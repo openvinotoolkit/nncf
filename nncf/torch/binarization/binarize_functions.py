@@ -44,12 +44,12 @@ class XNORBinarizeFn(torch.autograd.Function):
 
     @staticmethod
     def symbolic(g, x):
-        zero = g.constant(0, [1], "float")
+        zero = g.op("Constant", value_t=torch.tensor([0]))
         zero = _unsqueeze_helper(g, zero, [1, 2, 3])
         scale = g.op("Abs", x)
         scale = g.op("ReduceMean", scale, axes_i=[1, 2, 3])
         scale_neg = g.op("Neg", scale)
-        return g.op(add_domain("FakeQuantize"), x, zero, zero, scale_neg, scale, levels_i=2)
+        return g.op(add_domain("FakeQuantize"), x, zero, zero, scale_neg, scale, levels_i=2).setType(x.type())
 
     @staticmethod
     def forward(ctx, x):
@@ -76,12 +76,12 @@ class DOREFABinarizeFn(torch.autograd.Function):
 
     @staticmethod
     def symbolic(g, x):
-        zero = g.constant(0, [1], "float")
+        zero = g.op("Constant", value_t=torch.tensor([0]))
         zero = _unsqueeze_helper(g, zero, [1, 2, 3])
         scale = g.op("Abs", x)
         scale = g.op("ReduceMean", scale, axes_i=[0, 1, 2, 3])
         scale_neg = g.op("Neg", scale)
-        return g.op(add_domain("FakeQuantize"), x, zero, zero, scale_neg, scale, levels_i=2)
+        return g.op(add_domain("FakeQuantize"), x, zero, zero, scale_neg, scale, levels_i=2).setType(x.type())
 
     @staticmethod
     def forward(ctx, x):
@@ -105,11 +105,11 @@ class DOREFABinarizeFn(torch.autograd.Function):
 class ActivationBinarizationScaleThresholdFn(torch.autograd.Function):
     @staticmethod
     def symbolic(g, x, scale, threshold):
-        zero = g.constant(0, [1], "float")
+        zero = g.op("Constant", value_t=torch.tensor([0]))
         zero = _unsqueeze_helper(g, zero, [0, 2, 3])
         threshold = g.op("Mul", threshold, scale)
         scale = _unsqueeze_helper(g, scale, [0, 2, 3])
-        return g.op(add_domain("FakeQuantize"), x, threshold, threshold, zero, scale, levels_i=2)
+        return g.op(add_domain("FakeQuantize"), x, threshold, threshold, zero, scale, levels_i=2).setType(x.type())
 
     @staticmethod
     def forward(ctx, input_, scale, threshold):

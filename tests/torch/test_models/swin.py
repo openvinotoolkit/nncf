@@ -13,9 +13,9 @@
 # and https://github.com/rwightman/pytorch-image-models
 
 import torch
-from timm.models.layers import DropPath
-from timm.models.layers import to_2tuple
-from timm.models.layers import trunc_normal_
+from timm.layers import DropPath
+from timm.layers import to_2tuple
+from timm.layers import trunc_normal_
 from torch import nn
 
 WindowProcess = None
@@ -177,7 +177,7 @@ class SwinTransformerBlock(nn.Module):
 
     Args:
         dim (int): Number of input channels.
-        input_resolution (tuple[int]): Input resulotion.
+        input_resolution (tuple[int]): Input resolution.
         num_heads (int): Number of attention heads.
         window_size (int): Window size.
         shift_size (int): Shift size for SW-MSA.

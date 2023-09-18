@@ -60,11 +60,15 @@ class IgnoredScope:
     :type patterns: List[str]
     :param types: List of ignored operation types.
     :type types: List[str]
+    :param validate: If set to True, then a RuntimeError will be raised if any ignored scope does not match
+      in the model graph.
+    :type types: bool
     """
 
     names: List[str] = field(default_factory=list)
     patterns: List[str] = field(default_factory=list)
     types: List[str] = field(default_factory=list)
+    validate: bool = True
 
 
 def convert_ignored_scope_to_list(ignored_scope: Optional[IgnoredScope]) -> List[str]:
@@ -96,7 +100,7 @@ def get_ignored_node_names_from_ignored_scope(
     If strict is False, returns all possible matches.
 
     :param ignored_scope: Given ignored scope instance.
-    :param nncf_grpah: Given NNCFGrpah.
+    :param nncf_graph: Given NNCFGraph.
     :param strict: Whether all ignored_scopes must match at least one node or not.
     :returns: NNCF node names from given NNCFGraph specified in given ignored scope.
     """
@@ -129,7 +133,7 @@ def get_ignored_node_names_from_ignored_scope(
                 not_matched_patterns.append(str_pattern)
             matched_by_patterns.extend(matches)
         if strict and not_matched_patterns:
-            raise RuntimeError(f"No mathes for ignored patterns {not_matched_patterns} in the NNCFGraph. " + error_msg)
+            raise RuntimeError(f"No matches for ignored patterns {not_matched_patterns} in the NNCFGraph. " + error_msg)
         nncf_logger.info(f"{len(matched_by_patterns)} ignored nodes was found by patterns in the NNCFGraph")
 
     matched_by_types = []

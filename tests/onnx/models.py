@@ -419,7 +419,7 @@ class ReshapeWeightModel(ONNXReferenceModel):
         model_output_name = "Y"
         model_output_channels = 5
         Y = onnx.helper.make_tensor_value_info(model_output_name, onnx.TensorProto.FLOAT, [1, model_output_channels])
-        rng = np.random.default_rng(seed=0)
+        rng = get_random_generator()
         shape = [1, 1, model_input_channels, model_output_channels]
         w_tensor = create_initializer_tensor(
             name="W", tensor_array=rng.uniform(0, 1, shape).astype(np.float32), data_type=onnx.TensorProto.FLOAT
@@ -492,18 +492,19 @@ class WeightSharingModel(ONNXReferenceModel):
     #            |
     #            Y
     def __init__(self):
-        input_shape = output_shape = [1, 1, 5, 5]
-
+        input_shape = [1, 1, 5, 5]
+        output_shape = [1, 5, 5, 5]
+        W_shape = [5, 1, 3, 3]
         model_input_name = "X"
         X = onnx.helper.make_tensor_value_info(model_input_name, onnx.TensorProto.FLOAT, input_shape)
         model_output_name = "Y"
         Y = onnx.helper.make_tensor_value_info(model_output_name, onnx.TensorProto.FLOAT, output_shape)
 
-        W = np.array(
-            [[[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]]]  # (1, 1, 3, 3) tensor for convolution weights
-        ).astype(np.float32)
+        rng = get_random_generator()
 
-        w_tensor = create_initializer_tensor(name="W", tensor_array=W, data_type=onnx.TensorProto.FLOAT)
+        w_tensor = create_initializer_tensor(
+            name="W", tensor_array=rng.uniform(0, 1, W_shape), data_type=onnx.TensorProto.FLOAT
+        )
 
         relu_x_node = onnx.helper.make_node(
             name="Relu",
@@ -1184,3 +1185,562 @@ class NonShapeModel(ONNXReferenceModel):
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "non_shape_model.dot")
+
+
+@ALL_SYNTHETIC_MODELS.register()
+class MatMulWeightModel(ONNXReferenceModel):
+    #         X       W
+    #          \     /
+    #           MatMul
+    #             |
+    #          softmax
+    def __init__(self):
+        model_input_name, model_output_name = "X", "Y"
+        model_input_channels, model_output_channels = 10, 5
+        input_shape = [1, model_input_channels]
+
+        X = onnx.helper.make_tensor_value_info(model_input_name, onnx.TensorProto.FLOAT, input_shape)
+        Y = onnx.helper.make_tensor_value_info(model_output_name, onnx.TensorProto.FLOAT, [1, model_output_channels])
+
+        rng = np.random.default_rng(seed=0)
+        shape = [model_input_channels, model_output_channels]
+        w_tensor = create_initializer_tensor(
+            name="W", tensor_array=rng.uniform(0, 1, shape).astype(np.float32), data_type=onnx.TensorProto.FLOAT
+        )
+
+        matmul_node = onnx.helper.make_node(
+            name="MatMul", op_type="MatMul", inputs=[model_input_name, "W"], outputs=["logit"]
+        )
+
+        softmax_node = onnx.helper.make_node(
+            name="Softmax",
+            op_type="Softmax",
+            inputs=["logit"],
+            outputs=["Y"],
+        )
+
+        graph_def = onnx.helper.make_graph(
+            nodes=[matmul_node, softmax_node],
+            name="Net",
+            inputs=[X],
+            outputs=[Y],
+            initializer=[w_tensor],
+        )
+
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape], "weight_matmul_model.dot")
+
+
+@ALL_SYNTHETIC_MODELS.register()
+class MatMulActivationModel(ONNXReferenceModel):
+    #         X       Y
+    #         |       |
+    #          \     /
+    #           MatMul
+    #             |
+    #          softmax
+    def __init__(self):
+        model_input_name_1, model_input_name_2, model_output_name = "X", "Y", "Z"
+        channels = 10
+        x_input_shape = [channels, 1]
+        y_input_shape = [1, channels]
+
+        X = onnx.helper.make_tensor_value_info(model_input_name_1, onnx.TensorProto.FLOAT, x_input_shape)
+        Y = onnx.helper.make_tensor_value_info(model_input_name_2, onnx.TensorProto.FLOAT, y_input_shape)
+        Z = onnx.helper.make_tensor_value_info(model_output_name, onnx.TensorProto.FLOAT, [channels, channels])
+
+        matmul_node = onnx.helper.make_node(name="MatMul", op_type="MatMul", inputs=["X", "Y"], outputs=["logit"])
+
+        softmax_node = onnx.helper.make_node(
+            name="Softmax",
+            op_type="Softmax",
+            inputs=["logit"],
+            outputs=["Z"],
+        )
+
+        graph_def = onnx.helper.make_graph(nodes=[matmul_node, softmax_node], name="Net", inputs=[X, Y], outputs=[Z])
+
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [x_input_shape, y_input_shape], "activation_matmul_model.dot")
+
+
+@ALL_SYNTHETIC_MODELS.register()
+class GEMMTransposeWeightModel(ONNXReferenceModel):
+    #         X       W(Transposed)
+    #         |       |
+    #      Identity   |
+    #          \     /
+    #           Gemm
+    #             |
+    #          softmax
+    def __init__(self):
+        model_input_name, model_output_name = "X", "Y"
+        model_input_channels, model_output_channels = 10, 5
+        input_shape = [1, model_input_channels]
+
+        X = onnx.helper.make_tensor_value_info(model_input_name, onnx.TensorProto.FLOAT, input_shape)
+        Y = onnx.helper.make_tensor_value_info(model_output_name, onnx.TensorProto.FLOAT, [1, model_output_channels])
+
+        rng = np.random.default_rng(seed=0)
+        shape = [model_output_channels, model_input_channels]
+        w_tensor = create_initializer_tensor(
+            name="W", tensor_array=rng.uniform(0, 1, shape).astype(np.float32), data_type=onnx.TensorProto.FLOAT
+        )
+
+        identity_node = onnx.helper.make_node(
+            name="Identity", op_type="Identity", inputs=[model_input_name], outputs=["identity"]
+        )
+
+        gemm_node = onnx.helper.make_node(
+            name="Gemm", op_type="Gemm", inputs=["identity", "W"], outputs=["logit"], transB=1
+        )
+
+        softmax_node = onnx.helper.make_node(
+            name="Softmax",
+            op_type="Softmax",
+            inputs=["logit"],
+            outputs=["Y"],
+        )
+
+        graph_def = onnx.helper.make_graph(
+            nodes=[identity_node, gemm_node, softmax_node],
+            name="Net",
+            inputs=[X],
+            outputs=[Y],
+            initializer=[w_tensor],
+        )
+
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape], "gemm_weight_transpose_model.dot")
+
+
+@ALL_SYNTHETIC_MODELS.register()
+class WeightPropagationMatMulModel(ONNXReferenceModel):
+    #               Identity
+    #                   |
+    #         X     Identity
+    #          \     /
+    #           MatMul
+    #             |     Constant
+    #             |     /
+    #           MatMul
+    #             |
+    #             Y
+    def __init__(self):
+        model_input_name, model_output_name = "X", "Y"
+        model_input_channels = 10
+        matmul_output_channels = 5
+        input_shape = [1, model_input_channels]
+        X = onnx.helper.make_tensor_value_info(model_input_name, onnx.TensorProto.FLOAT, input_shape)
+        Y = onnx.helper.make_tensor_value_info(model_output_name, onnx.TensorProto.FLOAT, [1, model_input_channels])
+
+        rng = np.random.default_rng(seed=0)
+        shape = [model_input_channels, matmul_output_channels]
+
+        # Create MatMul
+        w_tensor = create_initializer_tensor(
+            name="W_tensor", tensor_array=rng.uniform(0, 1, shape).astype(np.float32), data_type=onnx.TensorProto.FLOAT
+        )
+        identity_1 = onnx.helper.make_node(name="Identity_1", op_type="Identity", inputs=["W_tensor"], outputs=["i_1"])
+        identity_2 = onnx.helper.make_node(name="Identity_2", op_type="Identity", inputs=["i_1"], outputs=["i_2"])
+        matmul_1 = onnx.helper.make_node(
+            name="MatMul_1", op_type="MatMul", inputs=[model_input_name, "i_2"], outputs=["mm_1"]
+        )
+        matmul_2_shape = (matmul_output_channels, model_input_channels)
+        constant_data = rng.uniform(0, 1, matmul_2_shape).astype(np.float32)  # Randomly initialized weight tensor
+        constant_initializer = onnx.helper.make_tensor(
+            name="constant_data",
+            data_type=onnx.TensorProto.FLOAT,
+            dims=constant_data.shape,
+            vals=constant_data.flatten(),
+        )
+        constant = onnx.helper.make_node("Constant", [], ["const"], name="constant", value=constant_initializer)
+        matmul_2 = onnx.helper.make_node(
+            name="MatMul_2", op_type="MatMul", inputs=["mm_1", "const"], outputs=[model_output_name]
+        )
+
+        graph_def = onnx.helper.make_graph(
+            nodes=[identity_1, identity_2, matmul_1, constant, matmul_2],
+            name="Net",
+            inputs=[X],
+            outputs=[Y],
+            initializer=[w_tensor, constant_initializer],
+        )
+
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape], "weight_propagation_matmul_model.dot")
+
+
+@ALL_SYNTHETIC_MODELS.register()
+class WeightPropagationConvModel(ONNXReferenceModel):
+    #     X             Reshape
+    #     |               |
+    #     |           Transpose
+    #     |               |
+    #     \            Identiy
+    #       \            /
+    #         \       /
+    #            Conv
+    #             |
+    #             |         Constant
+    #             |           /
+    #             |       Reshape
+    #             |        /
+    #             |    Identity
+    #             |     /
+    #            Conv
+    #             |
+    #             |    Constant
+    #             |   /
+    #            Conv
+    #             |
+    #             |
+    #             |
+    def __init__(self):
+        input_shape = (1, 1, 28, 28)  # Example shape, change as required
+        Y = onnx.helper.make_tensor_value_info("output", onnx.TensorProto.FLOAT, [1, 1, 28, 28])
+        input_tensor = onnx.helper.make_tensor_value_info("input", onnx.TensorProto.FLOAT, input_shape)
+        rng = get_random_generator()
+
+        # Layer 1: Convolution 1
+        conv_output1 = "conv_output1"
+        conv1_shape = (1, 1, 3, 3)
+        conv1_weight = rng.uniform(0, 1, conv1_shape).astype(np.float32)  # Randomly initialized weight tensor
+
+        conv1_weight_initializer = onnx.helper.make_tensor(
+            name="conv1_weight",
+            data_type=onnx.TensorProto.FLOAT,
+            dims=conv1_weight.shape,
+            vals=conv1_weight.flatten(),
+        )
+
+        # Layer 1: Identity -> Transpose -> Reshape
+        identity_output1 = "identity_output1"
+        transpose_output = "transpose_output"
+        reshape_output = "reshape_output"
+        reshape_1_tensor_name = "w_r_1"
+        reshape_1_initializer_tensor = create_initializer_tensor(
+            name=reshape_1_tensor_name,
+            tensor_array=np.array(conv1_shape).astype(np.int64),
+            data_type=onnx.TensorProto.INT64,
+        )
+        reshape_node = onnx.helper.make_node(
+            "Reshape", ["conv1_weight", reshape_1_tensor_name], [reshape_output], name="reshape"
+        )
+        transpose_node = onnx.helper.make_node(
+            "Transpose", [reshape_output], [transpose_output], name="transpose", perm=[0, 1, 3, 2]
+        )
+        identity_node1 = onnx.helper.make_node("Identity", [transpose_output], [identity_output1], name="identity1")
+
+        conv1_node = onnx.helper.make_node(
+            "Conv", ["input", identity_output1], [conv_output1], name="conv1", kernel_shape=[3, 3], pads=[1, 1, 1, 1]
+        )
+
+        # Layer 3: Convolution 2
+        identity_output2 = "identity_output2"
+        reshape_output2 = "reshape_output2"
+        constant_output = "constant_output"
+        conv_output2 = "conv_output2"
+        conv2_shape = (1, 1, 3, 3)
+        conv2_node = onnx.helper.make_node(
+            "Conv",
+            [conv_output1, identity_output2],
+            [conv_output2],
+            name="conv2",
+            kernel_shape=[3, 3],
+            pads=[1, 1, 1, 1],
+        )
+
+        # Layer 4: Identity -> Reshape -> Constant
+        constant_data = rng.uniform(0, 1, conv2_shape).astype(np.float32)  # Randomly initialized weight tensor
+        reshape_2_tensor_name = "w_r_2"
+
+        reshape_2_initializer_tensor = create_initializer_tensor(
+            name=reshape_2_tensor_name,
+            tensor_array=np.array((1, 1, 3, 3)).astype(np.int64),
+            data_type=onnx.TensorProto.INT64,
+        )
+        constant_initializer = onnx.helper.make_tensor(
+            name="constant_data",
+            data_type=onnx.TensorProto.FLOAT,
+            dims=constant_data.shape,
+            vals=constant_data.flatten(),
+        )
+        constant_node = onnx.helper.make_node(
+            "Constant", [], [constant_output], name="constant", value=constant_initializer
+        )
+        reshape_node2 = onnx.helper.make_node(
+            "Reshape", [constant_output, reshape_2_tensor_name], [reshape_output2], name="reshape2"
+        )
+        identity_node2 = onnx.helper.make_node("Identity", [reshape_output2], [identity_output2], name="identity2")
+
+        # Layer 6: Convolution 3
+        constant_output2 = "constant_output2"
+        conv4_shape = (1, 1, 3, 3)
+        constant_data2 = rng.uniform(0, 1, conv4_shape).astype(np.float32)  # Randomly initialized weight tensor
+        constant_initializer2 = onnx.helper.make_tensor(
+            name="constant_data2",
+            data_type=onnx.TensorProto.FLOAT,
+            dims=constant_data2.shape,
+            vals=constant_data2.flatten(),
+        )
+        constant_2_node = onnx.helper.make_node(
+            "Constant", [], [constant_output2], name="constant2", value=constant_initializer2
+        )
+        conv4_node = onnx.helper.make_node(
+            "Conv",
+            [conv_output2, constant_output2],
+            ["output"],
+            name="conv4",
+            kernel_shape=[3, 3],
+            pads=[1, 1, 1, 1],
+        )
+
+        # Create the graph with all the nodes
+        graph_def = onnx.helper.make_graph(
+            [
+                reshape_node,
+                transpose_node,
+                identity_node1,
+                conv1_node,
+                constant_node,
+                reshape_node2,
+                identity_node2,
+                conv2_node,
+                constant_2_node,
+                conv4_node,
+            ],
+            "example_model",
+            [input_tensor],
+            [Y],
+            [
+                conv1_weight_initializer,
+                constant_initializer,
+                reshape_1_initializer_tensor,
+                reshape_2_initializer_tensor,
+                constant_initializer2,
+            ],
+        )
+
+        # Create the model with the graph
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape], "weight_propagation_conv_model.dot")
+
+
+@ALL_SYNTHETIC_MODELS.register()
+class EmbeddingModel(ONNXReferenceModel):
+    #               Constant
+    #                   |
+    #         X     Identity
+    #          \     /
+    #           Gather
+    #             |
+    #           Gather
+    #             |
+    #           MatMul
+    #             |
+    #             Y
+    def __init__(self):
+        model_input_name, model_output_name = "X", "Y"
+        model_input_channels = 10
+        model_output_channels = 10
+        input_shape = [1, model_input_channels]
+        X = onnx.helper.make_tensor_value_info(model_input_name, onnx.TensorProto.INT64, input_shape)
+        Y = onnx.helper.make_tensor_value_info(model_output_name, onnx.TensorProto.FLOAT, [10, model_output_channels])
+
+        rng = np.random.default_rng(seed=0)
+
+        embedding_output_node_name = "Embedding_Y"
+        embedding_weights_tensor_name = "Embedding_W"
+        embedding_weights_tensor = create_initializer_tensor(
+            name=embedding_weights_tensor_name,
+            tensor_array=rng.uniform(0, 1, (10, 20)).astype(np.float32),
+            data_type=onnx.TensorProto.FLOAT,
+        )
+
+        identity_output_name = "Identity_Y"
+        identity_node = onnx.helper.make_node(
+            name="Identity",
+            op_type="Identity",
+            inputs=[embedding_weights_tensor_name],
+            outputs=[identity_output_name],
+        )
+
+        embedding_node = onnx.helper.make_node(
+            name="Embedding",
+            op_type="Gather",
+            axis=0,
+            inputs=[identity_output_name, model_input_name],
+            outputs=[embedding_output_node_name],
+        )
+
+        gather_output_node_name = "Gather_Y"
+        gather_indices_tensor_name = "Gather_I"
+        gather_indices_initializer_tensor = create_initializer_tensor(
+            name=gather_indices_tensor_name, tensor_array=np.int64(0), data_type=onnx.TensorProto.INT64
+        )
+        gather_node = onnx.helper.make_node(
+            name="Gather",
+            op_type="Gather",
+            axis=0,
+            inputs=[embedding_output_node_name, gather_indices_tensor_name],
+            outputs=[gather_output_node_name],
+        )
+
+        shape = [20, model_output_channels]
+        w_tensor_name = "W"
+        w_tensor = create_initializer_tensor(
+            name=w_tensor_name,
+            tensor_array=rng.uniform(0, 1, shape).astype(np.float32),
+            data_type=onnx.TensorProto.FLOAT,
+        )
+
+        matmul_node = onnx.helper.make_node(
+            name="MatMul",
+            op_type="MatMul",
+            inputs=[gather_output_node_name, w_tensor_name],
+            outputs=[model_output_name],
+        )
+
+        graph_def = onnx.helper.make_graph(
+            nodes=[identity_node, embedding_node, gather_node, matmul_node],
+            name="EmbeddingModel",
+            inputs=[X],
+            outputs=[Y],
+            initializer=[embedding_weights_tensor, gather_indices_initializer_tensor, w_tensor],
+        )
+
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape], "embedding_model.dot")
+
+
+@ALL_SYNTHETIC_MODELS.register()
+class UnifiedEmbeddingModel(ONNXReferenceModel):
+    #       X
+    #      / \
+    #     | Convert
+    #     |     \
+    #   MatMul  Gather
+    #     |       |
+    #  Reshape    |
+    #     \      /
+    #      Concat
+    #         |
+    #       MatMul
+    #         |
+    #         Y
+    def __init__(self):
+        model_input_name, model_output_name = "X", "Y"
+        model_input_channels = 3
+        model_output_channels = 6
+        input_shape = [1, model_input_channels]
+        X = onnx.helper.make_tensor_value_info(model_input_name, onnx.TensorProto.FLOAT, input_shape)
+        Y = onnx.helper.make_tensor_value_info(model_output_name, onnx.TensorProto.FLOAT, [1, model_output_channels])
+
+        rng = np.random.default_rng(seed=0)
+
+        cast_output_name = "Cast_Y"
+        cast_node = onnx.helper.make_node(
+            name="Cast",
+            op_type="Cast",
+            to=onnx.TensorProto.INT64,
+            inputs=[model_input_name],
+            outputs=[cast_output_name],
+        )
+
+        embedding_output_name = "Embedding_Y"
+        embedding_tensor_name = "Embedding_W"
+        embedding_tensor = create_initializer_tensor(
+            name=embedding_tensor_name,
+            tensor_array=rng.uniform(0, 1, (4, 5)).astype(np.float32),
+            data_type=onnx.TensorProto.FLOAT,
+        )
+        embedding_node = onnx.helper.make_node(
+            name="Embedding",
+            op_type="Gather",
+            axis=0,
+            inputs=[embedding_tensor_name, cast_output_name],
+            outputs=[embedding_output_name],
+        )
+
+        matmul_1_tensor_name = "W_1"
+        matmul_1_output_name = "MatMul_1_Y"
+        matmul_1_tensor = create_initializer_tensor(
+            name=matmul_1_tensor_name,
+            tensor_array=rng.uniform(0, 1, (3, 3, 5)).astype(np.float32),
+            data_type=onnx.TensorProto.FLOAT,
+        )
+        matmul_1_node = onnx.helper.make_node(
+            name="MatMul_1",
+            op_type="MatMul",
+            inputs=[model_input_name, matmul_1_tensor_name],
+            outputs=[matmul_1_output_name],
+        )
+
+        reshape_tensor_name = "R"
+        reshape_tensor = create_initializer_tensor(
+            name=reshape_tensor_name,
+            tensor_array=np.array([1, 3, 5]).astype(np.float32),
+            data_type=onnx.TensorProto.FLOAT,
+        )
+        reshape_output_name = "Reshape_Y"
+        reshape_node = onnx.helper.make_node(
+            name="Reshape",
+            op_type="Reshape",
+            inputs=[matmul_1_output_name, reshape_tensor_name],
+            outputs=[reshape_output_name],
+        )
+
+        concat_output_name = "Concat_Y"
+        concat_node = onnx.helper.make_node(
+            name="Concat",
+            op_type="Concat",
+            inputs=[embedding_output_name, reshape_output_name],
+            outputs=[concat_output_name],
+            axis=0,
+        )
+
+        matmul_2_tensor_name = "W_2"
+        matmul_2_tensor = create_initializer_tensor(
+            name=matmul_2_tensor_name,
+            tensor_array=rng.uniform(0, 1, (1, 5)).astype(np.float32),
+            data_type=onnx.TensorProto.FLOAT,
+        )
+        matmul_2_node = onnx.helper.make_node(
+            name="MatMul_2",
+            op_type="MatMul",
+            inputs=[concat_output_name, matmul_2_tensor_name],
+            outputs=[model_output_name],
+        )
+
+        graph_def = onnx.helper.make_graph(
+            nodes=[cast_node, embedding_node, matmul_1_node, reshape_node, concat_node, matmul_2_node],
+            name="UnifiedEmbeddingModel",
+            inputs=[X],
+            outputs=[Y],
+            initializer=[embedding_tensor, matmul_1_tensor, matmul_2_tensor, reshape_tensor],
+        )
+
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape], "unified_embedding_model.dot")

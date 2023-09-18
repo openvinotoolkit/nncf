@@ -16,9 +16,10 @@ from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXLinearMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXGemmMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSoftmaxMetatype
-from nncf.onnx.graph.nncf_graph_builder import ONNXExtendedLayerAttributes
+from nncf.onnx.graph.nncf_graph_builder import GraphConverter
+from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
@@ -31,9 +32,9 @@ from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
 from tests.onnx.models import LinearModel
 from tests.onnx.models import OneDepthwiseConvolutionalModel
-from tests.post_training.models import NNCFGraphToTest
-from tests.post_training.models import NNCFGraphToTestMatMul
-from tests.post_training.test_ptq_params import TemplateTestPTQParams
+from tests.post_training.test_templates.models import NNCFGraphToTest
+from tests.post_training.test_templates.models import NNCFGraphToTestMatMul
+from tests.post_training.test_templates.test_ptq_params import TemplateTestPTQParams
 
 # pylint: disable=protected-access
 
@@ -78,35 +79,69 @@ class TestPTQParams(TemplateTestPTQParams):
     def metatypes_mapping(self):
         return {
             Conv2dTestMetatype: ONNXConvolutionMetatype,
-            LinearTestMetatype: ONNXLinearMetatype,
+            LinearTestMetatype: ONNXGemmMetatype,
             SoftmaxTestMetatype: ONNXSoftmaxMetatype,
         }
 
     @pytest.fixture(scope="session")
     def test_params(self):
+        linear_model = LinearModel().onnx_model
+        linear_model_graph = GraphConverter.create_nncf_graph(linear_model)
+        depthwise_model = OneDepthwiseConvolutionalModel().onnx_model
+        depthwise_model_graph = GraphConverter.create_nncf_graph(depthwise_model)
+
         return {
-            "test_range_estimator_per_tensor": {"model": LinearModel().onnx_model, "stat_points_num": 5},
+            "test_range_estimator_per_tensor": {
+                "model": linear_model,
+                "nncf_graph": linear_model_graph,
+                "stat_points_num": 5,
+            },
             "test_range_estimator_per_channel": {
-                "model": OneDepthwiseConvolutionalModel().onnx_model,
+                "model": depthwise_model,
+                "nncf_graph": depthwise_model_graph,
                 "stat_points_num": 2,
             },
             "test_quantize_outputs": {
                 "nncf_graph": NNCFGraphToTest(
-                    ONNXConvolutionMetatype, ONNXExtendedLayerAttributes(None, None)
+                    conv_metatype=ONNXConvolutionMetatype,
+                    conv_layer_attrs=ONNXLayerAttributes(
+                        weight_attrs={1: {"name": "aaa"}},
+                    ),
+                    input_layer_attrs=ONNXLayerAttributes(),
+                    output_layer_attrs=ONNXLayerAttributes(),
                 ).nncf_graph,
                 "hw_patterns": get_hw_patterns(),
                 "ignored_patterns": get_ignored_patterns(),
             },
             "test_ignored_scopes": {
                 "nncf_graph": NNCFGraphToTest(
-                    ONNXConvolutionMetatype, ONNXExtendedLayerAttributes(None, None)
+                    conv_metatype=ONNXConvolutionMetatype,
+                    conv_layer_attrs=ONNXLayerAttributes(
+                        weight_attrs={1: {"name": "aaa"}},
+                    ),
+                    input_layer_attrs=ONNXLayerAttributes(),
+                    output_layer_attrs=ONNXLayerAttributes(),
                 ).nncf_graph,
                 "hw_patterns": get_hw_patterns(),
                 "ignored_patterns": get_ignored_patterns(),
             },
             "test_model_type_pass": {
-                "nncf_graph": NNCFGraphToTestMatMul(ONNXLinearMetatype).nncf_graph,
+                "nncf_graph": NNCFGraphToTestMatMul(
+                    ONNXGemmMetatype,
+                    ONNXLayerAttributes(weight_attrs={1: {"name": "aaa"}}),
+                    input_layer_attrs=ONNXLayerAttributes(),
+                    output_layer_attrs=ONNXLayerAttributes(),
+                ).nncf_graph,
                 "hw_patterns": get_hw_patterns(),
+                "ignored_patterns": get_ignored_patterns(),
+            },
+            "test_validate_scope": {
+                "nncf_graph": NNCFGraphToTestMatMul(
+                    ONNXGemmMetatype,
+                    ONNXLayerAttributes(weight_attrs={1: {"name": "aaa"}}),
+                    input_layer_attrs=ONNXLayerAttributes(),
+                    output_layer_attrs=ONNXLayerAttributes(),
+                ).nncf_graph,
                 "ignored_patterns": get_ignored_patterns(),
             },
         }

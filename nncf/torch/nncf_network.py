@@ -23,12 +23,10 @@ import torch
 from torch import nn
 
 from nncf import nncf_logger
-from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
-from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.insertion_point_graph import InsertionPointGraph
@@ -58,10 +56,8 @@ from nncf.torch.graph.graph_builder import GraphConverter
 from nncf.torch.graph.operator_metatypes import OPERATORS_WITH_WEIGHTS_METATYPES
 from nncf.torch.graph.operator_metatypes import PTSplitMetatype
 from nncf.torch.graph.transformations.commands import PTTargetPoint
-from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.knowledge_distillation.knowledge_distillation_handler import KnowledgeDistillationLossHandler
 from nncf.torch.layer_utils import _NNCFModuleMixin
-from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nested_objects_traversal import objwalk
 from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
 from nncf.torch.utils import compute_FLOPs_hook
@@ -151,6 +147,8 @@ class NNCFNetworkInterface(torch.nn.Module):
         Returns the forward function of the original model, unmodified by NNCF. The returned function will
         have its 0-th implicit `self` argument bound to the model object.
         """
+        if self._original_instance_forward is not None:
+            return functools.partial(self._original_instance_forward, self._model_ref)
         return functools.partial(self._original_unbound_forward, self._model_ref)
 
     @contextmanager
@@ -214,10 +212,12 @@ class NNCFNetworkInterface(torch.nn.Module):
             self._original_class = model.nncf._original_class
             self._bound_original_forward = model.nncf._bound_original_forward
             self._custom_original_unbound_forward = model.nncf._custom_original_unbound_forward
+            self._original_instance_forward = model.nncf._original_instance_forward
         else:
             self._original_class = model.__class__
             self._bound_original_forward = None
             self._custom_original_unbound_forward = None
+            self._original_instance_forward = model.__dict__.get("forward")
 
         self._forward_signature = inspect.signature(self.get_original_forward())
         self._input_infos = input_infos
@@ -367,7 +367,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         # WARNING: Will reset pre- and post-ops of the underlying model. Use save_nncf_module_additions
         # and load_nncf_module_additions to preserve these, or temporary_clean_view().
         from nncf.torch.utils import load_module_state  # pylint: disable=cyclic-import
-        from nncf.torch.utils import save_module_state
+        from nncf.torch.utils import save_module_state  # pylint: disable=cyclic-import
 
         saved_state = save_module_state(self._model_ref)
         new_interface = NNCFNetworkInterface(
@@ -606,9 +606,11 @@ class NNCFNetworkInterface(torch.nn.Module):
             # a port ID attribute.
             in_edges = nncf_graph.get_input_edges(node)
             for edge in in_edges:
-                port_id = edge.input_port_id
-                pre_hook_ip = PreHookInsertionPoint(target_node_name=node.node_name, input_port_id=port_id)
-                pre_hooks.append(pre_hook_ip)
+                for port_id in [
+                    edge.input_port_id,
+                ] + edge.parallel_input_port_ids:
+                    pre_hook_ip = PreHookInsertionPoint(target_node_name=node.node_name, input_port_id=port_id)
+                    pre_hooks.append(pre_hook_ip)
 
             if issubclass(node.metatype, PTSplitMetatype):
                 # chunk returns a tuple of tensors, which can only be handled in NNCF
@@ -741,6 +743,21 @@ class NNCFNetworkInterface(torch.nn.Module):
     def set_compression_controller(self, ctrl: "PTCompressionAlgorithmController"):
         self.compression_controller = ctrl
 
+    def strip(self, do_copy: bool = True) -> "NNCFNetwork":
+        """
+        Returns the model object with as much custom NNCF additions as possible removed
+        while still preserving the functioning of the model object as a compressed model.
+        :param do_copy: If True (default), will return a copy of the currently associated model object. If False,
+          will return the currently associated model object "stripped" in-place.
+        :return: The stripped model.
+        """
+        if self.compression_controller is None:
+            # PTQ algorithm does not set compressed controller
+            from nncf.torch.quantization.strip import strip_quantized_model
+
+            return strip_quantized_model(self._model_ref)
+        return self.compression_controller.strip(do_copy)
+
 
 class NNCFNetworkMeta(type):
     """
@@ -814,13 +831,13 @@ class NNCFNetworkMeta(type):
         )
         # Make the signature of the forward on the resulting object same as for
         # the original forward.
-        fn = NNCFNetwork.forward
-        new_forward = types.FunctionType(fn.__code__, fn.__globals__, fn.__name__, fn.__defaults__, fn.__closure__)
-        new_forward.__dict__.update(fn.__dict__)
-        new_forward.__signature__ = inspect.signature(original_class.forward)
-        if is_debug():
-            new_forward = debuggable_forward(new_forward)
-        new_class.forward = new_forward
+        new_class.forward = _get_nncf_forward_function_with_signature(inspect.signature(original_class.forward))
+
+        # In case of overriding forward by code like `model.forward = wrapper(model.forward)`
+        forward_inst_attr_fn = original_model.__dict__.get("forward")
+        if forward_inst_attr_fn is not None:
+            new_inst_forward = _get_nncf_forward_function_with_signature(inspect.signature(forward_inst_attr_fn))
+            original_model.__dict__["forward"] = functools.partial(new_inst_forward, original_model)
 
         # Make resulting class keep __module__ attributes of the original class,
         # otherwise these will point to NNCF
@@ -850,7 +867,7 @@ class NNCFNetworkMeta(type):
         if len(cls.__bases__) == 2:
             original_class = cls.__bases__[1]
             return hash(original_class)
-        return id(NNCFNetwork)  # conforms to a default hashing behaviour in Python for cls objects
+        return id(NNCFNetwork)  # conforms to a default hashing behavior in Python for cls objects
 
     def __eq__(cls, other):
         """
@@ -863,6 +880,21 @@ class NNCFNetworkMeta(type):
             original_class = cls.__bases__[1]
             return original_class == other
         return other is NNCFNetwork
+
+
+def _get_nncf_forward_function_with_signature(signature: inspect.Signature):
+    """
+    Create forward function with copy signature of forward function.
+    :param signature: Signature of function that will used for forward function.
+    :return: New copy of function NNCFNetwork.forward with specified signature.
+    """
+    fn = NNCFNetwork.forward
+    new_forward = types.FunctionType(fn.__code__, fn.__globals__, fn.__name__, fn.__defaults__, fn.__closure__)
+    new_forward.__dict__.update(fn.__dict__)
+    new_forward.__signature__ = signature
+    if is_debug():
+        new_forward = debuggable_forward(new_forward)
+    return new_forward
 
 
 class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
@@ -901,8 +933,15 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
                 args, kwargs = self.nncf._wrap_inputs_fn(args, kwargs)
 
             # For purposes of scope tracking, need the original forward call to occur as if it were
-            # a module call of the correponding object.
-            if self.nncf._bound_original_forward is None:
+            # a module call of the corresponding object.
+            if self.nncf._original_instance_forward is not None:
+
+                def _unbound_like_original_instance_forward(_self, *args, **kwargs):
+                    return self.nncf._original_instance_forward(*args, **kwargs)
+
+                retval = wrap_module_call(_unbound_like_original_instance_forward)(self, *args, **kwargs)
+
+            elif self.nncf._bound_original_forward is None:
                 retval = wrap_module_call(self.nncf._original_unbound_forward)(self, *args, **kwargs)
             else:
 
@@ -927,34 +966,13 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
         # self._nncf is being set in the creation function defined in the NNCFNetworkMeta metaclass
         return self._nncf
 
-    def __getattr__(self, key):
-        """
-        Only defined for purposes of deprecation warnings. This method should be removed after v2.5.0.
-        """
-        try:
-            return super().__getattr__(key)
-        except AttributeError as e:
-            if hasattr(self._nncf, key):
-                warning_deprecated(
-                    "Old style of accessing NNCF-specific attributes and methods on NNCFNetwork "
-                    "objects is deprecated. "
-                    "Access the NNCF-specific attrs through the NNCFInterface, which is "
-                    "set up as an `nncf` attribute on the compressed model object.\n"
-                    "For instance, instead of `compressed_model.get_graph()` "
-                    "you should now write `compressed_model.nncf.get_graph()`.\n"
-                    "The old style will be removed after NNCF v2.5.0"
-                )
-                return getattr(self._nncf, key)
-            raise e
-
     def __setattr__(self, key, value):
         # If setting `forward`, set it on the original model.
         if key == "forward":
             nncf_logger.warning(
                 "You are setting `forward` on an NNCF-processed model object.\n"
                 "NNCF relies on custom-wrapping the `forward` call in order to function properly.\n"
-                "Arbitrary adjustments to the forward function on an NNCFNetwork object have undefined "
-                "behaviour.\n"
+                "Arbitrary adjustments to the forward function on an NNCFNetwork object have undefined behavior.\n"
                 "If you need to replace the underlying forward function of the original model so that "
                 "NNCF should be using that instead of the original forward function that NNCF saved "
                 "during the compressed model creation, you can do this by calling:\n"
@@ -965,15 +983,6 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
             )
         super().__setattr__(key, value)
 
-    def get_nncf_wrapped_model(self) -> "NNCFNetwork":
-        warning_deprecated(
-            "Calls to NNCFNetwork.get_nncf_wrapped_model() are deprecated and will be removed "
-            "in NNCF v2.6.0.\n"
-            "Starting from NNCF v2.5.0, the compressed model object already inherits the original "
-            "class of the uncompressed model and the forward signature, so the call to "
-            ".get_nncf_wrapped_model() may be simply omitted."
-        )
-        return self
 
 class NNCFSkippingIter:
     """
@@ -1021,33 +1030,3 @@ class LoadStateListener:
 
     def close(self):
         self.hook.remove()
-
-
-class PTModelTransformer(ModelTransformer):
-    def __init__(self, model: NNCFNetwork):
-        super().__init__(model)
-        self._node_to_op_address_mapping = model.nncf.get_node_to_op_address_mapping()
-
-    def transform(self, transformation_layout: PTTransformationLayout) -> NNCFNetwork:
-        fns_grouped_by_points = {}  # type: Dict[PTInsertionPoint, List[Tuple[Callable, TransformationPriority]]]
-        for transformation_command in transformation_layout.transformations:  # type: PTInsertionCommand
-            target_point = transformation_command.target_point  # type: PTTargetPoint
-            target_node_name = target_point.target_node_name
-            pt_ip = PTInsertionPoint(
-                target_type=target_point.target_type,
-                op_address=self._node_to_op_address_mapping[target_node_name],
-                input_port_id=target_point.input_port_id,
-            )
-            fn = transformation_command.fn
-            if target_point.type is TargetType.OPERATION_WITH_WEIGHTS:
-                fn = UpdateWeight(fn)
-            tup = (fn, transformation_command.priority)
-            if pt_ip not in fns_grouped_by_points:
-                fns_grouped_by_points[pt_ip] = [tup]
-            else:
-                fns_grouped_by_points[pt_ip].append(tup)
-
-        for pt_ip, fn_list_with_priority in fns_grouped_by_points.items():
-            fn_list_with_priority = sorted(fn_list_with_priority, key=lambda x: x[1])
-            self._model.nncf.insert_at_point(pt_ip, [x[0] for x in fn_list_with_priority])
-        return self._model

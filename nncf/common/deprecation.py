@@ -1,21 +1,20 @@
-""""
- Copyright (c) 2022 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import functools
 import inspect
 import warnings
 from typing import Callable, Type, TypeVar
 
-from pkg_resources import parse_version
+from packaging import version
 
 
 def warning_deprecated(msg):
@@ -38,8 +37,8 @@ class deprecated:
         :param msg: Custom message to be added after the boilerplate deprecation text.
         """
         self.msg = msg
-        self.start_version = parse_version(start_version) if start_version is not None else None
-        self.end_version = parse_version(end_version) if end_version is not None else None
+        self.start_version = version.parse(start_version) if start_version is not None else None
+        self.end_version = version.parse(end_version) if end_version is not None else None
 
     def __call__(self, fn_or_class: ClassOrFn) -> ClassOrFn:
         name = fn_or_class.__module__ + "." + fn_or_class.__name__

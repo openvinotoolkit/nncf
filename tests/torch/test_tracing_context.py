@@ -10,14 +10,14 @@
 # limitations under the License.
 import pytest
 import torch
-from pkg_resources import parse_version
+from packaging import version
 
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 
 
 @pytest.mark.skipif(
-    parse_version(torch.__version__) < parse_version("1.11"),
+    version.parse(torch.__version__) < version.parse("1.11"),
     reason="__getitem__ works unexpectedly for TracedTensor until fix in torch 1.11.\n"
     "Fix in pytorch: https://github.com/pytorch/pytorch/pull/67202\n"
     "Related ticket: 82065",

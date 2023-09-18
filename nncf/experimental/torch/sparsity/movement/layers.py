@@ -160,7 +160,7 @@ class MovementSparsifier(nn.Module):
         """
         super().__init__()
         self.target_module_node = target_module_node
-        self.prune_bias = bool(target_module_node.layer_attributes.bias)
+        self.prune_bias = bool(target_module_node.layer_attributes.with_bias)
         self.frozen = frozen
         self.layerwise_loss_lambda = layerwise_loss_lambda
         self._importance_threshold = -math.inf

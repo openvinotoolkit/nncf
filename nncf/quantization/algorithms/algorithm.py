@@ -14,16 +14,11 @@ from abc import abstractmethod
 from typing import Dict, Optional, TypeVar
 
 from nncf import Dataset
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 
 TModel = TypeVar("TModel")
-
-
-class AlgorithmParameters(ABC):
-    """
-    Base class for Post-Training algorithm parameters.
-    """
 
 
 class Algorithm(ABC):
@@ -35,43 +30,35 @@ class Algorithm(ABC):
     @abstractmethod
     def available_backends(self) -> Dict[str, BackendType]:
         """
-        Returns dictionary of the avaliable backends for the algorithm
+        Returns dictionary of the available backends for the algorithm.
 
-        :return: Dict of backends supported by the algorithm
+        :return: Dict of backends supported by the algorithm.
         """
 
+    @abstractmethod
     def apply(
         self,
         model: TModel,
+        graph: NNCFGraph,
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         """
-        Checks that statistic point exists, sets model into transformer
-        and applies the algorithm to the model.
-        :param model: model for applying algorithm
-        :param engine: engine for the model execution
-        :param statistic_points: StatisticPointsContainer
-        :return: model after algorithm
-        """
-        if statistic_points is None:
-            return self._apply(model, statistic_points=None, dataset=dataset)
-        _statistic_points = self.get_statistic_points(model)
-        for edge_name in _statistic_points.keys():
-            if statistic_points.get(edge_name) is None:
-                raise RuntimeError(f"No statistics collected for the layer {edge_name}")
-        return self._apply(model, statistic_points)
-
-    @abstractmethod
-    def _apply(
-        self, model: TModel, statistic_points: StatisticPointsContainer, dataset: Optional[Dataset] = None
-    ) -> TModel:
-        """
         Applies the algorithm to the model.
+
+        :param model: Model for applying algorithm.
+        :param graph: Model graph.
+        :param statistic_points: Statistic points with collected statistics values.
+        :param dataset: A representative dataset for the calibration process.
+        :return: A resulting model.
         """
 
     @abstractmethod
-    def get_statistic_points(self, model: TModel) -> StatisticPointsContainer:
+    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         """
-        Returns activation layers, for which StatisticsCollector should collect statistics.
+        Returns statistic points, for which StatisticsCollector should collect statistics.
+
+        :param model: Model for statistics collection.
+        :param graph: Model graph.
+        :return: Statistic points, for which StatisticsCollector should collect statistics.
         """

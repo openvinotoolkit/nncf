@@ -15,7 +15,7 @@ import onnx
 import onnxruntime as rt
 import pytest
 import torch
-from pkg_resources import parse_version
+from packaging import version
 from torch import nn
 
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
@@ -63,10 +63,10 @@ class DepthBasicConvTestModel(nn.Module):
         super().__init__()
         self._depth = depth
         self._skipped_layers = []
-        self.conv1 = create_conv(1, 3, 3, weight_init=1, bias_init=1)
+        self.conv1 = create_conv(1, 3, 3, weight_init=1, bias_init=1, padding=1)
         self.branch_with_blocks = nn.Sequential()
         for idx in range(depth):
-            conv = create_conv(3, 3, 5, weight_init=idx + 1, bias_init=idx + 1)
+            conv = create_conv(3, 3, 5, weight_init=idx + 1, bias_init=idx + 1, padding=2)
             self.branch_with_blocks.add_module("conv{}".format(idx), conv)
         self.last_conv = create_conv(3, 1, 1)
 
@@ -238,7 +238,7 @@ def test_can_export_model_with_one_skipped_block_resnet18(tmp_path):
     num_not_skipped_nodes = len(onnx_resnet18_without_one_block.graph.node)
     ref_num_nodes = 65
     ref_not_skipped_nodes = 63
-    if parse_version(torch.__version__) < parse_version("1.12"):
+    if version.parse(torch.__version__) < version.parse("1.12"):
         # different ONNX format for older pytorch version - no Identity nodes
         ref_num_nodes = 49
         ref_not_skipped_nodes = 48

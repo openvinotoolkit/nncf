@@ -30,6 +30,9 @@ from nncf.openvino.graph.node_utils import get_result_node_name
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
+from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVNullBiasInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
@@ -37,10 +40,12 @@ from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.models import ConvModel
+from tests.openvino.native.models import ConvNotBiasModel
 from tests.openvino.native.models import FPModel
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import QuantizedModel
 from tests.openvino.native.models import SimpleSplitModel
+from tests.openvino.native.models import WeightsModel
 from tests.openvino.native.models import ZeroRankEltwiseModel
 
 REFERENCE_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / "data" / "reference_graphs" / "original_nncf_graph"
@@ -121,7 +126,7 @@ INPLACE_OPS_TEST_CASES = [
         "abs_max", None, lambda o, r: get_inplace_max_op(o, r, True), ["Abs", "ReduceMax"], [None, (0, 1, 2, 3)]
     ),
     # Batch mean and mean per ch operations
-    InplaceOpTestCase("batch_mean", None, lambda o, r: get_inplace_batch_mean_op(o), ["ReduceMean"], [(0,)]),
+    InplaceOpTestCase("batch_mean", None, lambda o, r: get_inplace_batch_mean_op(o), ["ReduceMean"], [0]),
     InplaceOpTestCase("mean_per_ch", 1, get_inplace_mean_per_ch, ["Reshape", "ReduceMean"], [(1, 3, 16), (0, 2)]),
     InplaceOpTestCase(
         "mean_per_ch",
@@ -130,7 +135,21 @@ INPLACE_OPS_TEST_CASES = [
         ["Transpose", "Reshape", "ReduceMean"],
         [(0, 2, 1, 3), (1, 4, 12), (0, 2)],
     ),
-    InplaceOpTestCase("mean_per_ch", 0, get_inplace_mean_per_ch, ["ReduceMean"], [(0,)], dims="SHORT"),
+    InplaceOpTestCase(
+        "mean_per_ch",
+        0,
+        get_inplace_mean_per_ch,
+        ["ReduceMean"],
+        [
+            0,
+        ],
+        dims="SHORT",
+    ),
+    # EmptyCase
+    InplaceOpTestCase("min", (), get_inplace_min_op, ["ReduceMin"], [()]),
+    InplaceOpTestCase("mean", (), get_inplace_mean_op, ["ReduceMean"], [()]),
+    InplaceOpTestCase("max", (), lambda o, r: get_inplace_max_op(o, r, False), ["ReduceMax"], [()]),
+    InplaceOpTestCase("abs_max", (), lambda o, r: get_inplace_max_op(o, r, True), ["Abs", "ReduceMax"], [None, ()]),
 ]
 
 
@@ -159,9 +178,12 @@ def check_inplace_op(target_node, ref_types, ref_vals, inplace_branches_num, out
             const = get_prev_node(node, 1)
             if ref_val == []:
                 assert const.get_data().shape == (0,)
+            elif not isinstance(ref_val, tuple):
+                assert const.get_data() == ref_val
             else:
                 res = np.equal(const.get_data(), np.array(ref_val))
                 assert all(res)
+                assert const.get_data().shape == np.array(ref_val).shape
 
         nodes = get_next_nodes(node, 0)
         assert len(nodes) == 1
@@ -520,3 +542,107 @@ def test_no_transformations():
     for output in ret_val_1.keys():
         assert np.allclose(ret_val_1[output], ret_val_2[output])
     assert id(transformed_model) != id(model)
+
+
+MODELS_WITH_PARAMETERS = [
+    {"model": ConvNotBiasModel().ov_model, "layers": ["Conv"]},
+    {"model": WeightsModel().ov_model, "layers": ["Conv", "Conv_backprop"]},
+]
+
+
+@pytest.mark.parametrize("model_with_parameters", MODELS_WITH_PARAMETERS)
+def test_null_biases_insertion(model_with_parameters):
+    model = model_with_parameters["model"]
+    layers = model_with_parameters["layers"]
+
+    transformed_model = create_transformed_model(model, layers, TargetType.LAYER, OVNullBiasInsertionCommand, port_id=0)
+    ops_dict = {op.get_friendly_name(): op for op in transformed_model.get_ops()}
+
+    for layer_name in layers:
+        node = ops_dict[layer_name]
+        layer_shape = ops_dict[layer_name].shape
+        bias_dtype = node.get_element_type().to_dtype()
+
+        # We assume that there is only ONE bias after convolution
+        output_port = node.output(0)
+        add_with_bias = list(output_port.get_target_inputs())[0].get_node()
+        assert add_with_bias.get_type_name() == "Add"
+
+        # We assume that the bias inserts only on 1st position for Add layer
+        bias_node = add_with_bias.input(1).get_source_output().get_node()
+        assert bias_node.get_type_name() == "Constant"
+
+        assert all(bias_node.get_vector() == np.zeros(layer_shape[1], dtype=bias_dtype))
+
+
+MODELS_WITH_DATA = [
+    {"model": ConvModel(), "input_layers": ["Conv"], "output_layers": ["Conv"]},
+    {"model": QuantizedModel(), "input_layers": ["Relu_1", "Transpose"], "output_layers": ["Conv_3", "Add_2"]},
+]
+
+
+@pytest.mark.parametrize("model_with_data", MODELS_WITH_DATA)
+def test_model_extraction(model_with_data):
+    model_to_test = model_with_data["model"]
+    model = model_to_test.ov_model
+    transformation_layout = TransformationLayout()
+    command = OVModelExtractionCommand(model_with_data["input_layers"], model_with_data["output_layers"])
+    transformation_layout.register(command)
+
+    model_transformer = OVModelTransformer(model)
+    transformed_model = model_transformer.transform(transformation_layout)
+
+    path_to_dot = REFERENCE_GRAPHS_DIR / f"exctracted_{model_to_test.ref_graph_name}"
+    compare_nncf_graphs(transformed_model, path_to_dot)
+
+
+MODELS_WITH_PARAMETERS = [
+    {
+        "model": LinearModel().ov_model,
+        "layers": ["Reshape"],
+        "destination_node_names": ["MatMul"],
+        "scale": np.ones((1, 1, 1, 4)),
+    },
+    {
+        "model": WeightsModel().ov_model,
+        "layers": ["MatMul_1"],
+        "destination_node_names": ["MatMul_0"],
+        "scale": np.ones((1, 1, 1, 1)),
+    },
+]
+
+
+@pytest.mark.parametrize("model_with_parameters", MODELS_WITH_PARAMETERS)
+def test_multiply_insertion(model_with_parameters):
+    model = model_with_parameters["model"]
+    layers = model_with_parameters["layers"]
+    dest_nodes = model_with_parameters["destination_node_names"]
+    scale = model_with_parameters["scale"]
+    output_port_id = 0
+
+    transformed_model = create_transformed_model(
+        model,
+        layers,
+        TargetType.POST_LAYER_OPERATION,
+        OVMultiplyInsertionCommand,
+        port_id=output_port_id,
+        **{"scale_value": scale, "destination_node_names": dest_nodes, "multiply_node_name": "test_name"},
+    )
+    ops_dict = {op.get_friendly_name(): op for op in transformed_model.get_ops()}
+
+    for dest_node_name in dest_nodes:
+        dest_node = ops_dict[dest_node_name]
+
+        for dest_input in dest_node.inputs():
+            input_node = dest_input.get_source_output().get_node()
+            if input_node.get_type_name() == "Constant":
+                continue
+            scale_node = input_node
+
+        assert scale_node.get_type_name() == "Multiply"
+        scale_const = scale_node.input(1).get_source_output().get_node()
+
+        assert scale_const.get_type_name() == "Constant"
+        scale_const_data = scale_const.data
+
+        assert np.all(scale_const_data == scale)

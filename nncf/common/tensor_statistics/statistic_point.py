@@ -25,9 +25,7 @@ class StatisticPoint:
     algorithm implies on what algorithm nedeed this statistics.
     """
 
-    def __init__(
-        self, target_point: TargetPoint, tensor_collector: TensorStatisticCollectorBase, algorithm: "Algorithm"
-    ):
+    def __init__(self, target_point: TargetPoint, tensor_collector: TensorStatisticCollectorBase, algorithm: str):
         self.target_point = target_point
         self.algorithm_to_tensor_collectors = {algorithm: [tensor_collector]}
 
@@ -65,11 +63,12 @@ class StatisticPointsContainer(UserDict):
                             _statistic_point.algorithm_to_tensor_collectors[algorithm].extend(
                                 statistic_point.algorithm_to_tensor_collectors[algorithm]
                             )
-                            return
-                        _statistic_point.algorithm_to_tensor_collectors[
-                            algorithm
-                        ] = statistic_point.algorithm_to_tensor_collectors[algorithm]
-                        return
+                        else:
+                            _statistic_point.algorithm_to_tensor_collectors[
+                                algorithm
+                            ] = statistic_point.algorithm_to_tensor_collectors[algorithm]
+                    return
+
             self.data[target_node_name].append(statistic_point)
 
     def iter_through_statistic_points_in_target_node(
@@ -88,7 +87,7 @@ class StatisticPointsContainer(UserDict):
 
     def get_tensor_collectors(
         self, filter_fn: Optional[Callable[[StatisticPoint], bool]] = None
-    ) -> Generator[Tuple["Algorithm", StatisticPoint, TensorStatisticCollectorBase], None, None]:
+    ) -> Generator[Tuple[str, StatisticPoint, TensorStatisticCollectorBase], None, None]:
         """
         Returns iterable through all tensor collectors.
 
@@ -114,7 +113,7 @@ class StatisticPointsContainer(UserDict):
         self,
         target_node_name: str,
         filter_fn: Callable[[StatisticPoint], bool],
-        algorithm: "Algorithm",
+        algorithm: str,
     ) -> Generator[TensorStatisticCollectorBase, None, None]:
         """
         Returns iterable through all statistic collectors in node with target_node_name.

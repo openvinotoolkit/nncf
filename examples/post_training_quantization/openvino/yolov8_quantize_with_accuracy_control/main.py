@@ -18,15 +18,19 @@ import numpy as np
 import openvino.runtime as ov
 import torch
 from tqdm import tqdm
-from ultralytics import YOLO
-from ultralytics.yolo.configs import get_config
-from ultralytics.yolo.data.utils import check_dataset_yaml
-from ultralytics.yolo.engine.validator import BaseValidator as Validator
-from ultralytics.yolo.utils import DEFAULT_CONFIG
-from ultralytics.yolo.utils import ops
-from ultralytics.yolo.utils.metrics import ConfusionMatrix
+from ultralytics.cfg import get_cfg
+from ultralytics.data.converter import coco80_to_coco91_class
+from ultralytics.data.utils import check_det_dataset
+from ultralytics.engine.validator import BaseValidator as Validator
+from ultralytics.models.yolo import YOLO
+from ultralytics.utils import DATASETS_DIR
+from ultralytics.utils import DEFAULT_CFG
+from ultralytics.utils import ops
+from ultralytics.utils.metrics import ConfusionMatrix
 
 import nncf
+
+ROOT = Path(__file__).parent.resolve()
 
 
 def validate(
@@ -50,7 +54,7 @@ def validate(
         else:
             preds = [
                 torch.from_numpy(results[compiled_model.output(0)]),
-                [torch.from_numpy(results[compiled_model.output(1)])],
+                torch.from_numpy(results[compiled_model.output(1)]),
             ]
         preds = validator.postprocess(preds)
         validator.update_metrics(preds, batch)
@@ -88,17 +92,17 @@ def print_statistics(stats: np.ndarray, total_images: int, total_objects: int) -
 
 
 def prepare_validation(model: YOLO, args: Any) -> Tuple[Validator, torch.utils.data.DataLoader]:
-    data = check_dataset_yaml(args.data)
-    dataset = data["val"]
+    validator = model.smart_load("validator")(args)
+    validator.data = check_det_dataset(args.data)
+    dataset = validator.data["val"]
     print(f"{dataset}")
 
-    validator = model.ValidatorClass(args)
-    data_loader = validator.get_dataloader("../datasets/coco128-seg", 1)
+    data_loader = validator.get_dataloader(f"{DATASETS_DIR}/coco128-seg", 1)
 
-    validator = model.ValidatorClass(args)
+    validator = model.smart_load("validator")(args)
 
     validator.is_coco = True
-    validator.class_map = ops.coco80_to_coco91_class()
+    validator.class_map = coco80_to_coco91_class()
     validator.names = model.model.names
     validator.metrics.names = validator.names
     validator.nc = model.model.model[-1].nc
@@ -119,7 +123,7 @@ def benchmark_performance(model_path, config) -> float:
 
 
 def prepare_openvino_model(model: YOLO, model_name: str) -> Tuple[ov.Model, Path]:
-    model_path = Path(f"{model_name}_openvino_model/{model_name}.xml")
+    model_path = Path(f"{ROOT}/{model_name}_openvino_model/{model_name}.xml")
     if not model_path.exists():
         model.export(format="openvino", dynamic=True, half=False)
 
@@ -156,7 +160,7 @@ def quantize_ac(model: ov.Model, data_loader: torch.utils.data.DataLoader, valid
             else:
                 preds = [
                     torch.from_numpy(results[compiled_model.output(0)]),
-                    [torch.from_numpy(results[compiled_model.output(1)])],
+                    torch.from_numpy(results[compiled_model.output(1)]),
                 ]
             preds = validator.postprocess(preds)
             validator.update_metrics(preds, batch)
@@ -166,7 +170,7 @@ def quantize_ac(model: ov.Model, data_loader: torch.utils.data.DataLoader, valid
             stats_metrics = stats["metrics/mAP50-95(B)"]
         else:
             stats_metrics = stats["metrics/mAP50-95(M)"]
-        print(f"Validate: dataset lenght = {counter}, " f"metric value = {stats_metrics:.3f}")
+        print(f"Validate: dataset length = {counter}, metric value = {stats_metrics:.3f}")
         return stats_metrics
 
     quantization_dataset = nncf.Dataset(data_loader, transform_fn)
@@ -204,8 +208,8 @@ def quantize_ac(model: ov.Model, data_loader: torch.utils.data.DataLoader, valid
 def main():
     MODEL_NAME = "yolov8n-seg"
 
-    model = YOLO(f"{MODEL_NAME}.pt")
-    args = get_config(config=DEFAULT_CONFIG)
+    model = YOLO(f"{ROOT}/{MODEL_NAME}.pt")
+    args = get_cfg(cfg=DEFAULT_CFG)
     args.data = "coco128-seg.yaml"
 
     # Prepare validation dataset and helper
@@ -217,7 +221,7 @@ def main():
     # Quantize mode in OpenVINO representation
     quantized_model = quantize_ac(ov_model, data_loader, validator)
 
-    quantized_model_path = Path(f"{MODEL_NAME}_openvino_model/{MODEL_NAME}_quantized.xml")
+    quantized_model_path = Path(f"{ROOT}/{MODEL_NAME}_openvino_model/{MODEL_NAME}_quantized.xml")
     ov.serialize(quantized_model, str(quantized_model_path))
 
     # Validate FP32 model

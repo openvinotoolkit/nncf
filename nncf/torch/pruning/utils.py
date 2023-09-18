@@ -57,12 +57,12 @@ def init_output_masks_in_graph(graph: NNCFGraph, nodes: List):
     :param nodes: list with pruned nodes
     """
     for node in graph.get_all_nodes():
-        node.data.pop("output_mask", None)
+        node.attributes.pop("output_mask", None)
 
     for minfo in nodes:
         mask = minfo.operand.binary_filter_pruning_mask
         nncf_node = graph.get_node_by_id(minfo.nncf_node_id)
-        nncf_node.data["output_mask"] = PTNNCFTensor(mask)
+        nncf_node.attributes["output_mask"] = PTNNCFTensor(mask)
 
 
 def _calculate_output_shape(graph: NNCFGraph, node: NNCFNode) -> Tuple[int, ...]:

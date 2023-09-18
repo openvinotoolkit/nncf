@@ -23,7 +23,6 @@ import torch
 import torch.utils.data
 from numpy.random import random_sample
 from torch import nn
-from torch.utils import model_zoo
 from torchvision.models import resnet50
 from torchvision.transforms import transforms
 
@@ -455,8 +454,8 @@ HAWQTestParams = namedtuple(
     (
         HAWQTestParams(200, 13, 100, 1.2741253547860323, 1.274125503581261),
         HAWQTestParams(2, 13, 100, 1.2646427814393832, 1.2646428162034615),
-        HAWQTestParams(2, 10, 10, 1.83052726021032, 1.8305243724338203),
-        HAWQTestParams(2, 10, 5, 1.830527260210321, 1.8305243724338203),
+        HAWQTestParams(2, 10, 10, 1.8305234709185931, 1.8305243724338203),
+        HAWQTestParams(2, 10, 5, 1.8305234709185931, 1.8305243724338203),
     ),
     ids=("until_threshold", "until_num_iter", "batch_eq_num_data", "batch_larger_num_data"),
 )
@@ -466,9 +465,10 @@ def test_hawq_on_single_conv_without_quantizers(_seed, dataset_dir, tmp_path, pa
     tolerance = 4e-4
 
     model = squeezenet1_1(num_classes=10, dropout=0)
-    from torchvision.models.squeezenet import model_urls
 
-    load_state(model, model_zoo.load_url(model_urls["squeezenet1_1"]))
+    from torchvision.models import SqueezeNet1_1_Weights
+
+    load_state(model, SqueezeNet1_1_Weights.IMAGENET1K_V1.get_state_dict(progress=False))
     criterion = nn.CrossEntropyLoss()
     ref_trace = params.cpu_ref_trace
     rtol = 1e-5

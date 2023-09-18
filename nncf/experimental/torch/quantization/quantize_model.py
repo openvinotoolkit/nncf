@@ -13,7 +13,6 @@ from typing import Any, Dict, Optional, Tuple
 
 import torch
 
-from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.parameters import ModelType
@@ -104,14 +103,6 @@ def quantize_impl(
     if target_device == TargetDevice.CPU_SPR:
         raise RuntimeError("target_device == CPU_SPR is not supported")
 
-    if advanced_parameters is None:
-        advanced_parameters = AdvancedQuantizationParameters()
-    if not advanced_parameters.disable_bias_correction:
-        nncf_logger.warning(
-            "Bias correction and fast bias correction algorithms are not supported by Torch backend yet."
-        )
-        advanced_parameters.disable_bias_correction = True
-
     nncf_network = create_nncf_network(model.eval(), calibration_dataset)
 
     quantization_algorithm = PostTrainingQuantization(
@@ -124,9 +115,9 @@ def quantize_impl(
         advanced_parameters=advanced_parameters,
     )
 
-    quantized_model = quantization_algorithm.apply(nncf_network, dataset=calibration_dataset)
-
-    # TODO (asuslov): quantized_model = quantized_model.strip()
+    quantized_model = quantization_algorithm.apply(
+        nncf_network, nncf_network.nncf.get_graph(), dataset=calibration_dataset
+    )
 
     quantized_model.nncf.disable_dynamic_graph_building()
 

@@ -1,3 +1,14 @@
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from enum import Enum
 from typing import List, Tuple, TypeVar
 
@@ -78,7 +89,7 @@ class ReferenceQuantize:
         input_high[input_high < 0] = 0
         n = levels - 1
         scale = levels / (input_high - input_low)
-        scale = scale.astype(dtype=input_high.dtype)
+        scale = self._astype(scale, input_high.dtype)
         zp = self.backend.round(-input_low * scale)
 
         new_input_low = self.backend.where(zp < n, zp / (zp - n) * input_high, input_low)
@@ -87,7 +98,7 @@ class ReferenceQuantize:
         range_1 = input_high - new_input_low
         range_2 = new_input_high - input_low
 
-        mask = (range_1 > range_2).astype(input_high.dtype)
+        mask = self._astype((range_1 > range_2), input_high.dtype)
         inv_mask = abs(1 - mask)
 
         new_input_low = mask * new_input_low + inv_mask * input_low

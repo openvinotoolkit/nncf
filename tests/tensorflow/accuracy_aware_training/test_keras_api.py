@@ -152,6 +152,7 @@ def test_adaptive_compression_training_loop(
     statistics = compress_model.accuracy_aware_fit(
         dataset,
         compression_ctrl,
+        uncompressed_model_accuracy=uncompressed_model_accuracy,
         nncf_config=config,
         callbacks=compression_callbacks,
         initial_epoch=0,
@@ -207,6 +208,7 @@ def test_early_exit_compression_training_loop(
     statistics = compress_model.accuracy_aware_fit(
         dataset,
         compression_ctrl,
+        uncompressed_model_accuracy=uncompressed_model_accuracy,
         nncf_config=config,
         callbacks=compression_callbacks,
         initial_epoch=0,

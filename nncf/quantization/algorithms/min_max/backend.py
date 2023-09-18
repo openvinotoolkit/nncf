@@ -28,18 +28,18 @@ from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
-from nncf.scopes import IgnoredScope
 
 TModel = TypeVar("TModel")
 ALGO_BACKENDS = Registry("algo_backends")
 
 
+# pylint:disable=too-many-public-methods
 class MinMaxAlgoBackend(ABC):
     @property
     @abstractmethod
-    def mat_mul_metatype(self) -> OperatorMetatype:
+    def mat_mul_metatypes(self) -> List[OperatorMetatype]:
         """
-        Property for the backend-specific MatMul metatype.
+        Property for the backend-specific MatMul metatypes.
         """
 
     @property
@@ -58,7 +58,7 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def conv_metatype(self) -> List[OperatorMetatype]:
+    def conv_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific Convolution metatypes.
         """
@@ -75,6 +75,27 @@ class MinMaxAlgoBackend(ABC):
     def read_variable_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific metatypes that also can be interpreted as inputs (ReadValue).
+        """
+
+    @property
+    @abstractmethod
+    def add_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific metatypes that also can be interpreted as Add layer.
+        """
+
+    @property
+    @abstractmethod
+    def group_conv_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific Grouped Convolution metatypes.
+        """
+
+    @property
+    @abstractmethod
+    def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
+        """
+        Property for the backend-specific metatypes that produces quantizers that might be unified.
         """
 
     @property
@@ -105,25 +126,7 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_activation_quantizer_insertion_command(
-        nncf_graph: NNCFGraph,
-        target_point: TargetPoint,
-        quantizer_config: QuantizerConfig,
-        parameters: FakeQuantizeParameters,
-    ) -> TransformationCommand:
-        """
-        Returns backend-specific quantizer insertion command.
-
-        :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
-        :param target_point: Target location for the correction.
-        :param quantizer_config: QuantizerConfig instance for the current layer.
-        :param parameters: FakeQuantizeParameters to calculate activation quantization parameters.
-        :return: Backend-specific TransformationCommand for the quantizer insertion operation.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def create_weight_quantizer_insertion_command(
+    def create_quantizer_insertion_command(
         nncf_graph: NNCFGraph,
         target_point: TargetPoint,
         quantizer_config: QuantizerConfig,
@@ -203,13 +206,23 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_ignored_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
+    def get_ignored_metatypes(model_type: ModelType, device: TargetDevice) -> List[OperatorMetatype]:
         """
-        Returns ignores scope based on a model type and device parameters.
+        Returns ignored metatypes based on a model type and device parameters.
 
         :param model_type: Model type parameter.
         :param device: Target device.
-        :return: Instance of ignored scope.
+        :return: List of ignored metatypes.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> List[str]:
+        """
+        Returns names of ignored nodes based on layer_attributes.
+
+        :param nncf_graph: NNCFGraph instance.
+        :return: List of ignored names.
         """
 
     @staticmethod

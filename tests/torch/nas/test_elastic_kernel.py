@@ -76,6 +76,22 @@ def test_elastic_kernel_with_intermediate_value():
     assert torch.equal(actual_output, ref_output)
 
 
+def test_elastic_kernel_output_shape():
+    kernel_handler, supernet = create_single_conv_kernel_supernet(kernel_size=9, padding=2)
+
+    device = next(iter(supernet.parameters())).device
+    input_ = torch.ones([1, 1, 9, 9]).to(device)
+
+    original_model = supernet.nncf.get_clean_shallow_copy()
+    ref_output = original_model(input_)
+
+    kernel_size_list = [9, 7, 5]
+    for kernel_size in kernel_size_list:
+        kernel_handler.activate_subnet_for_config([kernel_size])
+        actual_output = supernet(input_)
+        assert actual_output.shape == ref_output.shape
+
+
 def test_elastic_kernel_with_custom_transition_matrix():
     kernel_handler, supernet = create_single_conv_kernel_supernet()
     device = next(iter(supernet.parameters())).device

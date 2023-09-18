@@ -56,6 +56,7 @@ from examples.torch.object_detection.layers.modules import MultiBoxLoss
 from examples.torch.object_detection.model import build_ssd
 from nncf.api.compression import CompressionStage
 from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
+from nncf.config.structures import ModelEvaluationArgs
 from nncf.config.utils import is_accuracy_aware_training
 from nncf.torch import create_compressed_model
 from nncf.torch import load_state
@@ -197,7 +198,11 @@ def main_worker(current_gpu, config):
     resuming_checkpoint = None
     if resuming_checkpoint_path is not None:
         resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
-    compression_ctrl, net = create_model(config, resuming_checkpoint)
+    net = create_model(config)
+    if "train" in config.mode and is_accuracy_aware_training(config):
+        with torch.no_grad():
+            uncompressed_model_accuracy = config.nncf_config.get_extra_struct(ModelEvaluationArgs).eval_fn(net)
+    compression_ctrl, net = compress_model(net, config, resuming_checkpoint)
     if config.distributed:
         config.batch_size //= config.ngpus_per_node
         config.workers //= config.ngpus_per_node
@@ -264,7 +269,9 @@ def main_worker(current_gpu, config):
             optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
             return optimizer, lr_scheduler
 
-        acc_aware_training_loop = create_accuracy_aware_training_loop(nncf_config, compression_ctrl)
+        acc_aware_training_loop = create_accuracy_aware_training_loop(
+            nncf_config, compression_ctrl, uncompressed_model_accuracy
+        )
         net = acc_aware_training_loop.run(
             net,
             train_epoch_fn=train_epoch_fn,
@@ -356,7 +363,7 @@ def create_dataloaders(config):
     return test_data_loader, train_data_loader, init_data_loader
 
 
-def create_model(config: SampleConfig, resuming_checkpoint: dict = None):
+def create_model(config: SampleConfig):
     input_info_list = create_input_infos(config.nncf_config)
     image_size = input_info_list[0].shape[-1]
     ssd_net = build_ssd(config.model, config.ssd_params, image_size, config.num_classes, config)
@@ -367,8 +374,13 @@ def create_model(config: SampleConfig, resuming_checkpoint: dict = None):
         load_state(ssd_net, sd)
 
     ssd_net.to(config.device)
+
+    return ssd_net
+
+
+def compress_model(model: torch.nn.Module, config: SampleConfig, resuming_checkpoint: dict = None):
     model_state_dict, compression_state = extract_model_and_compression_states(resuming_checkpoint)
-    compression_ctrl, compressed_model = create_compressed_model(ssd_net, config.nncf_config, compression_state)
+    compression_ctrl, compressed_model = create_compressed_model(model, config.nncf_config, compression_state)
     if model_state_dict is not None:
         load_state(compressed_model, model_state_dict, is_resume=True)
     compressed_model, _ = prepare_model_for_execution(compressed_model, config)

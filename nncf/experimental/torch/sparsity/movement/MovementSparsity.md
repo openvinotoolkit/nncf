@@ -1,4 +1,4 @@
-### Movement Sparsity
+# Movement Sparsity
 
 [Movement Pruning (Sanh et al., 2020)](https://arxiv.org/pdf/2005.07683.pdf) is an effective learning-based unstructured sparsification algorithm, especially for Transformer-based models in transfer learning setup. [Lagunas et al., 2021](https://arxiv.org/pdf/2109.04838.pdf) extends the algorithm to sparsify by block grain size, enabling structured sparsity which can achieve device-agnostic inference acceleration.
 
@@ -6,7 +6,7 @@ NNCF implements both unstructured and structured movement sparsification. The im
 
 For usage explanation of the algorithm, let's start with an example configuration below which is targeted for BERT models.
 
-**Example configuration of Movement Sparsity for BERT models**
+## Example configuration of Movement Sparsity for BERT models
 
 ```json
 {
@@ -39,20 +39,20 @@ This diagram is the sparsity level of BERT-base model over the optimization life
 
 2. **Structured masking and fine-tuning**: At the end of first stage, i.e. `warmup_end_epoch`, the sparsified model cannot be accelerated without tailored HW/SW but some sparse structures can be totally discarded from the model to save compute and memory footprint. NNCF provides mechanism to achieve structured masking by `"enable_structured_masking": true`, where it automatically resolves the structured masking between dependent layers and rewinds the sparsified parameters that does not participate in acceleration for task modeling. In the example above, the sparsity level has dropped after `warmup_end_epoch` due to structured masking and the model will continue to fine-tune thereafter. Currently, the automatic structured masking feature was tested on **_BERT, DistilBERT, RoBERTa, MobileBERT, Wav2Vec2, Swin, ViT, CLIPVisual_** architectures defined by [Hugging Face&#39;s transformers](https://huggingface.co/docs/transformers/index). Support for other architectures is not guaranteed. Users can disable this feature by setting `"enable_structured_masking": false`, where the sparse structures at the end of first stage will be frozen and training/fine-tuning will continue on unmasked parameters. Please refer next section to realize model inference acceleration with [OpenVINO](https://docs.openvino.ai/latest/index.html) toolchain.
 
-#### Inference Acceleration via [OpenVINO](https://docs.openvino.ai/latest/index.html) 
+## Inference Acceleration via [OpenVINO](https://docs.openvino.ai/latest/index.html)
 
 Optimized models are compatible with OpenVINO toolchain. Use `compression_controller.export_model("movement_sparsified_model.onnx")` to export model in onnx format. Sparsified parameters in the onnx are in value of zero. Structured sparse structures can be discarded during ONNX translation to OpenVINO IR using [Model Optimizer](https://docs.openvino.ai/latest/openvino_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html) with additional option `--transform=Pruning`. Corresponding IR is compressed and deployable with [OpenVINO Runtime](https://docs.openvino.ai/latest/openvino_docs_OV_UG_OV_Runtime_User_Guide.html). To quantify inference performance improvement, both ONNX and IR can be profiled using [Benchmark Tool](https://docs.openvino.ai/latest/openvino_inference_engine_tools_benchmark_tool_README.html).
 
-#### Getting Started
+## Getting Started
 
 Please refer [optimum-intel](https://github.com/huggingface/optimum-intel/tree/main/examples/openvino) for example pipelines on image classification, question answering, etc. The repository also provides examples of joint pruning, quantization and distillation, end-to-end from NNCF optimization to compressed OpenVINO IR.
 
-#### Known Limitation
+## Known Limitation
 
 1. Movement sparsification only supports `torch.nn.Linear` layers.
 2. Automatic structured masking feature supports **BERT, DistilBERT, RoBERTa, MobileBERT, Wav2Vec2, Swin, ViT, CLIPVisual** architectures defined by [Hugging Face&#39;s transformers](https://huggingface.co/docs/transformers/index). Other similar architectures may work, but support is not guaranteed.
 
-#### Detailed description of Movement Sparsity configuration
+## Detailed description of Movement Sparsity configuration
 
 - `algorithm`: The algorithm name is "movement_sparsity".
 - `warmup_start_epoch` & `warmup_end_epoch`: The algorithm will conduct model weight sparsification gradually from epoch >= `warmup_start_epoch` to epoch < `warmup_end_epoch`, with epoch is zero-indexed. This span is known as sparsification warm-up (stage 1).
@@ -68,7 +68,7 @@ Please refer [optimum-intel](https://github.com/huggingface/optimum-intel/tree/m
 
 - `ignored_scopes`: A string or a list of strings representing the layers to be ignored by Movement Sparsity algorithm.
 
-#### Extra configuration in `params` section
+## Extra configuration in `params` section
 
 Following arguments have been defaulted to work well out of the box. However, you can specify them for a more controlled sparsification strategy.
 
@@ -76,7 +76,7 @@ Following arguments have been defaulted to work well out of the box. However, yo
 - `power`: Optional. The importance threshold and regularization factor follow a concave polynomial warm-up schedule where its decay factor is parameterized by `power`. Default is 3.
 - `steps_per_epoch`: Optional. Number of steps per epoch is needed for threshold and regularization factor scheduling. It varies by dataset size and training hyperparameters. By default, this can be automatically derived during the first epoch without any side effect, as long as `warmup_start_epoch` >= 1. Specification of `steps_per_epoch` is only required when warm-up sparsification is intended to start at the first epoch.
 
-#### References
+## References
 
 1. Victor Sanh, Thomas Wolf, and Alexander M. Rush. 2020. [Movement Pruning: Adaptive Sparsity by Fine-Tuning]((https://arxiv.org/pdf/2005.07683.pdf)). In Advances in Neural Information Processing Systems, 33, pp. 20378-20389.
 2. François Lagunas, Ella Charlaix, Victor Sanh, and Alexander M. Rush. 2021. [Block Pruning For Faster Transformers]((https://arxiv.org/pdf/2109.04838.pdf)). In Proceedings of the 2021 Conference on Empirical Methods in Natural Language Processing, pp. 10619–10629.

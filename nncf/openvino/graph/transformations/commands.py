@@ -135,7 +135,7 @@ class OVModelExtractionCommand(Command):
 
     def __init__(self, inputs: List[str], outputs: List[str]):
         """
-        :param inputs: List of the input names that denote the sub-graph beggining.
+        :param inputs: List of the input names that denote the sub-graph beginning.
         :param outputs: List of the output names that denote the sub-graph ending.
         """
         super().__init__(TransformationType.EXTRACT)
@@ -143,5 +143,49 @@ class OVModelExtractionCommand(Command):
         self.outputs = outputs
 
     def union(self, other: "Command") -> "Command":
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
+
+class OVNullBiasInsertionCommand(TransformationCommand):
+    """
+    Inserts null bias for the corresponding node.
+    """
+
+    def __init__(self, target_point: OVTargetPoint):
+        """
+        :param target_point: The TargetPoint instance for the insertion that contains layer's information.
+        """
+        super().__init__(TransformationType.INSERT, target_point)
+
+    def union(self, other: "TransformationCommand") -> "TransformationCommand":
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
+
+class OVMultiplyInsertionCommand(OVInsertionCommand):
+    """
+    Inserts Multiply nodes before the corresponding nodes.
+    """
+
+    def __init__(
+        self,
+        target_point: OVTargetPoint,
+        scale_value: np.ndarray,
+        destination_node_names: List[str],
+        multiply_node_name: str,
+    ):
+        """
+        :param target_point: The TargetPoint instance for the insertion that contains layer's information.
+        :param scale_value: Scale value for Multiply layer.
+        :param destination_node_names: New layer consumers.
+        :param multiply_node_name: New layer name.
+        """
+        super().__init__(target_point)
+        self.scale_value = scale_value
+        self.destination_node_names = destination_node_names
+        self.multiply_node_name = multiply_node_name
+
+    def union(self, other: "TransformationCommand") -> "TransformationCommand":
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
         raise NotImplementedError()

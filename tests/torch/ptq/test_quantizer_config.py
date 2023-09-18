@@ -13,13 +13,12 @@ import pytest
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
-from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollector
 from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
-from tests.post_training.models import NNCFGraphToTest
-from tests.post_training.models import NNCFGraphToTestDepthwiseConv
-from tests.post_training.models import NNCFGraphToTestSumAggregation
-from tests.post_training.test_quantizer_config import TemplateTestQuantizerConfig
+from tests.post_training.test_templates.models import NNCFGraphToTest
+from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseConv
+from tests.post_training.test_templates.models import NNCFGraphToTestSumAggregation
+from tests.post_training.test_templates.test_quantizer_config import TemplateTestQuantizerConfig
 from tests.torch.ptq.helpers import get_depthwise_conv_nncf_graph
 from tests.torch.ptq.helpers import get_single_conv_nncf_graph
 from tests.torch.ptq.helpers import get_sum_aggregation_nncf_graph

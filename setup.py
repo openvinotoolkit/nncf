@@ -101,50 +101,55 @@ def find_version(*file_paths):
 
 
 INSTALL_REQUIRES = [
-    "ninja>=1.10.0.post2, <1.11",
-    "texttable>=1.6.3",
-    "scipy>=1.3.2, <1.11",
+    "jsonschema>=3.2.0",
+    "jstyleson>=0.0.2",
+    "natsort>=7.1.0",
     "networkx>=2.6, <=2.8.2",  # see ticket 94048 or https://github.com/networkx/networkx/issues/5962
-    "numpy>=1.19.1, <1.24",
+    "ninja>=1.10.0.post2, <1.11",
+    "numpy>=1.19.1, <1.25",
+    "openvino-telemetry>=2023.1.1",
+    "packaging>=20.0",
+    "pandas>=1.1.5,<2.1",
+    "psutil",
+    "pydot>=1.4.1",
+    "pymoo>=0.6.0.1",
     # The recent pyparsing major version update seems to break
     # integration with networkx - the graphs parsed from current .dot
     # reference files no longer match against the graphs produced in tests.
     # Using 2.x versions of pyparsing seems to fix the issue.
     # Ticket: 69520
     "pyparsing<3.0",
-    "pymoo==0.5.0",
-    "jsonschema>=3.2.0",
-    "pydot>=1.4.1",
-    "jstyleson>=0.0.2",
-    "tqdm>=4.54.1",
-    "natsort>=7.1.0",
-    "pandas>=1.1.5,<2.1",
     "scikit-learn>=0.24.0",
-    "openvino-telemetry",
+    "scipy>=1.3.2, <1.11",
+    "texttable>=1.6.3",
+    "tqdm>=4.54.1",
 ]
 
 
 TF_EXTRAS = [
-    "tensorflow~=2.11.1",
-    # The workaround of the protobuf issue and should be fixed with migration on TF 2.12
+    "tensorflow~=2.12.0",
+    # This is required for support of TF 2.8.4 which needs protobuf<=3.19.6
     "tensorflow-metadata<=1.13.0",
 ]
 
 TORCH_EXTRAS = [
-    "torch>=1.9.1,<1.14;python_version < '3.11'",
+    "torch>=1.13.0,<2.1;python_version < '3.11'",
 ]
 
 ONNX_EXTRAS = ["onnx~=1.13.1", "onnxruntime~=1.14.1;python_version < '3.11'"]
 
-OPENVINO_EXTRAS = ["openvino==2023.0.0"]
+OPENVINO_EXTRAS = ["openvino==2023.0.1"]
 
 
 EXTRAS_REQUIRE = {
     "dev": [
+        "black==23.3.0",
+        "isort==5.12.0",
         "kaleido>=0.2.1",
         "matplotlib>=3.3.4, <3.6",
         "pillow>=9.0.0",
         "plotly-express>=0.4.1",
+        "pre-commit==3.2.2",
     ],
     "tests": ["pytest"],
     "docs": [],

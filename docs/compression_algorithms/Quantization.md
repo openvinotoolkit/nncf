@@ -1,10 +1,11 @@
+# Uniform Quantization with Fine-Tuning
+
 >_Scroll down for the examples of the JSON configuration files that can be used to apply this algorithm_.
 
-### Uniform Quantization with Fine-Tuning
 A uniform "fake" quantization method supports an arbitrary number of bits (>=2) which is used to represent weights and activations.
 The method performs differentiable sampling of the continuous signal (for example, activations or weights) during forward pass, simulating inference with integer arithmetic.
 
-#### Common Quantization Formula
+## Common Quantization Formula
 
 Quantization is parametrized by clamping range and number of quantization levels. The sampling formula is the following:
 
@@ -16,11 +17,9 @@ $clamp(input; input\\_low, input\\_high)$
 
 $s = \frac{levels - 1}{input\\_high - input\\_low}$
 
-
 $input\\_low$ and $input\\_high$ represent the quantization range and $\left\lfloor \cdot \right\rceil$ denotes rounding to the nearest integer.
 
-
-####  Symmetric Quantization
+## Symmetric Quantization
 
 During the training, we optimize the **scale** parameter that represents the range `[input_low, input_range]` of the original signal using gradient descent:
 
@@ -28,17 +27,17 @@ $input\\_low=scale*\frac{level\\_low}{level\\_high}$
 
 $input\\_high=scale$
 
-
 In the formula above, $level\\_low$ and $level\\_high$ represent the range of the discrete signal.
- - For weights:
-    
+
+- For weights:
+
     $level\\_low=-2^{bits-1}+1$
-    
+
     $level\\_high=2^{bits-1}-1$
 
     $levels=255$
 
- - For unsigned activations:
+- For unsigned activations:
 
     $level\\_low=0$
 
@@ -46,7 +45,7 @@ In the formula above, $level\\_low$ and $level\\_high$ represent the range of th
 
     $levels=256$
 
- - For signed activations:
+- For signed activations:
 
     $level\\_low=-2^{bits-1}$
 
@@ -60,7 +59,7 @@ $output = \left\lfloor clamp(input * \frac{level\\_high}{scale}, level\\_low, le
 
 Use the `num_init_samples` parameter from the `initializer` group to initialize the values of `scale` and determine which activation should be signed or unsigned from the collected statistics using given number of samples.
 
-####  Asymmetric Quantization
+## Asymmetric Quantization
 
 During the training we optimize the `input_low` and `input_range` parameters using gradient descent:
 
@@ -93,19 +92,20 @@ $$
 &\end{flalign}
 $$
 
-
 You can use the `num_init_samples` parameter from the `initializer` group to initialize the values of `input_low` and `input_range` from the collected statistics using given number of samples.
 
-#### Quantizer setup and hardware config files
+## Quantizer setup and hardware config files
+
 NNCF allows to quantize models for best results on a given Intel hardware type when executed using OpenVINO runtime.
 To achieve this, the quantizer setup should be performed with following considerations in mind:
-1) every operation that can accept quantized inputs on a given HW (i.e. can be executed using quantized input values) should have its inputs quantized in NNCF
-2) the quantized inputs should be quantized with a configuration that is supported on a given HW for a given operation (e.g. per-tensor vs per-channel quantization, or 8 bits vs. 4 bits)
-3) for operations that are agnostic to quantization, the execution should handle quantized tensors rather than full-precision tensors.
-4) certain operation sequences will be runtime-optimized to execute in a single kernel call ("fused"), and additional quantizer insertion/quantization simulation within such operation sequences will be detrimental to overall performance
+
+1. every operation that can accept quantized inputs on a given HW (i.e. can be executed using quantized input values) should have its inputs quantized in NNCF
+2. the quantized inputs should be quantized with a configuration that is supported on a given HW for a given operation (e.g. per-tensor vs per-channel quantization, or 8 bits vs. 4 bits)
+3. for operations that are agnostic to quantization, the execution should handle quantized tensors rather than full-precision tensors.
+4. certain operation sequences will be runtime-optimized to execute in a single kernel call ("fused"), and additional quantizer insertion/quantization simulation within such operation sequences will be detrimental to overall performance
 
 These requirements are fulfilled by the quantizer propagation algorithm.
-The algorithm first searches the internal NNCF representation of the model's control flow graph for predefined patterns that are "fusable", and apply the fusing to the internal graph representation as well.
+The algorithm first searches the internal NNCF representation of the model's control flow graph for predefined patterns that are "fusible", and apply the fusing to the internal graph representation as well.
 Next, the operations in the graph that can be associated to input-quantizable operations on a given target hardware are assigned a single quantizer for each its quantizable activation input, with a number of possible quantizer configurations attached to it (that are feasible on target HW).
 The quantizers are then "propagated" against the data flow in the model's control flow graph as far as possible, potentially merging with other quantizers.
 Once all quantizers have reached a standstill in their propagation process, each will have a final (possibly reduced) set of possible quantizer configurations, from which a single one is either chosen manually, or using a precision initialization algorithm (which accepts the potential quantizer locations and associated potential quantizer configuration sets).
@@ -122,10 +122,9 @@ The quantization configuration in the `"target_device": "TRIAL"` case may be ove
 
 For all target HW types, parts of the model graph can be marked as non-quantizable by using the `"ignored_scopes"` field - inputs and weights of matching nodes in the NNCF internal graph representation will not be quantized, and the downstream quantizers will not propagate upwards through such nodes.
 
+## Quantization Implementation
 
-#### Quantization Implementation
-
-In our implementation, we use a slightly transformed formula. It is equivalent by order of floating-point operations to simplified symmetric formula and the assymetric one. The small difference is addition of small positive number `eps` to prevent division by zero and taking absolute value of range, since it might become negative on backward:
+In our implementation, we use a slightly transformed formula. It is equivalent by order of floating-point operations to simplified symmetric formula and the asymmetric one. The small difference is addition of small positive number `eps` to prevent division by zero and taking absolute value of range, since it might become negative on backward:
 
 $output = \frac{clamp(\left\lfloor (input-input\\_low^{*}) *s - ZP \right \rceil, level\\_low, level\\_high)}{s}$
 
@@ -145,10 +144,11 @@ $input\\_low^{*} = 0$
 
 $input\\_range^{*} = scale$
 
-The most common case of applying quantization is 8-bit uniform quantization. 
+The most common case of applying quantization is 8-bit uniform quantization.
 NNCF example scripts provide a plethora of configuration files that implement this case ([PyTorch](../../examples/torch/classification/configs/quantization/inception_v3_imagenet_int8.json), [TensorFlow](../../examples/tensorflow/classification/configs/quantization/inception_v3_imagenet_int8.json))
 
 ---
+
 **NOTE**
 
 There is a known issue with AVX2 and AVX512 CPU devices. The issue appears with 8-bit matrix calculations with tensors which elements are close to the maximum or saturated.
@@ -160,18 +160,18 @@ This regime is used when `"target_device": "CPU"` or `"target_device": "ANY"` se
 
 To control the application of overflow fix, `"overflow_fix"` config option is introduced. The default value is `"overflow_fix": "enable"`. To apply the overflow issue fix only to the first layer, use `"overflow_fix": "first_layer_only"`. To disable the overflow issue fix for all layers, use `"overflow_fix": "disable"`.
 
-
-
 ---
 
 <a name="mixed_precision_quantization"></a>
-#### Mixed-Precision Quantization
+
+## Mixed-Precision Quantization
 
 Quantization to lower precisions (e.g. 6, 4, 2 bits) is an efficient way to accelerate inference of neural networks.
 Although NNCF supports quantization with an arbitrary number of bits to represent weights and activations values,
 choosing ultra-low bitwidth could noticeably affect the model's accuracy. A good trade-off between accuracy and performance is achieved by assigning different precisions to different layers. NNCF provides two automatic precision assignment algorithms, namely **HAWQ** and **AutoQ**.
 
-#### HAWQ
+### HAWQ
+
 NNCF utilizes the [HAWQ-v2](https://arxiv.org/pdf/1911.03852.pdf) method to automatically choose optimal mixed-precision
 configuration by taking into account the sensitivity of each layer, i.e. how much lower-bit quantization of each layer
 decreases the accuracy of model. The most sensitive layers are kept at higher precision. The sensitivity of the i-th layer is
@@ -227,7 +227,8 @@ is chosen. By default, liberal mode is used as it does not reject a large number
 The `bitwidth_assignment_mode` parameter can override it to the strict one.
 
 For automatic mixed-precision selection it's recommended to use the following template of configuration file:
-```
+
+```json
     "optimizer": {
         "base_lr": 3.1e-4,
         "schedule_type": "plateau",
@@ -271,7 +272,8 @@ file.
 
 ---
 
-#### AutoQ
+### AutoQ
+
 NNCF provides an alternate mode, namely AutoQ, for mixed-precision automation. It is an AutoML-based technique that automatically learns the layer-wise bitwidth with explored experiences. Based on [HAQ](https://openaccess.thecvf.com/content_CVPR_2019/papers/Wang_HAQ_Hardware-Aware_Automated_Quantization_With_Mixed_Precision_CVPR_2019_paper.pdf), AutoQ utilizes an actor-critic algorithm, Deep Deterministic Policy Gradient (DDPG) for efficient search over the bitwidth space. DDPG is trained in an episodic fashion, converging to a deterministic mixed-precision policy after a number of episodes. An episode is constituted by stepping, the DDPG transitions from quantizer to quantizer sequentially to predict a precision of a layer. Each quantizer essentially denotes a state in RL framework and it is represented by attributes of the associated layers. For example, a quantizer for 2D Convolution is represented by its quantizer Id (integer), input and output channel size, feature map dimension, stride size, if it is depthwise, number of parameters etc. It is recommended to check out ```_get_layer_attr``` in [```quantization_env.py```](https://github.com/openvinotoolkit/nncf/blob/develop/nncf/automl/environment/quantization_env.py#L333) for the featurization of different network layer types.
 
 When the agent enters a state/quantizer, it receives the state features and forward passes them through its network. The output of the forward pass is a scalar continuous action output which is subsequently mapped to the bitwidth options of the particular quantizer. The episode terminates after the prediction of the last quantizer and a complete layer-wise mixed-precision policy is obtained. To ensure a policy fits in the user-specified compression ratio, the policy is post processed by reducing the precision sequentially from the last quantizer until the compression ratio is met.
@@ -315,7 +317,7 @@ As briefly mentioned earlier, user is required to register a callback function f
 
 Following is an example of wrapping ImageNet validation loop as a callback. Top5 accuracy is chosen as the scalar objective metric. ```autoq_eval_fn``` and ```val_loader``` are registered in the call of ```register_default_init_args```.
 
-```
+```python
     def autoq_eval_fn(model, eval_loader):
         _, top5 = validate(eval_loader, model, criterion, config)
         return top5
@@ -327,11 +329,12 @@ Following is an example of wrapping ImageNet validation loop as a callback. Top5
 
 The complete config [example](../../examples/torch/classification/configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_autoq_staged.json) that applies AutoQ to MobileNetV2 is provided within the [classification sample](../../examples/torch/classification) for PyTorch.
 
-### Example configuration files:
+## Example configuration files
 
 >_For the full list of the algorithm configuration parameters via config file, see the corresponding section in the [NNCF config schema](https://openvinotoolkit.github.io/nncf/)_.
 
 - Quantize a model using default algorithm settings (8-bit, quantizers configuration chosen to be compatible with all Intel target HW types):
+
 ```json5
 {
     "input_info": { "sample_size": [1, 3, 224, 224] }, // the input shape of your model may vary
@@ -342,6 +345,7 @@ The complete config [example](../../examples/torch/classification/configs/mixed_
 ```
 
 - Quantize a model to 8-bit precision targeted for Intel CPUs, with additional constraints of symmetric weight quantization and asymmetric activation quantization:
+
 ```json5
 {
     "input_info": { "sample_size": [1, 3, 32, 32] }, // the input shape of your model may vary
@@ -355,6 +359,7 @@ The complete config [example](../../examples/torch/classification/configs/mixed_
 ```
 
 - Quantize a model with fully symmetric INT8 quantization and increased number of quantizer range initialization samples (make sure to supply a corresponding data loader in code via `nncf.config.structures.QuantizationRangeInitArgs` or the `register_default_init_args` helper function):
+
 ```json5
 {
     "input_info": { "sample_size": [1, 3, 224, 224] }, // the input shape of your model may vary
@@ -369,6 +374,7 @@ The complete config [example](../../examples/torch/classification/configs/mixed_
 ```
 
 - Quantize a model using 4-bit per-channel quantization for experimentation/trial purposes (end-to-end performance and/or compatibility with OpenVINO Inference Engine not guaranteed)
+
 ```json5
 {
     "input_info": { "sample_size": [1, 3, 32, 32] }, // the input shape of your model may vary
@@ -382,6 +388,7 @@ The complete config [example](../../examples/torch/classification/configs/mixed_
 ```
 
 - Quantize a multi-input model to 8-bit precision targeted for Intel CPUs, with a range initialization performed using percentile statistics (empirically known to be better for NLP models, for example) and excluding some parts of the model from quantization:
+
 ```json5
 {
     "input_info": [
@@ -418,7 +425,9 @@ The complete config [example](../../examples/torch/classification/configs/mixed_
     "target_device": "TRIAL"
 }
 ```
+
 - Quantize a model to variable bit width using 300 iterations of the AutoQ algorithm, with a target model size (w.r.t the effective parameter storage size) set to 15% of the FP32 model and possible quantizer bitwidths limited to INT2, INT4 or INT8.
+
 ```json5
 {
     "input_info": { "sample_size": [1, 3, 224, 224] }, // the input shape of your model may vary
@@ -436,4 +445,3 @@ The complete config [example](../../examples/torch/classification/configs/mixed_
     "target_device": "TRIAL"
 }
 ```
-

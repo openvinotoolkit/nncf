@@ -1,16 +1,13 @@
-"""
- Copyright (c) 2022 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
-
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
@@ -62,6 +59,7 @@ from nncf.torch.graph.operator_metatypes import PTSigmoidMetatype
 from nncf.torch.graph.operator_metatypes import PTSILUMetatype
 from nncf.torch.graph.operator_metatypes import PTSoftmaxMetatype
 from nncf.torch.graph.operator_metatypes import PTSplitMetatype
+from nncf.torch.graph.operator_metatypes import PTSqueezeMetatype
 from nncf.torch.graph.operator_metatypes import PTSubMetatype
 from nncf.torch.graph.operator_metatypes import PTSumMetatype
 from nncf.torch.graph.operator_metatypes import PTTanhMetatype
@@ -95,6 +93,7 @@ class PTIdentityMaskForwardPruningOp(IdentityMaskForwardPruningOp):
         PTSoftmaxMetatype,
         PTAvgPool2dMetatype,
         PTMaxPool2dMetatype,
+        PTMeanMetatype,
         PTDropoutMetatype,
         PTSILUMetatype,
         PTPowerMetatype,
@@ -127,7 +126,7 @@ class PTElementwisePruningOp(ElementwisePruningOp):
 
 @PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES.register("stop_propagation_ops")
 class PTStopMaskForwardPruningOp(StopMaskForwardPruningOp):
-    subtypes = [PTMeanMetatype, PTMaxMetatype, PTMinMetatype, PTSumMetatype, UnknownMetatype]
+    subtypes = [PTMaxMetatype, PTMinMetatype, PTSumMetatype, UnknownMetatype]
 
 
 @PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES.register("transpose")
@@ -137,7 +136,7 @@ class PTTransposePruningOp(TransposePruningOp):
 
 @PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES.register("reshape")
 class PTReshape(ReshapePruningOp):
-    subtypes = [PTReshapeMetatype]
+    subtypes = [PTReshapeMetatype, PTSqueezeMetatype]
 
 
 @PT_EXPERIMENTAL_PRUNING_OPERATOR_METATYPES.register("split")

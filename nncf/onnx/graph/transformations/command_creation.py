@@ -25,6 +25,6 @@ def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray) -> ON
     :param bias_value: The new bias value that will be set.
     :return: The `ONNXBiasCorrectionCommand` command to update bias.
     """
-    bias_port_id = node.metatype.weight_definitions.bias_port_id
+    bias_port_id = node.metatype.bias_port_id
     target_point = ONNXTargetPoint(TargetType.LAYER, node.node_name, bias_port_id)
     return ONNXBiasCorrectionCommand(target_point, bias_value)

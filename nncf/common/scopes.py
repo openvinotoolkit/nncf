@@ -15,6 +15,7 @@ from typing import List, Optional, Union
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
+from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizerId
 from nncf.scopes import IgnoredScope
 from nncf.scopes import convert_ignored_scope_to_list
@@ -103,6 +104,7 @@ def check_scopes_in_graph(
     graph: NNCFGraph,
     ignored_scopes: Union[IgnoredScope, List[str]],
     target_scopes: Optional[List[str]] = None,
+    validate_scopes: bool = True,
 ) -> None:
     """
     Raise RuntimeError in case if ignored/target scope names do not match model graph.
@@ -111,6 +113,8 @@ def check_scopes_in_graph(
     :param ignored_scopes: The instance of IgnoredScope or a list of strings specifying a denylist
         for the serializable_id.
     :param target_scopes: A list of strings specifying an allowlist for the serializable_id.
+    :param validate_scopes: If set to True, then a RuntimeError will be raised if the names of the
+      ignored/target scopes do not match the names of the scopes in the model graph.
     """
     node_list = graph.get_all_nodes()
     not_matched_ignored_scopes = get_not_matched_scopes(ignored_scopes, node_list)
@@ -132,4 +136,6 @@ def check_scopes_in_graph(
             "scopes in terms of the names there."
         )
 
-        raise RuntimeError(err_message)
+        if validate_scopes:
+            raise RuntimeError(err_message)
+        nncf_logger.info(err_message)

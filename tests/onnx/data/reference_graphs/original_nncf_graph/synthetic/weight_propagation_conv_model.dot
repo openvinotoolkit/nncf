@@ -1,0 +1,25 @@
+strict digraph  {
+"0 reshape" [id=0, type=Reshape];
+"1 transpose" [id=1, type=Transpose];
+"2 identity1" [id=2, type=Identity];
+"3 conv1" [id=3, type=Conv];
+"4 constant" [id=4, type=Constant];
+"5 reshape2" [id=5, type=Reshape];
+"6 identity2" [id=6, type=Identity];
+"7 conv2" [id=7, type=Conv];
+"8 constant2" [id=8, type=Constant];
+"9 conv4" [id=9, type=Conv];
+"10 nncf_model_input_0" [id=10, type=nncf_model_input];
+"11 nncf_model_output_0" [id=11, type=nncf_model_output];
+"0 reshape" -> "1 transpose"  [label="[1, 1, 3, 3]", style=solid];
+"1 transpose" -> "2 identity1"  [label="[1, 1, 3, 3]", style=solid];
+"2 identity1" -> "3 conv1"  [label="[1, 1, 3, 3]", style=solid];
+"3 conv1" -> "7 conv2"  [label="[1, 1, 28, 28]", style=solid];
+"4 constant" -> "5 reshape2"  [label="[1, 1, 3, 3]", style=solid];
+"5 reshape2" -> "6 identity2"  [label="[1, 1, 3, 3]", style=solid];
+"6 identity2" -> "7 conv2"  [label="[1, 1, 3, 3]", style=solid];
+"7 conv2" -> "9 conv4"  [label="[1, 1, 28, 28]", style=solid];
+"8 constant2" -> "9 conv4"  [label="[1, 1, 3, 3]", style=solid];
+"9 conv4" -> "11 nncf_model_output_0"  [label="[1, 1, 28, 28]", style=solid];
+"10 nncf_model_input_0" -> "3 conv1"  [label="[1, 1, 28, 28]", style=solid];
+}

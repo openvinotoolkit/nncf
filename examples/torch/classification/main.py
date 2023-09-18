@@ -226,6 +226,9 @@ def main_worker(current_gpu, config: SampleConfig):
 
     model.to(config.device)
 
+    if "train" in config.mode and is_accuracy_aware_training(config):
+        uncompressed_model_accuracy = model_eval_fn(model)
+
     resuming_checkpoint = None
     if resuming_checkpoint_path is not None:
         resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
@@ -293,7 +296,9 @@ def main_worker(current_gpu, config: SampleConfig):
                 optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
                 return optimizer, lr_scheduler
 
-            acc_aware_training_loop = create_accuracy_aware_training_loop(nncf_config, compression_ctrl)
+            acc_aware_training_loop = create_accuracy_aware_training_loop(
+                nncf_config, compression_ctrl, uncompressed_model_accuracy
+            )
             model = acc_aware_training_loop.run(
                 model,
                 train_epoch_fn=train_epoch_fn,

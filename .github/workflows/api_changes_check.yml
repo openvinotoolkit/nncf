@@ -18,7 +18,7 @@ jobs:
       ref: "refs/pull/${{ github.event.number }}/merge"
   compare-api-doc-with-develop:
     needs: call-build-api-doc
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     permissions:
       issues: write
     steps:
@@ -40,7 +40,7 @@ jobs:
           CHANGED_FILES=$(echo $CHANGED_FILES | tr '\n' ' ')
           echo "changed_files=${CHANGED_FILES}" >> $GITHUB_OUTPUT
       - uses: actions/github-script@v6
-        if: ${{ !contains(steps.diff.outputs.changed_files, 'differ') }}
+        if: ${{ !(contains(steps.diff.outputs.changed_files, 'differ'))  && contains(github.event.pull_request.labels.*.name, 'API') }}
         with:
           github-token: ${{ secrets.ADD_LABELS_WITH_REST_API }}
           script: |

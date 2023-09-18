@@ -63,7 +63,7 @@ def get_random_dataset_for_test(model: onnx.ModelProto, has_batch_dim: bool, len
             input_np_dtype = onnx.helper.tensor_dtype_to_np_dtype(input_dtype)
             shape = ONNXGraph.get_edge_shape(edge)
             rng = get_random_generator()
-            tensor = rng.uniform(0, 1, shape).astype(input_np_dtype)
+            tensor = rng.uniform(-1, 1, shape).astype(input_np_dtype)
             if has_batch_dim:
                 tensor = np.squeeze(tensor, axis=0)
             output[key] = tensor
@@ -81,7 +81,7 @@ def get_dataset_for_test(samples: List[Tuple[np.ndarray, int]], input_name: str)
 
 
 class ModelToTest:
-    def __init__(self, model_name: str, input_shape: List[int]):
+    def __init__(self, model_name: str, input_shape: Optional[List[int]] = None):
         self.model_name = model_name
         self.path_ref_graph = self.model_name + ".dot"
         self.input_shape = input_shape
@@ -95,6 +95,7 @@ def min_max_quantize_model(
 ) -> onnx.ModelProto:
     if convert_model_opset:
         original_model = convert_opset_version(original_model)
+    graph = GraphConverter.create_nncf_graph(original_model)
     dataset = get_random_dataset_for_test(original_model, dataset_has_batch_size)
     quantization_params = {} if quantization_params is None else quantization_params
 
@@ -104,7 +105,7 @@ def min_max_quantize_model(
 
     post_training_quantization = PostTrainingQuantization(subset_size=1, **quantization_params)
 
-    quantized_model = post_training_quantization.apply(original_model, dataset=dataset)
+    quantized_model = post_training_quantization.apply(original_model, graph, dataset=dataset)
     return quantized_model
 
 
@@ -116,10 +117,11 @@ def ptq_quantize_model(
 ) -> onnx.ModelProto:
     if convert_model_opset:
         original_model = convert_opset_version(original_model)
+    graph = GraphConverter.create_nncf_graph(original_model)
     dataset = get_random_dataset_for_test(original_model, dataset_has_batch_size)
     quantization_params = {} if quantization_params is None else quantization_params
     post_training_quantization = PostTrainingQuantization(subset_size=1, **quantization_params)
-    quantized_model = post_training_quantization.apply(original_model, dataset=dataset)
+    quantized_model = post_training_quantization.apply(original_model, graph, dataset=dataset)
     return quantized_model
 
 

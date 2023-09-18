@@ -27,6 +27,8 @@ from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
+from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVNullBiasInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
@@ -48,6 +50,8 @@ class OVModelTransformer(ModelTransformer):
             (OVModelExtractionCommand, self._apply_model_extraction_transformation),
             (OVInplaceFnInsertionCommand, self._apply_insert_operation),
             (OVOutputInsertionCommand, self._apply_output_insertion_transformations),
+            (OVNullBiasInsertionCommand, self._apply_bias_insertion_transformations),
+            (OVMultiplyInsertionCommand, self._apply_multiply_insertion_transformations),
         ]
 
     @staticmethod
@@ -59,6 +63,25 @@ class OVModelTransformer(ModelTransformer):
         :return: Mapping from node name to node.
         """
         return {op.get_friendly_name(): op for op in model.get_ops()}
+
+    @staticmethod
+    def _get_activation_node_names(model: ov.Model) -> List[str]:
+        """
+        Returns list of the activation node names.
+
+        :param model: Model to get list.
+        :return: List with the activation names.
+        """
+        activation_nodes = set()
+        nodes_queue = deque(model.get_parameters())
+        while nodes_queue:
+            node = nodes_queue.popleft()
+            if node.name in activation_nodes:
+                continue
+            activation_nodes.add(node.name)
+            for node_output in node.outputs():
+                nodes_queue.extend([i.get_node() for i in node_output.get_target_inputs()])
+        return list(activation_nodes)
 
     @staticmethod
     def _update_tensor_name(tensors: List[DescriptorTensor], name: str) -> None:
@@ -362,22 +385,27 @@ class OVModelTransformer(ModelTransformer):
         """
         transformation = transformations[-1]
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
+        activation_node_names = OVModelTransformer._get_activation_node_names(model)
         params, results = [], []
         for input_name in transformation.inputs:
             input_node = name_to_node_mapping[input_name]
             if input_name in [tensor.node.get_friendly_name() for tensor in model.inputs]:
                 params.append(input_node)
                 continue
-            input_port = input_node.input(0)
-            input_node_output = input_port.get_source_output()
-            parameter_name = f"Parameter_{input_name}"
-            new_param = opset.parameter(
-                shape=input_node_output.partial_shape, dtype=input_node_output.get_element_type(), name=parameter_name
-            )
-            input_port.replace_source_output(new_param.output(0))
-            new_param_tensors = [o.get_tensor() for o in new_param.outputs()]
-            OVModelTransformer._update_tensor_name(new_param_tensors, parameter_name)
-            params.append(new_param)
+            for input_port in input_node.inputs():
+                if input_port.get_source_output().get_node().name not in activation_node_names:
+                    continue
+                input_node_output = input_port.get_source_output()
+                parameter_name = f"Parameter_{input_name}"
+                new_param = opset.parameter(
+                    shape=input_node_output.partial_shape,
+                    dtype=input_node_output.get_element_type(),
+                    name=parameter_name,
+                )
+                input_port.replace_source_output(new_param.output(0))
+                new_param_tensors = [o.get_tensor() for o in new_param.outputs()]
+                OVModelTransformer._update_tensor_name(new_param_tensors, parameter_name)
+                params.append(new_param)
 
         for output_name in transformation.outputs:
             output_node = name_to_node_mapping[output_name]
@@ -431,3 +459,74 @@ class OVModelTransformer(ModelTransformer):
             new_node = transformation.inplace_op_fn(output.get_node(), output.get_index())
             return (new_node.output(fn_output_port_id), fn_output_port_id)
         raise RuntimeError(f"Transform type {transform_type} is not supported")
+
+    @staticmethod
+    def _apply_bias_insertion_transformations(
+        model: ov.Model, transformations: List[OVNullBiasInsertionCommand]
+    ) -> ov.Model:
+        """
+        Inserts null bias operation after corresponding layer.
+
+        :param transformations: List of the bias insertion transformations.
+        :returns: Transformed model with null biases.
+        """
+        name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
+        for transformation in transformations:
+            node_name = transformation.target_point.target_node_name
+            node = name_to_node_mapping[node_name]
+            # Since layers that may have biases mostly are Convolution or MatMul variations,
+            # we may use only 0 output port.
+            node_shape = node.output(0).partial_shape.get_max_shape()
+            node_output_port = node.output(transformation.target_point.port_id)
+            node_output_source_ports = node_output_port.get_target_inputs()
+
+            bias_shape = [1] * len(node_shape)
+            bias_shape[1] = node_shape[1]
+            const_value = np.zeros(bias_shape, dtype=node.get_element_type().to_dtype())
+            bias_const_node = opset.constant(const_value, dtype=node.get_element_type())
+            bias_const_output_port = bias_const_node.output(0)
+
+            add_node = opset.add(node_output_port, bias_const_output_port, name=f"{node_name}/nncf_null_bias_")
+
+            for node_output_source_port in node_output_source_ports:
+                node_output_source_port.replace_source_output(add_node.output(0))
+
+        return model
+
+    @staticmethod
+    def _apply_multiply_insertion_transformations(
+        model: ov.Model, transformations: List[OVMultiplyInsertionCommand]
+    ) -> ov.Model:
+        """
+        Inserts Multiply with provided value for corresponding layer.
+
+        :param transformations: List of the smooth insertion transformations.
+        :returns: Transformed model with Multiply nodes.
+        """
+        name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
+
+        for transformation in transformations:
+            node_name = transformation.target_point.target_node_name
+            node = name_to_node_mapping[node_name]
+            output_port_id = transformation.target_point.port_id
+            node_output_port = node.output(output_port_id)
+
+            destination_ports = []
+
+            for target_input_port in node_output_port.get_target_inputs():
+                target_node = target_input_port.get_node()
+                if target_node.get_friendly_name() in transformation.destination_node_names:
+                    destination_ports.append(target_input_port)
+
+            scale_dtype = ov.Type(np.float32)
+            fp16_dtype = ov.Type(np.float16)
+            if all(p.get_element_type() == fp16_dtype for p in destination_ports):
+                scale_dtype = fp16_dtype
+
+            scale_constant = opset.constant(transformation.scale_value, dtype=scale_dtype)
+            multiply_node = opset.multiply(node_output_port, scale_constant, name=transformation.multiply_node_name)
+
+            for destination_port in destination_ports:
+                destination_port.replace_source_output(multiply_node.output(0))
+
+        return model

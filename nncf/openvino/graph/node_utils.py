@@ -17,13 +17,13 @@ import openvino.runtime.opset9 as opset
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
 from nncf.openvino.graph.metatypes.openvino_metatypes import OPERATIONS_WITH_BIAS_METATYPES
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvertMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
-from nncf.openvino.graph.nncf_graph_builder import OVConstantLayerAttributes
 
 InplaceInsertionFnType = Callable[[ov.Node, int], ov.Node]
 
@@ -86,7 +86,7 @@ def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) 
     :param port_id: The input port ID to get weight input.
     :return: The weight value.
     """
-    const_op_friendly_name = node_with_weight.layer_attributes.const_attrs[port_id]["name"]
+    const_op_friendly_name = node_with_weight.layer_attributes.constant_attributes[port_id]["name"]
     friendly_name_to_op_map = {op.get_friendly_name(): op for op in model.get_ops()}
     const_op = friendly_name_to_op_map[const_op_friendly_name]
     weight_tensor = get_const_value(const_op)
@@ -171,7 +171,7 @@ def get_inplace_reduce_op(
 
         return op(
             op_input.output(output_port_id),
-            reduction_axes=reduction_axes_,
+            reduction_axes=np.array(reduction_axes_, dtype=np.int64),
             keep_dims=True,
             name=get_ov_model_reduce_node_name(output_name, reduce_node_name, name_output_port_id),
         )
@@ -321,13 +321,46 @@ def get_weight_channel_axes(node: NNCFNode, weights_port_id: int) -> List[int]:
     if node.metatype not in GENERAL_WEIGHT_LAYER_METATYPES:
         raise ValueError("Channel axis cannot be defined for operation without weights.")
 
-    channel_axis = node.metatype.const_channel_axis
+    channel_axes = node.metatype.const_channel_axis
     if node.metatype == OVMatMulMetatype:
-        assert isinstance(node.layer_attributes, OVConstantLayerAttributes)
-        const_attrs = node.layer_attributes.const_attrs[weights_port_id]
-        if const_attrs["transpose"]:
-            assert len(channel_axis) == 1
-            assert channel_axis[0] in [0, 1]
-            channel_axis = [1 - channel_axis[0]]
+        assert isinstance(node.layer_attributes, OVLayerAttributes)
+        assert len(channel_axes) == 1
+        const_attrs = node.layer_attributes.constant_attributes[weights_port_id]
+        transpose = const_attrs["transpose"]
+        ndims = len(const_attrs["shape"])
+        channel_axes = get_matmul_channel_axes(weights_port_id, ndims, transpose)
 
-    return channel_axis
+    return channel_axes
+
+
+def get_matmul_channel_axes(weights_port_id: int, ndims: int, transpose: bool) -> List[int]:
+    """
+    Calculate channel axes for the MatMul operation.
+
+    :param weights_port_id: Weight port id of the target node.
+    :param ndims: The number of MatMul dimensions.
+    :param transpose: Whether the transpose is applied to weights.
+    :return: List of channel axes for the MatMul operation.
+    """
+    matmul_channel_axis = OVMatMulMetatype.const_channel_axis[0]
+    if (weights_port_id == 1) == transpose:
+        matmul_channel_axis -= 1
+    matmul_channel_axis = max(ndims, 2) + matmul_channel_axis
+    channel_axes = list(range(ndims - 2))
+    if matmul_channel_axis < ndims:
+        channel_axes.append(matmul_channel_axis)
+    return channel_axes
+
+
+def get_channel_agnostic_reduction_shape(channel_axes: List[int], shape: List[int]) -> Tuple[int]:
+    """
+    Returns filtered reduction shape without axes that corresponds channels.
+
+    :param channel_axes: List of the channel axes.
+    :param shape: Shape that need to be filtered.
+    :return: Reduction shape in tuple format.
+    """
+    reduction_shape = list(range(len(shape)))
+    for channel_axis in sorted(channel_axes, reverse=True):
+        del reduction_shape[channel_axis]
+    return tuple(reduction_shape)

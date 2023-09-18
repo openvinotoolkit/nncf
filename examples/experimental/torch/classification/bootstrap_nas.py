@@ -213,8 +213,8 @@ def main_worker(current_gpu, config: SampleConfig):
 
         # Maximal subnet
         elasticity_ctrl.multi_elasticity_handler.activate_maximum_subnet()
-        search_algo.bn_adaptation.run(model)
-        top1_acc = validate_model_fn_top1(model, val_loader)
+        search_algo.bn_adaptation.run(nncf_network)
+        top1_acc = validate_model_fn_top1(nncf_network, val_loader)
         logger.info(
             "Maximal subnet Top1 acc: {top1_acc}, Macs: {macs}".format(
                 top1_acc=top1_acc,
@@ -224,8 +224,8 @@ def main_worker(current_gpu, config: SampleConfig):
 
         # Best found subnet
         elasticity_ctrl.multi_elasticity_handler.activate_subnet_for_config(best_config)
-        search_algo.bn_adaptation.run(model)
-        top1_acc = validate_model_fn_top1(model, val_loader)
+        search_algo.bn_adaptation.run(nncf_network)
+        top1_acc = validate_model_fn_top1(nncf_network, val_loader)
         logger.info(
             "Best found subnet Top1 acc: {top1_acc}, Macs: {macs}".format(
                 top1_acc=top1_acc,
@@ -235,7 +235,7 @@ def main_worker(current_gpu, config: SampleConfig):
         elasticity_ctrl.export_model(osp.join(config.log_dir, "best_subnet.onnx"))
 
     if "test" in config.mode:
-        validate(val_loader, model, criterion, config)
+        validate(val_loader, nncf_network, criterion, config)
 
 
 if __name__ == "__main__":

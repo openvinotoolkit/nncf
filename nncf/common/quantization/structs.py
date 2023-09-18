@@ -18,6 +18,7 @@ from nncf.common.graph import NNCFNodeName
 from nncf.common.utils.api_marker import api
 from nncf.config.schemata.defaults import QUANTIZATION_BITS
 from nncf.config.schemata.defaults import QUANTIZATION_PER_CHANNEL
+from nncf.parameters import TargetDevice
 
 
 @api()
@@ -224,7 +225,9 @@ class QuantizationConstraints:
             signedness_to_force=config_dict.get("signed"),
         )
 
-    def constrain_qconfig_list(self, quantizer_config_list: List[QuantizerConfig]) -> List[QuantizerConfig]:
+    def constrain_qconfig_list(
+        self, node_name: NNCFNodeName, target_device: TargetDevice, quantizer_config_list: List[QuantizerConfig]
+    ) -> List[QuantizerConfig]:
         assert quantizer_config_list is not None
 
         constrained_quantizer_config_list = list(filter(self.is_config_compatible, quantizer_config_list))
@@ -233,7 +236,10 @@ class QuantizationConstraints:
         # It means that the qconfig from overrides must be selected as final config
         # even if it is not valid in hw-config.
         if not constrained_quantizer_config_list:
-            raise RuntimeError()
+            err_msg = f"Quantization parameter constraints specified in NNCF config are incompatible \
+            with HW capabilities as specified in HW config type '{target_device}'. \
+            First conflicting quantizer location: {node_name}"
+            raise ValueError(err_msg)
 
         return constrained_quantizer_config_list
 

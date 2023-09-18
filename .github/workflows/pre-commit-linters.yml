@@ -1,0 +1,21 @@
+name: pre-commit-linters
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v3
+      with:
+        python-version: 3.8.10
+    - name: Install pre-commit package
+      run: make install-pre-commit
+    - name: Run pre-commit linter suite
+      run: make pre-commit

@@ -37,7 +37,7 @@ QUANTIZATION_AGNOSTIC_OPERATIONS = {
             for layer_name in m.get_all_aliases()
         )
     ),
-    "label": "ELEMENTWISE",
+    "label": "QUANTIZATION_AGNOSTIC",
 }
 
 BATCH_NORMALIZATION_OPERATIONS = {

@@ -35,18 +35,17 @@ def download(url: str, path: str) -> Path:
     return downloader.get(url)
 
 
-def preprocess_imagenette_data(dataset_path: str) -> None:
-    destination = os.path.join(dataset_path, "val")
-    for filename in os.listdir(destination):
-        path = os.path.join(destination, filename)
-        if os.path.isdir(path):
-            for img_name in os.listdir(path):
-                img_path = os.path.join(path, img_name)
-                shutil.move(img_path, destination)
-            os.rmdir(path)
+def preprocess_imagenette_data(dataset_path: Path, destination_path: Path) -> None:
+    val_dataset_path = dataset_path / "val"
+    for filename in os.listdir(val_dataset_path):
+        path = val_dataset_path / filename
+        if path.is_dir():
+            for img_name in path.iterdir():
+                img_path = path / img_name
+                shutil.copy(img_path, destination_path)
 
 
-def preprocess_imagenette_labels(dataset_path: str) -> None:
+def preprocess_imagenette_labels(destination_path: Path) -> None:
     labels_map = {
         "n01440764": 0,  # tench
         "n02102040": 217,  # English springer
@@ -59,23 +58,30 @@ def preprocess_imagenette_labels(dataset_path: str) -> None:
         "n03445777": 574,  # golf ball
         "n03888257": 701,  # parachute
     }
-
     response = requests.get(IMAGENETTE_ANNOTATION_URL, timeout=10)
-    annotation_path = dataset_path / "imagenette2-320_val.txt"
-    with open(annotation_path, "w", encoding="utf-8") as output_file:
+    annotation_path = destination_path / "imagenette2-320_val.txt"
+
+    with open(annotation_path, "w+", encoding="utf-8") as output_file:
         for line in response.iter_lines():
             image_path = line.decode("utf-8").split("/")
             class_name = image_path[2]
-            new_path = os.path.join(image_path[0], image_path[1], image_path[3])
+            new_path = os.path.join(image_path[0], image_path[1], image_path[2], image_path[3])
             label = labels_map[class_name]
             img_path_with_labels = f"{new_path} {label}\n"
             output_file.write(img_path_with_labels)
 
 
+def convert_dataset_to_ac_format(dataset_path: Path, destination_path: Path) -> None:
+    preprocess_imagenette_labels(destination_path)
+    preprocess_imagenette_data(dataset_path, destination_path)
+
+
 def prepare_imagenette_for_test(data_dir: Path) -> Path:
     dataset_path = download(IMAGENETTE_URL, data_dir)
-    preprocess_imagenette_labels(dataset_path)
-    preprocess_imagenette_data(dataset_path)
+    destination_path = dataset_path.parent / "ac_imagenette2-320/"
+    if not destination_path.exists():
+        destination_path.mkdir()
+    convert_dataset_to_ac_format(dataset_path, destination_path)
     return dataset_path
 
 

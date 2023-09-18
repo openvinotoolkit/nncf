@@ -18,7 +18,7 @@ from contextlib import nullcontext
 import pytest
 import torch
 import torchvision
-from pkg_resources import parse_version
+from packaging import version
 from pytest_dependency import depends
 
 from examples.common.sample_config import EVAL_ONLY_ERROR_TEXT
@@ -185,7 +185,7 @@ def fixture_case_common_dirs(tmp_path_factory):
 
 @pytest.mark.parametrize(" multiprocessing_distributed", (True, False), ids=["distributed", "dataparallel"])
 def test_pretrained_model_eval(config, tmp_path, multiprocessing_distributed, case_common_dirs):
-    if parse_version(torchvision.__version__) < parse_version("0.13") and "voc" in str(config["dataset_path"]):
+    if version.parse(torchvision.__version__) < version.parse("0.13") and "voc" in str(config["dataset_path"]):
         pytest.skip(
             f"Test calls sample that uses `datasets.VOCDetection.parse_voc_xml` function from latest "
             f"torchvision.\nThe signature of the function is not compatible with the corresponding signature "
@@ -269,7 +269,7 @@ def depends_on_pretrained_train(request, test_case_id: str, current_multiprocess
 @pytest.mark.dependency()
 @pytest.mark.parametrize("multiprocessing_distributed", [True, False], ids=["distributed", "dataparallel"])
 def test_trained_model_eval(request, config, tmp_path, multiprocessing_distributed, case_common_dirs):
-    if parse_version(torchvision.__version__) < parse_version("0.13") and "voc" in str(config["dataset_path"]):
+    if version.parse(torchvision.__version__) < version.parse("0.13") and "voc" in str(config["dataset_path"]):
         pytest.skip(
             f"Test calls sample that uses `datasets.VOCDetection.parse_voc_xml` function from latest "
             f"torchvision.\nThe signature of the function is not compatible with the corresponding signature "

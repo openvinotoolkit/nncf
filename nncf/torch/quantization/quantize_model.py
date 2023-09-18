@@ -22,7 +22,7 @@ from nncf.data import Dataset
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-from nncf.quantization.advanced_parameters import convert_advanced_parameters_to_dict
+from nncf.quantization.advanced_parameters import apply_advanced_parameters_to_config
 from nncf.scopes import IgnoredScope
 from nncf.scopes import convert_ignored_scope_to_list
 from nncf.torch.dynamic_graph.context import no_nncf_trace
@@ -32,6 +32,8 @@ from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_ob
 from nncf.torch.initialization import PTInitializingDataLoader
 from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.nested_objects_traversal import objwalk
+from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
+from nncf.torch.quantization.weights_compression import insert_pre_compression_operations
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import is_tensor
 
@@ -39,7 +41,7 @@ DEFAULT_RANGE_TYPE = "mean_min_max"
 
 
 # TODO(alexsu52): It is a workaround and should be removed.
-class CalibrarionDataLoader(PTInitializingDataLoader):
+class CalibrationDataLoader(PTInitializingDataLoader):
     """
     This class wraps the nncf.Dataset.
 
@@ -61,7 +63,7 @@ class CalibrarionDataLoader(PTInitializingDataLoader):
     def __len__(self):
         if self._length is None:
             data = self._data_loader.get_inference_data()
-            self._length = CalibrarionDataLoader._get_length(data)
+            self._length = CalibrationDataLoader._get_length(data)
         return self._length
 
     def get_inputs(self, dataloader_output: Any) -> Tuple[Tuple, Dict]:
@@ -169,18 +171,13 @@ def _create_nncf_config(
             compression_config["ignored_scopes"].extend(_ignored_scope)
         else:
             compression_config["ignored_scopes"] = _ignored_scope
+        compression_config["validate_scopes"] = ignored_scope.validate
 
     if advanced_parameters is not None:
-        advanced_config = convert_advanced_parameters_to_dict(advanced_parameters)
+        compression_config = apply_advanced_parameters_to_config(compression_config, advanced_parameters)
 
-        ranges = advanced_config.get("initializer", {}).get("range")
-        if ranges is not None:
-            for rconfig in ranges:
-                rconfig["num_init_samples"] = subset_size
-                if "type" not in rconfig:
-                    rconfig["type"] = DEFAULT_RANGE_TYPE
-
-        compression_config.update(advanced_config)
+    if model_type == ModelType.TRANSFORMER:
+        compression_config["validate_scopes"] = False
 
     return NNCFConfig({"target_device": target_device.value, "compression": compression_config})
 
@@ -214,7 +211,7 @@ def quantize_impl(
         preset, target_device, subset_size, model_type, ignored_scope, advanced_parameters
     )
 
-    calibration_data_loader = CalibrarionDataLoader(calibration_dataset)
+    calibration_data_loader = CalibrationDataLoader(calibration_dataset)
     nncf_config.register_extra_structs(
         [
             QuantizationRangeInitArgs(data_loader=calibration_data_loader),
@@ -259,5 +256,15 @@ def quantize_impl(
     )
     compression_ctrl.prepare_for_export()
     compressed_model.nncf.disable_dynamic_graph_building()
+
+    return compressed_model
+
+
+def compress_weights_impl(model: torch.nn.Module) -> torch.nn.Module:
+    """
+    Implementation of the `compress_weights()` method for the PyTorch backend.
+    """
+    compressed_model, _ = replace_modules_by_nncf_modules(model)
+    insert_pre_compression_operations(model)
 
     return compressed_model

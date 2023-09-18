@@ -14,11 +14,19 @@ import numpy as np
 import onnx
 import pytest
 
+from nncf.common.quantization.structs import QuantizationPreset
 from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from tests.onnx.conftest import ONNX_TEST_ROOT
+from tests.onnx.models import EmbeddingModel
+from tests.onnx.models import GEMMTransposeWeightModel
 from tests.onnx.models import LinearModel
+from tests.onnx.models import MatMulActivationModel
+from tests.onnx.models import MatMulWeightModel
+from tests.onnx.models import OneDepthwiseConvolutionalModel
+from tests.onnx.models import ReshapeWeightModel
+from tests.onnx.models import WeightSharingModel
 from tests.onnx.quantization.common import min_max_quantize_model
 from tests.shared.helpers import compare_stats
 from tests.shared.helpers import load_json
@@ -31,8 +39,8 @@ def get_q_nodes_params(model: onnx.ModelProto) -> Dict[str, np.ndarray]:
     onnx_graph = ONNXGraph(model)
     for node in onnx_graph.get_all_nodes():
         if node.op_type == "QuantizeLinear":
-            scale = onnx_graph.get_initializers_value(node.input[1])
-            zero_point = onnx_graph.get_initializers_value(node.input[2])
+            scale = onnx_graph.get_tensor_value(node.input[1])
+            zero_point = onnx_graph.get_tensor_value(node.input[2])
             output[node.name] = {"scale": scale, "zero_point": zero_point}
     return output
 
@@ -55,6 +63,56 @@ def test_overflow_fix_scales(overflow_fix):
 
     # Unkomment lines below to generate reference for new models.
     # from tests.shared.helpers import dump_to_json
+
+    # dump_to_json(ref_stats_path, q_nodes_params)
+
+    ref_nodes_params = load_json(ref_stats_path)
+    params = ["scale", "zero_point"]
+    compare_stats(ref_nodes_params, q_nodes_params, params)
+
+
+MODELS = [
+    GEMMTransposeWeightModel,
+    MatMulWeightModel,
+    MatMulActivationModel,
+    WeightSharingModel,
+    ReshapeWeightModel,
+    LinearModel,
+    OneDepthwiseConvolutionalModel,
+    EmbeddingModel,
+]
+
+
+@pytest.mark.parametrize(
+    "preset",
+    [QuantizationPreset.PERFORMANCE, QuantizationPreset.MIXED],
+    ids=[QuantizationPreset.PERFORMANCE.value, QuantizationPreset.MIXED.value],
+)
+@pytest.mark.parametrize(
+    "model",
+    MODELS,
+    ids=[
+        "GEMMTransposeWeightModel",
+        "MatMulWeightModel",
+        "MatMulActivationModel",
+        "WeightSharingModel",
+        "ReshapeWeightModel",
+        "LinearModel",
+        "OneDepthwiseConvolutionalModel",
+        "EmbeddingModel",
+    ],
+)
+def test_scales(model, preset):
+    model = model()
+    quantized_model = min_max_quantize_model(model.onnx_model, quantization_params={"preset": preset})
+    q_nodes_params = get_q_nodes_params(quantized_model)
+
+    ref_stats_name = model.path_ref_graph.split(".")[0] + f"_{preset.value}.json"
+    ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
+
+    # Unkomment lines below to generate reference for new models.
+    # from tests.shared.helpers import dump_to_json
+
     # dump_to_json(ref_stats_path, q_nodes_params)
 
     ref_nodes_params = load_json(ref_stats_path)

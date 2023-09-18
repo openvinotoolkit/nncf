@@ -14,6 +14,10 @@ import re
 import subprocess
 from pathlib import Path
 
+# nncf.torch must be imported before torchvision
+import nncf
+from nncf.torch import disable_tracing
+
 import openvino.runtime as ov
 import torch
 import torchvision
@@ -24,9 +28,6 @@ from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from torchvision.models.detection.ssd import SSD
 from torchvision.models.detection.ssd import GeneralizedRCNNTransform
 from tqdm import tqdm
-
-import nncf
-from nncf.torch import disable_tracing
 
 ROOT = Path(__file__).parent.resolve()
 DATASET_URL = "https://ultralytics.com/assets/coco128.zip"
@@ -67,87 +68,10 @@ def run_benchmark(model_path: str, shape=None, verbose: bool = True) -> float:
 
 class COCO128Dataset(torch.utils.data.Dataset):
     category_mapping = [
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        7,
-        8,
-        9,
-        10,
-        11,
-        13,
-        14,
-        15,
-        16,
-        17,
-        18,
-        19,
-        20,
-        21,
-        22,
-        23,
-        24,
-        25,
-        27,
-        28,
-        31,
-        32,
-        33,
-        34,
-        35,
-        36,
-        37,
-        38,
-        39,
-        40,
-        41,
-        42,
-        43,
-        44,
-        46,
-        47,
-        48,
-        49,
-        50,
-        51,
-        52,
-        53,
-        54,
-        55,
-        56,
-        57,
-        58,
-        59,
-        60,
-        61,
-        62,
-        63,
-        64,
-        65,
-        67,
-        70,
-        72,
-        73,
-        74,
-        75,
-        76,
-        77,
-        78,
-        79,
-        80,
-        81,
-        82,
-        84,
-        85,
-        86,
-        87,
-        88,
-        89,
-        90,
-    ]
+        1,2,3,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,20,21,22,23,24,25,27,28,31,32,33,
+        34,35,36,37,38,39,40,41,42,43,44,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,
+        61,62,63,64,65,67,70,72,73,74,75,76,77,78,79,80,81,82,84,85,86,87,88,89,90
+    ]  # fmt: skip
 
     def __init__(self, data_path, transform):
         super().__init__()
@@ -165,7 +89,7 @@ class COCO128Dataset(torch.utils.data.Dataset):
         target = dict(image_id=[image_id], boxes=[], labels=[])
         label_filepath = self.labels_path / f"{image_id:012d}.txt"
         if label_filepath.exists():
-            with open(label_filepath, "r") as f:
+            with open(label_filepath, "r", encoding="utf-8") as f:
                 for box_descr in f.readlines():
                     category_id, rel_x, rel_y, rel_w, rel_h = tuple(map(float, box_descr.split(" ")))
                     box_x1, box_y1 = img_w * (rel_x - rel_w / 2), img_h * (rel_y - rel_h / 2)
@@ -173,8 +97,12 @@ class COCO128Dataset(torch.utils.data.Dataset):
                     target["boxes"].append((box_x1, box_y1, box_x2, box_y2))
                     target["labels"].append(self.category_mapping[int(category_id)])
 
-        for k in target.keys():
-            target[k] = torch.as_tensor(target[k], dtype=torch.float32 if k == "boxes" else torch.int64)
+        target_copy = {}
+        target_keys = target.keys()
+        for k in target_keys:
+            target_copy[k] = torch.as_tensor(target[k], dtype=torch.float32 if k == "boxes" else torch.int64)
+        target = target_copy
+
         img, target = self.transform(img, target)
         return img, target
 
@@ -211,7 +139,7 @@ def main():
 
     # Get the pretrained ssd300_vgg16 model from torchvision.models
     model = torchvision.models.get_model("ssd300_vgg16", weights=weights_name)
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.cpu
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model.to(device)
     model.eval()
 
@@ -224,9 +152,15 @@ def main():
     quantized_model = nncf.quantize(model, calibration_dataset)
 
     # Convert to OpenVINO
-    input_shape = [3, 480, 480]
-    ov_model = mo.convert_model(model.cpu(), input_shape=[-1] + input_shape)
-    ov_quantized_model = mo.convert_model(quantized_model.cpu(), input_shape=[-1] + input_shape)
+    dummy_input = torch.randn(1, 3, 480, 480)
+
+    fp32_onnx_path = f"{ROOT}/ssd300_vgg16_fp32.onnx"
+    torch.onnx.export(model.cpu(), dummy_input, fp32_onnx_path)
+    ov_model = mo.convert_model(fp32_onnx_path)
+
+    int8_onnx_path = f"{ROOT}/ssd300_vgg16_int8.onnx"
+    torch.onnx.export(quantized_model.cpu(), dummy_input, int8_onnx_path)
+    ov_quantized_model = mo.convert_model(int8_onnx_path)
 
     fp32_ir_path = f"{ROOT}/ssd300_vgg16_fp32.xml"
     ov.serialize(ov_model, fp32_ir_path)
@@ -239,9 +173,9 @@ def main():
     int8_model_size = get_model_size(int8_ir_path, verbose=True)
 
     print("[3/7] Benchmark FP32 model:")
-    fp32_fps = run_benchmark(fp32_ir_path, shape=[1] + input_shape, verbose=True)
+    fp32_fps = run_benchmark(fp32_ir_path, verbose=True)
     print("[4/7] Benchmark INT8 model:")
-    int8_fps = run_benchmark(int8_ir_path, shape=[1] + input_shape, verbose=True)
+    int8_fps = run_benchmark(int8_ir_path, verbose=True)
 
     print("[5/7] Validate FP32 model:")
     torch.backends.cudnn.deterministic = True
@@ -257,6 +191,8 @@ def main():
     print(f"Model compression rate: {fp32_model_size / int8_model_size:.3f}")
     # https://docs.openvino.ai/latest/openvino_docs_optimization_guide_dldt_optimization_guide.html
     print(f"Performance speed up (throughput mode): {int8_fps / fp32_fps:.3f}")
+
+    return fp32_map, int8_map, fp32_fps, int8_fps, fp32_model_size, int8_model_size
 
 
 if __name__ == "__main__":

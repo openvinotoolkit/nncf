@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2019-2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the 'License');
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an 'AS IS' BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import json
 import os
@@ -321,7 +319,7 @@ NAS_DESCRIPTORS = [
     NASTrainingTestDescriptor()
     .real_dataset("cifar10")
     .config_name("mobilenet_v2_nas_SMALL.json")
-    .expected_accuracy(80.95)
+    .expected_accuracy(85.1)
     .subnet_expected_accuracy(88.67)
     .weights_filename("mobilenet_v2_cifar10_93.91.pth")
     .absolute_tolerance_train(1.0)
@@ -330,7 +328,7 @@ NAS_DESCRIPTORS = [
     .real_dataset("cifar10")
     .config_name("resnet50_nas_SMALL.json")
     .subnet_expected_accuracy(88.67)
-    .expected_accuracy(87.25)
+    .expected_accuracy(85.19)
     .weights_filename("resnet50_cifar10_93.65.pth")
     .absolute_tolerance_train(2.0)
     .absolute_tolerance_eval(2e-2),

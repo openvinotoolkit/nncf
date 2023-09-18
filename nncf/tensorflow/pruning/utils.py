@@ -15,7 +15,6 @@ import numpy as np
 import tensorflow as tf
 
 from nncf.common.graph import NNCFGraph
-from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
@@ -29,10 +28,6 @@ from nncf.tensorflow.layers.data_layout import get_weight_channel_axis
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 
 
-def is_shared(node: NNCFNode) -> bool:
-    return node.data["is_shared"]
-
-
 def get_filter_axis(layer: NNCFWrapper, weight_attr: str) -> int:
     channel_axes = get_weight_channel_axis(layer, weight_attr)
     filter_axis = channel_axes[0] if isinstance(channel_axes, tuple) else channel_axes
@@ -42,7 +37,7 @@ def get_filter_axis(layer: NNCFWrapper, weight_attr: str) -> int:
 def get_filters_num(layer: NNCFWrapper):
     layer_metatype = get_keras_layer_metatype(layer)
     if len(layer_metatype.weight_definitions) != 1:
-        raise ValueError(f"Could not calculate the number of filters " f"for the layer {layer.layer.name}.")
+        raise ValueError(f"Could not calculate the number of filters for the layer {layer.layer.name}.")
 
     weight_def = layer_metatype.weight_definitions[0]
     weight_attr = weight_def.weight_attr_name

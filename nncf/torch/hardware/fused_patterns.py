@@ -12,6 +12,7 @@
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns import HWFusedPatternNames
 from nncf.common.utils.registry import Registry
+from nncf.torch.graph.operator_metatypes import PTInputNoopMetatype
 from nncf.torch.graph.pattern_operations import ARITHMETIC_OPERATIONS
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
@@ -46,36 +47,25 @@ def create_l2_norm_operations() -> GraphPattern:
     return pattern
 
 
-@PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.MATMUL_SOFTMAX_MATMUL)
-def create_matmul_softmax_matmul() -> GraphPattern:
-    matmul_aliases = ["linear", "addmm", "matmul", "bmm", "mm", "baddbmm"]
+# COMBINATIONS
+
+
+@PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.SHIFT_SCALE)
+def create_shift_scale() -> GraphPattern:
     pattern = GraphPattern()
-    softmax_1 = pattern.add_node(label="SOFTMAX", type="softmax")
-    mat_mul_1_1 = pattern.add_node(label="MATMUL_1", type=matmul_aliases)
-    mat_mul_2_1 = pattern.add_node(label="MATMUL_2", type=matmul_aliases)
-
-    any_1 = pattern.add_node(label="ANY", type=GraphPattern.NON_PATTERN_NODE_TYPE)
-
-    pattern.add_edge(mat_mul_1_1, softmax_1)
-    pattern.add_edge(softmax_1, mat_mul_2_1)
-    pattern.add_edge(any_1, mat_mul_2_1)
-
-    softmax_2 = pattern.add_node(label="SOFTMAX", type="softmax")
-    add_2 = pattern.add_node(label="ADD", type=["add", "__add__", "__iadd__", "__radd__"])
-    mat_mul_1_2 = pattern.add_node(label="MATMUL_1", type=matmul_aliases)
-    mat_mul_2_2 = pattern.add_node(label="MATMUL_2", type=matmul_aliases)
-
-    any_2 = pattern.add_node(label="ANY", type=GraphPattern.NON_PATTERN_NODE_TYPE)
-
-    pattern.add_edge(mat_mul_1_2, add_2)
-    pattern.add_edge(add_2, softmax_2)
-    pattern.add_edge(softmax_2, mat_mul_2_2)
-    pattern.add_edge(any_2, mat_mul_2_2)
-
+    add_node = pattern.add_node(label="ADD, SUB", type=["__add__", "__sub__"])
+    truediv_node = pattern.add_node(label="MUL, DIV", type=["__mul__", "__truediv__"])
+    pattern.add_edge(add_node, truediv_node)
     return pattern
 
 
-# COMBINATIONS
+@PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.INPUT_SHIFT_SCALE)
+def create_input_shift_scale() -> GraphPattern:
+    pattern = GraphPattern()
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: PTInputNoopMetatype})
+    shift_scale = create_shift_scale()
+    pattern.join_patterns(shift_scale)
+    return pattern
 
 
 @PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ARITHMETIC)

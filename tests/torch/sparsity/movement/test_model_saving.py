@@ -25,7 +25,7 @@ from openvino.runtime import serialize
 from openvino.tools.mo.back.offline_transformations import apply_fused_names_cleanup
 from openvino.tools.mo.back.offline_transformations import apply_moc_transformations
 from openvino.tools.mo.back.offline_transformations import apply_user_transformations
-from pkg_resources import parse_version
+from packaging import version
 from scipy.special import softmax
 from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
 
@@ -78,7 +78,7 @@ class TestONNXExport:
         PTTensorListComparator.check_equal(list(state_before.values()), list(state_after.values()))
 
     @pytest.mark.skipif(
-        parse_version(torch.__version__) < parse_version("1.12"),
+        version.parse(torch.__version__) < version.parse("1.12"),
         reason=f"torch {torch.__version__} is not compatible with installed transformers package. "
         f"Some tests may fail with segmentation fault",
     )
@@ -126,7 +126,7 @@ class TestONNXExport:
         assert np.allclose(softmax(onnx_outputs, axis=-1), softmax(torch_outputs, axis=-1), atol=1e-6)
 
     @pytest.mark.skipif(
-        parse_version(torch.__version__) < parse_version("1.12"),
+        version.parse(torch.__version__) < version.parse("1.12"),
         reason=f"torch {torch.__version__} is not compatible with installed transformers package. "
         f"Some tests may fail with segmentation fault",
     )
@@ -269,7 +269,7 @@ class TestONNXExport:
         ), f"IR's size ratio: 1 - {pruned_file_bytes}/{not_pruned_file_bytes}"
         if abs(desc.ov_weight_ratio - desc.nncf_weight_ratio) >= 0.15:
             pytest.skip("Known issue in the ngraph transformation")
-        assert abs(file_size_ratio - compression_rate) < 0.15
+        assert abs(file_size_ratio - compression_rate) < 0.152  # used to be 0.15 before OV 2023.1.0
 
     def _get_onnx_model_inference_outputs(self, onnx_model_path: str, dataset: Dataset, recipe: BaseMockRunRecipe):
         sess = onnxruntime.InferenceSession(onnx_model_path)

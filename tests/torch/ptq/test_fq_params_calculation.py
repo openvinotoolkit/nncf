@@ -33,6 +33,9 @@ from tests.torch.helpers import create_random_mock_dataloader
 REFERENCE_SCALES_DIR = TEST_ROOT / "torch" / "data" / "reference_scales"
 
 
+# pylint: disable=protected-access
+
+
 def min_max_quantize_model(
     original_model: torch.nn.Module, quantization_params: Dict[str, Any] = None
 ) -> torch.nn.Module:
@@ -56,7 +59,7 @@ def min_max_quantize_model(
 
     original_model.eval()
     nncf_network = create_nncf_network(original_model, config)
-    quantized_model = post_training_quantization.apply(nncf_network, dataset=dataset)
+    quantized_model = post_training_quantization.apply(nncf_network, nncf_network.nncf.get_graph(), dataset=dataset)
     return quantized_model
 
 

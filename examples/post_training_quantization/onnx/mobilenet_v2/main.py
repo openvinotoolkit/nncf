@@ -122,7 +122,7 @@ def transform_fn(data_item):
 # item and prepare model input data. The quantize method uses a small subset
 # (default: 300 samples) of the calibration dataset.
 calibration_dataset = nncf.Dataset(val_loader, transform_fn)
-quantized_model = nncf.quantize(model, calibration_dataset)
+onnx_quantized_model = nncf.quantize(model, calibration_dataset)
 
 ###############################################################################
 # Benchmark performance and validate accuracy
@@ -132,7 +132,7 @@ onnx.save(model, fp32_model_path)
 print(f"[1/7] Save FP32 model: {fp32_model_path}")
 
 int8_model_path = f"{ROOT}/mobilenet_v2_int8.onnx"
-onnx.save(quantized_model, int8_model_path)
+onnx.save(onnx_quantized_model, int8_model_path)
 print(f"[2/7] Save INT8 model: {int8_model_path}")
 
 print("[3/7] Benchmark FP32 model:")

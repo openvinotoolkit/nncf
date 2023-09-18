@@ -178,6 +178,11 @@ def run(config):
     if resume_training:
         compression_state = load_compression_state(config.ckpt_path)
 
+    if "train" in config.mode and is_accuracy_aware_training(config):
+        uncompressed_model_accuracy = get_model_accuracy(
+            model_fn, model_params, nncf_config, validation_dataset, validation_steps
+        )
+
     with TFModelManager(model_fn, nncf_config, **model_params) as model:
         with strategy.scope():
             compression_ctrl, compress_model = create_compressed_model(model, nncf_config, compression_state)
@@ -239,6 +244,7 @@ def run(config):
             statistics = compress_model.accuracy_aware_fit(
                 train_dataset,
                 compression_ctrl,
+                uncompressed_model_accuracy=uncompressed_model_accuracy,
                 nncf_config=config.nncf_config,
                 callbacks=callbacks,
                 initial_epoch=initial_epoch,

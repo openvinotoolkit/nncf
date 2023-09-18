@@ -156,7 +156,7 @@ class BasePruningAlgoBuilder(PTCompressionAlgorithmBuilder):
 
         all_norm_layers = target_model_graph.get_nodes_by_types(types_to_apply_mask)
         for node in all_norm_layers:
-            if node.data["output_mask"] is None:
+            if node.attributes["output_mask"] is None:
                 # Skip elements that will not be pruned
                 continue
 

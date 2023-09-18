@@ -1,15 +1,14 @@
-"""
- Copyright (c) 2020-2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from os import path as osp
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -19,6 +18,7 @@ from torch.nn import Module
 
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
+from nncf.common.deprecation import warning_deprecated
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.debug import set_debug_log_dir
@@ -93,6 +93,21 @@ def create_compressed_model(
         is an instance of CompositeCompressionController) and the model ready for compression parameter training wrapped
         as an object of NNCFNetwork.
     """
+    if isinstance(model, NNCFNetwork):
+        raise RuntimeError(
+            "The model object has already been compressed.\n"
+            "NNCF for PyTorch modifies the model object in-place, and repeat calls to "
+            "`nncf.torch.create_compressed_model` with the same model object passed as argument "
+            "will lead to an incorrect attempt to compress the model twice.\n"
+            "Make sure that the model object you are passing has not already been compressed (for "
+            "instance, by testing `if isinstance(model, nncf.torch.nncf_network.NNCFNetwork)`).\n"
+            "If you are encountering this in a Jupyter notebook context - make sure that when "
+            "re-running cells involving `nncf.torch.create_compressed_model` the original model object "
+            "is also re-created (via constructor call)."
+        )
+
+    if config.get("target_device") == "VPU":
+        warning_deprecated("VPU device is deprecated and will no longer be supported in the future.")
 
     set_debug_log_dir(config.get("log_dir", "."))
 

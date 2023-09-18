@@ -49,6 +49,7 @@ from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.logger import DuplicateFilter
 from nncf.common.quantization.config_assignment import assign_qconfig_lists_to_modules
+from nncf.common.quantization.quantizer_propagation.structs import IgnoreReason
 from nncf.common.quantization.quantizer_setup import DEFAULT_QUANTIZER_CONFIG
 from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
@@ -88,6 +89,8 @@ from nncf.torch.debug import CallCountTracker
 from nncf.torch.debug import DebugInterface
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.graph.graph import PTNNCFGraph
+from nncf.torch.graph.operator_metatypes import UNIFICATION_PRODUCING_METATYPES
+from nncf.torch.graph.operator_metatypes import PTCatMetatype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
@@ -131,8 +134,7 @@ from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitPa
 from nncf.torch.quantization.precision_init.hawq_init import HAWQPrecisionInitParams
 from nncf.torch.quantization.precision_init.manual_init import ManualPrecisionInitParams
 from nncf.torch.quantization.schedulers import QUANTIZATION_SCHEDULERS
-from nncf.torch.quantization.strip import remove_disabled_quantizers
-from nncf.torch.quantization.strip import replace_quantizer_to_torch_native_module
+from nncf.torch.quantization.strip import strip_quantized_model
 from nncf.torch.quantization.structs import NonWeightQuantizerInfo
 from nncf.torch.quantization.structs import WeightQuantizerInfo
 from nncf.torch.quantization.translator import PTTargetPointTranslator
@@ -359,8 +361,12 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
             QuantizerPropagationSolver,  # pylint: disable=cyclic-import
         )
 
+        scales_unification_map = {PTCatMetatype: UNIFICATION_PRODUCING_METATYPES}
+        ignored_scopes_for_solver = {
+            name: IgnoreReason.USER_REQUESTED for name in self._ignored_scopes_per_group[QuantizerGroup.ACTIVATIONS]
+        }
         prop_graph_solver = QuantizerPropagationSolver(
-            activation_ignored_scopes=self._ignored_scopes_per_group[QuantizerGroup.ACTIVATIONS],
+            activation_ignored_scopes=ignored_scopes_for_solver,
             weight_ignored_scopes=self._ignored_scopes_per_group[QuantizerGroup.WEIGHTS],
             activation_target_scopes=self._target_scopes_per_group[QuantizerGroup.ACTIVATIONS],
             weight_target_scopes=self._target_scopes_per_group[QuantizerGroup.WEIGHTS],
@@ -374,6 +380,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
             global_constraints=self.global_quantizer_constraints,
             additional_unified_scale_op_scopes=self._unified_scale_ops,
             quantize_outputs=self._quantize_outputs,
+            scales_unification_map=scales_unification_map,
         )
 
         merged_ip_graph = insertion_point_graph.get_ip_graph_with_merged_hw_optimized_operations(
@@ -469,6 +476,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         algo_config = self._get_algo_specific_config_section()
         if self._target_device == "VPU" and "preset" in algo_config:
             raise RuntimeError("The VPU target device does not support presets.")
+        if self._target_device == "CPU_SPR":
+            raise RuntimeError("The CPU_SPR target device does not supported.")
 
         self._range_init_params = None
         self._precision_init_type = None
@@ -1519,8 +1528,7 @@ class QuantizationController(QuantizationControllerBase):
     def strip_model(self, model: NNCFNetwork, do_copy: bool = False) -> NNCFNetwork:
         if do_copy:
             model = copy_model(model)
-        model = replace_quantizer_to_torch_native_module(model)
-        model = remove_disabled_quantizers(model)
+        model = strip_quantized_model(model)
         return model
 
 

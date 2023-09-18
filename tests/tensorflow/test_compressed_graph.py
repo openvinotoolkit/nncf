@@ -15,7 +15,7 @@ from typing import List
 import networkx as nx
 import pytest
 import tensorflow as tf
-from pkg_resources import parse_version
+from packaging import version
 
 from nncf import NNCFConfig
 from nncf.common.hardware.config import HWConfigType
@@ -356,7 +356,7 @@ def prepare_and_check_nx_graph(
 
 
 def check_model_graph(compressed_model, ref_graph_filename, ref_graph_dir, rename_resource_nodes):
-    tf_version = parse_version(tf.__version__).base_version
+    tf_version = version.parse(tf.__version__).base_version
     tf_version_major, tf_version_minor = tuple(map(int, tf_version.split(".")))[:2]
     data_dir = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "data", "reference_graphs", f"{tf_version_major}.{tf_version_minor}"

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
-from tests.post_training.test_calculate_quantizer_parameters import TemplateTestFQParams
+from tests.post_training.test_templates.test_calculate_quantizer_parameters import TemplateTestFQParams
 
 
 class TestFQParams(TemplateTestFQParams):

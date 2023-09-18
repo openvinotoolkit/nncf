@@ -1,0 +1,15 @@
+strict digraph  {
+"0 Identity_1" [id=0, type=Identity];
+"1 Identity_2" [id=1, type=Identity];
+"2 MatMul_1" [id=2, type=MatMul];
+"3 constant" [id=3, type=Constant];
+"4 MatMul_2" [id=4, type=MatMul];
+"5 nncf_model_input_0" [id=5, type=nncf_model_input];
+"6 nncf_model_output_0" [id=6, type=nncf_model_output];
+"0 Identity_1" -> "1 Identity_2"  [label="[10, 5]", style=solid];
+"1 Identity_2" -> "2 MatMul_1"  [label="[10, 5]", style=solid];
+"2 MatMul_1" -> "4 MatMul_2"  [label="[1, 5]", style=solid];
+"3 constant" -> "4 MatMul_2"  [label="[5, 10]", style=solid];
+"4 MatMul_2" -> "6 nncf_model_output_0"  [label="[1, 10]", style=solid];
+"5 nncf_model_input_0" -> "2 MatMul_1"  [label="[1, 10]", style=solid];
+}

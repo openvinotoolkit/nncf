@@ -21,6 +21,7 @@ import pytest
 from nncf.common.graph import Dtype
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
@@ -35,7 +36,9 @@ from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertion
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
+from tests.common.quantization.metatypes import WEIGHT_LAYER_METATYPES
 from tests.common.quantization.metatypes import CatTestMetatype
+from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.mock_graphs import get_ip_graph_for_test
 from tests.common.quantization.mock_graphs import get_mock_nncf_node_attrs
 from tests.common.quantization.mock_graphs import get_nncf_graph_from_mock_nx_graph
@@ -67,6 +70,7 @@ class TestQuantizerPropagationStateGraph:
         qpsg = QPSG(ip_graph)
 
         qpsg.nodes["5 /F_0"][QPSG.OPERATOR_METATYPE_NODE_ATTR] = CatTestMetatype
+        qpsg.nodes["6 /G_0"][QPSG.OPERATOR_METATYPE_NODE_ATTR] = Conv2dTestMetatype
         qpsg.skip_check = False
         yield qpsg
         if not qpsg.skip_check:
@@ -285,7 +289,7 @@ class TestQuantizerPropagationStateGraph:
         ref_groups_vs_paths = start_ip_node_and_dom_node_grouped_paths.ref_groups_vs_paths
         test_groups_vs_paths = (
             mock_qp_graph.get_paths_to_immediately_dominating_insertion_points_grouped_by_unified_scales(
-                start_node_key, {CatTestMetatype}
+                start_node_key, {CatTestMetatype}, {CatTestMetatype: WEIGHT_LAYER_METATYPES}
             )
         )
 
@@ -1227,7 +1231,7 @@ class TestUnifinedScaleTypeAfterMergeQuantizers:
             mock_node_attrs = get_mock_nncf_node_attrs(op_name=node_key)
             if node_key == "B":
                 # Split have no POST_HOOK
-                mock_node_attrs[NNCFGraph.NODE_TYPE_ATTR] = "split"
+                mock_node_attrs[NNCFNode.NODE_TYPE_ATTR] = "split"
             mock_graph.add_node(node_key, **mock_node_attrs)
 
         mock_graph.add_edges_from([("A", "B"), ("B", "C"), ("B", "D"), ("C", "E"), ("D", "E")])
@@ -1702,3 +1706,137 @@ class TestOutputQuantAsWeightsSetup:
         )
         ref_quantizer_setup = output_quant_as_weights_test_struct.ref_quantizer_setup()
         assert test_quantizer_setup.equivalent_to(ref_quantizer_setup)
+
+
+@pytest.mark.parametrize(
+    "weight_configs, activation_configs, reference_configs",
+    [
+        (
+            # Weights #1
+            [
+                QuantizerConfig(
+                    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True, per_channel=False
+                ),
+                QuantizerConfig(
+                    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True, per_channel=True
+                ),
+            ],
+            # Activations #1
+            [
+                QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+            ],
+            # Reference #1
+            [
+                QuantizerConfig(
+                    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True, per_channel=False
+                ),
+            ],
+        ),
+        (
+            # Weights #2
+            [
+                QuantizerConfig(
+                    num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=True, per_channel=False
+                ),
+                QuantizerConfig(
+                    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True, per_channel=True
+                ),
+            ],
+            # Activations #2
+            [
+                QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False),
+                QuantizerConfig(
+                    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True, per_channel=False
+                ),
+            ],
+            # Reference #2
+            [
+                QuantizerConfig(
+                    num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=True, per_channel=False
+                ),
+            ],
+        ),
+        (
+            # Weights #3
+            [
+                QuantizerConfig(
+                    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True, per_channel=False
+                ),
+                QuantizerConfig(
+                    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True, per_channel=True
+                ),
+            ],
+            # Activations #3
+            [
+                QuantizerConfig(
+                    num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=True, per_channel=False
+                ),
+            ],
+            # Reference #3
+            [],
+        ),
+        (
+            # Weights #4
+            [
+                QuantizerConfig(
+                    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True, per_channel=False
+                ),
+                QuantizerConfig(
+                    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True, per_channel=True
+                ),
+            ],
+            # Activations #4
+            [
+                QuantizerConfig(
+                    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=False, per_channel=False
+                ),
+            ],
+            # Reference #4
+            [],
+        ),
+        (
+            # Weights #5
+            [
+                QuantizerConfig(
+                    num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=False, per_channel=False
+                ),
+                QuantizerConfig(
+                    num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=True, per_channel=True
+                ),
+            ],
+            # Activations #5
+            [
+                QuantizerConfig(
+                    num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=None, per_channel=False
+                ),
+                QuantizerConfig(
+                    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=None, per_channel=False
+                ),
+            ],
+            # Reference #5
+            [
+                QuantizerConfig(
+                    num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=False, per_channel=False
+                ),
+            ],
+        ),
+        (
+            # Weights #6
+            [
+                QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+            ],
+            # Activations #6
+            [
+                QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+            ],
+            # Reference #6
+            [
+                QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+            ],
+        ),
+    ],
+)
+def test_get_weight_and_activation_qconfig_list_intersection(weight_configs, activation_configs, reference_configs):
+    # pylint: disable=protected-access
+    resulted_configs = QPSG._get_weight_and_activation_qconfig_list_intersection(weight_configs, activation_configs)
+    assert resulted_configs == reference_configs

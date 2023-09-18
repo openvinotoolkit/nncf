@@ -1,15 +1,14 @@
-#
-#  Copyright (c) 2019-2023 Intel Corporation
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#       http://www.apache.org/licenses/LICENSE-2.0
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
-#
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 
 """
 @package docstring
@@ -33,8 +32,8 @@ from nncf.config import NNCFConfig
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.layers import NNCF_MODULES_DICT
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
+from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.nncf_network import PTModelTransformer
 
 TModel = TypeVar("TModel")
 
@@ -137,7 +136,9 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         :param model: An instance of NNCFNetwork for the algorithm to be applied to.
         :return: NNCFNetwork with algorithm-specific modifications applied
         """
-        check_scopes_in_graph(model.nncf.get_original_graph(), self.ignored_scopes, self.target_scopes)
+        check_scopes_in_graph(
+            model.nncf.get_original_graph(), self.ignored_scopes, self.target_scopes, self.validate_scopes
+        )
 
         layout = self._get_transformation_layout(model)
         self._handle_frozen_layers(model)
@@ -202,7 +203,7 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
             is_allowed, reason = self._are_frozen_layers_allowed()
             if is_allowed:
                 nncf_logger.warning(
-                    f"{reason}, compressing them without tuning weights.\n" f"Frozen layers:\n" f"{scopes_to_print}"
+                    f"{reason}, compressing them without tuning weights.\nFrozen layers:\n{scopes_to_print}"
                 )
             else:
                 raise RuntimeError(

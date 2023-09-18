@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict
+from typing import Dict, List
 
 import pytest
 
@@ -27,3 +27,8 @@ def skip_marked_cases_if_options_not_specified(config, items, marks_vs_options: 
                 item.add_marker(
                     pytest.mark.skip(reason=f"This test case requires an option {option} to be specified for pytest.")
                 )
+
+
+def skip_if_backend_not_selected(backend: str, backends_list: List[str]):
+    if "all" not in backends_list and backend not in backends_list:
+        pytest.skip("not selected for testing")

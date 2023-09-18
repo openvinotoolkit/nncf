@@ -36,12 +36,11 @@ from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
-from nncf.scopes import IgnoredScope
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.hardware.config import PTHWConfig
+from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.nncf_network import PTModelTransformer
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.init_range import PTRangeInitCollectorParams
 from nncf.torch.quantization.init_range import StatCollectorGenerator
@@ -58,9 +57,14 @@ from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 # pylint:disable=too-many-public-methods
 @ALGO_BACKENDS.register(BackendType.TORCH)
 class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
+    TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
+        TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
+        TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
+    }
+
     @property
-    def mat_mul_metatype(self) -> OperatorMetatype:
-        return om.PTModuleLinearMetatype
+    def mat_mul_metatypes(self) -> List[OperatorMetatype]:
+        return [om.PTModuleLinearMetatype]
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
@@ -71,7 +75,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return []
 
     @property
-    def conv_metatype(self) -> List[OperatorMetatype]:
+    def conv_metatypes(self) -> List[OperatorMetatype]:
         return [om.PTModuleConv1dMetatype, om.PTModuleConv2dMetatype, om.PTModuleConv3dMetatype]
 
     @property
@@ -91,6 +95,18 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return []
 
     @property
+    def add_metatypes(self) -> List[OperatorMetatype]:
+        return [om.PTAddMetatype]
+
+    @property
+    def group_conv_metatypes(self) -> List[OperatorMetatype]:
+        return self.conv_metatypes
+
+    @property
+    def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
+        return {om.PTCatMetatype: self.overflow_fix_metatypes}
+
+    @property
     def hw_config(self) -> HWConfig:
         return PTHWConfig
 
@@ -102,11 +118,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def model_transformer(model: NNCFNetwork) -> ModelTransformer:
         return PTModelTransformer(model)
 
-    TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
-        TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
-        TargetType.POST_LAYER_OPERATION: TargetType.OPERATOR_POST_HOOK,
-    }
-
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
         if NNCFGraphNodeType.INPUT_NODE in target_node_name or target_type == TargetType.POST_LAYER_OPERATION:
@@ -116,18 +127,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return PTTargetPoint(target_type, target_node_name, input_port_id=port_id)
 
     @staticmethod
-    def create_activation_quantizer_insertion_command(
-        nncf_graph: NNCFGraph,
-        target_point: PTTargetPoint,
-        quantizer_config: QuantizerConfig,
-        parameters: FakeQuantizeParameters,
-    ) -> PTInsertionCommand:
-        return PTMinMaxAlgoBackend._create_quantizer_insertion_command(
-            nncf_graph, target_point, quantizer_config, parameters
-        )
-
-    @staticmethod
-    def create_weight_quantizer_insertion_command(
+    def create_quantizer_insertion_command(
         nncf_graph: NNCFGraph,
         target_point: PTTargetPoint,
         quantizer_config: QuantizerConfig,
@@ -141,8 +141,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def unify_statistics(statistics: List[PTMinMaxTensorStatistic]) -> PTMinMaxTensorStatistic:
         max_values, min_values = [], []
         for statistic in statistics:
-            max_values.append(statistic.max_values)
-            min_values.append(statistic.min_values)
+            max_values.append(torch.tensor(statistic.max_values).flatten())
+            min_values.append(torch.tensor(statistic.min_values).flatten())
         max_values = torch.max(torch.tensor(max_values))
         min_values = torch.min(torch.tensor(min_values))
         return PTMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
@@ -309,24 +309,27 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return PTInsertionCommand(target_point, quantizer, TransformationPriority.QUANTIZATION_PRIORITY)
 
     @staticmethod
-    def get_ignored_scope(model_type: ModelType, device: TargetDevice) -> IgnoredScope:
+    def get_ignored_metatypes(model_type: ModelType, device: TargetDevice) -> List[OperatorMetatype]:
+        types = []
         if model_type == ModelType.TRANSFORMER:
-            types = []
-            metatypes_to_add = [
+            types = [
                 om.PTAddMetatype,
                 om.PTPowerMetatype,
                 om.PTSubMetatype,
                 om.PTMeanMetatype,
+                om.PTSumMetatype,
+                om.PTReduceL2,
                 om.PTDivMetatype,
+                om.PTMaxMetatype,
+                om.PTSqueezeMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
-                metatypes_to_add.append(om.PTMulMetatype)
-            type_name_to_add = ["squeeze"]
-            for metatype in metatypes_to_add:
-                types.extend(metatype.get_all_aliases())
-            types.extend(type_name_to_add)
-            return IgnoredScope(types=types)
-        return IgnoredScope()
+                types.append(om.PTMulMetatype)
+        return types
+
+    @staticmethod
+    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> List[str]:
+        return []
 
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:

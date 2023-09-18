@@ -175,7 +175,7 @@ def test_matches_with_non_pattern_node_type():
 
     ref_graph = create_graph_with_many_nodes()
     matches = find_subgraphs_matching_pattern(ref_graph, pattern)
-    assert matches == [["1", "2", "4", "3", "5", "6"]]
+    assert matches == [["1", "2", "3", "4", "5", "6"]]
 
 
 def test_matches_with_any_pattern_node_type():
@@ -202,3 +202,28 @@ def test_matches_with_any_pattern_node_type():
     ref_graph = create_graph_with_many_nodes()
     matches = find_subgraphs_matching_pattern(ref_graph, pattern)
     assert matches == [["7", "1", "2", "4", "8", "3", "5", "9", "6"]]
+
+
+def test_not_match_edges_inside_pattern():
+    ref_graph = nx.DiGraph()
+    ref_graph.add_node("0", **{GraphPattern.METATYPE_ATTR: "0"})
+    ref_graph.add_node("1", **{GraphPattern.METATYPE_ATTR: "a"})
+    ref_graph.add_node("2", **{GraphPattern.METATYPE_ATTR: "b"})
+    ref_graph.add_node("3", **{GraphPattern.METATYPE_ATTR: "c"})
+    ref_graph.add_edge("0", "1")
+    ref_graph.add_edge("1", "2")
+    ref_graph.add_edge("2", "3")
+    ref_graph.add_edge("1", "3")
+
+    pattern = GraphPattern()
+    node_1 = pattern.add_node(**{GraphPattern.METATYPE_ATTR: "a"})
+    node_2 = pattern.add_node(**{GraphPattern.METATYPE_ATTR: "b"})
+    node_3 = pattern.add_node(**{GraphPattern.METATYPE_ATTR: "c"})
+    pattern.add_edge(node_1, node_2)
+    pattern.add_edge(node_2, node_3)
+    matches = find_subgraphs_matching_pattern(ref_graph, pattern)
+    assert not matches
+
+    pattern.add_edge(node_1, node_3)
+    matches = find_subgraphs_matching_pattern(ref_graph, pattern)
+    assert matches == [["1", "2", "3"]]

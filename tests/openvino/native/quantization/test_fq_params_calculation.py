@@ -16,6 +16,7 @@ import openvino.runtime as ov
 import pytest
 
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
@@ -56,13 +57,14 @@ def get_fq_nodes_stats_algo(model):
 # pylint: disable=protected-access
 def quantize_model(ov_model, q_params):
     dataset = get_dataset_for_test(ov_model)
+    graph = GraphConverter.create_nncf_graph(ov_model)
 
     min_max_algo = MinMaxQuantization(subset_size=1, **q_params)
     statistics_aggregator = OVStatisticsAggregator(dataset)
-    statistic_points = min_max_algo.get_statistic_points(ov_model)
+    statistic_points = min_max_algo.get_statistic_points(ov_model, graph)
     statistics_aggregator.register_statistic_points(statistic_points)
-    statistics_aggregator.collect_statistics(ov_model)
-    quantized_model = min_max_algo._apply(ov_model, statistics_aggregator.statistic_points)
+    statistics_aggregator.collect_statistics(ov_model, graph)
+    quantized_model = min_max_algo.apply(ov_model, graph, statistics_aggregator.statistic_points)
     return quantized_model
 
 
@@ -77,7 +79,7 @@ def fixture_inplace_statistics(request):
     ids=[QuantizationPreset.PERFORMANCE.value, QuantizationPreset.MIXED.value],
 )
 @pytest.mark.parametrize("model_creator_func", SYNTHETIC_MODELS.values())
-def test_syntetic_models_fq_scales(model_creator_func, preset, inplace_statistics):
+def test_synthetic_models_fq_scales(model_creator_func, preset, inplace_statistics):
     model = model_creator_func()
     quantized_model = quantize_model(model.ov_model, {"preset": preset, "inplace_statistics": inplace_statistics})
     nodes = get_fq_nodes_stats_algo(quantized_model)
@@ -85,7 +87,7 @@ def test_syntetic_models_fq_scales(model_creator_func, preset, inplace_statistic
     ref_stats_name = model.ref_graph_name.split(".")[0] + f"_{preset.value}.json"
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
 
-    # Unkomment lines below to generate reference for new models.
+    # Uncomment lines below to generate reference for new models.
     # from tests.shared.helpers import dump_to_json
     # dump_to_json(ref_stats_path, nodes)
 
@@ -107,7 +109,7 @@ def test_overflow_fix_scales(overflow_fix):
     ref_stats_name = model.ref_graph_name.split(".")[0] + f"_overflow_fix_{overflow_fix.value}.json"
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
 
-    # Unkomment lines below to generate reference for new models.
+    # Uncomment lines below to generate reference for new models.
     # from tests.shared.helpers import dump_to_json
     # dump_to_json(ref_stats_path, nodes)
 
@@ -140,7 +142,7 @@ def test_omz_models_fq_scales(model_name, preset, inplace_statistics, tmp_path):
     ref_stats_name = str(Path(model_path).name).rsplit(".", maxsplit=1)[0] + f"_{preset.value}.json"
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
 
-    # Unkomment lines below to generate reference for new models.
+    # Uncomment lines below to generate reference for new models.
     # from tests.shared.helpers import dump_to_json
     # dump_to_json(ref_stats_path, nodes)
 
@@ -159,7 +161,7 @@ REF_NODES_SHAPES = {
 @pytest.mark.parametrize(
     "model_creator_func, ref_shapes", zip([LinearModel, ConvModel, MatMul2DModel], REF_NODES_SHAPES.values())
 )
-def test_syntetic_models_fq_shapes(model_creator_func, ref_shapes, inplace_statistics):
+def test_synthetic_models_fq_shapes(model_creator_func, ref_shapes, inplace_statistics):
     model = model_creator_func()
     quantized_model = quantize_model(
         model.ov_model, {"preset": QuantizationPreset.PERFORMANCE, "inplace_statistics": inplace_statistics}

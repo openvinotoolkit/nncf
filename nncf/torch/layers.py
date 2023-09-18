@@ -349,6 +349,7 @@ class NNCFConvTranspose3d(_NNCFModuleMixin, nn.ConvTranspose3d):
 
 class NNCFEmbedding(_NNCFModuleMixin, nn.Embedding):
     op_func_name = "embedding"
+    target_weight_dim_for_compression = 0
 
     # Note that this does not require activation quantization because it's basically a lookup.
     @staticmethod
@@ -449,7 +450,9 @@ NNCF_WRAPPED_USER_MODULES_DICT = {}
 
 
 @api(canonical_alias="nncf.torch.register_module")
-def register_module(*quantizable_field_names: str, ignored_algorithms: list = None):
+def register_module(
+    *quantizable_field_names: str, ignored_algorithms: list = None, target_weight_dim_for_compression: int = 0
+):
     # quantizable_field_names will work for `weight` attributes only. Should later extend to registering
     # customly named attributes if it becomes necessary
     def wrap(cls):
@@ -462,6 +465,10 @@ def register_module(*quantizable_field_names: str, ignored_algorithms: list = No
         setattr(NNCF_WRAPPED_USER_MODULES_DICT[cls], "get_weight_shape", get_base_attributes_fn)
         if ignored_algorithms:
             setattr(NNCF_WRAPPED_USER_MODULES_DICT[cls], "ignored_algorithms", ignored_algorithms)
+
+        setattr(
+            NNCF_WRAPPED_USER_MODULES_DICT[cls], "target_weight_dim_for_compression", target_weight_dim_for_compression
+        )
         return cls
 
     return wrap

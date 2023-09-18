@@ -53,12 +53,11 @@ class ThreeConvModel(nn.Module):
 
     def __init__(self):
         super().__init__()
-        self.conv1 = create_conv(1, 3, 5, bias=False)
+        self.conv1 = create_conv(1, 3, 5, bias=False, padding=2)
         self.conv_to_skip = create_conv(3, 3, 1, bias=False)
         self.last_conv = create_conv(3, 1, 1)
-        self.mode = ThreeConvModelMode.ORIGINAL
+        self.mode = ThreeConvModelMode.SUPERNET
         self._forward_fn_per_mode = {
-            ThreeConvModelMode.ORIGINAL: self.original_forward,
             ThreeConvModelMode.SUPERNET: self.supernet_forward,
             ThreeConvModelMode.WIDTH_STAGE: self.forward_min_subnet_on_width_stage,
             ThreeConvModelMode.KERNEL_STAGE: self.forward_min_subnet_on_kernel_stage,
@@ -77,14 +76,8 @@ class ThreeConvModel(nn.Module):
     def assert_transition_matrix_equals(self, matrix_to_cmp: Tensor):
         assert torch.equal(self._transition_matrix, matrix_to_cmp)
 
-    def original_forward(self, x):
-        o1 = self.conv1(x)
-        o2 = self.conv_to_skip(o1)
-        o3 = o1 + o2
-        return self.last_conv(o3)
-
     def supernet_forward(self, x):
-        o1 = do_conv2d(self.conv1, x, padding=2)
+        o1 = self.conv1(x)
         o2 = self.conv_to_skip(o1)
         o3 = o1 + o2
         return self.last_conv(o3)

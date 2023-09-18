@@ -11,18 +11,18 @@
 
 import importlib
 from copy import deepcopy
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
 
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.utils.backend import get_backend
-from nncf.common.utils.timer import timer
 from nncf.data import Dataset
+from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
+from nncf.openvino.quantization.weights_compression import insert_pre_compression_operations
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -30,14 +30,18 @@ from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParame
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import convert_to_dict_recursively
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
-from nncf.quantization.algorithms.accuracy_control.algorithm import get_algo_backend
+from nncf.quantization.algorithms.accuracy_control.algorithm import calculate_accuracy_drop
+from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
 from nncf.telemetry.decorator import tracked_function
 from nncf.telemetry.events import NNCF_OV_CATEGORY
 
 USE_POT_AS_DEFAULT = False
+
+TTensor = TypeVar("TTensor")
 
 
 def should_use_pot(advanced_parameters: Optional[AdvancedQuantizationParameters]) -> bool:
@@ -112,7 +116,8 @@ def native_quantize_impl(
         advanced_parameters=advanced_parameters,
     )
 
-    quantized_model = quantization_algorithm.apply(model, dataset=calibration_dataset)
+    graph = GraphConverter.create_nncf_graph(model)
+    quantized_model = quantization_algorithm.apply(model, graph, dataset=calibration_dataset)
 
     if is_weight_compression_needed(advanced_parameters):
         compress_quantize_weights_transformation(quantized_model)
@@ -139,7 +144,7 @@ def native_quantize_with_accuracy_control_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
     validation_dataset: Dataset,
-    validation_fn: Callable[[Any, Iterable[Any]], float],
+    validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
     preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
@@ -157,12 +162,6 @@ def native_quantize_with_accuracy_control_impl(
     """
     if advanced_accuracy_restorer_parameters is None:
         advanced_accuracy_restorer_parameters = AdvancedAccuracyRestorerParameters()
-
-    if advanced_accuracy_restorer_parameters.tune_hyperparams:
-        raise RuntimeError(
-            "Quantization algorithm with accuracy control from the "
-            "OpenVINO backend does not support tuning hyperparams yet"
-        )
 
     compress_weights = is_weight_compression_needed(advanced_quantization_parameters)
 
@@ -184,35 +183,75 @@ def native_quantize_with_accuracy_control_impl(
         copied_parameters,
     )
 
-    # Backends
-    backend = get_backend(model)
-    algo_backend = get_algo_backend(backend)
+    evaluator = Evaluator(validation_fn)
+    evaluator.enable_iteration_count()
+    initial_metric_results = evaluator.collect_metric_results(model, validation_dataset, model_name="initial")
+    validation_dataset_size = evaluator.num_passed_iterations
+    evaluator.disable_iteration_count()
 
-    nncf_logger.info("Validation of initial model was started")
-    with timer():
-        initial_metric = validation_fn(algo_backend.prepare_for_inference(model), validation_dataset.get_data())
-    nncf_logger.info(f"Metric of initial model: {initial_metric}")
+    quantized_metric_results = evaluator.collect_metric_results(
+        quantized_model, validation_dataset, model_name="quantized"
+    )
 
-    nncf_logger.info("Validation of quantized model was started")
-    with timer():
-        quantized_metric = validation_fn(
-            algo_backend.prepare_for_inference(quantized_model), validation_dataset.get_data()
+    should_terminate, accuracy_drop = calculate_accuracy_drop(
+        initial_metric_results.metric_value, quantized_metric_results.metric_value, max_drop, drop_type
+    )
+
+    nncf_logger.info(f"Accuracy drop: {accuracy_drop} ({drop_type})")
+
+    # TODO(andrey-churkin): Collect statistics only once
+    if advanced_accuracy_restorer_parameters.tune_hyperparams and not should_terminate:
+        tuned_quantized_model = quantize_with_tune_hyperparams(
+            model,
+            calibration_dataset,
+            validation_dataset,
+            validation_fn,
+            initial_metric_results,
+            quantized_metric_results,
+            subset_size,
+            preset,
+            target_device,
+            subset_size,
+            fast_bias_correction,
+            model_type,
+            ignored_scope,
+            advanced_quantization_parameters,
         )
-    nncf_logger.info(f"Metric of quantized model: {quantized_metric}")
+        tuned_quantized_metric_results = evaluator.collect_metric_results(
+            tuned_quantized_model, validation_dataset, model_name="tuned"
+        )
+        should_terminate, tuned_accuracy_drop = calculate_accuracy_drop(
+            initial_metric_results.metric_value, tuned_quantized_metric_results.metric_value, max_drop, drop_type
+        )
 
-    ranking_subset_size = subset_size
-    if advanced_accuracy_restorer_parameters.ranking_subset_size is not None:
-        ranking_subset_size = advanced_accuracy_restorer_parameters.ranking_subset_size
+        nncf_logger.info(f"Accuracy drop (tuned): {tuned_accuracy_drop} ({drop_type})")
 
-    accuracy_aware_loop = QuantizationAccuracyRestorer(
-        ranking_subset_size=ranking_subset_size,
-        max_num_iterations=advanced_accuracy_restorer_parameters.max_num_iterations,
-        max_drop=max_drop,
-        drop_type=drop_type,
-    )
-    quantized_model = accuracy_aware_loop.restore_accuracy(
-        model, initial_metric, quantized_model, quantized_metric, validation_dataset, validation_fn
-    )
+        if should_terminate or tuned_accuracy_drop < accuracy_drop:
+            quantized_model = tuned_quantized_model
+            quantized_metric_results = tuned_quantized_metric_results
+
+    if not should_terminate:
+        ranking_subset_size = subset_size
+        if advanced_accuracy_restorer_parameters.ranking_subset_size is not None:
+            ranking_subset_size = advanced_accuracy_restorer_parameters.ranking_subset_size
+
+        accuracy_restorer = QuantizationAccuracyRestorer(
+            ranking_subset_size,
+            advanced_accuracy_restorer_parameters.max_num_iterations,
+            max_drop,
+            drop_type,
+            advanced_accuracy_restorer_parameters.num_ranking_processes,
+        )
+        quantized_model = accuracy_restorer.apply(
+            model,
+            initial_metric_results,
+            quantized_model,
+            quantized_metric_results,
+            validation_dataset,
+            validation_dataset_size,
+            evaluator,
+        )
+
     if compress_weights:
         compress_quantize_weights_transformation(quantized_model)
 
@@ -268,6 +307,23 @@ def quantize_impl(
     )
 
 
+def wrap_validation_fn(validation_fn):
+    """
+    Wraps validation function to support case when it only returns metric value.
+
+    :param validation_fn: Validation function to wrap.
+    :return: Wrapped validation function.
+    """
+
+    def wrapper(*args, **kwargs):
+        retval = validation_fn(*args, **kwargs)
+        if isinstance(retval, tuple):
+            return retval
+        return retval, None
+
+    return wrapper
+
+
 def quantize_with_accuracy_control_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
@@ -295,11 +351,14 @@ def quantize_with_accuracy_control_impl(
         quantize_with_accuracy_control_fn = pot_quantize_with_accuracy_control_impl
     else:
         quantize_with_accuracy_control_fn = native_quantize_with_accuracy_control_impl
+
+    val_func = wrap_validation_fn(validation_fn)
+
     return quantize_with_accuracy_control_fn(
         model,
         calibration_dataset,
         validation_dataset,
-        validation_fn,
+        val_func,
         max_drop,
         drop_type,
         preset,
@@ -311,3 +370,11 @@ def quantize_with_accuracy_control_impl(
         advanced_quantization_parameters,
         advanced_accuracy_restorer_parameters,
     )
+
+
+def compress_weights_impl(model: ov.Model) -> ov.Model:
+    """
+    Implementation of the `compress_weights()` method for the OpenVINO backend.
+    """
+    insert_pre_compression_operations(model)
+    return model

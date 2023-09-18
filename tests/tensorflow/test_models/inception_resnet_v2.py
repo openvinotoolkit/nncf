@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import tensorflow as tf
+from keras import layers as keras_layers
 
 from nncf.tensorflow.tf_internals import backend
 from nncf.tensorflow.tf_internals import imagenet_utils
@@ -142,12 +143,21 @@ def inception_resnet_block(x, scale, block_type, block_idx, activation="relu"):
         mixed, backend.int_shape(x)[channel_axis], 1, activation=None, use_bias=True, name=block_name + "_conv"
     )
 
-    x = layers.Lambda(
-        lambda inputs, scale: inputs[0] + inputs[1] * scale,
-        output_shape=backend.int_shape(x)[1:],
-        arguments={"scale": scale},
-        name=block_name,
-    )([x, up])
+    x = CustomScaleLayer(scale)([x, up])
     if activation is not None:
         x = layers.Activation(activation, name=block_name + "_ac")(x)
     return x
+
+
+class CustomScaleLayer(keras_layers.Layer):
+    def __init__(self, scale, **kwargs):
+        super().__init__(**kwargs)
+        self.scale = scale
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({"scale": self.scale})
+        return config
+
+    def call(self, inputs):
+        return inputs[0] + inputs[1] * self.scale

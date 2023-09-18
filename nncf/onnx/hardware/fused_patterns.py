@@ -44,6 +44,26 @@ def create_scale_shift() -> GraphPattern:
     return pattern
 
 
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.SHIFT_SCALE)
+def create_shift_scale() -> GraphPattern:
+    pattern = GraphPattern()
+    add_node = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "ADD, SUBTRACT",
+            GraphPattern.METATYPE_ATTR: [om.ONNXAddLayerMetatype, om.ONNXSubMetatype],
+        }
+    )
+    mul_node = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "MULTIPLY, DIV",
+            GraphPattern.METATYPE_ATTR: [om.ONNXMulLayerMetatype, om.ONNXDivLayerMetatype],
+        }
+    )
+
+    pattern.add_edge(add_node, mul_node)
+    return pattern
+
+
 @ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.SWISH_WITH_SIGMOID)
 def create_swish_with_sigmoid() -> GraphPattern:
     pattern = GraphPattern()
@@ -82,71 +102,54 @@ def create_swish_with_hard_sigmoid() -> GraphPattern:
     return pattern
 
 
-@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.MATMUL_SOFTMAX_MATMUL)
-def create_matmul_softmax_matmul() -> GraphPattern:
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.HSWISH_ACTIVATION_WITHOUT_DENOMINATOR)
+def create_hswish_without_denominator() -> GraphPattern:
     pattern = GraphPattern()
-    softmax_1 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: om.ONNXSoftmaxMetatype}
+    any_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "ANY", GraphPattern.METATYPE_ATTR: GraphPattern.ANY_PATTERN_NODE_TYPE}
     )
-    mat_mul_1_1 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MATMUL_1", GraphPattern.METATYPE_ATTR: om.ONNXLinearMetatype}
-    )
-    mat_mul_2_1 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MATMUL_2", GraphPattern.METATYPE_ATTR: om.ONNXLinearMetatype}
-    )
-
-    any_1 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "ANY", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: om.ONNXAddLayerMetatype})
+    relu_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "RELU", GraphPattern.METATYPE_ATTR: om.ONNXReluMetatype})
+    multiply_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype}
     )
 
-    pattern.add_edge(mat_mul_1_1, softmax_1)
-    pattern.add_edge(softmax_1, mat_mul_2_1)
-    pattern.add_edge(any_1, mat_mul_2_1)
-
-    softmax_2 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: om.ONNXSoftmaxMetatype}
-    )
-    add_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: om.ONNXAddLayerMetatype})
-    mat_mul_1_2 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MATMUL_1", GraphPattern.METATYPE_ATTR: om.ONNXLinearMetatype}
-    )
-    mat_mul_2_2 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MATMUL_2", GraphPattern.METATYPE_ATTR: om.ONNXLinearMetatype}
-    )
-
-    any_2 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "ANY", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
-    )
-
-    pattern.add_edge(mat_mul_1_2, add_2)
-    pattern.add_edge(add_2, softmax_2)
-    pattern.add_edge(softmax_2, mat_mul_2_2)
-    pattern.add_edge(any_2, mat_mul_2_2)
-
+    pattern.add_edge(any_node, add_node)
+    pattern.add_edge(add_node, relu_node)
+    pattern.add_edge(relu_node, multiply_node)
+    pattern.add_edge(any_node, multiply_node)
     return pattern
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.HSWISH_ACTIVATION)
+def create_hswish() -> GraphPattern:
+    div_pattern = GraphPattern()
+    hswish = create_hswish_without_denominator()
+    div_pattern.add_node(**{GraphPattern.LABEL_ATTR: "DIV", GraphPattern.METATYPE_ATTR: om.ONNXDivLayerMetatype})
+    hswish.join_patterns(div_pattern)
+    return hswish
 
 
 # INPUT PROCESSING
 
 
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.INPUT_SCALE_SHIFT)
+def create_input_scale_shift() -> GraphPattern:
+    pattern = GraphPattern()
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: InputNoopMetatype})
+    scale_shift = create_scale_shift()
+
+    pattern.join_patterns(scale_shift)
+    return pattern
+
+
 @ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.INPUT_SHIFT_SCALE)
 def create_input_shift_scale() -> GraphPattern:
     pattern = GraphPattern()
-    input_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: InputNoopMetatype}
-    )
-    add_node = pattern.add_node(
-        **{
-            GraphPattern.LABEL_ATTR: "ADD, SUBTRACT",
-            GraphPattern.METATYPE_ATTR: [om.ONNXAddLayerMetatype, om.ONNXSubMetatype],
-        }
-    )
-    multiply_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype}
-    )
+    pattern.add_node(**{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: InputNoopMetatype})
+    shift_scale = create_shift_scale()
 
-    pattern.add_edge(input_node, add_node)
-    pattern.add_edge(add_node, multiply_node)
+    pattern.join_patterns(shift_scale)
     return pattern
 
 
@@ -164,16 +167,6 @@ def create_input_add() -> GraphPattern:
     )
 
     pattern.add_edge(input_node, add_node)
-    return pattern
-
-
-@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.INPUT_SCALE_SHIFT)
-def create_input_scale_shift() -> GraphPattern:
-    pattern = GraphPattern()
-    pattern.add_node(**{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: InputNoopMetatype})
-    scale_shift = create_scale_shift()
-
-    pattern.join_patterns(scale_shift)
     return pattern
 
 
@@ -357,6 +350,26 @@ def create_bn_scale_shift_activation() -> GraphPattern:
     return batch_norm
 
 
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ARITHMETIC_ACTIVATIONS)
+def create_linear_arithmetic_activations() -> GraphPattern:
+    linear = linear_operations()
+    arithmetic = arithmetic_operations()
+    activations = atomic_activations_operations()
+
+    linear.join_patterns(arithmetic)
+    linear.join_patterns(activations)
+    return linear
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ARITHMETIC_ACTIVATIONS_ARITHMETIC)
+def create_linear_arithmetic_activations_arithmetic() -> GraphPattern:
+    linear_arithmetic_activations = create_linear_arithmetic_activations()
+    arithmetic = arithmetic_operations()
+
+    linear_arithmetic_activations.join_patterns(arithmetic)
+    return linear_arithmetic_activations
+
+
 # DEVICE PATTERNS
 
 
@@ -389,6 +402,12 @@ def atomic_activations_operations() -> GraphPattern:
 
     swish_hard_sigmoid = create_swish_with_hard_sigmoid()
     pattern.add_pattern_alternative(swish_hard_sigmoid)
+
+    hswish = create_hswish()
+    pattern.add_pattern_alternative(hswish)
+
+    hswish_without_denominator = create_hswish_without_denominator()
+    pattern.add_pattern_alternative(hswish_without_denominator)
     return pattern
 
 

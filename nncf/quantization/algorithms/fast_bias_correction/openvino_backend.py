@@ -19,10 +19,8 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
-from nncf.common.utils.registry import Registry
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
-from nncf.openvino.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
@@ -38,10 +36,6 @@ from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCo
 
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
-    @property
-    def operation_metatypes(self) -> Registry:
-        return OV_OPERATOR_METATYPES
-
     @property
     def tensor_processor(self) -> OVNNCFCollectorTensorProcessor:
         return OVNNCFCollectorTensorProcessor
@@ -74,13 +68,16 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return subgraph.inputs[0].get_any_name(), subgraph.outputs[0].get_any_name()
 
     @staticmethod
-    def create_blob(shape: Tuple[int], data: List[np.ndarray], channel_axis: int) -> np.ndarray:
+    def create_input_data(
+        shape: Tuple[int], data: List[np.ndarray], input_name: str, channel_axis: int
+    ) -> Dict[str, np.ndarray]:
         blob = np.zeros(shape)
         for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):
             index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))
             blob[index] = data[j]
         blob = blob.astype(data[0].dtype)
-        return blob
+        input_data = {input_name: blob}
+        return input_data
 
     @staticmethod
     def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
@@ -107,3 +104,22 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return is_node_with_bias(node, nncf_graph)
+
+    @staticmethod
+    def get_bias_shift_magnitude(current_bias_value: np.ndarray, updated_bias_value: np.ndarray) -> float:
+        bias_shift_magnitude = np.inf
+        if np.count_nonzero(current_bias_value == 0) == 0:
+            bias_shift_magnitude = np.max(np.abs((updated_bias_value - current_bias_value) / current_bias_value))
+        return bias_shift_magnitude
+
+    @staticmethod
+    def post_process_output_data(data: List[np.ndarray]) -> np.ndarray:
+        return np.array(data)
+
+    @staticmethod
+    def reshape_tensor(data: np.ndarray, new_shape: List[int]) -> np.ndarray:
+        return data.reshape(new_shape)
+
+    @staticmethod
+    def get_node_names_for_input_output_statistics(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[str, str]:
+        return node.node_name, node.node_name

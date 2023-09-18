@@ -291,12 +291,11 @@ class HWFusedPatternNames(Enum):
     # BLOCK PATTERNS
     ADD_SCALE_SHIFT_OUTPUT = PatternDesc("add_scale_shift_output")
     BATCH_INDEX = PatternDesc("batch_index")
-    EQUAL_LOGICALNOT = PatternDesc("equal_logicalnot")
-    FC_BN_HSWISH_ACTIVATION = PatternDesc("fc_bn_hswish_activation")
     LINEAR_WITH_BIAS = PatternDesc("linear_with_bias")
     MVN_SCALE_SHIFT = PatternDesc("mvn_scale_shift")
     NORMALIZE_L2_MULTIPLY = PatternDesc("normalize_l2_multiply")
     SCALE_SHIFT = PatternDesc("scale_shift")
+    SHIFT_SCALE = PatternDesc("shift_scale")
     SE_BLOCK = PatternDesc("se_block")
     SOFTMAX_DIV = PatternDesc("softmax_div")
 
@@ -340,12 +339,15 @@ class HWFusedPatternNames(Enum):
     LINEAR_ACTIVATIONS_SCALE_SHIFT = PatternDesc("linear_activations_scale_shift")
     LINEAR_ARITHMETIC = PatternDesc("linear_arithmetic")
     LINEAR_ARITHMETIC_ACTIVATIONS = PatternDesc("linear_arithmetic_activations")
+    # Found in PicoDet models
+    LINEAR_ARITHMETIC_ACTIVATIONS_ARITHMETIC = PatternDesc("linear_arithmetic_activations_arithmetic")
     LINEAR_BATCH_NORM = PatternDesc("linear_batch_norm")
     LINEAR_BATCH_NORM_ACTIVATIONS = PatternDesc("linear_batch_norm_activations")
     LINEAR_BATCH_NORM_SCALE_SHIFT_ACTIVATIONS = PatternDesc("linear_batch_norm_scale_shift_activations")
     LINEAR_SCALE_SHIFT_ACTIVATIONS = PatternDesc("linear_scale_shift_activations")
     LINEAR_CONST_MULTIPLY = PatternDesc("linear_const_multiply")
     LINEAR_SQUEEZE_ACTIVATIONS = PatternDesc("linear_squeeze_activations")
+    LINEAR_ACTIVATIONS_UNSQUEEZE_BN_SQUEEZE = PatternDesc("linear_activations_unsqueeze_bn_squeeze")
     SCALE_SHIFT_ACTIVATIONS = PatternDesc("scale_shift_activations")
     MVN_SCALE_SHIFT_ACTIVATIONS = PatternDesc("mvn_scale_shift_activations")
 
@@ -379,22 +381,16 @@ class HWFusedPatternNames(Enum):
         "linear_biased_activation_elementwise", devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU]
     )
 
-    # TRANSFORMERS
-    MATMUL_SOFTMAX_MATMUL = PatternDesc("matmul_softmax_matmul", model_types=[ModelType.TRANSFORMER])
-    SOFTMAX_RESHAPE_MATMUL = PatternDesc("softmax_reshape_matmul", model_types=[ModelType.TRANSFORMER])
-    SOFTMAX_RESHAPE_TRANSPOSE_GATHER_MATMUL = PatternDesc(
-        "softmax_reshape_transpose_gather_matmul", model_types=[ModelType.TRANSFORMER]
-    )
-    SOFTMAX_RESHAPE_TRANSPOSE_MATMUL = PatternDesc(
-        "softmax_reshape_transpose_matmul", model_types=[ModelType.TRANSFORMER]
-    )
-    STABLE_DIFFUSION = PatternDesc("stable_diffusion", model_types=[ModelType.TRANSFORMER])
-
 
 class IgnoredPatternNames(Enum):
     """
     Describes the patterns, which nodes should be ignored during FakeQuantize placement.
     """
 
-    SOFTMAX_MATMUL = PatternDesc("softmax_matmul", model_types=[ModelType.TRANSFORMER])
-    SOFTMAX_RESHAPE_MATMUL = PatternDesc("softmax_reshape_matmul", model_types=[ModelType.TRANSFORMER])
+    MULTIHEAD_ATTENTION_OUTPUT = PatternDesc(
+        "multihead_attention_output",
+        model_types=[ModelType.TRANSFORMER],
+        devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU, TargetDevice.VPU],
+    )
+    FC_BN_HSWISH_ACTIVATION = PatternDesc("fc_bn_hswish_activation")
+    EQUAL_LOGICALNOT = PatternDesc("equal_logicalnot")

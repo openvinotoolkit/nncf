@@ -14,7 +14,7 @@
 
 import torch
 import torch.nn.functional as F
-from pkg_resources import parse_version
+from packaging import version
 from torch import nn
 
 from examples.torch.common.example_logger import logger
@@ -85,7 +85,7 @@ class UNet(nn.Module):
             x = up(x, blocks[-i - 1])
 
         x = self.last(x)
-        if is_tracing_state() and parse_version(torch.__version__) >= parse_version("1.1.0"):
+        if is_tracing_state() and version.parse(torch.__version__) >= version.parse("1.1.0"):
             # While exporting, add extra post-processing layers into the graph
             # so that the model outputs class probabilities instead of class scores
             softmaxed = F.softmax(x, dim=1)

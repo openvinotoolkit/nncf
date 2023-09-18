@@ -15,8 +15,8 @@ from typing import Any, Dict, TypeVar
 
 from tqdm import tqdm
 
-from nncf.common.factory import EngineFactory
-from nncf.common.factory import ModelTransformerFactory
+from nncf.common import factory
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -33,22 +33,26 @@ class StatisticsAggregator(ABC):
 
     def __init__(self, dataset: Dataset):
         self.dataset = dataset
-        self.stat_subset_size = 0
+        self.stat_subset_size = None
         self.statistic_points = StatisticPointsContainer()
 
-    def collect_statistics(self, model: TModel) -> None:
+    def collect_statistics(self, model: TModel, graph: NNCFGraph) -> None:
         """
         Collects statistics for registered StatisticPoints.
         The statistics are stored in self.statistic_points.
 
-        :param model: backend-specific model instance
+        :param model: Backend-specific model instance.
+        :param graph: Model graph.
         """
-        model_transformer = ModelTransformerFactory.create(model)
+        if not self.statistic_points:
+            return
 
-        merged_statistics = self._get_merged_statistic_points(self.statistic_points, model)
+        model_transformer = factory.ModelTransformerFactory.create(model)
+
+        merged_statistics = self._get_merged_statistic_points(self.statistic_points, model, graph)
         transformation_layout = self._get_transformation_layout_extra_outputs(merged_statistics)
         model_with_outputs = model_transformer.transform(transformation_layout)
-        engine = EngineFactory.create(model_with_outputs)
+        engine = factory.EngineFactory.create(model_with_outputs)
 
         for input_data in tqdm(
             islice(self.dataset.get_inference_data(), self.stat_subset_size),
@@ -74,7 +78,10 @@ class StatisticsAggregator(ABC):
             for _statistic_point in _statistic_points:
                 for _, tensor_collectors in _statistic_point.algorithm_to_tensor_collectors.items():
                     for tensor_collector in tensor_collectors:
-                        self.stat_subset_size = max(self.stat_subset_size, tensor_collector.num_samples)
+                        if self.stat_subset_size is None:
+                            self.stat_subset_size = tensor_collector.num_samples
+                        elif tensor_collector.num_samples is not None:
+                            self.stat_subset_size = max(self.stat_subset_size, tensor_collector.num_samples)
 
     @abstractmethod
     def _register_statistics(self, outputs: Dict[str, NNCFTensor], statistic_points: StatisticPointsContainer) -> None:
@@ -99,7 +106,7 @@ class StatisticsAggregator(ABC):
     @staticmethod
     @abstractmethod
     def _get_merged_statistic_points(
-        statistic_points: StatisticPointsContainer, model: TModel
+        statistic_points: StatisticPointsContainer, model: TModel, graph: NNCFGraph
     ) -> StatisticPointsContainer:
         """
         Creates a new StatisticPointContainer that has no duplicated tensor collectors for one
@@ -109,6 +116,7 @@ class StatisticsAggregator(ABC):
 
         :param statistic_points: Registered statistic points with possible tensor collectors duplicates.
         :param model: Backend-specific target model.
+        :param graph: Model graph.
         :return: Merged statistic points container bounded with given statistic point container.
         """
 

@@ -1,9 +1,19 @@
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from typing import List
 
 from nncf.common.graph import OperatorMetatype
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
-from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 
 METATYPES_FOR_TEST = OperatorMetatypeRegistry("TEST_METATYPES")
@@ -155,13 +165,6 @@ DEFAULT_TEST_QUANT_TRAIT_MAP = {
         GeluTestMetatype,
         LinearTestMetatype,
         AddTestMetatype,
-    ],
-    QuantizationTrait.NON_QUANTIZABLE: [
-        MaxPool2dTestMetatype,
-        DropoutTestMetatype,
-        MinTestMetatype,
-        SoftmaxTestMetatype,
-        UnknownMetatype,
     ],
     QuantizationTrait.CONCAT: [CatTestMetatype],
 }

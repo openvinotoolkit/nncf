@@ -20,6 +20,7 @@ from nncf.torch.binarization.reference import ReferenceBinarizedFunctions
 from nncf.torch.extensions import EXTENSIONS
 from nncf.torch.extensions import CudaNotAvailableStub
 from nncf.torch.extensions import ExtensionLoader
+from nncf.torch.extensions import ExtensionLoaderTimeoutException
 from nncf.torch.extensions import ExtensionNamespace
 from nncf.torch.extensions import ExtensionsType
 
@@ -60,6 +61,8 @@ class BinarizedFunctionsCPULoader(ExtensionLoader):
                 build_directory=cls.get_build_dir(),
                 verbose=False,
             )
+        except ExtensionLoaderTimeoutException as e:
+            raise e
         except Exception as e:  # pylint:disable=broad-except
             nncf_logger.warning(
                 f"Could not compile CPU binarization extensions. "
@@ -91,6 +94,8 @@ class BinarizedFunctionsCUDALoader(ExtensionLoader):
                 build_directory=cls.get_build_dir(),
                 verbose=False,
             )
+        except ExtensionLoaderTimeoutException as e:
+            raise e
         except (subprocess.CalledProcessError, OSError, RuntimeError) as e:
             assert torch.cuda.is_available()
             raise RuntimeError(

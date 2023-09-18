@@ -12,7 +12,6 @@
 import os
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 from typing import List
 
@@ -21,6 +20,7 @@ import pytest
 from nncf.common.utils.os import is_linux
 from nncf.common.utils.os import is_windows
 from tests.cross_fw.install.conftest import TESTED_BACKENDS
+from tests.shared.case_collection import skip_if_backend_not_selected
 from tests.shared.helpers import create_venv_with_nncf
 from tests.shared.helpers import get_pip_executable_with_venv
 from tests.shared.helpers import get_python_executable_with_venv
@@ -97,11 +97,6 @@ def backend_to_test_(request, backend_clopt: List[str]):
     return request.param
 
 
-def skip_if_backend_not_selected(backend: str, backends_from_cl: List[str]):
-    if "all" not in backends_from_cl and backend not in backends_from_cl:
-        pytest.skip("not selected for testing")
-
-
 @pytest.mark.parametrize("backend", TESTED_BACKENDS)
 class TestInstall:
     @staticmethod
@@ -114,10 +109,8 @@ class TestInstall:
         host_configuration_clopt: str,
     ):
         skip_if_backend_not_selected(backend, backend_clopt)
-        if backend == "openvino" and "pypi" in package_type:
-            pytest.xfail("Disabled until OV backend is exposed in a release")
-        if backend == "torch" and "pypi" in package_type:
-            pytest.xfail("Disabled until NNCF with torch version supporting CUDA 11.6 backend is exposed in a release")
+        if "pypi" in package_type:
+            pytest.xfail("Disabled until NNCF is exposed in a release")
         venv_path = create_venv_with_nncf(tmp_path, package_type, venv_type, extra_reqs={backend})
         run_install_checks(venv_path, tmp_path, package_type, backend=backend, install_type=host_configuration_clopt)
 
@@ -131,10 +124,8 @@ class TestInstall:
         host_configuration_clopt: str,
     ):
         skip_if_backend_not_selected(backend, backend_clopt)
-        if backend == "openvino" and "pypi" in package_type:
-            pytest.xfail("Disabled until OV backend is exposed in a release")
-        if backend == "torch" and "pypi" in package_type:
-            pytest.xfail("Disabled until NNCF with torch version supporting CUDA 11.6 backend is exposed in a release")
+        if "pypi" in package_type:
+            pytest.xfail("Disabled until NNCF is exposed in a release")
         venv_path = create_venv_with_nncf(tmp_path, package_type, venv_type, extra_reqs={backend})
 
         if is_linux():

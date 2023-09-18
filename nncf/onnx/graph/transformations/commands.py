@@ -107,7 +107,7 @@ class ONNXModelExtractionCommand(Command):
 
     def __init__(self, inputs: List[str], outputs: List[str]):
         """
-        :param inputs: List of the input names that denote the sub-graph beggining.
+        :param inputs: List of the input names that denote the sub-graph beginning.
         :param outputs: List of the output names that denote the sub-graph ending.
         """
         super().__init__(TransformationType.EXTRACT)
@@ -129,6 +129,22 @@ class ONNXQDQNodeRemovingCommand(TransformationCommand):
         :param target_point: The TargetPoint instance for the layer that contains information for removing.
         """
         super().__init__(TransformationType.REMOVE, target_point)
+
+    def union(self, other: "TransformationCommand") -> "TransformationCommand":
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
+
+class ONNXNullBiasInsertionCommand(TransformationCommand):
+    """
+    Inserts null bias for the corresponding node.
+    """
+
+    def __init__(self, target_point: ONNXTargetPoint):
+        """
+        :param target_point: The TargetPoint instance for the insertion that contains layer's information.
+        """
+        super().__init__(TransformationType.INSERT, target_point)
 
     def union(self, other: "TransformationCommand") -> "TransformationCommand":
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand

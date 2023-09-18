@@ -1,15 +1,14 @@
-"""
- Copyright (c) 2020-2023 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 from collections import OrderedDict
 from pathlib import Path
@@ -199,13 +198,16 @@ class HAWQDebugger:
             perturb.append(perturbations_for_all_observed_qconfig_sequence_in_current_layer[max_bitwidth_qconfig])
             max_bitwidths.append(max_bitwidth_qconfig.num_bits)
         ax.plot(
-            [p / m / n for p, m, n in zip(perturb, self._num_weights_per_layer, self._norm_weights_per_layer)],
+            [
+                (p / m / n).cpu().numpy()
+                for p, m, n in zip(perturb, self._num_weights_per_layer, self._norm_weights_per_layer)
+            ],
             label="normalized n-bit noise",
         )
-        ax.plot(perturb, label="n-bit noise")
+        ax.plot([x.cpu().numpy() for x in perturb], label="n-bit noise")
         ax.plot(max_bitwidths, label="n")
         ax.plot(self._traces_per_layer.cpu().numpy(), label="trace")
-        ax.plot([n * p for n, p in zip(self._traces_per_layer, perturb)], label="trace * noise")
+        ax.plot([(n * p).cpu().numpy() for n, p in zip(self._traces_per_layer, perturb)], label="trace * noise")
         ax.legend()
         plt.savefig(os.path.join(self._dump_dir, "Quantization_noise_vs_Average_Trace"))
 

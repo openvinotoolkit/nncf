@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import torch
-from pkg_resources import parse_version
 
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.torch.exporter import generate_input_names_list
@@ -24,15 +23,12 @@ def export_model(ctrl: CompressionAlgorithmController, save_path: str, no_strip_
     :param no_strip_on_export: Set to skip strip model before export.
     """
 
-    if parse_version(torch.__version__) < parse_version("1.10"):
-        no_strip_on_export = True
-
     model = ctrl.model if no_strip_on_export else ctrl.strip()
 
     model = model.eval().cpu()
-    input_names = generate_input_names_list(len(model.input_infos))
+    input_names = generate_input_names_list(len(model.nncf.input_infos))
     input_tensor_list = []
-    for info in model.input_infos:
+    for info in model.nncf.input_infos:
         input_shape = tuple([1] + list(info.shape)[1:])
         input_tensor_list.append(torch.rand(input_shape))
 

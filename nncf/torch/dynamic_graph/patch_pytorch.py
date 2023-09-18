@@ -11,6 +11,7 @@
 
 import functools
 import inspect
+from contextlib import contextmanager
 from typing import List
 
 import torch
@@ -187,49 +188,38 @@ def torch_jit_script_wrapper(*args, **kwargs):
     # so at call of torch.jit.script function we need to
     # un-patch the torch operators
 
-    # If already unpatched, don't perform unpatch/patch
-    apply_unpatch = _OPERATORS_ALREADY_WRAPPED
-    if apply_unpatch:
-        unpatch_torch_operators()
+    with disable_patching():
+        signature = inspect.signature(_ORIG_JIT_SCRIPT)
+        bound_args = signature.bind(*args, **kwargs).arguments
+        # Process the case when the object-to-script is a class as in the original jit.script logic
+        if inspect.isclass(bound_args["obj"]):
+            # Inserting wrapper alters the call stack, hence we need to change the resolution callback accordingly
+            if "_rcb" not in bound_args:
+                frames_up = bound_args.get("_frames_up", 0)
+                rcb = createResolutionCallbackFromFrame(frames_up + 1)
+                kwargs["_rcb"] = rcb
+            retval = _ORIG_JIT_SCRIPT(*args, **kwargs)
+        else:
+            # For some reason resolution callback may return patched methods, so we wrap it to avoid this
+            if "_rcb" in kwargs:
+                rcb = kwargs["_rcb"]
 
-    signature = inspect.signature(_ORIG_JIT_SCRIPT)
-    bound_args = signature.bind(*args, **kwargs).arguments
-    # Process the case when the object-to-script is a class as in the original jit.script logic
-    if inspect.isclass(bound_args["obj"]):
-        # Inserting wrapper alters the call stack, hence we need to change the resolution callback accordingly
-        if "_rcb" not in bound_args:
-            frames_up = bound_args.get("_frames_up", 0)
-            rcb = createResolutionCallbackFromFrame(frames_up + 1)
-            kwargs["_rcb"] = rcb
-        retval = _ORIG_JIT_SCRIPT(*args, **kwargs)
-    else:
-        # For some reason resolution callback may return patched methods, so we wrap it to avoid this
-        if "_rcb" in kwargs:
-            rcb = kwargs["_rcb"]
+                def rcb_wrapper(name):
+                    value = rcb(name)
+                    if hasattr(value, "_original_op"):
+                        value = value._original_op  # pylint: disable=protected-access
+                    return value
 
-            def rcb_wrapper(name):
-                value = rcb(name)
-                if hasattr(value, "_original_op"):
-                    value = value._original_op  # pylint: disable=protected-access
-                return value
+                kwargs["_rcb"] = rcb_wrapper
 
-            kwargs["_rcb"] = rcb_wrapper
+            retval = _ORIG_JIT_SCRIPT(*args, **kwargs)
 
-        retval = _ORIG_JIT_SCRIPT(*args, **kwargs)
-
-    if apply_unpatch:
-        patch_torch_operators()
-
-    return retval
+        return retval
 
 
 def torch_jit_trace_make_module_wrapper(*args, **kwargs):
-    apply_unpatch = _OPERATORS_ALREADY_WRAPPED
-    if apply_unpatch:
-        unpatch_torch_operators()
-    retval = _ORIG_JIT_TRACE_MAKE_MODULE(*args, **kwargs)
-    if apply_unpatch:
-        patch_torch_operators()
+    with disable_patching():
+        retval = _ORIG_JIT_TRACE_MAKE_MODULE(*args, **kwargs)
     return retval
 
 
@@ -415,3 +405,17 @@ def unpatch_torch_operators():
 
     for orig_op_info in ORIGINAL_OPERATORS:
         setattr(orig_op_info.namespace, orig_op_info.name, orig_op_info.op)
+
+
+@contextmanager
+def disable_patching():
+    was_patched = _OPERATORS_ALREADY_WRAPPED
+    if was_patched:
+        unpatch_torch_operators()
+    try:
+        yield
+    finally:
+        # The code in the with statement may raise an exception, which could be expected to be handled elsewhere.
+        # Need to restore the previous state of patching in this case before continuing to the exception handling.
+        if was_patched:
+            patch_torch_operators()

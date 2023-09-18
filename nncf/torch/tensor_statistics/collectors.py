@@ -17,6 +17,7 @@ from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorElementsType
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MeanPercentileStatisticCollector
+from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
 from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
 from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
@@ -27,6 +28,7 @@ from nncf.common.tensor_statistics.reduction import np_percentile_reduce_like
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.tensor_statistics.reduction import expand_like
+from nncf.torch.tensor_statistics.statistics import PTMeanTensorStatistic
 from nncf.torch.tensor_statistics.statistics import PTMedianMADTensorStatistic
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 from nncf.torch.tensor_statistics.statistics import PTPercentileTensorStatistic
@@ -74,6 +76,18 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         raise NotImplementedError()
 
     @staticmethod
+    def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
+        if len(x.shape) < 3:
+            return PTNNCFTensor(torch.mean(x.tensor, axis=0))
+        x = torch.moveaxis(x.tensor, axis, 1)
+        t = x.reshape(x.shape[0], x.shape[1], -1)
+        return PTNNCFTensor(torch.mean(t, axis=(0, 2)))
+
+    @staticmethod
+    def batch_mean(x: NNCFTensor) -> NNCFTensor:
+        return PTNNCFTensor(torch.mean(x.tensor, axis=0, keepdims=True))
+
+    @staticmethod
     def stack(x: Union[List[NNCFTensor], Deque[NNCFTensor]], axis: int = 0) -> NNCFTensor:
         x = [t.tensor for t in x]
         return PTNNCFTensor(torch.stack(x, dim=axis))
@@ -94,10 +108,6 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     def quantile(
         tensor: NNCFTensor, quantile: Union[float, List[float]], axis: Union[int, tuple, list], keepdims: bool = False
     ) -> List[NNCFTensor]:
-        raise NotImplementedError()
-
-    @staticmethod
-    def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
         raise NotImplementedError()
 
     @classmethod
@@ -235,3 +245,16 @@ class PTMeanPercentileStatisticCollector(MeanPercentileStatisticCollector):
             stacked_pct_vals = torch.stack(list(val))
             mean_percentile_values[pct] = stacked_pct_vals.mean(dim=0).view(self._reduction_shape)
         return PTPercentileTensorStatistic(mean_percentile_values)
+
+
+class PTMeanStatisticCollector(MeanStatisticCollector):
+    @staticmethod
+    def _get_processor() -> NNCFCollectorTensorProcessor:
+        return PTNNCFCollectorTensorProcessor()
+
+    def _register_input(self, x: torch.Tensor):
+        with no_nncf_trace():
+            self._register_input_common(PTNNCFTensor(x))
+
+    def _get_statistics(self) -> PTMeanTensorStatistic:
+        return PTMeanTensorStatistic(self._mean_aggregate().tensor, self._shape())

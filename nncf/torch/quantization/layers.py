@@ -19,7 +19,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
-from pkg_resources import parse_version
 from torch import distributed
 from torch import nn
 
@@ -331,7 +330,6 @@ class BaseQuantizer(nn.Module, ABC):
                 self.hook.remove()
 
         self.load_listener = LoadStateListener(self)
-        self._old_level_range_setting = False
 
     @property
     def level_low(self) -> int:
@@ -379,8 +377,6 @@ class BaseQuantizer(nn.Module, ABC):
         # TODO: refactor to get rid of extra if's and calls on each forward
         if not self.is_enabled_quantization():
             return x
-        if self._old_level_range_setting:
-            self.set_levels()
         is_exporting = is_tracing_state()
         if is_exporting:
             with no_nncf_trace():
@@ -518,7 +514,13 @@ class BaseQuantizer(nn.Module, ABC):
         with torch.no_grad():
             if self._export_mode == QuantizerExportMode.FAKE_QUANTIZE:
                 x, levels, input_low, input_high = self._prepare_fq_export_quantization(x)
-                return ExportQuantizeToFakeQuantize.apply(x, levels, input_low, input_high, input_low, input_high)
+                q_min, q_max, scale, zero_point = self.get_parameters_for_torch_fq()
+
+                ch_axis = np.argmax(self.scale_shape) if self.per_channel else None
+
+                return ExportQuantizeToFakeQuantize.apply(
+                    x, levels, input_low, input_high, input_low, input_high, scale, zero_point, q_min, q_max, ch_axis
+                )
             if self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
                 x, y_scale, y_zero_point, axis = self._prepare_qdq_export_quantization(x)
                 return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point, axis)
@@ -658,11 +660,8 @@ class SymmetricQuantizer(BaseQuantizer):
             )
         )
 
-        if parse_version(torch.__version__) >= parse_version("1.12"):
-            # Values of level_low, level_high must be recalculated for load new signed parameter.
-            self.register_load_state_dict_post_hook(lambda module, _: module.set_levels())
-        else:
-            self._old_level_range_setting = True
+        # Values of level_low, level_high must be recalculated for load new signed parameter.
+        self.register_load_state_dict_post_hook(lambda module, _: module.set_levels())
 
     @property
     def scale(self):
@@ -777,7 +776,7 @@ class SymmetricQuantizer(BaseQuantizer):
             scale - Quantizer scale.
             zero_point - Quantizer zero point.
         """
-        with torch.no_grad():
+        with torch.no_grad(), no_jit_trace():
             input_low, input_high = self._get_input_low_input_high(
                 self.scale, self.level_low, self.level_high, self.eps
             )
@@ -970,7 +969,7 @@ class AsymmetricQuantizer(BaseQuantizer):
             scale - Quantizer scale.
             zero_point - Quantizer zero point.
         """
-        with torch.no_grad():
+        with torch.no_grad(), no_jit_trace():
             input_low, input_high = self._get_input_low_input_high(
                 self.input_range, self.input_low, self.levels, self.eps
             )
