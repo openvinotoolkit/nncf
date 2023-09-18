@@ -380,13 +380,14 @@ def train(
         is_best = is_best_by_accuracy or compression_stage > best_compression_stage
         if is_best:
             best_acc1 = acc1
-        config.mlflow.safe_call("log_metric", "best_acc1", best_acc1)
         best_compression_stage = max(compression_stage, best_compression_stage)
-        acc = best_acc1 / 100
-        if config.metrics_dump is not None:
-            write_metrics(acc, config.metrics_dump)
         if is_main_process():
             logger.info(statistics.to_str())
+
+            if config.metrics_dump is not None:
+                acc = best_acc1 / 100
+                write_metrics(acc, config.metrics_dump)
+            config.mlflow.safe_call("log_metric", "best_acc1", best_acc1)
 
             checkpoint_path = osp.join(config.checkpoint_save_dir, get_run_name(config) + "_last.pth")
             checkpoint = {
@@ -727,19 +728,19 @@ def validate(val_loader, model, criterion, config, epoch=0, log_validation_info=
                     )
                 )
 
-        if is_main_process() and log_validation_info:
-            config.tb.add_scalar("val/loss", losses.avg, len(val_loader) * epoch)
-            config.tb.add_scalar("val/top1", top1.avg, len(val_loader) * epoch)
-            config.tb.add_scalar("val/top5", top5.avg, len(val_loader) * epoch)
-            config.mlflow.safe_call("log_metric", "val/loss", float(losses.avg), epoch)
-            config.mlflow.safe_call("log_metric", "val/top1", float(top1.avg), epoch)
-            config.mlflow.safe_call("log_metric", "val/top5", float(top5.avg), epoch)
+        if is_main_process():
+            if log_validation_info:
+                config.tb.add_scalar("val/loss", losses.avg, len(val_loader) * epoch)
+                config.tb.add_scalar("val/top1", top1.avg, len(val_loader) * epoch)
+                config.tb.add_scalar("val/top5", top5.avg, len(val_loader) * epoch)
+                config.mlflow.safe_call("log_metric", "val/loss", float(losses.avg), epoch)
+                config.mlflow.safe_call("log_metric", "val/top1", float(top1.avg), epoch)
+                config.mlflow.safe_call("log_metric", "val/top5", float(top5.avg), epoch)
 
-        if log_validation_info:
-            logger.info(" * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}\n".format(top1=top1, top5=top5))
+                logger.info(" * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}\n".format(top1=top1, top5=top5))
 
-            acc = top1.avg / 100
             if config.metrics_dump is not None:
+                acc = top1.avg / 100
                 write_metrics(acc, config.metrics_dump)
 
     return top1.avg, top5.avg, losses.avg

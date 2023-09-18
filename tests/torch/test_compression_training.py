@@ -442,7 +442,7 @@ class TestCompression:
         self._validate_train_metric(desc)
 
     @pytest.mark.dependency(depends=["train"])
-    def test_compression_eval(self, desc: LEGRTrainingTestDescriptor, tmp_path, mocker):
+    def test_compression_eval(self, desc: CompressionTrainingTestDescriptor, tmp_path, mocker):
         validator = desc.get_validator()
         args = validator.get_default_args(tmp_path)
         metric_file_path = self._add_args_for_eval(args, desc, tmp_path)
@@ -497,7 +497,7 @@ class TestCompression:
         self._validate_eval_metric(nas_desc, metric_file_path)
 
     @staticmethod
-    def _validate_eval_metric(desc, metric_file_path):
+    def _validate_eval_metric(desc: CompressionTrainingTestDescriptor, metric_file_path):
         with open(str(metric_file_path), encoding="utf8") as metric_file:
             metrics = json.load(metric_file)
             ref_metric = metrics["Accuracy"]
