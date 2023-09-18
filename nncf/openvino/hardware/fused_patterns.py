@@ -595,6 +595,17 @@ def create_linear_squeeze_activation() -> GraphPattern:
     return linear
 
 
+@OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_SQUEEZE_ARITHMETIC_ACTIVATIONS)
+def create_linear_squeeze_arithmetic_activation() -> GraphPattern:
+    linear = linear_operations()
+    squeeze = squeeze_operation()
+    arithmetic_activations = create_arithmetic_activations()
+
+    linear.join_patterns(squeeze)
+    linear.join_patterns(arithmetic_activations)
+    return linear
+
+
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.MVN_SCALE_SHIFT_ACTIVATIONS)
 def create_mvn_scale_shift_activations() -> GraphPattern:
     pattern = GraphPattern()
