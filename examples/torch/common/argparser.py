@@ -105,6 +105,7 @@ def get_common_argument_parser():
     parser.add_argument("--rank", default=0, type=int, help="Node rank for distributed training")
     parser.add_argument("--dist-backend", default="nccl", type=str, help="Distributed backend")
     parser.add_argument("--no_strip_on_export", help="Set to export not stripped model.", action="store_true")
+    parser.add_argument("--export_via_onnx", help="Export model via ONNX representation.", action="store_true")
 
     # Hyperparameters
     parser.add_argument(
@@ -169,8 +170,7 @@ def get_common_argument_parser():
     )
 
     parser.add_argument("--save-freq", default=5, type=int, help="Checkpoint save frequency (epochs). Default: 5")
-
-    parser.add_argument("--to-onnx", type=str, metavar="PATH", default=None, help="Export to ONNX model by given path")
+    parser.add_argument("--output-dir", type=str, metavar="PATH", default=None, help="Directory path to export model")
 
     # Display
     parser.add_argument(
@@ -191,6 +191,6 @@ def get_common_argument_parser():
 
 def parse_args(parser, argv):
     args = parser.parse_args(argv)
-    if "export" in args.mode and args.to_onnx is None:
-        raise RuntimeError("--mode export requires --to-onnx argument to be set")
+    if "export" in args.mode and args.output_dir is None:
+        raise RuntimeError("--mode export requires --output-dir argument to be set")
     return args

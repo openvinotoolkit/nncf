@@ -50,6 +50,7 @@ This scenario demonstrates quantization with fine-tuning of SSD300 on VOC datase
 - Use `--multiprocessing-distributed` flag to run in the distributed mode.
 - Use `--resume` flag with the path to a previously saved model to resume training.
 - Use the `--no_strip_on_export` to export not stripped model.
+- Use the `--export_via_onnx` to export model via ONNX representation.
 
 ### Validate your model checkpoint
 

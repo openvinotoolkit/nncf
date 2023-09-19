@@ -57,6 +57,7 @@ It may take a few epochs to get the baseline accuracy results.
   if you need to start compression-aware training from a previously trained uncompressed (FP32) checkpoint instead of performing compression-aware training fr
   om scratch.
 - Use the `--no_strip_on_export` to export not stripped model.
+- Use the `--export_via_onnx` to export model via ONNX representation.
 
 ### Validate your model checkpoint
 
