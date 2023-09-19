@@ -109,7 +109,9 @@ def native_quantize_if_op_impl(
     Implementation of the `quantize()` method for the OpenVINO backend via the OpenVINO Runtime API.
     """
     if not fast_bias_correction:
-        raise NotImplementedError("The BiasCorrection algorithm is not supported for OpnVINO models with If operation.")
+        raise NotImplementedError(
+            "The BiasCorrection algorithm is not supported for OpenVINO models with If operation."
+        )
     quantization_algorithm = PostTrainingQuantization(
         preset=preset,
         target_device=target_device,
@@ -349,6 +351,9 @@ def quantize_impl(
     else:
         quantize_fn = native_quantize_impl
         if has_if_op(model):
+            nncf_logger.info(
+                f"The model consists of an If node with then and else bodies. Iteratively each body will be quantized."
+            )
             quantize_fn = native_quantize_if_op_impl
 
     return quantize_fn(

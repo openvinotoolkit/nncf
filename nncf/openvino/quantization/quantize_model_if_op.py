@@ -66,7 +66,7 @@ def _make_dataset_for_if_bodies(
     for input_data in track(
         islice(calibration_dataset.get_inference_data(), calibration_dataset_size),
         total=calibration_dataset_size,
-        description="Collect dataset for then and else models:",
+        description="Collect dataset for then and else bodies of If node:",
     ):
         data_item = []
         results = engine.infer(input_data)
@@ -78,8 +78,8 @@ def _make_dataset_for_if_bodies(
             for name in else_model_input_names:
                 data_item.append(results[name])
             else_dataset.append(data_item)
-    nncf_logger.info(f"The length of dataset for then body is {len(then_dataset)}")
-    nncf_logger.info(f"The length of dataset for else body is {len(else_dataset)}")
+    nncf_logger.debug(f"The length of dataset for then body is {len(then_dataset)}")
+    nncf_logger.debug(f"The length of dataset for else body is {len(else_dataset)}")
     return Dataset(then_dataset), Dataset(else_dataset)
 
 
@@ -155,7 +155,6 @@ def apply_algorithm_if_bodies(
     :param parent_statistic_points: Statistics points for algorithm.
     :return: A model for every bodies of If nodes the algorithm was applied.
     """
-    nncf_logger.info(f"Quantize a new submodel")
     quantized_model = algorithm.apply(parent_model, parent_graph, parent_statistic_points, parent_dataset)
     if not has_if_op(parent_model):
         return quantized_model
