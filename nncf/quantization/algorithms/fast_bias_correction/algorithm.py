@@ -133,7 +133,8 @@ class FastBiasCorrection(Algorithm):
             for node in graph.get_all_nodes()
             if self._backend_entity.is_node_with_bias(node, graph)
         ]
-
+        if not node_and_bias_value:
+            return model
         # Fill `node_and_new_bias_value` list. It is a correspondence between nodes
         # for which we should update bias and new bias values.
         node_and_new_bias_value = []
