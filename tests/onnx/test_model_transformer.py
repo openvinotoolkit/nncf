@@ -20,7 +20,6 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
-from nncf.onnx.graph.onnx_helper import get_model_outputs
 from nncf.onnx.graph.onnx_helper import get_node_by_name
 from nncf.onnx.graph.onnx_helper import get_tensor
 from nncf.onnx.graph.onnx_helper import get_tensor_value
@@ -161,7 +160,7 @@ def test_output_insertion(target_layers, target_layer_outputs):
 
     transformed_model = model_transformer.transform(transformation_layout)
 
-    assert Counter([out.name for out in get_model_outputs(transformed_model)]) == Counter(target_layer_outputs)
+    assert Counter([out.name for out in transformed_model.graph.output]) == Counter(target_layer_outputs)
 
 
 CONV_LAYERS = [["Conv1", "Conv2"]]
