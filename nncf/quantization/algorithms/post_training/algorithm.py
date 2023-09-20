@@ -80,7 +80,6 @@ class PostTrainingQuantization(Algorithm):
         """
         super().__init__()
         self.algorithms = []
-        self.subset_size = subset_size
         self.first_stage_algorithms: List[Algorithm] = []
 
         if target_device is TargetDevice.VPU:

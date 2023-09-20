@@ -264,12 +264,6 @@
                 "activations": "q8_a"
             }
         },
-        {
-            "type": "If",
-            "quantization": {
-                "activations": "q8_a"
-            }
-        },
         {"type": "Flatten"},
         {"type": "Squeeze"},
         {"type": "Unsqueeze"},
