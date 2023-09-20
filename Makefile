@@ -117,11 +117,11 @@ test-examples-tensorflow:
 # PyTorch backend
 install-torch-test:
 	pip install -U pip
-	pip install -e .[torch]
-	pip install -r tests/torch/requirements.txt
+	pip install -e .[torch] --index-url https://download.pytorch.org/whl/cu118 --extra-index-url=https://pypi.org/simple  # ticket 119128
+	pip install -r tests/torch/requirements.txt --index-url https://download.pytorch.org/whl/cu118 --extra-index-url=https://pypi.org/simple
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/cross_fw/examples/requirements.txt
-	pip install -r examples/torch/requirements.txt
+	pip install -r examples/torch/requirements.txt --index-url https://download.pytorch.org/whl/cu118 --extra-index-url=https://pypi.org/simple
 
 install-torch-dev: install-torch-test install-pre-commit install-pylint
 	pip install -r examples/post_training_quantization/torch/mobilenet_v2/requirements.txt
