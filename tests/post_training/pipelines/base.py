@@ -23,14 +23,13 @@ import onnx
 import openvino.runtime as ov
 import torch
 from memory_profiler import memory_usage
+from openvino.tools.mo import convert_model
 from optimum.intel import OVQuantizer
-from torch import nn
 
 import nncf
 from nncf import TargetDevice
 from nncf.experimental.torch.quantization.quantize_model import quantize_impl as pt_impl_experimental
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-from tests.shared.command import Command
 
 DEFAULT_VAL_THREADS = 4
 
@@ -45,7 +44,8 @@ class BackendType(Enum):
     OPTIMUM = "OPTIMUM"
 
 
-ALL_NNCF_PTQ_BACKENDS = [BackendType.OLD_TORCH, BackendType.TORCH, BackendType.ONNX, BackendType.OV, BackendType.POT]
+NNCF_PTQ_BACKENDS = [BackendType.OLD_TORCH, BackendType.TORCH, BackendType.ONNX, BackendType.OV]
+ALL_PTQ_BACKENDS = NNCF_PTQ_BACKENDS + [BackendType.POT]
 PT_BACKENDS = [BackendType.TORCH, BackendType.OLD_TORCH]
 OV_BACKENDS = [BackendType.OV, BackendType.POT, BackendType.OPTIMUM]
 
@@ -92,25 +92,6 @@ class RunInfo:
             "Total time": self.format_time(self.time_total),
             "Status": self.status,
         }
-
-
-def export_to_onnx(model: nn.Module, save_path: str, data_sample: torch.Tensor) -> None:
-    """
-    Export Torch model to ONNX format.
-    """
-    torch.onnx.export(model, data_sample, save_path, export_params=True, opset_version=13, do_constant_folding=False)
-
-
-def export_to_ir(model_path: str, save_path: str, model_name: str) -> None:
-    """
-    Export ONNX model to OpenVINO format.
-
-    :param model_path: Path to ONNX model.
-    :param save_path: Path directory to save OpenVINO IR model.
-    :param model_name: Model name.
-    """
-    runner = Command(f"mo -m {model_path} -o {save_path} -n {model_name} --compress_to_fp16=False")
-    runner.run()
 
 
 class BaseTestPipeline(ABC):
@@ -231,15 +212,15 @@ class BaseTestPipeline(ABC):
         if self.backend == BackendType.OPTIMUM:
             self.path_quantized_ir = self.output_model_dir / "openvino_model.xml"
         elif self.backend in PT_BACKENDS:
-            onnx_path = self.output_model_dir / "model.onnx"
-            export_to_onnx(self.quantized_model, str(onnx_path), self.dummy_tensor)
-            export_to_ir(onnx_path, self.output_model_dir, model_name="model")
+            ov_model = convert_model(self.quantized_model, example_input=self.dummy_tensor)
             self.path_quantized_ir = self.output_model_dir / "model.xml"
+            ov.serialize(ov_model, self.path_quantized_ir)
         elif self.backend == BackendType.ONNX:
             onnx_path = self.output_model_dir / "model.onnx"
             onnx.save(self.quantized_model, str(onnx_path))
-            export_to_ir(onnx_path, str(self.output_model_dir), model_name="model")
+            ov_model = convert_model(onnx_path)
             self.path_quantized_ir = self.output_model_dir / "model.xml"
+            ov.serialize(ov_model, self.path_quantized_ir)
         elif self.backend in OV_BACKENDS:
             self.path_quantized_ir = self.output_model_dir / "model.xml"
             ov.serialize(self.quantized_model, str(self.path_quantized_ir))

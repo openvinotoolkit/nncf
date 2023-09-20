@@ -14,13 +14,13 @@ from typing import List
 import numpy as np
 import openvino.runtime as ov
 import torch
+from openvino.tools.mo import convert_model
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
 from nncf.quantization.algorithms.fast_bias_correction.openvino_backend import OVFastBiasCorrectionAlgoBackend
 from tests.post_training.test_templates.test_fast_bias_correction import TemplateTestFBCAlgorithm
-from tests.shared.command import Command
 
 
 class TestOVFBCAlgorithm(TemplateTestFBCAlgorithm):
@@ -36,11 +36,7 @@ class TestOVFBCAlgorithm(TemplateTestFBCAlgorithm):
     def backend_specific_model(model: bool, tmp_dir: str):
         onnx_path = f"{tmp_dir}/model.onnx"
         torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
-        ov_path = f"{tmp_dir}/model.xml"
-        runner = Command(f"mo -m {onnx_path} -o {tmp_dir} -n model --compress_to_fp16=False")
-        runner.run()
-        core = ov.Core()
-        ov_model = core.read_model(ov_path)
+        ov_model = convert_model(onnx_path, input_shape=model.INPUT_SIZE, compress_to_fp16=False)
         return ov_model
 
     @staticmethod
