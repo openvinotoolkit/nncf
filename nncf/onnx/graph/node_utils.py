@@ -21,7 +21,7 @@ from nncf.common.logging.logger import nncf_logger
 from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
-from nncf.onnx.graph.onnx_helper import get_node_edge_names
+from nncf.onnx.graph.onnx_helper import ONNXModelSeeker
 from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 
@@ -69,7 +69,9 @@ def get_input_edges_mapping(nncf_graph: NNCFGraph) -> Dict[str, Tuple[str, int]]
 
 
 def get_input_edge(
-    input_node_name: str, input_edges_mapping: Dict[str, Tuple[str, int]], model: onnx.ModelProto
+    input_node_name: str,
+    input_edges_mapping: Dict[str, Tuple[str, int]],
+    name_to_node_mapping: Dict[str, onnx.NodeProto],
 ) -> str:
     """
     Returns input edge corresponding to the NNCF input node with the name input_node_name.
@@ -83,7 +85,8 @@ def get_input_edge(
     input_edges = set()
     for node_info in input_edges_mapping[input_node_name]:
         name, port_id = node_info
-        input_edges.add(get_node_edge_names(model, name)["input"][port_id])
+        node = name_to_node_mapping[name]
+        input_edges.add(node.input[port_id])
     assert len(input_edges) == 1
     return input_edges.pop()
 

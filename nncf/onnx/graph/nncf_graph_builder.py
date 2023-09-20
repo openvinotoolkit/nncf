@@ -33,9 +33,7 @@ from nncf.onnx.graph.onnx_helper import get_edge_dtype
 from nncf.onnx.graph.onnx_helper import get_edge_shape
 from nncf.onnx.graph.onnx_helper import get_input_port_id_for_node_after_input
 from nncf.onnx.graph.onnx_helper import get_model_inputs
-from nncf.onnx.graph.onnx_helper import get_model_outputs
 from nncf.onnx.graph.onnx_helper import get_node_by_output
-from nncf.onnx.graph.onnx_helper import get_node_edge_names
 from nncf.onnx.graph.onnx_helper import get_nodes_by_input
 from nncf.onnx.graph.onnx_helper import get_output_port_id_for_node_before_output
 from nncf.onnx.graph.onnx_helper import get_port_ids_between_nodes
@@ -253,7 +251,7 @@ class GraphConverter:
         :param nncf_graph: NNCFGraph, in which the new nodes will be added.
         :return: None.
         """
-        for i, _output in enumerate(get_model_outputs(model)):
+        for i, _output in enumerate(model.graph.output):
             output_name = _output.name
             layer_attributes = ONNXLayerAttributes()
             output_node = nncf_graph.add_nncf_node(
@@ -331,7 +329,7 @@ class GraphConverter:
                 is_shared=is_shared,
             )
         for output_node in get_all_nodes(onnx_model):
-            output_edges = get_node_edge_names(onnx_model, output_node.name)["output"]
+            output_edges = output_node.output
             for output_edge in output_edges:
                 edge = get_edge(onnx_model, output_edge)
                 if edge is None:

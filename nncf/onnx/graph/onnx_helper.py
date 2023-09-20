@@ -15,56 +15,58 @@ import onnx
 from onnx import numpy_helper
 
 
-def get_all_nodes(model: onnx.ModelProto) -> List[onnx.NodeProto]:
-    """
-    Returns model nodes in the original order.
+class ModelSeeker:
+    def __init__(self, model: onnx.ModelProto) -> None:
+        self.model = model
+        self.node_name_to_node_mapping = {node.node_name: node for node in model.graph.node}
+        self._edge_name_to_value_info: Dict[str, onnx.ValueInfoProto] = {}
 
-    :return: model nodes.
-    """
-    return model.graph.node
+    def _update_edges(self) -> None:
+        self.model = onnx.shape_inference.infer_shapes(self.onnx_model)
+        value_infos = (
+            *self.model.graph.value_info,
+            *self.model.graph.input,
+            *self.model.graph.output,
+            *self.model.graph.initializer,
+        )
+        self._edge_name_to_value_info = {tensor.name: tensor for tensor in value_infos}
+
+    def get_node(self, node_name: str) -> Optional[onnx.NodeProto]:
+        """
+        Returns a model node with the name equals to 'node_name' from self._node_name_to_node.
+        If the self._node_name_to_node is None, fills it with the nodes from the self.onnx_model.
+        If there is no node with such name returns None.
+
+        :param node_name: Name of the node.
+        :return: None if the node with the specified name exists - otherwise returns the node.
+        """
+        return self.node_name_to_node_mapping.get(node_name)
+
+    def get_edge(self, edge_name: str) -> Optional[onnx.ValueInfoProto]:
+        """
+        Returns edge by its name or None if the model has no such edge.
+        If self._edge_name_to_value_info is not initialized runs an initialization.
+
+        :param edge_name: Name of edge.
+        :return: Edge.
+        """
+        if edge_name not in self._edge_name_to_value_info:
+            self._update_edges()
+        return self._edge_name_to_value_info.get(edge_name)
 
 
-def get_node_by_name(model: onnx.ModelProto, node_name: str) -> Optional[onnx.NodeProto]:
+def get_node(model: onnx.ModelProto, node_name: str) -> Optional[onnx.NodeProto]:
     """
     Returns a model node with the name equals to 'node_name' from self._node_name_to_node.
     If the self._node_name_to_node is None, fills it with the nodes from the self.onnx_model.
     If there is no node with such name returns None.
-
     :param node_name: Name of the node.
     :return: None if the node with the specified name exists - otherwise returns the node.
     """
-    for node in get_all_nodes(model):
+    for node in model.graph.node:
         if node.name == node_name:
             return node
     return None
-
-
-def get_edge(model: onnx.ModelProto, edge_name: str) -> Optional[onnx.ValueInfoProto]:
-    """
-    Returns edge by its name or None if the model has no such edge.
-    If self._edge_name_to_value_info is not initialized runs an initialization.
-
-    :param edge_name: Name of edge.
-    :return: Edge.
-    """
-
-    def seek_v_info(model, edge_name):
-        value_infos = [
-            *model.graph.value_info,
-            *model.graph.input,
-            *model.graph.output,
-            *model.graph.initializer,
-        ]
-        for info in value_infos:
-            if info.name == edge_name:
-                return info
-        return None
-
-    v_info = seek_v_info(model, edge_name)
-    if v_info is not None:
-        return v_info
-    infered_model = onnx.shape_inference.infer_shapes(model)
-    return seek_v_info(infered_model, edge_name)
 
 
 def get_model_inputs(model: onnx.ModelProto) -> List[onnx.ValueInfoProto]:
@@ -83,15 +85,6 @@ def get_model_inputs(model: onnx.ModelProto) -> List[onnx.ValueInfoProto]:
     return inputs
 
 
-def get_model_outputs(model: onnx.ModelProto) -> List[onnx.ValueInfoProto]:
-    """
-    Returns all model outputs.
-
-    :return: Model Outputs.
-    """
-    return list(model.graph.output)
-
-
 def get_node_by_output(model: onnx.ModelProto, output_name: str) -> Optional[onnx.NodeProto]:
     """
     Returns node that have output edge with the name 'output_name'.
@@ -99,7 +92,7 @@ def get_node_by_output(model: onnx.ModelProto, output_name: str) -> Optional[onn
     :param output_name: The name of output edge.
     :return: Node with corresponding output.
     """
-    for node in get_all_nodes(model):
+    for node in model.graph.node:
         if output_name in node.output:
             return node
     return None
@@ -113,27 +106,10 @@ def get_nodes_by_input(model: onnx.ModelProto, input_name: str) -> List[onnx.Nod
     :return: Nodes with corresponding input.
     """
     output = []
-    for node in get_all_nodes(model):
+    for node in model.graph.node:
         if input_name in node.input:
             output.append(node)
     return output
-
-
-def get_node_edge_names(model: onnx.ModelProto, node_name: str) -> Dict[str, List[str]]:
-    """
-    Returns node edge names.
-
-    :param node_name: The name of the node.
-    :return: Dict with two keys: 'input' and 'output',
-    which are corresponding to input and output edges accordingly.
-    """
-    node = get_node_by_name(model, node_name)
-    if node:
-        return {
-            "input": list(node.input),
-            "output": list(node.output),
-        }
-    raise RuntimeError("There is no node with the name {}".format(node_name))
 
 
 def get_input_port_id_for_node_after_input(input_name: str, to_node: onnx.NodeProto) -> int:
@@ -191,7 +167,7 @@ def get_node_index(model: onnx.ModelProto, node_name: str) -> Optional[int]:
     :param node_name: Name of the node.
     :return: Node index, -1 if there is no such node.
     """
-    for i, node in enumerate(get_all_nodes(model)):
+    for i, node in enumerate(model.graph.node):
         if node.name == node_name:
             return i
     return None
@@ -308,8 +284,7 @@ def get_children(model: onnx.ModelProto, node: onnx.NodeProto) -> List[onnx.Node
     :return: All children nodes.
     """
     output = []
-    node_edges = get_node_edge_names(model, node.name)["output"]
-    for node_edge in node_edges:
+    for node_edge in node.output:
         output.extend(get_nodes_by_input(model, node_edge))
     return output
 
@@ -321,6 +296,6 @@ def is_node_has_shared_weight(model: onnx.ModelProto, node: onnx.NodeProto, weig
     :param node: Node.
     :return: True whether node shares a weight - otherwise False.
     """
-    weight_tensor_edge = get_node_edge_names(model, node.name)["input"][weight_port_id]
+    weight_tensor_edge = node.input[weight_port_id]
     nodes = get_nodes_by_input(model, weight_tensor_edge)
     return len(nodes) > 1

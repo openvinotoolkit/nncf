@@ -19,12 +19,9 @@ from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.onnx.graph.node_utils import get_input_edge
+from nncf.onnx.graph.onnx_helper import ModelSeeker
 from nncf.onnx.graph.onnx_helper import get_children
-from nncf.onnx.graph.onnx_helper import get_edge
 from nncf.onnx.graph.onnx_helper import get_edge_dtype
-from nncf.onnx.graph.onnx_helper import get_model_outputs
-from nncf.onnx.graph.onnx_helper import get_node_by_name
-from nncf.onnx.graph.onnx_helper import get_node_edge_names
 from nncf.onnx.graph.onnx_helper import get_node_index
 from nncf.onnx.graph.onnx_helper import get_nodes_by_input
 from nncf.onnx.graph.onnx_helper import get_tensor
@@ -50,6 +47,7 @@ class ONNXModelTransformer(ModelTransformer):
     def __init__(self, model: onnx.ModelProto):
         super().__init__(model)
         self.onnx_model_extractor = onnx.utils.Extractor(self._model)
+        self.onnx_model_seeker = ModelSeeker(self.model)
 
     def _get_target_edge(
         self,
@@ -69,10 +67,10 @@ class ONNXModelTransformer(ModelTransformer):
         :return: Target edge name.
         """
         if transform_type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
-            return get_node_edge_names(self._model, node_name)["input"][port_id]
+            return self.onnx_model_seeker.get_node(node_name).input[port_id]
         if node_name in input_edges_mapping:  # ADD INPUT NODE CASE
             return get_input_edge(node_name, input_edges_mapping, self._model)
-        return get_node_edge_names(self._model, node_name)["output"][port_id]
+        return self.onnx_model_seeker.get_node(self._model, node_name).input[port_id]
 
     def transform(self, transformation_layout: TransformationLayout) -> onnx.ModelProto:
         """
@@ -129,7 +127,7 @@ class ONNXModelTransformer(ModelTransformer):
         :param transformations: ONNXOutputInsertionCommand transformations.
         :return: New model with inserted outputs.
         """
-        model_outputs = set(output.name for output in get_model_outputs(self._model))
+        model_outputs = set(output.name for output in self._model.graph.output)
         for transformation in transformations:
             port_id = transformation.target_point.port_id
             node_name = transformation.target_point.target_node_name
@@ -369,16 +367,13 @@ class ONNXModelTransformer(ModelTransformer):
         """
         input_tensor_names = []
         for input_node_name in transformation.inputs:
-            input_onnx_node = get_node_by_name(self._model, input_node_name)
+            input_onnx_node = self.onnx_model_seeker.get_node(input_node_name)
             input_tensor_names.append(input_onnx_node.input[0])
 
-        output_tensor_names = []
+        output_tensor_names = [n.name for n in self._model.graph.output]
         for output_node_name in transformation.outputs:
-            output_onnx_node = get_node_by_name(self._model, output_node_name)
+            output_onnx_node = self.onnx_model_seeker.get_node(output_node_name)
             output_tensor_names.append(output_onnx_node.output[0])
-
-        if not output_tensor_names:
-            output_tensor_names = [n.name for n in get_model_outputs(self._model)]
 
         return self.onnx_model_extractor.extract_model(input_tensor_names, output_tensor_names)
 
@@ -393,7 +388,7 @@ class ONNXModelTransformer(ModelTransformer):
         :return: Model with removed nodes.
         """
         for transformation in transformations:
-            node = get_node_by_name(model, transformation.target_point.target_node_name)
+            node = self.onnx_model_seeker.get_node(transformation.target_point.target_node_name)
 
             node_children = get_children(model, node)
             for node_child in node_children:
