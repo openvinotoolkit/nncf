@@ -28,7 +28,7 @@ from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVIfMetatype
-from nncf.openvino.graph.node_utils import has_if_op
+from nncf.openvino.graph.node_utils import get_number_if_op
 from nncf.openvino.graph.transformations.commands import OVExtractIfBodyCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
@@ -64,13 +64,10 @@ def _make_dataset_for_if_bodies(
         if calibration_dataset.get_length() is not None
         else subset_size
     )
-    nncf_logger.info(
-        f"Collect the dataset for then and else bodies. The sum of length of datasets should be {calibration_dataset_size}"
-    )
     for input_data in track(
         islice(calibration_dataset.get_inference_data(), calibration_dataset_size),
         total=calibration_dataset_size,
-        description="Collecting:",
+        description="Collecting the dataset for then and else bodies:",
     ):
         data_item = []
         results = engine.infer(input_data)
@@ -82,9 +79,7 @@ def _make_dataset_for_if_bodies(
             for name in else_model_input_names:
                 data_item.append(results[name])
             else_dataset.append(data_item)
-    nncf_logger.info(
-        f"The resulted length of dataset for then body is {len(then_dataset)}, else body is {len(else_dataset)}."
-    )
+    nncf_logger.info(f"The length of dataset for then body is {len(then_dataset)}, else body is {len(else_dataset)}.")
     return Dataset(then_dataset), Dataset(else_dataset)
 
 
@@ -148,8 +143,10 @@ def apply_algorithm_if_bodies(
     parent_graph: NNCFGraph,
     parent_dataset: Dataset,
     subset_size: int,
+    current_model_num: int,
+    all_models_num: int,
     parent_statistic_points: Optional[StatisticPointsContainer] = None,
-) -> ov.Model:
+) -> Tuple[ov.Model, int]:
     """
     Applies an algorithm recursievley to each bodies of If node.
 
@@ -157,13 +154,15 @@ def apply_algorithm_if_bodies(
     :param parent_graph: Graph of a model.
     :param parent_dataset: Dataset for algorithm.
     :param subset_size: Size of a dataset to use for calibration.
+    :param current_model_num: Current model number.
+    :param all_models_num: All model numbers.
     :param parent_statistic_points: Statistics points for algorithm.
-    :return: A model for every bodies of If nodes the algorithm was applied.
+    :return: A model for every bodies of If nodes the algorithm was applied and the latest model number.
     """
-    nncf_logger.info(f"The quantization of another model is started.")
+    nncf_logger.info(f"Iteration [{current_model_num}/{all_models_num}] ...")
     quantized_model = algorithm.apply(parent_model, parent_graph, parent_statistic_points, parent_dataset)
-    if not has_if_op(parent_model):
-        return quantized_model
+    if get_number_if_op(parent_model) == 0:
+        return quantized_model, current_model_num
     model_transformer_fp32 = factory.ModelTransformerFactory.create(parent_model)
     for if_node in parent_graph.get_nodes_by_metatypes(OVBackend.if_node_metatypes()):
         then_model_input_names = OVBackend.get_if_body_input_names(parent_model, if_node, True)
@@ -182,17 +181,29 @@ def apply_algorithm_if_bodies(
         )
         then_model = _extract_if_body(model_transformer_fp32, if_node, True)
         else_model = _extract_if_body(model_transformer_fp32, if_node, False)
-        then_quantized_model = apply_algorithm_if_bodies(
-            algorithm, then_model, NNCFGraphFactory.create(then_model), then_dataset, subset_size, None
+        then_quantized_model, current_model_num = apply_algorithm_if_bodies(
+            algorithm,
+            then_model,
+            NNCFGraphFactory.create(then_model),
+            then_dataset,
+            subset_size,
+            current_model_num + 1,
+            all_models_num,
         )
-        else_quantized_model = apply_algorithm_if_bodies(
-            algorithm, else_model, NNCFGraphFactory.create(else_model), else_dataset, subset_size, None
+        else_quantized_model, current_model_num = apply_algorithm_if_bodies(
+            algorithm,
+            else_model,
+            NNCFGraphFactory.create(else_model),
+            else_dataset,
+            subset_size,
+            current_model_num + 1,
+            all_models_num,
         )
         model_transformer_int8 = factory.ModelTransformerFactory.create(quantized_model)
         quantized_model = _update_if_body(model_transformer_int8, if_node, True, then_quantized_model)
         model_transformer_int8 = factory.ModelTransformerFactory.create(quantized_model)
         quantized_model = _update_if_body(model_transformer_int8, if_node, False, else_quantized_model)
-    return quantized_model
+    return quantized_model, current_model_num
 
 
 class OVBackend:

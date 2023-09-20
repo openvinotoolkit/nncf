@@ -51,18 +51,23 @@ def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     return bias_constant is not None
 
 
-def has_if_op(model: ov.Model) -> bool:
+def get_number_if_op(model: ov.Model) -> int:
     """
-    Returns True whether a model has If operation.
+    Returns number of If operation in a model.
 
     :param model: Model.
     :return: True if Model has If operation, False - otherwise.
     """
-    for op in model.get_ops():
-        metatype = get_node_metatype(op)
-        if metatype == OVIfMetatype:
-            return True
-    return False
+
+    def cnt_if_op(model: ov.Model, cnt: int) -> int:
+        for op in model.get_ops():
+            if get_node_metatype(op) == OVIfMetatype:
+                cnt += 1
+                cnt = cnt_if_op(op.get_function(0), cnt)
+                cnt = cnt_if_op(op.get_function(1), cnt)
+        return cnt
+
+    return cnt_if_op(model, 0)
 
 
 def get_const_value(const_node: ov.Node) -> np.ndarray:

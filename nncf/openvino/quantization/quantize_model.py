@@ -20,7 +20,7 @@ from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
-from nncf.openvino.graph.node_utils import has_if_op
+from nncf.openvino.graph.node_utils import get_number_if_op
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
 from nncf.openvino.quantization.quantize_ifmodel import apply_algorithm_if_bodies
@@ -123,8 +123,14 @@ def native_quantize_if_op_impl(
     )
 
     graph = GraphConverter.create_nncf_graph(model)
-
-    quantized_model = apply_algorithm_if_bodies(quantization_algorithm, model, graph, calibration_dataset, subset_size)
+    if_ops_number = get_number_if_op(model)
+    all_models_number = if_ops_number * 2 + 1
+    nncf_logger.info(
+        f"The model consists of {if_ops_number} If node with then and else bodies. Iteratively main model and all If bodies will be quantized."
+    )
+    quantized_model, _ = apply_algorithm_if_bodies(
+        quantization_algorithm, model, graph, calibration_dataset, subset_size, 1, all_models_number
+    )
 
     if is_weight_compression_needed(advanced_parameters):
         compress_quantize_weights_transformation(quantized_model)
@@ -350,10 +356,7 @@ def quantize_impl(
         quantize_fn = pot_quantize_impl
     else:
         quantize_fn = native_quantize_impl
-        if has_if_op(model):
-            nncf_logger.info(
-                f"The model consists of an If node with then and else bodies. Iteratively each body will be quantized."
-            )
+        if get_number_if_op(model) > 0:
             quantize_fn = native_quantize_if_op_impl
 
     return quantize_fn(
