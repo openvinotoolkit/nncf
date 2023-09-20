@@ -81,7 +81,6 @@ INPUTS_QUANTIZABLE_OPERATIONS = [
     ov_metatypes.OVLSTMSequenceMetatype,
     ov_metatypes.OVGRUSequenceMetatype,
     ov_metatypes.OVGroupNormalizationMetatype,
-    ov_metatypes.OVIfMetatype,
 ]
 
 
