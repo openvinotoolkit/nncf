@@ -189,11 +189,6 @@ def openvino(request):
 
 
 @pytest.fixture(scope="module")
-def onnx_dir(request):
-    return request.config.getoption("--onnx-dir")
-
-
-@pytest.fixture(scope="module")
 def ov_config_dir(request):
     return request.config.getoption("--ov-config-dir")
 

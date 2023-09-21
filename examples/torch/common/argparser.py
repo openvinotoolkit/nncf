@@ -170,7 +170,9 @@ def get_common_argument_parser():
     )
 
     parser.add_argument("--save-freq", default=5, type=int, help="Checkpoint save frequency (epochs). Default: 5")
-    parser.add_argument("--output-dir", type=str, metavar="PATH", default=None, help="Directory path to export model")
+    parser.add_argument(
+        "--to-ir", type=str, metavar="PATH", default=None, help="Export to OpenVINO model by given path"
+    )
 
     # Display
     parser.add_argument(
@@ -191,6 +193,6 @@ def get_common_argument_parser():
 
 def parse_args(parser, argv):
     args = parser.parse_args(argv)
-    if "export" in args.mode and args.output_dir is None:
-        raise RuntimeError("--mode export requires --output-dir argument to be set")
+    if "export" in args.mode and args.to_ir is None:
+        raise RuntimeError("--mode export requires --to-ir argument to be set")
     return args

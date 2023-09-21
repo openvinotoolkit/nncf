@@ -10,7 +10,7 @@
 # limitations under the License.
 from pathlib import Path
 
-import openvino as ov
+import openvino.runtime as ov
 import torch
 from openvino.tools.mo import convert_model
 
@@ -39,10 +39,12 @@ def export_model(ctrl: CompressionAlgorithmController, config: SampleConfig) -> 
         input_tensor_list.append(torch.rand(input_shape))
         input_shape_list.append(input_shape)
 
-    output_dir = Path(config.output_dir)
-    output_dir.mkdir(exist_ok=True)
+    if len(input_tensor_list) == 1:
+        input_tensor_list = input_tensor_list[0]
+        input_shape_list = input_shape_list[0]
 
-    model_path = Path(output_dir) / f"{config.model_name}.xml"
+    model_path = Path(config.to_ir)
+    model_path.parent.mkdir(exist_ok=True, parents=True)
 
     if not config.export_via_onnx:
         ov_model = convert_model(
@@ -53,11 +55,12 @@ def export_model(ctrl: CompressionAlgorithmController, config: SampleConfig) -> 
         # Rename input nodes
         for input_node, input_name in zip(ov_model.inputs, input_names):
             input_node.node.set_friendly_name(input_name)
+
         ov.serialize(ov_model, model_path)
     else:
-        model_onnx_path = Path(output_dir) / f"{config.model_name}.onnx"
+        model_onnx_path = model_path.with_suffix(".onnx")
         with torch.no_grad():
-            torch.onnx.export(model, tuple(input_tensor_list), model_onnx_path, input_names=input_names)
+            torch.onnx.export(model, input_tensor_list, model_onnx_path, input_names=input_names)
         ov_model = convert_model(model_onnx_path)
         ov.serialize(ov_model, model_path)
 
