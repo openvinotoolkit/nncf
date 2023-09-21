@@ -23,7 +23,7 @@ from nncf.quantization.algorithms.fast_bias_correction.algorithm import FAST_BIA
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
-from nncf.quantization.pipelines.stepwise_pipeline import StepwisePipeline
+from nncf.quantization.pipelines.pipeline import Pipeline
 from nncf.scopes import IgnoredScope
 
 TModel = TypeVar("TModel")
@@ -37,7 +37,7 @@ def create_ptq_pipeline(
     model_type: Optional[ModelType] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
-) -> StepwisePipeline:
+) -> Pipeline:
     """
     Creates a post-training quantization pipeline.
 
@@ -136,4 +136,4 @@ def create_ptq_pipeline(
             )
         )
 
-    return StepwisePipeline(pipeline_steps)
+    return Pipeline(pipeline_steps)

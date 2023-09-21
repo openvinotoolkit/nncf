@@ -28,11 +28,10 @@ from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResult
 from nncf.quantization.algorithms.accuracy_control.rank_functions import create_normalized_mse_func
 from nncf.quantization.algorithms.accuracy_control.subset_selection import select_subset
 from nncf.quantization.pipelines.pipeline import Pipeline
-from nncf.quantization.pipelines.stepwise_pipeline import StepwisePipeline
-from nncf.quantization.pipelines.stepwise_pipeline import collect_statistics
-from nncf.quantization.pipelines.stepwise_pipeline import get_statistic_points
-from nncf.quantization.pipelines.stepwise_pipeline import run_pipeline_from_step
-from nncf.quantization.pipelines.stepwise_pipeline import run_pipeline_step
+from nncf.quantization.pipelines.pipeline import collect_statistics
+from nncf.quantization.pipelines.pipeline import get_statistic_points
+from nncf.quantization.pipelines.pipeline import run_pipeline_from_step
+from nncf.quantization.pipelines.pipeline import run_pipeline_step
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -180,7 +179,7 @@ def find_best_combination(
     return best_combination_key
 
 
-class HyperparameterTuner(Pipeline):
+class HyperparameterTuner:
     """
     This algorithm is used to find a best combination of parameters from `param_grid`.
 
@@ -219,7 +218,7 @@ class HyperparameterTuner(Pipeline):
 
     def __init__(
         self,
-        pipeline_cls: Type[StepwisePipeline],
+        pipeline_cls: Type[Pipeline],
         init_params: Dict[str, Any],
         param_grids: List[Dict[str, List[Any]]],
         calibration_dataset: Dataset,
@@ -255,7 +254,7 @@ class HyperparameterTuner(Pipeline):
         self._error_fn = None
 
         # Will be initialized inside `_prepare_pipeline_step()` method
-        self._pipelines: Dict[CombinationKey, StepwisePipeline] = {}
+        self._pipelines: Dict[CombinationKey, Pipeline] = {}
         self._step_index_to_statistics: Dict[int, StatisticPointsContainer] = {}
 
         self._calculated_scores: Dict[CombinationKey, float] = {}

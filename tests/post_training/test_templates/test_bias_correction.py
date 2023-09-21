@@ -20,8 +20,8 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
+from nncf.quantization.pipelines.pipeline import Pipeline
 from nncf.quantization.pipelines.post_training.pipeline import create_ptq_pipeline
-from nncf.quantization.pipelines.stepwise_pipeline import StepwisePipeline
 from tests.post_training.test_templates.helpers import ConvTestModel
 from tests.post_training.test_templates.helpers import MultipleConvTestModel
 from tests.post_training.test_templates.helpers import SplittedModel
@@ -94,7 +94,7 @@ class TemplateTestBCAlgorithm:
         return ref_biases
 
     @staticmethod
-    def get_quantization_algorithm(disable_bias_correction=False) -> StepwisePipeline:
+    def get_quantization_algorithm(disable_bias_correction=False) -> Pipeline:
         return create_ptq_pipeline(
             subset_size=1,
             fast_bias_correction=False,
