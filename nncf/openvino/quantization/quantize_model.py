@@ -126,7 +126,8 @@ def native_quantize_if_op_impl(
     if_ops_number = get_number_if_op(model)
     all_models_number = if_ops_number * 2 + 1
     nncf_logger.info(
-        f"The model consists of {if_ops_number} If node(-s) with then and else bodies. Main model and all If bodies will be quantized recursively."
+        f"The model consists of {if_ops_number} If node(-s) with then and else bodies. \
+            Main model and all If bodies will be quantized recursively."
     )
     quantized_model, _ = apply_algorithm_if_bodies(
         quantization_algorithm, model, graph, calibration_dataset, subset_size, 1, all_models_number
