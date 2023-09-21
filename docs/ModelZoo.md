@@ -1,24 +1,390 @@
 # NNCF Compressed Model Zoo
 
+The applied compression algorithms are divided into three broad categories: Post-Training Quantization ([PTQ](../README.md#post-training-quantization)), [Weights Compression](../docs/compression_algorithms/CompressWeights.md) and Training-Time Compression ([TTC](../README.md#training-time-compression)).
+
+- [Post-Training Quantization](#post-training-quantization)
+  - [OpenVINO Post-Training Quantization](#onnx-post-training-quantization)
+    - [Classification](#openvino-ptq-classification)
+    - [Object Detection](#openvino-ptq-object-detection)
+    - [Semantic Segmentation](#openvino-ptq-semantic-segmentation)
+    - [Natural Language Processing](#openvino-ptq-natural-language-processing)
+  - [ONNX Post-Training Quantization](#onnx-post-training-quantization)
+    - [Classification](#onnx-ptq-classification)
+    - [Object Detection](#onnx-ptq-object-detection)
+- [OpenVINO Weights Compression](#openvino-weights-compression)
+- [Training-Time Compression](#training-time-compression)
+  - [PyTorch Training-Time Compression](#pytorch-ttc)
+    - [Classification](#pytorch-ttc-classification)
+    - [Object Detection](#pytorch-ttc-object-detection)
+    - [Semantic Segmentation](#pytorch-ttc-semantic-segmentation)
+    - [Natural Language Processing (3rd-party training pipelines)](#pytorch-ttc-nlp-huggingface-transformers-powered-models)
+  - [TensorFlow Training-Time Compression](#tensorflow-ttc)
+    - [Classification](#tensorflow-ttc-classification)
+    - [Object Detection](#tensorflow-ttc-object-detection)
+    - [Instance Segmentation](#tensorflow-ttc-instance-segmentation)
+
+## Post-Training Quantization
+
+Additional PTQ results may be found on an OpenVino Performance Benchmarks [page](https://docs.openvino.ai/latest/openvino_docs_performance_benchmarks.html).
+
+### OpenVINO PTQ
+
+#### OpenVINO PTQ Classification
+<table>
+  <thead>
+    <tr style="text-align: center;">
+      <th>Model</th>
+      <th>Dataset</th>
+      <th>Metric (<em>drop</em>) %</th>
+      <th>Metric Type</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>AlexNet</td>
+      <td>ImageNet</td>
+      <td>56.28 (0.24)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>VGG</td>
+      <td>ImageNet</td>
+      <td>71.49 (0.10)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>ShuffleNet</td>
+      <td>ImageNet</td>
+      <td>64.78 (0.33)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>DenseNet-161</td>
+      <td>ImageNet</td>
+      <td>76.96 (0.18)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>GoogLeNet</td>
+      <td>ImageNet</td>
+      <td>77.22 (0.47)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>ResNet-18</td>
+      <td>ImageNet</td>
+      <td>69.51 (0.24)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>ResNet-50</td>
+      <td>ImageNet</td>
+      <td>75.98 (0.15)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>ResNext-50</td>
+      <td>ImageNet</td>
+      <td>77.51 (0.11)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>ResNext-101</td>
+      <td>ImageNet</td>
+      <td>83.14 (0.20)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>ResNeSt-50</td>
+      <td>ImageNet</td>
+      <td>80.81 (0.30)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>SqueezeNet v1.0</td>
+      <td>ImageNet</td>
+      <td>57.34 (0.75)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>SqueezeNet v1.1</td>
+      <td>ImageNet</td>
+      <td>57.69 (0.50)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>ViT Base</td>
+      <td>ImageNet</td>
+      <td>81.15 (0.51)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>SWin Tiny</td>
+      <td>ImageNet</td>
+      <td>80.22 (1.16)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>LeViT</td>
+      <td>ImageNet</td>
+      <td>75.80 (0.75)</td>
+      <td>Accuracy</td>
+    </tr>
+  </tbody>
+</table>
+
+#### OpenVINO PTQ Object Detection
+<table>
+  <thead>
+    <tr style="text-align: center;">
+      <th>Model</th>
+      <th>Dataset</th>
+      <th>Metric (<em>drop</em>) %</th>
+      <th>Metric Type</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>SSD ResNet-34</td>
+      <td>COCO</td>
+      <td>39.32 (-0.04)</td>
+      <td>MAP</td>
+    </tr>
+    <tr>
+      <td>SSD VGG16</td>
+      <td>VOC</td>
+      <td>87.03 (-0.12)</td>
+      <td>MAP</td>
+    </tr>
+    <tr>
+      <td>RetinaNet ResNet-34</td>
+      <td>VOC</td>
+      <td>90.30 (-0.02)</td>
+      <td>MAP</td>
+    </tr>
+    <tr>
+      <td>YOLO v3</td>
+      <td>COCO</td>
+      <td>47.59 (0.70)</td>
+      <td>MAP</td>
+    </tr>
+    <tr>
+      <td>YOLO v5s</td>
+      <td>COCO</td>
+      <td>49.85 (0.23)</td>
+      <td>MAP</td>
+    </tr>
+    <tr>
+      <td>YOLO v5m</td>
+      <td>COCO</td>
+      <td>56.75 (0.27)</td>
+      <td>MAP</td>
+    </tr>
+    <tr>
+      <td>YOLO v5l</td>
+      <td>COCO</td>
+      <td>59.40 (0.18)</td>
+      <td>MAP</td>
+    </tr>
+    <tr>
+      <td>YOLO v5x</td>
+      <td>COCO</td>
+      <td>61.46 (0.28)</td>
+      <td>MAP</td>
+    </tr>
+    <tr>
+      <td>YOLO Xt</td>
+      <td>COCO</td>
+      <td>46.75 (1.10)</td>
+      <td>MAP</td>
+    </tr>
+  </tbody>
+</table>
+
+#### OpenVINO PTQ Semantic Segmentation
+<table>
+  <thead>
+    <tr style="text-align: center;">
+      <th>Model</th>
+      <th>Dataset</th>
+      <th>Metric (<em>drop</em>) %</th>
+      <th>Metric Type</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>DeepLab v3</td>
+      <td>COCO</td>
+      <td>59.18 (0.55)</td>
+      <td>mIoU</td>
+    </tr>
+    <tr>
+      <td>HRNet v2</td>
+      <td>ADEC</td>
+      <td>32.09 (0.93)</td>
+      <td>mIoU</td>
+    </tr>
+    <tr>
+      <td>LR-ASPP</td>
+      <td>COCO</td>
+      <td>57.58 (0.58)</td>
+      <td>mIoU</td>
+    </tr>
+  </tbody>
+</table>
+
+#### OpenVINO PTQ Natural Language Processing
+<table>
+  <thead>
+    <tr style="text-align: center;">
+      <th>Model</th>
+      <th>Dataset</th>
+      <th>Metric (<em>drop</em>) %</th>
+      <th>Metric Type</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>BERT Tiny</td>
+      <td>CoLA</td>
+      <td>80.90 (0.19)</td>
+      <td>Accuracy</td>
+    </tr>
+    <tr>
+      <td>BERT Base</td>
+      <td>CONNL2003</td>
+      <td>99.17 (-0.02)</td>
+      <td>NER Accuracy</td>
+    </tr>
+    <tr>
+      <td>RoBERTa</td>
+      <td>GLUE</td>
+      <td>81.04 (0.18)</td>
+      <td>F1</td>
+    </tr>
+    <tr>
+      <td>DistilBERT</td>
+      <td>STS</td>
+      <td>55.51 (1.35)</td>
+      <td>Spearman Correlation</td>
+    </tr>
+    <tr>
+      <td>SBERT</td>
+      <td>STS</td>
+      <td>84.81 (0.26)</td>
+      <td>Spearman Correlation</td>
+    </tr>
+  </tbody>
+</table>
+
+
+### ONNX Post-Training Quantization
+
+#### ONNX PTQ Classification
+
+<table>
+  <thead>
+    <tr>
+      <th>ONNX Model</th>
+      <th>Compression algorithm</th>
+      <th>Dataset</th>
+      <th>Accuracy (<em>drop</em>) %</th>
+    </tr>
+  </thead>
+  <tbody align="center">
+    <tr>
+      <td align="left">DenseNet-121</td>
+      <td align="left">PTQ</td>
+      <td>ImageNet</td>
+      <td>60.16 (0.8)</td>
+    </tr>
+    <tr>
+      <td align="left">GoogleNet</td>
+      <td align="left">PTQ</td>
+      <td>ImageNet</td>
+      <td>66.36 (0.3)</td>
+    </tr>
+    <tr>
+      <td align="left">MobileNet V2</td>
+      <td align="left">PTQ</td>
+      <td>ImageNet</td>
+      <td>71.38 (0.49)</td>
+    </tr>
+    <tr>
+      <td align="left">ResNet-50</td>
+      <td align="left">PTQ</td>
+      <td>ImageNet</td>
+      <td>74.63 (0.21)</td>
+    </tr>
+    <tr>
+      <td align="left">ShuffleNet</td>
+      <td align="left">PTQ</td>
+      <td>ImageNet</td>
+      <td>47.25 (0.18)</td>
+    </tr>
+    <tr>
+      <td align="left">SqueezeNet V1.0</td>
+      <td align="left">PTQ</td>
+      <td>ImageNet</td>
+      <td>54.3 (0.54)</td>
+    </tr>
+    <tr>
+      <td align="left">VGG‑16</td>
+      <td align="left">PTQ</td>
+      <td>ImageNet</td>
+      <td>72.02 (0.0)</td>
+    </tr>
+  </tbody>
+</table>
+
+#### ONNX PTQ Object Detection
+
+<table>
+  <thead>
+    <tr>
+      <th>ONNX Model</th>
+      <th>Compression algorithm</th>
+      <th>Dataset</th>
+      <th>mAP (<em>drop</em>) %</th>
+    </tr>
+  </thead>
+  <tbody align="center">
+    <tr>
+      <td align="left">SSD1200</td>
+      <td align="left">PTQ</td>
+      <td>COCO2017</td>
+      <td>20.17 (0.17)</td>
+    </tr>
+    <tr>
+      <td align="left">Tiny-YOLOv2</td>
+      <td align="left">PTQ</td>
+      <td>VOC12</td>
+      <td>29.03 (0.23)</td>
+    </tr>
+  </tbody>
+</table>
+
+
+## OpenVINO Weights Compression
+
+Below we present weight compression results for LLMs from Hugging Face.
+
+| Model           | Accuracy (<em>drop</em>) | Size reduction |
+|-----------------|--------------------------|----------------|
+| open-llama-3b   | 66.49 (0.02)             | 4.33           |
+| llama-7b        | 73.39 (-0.22)            | 4.17           |
+| llama-2-7b-chat | 70.85 (-0.23)            | 3.83           |
+| gpt-j-6b        | 68.12 (-0.19)            | 4.00           |
+| dolly-v2-12b    | 64.29 (-0.06)            | 4.05           |
+
+## Training-Time Compression
+
 Here we present the results achieved using our sample scripts, example patches to third-party repositories and NNCF configuration files.
 
-The applied quantization compression algorithms are divided into two broad categories: Quantization-Aware Training ([QAT](../README.md#training-time-compression)) and Post-Training Quantization ([PTQ](../README.md#post-training-quantization)). Here we mainly report the QAT results and the PTQ results may be found on an OpenVino Performance Benchmarks [page](https://docs.openvino.ai/latest/openvino_docs_performance_benchmarks.html).
 
-- [PyTorch](#pytorch)
-  - [Classification](#pytorch-classification)
-  - [Object Detection](#pytorch-object-detection)
-  - [Semantic Segmentation](#pytorch-semantic-segmentation)
-  - [Natural Language Processing (3rd-party training pipelines)](#pytorch-nlp-huggingface-transformers-powered-models)
-- [TensorFlow](#tensorflow)
-  - [Classification](#tensorflow-classification)
-  - [Object Detection](#tensorflow-object-detection)
-  - [Instance Segmentation](#tensorflow-instance-segmentation)
-- [ONNX](#onnx)
-- [OpenVINO Post Training Quantization](#openvino-post-training-quantization)
+### PyTorch TTC
 
-## PyTorch
-
-### PyTorch Classification
+#### PyTorch TTC Classification
 
 <table>
   <thead>
@@ -291,7 +657,7 @@ The applied quantization compression algorithms are divided into two broad categ
   </tbody>
 </table>
 
-### PyTorch Object Detection
+#### PyTorch TTC Object Detection
 
 <table>
   <thead>
@@ -380,7 +746,7 @@ The applied quantization compression algorithms are divided into two broad categ
   </tbody>
 </table>
 
-### PyTorch Semantic Segmentation
+#### PyTorch TTC Semantic Segmentation
 
 <table>
   <thead>
@@ -477,7 +843,7 @@ The applied quantization compression algorithms are divided into two broad categ
   </tbody>
 </table>
 
-### PyTorch NLP (HuggingFace Transformers-powered models)
+#### PyTorch TTC NLP (HuggingFace Transformers-powered models)
 
 <table>
   <thead>
@@ -540,9 +906,9 @@ The applied quantization compression algorithms are divided into two broad categ
   </tbody>
 </table>
 
-## TensorFlow
+### TensorFlow TTC
 
-### TensorFlow Classification
+#### TensorFlow TTC Classification
 
 <table>
   <thead>
@@ -735,7 +1101,7 @@ The applied quantization compression algorithms are divided into two broad categ
   </tbody>
 </table>
 
-### TensorFlow Object Detection
+#### TensorFlow TTC Object Detection
 
 <table>
   <thead>
@@ -816,7 +1182,7 @@ The applied quantization compression algorithms are divided into two broad categ
   </tbody>
 </table>
 
-### TensorFlow Instance Segmentation
+#### TensorFlow TTC Instance Segmentation
 
 <table>
   <thead>
@@ -856,373 +1222,3 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
   </tbody>
 </table>
-
-## ONNX
-
-### ONNX Classification
-
-<table>
-  <thead>
-    <tr>
-      <th>ONNX Model</th>
-      <th>Compression algorithm</th>
-      <th>Dataset</th>
-      <th>Accuracy (<em>drop</em>) %</th>
-    </tr>
-  </thead>
-  <tbody align="center">
-    <tr>
-      <td align="left">DenseNet-121</td>
-      <td align="left">PTQ</td>
-      <td>ImageNet</td>
-      <td>60.16 (0.8)</td>
-    </tr>
-    <tr>
-      <td align="left">GoogleNet</td>
-      <td align="left">PTQ</td>
-      <td>ImageNet</td>
-      <td>66.36 (0.3)</td>
-    </tr>
-    <tr>
-      <td align="left">MobileNet V2</td>
-      <td align="left">PTQ</td>
-      <td>ImageNet</td>
-      <td>71.38 (0.49)</td>
-    </tr>
-    <tr>
-      <td align="left">ResNet-50</td>
-      <td align="left">PTQ</td>
-      <td>ImageNet</td>
-      <td>74.63 (0.21)</td>
-    </tr>
-    <tr>
-      <td align="left">ShuffleNet</td>
-      <td align="left">PTQ</td>
-      <td>ImageNet</td>
-      <td>47.25 (0.18)</td>
-    </tr>
-    <tr>
-      <td align="left">SqueezeNet V1.0</td>
-      <td align="left">PTQ</td>
-      <td>ImageNet</td>
-      <td>54.3 (0.54)</td>
-    </tr>
-    <tr>
-      <td align="left">VGG‑16</td>
-      <td align="left">PTQ</td>
-      <td>ImageNet</td>
-      <td>72.02 (0.0)</td>
-    </tr>
-  </tbody>
-</table>
-
-### ONNX Object Detection
-
-<table>
-  <thead>
-    <tr>
-      <th>ONNX Model</th>
-      <th>Compression algorithm</th>
-      <th>Dataset</th>
-      <th>mAP (<em>drop</em>) %</th>
-    </tr>
-  </thead>
-  <tbody align="center">
-    <tr>
-      <td align="left">SSD1200</td>
-      <td align="left">PTQ</td>
-      <td>COCO2017</td>
-      <td>20.17 (0.17)</td>
-    </tr>
-    <tr>
-      <td align="left">Tiny-YOLOv2</td>
-      <td align="left">PTQ</td>
-      <td>VOC12</td>
-      <td>29.03 (0.23)</td>
-    </tr>
-  </tbody>
-</table>
-
-
-## OpenVINO Post Training Quantization
-The results presented below were obtained using NNCF PTQ for OpenVINO backend. 
-
-> Note: Some of the PyTorch models are labeled as ONNX here, because PyTorch models are converted to OpenVINO intermediate representation through ONNX. 
-
-### Classification
-<table>
-  <thead>
-    <tr style="text-align: center;">
-      <th>Model</th>
-      <th>Framework</th>
-      <th>Dataset</th>
-      <th>Metric</th>
-      <th>Metric Type</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>GoogLeNet</td>
-      <td>ONNX</td>
-      <td>ImageNet</td>
-      <td>77.31 (0.38)</td>
-      <td>Accuracy</td>
-    </tr>
-    <tr>
-      <td>MobileNetV3 Large</td>
-      <td>TF</td>
-      <td>ImageNet</td>
-      <td>75.18 (0.66)</td>
-      <td>Accuracy</td>
-    </tr>
-    <tr>
-      <td>ResNet-18</td>
-      <td>ONNX</td>
-      <td>ImageNet</td>
-      <td>69.52 (0.23)</td>
-      <td>Accuracy</td>
-    </tr>
-    <tr>
-      <td>ResNet-50</td>
-      <td>ONNX</td>
-      <td>ImageNet</td>
-      <td>75.93 (0.20)</td>
-      <td>Accuracy</td>
-    </tr>
-    <tr>
-      <td>ResNet-50</td>
-      <td>ONNX</td>
-      <td>ImageNet</td>
-      <td>75.97 (0.15)</td>
-      <td>Accuracy</td>
-    </tr>
-    <tr>
-      <td>ResNet-50</td>
-      <td>TF</td>
-      <td>ImageNet</td>
-      <td>74.96 (0.08)</td>
-      <td>Accuracy</td>
-    </tr>
-    <tr>
-      <td>ResNext-50</td>
-      <td>ONNX</td>
-      <td>ImageNet</td>
-      <td>77.50 (0.12)</td>
-      <td>Accuracy</td>
-    </tr>
-    <tr>
-      <td>ResNext-101</td>
-      <td>ONNX</td>
-      <td>ImageNet</td>
-      <td>83.14 (0.20)</td>
-      <td>Accuracy</td>
-    </tr>
-    <tr>
-      <td>SqueezeNet V1.0</td>
-      <td>ONNX</td>
-      <td>ImageNet</td>
-      <td>57.34 (0.75)</td>
-      <td>Accuracy</td>
-    </tr>
-    <tr>
-      <td>SqueezeNet V1.1</td>
-      <td>ONNX</td>
-      <td>ImageNet</td>
-      <td>57.69 (0.50)</td>
-      <td>Accuracy</td>
-    </tr>
-    <tr>
-      <td>DeiT</td>
-      <td>ONNX</td>
-      <td>ImageNet</td>
-      <td>80.90 (0.90)</td>
-      <td>Accuracy</td>
-    </tr>
-    <tr>
-      <td>SWin Tiny</td>
-      <td>ONNX</td>
-      <td>ImageNet</td>
-      <td>80.59 (0.79)</td>
-      <td>Accuracy</td>
-    </tr>
-    <tr>
-      <td>LeViT</td>
-      <td>ONNX</td>
-      <td>ImageNet</td>
-      <td>75.81 (0.73)</td>
-      <td>Accuracy</td>
-    </tr>
-  </tbody>
-</table>
-
-### Object Detection
-<table>
-  <thead>
-    <tr style="text-align: center;">
-      <th>Model</th>
-      <th>Framework</th>
-      <th>Dataset</th>
-      <th>Metric</th>
-      <th>Metric Type</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>SSD ResNet-34</td>
-      <td>ONNX</td>
-      <td>COCO</td>
-      <td>39.26 (0.03)</td>
-      <td>MAP</td>
-    </tr>
-    <tr>
-      <td>SSD ResNet-50</td>
-      <td>TF</td>
-      <td>COCO</td>
-      <td>58.49 (-3.27)</td>
-      <td>MAP</td>
-    </tr>
-    <tr>
-      <td>SSD VGG16</td>
-      <td>ONNX</td>
-      <td>VOC</td>
-      <td>86.99 (-0.07)</td>
-      <td>MAP</td>
-    </tr>
-    <tr>
-      <td>RetinaNet ResNet-34</td>
-      <td>ONNX</td>
-      <td>VOC</td>
-      <td>90.30 (-0.02)</td>
-      <td>MAP</td>
-    </tr>
-    <tr>
-      <td>YOLO v3t</td>
-      <td>ONNX</td>
-      <td>COCO</td>
-      <td>16.76 (0.31)</td>
-      <td>MAP</td>
-    </tr>
-    <tr>
-      <td>YOLO v5s</td>
-      <td>ONNX</td>
-      <td>COCO</td>
-      <td>49.77 (0.31)</td>
-      <td>MAP</td>
-    </tr>
-    <tr>
-      <td>YOLO v5m</td>
-      <td>ONNX</td>
-      <td>COCO</td>
-      <td>56.88 (0.14)</td>
-      <td>MAP</td>
-    </tr>
-    <tr>
-      <td>YOLO v5l</td>
-      <td>ONNX</td>
-      <td>COCO</td>
-      <td>59.48 (0.09)</td>
-      <td>MAP</td>
-    </tr>
-    <tr>
-      <td>YOLO Xt</td>
-      <td>ONNX</td>
-      <td>COCO</td>
-      <td>47.04 (0.81)</td>
-      <td>MAP</td>
-    </tr>
-  </tbody>
-</table>
-
-### Semantic Segmentation
-<table>
-  <thead>
-    <tr style="text-align: center;">
-      <th>Model</th>
-      <th>Framework</th>
-      <th>Dataset</th>
-      <th>Metric</th>
-      <th>Metric Type</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>DeepLab v3</td>
-      <td>ONNX</td>
-      <td>COCO</td>
-      <td>59.22 (0.51)</td>
-      <td>mIoU</td>
-    </tr>
-    <tr>
-      <td>HRNet v2</td>
-      <td>ONNX</td>
-      <td>ADEC</td>
-      <td>32.09 (0.93)</td>
-      <td>mIoU</td>
-    </tr>
-    <tr>
-      <td>LR-ASPP</td>
-      <td>ONNX</td>
-      <td>COCO</td>
-      <td>57.60 (0.56)</td>
-      <td>mIoU</td>
-    </tr>
-    <tr>
-      <td>FC-DenseNet</td>
-      <td>TF</td>
-      <td>CamVid</td>
-      <td>83.56 (0.43)</td>
-      <td>Accuracy</td>
-    </tr>
-  </tbody>
-</table>
-
-### Natural Language Processing
-<table>
-  <thead>
-    <tr style="text-align: center;">
-      <th>Model</th>
-      <th>Framework</th>
-      <th>Dataset</th>
-      <th>Metric</th>
-      <th>Metric Type</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>BERT Tiny</td>
-      <td>ONNX</td>
-      <td>CoLA</td>
-      <td>80.42 (0.67)</td>
-      <td>Accuracy</td>
-    </tr>
-    <tr>
-      <td>BERT Base</td>
-      <td>ONNX</td>
-      <td>CONNL2003</td>
-      <td>99.14 (0.01)</td>
-      <td>NER Accuracy</td>
-    </tr>
-    <tr>
-      <td>BERT Large</td>
-      <td>ONNX</td>
-      <td>STS</td>
-      <td>41.68 (-3.21)</td>
-      <td>Spearman Correlation</td>
-    </tr>
-    <tr>
-      <td>RoBERTa</td>
-      <td>ONNX</td>
-      <td>GLUE</td>
-      <td>81.04 (0.18)</td>
-      <td>F1</td>
-    </tr>
-    <tr>
-      <td>SBERT</td>
-      <td>ONNX</td>
-      <td>STS</td>  
-      <td>84.49 (0.58)</td>
-      <td>Spearman Correlation</td>
-    </tr>
-  </tbody>
-</table>
-
