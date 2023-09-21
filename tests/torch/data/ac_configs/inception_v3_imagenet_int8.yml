@@ -26,3 +26,7 @@ models:
           - name: accuracy@top1
             type: accuracy
             top_k: 1
+
+          - type: normalization
+            mean: 123.675, 116.28, 103.53
+            std: 58.4795, 57.1429, 57.4713

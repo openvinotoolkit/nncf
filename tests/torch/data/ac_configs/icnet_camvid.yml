@@ -30,3 +30,7 @@ models:
           - type: mean_iou
             use_argmax: True
             ignore_label: 11
+
+          - type: normalization
+            mean: 99.603, 103.329, 105.6567
+            std: 75.643, 77.821, 76.746
