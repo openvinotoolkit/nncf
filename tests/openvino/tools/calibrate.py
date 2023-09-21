@@ -10,6 +10,7 @@
 # limitations under the License.
 # pylint:disable=too-many-lines
 
+import functools
 import json
 import multiprocessing
 import os
@@ -516,6 +517,19 @@ def map_tune_hyperparams(tune_hyperparams):
     return {"advanced_accuracy_restorer_parameters": advanced_parameters}
 
 
+def map_dump_intermediate_model(dump_intermediate_model, output_dir):
+    intermediate_model_dir = None
+
+    if dump_intermediate_model:
+        intermediate_model_dir = os.path.join(output_dir, "intermediate_model")
+        os.makedirs(intermediate_model_dir, exist_ok=True)
+
+    ctx = get_algorithm_parameters_context()
+    advanced_parameters = ctx.params.get("advanced_accuracy_restorer_parameters", AdvancedAccuracyRestorerParameters())
+    advanced_parameters.intermediate_model_dir = intermediate_model_dir
+    return {"advanced_accuracy_restorer_parameters": advanced_parameters}
+
+
 def create_parameters_for_algorithm(
     pot_parameters, supported_parameters, default_parameters, ignored_parameters, param_name_map
 ):
@@ -587,8 +601,11 @@ def map_quantization_parameters(pot_parameters):
     return result
 
 
-def map_quantize_with_accuracy_control_parameters(pot_parameters):
+def map_quantize_with_accuracy_control_parameters(pot_parameters, output_dir):
     supported_parameters, default_parameters, ignored_parameters = get_pot_quantization_parameters_mapping()
+
+    ignored_parameters.remove("dump_intermediate_model")
+    map_dump_intermediate_model_fn = functools.partial(map_dump_intermediate_model, output_dir=output_dir)
 
     supported_parameters.update(
         {
@@ -597,6 +614,7 @@ def map_quantize_with_accuracy_control_parameters(pot_parameters):
             "ranking_subset_size": map_ranking_subset_size,
             "tune_hyperparams": map_tune_hyperparams,
             "drop_type": map_drop_type,
+            "dump_intermediate_model": map_dump_intermediate_model_fn,
         }
     )
 
@@ -625,11 +643,11 @@ def map_quantize_with_accuracy_control_parameters(pot_parameters):
     return result
 
 
-def map_paramaters(pot_algo_name, nncf_algo_name, pot_parameters):
+def map_paramaters(pot_algo_name, nncf_algo_name, pot_parameters, output_dir):
     if nncf_algo_name == "quantize":
         return map_quantization_parameters(pot_parameters)
     if nncf_algo_name == "quantize_with_accuracy_control":
-        return map_quantize_with_accuracy_control_parameters(pot_parameters)
+        return map_quantize_with_accuracy_control_parameters(pot_parameters, output_dir)
     raise ValueError(f"Mapping POT {pot_algo_name} parameters to NNCF {nncf_algo_name} parameters is not supported")
 
 
@@ -645,7 +663,7 @@ def get_accuracy_checker_config(engine_config):
     return engine_config
 
 
-def get_nncf_algorithms_config(compression_config):
+def get_nncf_algorithms_config(compression_config, output_dir):
     nncf_algorithms = {}
     override_options = {}
     for pot_algo in compression_config.algorithms:
@@ -665,7 +683,7 @@ def get_nncf_algorithms_config(compression_config):
             override_options[nncf_algo_name]["parameters"].update(parameters)
             continue
 
-        nncf_algo_parameters = map_paramaters(pot_algo_name, nncf_algo_name, pot_algo.params)
+        nncf_algo_parameters = map_paramaters(pot_algo_name, nncf_algo_name, pot_algo.params, output_dir)
 
         if advanced_parameters is not None:
             nncf_algo_parameters["advanced_parameters"] = replace(
@@ -963,6 +981,8 @@ def filter_configuration(config: Config) -> Config:
     # Drop params before configure
     for algorithm_config in config["compression"]["algorithms"]:
         algo_params = algorithm_config.get("params")
+        if algo_params is None:
+            continue
         algo_name = algorithm_config.get("name")
         for field_to_filter in fields_to_filter:
             field_value = algo_params.get(field_to_filter)
@@ -989,7 +1009,7 @@ def main():
 
     xml_path, bin_path = get_model_paths(config.model)
     accuracy_checker_config = get_accuracy_checker_config(config.engine)
-    nncf_algorithms_config = get_nncf_algorithms_config(config.compression)
+    nncf_algorithms_config = get_nncf_algorithms_config(config.compression, args.output_dir)
 
     set_log_file(f"{args.output_dir}/log.txt")
     output_dir = os.path.join(args.output_dir, "optimized")

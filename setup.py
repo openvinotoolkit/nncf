@@ -112,15 +112,16 @@ INSTALL_REQUIRES = [
     "pandas>=1.1.5,<2.1",
     "psutil",
     "pydot>=1.4.1",
-    "pymoo @ git+https://github.com/anyoptimization/pymoo.git@695cb26923903f872c7256a9013609769f3cc2bd",
+    "pymoo>=0.6.0.1",
     # The recent pyparsing major version update seems to break
     # integration with networkx - the graphs parsed from current .dot
     # reference files no longer match against the graphs produced in tests.
     # Using 2.x versions of pyparsing seems to fix the issue.
     # Ticket: 69520
     "pyparsing<3.0",
+    "rich>=13.5.2",
     "scikit-learn>=0.24.0",
-    "scipy>=1.3.2, <1.11",
+    "scipy>=1.3.2",
     "texttable>=1.6.3",
     "tqdm>=4.54.1",
 ]
@@ -138,7 +139,7 @@ TORCH_EXTRAS = [
 
 ONNX_EXTRAS = ["onnx~=1.13.1", "onnxruntime~=1.14.1;python_version < '3.11'"]
 
-OPENVINO_EXTRAS = ["openvino==2023.0.1"]
+OPENVINO_EXTRAS = ["openvino==2023.1"]
 
 
 EXTRAS_REQUIRE = {
