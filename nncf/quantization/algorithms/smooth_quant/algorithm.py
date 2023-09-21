@@ -28,7 +28,7 @@ from nncf import Dataset
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.layer_attributes import LayoutElem
+from nncf.common.graph.layer_attributes import ConvLayoutElem
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging import nncf_logger
@@ -365,4 +365,4 @@ class SmoothQuant(Algorithm):
         layer_attributes = node.layer_attributes.get_backend_agnostic_attributes()
         if layer_attributes is None or layer_attributes.weights_layout is None:
             return 1
-        return layer_attributes.weights_layout.index(LayoutElem.C_IN)
+        return layer_attributes.weights_layout.index(ConvLayoutElem.C_IN)

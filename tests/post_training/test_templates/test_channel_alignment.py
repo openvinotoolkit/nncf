@@ -16,8 +16,8 @@ import numpy as np
 import pytest
 
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.layer_attributes import ConvLayoutElem
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
-from nncf.common.graph.layer_attributes import LayoutElem
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
@@ -49,7 +49,7 @@ VALID_CONV_LAYER_ATTR = ConvolutionLayerAttributes(
     groups=1,
     transpose=False,
     padding_values=(0, 0, 0, 0),
-    weights_layout=(LayoutElem.C_OUT, LayoutElem.C_IN, LayoutElem.SPATIAL, LayoutElem.SPATIAL),
+    weights_layout=(ConvLayoutElem.C_OUT, ConvLayoutElem.C_IN, ConvLayoutElem.SPATIAL, ConvLayoutElem.SPATIAL),
 )
 
 
@@ -63,7 +63,13 @@ DEPTHWISE_CONV_LAYER_ATTR = ConvolutionLayerAttributes(
     groups=5,
     transpose=False,
     padding_values=(0, 0, 0, 0),
-    weights_layout=(LayoutElem.GROUPS, LayoutElem.C_OUT, LayoutElem.C_IN, LayoutElem.SPATIAL, LayoutElem.SPATIAL),
+    weights_layout=(
+        ConvLayoutElem.GROUPS,
+        ConvLayoutElem.C_OUT,
+        ConvLayoutElem.C_IN,
+        ConvLayoutElem.SPATIAL,
+        ConvLayoutElem.SPATIAL,
+    ),
 )
 
 MATMUL_LAYER_METATYPES = [
@@ -73,11 +79,15 @@ MATMUL_LAYER_METATYPES = [
         in_features=5,
         out_features=10,
         with_bias=False,
-        weights_layout=[LayoutElem.C_IN, LayoutElem.C_OUT],
+        weights_layout=[ConvLayoutElem.C_IN, ConvLayoutElem.C_OUT],
     ),
     # 1D
     LinearLayerAttributes(
-        weight_requires_grad=False, in_features=5, out_features=None, with_bias=False, weights_layout=[LayoutElem.C_IN]
+        weight_requires_grad=False,
+        in_features=5,
+        out_features=None,
+        with_bias=False,
+        weights_layout=[ConvLayoutElem.C_IN],
     ),
     # 5D
     LinearLayerAttributes(
@@ -85,7 +95,13 @@ MATMUL_LAYER_METATYPES = [
         in_features=5,
         out_features=None,
         with_bias=False,
-        weights_layout=[LayoutElem.SPATIAL, LayoutElem.SPATIAL, LayoutElem.SPATIAL, LayoutElem.C_IN, LayoutElem.C_OUT],
+        weights_layout=[
+            ConvLayoutElem.SPATIAL,
+            ConvLayoutElem.SPATIAL,
+            ConvLayoutElem.SPATIAL,
+            ConvLayoutElem.C_IN,
+            ConvLayoutElem.C_OUT,
+        ],
     ),
 ]
 
@@ -101,7 +117,7 @@ INVALID_CONSUMER_CONV_LAYER_ATTRS = [
         groups=1,
         transpose=False,
         padding_values=(0, 0, 0, 0),
-        weights_layout=(LayoutElem.C_OUT, LayoutElem.C_IN, LayoutElem.SPATIAL, LayoutElem.SPATIAL),
+        weights_layout=(ConvLayoutElem.C_OUT, ConvLayoutElem.C_IN, ConvLayoutElem.SPATIAL, ConvLayoutElem.SPATIAL),
     ),
     ConvolutionLayerAttributes(
         weight_requires_grad=False,
@@ -113,7 +129,7 @@ INVALID_CONSUMER_CONV_LAYER_ATTRS = [
         groups=1,
         transpose=False,
         padding_values=(0, 0, 0, 0),
-        weights_layout=(LayoutElem.C_OUT, LayoutElem.C_IN, LayoutElem.SPATIAL, LayoutElem.SPATIAL),
+        weights_layout=(ConvLayoutElem.C_OUT, ConvLayoutElem.C_IN, ConvLayoutElem.SPATIAL, ConvLayoutElem.SPATIAL),
     ),
     ConvolutionLayerAttributes(
         weight_requires_grad=False,
@@ -125,7 +141,7 @@ INVALID_CONSUMER_CONV_LAYER_ATTRS = [
         groups=1,
         transpose=False,
         padding_values=(0, 0, 0, 0),
-        weights_layout=(LayoutElem.C_OUT, LayoutElem.C_IN, LayoutElem.SPATIAL, LayoutElem.SPATIAL),
+        weights_layout=(ConvLayoutElem.C_OUT, ConvLayoutElem.C_IN, ConvLayoutElem.SPATIAL, ConvLayoutElem.SPATIAL),
     ),
     ConvolutionLayerAttributes(
         weight_requires_grad=False,
@@ -137,7 +153,7 @@ INVALID_CONSUMER_CONV_LAYER_ATTRS = [
         groups=1,
         transpose=False,
         padding_values=(1, 0, 0, 0),
-        weights_layout=(LayoutElem.C_OUT, LayoutElem.C_IN, LayoutElem.SPATIAL, LayoutElem.SPATIAL),
+        weights_layout=(ConvLayoutElem.C_OUT, ConvLayoutElem.C_IN, ConvLayoutElem.SPATIAL, ConvLayoutElem.SPATIAL),
     ),
 ]
 
@@ -152,7 +168,13 @@ INVALID_CONV_LAYER_ATTR = ConvolutionLayerAttributes(
     groups=5,
     transpose=False,
     padding_values=(0, 0, 0, 0),
-    weights_layout=(LayoutElem.GROUPS, LayoutElem.C_OUT, LayoutElem.C_IN, LayoutElem.SPATIAL, LayoutElem.SPATIAL),
+    weights_layout=(
+        ConvLayoutElem.GROUPS,
+        ConvLayoutElem.C_OUT,
+        ConvLayoutElem.C_IN,
+        ConvLayoutElem.SPATIAL,
+        ConvLayoutElem.SPATIAL,
+    ),
 )
 
 

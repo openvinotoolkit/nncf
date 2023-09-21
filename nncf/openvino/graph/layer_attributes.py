@@ -14,9 +14,9 @@ from typing import Any, Dict, List, Optional
 import openvino.runtime as ov
 
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
+from nncf.common.graph.layer_attributes import ConvLayoutElem
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
-from nncf.common.graph.layer_attributes import LayoutElem
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
@@ -102,47 +102,39 @@ def get_weighted_layer_attributes(
             "padding_values": tuple(node_attrs["pads_begin"] + node_attrs["pads_end"]),
         }
 
-        weights_layout_map = {
-            OVConvolutionMetatype: [LayoutElem.C_OUT, LayoutElem.C_IN],
-            OVGroupConvolutionMetatype: [LayoutElem.GROUPS, LayoutElem.C_OUT, LayoutElem.C_IN],
-            OVDepthwiseConvolutionMetatype: [LayoutElem.GROUPS, LayoutElem.C_OUT, LayoutElem.C_IN],
-            OVConvolutionBackpropDataMetatype: [LayoutElem.C_IN, LayoutElem.C_OUT],
-            OVGroupConvolutionBackpropDataMetatype: [LayoutElem.GROUPS, LayoutElem.C_IN, LayoutElem.C_OUT],
-        }
-
-        weights_layout = weights_layout_map[ov_metatype]
+        weights_layout = ov_metatype.const_layout
         weights_shape = attrs["shape"]
         kwargs.update(
             {
-                "in_channels": weights_shape[weights_layout.index(LayoutElem.C_IN)],
-                "out_channels": weights_shape[weights_layout.index(LayoutElem.C_OUT)],
+                "in_channels": weights_shape[weights_layout.index(ConvLayoutElem.C_IN)],
+                "out_channels": weights_shape[weights_layout.index(ConvLayoutElem.C_OUT)],
                 "kernel_size": tuple(weights_shape[len(weights_layout) :]),
-                "groups": weights_shape[weights_layout.index(LayoutElem.GROUPS)]
-                if LayoutElem.GROUPS in weights_layout
+                "groups": weights_shape[weights_layout.index(ConvLayoutElem.GROUPS)]
+                if ConvLayoutElem.GROUPS in weights_layout
                 else 1,
             }
         )
-        kwargs.update({"weights_layout": tuple(weights_layout + len(kwargs["kernel_size"]) * [LayoutElem.SPATIAL])})
+        kwargs.update({"weights_layout": tuple(weights_layout + len(kwargs["kernel_size"]) * [ConvLayoutElem.SPATIAL])})
 
         return ConvolutionLayerAttributes(**kwargs)
     if ov_metatype == OVMatMulMetatype:
         weights_shape = attrs["shape"]
 
-        weights_layout = [LayoutElem.SPATIAL] * (len(weights_shape) - 2)
+        weights_layout = [ConvLayoutElem.SPATIAL] * (len(weights_shape) - 2)
         if len(weights_shape) > 1:
             transpose = attrs.get("transpose", False)
             if (transpose and port_id == 0) or (not transpose and port_id == 1):
-                weights_layout += [LayoutElem.C_IN, LayoutElem.C_OUT]
+                weights_layout += [ConvLayoutElem.C_IN, ConvLayoutElem.C_OUT]
             else:
-                weights_layout += [LayoutElem.C_OUT, LayoutElem.C_IN]
+                weights_layout += [ConvLayoutElem.C_OUT, ConvLayoutElem.C_IN]
         else:
-            weights_layout += [LayoutElem.C_IN]
+            weights_layout += [ConvLayoutElem.C_IN]
 
         kwargs = {
             "weight_requires_grad": False,
-            "in_features": weights_shape[weights_layout.index(LayoutElem.C_IN)],
-            "out_features": weights_shape[weights_layout.index(LayoutElem.C_OUT)]
-            if LayoutElem.C_OUT in weights_layout
+            "in_features": weights_shape[weights_layout.index(ConvLayoutElem.C_IN)],
+            "out_features": weights_shape[weights_layout.index(ConvLayoutElem.C_OUT)]
+            if ConvLayoutElem.C_OUT in weights_layout
             else None,
             "with_bias": False,
             "weights_layout": weights_layout,

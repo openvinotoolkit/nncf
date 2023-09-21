@@ -18,8 +18,8 @@ import pytest
 import torch
 from openvino.tools.mo import convert_model
 
+from nncf.common.graph.layer_attributes import ConvLayoutElem
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
-from nncf.common.graph.layer_attributes import LayoutElem
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
@@ -93,7 +93,7 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
                         in_features=5,
                         out_features=10,
                         with_bias=False,
-                        weights_layout=[LayoutElem.C_OUT, LayoutElem.C_IN],
+                        weights_layout=[ConvLayoutElem.C_OUT, ConvLayoutElem.C_IN],
                     ),
                 ),
                 1,
@@ -107,7 +107,7 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
                         in_features=5,
                         out_features=None,
                         with_bias=False,
-                        weights_layout=[LayoutElem.C_IN],
+                        weights_layout=[ConvLayoutElem.C_IN],
                     ),
                 ),
                 0,
@@ -127,7 +127,12 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
                         transpose=False,
                         padding_values=[1, 1, 1, 1],
                         with_bias=False,
-                        weights_layout=[LayoutElem.SPATIAL, LayoutElem.SPATIAL, LayoutElem.C_IN, LayoutElem.C_OUT],
+                        weights_layout=[
+                            ConvLayoutElem.SPATIAL,
+                            ConvLayoutElem.SPATIAL,
+                            ConvLayoutElem.C_IN,
+                            ConvLayoutElem.C_OUT,
+                        ],
                     ),
                 ),
                 2,

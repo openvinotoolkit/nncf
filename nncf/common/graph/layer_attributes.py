@@ -21,7 +21,20 @@ class Dtype(Enum):
     INTEGER = "int"
 
 
-class LayoutElem(Enum):
+class ConvLayoutElem(Enum):
+    """
+    Layout elements descriptor for convolutional and linear layers:
+        C_IN: Input channels dimension.
+        C_OUT: Output channels dimension.
+        SPATIAL: Spatial dimension.
+        GROUPS: Groups dimention.
+    In case a backend is not using a separate dimension for groups and
+    has layout C_IN // GROUPS for input channels of a convolution operation
+    and C_OUT // GROUPS for output channels of a transpose convolution operation
+    input/output channel dimentions are interpretated as
+    input/output channel dimension but with size divided by groups number.
+    """
+
     C_IN = "channels_in"
     C_OUT = "channels_out"
     SPATIAL = "spatial"
@@ -125,7 +138,7 @@ class LinearLayerAttributes(WeightedLayerAttributes):
         in_features: int,
         out_features: int,
         with_bias: bool = True,
-        weights_layout: Optional[Tuple[LayoutElem, ...]] = None,
+        weights_layout: Optional[Tuple[ConvLayoutElem, ...]] = None,
     ):
         """
 
@@ -162,7 +175,7 @@ class ConvolutionLayerAttributes(WeightedLayerAttributes):
         transpose: bool,
         padding_values: Tuple[int, ...],
         with_bias: bool = False,
-        weights_layout: Optional[Tuple[LayoutElem, ...]] = None,
+        weights_layout: Optional[Tuple[ConvLayoutElem, ...]] = None,
     ):
         """
 

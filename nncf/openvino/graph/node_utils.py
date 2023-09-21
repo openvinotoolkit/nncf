@@ -17,7 +17,7 @@ import openvino.runtime.opset9 as opset
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.layer_attributes import LayoutElem
+from nncf.common.graph.layer_attributes import ConvLayoutElem
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_BIAS
@@ -342,7 +342,7 @@ def get_matmul_channel_axes(node: ov.Node) -> List[int]:
     return [
         idx
         for idx, elem in enumerate(layer_attributes.weights_layout)
-        if elem in [LayoutElem.SPATIAL, LayoutElem.C_OUT]
+        if elem in [ConvLayoutElem.SPATIAL, ConvLayoutElem.C_OUT]
     ]
 
 

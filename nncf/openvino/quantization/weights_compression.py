@@ -15,7 +15,7 @@ import numpy as np
 import openvino.runtime as ov
 from openvino.runtime import opset9 as opset
 
-from nncf.common.graph.layer_attributes import LayoutElem
+from nncf.common.graph.layer_attributes import ConvLayoutElem
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.openvino.graph.layer_attributes import get_weighted_layer_attributes
@@ -100,7 +100,7 @@ def _get_reduction_axes(
             ov_node=node, ov_metatype=OVMatMulMetatype, constant_attributes=constant_attributes
         )
         assert isinstance(layer_attributes, LinearLayerAttributes)
-        axes = tuple(idx for idx, elem in enumerate(layer_attributes.weights_layout) if elem == LayoutElem.C_IN)
+        axes = tuple(idx for idx, elem in enumerate(layer_attributes.weights_layout) if elem == ConvLayoutElem.C_IN)
     elif metatype is OVEmbeddingMetatype:
         axes = (metatype.const_channel_axis[0] + 1) % 2
     else:
