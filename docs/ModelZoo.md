@@ -25,7 +25,7 @@ The applied compression algorithms are divided into three broad categories: Post
 
 ## Post-Training Quantization
 
-Additional PTQ results may be found on an OpenVino Performance Benchmarks [page](https://docs.openvino.ai/latest/openvino_docs_performance_benchmarks.html).
+Additional PTQ results may be found on an OpenVINO Performance Benchmarks [page](https://docs.openvino.ai/latest/openvino_docs_performance_benchmarks.html).
 
 ### OpenVINO PTQ
 
@@ -286,7 +286,6 @@ Additional PTQ results may be found on an OpenVino Performance Benchmarks [page]
   <thead>
     <tr>
       <th>ONNX Model</th>
-      <th>Compression algorithm</th>
       <th>Dataset</th>
       <th>Accuracy (<em>drop</em>) %</th>
     </tr>
@@ -294,43 +293,36 @@ Additional PTQ results may be found on an OpenVino Performance Benchmarks [page]
   <tbody align="center">
     <tr>
       <td align="left">DenseNet-121</td>
-      <td align="left">PTQ</td>
       <td>ImageNet</td>
       <td>60.16 (0.8)</td>
     </tr>
     <tr>
       <td align="left">GoogleNet</td>
-      <td align="left">PTQ</td>
       <td>ImageNet</td>
       <td>66.36 (0.3)</td>
     </tr>
     <tr>
       <td align="left">MobileNet V2</td>
-      <td align="left">PTQ</td>
       <td>ImageNet</td>
       <td>71.38 (0.49)</td>
     </tr>
     <tr>
       <td align="left">ResNet-50</td>
-      <td align="left">PTQ</td>
       <td>ImageNet</td>
       <td>74.63 (0.21)</td>
     </tr>
     <tr>
       <td align="left">ShuffleNet</td>
-      <td align="left">PTQ</td>
       <td>ImageNet</td>
       <td>47.25 (0.18)</td>
     </tr>
     <tr>
       <td align="left">SqueezeNet V1.0</td>
-      <td align="left">PTQ</td>
       <td>ImageNet</td>
       <td>54.3 (0.54)</td>
     </tr>
     <tr>
       <td align="left">VGG‑16</td>
-      <td align="left">PTQ</td>
       <td>ImageNet</td>
       <td>72.02 (0.0)</td>
     </tr>
@@ -343,7 +335,6 @@ Additional PTQ results may be found on an OpenVino Performance Benchmarks [page]
   <thead>
     <tr>
       <th>ONNX Model</th>
-      <th>Compression algorithm</th>
       <th>Dataset</th>
       <th>mAP (<em>drop</em>) %</th>
     </tr>
@@ -351,13 +342,11 @@ Additional PTQ results may be found on an OpenVino Performance Benchmarks [page]
   <tbody align="center">
     <tr>
       <td align="left">SSD1200</td>
-      <td align="left">PTQ</td>
       <td>COCO2017</td>
       <td>20.17 (0.17)</td>
     </tr>
     <tr>
       <td align="left">Tiny-YOLOv2</td>
-      <td align="left">PTQ</td>
       <td>VOC12</td>
       <td>29.03 (0.23)</td>
     </tr>
