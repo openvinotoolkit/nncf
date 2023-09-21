@@ -21,7 +21,7 @@ from nncf.onnx.graph.onnx_graph import ONNXGraph
 from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
-from nncf.quantization.pipelines.post_training.pipeline import PostTrainingQuantization
+from nncf.quantization.pipelines.post_training.pipeline import create_ptq_pipeline
 from tests.onnx.common import get_random_generator
 from tests.onnx.opset_converter import convert_opset_version
 from tests.shared.nx_graph import check_nx_graph
@@ -102,7 +102,7 @@ def min_max_quantize_model(
     advanced_parameters.disable_bias_correction = True
     quantization_params["advanced_parameters"] = advanced_parameters
 
-    post_training_quantization = PostTrainingQuantization(subset_size=1, **quantization_params)
+    post_training_quantization = create_ptq_pipeline(subset_size=1, **quantization_params)
 
     quantized_model = post_training_quantization.run(original_model, dataset)
     return quantized_model
@@ -118,7 +118,7 @@ def ptq_quantize_model(
         original_model = convert_opset_version(original_model)
     dataset = get_random_dataset_for_test(original_model, dataset_has_batch_size)
     quantization_params = {} if quantization_params is None else quantization_params
-    post_training_quantization = PostTrainingQuantization(subset_size=1, **quantization_params)
+    post_training_quantization = create_ptq_pipeline(subset_size=1, **quantization_params)
     quantized_model = post_training_quantization.run(original_model, dataset)
     return quantized_model
 

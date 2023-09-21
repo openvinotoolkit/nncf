@@ -29,117 +29,111 @@ from nncf.scopes import IgnoredScope
 TModel = TypeVar("TModel")
 
 
-class PostTrainingQuantization(StepwisePipeline):
+def create_ptq_pipeline(
+    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    target_device: TargetDevice = TargetDevice.ANY,
+    subset_size: int = 300,
+    fast_bias_correction: bool = True,
+    model_type: Optional[ModelType] = None,
+    ignored_scope: Optional[IgnoredScope] = None,
+    advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
+) -> StepwisePipeline:
     """
-    A class for creating a post-training quantization pipeline.
+    Creates a post-training quantization pipeline.
+
     The post-training quantization pipeline includes the following steps:
         1) SmoothQuant
         2) ChannelAlignment
         3) MinMaxQuantization
         4) FastBiasCorrection or BiasCorrection
+
+    :param preset: A preset that controls the quantization mode
+        (symmetric and asymmetric). It can take the following values:
+        - `performance`: Symmetric quantization of weights and activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric
+        quantization of activations.
+    :param target_device: A target device the specificity of which will be taken
+        into account while compressing in order to obtain the best performance
+        for this type of device.
+    :param subset_size: Size of a subset to calculate activations
+        statistics used for quantization.
+    :param fast_bias_correction: Setting this option to `False` enables a different
+        bias correction method which is more accurate, in general, and takes
+        more time but requires less memory.
+    :param model_type: Model type is needed to specify additional patterns
+        in the model. Supported only `transformer` now.
+    :param ignored_scope: An ignored scope that defined the list of model control
+        flow graph nodes to be ignored during quantization.
+    :param advanced_parameters: Advanced quantization parameters for
+        fine-tuning the quantization algorithm
+    :return: A post-training quantization pipeline.
     """
+    if target_device is TargetDevice.VPU:
+        warning_deprecated("VPU device is deprecated and will no longer be supported in the future.")
 
-    def __init__(
-        self,
-        preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
-        target_device: TargetDevice = TargetDevice.ANY,
-        subset_size: int = 300,
-        fast_bias_correction: bool = True,
-        model_type: Optional[ModelType] = None,
-        ignored_scope: Optional[IgnoredScope] = None,
-        advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
-    ):
-        """
-        :param preset: A preset that controls the quantization mode
-            (symmetric and asymmetric). It can take the following values:
-            - `performance`: Symmetric quantization of weights and activations.
-            - `mixed`: Symmetric quantization of weights and asymmetric
-            quantization of activations.
-        :param target_device: A target device the specificity of which will be taken
-            into account while compressing in order to obtain the best performance
-            for this type of device.
-        :param subset_size: Size of a subset to calculate activations
-            statistics used for quantization.
-        :param fast_bias_correction: Setting this option to `False` enables a different
-            bias correction method which is more accurate, in general, and takes
-            more time but requires less memory.
-        :param model_type: Model type is needed to specify additional patterns
-            in the model. Supported only `transformer` now.
-        :param ignored_scope: An ignored scope that defined the list of model control
-            flow graph nodes to be ignored during quantization.
-        :param advanced_parameters: Advanced quantization parameters for
-            fine-tuning the quantization algorithm
-        """
-        if target_device is TargetDevice.VPU:
-            warning_deprecated("VPU device is deprecated and will no longer be supported in the future.")
+    if advanced_parameters is None:
+        advanced_parameters = AdvancedQuantizationParameters()
 
-        if advanced_parameters is None:
-            advanced_parameters = AdvancedQuantizationParameters()
+    # Build the post-training quantization pipeline.
+    pipeline_steps = []
 
-        # Build the post-training quantization pipeline.
-        pipeline_steps = []
-
-        # Add the `SmoothQuant` algorithm as the first step of the pipeline.
-        # It is added only for `ModelType.TRANSFORMER`.
-        if model_type == ModelType.TRANSFORMER and advanced_parameters.smooth_quant_alpha >= 0:
-            pipeline_steps.append(
-                [
-                    SmoothQuant(
-                        subset_size, advanced_parameters.inplace_statistics, advanced_parameters.smooth_quant_alpha
-                    )
-                ]
-            )
-
-        # Add the `ChannelAlignment` algorithm as the second step of the pipeline.
-        if not advanced_parameters.disable_channel_alignment:
-            pipeline_steps.append([ChannelAlignment(subset_size, advanced_parameters.inplace_statistics)])
-
-        # Add the `MinMaxQuantization` algorithm as the third step of the pipeline.
+    # Add the `SmoothQuant` algorithm as the first step of the pipeline.
+    # It is added only for `ModelType.TRANSFORMER`.
+    if model_type == ModelType.TRANSFORMER and advanced_parameters.smooth_quant_alpha >= 0:
         pipeline_steps.append(
-            [
-                MinMaxQuantization(
-                    preset,
-                    target_device,
-                    subset_size,
-                    model_type,
-                    ignored_scope,
-                    advanced_parameters.overflow_fix,
-                    advanced_parameters.quantize_outputs,
-                    advanced_parameters.inplace_statistics,
-                    advanced_parameters.activations_quantization_params,
-                    advanced_parameters.weights_quantization_params,
-                    advanced_parameters.activations_range_estimator_params,
-                    advanced_parameters.weights_range_estimator_params,
-                    advanced_parameters.backend_params,
-                )
-            ]
+            [SmoothQuant(subset_size, advanced_parameters.inplace_statistics, advanced_parameters.smooth_quant_alpha)]
         )
 
-        if not advanced_parameters.disable_bias_correction:
-            # Add the `FastBiasCorrection` or `BiasCorrection` as additional algorithm
-            # inside the third step of the pipeline. It is added after `MinMaxQuantization`
-            # algorithm.
-            bias_correction_params = advanced_parameters.bias_correction_params
-            if fast_bias_correction:
-                threshold = FAST_BIAS_CORRECTION_THRESHOLD
-                bias_correction_subset_size = subset_size
-                bias_correction_cls = FastBiasCorrection
-            else:
-                threshold = BIAS_CORRECTION_THRESHOLD
-                bias_correction_subset_size = max(int(subset_size * 0.2), 1)
-                bias_correction_cls = BiasCorrection
+    # Add the `ChannelAlignment` algorithm as the second step of the pipeline.
+    if not advanced_parameters.disable_channel_alignment:
+        pipeline_steps.append([ChannelAlignment(subset_size, advanced_parameters.inplace_statistics)])
 
-            if bias_correction_params.threshold is not None:
-                threshold = bias_correction_params.threshold
-
-            pipeline_steps[-1].append(
-                bias_correction_cls(
-                    bias_correction_subset_size,
-                    threshold,
-                    bias_correction_params.apply_for_all_nodes,
-                    advanced_parameters.inplace_statistics,
-                    advanced_parameters.backend_params,
-                )
+    # Add the `MinMaxQuantization` algorithm as the third step of the pipeline.
+    pipeline_steps.append(
+        [
+            MinMaxQuantization(
+                preset,
+                target_device,
+                subset_size,
+                model_type,
+                ignored_scope,
+                advanced_parameters.overflow_fix,
+                advanced_parameters.quantize_outputs,
+                advanced_parameters.inplace_statistics,
+                advanced_parameters.activations_quantization_params,
+                advanced_parameters.weights_quantization_params,
+                advanced_parameters.activations_range_estimator_params,
+                advanced_parameters.weights_range_estimator_params,
+                advanced_parameters.backend_params,
             )
+        ]
+    )
 
-        super().__init__(pipeline_steps)
+    if not advanced_parameters.disable_bias_correction:
+        # Add the `FastBiasCorrection` or `BiasCorrection` as additional algorithm
+        # inside the third step of the pipeline. It is added after `MinMaxQuantization`
+        # algorithm.
+        bias_correction_params = advanced_parameters.bias_correction_params
+        if fast_bias_correction:
+            threshold = FAST_BIAS_CORRECTION_THRESHOLD
+            bias_correction_subset_size = subset_size
+            bias_correction_cls = FastBiasCorrection
+        else:
+            threshold = BIAS_CORRECTION_THRESHOLD
+            bias_correction_subset_size = max(int(subset_size * 0.2), 1)
+            bias_correction_cls = BiasCorrection
+
+        if bias_correction_params.threshold is not None:
+            threshold = bias_correction_params.threshold
+
+        pipeline_steps[-1].append(
+            bias_correction_cls(
+                bias_correction_subset_size,
+                threshold,
+                bias_correction_params.apply_for_all_nodes,
+                advanced_parameters.inplace_statistics,
+                advanced_parameters.backend_params,
+            )
+        )
+
+    return StepwisePipeline(pipeline_steps)

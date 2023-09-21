@@ -19,7 +19,7 @@ from nncf.data import Dataset
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-from nncf.quantization.pipelines.post_training.pipeline import PostTrainingQuantization
+from nncf.quantization.pipelines.post_training.pipeline import create_ptq_pipeline
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
 from nncf.telemetry import tracked_function
@@ -55,7 +55,7 @@ def quantize_impl(
         advanced_parameters.weights_quantization_params.per_channel = False
         advanced_parameters.activations_quantization_params.per_channel = False
 
-    quantization_pipeline = PostTrainingQuantization(
+    quantization_pipeline = create_ptq_pipeline(
         preset=preset,
         target_device=target_device,
         subset_size=subset_size,

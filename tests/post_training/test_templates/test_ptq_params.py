@@ -31,7 +31,7 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.passes import transform_to_inference_graph
-from nncf.quantization.pipelines.post_training.pipeline import PostTrainingQuantization
+from nncf.quantization.pipelines.post_training.pipeline import create_ptq_pipeline
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from nncf.scopes import IgnoredScope
 from tests.common.quantization.metatypes import Conv2dTestMetatype
@@ -131,7 +131,7 @@ class TemplateTestPTQParams:
         "range_estimator_params", [RangeEstimatorParametersSet.MINMAX, RangeEstimatorParametersSet.MEAN_MINMAX, None]
     )
     def test_range_estimator_per_tensor(self, test_params, range_estimator_params):
-        pipeline = PostTrainingQuantization(
+        pipeline = create_ptq_pipeline(
             advanced_parameters=AdvancedQuantizationParameters(
                 activations_range_estimator_params=range_estimator_params
             )
@@ -161,7 +161,7 @@ class TemplateTestPTQParams:
 
     @pytest.mark.parametrize("quantize_outputs", [False, True])
     def test_quantize_outputs(self, test_params, quantize_outputs):
-        pipeline = PostTrainingQuantization(
+        pipeline = create_ptq_pipeline(
             advanced_parameters=AdvancedQuantizationParameters(quantize_outputs=quantize_outputs)
         )
         min_max_algo = pipeline.pipeline_steps[-1][0]
@@ -189,7 +189,7 @@ class TemplateTestPTQParams:
 
     def test_ignored_scopes(self, test_params, ignored_scopes_data):
         ignored_scope, act_num_ref, weight_num_ref = ignored_scopes_data
-        pipeline = PostTrainingQuantization(ignored_scope=ignored_scope)
+        pipeline = create_ptq_pipeline(ignored_scope=ignored_scope)
         min_max_algo = pipeline.pipeline_steps[-1][0]
         min_max_algo._backend_entity = self.get_algo_backend()
         assert min_max_algo._ignored_scope == ignored_scope
@@ -215,7 +215,7 @@ class TemplateTestPTQParams:
 
     @pytest.mark.parametrize("model_type", [ModelType.TRANSFORMER])
     def test_model_type_pass(self, test_params, model_type):
-        pipeline = PostTrainingQuantization(preset=QuantizationPreset.MIXED, model_type=model_type)
+        pipeline = create_ptq_pipeline(preset=QuantizationPreset.MIXED, model_type=model_type)
         min_max_algo = pipeline.pipeline_steps[-1][0]
         min_max_algo._backend_entity = self.get_algo_backend()
 

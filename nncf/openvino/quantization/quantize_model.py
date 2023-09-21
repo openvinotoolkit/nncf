@@ -31,7 +31,7 @@ from nncf.quantization.advanced_parameters import convert_to_dict_recursively
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
 from nncf.quantization.algorithms.accuracy_control.algorithm import calculate_accuracy_drop
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
-from nncf.quantization.pipelines.post_training.pipeline import PostTrainingQuantization
+from nncf.quantization.pipelines.post_training.pipeline import create_ptq_pipeline
 from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
@@ -105,7 +105,7 @@ def native_quantize_impl(
     """
     Implementation of the `quantize()` method for the OpenVINO backend via the OpenVINO Runtime API.
     """
-    quantization_algorithm = PostTrainingQuantization(
+    quantization_algorithm = create_ptq_pipeline(
         preset=preset,
         target_device=target_device,
         subset_size=subset_size,

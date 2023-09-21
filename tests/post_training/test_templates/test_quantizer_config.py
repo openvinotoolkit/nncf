@@ -32,7 +32,7 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.passes import transform_to_inference_graph
-from nncf.quantization.pipelines.post_training.pipeline import PostTrainingQuantization
+from nncf.quantization.pipelines.post_training.pipeline import create_ptq_pipeline
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from tests.post_training.test_templates.models import NNCFGraphToTest
 from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseConv
@@ -81,7 +81,7 @@ class TemplateTestQuantizerConfig:
         pass
 
     def test_default_quantizer_config(self, single_conv_nncf_graph):
-        pipeline = PostTrainingQuantization()
+        pipeline = create_ptq_pipeline()
         min_max_algo = pipeline.pipeline_steps[-1][0]
         min_max_algo._backend_entity = self.get_algo_backend()
         nncf_graph = single_conv_nncf_graph.nncf_graph
@@ -127,7 +127,7 @@ class TemplateTestQuantizerConfig:
         signed_activations,
         single_conv_nncf_graph,
     ):
-        pipeline = PostTrainingQuantization(
+        pipeline = create_ptq_pipeline(
             preset=preset,
             advanced_parameters=AdvancedQuantizationParameters(
                 activations_quantization_params=QuantizationParameters(
@@ -179,7 +179,7 @@ class TemplateTestQuantizerConfig:
                         assert quantization_point.qconfig.signedness_to_force == signed_activations
 
     def test_depthwise_conv_default_quantizer_config(self, depthwise_conv_nncf_graph):
-        pipeline = PostTrainingQuantization()
+        pipeline = create_ptq_pipeline()
         min_max_algo = pipeline.pipeline_steps[-1][0]
         min_max_algo._backend_entity = self.get_algo_backend()
         nncf_graph = depthwise_conv_nncf_graph.nncf_graph
@@ -223,7 +223,7 @@ class TemplateTestQuantizerConfig:
         statistic_collector_parameters: TestGetStatisticsCollectorParameters,
     ):
         params = statistic_collector_parameters
-        pipeline = PostTrainingQuantization(
+        pipeline = create_ptq_pipeline(
             advanced_parameters=AdvancedQuantizationParameters(
                 activations_range_estimator_params=range_estimator_params
             )

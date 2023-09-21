@@ -16,7 +16,7 @@ import pytest
 
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-from nncf.quantization.pipelines.post_training.pipeline import PostTrainingQuantization
+from nncf.quantization.pipelines.post_training.pipeline import create_ptq_pipeline
 from nncf.torch.layers import NNCF_RNN
 from nncf.torch.layers import LSTMCellNNCF
 from tests.post_training.test_templates.helpers import EmbeddingModel
@@ -98,7 +98,7 @@ def test_min_max_classification_quantized_graphs(desc: ModelDesc, quantization_p
 
     nncf_network = get_nncf_network(model, desc.input_sample_sizes)
     quantization_parameters["advanced_parameters"] = AdvancedQuantizationParameters(disable_bias_correction=True)
-    quantization_pipeline = PostTrainingQuantization(**quantization_parameters)
+    quantization_pipeline = create_ptq_pipeline(**quantization_parameters)
     quantized_model = quantization_pipeline.run(nncf_network, dataset=None)
 
     check_graph(quantized_model.nncf.get_graph(), desc.dot_filename, graph_dir)

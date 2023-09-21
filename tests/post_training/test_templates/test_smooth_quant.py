@@ -24,7 +24,7 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
-from nncf.quantization.pipelines.post_training.pipeline import PostTrainingQuantization
+from nncf.quantization.pipelines.post_training.pipeline import create_ptq_pipeline
 from tests.post_training.test_templates.helpers import LinearMultiShapeModel
 from tests.post_training.test_templates.helpers import NonZeroLinearModel
 from tests.post_training.test_templates.helpers import get_static_dataset
@@ -75,7 +75,7 @@ class TemplateTestSQAlgorithm:
 
     @staticmethod
     def get_quantization_algorithm():
-        return PostTrainingQuantization(
+        return create_ptq_pipeline(
             subset_size=1,
             model_type=ModelType.TRANSFORMER,
             advanced_parameters=AdvancedQuantizationParameters(

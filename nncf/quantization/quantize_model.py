@@ -25,7 +25,7 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResults
 from nncf.quantization.pipelines.hyperparameter_tuner.param_grid import get_quantization_param_grids
 from nncf.quantization.pipelines.hyperparameter_tuner.pipeline import HyperparameterTuner
-from nncf.quantization.pipelines.post_training.pipeline import PostTrainingQuantization
+from nncf.quantization.pipelines.post_training.pipeline import create_ptq_pipeline
 from nncf.scopes import IgnoredScope
 
 TTensor = TypeVar("TTensor")
@@ -299,10 +299,10 @@ def quantize_with_tune_hyperparams(
         "advanced_parameters": advanced_quantization_parameters,
     }
 
-    param_grids = get_quantization_param_grids(PostTrainingQuantization(**init_quantization_params))
+    param_grids = get_quantization_param_grids(create_ptq_pipeline(**init_quantization_params))
 
     hyperparameter_tuner = HyperparameterTuner(
-        PostTrainingQuantization,
+        create_ptq_pipeline,
         init_quantization_params,
         param_grids,
         calibration_dataset,

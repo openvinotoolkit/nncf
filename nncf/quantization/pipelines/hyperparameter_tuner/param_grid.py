@@ -18,7 +18,7 @@ from nncf.quantization.algorithms.channel_alignment.algorithm import ChannelAlig
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
-from nncf.quantization.pipelines.post_training.pipeline import PostTrainingQuantization
+from nncf.quantization.pipelines.stepwise_pipeline import StepwisePipeline
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import StatisticsCollectorParameters
@@ -89,7 +89,7 @@ def _get_bias_correction_param_grid() -> ParamGrid:
     return {"fast_bias_correction": [True, False]}
 
 
-def get_quantization_param_grids(pipeline: PostTrainingQuantization) -> List[ParamGrid]:
+def get_quantization_param_grids(pipeline: StepwisePipeline) -> List[ParamGrid]:
     """
     Returns params grid for post-training quantization algorithm.
     """

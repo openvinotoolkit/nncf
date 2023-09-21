@@ -18,7 +18,7 @@ import torch
 import nncf
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
-from nncf.quantization.pipelines.post_training.pipeline import PostTrainingQuantization
+from nncf.quantization.pipelines.post_training.pipeline import create_ptq_pipeline
 from nncf.torch.model_creation import create_nncf_network
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
@@ -48,7 +48,7 @@ def min_max_quantize_model(
 
     dataset = nncf.Dataset(dataloader, transform_func=transform_fn)
 
-    post_training_quantization = PostTrainingQuantization(subset_size=1, **quantization_params)
+    post_training_quantization = create_ptq_pipeline(subset_size=1, **quantization_params)
     original_model.eval()
     nncf_network = create_nncf_network(original_model, config)
     quantized_model = post_training_quantization.run(nncf_network, dataset)
