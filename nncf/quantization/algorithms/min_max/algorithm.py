@@ -698,7 +698,8 @@ class MinMaxQuantization(Algorithm):
                     graph, quantization_target_point, qconfig, parameters
                 )
                 transformation_layout.register(command)
-
+        if not transformation_layout.transformations:
+            nncf_logger.info("The model has no operations to apply quantization.")
         quantized_model = model_transformer.transform(transformation_layout)
         return quantized_model
 

@@ -202,9 +202,7 @@ class PostTrainingQuantization(Algorithm):
             for algorithm in self.algorithms:
                 algo_statistic_points = algorithm.get_statistic_points(modified_model, modified_model_graph)
                 statistics_aggregator.register_statistic_points(algo_statistic_points)
-            if not statistics_aggregator.statistic_points:
-                nncf_logger.info("The model has no operations to apply quantization.")
-                return modified_model
+
             statistics_aggregator.collect_statistics(modified_model, modified_model_graph)
             statistic_points = statistics_aggregator.statistic_points
 
