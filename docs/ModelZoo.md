@@ -281,7 +281,6 @@ Additional PTQ results may be found on an OpenVINO Performance Benchmarks [page]
   </tbody>
 </table>
 
-
 ### ONNX Post-Training Quantization
 
 #### ONNX PTQ Classification
@@ -357,7 +356,6 @@ Additional PTQ results may be found on an OpenVINO Performance Benchmarks [page]
   </tbody>
 </table>
 
-
 ## OpenVINO Weights Compression
 
 Below we present weight compression results for LLMs from Hugging Face.
@@ -373,7 +371,6 @@ Below we present weight compression results for LLMs from Hugging Face.
 ## Training-Time Compression
 
 Here we present the results achieved using our sample scripts, example patches to third-party repositories and NNCF configuration files.
-
 
 ### PyTorch TTC
 
