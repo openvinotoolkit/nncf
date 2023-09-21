@@ -22,24 +22,6 @@ TModel = TypeVar("TModel")
 PipelineStep = List[Algorithm]
 
 
-def get_statistic_points(pipeline_step: PipelineStep, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
-    """
-    TODO
-
-    :param pipeline_step:
-    :param model:
-    :param graph:
-    :return:
-    """
-    container = StatisticPointsContainer()
-    for algorithm in pipeline_step:
-        for statistic_points in algorithm.get_statistic_points(model, graph).values():
-            for statistic_point in statistic_points:
-                container.add_statistic_point(statistic_point)
-
-    return container
-
-
 def collect_statistics(
     containers: Union[StatisticPointsContainer, List[StatisticPointsContainer]],
     model: TModel,
@@ -105,81 +87,96 @@ class Pipeline:
         :param dataset: A dataset that holds the data items for algorithms.
         :return: The updated model after executing the entire pipeline.
         """
-        return run_pipeline_from_step(self, model, dataset)
+        return self.run_from_step(model, dataset)
 
+    def run_step(
+        self,
+        step_index: int,
+        step_statistics: StatisticPointsContainer,
+        model: TModel,
+        graph: NNCFGraph,
+    ) -> TModel:
+        """
+        Executes a provided pipeline step on the provided model.
 
-def run_pipeline_step(
-    pipeline_step: PipelineStep,
-    pipeline_step_statistics: StatisticPointsContainer,
-    model: TModel,
-    graph: NNCFGraph,
-) -> TModel:
-    """
-    Executes a provided pipeline step on the provided model.
+        :param pipeline_step: A sequence of algorithms representing a pipeline step.
+        :param pipeline_step_statistics: Statistics required to execute a pipeline step.
+        :param model: A model to which a pipeline step will be applied.
+        :param graph: A graph assosiated with a model.
+        :return: The updated model after executing the pipeline step.
+        """
+        current_model = model
+        current_graph = graph
 
-    :param pipeline_step: A sequence of algorithms representing a pipeline step.
-    :param pipeline_step_statistics: Statistics required to execute a pipeline step.
-    :param model: A model to which a pipeline step will be applied.
-    :param graph: A graph assosiated with a model.
-    :return: The updated model after executing the pipeline step.
-    """
-    current_model = model
-    current_graph = graph
+        pipeline_step = self.pipeline_steps[step_index]
+        for algorithm in pipeline_step[:-1]:
+            current_model = algorithm.apply(current_model, current_graph, step_statistics)
+            current_graph = NNCFGraphFactory.create(current_model)
+        current_model = pipeline_step[-1].apply(current_model, current_graph, step_statistics)
 
-    for algorithm in pipeline_step[:-1]:
-        current_model = algorithm.apply(current_model, current_graph, pipeline_step_statistics)
-        current_graph = NNCFGraphFactory.create(current_model)
-    current_model = pipeline_step[-1].apply(current_model, current_graph, pipeline_step_statistics)
+        return current_model
 
-    return current_model
+    def run_from_step(
+        self,
+        model: TModel,
+        dataset: Dataset,
+        graph: Optional[NNCFGraph] = None,
+        start_step_index: int = 0,
+        step_index_to_statistics: Optional[Dict[int, StatisticPointsContainer]] = None,
+    ) -> TModel:
+        """
+        Executes the pipeline from the specified pipeline step to the end.
 
+        :param model: This is the model after the (start_step_index - 1)-th pipeline
+            step, or the initial model if start_step_index is 0.
+        :param dataset: A dataset that holds the data items for pipeline steps.
+        :param graph: A graph assosiated with a model.
+        :param start_step_index: Zero-based pipeline step index from which the pipeline
+            should be executed.
+        :param step_index_to_statistics: A mapping from pipeline step index to statistics
+            required to execute pipeline step.
+        :return: The updated model after executing the pipeline from the specified pipeline
+            step to the end.
+        """
+        if step_index_to_statistics is None:
+            step_index_to_statistics = {}
 
-def run_pipeline_from_step(
-    pipeline: Pipeline,
-    model: TModel,
-    dataset: Dataset,
-    graph: Optional[NNCFGraph] = None,
-    start_step_index: int = 0,
-    step_index_to_statistics: Optional[Dict[int, StatisticPointsContainer]] = None,
-) -> TModel:
-    """
-    Execute the pipeline from the specified pipeline step to the end.
+        # The `step_model` and `step_graph` entities are required to execute `step_index`-th pipeline step
+        step_model = model
+        step_graph = graph
+        for step_index in range(start_step_index, len(self.pipeline_steps)):
+            # Create graph required to run current pipeline step
+            if step_graph is None:
+                step_graph = NNCFGraphFactory.create(step_model)
 
-    :param pipeline: A pipeline part of which should be executed.
-    :param model: This is the model after the (start_step_index - 1)-th pipeline
-        step, or the initial model if start_step_index is 0.
-    :param dataset: A dataset that holds the data items for pipeline steps.
-    :param graph: A graph assosiated with a model.
-    :param start_step_index: Zero-based pipeline step index from which the pipeline
-        should be executed.
-    :param step_index_to_statistics: A mapping from pipeline step index to statistics
-        required to execute pipeline step.
-    :return: The updated model after executing the pipeline from the specified pipeline
-        step to the end.
-    """
-    if step_index_to_statistics is None:
-        step_index_to_statistics = {}
+            # Collect statistics required to run current pipeline step
+            step_statistics = step_index_to_statistics.get(step_index)
+            if step_statistics is None:
+                statistic_points = self.get_statistic_points_for_step(step_index, step_model, step_graph)
+                step_statistics = collect_statistics(statistic_points, step_model, step_graph, dataset)
 
-    # The `step_model` and `step_graph` entities are required to execute `step_index`-th pipeline step
-    step_model = model
-    step_graph = graph
-    step_index = start_step_index
+            # Run current pipeline step
+            step_model = self.run_step(step_index, step_statistics, step_model, step_graph)
 
-    for pipeline_step in pipeline.pipeline_steps[start_step_index:]:
-        # Create graph required to run current pipeline step
-        if step_graph is None:
-            step_graph = NNCFGraphFactory.create(step_model)
+            step_graph = None  # We should rebuild the graph for the next pipeline step
 
-        # Collect statistics required to run current pipeline step
-        step_statistics = step_index_to_statistics.get(step_index)
-        if step_statistics is None:
-            statistic_points = get_statistic_points(pipeline_step, step_model, step_graph)
-            step_statistics = collect_statistics(statistic_points, step_model, step_graph, dataset)
+        return step_model
 
-        # Run current pipeline step
-        step_model = run_pipeline_step(pipeline_step, step_statistics, step_model, step_graph)
+    def get_statistic_points_for_step(
+        self, step_index: int, model: TModel, graph: NNCFGraph
+    ) -> StatisticPointsContainer:
+        """
+        TODO
 
-        step_graph = None  # We should rebuild the graph for the next pipeline step
-        step_index += 1
+        :param pipeline_step:
+        :param model:
+        :param graph:
+        :return:
+        """
+        container = StatisticPointsContainer()
+        for algorithm in self.pipeline_steps[step_index]:
+            for statistic_points in algorithm.get_statistic_points(model, graph).values():
+                for statistic_point in statistic_points:
+                    container.add_statistic_point(statistic_point)
 
-    return step_model
+        return container

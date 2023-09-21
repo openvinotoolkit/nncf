@@ -29,9 +29,6 @@ from nncf.quantization.algorithms.accuracy_control.rank_functions import create_
 from nncf.quantization.algorithms.accuracy_control.subset_selection import select_subset
 from nncf.quantization.pipelines.pipeline import Pipeline
 from nncf.quantization.pipelines.pipeline import collect_statistics
-from nncf.quantization.pipelines.pipeline import get_statistic_points
-from nncf.quantization.pipelines.pipeline import run_pipeline_from_step
-from nncf.quantization.pipelines.pipeline import run_pipeline_step
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -290,10 +287,10 @@ class HyperparameterTuner:
             if not step_param_grid:
                 # TODO(andrey-churkin): Think about how it can be avoided.
                 params = apply_combination(self._init_params, best_settings)
-                pipeline_step = self._pipeline_cls(**params).pipeline_steps[step_index]
-                container = get_statistic_points(pipeline_step, step_model, step_graph)
+                pipeline = self._pipeline_cls(**params)
+                container = pipeline.get_statistic_points_for_step(step_index, step_model, step_graph)
                 step_statistics = collect_statistics(container, step_model, step_graph, self._calibration_dataset)
-                step_model = run_pipeline_step(pipeline_step, step_statistics, step_model, step_graph)
+                step_model = pipeline.run_step(step_index, step_statistics, step_model, step_graph)
                 continue
 
             step_combinations = create_combinations(step_param_grid)
@@ -318,9 +315,9 @@ class HyperparameterTuner:
                 )
 
             best_settings.update(step_combinations[step_best_combination_key])
-            pipeline_step = self._pipelines[step_best_combination_key].pipeline_steps[step_index]
-            step_model = run_pipeline_step(
-                pipeline_step, self._step_index_to_statistics[step_index], step_model, step_graph
+            pipeline = self._pipelines[step_best_combination_key]
+            step_model = pipeline.run_step(
+                step_index, self._step_index_to_statistics[step_index], step_model, step_graph
             )
 
         # TODO(andrey-churkin): Show final best settings
@@ -357,7 +354,7 @@ class HyperparameterTuner:
 
         # Collect statistics required to execute `step_index`-th pipeline step
         containers = [
-            get_statistic_points(pipeline.pipeline_steps[step_index], step_model, step_graph)
+            pipeline.get_statistic_points_for_step(step_index, step_model, step_graph)
             for pipeline in self._pipelines.values()
         ]
         self._step_index_to_statistics[step_index] = collect_statistics(
@@ -386,13 +383,9 @@ class HyperparameterTuner:
         if combination_key in self._calculated_scores:
             return self._calculated_scores[combination_key]
 
-        model = run_pipeline_from_step(
-            self._pipelines[combination_key],
-            step_model,
-            self._calibration_dataset,
-            step_graph,
-            step_index,
-            self._step_index_to_statistics,
+        pipeline = self._pipelines[combination_key]
+        model = pipeline.run_from_step(
+            step_model, self._calibration_dataset, step_graph, step_index, self._step_index_to_statistics
         )
 
         score = self._validate_model(model, dataset, subset_indices)
