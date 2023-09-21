@@ -30,6 +30,7 @@ Additional PTQ results may be found on an OpenVINO Performance Benchmarks [page]
 ### OpenVINO PTQ
 
 #### OpenVINO PTQ Classification
+
 <table>
   <thead>
     <tr style="text-align: center;">
@@ -134,6 +135,7 @@ Additional PTQ results may be found on an OpenVINO Performance Benchmarks [page]
 </table>
 
 #### OpenVINO PTQ Object Detection
+
 <table>
   <thead>
     <tr style="text-align: center;">
@@ -202,6 +204,7 @@ Additional PTQ results may be found on an OpenVINO Performance Benchmarks [page]
 </table>
 
 #### OpenVINO PTQ Semantic Segmentation
+
 <table>
   <thead>
     <tr style="text-align: center;">
@@ -234,6 +237,7 @@ Additional PTQ results may be found on an OpenVINO Performance Benchmarks [page]
 </table>
 
 #### OpenVINO PTQ Natural Language Processing
+
 <table>
   <thead>
     <tr style="text-align: center;">
