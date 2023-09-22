@@ -159,7 +159,7 @@ def test_ignore_nodes_by_attribues(linear_before_reset):
     compare_nncf_graphs(quantized_model, path_ref_graph)
 
 
-def get_dataset_for_if_model(model, size=2):
+def get_dataset_for_if_model(model: ov.Model, size: int = 2) -> Dataset:
     rng = np.random.default_rng(seed=0)
     dataitems = []
     for i in range(size):
