@@ -166,7 +166,7 @@ def get_dataset_for_if_model(model: ov.Model, size: int = 2) -> Dataset:
         input_data = {}
         for param in model.get_parameters():
             if param.get_element_type().get_type_name() == "boolean":
-                input_data[param.get_output_tensor(0).get_any_name()] = True if i < size // 2 else False
+                input_data[param.get_output_tensor(0).get_any_name()] = i < size // 2
             else:
                 input_shape = param.partial_shape.get_max_shape()
                 input_data[param.get_output_tensor(0).get_any_name()] = rng.uniform(0, 1, input_shape)
