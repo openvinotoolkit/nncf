@@ -712,9 +712,7 @@ class IfModel(OVReferenceModel):
         input_2 = opset.parameter([1, 3, 2, 4], name="Input_2")
         input_3 = opset.parameter([], dtype=bool, name="Cond_input")
 
-        # then_body
         then_body = ConvModel()._create_ov_model()
-        # else_body
         else_body = ConvModel()._create_ov_model()
 
         if_node = opset.if_op(input_3)

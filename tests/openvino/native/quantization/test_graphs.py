@@ -166,7 +166,6 @@ def get_dataset_for_if_model(model, size=2):
         input_data = {}
         for param in model.get_parameters():
             if param.get_element_type().get_type_name() == "boolean":
-                # To have same data for If bodies
                 input_data[param.get_output_tensor(0).get_any_name()] = True if i < size // 2 else False
             else:
                 input_shape = param.partial_shape.get_max_shape()
@@ -179,7 +178,7 @@ def get_dataset_for_if_model(model, size=2):
 def test_if_model_fq_placement():
     if_model = IfModel()
     ov_model = if_model.ov_model
-    dataset = get_dataset_for_if_model(ov_model, 2)
+    dataset = get_dataset_for_if_model(ov_model)
     quantized_model = quantize_impl(
         ov_model,
         dataset,
@@ -189,12 +188,10 @@ def test_if_model_fq_placement():
     if_ops = [op for op in quantized_model.get_ops() if op.get_type_name() == "If"]
     assert len(if_ops) == 1
     if_op = if_ops[0]
-    then_body = if_op.get_function(0)
-    else_body = if_op.get_function(1)
     main_model_path = if_model.ref_model_name + "_main.dot"
     then_body_path = if_model.ref_model_name + "_then.dot"
     else_body_path = if_model.ref_model_name + "_else.dot"
 
     compare_nncf_graphs(quantized_model, QUANTIZED_REF_GRAPHS_DIR / main_model_path)
-    compare_nncf_graphs(then_body, QUANTIZED_REF_GRAPHS_DIR / then_body_path)
-    compare_nncf_graphs(else_body, QUANTIZED_REF_GRAPHS_DIR / else_body_path)
+    compare_nncf_graphs(if_op.get_function(0), QUANTIZED_REF_GRAPHS_DIR / then_body_path)
+    compare_nncf_graphs(if_op.get_function(1), QUANTIZED_REF_GRAPHS_DIR / else_body_path)
