@@ -416,6 +416,7 @@ class TemplateTestNNCFTensorOperators:
             ([0.1], [0.10001], 0.1, None, True),
             ([0.1], [0.10001], None, 0.1, True),
             ([0.1], [0.20001], None, 0.1, False),
+            ([0.1], 0.1, None, None, True),
         ),
     )
     def test_fn_allclose(self, x1, x2, rtol, atol, ref):
@@ -436,6 +437,7 @@ class TemplateTestNNCFTensorOperators:
             ([0.1], [0.10001], None, None, [False]),
             ([0.1], [0.10001], 0.1, None, [True]),
             ([0.1], [0.10001], None, 0.1, [True]),
+            ([0.1], 0.1, None, None, [True]),
         ),
     )
     def test_fn_isclose(self, x1, x2, rtol, atol, ref):

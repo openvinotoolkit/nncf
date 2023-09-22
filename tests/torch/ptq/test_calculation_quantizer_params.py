@@ -13,11 +13,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
-import onnx
 import pytest
 import torch
 from torch import nn
 
+import onnx
 from nncf import Dataset
 from nncf import NNCFConfig
 from nncf.common.graph.transformations.commands import TargetType
@@ -26,6 +26,7 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.experimental.tensor import Tensor
+from nncf.experimental.tensor import functions as fn
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
@@ -105,7 +106,7 @@ SYM_CASES = (
 
 
 @pytest.mark.parametrize("case_to_test", SYM_CASES)
-def test_quantizer_params_sym(case_to_test):
+def test_quantizer_params_sym(case_to_test: CaseSymParams):
     per_ch = case_to_test.per_channel
     fq_params = case_to_test.fq_params
     quant_group = case_to_test.quant_group
@@ -195,7 +196,7 @@ ASYM_CASES = (
 
 
 @pytest.mark.parametrize("case_to_test", ASYM_CASES)
-def test_quantizer_params_asym(case_to_test):
+def test_quantizer_params_asym(case_to_test: CaseSymParams):
     per_ch = case_to_test.per_channel
     fq_params = case_to_test.fq_params
     quant_group = case_to_test.quant_group
@@ -213,8 +214,8 @@ def test_quantizer_params_asym(case_to_test):
     )
     quantizer = PTMinMaxAlgoBackend._create_quantizer(qconfig, scale_shape, fq_params, target_type)
     assert quantizer.levels == fq_params.levels
-    assert np.allclose(quantizer.input_low.detach().numpy(), case_to_test.ref_inp_low)
-    assert np.allclose(quantizer.input_range.detach().numpy(), case_to_test.ref_inp_range)
+    assert fn.allclose(quantizer.input_low.data, case_to_test.ref_inp_low)
+    assert fn.allclose(quantizer.input_range.data, case_to_test.ref_inp_range)
 
 
 class LinearTestModel(nn.Module):
@@ -342,8 +343,8 @@ def test_quantizer_parameters_export(tmp_path: Path):
 
     for name, param in fq_params.items():
         assert name in torch_ptq_params
-        assert np.allclose(param["input_low"].data.numpy(), torch_ptq_params[name]["input_low"])
-        assert np.allclose(param["input_high"].data.numpy(), torch_ptq_params[name]["input_high"])
+        assert fn.allclose(param["input_low"], torch_ptq_params[name]["input_low"])
+        assert fn.allclose(param["input_high"], torch_ptq_params[name]["input_high"])
 
 
 class TestFQParams(TemplateTestFQParams):

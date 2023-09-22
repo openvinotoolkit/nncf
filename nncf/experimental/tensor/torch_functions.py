@@ -94,6 +94,8 @@ def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Union[t
 
 @fns.allclose.register(torch.Tensor)
 def _(a: torch.Tensor, b: torch.Tensor, rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False) -> bool:
+    if not isinstance(b, torch.Tensor):
+        b = torch.tensor(b, device=a.device)
     return torch.allclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 
@@ -116,6 +118,8 @@ def _(a: torch.Tensor) -> bool:
 
 @fns.isclose.register(torch.Tensor)
 def _(a: torch.Tensor, b: torch.Tensor, rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False):
+    if not isinstance(b, torch.Tensor):
+        b = torch.tensor(b, device=a.device)
     return torch.isclose(a, b, atol=atol, rtol=rtol, equal_nan=equal_nan)
 
 
