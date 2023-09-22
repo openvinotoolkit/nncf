@@ -1,6 +1,12 @@
 import pandas as pd
-
-from name_mappings import MODELS, ALL_MODELS, EXCLUDED_MODELS, METRICS, METRICS_PRIORITY, FRAMEWORKS, DATASETS, HEADERS # pylint: disable = no-name-in-module, import-error
+from name_mappings import ALL_MODELS  # pylint: disable = no-name-in-module, import-error
+from name_mappings import DATASETS  # pylint: disable = no-name-in-module, import-error
+from name_mappings import EXCLUDED_MODELS  # pylint: disable = no-name-in-module, import-error
+from name_mappings import FRAMEWORKS  # pylint: disable = no-name-in-module, import-error
+from name_mappings import HEADERS  # pylint: disable = no-name-in-module, import-error
+from name_mappings import METRICS  # pylint: disable = no-name-in-module, import-error
+from name_mappings import METRICS_PRIORITY  # pylint: disable = no-name-in-module, import-error
+from name_mappings import MODELS  # pylint: disable = no-name-in-module, import-error
 
 # Check that EXCLUDED_MODELS does not intersect with ALL_MODELS
 assert len(EXCLUDED_MODELS.intersection(set(ALL_MODELS))) == 0, (
