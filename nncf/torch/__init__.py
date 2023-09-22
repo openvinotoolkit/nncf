@@ -13,6 +13,7 @@
 """
 Base subpackage for NNCF PyTorch functionality.
 """
+
 from nncf import nncf_logger
 from nncf.common.logging.logger import warn_bkc_version_mismatch
 
@@ -57,7 +58,7 @@ from nncf.torch.dynamic_graph.context import disable_tracing
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.dynamic_graph.context import forward_nncf_trace
 from nncf.torch.strip import strip
-from nncf.torch.quantization.quantize_model import compress_weights
+from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 
 # NNCF relies on tracing PyTorch operations. Each code that uses NNCF
 # should be executed with PyTorch operators wrapped via a call to "patch_torch_operators",

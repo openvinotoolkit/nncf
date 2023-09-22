@@ -25,6 +25,7 @@ from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.pytorch_patch_isolated import test_jit_if_tracing_script_source_equals
+from tests.torch.pytorch_patch_isolated import test_jit_script_exception_preserves_patching_isolated
 
 
 def test_get_all_aliases_is_valid():
@@ -83,6 +84,11 @@ def test_jit_if_tracing_script_patching(tmp_path):
 def test_jit_if_tracing_script_source():
     # Run test case in a separate process to track patching of torch by NNCF
     run_pytest_case_function_in_separate_process(test_jit_if_tracing_script_source_equals)
+
+
+def test_jit_script_exception_preserves_patching():
+    # Run test case in a separate process to track patching of torch by NNCF
+    run_pytest_case_function_in_separate_process(test_jit_script_exception_preserves_patching_isolated)
 
 
 def test_jit_script_signature():

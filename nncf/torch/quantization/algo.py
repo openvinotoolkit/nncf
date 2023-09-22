@@ -30,6 +30,7 @@ from torch import nn
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
+from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
@@ -1361,6 +1362,11 @@ class QuantizationController(QuantizationControllerBase):
             "export_to_onnx_standard_ops", QUANTIZATION_EXPORT_TO_ONNX_STANDARD_OPS
         )
         if should_export_to_onnx_qdq:
+            warning_deprecated(
+                "The config option `export_to_onnx_standard_ops` is deprecated and will be removed "
+                "in a future version. Please use the `nncf.strip(quantized_model)` method before export to ONNX "
+                "to get model with QuantizeLinear-DequantizeLinear node pairs."
+            )
             export_mode = QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS
         else:
             export_mode = QuantizerExportMode.FAKE_QUANTIZE

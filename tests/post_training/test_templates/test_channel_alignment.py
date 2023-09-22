@@ -183,18 +183,15 @@ class TemplateTestChannelAlignment:
     REF_UPDATED_CONV_OUT = np.array([[0.0, 2.0, 0.04, 600, 8], [10, 12, 0.14, 1600, 18]])
     REF_UPDATED_BIAS_IN = np.array([2, 4, 600, 0.08, 10])
 
-    @pytest.mark.parametrize("bias_in_value", [np.array([2, 4, 6, 8, 10]), None])
+    @pytest.mark.parametrize("bias_in_value", [np.array([2, 4, 6, 8, 10])])
     def test_align_scales(self, bias_in_value):
         def check_updated_values(updated_conv_in, updated_conv_out, updated_bias_in):
             assert updated_conv_in.shape == self.REF_UPDATED_CONV_IN.shape
             assert np.allclose(updated_conv_in, self.REF_UPDATED_CONV_IN)
             assert updated_conv_out.shape == self.REF_UPDATED_CONV_OUT.shape
             assert np.allclose(updated_conv_out, self.REF_UPDATED_CONV_OUT)
-            if bias_in_value is None:
-                assert updated_bias_in is None
-            else:
-                assert updated_bias_in.shape == self.REF_UPDATED_BIAS_IN.shape
-                assert np.allclose(updated_bias_in, self.REF_UPDATED_BIAS_IN)
+            assert updated_bias_in.shape == self.REF_UPDATED_BIAS_IN.shape
+            assert np.allclose(updated_bias_in, self.REF_UPDATED_BIAS_IN)
 
         conv_in_value = np.arange(5).reshape(5, 1)
         conv_out_value = np.arange(10).reshape(2, 5) * 2
@@ -225,7 +222,6 @@ class TemplateTestChannelAlignment:
         updated_conv_in = updated_conv_in.reshape(updated_conv_in.shape[1:])
         check_updated_values(updated_conv_in, updated_conv_out, updated_bias_in)
 
-    GET_NODES_TEST_CASES = []
     GET_NODES_TEST_CASES = [(VALID_CONV_LAYER_ATTR, VALID_CONV_LAYER_ATTR, True)]
     GET_NODES_TEST_CASES.extend([(attr, VALID_CONV_LAYER_ATTR, True) for attr in INVALID_CONSUMER_CONV_LAYER_ATTRS])
     GET_NODES_TEST_CASES.extend([(VALID_CONV_LAYER_ATTR, attr, False) for attr in INVALID_CONSUMER_CONV_LAYER_ATTRS])
@@ -370,27 +366,24 @@ class TemplateTestChannelAlignment:
             assert len(arg.transformations) == 0
             return
 
-        align_means_called = 1 if num_biases == 2 else 0
-        assert algorithm._align_means.call_count == align_means_called
-        if align_means_called:
-            algorithm._align_means.assert_called_once_with(
-                ref_bias_val + "1",
-                ref_bias_val + "2",
-                ref_weights_val + "2",
-                np.array(0.5, dtype=np.float32),
-                ref_dims_descr + "2",
-            )
+        assert algorithm._align_means.call_count == 1
+        args = [
+            np.zeros((1, 1, 1, 1)),
+            np.zeros((1, 1, 1, 1)),
+            ref_weights_val + "2",
+            np.array(0.5, dtype=np.float32),
+            ref_dims_descr + "2",
+        ]
+        for i in range(num_biases):
+            args[i] = f"ref_bias_val{i + 1}"
+
+        algorithm._align_means.assert_called_once_with(*args)
 
         assert algorithm._align_scales.call_count == 1
         args = algorithm._align_scales.call_args.args
         assert args[0] == ref_weights_val + "1"
         assert args[1] == ref_weights_val + "2"
-        if num_biases == 2:
-            assert args[2] == ref_bias_in_after_align
-        elif num_biases == 1:
-            assert args[2] == ref_bias_val + "1"
-        else:
-            assert args[2] is None
+        assert args[2] == ref_bias_in_after_align
         assert ((args[3] - 3) < EPS).all()
         assert args[4] == ref_dims_descr + "1"
         assert args[5] == ref_dims_descr + "2"
@@ -408,14 +401,20 @@ class TemplateTestChannelAlignment:
             },
             "/Conv_2_0": {"weight_value": ref_weights_out_after_scale_align, "bias_value": ref_bias_out_after_align},
         }
-        bias_update_cls, weights_update_cls = self.get_transformation_commands()
+
+        bias_insert_cls, bias_update_cls, weights_update_cls = self.get_transformation_commands()
         for transformation in transformations:
-            assert transformation.type == TransformationType.CHANGE
             tp = transformation.target_point
             if isinstance(transformation, bias_update_cls):
+                assert transformation.type == TransformationType.CHANGE
                 _class = bias_update_cls
                 _attr = "bias_value"
+            elif isinstance(transformation, bias_insert_cls):
+                assert transformation.type == TransformationType.INSERT
+                _class = bias_insert_cls
+                _attr = "bias_value"
             elif isinstance(transformation, weights_update_cls):
+                assert transformation.type == TransformationType.CHANGE
                 _class = weights_update_cls
                 _attr = "weight_value"
             else:
@@ -425,18 +424,16 @@ class TemplateTestChannelAlignment:
             assert ref_values[tp.target_node_name][_attr] == getattr(transformation, _attr)
 
         if num_biases == 2:
-            ref_len = {"/Conv_1_0": 2, "/Conv_2_0": 2}
+            ref_classes = {"/Conv_1_0": bias_update_cls, "/Conv_2_0": bias_update_cls}
         elif num_biases == 1:
-            ref_len = {"/Conv_1_0": 2, "/Conv_2_0": 1}
+            ref_classes = {"/Conv_1_0": bias_update_cls, "/Conv_2_0": bias_insert_cls}
         else:
-            ref_len = {"/Conv_1_0": 1, "/Conv_2_0": 1}
+            ref_classes = {"/Conv_1_0": bias_insert_cls, "/Conv_2_0": bias_insert_cls}
 
         for node_name, _transformations in target_names.items():
-            _ref_len = ref_len[node_name]
-            assert len(_transformations) == _ref_len
+            assert len(_transformations) == 2
             assert weights_update_cls in _transformations
-            if _ref_len == 2:
-                assert bias_update_cls in _transformations
+            assert ref_classes[node_name] in _transformations
 
     @pytest.mark.parametrize("num_biases", [0, 1, 2])
     def test_get_statistic_points(self, num_biases, mocker):

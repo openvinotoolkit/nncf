@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, List, Optional, Tuple, Type
+from typing import Any, Callable, List, Optional, Tuple, Type
 
 import numpy as np
 import openvino.runtime as ov
@@ -18,8 +18,8 @@ import openvino.runtime.opset9 as opset
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
-from nncf.openvino.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
-from nncf.openvino.graph.metatypes.openvino_metatypes import OPERATIONS_WITH_BIAS_METATYPES
+from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_BIAS
+from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvertMetatype
@@ -38,7 +38,7 @@ def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         with bias (bias is added to the output tensor of that operation),
         `False` otherwise.
     """
-    if node.metatype not in OPERATIONS_WITH_BIAS_METATYPES:
+    if node.metatype not in OPERATIONS_WITH_BIAS:
         return False
 
     add_node = nncf_graph.get_next_nodes(node)[0]
@@ -318,24 +318,37 @@ def get_weight_channel_axes(node: NNCFNode, weights_port_id: int) -> List[int]:
     :param weights_port_id: Weight port id of the target node.
     :return: Axes numbers of the weight tensor which correspond to its channels.
     """
-    if node.metatype not in GENERAL_WEIGHT_LAYER_METATYPES:
+    if node.metatype not in OPERATIONS_WITH_WEIGHTS:
         raise ValueError("Channel axis cannot be defined for operation without weights.")
 
     channel_axes = node.metatype.const_channel_axis
     if node.metatype == OVMatMulMetatype:
         assert isinstance(node.layer_attributes, OVLayerAttributes)
         assert len(channel_axes) == 1
-        matmul_channel_axis = channel_axes[0]
         const_attrs = node.layer_attributes.constant_attributes[weights_port_id]
-        if (weights_port_id == 1) == const_attrs["transpose"]:
-            matmul_channel_axis -= 1
-        shape = const_attrs["shape"]
-        ndims = len(shape)
-        channel_axes = list(range(ndims - 2)) if ndims > 2 else []
-        matmul_channel_axis = max(ndims, 2) + matmul_channel_axis
-        if matmul_channel_axis < ndims:
-            channel_axes.append(matmul_channel_axis)
+        transpose = const_attrs["transpose"]
+        ndims = len(const_attrs["shape"])
+        channel_axes = get_matmul_channel_axes(weights_port_id, ndims, transpose)
 
+    return channel_axes
+
+
+def get_matmul_channel_axes(weights_port_id: int, ndims: int, transpose: bool) -> List[int]:
+    """
+    Calculate channel axes for the MatMul operation.
+
+    :param weights_port_id: Weight port id of the target node.
+    :param ndims: The number of MatMul dimensions.
+    :param transpose: Whether the transpose is applied to weights.
+    :return: List of channel axes for the MatMul operation.
+    """
+    matmul_channel_axis = OVMatMulMetatype.const_channel_axis[0]
+    if (weights_port_id == 1) == transpose:
+        matmul_channel_axis -= 1
+    matmul_channel_axis = max(ndims, 2) + matmul_channel_axis
+    channel_axes = list(range(ndims - 2))
+    if matmul_channel_axis < ndims:
+        channel_axes.append(matmul_channel_axis)
     return channel_axes
 
 
@@ -351,3 +364,19 @@ def get_channel_agnostic_reduction_shape(channel_axes: List[int], shape: List[in
     for channel_axis in sorted(channel_axes, reverse=True):
         del reduction_shape[channel_axis]
     return tuple(reduction_shape)
+
+
+def create_bias_tensor(node_without_bias: NNCFNode, graph: NNCFGraph, value: Any) -> np.ndarray:
+    """
+    Creates bias value constant array filled by given value.
+
+    :param node_without_bias: NNCFNode to add bias to.
+    :param graph: Target NNCFgraph.
+    :param value: Value to fill bias constant array.
+    :return: Bias value constant array filled by given value.
+    """
+    node_shape = graph.get_output_edges(node_without_bias)[0].tensor_shape
+    bias_shape = [1] * len(node_shape)
+    channel_axis = node_without_bias.metatype.output_channel_axis
+    bias_shape[channel_axis] = node_shape[1]
+    return np.full(bias_shape, value)

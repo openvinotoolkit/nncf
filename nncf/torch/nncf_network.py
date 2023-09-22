@@ -23,7 +23,6 @@ import torch
 from torch import nn
 
 from nncf import nncf_logger
-from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
@@ -967,26 +966,6 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
         # self._nncf is being set in the creation function defined in the NNCFNetworkMeta metaclass
         return self._nncf
 
-    def __getattr__(self, key):
-        """
-        Only defined for purposes of deprecation warnings. This method should be removed after v2.5.0.
-        """
-        try:
-            return super().__getattr__(key)
-        except AttributeError as e:
-            if hasattr(self._nncf, key):
-                warning_deprecated(
-                    "Old style of accessing NNCF-specific attributes and methods on NNCFNetwork "
-                    "objects is deprecated. "
-                    "Access the NNCF-specific attrs through the NNCFInterface, which is "
-                    "set up as an `nncf` attribute on the compressed model object.\n"
-                    "For instance, instead of `compressed_model.get_graph()` "
-                    "you should now write `compressed_model.nncf.get_graph()`.\n"
-                    "The old style will be removed after NNCF v2.5.0"
-                )
-                return getattr(self._nncf, key)
-            raise e
-
     def __setattr__(self, key, value):
         # If setting `forward`, set it on the original model.
         if key == "forward":
@@ -1003,16 +982,6 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
                 "if `fn` already had 0-th `self` argument bound or never had it in the first place."
             )
         super().__setattr__(key, value)
-
-    def get_nncf_wrapped_model(self) -> "NNCFNetwork":
-        warning_deprecated(
-            "Calls to NNCFNetwork.get_nncf_wrapped_model() are deprecated and will be removed "
-            "in NNCF v2.6.0.\n"
-            "Starting from NNCF v2.5.0, the compressed model object already inherits the original "
-            "class of the uncompressed model and the forward signature, so the call to "
-            ".get_nncf_wrapped_model() may be simply omitted."
-        )
-        return self
 
 
 class NNCFSkippingIter:

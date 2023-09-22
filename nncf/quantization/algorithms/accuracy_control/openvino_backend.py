@@ -18,12 +18,12 @@ import openvino.runtime as ov
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
-from nncf.openvino.graph.metatypes.common import CONSTANT_OPERATIONS
-from nncf.openvino.graph.metatypes.common import FAKE_QUANTIZE_OPERATIONS
-from nncf.openvino.graph.metatypes.common import QUANTIZABLE_OPERATIONS
-from nncf.openvino.graph.metatypes.common import QUANTIZE_AGNOSTIC_OPERATIONS
-from nncf.openvino.graph.metatypes.common import SHAPEOF_OPERATIONS
-from nncf.openvino.graph.metatypes.openvino_metatypes import GENERAL_WEIGHT_LAYER_METATYPES
+from nncf.openvino.graph.metatypes.groups import CONSTANT_OPERATIONS
+from nncf.openvino.graph.metatypes.groups import FAKE_QUANTIZE_OPERATIONS
+from nncf.openvino.graph.metatypes.groups import INPUTS_QUANTIZABLE_OPERATIONS
+from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
+from nncf.openvino.graph.metatypes.groups import QUANTIZE_AGNOSTIC_OPERATIONS
+from nncf.openvino.graph.metatypes.groups import SHAPEOF_OPERATIONS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConcatMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.openvino.graph.node_utils import get_bias_value
@@ -69,7 +69,7 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
 
     @staticmethod
     def get_quantizable_metatypes() -> List[OVOpMetatype]:
-        return QUANTIZABLE_OPERATIONS
+        return INPUTS_QUANTIZABLE_OPERATIONS
 
     @staticmethod
     def get_quantize_agnostic_metatypes() -> List[OVOpMetatype]:
@@ -87,7 +87,7 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
 
     @staticmethod
     def is_node_with_weight(node: NNCFNode) -> bool:
-        return node.metatype in GENERAL_WEIGHT_LAYER_METATYPES and isinstance(node.layer_attributes, OVLayerAttributes)
+        return node.metatype in OPERATIONS_WITH_WEIGHTS and isinstance(node.layer_attributes, OVLayerAttributes)
 
     @staticmethod
     def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:

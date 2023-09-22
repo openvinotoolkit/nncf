@@ -22,6 +22,7 @@ from nncf.data import Dataset
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
+from nncf.openvino.quantization.weights_compression import insert_pre_compression_operations
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -181,6 +182,10 @@ def native_quantize_with_accuracy_control_impl(
         ignored_scope,
         copied_parameters,
     )
+
+    if advanced_accuracy_restorer_parameters.intermediate_model_dir:
+        quantized_model_path = f"{advanced_accuracy_restorer_parameters.intermediate_model_dir}/intermediate_model.xml"
+        ov.serialize(quantized_model, quantized_model_path)
 
     evaluator = Evaluator(validation_fn)
     evaluator.enable_iteration_count()
@@ -369,3 +374,11 @@ def quantize_with_accuracy_control_impl(
         advanced_quantization_parameters,
         advanced_accuracy_restorer_parameters,
     )
+
+
+def compress_weights_impl(model: ov.Model) -> ov.Model:
+    """
+    Implementation of the `compress_weights()` method for the OpenVINO backend.
+    """
+    insert_pre_compression_operations(model)
+    return model
