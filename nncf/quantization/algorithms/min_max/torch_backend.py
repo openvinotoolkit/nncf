@@ -134,8 +134,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def unify_statistics(statistics: List[PTMinMaxTensorStatistic]) -> PTMinMaxTensorStatistic:
         max_values, min_values = [], []
         for statistic in statistics:
-            max_values.append(statistic.max_values)
-            min_values.append(statistic.min_values)
+            max_values.append(torch.tensor(statistic.max_values).flatten())
+            min_values.append(torch.tensor(statistic.min_values).flatten())
         max_values = torch.max(torch.tensor(max_values))
         min_values = torch.min(torch.tensor(min_values))
         return PTMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
@@ -318,6 +318,10 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
             if device != TargetDevice.CPU_SPR:
                 types.append(om.PTMulMetatype)
         return types
+
+    @staticmethod
+    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> List[str]:
+        return []
 
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:

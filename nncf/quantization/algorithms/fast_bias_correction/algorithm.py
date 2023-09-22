@@ -12,8 +12,6 @@
 from math import inf
 from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
 
-from tqdm import tqdm
-
 from nncf import Dataset
 from nncf.common.factory import EngineFactory
 from nncf.common.factory import ModelTransformerFactory
@@ -23,6 +21,7 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging import nncf_logger
+from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
@@ -143,7 +142,7 @@ class FastBiasCorrection(Algorithm):
         # for which we should update bias and new bias values.
         node_and_new_bias_value = []
 
-        for node, bias_value in tqdm(node_and_bias_value, desc="Applying Fast Bias correction"):
+        for node, bias_value in track(node_and_bias_value, description="Applying Fast Bias correction"):
             node_name = node.node_name
 
             if not self._backend_entity.is_quantized_weights(node, graph):

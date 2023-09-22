@@ -115,8 +115,8 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     def unify_statistics(statistics: List[OVMinMaxTensorStatistic]) -> OVMinMaxTensorStatistic:
         max_values, min_values = [], []
         for statistic in statistics:
-            max_values.append(statistic.max_values)
-            min_values.append(statistic.min_values)
+            max_values.append(np.array(statistic.max_values).flatten())
+            min_values.append(np.array(statistic.min_values).flatten())
         max_values = np.max(max_values, axis=0)
         min_values = np.min(min_values, axis=0)
         return OVMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
@@ -225,6 +225,16 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             if device != TargetDevice.CPU_SPR:
                 types.append(om.OVMultiplyMetatype)
         return types
+
+    @staticmethod
+    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> List[str]:
+        ignored_names = []
+        target_nodes = nncf_graph.get_nodes_by_metatypes([om.OVGRUSequenceMetatype])
+        for node in target_nodes:
+            if isinstance(node.layer_attributes, OVLayerAttributes):
+                if node.layer_attributes.input_attributes["linear_before_reset"]:
+                    ignored_names.append(node.node_name)
+        return ignored_names
 
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:

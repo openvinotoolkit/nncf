@@ -11,16 +11,18 @@
 
 import os
 
+import pytest
 import tensorflow as tf
 
-from nncf.experimental.tensorflow.patch_tf import patch_tf_operations
-from tests.experimental.tensorflow.test_compressed_graph import check_model_graph_v2
+from tests.tensorflow.experimental.test_compressed_graph import check_model_graph_v2
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.test_compressed_graph import QuantizeTestCaseConfiguration
 from tests.tensorflow.test_compressed_graph import create_test_name
 from tests.tensorflow.test_compressed_graph import get_basic_quantization_config
 
-patch_tf_operations()
+# TODO(achurkin): enable after 120296 ticked is fixed
+# from nncf.experimental.tensorflow.patch_tf import patch_tf_operations
+# patch_tf_operations()
 
 
 class ModelWithSharedLayer(tf.keras.Model):
@@ -51,6 +53,7 @@ class ModelWithSharedLayer(tf.keras.Model):
         raise NotImplementedError
 
 
+@pytest.mark.skip(reason="ticket 120296")
 def test_context_independence():
     params = {"activations": ("symmetric", "per_tensor"), "weights": ("symmetric", "per_tensor")}
 

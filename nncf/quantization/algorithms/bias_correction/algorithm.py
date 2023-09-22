@@ -13,7 +13,6 @@ from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
 import numpy as np
-from tqdm import tqdm
 
 from nncf import Dataset
 from nncf import nncf_logger
@@ -26,6 +25,7 @@ from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
@@ -159,8 +159,8 @@ class BiasCorrection(Algorithm):
         # for which we will create a subgraph for inference and collection of statistics.
         subgraphs_data = [self._get_subgraph_data_for_node(node, nncf_graph) for node in nodes_with_bias]
 
-        for position, (node, subgraph_data) in tqdm(
-            list(enumerate(zip(nodes_with_bias, subgraphs_data))), desc="Applying Bias correction"
+        for position, (node, subgraph_data) in track(
+            list(enumerate(zip(nodes_with_bias, subgraphs_data))), description="Applying Bias correction"
         ):
             node_name = node.node_name
 

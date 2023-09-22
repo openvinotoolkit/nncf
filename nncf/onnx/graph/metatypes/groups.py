@@ -12,6 +12,7 @@
 from nncf.onnx.graph.metatypes import onnx_metatypes
 
 QUANTIZE_AGNOSTIC_OPERATIONS = [
+    onnx_metatypes.ONNXGlobalMaxPoolMetatype,
     onnx_metatypes.ONNXMaxPoolMetatype,
     onnx_metatypes.ONNXReduceMaxMetatype,
     onnx_metatypes.ONNXReshapeMetatype,
