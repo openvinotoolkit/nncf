@@ -306,11 +306,9 @@ class OVModelTransformer(ModelTransformer):
             fq = opset.fake_quantize(output, input_low, input_high, output_low, output_high, levels, name=fq_name)
             destination_names = transformation.target_point.destination_node_names
             for inp_node in target_inputs:
-                if destination_names is not None:
-                    if inp_node.get_node().get_friendly_name() in destination_names:
-                        inp_node.replace_source_output(fq.output(0))
-                else:
-                    inp_node.replace_source_output(fq.output(0))
+                if destination_names is not None and inp_node.get_node().get_friendly_name() not in destination_names:
+                    continue
+                inp_node.replace_source_output(fq.output(0))
         else:
             raise RuntimeError(f"Incorrect target point type {transform_type}")
 

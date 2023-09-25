@@ -22,7 +22,13 @@ from nncf.onnx.quantization.quantizer_parameters import ONNXQuantizerLayerParame
 
 
 class ONNXTargetPoint(TargetPoint):
-    def __init__(self, target_type: TargetType, target_node_name: str, port_id: Optional[int] = None):
+    def __init__(
+        self,
+        target_type: TargetType,
+        target_node_name: str,
+        port_id: Optional[int] = None,
+        destination_node_names: Optional[List[str]] = None,
+    ):
         """
         Constructor.
 
@@ -30,10 +36,12 @@ class ONNXTargetPoint(TargetPoint):
         :param target_node_name: ONNX node name.
         :param port_id: Number of port id in case target_type is
             TargetType.PRE_LAYER_OPERATION or TargetType.POST_LAYER_OPERATION.
+        :param destination_node_names: List of successor the node names.
         """
         super().__init__(target_type)
         self.target_node_name = target_node_name
         self.port_id = port_id
+        self.destination_node_names = destination_node_names
 
     def __eq__(self, other: "ONNXTargetPoint") -> bool:
         return (

@@ -50,7 +50,7 @@ from nncf.quantization.range_estimator import RangeEstimatorParameters
 class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def disable_branches_merge(self) -> bool:
-        return True
+        return False
 
     @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:
@@ -100,7 +100,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     def target_point(
         target_type: TargetType, target_node_name: str, port_id: int, destination_node_names: Optional[List[str]] = None
     ) -> ONNXTargetPoint:
-        return ONNXTargetPoint(target_type, target_node_name, port_id)
+        return ONNXTargetPoint(target_type, target_node_name, port_id, destination_node_names)
 
     @staticmethod
     def create_quantizer_insertion_command(
