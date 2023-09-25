@@ -1,4 +1,5 @@
 import pandas as pd
+
 # Please find ptq_model_zoo_name_mappings.py on the private nncf share at tools/ directory
 from ptq_model_zoo_name_mappings import ALL_MODELS  # pylint: disable = no-name-in-module, import-error
 from ptq_model_zoo_name_mappings import DATASETS  # pylint: disable = no-name-in-module, import-error
