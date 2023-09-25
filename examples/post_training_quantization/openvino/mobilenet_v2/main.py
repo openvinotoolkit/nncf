@@ -102,30 +102,6 @@ val_dataset = datasets.ImageFolder(
 )
 val_data_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, shuffle=False)
 
-class Loader:
-    def __init__(self, dataloader):
-        self.dataloader = dataloader
-        self.i = 0
-
-    def __iter__(self):
-        self.i = 0
-        self.iter = self.dataloader.__iter__()
-        return self
-
-    def __next__(self):
-        if self.i > 100:
-            raise StopIteration
-        self.i += 1
-        return next(self.iter)
-
-    # def __len__(self):
-    #     return 101
-
-# from time import sleep
-# from nncf.common.logging.track_progress import track
-# for n in track(Loader(val_data_loader)):
-#     sleep(0.1)
-
 path_to_model = download(MODEL_URL, MODEL_PATH)
 ov_model = ov.Core().read_model(path_to_model / "mobilenet_v2_fp32.xml")
 

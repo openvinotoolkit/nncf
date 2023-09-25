@@ -23,7 +23,6 @@ from rich.progress import TextColumn
 from rich.style import StyleType
 from rich.text import Text
 
-# INTEL_BLUE_COLOR = (0, 174, 239)
 INTEL_BLUE_COLOR = (0, 113, 197)
 
 
@@ -51,7 +50,11 @@ class SeparatorColumn(ProgressColumn):
 
 
 class TimeElapsedColumnWithStyle(ProgressColumn):
-    """Renders time elapsed."""
+    """
+    Renders time elapsed.
+
+    Similar to TimeElapsedColumn, but with addition of style parameter.
+    """
 
     def __init__(self, style: Union[str, StyleType]):
         super().__init__()
@@ -67,7 +70,11 @@ class TimeElapsedColumnWithStyle(ProgressColumn):
 
 
 class TimeRemainingColumnWithStyle(ProgressColumn):
-    """Renders estimated time remaining."""
+    """
+    Renders estimated time remaining.
+
+    Similar to TimeRemainingColumn, but with addition of style parameter.
+    """
 
     # Only refresh twice a second to prevent jitter
     max_refresh = 0.5
@@ -157,7 +164,7 @@ class track:
         self.update_period = update_period
         self.task = None
 
-        text_style = f"rgb{INTEL_BLUE_COLOR}".replace(' ', '')
+        text_style = f"rgb({INTEL_BLUE_COLOR[0]},{INTEL_BLUE_COLOR[1]},{INTEL_BLUE_COLOR[2]})"
 
         self.columns: List[ProgressColumn] = (
             [TextColumn("[progress.description]{task.description}")] if description else []
@@ -169,7 +176,7 @@ class track:
                     complete_style=complete_style,
                     finished_style=finished_style,
                     pulse_style=pulse_style,
-                    bar_width=None
+                    bar_width=None,
                 ),
                 TaskProgressColumn(show_speed=show_speed),
                 IterationsColumn(style=text_style),
