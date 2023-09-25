@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from datetime import timedelta
 from typing import Callable, Iterable, List, Optional, Sequence, Union
 
 from rich.console import Console
@@ -20,20 +20,23 @@ from rich.progress import ProgressType
 from rich.progress import Task
 from rich.progress import TaskProgressColumn
 from rich.progress import TextColumn
-from rich.progress import TimeElapsedColumn
-from rich.progress import TimeRemainingColumn
 from rich.style import StyleType
 from rich.text import Text
 
+# INTEL_BLUE_COLOR = (0, 174, 239)
+INTEL_BLUE_COLOR = (0, 113, 197)
+
 
 class IterationsColumn(ProgressColumn):
+    def __init__(self, style: Union[str, StyleType]):
+        super().__init__()
+        self.style = style
+
     def render(self, task: Task) -> Text:
         if task.total is None:
             return Text("")
         text = f"{int(task.completed)}/{int(task.total)}"
-        if task.finished:
-            return Text(text, style="progress.elapsed")
-        return Text(text, style="progress.remaining")
+        return Text(text, style=self.style)
 
 
 class SeparatorColumn(ProgressColumn):
@@ -45,6 +48,65 @@ class SeparatorColumn(ProgressColumn):
         if self.disable_if_no_total and task.total is None:
             return Text("")
         return Text("•")
+
+
+class TimeElapsedColumnWithStyle(ProgressColumn):
+    """Renders time elapsed."""
+
+    def __init__(self, style: Union[str, StyleType]):
+        super().__init__()
+        self.style = style
+
+    def render(self, task: "Task") -> Text:
+        """Show time elapsed."""
+        elapsed = task.finished_time if task.finished else task.elapsed
+        if elapsed is None:
+            return Text("-:--:--", style=self.style)
+        delta = timedelta(seconds=max(0, int(elapsed)))
+        return Text(str(delta), style=self.style)
+
+
+class TimeRemainingColumnWithStyle(ProgressColumn):
+    """Renders estimated time remaining."""
+
+    # Only refresh twice a second to prevent jitter
+    max_refresh = 0.5
+
+    def __init__(
+        self,
+        style: Union[str, StyleType],
+        compact: bool = False,
+        elapsed_when_finished: bool = False,
+        table_column: Optional[Column] = None,
+    ):
+        self.style = style
+        self.compact = compact
+        self.elapsed_when_finished = elapsed_when_finished
+        super().__init__(table_column=table_column)
+
+    def render(self, task: "Task") -> Text:
+        """Show time remaining."""
+        if self.elapsed_when_finished and task.finished:
+            task_time = task.finished_time
+        else:
+            task_time = task.time_remaining
+
+        if task.total is None:
+            return Text("", style=self.style)
+
+        if task_time is None:
+            return Text("--:--" if self.compact else "-:--:--", style=self.style)
+
+        # Based on https://github.com/tqdm/tqdm/blob/master/tqdm/std.py
+        minutes, seconds = divmod(int(task_time), 60)
+        hours, minutes = divmod(minutes, 60)
+
+        if self.compact and not hours:
+            formatted = f"{minutes:02d}:{seconds:02d}"
+        else:
+            formatted = f"{hours:d}:{minutes:02d}:{seconds:02d}"
+
+        return Text(formatted, style=self.style)
 
 
 class track:
@@ -95,6 +157,8 @@ class track:
         self.update_period = update_period
         self.task = None
 
+        text_style = f"rgb{INTEL_BLUE_COLOR}".replace(' ', '')
+
         self.columns: List[ProgressColumn] = (
             [TextColumn("[progress.description]{task.description}")] if description else []
         )
@@ -105,13 +169,14 @@ class track:
                     complete_style=complete_style,
                     finished_style=finished_style,
                     pulse_style=pulse_style,
+                    bar_width=None
                 ),
                 TaskProgressColumn(show_speed=show_speed),
-                IterationsColumn(),
+                IterationsColumn(style=text_style),
                 SeparatorColumn(),
-                TimeElapsedColumn(),
+                TimeElapsedColumnWithStyle(style=text_style),
                 SeparatorColumn(disable_if_no_total=True),  # disable because time remaining will be empty
-                TimeRemainingColumn(),
+                TimeRemainingColumnWithStyle(style=text_style),
             )
         )
 
