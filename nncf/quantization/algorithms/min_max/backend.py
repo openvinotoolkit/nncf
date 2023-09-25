@@ -37,6 +37,13 @@ ALGO_BACKENDS = Registry("algo_backends")
 class MinMaxAlgoBackend(ABC):
     @property
     @abstractmethod
+    def disable_branches_merge(self) -> bool:
+        """
+        Property that enables parallel quantizer merging that was not merged by Solver.
+        """
+
+    @property
+    @abstractmethod
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific MatMul metatypes.
