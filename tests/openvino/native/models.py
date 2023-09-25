@@ -733,3 +733,23 @@ class ParallelModel(OVReferenceModel):
         result_1 = opset.result(concat_1, name="Result")
         model = ov.Model([result_1], [input_1])
         return model
+
+
+class IfModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input_1 = opset.parameter([1, 3, 4, 2], name="Input_1")
+        input_2 = opset.parameter([1, 3, 2, 4], name="Input_2")
+        input_3 = opset.parameter([], dtype=bool, name="Cond_input")
+
+        then_body = ConvModel().ov_model
+        else_body = ConvModel().ov_model
+
+        if_node = opset.if_op(input_3)
+        if_node.set_then_body(then_body)
+        if_node.set_else_body(else_body)
+        if_node.set_input(input_1.outputs()[0], then_body.get_parameters()[0], else_body.get_parameters()[0])
+        if_node.set_input(input_2.outputs()[0], then_body.get_parameters()[1], else_body.get_parameters()[1])
+        if_node.set_output(then_body.results[0], else_body.results[0])
+        result = opset.result(if_node, name="Result")
+        model = ov.Model([result], [input_1, input_2, input_3])
+        return model

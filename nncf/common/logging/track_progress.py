@@ -114,6 +114,9 @@ class track:
                 TimeRemainingColumn(),
             )
         )
+
+        disable = disable or (hasattr(sequence, "__len__") and len(sequence) == 0)
+
         self.progress = Progress(
             *self.columns,
             auto_refresh=auto_refresh,

@@ -674,6 +674,12 @@ class OVAbsMetatype(OVOpMetatype):
 
 
 @OV_OPERATOR_METATYPES.register()
+class OVIfMetatype(OVOpMetatype):
+    name = "IfOp"
+    op_names = ["If"]
+
+
+@OV_OPERATOR_METATYPES.register()
 class OVGroupNormalizationMetatype(OVOpMetatype):
     name = "GroupNormalizationOp"
     op_names = ["GroupNormalization"]
