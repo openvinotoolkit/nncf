@@ -29,7 +29,8 @@ from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
-from nncf.common.quantization.quantizer_propagation.grouping import PropagatingQuantizerGroupManager
+from nncf.common.quantization.quantizer_propagation.grouping import BranchGroupPropagatingQuantizerGroupManager
+from nncf.common.quantization.quantizer_propagation.grouping import UnifiedScalePropagatingQuantizerGroupManager
 from nncf.common.quantization.quantizer_propagation.structs import IgnoreReason
 from nncf.common.quantization.quantizer_propagation.structs import PropagatingQuantizer
 from nncf.common.quantization.quantizer_propagation.structs import PropagationPath
@@ -87,8 +88,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         self._target_scopes = deepcopy(target_scopes)
         self.ignored_node_keys = {}  # type: Dict[str, IgnoreReason]
 
-        self._unified_scale_group_manager = PropagatingQuantizerGroupManager()
-        self._branch_merge_group_manager = PropagatingQuantizerGroupManager()
+        self._unified_scale_group_manager = UnifiedScalePropagatingQuantizerGroupManager()
+        self._branch_merge_group_manager = BranchGroupPropagatingQuantizerGroupManager()
         self._input_node_keys_vs_nncf_nodes = {}  # type: Dict[str, NNCFNode]
         self._output_node_keys_vs_nncf_nodes = {}  # type: Dict[str, NNCFNode]
         self._pqs_after_weight_dependent_output_quantized_nodes = {}  # type: Dict[PropagatingQuantizer, str]

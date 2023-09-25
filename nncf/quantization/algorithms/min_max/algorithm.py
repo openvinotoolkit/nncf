@@ -849,6 +849,8 @@ class MinMaxQuantization(Algorithm):
         main_node = None
         quantization_point = None
         for quantizer_ids in quantizer_setup.branch_merge_groups.values():
+            if len(quantizer_ids) < 2:
+                return
             for quantizer_id in quantizer_ids:
                 quantization_point = quantizer_setup.quantization_points.pop(quantizer_id)
                 directly_quantized_node = nncf_graph.get_node_by_name(
@@ -867,7 +869,7 @@ class MinMaxQuantization(Algorithm):
                         f"differs from the main node named {main_node.node_name}. The merging would be skipped."
                     )
                     return
-        
+
         if quantization_point is None:
             return
 

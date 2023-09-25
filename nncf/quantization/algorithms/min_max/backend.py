@@ -114,7 +114,9 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def target_point(target_type: TargetType, target_node_name: str, port_id: int, destination_node_names: Optional[List[str]] = None) -> TargetPoint:
+    def target_point(
+        target_type: TargetType, target_node_name: str, port_id: int, destination_node_names: Optional[List[str]] = None
+    ) -> TargetPoint:
         """
         Returns backend-specific target point.
 

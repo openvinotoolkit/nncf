@@ -1256,18 +1256,22 @@ class QuantizerPropagationSolver:
                 if not active_pqs_dominated_by_cat:
                     # There is no chance for this concat node to be quantized later,
                     # should not attempt merge.
-                    should_not_transition_flag = False
+                    should_not_transition_flag = True
                     continue
                 # There are still some quantizers that may propagate upwards through this concat node
                 # and ultimately lead to the concat node having quantized inputs
                 dom_op_quantizers.update(active_pqs_dominated_by_cat)
 
         if should_not_transition_flag:
-            for pq in dom_op_quantizers:
-                gid = quant_prop_graph._branch_merge_group_manager.get_group_id_by_propagating_quantizer_id(pq.id)
-                if gid is None:
-                    quant_prop_graph._branch_merge_group_manager.register_group(dom_op_quantizers)
-                    break
+            if (
+                branching_node_key
+                in quant_prop_graph._branch_merge_group_manager.get_group_vs_prop_quants_dict().keys()
+            ):
+                quant_prop_graph._branch_merge_group_manager.add_to_group(branching_node_key, prop_quant_to_transition)
+            else:
+                quant_prop_graph._branch_merge_group_manager.register_group(
+                    set([prop_quant_to_transition]), branching_node_key
+                )
 
             return TransitionStatus.SHOULD_NOT_TRANSITION
 

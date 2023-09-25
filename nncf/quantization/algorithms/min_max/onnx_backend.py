@@ -93,7 +93,9 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 
     @staticmethod
-    def target_point(target_type: TargetType, target_node_name: str, port_id: int, destination_node_names: Optional[List[str]] = None) -> ONNXTargetPoint:
+    def target_point(
+        target_type: TargetType, target_node_name: str, port_id: int, destination_node_names: Optional[List[str]] = None
+    ) -> ONNXTargetPoint:
         return ONNXTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
