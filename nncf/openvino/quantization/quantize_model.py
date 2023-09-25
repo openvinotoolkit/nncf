@@ -244,7 +244,7 @@ def native_quantize_with_accuracy_control_impl(
             advanced_accuracy_restorer_parameters.max_num_iterations,
             max_drop,
             drop_type,
-            advanced_accuracy_restorer_parameters.num_ranking_processes,
+            advanced_accuracy_restorer_parameters.num_ranking_workers,
         )
         quantized_model = accuracy_restorer.apply(
             model,
