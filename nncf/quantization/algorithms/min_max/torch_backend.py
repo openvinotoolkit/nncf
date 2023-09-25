@@ -66,7 +66,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def disable_branches_merge(self) -> bool:
         return True
 
-
     @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:
         return [om.PTModuleLinearMetatype]
