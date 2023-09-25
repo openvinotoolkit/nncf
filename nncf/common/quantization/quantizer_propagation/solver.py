@@ -1231,6 +1231,7 @@ class QuantizerPropagationSolver:
             branching_node_key
         )
         dom_op_quantizers = set()
+        should_not_transition_flag = False
         for op_node_key in dom_op_node_keys:
             op_node = quant_prop_graph.nodes[op_node_key]
             trait = op_node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR]
@@ -1241,7 +1242,8 @@ class QuantizerPropagationSolver:
             else:
                 if trait is not QuantizationTrait.CONCAT:
                     # The branch op is forced to be FP32 - should not proceed through the branch node.
-                    return TransitionStatus.SHOULD_NOT_TRANSITION
+                    should_not_transition_flag = True
+                    continue
 
                 # Have to determine if the concat node will potentially have input quantization applied
                 # as a result of further propagation.
@@ -1254,10 +1256,20 @@ class QuantizerPropagationSolver:
                 if not active_pqs_dominated_by_cat:
                     # There is no chance for this concat node to be quantized later,
                     # should not attempt merge.
-                    return TransitionStatus.SHOULD_NOT_TRANSITION
+                    should_not_transition_flag = False
+                    continue
                 # There are still some quantizers that may propagate upwards through this concat node
                 # and ultimately lead to the concat node having quantized inputs
                 dom_op_quantizers.update(active_pqs_dominated_by_cat)
+
+        if should_not_transition_flag:
+            for pq in dom_op_quantizers:
+                gid = quant_prop_graph._branch_merge_group_manager.get_group_id_by_propagating_quantizer_id(pq.id)
+                if gid is None:
+                    quant_prop_graph._branch_merge_group_manager.register_group(dom_op_quantizers)
+                    break
+
+            return TransitionStatus.SHOULD_NOT_TRANSITION
 
         dom_op_quantizers.discard(prop_quant_to_transition)
         if dom_op_quantizers:

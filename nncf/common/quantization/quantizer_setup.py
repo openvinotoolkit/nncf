@@ -237,8 +237,10 @@ class QuantizerSetupBase:
     def __init__(self):
         self.quantization_points = {}  # type: Dict[QuantizationPointId, QuantizationPointBase]
         self.unified_scale_groups = {}  # type: Dict[int, Set[QuantizationPointId]]
+        self.branch_merge_groups = {}  # type: Dict[int, Set[QuantizationPointId]]
         self.shared_input_operation_set_groups = {}  # type: Dict[int, Set[QuantizationPointId]]
         self._next_unified_scale_gid = 0
+        self._next_branch_merge_gid = 0
         self._next_shared_inputs_gid = 0
 
     def add_independent_quantization_point(self, qp: QuantizationPointBase):
@@ -256,6 +258,16 @@ class QuantizerSetupBase:
         gid = self._next_unified_scale_gid
         self.unified_scale_groups[self._next_unified_scale_gid] = set(qp_group)
         self._next_unified_scale_gid += 1
+        return gid
+
+    def register_branch_merge_group(self, qp_group: List[QuantizationPointId]) -> int:
+        for qp_id in qp_group:
+            gid = self.get_branch_merge_group_id(qp_id) is not None
+            if gid:
+                raise RuntimeError("QP id {} is already in unified branch merge group {}".format(qp_id, gid))
+        gid = self._next_branch_merge_gid
+        self.branch_merge_groups[self._next_branch_merge_gid] = set(qp_group)
+        self._next_branch_merge_gid += 1
         return gid
 
     def register_shared_inputs_group(self, qp_group: List[QuantizationPointId]) -> int:
@@ -299,6 +311,12 @@ class QuantizerSetupBase:
                 return gid
         return None
 
+    def get_branch_merge_group_id(self, qp_id: QuantizationPointId) -> Optional[int]:
+        for gid, branch_merge_group in self.branch_merge_groups.items():
+            if qp_id in branch_merge_group:
+                return gid
+        return None
+
     def get_shared_inputs_group_id(self, qp_id: QuantizationPointId) -> Optional[int]:
         for gid, shared_inputs_group in self.shared_input_operation_set_groups.items():
             if qp_id in shared_inputs_group:
@@ -329,6 +347,14 @@ class QuantizerSetupBase:
         if not self.unified_scale_groups[gid]:
             nncf_logger.debug(f"Removed last entry from a unified scale group {gid} - removing group itself")
             self.unified_scale_groups.pop(gid)
+
+    def remove_branch_merge_group(self, gid: int):
+        if gid not in self.branch_merge_groups:
+            nncf_logger.debug(
+                f"Attempted to remove group {gid} from branch merge map, but the group" f"is not exist - ignoring."
+            )
+            return
+        self.branch_merge_groups.pop(gid)
 
     def equivalent_to(self, other: "QuantizerSetupBase") -> bool:
         this_qp_id_to_other_qp_id_dict = {}  # type: Dict[QuantizationPointId, QuantizationPointId]
@@ -505,6 +531,17 @@ class MultiConfigQuantizerSetup(QuantizerSetupBase):
                         "unified scales for this point."
                     )
                 retval.remove_unified_scale_from_point(per_channel_qid)
+
+        for bm_gid, bm_group in self.branch_merge_groups.items():
+            base_config = None
+            for bm_qid in bm_group:
+                if base_config is None:
+                    base_config = retval.quantization_points[bm_qid].qconfig
+                    continue
+                else:
+                    if retval.quantization_points[bm_qid].qconfig != base_config:
+                        retval.remove_branch_merge_group(bm_gid)
+            retval.register_branch_merge_group(bm_group)
 
         return retval
 

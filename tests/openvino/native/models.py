@@ -704,3 +704,32 @@ class GroupNormalizationModel(OVReferenceModel):
         result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [input_1])
         return model
+
+
+@SYNTHETIC_MODELS.register()
+class ParallelModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input_1 = opset.parameter([1, 3, 4, 2], name="Input_1")
+
+        kernel = self._rng.random((3, 3, 1, 1)).astype(np.float32)
+        pads = [0, 0]
+        dilations, strides = [1, 1], [1, 1]
+        conv_1 = opset.convolution(input_1, kernel, strides, pads, pads, dilations, name="Conv_1")
+
+        add_const = self._rng.random((1, 3, 1, 1)).astype(np.float32)
+        add_1 = opset.add(conv_1, add_const, name="Add_1")
+
+        relu_1 = opset.relu(add_1, name="ReLU_1")
+        add_const = self._rng.random((1, 3, 4, 1)).astype(np.float32)
+        add_2 = opset.add(add_1, add_const, name="Add_2")
+        matmul_const = self._rng.random((1, 3, 2, 3)).astype(np.float32)
+        matmul_1 = opset.matmul(add_1, matmul_const, transpose_a=False, transpose_b=False, name="MatMul_1")
+        matmul_const = self._rng.random((1, 3, 3, 2)).astype(np.float32)
+        matmul_2 = opset.matmul(matmul_1, matmul_const, transpose_a=False, transpose_b=False, name="MatMul_2")
+
+        concat_1 = opset.concat([relu_1, add_2, matmul_2], axis=3)
+        # concat_1 = opset.concat([add_2, matmul_2], axis=3)
+
+        result_1 = opset.result(concat_1, name="Result")
+        model = ov.Model([result_1], [input_1])
+        return model

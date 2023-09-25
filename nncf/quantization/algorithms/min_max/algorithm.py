@@ -472,8 +472,12 @@ class MinMaxQuantization(Algorithm):
         # If quantization of node's output or Model Input node
         else:
             output_port_id = 0
+            destination_node_names = getattr(quantization_point, "destination_node_names", None)
             activation_quantization_target_point = self._backend_entity.target_point(
-                TargetType.POST_LAYER_OPERATION, node_name, output_port_id
+                TargetType.POST_LAYER_OPERATION,
+                node_name,
+                output_port_id,
+                destination_node_names,
             )
         return activation_quantization_target_point
 
@@ -508,6 +512,7 @@ class MinMaxQuantization(Algorithm):
         quantizer_setup = self._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)
         self._apply_model_type_pass(self._model_type, quantizer_setup, nncf_graph)
         self._apply_device_pass(self._target_device, quantizer_setup, inference_nncf_graph)
+        self._apply_branch_merge_pass(quantizer_setup, inference_nncf_graph)
         self._unified_scale_groups = self._collect_unified_groups(quantizer_setup, nncf_graph)
         quantization_points = list(quantizer_setup.quantization_points.values())
         quantization_points = self._topological_sort_quantization_points(quantization_points, nncf_graph)
@@ -838,3 +843,35 @@ class MinMaxQuantization(Algorithm):
                         quantizer_setup.discard(fq_2_q_key, True)
 
         return quantizer_setup
+
+    def _apply_branch_merge_pass(self, quantizer_setup: SingleConfigQuantizerSetup, nncf_graph: NNCFGraph) -> None:
+        destination_node_names = []
+        main_node = None
+        quantization_point = None
+        for quantizer_ids in quantizer_setup.branch_merge_groups.values():
+            for quantizer_id in quantizer_ids:
+                quantization_point = quantizer_setup.quantization_points.pop(quantizer_id)
+                directly_quantized_node = nncf_graph.get_node_by_name(
+                    quantization_point.insertion_point.target_node_name
+                )
+                producer_node = nncf_graph.get_input_edges(directly_quantized_node)[
+                    quantization_point.insertion_point.input_port_id
+                ].from_node
+                destination_node_names.extend(quantization_point.directly_quantized_operator_node_names)
+
+                main_node = producer_node if main_node is None else main_node
+
+                if producer_node != main_node:
+                    nncf_logger.debug(
+                        f"The producer node {producer_node.node_name} for node {directly_quantized_node.node_name} "
+                        f"differs from the main node named {main_node.node_name}. The merging would be skipped."
+                    )
+                    return
+        
+        if quantization_point is None:
+            return
+
+        quantization_point.destination_node_names = destination_node_names
+        quantization_point.insertion_point.input_port_id = None
+        quantization_point.insertion_point.target_node_name = producer_node.node_name
+        quantizer_setup.add_independent_quantization_point(quantization_point)

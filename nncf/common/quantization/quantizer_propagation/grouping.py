@@ -15,9 +15,9 @@ from typing import Dict, Optional, Set
 from nncf.common.quantization.quantizer_propagation.structs import PropagatingQuantizer
 
 
-class UnifiedScalePropagatingQuantizerGroupManager:
+class PropagatingQuantizerGroupManager:
     """
-    Keeps track of the groups of quantizers that have to have their scales unified in the final
+    Keeps track of the groups of quantizers that have to processed together in the final
     quantized model.
     """
 

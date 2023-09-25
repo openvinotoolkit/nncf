@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 
@@ -23,10 +23,17 @@ from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
 
 class OVTargetPoint(TargetPoint):
-    def __init__(self, target_type: TargetType, target_node_name: str, port_id: int):
+    def __init__(
+        self,
+        target_type: TargetType,
+        target_node_name: str,
+        port_id: int,
+        destination_node_names: Optional[List[str]] = None,
+    ):
         super().__init__(target_type)
         self.target_node_name = target_node_name
         self.port_id = port_id
+        self.destination_node_names = destination_node_names
 
     def __eq__(self, other: "OVTargetPoint") -> bool:
         return (
@@ -34,6 +41,7 @@ class OVTargetPoint(TargetPoint):
             and self.type == other.type
             and self.target_node_name == other.target_node_name
             and self.port_id == other.port_id
+            and self.destination_node_names == other.destination_node_names
         )
 
     def __hash__(self) -> int:
