@@ -23,7 +23,9 @@ from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvertMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVIfMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
 
 InplaceInsertionFnType = Callable[[ov.Node, int], ov.Node]
 
@@ -47,6 +49,25 @@ def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
 
     bias_constant = get_node_with_bias_value(add_node, nncf_graph)
     return bias_constant is not None
+
+
+def get_number_if_op(model: ov.Model) -> int:
+    """
+    Returns number of If operation in a model.
+
+    :param model: Model.
+    :return: True if Model has If operation, False - otherwise.
+    """
+
+    def cnt_if_op(model: ov.Model, cnt: int) -> int:
+        for op in model.get_ops():
+            if get_node_metatype(op) == OVIfMetatype:
+                cnt += 1
+                cnt = cnt_if_op(op.get_function(0), cnt)
+                cnt = cnt_if_op(op.get_function(1), cnt)
+        return cnt
+
+    return cnt_if_op(model, 0)
 
 
 def get_const_value(const_node: ov.Node) -> np.ndarray:
