@@ -532,17 +532,7 @@ class MultiConfigQuantizerSetup(QuantizerSetupBase):
                     )
                 retval.remove_unified_scale_from_point(per_channel_qid)
 
-        for bm_gid, bm_group in self.branch_merge_groups.items():
-            base_config = None
-            for bm_qid in bm_group:
-                if base_config is None:
-                    base_config = retval.quantization_points[bm_qid].qconfig
-                    continue
-                else:
-                    if retval.quantization_points[bm_qid].qconfig != base_config:
-                        retval.remove_branch_merge_group(bm_gid)
-            retval.register_branch_merge_group(bm_group)
-
+        retval = self.filter_branching_quantizers(retval)
         return retval
 
     def select_first_qconfig_for_each_point(self) -> SingleConfigQuantizerSetup:
@@ -550,6 +540,24 @@ class MultiConfigQuantizerSetup(QuantizerSetupBase):
         for qp_id, qp in self.quantization_points.items():
             qp_id_vs_qconfig_dict[qp_id] = qp.possible_qconfigs[0]
         return self.select_qconfigs(qp_id_vs_qconfig_dict)
+
+    def filter_branching_quantizers(self, retval: SingleConfigQuantizerSetup) -> SingleConfigQuantizerSetup:
+        """
+        Filters brancging quantizert groups based on the quantizer configuration.
+
+        :param retval: SingleConfigQuantizerSetup to filter.
+        :return: SingleConfigQuantizerSetup instance.
+        """
+        for bm_gid, bm_group in self.branch_merge_groups.items():
+            base_config = None
+            for bm_qid in bm_group:
+                if base_config is None:
+                    base_config = retval.quantization_points[bm_qid].qconfig
+                    continue
+                if retval.quantization_points[bm_qid].qconfig != base_config:
+                    retval.remove_branch_merge_group(bm_gid)
+            retval.register_branch_merge_group(bm_group)
+        return retval
 
     @classmethod
     def from_single_config_setup(cls, single_conf_setup: SingleConfigQuantizerSetup) -> "MultiConfigQuantizerSetup":

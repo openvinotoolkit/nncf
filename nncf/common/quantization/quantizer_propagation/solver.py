@@ -1263,16 +1263,7 @@ class QuantizerPropagationSolver:
                 dom_op_quantizers.update(active_pqs_dominated_by_cat)
 
         if should_not_transition_flag:
-            if (
-                branching_node_key
-                in quant_prop_graph._branch_merge_group_manager.get_group_vs_prop_quants_dict().keys()
-            ):
-                quant_prop_graph._branch_merge_group_manager.add_to_group(branching_node_key, prop_quant_to_transition)
-            else:
-                quant_prop_graph._branch_merge_group_manager.register_group(
-                    set([prop_quant_to_transition]), branching_node_key
-                )
-
+            quant_prop_graph.add_branching_quantizer_to_group(prop_quant_to_transition, branching_node_key)
             return TransitionStatus.SHOULD_NOT_TRANSITION
 
         dom_op_quantizers.discard(prop_quant_to_transition)
