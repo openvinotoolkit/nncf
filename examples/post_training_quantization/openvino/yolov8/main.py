@@ -158,7 +158,7 @@ def main():
     # Quantize mode in OpenVINO representation
     quantized_model = quantize(ov_model, data_loader, validator)
     quantized_model_path = Path(f"{ROOT}/{MODEL_NAME}_openvino_model/{MODEL_NAME}_quantized.xml")
-    ov.serialize(quantized_model, str(quantized_model_path))
+    ov.save_model(quantized_model, str(quantized_model_path), compress_to_fp16=False)
 
     # Validate FP32 model
     fp_stats, total_images, total_objects = validate(ov_model, tqdm(data_loader), validator)
