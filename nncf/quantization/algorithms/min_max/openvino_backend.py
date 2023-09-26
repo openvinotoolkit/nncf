@@ -104,9 +104,9 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def target_point(
-        target_type: TargetType, target_node_name: str, port_id: int, destination_node_names: Optional[List[str]] = None
+        target_type: TargetType, target_node_name: str, port_id: int, branch_node_names: Optional[List[str]] = None
     ) -> OVTargetPoint:
-        return OVTargetPoint(target_type, target_node_name, port_id, destination_node_names)
+        return OVTargetPoint(target_type, target_node_name, port_id, branch_node_names)
 
     @staticmethod
     def create_quantizer_insertion_command(

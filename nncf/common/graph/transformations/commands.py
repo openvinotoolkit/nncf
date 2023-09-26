@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from enum import IntEnum
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 
 from nncf.common.stateful_classes_registry import CommonStatefulClassesRegistry
 
@@ -63,6 +63,8 @@ class TargetType(IntEnum):
                           specific module attributes - N/A in TF
     `OPERATOR_POST_HOOK` - a location after a function call in PT without access to
                            specific module attributes - N/A in TF
+    `POST_BRANCH_WITH_PARTIAL_MERGE` - a location after the associated model layer,
+                                       that represents the connection with the specific branches
 
     Notes: Adding operations to a PT-module or TF-layer implemented by wrapping
     the original PT-module or TF-layer and registering operations that are executed
@@ -79,6 +81,7 @@ class TargetType(IntEnum):
     OPERATION_WITH_WEIGHTS = 5
     OPERATOR_PRE_HOOK = 6
     OPERATOR_POST_HOOK = 7
+    POST_BRANCH_WITH_PARTIAL_MERGE = 8
 
     def get_state(self) -> Dict[str, Any]:
         """
@@ -116,6 +119,9 @@ class TransformationType(IntEnum):
 
 class TargetPointStateNames:
     TARGET_TYPE = "target_type"
+    TARGET_NODE_NAME = "target_node_name"
+    PORT_ID = "port_id"
+    BRANCH_NODE_NAMES = "branch_node_names"
 
 
 @CommonStatefulClassesRegistry.register()
@@ -133,17 +139,38 @@ class TargetPoint:
 
     _state_names = TargetPointStateNames
 
-    def __init__(self, target_type: TargetType):
+    def __init__(
+        self,
+        target_type: TargetType,
+        target_node_name: Optional[str] = None,
+        port_id: Optional[int] = None,
+        branch_node_names: Optional[List[str]] = None,
+    ):
         """
         Constructor.
 
         :param target_type: Type of the target point.
         """
         self._target_type = target_type
+        self._target_node_name = target_node_name
+        self._port_id = port_id
+        self._branch_node_names = branch_node_names
 
     @property
     def type(self) -> TargetType:
         return self._target_type
+
+    @property
+    def target_node_name(self) -> Optional[str]:
+        return self._target_node_name
+
+    @property
+    def port_id(self) -> Optional[int]:
+        return self._port_id
+
+    @property
+    def branch_node_names(self) -> Optional[List[str]]:
+        return self._branch_node_names
 
     def __eq__(self, other: Any) -> bool:
         return isinstance(other, TargetPoint) and self.type == other.type

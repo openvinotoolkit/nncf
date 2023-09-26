@@ -316,7 +316,7 @@ class ONNXModelTransformer(ModelTransformer):
                 f"Can not add the quantizer to the {target_edge_name} edge. This edge does not have end node."
             )
 
-        destination_names = transformation.target_point.destination_node_names
+        branch_node_names = transformation.target_point.branch_node_names
 
         if transformation.target_point.type == TargetType.PRE_LAYER_OPERATION:
             # If we need to change only target nodes input
@@ -326,7 +326,7 @@ class ONNXModelTransformer(ModelTransformer):
                     target_node.input[i] = dequantizer.output[0]
         else:
             for node in input_nodes:
-                if destination_names is not None and node.name not in destination_names:
+                if branch_node_names is not None and node.name not in branch_node_names:
                     continue
 
                 for i, inp in enumerate(node.input):

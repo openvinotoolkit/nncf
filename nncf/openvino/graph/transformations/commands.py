@@ -29,12 +29,9 @@ class OVTargetPoint(TargetPoint):
         target_type: TargetType,
         target_node_name: str,
         port_id: int,
-        destination_node_names: Optional[List[str]] = None,
+        branch_node_names: Optional[List[str]] = None,
     ):
-        super().__init__(target_type)
-        self.target_node_name = target_node_name
-        self.port_id = port_id
-        self.destination_node_names = destination_node_names
+        super().__init__(target_type, target_node_name, port_id, branch_node_names)
 
     def __eq__(self, other: "OVTargetPoint") -> bool:
         return (
@@ -42,7 +39,7 @@ class OVTargetPoint(TargetPoint):
             and self.type == other.type
             and self.target_node_name == other.target_node_name
             and self.port_id == other.port_id
-            and self.destination_node_names == other.destination_node_names
+            and self.branch_node_names == other.branch_node_names
         )
 
     def __hash__(self) -> int:

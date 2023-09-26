@@ -124,7 +124,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def target_point(
-        target_type: TargetType, target_node_name: str, port_id: int, destination_node_names: Optional[List[str]] = None
+        target_type: TargetType, target_node_name: str, port_id: int, branch_node_names: Optional[List[str]] = None
     ) -> PTTargetPoint:
         if NNCFGraphNodeType.INPUT_NODE in target_node_name or target_type == TargetType.POST_LAYER_OPERATION:
             port_id = None

@@ -475,13 +475,17 @@ class MinMaxQuantization(Algorithm):
         # If quantization of node's output or Model Input node
         else:
             output_port_id = 0
-            destination_node_names = getattr(quantization_point, "destination_node_names", None)
-            activation_quantization_target_point = self._backend_entity.target_point(
-                TargetType.POST_LAYER_OPERATION,
-                node_name,
-                output_port_id,
-                destination_node_names,
-            )
+            branch_node_names = getattr(quantization_point, "branch_node_names", None)
+            target_point_options = {
+                "target_node_name": node_name,
+                "port_id": output_port_id,
+                "target_type": TargetType.POST_LAYER_OPERATION,
+            }
+            if branch_node_names:
+                target_point_options["target_type"] = TargetType.POST_BRANCH_WITH_PARTIAL_MERGE
+                target_point_options["branch_node_names"] = branch_node_names
+
+            activation_quantization_target_point = self._backend_entity.target_point(**target_point_options)
         return activation_quantization_target_point
 
     def _get_quantization_target_points(
@@ -854,7 +858,7 @@ class MinMaxQuantization(Algorithm):
         if self._backend_entity.disable_branches_merge:
             return
 
-        destination_node_names = []
+        branch_node_names = []
         main_node = None
         quantization_point = None
         for quantizer_ids in quantizer_setup.partial_branch_merge_groups.values():
@@ -868,7 +872,7 @@ class MinMaxQuantization(Algorithm):
                 producer_node = nncf_graph.get_input_edges(directly_quantized_node)[
                     quantization_point.insertion_point.input_port_id
                 ].from_node
-                destination_node_names.extend(quantization_point.directly_quantized_operator_node_names)
+                branch_node_names.extend(quantization_point.directly_quantized_operator_node_names)
 
                 main_node = producer_node if main_node is None else main_node
 
@@ -882,7 +886,7 @@ class MinMaxQuantization(Algorithm):
             if quantization_point is None:
                 return
 
-            quantization_point.destination_node_names = destination_node_names
+            quantization_point.branch_node_names = branch_node_names
             quantization_point.insertion_point.input_port_id = None
             quantization_point.insertion_point.target_node_name = producer_node.node_name
             quantizer_setup.add_independent_quantization_point(quantization_point)

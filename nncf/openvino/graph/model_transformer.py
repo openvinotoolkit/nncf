@@ -155,7 +155,10 @@ class OVModelTransformer(ModelTransformer):
             node_name = transformation.target_point.target_node_name
             node = name_to_node_mapping[node_name]
             port_id = transformation.target_point.port_id
-            if transformation.target_point.type == TargetType.POST_LAYER_OPERATION:
+            if transformation.target_point.type in [
+                TargetType.POST_LAYER_OPERATION,
+                TargetType.POST_BRANCH_WITH_PARTIAL_MERGE,
+            ]:
                 output = node.output(port_id)
                 extra_model_outputs.append((output, port_id))
             elif transformation.target_point.type in [
@@ -296,7 +299,7 @@ class OVModelTransformer(ModelTransformer):
                     input_node_output, input_low, input_high, output_low, output_high, levels, name=fq_name
                 )
             inp_node.replace_source_output(fq.output(0))
-        elif transform_type == TargetType.POST_LAYER_OPERATION:
+        elif transform_type in [TargetType.POST_LAYER_OPERATION, TargetType.POST_BRANCH_WITH_PARTIAL_MERGE]:
             output = target_node.output(port_id)
             data_type = output.get_element_type()
             if data_type == ov.Type(np.float16):
@@ -304,9 +307,11 @@ class OVModelTransformer(ModelTransformer):
             target_inputs = output.get_target_inputs()
             fq_name = f"{node_name}/fq_output_{port_id}"
             fq = opset.fake_quantize(output, input_low, input_high, output_low, output_high, levels, name=fq_name)
-            destination_names = transformation.target_point.destination_node_names
             for inp_node in target_inputs:
-                if destination_names is not None and inp_node.get_node().get_friendly_name() not in destination_names:
+                if (
+                    transform_type == TargetType.POST_BRANCH_WITH_PARTIAL_MERGE
+                    and inp_node.get_node().get_friendly_name() not in transformation.target_point.branch_node_names
+                ):
                     continue
                 inp_node.replace_source_output(fq.output(0))
         else:
@@ -458,7 +463,7 @@ class OVModelTransformer(ModelTransformer):
         target_node = name_to_node_mapping[node_name]
         port_id = transformation.target_point.port_id
         fn_output_port_id = transformation.fn_output_port_id
-        if transform_type == TargetType.POST_LAYER_OPERATION:
+        if transform_type in [TargetType.POST_LAYER_OPERATION, TargetType.POST_BRANCH_WITH_PARTIAL_MERGE]:
             new_node = transformation.inplace_op_fn(target_node, port_id)
             return (new_node.output(fn_output_port_id), fn_output_port_id)
         if transform_type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:

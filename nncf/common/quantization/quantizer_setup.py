@@ -237,9 +237,10 @@ class QuantizerSetupBase:
     def __init__(self):
         self.quantization_points = {}  # type: Dict[QuantizationPointId, QuantizationPointBase]
         self.unified_scale_groups = {}  # type: Dict[int, Set[QuantizationPointId]]
-        self.partial_branch_merge_groups = {}  # type: Dict[str, Set[QuantizationPointId]]
+        self.partial_branch_merge_groups = {}  # type: Dict[int, Set[QuantizationPointId]]
         self.shared_input_operation_set_groups = {}  # type: Dict[int, Set[QuantizationPointId]]
         self._next_unified_scale_gid = 0
+        self._next_branch_merge_gid = 0
         self._next_shared_inputs_gid = 0
 
     def add_independent_quantization_point(self, qp: QuantizationPointBase):
@@ -259,12 +260,15 @@ class QuantizerSetupBase:
         self._next_unified_scale_gid += 1
         return gid
 
-    def register_partial_branch_merge_group(self, qp_group: List[QuantizationPointId], partial_branch_merge_gid: str):
+    def register_partial_branch_merge_group(self, qp_group: List[QuantizationPointId]) -> int:
         for qp_id in qp_group:
             gid = self.get_partial_branch_merge_group_id(qp_id) is not None
             if gid:
                 raise RuntimeError("QP id {} is already in unified branch merge group {}".format(qp_id, gid))
-        self.partial_branch_merge_groups[partial_branch_merge_gid] = set(qp_group)
+        gid = self._next_branch_merge_gid
+        self.partial_branch_merge_groups[self._next_branch_merge_gid] = set(qp_group)
+        self._next_branch_merge_gid += 1
+        return gid
 
     def register_shared_inputs_group(self, qp_group: List[QuantizationPointId]) -> int:
         for qp_id in qp_group:

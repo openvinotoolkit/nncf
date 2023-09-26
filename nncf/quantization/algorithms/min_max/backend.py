@@ -122,7 +122,7 @@ class MinMaxAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def target_point(
-        target_type: TargetType, target_node_name: str, port_id: int, destination_node_names: Optional[List[str]] = None
+        target_type: TargetType, target_node_name: str, port_id: int, branch_node_names: Optional[List[str]] = None
     ) -> TargetPoint:
         """
         Returns backend-specific target point.
@@ -130,7 +130,7 @@ class MinMaxAlgoBackend(ABC):
         :param target_type: Type of the location that should be modified.
         :param target_node_name: Name of the located node.
         :param port_id: Port ID of the tensor for the statistics distribution.
-        :param destination_node_names: Optional parameter that contains destination node names for insertion.
+        :param branch_node_names: Optional parameter that contains destination node names for insertion.
         :return: Backend-specific TargetPoint.
         """
 
