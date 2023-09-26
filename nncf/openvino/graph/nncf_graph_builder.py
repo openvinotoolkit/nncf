@@ -101,7 +101,7 @@ class GraphConverter:
 
                     parallel_inputs = None
                     if len(inputs) > 1:
-                        parallel_inputs = [inp.get_index() for inp in inputs]
+                        parallel_inputs = [inp.get_index() for inp in inputs[1:]]
 
                     graph.add_edge_between_nncf_nodes(
                         from_node_id=in_node_id,

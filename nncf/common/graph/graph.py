@@ -148,11 +148,9 @@ class NNCFGraphEdge:
         self.parallel_input_port_ids = parallel_input_port_ids
 
     def __str__(self):
-        # return f"{self.from_node}: -> {self.tensor_shape} -> {self.to_node}:"
         return f"{self.from_node}:{self.output_port_id} -> {self.tensor_shape} -> {self.to_node}:{self.input_port_id}"
 
     def __hash__(self):
-        # return hash(str(self.from_node) + " -> " + str(self.tensor_shape) + " -> " + str(self.to_node))
         return hash(str(self))
 
     def __eq__(self, other):
@@ -160,6 +158,8 @@ class NNCFGraphEdge:
             self.from_node == other.from_node
             and self.to_node == other.to_node
             and self.tensor_shape == other.tensor_shape
+            and self.input_port_id == other.input_port_id
+            and self.output_port_id == other.output_port_id
         )
 
 
@@ -355,9 +355,10 @@ class NNCFGraph:
     def _get_edges(self, from_node: NNCFNode, to_node: NNCFNode) -> List[NNCFGraphEdge]:
         edges = []
         edge = self.get_edge(from_node, to_node)
-        if not edge.parallel_input_port_ids:
-            edges.append(edge)
-        for input_port_id in edge.parallel_input_port_ids:
+        parallel_input_port_ids = edge.parallel_input_port_ids
+        edge.parallel_input_port_ids = []
+        edges.append(edge)
+        for input_port_id in parallel_input_port_ids:
             edges.append(
                 NNCFGraphEdge(
                     from_node=edge.from_node,

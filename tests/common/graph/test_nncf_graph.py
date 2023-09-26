@@ -52,6 +52,17 @@ def test_find_matching_subgraphs():
 
 
 def test_parallel_edges():
+    def _get_default_nncf_graph_edge(from_node, to_node, input_port_id, output_port_id):
+        return NNCFGraphEdge(
+            from_node,
+            to_node,
+            input_port_id=input_port_id,
+            output_port_id=output_port_id,
+            parallel_input_port_ids=list(range(1, 5)),
+            tensor_shape=(1, 2, 3),
+            dtype="dummy",
+        )
+
     nncf_graph = NNCFGraph()
     nodes = []
     for node in "abc":
@@ -62,7 +73,7 @@ def test_parallel_edges():
         nodes[1].node_id,
         input_port_id=0,
         output_port_id=0,
-        parallel_input_port_ids=list(range(5)),
+        parallel_input_port_ids=list(range(1, 5)),
         tensor_shape=(1, 2, 3),
         dtype="dummy",
     )
@@ -81,24 +92,18 @@ def test_parallel_edges():
     assert len(output_edges) == 6
     assert input_edges == output_edges[:-1]
     for input_port_id, edge in enumerate(input_edges):
-        ref_edge = NNCFGraphEdge(
+        ref_edge = _get_default_nncf_graph_edge(
             nodes[0],
             nodes[1],
             input_port_id=input_port_id,
             output_port_id=0,
-            parallel_input_port_ids=[],
-            tensor_shape=(1, 2, 3),
-            dtype="dummy",
         )
         assert ref_edge == edge
 
-    ordinary_edge = NNCFGraphEdge(
+    ordinary_edge = _get_default_nncf_graph_edge(
         nodes[0],
         nodes[2],
         input_port_id=10,
         output_port_id=15,
-        parallel_input_port_ids=[],
-        tensor_shape=(1, 2, 3),
-        dtype="dummy",
     )
     assert ordinary_edge == output_edges[-1]
