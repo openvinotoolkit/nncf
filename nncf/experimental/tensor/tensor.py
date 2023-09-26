@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import operator
-from typing import Any, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Optional, Tuple, TypeVar, Union
 
 from nncf.experimental.tensor.enums import TensorDataType
 from nncf.experimental.tensor.enums import TensorDeviceType
@@ -128,10 +128,10 @@ class Tensor:
     def flatten(self) -> Tensor:
         return _call_function("flatten", self)
 
-    def max(self, axis: Optional[TTensor] = None) -> Tensor:
+    def max(self, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:
         return _call_function("max", self, axis)
 
-    def min(self, axis: Optional[TTensor] = None) -> Tensor:
+    def min(self, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:
         return _call_function("min", self, axis)
 
     def abs(self) -> Tensor:
@@ -140,7 +140,7 @@ class Tensor:
     def isempty(self) -> bool:
         return _call_function("isempty", self)
 
-    def astype(self, dtype: TensorDataType):
+    def astype(self, dtype: TensorDataType) -> Tensor:
         return _call_function("astype", self, dtype)
 
     def reshape(self, shape: Tuple[int, ...]) -> Tensor:
