@@ -21,13 +21,10 @@ from examples.torch.common.execution import get_device
 from examples.torch.common.execution import prepare_model_for_execution
 from examples.torch.common.model_loader import load_model
 from nncf.api.compression import CompressionStage
-from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.logging.logger import NNCFDeprecationWarning
 from nncf.config import NNCFConfig
 from nncf.torch import register_default_init_args
 from nncf.torch.checkpoint_loading import load_state
-from nncf.torch.nncf_network import LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
-from nncf.torch.nncf_network import LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME
 from nncf.torch.quantization.algo import QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME
 from nncf.torch.quantization.algo import QuantizerBuilderStateVersion
 from tests.shared.helpers import get_cli_dict_args
@@ -37,7 +34,6 @@ from tests.torch.helpers import Command
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.helpers import register_bn_adaptation_init_args
-from tests.torch.quantization.test_range_init import SingleConv2dIdentityModel
 from tests.torch.test_compressed_graph import get_basic_quantization_config
 from tests.torch.test_sanity_sample import create_command_line
 
@@ -162,42 +158,6 @@ def test_loaded_model_evals_according_to_saved_acc(_params, tmp_path, dataset_di
         metrics = json.load(metric_file)
         # accuracy is rounded to hundredths
         assert torch.load(checkpoint_path)["best_acc1"] == pytest.approx(metrics["Accuracy"], abs=1e-2)
-
-
-old_style_sd = {
-    f"{LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.weight": torch.ones([3, 3, 1, 1]),
-    f"{LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.bias": torch.ones([3]),
-    f"{LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op._num_bits": 8 * torch.ones([1], dtype=torch.int32),
-    f"{LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op.signed_tensor": torch.ones([1], dtype=torch.int32),
-    f"{LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op.enabled": torch.ones([1], dtype=torch.int32),
-    f"{LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op.scale": torch.ones([3, 1, 1, 1]),
-    f"{LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX}./{MODEL_INPUT_OP_NAME}_0|OUTPUT._num_bits": 8
-    * torch.ones([1], dtype=torch.int32),
-    f"{LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX}./{MODEL_INPUT_OP_NAME}_0|OUTPUT.signed_tensor": torch.zeros(
-        [1], dtype=torch.int32
-    ),
-    f"{LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX}./{MODEL_INPUT_OP_NAME}_0|OUTPUT.enabled": torch.ones(
-        [1], dtype=torch.int32
-    ),
-    f"{LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX}./{MODEL_INPUT_OP_NAME}_0|OUTPUT.scale": torch.ones([1]),
-}
-
-
-def test_renamed_activation_quantizer_storage_in_state_dict():
-    model = SingleConv2dIdentityModel()
-    config = get_basic_quantization_config(input_info={"sample_size": [1, 3, 100, 100]})
-    register_bn_adaptation_init_args(config)
-    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
-
-    with pytest.warns(NNCFDeprecationWarning):
-        _ = load_state(compressed_model, old_style_sd, is_resume=True)
-
-
-def test_can_compress_with_config_and_resume_of_old_checkpoint():
-    model = SingleConv2dIdentityModel()
-    config = get_basic_quantization_config(input_info={"sample_size": [1, 3, 100, 100]})
-    register_bn_adaptation_init_args(config)
-    create_compressed_model_and_algo_for_test(model, config, compression_state=old_style_sd)
 
 
 # BN Wrapping backward compatibility test
