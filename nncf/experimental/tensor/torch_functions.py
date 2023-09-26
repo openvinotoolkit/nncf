@@ -41,7 +41,7 @@ def _(a: torch.Tensor) -> TensorDeviceType:
 def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> torch.Tensor:
     if axis is None:
         return a.squeeze()
-    if isinstance(axis, Tuple) and any([1 != a.shape[i] for i in axis]):
+    if isinstance(axis, Tuple) and any(1 != a.shape[i] for i in axis):
         # Make Numpy behavior, torch.squeeze skips axes that are not equal to one..
         raise ValueError("Cannot select an axis to squeeze out which has size not equal to one")
     return a.squeeze(axis)
@@ -188,11 +188,11 @@ def _(a: torch.Tensor, decimals=0) -> torch.Tensor:
     return torch.round(a, decimals=decimals)
 
 
-@fns._binary_op_nowarn.register(torch.Tensor)
+@fns._binary_op_nowarn.register(torch.Tensor)  # pylint: disable=protected-access
 def _(a: torch.Tensor, b: Union[torch.Tensor, float], operator_fn: Callable) -> torch.Tensor:
     return operator_fn(a, b)
 
 
-@fns._binary_reverse_op_nowarn.register(torch.Tensor)
+@fns._binary_reverse_op_nowarn.register(torch.Tensor)  # pylint: disable=protected-access
 def _(a: torch.Tensor, b: Union[torch.Tensor, float], operator_fn: Callable) -> torch.Tensor:
     return operator_fn(b, a)

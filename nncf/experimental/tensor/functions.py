@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import functools
-from typing import Callable, List, Optional, Tuple, TypeVar, Union
+from typing import Callable, List, Optional, Tuple, Union
 
 from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor import unwrap_tensor_data

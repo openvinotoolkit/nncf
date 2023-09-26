@@ -188,7 +188,7 @@ def _(a: Union[np.ndarray, np.generic], decimals: int = 0) -> np.ndarray:
     return np.round(a, decimals=decimals)
 
 
-@_register_numpy_types(fns._binary_op_nowarn)
+@_register_numpy_types(fns._binary_op_nowarn)  # pylint: disable=protected-access
 def _(
     a: Union[np.ndarray, np.generic], b: Union[np.ndarray, np.generic, float], operator_fn: Callable
 ) -> Union[np.ndarray, np.generic]:
@@ -197,7 +197,7 @@ def _(
         return operator_fn(a, b)
 
 
-@_register_numpy_types(fns._binary_reverse_op_nowarn)
+@_register_numpy_types(fns._binary_reverse_op_nowarn)  # pylint: disable=protected-access
 def _(
     a: Union[np.ndarray, np.generic], b: Union[np.ndarray, np.generic, float], operator_fn: Callable
 ) -> Union[np.ndarray, np.generic]:
