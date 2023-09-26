@@ -192,7 +192,7 @@ def _get_activation_tensor_shape(
     """
     if target_point.type == TargetType.PRE_LAYER_OPERATION:
         shape = nncf_graph.get_input_edges(node)[target_point.port_id].tensor_shape
-    elif target_point.type == TargetType.POST_LAYER_OPERATION:
+    elif target_point.type in [TargetType.POST_LAYER_OPERATION, TargetType.POST_BRANCH_WITH_PARTIAL_MERGE]:
         shape = nncf_graph.get_output_edges(node)[target_point.port_id].tensor_shape
     else:
         raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
