@@ -347,7 +347,8 @@ class QuantizerSetupBase:
     def remove_partial_branch_merge_group(self, partial_branch_merge_gid: str):
         if partial_branch_merge_gid not in self.partial_branch_merge_groups:
             nncf_logger.debug(
-                f"Attempted to remove group {partial_branch_merge_gid} from branch merge map, but the group" f"is not exist - ignoring."
+                f"Attempted to remove group {partial_branch_merge_gid} from branch merge map, but the group"
+                f"is not exist - ignoring."
             )
             return
         self.partial_branch_merge_groups.pop(partial_branch_merge_gid)
