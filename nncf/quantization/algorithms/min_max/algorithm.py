@@ -877,10 +877,10 @@ class MinMaxQuantization(Algorithm):
                     )
                     return
 
-        if quantization_point is None:
-            return
+            if quantization_point is None:
+                return
 
-        quantization_point.destination_node_names = destination_node_names
-        quantization_point.insertion_point.input_port_id = None
-        quantization_point.insertion_point.target_node_name = producer_node.node_name
-        quantizer_setup.add_independent_quantization_point(quantization_point)
+            quantization_point.destination_node_names = destination_node_names
+            quantization_point.insertion_point.input_port_id = None
+            quantization_point.insertion_point.target_node_name = producer_node.node_name
+            quantizer_setup.add_independent_quantization_point(quantization_point)
