@@ -100,7 +100,7 @@ def _(a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...
 @_register_numpy_types(fns.allclose)
 def _(
     a: Union[np.ndarray, np.generic],
-    b: Union[np.ndarray, np.generic],
+    b: Union[np.ndarray, np.generic, float],
     rtol: float = 1e-05,
     atol: float = 1e-08,
     equal_nan: bool = False,
@@ -126,7 +126,7 @@ def _(a: Union[np.ndarray, np.generic]) -> bool:
 @_register_numpy_types(fns.isclose)
 def _(
     a: Union[np.ndarray, np.generic],
-    b: Union[np.ndarray, np.generic],
+    b: Union[np.ndarray, np.generic, float],
     rtol: float = 1e-05,
     atol: float = 1e-08,
     equal_nan: bool = False,
@@ -135,12 +135,12 @@ def _(
 
 
 @_register_numpy_types(fns.maximum)
-def _(x1: Union[np.ndarray, np.generic], x2: Union[np.ndarray, np.generic]) -> np.ndarray:
+def _(x1: Union[np.ndarray, np.generic], x2: Union[np.ndarray, np.generic, float]) -> np.ndarray:
     return np.maximum(x1, x2)
 
 
 @_register_numpy_types(fns.minimum)
-def _(x1: Union[np.ndarray, np.generic], x2: Union[np.ndarray, np.generic]) -> np.ndarray:
+def _(x1: Union[np.ndarray, np.generic], x2: Union[np.ndarray, np.generic, float]) -> np.ndarray:
     return np.minimum(x1, x2)
 
 
@@ -152,8 +152,8 @@ def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
 @_register_numpy_types(fns.where)
 def _(
     condition: Union[np.ndarray, np.generic],
-    x: Union[np.ndarray, np.number, float, bool],
-    y: Union[np.ndarray, float, bool],
+    x: Union[np.ndarray, np.generic, float],
+    y: Union[np.ndarray, np.generic, float],
 ) -> np.ndarray:
     return np.where(condition, x, y)
 
@@ -190,7 +190,7 @@ def _(a: Union[np.ndarray, np.generic], decimals: int = 0) -> np.ndarray:
 
 @_register_numpy_types(fns._binary_op_nowarn)
 def _(
-    a: Union[np.ndarray, np.generic], b: Union[np.ndarray, np.generic], operator_fn: Callable
+    a: Union[np.ndarray, np.generic], b: Union[np.ndarray, np.generic, float], operator_fn: Callable
 ) -> Union[np.ndarray, np.generic]:
     # Run operator with disabled warning
     with np.errstate(invalid="ignore", divide="ignore"):
@@ -199,7 +199,7 @@ def _(
 
 @_register_numpy_types(fns._binary_reverse_op_nowarn)
 def _(
-    a: Union[np.ndarray, np.generic], b: Union[np.ndarray, np.generic], operator_fn: Callable
+    a: Union[np.ndarray, np.generic], b: Union[np.ndarray, np.generic, float], operator_fn: Callable
 ) -> Union[np.ndarray, np.generic]:
     # Run operator with disabled warning
     with np.errstate(invalid="ignore", divide="ignore"):

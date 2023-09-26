@@ -64,37 +64,37 @@ class Tensor:
 
     # built-in operations
 
-    def __add__(self, other: TTensor) -> Tensor:
+    def __add__(self, other: Union[Tensor, float]) -> Tensor:
         return Tensor(self.data + unwrap_tensor_data(other))
 
-    def __radd__(self, other: TTensor) -> Tensor:
+    def __radd__(self, other: Union[Tensor, float]) -> Tensor:
         return Tensor(unwrap_tensor_data(other) + self.data)
 
-    def __sub__(self, other: TTensor) -> Tensor:
+    def __sub__(self, other: Union[Tensor, float]) -> Tensor:
         return Tensor(self.data - unwrap_tensor_data(other))
 
-    def __rsub__(self, other: TTensor) -> Tensor:
+    def __rsub__(self, other: Union[Tensor, float]) -> Tensor:
         return Tensor(unwrap_tensor_data(other) - self.data)
 
-    def __mul__(self, other: TTensor) -> Tensor:
+    def __mul__(self, other: Union[Tensor, float]) -> Tensor:
         return Tensor(self.data * unwrap_tensor_data(other))
 
-    def __rmul__(self, other: TTensor) -> Tensor:
+    def __rmul__(self, other: Union[Tensor, float]) -> Tensor:
         return Tensor(unwrap_tensor_data(other) * self.data)
 
-    def __pow__(self, other: TTensor) -> Tensor:
+    def __pow__(self, other: Union[Tensor, float]) -> Tensor:
         return Tensor(self.data ** unwrap_tensor_data(other))
 
-    def __truediv__(self, other: TTensor) -> Tensor:
+    def __truediv__(self, other: Union[Tensor, float]) -> Tensor:
         return _call_function("_binary_op_nowarn", self, other, operator.truediv)
 
-    def __rtruediv__(self, other: TTensor) -> Tensor:
+    def __rtruediv__(self, other: Union[Tensor, float]) -> Tensor:
         return _call_function("_binary_reverse_op_nowarn", self, other, operator.truediv)
 
-    def __floordiv__(self, other: TTensor) -> Tensor:
+    def __floordiv__(self, other: Union[Tensor, float]) -> Tensor:
         return _call_function("_binary_op_nowarn", self, other, operator.floordiv)
 
-    def __rfloordiv__(self, other: TTensor) -> Tensor:
+    def __rfloordiv__(self, other: Union[Tensor, float]) -> Tensor:
         return _call_function("_binary_reverse_op_nowarn", self, other, operator.floordiv)
 
     def __neg__(self) -> Tensor:
@@ -102,22 +102,22 @@ class Tensor:
 
     # Comparison operators
 
-    def __lt__(self, other: TTensor) -> Tensor:
+    def __lt__(self, other: Union[Tensor, float]) -> Tensor:
         return Tensor(self.data < unwrap_tensor_data(other))
 
-    def __le__(self, other: TTensor) -> Tensor:
+    def __le__(self, other: Union[Tensor, float]) -> Tensor:
         return Tensor(self.data <= unwrap_tensor_data(other))
 
-    def __eq__(self, other: TTensor) -> Tensor:
+    def __eq__(self, other: Union[Tensor, float]) -> Tensor:
         return Tensor(self.data == unwrap_tensor_data(other))
 
-    def __ne__(self, other: TTensor) -> Tensor:
+    def __ne__(self, other: Union[Tensor, float]) -> Tensor:
         return Tensor(self.data != unwrap_tensor_data(other))
 
-    def __gt__(self, other: TTensor) -> Tensor:
+    def __gt__(self, other: Union[Tensor, float]) -> Tensor:
         return Tensor(self.data > unwrap_tensor_data(other))
 
-    def __ge__(self, other: TTensor) -> Tensor:
+    def __ge__(self, other: Union[Tensor, float]) -> Tensor:
         return Tensor(self.data >= unwrap_tensor_data(other))
 
     # Tensor functions

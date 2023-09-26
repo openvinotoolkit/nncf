@@ -17,8 +17,6 @@ from nncf.experimental.tensor import unwrap_tensor_data
 from nncf.experimental.tensor.enums import TensorDataType
 from nncf.experimental.tensor.enums import TensorDeviceType
 
-TTensor = TypeVar("TTensor")
-
 
 def _tensor_guard(func: callable):
     """
@@ -165,7 +163,9 @@ def all(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor
 
 @functools.singledispatch
 @_tensor_guard
-def allclose(a: Tensor, b: TTensor, rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False) -> Tensor:
+def allclose(
+    a: Tensor, b: Union[Tensor, float], rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False
+) -> Tensor:
     """
     Returns True if two arrays are element-wise equal within a tolerance.
 
@@ -230,7 +230,9 @@ def isempty(a: Tensor) -> bool:
 
 @functools.singledispatch
 @_tensor_guard
-def isclose(a: Tensor, b: TTensor, rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False) -> Tensor:
+def isclose(
+    a: Tensor, b: Union[Tensor, float], rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False
+) -> Tensor:
     """
     Returns a boolean array where two arrays are element-wise equal within a tolerance.
 
@@ -256,7 +258,7 @@ def isclose(a: Tensor, b: TTensor, rtol: float = 1e-05, atol: float = 1e-08, equ
 
 @functools.singledispatch
 @_tensor_guard
-def maximum(x1: Tensor, x2: TTensor) -> Tensor:
+def maximum(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
     """
     Element-wise maximum of tensor elements.
 
@@ -269,7 +271,7 @@ def maximum(x1: Tensor, x2: TTensor) -> Tensor:
 
 @functools.singledispatch
 @_tensor_guard
-def minimum(x1: Tensor, x2: TTensor) -> Tensor:
+def minimum(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
     """
     Element-wise minimum of tensor elements.
 
@@ -294,7 +296,7 @@ def ones_like(a: Tensor) -> Tensor:
 
 @functools.singledispatch
 @_tensor_guard
-def where(condition: Tensor, x: TTensor, y: TTensor) -> Tensor:
+def where(condition: Tensor, x: Union[Tensor, float], y: Union[Tensor, float]) -> Tensor:
     """
     Return elements chosen from x or y depending on condition.
 
@@ -343,7 +345,7 @@ def stack(x: List[Tensor], axis: int = 0) -> Tensor:
 
 @functools.singledispatch
 @_tensor_guard
-def unstack(a: Tensor, axis: int = 0) -> List[TTensor]:
+def unstack(a: Tensor, axis: int = 0) -> List[Tensor]:
     """
     Unstack a Tensor into list.
 
@@ -399,7 +401,7 @@ def round(a: Tensor, decimals=0) -> Tensor:  # pylint: disable=redefined-builtin
 
 @functools.singledispatch
 @_tensor_guard
-def _binary_op_nowarn(a: Tensor, b: TTensor, operator_fn: Callable) -> Tensor:
+def _binary_op_nowarn(a: Tensor, b: Union[Tensor, float], operator_fn: Callable) -> Tensor:
     """
     Applies a binary operation with disable warnings.
 
@@ -413,7 +415,7 @@ def _binary_op_nowarn(a: Tensor, b: TTensor, operator_fn: Callable) -> Tensor:
 
 @functools.singledispatch
 @_tensor_guard
-def _binary_reverse_op_nowarn(a: Tensor, b: TTensor, operator_fn: Callable) -> Tensor:
+def _binary_reverse_op_nowarn(a: Tensor, b: Union[Tensor, float], operator_fn: Callable) -> Tensor:
     """
     Applies a binary reverse operation with disable warnings.
 

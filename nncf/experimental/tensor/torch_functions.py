@@ -96,7 +96,9 @@ def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Un
 
 
 @fns.allclose.register(torch.Tensor)
-def _(a: torch.Tensor, b: torch.Tensor, rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False) -> bool:
+def _(
+    a: torch.Tensor, b: Union[torch.Tensor, float], rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False
+) -> bool:
     if not isinstance(b, torch.Tensor):
         b = torch.tensor(b, device=a.device)
     return torch.allclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
@@ -120,21 +122,23 @@ def _(a: torch.Tensor) -> bool:
 
 
 @fns.isclose.register(torch.Tensor)
-def _(a: torch.Tensor, b: torch.Tensor, rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False):
+def _(
+    a: torch.Tensor, b: Union[torch.Tensor, float], rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False
+):
     if not isinstance(b, torch.Tensor):
         b = torch.tensor(b, device=a.device)
     return torch.isclose(a, b, atol=atol, rtol=rtol, equal_nan=equal_nan)
 
 
 @fns.maximum.register(torch.Tensor)
-def _(x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
+def _(x1: torch.Tensor, x2: Union[torch.Tensor, float]) -> torch.Tensor:
     if not isinstance(x2, torch.Tensor):
         x2 = torch.tensor(x2, device=x1.data.device)
     return torch.maximum(x1, x2)
 
 
 @fns.minimum.register(torch.Tensor)
-def _(x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
+def _(x1: torch.Tensor, x2: Union[torch.Tensor, float]) -> torch.Tensor:
     if not isinstance(x2, torch.Tensor):
         x2 = torch.tensor(x2, device=x1.data.device)
     return torch.minimum(x1, x2)
@@ -185,10 +189,10 @@ def _(a: torch.Tensor, decimals=0) -> torch.Tensor:
 
 
 @fns._binary_op_nowarn.register(torch.Tensor)
-def _(a: torch.Tensor, b: torch.Tensor, operator_fn: Callable) -> torch.Tensor:
+def _(a: torch.Tensor, b: Union[torch.Tensor, float], operator_fn: Callable) -> torch.Tensor:
     return operator_fn(a, b)
 
 
 @fns._binary_reverse_op_nowarn.register(torch.Tensor)
-def _(a: torch.Tensor, b: torch.Tensor, operator_fn: Callable) -> torch.Tensor:
+def _(a: torch.Tensor, b: Union[torch.Tensor, float], operator_fn: Callable) -> torch.Tensor:
     return operator_fn(b, a)
