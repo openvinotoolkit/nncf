@@ -327,9 +327,9 @@ def zeros_like(a: Tensor) -> Tensor:
 @functools.singledispatch
 def stack(x: List[Tensor], axis: int = 0) -> Tensor:
     """
-    Stacks a list or deque of Tensors rank-R tensors into one Tensor rank-(R+1) tensor.
+    Stacks a list of Tensors rank-R tensors into one Tensor rank-(R+1) tensor.
 
-    :param x: List or deque of Tensors.
+    :param x: List of Tensors.
     :param axis: The axis to stack along.
     :return: Stacked Tensor.
     """
