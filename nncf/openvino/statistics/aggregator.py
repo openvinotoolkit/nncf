@@ -40,7 +40,7 @@ class OVStatisticsAggregator(StatisticsAggregator):
             target_point = statistic_point.target_point
             node_name = target_point.target_node_name
             port_id = target_point.port_id
-            if target_point.type == TargetType.POST_LAYER_OPERATION:
+            if target_point.type in [TargetType.POST_LAYER_OPERATION, TargetType.POST_BRANCH_WITH_PARTIAL_MERGE]:
                 stat_node_name = node_name
             elif target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
                 node = self._name_to_node_mapping[node_name]
