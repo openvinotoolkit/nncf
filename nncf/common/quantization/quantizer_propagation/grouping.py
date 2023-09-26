@@ -11,12 +11,14 @@
 
 from abc import abstractmethod
 from copy import copy
-from typing import Any, Dict, Optional, Set
+from typing import Any, Dict, Generic, Optional, Set, TypeVar
 
 from nncf.common.quantization.quantizer_propagation.structs import PropagatingQuantizer
 
+GroupId = TypeVar("GroupId")
 
-class PropagatingQuantizerGroupManager:
+
+class PropagatingQuantizerGroupManager(Generic[GroupId]):
     """
     Keeps track of the groups of quantizers that have to processed together in the final
     quantized model.
@@ -26,15 +28,16 @@ class PropagatingQuantizerGroupManager:
         self._group_vs_prop_quants_dict = {}  # type: Dict[Any, Set[PropagatingQuantizer]]
 
     @abstractmethod
-    def register_group(self, prop_quants: Set[PropagatingQuantizer], **kwargs) -> Any:
+    def register_group(self, prop_quants: Set[PropagatingQuantizer], group_id: Optional[GroupId] = None) -> GroupId:
         """
         Registers a set of propagating quantizers as a new group.
 
         :param prop_quants: A set of propagating quantizers to be registered.
+        :param group_id: Optional GroupId for the new group.
         :return: The ID of the newly created group.
         """
 
-    def add_to_group(self, target_gid: Any, prop_quant: PropagatingQuantizer):
+    def add_to_group(self, target_gid: GroupId, prop_quant: PropagatingQuantizer):
         """
         Adds a propagating quantizer to an already existing group.
 
@@ -50,7 +53,7 @@ class PropagatingQuantizerGroupManager:
                 )
         self._group_vs_prop_quants_dict[target_gid].add(prop_quant)
 
-    def remove_from_group(self, target_gid: Any, prop_quant: PropagatingQuantizer):
+    def remove_from_group(self, target_gid: GroupId, prop_quant: PropagatingQuantizer):
         """
         Removes a propagating quantizer from a group.
 
@@ -59,13 +62,13 @@ class PropagatingQuantizerGroupManager:
         """
         self._group_vs_prop_quants_dict[target_gid].remove(prop_quant)
 
-    def get_group_vs_prop_quants_dict(self) -> Dict[Any, Set[PropagatingQuantizer]]:
+    def get_group_vs_prop_quants_dict(self) -> Dict[GroupId, Set[PropagatingQuantizer]]:
         """
         :return: A dictionary of groups vs propagating quantizers currently associated with the corresponding group.
         """
         return copy(self._group_vs_prop_quants_dict)
 
-    def get_group_id_by_propagating_quantizer_id(self, requested_pqid: int) -> Optional[Any]:
+    def get_group_id_by_propagating_quantizer_id(self, requested_pqid: int) -> Optional[GroupId]:
         """
         If a propagating quantizer with a given ID is registered within a group,
         then this function will return the corresponding group ID; otherwise, None is returned.
@@ -79,7 +82,7 @@ class PropagatingQuantizerGroupManager:
                     return gid
         return None
 
-    def merge_groups(self, merge_to_gid: Any, merge_from_gid: Any):
+    def merge_groups(self, merge_to_gid: GroupId, merge_from_gid: GroupId):
         """
         Merges two groups into a single one. The `merge_to_gid` group retains its group ID.
 
@@ -92,29 +95,32 @@ class PropagatingQuantizerGroupManager:
         self._group_vs_prop_quants_dict.pop(merge_from_gid)
 
 
-class UnifiedScalePropagatingQuantizerGroupManager(PropagatingQuantizerGroupManager):
+class UnifiedScaleGroupManager(PropagatingQuantizerGroupManager):
     def __init__(self):
         self._next_gid = 0
         super().__init__()
 
-    def _get_next_gid(self) -> int:
+    def _get_next_gid(self) -> GroupId:
         retval = self._next_gid
         self._next_gid += 1
         return retval
 
-    def register_group(self, prop_quants: Set[PropagatingQuantizer]) -> int:
+    def register_group(self, prop_quants: Set[PropagatingQuantizer], group_id: Optional[GroupId] = None) -> GroupId:
         for pq in prop_quants:
             for gid, group in self._group_vs_prop_quants_dict.items():
                 assert pq not in group, "Propagating quantizer #{} is already registered in a group {}!".format(
                     pq.id, gid
                 )
-        gid = self._get_next_gid()
+        gid = self._get_next_gid() if group_id is None else group_id
         self._group_vs_prop_quants_dict[gid] = prop_quants
         return gid
 
 
-class BranchGroupPropagatingQuantizerGroupManager(PropagatingQuantizerGroupManager):
-    def register_group(self, prop_quants: Set[PropagatingQuantizer], group_id: str) -> str:
+class PartialBranchMergeGroupManager(PropagatingQuantizerGroupManager):
+    def register_group(self, prop_quants: Set[PropagatingQuantizer], group_id: Optional[GroupId] = None) -> GroupId:
+        if group_id is None:
+            raise RuntimeError("Unable to register group without group_id!")
+
         for pq in prop_quants:
             for gid, group in self._group_vs_prop_quants_dict.items():
                 assert pq not in group, "Propagating quantizer #{} is already registered in a group {}!".format(

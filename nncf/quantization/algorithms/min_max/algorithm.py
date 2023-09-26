@@ -515,7 +515,7 @@ class MinMaxQuantization(Algorithm):
         quantizer_setup = self._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)
         self._apply_model_type_pass(self._model_type, quantizer_setup, nncf_graph)
         self._apply_device_pass(self._target_device, quantizer_setup, inference_nncf_graph)
-        self._apply_branch_merge_pass(quantizer_setup, inference_nncf_graph)
+        self._apply_partial_branch_merge_pass(quantizer_setup, inference_nncf_graph)
         self._unified_scale_groups = self._collect_unified_groups(quantizer_setup, nncf_graph)
         quantization_points = list(quantizer_setup.quantization_points.values())
         quantization_points = self._topological_sort_quantization_points(quantization_points, nncf_graph)
@@ -848,14 +848,16 @@ class MinMaxQuantization(Algorithm):
 
         return quantizer_setup
 
-    def _apply_branch_merge_pass(self, quantizer_setup: SingleConfigQuantizerSetup, nncf_graph: NNCFGraph) -> None:
+    def _apply_partial_branch_merge_pass(
+        self, quantizer_setup: SingleConfigQuantizerSetup, nncf_graph: NNCFGraph
+    ) -> None:
         if self._backend_entity.disable_branches_merge:
             return
 
         destination_node_names = []
         main_node = None
         quantization_point = None
-        for quantizer_ids in quantizer_setup.branch_merge_groups.values():
+        for quantizer_ids in quantizer_setup.partial_branch_merge_groups.values():
             if len(quantizer_ids) < 2:
                 return
             for quantizer_id in quantizer_ids:

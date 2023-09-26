@@ -237,10 +237,9 @@ class QuantizerSetupBase:
     def __init__(self):
         self.quantization_points = {}  # type: Dict[QuantizationPointId, QuantizationPointBase]
         self.unified_scale_groups = {}  # type: Dict[int, Set[QuantizationPointId]]
-        self.branch_merge_groups = {}  # type: Dict[int, Set[QuantizationPointId]]
+        self.partial_branch_merge_groups = {}  # type: Dict[str, Set[QuantizationPointId]]
         self.shared_input_operation_set_groups = {}  # type: Dict[int, Set[QuantizationPointId]]
         self._next_unified_scale_gid = 0
-        self._next_branch_merge_gid = 0
         self._next_shared_inputs_gid = 0
 
     def add_independent_quantization_point(self, qp: QuantizationPointBase):
@@ -260,15 +259,12 @@ class QuantizerSetupBase:
         self._next_unified_scale_gid += 1
         return gid
 
-    def register_branch_merge_group(self, qp_group: List[QuantizationPointId]) -> int:
+    def register_partial_branch_merge_group(self, qp_group: List[QuantizationPointId], partial_branch_merge_gid: str):
         for qp_id in qp_group:
-            gid = self.get_branch_merge_group_id(qp_id) is not None
+            gid = self.get_partial_branch_merge_group_id(qp_id) is not None
             if gid:
                 raise RuntimeError("QP id {} is already in unified branch merge group {}".format(qp_id, gid))
-        gid = self._next_branch_merge_gid
-        self.branch_merge_groups[self._next_branch_merge_gid] = set(qp_group)
-        self._next_branch_merge_gid += 1
-        return gid
+        self.partial_branch_merge_groups[partial_branch_merge_gid] = set(qp_group)
 
     def register_shared_inputs_group(self, qp_group: List[QuantizationPointId]) -> int:
         for qp_id in qp_group:
@@ -311,9 +307,9 @@ class QuantizerSetupBase:
                 return gid
         return None
 
-    def get_branch_merge_group_id(self, qp_id: QuantizationPointId) -> Optional[int]:
-        for gid, branch_merge_group in self.branch_merge_groups.items():
-            if qp_id in branch_merge_group:
+    def get_partial_branch_merge_group_id(self, qp_id: QuantizationPointId) -> Optional[str]:
+        for gid, partial_branch_merge_group in self.partial_branch_merge_groups.items():
+            if qp_id in partial_branch_merge_group:
                 return gid
         return None
 
@@ -348,13 +344,13 @@ class QuantizerSetupBase:
             nncf_logger.debug(f"Removed last entry from a unified scale group {gid} - removing group itself")
             self.unified_scale_groups.pop(gid)
 
-    def remove_branch_merge_group(self, gid: int):
-        if gid not in self.branch_merge_groups:
+    def remove_partial_branch_merge_group(self, partial_branch_merge_gid: str):
+        if partial_branch_merge_gid not in self.partial_branch_merge_groups:
             nncf_logger.debug(
-                f"Attempted to remove group {gid} from branch merge map, but the group" f"is not exist - ignoring."
+                f"Attempted to remove group {partial_branch_merge_gid} from branch merge map, but the group" f"is not exist - ignoring."
             )
             return
-        self.branch_merge_groups.pop(gid)
+        self.partial_branch_merge_groups.pop(partial_branch_merge_gid)
 
     def equivalent_to(self, other: "QuantizerSetupBase") -> bool:
         this_qp_id_to_other_qp_id_dict = {}  # type: Dict[QuantizationPointId, QuantizationPointId]
@@ -532,7 +528,7 @@ class MultiConfigQuantizerSetup(QuantizerSetupBase):
                     )
                 retval.remove_unified_scale_from_point(per_channel_qid)
 
-        retval = self.filter_branching_quantizers(retval)
+        self.process_partial_branching_quantizers(retval)
         return retval
 
     def select_first_qconfig_for_each_point(self) -> SingleConfigQuantizerSetup:
@@ -541,23 +537,23 @@ class MultiConfigQuantizerSetup(QuantizerSetupBase):
             qp_id_vs_qconfig_dict[qp_id] = qp.possible_qconfigs[0]
         return self.select_qconfigs(qp_id_vs_qconfig_dict)
 
-    def filter_branching_quantizers(self, retval: SingleConfigQuantizerSetup) -> SingleConfigQuantizerSetup:
+    def process_partial_branching_quantizers(self, retval: SingleConfigQuantizerSetup):
         """
-        Filters brancging quantizert groups based on the quantizer configuration.
+        Processes branching quantizer groups based on the quantizer's configuration.
+        If the quantizers in one group have different configurations, this group will be removed.
+        Otherwise, the group will be registered in the SingleConfigQuantizerSetup.
 
-        :param retval: SingleConfigQuantizerSetup to filter.
-        :return: SingleConfigQuantizerSetup instance.
+        :param retval: SingleConfigQuantizerSetup with the groups to process.
         """
-        for bm_gid, bm_group in self.branch_merge_groups.items():
+        for bm_gid, bm_group in self.partial_branch_merge_groups.items():
             base_config = None
             for bm_qid in bm_group:
                 if base_config is None:
                     base_config = retval.quantization_points[bm_qid].qconfig
                     continue
                 if retval.quantization_points[bm_qid].qconfig != base_config:
-                    retval.remove_branch_merge_group(bm_gid)
-            retval.register_branch_merge_group(bm_group)
-        return retval
+                    retval.remove_partial_branch_merge_group(bm_gid)
+            retval.register_partial_branch_merge_group(bm_group)
 
     @classmethod
     def from_single_config_setup(cls, single_conf_setup: SingleConfigQuantizerSetup) -> "MultiConfigQuantizerSetup":

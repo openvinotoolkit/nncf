@@ -29,8 +29,8 @@ from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
-from nncf.common.quantization.quantizer_propagation.grouping import BranchGroupPropagatingQuantizerGroupManager
-from nncf.common.quantization.quantizer_propagation.grouping import UnifiedScalePropagatingQuantizerGroupManager
+from nncf.common.quantization.quantizer_propagation.grouping import PartialBranchMergeGroupManager
+from nncf.common.quantization.quantizer_propagation.grouping import UnifiedScaleGroupManager
 from nncf.common.quantization.quantizer_propagation.structs import IgnoreReason
 from nncf.common.quantization.quantizer_propagation.structs import PropagatingQuantizer
 from nncf.common.quantization.quantizer_propagation.structs import PropagationPath
@@ -88,8 +88,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         self._target_scopes = deepcopy(target_scopes)
         self.ignored_node_keys = {}  # type: Dict[str, IgnoreReason]
 
-        self._unified_scale_group_manager = UnifiedScalePropagatingQuantizerGroupManager()
-        self._branch_merge_group_manager = BranchGroupPropagatingQuantizerGroupManager()
+        self._unified_scale_group_manager = UnifiedScaleGroupManager()
+        self._partial_branch_merge_group_manager = PartialBranchMergeGroupManager()
         self._input_node_keys_vs_nncf_nodes = {}  # type: Dict[str, NNCFNode]
         self._output_node_keys_vs_nncf_nodes = {}  # type: Dict[str, NNCFNode]
         self._pqs_after_weight_dependent_output_quantized_nodes = {}  # type: Dict[PropagatingQuantizer, str]
@@ -1337,11 +1337,11 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 [pqid_vs_qpid[pq.id] for pq in pq_set], [pq.unified_scale_type for pq in pq_set]
             )
 
-        pq_sets_grouped_by_branch_merge = list(
-            self._branch_merge_group_manager.get_group_vs_prop_quants_dict().values()
+        pq_sets_grouped_by_partial_branch_merge = list(
+            self._partial_branch_merge_group_manager.get_group_vs_prop_quants_dict().values()
         )
-        for pq_set in pq_sets_grouped_by_branch_merge:
-            setup.register_branch_merge_group([pd.id for pd in pq_set])
+        for pq_set in pq_sets_grouped_by_partial_branch_merge:
+            setup.register_partial_branch_merge_group([pd.id for pd in pq_set])
 
         setup = self._handle_output_quantizers_for_weights_as_outputs_ops(setup, pqid_vs_qpid, wao_op_node_key_vs_wq_id)
 
@@ -1526,7 +1526,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         :param propagation_quantizer: PropagatingQuantizer instance.
         :param group_id: Group ID.
         """
-        if group_id in self._branch_merge_group_manager.get_group_vs_prop_quants_dict().keys():
-            self._branch_merge_group_manager.add_to_group(group_id, propagation_quantizer)
+        if group_id in self._partial_branch_merge_group_manager.get_group_vs_prop_quants_dict().keys():
+            self._partial_branch_merge_group_manager.add_to_group(group_id, propagation_quantizer)
         else:
-            self._branch_merge_group_manager.register_group(set([propagation_quantizer]), group_id)
+            self._partial_branch_merge_group_manager.register_group(set([propagation_quantizer]), group_id)
