@@ -6,7 +6,7 @@ making them more portable and reusable.
 
 ## Usage
 
-The main idea is common algorithms should use wrapped tensors and provide to backend-specific function unwrapped tensor.
+Common algorithms should use wrapped tensors and provide the unwrapped tensor to the backend-specific function.
 
 ### Initialization Tensor
 
@@ -31,6 +31,8 @@ tensor_a = Tensor(np.array([1,2]))
 tenor_b = Tensor(np.array([1,2]))
 tensor_a + tenor_b  # Tensor(array([2, 4]))
 ```
+
+**NOTE** Division operations for the numpy backend are performed with warnings disabled for the same for all backends.
 
 ### Comparison operators
 
@@ -125,7 +127,7 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
     - [numpy_function.py](numpy_function.py)
 
         ```python
-        @registry_numpy_types(fns.foo)
+        @_register_numpy_types(fns.foo)
         def _(a: TType, arg1: Type) -> np.ndarray:
             return np.foo(a, arg1)
         ```

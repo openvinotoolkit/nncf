@@ -28,7 +28,7 @@ DTYPE_MAP = {
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
 
 
-def registry_numpy_types(singledispatch_fn):
+def _register_numpy_types(singledispatch_fn):
     """
     Decorator to register function to singledispatch for numpy classes.
 
@@ -43,86 +43,89 @@ def registry_numpy_types(singledispatch_fn):
     return inner
 
 
-@registry_numpy_types(fns.device)
-def _(a: Union[np.ndarray, np.number]) -> TensorDeviceType:
+NUMPY_TYPES = Union[np.ndarray, np.generic]
+
+
+@_register_numpy_types(fns.device)
+def _(a: NUMPY_TYPES) -> TensorDeviceType:
     return TensorDeviceType.CPU
 
 
-@registry_numpy_types(fns.squeeze)
-def _(a: Union[np.ndarray, np.number], axis: Optional[Union[int, Tuple[int]]] = None) -> np.ndarray:
+@_register_numpy_types(fns.squeeze)
+def _(a: NUMPY_TYPES, axis: Optional[Union[int, Tuple[int]]] = None) -> NUMPY_TYPES:
     return np.squeeze(a, axis=axis)
 
 
-@registry_numpy_types(fns.flatten)
-def _(a: Union[np.ndarray, np.number]) -> np.ndarray:
+@_register_numpy_types(fns.flatten)
+def _(a: NUMPY_TYPES) -> np.ndarray:
     return a.flatten()
 
 
-@registry_numpy_types(fns.max)
-def _(a: Union[np.ndarray, np.number], axis: Optional[Union[int, Tuple[int]]] = None) -> np.ndarray:
+@_register_numpy_types(fns.max)
+def _(a: NUMPY_TYPES, axis: Optional[Union[int, Tuple[int]]] = None) -> np.ndarray:
     return np.max(a, axis=axis)
 
 
-@registry_numpy_types(fns.min)
-def _(a: Union[np.ndarray, np.number], axis: Optional[Union[int, Tuple[int]]] = None) -> np.ndarray:
+@_register_numpy_types(fns.min)
+def _(a: NUMPY_TYPES, axis: Optional[Union[int, Tuple[int]]] = None) -> NUMPY_TYPES:
     return np.min(a, axis=axis)
 
 
-@registry_numpy_types(fns.abs)
-def _(a: Union[np.ndarray, np.number]) -> np.ndarray:
+@_register_numpy_types(fns.abs)
+def _(a: NUMPY_TYPES) -> NUMPY_TYPES:
     return np.absolute(a)
 
 
-@registry_numpy_types(fns.astype)
-def _(a: Union[np.ndarray, np.number], dtype: TensorDataType) -> np.ndarray:
+@_register_numpy_types(fns.astype)
+def _(a: NUMPY_TYPES, dtype: TensorDataType) -> NUMPY_TYPES:
     return a.astype(DTYPE_MAP[dtype])
 
 
-@registry_numpy_types(fns.dtype)
-def _(a: Union[np.ndarray, np.number]) -> TensorDataType:
+@_register_numpy_types(fns.dtype)
+def _(a: NUMPY_TYPES) -> TensorDataType:
     return DTYPE_MAP_REV[np.dtype(a.dtype)]
 
 
-@registry_numpy_types(fns.reshape)
-def _(a: Union[np.ndarray, np.number], shape: Union[int, Tuple[int]]) -> np.ndarray:
+@_register_numpy_types(fns.reshape)
+def _(a: NUMPY_TYPES, shape: Union[int, Tuple[int]]) -> np.ndarray:
     return a.reshape(shape)
 
 
-@registry_numpy_types(fns.all)
-def _(a: Union[np.ndarray, np.number], axis: Optional[Union[int, Tuple[int]]] = None) -> Union[np.ndarray, bool]:
+@_register_numpy_types(fns.all)
+def _(a: NUMPY_TYPES, axis: Optional[Union[int, Tuple[int]]] = None) -> Union[np.ndarray, bool]:
     return np.all(a, axis=axis)
 
 
-@registry_numpy_types(fns.allclose)
+@_register_numpy_types(fns.allclose)
 def _(
-    a: Union[np.ndarray, np.number],
-    b: Union[np.ndarray, np.number],
+    a: NUMPY_TYPES,
+    b: NUMPY_TYPES,
     rtol: float = 1e-05,
     atol: float = 1e-08,
     equal_nan: bool = False,
-) -> bool:
+) -> np.ndarray:
     return np.allclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 
-@registry_numpy_types(fns.any)
-def _(a: Union[np.ndarray, np.number], axis: Optional[Union[int, Tuple[int]]] = None) -> Union[np.ndarray, bool]:
+@_register_numpy_types(fns.any)
+def _(a: NUMPY_TYPES, axis: Optional[Union[int, Tuple[int]]] = None) -> Union[np.ndarray, bool]:
     return np.any(a, axis=axis)
 
 
-@registry_numpy_types(fns.count_nonzero)
-def _(a: Union[np.ndarray, np.number], axis: Optional[Union[int, Tuple[int]]] = None) -> np.ndarray:
+@_register_numpy_types(fns.count_nonzero)
+def _(a: NUMPY_TYPES, axis: Optional[Union[int, Tuple[int]]] = None) -> np.ndarray:
     return np.array(np.count_nonzero(a, axis=axis))
 
 
-@registry_numpy_types(fns.isempty)
-def _(a: Union[np.ndarray, np.number]) -> bool:
+@_register_numpy_types(fns.isempty)
+def _(a: NUMPY_TYPES) -> bool:
     return a.size == 0
 
 
-@registry_numpy_types(fns.isclose)
+@_register_numpy_types(fns.isclose)
 def _(
-    a: Union[np.ndarray, np.number],
-    b: np.ndarray,
+    a: NUMPY_TYPES,
+    b: NUMPY_TYPES,
     rtol: float = 1e-05,
     atol: float = 1e-08,
     equal_nan: bool = False,
@@ -130,73 +133,69 @@ def _(
     return np.isclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 
-@registry_numpy_types(fns.maximum)
-def _(x1: Union[np.ndarray, np.number], x2: np.ndarray) -> np.ndarray:
+@_register_numpy_types(fns.maximum)
+def _(x1: NUMPY_TYPES, x2: NUMPY_TYPES) -> np.ndarray:
     return np.maximum(x1, x2)
 
 
-@registry_numpy_types(fns.minimum)
-def _(x1: Union[np.ndarray, np.number], x2: np.ndarray) -> np.ndarray:
+@_register_numpy_types(fns.minimum)
+def _(x1: NUMPY_TYPES, x2: NUMPY_TYPES) -> np.ndarray:
     return np.minimum(x1, x2)
 
 
-@registry_numpy_types(fns.ones_like)
-def _(a: Union[np.ndarray, np.number]) -> np.ndarray:
+@_register_numpy_types(fns.ones_like)
+def _(a: NUMPY_TYPES) -> np.ndarray:
     return np.ones_like(a)
 
 
-@registry_numpy_types(fns.where)
+@_register_numpy_types(fns.where)
 def _(
-    condition: Union[np.ndarray, np.number],
+    condition: NUMPY_TYPES,
     x: Union[np.ndarray, np.number, float, bool],
     y: Union[np.ndarray, float, bool],
 ) -> np.ndarray:
     return np.where(condition, x, y)
 
 
-@registry_numpy_types(fns.zeros_like)
-def _(a: Union[np.ndarray, np.number]) -> np.ndarray:
+@_register_numpy_types(fns.zeros_like)
+def _(a: NUMPY_TYPES) -> np.ndarray:
     return np.zeros_like(a)
 
 
-@registry_numpy_types(fns.stack)
-def _(x: Union[np.ndarray, np.number], axis: int = 0) -> List[np.ndarray]:
+@_register_numpy_types(fns.stack)
+def _(x: NUMPY_TYPES, axis: int = 0) -> List[np.ndarray]:
     return np.stack(x, axis=axis)
 
 
-@registry_numpy_types(fns.unstack)
-def _(x: Union[np.ndarray, np.number], axis: int = 0) -> List[np.ndarray]:
+@_register_numpy_types(fns.unstack)
+def _(x: NUMPY_TYPES, axis: int = 0) -> List[np.ndarray]:
     return [np.squeeze(e, axis) for e in np.split(x, x.shape[axis], axis=axis)]
 
 
-@registry_numpy_types(fns.moveaxis)
+@_register_numpy_types(fns.moveaxis)
 def _(a: np.ndarray, source: Union[int, List[int]], destination: Union[int, List[int]]) -> np.ndarray:
     return np.moveaxis(a, source, destination)
 
 
-@registry_numpy_types(fns.mean)
-def _(a: Union[np.ndarray, np.number], axis: Union[int, List[int]] = None, keepdims: bool = False) -> np.ndarray:
+@_register_numpy_types(fns.mean)
+def _(a: NUMPY_TYPES, axis: Union[int, List[int]] = None, keepdims: bool = False) -> np.ndarray:
     return np.mean(a, axis=axis, keepdims=keepdims)
 
 
-@registry_numpy_types(fns.round)
-def _(a: Union[np.ndarray, np.number], decimals: int = 0) -> np.ndarray:
+@_register_numpy_types(fns.round)
+def _(a: NUMPY_TYPES, decimals: int = 0) -> np.ndarray:
     return np.round(a, decimals=decimals)
 
 
-@registry_numpy_types(fns.binary_operator)
-def _(
-    a: Union[np.ndarray, np.number], b: Union[np.ndarray, np.number], operator_fn: Callable
-) -> Union[np.ndarray, np.number]:
+@_register_numpy_types(fns.binary_op_nowarn)
+def _(a: NUMPY_TYPES, b: NUMPY_TYPES, operator_fn: Callable) -> NUMPY_TYPES:
     # Run operator with disabled warning
     with np.errstate(invalid="ignore", divide="ignore"):
         return operator_fn(a, b)
 
 
-@registry_numpy_types(fns.binary_reverse_operator)
-def _(
-    a: Union[np.ndarray, np.number], b: Union[np.ndarray, np.number], operator_fn: Callable
-) -> Union[np.ndarray, np.number]:
+@_register_numpy_types(fns.binary_reverse_op_nowarn)
+def _(a: NUMPY_TYPES, b: NUMPY_TYPES, operator_fn: Callable) -> NUMPY_TYPES:
     # Run operator with disabled warning
     with np.errstate(invalid="ignore", divide="ignore"):
         return operator_fn(b, a)

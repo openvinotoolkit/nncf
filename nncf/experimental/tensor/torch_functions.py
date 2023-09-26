@@ -181,11 +181,11 @@ def _(a: torch.Tensor, decimals=0) -> torch.Tensor:
     return torch.round(a, decimals=decimals)
 
 
-@fns.binary_operator.register(torch.Tensor)
+@fns.binary_op_nowarn.register(torch.Tensor)
 def _(a: torch.Tensor, b: torch.Tensor, operator_fn: Callable) -> torch.Tensor:
     return operator_fn(a, b)
 
 
-@fns.binary_reverse_operator.register(torch.Tensor)
+@fns.binary_reverse_op_nowarn.register(torch.Tensor)
 def _(a: torch.Tensor, b: torch.Tensor, operator_fn: Callable) -> torch.Tensor:
     return operator_fn(b, a)

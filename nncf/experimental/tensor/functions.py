@@ -343,7 +343,7 @@ def stack(x: List[TTensor], axis: int = 0) -> TTensor:
 
 @functools.singledispatch
 @_tensor_guard
-def unstack(a: TTensor, axis: int = 0) -> List[Tensor]:
+def unstack(a: TTensor, axis: int = 0) -> List[TTensor]:
     """
     Unstack a Tensor into list.
 
@@ -399,7 +399,7 @@ def round(a: TTensor, decimals=0) -> TTensor:  # pylint: disable=redefined-built
 
 @functools.singledispatch
 @_tensor_guard
-def binary_operator(a: TTensor, b: TTensor, operator_fn: Callable) -> TTensor:
+def binary_op_nowarn(a: TTensor, b: TTensor, operator_fn: Callable) -> TTensor:
     """
     Applies a binary operation to two tensors with disable warnings.
 
@@ -408,12 +408,12 @@ def binary_operator(a: TTensor, b: TTensor, operator_fn: Callable) -> TTensor:
     :param operator_fn: The binary operation function.
     :return: The result of the binary operation.
     """
-    return Tensor(binary_operator(a.data, unwrap_tensor_data(b), operator_fn))
+    return Tensor(binary_op_nowarn(a.data, unwrap_tensor_data(b), operator_fn))
 
 
 @functools.singledispatch
 @_tensor_guard
-def binary_reverse_operator(a: TTensor, b: TTensor, operator_fn: Callable) -> TTensor:
+def binary_reverse_op_nowarn(a: TTensor, b: TTensor, operator_fn: Callable) -> TTensor:
     """
     Applies a binary reverse operation to two tensors with disable warnings.
 
@@ -422,7 +422,7 @@ def binary_reverse_operator(a: TTensor, b: TTensor, operator_fn: Callable) -> TT
     :param operator_fn: The binary operation function.
     :return: The result of the binary operation.
     """
-    return Tensor(binary_reverse_operator(a.data, unwrap_tensor_data(b), operator_fn))
+    return Tensor(binary_reverse_op_nowarn(a.data, unwrap_tensor_data(b), operator_fn))
 
 
 def _initialize_backends():

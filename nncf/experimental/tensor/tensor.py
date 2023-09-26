@@ -86,16 +86,16 @@ class Tensor:
         return Tensor(self.data ** unwrap_tensor_data(other))
 
     def __truediv__(self, other: TTensor) -> "Tensor":
-        return _call_function("binary_operator", self, other, operator.truediv)
+        return _call_function("_binary_op_nowarn", self, other, operator.truediv)
 
     def __rtruediv__(self, other: TTensor) -> "Tensor":
-        return _call_function("binary_reverse_operator", self, other, operator.truediv)
+        return _call_function("_binary_reverse_op_nowarn", self, other, operator.truediv)
 
     def __floordiv__(self, other: TTensor) -> "Tensor":
-        return _call_function("binary_operator", self, other, operator.floordiv)
+        return _call_function("_binary_op_nowarn", self, other, operator.floordiv)
 
     def __rfloordiv__(self, other: TTensor) -> "Tensor":
-        return _call_function("binary_reverse_operator", self, other, operator.floordiv)
+        return _call_function("_binary_reverse_op_nowarn", self, other, operator.floordiv)
 
     def __neg__(self) -> "Tensor":
         return Tensor(-self.data)
