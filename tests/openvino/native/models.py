@@ -650,6 +650,19 @@ class ZeroRankEltwiseModel(OVReferenceModel):
         return model
 
 
+class ParallelEdgesModel(OVReferenceModel):
+    def _create_ov_model(self) -> ov.Model:
+        input_shape = [1, 3, 3]
+
+        input_1 = opset.parameter(input_shape, name="Input")
+        mm = opset.matmul(input_1, input_1, False, False, name="Mm")
+        add = opset.add(input_1, np.array(1.0, dtype=np.float32), name="Add")
+        result_0 = opset.result(mm, name="Result_mm")
+        result_1 = opset.result(add, name="Result_add")
+        model = ov.Model([result_0, result_1], [input_1])
+        return model
+
+
 @SYNTHETIC_MODELS.register()
 class UnifiedEmbeddingModel(OVReferenceModel):
     def _create_ov_model(self):
