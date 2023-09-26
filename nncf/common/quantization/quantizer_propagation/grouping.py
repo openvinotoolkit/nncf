@@ -25,7 +25,7 @@ class PropagatingQuantizerGroupManager(Generic[GroupId]):
     """
 
     def __init__(self):
-        self._group_vs_prop_quants_dict = {}  # type: Dict[Any, Set[PropagatingQuantizer]]
+        self._group_vs_prop_quants_dict = {}  # type: Dict[GroupId, Set[PropagatingQuantizer]]
 
     @abstractmethod
     def register_group(self, prop_quants: Set[PropagatingQuantizer], group_id: Optional[GroupId] = None) -> GroupId:
