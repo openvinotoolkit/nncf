@@ -32,7 +32,7 @@ class Tensor:
         return self._data
 
     @property
-    def shape(self) -> List[int]:
+    def shape(self) -> Tuple[int, ...]:
         return tuple(self.data.shape)
 
     @property
@@ -86,16 +86,16 @@ class Tensor:
         return Tensor(self.data ** unwrap_tensor_data(other))
 
     def __truediv__(self, other: TTensor) -> Tensor:
-        return _call_function("binary_op_nowarn", self, other, operator.truediv)
+        return _call_function("_binary_op_nowarn", self, other, operator.truediv)
 
     def __rtruediv__(self, other: TTensor) -> Tensor:
-        return _call_function("binary_reverse_op_nowarn", self, other, operator.truediv)
+        return _call_function("_binary_reverse_op_nowarn", self, other, operator.truediv)
 
     def __floordiv__(self, other: TTensor) -> Tensor:
-        return _call_function("binary_op_nowarn", self, other, operator.floordiv)
+        return _call_function("_binary_op_nowarn", self, other, operator.floordiv)
 
     def __rfloordiv__(self, other: TTensor) -> Tensor:
-        return _call_function("binary_reverse_op_nowarn", self, other, operator.floordiv)
+        return _call_function("_binary_reverse_op_nowarn", self, other, operator.floordiv)
 
     def __neg__(self) -> Tensor:
         return Tensor(-self.data)
@@ -122,7 +122,7 @@ class Tensor:
 
     # Tensor functions
 
-    def squeeze(self, axis: Optional[Union[int, Tuple[int]]] = None) -> Tensor:
+    def squeeze(self, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:
         return _call_function("squeeze", self, axis)
 
     def flatten(self) -> Tensor:
@@ -143,7 +143,7 @@ class Tensor:
     def astype(self, dtype: TensorDataType):
         return _call_function("astype", self, dtype)
 
-    def reshape(self, shape: List) -> Tensor:
+    def reshape(self, shape: Tuple[int, ...]) -> Tensor:
         return _call_function("reshape", self, shape)
 
 

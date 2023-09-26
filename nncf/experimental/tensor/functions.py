@@ -48,7 +48,7 @@ def device(a: Tensor) -> TensorDeviceType:
 
 @functools.singledispatch
 @_tensor_guard
-def squeeze(a: Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Tensor:
+def squeeze(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:
     """
     Remove axes of length one from a.
 
@@ -75,7 +75,7 @@ def flatten(a: Tensor) -> Tensor:
 
 @functools.singledispatch
 @_tensor_guard
-def max(a: Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
+def max(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
     """
     Return the maximum of an array or maximum along an axis.
 
@@ -88,7 +88,7 @@ def max(a: Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Tensor:  # 
 
 @functools.singledispatch
 @_tensor_guard
-def min(a: Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
+def min(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
     """
     Return the minimum of an array or minimum along an axis.
 
@@ -139,7 +139,7 @@ def dtype(a: Tensor) -> TensorDataType:
 
 @functools.singledispatch
 @_tensor_guard
-def reshape(a: Tensor, shape: List[int]) -> Tensor:
+def reshape(a: Tensor, shape: Tuple[int, ...]) -> Tensor:
     """
     Gives a new shape to a tensor without changing its data.
 
@@ -152,7 +152,7 @@ def reshape(a: Tensor, shape: List[int]) -> Tensor:
 
 @functools.singledispatch
 @_tensor_guard
-def all(a: Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
+def all(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
     """
     Test whether all tensor elements along a given axis evaluate to True.
 
@@ -191,7 +191,7 @@ def allclose(a: Tensor, b: TTensor, rtol: float = 1e-05, atol: float = 1e-08, eq
 
 @functools.singledispatch
 @_tensor_guard
-def any(a: Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
+def any(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
     """
     Test whether any tensor elements along a given axis evaluate to True.
 
@@ -204,7 +204,7 @@ def any(a: Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Tensor:  # 
 
 @functools.singledispatch
 @_tensor_guard
-def count_nonzero(a: Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Tensor:
+def count_nonzero(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:
     """
     Counts the number of non-zero values in the tensor input.
 
@@ -357,7 +357,7 @@ def unstack(a: Tensor, axis: int = 0) -> List[TTensor]:
 
 @functools.singledispatch
 @_tensor_guard
-def moveaxis(a: Tensor, source: Union[int, List[int]], destination: Union[int, List[int]]) -> Tensor:
+def moveaxis(a: Tensor, source: Union[int, Tuple[int, ...]], destination: Union[int, Tuple[int, ...]]) -> Tensor:
     """
     Move axes of an array to new positions.
 
@@ -371,7 +371,7 @@ def moveaxis(a: Tensor, source: Union[int, List[int]], destination: Union[int, L
 
 @functools.singledispatch
 @_tensor_guard
-def mean(a: Tensor, axis: Union[int, List[int]] = None, keepdims: bool = False) -> Tensor:
+def mean(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> Tensor:
     """
     Compute the arithmetic mean along the specified axis.
 
@@ -399,30 +399,30 @@ def round(a: Tensor, decimals=0) -> Tensor:  # pylint: disable=redefined-builtin
 
 @functools.singledispatch
 @_tensor_guard
-def binary_op_nowarn(a: Tensor, b: TTensor, operator_fn: Callable) -> Tensor:
+def _binary_op_nowarn(a: Tensor, b: TTensor, operator_fn: Callable) -> Tensor:
     """
-    Applies a binary operation to two tensors with disable warnings.
+    Applies a binary operation with disable warnings.
 
     :param a: The first tensor.
     :param b: The second tensor.
     :param operator_fn: The binary operation function.
     :return: The result of the binary operation.
     """
-    return Tensor(binary_op_nowarn(a.data, unwrap_tensor_data(b), operator_fn))
+    return Tensor(_binary_op_nowarn(a.data, unwrap_tensor_data(b), operator_fn))
 
 
 @functools.singledispatch
 @_tensor_guard
-def binary_reverse_op_nowarn(a: Tensor, b: TTensor, operator_fn: Callable) -> Tensor:
+def _binary_reverse_op_nowarn(a: Tensor, b: TTensor, operator_fn: Callable) -> Tensor:
     """
-    Applies a binary reverse operation to two tensors with disable warnings.
+    Applies a binary reverse operation with disable warnings.
 
     :param a: The first tensor.
     :param b: The second tensor.
     :param operator_fn: The binary operation function.
     :return: The result of the binary operation.
     """
-    return Tensor(binary_reverse_op_nowarn(a.data, unwrap_tensor_data(b), operator_fn))
+    return Tensor(_binary_reverse_op_nowarn(a.data, unwrap_tensor_data(b), operator_fn))
 
 
 def _initialize_backends():

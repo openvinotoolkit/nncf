@@ -38,9 +38,12 @@ def _(a: torch.Tensor) -> TensorDeviceType:
 
 
 @fns.squeeze.register(torch.Tensor)
-def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> torch.Tensor:
+def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> torch.Tensor:
     if axis is None:
         return a.squeeze()
+    if isinstance(axis, Tuple) and any([1 != a.shape[i] for i in axis]):
+        # Make Numpy behavior, torch.squeeze skips axes that are not equal to one..
+        raise ValueError("Cannot select an axis to squeeze out which has size not equal to one")
     return a.squeeze(axis)
 
 
@@ -50,7 +53,7 @@ def _(a: torch.Tensor) -> torch.Tensor:
 
 
 @fns.max.register(torch.Tensor)
-def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> torch.Tensor:
+def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> torch.Tensor:
     # Analog of numpy.max is torch.amax
     if axis is None:
         return torch.amax(a)
@@ -58,7 +61,7 @@ def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> torch.T
 
 
 @fns.min.register(torch.Tensor)
-def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> torch.Tensor:
+def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> torch.Tensor:
     # Analog of numpy.min is torch.amin
     if axis is None:
         return torch.amin(a)
@@ -81,12 +84,12 @@ def _(a: torch.Tensor) -> TensorDataType:
 
 
 @fns.reshape.register(torch.Tensor)
-def _(a: torch.Tensor, shape: List[int]) -> torch.Tensor:
+def _(a: torch.Tensor, shape: Tuple[int, ...]) -> torch.Tensor:
     return a.reshape(shape)
 
 
 @fns.all.register(torch.Tensor)
-def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Union[torch.Tensor, bool]:
+def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Union[torch.Tensor, bool]:
     if axis is None:
         return torch.all(a)
     return torch.all(a, dim=axis)
@@ -100,14 +103,14 @@ def _(a: torch.Tensor, b: torch.Tensor, rtol: float = 1e-05, atol: float = 1e-08
 
 
 @fns.any.register(torch.Tensor)
-def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> Union[torch.Tensor, bool]:
+def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Union[torch.Tensor, bool]:
     if axis is None:
         return torch.any(a)
     return torch.any(a, dim=axis)
 
 
 @fns.count_nonzero.register(torch.Tensor)
-def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int]]] = None) -> torch.Tensor:
+def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> torch.Tensor:
     return torch.count_nonzero(a, dim=axis)
 
 
@@ -167,12 +170,12 @@ def _(x: torch.Tensor, axis: int = 0) -> List[torch.Tensor]:
 
 
 @fns.moveaxis.register(torch.Tensor)
-def _(a: torch.Tensor, source: Union[int, List[int]], destination: Union[int, List[int]]) -> torch.Tensor:
+def _(a: torch.Tensor, source: Union[int, Tuple[int, ...]], destination: Union[int, Tuple[int, ...]]) -> torch.Tensor:
     return torch.moveaxis(a, source, destination)
 
 
 @fns.mean.register(torch.Tensor)
-def _(a: torch.Tensor, axis: Union[int, List[int]] = None, keepdims: bool = False) -> torch.Tensor:
+def _(a: torch.Tensor, axis: Union[int, Tuple[int, ...]] = None, keepdims: bool = False) -> torch.Tensor:
     return torch.mean(a, axis=axis, keepdims=keepdims)
 
 
@@ -181,11 +184,11 @@ def _(a: torch.Tensor, decimals=0) -> torch.Tensor:
     return torch.round(a, decimals=decimals)
 
 
-@fns.binary_op_nowarn.register(torch.Tensor)
+@fns._binary_op_nowarn.register(torch.Tensor)
 def _(a: torch.Tensor, b: torch.Tensor, operator_fn: Callable) -> torch.Tensor:
     return operator_fn(a, b)
 
 
-@fns.binary_reverse_op_nowarn.register(torch.Tensor)
+@fns._binary_reverse_op_nowarn.register(torch.Tensor)
 def _(a: torch.Tensor, b: torch.Tensor, operator_fn: Callable) -> torch.Tensor:
     return operator_fn(b, a)

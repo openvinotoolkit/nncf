@@ -151,6 +151,7 @@ class TemplateTestNNCFTensorOperators:
             ([[[[1], [2]], [[1], [2]]]], None, [[1, 2], [1, 2]]),
             ([[[[1], [2]], [[1], [2]]]], 0, [[[1], [2]], [[1], [2]]]),
             ([[[[1], [2]], [[1], [2]]]], -1, [[[1, 2], [1, 2]]]),
+            ([[[[1], [2]], [[1], [2]]]], (0, 3), [[1, 2], [1, 2]]),
         ),
     )
     def test_squeeze(self, val, axis, ref):
@@ -160,6 +161,20 @@ class TemplateTestNNCFTensorOperators:
         res = nncf_tensor.squeeze(axis=axis)
         assert isinstance(res, Tensor)
         assert fns.allclose(res, ref_tensor)
+
+    @pytest.mark.parametrize(
+        "val, axis, exception_type, exception_match",
+        (
+            ([[[[1], [2]], [[1], [2]]]], (0, 1), ValueError, "not equal to one"),
+            ([[[[1], [2]], [[1], [2]]]], 42, IndexError, "out of"),
+            ([[[[1], [2]], [[1], [2]]]], (0, 42), IndexError, "out of"),
+        ),
+    )
+    def test_squeeze_axis_error(self, val, axis, exception_type, exception_match):
+        tensor = self.to_tensor(val)
+        nncf_tensor = Tensor(tensor)
+        with pytest.raises(exception_type, match=exception_match):
+            nncf_tensor.squeeze(axis=axis)
 
     @pytest.mark.parametrize(
         "val, axis, ref",
@@ -471,12 +486,12 @@ class TemplateTestNNCFTensorOperators:
     def test_reshape(self):
         tensor = Tensor(self.to_tensor([1, 1]))
         assert tensor.shape == (2,)
-        assert tensor.reshape([1, 2]).shape == (1, 2)
+        assert tensor.reshape((1, 2)).shape == (1, 2)
 
     def test_fn_reshape(self):
         tensor = Tensor(self.to_tensor([1, 1]))
         assert tensor.shape == (2,)
-        assert fns.reshape(tensor, [1, 2]).shape == (1, 2)
+        assert fns.reshape(tensor, (1, 2)).shape == (1, 2)
 
     def test_not_implemented(self):
         with pytest.raises(NotImplementedError, match="is not implemented for"):
