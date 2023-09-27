@@ -122,9 +122,19 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
         return NotImplemented(f"Function `foo` is not implemented for {type(a)}")
     ```
 
+    **NOTE** For the case when the first argument has type `List[Tensor]`, use the `_dispatch_list` function. This function dispatches function by first element in the first argument.
+    ```python
+    @functools.singledispatch
+    def foo(x: List[Tensor], axis: int = 0) -> Tensor:
+        if isinstance(x, List):
+            unwrapped_x = [i.data for i in x]
+            return Tensor(_dispatch_list(foo, unwrapped_x, axis=axis))
+        raise NotImplementedError(f"Function `foo` is not implemented for {type(x)}")
+    ```
+
 3. Add backend specific implementation of method to:
 
-    - [numpy_function.py](numpy_function.py)
+    - [numpy_function.py](numpy_functions.py)
 
         ```python
         @_register_numpy_types(fns.foo)
@@ -132,7 +142,7 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
             return np.foo(a, arg1)
         ```
 
-    - [torch_function.py](torch_function.py)
+    - [torch_function.py](torch_functions.py)
 
         ```python
         @fns.foo.register(torch.Tensor)
@@ -140,7 +150,7 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
             return torch.foo(a, arg1)
         ```
 
-4. Add test of method to [test template](tests/shared/test_templates/template_test_nncf_tensor.py) for Tensor class
+4. Add test of method to [test template](../../../tests/shared/test_templates/template_test_nncf_tensor.py) for Tensor class
 
 ### Add new backend
 
