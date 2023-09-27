@@ -77,10 +77,10 @@ class PTModelTransformer(ModelTransformer):
         :param transformations: List of the bias correction transformations.
         """
         node_to_op_address_mapping = model.nncf.get_node_to_op_address_mapping()
-        fns_grouped_by_points = {}  # type: Dict[PTInsertionPoint, List[Tuple[Callable, TransformationPriority]]]
+        fns_grouped_by_points: Dict[PTInsertionPoint, List[Tuple[Callable, TransformationPriority]]] = {}
 
-        for transformation_command in transformations:  # type: PTInsertionCommand
-            target_point = transformation_command.target_point  # type: PTTargetPoint
+        for transformation_command in transformations:
+            target_point: PTTargetPoint = transformation_command.target_point
             target_node_name = target_point.target_node_name
             pt_ip = PTInsertionPoint(
                 target_type=target_point.target_type,
@@ -113,32 +113,28 @@ class PTModelTransformer(ModelTransformer):
         :param transformations: List of the OVQuantizerInsertionCommand transformations.
         :return: Model with inserted FakeQuantize nodes.
         """
-        node_to_op_address_mapping = model.nncf.get_node_to_op_address_mapping()
         compression_model_type = ExtraCompressionModuleType.EXTERNAL_QUANTIZER
 
         if not model.nncf.is_compression_module_registered(compression_model_type):
             model.nncf.register_compression_module_type(compression_model_type)
 
+        insertion_commands: List[PTInsertionCommand] = []
+
         for transformation_command in transformations:
             target_point: PTTargetPoint = transformation_command.target_point
-            target_node_name = target_point.target_node_name
-            pt_ip = PTInsertionPoint(
-                target_type=target_point.target_type,
-                op_address=node_to_op_address_mapping[target_node_name],
-                input_port_id=target_point.input_port_id,
-            )
-            quantizer = transformation_command.quantizer
+            fn = transformation_command.quantizer
 
-            if target_point.type is TargetType.OPERATION_WITH_WEIGHTS:
-                model.nncf.insert_at_point(pt_ip, [UpdateWeight(quantizer)])
-            else:
+            if target_point.type is not TargetType.OPERATION_WITH_WEIGHTS:
                 quantizer_id = NonWeightQuantizerId(target_point.target_node_name, target_point.input_port_id)
                 storage_key = str(quantizer_id)
-                model.nncf.add_compression_module(storage_key, quantizer, compression_model_type)
-                external_hook = ExternalQuantizerCallHook(model.nncf.get_tracing_context(), storage_key)
-                model.nncf.insert_at_point(pt_ip, [external_hook])
+                model.nncf.add_compression_module(storage_key, transformation_command.quantizer, compression_model_type)
+                fn = ExternalQuantizerCallHook(model.nncf.get_tracing_context(), storage_key)
 
-        return model
+            insertion_commands.append(
+                PTInsertionCommand(target_point, fn, TransformationPriority.QUANTIZATION_PRIORITY)
+            )
+
+        return PTModelTransformer._apply_insertion_transformations(model, insertion_commands)
 
     @staticmethod
     def _apply_extraction_with_fused_bias_transformations(
