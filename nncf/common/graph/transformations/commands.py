@@ -150,6 +150,9 @@ class TargetPoint:
         Constructor.
 
         :param target_type: Type of the target point.
+        :param target_node_name: Name of the node to insert the point.
+        :param port_id: Port ID to insert the point.
+        :param branch_node_names: The dependence nodes that should be taken into account while inserting.
         """
         self._target_type = target_type
         self._target_node_name = target_node_name
