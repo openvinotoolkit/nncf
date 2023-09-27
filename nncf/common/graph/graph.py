@@ -151,16 +151,20 @@ class NNCFGraphEdge:
         return f"{self.from_node}:{self.output_port_id} -> {self.tensor_shape} -> {self.to_node}:{self.input_port_id}"
 
     def __hash__(self):
-        return hash(str(self))
+        return hash(
+            (
+                self.from_node,
+                self.to_node,
+                self.input_port_id,
+                self.output_port_id,
+                tuple(self.tensor_shape),
+                self.dtype,
+                tuple(self.parallel_input_port_ids),
+            )
+        )
 
     def __eq__(self, other):
-        return (
-            self.from_node == other.from_node
-            and self.to_node == other.to_node
-            and self.tensor_shape == other.tensor_shape
-            and self.input_port_id == other.input_port_id
-            and self.output_port_id == other.output_port_id
-        )
+        return isinstance(other, NNCFGraphEdge) and self.__dict__ == other.__dict__
 
 
 class NNCFGraphPatternIO:
