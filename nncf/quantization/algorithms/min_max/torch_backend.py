@@ -63,8 +63,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     }
 
     @property
-    def disable_branches_merge(self) -> bool:
-        return True
+    def can_do_partial_branch_merge(self) -> bool:
+        return False
 
     @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:

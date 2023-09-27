@@ -1231,7 +1231,7 @@ class QuantizerPropagationSolver:
             branching_node_key
         )
         dom_op_quantizers = set()
-        should_not_transition_flag = False
+        should_not_transition = False
         for op_node_key in dom_op_node_keys:
             op_node = quant_prop_graph.nodes[op_node_key]
             trait = op_node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR]
@@ -1242,7 +1242,7 @@ class QuantizerPropagationSolver:
             else:
                 if trait is not QuantizationTrait.CONCAT:
                     # The branch op is forced to be FP32 - should not proceed through the branch node.
-                    should_not_transition_flag = True
+                    should_not_transition = True
                     continue
 
                 # Have to determine if the concat node will potentially have input quantization applied
@@ -1256,13 +1256,13 @@ class QuantizerPropagationSolver:
                 if not active_pqs_dominated_by_cat:
                     # There is no chance for this concat node to be quantized later,
                     # should not attempt merge.
-                    should_not_transition_flag = True
+                    should_not_transition = True
                     continue
                 # There are still some quantizers that may propagate upwards through this concat node
                 # and ultimately lead to the concat node having quantized inputs
                 dom_op_quantizers.update(active_pqs_dominated_by_cat)
 
-        if should_not_transition_flag:
+        if should_not_transition:
             quant_prop_graph.add_branching_quantizer_to_group(prop_quant_to_transition, branching_node_key)
             return TransitionStatus.SHOULD_NOT_TRANSITION
 

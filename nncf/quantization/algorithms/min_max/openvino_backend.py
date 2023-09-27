@@ -49,8 +49,8 @@ from nncf.quantization.fake_quantize import FakeQuantizeParameters
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
-    def disable_branches_merge(self) -> bool:
-        return False
+    def can_do_partial_branch_merge(self) -> bool:
+        return True
 
     @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:

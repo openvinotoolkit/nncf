@@ -95,7 +95,7 @@ class PropagatingQuantizerGroupManager(Generic[GroupId]):
         self._group_vs_prop_quants_dict.pop(merge_from_gid)
 
 
-class UnifiedScaleGroupManager(PropagatingQuantizerGroupManager):
+class UnifiedScaleGroupManager(PropagatingQuantizerGroupManager[int]):
     def __init__(self):
         self._next_gid = 0
         super().__init__()
@@ -105,7 +105,7 @@ class UnifiedScaleGroupManager(PropagatingQuantizerGroupManager):
         self._next_gid += 1
         return retval
 
-    def register_group(self, prop_quants: Set[PropagatingQuantizer], group_id: Optional[GroupId] = None) -> GroupId:
+    def register_group(self, prop_quants: Set[PropagatingQuantizer], group_id: Optional[int] = None) -> int:
         for pq in prop_quants:
             for gid, group in self._group_vs_prop_quants_dict.items():
                 assert pq not in group, "Propagating quantizer #{} is already registered in a group {}!".format(
@@ -116,8 +116,8 @@ class UnifiedScaleGroupManager(PropagatingQuantizerGroupManager):
         return gid
 
 
-class PartialBranchMergeGroupManager(PropagatingQuantizerGroupManager):
-    def register_group(self, prop_quants: Set[PropagatingQuantizer], group_id: Optional[GroupId] = None) -> GroupId:
+class PartialBranchMergeGroupManager(PropagatingQuantizerGroupManager[str]):
+    def register_group(self, prop_quants: Set[PropagatingQuantizer], group_id: Optional[str] = None) -> str:
         if group_id is None:
             raise RuntimeError("Unable to register group without group_id!")
 

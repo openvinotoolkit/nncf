@@ -855,7 +855,7 @@ class MinMaxQuantization(Algorithm):
     def _apply_partial_branch_merge_pass(
         self, quantizer_setup: SingleConfigQuantizerSetup, nncf_graph: NNCFGraph
     ) -> None:
-        if self._backend_entity.disable_branches_merge:
+        if not self._backend_entity.can_do_partial_branch_merge:
             return
 
         branch_node_names = []
