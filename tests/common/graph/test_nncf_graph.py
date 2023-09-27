@@ -58,7 +58,7 @@ def test_parallel_edges():
             to_node,
             input_port_id=input_port_id,
             output_port_id=output_port_id,
-            parallel_input_port_ids=list(range(1, 5)),
+            parallel_input_port_ids=[],
             tensor_shape=(1, 2, 3),
             dtype="dummy",
         )
