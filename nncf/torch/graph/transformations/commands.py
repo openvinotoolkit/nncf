@@ -41,8 +41,7 @@ class PTTargetPoint(TargetPoint):
     _state_names = PTTargetPointStateNames
 
     def __init__(self, target_type: TargetType, target_node_name: NNCFNodeName, *, input_port_id: int = None):
-        super().__init__(target_type)
-        self.target_node_name = target_node_name
+        super().__init__(target_type, target_node_name)
         self.target_type = target_type
         if self.target_type not in self._OPERATION_TYPES + self._HOOK_TYPES + self._LAYER_TYPE:
             raise NotImplementedError("Unsupported target type: {}".format(target_type))
