@@ -56,3 +56,18 @@ class DropType(Enum):
 
     ABSOLUTE = "absolute"
     RELATIVE = "relative"
+
+
+@api(canonical_alias="nncf.CompressWeightsMode")
+class CompressWeightsMode(Enum):
+    """
+    Defines a mode for weight compression.
+
+    :param COMPRESSED_INT8: Stands for unsigned int8 quantization of all weights.
+    :param COMPRESSED_NF4: assumes mixed precision quantization with favor to NF4 one. The first and last layers are
+        always compressed to INT8, and all others are quantized to NF4 or to some backup precision (INT8) depending on
+        some criteria and the given ratio.
+    """
+
+    COMPRESSED_INT8 = "compressed_int8"
+    COMPRESSED_NF4 = "compressed_nf4"

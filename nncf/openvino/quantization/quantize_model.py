@@ -25,6 +25,7 @@ from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
 from nncf.openvino.quantization.quantize_ifmodel import apply_algorithm_if_bodies
 from nncf.openvino.quantization.weights_compression import insert_pre_compression_operations
+from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -438,9 +439,28 @@ def quantize_with_accuracy_control_impl(
     )
 
 
-def compress_weights_impl(model: ov.Model) -> ov.Model:
+def compress_weights_impl(
+    model: ov.Model,
+    mode: CompressWeightsMode = CompressWeightsMode.COMPRESSED_INT8,
+    ratio: float = None,
+    group_size: int = None,
+) -> ov.Model:
     """
     Implementation of the `compress_weights()` method for the OpenVINO backend.
+
+    :param mode: Defines compression precision. Default to int8 quantization.
+    :param ratio: ratio between primary precision and backup (e.g. 0.9 means 90% of layers in NF4 and the rest in INT8).
+    :param group_size: number of weights (e.g. 64 or 128) that are independently quantized or share compression
+        parameters (scale). When it equals -1, per-channel quantization is assumed with group size equals to the size of
+        channel. Defaults to -1.
+    :return: The non-trainable model with compressed weights and dequantization operations.
+
     """
-    insert_pre_compression_operations(model)
+    if mode == CompressWeightsMode.COMPRESSED_NF4:
+        if ratio is None:
+            ratio = 1
+        if group_size is None:
+            group_size = 64
+
+    insert_pre_compression_operations(model, mode, ratio, group_size)
     return model

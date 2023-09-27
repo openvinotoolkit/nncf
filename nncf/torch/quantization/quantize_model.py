@@ -19,6 +19,7 @@ from nncf.config import NNCFConfig
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.data import Dataset
+from nncf.parameters import CompressWeightsMode
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -260,10 +261,25 @@ def quantize_impl(
     return compressed_model
 
 
-def compress_weights_impl(model: torch.nn.Module) -> torch.nn.Module:
+def compress_weights_impl(
+    model: torch.nn.Module, mode=CompressWeightsMode.COMPRESSED_INT8, ratio: float = None, group_size: int = None
+) -> torch.nn.Module:
     """
-    Implementation of the `compress_weights()` method for the PyTorch backend.
+    Implementation of the `compress_weights()` method for the PyTorch backend. Currently it supports COMPRESSED_INT8
+    mode only with default ratio and group_size.
+
+
+    :param ratio: ratio between primary precision and backup (e.g. 0.9 means 90% of layers in NF4 and the rest in INT8).
+    :param group_size: number of weights (e.g. 64 or 128) that are independently quantized or share compression
+        parameters (scale). When it equals -1, per-channel quantization is assumed with group size equals to the size of
+        channel. Defaults to -1.
+    :return: The non-trainable model with compressed weights and dequantization operations.
     """
+
+    if mode != CompressWeightsMode.COMPRESSED_INT8:
+        raise AttributeError(
+            f"Torch backend supports only COMPRESSED_INT8 mode for weight compression, but given {mode} mode"
+        )
     compressed_model, _ = replace_modules_by_nncf_modules(model)
     insert_pre_compression_operations(model)
 

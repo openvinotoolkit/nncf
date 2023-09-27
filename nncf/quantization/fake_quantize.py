@@ -307,6 +307,9 @@ def calculate_scale_zero_point(
     """
     levels = level_high - level_low if narrow_range else level_high - level_low + 1
     scale = np.array((input_high - input_low) / (levels - 1)).astype(np.float32)
+    eps = np.finfo(scale.dtype).eps
+    # NOTE: adding machine epsilon to avoid division by zero
+    scale[np.abs(scale) < eps] = eps
     expected_level_low = level_low + 1 if narrow_range else level_low
     zero_point = expected_level_low - np.round(input_low / scale)
     zero_point = np.clip(zero_point.astype(np.int32), level_low, level_high)
