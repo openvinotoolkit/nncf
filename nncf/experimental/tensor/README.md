@@ -123,6 +123,7 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
     ```
 
     **NOTE** For the case when the first argument has type `List[Tensor]`, use the `_dispatch_list` function. This function dispatches function by first element in the first argument.
+
     ```python
     @functools.singledispatch
     def foo(x: List[Tensor], axis: int = 0) -> Tensor:
