@@ -78,7 +78,7 @@ def _get_minmax_quantization_param_grid() -> ParamGrid:
 
 
 def _get_smooth_quant_param_grid() -> ParamGrid:
-    return {"advanced_parameters:smooth_quant_alpha": [0.2, 0.5, 0.9, 0.95]}
+    return {"advanced_parameters:smooth_quant_alpha": [0.15, 0.25, 0.5, 0.75, 0.95]}
 
 
 def _get_channel_alignment_param_grid() -> ParamGrid:
