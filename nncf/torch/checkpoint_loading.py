@@ -228,7 +228,7 @@ class NormalizedKeys:
     def _key_clipper(key: str) -> str:
         new_key = key
 
-        clip_patterns = ["module.", "|OUTPUT", "|INPUT", "_nncf."]
+        clip_patterns = ["module.", "|OUTPUT", "|INPUT"]
         for pattern in clip_patterns:
             new_key = new_key.replace(pattern, "")
         return new_key
@@ -266,7 +266,6 @@ class NormalizedKeys:
             for key in group_of_keys[1:-1]:
                 result.append(EXTERNAL_QUANTIZERS_STORAGE_PREFIX + "." + key + "." + common_op)
         return result
-
 
 
 class KeyMatcher:

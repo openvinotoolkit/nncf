@@ -229,14 +229,12 @@ MATCH_KEY_DESC_LIST = [
         .missing(['2']).matched(['1']),
 
     # wrapping by NNCFNetwork and DataParallel & DistributedDataParallel
-    MatchKeyDesc(num_loaded=2).keys_to_load(['module.1', 'nncf_module.2']).model_keys(['1', '2'])
+    MatchKeyDesc(num_loaded=2).keys_to_load(['1', '2']).model_keys(['module.1', 'module.2'])
         .all_matched(),
-    MatchKeyDesc(num_loaded=2).keys_to_load(['1', '2']).model_keys(['module.1', 'nncf_module.2'])
-        .all_matched(),
-    MatchKeyDesc(num_loaded=2).keys_to_load(['module.nncf_module.1', 'module.2']).model_keys(['1', 'nncf_module.2'])
+    MatchKeyDesc(num_loaded=2).keys_to_load(['module.1', 'module.2']).model_keys(['1', 'module.2'])
         .all_matched(),
     MatchKeyDesc(num_loaded=0, expects_error=True)
-        .keys_to_load(['module.nncf_module.1.1', 'module.2']).model_keys(['1', '2.2'])
+        .keys_to_load(['module.1.1', 'module.2']).model_keys(['1', '2.2'])
         .all_not_matched(),
 
     # collisions after normalization of keys
@@ -252,8 +250,8 @@ MATCH_KEY_DESC_LIST = [
         .model_keys(['pre_ops.0.op.1', 'pre_ops.1.op.1'])
         .all_matched(),
     MatchKeyDesc(num_loaded=2)
-        .keys_to_load(['nncf_module.pre_ops.1.op.1', 'nncf_module.pre_ops.0.op.1'])
-        .model_keys(['module.nncf_module.pre_ops.1.op.1', 'module.nncf_module.pre_ops.0.op.1'])
+        .keys_to_load(['module.pre_ops.1.op.1', 'module.pre_ops.0.op.1'])
+        .model_keys(['module.module.pre_ops.1.op.1', 'module.module.pre_ops.0.op.1'])
         .all_matched(),
     # quantization -> quantization + sparsity: op.1 was first, than
     MatchKeyDesc(num_loaded=2)
@@ -361,9 +359,9 @@ MATCH_KEY_DESC_LIST = [
         .keys_to_ignore(['1'])
         .skipped(['1']),
     MatchKeyDesc(num_loaded=0, expects_error=True)
-        .keys_to_load(['module.nncf_module.1.1', '2.2']).model_keys(['module.1', 'module.2'])
+        .keys_to_load(['module.1.1', '2.2']).model_keys(['module.1', 'module.2'])
         .keys_to_ignore(['1', '2.2'])
-        .skipped(['module.1', '2.2']).missing(['module.2']).unexpected(['module.nncf_module.1.1']),
+        .skipped(['module.1', '2.2']).missing(['module.2']).unexpected(['module.1.1']),
 
     # optional parameter - not necessary in checkpoint can be initialized by default in the model
     # can match unified FQ
@@ -419,9 +417,9 @@ MATCH_KEY_DESC_LIST = [
         .keys_to_ignore(['1'])
         .skipped(['1']),
     MatchKeyDesc(num_loaded=0, expects_error=True)
-        .keys_to_load(['module.nncf_module.1.1', '2.2']).model_keys(['module.1', 'module.2'])
+        .keys_to_load(['module.1.1', '2.2']).model_keys(['module.1', 'module.2'])
         .keys_to_ignore(['1', '2.2'])
-        .skipped(['module.1', '2.2']).missing(['module.2']).unexpected(['module.nncf_module.1.1']),
+        .skipped(['module.1', '2.2']).missing(['module.2']).unexpected(['module.1.1']),
 
     # optional parameter - not necessary in checkpoint can be initialized by default in the model
     # can match unified FQ
@@ -466,12 +464,6 @@ MATCH_KEY_DESC_LIST = [
         .matched([EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_0|OUTPUT;RELU_2|OUTPUT;RELU_1|OUTPUT.' + OP1])
         .unexpected(['module.' + EXTERNAL_QUANTIZERS_STORAGE_PREFIX + '.RELU_3.' + OP1]),
 
-    # can match keys under _nncf in the new style and the keys without _nncf
-    MatchKeyDesc(num_loaded=1)
-        .keys_to_load(['key.op'])
-        .model_keys(['_nncf.key.op'])
-        .all_matched()
-        .with_deprecation_warning(),
 
     OptionalMatchKeyDesc(num_loaded=0)
         .keys_to_load([])
