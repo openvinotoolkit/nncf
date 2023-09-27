@@ -23,6 +23,8 @@ def mean_per_channel(x: Tensor, axis: int) -> Tensor:
     """
     if len(x.shape) < 3:
         return fns.mean(x, axis=0)
-    x = fns.moveaxis(x, axis, 1)
-    t = x.reshape([x.shape[0], x.shape[1], -1])
-    return fns.mean(t, axis=(0, 2))
+    pos_axis = axis + x.ndim if axis < 0 else axis
+    if not 0 <= pos_axis < x.ndim:
+        raise ValueError(f"axis {axis} is out of bounds for array of dimension {x.ndim}")
+    axis = tuple(i for i in range(x.ndim) if i != pos_axis)
+    return fns.mean(x, axis=axis)
