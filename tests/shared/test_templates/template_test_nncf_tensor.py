@@ -659,3 +659,9 @@ class TemplateTestNNCFTensorOperators:
         res = s_fns.mean_per_channel(tensor, axis)
         assert isinstance(res, Tensor)
         assert fns.allclose(res, ref_tensor), f"{res.data}"
+
+    @pytest.mark.parametrize("axis", (3, 4, -4, -5))
+    def test_fn_mean_per_channel_incorrect_axis(self, axis):
+        tensor = Tensor(self.to_tensor([[[9.0, 9.0], [0.0, 3.0]], [[5.0, 1.0], [7.0, 1.0]]]))
+        with pytest.raises(ValueError, match="is out of bounds for array of dimension"):
+            s_fns.mean_per_channel(tensor, axis)
