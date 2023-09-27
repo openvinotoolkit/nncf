@@ -333,12 +333,16 @@ class HyperparameterTuner:
         best_settings,
     ) -> None:
         """
-        TODO:
+        Creates a separate pipeline for each combination from step_combination.
+        Each combination only changes the parameters of the `step_index`-th pipeline
+        step. After that, combines the statistics required to execute the `step_index`-th
+        pipeline step and collects them using `step_model`, `step_graph`, and the calibration
+        dataset.
 
-        :param step_index:
-        :param step_model:
-        :param step_graph:
-        :param step_combinations:
+        :param step_index: Zero-based index of pipeline step that should be prepared.
+        :param step_model: A model.
+        :param step_graph: A graph assosiated with a model.
+        :param step_combinations: Combinations that change parameters only for the step_index-th pipeline step.
         """
         # Create a separate pipeline for each combination
 

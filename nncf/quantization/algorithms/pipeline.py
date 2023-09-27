@@ -29,13 +29,13 @@ def collect_statistics(
     dataset: Dataset,
 ) -> StatisticPointsContainer:
     """
-    TODO:
+    Utility method for collecting statistics by model.
 
-    :param statistic_points:
-    :param model:
-    :param graph:
-    :param dataset:
-    :return:
+    :param statistic_points: Statistic points that need to be collected.
+    :param model: A model.
+    :param graph: A graph assosiated with a model.
+    :param dataset: A dataset.
+    :return: Collected statistics.
     """
     if not isinstance(containers, list):
         containers = [containers]
@@ -99,8 +99,8 @@ class Pipeline:
         """
         Executes a provided pipeline step on the provided model.
 
-        :param pipeline_step: A sequence of algorithms representing a pipeline step.
-        :param pipeline_step_statistics: Statistics required to execute a pipeline step.
+        :param step_index: Zero-based index of the pipeline step that should be executed
+        :param step_statistics: Statistics required to execute a pipeline step.
         :param model: A model to which a pipeline step will be applied.
         :param graph: A graph assosiated with a model.
         :return: The updated model after executing the pipeline step.
@@ -166,12 +166,12 @@ class Pipeline:
         self, step_index: int, model: TModel, graph: NNCFGraph
     ) -> StatisticPointsContainer:
         """
-        TODO
+        Returns statistics that should be collected to execute `step_index`-th pipeline step.
 
-        :param pipeline_step:
-        :param model:
-        :param graph:
-        :return:
+        :param step_index: Zero-based index of the pipeline step.
+        :param model: A model.
+        :param graph: A graph assosiated with a model.
+        :return: Statistics that should be collected to execute `step_index`-th pipeline step.
         """
         container = StatisticPointsContainer()
         for algorithm in self.pipeline_steps[step_index]:
