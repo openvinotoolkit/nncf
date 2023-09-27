@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from datetime import timedelta
+
 from typing import Callable, Iterable, List, Optional, Sequence, Union
 
 from rich.console import Console
