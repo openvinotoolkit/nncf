@@ -9,4 +9,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from tests.experimental.tensorflow.test_models.resnet import resnet_50
+from tests.tensorflow.experimental.test_models.resnet import resnet_50

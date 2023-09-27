@@ -21,19 +21,6 @@ TModel = TypeVar("TModel")
 TPModel = TypeVar("TPModel")
 
 
-class AsyncPreparedModel(ABC):
-    @abstractmethod
-    def get(self, timeout) -> TPModel:
-        """
-        Returns the prepared model for inference when it arrives. If timeout is not None and
-        the result does not arrive within timeout seconds then TimeoutError is raised. If
-        the remote call raised an exception then that exception will be reraised by get().
-
-        :param timeout: timeout
-        :return: A prepared model for inference
-        """
-
-
 class AccuracyControlAlgoBackend(ABC):
     # Metatypes
 
@@ -161,14 +148,4 @@ class AccuracyControlAlgoBackend(ABC):
 
         :param model: A model that should be prepared.
         :return: Prepared model for inference.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def prepare_for_inference_async(model: TModel) -> AsyncPreparedModel:
-        """
-        Prepares model for inference asynchronously.
-
-        :param model: A model that should be prepared.
-        :return: AsyncPreparedModel opbject.
         """

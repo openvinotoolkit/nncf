@@ -12,10 +12,8 @@
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.quantization.debug_interface import QuantizationDebugInterface
 
-LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX = "external_quantizers"
-
 EXTERNAL_QUANTIZERS_STORAGE_NAME = "external_quantizers"
-CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX = "_nncf." + EXTERNAL_QUANTIZERS_STORAGE_NAME
+EXTERNAL_QUANTIZERS_STORAGE_PREFIX = "_nncf." + EXTERNAL_QUANTIZERS_STORAGE_NAME
 
 
 class ExternalQuantizerCallHook:

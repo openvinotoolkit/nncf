@@ -66,9 +66,6 @@ from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import training_mode_switcher
 
-LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME = "nncf_module"
-
-
 Module = TypeVar("Module", bound=nn.Module)
 
 
