@@ -12,11 +12,14 @@
 
 from typing import Dict
 
+import numpy as np
 import openvino.runtime as ov
 import pytest
 
+from nncf import Dataset
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
+from nncf.openvino.quantization.quantize_model import quantize_impl
 from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -30,6 +33,7 @@ from tests.openvino.native.models import DepthwiseConv3DModel
 from tests.openvino.native.models import DepthwiseConv4DModel
 from tests.openvino.native.models import DepthwiseConv5DModel
 from tests.openvino.native.models import GRUSequenceModel
+from tests.openvino.native.models import IfModel
 from tests.openvino.native.models import MatmulSoftmaxMatmulBlock
 from tests.openvino.native.quantization.test_fq_params_calculation import quantize_model
 from tests.openvino.omz_helpers import convert_model
@@ -153,3 +157,41 @@ def test_ignore_nodes_by_attribues(linear_before_reset):
     postfix = "T" if linear_before_reset else "F"
     path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / f"GRUSequenceModel_linear_before_reset_{postfix}.dot"
     compare_nncf_graphs(quantized_model, path_ref_graph)
+
+
+def get_dataset_for_if_model(model: ov.Model, size: int = 2) -> Dataset:
+    rng = np.random.default_rng(seed=0)
+    dataitems = []
+    for i in range(size):
+        input_data = {}
+        for param in model.get_parameters():
+            if param.get_element_type().get_type_name() == "boolean":
+                input_data[param.get_output_tensor(0).get_any_name()] = i < size // 2
+            else:
+                input_shape = param.partial_shape.get_max_shape()
+                input_data[param.get_output_tensor(0).get_any_name()] = rng.uniform(0, 1, input_shape)
+        dataitems.append(input_data)
+    dataset = Dataset(dataitems)
+    return dataset
+
+
+def test_if_model_fq_placement():
+    if_model = IfModel()
+    ov_model = if_model.ov_model
+    dataset = get_dataset_for_if_model(ov_model)
+    quantized_model = quantize_impl(
+        ov_model,
+        dataset,
+        subset_size=2,
+        fast_bias_correction=True,
+    )
+    if_ops = [op for op in quantized_model.get_ops() if op.get_type_name() == "If"]
+    assert len(if_ops) == 1
+    if_op = if_ops[0]
+    main_model_path = if_model.ref_model_name + "_main.dot"
+    then_body_path = if_model.ref_model_name + "_then.dot"
+    else_body_path = if_model.ref_model_name + "_else.dot"
+
+    compare_nncf_graphs(quantized_model, QUANTIZED_REF_GRAPHS_DIR / main_model_path)
+    compare_nncf_graphs(if_op.get_function(0), QUANTIZED_REF_GRAPHS_DIR / then_body_path)
+    compare_nncf_graphs(if_op.get_function(1), QUANTIZED_REF_GRAPHS_DIR / else_body_path)

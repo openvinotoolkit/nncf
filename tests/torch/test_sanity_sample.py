@@ -174,12 +174,6 @@ def set_num_threads_locally(n=1):
         torch.set_num_threads(old_n)
 
 
-def _run_with_xfail_119128(runner: Command):
-    returncode = runner.run(assert_returncode_zero=False)
-    if returncode == 139:
-        pytest.xfail("Bug 119128: sporadic segment fault on backward")
-
-
 @pytest.mark.nightly
 class TestSanitySample:
     @staticmethod
@@ -289,7 +283,7 @@ class TestSanitySample:
             )
 
         runner = Command(create_command_line(args, config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
-        _run_with_xfail_119128(runner)
+        runner.run(assert_returncode_zero=False)
         last_checkpoint_path = os.path.join(checkpoint_save_dir, get_run_name(config_factory.config) + "_last.pth")
         assert os.path.exists(last_checkpoint_path)
         if "compression" in config["sample_config"]:
@@ -374,7 +368,7 @@ class TestSanitySample:
             args["--multiprocessing-distributed"] = True
 
         runner = Command(create_command_line(args, config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
-        _run_with_xfail_119128(runner)
+        runner.run(assert_returncode_zero=False)
         last_checkpoint_path = os.path.join(checkpoint_save_dir, get_run_name(config_factory.config) + "_last.pth")
         assert os.path.exists(last_checkpoint_path)
         if "compression" in config["sample_config"]:
@@ -590,7 +584,7 @@ class TestSanitySample:
             args["--multiprocessing-distributed"] = True
 
         runner = Command(create_command_line(args, accuracy_aware_config["sample_type"]), env=ROOT_PYTHONPATH_ENV)
-        _run_with_xfail_119128(runner)
+        runner.run(assert_returncode_zero=False)
 
         checkpoint_save_dir = log_dir / get_run_name(config_factory.config)
         aa_checkpoint_path = get_accuracy_aware_checkpoint_dir_path(checkpoint_save_dir)

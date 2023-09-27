@@ -12,6 +12,7 @@
 from typing import List
 
 import numpy as np
+import openvino.runtime as ov
 
 from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -187,6 +188,43 @@ class OVMultiplyInsertionCommand(OVInsertionCommand):
         self.scale_value = scale_value
         self.destination_node_names = destination_node_names
         self.multiply_node_name = multiply_node_name
+
+    def union(self, other: "TransformationCommand") -> "TransformationCommand":
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
+
+class OVUpdateIfBodyCommand(TransformationCommand):
+    """
+    Updates If node body.
+    """
+
+    def __init__(self, target_point: OVTargetPoint, body_model: ov.Model):
+        """
+        :param target_point: The TargetPoint instance for the change that contains layer's information.
+        :param body_model: A new model to set.
+        """
+        super().__init__(TransformationType.CHANGE, target_point)
+        self.subgraph_model = body_model
+
+    def union(self, other: "TransformationCommand") -> "TransformationCommand":
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
+
+class OVExtractIfBodyCommand(Command):
+    """
+    Extracts If node body.
+    """
+
+    def __init__(self, if_node_name: str, if_body_condition: bool):
+        """
+        :param target_point: The TargetPoint instance for the extraction that contains layer's information.
+        :param if_body_condition: If true extracts then body, else - else body.
+        """
+        super().__init__(TransformationType.EXTRACT)
+        self.if_node_name = if_node_name
+        self.if_body_condition = if_body_condition
 
     def union(self, other: "TransformationCommand") -> "TransformationCommand":
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
