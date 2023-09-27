@@ -141,7 +141,7 @@ class HessianTraceEstimator:
             mean_avg_traces_per_param = self._get_mean(avg_traces_per_iter)
             mean_avg_total_trace = torch.sum(mean_avg_traces_per_param)
 
-            diff_avg = abs(mean_avg_total_trace - avg_total_trace) / (avg_total_trace + self._diff_eps)
+            diff_avg = abs(mean_avg_total_trace - avg_total_trace) / (abs(avg_total_trace) + self._diff_eps)
             if diff_avg < tolerance:
                 return mean_avg_traces_per_param
             avg_total_trace = mean_avg_total_trace
