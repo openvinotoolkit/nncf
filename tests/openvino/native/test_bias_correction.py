@@ -15,6 +15,7 @@ import numpy as np
 import openvino.runtime as ov
 import pytest
 import torch
+from openvino.tools.mo import convert_model
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.openvino.graph.model_utils import remove_fq_from_inputs
@@ -24,7 +25,6 @@ from nncf.quantization.algorithms.bias_correction.openvino_backend import OVBias
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.post_training.test_templates.test_bias_correction import TemplateTestBCAlgorithm
-from tests.shared.command import Command
 
 
 class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
@@ -40,11 +40,7 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
     def backend_specific_model(model: torch.nn.Module, tmp_dir: str):
         onnx_path = f"{tmp_dir}/model.onnx"
         torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
-        ov_path = f"{tmp_dir}/model.xml"
-        runner = Command(f"mo -m {onnx_path} -o {tmp_dir} -n model --compress_to_fp16=False")
-        runner.run()
-        core = ov.Core()
-        ov_model = core.read_model(ov_path)
+        ov_model = convert_model(onnx_path, input_shape=model.INPUT_SIZE, compress_to_fp16=False)
         return ov_model
 
     @staticmethod

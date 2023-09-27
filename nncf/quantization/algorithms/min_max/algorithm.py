@@ -165,13 +165,16 @@ class MinMaxQuantization(Algorithm):
                 quantizer_group, preset, self._quantization_params[quantizer_group]
             )
 
+        self._reset_cache()
+        self._algorithm_key = f"MMQ_{hash(self)}"
+
+    def _reset_cache(self):
         # It prevents the duplicate weight quantizers from being added.
         # It can happen when you have layers that share the identical weight tensor.
         self._quantization_target_points_to_qconfig = (
             collections.OrderedDict()
         )  # type: OrderedDict[TargetPoint, QuantizerConfig]
         self._unified_scale_groups = []
-        self._algorithm_key = f"MMQ_{hash(self)}"
 
     @property
     def available_backends(self) -> Dict[str, BackendType]:
@@ -695,13 +698,14 @@ class MinMaxQuantization(Algorithm):
                     graph, quantization_target_point, qconfig, parameters
                 )
                 transformation_layout.register(command)
-
+        if not transformation_layout.transformations:
+            nncf_logger.info("The model has no operations to apply quantization.")
         quantized_model = model_transformer.transform(transformation_layout)
         return quantized_model
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         self._set_backend_entity(model)
-
+        self._reset_cache()
         quantization_target_points, _ = self._get_quantization_target_points(model, graph)
         output = StatisticPointsContainer()
         for quantization_target_point, qconfig in quantization_target_points.items():

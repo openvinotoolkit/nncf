@@ -10,6 +10,7 @@
 # limitations under the License.
 
 
+import openvino.runtime as ov
 import transformers
 from optimum.intel import OVQuantizer
 from optimum.intel.openvino import OVModelForCausalLM
@@ -26,6 +27,7 @@ class CausalLMHF(BaseTestPipeline):
         if self.backend in OV_BACKENDS:
             self.model_hf = OVModelForCausalLM.from_pretrained(self.model_id, export=True, compile=False)
             self.model = self.model_hf.model
+            ov.serialize(self.model, self.output_model_dir / "model_fp32.xml")
 
     def prepare_preprocessor(self) -> None:
         self.preprocessor = transformers.AutoTokenizer.from_pretrained(self.model_id)

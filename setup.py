@@ -57,8 +57,8 @@ if setuptools_version < "43.0.0":
     )
 
 python_version = sys.version_info
-if python_version < (3, 7, 0):
-    print("Only Python >= 3.7.0 is supported")
+if python_version < (3, 8, 0):
+    print("Only Python >= 3.8.0 is supported")
     sys.exit(0)
 
 version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])
@@ -112,7 +112,7 @@ INSTALL_REQUIRES = [
     "pandas>=1.1.5,<2.1",
     "psutil",
     "pydot>=1.4.1",
-    "pymoo @ git+https://github.com/anyoptimization/pymoo.git@695cb26923903f872c7256a9013609769f3cc2bd",
+    "pymoo>=0.6.0.1",
     # The recent pyparsing major version update seems to break
     # integration with networkx - the graphs parsed from current .dot
     # reference files no longer match against the graphs produced in tests.
@@ -139,7 +139,7 @@ TORCH_EXTRAS = [
 
 ONNX_EXTRAS = ["onnx~=1.13.1", "onnxruntime~=1.14.1;python_version < '3.11'"]
 
-OPENVINO_EXTRAS = ["openvino==2023.0.1"]
+OPENVINO_EXTRAS = ["openvino==2023.1"]
 
 
 EXTRAS_REQUIRE = {

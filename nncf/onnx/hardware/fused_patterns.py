@@ -339,6 +339,17 @@ def create_linear_squeeze_activation() -> GraphPattern:
     return linear
 
 
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_SQUEEZE_ARITHMETIC_ACTIVATIONS)
+def create_linear_squeeze_arithmetic_activation() -> GraphPattern:
+    linear = linear_operations()
+    squeeze = squeeze_operation()
+    arithmetic_activations = create_arithmetic_activations()
+
+    linear.join_patterns(squeeze)
+    linear.join_patterns(arithmetic_activations)
+    return linear
+
+
 @ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.BATCH_NORM_SCALE_SHIFT_ACTIVATIONS)
 def create_bn_scale_shift_activation() -> GraphPattern:
     batch_norm = batch_normalization_operations()
