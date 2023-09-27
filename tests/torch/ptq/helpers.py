@@ -94,6 +94,6 @@ def mock_collect_statistics(mocker):
     min_, max_ = 0.0, 1.0
     min_, max_ = torch.tensor(min_), torch.tensor(max_)
     _ = mocker.patch(
-        "nncf.common.tensor_statistics.collectors.TensorStatisticCollectorBase.get_statistics",
-        return_value=PTMinMaxTensorStatistic(min_, max_),
+        "nncf.experimental.common.tensor_statistics.collectors.TensorCollector.get_statistics",
+        return_value=PTMinMaxTensorStatistic(min_values=min_, max_values=max_),
     )

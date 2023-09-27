@@ -18,7 +18,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.logging.logger import nncf_logger
-from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 from nncf.onnx.graph.onnx_graph import ONNXGraph
@@ -131,7 +131,7 @@ def transpose_axis(shape: List[int], axis: int) -> int:
     return range(len(shape) - 1, -1, -1)[axis]  # Iterate backward throug axis
 
 
-def get_reduction_shape(shape: List[int], axis: int) -> ReductionShape:
+def get_reduction_shape(shape: List[int], axis: int) -> ReductionAxes:
     """
     Returns reduction shape for shape and axis.
 

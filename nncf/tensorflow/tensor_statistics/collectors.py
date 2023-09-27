@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Deque, List, Optional, Union
+from typing import Deque, List, Optional, Tuple, Union
 
 import numpy as np
 import tensorflow as tf
@@ -64,12 +64,22 @@ class TFNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     def median(x: NNCFTensor, axis: Union[int, tuple, list], keepdims=False) -> NNCFTensor:
         raise NotImplementedError()
 
-    @staticmethod
-    def masked_mean(x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor, keepdims=False) -> NNCFTensor:
+    @classmethod
+    def masked_mean(cls, x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor, keepdims=False) -> NNCFTensor:
+        raise NotImplementedError()
+
+    @classmethod
+    def masked_median(
+        cls, x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor, keepdims=False
+    ) -> NNCFTensor:
         raise NotImplementedError()
 
     @staticmethod
-    def masked_median(x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor, keepdims=False) -> NNCFTensor:
+    def logical_or(input_: NNCFTensor, other: NNCFTensor) -> NNCFTensor:
+        raise NotImplementedError()
+
+    @staticmethod
+    def less(input_: NNCFTensor, other: NNCFTensor) -> NNCFTensor:
         raise NotImplementedError()
 
     @staticmethod
@@ -86,6 +96,10 @@ class TFNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return [TFNNCFTensor(t) for t in tensor_list]
 
     @staticmethod
+    def squeeze(x: NNCFTensor, dim: Optional[Union[int, Tuple[int, ...]]] = None) -> NNCFTensor:
+        raise NotImplementedError()
+
+    @staticmethod
     def sum(tensor: NNCFTensor) -> TensorElementsType:
         return tf.reduce_sum(tensor.tensor).numpy()
 
@@ -95,14 +109,26 @@ class TFNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     ) -> List[NNCFTensor]:
         raise NotImplementedError()
 
+    @classmethod
+    def percentile(
+        cls,
+        tensor: NNCFTensor,
+        percentile: Union[float, List[float]],
+        axis: Union[int, tuple, list],
+        keepdims: bool = False,
+    ) -> List[TensorElementsType]:
+        raise NotImplementedError()
+
     @staticmethod
     def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
         raise NotImplementedError()
 
-    @classmethod
-    def no_outliers_map(
-        cls, x: NNCFTensor, fn: Callable[[NNCFTensor, Optional[int]], Any], axis: int = 0, alpha: float = 0.01
-    ):
+    @staticmethod
+    def sub(a: NNCFTensor, b: NNCFTensor) -> NNCFTensor:
+        raise NotImplementedError()
+
+    @staticmethod
+    def zero_elements(x: NNCFTensor) -> NNCFTensor:
         raise NotImplementedError()
 
 
