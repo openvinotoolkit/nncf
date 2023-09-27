@@ -1520,13 +1520,13 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 assert pq in op_node[QuantizerPropagationStateGraph.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
 
     def add_branching_quantizer_to_group(self, propagation_quantizer: PropagatingQuantizer, group_id: str) -> None:
-        """ "
+        """
         Adds branching quantizer into the group associated by provided group ID.
 
         :param propagation_quantizer: PropagatingQuantizer instance.
         :param group_id: Group ID.
         """
-        if group_id in self._partial_branch_merge_group_manager.get_group_vs_prop_quants_dict().keys():
+        if group_id in self._partial_branch_merge_group_manager.get_group_vs_prop_quants_dict():
             self._partial_branch_merge_group_manager.add_to_group(group_id, propagation_quantizer)
         else:
-            self._partial_branch_merge_group_manager.register_group(set([propagation_quantizer]), group_id)
+            self._partial_branch_merge_group_manager.register_group({propagation_quantizer}, group_id)
