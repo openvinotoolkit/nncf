@@ -69,6 +69,7 @@ class TemplateTestNNCFTensorOperators:
         assert res.dtype == res_nncf.data.dtype
         assert all(res == res_nncf.data)
         assert isinstance(res_nncf, Tensor)
+        assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize("op_name", OPERATOR_MAP.keys())
     def test_operators_int(self, op_name):
@@ -84,6 +85,7 @@ class TemplateTestNNCFTensorOperators:
         assert res.dtype == res_nncf.data.dtype
         assert all(res == res_nncf.data)
         assert isinstance(res_nncf, Tensor)
+        assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize("op_name", ("add", "sub", "mul", "truediv", "floordiv"))
     def test_operators_int_rev(self, op_name):
@@ -99,6 +101,7 @@ class TemplateTestNNCFTensorOperators:
         assert res.dtype == res_nncf.data.dtype
         assert all(res == res_nncf.data)
         assert isinstance(res_nncf, Tensor)
+        assert res_nncf.device == nncf_tensor_a.device
 
     @pytest.mark.parametrize("op_name", COMPARISON_OPERATOR_MAP.keys())
     def test_comparison_tensor(self, op_name):
@@ -161,6 +164,7 @@ class TemplateTestNNCFTensorOperators:
         res = nncf_tensor.squeeze(axis=axis)
         assert isinstance(res, Tensor)
         assert fns.allclose(res, ref_tensor)
+        assert res.device == nncf_tensor.device
 
     @pytest.mark.parametrize(
         "val, axis, exception_type, exception_match",
@@ -193,6 +197,7 @@ class TemplateTestNNCFTensorOperators:
         res = fns.squeeze(nncf_tensor, axis=axis)
         assert isinstance(res, Tensor)
         assert fns.allclose(res, ref_tensor)
+        assert res.device == nncf_tensor.device
 
     @pytest.mark.parametrize(
         "val,ref",
@@ -209,6 +214,7 @@ class TemplateTestNNCFTensorOperators:
         res = nncf_tensor.flatten()
         assert isinstance(res, Tensor)
         assert fns.allclose(res, ref_tensor)
+        assert res.device == nncf_tensor.device
 
     @pytest.mark.parametrize(
         "val, axis, ref",
@@ -226,6 +232,7 @@ class TemplateTestNNCFTensorOperators:
         res = fns.max(nncf_tensor, axis=axis)
         assert isinstance(res, Tensor)
         assert fns.allclose(res, ref_tensor)
+        assert res.device == nncf_tensor.device
 
     @pytest.mark.parametrize(
         "val, axis, ref",
@@ -242,6 +249,7 @@ class TemplateTestNNCFTensorOperators:
         res = nncf_tensor.min(axis=axis)
         assert isinstance(res, Tensor)
         assert fns.allclose(res, ref_tensor)
+        assert res.device == nncf_tensor.device
 
     @pytest.mark.parametrize(
         "val, ref",
@@ -256,6 +264,7 @@ class TemplateTestNNCFTensorOperators:
         res = nncf_tensor.abs()
         assert isinstance(res, Tensor)
         assert fns.allclose(res, nncf_ref_tensor)
+        assert res.device == nncf_tensor.device
 
     @pytest.mark.parametrize(
         "val, ref",
@@ -270,6 +279,7 @@ class TemplateTestNNCFTensorOperators:
         res = fns.abs(nncf_tensor)
         assert isinstance(res, Tensor)
         assert fns.allclose(res, nncf_ref_tensor)
+        assert res.device == nncf_tensor.device
 
     def test_getitem(self):
         arr = [0, 1, 2]
@@ -277,6 +287,7 @@ class TemplateTestNNCFTensorOperators:
         res = nncf_tensor[1]
         assert res == 1
         assert isinstance(res, Tensor)
+        assert res.device == nncf_tensor.device
 
     def test_iter(self):
         arr = [0, 1, 2]
@@ -304,6 +315,7 @@ class TemplateTestNNCFTensorOperators:
 
         assert isinstance(res, Tensor)
         assert fns.allclose(res.data, ref_tensor)
+        assert res.device == nncf_tensor.device
 
     def test_fn_zeros_like(self):
         tensor = self.to_tensor([1, 2])
@@ -312,6 +324,7 @@ class TemplateTestNNCFTensorOperators:
         res = fns.zeros_like(nncf_tensor)
         assert all(res == Tensor(tensor * 0))
         assert isinstance(res, Tensor)
+        assert res.device == nncf_tensor.device
 
     def test_fn_maximum(self):
         tensor_a = Tensor(self.to_tensor([1, 2]))
@@ -321,6 +334,7 @@ class TemplateTestNNCFTensorOperators:
         res = fns.maximum(tensor_a, tensor_b)
         assert all(res.data == tensor_ref)
         assert isinstance(res, Tensor)
+        assert res.device == tensor_a.device
 
     def test_fn_maximum_list(self):
         tensor_a = Tensor(self.to_tensor([1, 2]))
@@ -330,6 +344,7 @@ class TemplateTestNNCFTensorOperators:
         res = fns.maximum(tensor_a, tensor_b)
         assert all(res.data == tensor_ref)
         assert isinstance(res, Tensor)
+        assert res.device == tensor_a.device
 
     def test_fn_minimum(self):
         tensor_a = Tensor(self.to_tensor([1, 2]))
@@ -339,6 +354,7 @@ class TemplateTestNNCFTensorOperators:
         res = fns.minimum(tensor_a, tensor_b)
         assert all(res.data == tensor_ref)
         assert isinstance(res, Tensor)
+        assert res.device == tensor_a.device
 
     def test_fn_minimum_list(self):
         tensor_a = Tensor(self.to_tensor([1, 2]))
@@ -348,6 +364,7 @@ class TemplateTestNNCFTensorOperators:
         res = fns.minimum(tensor_a, tensor_b)
         assert all(res.data == tensor_ref)
         assert isinstance(res, Tensor)
+        assert res.device == tensor_a.device
 
     def test_fn_ones_like(self):
         tensor_a = Tensor(self.to_tensor([1, 2]))
@@ -356,6 +373,7 @@ class TemplateTestNNCFTensorOperators:
         res = fns.ones_like(tensor_a)
         assert all(res.data == tensor_ref)
         assert isinstance(res, Tensor)
+        assert res.device == tensor_a.device
 
     @pytest.mark.parametrize(
         "val, axis, ref",
@@ -371,6 +389,7 @@ class TemplateTestNNCFTensorOperators:
         res = fns.all(tensor, axis=axis)
         assert isinstance(res, Tensor)
         assert fns.allclose(res.data, self.to_tensor(ref))
+        assert res.device == tensor.device
 
     @pytest.mark.parametrize(
         "val, axis, ref",
@@ -387,6 +406,7 @@ class TemplateTestNNCFTensorOperators:
 
         assert isinstance(res, Tensor)
         assert fns.allclose(res.data, self.to_tensor(ref))
+        assert res.device == tensor.device
 
     def test_fn_where(self):
         tensor = Tensor(self.to_tensor([1, -1]))
@@ -394,6 +414,7 @@ class TemplateTestNNCFTensorOperators:
         res = fns.where(tensor > 0, 1, 0)
         assert all(res.data == tensor_ref)
         assert isinstance(res, Tensor)
+        assert res.device == tensor.device
 
     @pytest.mark.parametrize(
         "val, ref",
@@ -476,6 +497,7 @@ class TemplateTestNNCFTensorOperators:
         res = tensor.astype(TensorDataType.int8)
         assert isinstance(res, Tensor)
         assert res.dtype == TensorDataType.int8
+        assert res.device == tensor.device
 
     def test_fn_astype(self):
         tensor = Tensor(self.to_tensor([1]))
@@ -485,13 +507,17 @@ class TemplateTestNNCFTensorOperators:
 
     def test_reshape(self):
         tensor = Tensor(self.to_tensor([1, 1]))
+        res = tensor.reshape((1, 2))
         assert tensor.shape == (2,)
-        assert tensor.reshape((1, 2)).shape == (1, 2)
+        assert res.shape == (1, 2)
+        assert res.device == tensor.device
 
     def test_fn_reshape(self):
         tensor = Tensor(self.to_tensor([1, 1]))
+        res = fns.reshape(tensor, (1, 2))
         assert tensor.shape == (2,)
-        assert fns.reshape(tensor, (1, 2)).shape == (1, 2)
+        assert res.shape == (1, 2)
+        assert res.device == tensor.device
 
     def test_not_implemented(self):
         with pytest.raises(NotImplementedError, match="is not implemented for"):
@@ -521,6 +547,7 @@ class TemplateTestNNCFTensorOperators:
         assert isinstance(res, list)
         for i, _ in enumerate(ref):
             assert all(res[i] == ref[i])
+            assert res[i].device == tensor.device
 
     @pytest.mark.parametrize(
         "x, axis, ref",
@@ -538,13 +565,14 @@ class TemplateTestNNCFTensorOperators:
         ),
     )
     def test_fn_stack(self, x, axis, ref):
-        tensor = [Tensor(self.to_tensor(i)) for i in x]
+        list_tensor = [Tensor(self.to_tensor(i)) for i in x]
         ref = self.to_tensor(ref)
 
-        res = fns.stack(tensor, axis=axis)
+        res = fns.stack(list_tensor, axis=axis)
 
         assert isinstance(res, Tensor)
         assert fns.all(res.data == ref)
+        assert res.device == list_tensor[0].device
 
     def test_fn_moveaxis(self):
         tensor = [[0, 0, 0], [0, 0, 0]]
@@ -591,6 +619,7 @@ class TemplateTestNNCFTensorOperators:
 
         assert isinstance(res, Tensor)
         assert fns.allclose(res.data, ref_tensor)
+        assert res.device == tensor.device
 
     @pytest.mark.parametrize(
         "val, decimals, ref",
@@ -608,6 +637,7 @@ class TemplateTestNNCFTensorOperators:
 
         assert isinstance(res, Tensor)
         assert fns.allclose(res.data, ref_tensor)
+        assert res.device == tensor.device
 
     @pytest.mark.parametrize(
         "val, axis, ref",
@@ -659,6 +689,7 @@ class TemplateTestNNCFTensorOperators:
         res = s_fns.mean_per_channel(tensor, axis)
         assert isinstance(res, Tensor)
         assert fns.allclose(res, ref_tensor), f"{res.data}"
+        assert res.device == tensor.device
 
     @pytest.mark.parametrize("axis", (3, 4, -4, -5))
     def test_fn_mean_per_channel_incorrect_axis(self, axis):
