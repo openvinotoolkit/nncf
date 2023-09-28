@@ -132,7 +132,7 @@ def generate_run_examples_command(
     sample_type: str,
     mode: str,
     config: str,
-    dataset_path: Path,
+    dataset_path: Optional[Path] = None,
     log_dir: Optional[Path] = None,
     metrics_dump_file_path: Optional[Path] = None,
     multiprocessing_distributed: bool = False,
@@ -150,9 +150,9 @@ def generate_run_examples_command(
             sample_type,
             "-m", mode,
             "--config", config,
-            "--data", dataset_path.as_posix(),
-
         ]  # fmt: skip
+    if dataset_path is not None:
+        cmd += ["--data", dataset_path.as_posix()]
     if resume_file_path is not None:
         cmd += ["--resume", resume_file_path.as_posix()]
     else:
@@ -181,18 +181,18 @@ def generate_run_examples_command(
 
 @pytest.fixture(autouse=True, scope="class")
 def make_metrics_dump_path(metrics_dump_dir):
-    if pytest.metrics_dump_path is None:
+    if metrics_dump_path is None:
         data = datetime.datetime.now()
-        pytest.metrics_dump_path = (
+        metrics_dump_path = (
             PROJECT_ROOT / "test_results" / "metrics_dump_"
             f"{'_'.join([str(getattr(data, atr)) for atr in ['year', 'month', 'day', 'hour', 'minute', 'second']])}"
         )
     else:
-        pytest.metrics_dump_path = Path(pytest.metrics_dump_path)
-    assert not pytest.metrics_dump_path.is_dir() or not os.listdir(
-        pytest.metrics_dump_path
-    ), f"metrics_dump_path dir should be empty: {pytest.metrics_dump_path}"
-    print(f"metrics_dump_path: {pytest.metrics_dump_path}")
+        metrics_dump_path = Path(metrics_dump_path)
+    assert not metrics_dump_path.is_dir() or not os.listdir(
+        metrics_dump_path
+    ), f"metrics_dump_path dir should be empty: {metrics_dump_path}"
+    print(f"metrics_dump_path: {metrics_dump_path}")
 
 
 @pytest.mark.nightly
@@ -354,7 +354,7 @@ class TestSotaCheckpoints:
         return PROJECT_ROOT / "ir_models" / eval_run_param.model_name / f"{eval_run_param.model_name}.xml"
 
     @pytest.mark.convert
-    def test_convert(self, eval_run_param: EvalRunParamsStruct, openvino, sota_checkpoints_dir, sota_data_dir):
+    def test_convert(self, eval_run_param: EvalRunParamsStruct, openvino, sota_checkpoints_dir):
         if not openvino:
             pytest.skip()
         os.chdir(PROJECT_ROOT)
@@ -369,7 +369,6 @@ class TestSotaCheckpoints:
             sample_type=eval_run_param.sample_type,
             mode="export",
             config=eval_run_param.config_name,
-            dataset_path=Path(sota_data_dir) / eval_run_param.dataset_name,
             cpu_only=True,
             to_ir=ir_model_path,
             resume_file_path=resume_file_path,
