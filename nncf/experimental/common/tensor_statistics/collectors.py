@@ -366,7 +366,7 @@ class TensorCollector:
 
         :param outputs: Target model outputs.
         :param output_info: Output info collected by a `TensorCollector.get_output_info` method.
-        :returns: Model outputs in a format required by `TensorCollector.register_input` method.
+        :returns: Model outputs in a format required by `TensorCollector.register_inputs` method.
         """
         target_inputs = {}
         for reducer, names in output_info:
