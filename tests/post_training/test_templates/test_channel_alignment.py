@@ -16,7 +16,6 @@ import numpy as np
 import pytest
 
 from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.layer_attributes import ConvLayoutElem
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.model_transformer import ModelTransformer
@@ -29,7 +28,6 @@ from nncf.experimental.common.tensor_statistics.collectors import MedianAggregat
 from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.quantization.algorithms.channel_alignment.algorithm import ChannelAlignment
-from nncf.quantization.algorithms.channel_alignment.algorithm import ConvParamsContainer
 from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend
 from nncf.quantization.algorithms.channel_alignment.backend import LayoutDescriptor
 from tests.post_training.test_templates.models import NNCFGraphCA
@@ -49,7 +47,6 @@ VALID_CONV_LAYER_ATTR = ConvolutionLayerAttributes(
     groups=1,
     transpose=False,
     padding_values=(0, 0, 0, 0),
-    weights_layout=(ConvLayoutElem.C_OUT, ConvLayoutElem.C_IN, ConvLayoutElem.SPATIAL, ConvLayoutElem.SPATIAL),
 )
 
 
@@ -63,13 +60,6 @@ DEPTHWISE_CONV_LAYER_ATTR = ConvolutionLayerAttributes(
     groups=5,
     transpose=False,
     padding_values=(0, 0, 0, 0),
-    weights_layout=(
-        ConvLayoutElem.GROUPS,
-        ConvLayoutElem.C_OUT,
-        ConvLayoutElem.C_IN,
-        ConvLayoutElem.SPATIAL,
-        ConvLayoutElem.SPATIAL,
-    ),
 )
 
 MATMUL_LAYER_METATYPES = [
@@ -79,7 +69,6 @@ MATMUL_LAYER_METATYPES = [
         in_features=5,
         out_features=10,
         with_bias=False,
-        weights_layout=[ConvLayoutElem.C_IN, ConvLayoutElem.C_OUT],
     ),
     # 1D
     LinearLayerAttributes(
@@ -87,7 +76,6 @@ MATMUL_LAYER_METATYPES = [
         in_features=5,
         out_features=None,
         with_bias=False,
-        weights_layout=[ConvLayoutElem.C_IN],
     ),
     # 5D
     LinearLayerAttributes(
@@ -95,13 +83,6 @@ MATMUL_LAYER_METATYPES = [
         in_features=5,
         out_features=None,
         with_bias=False,
-        weights_layout=[
-            ConvLayoutElem.SPATIAL,
-            ConvLayoutElem.SPATIAL,
-            ConvLayoutElem.SPATIAL,
-            ConvLayoutElem.C_IN,
-            ConvLayoutElem.C_OUT,
-        ],
     ),
 ]
 
@@ -117,7 +98,6 @@ INVALID_CONSUMER_CONV_LAYER_ATTRS = [
         groups=1,
         transpose=False,
         padding_values=(0, 0, 0, 0),
-        weights_layout=(ConvLayoutElem.C_OUT, ConvLayoutElem.C_IN, ConvLayoutElem.SPATIAL, ConvLayoutElem.SPATIAL),
     ),
     ConvolutionLayerAttributes(
         weight_requires_grad=False,
@@ -129,7 +109,6 @@ INVALID_CONSUMER_CONV_LAYER_ATTRS = [
         groups=1,
         transpose=False,
         padding_values=(0, 0, 0, 0),
-        weights_layout=(ConvLayoutElem.C_OUT, ConvLayoutElem.C_IN, ConvLayoutElem.SPATIAL, ConvLayoutElem.SPATIAL),
     ),
     ConvolutionLayerAttributes(
         weight_requires_grad=False,
@@ -141,7 +120,6 @@ INVALID_CONSUMER_CONV_LAYER_ATTRS = [
         groups=1,
         transpose=False,
         padding_values=(0, 0, 0, 0),
-        weights_layout=(ConvLayoutElem.C_OUT, ConvLayoutElem.C_IN, ConvLayoutElem.SPATIAL, ConvLayoutElem.SPATIAL),
     ),
     ConvolutionLayerAttributes(
         weight_requires_grad=False,
@@ -153,7 +131,6 @@ INVALID_CONSUMER_CONV_LAYER_ATTRS = [
         groups=1,
         transpose=False,
         padding_values=(1, 0, 0, 0),
-        weights_layout=(ConvLayoutElem.C_OUT, ConvLayoutElem.C_IN, ConvLayoutElem.SPATIAL, ConvLayoutElem.SPATIAL),
     ),
 ]
 
@@ -168,13 +145,6 @@ INVALID_CONV_LAYER_ATTR = ConvolutionLayerAttributes(
     groups=5,
     transpose=False,
     padding_values=(0, 0, 0, 0),
-    weights_layout=(
-        ConvLayoutElem.GROUPS,
-        ConvLayoutElem.C_OUT,
-        ConvLayoutElem.C_IN,
-        ConvLayoutElem.SPATIAL,
-        ConvLayoutElem.SPATIAL,
-    ),
 )
 
 
@@ -379,12 +349,14 @@ class TemplateTestChannelAlignment:
         mocked_transformer = mocker.MagicMock()
         self.mock_model_transformer_factory(mocker, mocked_transformer)
 
+        # NNCFGraph building
         first_conv_layer_attrs = DEPTHWISE_CONV_LAYER_ATTR if not one_dim_mm else MATMUL_LAYER_METATYPES[1]
         nncf_graph = self._get_nncf_graph(num_biases, first_conv_layer_attrs)
         self.mock_nncf_graph_factory(mocker, nncf_graph)
 
         self.mock_command_creation_factory(mocker)
 
+        # Statistic points setup
         statistic_points = StatisticPointsContainer()
         target_node_name = "/Add_1_0" if num_biases else "/Conv_1_0"
         target_node = nncf_graph.get_node_by_name(target_node_name)
@@ -407,6 +379,7 @@ class TemplateTestChannelAlignment:
         tensor_collector.get_statistics = self._get_constant_lambda(TestTensorStats(*stat_value))
         statistic_points.add_statistic_point(StatisticPoint(target_point, tensor_collector, algorithm._algorithm_key))
 
+        # Backend setup
         class MockBackend(backend_cls):
             pass
 
@@ -415,6 +388,19 @@ class TemplateTestChannelAlignment:
         ref_bias_val = "ref_bias_val"
         MockBackend.get_bias_value = self._get_constant_lambda(ref_bias_val, True)
 
+        # ConvParams setup
+        ref_dims_in = LayoutDescriptor(0, 1, -1)
+        ref_dims_out = LayoutDescriptor(0, 2, 1)
+        if one_dim_mm:
+            ref_dims_in = LayoutDescriptor(None, 1, -1)
+        iter_ = (dims for dims in (ref_dims_in, ref_dims_out))
+
+        def dims_iter(*args, **kwargs):
+            return next(iter_)
+
+        MockBackend.get_dims_descriptor = dims_iter
+
+        # Algorithm fucntions mocking
         algorithm._backend_entity = MockBackend
         algorithm._set_backend_entity = mocker.MagicMock()
         ref_bias_in_after_align = "ref_bias_in_after_align"
@@ -440,16 +426,12 @@ class TemplateTestChannelAlignment:
             assert len(arg.transformations) == 0
             return
 
-        assert algorithm._align_means.call_count == 1
-
-        ref_dims = LayoutDescriptor(0, 2, 1)
-        ref_dims_1 = LayoutDescriptor(0, 1, 1)
         args = [
             np.zeros((1, 1, 1, 1)),
             np.zeros((1, 1, 1, 1)),
             ref_weights_val + "2",
             np.array(0.5, dtype=np.float32),
-            ref_dims_1,
+            ref_dims_out,
         ]
         for i in range(num_biases):
             args[i] = f"ref_bias_val{i + 1}"
@@ -462,8 +444,8 @@ class TemplateTestChannelAlignment:
         assert args[1] == ref_weights_val + "2"
         assert args[2] == ref_bias_in_after_align
         assert ((args[3] - 3) < EPS).all()
-        assert args[4] == ref_dims
-        assert args[5] == ref_dims_1
+        assert args[4] == ref_dims_in
+        assert args[5] == ref_dims_out
         assert args[6] < EPS
 
         mocked_transformer.transform.assert_called_once()
@@ -574,29 +556,3 @@ class TemplateTestChannelAlignment:
             assert isinstance(aggr, MedianAggregator)
             assert aggr.num_samples == num_samples_ref
             assert not aggr._use_per_sample_stats
-
-    @pytest.mark.parametrize(
-        "layer_attributes,ref_layout_desc",
-        [
-            (VALID_CONV_LAYER_ATTR, LayoutDescriptor(0, 1, 1)),
-            (DEPTHWISE_CONV_LAYER_ATTR, LayoutDescriptor(0, 2, 1)),
-            (MATMUL_LAYER_METATYPES[0], LayoutDescriptor(1, 0, 1)),
-            (MATMUL_LAYER_METATYPES[1], LayoutDescriptor(None, 0, 1)),
-            (MATMUL_LAYER_METATYPES[2], LayoutDescriptor(4, 3, 1)),
-        ],
-    )
-    def test_conv_params_dims(self, layer_attributes, ref_layout_desc):
-        backend_cls = self.get_backend_cls()
-
-        class MockBackend(backend_cls):
-            pass
-
-        ref_weights_val = "ref_weights_val"
-        MockBackend.get_weight_value = self._get_constant_lambda(ref_weights_val)
-        ref_bias_val = "ref_bias_val"
-        MockBackend.get_bias_value = self._get_constant_lambda(ref_bias_val)
-        nncf_graph = NNCFGraphCAWithBias(
-            self.get_conv_metatype(), self.get_add_metatype(), self.convert_conv_layer_attrs(layer_attributes)
-        ).nncf_graph
-        cont = ConvParamsContainer(nncf_graph.get_node_by_name("/Conv_1_0"), None, nncf_graph, MockBackend)
-        assert cont.dims == ref_layout_desc

@@ -18,10 +18,8 @@ import pytest
 import torch
 from openvino.tools.mo import convert_model
 
-from nncf.common.graph.layer_attributes import ConvLayoutElem
-from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
-from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
+from nncf.openvino.graph.layout import OVConvLayoutElem
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.quantization.algorithms.smooth_quant.openvino_backend import OVSmoothQuantAlgoBackend
@@ -82,73 +80,47 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
         return super().test_get_activation_channel_axis(node_metatype, layer_attributes, port_id, reference_value)
 
     @pytest.mark.parametrize(
-        "node_metatype,layer_attributes,reference_value",
+        "node_metatype,weights_layout,reference_value",
         (
             (
                 OVMatMulMetatype,
-                OVLayerAttributes(
-                    {},
-                    LinearLayerAttributes(
-                        weight_requires_grad=False,
-                        in_features=5,
-                        out_features=10,
-                        with_bias=False,
-                        weights_layout=[ConvLayoutElem.C_OUT, ConvLayoutElem.C_IN],
-                    ),
-                ),
+                (OVConvLayoutElem.C_OUT, OVConvLayoutElem.C_IN),
                 1,
             ),
             (
                 OVMatMulMetatype,
-                OVLayerAttributes(
-                    {},
-                    LinearLayerAttributes(
-                        weight_requires_grad=False,
-                        in_features=5,
-                        out_features=None,
-                        with_bias=False,
-                        weights_layout=[ConvLayoutElem.C_IN],
-                    ),
-                ),
+                (OVConvLayoutElem.C_IN,),
                 0,
             ),
             (
-                OVConvolutionMetatype,
-                OVLayerAttributes(
-                    {},
-                    ConvolutionLayerAttributes(
-                        weight_requires_grad=False,
-                        in_channels=5,
-                        out_channels=10,
-                        kernel_size=(5, 5),
-                        stride=(1, 1),
-                        dilations=(1, 1),
-                        groups=1,
-                        transpose=False,
-                        padding_values=[1, 1, 1, 1],
-                        with_bias=False,
-                        weights_layout=[
-                            ConvLayoutElem.SPATIAL,
-                            ConvLayoutElem.SPATIAL,
-                            ConvLayoutElem.C_IN,
-                            ConvLayoutElem.C_OUT,
-                        ],
-                    ),
+                OVMatMulMetatype,
+                (
+                    OVConvLayoutElem.SPATIAL,
+                    OVConvLayoutElem.SPATIAL,
+                    OVConvLayoutElem.SPATIAL,
+                    OVConvLayoutElem.C_IN,
+                    OVConvLayoutElem.C_OUT,
                 ),
-                2,
+                3,
             ),
             (
-                OVMatMulMetatype,
-                OVLayerAttributes(
-                    {},
-                    None,
+                OVConvolutionMetatype,
+                (
+                    OVConvLayoutElem.C_IN,
+                    OVConvLayoutElem.C_OUT,
+                    OVConvLayoutElem.SPATIAL,
+                    OVConvLayoutElem.SPATIAL,
                 ),
-                1,
+                0,
             ),
         ),
     )
-    def test_get_weight_channel_axis(self, node_metatype, layer_attributes, reference_value):
-        return super().test_get_weight_channel_axis(node_metatype, layer_attributes, reference_value)
+    def test_get_weight_channel_axis(self, node_metatype, weights_layout, reference_value, mocker):
+        mocker.patch(
+            "nncf.quantization.algorithms.smooth_quant.openvino_backend.get_linear_weights_layout_from_node",
+            return_value=weights_layout,
+        )
+        return super().test_get_weight_channel_axis(node_metatype, None, reference_value)
 
     @staticmethod
     def get_matmul_metatype():

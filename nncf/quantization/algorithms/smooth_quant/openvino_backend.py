@@ -21,6 +21,8 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.openvino.graph.layer_attributes import get_linear_weights_layout_from_node
+from nncf.openvino.graph.layout import OVConvLayoutElem
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_shape
 from nncf.openvino.graph.node_utils import get_weight_value
@@ -159,6 +161,14 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
                 channel_axis = OVSmoothQuantAlgoBackend.calculate_port_based_channel_axis(port_id, transpose)
 
         return channel_axis
+
+    @staticmethod
+    def get_weight_channel_axis(node: NNCFNode) -> int:
+        if node.metatype != OVMatMulMetatype:
+            return 1 if node.metatype.const_channel_axis is None else node.metatype.const_channel_axis[0]
+
+        weights_layout = get_linear_weights_layout_from_node(node)
+        return weights_layout.index(OVConvLayoutElem.C_IN)
 
     @staticmethod
     def calculate_port_based_channel_axis(port_id: int, transpose: bool) -> int:

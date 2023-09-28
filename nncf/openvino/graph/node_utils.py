@@ -17,9 +17,8 @@ import openvino.runtime.opset9 as opset
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.layer_attributes import ConvLayoutElem
-from nncf.common.graph.layer_attributes import LinearLayerAttributes
-from nncf.openvino.graph.layer_attributes import OVLayerAttributes
+from nncf.openvino.graph.layer_attributes import get_linear_weights_layout_from_node
+from nncf.openvino.graph.layout import OVConvLayoutElem
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_BIAS
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
@@ -336,13 +335,9 @@ def get_matmul_channel_axes(node: ov.Node) -> List[int]:
     :param node: The target node.
     :return: List of channel axes for the MatMul operation.
     """
-    assert isinstance(node.layer_attributes, OVLayerAttributes)
-    layer_attributes = node.layer_attributes.get_backend_agnostic_attributes()
-    assert isinstance(layer_attributes, LinearLayerAttributes)
+    weights_layout = get_linear_weights_layout_from_node(node)
     return [
-        idx
-        for idx, elem in enumerate(layer_attributes.weights_layout)
-        if elem in [ConvLayoutElem.SPATIAL, ConvLayoutElem.C_OUT]
+        idx for idx, elem in enumerate(weights_layout) if elem in [OVConvLayoutElem.SPATIAL, OVConvLayoutElem.C_OUT]
     ]
 
 

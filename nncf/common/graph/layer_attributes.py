@@ -13,32 +13,12 @@ from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, List, Tuple, Union
 
 
 class Dtype(Enum):
     FLOAT = "float"
     INTEGER = "int"
-
-
-class ConvLayoutElem(Enum):
-    """
-    Layout elements descriptor for convolutional and linear layers:
-        C_IN: Input channels dimension.
-        C_OUT: Output channels dimension.
-        SPATIAL: Spatial dimension.
-        GROUPS: Groups dimention.
-    In case a backend is not using a separate dimension for groups and
-    has layout C_IN // GROUPS for input channels of a convolution operation
-    and C_OUT // GROUPS for output channels of a transpose convolution operation
-    input/output channel dimentions are interpretated as
-    input/output channel dimension but with size divided by groups number.
-    """
-
-    C_IN = "channels_in"
-    C_OUT = "channels_out"
-    SPATIAL = "spatial"
-    GROUPS = "groups"
 
 
 class BaseLayerAttributes(ABC):
@@ -138,7 +118,6 @@ class LinearLayerAttributes(WeightedLayerAttributes):
         in_features: int,
         out_features: int,
         with_bias: bool = True,
-        weights_layout: Optional[Tuple[ConvLayoutElem, ...]] = None,
     ):
         """
 
@@ -150,7 +129,6 @@ class LinearLayerAttributes(WeightedLayerAttributes):
         super().__init__(weight_requires_grad, with_bias=with_bias)
         self.in_features = in_features
         self.out_features = out_features
-        self.weights_layout = weights_layout
 
     def get_weight_shape(self) -> List[int]:
         return [self.out_features, self.in_features]
@@ -175,7 +153,6 @@ class ConvolutionLayerAttributes(WeightedLayerAttributes):
         transpose: bool,
         padding_values: Tuple[int, ...],
         with_bias: bool = False,
-        weights_layout: Optional[Tuple[ConvLayoutElem, ...]] = None,
     ):
         """
 
@@ -199,7 +176,6 @@ class ConvolutionLayerAttributes(WeightedLayerAttributes):
         self.groups = groups
         self.transpose = transpose
         self.padding_values = padding_values
-        self.weights_layout = weights_layout
 
     def get_weight_shape(self) -> List[int]:
         if not self.transpose:

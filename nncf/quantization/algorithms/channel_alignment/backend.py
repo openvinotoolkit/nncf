@@ -112,6 +112,17 @@ class ChannelAlignmentAlgoBackend:
 
     @staticmethod
     @abstractmethod
+    def get_dims_descriptor(node: NNCFNode) -> LayoutDescriptor:
+        """
+        Return weights layout descriptor of the given node if it is possible and None otherwise.
+        Only convolutional and linear nodes are supported.
+
+        :param node: NNCFNode to get layout descriptor from.
+        :return: Weights layout descriptor of the given node if it is possible and None otherwise.
+        """
+
+    @staticmethod
+    @abstractmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         """
         Checks if the node has a bias or not.

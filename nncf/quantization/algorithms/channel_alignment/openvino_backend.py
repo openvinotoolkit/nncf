@@ -21,6 +21,10 @@ from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBas
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import MedianAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.openvino.graph.layer_attributes import OV_CONV_METATYPES
+from nncf.openvino.graph.layer_attributes import get_conv_weights_layout_from_node
+from nncf.openvino.graph.layer_attributes import get_linear_weights_layout_from_node
+from nncf.openvino.graph.layout import OVConvLayoutElem
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
@@ -38,6 +42,7 @@ from nncf.openvino.statistics.collectors import OVQuantileReducer
 from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
 from nncf.quantization.algorithms.channel_alignment.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend
+from nncf.quantization.algorithms.channel_alignment.backend import LayoutDescriptor
 
 
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
@@ -98,6 +103,31 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
 
         bias_constant = get_node_with_bias_value(add_node, nncf_graph)
         return bias_constant is not None
+
+    @staticmethod
+    def get_dims_descriptor(node: NNCFNode) -> LayoutDescriptor:
+        if node.metatype in OV_CONV_METATYPES:
+            weights_layout = get_conv_weights_layout_from_node(node=node)
+        elif node.metatype == OVMatMulMetatype:
+            weights_layout = get_linear_weights_layout_from_node(node=node)
+        else:
+            raise RuntimeError(
+                f"Metatype {node.metatype} of node {node.node_name} dimensions description retrieving is not supported"
+            )
+
+        if OVConvLayoutElem.GROUPS in weights_layout:
+            # Using groups dim as output channels dim for ChannelAlignment algorithm
+            # TODO(dlyakhov) support group convolutions with groups number not in [1, out_channels]
+            return LayoutDescriptor(
+                weights_layout.index(OVConvLayoutElem.GROUPS),
+                weights_layout.index(OVConvLayoutElem.C_IN),
+                node.metatype.output_channel_axis,
+            )
+        return LayoutDescriptor(
+            weights_layout.index(OVConvLayoutElem.C_OUT) if OVConvLayoutElem.C_OUT in weights_layout else None,
+            weights_layout.index(OVConvLayoutElem.C_IN),
+            node.metatype.output_channel_axis,
+        )
 
     @staticmethod
     def create_bias_tensor(node: NNCFNode, nncf_graph: NNCFGraph, value: Any) -> np.ndarray:

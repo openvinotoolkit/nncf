@@ -237,7 +237,7 @@ class TemplateTestSQAlgorithm:
 
         try:
             # pylint: disable=protected-access
-            activation_channel_axis = SmoothQuant._get_weight_channel_axis(node)
+            activation_channel_axis = self.get_backend().get_weight_channel_axis(node)
         except RuntimeError as e:
             if isinstance(e, reference_value):
                 pytest.xfail("Expected exception")

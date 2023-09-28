@@ -18,7 +18,6 @@ from nncf.common.factory import CommandCreatorFactory
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.layer_attributes import ConvLayoutElem
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
@@ -465,21 +464,7 @@ class ConvParamsContainer:
             bias = backend_entity.create_bias_tensor(conv_op, nncf_graph, 0)
         self.stated_bias = StatedTensor(bias)
         self._op = conv_op
-        weights_layout = conv_op.layer_attributes.get_backend_agnostic_attributes().weights_layout
-        if ConvLayoutElem.GROUPS in weights_layout:
-            # Using groups dim as output channels dim for ChannelAlignment algorithm
-            # TODO(dlyakhov) support group convolutions with groups number not in [1, out_channels]
-            self._dims = LayoutDescriptor(
-                weights_layout.index(ConvLayoutElem.GROUPS),
-                weights_layout.index(ConvLayoutElem.C_IN),
-                conv_op.metatype.output_channel_axis,
-            )
-        else:
-            self._dims = LayoutDescriptor(
-                weights_layout.index(ConvLayoutElem.C_OUT) if ConvLayoutElem.C_OUT in weights_layout else None,
-                weights_layout.index(ConvLayoutElem.C_IN),
-                conv_op.metatype.output_channel_axis,
-            )
+        self._dims = backend_entity.get_dims_descriptor(conv_op)
 
     @property
     def weight(self):
