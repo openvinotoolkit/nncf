@@ -50,11 +50,11 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     """
 
     @staticmethod
-    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
+    def reduce_min(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
         return PTNNCFTensor(torch.amin(x.tensor, dim=axis, keepdim=keepdims))
 
     @staticmethod
-    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
+    def reduce_max(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
         return PTNNCFTensor(torch.amax(x.tensor, dim=axis, keepdim=keepdims))
 
     @staticmethod
@@ -72,38 +72,44 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return cls.reduce_max(stacked, axis=0, keepdims=False)
 
     @staticmethod
-    def mean(x: NNCFTensor, axis: Union[int, tuple, list], keepdims=False) -> NNCFTensor:
+    def mean(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> NNCFTensor:
         return PTNNCFTensor(x.tensor.mean(dim=axis, keepdim=keepdims))
 
     @staticmethod
-    def median(x: NNCFTensor, axis: Union[int, tuple, list], keepdims=False) -> NNCFTensor:
+    def median(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> NNCFTensor:
         # See https://github.com/pytorch/pytorch/issues/61582
         if not isinstance(axis, int):
-            return PTNNCFTensor(torch.tensor(np.median(x.tensor.detach().cpu().numpy(), axis=axis, keepdims=keepdims)))
+            device = x.tensor.device
+            result = torch.tensor(np.median(x.tensor.detach().cpu().numpy(), axis=axis, keepdims=keepdims))
+            return PTNNCFTensor(result.type(x.tensor.dtype).to(device))
         return PTNNCFTensor(torch.quantile(x.tensor, q=0.5, dim=axis, keepdim=keepdims).values)
 
     @classmethod
-    def masked_mean(cls, x: NNCFTensor, axis: Union[int, tuple], mask: NNCFTensor, keepdims=False) -> NNCFTensor:
+    def masked_mean(
+        cls, x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], mask: NNCFTensor, keepdims=False
+    ) -> NNCFTensor:
         if mask is None:
             return cls.mean(x, axis=axis, keepdims=keepdims)
-        masked_x = np.ma.array(x.tensor.detach().cpu().numpy(), mask=mask.tensor)
+        device = x.tensor.device
+        masked_x = np.ma.array(x.tensor.detach().cpu().numpy(), mask=mask.tensor.detach().cpu().numpy())
         result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims).astype(masked_x.dtype)
         if isinstance(result, np.ma.MaskedArray):
-            return PTNNCFTensor(torch.tensor(result.data))
-        return PTNNCFTensor(torch.tensor(result))
+            result = result.data
+        return PTNNCFTensor(torch.tensor(result).to(device=device))
 
     @classmethod
     def masked_median(
-        cls, x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor, keepdims=False
+        cls, x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], mask: NNCFTensor, keepdims=False
     ) -> NNCFTensor:
         # Implemented in numy as torch.masked.median is not implemented yet
         if mask is None:
             return cls.median(x, axis=axis, keepdims=keepdims)
+        device = x.tensor.device
         masked_x = np.ma.array(x.tensor.detach().cpu().numpy(), mask=mask.tensor.detach().cpu().numpy())
         result = np.ma.median(masked_x, axis=axis, keepdims=keepdims).astype(masked_x.dtype)
         if isinstance(result, np.ma.MaskedArray):
-            return PTNNCFTensor(torch.tensor(result.data))
-        return PTNNCFTensor(torch.tensor(result))
+            result = result.data
+        return PTNNCFTensor(torch.tensor(result).to(device=device))
 
     @staticmethod
     def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
@@ -148,8 +154,12 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
 
     @staticmethod
     def quantile(
-        tensor: NNCFTensor, quantile: Union[float, List[float]], axis: Union[int, tuple, list], keepdims: bool = False
+        tensor: NNCFTensor,
+        quantile: Union[float, List[float], np.ndarray],
+        axis: Union[int, Tuple[int, ...], List[int]],
+        keepdims: bool = False,
     ) -> List[NNCFTensor]:
+        device = tensor.device
         # See https://github.com/pytorch/pytorch/issues/61582
         if not isinstance(axis, int):
             result = torch.tensor(
@@ -157,15 +167,15 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
             )
         else:
             result = torch.quantile(tensor.tensor, torch.tensor(quantile).type(tensor.tensor.dtype), axis, keepdims)
-        result = result.type(tensor.tensor.dtype)
+        result = result.type(tensor.tensor.dtype).to(device)
         return [PTNNCFTensor(x) for x in result]
 
     @classmethod
     def percentile(
         cls,
         tensor: NNCFTensor,
-        percentile: Union[float, List[float]],
-        axis: Union[int, tuple, list],
+        percentile: Union[float, List[float], np.ndarray],
+        axis: Union[int, Tuple[int, ...], List[int]],
         keepdims: bool = False,
     ) -> List[TensorElementsType]:
         quantile = np.true_divide(percentile, 100)

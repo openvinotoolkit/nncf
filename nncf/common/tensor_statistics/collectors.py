@@ -116,7 +116,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
+    def reduce_min(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
         """
         Computes minimum of elements across dimensions of NNCFTensor.
 
@@ -129,7 +129,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
+    def reduce_max(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
         """
         Computes maximum of elements across dimensions of NNCFTensor.
 
@@ -174,7 +174,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def mean(x: NNCFTensor, axis: Union[int, tuple, list], keepdims=False) -> NNCFTensor:
+    def mean(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> NNCFTensor:
         """
         Computes the mean of elements across given dimensions of NNCFTensor.
 
@@ -187,7 +187,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def median(x: NNCFTensor, axis: Union[int, tuple, list], keepdims=False) -> NNCFTensor:
+    def median(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> NNCFTensor:
         """
         Computes the median of elements across given dimensions of NNCFTensor.
 
@@ -200,7 +200,9 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @classmethod
     @abstractmethod
-    def masked_mean(cls, x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor, keepdims=False) -> NNCFTensor:
+    def masked_mean(
+        cls, x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], mask: NNCFTensor, keepdims=False
+    ) -> NNCFTensor:
         """
         Computes the masked mean of elements across given dimensions of NNCFTensor.
 
@@ -216,7 +218,7 @@ class NNCFCollectorTensorProcessor(ABC):
     @classmethod
     @abstractmethod
     def masked_median(
-        cls, x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor, keepdims=False
+        cls, x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], mask: NNCFTensor, keepdims=False
     ) -> NNCFTensor:
         """
         Computes the masked median of elements across given dimensions of NNCFTensor.
@@ -275,7 +277,10 @@ class NNCFCollectorTensorProcessor(ABC):
     @staticmethod
     @abstractmethod
     def quantile(
-        tensor: NNCFTensor, quantile: Union[float, List[float]], axis: Union[int, tuple, list], keepdims: bool = False
+        tensor: NNCFTensor,
+        quantile: Union[float, List[float]],
+        axis: Union[int, Tuple[int, ...], List[int]],
+        keepdims: bool = False,
     ) -> List[TensorElementsType]:
         """
         Compute the quantile(s) of the data along the specified axis.
@@ -295,7 +300,7 @@ class NNCFCollectorTensorProcessor(ABC):
         cls,
         tensor: NNCFTensor,
         percentile: Union[float, List[float]],
-        axis: Union[int, tuple, list],
+        axis: Union[int, Tuple[int, ...], List[int]],
         keepdims: bool = False,
     ) -> List[TensorElementsType]:
         """

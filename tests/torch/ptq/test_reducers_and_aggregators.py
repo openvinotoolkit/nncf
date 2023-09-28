@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from abc import ABC
 from typing import Any, List, Optional, Tuple
 
 import numpy as np
@@ -30,18 +31,18 @@ from nncf.torch.tensor_statistics.collectors import PTQuantileReducer
 from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggreagtors
 
 
-class TestReducersAggregators(TemplateTestReducersAggreagtors):
+class BaseTestReducersAggregators(TemplateTestReducersAggreagtors, ABC):
     @pytest.fixture
     def tensor_processor(self):
         return PTNNCFCollectorTensorProcessor
 
-    def get_nncf_tensor(self, x: np.ndarray, dtype: Optional[Dtype] = None):
+    def _get_torch_tensor(self, x: np.ndarray, dtype: Optional[Dtype] = None):
         torch_tensor = torch.tensor(x)
         if dtype == Dtype.FLOAT:
             torch_tensor = torch_tensor.float()
         elif dtype == Dtype.INTEGER:
             torch_tensor = torch_tensor.int()
-        return PTNNCFTensor(torch_tensor)
+        return torch_tensor
 
     @pytest.fixture(scope="module")
     def reducers(self):
@@ -58,8 +59,8 @@ class TestReducersAggregators(TemplateTestReducersAggreagtors):
         }
 
     def all_close(self, val, ref) -> bool:
-        val_ = torch.tensor(val)
-        ref_ = torch.tensor(ref)
+        val_ = val
+        ref_ = torch.tensor(ref).to(val_.device)
         return torch.allclose(val_, ref_) and val_.shape == ref_.shape
 
     def squeeze_tensor(self, ref_tensor: List[Any], axes: Optional[Tuple[int]] = None):
@@ -81,3 +82,22 @@ class TestReducersAggregators(TemplateTestReducersAggreagtors):
         for dim in dims:
             shape.insert(dim, 1)
         return tensor_.view(shape)
+
+
+class TestCPUReducersAggregators(BaseTestReducersAggregators):
+    def get_nncf_tensor(self, x: np.array, dtype: Optional[Dtype] = None):
+        return PTNNCFTensor(self._get_torch_tensor(x, dtype=dtype).cpu())
+
+    def all_close(self, val: torch.Tensor, ref) -> bool:
+        assert not val.is_cuda
+        return super().all_close(val, ref)
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="Cuda is not available in current environment")
+class TestCudaReducersAggregators(BaseTestReducersAggregators):
+    def get_nncf_tensor(self, x: np.array, dtype: Optional[Dtype] = None):
+        return PTNNCFTensor(self._get_torch_tensor(x, dtype=dtype).cuda())
+
+    def all_close(self, val: torch.Tensor, ref) -> bool:
+        assert val.is_cuda
+        return super().all_close(val, ref)

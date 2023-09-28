@@ -50,11 +50,11 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     """
 
     @staticmethod
-    def reduce_min(x: NNCFTensor, axis: Union[int, Tuple], keepdims: bool = True) -> NNCFTensor:
+    def reduce_min(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = True) -> NNCFTensor:
         return OVNNCFTensor(np.amin(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
-    def reduce_max(x: NNCFTensor, axis: Union[int, Tuple], keepdims: bool = True) -> NNCFTensor:
+    def reduce_max(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = True) -> NNCFTensor:
         return OVNNCFTensor(np.amax(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
@@ -70,16 +70,20 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return OVNNCFTensor(np.maximum(x1.tensor, x2.tensor))
 
     @staticmethod
-    def mean(x: NNCFTensor, axis: Union[int, Tuple], keepdims: bool = False) -> NNCFTensor:
+    def mean(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
         return OVNNCFTensor(np.mean(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
-    def median(x: NNCFTensor, axis: Union[int, Tuple, list], keepdims: bool = False) -> NNCFTensor:
+    def median(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
         return OVNNCFTensor(np.median(x.tensor, axis=axis, keepdims=keepdims))
 
     @classmethod
     def masked_mean(
-        cls, x: NNCFTensor, axis: Optional[Union[int, Tuple, list]], mask: Optional[NNCFTensor], keepdims: bool = False
+        cls,
+        x: NNCFTensor,
+        axis: Optional[Union[int, Tuple[int, ...], List[int]]],
+        mask: Optional[NNCFTensor],
+        keepdims: bool = False,
     ) -> NNCFTensor:
         if mask is None:
             return cls.mean(x, axis=axis, keepdims=keepdims)
@@ -91,7 +95,11 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
 
     @classmethod
     def masked_median(
-        cls, x: NNCFTensor, axis: Optional[Union[int, Tuple, list]], mask: Optional[NNCFTensor], keepdims: bool = False
+        cls,
+        x: NNCFTensor,
+        axis: Optional[Union[int, Tuple[int, ...], List[int]]],
+        mask: Optional[NNCFTensor],
+        keepdims: bool = False,
     ) -> NNCFTensor:
         if mask is None:
             return cls.median(x, axis=axis, keepdims=keepdims)
@@ -140,7 +148,10 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
 
     @staticmethod
     def quantile(
-        tensor: NNCFTensor, quantile: Union[float, List[float]], axis: Union[int, Tuple, list], keepdims: bool = False
+        tensor: NNCFTensor,
+        quantile: Union[float, List[float]],
+        axis: Union[int, Tuple[int, ...], List[int]],
+        keepdims: bool = False,
     ) -> List[NNCFTensor]:
         result = np.quantile(tensor.tensor, quantile, axis, keepdims=keepdims)
         return [OVNNCFTensor(x) for x in result]
@@ -150,7 +161,7 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         cls,
         tensor: NNCFTensor,
         percentile: Union[float, List[float]],
-        axis: Union[int, tuple, list],
+        axis: Union[int, Tuple[int, ...], List[int]],
         keepdims: bool = False,
     ) -> List[TensorElementsType]:
         quantile = np.true_divide(percentile, 100)
