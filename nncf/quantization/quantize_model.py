@@ -235,13 +235,14 @@ def compress_weights(
 
     :param model: A model to be compressed.
     :param mode: Defines a mode for weight compression.
-        COMPRESSED_INT8 stands for int8 quantization of all weights.
-        COMPRESSED_NF4 assumes mixed precision quantization, when first and last layers are always compressed to
-        int8, and all others are quantized whether to NF4 or to INT8 depending on some criteria and given ratio.
-    :param ratio: ratio between primary precision and backup (e.g. 0.9 means 90% of layers in NF4 and the rest in INT8).
-    :param group_size: number of weights (e.g. 64 or 128) that are independently quantized or share compression
-        parameters (scale). When it equals -1, per-channel quantization is assumed with group size equals to the size of
-        channel. Defaults to -1.
+        COMPRESSED_INT8 stands for 8-bit integer quantization of all weights.
+        COMPRESSED_NF4 stands for a mixed-precision weights quantization to NF4 data type. The first and last layers
+        are always compressed to a backup precision which is uint8 by default. All others are quantized whether to NF4
+        or to a backup precision depending on criteria and the given ratio.
+    :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
+        and the rest to INT8).
+    :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
+        The value -1 means no grouping. Defaults to -1.
     :return: The non-trainable model with compressed weights.
     """
     backend = get_backend(model)

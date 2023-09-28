@@ -81,8 +81,8 @@ class WeightCompressionConfig:
 
     :param num_bits: number of bits for storing a single quantized value. 8, by default.
     :param is_nf4: is NF4 format used for quantization. False, by default.
-    :param group_size: number of weights (e.g. 64 or 128) that are independently quantized. When it equals -1,
-        per-channel quantized is assumed, with group size equals to the size of channel.
+    :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
+        The value -1 means no grouping. Defaults to -1.
     """
 
     num_bits: int = 8
@@ -165,8 +165,7 @@ def _calculate_scale_per_group(
 
     :param weight: Weight array to compress.
     :param reduction_axes: Axis or axes along which to reduce (collect) different statistics (e.g. min, max).
-    :param group_size: number of weights (e.g. 64 or 128) that are independently quantized or share compression
-        parameters (scale).
+    :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
     :return: Scale and reshaped weights.
     """
     assert group_size != -1
@@ -196,9 +195,8 @@ def _get_norm_weight_and_nf4_scale(
 
     :param weight: Weight array to compress.
     :param reduction_axes: Axis or axes along which to reduce (collect) different statistics (e.g. min, max).
-    :param group_size: number of weights (e.g. 64 or 128) that are independently quantized or share compression
-        parameters (scale). When it equals -1, per-channel quantization is assumed with group size equals to the size of
-        channel. Defaults to -1
+    :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
+        The value -1 means no grouping. Defaults to -1.
     :return: Normalized weights and nf4 scale.
     """
     if group_size != -1:
@@ -287,10 +285,10 @@ def _assign_mixed_precision(all_weight_params: List[WeightNodeParams], ratio: fl
     Assigns mixed quantization scheme (e.g. uniform int8 or non-uniform nf4) for weights based on some criteria.
 
     :param all_weight_params: List of information about each weight node. The quantization scheme is added to this info.
-    :param ratio: ratio between primary precision and backup (e.g. 0.9 means 90% of layers in NF4 and the rest in INT8).
-    :param group_size: number of weights (e.g. 64 or 128) that are independently quantized or share compression
-        parameters (scale). When it equals -1, per-channel quantization is assumed with group size equals to the size of
-        channel.
+    :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
+        and the rest to INT8).
+    :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
+        The value -1 means no grouping. Defaults to -1.
     """
     nf4_config = WeightCompressionConfig(num_bits=4, is_nf4=True, group_size=group_size)
     if ratio != 1:
@@ -337,14 +335,14 @@ def insert_pre_compression_operations(
 
     :param model: The model to be transformed.
     :param mode: Defines a mode for weight compression.
-        COMPRESSED_INT8 stands for unsigned int8 quantization of all weights.
-        COMPRESSED_NF4 assumes mixed precision quantization with favor to NF4 one. The first and last layers are
-        always compressed to INT8, and all others are quantized to NF4 or to some backup precision (INT8) depending on
-        some criteria and the given ratio.
-    :param ratio: ratio between primary precision and backup (e.g. 0.9 means 90% of layers in NF4 and the rest in INT8).
-    :param group_size: number of weights (e.g. 64 or 128) that are independently quantized or share compression
-        parameters (scale). When it equals -1, per-channel quantization is assumed with group size equals to the size of
-        channel.
+        COMPRESSED_INT8 stands for 8-bit integer quantization of all weights.
+        COMPRESSED_NF4 stands for a mixed-precision weights quantization to NF4 data type. The first and last layers
+        are always compressed to a backup precision which is uint8 by default. All others are quantized whether to NF4
+        or to a backup precision depending on criteria and the given ratio.
+    :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
+        and the rest to INT8).
+    :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
+        The value -1 means no grouping. Defaults to -1.
     """
     allowed_metatypes_to_const_port = {OVEmbeddingMetatype: [0], OVMatMulMetatype: [0, 1]}
 

@@ -63,10 +63,10 @@ class CompressWeightsMode(Enum):
     """
     Defines a mode for weight compression.
 
-    :param COMPRESSED_INT8: Stands for unsigned int8 quantization of all weights.
-    :param COMPRESSED_NF4: assumes mixed precision quantization with favor to NF4 one. The first and last layers are
-        always compressed to INT8, and all others are quantized to NF4 or to some backup precision (INT8) depending on
-        some criteria and the given ratio.
+    :param COMPRESSED_INT8: Stands for 8-bit integer quantization of all weights.
+    :param COMPRESSED_NF4: Stands for a mixed-precision weights quantization to NF4 data type. The first and last
+        layers are always compressed to a backup precision which is uint8 by default. All others are quantized whether
+        to NF4 or to a backup precision depending on criteria and the given ratio.
     """
 
     COMPRESSED_INT8 = "compressed_int8"
