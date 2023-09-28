@@ -181,18 +181,18 @@ def generate_run_examples_command(
 
 @pytest.fixture(autouse=True, scope="class")
 def make_metrics_dump_path(metrics_dump_dir):
-    if metrics_dump_dir is None:
+    if pytest.metrics_dump_path is None:
         data = datetime.datetime.now()
-        metrics_dump_dir = (
+        pytest.metrics_dump_path = (
             PROJECT_ROOT / "test_results" / "metrics_dump_"
             f"{'_'.join([str(getattr(data, atr)) for atr in ['year', 'month', 'day', 'hour', 'minute', 'second']])}"
         )
     else:
-        metrics_dump_dir = Path(metrics_dump_dir)
-    assert not metrics_dump_dir.is_dir() or not os.listdir(
-        metrics_dump_dir
-    ), f"metrics_dump_path dir should be empty: {metrics_dump_dir}"
-    print(f"metrics_dump_path: {metrics_dump_dir}")
+        pytest.metrics_dump_path = Path(pytest.metrics_dump_path)
+    assert not pytest.metrics_dump_path.is_dir() or not os.listdir(
+        pytest.metrics_dump_path
+    ), f"metrics_dump_path dir should be empty: {pytest.metrics_dump_path}"
+    print(f"metrics_dump_path: {pytest.metrics_dump_path}")
 
 
 @pytest.mark.nightly
