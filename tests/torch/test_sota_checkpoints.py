@@ -503,7 +503,7 @@ class TestSotaCheckpoints:
 def results(sota_data_dir):
     yield
     if sota_data_dir and TEST_RESULT:
-        path = pytest.metrics_dump_path / "result.csv"
+        path = pytest.metrics_dump_path / "results.csv"
         data_frame = pd.DataFrame.from_records([x.to_dict() for x in TEST_RESULT])
         data_frame.to_csv(path, index=False)
         print(f"Result file: {path}")
