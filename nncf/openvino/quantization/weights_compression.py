@@ -347,7 +347,7 @@ def insert_pre_compression_operations(
     allowed_metatypes_to_const_port = {OVEmbeddingMetatype: [0], OVMatMulMetatype: [0, 1]}
 
     all_weight_params: List[WeightNodeParams] = []
-    all_quantized_nodes = set()
+    quantized_nodes_ids = set()
     for node in model.get_ordered_ops():
         metatype = get_node_metatype(node)
         if metatype not in allowed_metatypes_to_const_port:
@@ -357,7 +357,7 @@ def insert_pre_compression_operations(
             weight_node = get_operation_const_op(node, const_port_id)
             if weight_node is None:
                 continue
-            if weight_node.name in all_quantized_nodes:
+            if id(weight_node) in quantized_nodes_ids:
                 continue
             weight_output = weight_node.output(0)
             weight_name = weight_node.get_friendly_name()
@@ -372,7 +372,7 @@ def insert_pre_compression_operations(
             num_weights = weight.size
             weight_params = WeightNodeParams(axes, num_weights, fq_name, weight_node, original_weight_dtype)
             all_weight_params.append(weight_params)
-            all_quantized_nodes.add(weight_node.name)
+            quantized_nodes_ids.add(id(weight_node))
 
     if mode == CompressWeightsMode.COMPRESSED_NF4:
         _assign_mixed_precision(all_weight_params, ratio, group_size)
