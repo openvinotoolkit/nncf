@@ -10,7 +10,7 @@
 # limitations under the License.
 from pathlib import Path
 
-import openvino.runtime as ov
+import openvino as ov
 import torch
 from openvino.tools.mo import convert_model
 
@@ -46,7 +46,12 @@ def export_model(ctrl: CompressionAlgorithmController, config: SampleConfig) -> 
     model_path = Path(config.to_ir)
     model_path.parent.mkdir(exist_ok=True, parents=True)
 
-    if not config.export_via_onnx:
+    if config.export_via_onnx:
+        model_onnx_path = model_path.with_suffix(".onnx")
+        with torch.no_grad():
+            torch.onnx.export(model, input_tensor_list, model_onnx_path, input_names=input_names)
+        ov_model = convert_model(model_onnx_path)
+    else:
         ov_model = convert_model(
             model,
             example_input=input_tensor_list,
@@ -56,12 +61,5 @@ def export_model(ctrl: CompressionAlgorithmController, config: SampleConfig) -> 
         for input_node, input_name in zip(ov_model.inputs, input_names):
             input_node.node.set_friendly_name(input_name)
 
-        ov.serialize(ov_model, model_path)
-    else:
-        model_onnx_path = model_path.with_suffix(".onnx")
-        with torch.no_grad():
-            torch.onnx.export(model, input_tensor_list, model_onnx_path, input_names=input_names)
-        ov_model = convert_model(model_onnx_path)
-        ov.serialize(ov_model, model_path)
-
+    ov.save_model(ov_model, model_path)
     logger.info(f"Saved to {model_path}")
