@@ -158,6 +158,26 @@ class PTInsertionCommand(PTTransformationCommand):
         return self.priority == TransformationPriority.QUANTIZATION_PRIORITY
 
 
+class PTQuantizerInsertionCommand(PTTransformationCommand):
+    """
+    Insertion quantizer operation to the models.
+    """
+
+    def __init__(
+        self,
+        point: PTTargetPoint,
+        quantizer: "BaseQuantizer",
+    ):
+        super().__init__(TransformationType.INSERT, point)
+        self.quantizer = quantizer
+
+    def union(self, other: "PTTransformationCommand") -> "PTTransformationCommand":
+        raise NotImplementedError()
+
+    def requires_graph_rebuild(self):
+        return True
+
+
 class PTModelExtractionWithFusedBiasCommand(PTCommand):
     """
     Extracts sequence by name with node that contain fused bias.
