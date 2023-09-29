@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import openvino.runtime as ov
@@ -56,7 +56,9 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return OVCommandCreator.create_command_to_update_bias(node, bias_value, nncf_graph)
 
     @staticmethod
-    def model_extraction_command(inputs: List[str], outputs: List[str]) -> OVModelExtractionCommand:
+    def model_extraction_command(
+        inputs: List[Tuple[str, int]], outputs: List[Tuple[str, int]]
+    ) -> OVModelExtractionCommand:
         return OVModelExtractionCommand(inputs, outputs)
 
     @staticmethod
@@ -81,20 +83,11 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return OVNNCFTensor(raw_data[output_name])
 
     @staticmethod
-    def get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
-        constant_ports = node.layer_attributes.get_const_port_ids()
-        activation_ports = [
-            e.input_port_id for e in nncf_graph.get_input_edges(node) if e.input_port_id not in constant_ports
-        ]
-        assert len(activation_ports) == 1
-        return activation_ports[0]
-
-    @staticmethod
     def get_bias_value(node: NNCFNode, model: ov.Model, nncf_graph: NNCFGraph) -> np.ndarray:
         return get_bias_value(node, nncf_graph, model)
 
     @staticmethod
-    def get_input_name(model: ov.Model, node_name: str) -> str:
+    def get_input_name(model: ov.Model, node_name: str, port_id: int) -> str:
         ops_dict = {op.get_friendly_name(): op for op in model.get_ops()}
 
         model_input_names = []
@@ -103,10 +96,10 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         if node_name in model_input_names:
             return node_name
 
-        for input_port in ops_dict[node_name].inputs():
-            input_node = input_port.get_source_output().get_node()
-            if input_node.get_type_name() == "Parameter":
-                return input_port.get_tensor().get_any_name()
+        input_port = ops_dict[node_name].input(port_id)
+        input_node = input_port.get_source_output().get_node()
+        if input_node.get_type_name() == "Parameter":
+            return input_port.get_tensor().get_any_name()
         raise RuntimeError(f"Input layer not found for {node_name}")
 
     @staticmethod

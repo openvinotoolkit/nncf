@@ -269,7 +269,7 @@ def get_raw_stat_collector(num_samples, inplace=False):
     reducer = OVNoopReducer()
     aggregator = NoopAggregator(num_samples)
 
-    collector = TensorCollector(OVRawTensorStatistic)
+    collector = TensorCollector(OVRawTensorStatistic, skip_empty_stats=False)
     collector.register_statistic_branch(OVRawTensorStatistic.VALUES_STATS, reducer, aggregator)
     return collector
 

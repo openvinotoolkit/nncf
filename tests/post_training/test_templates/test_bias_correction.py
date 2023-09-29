@@ -174,7 +174,7 @@ class TemplateTestBCAlgorithm:
         bc_algo._set_backend_entity(quantized_test_model)
 
         node = nncf_graph.get_node_by_name(layer_name)
-        bc_algo._collected_stat_inputs_map.update(ref_data["collected_inputs"])
+        bc_algo._collected_statistics_ids.update(ref_data["collected_inputs"])
         subgraph_data = bc_algo._get_subgraph_data_for_node(node, nncf_graph)
         ref_subgraph_data = ref_data["subgraph_data"]
 

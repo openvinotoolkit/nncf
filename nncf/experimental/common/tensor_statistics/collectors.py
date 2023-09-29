@@ -185,12 +185,13 @@ class TensorCollector:
     a dict could be collected by `get_statistics` call.
     """
 
-    def __init__(self, statistic_container: Optional[TensorStatistic] = None) -> None:
+    def __init__(self, statistic_container: Optional[TensorStatistic] = None, skip_empty_stats: Optional[bool] = True) -> None:
         self._reducers: Set[TensorReducerBase] = set()
         self._aggregators: Dict[Tuple[int, int], TensorAggregatorBase] = {}
         self._stat_container_kwargs_map: Dict[str, Tuple[int, int]] = {}
         self._stat_container = statistic_container
         self._enabled = True
+        self._skip_empty_stats = skip_empty_stats
 
     @property
     def num_samples(self) -> Optional[int]:
@@ -279,7 +280,7 @@ class TensorCollector:
         for reducer in self._reducers:
             reducer_hash = hash(reducer)
             input_ = inputs[reducer_hash]
-            if any(tensor.is_empty() for tensor in input_):
+            if any(tensor.is_empty() for tensor in input_) and self._skip_empty_stats:
                 continue
             reduced_inputs[reducer_hash] = reducer(input_)
 

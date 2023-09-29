@@ -22,6 +22,7 @@ from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.model_transformer import TModel
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.openvino.graph.node_utils import get_parameter_node_name
 from nncf.openvino.graph.node_utils import get_result_node_name
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVBiasInsertionCommand
@@ -67,25 +68,6 @@ class OVModelTransformer(ModelTransformer):
         :return: Mapping from node name to node.
         """
         return {op.get_friendly_name(): op for op in model.get_ops()}
-
-    @staticmethod
-    def _get_activation_node_names(model: ov.Model) -> List[str]:
-        """
-        Returns list of the activation node names.
-
-        :param model: Model to get list.
-        :return: List with the activation names.
-        """
-        activation_nodes = set()
-        nodes_queue = deque(model.get_parameters())
-        while nodes_queue:
-            node = nodes_queue.popleft()
-            if node.name in activation_nodes:
-                continue
-            activation_nodes.add(node.name)
-            for node_output in node.outputs():
-                nodes_queue.extend([i.get_node() for i in node_output.get_target_inputs()])
-        return list(activation_nodes)
 
     @staticmethod
     def _update_tensor_name(tensors: List[DescriptorTensor], name: str) -> None:
@@ -389,38 +371,36 @@ class OVModelTransformer(ModelTransformer):
         """
         transformation = transformations[-1]
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
-        activation_node_names = OVModelTransformer._get_activation_node_names(model)
         params, results = [], []
-        for input_name in transformation.inputs:
-            input_node = name_to_node_mapping[input_name]
-            if input_name in [tensor.node.get_friendly_name() for tensor in model.inputs]:
-                params.append(input_node)
-                continue
-            for input_port in input_node.inputs():
-                if input_port.get_source_output().get_node().name not in activation_node_names:
-                    continue
-                input_node_output = input_port.get_source_output()
-                parameter_name = f"Parameter_{input_name}"
-                new_param = opset.parameter(
-                    shape=input_node_output.partial_shape,
-                    dtype=input_node_output.get_element_type(),
-                    name=parameter_name,
-                )
-                input_port.replace_source_output(new_param.output(0))
-                new_param_tensors = [o.get_tensor() for o in new_param.outputs()]
-                OVModelTransformer._update_tensor_name(new_param_tensors, parameter_name)
-                params.append(new_param)
 
-        for output_name in transformation.outputs:
+        for node_id in transformation.inputs:
+            node_name, port_id = node_id
+            node = name_to_node_mapping[node_name]
+
+            node_input_port = node.input(port_id)
+            source_output_port = node_input_port.get_source_output()
+
+            parameter_name = get_parameter_node_name(node_name, port_id)
+            new_param = opset.parameter(
+                shape=source_output_port.partial_shape,
+                dtype=source_output_port.get_element_type(),
+                name=parameter_name,
+            )
+
+            node_input_port.replace_source_output(new_param.output(0))
+
+            new_param_tensors = [o.get_tensor() for o in new_param.outputs()]
+            OVModelTransformer._update_tensor_name(new_param_tensors, parameter_name)
+            params.append(new_param)
+
+        for output_id in transformation.outputs:
+            output_name, port_id = output_id
             output_node = name_to_node_mapping[output_name]
-            for node_out in output_node.outputs():
-                result_name = get_result_node_name(output_name, 0)
-                new_result = opset.result(node_out, name=result_name)
-                OVModelTransformer._update_tensor_name([new_result.get_output_tensor(0)], result_name)
-                results.append(new_result)
-
-        if not results:
-            results = model.get_results()
+            node_out = output_node.output(port_id)
+            result_name = get_result_node_name(output_name, port_id)
+            new_result = opset.result(node_out, name=result_name)
+            OVModelTransformer._update_tensor_name([new_result.get_output_tensor(port_id)], result_name)
+            results.append(new_result)
 
         return ov.Model(results, params)
 

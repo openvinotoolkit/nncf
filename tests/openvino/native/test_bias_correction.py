@@ -91,8 +91,7 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
                 {
                     "collected_inputs": {"/conv_1/Conv/WithoutBiases": ("input.1", 0)},
                     "subgraph_data": {
-                        "subgraph_input_names": {"/conv_1/Conv/WithoutBiases"},
-                        "subgraph_output_names": {"/maxpool_1/MaxPool", "/Split"},
+                        "subgraph_input_ids": {"/conv_1/Conv/WithoutBiases"},
                         "subgraph_output_ids": {("/Split", 0), ("/maxpool_1/MaxPool", 0), ("/Split", 1)},
                     },
                 },
@@ -107,8 +106,7 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
                         "/conv_6/Conv/WithoutBiases": ("/Split", 1),
                     },
                     "subgraph_data": {
-                        "subgraph_input_names": {"/conv_2/Conv/WithoutBiases"},
-                        "subgraph_output_names": {"/Relu_1"},
+                        "subgraph_input_ids": {"/conv_2/Conv/WithoutBiases"},
                         "subgraph_output_ids": {("/Relu_1", 0)},
                     },
                 },
@@ -124,8 +122,7 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
                         "/conv_6/Conv/WithoutBiases": ("/Split", 1),
                     },
                     "subgraph_data": {
-                        "subgraph_input_names": {"/conv_1/Conv/WithoutBiases", "/conv_3/Conv/WithoutBiases"},
-                        "subgraph_output_names": {"/Split"},
+                        "subgraph_input_ids": {"/conv_1/Conv/WithoutBiases", "/conv_3/Conv/WithoutBiases"},
                         "subgraph_output_ids": {("/Split", 0), ("/Split", 1)},
                     },
                 },
@@ -138,8 +135,7 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
                         "/conv_6/Conv/WithoutBiases": ("/Split", 1),
                     },
                     "subgraph_data": {
-                        "subgraph_input_names": {"/conv_4/Conv/WithoutBiases"},
-                        "subgraph_output_names": {"/Relu_2"},
+                        "subgraph_input_ids": {"/conv_4/Conv/WithoutBiases"},
                         "subgraph_output_ids": {("/Relu_2", 0)},
                     },
                 },
@@ -152,8 +148,7 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
                         "/conv_6/Conv/WithoutBiases": ("/Split", 1),
                     },
                     "subgraph_data": {
-                        "subgraph_input_names": {"/conv_5/Conv/WithoutBiases", "/conv_6/Conv/WithoutBiases"},
-                        "subgraph_output_names": {"/Add_3", "/Concat"},
+                        "subgraph_input_ids": {"/conv_5/Conv/WithoutBiases", "/conv_6/Conv/WithoutBiases"},
                         "subgraph_output_ids": {("/Add_3", 0), ("/Concat", 0)},
                     },
                 },
@@ -167,12 +162,11 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
                         "/conv_10/Conv/WithoutBiases": ("/Concat", 0),
                     },
                     "subgraph_data": {
-                        "subgraph_input_names": {
+                        "subgraph_input_ids": {
                             "/conv_8/Conv/WithoutBiases",
                             "/conv_9/Conv/WithoutBiases",
                             "/conv_10/Conv/WithoutBiases",
                         },
-                        "subgraph_output_names": {"/Concat_1"},
                         "subgraph_output_ids": {("/Concat_1", 0)},
                     },
                 },
@@ -184,8 +178,7 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
                         "/MatMul": ("/Reshape", 0),
                     },
                     "subgraph_data": {
-                        "subgraph_input_names": {"/MatMul"},
-                        "subgraph_output_names": {"/Reshape_1", "/Add_4"},
+                        "subgraph_input_ids": {"/MatMul"},
                         "subgraph_output_ids": {("/Reshape_1", 0), ("/Add_4", 0)},
                     },
                 },

@@ -93,10 +93,6 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return ONNXNNCFTensor(raw_data[output_name])
 
     @staticmethod
-    def get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[int, int]:
-        return 0
-
-    @staticmethod
     def get_bias_value(node: NNCFNode, model: onnx.ModelProto, nncf_graph: NNCFGraph) -> np.ndarray:
         return get_bias_value(node, model)
 

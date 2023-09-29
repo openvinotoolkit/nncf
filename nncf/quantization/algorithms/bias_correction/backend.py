@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List, Optional, TypeVar
+from typing import List, Optional, Tuple, TypeVar
 
 import numpy as np
 
@@ -64,12 +64,14 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def model_extraction_command(inputs: List[str], outputs: List[str]) -> TransformationCommand:
+    def model_extraction_command(
+        inputs: List[Tuple[str, int]], outputs: List[Tuple[str, int]]
+    ) -> TransformationCommand:
         """
-        Returns backend-specific command to extract sub-model based on input & output names.
+        Returns backend-specific command to extract sub-model based on input & output ids.
 
-        :param inputs: List of the input names for sub-model beginning.
-        :param outputs: List of the output names for sub-model end.
+        :param inputs: List of the input ids for sub-model beginning.
+        :param outputs: List of the output ids for sub-model end.
         :return: Backend-specific TransformationCommand for the model extraction.
         """
 
@@ -123,19 +125,6 @@ class BiasCorrectionAlgoBackend(ABC):
         :param raw_data: Backend-specific output from the model.
         :param output_name: Name of the output layer or tensor name.
         :return: Processed output as NNCFTensor.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
-        """
-        Returns input port id corresponding to activation input edge for
-        the node.
-        Supports only nodes that could have bias value.
-
-        :param node: Node of NNCFGraph with bias value.
-        :param nncf_graph: NNCFGraph instance with the node.
-        :return: boolean port id.
         """
 
     @staticmethod
