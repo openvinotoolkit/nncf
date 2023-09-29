@@ -14,7 +14,7 @@ import dataclasses
 import functools
 import itertools
 import operator
-from typing import Any, Callable, Dict, Iterable, List, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -112,7 +112,9 @@ def apply_combination(init_params: Dict[str, Any], combination: Combination) -> 
     return params
 
 
-def print_combination_and_score(title: str, combination: Combination, combination_score: float) -> None:
+def print_combination_and_score(
+    title: str, combination: Combination, combination_score: Optional[float] = None
+) -> None:
     """
     Prints combination and score.
 
@@ -127,7 +129,9 @@ def print_combination_and_score(title: str, combination: Combination, combinatio
     message = f"{title} {message}"
 
     nncf_logger.info(message)
-    nncf_logger.info(f"Score: {combination_score}")
+
+    if combination_score:
+        nncf_logger.info(f"Score: {combination_score}")
 
 
 def find_best_combination(
@@ -320,7 +324,7 @@ class HyperparameterTuner:
                 step_index, self._step_index_to_statistics[step_index], step_model, step_graph
             )
 
-        # TODO(andrey-churkin): Show final best settings
+        print_combination_and_score("Final best combination of parameters:", best_settings)
 
         return step_model
 
