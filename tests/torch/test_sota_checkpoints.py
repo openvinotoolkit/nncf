@@ -189,6 +189,7 @@ def make_metrics_dump_path(metrics_dump_dir):
         )
     else:
         pytest.metrics_dump_path = Path(pytest.metrics_dump_path)
+    pytest.metrics_dump_path.mkdir(exist_ok=True, parents=True)
     assert not pytest.metrics_dump_path.is_dir() or not os.listdir(
         pytest.metrics_dump_path
     ), f"metrics_dump_path dir should be empty: {pytest.metrics_dump_path}"
@@ -500,9 +501,9 @@ class TestSotaCheckpoints:
 
 
 @pytest.fixture(autouse=True, scope="class")
-def results(sota_data_dir):
+def results():
     yield
-    if sota_data_dir and TEST_RESULT:
+    if pytest.metrics_dump_path and TEST_RESULT:
         path = pytest.metrics_dump_path / "results.csv"
         data_frame = pd.DataFrame.from_records([x.to_dict() for x in TEST_RESULT])
         data_frame.to_csv(path, index=False)
