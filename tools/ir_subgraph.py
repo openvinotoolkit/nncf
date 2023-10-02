@@ -260,6 +260,9 @@ if __name__ == "__main__":
     else:
         output_dir = output_path.parent
 
+    if output_path.exists():
+        raise ValueError(f"There is already and IR at {output_path}. Exiting.")
+
     # Read IR xml as dict
     tree = dET.parse(input_path)
     root = tree.getroot()
@@ -286,7 +289,7 @@ if __name__ == "__main__":
                 print("Copying original .bin file because can't create a symbolic link due to lack of admin privileges")
                 shutil.copy(bin_input_path, bin_output_path)
             else:
-                print("Can't create a copy of original .bin file because it is missing")
+                print("Didn't create a copy of original .bin file because it is missing")
         else:
             raise e
 
