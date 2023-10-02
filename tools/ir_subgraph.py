@@ -231,7 +231,9 @@ if __name__ == "__main__":
     parser.add_argument("node", help="Target node name.")
     parser.add_argument("--distance", type=int, default=10, help="Distance around the target node (default 10).")
     parser.add_argument(
-        "--output-path", dest="output_path", help="Output IR path. Can either be a file or a directory path."
+        "--output-path",
+        dest="output_path",
+        help="Output IR path. Can either be a file path with .xml extension or a directory path.",
     )
 
     args = parser.parse_args()
