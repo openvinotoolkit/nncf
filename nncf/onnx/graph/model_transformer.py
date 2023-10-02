@@ -279,11 +279,14 @@ class ONNXModelTransformer(ModelTransformer):
         )
         return onnx_scale_tensor, onnx_zero_point_tensor
 
-    def _get_quantizer_dequantizer_edge_name(self, transformation: ONNXQuantizerInsertionCommand, node_mapping) -> str:
+    def _get_quantizer_dequantizer_edge_name(
+        self, transformation: ONNXQuantizerInsertionCommand, node_mapping: Dict[str, onnx.NodeProto]
+    ) -> str:
         """
         Returns an edge name on which QuantizeLinear-DequantizeLinear nodes pair has to be inserted.
 
         :param transformation: QuantizeLinear-DequantizeLinear insertion transformation.
+        :param node_mapping: Mapping from a node name to the node.
         :return: Edge name to insert QuantizeLinear-DequantizeLinear nodes pair.
         """
         port_id = transformation.target_point.port_id

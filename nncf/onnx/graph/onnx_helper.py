@@ -15,12 +15,23 @@ import onnx
 from onnx import numpy_helper
 
 
-def get_node_mapping(model: onnx.ModelProto):
+def get_node_mapping(model: onnx.ModelProto) -> Dict[str, onnx.NodeProto]:
+    """
+    Retuns mapping from node name to the node.
+
+    :param model: Model from mapping is built.
+    :return: Mapping.
+    """
     return {node.name: node for node in model.graph.node}
 
 
 def get_edge_mapping(model: onnx.ModelProto) -> Dict[str, onnx.ValueInfoProto]:
-    """ """
+    """
+    Retuns mapping from edge name to the edge info.
+
+    :param model: Model from mapping is built.
+    :return: Mapping.
+    """
     return {
         tensor.name: tensor
         for tensor in (*model.graph.value_info, *model.graph.input, *model.graph.output, *model.graph.initializer)
