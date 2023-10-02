@@ -22,7 +22,7 @@ from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.onnx.graph.node_utils import get_input_edge
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
-from nncf.onnx.graph.onnx_helper import ModelSeeker
+from nncf.onnx.graph.onnx_helper import get_node_mapping
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.tensor import ONNXNNCFTensor
 
@@ -30,7 +30,7 @@ from nncf.onnx.tensor import ONNXNNCFTensor
 class ONNXStatisticsAggregator(StatisticsAggregator):
     def collect_statistics(self, model: onnx.ModelProto, graph: NNCFGraph) -> None:
         self.input_edges_mapping = get_input_edges_mapping(graph)
-        self.model_seeker = ModelSeeker(model)
+        self.node_mapping = get_node_mapping(model)
         self._registered_weights = set()
         super().collect_statistics(model, graph)
 
@@ -41,16 +41,17 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
             for statistic_point in _statistic_points:
                 target_point = statistic_point.target_point
                 port_id = target_point.port_id
-                node = self.model_seeker.get_node(target_point.target_node_name)
                 if target_point.target_node_name in self.input_edges_mapping:  # Input case
                     edge_name = get_input_edge(
                         target_point.target_node_name,
                         self.input_edges_mapping,
-                        self.model_seeker.node_name_to_node_mapping,
+                        self.node_mapping,
                     )
                 elif target_point.type == TargetType.POST_LAYER_OPERATION:
+                    node = self.node_mapping[target_point.target_node_name]
                     edge_name = node.output[port_id]
                 elif target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
+                    node = self.node_mapping[target_point.target_node_name]
                     edge_name = node.input[port_id]
                 statistic_point.register_tensor(outputs[edge_name])
 

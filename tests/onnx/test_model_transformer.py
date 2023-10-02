@@ -20,7 +20,6 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
-from nncf.onnx.graph.onnx_helper import get_node_by_name
 from nncf.onnx.graph.onnx_helper import get_tensor
 from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
@@ -62,7 +61,7 @@ def test_quantizer_insertion(target_layers, should_raise, quantizer_number):
     if should_raise:
         try:
             _ = model_transformer.transform(transformation_layout)
-        except RuntimeError:
+        except KeyError:
             return
     transformed_model = model_transformer.transform(transformation_layout)
     onnx.checker.check_model(transformed_model)
@@ -181,9 +180,10 @@ def test_bias_correction(layers, values, refs):
     model_transformer = ONNXModelTransformer(model)
 
     transformed_model = model_transformer.transform(transformation_layout)
+    node_dict = {node.name: node for node in transformed_model.graph.node}
 
     for conv_layer, bias_reference in zip(layers, refs):
-        bias_tensor_name = get_node_by_name(transformed_model, conv_layer).input[2]
+        bias_tensor_name = node_dict[conv_layer].input[2]
         bias_tensor = get_tensor(transformed_model, bias_tensor_name)
         bias_value = onnx.numpy_helper.to_array(bias_tensor)
         assert np.all(bias_value == bias_reference)

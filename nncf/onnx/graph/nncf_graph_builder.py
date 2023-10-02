@@ -29,9 +29,8 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpWithWeightsMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import get_metatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import get_tensor_edge_name
-from nncf.onnx.graph.onnx_helper import get_all_nodes
-from nncf.onnx.graph.onnx_helper import get_edge
 from nncf.onnx.graph.onnx_helper import get_edge_dtype
+from nncf.onnx.graph.onnx_helper import get_edge_mapping
 from nncf.onnx.graph.onnx_helper import get_edge_shape
 from nncf.onnx.graph.onnx_helper import get_input_port_id_for_node_after_input
 from nncf.onnx.graph.onnx_helper import get_model_inputs
@@ -149,23 +148,6 @@ def _is_node_with_bias(node: onnx.NodeProto, model: onnx.ModelProto) -> bool:
     return False
 
 
-def _get_weight_attr(node: onnx.NodeProto, model: onnx.ModelProto, weight_port_id: int) -> Dict[int, Dict]:
-    """
-    Returns weight attributes.
-
-    :param node: ONNX node.
-    :param model: ONNX model.
-    :param weight_port_ids: Port ids with weights location.
-    :return: Weight attributes.
-    """
-    weight_attrs = {}
-    weight_edge_name = node.input[weight_port_id]
-    edge = get_edge(model, weight_edge_name)
-    weight_shape = get_edge_shape(edge)
-    weight_attrs[weight_port_id] = {"name": weight_edge_name, "shape": weight_shape}
-    return weight_attrs
-
-
 def _get_gemm_attrs(node: onnx.NodeProto) -> Dict[str, int]:
     """
     Returns transpose attrbiutes of GEMM node.
@@ -242,7 +224,7 @@ class GraphConverter:
         return model
 
     @staticmethod
-    def _add_nncf_input_nodes(model: onnx.ModelProto, nncf_graph: NNCFGraph) -> None:
+    def _add_nncf_input_nodes(model: onnx.ModelProto, nncf_graph: NNCFGraph, edge_mapping) -> None:
         """
         Adds special NNCF Input nodes to NNCFGraph.
         For all the ONNX model inputs, the special NNCF Input node is placed and then corresponding edges are added.
@@ -262,7 +244,7 @@ class GraphConverter:
             to_nodes = get_nodes_by_input(model, input_name)
 
             input_node_node_id = input_node.node_id
-            edge = get_edge(model, input_name)
+            edge = edge_mapping[input_name]
             input_shape = get_edge_shape(edge)
             onnx_dtype = get_edge_dtype(edge)
             nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
@@ -282,7 +264,7 @@ class GraphConverter:
                 output_port_id += 1
 
     @staticmethod
-    def _add_nncf_output_nodes(model: onnx.ModelProto, nncf_graph: NNCFGraph) -> None:
+    def _add_nncf_output_nodes(model: onnx.ModelProto, nncf_graph: NNCFGraph, edge_mapping) -> None:
         """
         Adds special NNCF Output nodes to NNCFGraph.
         For all the ONNX model outputs, the special NNCF Output node is placed and then corresponding edges are added.
@@ -302,7 +284,7 @@ class GraphConverter:
             from_node = get_node_by_output(model, output_name)
 
             output_node_node_id = output_node.node_id
-            edge = get_edge(model, output_name)
+            edge = edge_mapping[output_name]
             output_shape = get_edge_shape(edge)
             onnx_dtype = get_edge_dtype(edge)
             nncf_dtype = GraphConverter.convert_onnx_dtype_to_nncf_dtype(onnx_dtype)
@@ -341,8 +323,9 @@ class GraphConverter:
         """
         onnx_model = GraphConverter._replace_empty_node_name(onnx_model)
         onnx_model = onnx.shape_inference.infer_shapes(onnx_model)
+        edge_mapping = get_edge_mapping(onnx_model)
         nncf_graph = NNCFGraph()
-        for node in get_all_nodes(onnx_model):
+        for node in onnx_model.graph.node:
             metatype = get_metatype(onnx_model, node)
             weight_port_ids = _get_weight_port_ids(node, onnx_model)
             is_shared = None
@@ -352,8 +335,11 @@ class GraphConverter:
             if weight_port_ids:  # If node has weight
                 weight_edge_names = []
                 for weight_port_id in weight_port_ids:
-                    weight_edge_names.append(node.input[weight_port_id])
-                    weight_attrs.update(_get_weight_attr(node, onnx_model, weight_port_id))
+                    weight_edge_name = node.input[weight_port_id]
+                    weight_edge_names.append(weight_edge_name)
+                    edge = edge_mapping[weight_edge_name]
+                    weight_shape = get_edge_shape(edge)
+                    weight_attrs[weight_port_id] = {"name": weight_edge_name, "shape": weight_shape}
                     if not is_shared and is_node_has_shared_weight(onnx_model, node, weight_port_id):
                         is_shared = True
 
@@ -367,10 +353,11 @@ class GraphConverter:
                 layer_attributes=layer_attributes,
                 is_shared=is_shared,
             )
-        for output_node in get_all_nodes(onnx_model):
+
+        for output_node in onnx_model.graph.node:
             output_edges = output_node.output
             for output_edge in output_edges:
-                edge = get_edge(onnx_model, output_edge)
+                edge = edge_mapping.get(output_edge)
                 if edge is None:
                     # If the edge is None it means that the edge was not added during shape inference of ONNX model.
                     # BatchNorm exported in Training mode has unused outputs edges: mean, var, saved_mean, saved_var.
@@ -394,6 +381,6 @@ class GraphConverter:
                         output_port_id=output_port_id,
                         dtype=Dtype(nncf_dtype),
                     )
-        GraphConverter._add_nncf_input_nodes(onnx_model, nncf_graph)
-        GraphConverter._add_nncf_output_nodes(onnx_model, nncf_graph)
+        GraphConverter._add_nncf_input_nodes(onnx_model, nncf_graph, edge_mapping)
+        GraphConverter._add_nncf_output_nodes(onnx_model, nncf_graph, edge_mapping)
         return nncf_graph

@@ -15,58 +15,16 @@ import onnx
 from onnx import numpy_helper
 
 
-class ModelSeeker:
-    def __init__(self, model: onnx.ModelProto) -> None:
-        self.model = model
-        self.node_name_to_node_mapping = {node.node_name: node for node in model.graph.node}
-        self._edge_name_to_value_info: Dict[str, onnx.ValueInfoProto] = {}
-
-    def _update_edges(self) -> None:
-        self.model = onnx.shape_inference.infer_shapes(self.onnx_model)
-        value_infos = (
-            *self.model.graph.value_info,
-            *self.model.graph.input,
-            *self.model.graph.output,
-            *self.model.graph.initializer,
-        )
-        self._edge_name_to_value_info = {tensor.name: tensor for tensor in value_infos}
-
-    def get_node(self, node_name: str) -> Optional[onnx.NodeProto]:
-        """
-        Returns a model node with the name equals to 'node_name' from self._node_name_to_node.
-        If the self._node_name_to_node is None, fills it with the nodes from the self.onnx_model.
-        If there is no node with such name returns None.
-
-        :param node_name: Name of the node.
-        :return: None if the node with the specified name exists - otherwise returns the node.
-        """
-        return self.node_name_to_node_mapping.get(node_name)
-
-    def get_edge(self, edge_name: str) -> Optional[onnx.ValueInfoProto]:
-        """
-        Returns edge by its name or None if the model has no such edge.
-        If self._edge_name_to_value_info is not initialized runs an initialization.
-
-        :param edge_name: Name of edge.
-        :return: Edge.
-        """
-        if edge_name not in self._edge_name_to_value_info:
-            self._update_edges()
-        return self._edge_name_to_value_info.get(edge_name)
+def get_node_mapping(model: onnx.ModelProto):
+    return {node.name: node for node in model.graph.node}
 
 
-def get_node(model: onnx.ModelProto, node_name: str) -> Optional[onnx.NodeProto]:
-    """
-    Returns a model node with the name equals to 'node_name' from self._node_name_to_node.
-    If the self._node_name_to_node is None, fills it with the nodes from the self.onnx_model.
-    If there is no node with such name returns None.
-    :param node_name: Name of the node.
-    :return: None if the node with the specified name exists - otherwise returns the node.
-    """
-    for node in model.graph.node:
-        if node.name == node_name:
-            return node
-    return None
+def get_edge_mapping(model: onnx.ModelProto) -> Dict[str, onnx.ValueInfoProto]:
+    """ """
+    return {
+        tensor.name: tensor
+        for tensor in (*model.graph.value_info, *model.graph.input, *model.graph.output, *model.graph.initializer)
+    }
 
 
 def get_model_inputs(model: onnx.ModelProto) -> List[onnx.ValueInfoProto]:
