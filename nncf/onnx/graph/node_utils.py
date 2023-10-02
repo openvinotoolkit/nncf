@@ -77,8 +77,8 @@ def get_input_edge(
 
     :param input_node_name: Name of NNCF input node.
     :param input_edges_mapping: A mapping of NNCF input node names and
-        a tuple with the consumed node names and their input port ids.
-    :param model: ONNX model.
+    a tuple with the consumed node names and their input port ids.
+    :param node_mapping: Mapping of node names to the nodes.
     :return: Input edge name.
     """
     input_edges = set()

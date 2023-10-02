@@ -42,6 +42,7 @@ def get_model_inputs(model: onnx.ModelProto) -> List[onnx.ValueInfoProto]:
     """
     Returns all model inputs.
 
+    :param model: ONNX model.
     :return: Model Inputs.
     """
     inputs = []
@@ -58,6 +59,7 @@ def get_node_by_output(model: onnx.ModelProto, output_name: str) -> Optional[onn
     """
     Returns node that have output edge with the name 'output_name'.
 
+    :param model: ONNX model.
     :param output_name: The name of output edge.
     :return: Node with corresponding output.
     """
@@ -133,6 +135,7 @@ def get_node_index(model: onnx.ModelProto, node_name: str) -> Optional[int]:
     """
     Returns the node index in the model.
 
+    :param model: ONNX model.
     :param node_name: Name of the node.
     :return: Node index, -1 if there is no such node.
     """
@@ -146,6 +149,7 @@ def _get_all_tensors(model: onnx.ModelProto) -> Iterator[onnx.TensorProto]:
     """
     Iterate over all tensors of ONNX model.
 
+    :param model: ONNX model.
     :yield: tensors of ONNX model.
     """
     for initializer in model.graph.initializer:
@@ -161,6 +165,7 @@ def has_tensor(model: onnx.ModelProto, tensor_name: str) -> bool:
     """
     Returns True whether the model has the tensor with the name equals to tensor_name.
 
+    :param model: ONNX model.
     :param tensor_name: Name of the tensor.
     :return: True if the model has such tensor, False - otherwise.
     """
@@ -174,7 +179,8 @@ def get_tensor(model: onnx.ModelProto, tensor_name: str) -> onnx.TensorProto:
     """
     Returns a tensor with the name 'tensor_name'.
 
-    :param initializer_name: Name of the Initializer.
+    :param model: ONNX model.
+    :param tensor_name: Name of the tensor.
     :return: The Initializer.
     """
     for tensor in _get_all_tensors(model):
@@ -187,6 +193,7 @@ def get_tensor_value(model: onnx.ModelProto, tensor_name: str) -> np.ndarray:
     """
     Returns tensor value of a tensor with the name 'tensor_name'.
 
+    :param model: ONNX model.
     :param tensor_name: Name of the tensor.
     :return: The value of the tensor.
     """
@@ -236,6 +243,7 @@ def get_parent(model: onnx.ModelProto, node: onnx.NodeProto, port_id: int) -> Op
     """
     Returns parents of the node. If there is no parent node, returns None.
 
+    :param model: ONNX model.
     :param node: The child node.
     :param port_id: Input port id on which the parent is seeked.
     :return: Parent node.
@@ -249,6 +257,7 @@ def get_children(model: onnx.ModelProto, node: onnx.NodeProto) -> List[onnx.Node
     """
     Returns children of the node.
 
+    :param model: ONNX model.
     :param node: The parent node.
     :return: All children nodes.
     """
@@ -262,6 +271,7 @@ def is_node_has_shared_weight(model: onnx.ModelProto, node: onnx.NodeProto, weig
     """
     Returns whether the node share a weight.
 
+    :param model: ONNX model.
     :param node: Node.
     :return: True whether node shares a weight - otherwise False.
     """
