@@ -315,10 +315,10 @@ class TestSotaCheckpoints:
             result_info = ResultInfo(
                 model_name=eval_run_param.model_name,
                 backend="PT",
-                error="exit_code: {exit_code}",
+                error=f"exit_code: {exit_code}",
             )
             add_test_result(result_info)
-            pytest.fail("exit_code: {exit_code}")
+            pytest.fail(f"exit_code: {exit_code}")
 
         metric_value = self.read_metric(metrics_dump_file_path)
 

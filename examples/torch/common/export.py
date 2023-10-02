@@ -50,12 +50,10 @@ def export_model(ctrl: CompressionAlgorithmController, config: SampleConfig) -> 
         model_onnx_path = model_path.with_suffix(".onnx")
         with torch.no_grad():
             torch.onnx.export(model, input_tensor_list, model_onnx_path, input_names=input_names)
-        ov_model = convert_model(model_onnx_path)
+        ov_model = convert_model(model_onnx_path, compress_to_fp16=False)
     else:
         ov_model = convert_model(
-            model,
-            example_input=input_tensor_list,
-            input_shape=input_shape_list,
+            model, example_input=input_tensor_list, input_shape=input_shape_list, compress_to_fp16=False
         )
         # Rename input nodes
         for input_node, input_name in zip(ov_model.inputs, input_names):
