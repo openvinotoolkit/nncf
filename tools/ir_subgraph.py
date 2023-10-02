@@ -11,6 +11,7 @@
 
 import argparse
 import os
+import shutil
 import xml.etree.ElementTree as ET
 from copy import copy
 from copy import deepcopy
@@ -226,8 +227,7 @@ if __name__ == "__main__":
         description="Extract a subgraph from a model in OpenVINO Intermediate Representation format. Subgraph is taken "
         "around a given node. Use distance parameter to control how many nodes around the given one to include. "
         "The resulting subgraph is saved next to the input .xml file or at --output_path if provided. Additionally, a "
-        "symbolic link targeting the original .bin file is created. On Windows this script may be required to "
-        "be run with administrative privileges in order to create symbolic link."
+        "symbolic link targeting the original .bin file is created."
     )
 
     parser.add_argument("input-path", help="Input IR path.")
@@ -274,9 +274,17 @@ if __name__ == "__main__":
     write_xml(subgraph_xml_dict, output_path)
 
     # Create a symbolic link to original .bin file
+    bin_input_path = input_path.with_suffix(".bin")
     bin_output_path = output_path.with_suffix(".bin")
     if bin_output_path.exists():
         os.remove(bin_output_path)
-    bin_output_path.symlink_to(os.path.relpath(input_path.with_suffix(".bin"), bin_output_path.parent))
+    try:
+        bin_output_path.symlink_to(os.path.relpath(bin_input_path, bin_output_path.parent))
+    except OSError as e:
+        if "[WinError 1314]" in str(e):
+            print("Copying original .bin file because can't create a symbolic link due to lack of admin privileges")
+            shutil.copy(bin_input_path, bin_output_path)
+        else:
+            raise e
 
     print("Saved at:", output_path)
