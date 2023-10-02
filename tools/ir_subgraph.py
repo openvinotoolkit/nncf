@@ -16,11 +16,13 @@ from copy import copy
 from copy import deepcopy
 from pathlib import Path
 from pprint import pprint
+from typing import Any, Dict
 
+import defusedxml.ElementTree as dET
 import networkx as nx
 
 
-def xml_to_dict(element):
+def xml_to_dict(element: ET.Element):
     result = {}
     if element.attrib:
         result["attributes"] = element.attrib
@@ -40,7 +42,7 @@ def xml_to_dict(element):
     return result
 
 
-def dict_to_xml(data, parent: ET.Element):
+def dict_to_xml(data: Any, parent: ET.Element):
     if isinstance(data, dict):
         for tag_name, value in data.items():
             if tag_name == "attributes":
@@ -60,8 +62,8 @@ def dict_to_xml(data, parent: ET.Element):
         parent.text = str(data)
 
 
-def get_edges(xml_dict):
-    def add_edge(edges, from_layer, from_port, to_layer, to_port):
+def get_edges(xml_dict: Dict):
+    def add_edge(edges: Dict, from_layer: int, from_port: int, to_layer: int, to_port: int):
         if from_layer not in edges:
             edges[from_layer] = {}
         if from_port not in edges[from_layer]:
@@ -84,7 +86,7 @@ def get_edges(xml_dict):
     return edges
 
 
-def get_nodes(xml_dict, edges):
+def get_nodes(xml_dict: Dict, edges: Dict):
     all_node_names = set()
     nodes = {}
     for node in xml_dict["layers"]["layer"]:
@@ -149,11 +151,11 @@ def get_nodes(xml_dict, edges):
     return nodes
 
 
-def create_nx_graph(xml_dict):
-    def get_node_label(nodes, node_id):
+def create_nx_graph(xml_dict: Dict):
+    def get_node_label(nodes: Dict, node_id: int):
         return nodes[node_id]["name"]
 
-    def get_edge_label(edges, nodes, from_node, from_port, to_node, to_port):
+    def get_edge_label(edges: Dict, nodes: Dict, from_node: int, from_port: int, to_node: int, to_port: int):
         edge_properties = edges[from_node][from_port][(to_node, to_port)]
         return f'"{edge_properties["shape"]}\n{from_port}->{to_port}"'
 
@@ -182,7 +184,7 @@ def create_nx_graph(xml_dict):
     return G
 
 
-def write_xml(xml_dict, filepath):
+def write_xml(xml_dict: Dict, filepath: Path):
     write_root = ET.Element("net")
     dict_to_xml(xml_dict, write_root)
     xml_str = ET.tostring(write_root).decode()
@@ -191,7 +193,7 @@ def write_xml(xml_dict, filepath):
         f.write(xml_str)
 
 
-def take_model_subgraph(xml_dict, source_node_name, distance):
+def take_model_subgraph(xml_dict: Dict, source_node_name: str, distance: int):
     # Create networkx graph from IR xml dictionary
     G = create_nx_graph(xml_dict)
 
@@ -224,7 +226,8 @@ if __name__ == "__main__":
         description="Extract a subgraph from a model in OpenVINO Intermediate Representation format. Subgraph is taken "
         "around a given node. Use distance parameter to control how many nodes around the given one to include. "
         "The resulting subgraph is saved next to the input .xml file or at --output_path if provided. Additionally, a "
-        "symbolic link targeting the original .bin file is created."
+        "symbolic link targeting the original .bin file is created. On Windows this script may be required to "
+        "be run with administrative privileges in order to create symbolic link."
     )
 
     parser.add_argument("input-path", help="Input IR path.")
@@ -258,7 +261,7 @@ if __name__ == "__main__":
         output_dir = output_path.parent
 
     # Read IR xml as dict
-    tree = ET.parse(input_path)
+    tree = dET.parse(input_path)
     root = tree.getroot()
     xml_dict = xml_to_dict(root)
 
