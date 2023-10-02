@@ -282,8 +282,11 @@ if __name__ == "__main__":
         bin_output_path.symlink_to(os.path.relpath(bin_input_path, bin_output_path.parent))
     except OSError as e:
         if "[WinError 1314]" in str(e):
-            print("Copying original .bin file because can't create a symbolic link due to lack of admin privileges")
-            shutil.copy(bin_input_path, bin_output_path)
+            if bin_input_path.exists():
+                print("Copying original .bin file because can't create a symbolic link due to lack of admin privileges")
+                shutil.copy(bin_input_path, bin_output_path)
+            else:
+                print("Can't create a copy of original .bin file because it is missing")
         else:
             raise e
 
