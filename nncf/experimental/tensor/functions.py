@@ -12,10 +12,10 @@
 import functools
 from typing import Callable, List, Optional, Tuple, Union
 
-from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor import unwrap_tensor_data
 from nncf.experimental.tensor.enums import TensorDataType
 from nncf.experimental.tensor.enums import TensorDeviceType
+from nncf.experimental.tensor.tensor import Tensor
+from nncf.experimental.tensor.tensor import unwrap_tensor_data
 
 
 def _tensor_guard(func: callable):
