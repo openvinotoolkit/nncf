@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from collections import defaultdict
 from typing import Dict, Iterator, List, Optional, Union
 
 import numpy as np
@@ -38,6 +39,22 @@ def get_edge_mapping(model: onnx.ModelProto) -> Dict[str, onnx.ValueInfoProto]:
     }
 
 
+def get_input_edge_node_mapping(model: onnx.ModelProto) -> Dict[str, List[onnx.ValueInfoProto]]:
+    output = defaultdict(list)
+    for node in model.graph.node:
+        for input_edge in node.input:
+            output[input_edge].append(node)
+    return output
+
+
+def get_output_edge_node_mapping(model: onnx.ModelProto) -> Dict[str, onnx.ValueInfoProto]:
+    output = defaultdict(list)
+    for node in model.graph.node:
+        for input_edge in node.output:
+            output[input_edge] = node
+    return output
+
+
 def get_model_inputs(model: onnx.ModelProto) -> List[onnx.ValueInfoProto]:
     """
     Returns all model inputs.
@@ -53,34 +70,6 @@ def get_model_inputs(model: onnx.ModelProto) -> List[onnx.ValueInfoProto]:
         if node.name in net_feed_input:
             inputs.append(node)
     return inputs
-
-
-def get_node_by_output(model: onnx.ModelProto, output_name: str) -> Optional[onnx.NodeProto]:
-    """
-    Returns node that have output edge with the name 'output_name'.
-
-    :param model: ONNX model.
-    :param output_name: The name of output edge.
-    :return: Node with corresponding output.
-    """
-    for node in model.graph.node:
-        if output_name in node.output:
-            return node
-    return None
-
-
-def get_nodes_by_input(model: onnx.ModelProto, input_name: str) -> List[onnx.NodeProto]:
-    """
-    Returns all nodes that have input with the name 'input_name'.
-
-    :param input_name: The name of input edge.
-    :return: Nodes with corresponding input.
-    """
-    output = []
-    for node in model.graph.node:
-        if input_name in node.input:
-            output.append(node)
-    return output
 
 
 def get_input_port_id_for_node_after_input(input_name: str, to_node: onnx.NodeProto) -> int:
@@ -239,7 +228,7 @@ def get_edge_dtype(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> int:
     return edge.data_type
 
 
-def get_parent(model: onnx.ModelProto, node: onnx.NodeProto, port_id: int) -> Optional[onnx.NodeProto]:
+def get_parent(node: onnx.NodeProto, port_id: int, output_edge_node_mapping) -> Optional[onnx.NodeProto]:
     """
     Returns parents of the node. If there is no parent node, returns None.
 
@@ -249,11 +238,11 @@ def get_parent(model: onnx.ModelProto, node: onnx.NodeProto, port_id: int) -> Op
     :return: Parent node.
     """
     if port_id < len(node.input):
-        return get_node_by_output(model, node.input[port_id])
+        return output_edge_node_mapping[node.input[port_id]]
     return None
 
 
-def get_children(model: onnx.ModelProto, node: onnx.NodeProto) -> List[onnx.NodeProto]:
+def get_children(node: onnx.NodeProto, input_edge_node_mapping) -> List[onnx.NodeProto]:
     """
     Returns children of the node.
 
@@ -263,11 +252,11 @@ def get_children(model: onnx.ModelProto, node: onnx.NodeProto) -> List[onnx.Node
     """
     output = []
     for node_edge in node.output:
-        output.extend(get_nodes_by_input(model, node_edge))
+        output.extend(input_edge_node_mapping[node_edge])
     return output
 
 
-def is_node_has_shared_weight(model: onnx.ModelProto, node: onnx.NodeProto, weight_port_id: int) -> bool:
+def is_node_has_shared_weight(node: onnx.NodeProto, weight_port_id: int, input_edge_node_mapping) -> bool:
     """
     Returns whether the node share a weight.
 
@@ -276,5 +265,5 @@ def is_node_has_shared_weight(model: onnx.ModelProto, node: onnx.NodeProto, weig
     :return: True whether node shares a weight - otherwise False.
     """
     weight_tensor_edge = node.input[weight_port_id]
-    nodes = get_nodes_by_input(model, weight_tensor_edge)
+    nodes = input_edge_node_mapping[weight_tensor_edge]
     return len(nodes) > 1
