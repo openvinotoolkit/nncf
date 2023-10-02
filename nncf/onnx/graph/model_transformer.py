@@ -379,10 +379,13 @@ class ONNXModelTransformer(ModelTransformer):
             input_onnx_node = node_mapping[input_node_name]
             input_tensor_names.append(input_onnx_node.input[0])
 
-        output_tensor_names = [n.name for n in self._model.graph.output]
+        output_tensor_names = []
         for output_node_name in transformation.outputs:
             output_onnx_node = node_mapping[output_node_name]
             output_tensor_names.append(output_onnx_node.output[0])
+
+        if not output_tensor_names:
+            output_tensor_names = [n.name for n in self._model.graph.output]
 
         return self.onnx_model_extractor.extract_model(input_tensor_names, output_tensor_names)
 
