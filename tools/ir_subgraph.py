@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import argparse
+import os
 import xml.etree.ElementTree as ET
 from copy import copy
 from copy import deepcopy
@@ -268,6 +269,9 @@ if __name__ == "__main__":
     write_xml(subgraph_xml_dict, output_path)
 
     # Create a symbolic link to original .bin file
-    output_path.with_suffix(".bin").symlink_to(input_path.with_suffix(".bin").absolute())
+    bin_output_path = output_path.with_suffix(".bin")
+    if bin_output_path.exists():
+        os.remove(bin_output_path)
+    bin_output_path.symlink_to(input_path.with_suffix(".bin").absolute())
 
     print("Saved at:", output_path)
