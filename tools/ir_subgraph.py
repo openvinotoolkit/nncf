@@ -274,6 +274,6 @@ if __name__ == "__main__":
     bin_output_path = output_path.with_suffix(".bin")
     if bin_output_path.exists():
         os.remove(bin_output_path)
-    bin_output_path.symlink_to(input_path.with_suffix(".bin").absolute())
+    bin_output_path.symlink_to(os.path.relpath(input_path.with_suffix(".bin"), bin_output_path.parent))
 
     print("Saved at:", output_path)
