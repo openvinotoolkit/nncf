@@ -12,6 +12,6 @@
 from nncf.experimental.tensor.enums import TensorBackendType
 from nncf.experimental.tensor.enums import TensorDataType
 from nncf.experimental.tensor.enums import TensorDeviceType
-from nncf.experimental.tensor.functions import *
+from nncf.experimental.tensor.functions import *  # pylint: disable=redefined-builtin
 from nncf.experimental.tensor.tensor import Tensor
 from nncf.experimental.tensor.tensor import unwrap_tensor_data
