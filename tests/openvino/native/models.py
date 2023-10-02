@@ -650,6 +650,19 @@ class ZeroRankEltwiseModel(OVReferenceModel):
         return model
 
 
+class ParallelEdgesModel(OVReferenceModel):
+    def _create_ov_model(self) -> ov.Model:
+        input_shape = [1, 3, 3]
+
+        input_1 = opset.parameter(input_shape, name="Input")
+        mm = opset.matmul(input_1, input_1, False, False, name="Mm")
+        add = opset.add(input_1, np.array(1.0, dtype=np.float32), name="Add")
+        result_0 = opset.result(mm, name="Result_mm")
+        result_1 = opset.result(add, name="Result_add")
+        model = ov.Model([result_0, result_1], [input_1])
+        return model
+
+
 @SYNTHETIC_MODELS.register()
 class UnifiedEmbeddingModel(OVReferenceModel):
     def _create_ov_model(self):
@@ -703,4 +716,24 @@ class GroupNormalizationModel(OVReferenceModel):
         result = opset.result(add, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [input_1])
+        return model
+
+
+class IfModel(OVReferenceModel):
+    def _create_ov_model(self):
+        input_1 = opset.parameter([1, 3, 4, 2], name="Input_1")
+        input_2 = opset.parameter([1, 3, 2, 4], name="Input_2")
+        input_3 = opset.parameter([], dtype=bool, name="Cond_input")
+
+        then_body = ConvModel().ov_model
+        else_body = ConvModel().ov_model
+
+        if_node = opset.if_op(input_3)
+        if_node.set_then_body(then_body)
+        if_node.set_else_body(else_body)
+        if_node.set_input(input_1.outputs()[0], then_body.get_parameters()[0], else_body.get_parameters()[0])
+        if_node.set_input(input_2.outputs()[0], then_body.get_parameters()[1], else_body.get_parameters()[1])
+        if_node.set_output(then_body.results[0], else_body.results[0])
+        result = opset.result(if_node, name="Result")
+        model = ov.Model([result], [input_1, input_2, input_3])
         return model

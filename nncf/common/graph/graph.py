@@ -148,17 +148,23 @@ class NNCFGraphEdge:
         self.parallel_input_port_ids = parallel_input_port_ids
 
     def __str__(self):
-        return str(self.from_node) + " -> " + str(self.tensor_shape) + " -> " + str(self.to_node)
+        return f"{self.from_node}:{self.output_port_id} -> {self.tensor_shape} -> {self.to_node}:{self.input_port_id}"
 
     def __hash__(self):
-        return hash(str(self))
+        return hash(
+            (
+                self.from_node,
+                self.to_node,
+                self.input_port_id,
+                self.output_port_id,
+                tuple(self.tensor_shape),
+                self.dtype,
+                tuple(self.parallel_input_port_ids),
+            )
+        )
 
     def __eq__(self, other):
-        return (
-            self.from_node == other.from_node
-            and self.to_node == other.to_node
-            and self.tensor_shape == other.tensor_shape
-        )
+        return isinstance(other, NNCFGraphEdge) and self.__dict__ == other.__dict__
 
 
 class NNCFGraphPatternIO:
@@ -331,7 +337,9 @@ class NNCFGraph:
         :return: List of input edges for the node sorted by input port ID.
         """
         input_nodes = self.get_previous_nodes(node)
-        edges = [self.get_edge(from_node, node) for from_node in input_nodes]
+        edges = []
+        for from_node in input_nodes:
+            edges.extend(self._get_edges(from_node, node))
         return sorted(edges, key=lambda x: x.input_port_id)
 
     def get_output_edges(self, node: NNCFNode) -> List[NNCFGraphEdge]:
@@ -343,8 +351,30 @@ class NNCFGraph:
         """
 
         output_nodes = self.get_next_nodes(node)
-        edges = [self.get_edge(node, to_node) for to_node in output_nodes]
+        edges = []
+        for to_node in output_nodes:
+            edges.extend(self._get_edges(node, to_node))
         return sorted(edges, key=lambda x: x.output_port_id)
+
+    def _get_edges(self, from_node: NNCFNode, to_node: NNCFNode) -> List[NNCFGraphEdge]:
+        edges = []
+        edge = self.get_edge(from_node, to_node)
+        parallel_input_port_ids = edge.parallel_input_port_ids
+        edge.parallel_input_port_ids = []
+        edges.append(edge)
+        for input_port_id in parallel_input_port_ids:
+            edges.append(
+                NNCFGraphEdge(
+                    from_node=edge.from_node,
+                    to_node=edge.to_node,
+                    input_port_id=input_port_id,
+                    output_port_id=edge.output_port_id,
+                    tensor_shape=edge.tensor_shape,
+                    dtype=edge.dtype,
+                    parallel_input_port_ids=[],
+                )
+            )
+        return edges
 
     def traverse_graph(
         self,

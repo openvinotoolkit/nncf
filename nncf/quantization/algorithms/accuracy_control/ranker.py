@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import operator
+from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Callable, List, Optional, TypeVar, Union
@@ -59,7 +60,7 @@ class Ranker:
         dataset: Dataset,
         algo_backend: AccuracyControlAlgoBackend,
         evaluator: Evaluator,
-        num_processes: int = 1,
+        num_workers: int = 1,
         ranking_fn: Optional[Callable[[Any, Any], float]] = None,
     ):
         """
@@ -70,6 +71,8 @@ class Ranker:
         :param dataset: Dataset for the ranking process.
         :param algo_backend: The `AccuracyControlAlgoBackend` algo backend.
         :param evaluator: Evaluator to validate model.
+        :param num_workers: The number of parallel workers that are used to rank quantization
+            operations.
         :param  ranking_fn: a function that compares values returned by
             `Evaluator.collect_values_for_each_item()` method for initial and quantized model.
         """
@@ -78,7 +81,7 @@ class Ranker:
         self._algo_backend = algo_backend
         self._evaluator = evaluator
         self._ranking_fn = ranking_fn
-        self._num_processes = num_processes
+        self._num_workers = num_workers
 
     def find_groups_of_quantizers_to_rank(self, quantized_model_graph: NNCFGraph) -> List[GroupToRank]:
         """
@@ -150,8 +153,8 @@ class Ranker:
         nncf_logger.info("Calculating ranking score for groups of quantizers")
         with timer():
             # Calculate ranking score for groups of quantizers.
-            if self._num_processes > 1:
-                ranking_scores = self._multiprocessing_calculation_ranking_score(
+            if self._num_workers > 1:
+                ranking_scores = self._multithreading_calculation_ranking_score(
                     quantized_model,
                     quantized_model_graph,
                     groups_to_rank,
@@ -195,7 +198,7 @@ class Ranker:
 
         return ranking_scores
 
-    def _multiprocessing_calculation_ranking_score(
+    def _multithreading_calculation_ranking_score(
         self,
         quantized_model: TModel,
         quantized_model_graph: NNCFGraph,
@@ -205,22 +208,23 @@ class Ranker:
     ):
         ranking_scores = []  # ranking_scores[i] is the ranking score for groups_to_rank[i]
         prepared_model_queue = []
+        executor = ThreadPoolExecutor(max_workers=self._num_workers)
         for idx, current_group in enumerate(groups_to_rank):
             modified_model = revert_operations_to_floating_point_precision(
                 current_group.operations, current_group.quantizers, quantized_model, quantized_model_graph
             )
 
-            prepared_model_queue.append(self._algo_backend.prepare_for_inference_async(modified_model))
+            prepared_model_queue.append(executor.submit(self._algo_backend.prepare_for_inference, modified_model))
 
-            if idx >= (self._num_processes - 1):
-                prepared_model = prepared_model_queue.pop(0).get()
+            if idx >= (self._num_workers - 1):
+                prepared_model = prepared_model_queue.pop(0).result()
                 ranking_score = self._calculate_ranking_score(
                     prepared_model, ranking_subset_indices, reference_values_for_each_item
                 )
                 ranking_scores.append(float(ranking_score))
 
-        for _ in range(self._num_processes - 1):
-            prepared_model = prepared_model_queue.pop(0).get()
+        for _ in range(self._num_workers - 1):
+            prepared_model = prepared_model_queue.pop(0).result()
             ranking_score = self._calculate_ranking_score(
                 prepared_model, ranking_subset_indices, reference_values_for_each_item
             )

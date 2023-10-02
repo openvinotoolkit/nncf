@@ -22,7 +22,6 @@ from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.structs import QuantizationMode
@@ -37,7 +36,7 @@ from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.torch.graph.graph import PTTargetPoint
-from nncf.torch.graph.transformations.commands import PTInsertionCommand
+from nncf.torch.graph.transformations.commands import PTQuantizerInsertionCommand
 from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
@@ -132,7 +131,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_point: PTTargetPoint,
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
-    ) -> PTInsertionCommand:
+    ) -> PTQuantizerInsertionCommand:
         return PTMinMaxAlgoBackend._create_quantizer_insertion_command(
             nncf_graph, target_point, quantizer_config, parameters
         )
@@ -299,14 +298,13 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_point: PTTargetPoint,
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
-    ) -> PTInsertionCommand:
+    ) -> PTQuantizerInsertionCommand:
         _, scale_shape, _ = PTMinMaxAlgoBackend._get_input_scale_shape(nncf_graph, target_point, quantizer_config)
 
         quantizer = PTMinMaxAlgoBackend._create_quantizer(
             quantizer_config, scale_shape, parameters, target_point.target_type
         )
-
-        return PTInsertionCommand(target_point, quantizer, TransformationPriority.QUANTIZATION_PRIORITY)
+        return PTQuantizerInsertionCommand(target_point, quantizer)
 
     @staticmethod
     def get_ignored_metatypes(model_type: ModelType, device: TargetDevice) -> List[OperatorMetatype]:
