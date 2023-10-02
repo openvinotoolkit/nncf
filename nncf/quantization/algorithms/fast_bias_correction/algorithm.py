@@ -26,7 +26,7 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-from nncf.experimental.common.tensor_statistics import statistical_functions as s_fns
+from nncf.experimental.common.tensor_statistics.statistical_functions import mean_per_channel
 from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor import functions as fns
 from nncf.quantization.algorithms.algorithm import Algorithm
@@ -318,7 +318,7 @@ class FastBiasCorrection(Algorithm):
         engine = EngineFactory.create(model)
         raw_output = engine.infer(input_blob)
         q_outputs = self._backend_entity.process_model_output(raw_output, output_name)
-        q_outputs = s_fns.mean_per_channel(q_outputs, channel_axis)
+        q_outputs = mean_per_channel(q_outputs, channel_axis)
         bias_shift = fns.stack(output_fp) - q_outputs
         return bias_shift
 
