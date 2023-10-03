@@ -254,13 +254,13 @@ class TestSotaCheckpoints:
     ) -> Tuple[bool, List[str]]:
         err_msgs = []
 
-        if not diff_target_min < diff_target < diff_target_max:
+        if diff_target < diff_target_min or diff_target > diff_target_max:
             err_msgs.append(
                 f"Target diff is not within thresholds: {diff_target_min} < {diff_target} < {diff_target_max}"
             )
 
         if diff_fp32 is not None:
-            if not diff_fp32_min < diff_fp32 < diff_fp32_max:
+            if diff_fp32 < diff_fp32_min or diff_fp32 > diff_fp32_max:
                 err_msgs.append(f"FP32 diff is not within thresholds: {diff_fp32_min} < {diff_fp32} < {diff_fp32_max}")
 
         if err_msgs:
@@ -329,12 +329,12 @@ class TestSotaCheckpoints:
             diff_fp32 = round((metric_value - fp32_metric), 2)
 
         threshold_errors = self.threshold_check(
-            diff_target,
-            diff_fp32,
-            eval_run_param.diff_fp32_min,
-            eval_run_param.diff_fp32_max,
-            eval_run_param.diff_target_min,
-            eval_run_param.diff_target_max,
+            diff_target=diff_target,
+            diff_fp32=diff_fp32,
+            diff_target_min=eval_run_param.diff_target_min,
+            diff_target_max=eval_run_param.diff_target_max,
+            diff_fp32_min=eval_run_param.diff_fp32_min,
+            diff_fp32_max=eval_run_param.diff_fp32_max,
         )
         result_info = ResultInfo(
             model_name=eval_run_param.model_name,
@@ -380,7 +380,7 @@ class TestSotaCheckpoints:
     @staticmethod
     def get_metric_from_ac_csv(path: Path):
         data = pd.read_csv(path)
-        return data["metric_value"].iloc[0] * 100
+        return round(data["metric_value"].iloc[0] * 100, 2)
 
     @pytest.mark.oveval
     def test_openvino_eval(self, eval_run_param: EvalRunParamsStruct, ov_data_dir, openvino, ov_config_dir):
@@ -396,7 +396,7 @@ class TestSotaCheckpoints:
 
         ac_yml_path = config_folder / f"{eval_run_param.model_name}.yml"
 
-        report_csv_path = PROJECT_ROOT / f"{eval_run_param.model_name}.csv"
+        report_csv_path = pytest.metrics_dump_path / f"{eval_run_param.model_name}.csv"
 
         # Ensure that report file does not exists
         report_csv_path.unlink(missing_ok=True)
@@ -426,12 +426,12 @@ class TestSotaCheckpoints:
             diff_fp32 = round((metric_value - fp32_metric), 2)
 
         threshold_errors = self.threshold_check(
-            diff_target,
-            diff_fp32,
-            eval_run_param.diff_fp32_min,
-            eval_run_param.diff_fp32_max,
-            eval_run_param.diff_target_min,
-            eval_run_param.diff_target_max,
+            diff_target=diff_target,
+            diff_fp32=diff_fp32,
+            diff_target_min=eval_run_param.diff_target_min,
+            diff_target_max=eval_run_param.diff_target_max,
+            diff_fp32_min=eval_run_param.diff_fp32_min,
+            diff_fp32_max=eval_run_param.diff_fp32_max,
         )
         result_info = ResultInfo(
             model_name=eval_run_param.model_name,
