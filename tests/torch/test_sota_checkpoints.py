@@ -66,7 +66,7 @@ class ResultInfo:
     measured: Optional[float] = None
     diff_fp32: Optional[float] = None
     diff_target: Optional[float] = None
-    error: Optional[str] = None
+    status: Optional[str] = None
 
     def to_dict(self):
         return {
@@ -77,7 +77,7 @@ class ResultInfo:
             "Measured": self.measured,
             "Diff FP32": self.diff_fp32,
             "Diff target": self.diff_target,
-            "Error": self.error,
+            "Status": self.status,
         }
 
 
@@ -315,7 +315,7 @@ class TestSotaCheckpoints:
             result_info = ResultInfo(
                 model_name=eval_run_param.model_name,
                 backend="PT",
-                error=f"exit_code: {exit_code}",
+                status=f"exit_code: {exit_code}",
             )
             add_test_result(result_info)
             pytest.fail(f"exit_code: {exit_code}")
@@ -344,7 +344,7 @@ class TestSotaCheckpoints:
             measured=metric_value,
             diff_fp32=diff_fp32,
             diff_target=diff_target,
-            error=threshold_errors,
+            status=threshold_errors,
         )
         add_test_result(result_info)
         if threshold_errors is not None:
@@ -411,7 +411,7 @@ class TestSotaCheckpoints:
                 ResultInfo(
                     model_name=eval_run_param.model_name,
                     backend="OV",
-                    error=f"Accuracy checker return code: {exit_code}",
+                    status=f"Accuracy checker return code: {exit_code}",
                 )
             )
             pytest.fail(f"Accuracy checker return code: {exit_code}")
@@ -441,7 +441,7 @@ class TestSotaCheckpoints:
             measured=metric_value,
             diff_fp32=diff_fp32,
             diff_target=diff_target,
-            error=threshold_errors,
+            status=threshold_errors,
         )
         add_test_result(result_info)
         if threshold_errors is not None:
@@ -493,7 +493,7 @@ class TestSotaCheckpoints:
                 metric_type=eval_run_param.metric_type,
                 measured=metric_value,
                 diff_fp32=diff_fp32,
-                error=err_msg,
+                status=err_msg,
             )
         )
         if err_msg:
@@ -506,5 +506,6 @@ def results():
     if pytest.metrics_dump_path and TEST_RESULT:
         path = pytest.metrics_dump_path / "results.csv"
         data_frame = pd.DataFrame.from_records([x.to_dict() for x in TEST_RESULT])
+        data_frame = data_frame.sort_values("Model").reset_index(drop=True)
         data_frame.to_csv(path, index=False)
         print(f"Result file: {path}")
