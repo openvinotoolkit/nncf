@@ -441,30 +441,24 @@ def quantize_with_accuracy_control_impl(
 
 def compress_weights_impl(
     model: ov.Model,
-    mode: CompressWeightsMode = CompressWeightsMode.COMPRESSED_INT8,
-    ratio: float = None,
-    group_size: int = None,
+    mode: CompressWeightsMode = CompressWeightsMode.INT8,
+    ratio: Optional[float] = None,
+    group_size: Optional[int] = None,
 ) -> ov.Model:
     """
     Implementation of the `compress_weights()` method for the OpenVINO backend.
 
     :param model: an OpenVINO model for compression.
     :param mode: Defines a mode for weight compression.
-        COMPRESSED_INT8 stands for 8-bit integer quantization of all weights.
-        COMPRESSED_NF4 stands for a mixed-precision weights quantization to NF4 data type. The first and last layers
+        INT8 stands for 8-bit integer quantization of all weights.
+        NF4 stands for a mixed-precision weights quantization to NF4 data type. The first and last layers
         are always compressed to a backup precision which is uint8 by default. All others are quantized whether to NF4
         or to a backup precision depending on criteria and the given ratio.
     :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4 and
         the rest to INT8).
     :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
-        The value -1 means no grouping. Defaults to -1.
+        The value -1 means no grouping.
     :return: The non-trainable model with compressed weights and dequantization operations.
     """
-    if mode == CompressWeightsMode.COMPRESSED_NF4:
-        if ratio is None:
-            ratio = 1
-        if group_size is None:
-            group_size = 64
-
     insert_pre_compression_operations(model, mode, ratio, group_size)
     return model

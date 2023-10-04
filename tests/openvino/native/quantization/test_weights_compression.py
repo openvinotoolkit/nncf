@@ -58,7 +58,7 @@ def test_compress_weights_nf4(model_creator_func):
         pytest.xfail("Waiting for the merge NF4 support in OV - PR 19900")
     ref_compressed_weights = TEST_MODELS[model_creator_func]
     model = model_creator_func().ov_model
-    compressed_model = compress_weights(model, mode=CompressWeightsMode.COMPRESSED_NF4, ratio=1, group_size=1)
+    compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4, ratio=1, group_size=1)
 
     n_compressed_weights = 0
     for op in compressed_model.get_ordered_ops():
@@ -123,7 +123,7 @@ def test_compare_compressed_weights():
 @pytest.mark.xfail
 def test_compare_compressed_weights_nf4():
     model = IntegerModel().ov_model
-    compressed_model = compress_weights(model, mode=CompressWeightsMode.COMPRESSED_NF4, ratio=1, group_size=3)
+    compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4, ratio=1, group_size=3)
 
     nodes = {}
     ref_nf4_weight = TEST_MODELS[IntegerModel][1]
@@ -177,9 +177,7 @@ def test_mixed_precision(ratio, group_size, ref_nf4_nodes):
     if ratio > 0.3:
         pytest.xfail("Waiting for the merge NF4 support in OV - PR 19900")
     model = SequentialMatmulModel().ov_model
-    compressed_model = compress_weights(
-        model, mode=CompressWeightsMode.COMPRESSED_NF4, ratio=ratio, group_size=group_size
-    )
+    compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4, ratio=ratio, group_size=group_size)
     for op in compressed_model.get_ordered_ops():
         if op.get_type_name() == "Constant" and op.get_friendly_name() in ref_nf4_nodes:
             assert op.get_element_type() == ov.Type.nf4
@@ -348,9 +346,9 @@ def test_raise_error_with_incorrect_group_size():
 
 def test_raise_error_with_int8_and_non_default_ratio(mocker):
     with pytest.raises(RuntimeError):
-        compress_weights(mocker.Mock(), mode=CompressWeightsMode.COMPRESSED_INT8, ratio=0.5)
+        compress_weights(mocker.Mock(), mode=CompressWeightsMode.INT8, ratio=0.5)
 
 
 def test_raise_error_with_int8_and_non_default_group_size(mocker):
     with pytest.raises(RuntimeError):
-        compress_weights(mocker.Mock(), mode=CompressWeightsMode.COMPRESSED_INT8, group_size=64)
+        compress_weights(mocker.Mock(), mode=CompressWeightsMode.INT8, group_size=64)

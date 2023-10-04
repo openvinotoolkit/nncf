@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import List, Tuple, Type, TypeVar, Union
+from typing import List, Optional, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import openvino.runtime as ov
@@ -85,9 +85,9 @@ class WeightCompressionConfig:
         The value -1 means no grouping. Defaults to -1.
     """
 
-    num_bits: int = 8
-    is_nf4: bool = False
-    group_size: int = -1
+    num_bits: Optional[int] = 8
+    is_nf4: Optional[bool] = False
+    group_size: Optional[int] = -1
 
 
 @dataclass
@@ -288,7 +288,7 @@ def _assign_mixed_precision(all_weight_params: List[WeightNodeParams], ratio: fl
     :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
         and the rest to INT8).
     :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
-        The value -1 means no grouping. Defaults to -1.
+        The value -1 means no grouping.
     """
     nf4_config = WeightCompressionConfig(num_bits=4, is_nf4=True, group_size=group_size)
     if ratio != 1:
@@ -335,14 +335,14 @@ def insert_pre_compression_operations(
 
     :param model: The model to be transformed.
     :param mode: Defines a mode for weight compression.
-        COMPRESSED_INT8 stands for 8-bit integer quantization of all weights.
-        COMPRESSED_NF4 stands for a mixed-precision weights quantization to NF4 data type. The first and last layers
+        INT8 stands for 8-bit integer quantization of all weights.
+        NF4 stands for a mixed-precision weights quantization to NF4 data type. The first and last layers
         are always compressed to a backup precision which is uint8 by default. All others are quantized whether to NF4
         or to a backup precision depending on criteria and the given ratio.
     :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
         and the rest to INT8).
     :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
-        The value -1 means no grouping. Defaults to -1.
+        The value -1 means no grouping.
     """
     allowed_metatypes_to_const_port = {OVEmbeddingMetatype: [0], OVMatMulMetatype: [0, 1]}
 
@@ -374,7 +374,7 @@ def insert_pre_compression_operations(
             all_weight_params.append(weight_params)
             quantized_nodes_ids.add(id(weight_node))
 
-    if mode == CompressWeightsMode.COMPRESSED_NF4:
+    if mode == CompressWeightsMode.NF4:
         _assign_mixed_precision(all_weight_params, ratio, group_size)
 
     for wp in all_weight_params:
