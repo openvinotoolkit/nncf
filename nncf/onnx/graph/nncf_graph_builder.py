@@ -351,7 +351,7 @@ class GraphConverter:
         nncf_graph = NNCFGraph()
         for node in onnx_model.graph.node:
             metatype = get_metatype(onnx_model, node)
-            weight_port_ids = _get_weight_port_ids(node, metatype, edge_node_mapping)
+            weight_port_ids = _get_weight_port_ids(node, onnx_model, edge_node_mapping)
             is_shared = None
             weight_attrs = {}
             node_attrs = _get_node_attrs(node, onnx_model)
