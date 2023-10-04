@@ -315,6 +315,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.PTDivMetatype,
                 om.PTMaxMetatype,
                 om.PTSqueezeMetatype,
+                om.PTLayerNormMetatype,
+                om.PTModuleLayerNormMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
                 types.append(om.PTMulMetatype)
