@@ -154,7 +154,6 @@ class NormalizedKeys:
     def __init__(self, keys: List[str], keys_to_ignore: List[str]):
         self._unique_normalized_key_vs_orig_key_map = {}
         self.is_unified_group_detected = False
-        self.has_legacy_storage_keys = False
         unique_clipped_key_vs_orig_key_map, ignored_keys = self._clip_keys_without_collisions(keys, keys_to_ignore)
         self.ignored_orig_keys = ignored_keys
         ignored_keys = self._normalize_keys_without_collisions(unique_clipped_key_vs_orig_key_map, keys_to_ignore)
@@ -228,9 +227,8 @@ class NormalizedKeys:
     @staticmethod
     def _key_clipper(key: str) -> str:
         new_key = key
-        from nncf.torch.nncf_network import LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME  # pylint: disable=cyclic-import
 
-        clip_patterns = [LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME + ".", "module.", "|OUTPUT", "|INPUT", "_nncf."]
+        clip_patterns = ["module.", "|OUTPUT", "|INPUT"]
         for pattern in clip_patterns:
             new_key = new_key.replace(pattern, "")
         return new_key
@@ -240,11 +238,6 @@ class NormalizedKeys:
 
         match = re.search("(pre_ops|post_ops)\\.(\\d+?)\\.op", key)
         new_key = new_key if not match else new_key.replace(match.group(), "operation")
-
-        new_key, did_replace = self._replace_legacy_act_quantizer_storage_name(new_key)
-        if did_replace:
-            self.has_legacy_storage_keys = True
-
         result = self._split_unified_parameters(new_key)
         if len(result) > 1:
             self.is_unified_group_detected = True
@@ -263,29 +256,16 @@ class NormalizedKeys:
         Returns original key if there's no ';' and operation doesn't start with EXTERNAL_QUANTIZERS_STORAGE_NAME
         """
         result = [new_key]
-        from nncf.torch.nncf_network import CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX  # pylint: disable=cyclic-import
+        from nncf.torch.quantization.external_quantizer import EXTERNAL_QUANTIZERS_STORAGE_PREFIX
 
-        if ";" in new_key and new_key.startswith(CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX):
+        if ";" in new_key and new_key.startswith(EXTERNAL_QUANTIZERS_STORAGE_PREFIX):
             group_of_keys = new_key.split(";")
             last_key = group_of_keys[-1]
             common_op = last_key.split(".")[-1]
-            result = [group_of_keys[0] + "." + common_op, CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + "." + last_key]
+            result = [group_of_keys[0] + "." + common_op, EXTERNAL_QUANTIZERS_STORAGE_PREFIX + "." + last_key]
             for key in group_of_keys[1:-1]:
-                result.append(CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX + "." + key + "." + common_op)
+                result.append(EXTERNAL_QUANTIZERS_STORAGE_PREFIX + "." + key + "." + common_op)
         return result
-
-    @staticmethod
-    def _replace_legacy_act_quantizer_storage_name(checkpoint_key: str) -> Tuple[str, bool]:
-        did_replace = False
-        splits = checkpoint_key.split(".")
-        from nncf.torch.nncf_network import CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX  # pylint: disable=cyclic-import
-        from nncf.torch.nncf_network import LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX  # pylint: disable=cyclic-import
-
-        if splits[0] == LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX:
-            did_replace = True
-            splits[0] = CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
-        reconstructed_key = ".".join(splits)
-        return reconstructed_key, did_replace
 
 
 class KeyMatcher:
@@ -337,21 +317,8 @@ class KeyMatcher:
                 "Legacy NNCF-enabled .pth checkpoint has been loaded! "
                 "The version-agnostic `RELU` operator name entries in the state dict "
                 "have been deprecated. "
-                "The loader will try to match these entries to the correspoindig `relu` and `relu_` op "
+                "The loader will try to match these entries to the corresponding `relu` and `relu_` op "
                 "names. The newly exported checkpoints will be adjusted to the new format."
-            )
-
-        if normalized_keys_to_load.has_legacy_storage_keys:
-            from nncf.torch.nncf_network import CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
-            from nncf.torch.nncf_network import LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
-
-            warning_deprecated(
-                f"Legacy NNCF-enabled .pth checkpoint has been loaded! "
-                f"The {LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX} storage key is replaced with "
-                f"{CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX} in newer versions of NNCF, and support "
-                f"for the legacy storage key will be dropped in a future release. "
-                f"This checkpoint will be loaded; update your checkpoint file by saving this model's"
-                f"checkpoint file again."
             )
 
         if normalized_model_keys.is_unified_group_detected and not normalized_keys_to_load.is_unified_group_detected:

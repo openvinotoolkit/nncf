@@ -60,16 +60,11 @@ from nncf.torch.knowledge_distillation.knowledge_distillation_handler import Kno
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.nested_objects_traversal import objwalk
 from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
+from nncf.torch.quantization.external_quantizer import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.torch.utils import compute_FLOPs_hook
 from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import training_mode_switcher
-
-LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME = "nncf_module"
-LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX = "external_quantizers"
-
-EXTERNAL_QUANTIZERS_STORAGE_NAME = "external_quantizers"
-CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX = "_nncf." + EXTERNAL_QUANTIZERS_STORAGE_NAME
 
 Module = TypeVar("Module", bound=nn.Module)
 
@@ -543,6 +538,15 @@ class NNCFNetworkInterface(torch.nn.Module):
         if compression_module_type not in self._extra_module_types:
             raise RuntimeError(f"Module type {compression_module_type} was not registered")
         return self.__getattr__(attr_name)
+
+    def is_compression_module_registered(self, compression_module_type: ExtraCompressionModuleType) -> bool:
+        """
+        Check that extra compression module was registered.
+
+        :param compression_module_type: Type of the extra compression module.
+        :return: True if the extra compression module is registered, otherwise False.
+        """
+        return compression_module_type in self._extra_module_types
 
     @staticmethod
     def _compression_module_type_to_attr_name(compression_module_type: ExtraCompressionModuleType):

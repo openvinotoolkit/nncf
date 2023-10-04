@@ -25,6 +25,7 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MinReducer
@@ -54,6 +55,10 @@ class TemplateTestQuantizerConfig:
         pass
 
     @abstractmethod
+    def get_reduction_axes(self, reducer) -> ReductionAxes:
+        pass
+
+    @abstractmethod
     @pytest.fixture
     def single_conv_nncf_graph(self) -> NNCFGraphToTest:
         pass
@@ -72,8 +77,8 @@ class TemplateTestQuantizerConfig:
     class TestGetStatisticsCollectorParameters:
         target_type: TargetType
         target_node_name: str
-        ref_per_ch_reduction_shape: List[int]
-        ref_per_tensor_reduction_shape: List[int]
+        ref_per_ch_reduction_axes: List[int]
+        ref_per_tensor_reduction_axes: List[int]
 
     @abstractmethod
     @pytest.fixture
@@ -278,8 +283,8 @@ class TemplateTestQuantizerConfig:
 
         for reducer in reducers:
             if q_config_per_channel:
-                assert reducer._reduction_shape == params.ref_per_ch_reduction_shape
+                assert self.get_reduction_axes(reducer) == params.ref_per_ch_reduction_axes
             else:
-                assert reducer._reduction_shape == params.ref_per_tensor_reduction_shape
+                assert self.get_reduction_axes(reducer) == params.ref_per_tensor_reduction_axes
 
         assert tensor_collector.num_samples == num_samples

@@ -232,11 +232,11 @@ class SmoothQuant(Algorithm):
                 target_node_name=node_to_smooth.node_name,
                 port_id=node_data["input_act_port"],
             )
-            input_reduction_shape = self._calculate_input_reduction_shape(
+            input_reduction_axes = self._calculate_input_reduction_axes(
                 graph, node_to_smooth, node_data["input_act_port"]
             )
             stat_collector = self._backend_entity.get_abs_max_channel_collector(
-                self._subset_size, input_reduction_shape, self._inplace_statistics, STATISTIC_BRANCH_KEY
+                self._subset_size, input_reduction_axes, self._inplace_statistics, STATISTIC_BRANCH_KEY
             )
             statistic_container.add_statistic_point(
                 StatisticPoint(
@@ -316,21 +316,21 @@ class SmoothQuant(Algorithm):
             return self._backend_entity.calculate_weight_scale(scale_value, weights_size, channel_axis)
         return scale_value
 
-    def _calculate_input_reduction_shape(self, nncf_graph: NNCFGraph, node: NNCFNode, input_port: int) -> Tuple[int]:
+    def _calculate_input_reduction_axes(self, nncf_graph: NNCFGraph, node: NNCFNode, input_port: int) -> Tuple[int]:
         """
-        Returns reduction shape for specified input.
+        Returns reduction axes for specified input.
 
         :param nncf_graph: NNCFGraph instance.
         :param node: NNCFNode to check.
         :param input_port: Specified input port id.
-        :return: Calculated reduction shape.
+        :return: Calculated reduction axes.
         """
         shape = nncf_graph.get_input_edges(node)[input_port].tensor_shape
-        reduction_shape = tuple([0])
+        reduction_axes = tuple([0])
         if len(shape) > 1:
             channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port)
-            reduction_shape = self._backend_entity.get_channel_agnostic_reduction_shape(channel_axis, shape)
-        return reduction_shape
+            reduction_axes = self._backend_entity.get_channel_agnostic_reduction_axes(channel_axis, shape)
+        return reduction_axes
 
     def _process_weight_statistics(self, node: NNCFNode, weights: TTensor, port_id: int) -> TTensor:
         """

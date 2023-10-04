@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import defaultdict
 from typing import List, Type
 
 import openvino.runtime as ov
@@ -88,19 +89,28 @@ class GraphConverter:
         for op in model.get_ops():
             in_node_id = graph.get_node_by_name(op.get_friendly_name()).node_id
             for output_port_id, out in enumerate(op.outputs()):
+                node_vs_target_inputs = defaultdict(list)
                 for inp in out.get_target_inputs():
-                    out_node = inp.get_node()
+                    node_vs_target_inputs[inp.get_node()].append(inp)
+
+                for out_node, inputs in node_vs_target_inputs.items():
                     tensor_shape = list(out.partial_shape.get_max_shape())
                     output_node_id = graph.get_node_by_name(out_node.get_friendly_name()).node_id
                     ov_dtype = out.get_element_type().get_type_name()
                     nncf_dtype = GraphConverter.convert_to_nncf_dtype(ov_dtype)
+
+                    parallel_inputs = None
+                    if len(inputs) > 1:
+                        parallel_inputs = [inp.get_index() for inp in inputs[1:]]
+
                     graph.add_edge_between_nncf_nodes(
                         from_node_id=in_node_id,
                         to_node_id=output_node_id,
                         tensor_shape=tensor_shape,
-                        input_port_id=inp.get_index(),
+                        input_port_id=inputs[0].get_index(),
                         output_port_id=output_port_id,
                         dtype=Dtype(nncf_dtype),
+                        parallel_input_port_ids=parallel_inputs,
                     )
 
     @staticmethod

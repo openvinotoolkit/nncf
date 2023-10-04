@@ -190,9 +190,9 @@ class AdvancedAccuracyRestorerParameters:
     :param ranking_subset_size: Size of a subset that is used to rank layers by their
         contribution to the accuracy drop.
     :type ranking_subset_size: Optional[int]
-    :param num_ranking_processes: The number of parallel processes that are used to rank
+    :param num_ranking_workers: The number of parallel workers that are used to rank
         quantization operations.
-    :type num_ranking_processes: Optional[int]
+    :type num_ranking_workers: Optional[int]
     :param intermediate_model_dir: Path to the folder where the model, which was fully
         quantized with initial parameters, should be saved.
     :type intermediate_model_dir: Optional[str]
@@ -201,7 +201,7 @@ class AdvancedAccuracyRestorerParameters:
     max_num_iterations: int = sys.maxsize
     tune_hyperparams: bool = False
     ranking_subset_size: Optional[int] = None
-    num_ranking_processes: Optional[int] = None
+    num_ranking_workers: Optional[int] = None
     intermediate_model_dir: Optional[str] = None
 
 

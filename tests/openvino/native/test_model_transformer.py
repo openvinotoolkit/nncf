@@ -286,7 +286,7 @@ def test_split_inplace_fn_insertion(test_params: InplaceOpTestCase):
 )
 def test_inplace_reduce_fn_dynamic_shapes(input_shape, raise_error):
     input_1 = opset.parameter(input_shape, name="Input")
-    fn = get_inplace_min_op("test", reduction_shape=None)
+    fn = get_inplace_min_op("test", reduction_axes=None)
     if raise_error:
         with pytest.raises(RuntimeError):
             fn(input_1, 0)
@@ -297,8 +297,8 @@ def test_inplace_reduce_fn_dynamic_shapes(input_shape, raise_error):
     assert all(np.equal(get_prev_node(op, 1).get_data(), ref_const))
 
 
-@pytest.mark.parametrize("reduction_shape", [None, np.array([], dtype=np.int64)])
-def test_inplace_reduce_fn_zero_rank_output(reduction_shape):
+@pytest.mark.parametrize("reduction_axes", [None, np.array([], dtype=np.int64)])
+def test_inplace_reduce_fn_zero_rank_output(reduction_axes):
     model = ZeroRankEltwiseModel().ov_model
     target_layer = "Add"
     port_id = 1
@@ -310,7 +310,7 @@ def test_inplace_reduce_fn_zero_rank_output(reduction_shape):
         OVInplaceFnInsertionCommand,
         port_id,
         {
-            "inplace_op_fn": get_inplace_min_op(name, reduction_shape=reduction_shape),
+            "inplace_op_fn": get_inplace_min_op(name, reduction_axes=reduction_axes),
             "fn_output_port_id": 0,
         },
     )

@@ -17,6 +17,7 @@ import openvino.runtime as ov
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import MedianAggregator
@@ -33,7 +34,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSubtractMetatype
 from nncf.openvino.graph.node_utils import create_bias_tensor
 from nncf.openvino.graph.node_utils import get_bias_value
-from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_shape
+from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_node_with_bias_value
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
@@ -81,10 +82,10 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
 
     @staticmethod
     def get_statistic_collector(
-        reduction_shape, q: float, num_samples: int, inplace: bool
+        reduction_axes, q: float, num_samples: int, inplace: bool
     ) -> TensorStatisticCollectorBase:
         tensor_collector = TensorCollector(OVMinMaxTensorStatistic)
-        quantile_reducer = OVQuantileReducer(reduction_shape, (q, 1 - q), inplace)
+        quantile_reducer = OVQuantileReducer(reduction_axes, (q, 1 - q), inplace)
 
         for port_id, container_key in enumerate([OVMinMaxTensorStatistic.MIN_STAT, OVMinMaxTensorStatistic.MAX_STAT]):
             aggregator = MedianAggregator(OVNNCFCollectorTensorProcessor, num_samples=num_samples)
@@ -134,5 +135,5 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         return create_bias_tensor(node, nncf_graph, value)
 
     @staticmethod
-    def get_channel_agnostic_reduction_shape(channel_axis: int, shape: Tuple[int]) -> Tuple[int]:
-        return get_channel_agnostic_reduction_shape(channel_axes=channel_axis, shape=shape)
+    def get_channel_agnostic_reduction_axes(channel_axis: int, shape: Tuple[int]) -> ReductionAxes:
+        return get_channel_agnostic_reduction_axes(channel_axes=channel_axis, shape=shape)

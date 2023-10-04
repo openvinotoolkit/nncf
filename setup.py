@@ -57,8 +57,8 @@ if setuptools_version < "43.0.0":
     )
 
 python_version = sys.version_info
-if python_version < (3, 7, 0):
-    print("Only Python >= 3.7.0 is supported")
+if python_version < (3, 8, 0):
+    print("Only Python >= 3.8.0 is supported")
     sys.exit(0)
 
 version_string = "{}{}".format(sys.version_info[0], sys.version_info[1])

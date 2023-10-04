@@ -25,15 +25,15 @@ from rich.progress import TimeRemainingColumn
 from rich.style import StyleType
 from rich.text import Text
 
+INTEL_BLUE_COLOR = "#0068b5"
+
 
 class IterationsColumn(ProgressColumn):
     def render(self, task: Task) -> Text:
         if task.total is None:
             return Text("")
         text = f"{int(task.completed)}/{int(task.total)}"
-        if task.finished:
-            return Text(text, style="progress.elapsed")
-        return Text(text, style="progress.remaining")
+        return Text(text, style=INTEL_BLUE_COLOR)
 
 
 class SeparatorColumn(ProgressColumn):
@@ -45,6 +45,18 @@ class SeparatorColumn(ProgressColumn):
         if self.disable_if_no_total and task.total is None:
             return Text("")
         return Text("•")
+
+
+class TimeElapsedColumnWithStyle(TimeElapsedColumn):
+    def render(self, task: "Task") -> Text:
+        text = super().render(task)
+        return Text(text._text[0], style=INTEL_BLUE_COLOR)  # pylint: disable=protected-access
+
+
+class TimeRemainingColumnWithStyle(TimeRemainingColumn):
+    def render(self, task: "Task") -> Text:
+        text = super().render(task)
+        return Text(text._text[0], style=INTEL_BLUE_COLOR)  # pylint: disable=protected-access
 
 
 class track:
@@ -105,15 +117,19 @@ class track:
                     complete_style=complete_style,
                     finished_style=finished_style,
                     pulse_style=pulse_style,
+                    bar_width=None,
                 ),
                 TaskProgressColumn(show_speed=show_speed),
                 IterationsColumn(),
                 SeparatorColumn(),
-                TimeElapsedColumn(),
+                TimeElapsedColumnWithStyle(),
                 SeparatorColumn(disable_if_no_total=True),  # disable because time remaining will be empty
-                TimeRemainingColumn(),
+                TimeRemainingColumnWithStyle(),
             )
         )
+
+        disable = disable or (hasattr(sequence, "__len__") and len(sequence) == 0)
+
         self.progress = Progress(
             *self.columns,
             auto_refresh=auto_refresh,

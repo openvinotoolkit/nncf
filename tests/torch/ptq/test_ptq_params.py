@@ -18,6 +18,10 @@ from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.backend import BackendType
+from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
+from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
+from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -33,8 +37,6 @@ from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
 from nncf.torch.graph.operator_metatypes import PTSoftmaxMetatype
 from nncf.torch.quantization.quantize_model import _create_nncf_config
-from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollector
-from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
@@ -104,11 +106,17 @@ class TestPTQParams(TemplateTestPTQParams):
     def get_algo_backend(self):
         return PTMinMaxAlgoBackend()
 
-    def check_is_min_max_statistic_collector(self, tensor_collector):
-        assert isinstance(tensor_collector, PTMinMaxStatisticCollector)
+    def check_is_min_max_statistic_collector(self, tensor_collector: TensorCollector):
+        aggrs = [aggr.__class__ for aggr in tensor_collector.aggregators.values()]
+        assert len(aggrs) == 2
+        assert MinAggregator in aggrs
+        assert MaxAggregator in aggrs
 
-    def check_is_mean_min_max_statistic_collector(self, tensor_collector):
-        assert isinstance(tensor_collector, PTMeanMinMaxStatisticCollector)
+    def check_is_mean_min_max_statistic_collector(self, tensor_collector: TensorCollector):
+        aggrs = [aggr.__class__ for aggr in tensor_collector.aggregators.values()]
+        assert len(aggrs) == 2
+        assert MeanAggregator in aggrs
+        assert aggrs[0].__class__ == aggrs[1].__class__
 
     def check_quantize_outputs_fq_num(self, quantize_outputs, act_num_q, weight_num_q):
         if quantize_outputs:

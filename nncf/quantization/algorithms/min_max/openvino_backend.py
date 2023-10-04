@@ -20,14 +20,14 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
-from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_shape
+from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
@@ -122,9 +122,9 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return OVMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     @staticmethod
-    def _get_reduction_shape_and_use_abs_max(
+    def _get_reduction_axes_and_use_abs_max(
         nncf_graph: NNCFGraph, target_point: OVTargetPoint, quantizer_config: QuantizerConfig
-    ) -> Tuple[ReductionShape, bool]:
+    ) -> Tuple[ReductionAxes, bool]:
         use_abs_max = quantizer_config.mode == QuantizationMode.SYMMETRIC
         if not quantizer_config.per_channel:
             return None, use_abs_max
@@ -140,7 +140,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
             # TODO (l-bat): Disable quantizer propogation through layout changing operations
             channel_axis = 1  # OpenVINO activations have channel first layout: [N, C, Z, Y, X]
-            axes = get_channel_agnostic_reduction_shape([channel_axis], shape)
+            axes = get_channel_agnostic_reduction_axes([channel_axis], shape)
             return axes, use_abs_max
 
         assert isinstance(node.layer_attributes, OVLayerAttributes)
@@ -148,7 +148,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
         if quantizer_config.per_channel:
             channel_axes = get_weight_channel_axes(node)
-            axes = get_channel_agnostic_reduction_shape(channel_axes, const_shape)
+            axes = get_channel_agnostic_reduction_axes(channel_axes, const_shape)
         else:
             axes = tuple(range(len(const_shape)))
         return axes, use_abs_max
@@ -162,7 +162,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         inplace: bool,
         num_samples: int = None,
     ) -> TensorCollector:
-        reduction_shape, use_abs_max = OVMinMaxAlgoBackend._get_reduction_shape_and_use_abs_max(
+        reduction_axes, use_abs_max = OVMinMaxAlgoBackend._get_reduction_axes_and_use_abs_max(
             nncf_graph, target_point, quantizer_config
         )
 
@@ -181,7 +181,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                     f"Aggregator type: {params.aggregator_type} is not supported for OpenVino PTQ backend yet."
                 )
 
-            kwargs = {"reduction_shape": reduction_shape, "inplace": inplace}
+            kwargs = {"reduction_axes": reduction_axes, "inplace": inplace}
             if params.statistics_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
                 if container_key == OVMinMaxTensorStatistic.MIN_STAT:
                     quantile = params.quantile_outlier_prob

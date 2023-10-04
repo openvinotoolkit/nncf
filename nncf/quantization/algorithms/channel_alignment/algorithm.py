@@ -390,9 +390,7 @@ class ChannelAlignment(Algorithm):
 
             channel_axis = conv_in.metatype.output_channel_axis
             activation_shape = list(range(len(graph.get_output_edges(node_in)[0].tensor_shape)))
-            reduction_shape = self._backend_entity.get_channel_agnostic_reduction_shape(
-                [channel_axis], activation_shape
-            )
+            reduction_shape = self._backend_entity.get_channel_agnostic_reduction_axes([channel_axis], activation_shape)
 
             statistic_collector = self._backend_entity.get_statistic_collector(
                 tuple(reduction_shape), self._quantile, self.subset_size, self.inplace_statistics

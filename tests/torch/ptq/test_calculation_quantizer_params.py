@@ -271,7 +271,8 @@ def calculate_statistics(data, mode, qgroup, half_range=False):
         max_values = np.amax(data, axes)
 
     statistics = PTMinMaxTensorStatistic(
-        min_values=torch.from_numpy(np.array(min_values)), max_values=torch.from_numpy(np.array(max_values))
+        min_values=torch.from_numpy(np.array(min_values)),
+        max_values=torch.from_numpy(np.array(max_values)),
     )
     signedness_to_force = True if qgroup == QuantizerGroup.WEIGHTS else None
     qconfig = QuantizerConfig(num_bits=8, mode=mode, per_channel=per_ch, signedness_to_force=signedness_to_force)
@@ -292,10 +293,12 @@ def calculate_fq_params(model, input_data):
     conv2_w = model.conv2.weight
     conv2_w_stats = calculate_statistics(conv2_w, QuantizationMode.SYMMETRIC, QuantizerGroup.WEIGHTS)
     return {
-        "/FakeQuantize": conv1_stats,
-        "/bn1/FakeQuantize": bn1_stats,
-        "/avg_pool/FakeQuantize": avg_pool_stats,
-        "/conv2/FakeQuantize": conv2_stats,
+        "//nncf_model_input_0|OUTPUT/FakeQuantize": conv1_stats,
+        "/bn1/LinearTestModel/NNCFBatchNorm2d[bn1]/batch_norm_0|INPUT0/FakeQuantize": bn1_stats,
+        "/avg_pool/LinearTestModel/AdaptiveAvgPool2d[avg_pool]/adaptive_avg_pool2d_0|INPUT0/FakeQuantize": (
+            avg_pool_stats
+        ),
+        "/conv2/LinearTestModel/NNCFConv2d[conv2]/conv2d_0|INPUT0/FakeQuantize": conv2_stats,
         "/conv1/pre_ops.0/op/FakeQuantize": conv1_w_stats,
         "/conv2/pre_ops.0/op/FakeQuantize": conv2_w_stats,
     }
