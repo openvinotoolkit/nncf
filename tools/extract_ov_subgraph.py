@@ -233,11 +233,11 @@ if __name__ == "__main__":
         "The resulting subgraph is saved next to the input .xml file or at --output_path if provided. Additionally, a "
         "symbolic link targeting the original .bin file is created.",
         epilog="Usage examples:\n"
-        "  python ir_subgraph.py openvino.xml \"Constant_1116858\"\n"
-        "  python ir_subgraph.py openvino.xml \"Constant_1116858\" --distance 5\n"
-        "  python ir_subgraph.py openvino.xml \"Constant_1116858\" --output-path ./subgraphs\n"
-        "  python ir_subgraph.py openvino.xml \"Constant_1116858\" --output-path ./subgraphs/Constant_1116858.xml\n",
-        formatter_class=argparse.RawTextHelpFormatter
+        '  python ir_subgraph.py openvino.xml "Constant_1116858"\n'
+        '  python ir_subgraph.py openvino.xml "Constant_1116858" --distance 5\n'
+        '  python ir_subgraph.py openvino.xml "Constant_1116858" --output-path ./subgraphs\n'
+        '  python ir_subgraph.py openvino.xml "Constant_1116858" --output-path ./subgraphs/Constant_1116858.xml\n',
+        formatter_class=argparse.RawTextHelpFormatter,
     )
 
     parser.add_argument("input-path", help="Input IR path.")
