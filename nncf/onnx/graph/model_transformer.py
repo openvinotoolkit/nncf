@@ -21,8 +21,8 @@ from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.onnx.graph.node_utils import get_input_edge
 from nncf.onnx.graph.onnx_helper import get_children
 from nncf.onnx.graph.onnx_helper import get_edge_dtype
-from nncf.onnx.graph.onnx_helper import get_edge_mapping
-from nncf.onnx.graph.onnx_helper import get_input_edge_node_mapping
+from nncf.onnx.graph.onnx_helper import get_edge_info_mapping
+from nncf.onnx.graph.onnx_helper import get_edge_node_mapping
 from nncf.onnx.graph.onnx_helper import get_node_index
 from nncf.onnx.graph.onnx_helper import get_node_mapping
 from nncf.onnx.graph.onnx_helper import get_tensor
@@ -153,9 +153,9 @@ class ONNXModelTransformer(ModelTransformer):
         :return: New model with inserted outputs.
         """
         model_outputs = []
-        edge_mapping = get_edge_mapping(model)
+        edge_info_mapping = get_edge_info_mapping(model)
         for output in outputs:
-            edge = edge_mapping[output]
+            edge = edge_info_mapping[output]
             onnx_dtype = get_edge_dtype(edge)
             type_proto = onnx.helper.make_tensor_type_proto(onnx_dtype, shape=None)
             model_outputs.append(onnx.helper.make_value_info(name=output, type_proto=type_proto))
@@ -198,9 +198,9 @@ class ONNXModelTransformer(ModelTransformer):
         :return: New model with inserted QuantizeLinear-DequantizeLinear nodes pairs.
         """
         self._added_target_edges = Counter()
-        input_edge_node_mapping = get_input_edge_node_mapping(model)  # TODO: maybe update after transformation
         for transformation in transformations:
-            model = self._insert_quantizer_dequantizer(model, transformation, input_edge_node_mapping)
+            edge_node_mapping = get_edge_node_mapping(model)
+            model = self._insert_quantizer_dequantizer(model, transformation, edge_node_mapping)
         return model
 
     def _get_quantize_dequantize_nodes(
@@ -299,13 +299,17 @@ class ONNXModelTransformer(ModelTransformer):
         return target_edge_name
 
     def _insert_quantizer_dequantizer(
-        self, model: onnx.ModelProto, transformation: ONNXQuantizerInsertionCommand, input_edge_node_mapping
+        self,
+        model: onnx.ModelProto,
+        transformation: ONNXQuantizerInsertionCommand,
+        edge_node_mapping: Dict[str, Tuple[onnx.ValueInfoProto, List[onnx.ValueInfoProto]]],
     ) -> onnx.ModelProto:
         """
         Inserts QuantizeLinear-DequantizeLinear nodes pair.
 
         :param model: Model to insert new nodes.
         :param transformation: QuantizeLinear-DequantizeLinear insertion transformation.
+        :param edge_node_mapping: Mapping describing start and consumed nodes of the edges.
         :return: Updated model with inserted QuantizeLinear-DequantizeLinear pair.
         """
         node_mapping = get_node_mapping(model)
@@ -317,7 +321,7 @@ class ONNXModelTransformer(ModelTransformer):
 
         # If several nodes on one edge
         input_nodes = []
-        input_nodes.extend(input_edge_node_mapping[target_edge_name])
+        input_nodes.extend(edge_node_mapping[target_edge_name][1])
         if not input_nodes:
             raise RuntimeError(
                 f"Can not add the quantizer to the {target_edge_name} edge. This edge does not have end node."
@@ -403,12 +407,12 @@ class ONNXModelTransformer(ModelTransformer):
         :param transformations: Nodes removing transformations.
         :return: Model with removed nodes.
         """
-        input_edge_node_mapping = get_input_edge_node_mapping(model)
         for transformation in transformations:
             node_mapping = get_node_mapping(model)
+            edge_node_mapping = get_edge_node_mapping(model)
             node = node_mapping[transformation.target_point.target_node_name]
 
-            node_children = get_children(node, input_edge_node_mapping)
+            node_children = get_children(node, edge_node_mapping)
             for node_child in node_children:
                 for input_id, input_obj in enumerate(node_child.input):
                     if input_obj == node.output[0]:

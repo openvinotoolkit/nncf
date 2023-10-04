@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import defaultdict
-from typing import Dict, Iterator, List, Optional, Union
+from typing import Dict, Iterator, List, Optional, Tuple, Union
 
 import numpy as np
 import onnx
@@ -26,7 +26,7 @@ def get_node_mapping(model: onnx.ModelProto) -> Dict[str, onnx.NodeProto]:
     return {node.name: node for node in model.graph.node}
 
 
-def get_edge_mapping(model: onnx.ModelProto) -> Dict[str, onnx.ValueInfoProto]:
+def get_edge_info_mapping(model: onnx.ModelProto) -> Dict[str, onnx.ValueInfoProto]:
     """
     Retuns mapping from edge name to the edge info.
 
@@ -39,19 +39,27 @@ def get_edge_mapping(model: onnx.ModelProto) -> Dict[str, onnx.ValueInfoProto]:
     }
 
 
-def get_input_edge_node_mapping(model: onnx.ModelProto) -> Dict[str, List[onnx.ValueInfoProto]]:
-    output = defaultdict(list)
+def get_edge_node_mapping(model: onnx.ModelProto) -> Dict[str, Tuple[onnx.ValueInfoProto, List[onnx.ValueInfoProto]]]:
+    """
+    Returns mapping describing start and consumed nodes of the edges.
+    The mapping key is an edge name, while value is a tuple,
+    containig on 0-index a node from which the edge is started and 1-index containing nodes which consumes this edge.
+    If None on 0-index means that there is no start node (e.g. model input edge).
+    If None on 1-index means that there are no consuming nodes.
+
+    :param model: ONNX model from which the mapping is built.
+    :return: Mapping between edge name and a tuple of from node and to nodes.
+    """
+    output = {}
     for node in model.graph.node:
         for input_edge in node.input:
-            output[input_edge].append(node)
-    return output
-
-
-def get_output_edge_node_mapping(model: onnx.ModelProto) -> Dict[str, onnx.ValueInfoProto]:
-    output = defaultdict(list)
-    for node in model.graph.node:
-        for input_edge in node.output:
-            output[input_edge] = node
+            if input_edge not in output:
+                output[input_edge] = [None, []]
+            output[input_edge][1].append(node)  # To node
+        for output_edge in node.output:
+            if output_edge not in output:
+                output[output_edge] = [None, []]
+            output[output_edge][0] = node  # From node
     return output
 
 
@@ -228,42 +236,53 @@ def get_edge_dtype(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> int:
     return edge.data_type
 
 
-def get_parent(node: onnx.NodeProto, port_id: int, output_edge_node_mapping) -> Optional[onnx.NodeProto]:
+def get_parent(
+    node: onnx.NodeProto,
+    port_id: int,
+    edge_node_mapping: Dict[str, Tuple[onnx.ValueInfoProto, List[onnx.ValueInfoProto]]],
+) -> Optional[onnx.NodeProto]:
     """
     Returns parents of the node. If there is no parent node, returns None.
 
-    :param model: ONNX model.
     :param node: The child node.
     :param port_id: Input port id on which the parent is seeked.
+    :param edge_node_mapping: Mapping describing start and consumed nodes of the edges.
     :return: Parent node.
     """
     if port_id < len(node.input):
-        return output_edge_node_mapping[node.input[port_id]]
+        return edge_node_mapping[node.input[port_id]][0]
     return None
 
 
-def get_children(node: onnx.NodeProto, input_edge_node_mapping) -> List[onnx.NodeProto]:
+def get_children(
+    node: onnx.NodeProto, edge_node_mapping: Dict[str, Tuple[onnx.ValueInfoProto, List[onnx.ValueInfoProto]]]
+) -> List[onnx.NodeProto]:
     """
     Returns children of the node.
 
-    :param model: ONNX model.
     :param node: The parent node.
+    :param edge_node_mapping: Mapping describing start and consumed nodes of the edges.
     :return: All children nodes.
     """
     output = []
     for node_edge in node.output:
-        output.extend(input_edge_node_mapping[node_edge])
+        output.extend(edge_node_mapping[node_edge][1])
     return output
 
 
-def is_node_has_shared_weight(node: onnx.NodeProto, weight_port_id: int, input_edge_node_mapping) -> bool:
+def is_node_has_shared_weight(
+    node: onnx.NodeProto,
+    weight_port_id: int,
+    edge_node_mapping: Dict[str, Tuple[onnx.ValueInfoProto, List[onnx.ValueInfoProto]]],
+) -> bool:
     """
     Returns whether the node share a weight.
 
-    :param model: ONNX model.
     :param node: Node.
+    :param weight_port_id: Port id on which there is a weight.
+    :param edge_node_mapping: Mapping describing start and consumed nodes of the edges.
     :return: True whether node shares a weight - otherwise False.
     """
     weight_tensor_edge = node.input[weight_port_id]
-    nodes = input_edge_node_mapping[weight_tensor_edge]
+    nodes = edge_node_mapping[weight_tensor_edge][1]
     return len(nodes) > 1
