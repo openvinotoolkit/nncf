@@ -139,8 +139,12 @@ def get_nodes(xml_dict: Dict, edges: Dict):
                     dim = [dim]
                 shape = tuple(int(it["text"]) for it in dim)
 
-                # update properties of the edges leading from this port
-                edge = edges[node_id][from_port]
+                # Update properties of the edges leading from this port
+                if from_port not in edges[node_id]:
+                    # Some edge descriptions may be missing in execution graph
+                    continue
+                else:
+                    edge = edges[node_id][from_port]
                 for (to_node_id, to_port), edge_properties_dict in edge.items():
                     for name, value in zip(("precision", "shape", "is_input"), (precision, shape, is_input)):
                         assert name not in edge_properties_dict
@@ -224,10 +228,16 @@ def take_model_subgraph(xml_dict: Dict, source_node_name: str, distance: int):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Extract a subgraph from a model in OpenVINO Intermediate Representation format. Subgraph is taken "
-        "around a given node. Use distance parameter to control how many nodes around the given one to include. "
+        description="Extract a subgraph from a model in OpenVINO Intermediate Representation format.\n\nSubgraph is "
+        "taken around a given node. Use distance parameter to control how many nodes around the given one to include. "
         "The resulting subgraph is saved next to the input .xml file or at --output_path if provided. Additionally, a "
-        "symbolic link targeting the original .bin file is created."
+        "symbolic link targeting the original .bin file is created.",
+        epilog="Usage examples:\n"
+        "  python ir_subgraph.py openvino.xml \"Constant_1116858\"\n"
+        "  python ir_subgraph.py openvino.xml \"Constant_1116858\" --distance 5\n"
+        "  python ir_subgraph.py openvino.xml \"Constant_1116858\" --output-path ./subgraphs\n"
+        "  python ir_subgraph.py openvino.xml \"Constant_1116858\" --output-path ./subgraphs/Constant_1116858.xml\n",
+        formatter_class=argparse.RawTextHelpFormatter
     )
 
     parser.add_argument("input-path", help="Input IR path.")
