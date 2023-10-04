@@ -67,10 +67,6 @@ def get_fq_nodes_params(model: NNCFNetwork) -> Dict[str, np.ndarray]:
     output = {}
     quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
     nncf_module_quantizations = get_all_modules_by_type(model, quantization_types)
-    # This is not general logic, just used for the particular test
-    nncf_module_quantizations.update(
-        {str(scope): module[0] for scope, module in model.nncf.get_tracing_context()._post_hooks.items()}
-    )
 
     for name, nncf_module_quantization in nncf_module_quantizations.items():
         input_low, input_high = nncf_module_quantization.get_input_low_input_high()

@@ -290,7 +290,7 @@ class FastBiasCorrection(Algorithm):
         :param axis: Channel axis for the statistics calculation.
         """
         stat_collector = self._backend_entity.mean_statistic_collector(
-            reduction_shape=axis, num_samples=self.subset_size, inplace=self.inplace_statistics
+            channel_axis=axis, num_samples=self.subset_size, inplace=self.inplace_statistics
         )
         container.add_statistic_point(
             StatisticPoint(target_point=point, tensor_collector=stat_collector, algorithm=self._algorithm_key)

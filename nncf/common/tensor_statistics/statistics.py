@@ -20,6 +20,8 @@ TensorType = TypeVar("TensorType")
 class TensorStatistic(ABC):
     """Base class that stores statistic data"""
 
+    TENSOR_STATISTIC_OUTPUT_KEY = "tensor_statistic_output"
+
     @staticmethod
     @abstractmethod
     def tensor_eq(tensor1: TensorType, tensor2: TensorType, rtol=1e-6) -> bool:
@@ -63,6 +65,9 @@ class MeanTensorStatistic(TensorStatistic):
 
 
 class MedianMADTensorStatistic(TensorStatistic):
+    MEDIAN_VALUES_STAT = "median_values"
+    MAD_VALUES_STAT = "mad_values"
+
     def __init__(self, median_values, mad_values):
         self.median_values = median_values
         self.mad_values = mad_values
@@ -74,6 +79,8 @@ class MedianMADTensorStatistic(TensorStatistic):
 
 
 class PercentileTensorStatistic(TensorStatistic):
+    PERCENTILE_VS_VALUE_DICT = "percentile_vs_values_dict"
+
     def __init__(self, percentile_vs_values_dict):
         self.percentile_vs_values_dict = percentile_vs_values_dict
 

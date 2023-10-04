@@ -21,7 +21,6 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.registry import Registry
 
@@ -72,7 +71,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def mean_statistic_collector(
-        reduction_shape: ReductionShape,
+        channel_axis: int,
         inplace: bool,
         num_samples: Optional[int] = None,
         window_size: Optional[int] = None,
@@ -80,7 +79,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
         """
         Returns backend-specific mean statistic collector.
 
-        :param reduction_shape: Channel axes for the statistics aggregation.
+        :param channel_axis: Channel axes for the statistics aggregation.
         :param inplace: Whether to calculate statistic inplace or not.
         :param num_samples: Maximum number of samples to collect.
         :param window_size: The maximum size of the samples queue.

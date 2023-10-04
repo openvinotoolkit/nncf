@@ -22,6 +22,7 @@ from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.quantizers import get_num_levels
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.config import NNCFConfig
+from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SymmetricQuantizer
@@ -63,10 +64,12 @@ def _idfn(val):
 def check_quantizer_operators(model, levels=255):
     """Check that model contains only 8bit FakeQuantize operators."""
 
-    if hasattr(model.nncf, "external_quantizers"):
-        for key in list(model.nncf.external_quantizers.keys()):
-            op = model.nncf.external_quantizers[key]
-            assert isinstance(model.nncf.external_quantizers[key], FakeQuantize)
+    compression_module_type = ExtraCompressionModuleType.EXTERNAL_QUANTIZER
+    if model.nncf.is_compression_module_registered(compression_module_type):
+        external_quantizers = model.nncf.get_compression_modules_by_type(compression_module_type)
+        for key in list(external_quantizers.keys()):
+            op = external_quantizers[key]
+            assert isinstance(external_quantizers[key], FakeQuantize)
             assert op.quant_max - op.quant_min == levels
 
     for node in model.nncf.get_original_graph().get_all_nodes():

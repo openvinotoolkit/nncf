@@ -256,7 +256,7 @@ class NormalizedKeys:
         Returns original key if there's no ';' and operation doesn't start with EXTERNAL_QUANTIZERS_STORAGE_NAME
         """
         result = [new_key]
-        from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_PREFIX  # pylint: disable=cyclic-import
+        from nncf.torch.quantization.external_quantizer import EXTERNAL_QUANTIZERS_STORAGE_PREFIX
 
         if ";" in new_key and new_key.startswith(EXTERNAL_QUANTIZERS_STORAGE_PREFIX):
             group_of_keys = new_key.split(";")
@@ -317,7 +317,7 @@ class KeyMatcher:
                 "Legacy NNCF-enabled .pth checkpoint has been loaded! "
                 "The version-agnostic `RELU` operator name entries in the state dict "
                 "have been deprecated. "
-                "The loader will try to match these entries to the correspoindig `relu` and `relu_` op "
+                "The loader will try to match these entries to the corresponding `relu` and `relu_` op "
                 "names. The newly exported checkpoints will be adjusted to the new format."
             )
 

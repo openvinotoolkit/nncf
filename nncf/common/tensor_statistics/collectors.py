@@ -12,7 +12,7 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import deque
-from typing import Callable, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -21,14 +21,13 @@ from nncf.common.tensor import TensorElementsType
 from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.reduction import get_per_channel_history
 
-ReductionShape = Tuple[int]
-MaskedReduceFN = Callable[[NNCFTensor, Union[int, tuple, list], NNCFTensor, bool], NNCFTensor]
+ReductionAxes = Tuple[int]
 
 
 class TensorStatisticCollectorBase(ABC):
     """Collector estimate statistics at the quantization point based on the provided reduction shape."""
 
-    def __init__(self, reduction_shape: Optional[ReductionShape] = None, num_samples: Optional[int] = None):
+    def __init__(self, reduction_shape: Optional[ReductionAxes] = None, num_samples: Optional[int] = None):
         """
         Initializes Tensor Statistic Collector
 
@@ -101,7 +100,7 @@ class OfflineTensorStatisticCollector(TensorStatisticCollectorBase):
     """Collects statistics in offline regime by storing the data and aggregating it afterwards."""
 
     def __init__(
-        self, reduction_shape: Optional[ReductionShape] = None, num_samples: int = None, window_size: int = None
+        self, reduction_shape: Optional[ReductionAxes] = None, num_samples: int = None, window_size: int = None
     ):
         super().__init__(reduction_shape, num_samples)
         self._samples = deque(maxlen=window_size)
@@ -117,7 +116,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def reduce_min(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
+    def reduce_min(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
         """
         Computes minimum of elements across dimensions of NNCFTensor.
 
@@ -130,7 +129,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def reduce_max(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
+    def reduce_max(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
         """
         Computes maximum of elements across dimensions of NNCFTensor.
 
@@ -175,7 +174,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def mean(x: NNCFTensor, axis: Union[int, tuple, list], keepdims=False) -> NNCFTensor:
+    def mean(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> NNCFTensor:
         """
         Computes the mean of elements across given dimensions of NNCFTensor.
 
@@ -188,7 +187,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def median(x: NNCFTensor, axis: Union[int, tuple, list], keepdims=False) -> NNCFTensor:
+    def median(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> NNCFTensor:
         """
         Computes the median of elements across given dimensions of NNCFTensor.
 
@@ -199,9 +198,11 @@ class NNCFCollectorTensorProcessor(ABC):
         :return: Reduced NNCFTensor.
         """
 
-    @staticmethod
+    @classmethod
     @abstractmethod
-    def masked_mean(x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor, keepdims=False) -> NNCFTensor:
+    def masked_mean(
+        cls, x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], mask: NNCFTensor, keepdims=False
+    ) -> NNCFTensor:
         """
         Computes the masked mean of elements across given dimensions of NNCFTensor.
 
@@ -214,9 +215,11 @@ class NNCFCollectorTensorProcessor(ABC):
         :return: Reduced NNCFTensor.
         """
 
-    @staticmethod
+    @classmethod
     @abstractmethod
-    def masked_median(x: NNCFTensor, axis: Union[int, tuple, list], mask: NNCFTensor, keepdims=False) -> NNCFTensor:
+    def masked_median(
+        cls, x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], mask: NNCFTensor, keepdims=False
+    ) -> NNCFTensor:
         """
         Computes the masked median of elements across given dimensions of NNCFTensor.
 
@@ -253,6 +256,16 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
+    def squeeze(x: NNCFTensor, dim: Optional[Union[int, Tuple[int, ...]]] = None) -> NNCFTensor:
+        """
+        Remove axes of length one from x.
+
+        :param x: NNCFTensor to squeeze.
+        :param axis: Selects a subset of the entries of length one in the shape.
+        """
+
+    @staticmethod
+    @abstractmethod
     def sum(tensor: NNCFTensor) -> TensorElementsType:
         """
         Returns a sum of each elements in a given NNCFTensor.
@@ -264,18 +277,42 @@ class NNCFCollectorTensorProcessor(ABC):
     @staticmethod
     @abstractmethod
     def quantile(
-        tensor: NNCFTensor, quantile: Union[float, List[float]], axis: Union[int, tuple, list], keepdims: bool = False
+        tensor: NNCFTensor,
+        quantile: Union[float, List[float]],
+        axis: Union[int, Tuple[int, ...], List[int]],
+        keepdims: bool = False,
     ) -> List[TensorElementsType]:
         """
-        Compute the quantile-th percentile(s) of the data along the specified axis.
+        Compute the quantile(s) of the data along the specified axis.
 
         :param tensor: Given NNCFTensor.
-        :params quantile: Percentile or sequence of percentiles to compute, which must be between
+        :params quantile: Quantile or sequence of quantiles to compute, which must be between
             0 and 1 inclusive.
+        :param axis: Axis or axes along which the quantiles are computed.
+        :param keepdims: If True, the axes which are reduced are left in the result
+            as dimensions with size one.
+        :returns: List of the quantile(s) of the tensor elements.
+        """
+
+    @classmethod
+    @abstractmethod
+    def percentile(
+        cls,
+        tensor: NNCFTensor,
+        percentile: Union[float, List[float]],
+        axis: Union[int, Tuple[int, ...], List[int]],
+        keepdims: bool = False,
+    ) -> List[TensorElementsType]:
+        """
+        Compute the percentile(s) of the data along the specified axis.
+
+        :param tensor: Given NNCFTensor.
+        :params percentile: percentile or sequence of percentiles to compute, which must be between
+            0 and 100 inclusive.
         :param axis: Axis or axes along which the percentiles are computed.
         :param keepdims: If True, the axes which are reduced are left in the result
             as dimensions with size one.
-        :returns: List of the quantile-th percentile(s) of the tensor elements.
+        :returns: List of the percentile(s) of the tensor elements.
         """
 
     @staticmethod
@@ -289,27 +326,47 @@ class NNCFCollectorTensorProcessor(ABC):
         :return: Reduced NNCFTensor.
         """
 
+    @staticmethod
+    def logical_or(input_: NNCFTensor, other: NNCFTensor) -> NNCFTensor:
+        """
+        Computes the element-wise logical OR of the given input tensors.
+        Zeros are treated as False and nonzeros are treated as True.
+
+        :param input_: The input tensor.
+        :param other: The tensor to compute or with.
+        :return: Result of elementwise or operation between input_ and other tensor.
+        """
+
+    @staticmethod
+    def less(input_: NNCFTensor, other: NNCFTensor) -> NNCFTensor:
+        """
+        Return the truth value of (x1 < x2) element-wise.
+
+        :param input_: The input tensor.
+        :param other: The tensor to compute or with.
+        :return: Result of elementwise less operation between input_ and other tensor.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def sub(a: NNCFTensor, b: NNCFTensor) -> NNCFTensor:
+        """
+        Returns result of a substract b operation.
+        """
+
     @classmethod
     @abstractmethod
-    def no_outliers_map(cls, x: NNCFTensor, fn: MaskedReduceFN, axis: int = 0, alpha: float = 0.01) -> NNCFTensor:
+    def zero_elements(cls, x: NNCFTensor) -> NNCFTensor:
         """
-        Computes quantiles [alpha, 1 - alpha] on given tensor, masks all elements that
-        are smaller that alpha and bigger than 1 - alpha quantile and applies
-        given masked reduction function fn.
-
-        :param tensor: Given NNCFTensor.
-        :param fn: Masked reduce operation from the same NNCFCollectorTensorProcessor class.
-        :param axis: Axis along which the reduction function is computed.
-        :params alpha: Minimal percentile to filter outliers outside the range
-            [quantile(alpha), quantile(1 - alpha)]. Must be between 0 and 1. inclusive.
-        :returns: Result of given masked reduction function on filtered from outliers NNCFTensor.
+        Returns binary mask from the input x which equal true for all elemets that are smaller than
+        corresponding machine epsilon.
         """
 
 
 class MinMaxStatisticCollector(OnlineTensorStatisticCollector):
     """Collector estimates min of minimum values and max of maximum values."""
 
-    def __init__(self, use_abs_max: bool, reduction_shape: ReductionShape, num_samples: int = None):
+    def __init__(self, use_abs_max: bool, reduction_shape: ReductionAxes, num_samples: int = None):
         super().__init__(reduction_shape, num_samples)
         self._use_abs_max = use_abs_max
         self._tensor_processor = self._get_processor()
@@ -353,7 +410,7 @@ class MinMaxOfflineStatisticCollectorBase(OfflineTensorStatisticCollector):
         self,
         use_per_sample_stats: bool,
         use_abs_max: bool,
-        reduction_shape: ReductionShape,
+        reduction_shape: ReductionAxes,
         num_samples: int = None,
         window_size: int = None,
     ):
@@ -407,7 +464,7 @@ class MixedMinMaxStatisticCollector(MinMaxOfflineStatisticCollectorBase):
         use_abs_max: bool,
         use_means_of_mins: bool,
         use_means_of_maxs: bool,
-        reduction_shape: ReductionShape,
+        reduction_shape: ReductionAxes,
         num_samples: int = None,
         window_size: int = None,
     ):
@@ -447,17 +504,15 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
     Collector that aggregates statistics as mean along a pre-assigned axis.
     """
 
-    def __init__(
-        self, reduction_shape: ReductionShape, num_samples: Optional[int] = None, window_size: Optional[int] = None
-    ) -> None:
+    def __init__(self, channel_axis: int, num_samples: Optional[int] = None, window_size: Optional[int] = None) -> None:
         """
-        :param reduction_shape: The shape for the reduction while statistics collection.
-            For the MeanStatisticCollector this parameter contains the main axis.
+        :param channel_axis: The main axis for the reduction while statistics collection.
         :param num_samples: Optional parameter for statistic collection that regulates
             the number of samples that will be processed.
         :param window_size: Optional maximum length for the statistic collection
         """
-        super().__init__(reduction_shape, num_samples)
+        super().__init__(num_samples=num_samples)
+        self._channel_axis = channel_axis
         self._tensor_processor = self._get_processor()
         self._all_values = deque(maxlen=window_size)
         self._all_shapes = deque(maxlen=window_size)
@@ -468,10 +523,10 @@ class MeanStatisticCollector(OfflineTensorStatisticCollector):
         pass
 
     def _register_input_common(self, x: NNCFTensor):
-        if self._reduction_shape == 0:
+        if self._channel_axis == 0:
             self._all_values.append(self._tensor_processor.batch_mean(x))
         else:
-            self._all_values.append(self._tensor_processor.mean_per_channel(x, self._reduction_shape))
+            self._all_values.append(self._tensor_processor.mean_per_channel(x, self._channel_axis))
         self._all_shapes.append(x.shape)
 
     def _reset(self):
@@ -536,7 +591,7 @@ class PercentileStatisticCollector(OfflineTensorStatisticCollector):
     def __init__(
         self,
         percentiles_to_collect: List[float],
-        reduction_shape: Optional[ReductionShape] = None,
+        reduction_shape: Optional[ReductionAxes] = None,
         num_samples: int = None,
         window_size: int = None,
     ):
@@ -561,7 +616,7 @@ class MeanPercentileStatisticCollector(OfflineTensorStatisticCollector):
     def __init__(
         self,
         percentiles_to_collect: List[float],
-        reduction_shape: Optional[ReductionShape] = None,
+        reduction_shape: Optional[ReductionAxes] = None,
         num_samples: int = None,
         window_size: int = None,
     ):

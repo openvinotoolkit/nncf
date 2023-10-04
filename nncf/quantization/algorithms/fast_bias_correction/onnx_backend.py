@@ -17,7 +17,6 @@ import onnx
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.tensor import Tensor
 from nncf.onnx.graph.node_utils import get_bias_value
@@ -59,12 +58,12 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def mean_statistic_collector(
-        reduction_shape: ReductionShape,
+        channel_axis: int,
         inplace: bool,
         num_samples: Optional[int] = None,
         window_size: Optional[int] = None,
     ) -> ONNXMeanStatisticCollector:
-        return ONNXMeanStatisticCollector(reduction_shape, num_samples, window_size)
+        return ONNXMeanStatisticCollector(channel_axis, num_samples, window_size)
 
     @staticmethod
     def get_sub_input_output_names(subgraph: onnx.ModelProto) -> Tuple[str, str]:

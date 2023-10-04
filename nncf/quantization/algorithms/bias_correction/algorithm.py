@@ -509,7 +509,7 @@ class BiasCorrection(Algorithm):
                 TargetType.POST_LAYER_OPERATION, node_name, port_id=OUTPUT_PORT_OF_NODE
             )
             stat_collector = self._backend_entity.mean_statistic_collector(
-                reduction_shape=channel_axis, num_samples=self.subset_size, inplace=self.inplace_statistics
+                channel_axis=channel_axis, num_samples=self.subset_size, inplace=self.inplace_statistics
             )
             statistic_container.add_statistic_point(
                 StatisticPoint(
