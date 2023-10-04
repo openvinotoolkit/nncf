@@ -298,7 +298,7 @@ def _assign_mixed_precision(all_weight_params: List[WeightNodeParams], ratio: fl
         for weight_param in all_weight_params[1:-1]:
             weight = get_const_value(weight_param.weight_node)
             axes = weight_param.reduction_axes
-            nf4_error = _get_nf4_error(weight, axes)
+            nf4_error = _get_nf4_error(weight, axes, group_size)
             int8_error = _get_int8_err(weight, axes)
             eps = np.finfo(weight.dtype).eps
             error = nf4_error / (int8_error + eps)
