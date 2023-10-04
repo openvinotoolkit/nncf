@@ -18,8 +18,8 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.torch.graph.transformations.command_creation import create_bias_correction_command
@@ -32,8 +32,8 @@ from nncf.torch.model_analyzer import is_node_with_fused_bias
 from nncf.torch.model_analyzer import is_quantized_weights
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.tensor import PTNNCFTensor
-from nncf.torch.tensor_statistics.collectors import PTMeanStatisticCollector
 from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
+from nncf.torch.tensor_statistics.collectors import get_mean_statistic_collector
 
 
 @ALGO_BACKENDS.register(BackendType.TORCH)
@@ -45,7 +45,7 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @property
     def tensor_processor(self) -> PTNNCFCollectorTensorProcessor:
-        return PTNNCFCollectorTensorProcessor()
+        return PTNNCFCollectorTensorProcessor
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
@@ -67,12 +67,12 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def mean_statistic_collector(
-        reduction_shape: ReductionShape,
+        channel_axis: int,
         inplace: bool,
         num_samples: Optional[int] = None,
         window_size: Optional[int] = None,
-    ) -> PTMeanStatisticCollector:
-        return PTMeanStatisticCollector(reduction_shape, num_samples, window_size)
+    ) -> TensorCollector:
+        return get_mean_statistic_collector(num_samples, channel_axis, window_size)
 
     @staticmethod
     def get_sub_input_output_names(subgraph: NNCFNetwork) -> Tuple[str, str]:

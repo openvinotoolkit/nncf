@@ -726,9 +726,9 @@ strict digraph  {
 "724 DenseNet/Sequential[dense4]/Bottleneck[15]/cat_0" [id=724, type=cat];
 "725 DenseNet/NNCFBatchNorm2d[bn]/batch_norm_0" [id=725, type=batch_norm];
 "726 DenseNet/relu_0" [id=726, type=relu];
-"727 DenseNet/SymmetricQuantizer/symmetric_quantize_0" [id=727, type=symmetric_quantize];
+"727 DenseNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[DenseNet/relu_0|OUTPUT]/symmetric_quantize_0" [id=727, type=symmetric_quantize];
 "728 DenseNet/avg_pool2d_0" [id=728, type=avg_pool2d];
-"729 DenseNet/SymmetricQuantizer/symmetric_quantize_1" [id=729, type=symmetric_quantize];
+"729 DenseNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[DenseNet/avg_pool2d_0|OUTPUT]/symmetric_quantize_0" [id=729, type=symmetric_quantize];
 "730 DenseNet/view_0" [id=730, type=view];
 "731 DenseNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" [id=731, type=symmetric_quantize];
 "732 DenseNet/NNCFLinear[linear]/linear_0" [id=732, type=linear];
@@ -1517,10 +1517,10 @@ strict digraph  {
 "723 DenseNet/Sequential[dense4]/Bottleneck[15]/NNCFConv2d[conv2]/SymmetricQuantizer/symmetric_quantize_0" -> "724 DenseNet/Sequential[dense4]/Bottleneck[15]/cat_0";
 "724 DenseNet/Sequential[dense4]/Bottleneck[15]/cat_0" -> "725 DenseNet/NNCFBatchNorm2d[bn]/batch_norm_0";
 "725 DenseNet/NNCFBatchNorm2d[bn]/batch_norm_0" -> "726 DenseNet/relu_0";
-"726 DenseNet/relu_0" -> "727 DenseNet/SymmetricQuantizer/symmetric_quantize_0";
-"727 DenseNet/SymmetricQuantizer/symmetric_quantize_0" -> "728 DenseNet/avg_pool2d_0";
-"728 DenseNet/avg_pool2d_0" -> "729 DenseNet/SymmetricQuantizer/symmetric_quantize_1";
-"729 DenseNet/SymmetricQuantizer/symmetric_quantize_1" -> "730 DenseNet/view_0";
+"726 DenseNet/relu_0" -> "727 DenseNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[DenseNet/relu_0|OUTPUT]/symmetric_quantize_0";
+"727 DenseNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[DenseNet/relu_0|OUTPUT]/symmetric_quantize_0" -> "728 DenseNet/avg_pool2d_0";
+"728 DenseNet/avg_pool2d_0" -> "729 DenseNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[DenseNet/avg_pool2d_0|OUTPUT]/symmetric_quantize_0";
+"729 DenseNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[DenseNet/avg_pool2d_0|OUTPUT]/symmetric_quantize_0" -> "730 DenseNet/view_0";
 "730 DenseNet/view_0" -> "732 DenseNet/NNCFLinear[linear]/linear_0";
 "731 DenseNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "732 DenseNet/NNCFLinear[linear]/linear_0";
 "732 DenseNet/NNCFLinear[linear]/linear_0" -> "733 /nncf_model_output_0";

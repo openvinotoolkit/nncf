@@ -36,6 +36,7 @@ from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
 from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
+from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint
 from nncf.torch.nncf_network import PTInsertionType
@@ -752,3 +753,15 @@ def test_proxy_module_for_forward_with_super(mocker):
 
     input_ids = torch.randint(num_embeddings, (1, 4))
     wrapped_model(input_ids)
+
+
+@pytest.mark.parametrize("is_registered", (True, False))
+@pytest.mark.parametrize("compression_module_type", ExtraCompressionModuleType)
+def test_is_compression_module_registered(compression_module_type, is_registered):
+    model = SimplestModel()
+    nncf_model = NNCFNetwork(model, [ModelInputInfo(SimplestModel.INPUT_SIZE)])
+    if is_registered:
+        nncf_model.nncf.register_compression_module_type(compression_module_type)
+        assert nncf_model.nncf.is_compression_module_registered(compression_module_type)
+    else:
+        assert not nncf_model.nncf.is_compression_module_registered(compression_module_type)

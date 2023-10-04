@@ -19,15 +19,19 @@ from torch import nn
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTModelExtractionWithFusedBiasCommand
+from nncf.torch.graph.transformations.commands import PTQuantizerInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.model_analyzer import get_potential_fused_node
 from nncf.torch.module_operations import UpdateWeight
+from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint
+from nncf.torch.quantization.external_quantizer import ExternalQuantizerCallHook
 
 
 class PTModelTransformer(ModelTransformer):
@@ -41,6 +45,7 @@ class PTModelTransformer(ModelTransformer):
         self._command_transformation_ordered_pairs = [
             (PTModelExtractionWithFusedBiasCommand, self._apply_extraction_with_fused_bias_transformations),
             (PTInsertionCommand, self._apply_insertion_transformations),
+            (PTQuantizerInsertionCommand, self._apply_quantizer_insertion_transformations),
             (PTBiasCorrectionCommand, self._apply_bias_correction_transformations),
         ]
 
@@ -72,10 +77,10 @@ class PTModelTransformer(ModelTransformer):
         :param transformations: List of the bias correction transformations.
         """
         node_to_op_address_mapping = model.nncf.get_node_to_op_address_mapping()
-        fns_grouped_by_points = {}  # type: Dict[PTInsertionPoint, List[Tuple[Callable, TransformationPriority]]]
+        fns_grouped_by_points: Dict[PTInsertionPoint, List[Tuple[Callable, TransformationPriority]]] = {}
 
-        for transformation_command in transformations:  # type: PTInsertionCommand
-            target_point = transformation_command.target_point  # type: PTTargetPoint
+        for transformation_command in transformations:
+            target_point: PTTargetPoint = transformation_command.target_point
             target_node_name = target_point.target_node_name
             pt_ip = PTInsertionPoint(
                 target_type=target_point.target_type,
@@ -96,6 +101,40 @@ class PTModelTransformer(ModelTransformer):
             model.nncf.insert_at_point(pt_ip, [x[0] for x in fn_list_with_priority])
 
         return model
+
+    @staticmethod
+    def _apply_quantizer_insertion_transformations(
+        model: NNCFNetwork, transformations: List[PTQuantizerInsertionCommand]
+    ) -> NNCFNetwork:
+        """
+        Applies quantizer insertion transformations on the model.
+
+        :param model: Model to apply transformations.
+        :param transformations: List of the OVQuantizerInsertionCommand transformations.
+        :return: Model with inserted FakeQuantize nodes.
+        """
+        compression_model_type = ExtraCompressionModuleType.EXTERNAL_QUANTIZER
+
+        if not model.nncf.is_compression_module_registered(compression_model_type):
+            model.nncf.register_compression_module_type(compression_model_type)
+
+        insertion_commands: List[PTInsertionCommand] = []
+
+        for transformation_command in transformations:
+            target_point: PTTargetPoint = transformation_command.target_point
+            fn = transformation_command.quantizer
+
+            if target_point.type is not TargetType.OPERATION_WITH_WEIGHTS:
+                quantizer_id = NonWeightQuantizerId(target_point.target_node_name, target_point.input_port_id)
+                storage_key = str(quantizer_id)
+                model.nncf.add_compression_module(storage_key, transformation_command.quantizer, compression_model_type)
+                fn = ExternalQuantizerCallHook(model.nncf.get_tracing_context(), storage_key)
+
+            insertion_commands.append(
+                PTInsertionCommand(target_point, fn, TransformationPriority.QUANTIZATION_PRIORITY)
+            )
+
+        return PTModelTransformer._apply_insertion_transformations(model, insertion_commands)
 
     @staticmethod
     def _apply_extraction_with_fused_bias_transformations(
