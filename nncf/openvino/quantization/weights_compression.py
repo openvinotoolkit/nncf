@@ -331,14 +331,14 @@ def insert_pre_compression_operations(
     group_size: int,
 ) -> None:
     """
-    Compress weights of Linear and Embedding layers to uint8 or to nf4 depending on mode, ratio and group size.
+    Compress weights of Linear and Embedding layers to 8-bit integer or to nf4 depending on mode, ratio and group size.
 
     :param model: The model to be transformed.
     :param mode: Defines a mode for weight compression.
         INT8 stands for 8-bit integer quantization of all weights.
         NF4 stands for a mixed-precision weights quantization to NF4 data type. The first and last layers
-        are always compressed to a backup precision which is uint8 by default. All others are quantized whether to NF4
-        or to a backup precision depending on criteria and the given ratio.
+        are always compressed to a backup precision which is 8-bit integer by default. All others are quantized whether
+        to NF4 or to a backup precision depending on criteria and the given ratio.
     :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
         and the rest to INT8).
     :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
