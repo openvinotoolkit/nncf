@@ -20,11 +20,12 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.onnx.graph.node_utils import get_input_edge
 from nncf.onnx.graph.onnx_helper import get_children
+from nncf.onnx.graph.onnx_helper import get_children_node_mapping
 from nncf.onnx.graph.onnx_helper import get_edge_dtype
 from nncf.onnx.graph.onnx_helper import get_edge_info_mapping
-from nncf.onnx.graph.onnx_helper import get_edge_node_mapping
 from nncf.onnx.graph.onnx_helper import get_node_index
 from nncf.onnx.graph.onnx_helper import get_node_mapping
+from nncf.onnx.graph.onnx_helper import get_parents_node_mapping
 from nncf.onnx.graph.onnx_helper import get_tensor
 from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
@@ -199,8 +200,8 @@ class ONNXModelTransformer(ModelTransformer):
         """
         self._added_target_edges = Counter()
         for transformation in transformations:
-            edge_node_mapping = get_edge_node_mapping(model)
-            model = self._insert_quantizer_dequantizer(model, transformation, edge_node_mapping)
+            children_node_mapping = get_children_node_mapping(model)
+            model = self._insert_quantizer_dequantizer(model, transformation, children_node_mapping)
         return model
 
     def _get_quantize_dequantize_nodes(
@@ -302,7 +303,7 @@ class ONNXModelTransformer(ModelTransformer):
         self,
         model: onnx.ModelProto,
         transformation: ONNXQuantizerInsertionCommand,
-        edge_node_mapping: Dict[str, Tuple[onnx.ValueInfoProto, List[onnx.ValueInfoProto]]],
+        children_node_mapping: Dict[str, List[onnx.ValueInfoProto]],
     ) -> onnx.ModelProto:
         """
         Inserts QuantizeLinear-DequantizeLinear nodes pair.
@@ -321,7 +322,7 @@ class ONNXModelTransformer(ModelTransformer):
 
         # If several nodes on one edge
         input_nodes = []
-        input_nodes.extend(edge_node_mapping[target_edge_name][1])
+        input_nodes.extend(children_node_mapping[target_edge_name])
         if not input_nodes:
             raise RuntimeError(
                 f"Can not add the quantizer to the {target_edge_name} edge. This edge does not have end node."
@@ -409,10 +410,10 @@ class ONNXModelTransformer(ModelTransformer):
         """
         for transformation in transformations:
             node_mapping = get_node_mapping(model)
-            edge_node_mapping = get_edge_node_mapping(model)
+            children_node_mapping = get_children_node_mapping(model)
             node = node_mapping[transformation.target_point.target_node_name]
 
-            node_children = get_children(node, edge_node_mapping)
+            node_children = get_children(node, children_node_mapping)
             for node_child in node_children:
                 for input_id, input_obj in enumerate(node_child.input):
                     if input_obj == node.output[0]:

@@ -16,8 +16,8 @@ import onnx
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
-from nncf.onnx.graph.onnx_helper import get_edge_node_mapping
 from nncf.onnx.graph.onnx_helper import get_parent
+from nncf.onnx.graph.onnx_helper import get_parents_node_mapping
 from nncf.onnx.graph.onnx_helper import get_tensor
 from nncf.onnx.graph.onnx_helper import has_tensor
 
@@ -649,7 +649,7 @@ def get_tensor_edge_name(
     model: onnx.ModelProto,
     node: onnx.NodeProto,
     port_id: int,
-    edge_node_mapping: Dict[str, Tuple[onnx.ValueInfoProto, List[onnx.ValueInfoProto]]],
+    parents_node_mapping: Dict[str, List[onnx.ValueInfoProto]],
 ) -> Optional[str]:
     """
     Returns an edge name associated with a weight of a node laying on  an input port_id.
@@ -680,14 +680,14 @@ def get_tensor_edge_name(
         + ONNXDequantizeLinearMetatype.get_all_aliases()
     )
     END_NODES = ONNXConstantMetatype.get_all_aliases()
-    parent = get_parent(node, port_id, edge_node_mapping)
+    parent = get_parent(node, port_id, parents_node_mapping)
     if not parent:
         if has_tensor(model, node.input[port_id]):
             return node.input[port_id]
     elif parent.op_type in END_NODES:
         return node.input[port_id]
     elif parent.op_type in PROPAGATING_NODES:
-        return get_tensor_edge_name(model, parent, 0, edge_node_mapping)
+        return get_tensor_edge_name(model, parent, 0, parents_node_mapping)
     return None
 
 
@@ -737,8 +737,8 @@ def _is_embedding(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
     """
     tensor_port_id = ONNXEmbeddingMetatype.weight_port_ids[0]
     allowed_types_list = ["TensorProto.FLOAT"]
-    edge_node_mapping = get_edge_node_mapping(model)
-    weight_edge_name = get_tensor_edge_name(model, node, tensor_port_id, edge_node_mapping)
+    parents_node_mapping = get_parents_node_mapping(model)
+    weight_edge_name = get_tensor_edge_name(model, node, tensor_port_id, parents_node_mapping)
 
     if weight_edge_name is not None:
         tensor_data_type = get_tensor(model, weight_edge_name).data_type
