@@ -25,7 +25,6 @@ from nncf.onnx.graph.onnx_helper import get_edge_dtype
 from nncf.onnx.graph.onnx_helper import get_edge_info_mapping
 from nncf.onnx.graph.onnx_helper import get_node_index
 from nncf.onnx.graph.onnx_helper import get_node_mapping
-from nncf.onnx.graph.onnx_helper import get_parents_node_mapping
 from nncf.onnx.graph.onnx_helper import get_tensor
 from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import defaultdict
-from typing import Dict, Iterator, List, Optional, Tuple, Union
+from typing import Dict, Iterator, List, Optional, Union
 
 import numpy as np
 import onnx
