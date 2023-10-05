@@ -336,8 +336,7 @@ def stack(x: List[Tensor], axis: int = 0) -> Tensor:
     :return: Stacked Tensor.
     """
     if isinstance(x, List):
-        unwrapped_x = [i.data for i in x]
-        return Tensor(_dispatch_list(stack, unwrapped_x, axis=axis))
+        return Tensor(_dispatch_list(stack, x, axis=axis))
     raise NotImplementedError(f"Function `stack` is not implemented for {type(x)}")
 
 
@@ -425,14 +424,16 @@ def _binary_reverse_op_nowarn(a: Tensor, b: Union[Tensor, float], operator_fn: C
     return Tensor(_binary_reverse_op_nowarn(a.data, unwrap_tensor_data(b), operator_fn))
 
 
-def _dispatch_list(fn: "functools._SingleDispatchCallable", *args, **kwargs):
+def _dispatch_list(fn: "functools._SingleDispatchCallable", tensor_list: List[Tensor], *args, **kwargs):
     """
-    Dispatches the function to the appropriate implementation based on the type of the first element in the list.
+    Dispatches the function to the type of the wrapped data of the first element in tensor_list.
 
     :param fn: A function wrapped by `functools.singledispatch`.
+    :param tensor_list: List of Tensors.
     :return: The result value of the function call.
     """
-    return fn.dispatch(type(args[0][0]))(*args, **kwargs)
+    unwrapped_list = [i.data for i in tensor_list]
+    return fn.dispatch(type(unwrapped_list[0]))(unwrapped_list, *args, **kwargs)
 
 
 def _initialize_backends():
