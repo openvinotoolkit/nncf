@@ -287,6 +287,8 @@ class HWFusedPatternNames(Enum):
 
     # ATOMIC OPERATIONS
     L2_NORM = PatternDesc("l2_norm")
+    MVN = PatternDesc("mvn")
+    GELU = PatternDesc("gelu")
 
     # BLOCK PATTERNS
     ADD_SCALE_SHIFT_OUTPUT = PatternDesc("add_scale_shift_output")
@@ -338,6 +340,7 @@ class HWFusedPatternNames(Enum):
     LINEAR_ACTIVATIONS_BATCH_NORM = PatternDesc("linear_activations_batch_norm")
     LINEAR_ACTIVATIONS_SCALE_SHIFT = PatternDesc("linear_activations_scale_shift")
     LINEAR_ARITHMETIC = PatternDesc("linear_arithmetic")
+    LINEAR_SHIFT_SCALE = PatternDesc("linear_shift_scale")
     LINEAR_ARITHMETIC_ACTIVATIONS = PatternDesc("linear_arithmetic_activations")
     # Found in PicoDet models
     LINEAR_ARITHMETIC_ACTIVATIONS_ARITHMETIC = PatternDesc("linear_arithmetic_activations_arithmetic")

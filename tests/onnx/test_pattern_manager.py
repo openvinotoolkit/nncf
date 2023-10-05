@@ -21,7 +21,6 @@ IGNORING_HW_PATTERN_REASONS = {
     HWFusedPatternNames.LINEAR_CONST_MULTIPLY: "Not relevant for ONNX.",
     HWFusedPatternNames.ADD_SCALE_SHIFT_OUTPUT: "Not relevant for ONNX.",
     HWFusedPatternNames.BATCH_INDEX: "Not relevant for ONNX.",
-    HWFusedPatternNames.MVN_SCALE_SHIFT: "Not relevant for ONNX.",
     HWFusedPatternNames.NORMALIZE_L2_MULTIPLY: "Not relevant for ONNX.",
     HWFusedPatternNames.LINEAR_WITH_BIAS: "Linear layers contains biases in ONNX.",
     HWFusedPatternNames.SE_BLOCK: "Not relevant for ONNX.",
