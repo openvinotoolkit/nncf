@@ -98,12 +98,12 @@ class ChannelAlignmentAlgoBackend:
     @staticmethod
     @abstractmethod
     def get_statistic_collector(
-        reduction_shape, q: float, num_samples: int, inplace: bool
+        reduction_axes, q: float, num_samples: int, inplace: bool
     ) -> TensorStatisticCollectorBase:
         """
         Get backend-specific tensor collector that collects medians of minimal and maximal quantiles.
 
-        :param reduction_shape: Target reduction shape for the reduction.
+        :param reduction_axes: Target reduction axes for the reduction.
         :param q: Minimal quantile for the tensor collector.
         :param num_samples: Num samples to collect by the tensor collector.
         :param inplace: Should statistic be calculated inplace or out of place.

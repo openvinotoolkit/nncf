@@ -18,41 +18,38 @@ from nncf.common.tensor_statistics.statistics import MedianMADTensorStatistic
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.tensor_statistics.statistics import PercentileTensorStatistic
 from nncf.common.tensor_statistics.statistics import RawTensorStatistic
-from nncf.openvino.statistics.statistics import OVMeanTensorStatistic
-from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
-from nncf.openvino.statistics.statistics import OVRawTensorStatistic
-from nncf.openvino.tensor import OVNNCFTensor
+from nncf.torch.tensor import PTNNCFTensor
+from nncf.torch.tensor_statistics.statistics import PTMeanTensorStatistic
+from nncf.torch.tensor_statistics.statistics import PTMedianMADTensorStatistic
+from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
+from nncf.torch.tensor_statistics.statistics import PTPercentileTensorStatistic
 from tests.common.experimental.test_statistic_collector import TemplateTestStatisticCollector
 
 
 class TestOVStatisticCollector(TemplateTestStatisticCollector):
     def get_nncf_tensor_cls(self):
-        return OVNNCFTensor
+        return PTNNCFTensor
 
     @pytest.fixture
     def min_max_statistic_cls(self) -> Type[MinMaxTensorStatistic]:
-        return OVMinMaxTensorStatistic
+        return PTMinMaxTensorStatistic
 
     @pytest.fixture
     def mean_statistic_cls(self) -> Type[MeanTensorStatistic]:
-        return OVMeanTensorStatistic
+        return PTMeanTensorStatistic
 
     @pytest.fixture
     def median_mad_statistic_cls(self) -> Type[MedianMADTensorStatistic]:
-        raise NotImplementedError()
-
-    @pytest.mark.skip()
-    def test_median_mad_stat_building(self, median_mad_statistic_cls: MedianMADTensorStatistic):
-        pass
+        return PTMedianMADTensorStatistic
 
     @pytest.fixture
     def percentile_statistic_cls(self) -> Type[PercentileTensorStatistic]:
-        raise NotImplementedError()
-
-    @pytest.mark.skip
-    def test_percentile_max_stat_building(self, percentile_statistic_cls: PercentileTensorStatistic):
-        pass
+        return PTPercentileTensorStatistic
 
     @pytest.fixture
     def raw_statistic_cls(self) -> Type[RawTensorStatistic]:
-        return OVRawTensorStatistic
+        raise NotImplementedError()
+
+    @pytest.mark.skip
+    def test_raw_max_stat_building(self, raw_statistic_cls: RawTensorStatistic):
+        pass
