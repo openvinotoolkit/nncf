@@ -99,11 +99,8 @@ def create_multihead_attention_output() -> GraphPattern:
         "reshape",
         "view",
         "flatten",
-        "squeeze",
         "unsqueeze",
         "squeeze",
-        "flatten",
-        "unsqueeze",
         "unbind",
     ]
     gather_aliases = ["gather", "index_select", "where", "index_select", "__getitem__"]
