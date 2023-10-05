@@ -17,6 +17,7 @@ from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
+from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -226,22 +227,49 @@ def quantize_with_accuracy_control(
 
 
 @api(canonical_alias="nncf.compress_weights")
-def compress_weights(model: TModel) -> TModel:
+def compress_weights(
+    model: TModel, mode=CompressWeightsMode.INT8, ratio: Optional[float] = None, group_size: Optional[int] = None
+) -> TModel:
     """
     Compress model weights.
 
     :param model: A model to be compressed.
+    :param mode: Defines a mode for weight compression.
+        INT8 stands for 8-bit integer quantization of all weights.
+        NF4 stands for a mixed-precision weights quantization to NF4 data type. The first and last layers
+        are always compressed to a backup precision which is 8-bit integer by default. All others are quantized whether
+        to NF4 or to a backup precision depending on criteria and the given ratio.
+    :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
+        and the rest to INT8).
+    :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
+        The value -1 means no grouping.
     :return: The non-trainable model with compressed weights.
     """
     backend = get_backend(model)
+    if mode == CompressWeightsMode.INT8:
+        if ratio is None:
+            ratio = 1
+        if group_size is None:
+            group_size = -1
+        if ratio != 1 or group_size != -1:
+            raise AttributeError(
+                "INT8 mode assumes per-channel quantization of all layers in 8 bit. "
+                "Default values of `ratio` (1) and `group_size` (-1) parameters can not be overridden"
+            )
+    if mode == CompressWeightsMode.NF4:
+        if ratio is None:
+            ratio = 1
+        if group_size is None:
+            group_size = 128
+
     if backend == BackendType.TORCH:
         from nncf.torch.quantization.quantize_model import compress_weights_impl
 
-        return compress_weights_impl(model)
+        return compress_weights_impl(model, mode, ratio, group_size)
     if backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.quantize_model import compress_weights_impl
 
-        return compress_weights_impl(model)
+        return compress_weights_impl(model, mode, ratio, group_size)
 
     raise RuntimeError(f"Unsupported type of backend: {backend}")
 

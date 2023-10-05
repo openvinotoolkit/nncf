@@ -87,8 +87,7 @@ def insert_pre_compression_operations(module: nn.Module, bits: int = 8) -> Optio
     Inserts weights compression with dequantization for Linear and Embedding layers.
 
     :param module: The module to insert the weights compression.
-    :param bits: number of bits for compression. Note: compressed weights type is
-        uint8 with one element per 8 bit.
+    :param bits: number of bits for compression. Note: type of compressed weights is 8-bit integer.
     :return: The non-trainable module with inserted operations.
     """
     user_types = list(NNCF_WRAPPED_USER_MODULES_DICT.values())

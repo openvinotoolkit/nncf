@@ -17,6 +17,8 @@ from nncf.onnx.statistics.collectors import ONNXMinMaxTensorStatistic
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
 from tests.post_training.test_templates.test_calculate_quantizer_parameters import TemplateTestFQParams
 
+EPS = np.finfo(np.float32).eps
+
 
 @pytest.mark.parametrize(
     ("inp_low, inp_high, level_low, level_high, narrow_range, ref_scale, ref_zero_point"),
@@ -30,6 +32,9 @@ from tests.post_training.test_templates.test_calculate_quantizer_parameters impo
         (-10, 10, -512, 511, False, 0.01955034, 0),
         (-10, 10, -128, 127, True, 0.07874016, 0),
         (0, 25, 0, 15, False, 1.6666666, 0),
+        (1, 1, -128, 127, True, EPS, -128),
+        (0, 0, -128, 127, True, EPS, -127),
+        (np.array([0, 1]), np.array([0, 1]), -128, 127, True, np.array([EPS, EPS]), np.array([-127, -128])),
     ),
 )
 def test_calculate_scale_zero_point(inp_low, inp_high, level_low, level_high, narrow_range, ref_scale, ref_zero_point):

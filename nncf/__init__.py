@@ -18,6 +18,7 @@ from nncf.common.logging.logger import set_log_level
 from nncf.common.strip import strip
 from nncf.config import NNCFConfig
 from nncf.data import Dataset
+from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
