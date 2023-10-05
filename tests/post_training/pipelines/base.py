@@ -127,6 +127,7 @@ class BaseTestPipeline(ABC):
         self.model_hf = None
         self.calibration_dataset = None
         self.dummy_tensor = None
+        self.input_size = None
 
         self.run_info = RunInfo(model=reported_name, backend=self.backend)
 
@@ -212,7 +213,7 @@ class BaseTestPipeline(ABC):
         if self.backend == BackendType.OPTIMUM:
             self.path_quantized_ir = self.output_model_dir / "openvino_model.xml"
         elif self.backend in PT_BACKENDS:
-            ov_model = convert_model(self.quantized_model, example_input=self.dummy_tensor)
+            ov_model = convert_model(self.quantized_model, example_input=self.dummy_tensor, input_shape=self.input_size)
             self.path_quantized_ir = self.output_model_dir / "model.xml"
             ov.serialize(ov_model, self.path_quantized_ir)
         elif self.backend == BackendType.ONNX:
