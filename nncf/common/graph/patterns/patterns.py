@@ -287,8 +287,8 @@ class HWFusedPatternNames(Enum):
 
     # ATOMIC OPERATIONS
     L2_NORM = PatternDesc("l2_norm")
-    MVN = PatternDesc("MVN")
-    GELU = PatternDesc("GELU")
+    MVN = PatternDesc("mvn")
+    GELU = PatternDesc("gelu")
 
     # BLOCK PATTERNS
     ADD_SCALE_SHIFT_OUTPUT = PatternDesc("add_scale_shift_output")
