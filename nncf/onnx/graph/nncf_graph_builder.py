@@ -238,7 +238,7 @@ class GraphConverter:
         model: onnx.ModelProto,
         nncf_graph: NNCFGraph,
         edge_info_mapping: Dict[str, onnx.ValueInfoProto],
-        children_node_mapping: Dict[str, Tuple[onnx.ValueInfoProto, List[onnx.ValueInfoProto]]],
+        children_node_mapping: Dict[str, List[onnx.NodeProto]],
     ) -> None:
         """
         Adds special NNCF Input nodes to NNCFGraph.
@@ -246,7 +246,7 @@ class GraphConverter:
         :param model: ONNX model.
         :param nncf_graph: NNCFGraph, in which the new nodes will be added.
         :param edge_info_mapping: Mapping from edge name to the edge info.
-        :param edge_node_mapping: Mapping describing start and consumed nodes of the edges.
+        :param children_node_mapping: Mapping from edge name to nodes which consume this edge as an input.
         :return: None.
         """
         for i, _input in enumerate(get_model_inputs(model)):
@@ -285,7 +285,7 @@ class GraphConverter:
         model: onnx.ModelProto,
         nncf_graph: NNCFGraph,
         edge_info_mapping: Dict[str, onnx.ValueInfoProto],
-        parents_node_mapping: Dict[str, Tuple[onnx.ValueInfoProto, List[onnx.ValueInfoProto]]],
+        parents_node_mapping: Dict[str, List[onnx.NodeProto]],
     ) -> None:
         """
         Adds special NNCF Output nodes to NNCFGraph.
@@ -293,7 +293,7 @@ class GraphConverter:
         :param model: ONNX model.
         :param nncf_graph: NNCFGraph, in which the new nodes will be added.
         :param edge_info_mapping: Mapping from edge name to the edge info.
-        :param edge_node_mapping: Mapping describing start and consumed nodes of the edges.
+        :param parents_node_mapping: Mapping from edge name to node which outputs this edge.
         :return: None.
         """
         for i, _output in enumerate(model.graph.output):

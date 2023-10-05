@@ -39,7 +39,13 @@ def get_edge_info_mapping(model: onnx.ModelProto) -> Dict[str, onnx.ValueInfoPro
     }
 
 
-def get_children_node_mapping(model: onnx.ModelProto) -> Dict[str, List[onnx.ValueInfoProto]]:
+def get_children_node_mapping(model: onnx.ModelProto) -> Dict[str, List[onnx.NodeProto]]:
+    """
+    Returns a mapping from edge name to nodes which consume this edge as an input.
+
+    :param model: ONNX model.
+    :return: Mapping from edge name to nodes which consume this edge as an input.
+    """
     output = defaultdict(list)
     for node in model.graph.node:
         for input_edge in node.input:
@@ -47,8 +53,14 @@ def get_children_node_mapping(model: onnx.ModelProto) -> Dict[str, List[onnx.Val
     return output
 
 
-def get_parents_node_mapping(model: onnx.ModelProto) -> Dict[str, onnx.ValueInfoProto]:
-    output = defaultdict(list)
+def get_parents_node_mapping(model: onnx.ModelProto) -> Dict[str, onnx.NodeProto]:
+    """
+    Returns a mapping from edge name to node which outputs this edge.
+
+    :param model: ONNX model.
+    :return: Mapping from edge name to node which outputs this edge.
+    """
+    output = {}
     for node in model.graph.node:
         for input_edge in node.output:
             output[input_edge] = node

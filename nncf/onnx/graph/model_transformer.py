@@ -56,7 +56,7 @@ class ONNXModelTransformer(ModelTransformer):
         port_id: int,
         node_name: str,
         transform_type: TargetType,
-        node_mapping,
+        node_mapping: Dict[str, onnx.NodeProto],
         input_edges_mapping: Dict[str, str],
     ) -> str:
         """
@@ -65,8 +65,9 @@ class ONNXModelTransformer(ModelTransformer):
         :param port_id: Edge number of port.
         :param node_name: Node name.
         :param transform_type: Type of transformation.
+        :param node_mapping: Mapping from a node name to the node.
         :param input_edges_mapping: Mapping between NNCF Input nodes and
-            the following ONNX nodes and corresponding input port id.
+        the following ONNX nodes and corresponding input port id.
         :return: Target edge name.
         """
         if transform_type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
@@ -310,7 +311,7 @@ class ONNXModelTransformer(ModelTransformer):
 
         :param model: Model to insert new nodes.
         :param transformation: QuantizeLinear-DequantizeLinear insertion transformation.
-        :param edge_node_mapping: Mapping describing start and consumed nodes of the edges.
+        :param children_node_mapping: Mapping from edge name to nodes which consume this edge as an input.
         :return: Updated model with inserted QuantizeLinear-DequantizeLinear pair.
         """
         node_mapping = get_node_mapping(model)
