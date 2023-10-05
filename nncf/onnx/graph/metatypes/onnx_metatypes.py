@@ -649,7 +649,7 @@ def get_tensor_edge_name(
     model: onnx.ModelProto,
     node: onnx.NodeProto,
     port_id: int,
-    parents_node_mapping: Dict[str, List[onnx.ValueInfoProto]],
+    parents_node_mapping: Dict[str, onnx.NodeProto],
 ) -> Optional[str]:
     """
     Returns an edge name associated with a weight of a node laying on  an input port_id.
@@ -670,6 +670,7 @@ def get_tensor_edge_name(
     :param model: ONNX model.
     :param node: Node.
     :param port_id: Port id on which a weight edge is seeking.
+    :param parents_node_mapping: Mapping from edge name to node which outputs this edge.
     :return: Edge name associated with a weight.
     """
     PROPAGATING_NODES = (

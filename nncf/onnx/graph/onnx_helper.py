@@ -48,8 +48,8 @@ def get_children_node_mapping(model: onnx.ModelProto) -> Dict[str, List[onnx.Nod
     """
     output = defaultdict(list)
     for node in model.graph.node:
-        for input_edge in node.input:
-            output[input_edge].append(node)
+        for edge in node.input:
+            output[edge].append(node)
     return output
 
 
@@ -62,8 +62,8 @@ def get_parents_node_mapping(model: onnx.ModelProto) -> Dict[str, onnx.NodeProto
     """
     output = {}
     for node in model.graph.node:
-        for input_edge in node.output:
-            output[input_edge] = node
+        for edge in node.output:
+            output[edge] = node
     return output
 
 
@@ -243,7 +243,7 @@ def get_edge_dtype(edge: Union[onnx.ValueInfoProto, onnx.TensorProto]) -> int:
 def get_parent(
     node: onnx.NodeProto,
     port_id: int,
-    parents_node_mapping: Dict[str, List[onnx.ValueInfoProto]],
+    parents_node_mapping: Dict[str, onnx.NodeProto],
 ) -> Optional[onnx.NodeProto]:
     """
     Returns parents of the node. If there is no parent node, returns None.
@@ -254,13 +254,11 @@ def get_parent(
     :return: Parent node.
     """
     if port_id < len(node.input):
-        return parents_node_mapping[node.input[port_id]]
+        return parents_node_mapping.get(node.input[port_id])
     return None
 
 
-def get_children(
-    node: onnx.NodeProto, children_node_mapping: Dict[str, List[onnx.ValueInfoProto]]
-) -> List[onnx.NodeProto]:
+def get_children(node: onnx.NodeProto, children_node_mapping: Dict[str, List[onnx.NodeProto]]) -> List[onnx.NodeProto]:
     """
     Returns children of the node.
 
@@ -277,7 +275,7 @@ def get_children(
 def is_node_has_shared_weight(
     node: onnx.NodeProto,
     weight_port_id: int,
-    children_node_mapping: Dict[str, Tuple[onnx.ValueInfoProto, List[onnx.ValueInfoProto]]],
+    children_node_mapping: Dict[str, List[onnx.NodeProto]],
 ) -> bool:
     """
     Returns whether the node share a weight.

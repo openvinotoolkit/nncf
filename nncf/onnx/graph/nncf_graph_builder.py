@@ -115,7 +115,7 @@ def get_bias_tensor_port_id(metatype: ONNXOpWithWeightsMetatype) -> Optional[int
 def _get_weight_port_ids(
     node: onnx.NodeProto,
     model: onnx.ModelProto,
-    parents_node_mapping: Dict[str, Tuple[onnx.ValueInfoProto, List[onnx.ValueInfoProto]]],
+    parents_node_mapping: Dict[str, onnx.NodeProto],
 ) -> Set[int]:
     """
     Returns all weight input ports.
@@ -124,7 +124,7 @@ def _get_weight_port_ids(
 
     :param node: ONNX node.
     :param model: ONNX model.
-    :param edge_node_mapping: Mapping describing start and consumed nodes of the edges.
+    :param parents_node_mapping: Mapping from edge name to node which outputs this edge.
     :return: Port ids with weights.
     """
     port_ids = set()
@@ -185,14 +185,14 @@ def _get_node_attrs(node: onnx.NodeProto, model: onnx.ModelProto) -> Dict[str, A
 def _get_bias_attr(
     node: onnx.NodeProto,
     model: onnx.ModelProto,
-    parents_node_mapping: Dict[str, Tuple[onnx.ValueInfoProto, List[onnx.ValueInfoProto]]],
+    parents_node_mapping: Dict[str, onnx.NodeProto],
 ) -> Dict[str, str]:
     """
     Returns bias tensor attributes.
 
     :param node: ONNX node.
     :param model: ONNX model.
-    :param edge_node_mapping: Mapping describing start and consumed nodes of the edges.
+    :param parents_node_mapping: Mapping from edge name to node which outputs this edge.
     :return: Bias tensor attributes.
     """
     bias_attrs = {}
@@ -285,7 +285,7 @@ class GraphConverter:
         model: onnx.ModelProto,
         nncf_graph: NNCFGraph,
         edge_info_mapping: Dict[str, onnx.ValueInfoProto],
-        parents_node_mapping: Dict[str, List[onnx.NodeProto]],
+        parents_node_mapping: Dict[str, onnx.NodeProto],
     ) -> None:
         """
         Adds special NNCF Output nodes to NNCFGraph.
