@@ -459,13 +459,12 @@ def create_linear_arithmetic_activations() -> GraphPattern:
     return linear
 
 
-@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ARITHMETIC_ARITHMETIC)
-def create_linear_arithmetic_arithmetic() -> GraphPattern:
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_SHIFT_SCALE)
+def create_linear_shift_scale() -> GraphPattern:
     linear = linear_operations()
-    arithmetic_1 = arithmetic_operations()
-    arithmetic_2 = arithmetic_operations()
-    linear.join_patterns(arithmetic_1)
-    linear.join_patterns(arithmetic_2)
+    shift_scale = create_shift_scale()
+
+    linear.join_patterns(shift_scale)
     return linear
 
 

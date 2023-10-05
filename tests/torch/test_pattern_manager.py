@@ -65,7 +65,6 @@ IGNORING_HW_PATTERN_REASONS = {
     HWFusedPatternNames.LINEAR_SQUEEZE_ACTIVATIONS: "Not relevant for Torch.",
     HWFusedPatternNames.LINEAR_SQUEEZE_ARITHMETIC_ACTIVATIONS: "Not relevant for Torch.",
     HWFusedPatternNames.LINEAR_ACTIVATIONS_UNSQUEEZE_BN_SQUEEZE: "Not relevant for Torch.",
-    HWFusedPatternNames.LINEAR_ARITHMETIC_ARITHMETIC: "Not relevant for Torch.",
     HWFusedPatternNames.MVN: "Not relevant for Torch.",
     HWFusedPatternNames.GELU: "Not relevant for Torch.",
 }
