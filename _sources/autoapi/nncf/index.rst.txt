@@ -30,6 +30,7 @@ Classes
 
    nncf.NNCFConfig
    nncf.Dataset
+   nncf.CompressWeightsMode
    nncf.DropType
    nncf.ModelType
    nncf.TargetDevice
@@ -171,6 +172,18 @@ Functions
 
 
 
+.. py:class:: CompressWeightsMode
+
+   Bases: :py:obj:`enum.Enum`
+
+   Defines a mode for weight compression.
+
+   :param INT8: Stands for 8-bit integer quantization of all weights.
+   :param NF4: Stands for a mixed-precision weights quantization to NF4 data type. The first and last
+       layers are always compressed to a backup precision which is 8-bit integer by default. All others are quantized
+       whether to NF4 or to a backup precision depending on criteria and the given ratio.
+
+
 .. py:class:: DropType
 
    Bases: :py:obj:`enum.Enum`
@@ -211,11 +224,20 @@ Functions
    An enum with values corresponding to the available quantization presets.
 
 
-.. py:function:: compress_weights(model)
+.. py:function:: compress_weights(model, mode=CompressWeightsMode.INT8, ratio = None, group_size = None)
 
    Compress model weights.
 
    :param model: A model to be compressed.
+   :param mode: Defines a mode for weight compression.
+       INT8 stands for 8-bit integer quantization of all weights.
+       NF4 stands for a mixed-precision weights quantization to NF4 data type. The first and last layers
+       are always compressed to a backup precision which is 8-bit integer by default. All others are quantized whether
+       to NF4 or to a backup precision depending on criteria and the given ratio.
+   :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
+       and the rest to INT8).
+   :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
+       The value -1 means no grouping.
    :return: The non-trainable model with compressed weights.
 
 

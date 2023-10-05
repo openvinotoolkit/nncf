@@ -358,19 +358,22 @@
 <tr class="row-even"><td><p><a class="reference internal" href="#nncf.Dataset" title="nncf.Dataset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Dataset</span></code></a></p></td>
 <td><p>Wrapper for passing custom user datasets into NNCF algorithms.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.DropType" title="nncf.DropType"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DropType</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.CompressWeightsMode" title="nncf.CompressWeightsMode"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CompressWeightsMode</span></code></a></p></td>
+<td><p>Defines a mode for weight compression.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.DropType" title="nncf.DropType"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DropType</span></code></a></p></td>
 <td><p>Describes the accuracy drop type, which determines how the accuracy drop between</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.ModelType" title="nncf.ModelType"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ModelType</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.ModelType" title="nncf.ModelType"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ModelType</span></code></a></p></td>
 <td><p>Describes the model type the specificity of which will be taken into account during compression.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.TargetDevice" title="nncf.TargetDevice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TargetDevice</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.TargetDevice" title="nncf.TargetDevice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TargetDevice</span></code></a></p></td>
 <td><p>Target device architecture for compression.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.QuantizationPreset" title="nncf.QuantizationPreset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">QuantizationPreset</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.QuantizationPreset" title="nncf.QuantizationPreset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">QuantizationPreset</span></code></a></p></td>
 <td><p>An enum with values corresponding to the available quantization presets.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></p></td>
 <td><p>Provides an option to specify portions of model to be excluded from compression.</p></td>
 </tr>
 </tbody>
@@ -385,7 +388,7 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="#nncf.strip" title="nncf.strip"><code class="xref py py-obj docutils literal notranslate"><span class="pre">strip</span></code></a>(model[, do_copy])</p></td>
 <td><p>Returns the model object with as much custom NNCF additions as possible removed</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.compress_weights" title="nncf.compress_weights"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compress_weights</span></code></a>(model)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.compress_weights" title="nncf.compress_weights"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compress_weights</span></code></a>(model[, mode, ratio, group_size])</p></td>
 <td><p>Compress model weights.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantize" title="nncf.quantize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">quantize</span></code></a>(model, calibration_dataset[, preset, ...])</p></td>
@@ -588,6 +591,23 @@ the transformation function was applied.</p>
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="nncf.CompressWeightsMode">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">CompressWeightsMode</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.CompressWeightsMode" title="Permalink to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
+<p>Defines a mode for weight compression.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>INT8</strong> – Stands for 8-bit integer quantization of all weights.</p></li>
+<li><p><strong>NF4</strong> – Stands for a mixed-precision weights quantization to NF4 data type. The first and last
+layers are always compressed to a backup precision which is 8-bit integer by default. All others are quantized
+whether to NF4 or to a backup precision depending on criteria and the given ratio.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="nncf.DropType">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">DropType</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.DropType" title="Permalink to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
@@ -636,11 +656,22 @@ for this type of device.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nncf.compress_weights">
-<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">compress_weights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/quantization/quantize_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.compress_weights" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">compress_weights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">CompressWeightsMode.INT8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/quantization/quantize_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.compress_weights" title="Permalink to this definition">#</a></dt>
 <dd><p>Compress model weights.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>model</strong> (<em>nncf.api.compression.TModel</em>) – A model to be compressed.</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>nncf.api.compression.TModel</em>) – A model to be compressed.</p></li>
+<li><p><strong>mode</strong> – Defines a mode for weight compression.
+INT8 stands for 8-bit integer quantization of all weights.
+NF4 stands for a mixed-precision weights quantization to NF4 data type. The first and last layers
+are always compressed to a backup precision which is 8-bit integer by default. All others are quantized whether
+to NF4 or to a backup precision depending on criteria and the given ratio.</p></li>
+<li><p><strong>ratio</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
+and the rest to INT8).</p></li>
+<li><p><strong>group_size</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
+The value -1 means no grouping.</p></li>
+</ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The non-trainable model with compressed weights.</p>
@@ -863,6 +894,7 @@ in the model graph.</p></li>
 <li><a class="reference internal" href="#nncf.Dataset.get_length"><code class="docutils literal notranslate"><span class="pre">Dataset.get_length()</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#nncf.CompressWeightsMode"><code class="docutils literal notranslate"><span class="pre">CompressWeightsMode</span></code></a></li>
 <li><a class="reference internal" href="#nncf.DropType"><code class="docutils literal notranslate"><span class="pre">DropType</span></code></a></li>
 <li><a class="reference internal" href="#nncf.ModelType"><code class="docutils literal notranslate"><span class="pre">ModelType</span></code></a></li>
 <li><a class="reference internal" href="#nncf.TargetDevice"><code class="docutils literal notranslate"><span class="pre">TargetDevice</span></code></a></li>
