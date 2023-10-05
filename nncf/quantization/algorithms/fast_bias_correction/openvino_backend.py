@@ -17,7 +17,6 @@ import openvino.runtime as ov
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.metatypes.groups import FAKE_QUANTIZE_OPERATIONS
@@ -28,7 +27,7 @@ from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
-from nncf.openvino.statistics.collectors import get_mean_stat_collector
+from nncf.openvino.statistics.collectors import get_mean_statistic_collector
 from nncf.openvino.tensor import OVNNCFTensor
 from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
@@ -56,12 +55,12 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
 
     @staticmethod
     def mean_statistic_collector(
-        reduction_shape: ReductionShape,
+        channel_axis: int,
         inplace: bool,
         num_samples: Optional[int] = None,
         window_size: Optional[int] = None,
     ) -> TensorCollector:
-        return get_mean_stat_collector(num_samples, reduction_shape, window_size, inplace)
+        return get_mean_statistic_collector(num_samples, channel_axis, window_size, inplace)
 
     @staticmethod
     def get_sub_input_output_names(subgraph: ov.Model) -> Tuple[str, str]:

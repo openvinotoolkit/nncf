@@ -98,7 +98,10 @@ class TemplateTestStatisticsAggregator:
     @abstractmethod
     @pytest.fixture
     def is_backend_support_custom_estimators(self) -> bool:
-        pass
+        """
+        False if backend can initialize only following tensor collectors:
+        MinMax, MeanMinMax.
+        """
 
     @abstractmethod
     def reducers_map(self) -> List[TensorReducerBase]:
@@ -375,6 +378,7 @@ class TemplateTestStatisticsAggregator:
         inplace_statistics,
         is_backend_support_custom_estimators,
     ):
+        inplace_statistics = False
         model = self.get_backend_model(dataset_samples)
         quantizer_config = QuantizerConfig(
             mode=test_parameters.quantization_mode, per_channel=test_parameters.per_channel
@@ -433,6 +437,10 @@ class TemplateTestStatisticsAggregator:
             if isinstance(ref_min_val, np.ndarray):
                 assert stat.min_values.shape == ref_min_val.shape
                 assert stat.max_values.shape == ref_max_val.shape
+            else:
+                ref_shape = (1, 1, 1, 1) if is_stat_in_shape_of_scale else ()
+                assert stat.min_values.shape == ref_shape
+                assert stat.max_values.shape == ref_shape
 
     class BiasCorrectionAlgos(Enum):
         BIAS_CORRECTION = "bias_correction"
@@ -811,10 +819,10 @@ class TemplateTestStatisticsAggregator:
         model = params["model"](dataset_samples)
         params = {}
         if statistics_type in [StatisticsType.MIN, StatisticsType.MAX, StatisticsType.ABS_MAX, StatisticsType.MEAN]:
-            params["reduction_shape"] = [None, (0, 1, 3), (1, 2, 3)]
+            params["reduction_axes"] = [None, (0, 1, 3), (1, 2, 3)]
             params["inplace"] = [False, True]
         elif statistics_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
-            params["reduction_shape"] = [None, (0, 1, 3), (1, 2, 3)]
+            params["reduction_axes"] = [None, (0, 1, 3), (1, 2, 3)]
             params["quantile"] = [[0.01, 0.99], [0.001, 0.999]]
         elif statistics_type == "batch_mean":
             pytest.skip("Inplace statistic woun't work until openvino==2023.0.0 release")
@@ -822,7 +830,7 @@ class TemplateTestStatisticsAggregator:
         elif statistics_type == "mean_per_ch":
             # TODO(dlyakhov) uncoment when nncf will switch to openvino==2023.0.0
             # params["inplace"] = [False, True]
-            params["channel_dim"] = [1, 2]
+            params["channel_axis"] = [1, 2]
 
         def product_dict(**kwargs):
             keys = kwargs.keys()
@@ -844,7 +852,7 @@ class TemplateTestStatisticsAggregator:
         dataset = self.get_dataset(dataset_samples)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
-        # Run statistic collection to check output names matches reduer names
+        # Run statistic collection to check output names matches reducer names
         graph = NNCFGraphFactory.create(model)
         statistics_aggregator.collect_statistics(model, graph)
 

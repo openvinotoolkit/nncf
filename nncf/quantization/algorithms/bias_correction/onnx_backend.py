@@ -17,7 +17,6 @@ import onnx
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.model_utils import remove_fq_from_inputs
 from nncf.onnx.graph.node_utils import get_bias_value
@@ -43,7 +42,7 @@ from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionA
 class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @property
     def tensor_processor(self) -> ONNXNNCFCollectorTensorProcessor:
-        return ONNXNNCFCollectorTensorProcessor()
+        return ONNXNNCFCollectorTensorProcessor
 
     @property
     def types_to_insert_bias(self):
@@ -77,12 +76,12 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @staticmethod
     def mean_statistic_collector(
-        reduction_shape: ReductionShape,
+        channel_axis: int,
         inplace: bool,
         num_samples: Optional[int] = None,
         window_size: Optional[int] = None,
     ) -> ONNXMeanStatisticCollector:
-        return ONNXMeanStatisticCollector(reduction_shape, num_samples, window_size)
+        return ONNXMeanStatisticCollector(channel_axis, num_samples, window_size)
 
     @staticmethod
     def raw_statistic_collector(inplace: bool, num_samples: int = None) -> ONNXMeanStatisticCollector:

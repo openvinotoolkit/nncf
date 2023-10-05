@@ -17,7 +17,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
-from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_shape
+from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
@@ -91,7 +91,7 @@ def test_get_weight_channel_axes_for_matmul(weights_port_id, transpose, shape, e
 
 
 @pytest.mark.parametrize(
-    "shape, channel_axes, ref_reduction_shape",
+    "shape, channel_axes, ref_reduction_axes",
     [
         ((1, 128), [-1], (0,)),
         ((1, 256, 1), [-2], (0, 2)),
@@ -101,7 +101,7 @@ def test_get_weight_channel_axes_for_matmul(weights_port_id, transpose, shape, e
         ((1, 1, 12, 12), [1, 2], (0, 3)),
     ],
 )
-def test_get_channel_agnostic_reduction_shape(shape, channel_axes, ref_reduction_shape):
-    reduction_shape = get_channel_agnostic_reduction_shape(channel_axes=channel_axes, shape=shape)
+def test_get_channel_agnostic_reduction_axes(shape, channel_axes, ref_reduction_axes):
+    reduction_axes = get_channel_agnostic_reduction_axes(channel_axes=channel_axes, shape=shape)
 
-    assert reduction_shape == ref_reduction_shape
+    assert reduction_axes == ref_reduction_axes

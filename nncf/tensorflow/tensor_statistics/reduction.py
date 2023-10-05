@@ -13,7 +13,7 @@ from typing import Tuple, Union
 
 import tensorflow as tf
 
-from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.tensorflow.layers.data_layout import get_weight_shape
 
 
@@ -28,7 +28,7 @@ def get_axes(ndims: int, per_channel: bool, channel_axes: Union[int, list, tuple
 
 def get_reduction_shape_activations(
     layer: tf.keras.layers.Layer, channel_axes: Union[int, tuple, list], use_per_sample_stats: bool
-) -> ReductionShape:
+) -> ReductionAxes:
     ndims = len(layer.get_input_shape_at(0))
     channel_axes_ = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
     reduction_shape = get_axes(ndims, layer.per_channel, channel_axes_)
@@ -39,7 +39,7 @@ def get_reduction_shape_activations(
 
 def get_reduction_shape_weights(
     layer: tf.keras.layers.Layer, weight_attr: str, channel_axes: Union[int, tuple, list], per_channel: bool
-) -> ReductionShape:
+) -> ReductionAxes:
     weight_shape = get_weight_shape(layer, weight_attr)
     ndims = len(weight_shape)
     channel_axes_ = channel_axes if isinstance(channel_axes, (list, tuple)) else [channel_axes]
@@ -47,7 +47,7 @@ def get_reduction_shape_weights(
     return tuple(reduction_shape)
 
 
-def convert_rs_to_pt_type(input_shape: Tuple[int], reduction_shape: ReductionShape) -> ReductionShape:
+def convert_rs_to_pt_type(input_shape: Tuple[int], reduction_shape: ReductionAxes) -> ReductionAxes:
     if len(reduction_shape) == len(input_shape):
         pt_reduction_shape = [1]
     else:

@@ -57,6 +57,7 @@ from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
+from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import copy_model
@@ -130,7 +131,6 @@ from nncf.torch.quantization.translator import PTTargetPointTranslator
 from nncf.torch.structures import AutoQPrecisionInitArgs
 from nncf.torch.structures import QuantizationPrecisionInitArgs
 from nncf.torch.tensor_statistics.algo import TensorStatisticsCollectionBuilder
-from nncf.torch.tensor_statistics.collectors import ReductionShape
 from nncf.torch.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.torch.tensor_statistics.statistics import TensorStatistic
 from nncf.torch.tensor_statistics.statistics import pt_convert_stat_to_min_max_tensor_stat
@@ -582,7 +582,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
     def _get_minmax_values_for_quantizer_locations(
         self,
         quantizer_setup: SingleConfigQuantizerSetup,
-        tensor_statistics: Dict[PTTargetPoint, Dict[ReductionShape, TensorStatistic]],
+        tensor_statistics: Dict[PTTargetPoint, Dict[ReductionAxes, TensorStatistic]],
         target_model_graph: PTNNCFGraph,
     ) -> Dict[QuantizationPointId, MinMaxTensorStatistic]:
         retval = {}
@@ -662,7 +662,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
     @staticmethod
     def get_statistics_for_quantizer_setup(
         target_model: NNCFNetwork, quantizer_setup: QuantizerSetupBase, range_init_params: PTRangeInitParams
-    ) -> Dict[PTTargetPoint, Dict[ReductionShape, TensorStatistic]]:
+    ) -> Dict[PTTargetPoint, Dict[ReductionAxes, TensorStatistic]]:
         if range_init_params is None:
             return {}
         observation_points_vs_collectors_dict = (
@@ -688,7 +688,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
     def _get_statistics_for_final_range_init(
         self, target_model: NNCFNetwork, quantizer_setup: QuantizerSetupBase, range_init_params: PTRangeInitParams
-    ) -> Dict[PTTargetPoint, Dict[ReductionShape, TensorStatistic]]:
+    ) -> Dict[PTTargetPoint, Dict[ReductionAxes, TensorStatistic]]:
         return self.get_statistics_for_quantizer_setup(target_model, quantizer_setup, range_init_params)
 
     def _get_single_config_quantizer_setup(self, target_model) -> SingleConfigQuantizerSetup:
@@ -1508,7 +1508,7 @@ class ExperimentalQuantizationBuilder(QuantizationBuilder):
         self,
         quantizer_setup: MultiConfigQuantizerSetup,
         initial_quantizer_setup: SingleConfigQuantizerSetup,
-        tensor_stats_for_all_setup_variations: Dict[PTTargetPoint, Dict[ReductionShape, TensorStatistic]],
+        tensor_stats_for_all_setup_variations: Dict[PTTargetPoint, Dict[ReductionAxes, TensorStatistic]],
         hw_config: HWConfig = None,
     ):
         should_init = bool(tensor_stats_for_all_setup_variations)
@@ -1527,7 +1527,7 @@ class ExperimentalQuantizationBuilder(QuantizationBuilder):
 
     def _get_statistics_for_final_range_init(
         self, target_model: NNCFNetwork, quantizer_setup: QuantizerSetupBase, range_init_params: PTRangeInitParams
-    ) -> Dict[PTTargetPoint, Dict[ReductionShape, TensorStatistic]]:
+    ) -> Dict[PTTargetPoint, Dict[ReductionAxes, TensorStatistic]]:
         return self._tensor_stats
 
     def _build_controller(self, model: NNCFNetwork) -> "ExperimentalQuantizationController":
@@ -1583,7 +1583,7 @@ class ExperimentalQuantizationController(QuantizationController):
         quantizer_setup: MultiConfigQuantizerSetup,
         initial_quantizer_setup: SingleConfigQuantizerSetup,
         setup_to_module_id_translation_dict: Dict[QuantizationPointId, QuantizerId],
-        tensor_stats: Dict[PTTargetPoint, Dict[ReductionShape, TensorStatistic]],
+        tensor_stats: Dict[PTTargetPoint, Dict[ReductionAxes, TensorStatistic]],
         build_time_metric_info: QuantizationShareBuildTimeInfo,
         should_setup_adjust_pad_ops=False,
         hw_config: HWConfig = None,

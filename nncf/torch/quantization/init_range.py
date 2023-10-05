@@ -14,6 +14,7 @@ from copy import deepcopy
 from typing import Callable, Dict, List, Tuple
 
 import numpy as np
+import torch
 
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.quantization.initialization.range import RangeInitCollectorParams
@@ -27,9 +28,10 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.scopes import should_consider_scope
-from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.config.schemata.algo.quantization import RANGE_INIT_TYPES_VS_DESCRIPTIONS
+from nncf.experimental.common.tensor_statistics.collectors import AggregationAxes
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.initialization import DataLoaderBaseRunner
 from nncf.torch.nncf_network import NNCFNetwork
@@ -38,12 +40,12 @@ from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.quantization.layers import get_scale_shape
 from nncf.torch.quantization.translator import PTTargetPointTranslator
 from nncf.torch.tensor_statistics.algo import TensorStatisticObservationPoint
-from nncf.torch.tensor_statistics.collectors import PTMeanMinMaxStatisticCollector
-from nncf.torch.tensor_statistics.collectors import PTMeanPercentileStatisticCollector
-from nncf.torch.tensor_statistics.collectors import PTMedianMADStatisticCollector
-from nncf.torch.tensor_statistics.collectors import PTMinMaxStatisticCollector
-from nncf.torch.tensor_statistics.collectors import PTMixedMinMaxStatisticCollector
-from nncf.torch.tensor_statistics.collectors import PTPercentileStatisticCollector
+from nncf.torch.tensor_statistics.algo import create_register_input_hook
+from nncf.torch.tensor_statistics.collectors import get_mean_percentile_statistic_collector
+from nncf.torch.tensor_statistics.collectors import get_median_mad_statistic_collector
+from nncf.torch.tensor_statistics.collectors import get_min_max_statistic_collector
+from nncf.torch.tensor_statistics.collectors import get_mixed_min_max_statistic_collector
+from nncf.torch.tensor_statistics.collectors import get_percentile_tensor_collector
 from nncf.torch.tensor_statistics.statistics import pt_convert_stat_to_min_max_tensor_stat
 
 
@@ -103,28 +105,39 @@ class PTRangeInitCollectorParams(RangeInitCollectorParams):
         self._input_shape = input_shape
         self._channel_idx = channel_idx
 
-    def convert_reduction_shape(self, per_sample_stats) -> ReductionShape:
+    def get_reduction_axes(self, per_sample_stats: bool) -> ReductionAxes:
         """
-        Calculates the reduction shape of the tensor.
+        Calculates the reduction axes of the tensor.
 
         :param per_sample_stats: Boolean flag that indicated whether statistics are collected per-sample or per-batch.
         :return: Shape to reduce to.
         """
         ndims = len(self._input_shape)
-        reduction_shape = list(range(ndims))  # type: List[int]
+        reduction_axes = list(range(ndims))  # type: List[int]
         if self._per_channel:
             val = (ndims + self._channel_idx) % ndims
-            reduction_shape.remove(val)
+            reduction_axes.remove(val)
+            if not val and self.use_per_sample_stats(per_sample_stats):
+                raise RuntimeError("Batch dimension should be equal to zero")
         if self.use_per_sample_stats(per_sample_stats):
-            reduction_shape = reduction_shape[1:]  # Assumes batch is the first dimension
-        return tuple(reduction_shape)
+            reduction_axes = reduction_axes[1:]  # Assumes batch is the first dimension
+        return tuple(reduction_axes)
+
+    def get_aggregation_axes(self, per_sample_stats: bool) -> AggregationAxes:
+        """
+        Calculates the aggregation axes of the tensor.
+
+        :param per_sample_stats: Boolean flag that indicated whether statistics are collected per-sample or per-batch.
+        :return: Shape to aggregate to.
+        """
+        return (0, 1) if self.use_per_sample_stats(per_sample_stats) else (0,)
 
 
 class StatCollectorGenerator:
     @staticmethod
     def generate_collectors_for_range_init_statistics_collection(
         target_model_graph: PTNNCFGraph, quantizer_setup: QuantizerSetupBase, range_init_params: PTRangeInitParams
-    ) -> Dict[TensorStatisticObservationPoint, Dict[ReductionShape, TensorStatisticCollectorBase]]:
+    ) -> Dict[TensorStatisticObservationPoint, Dict[ReductionAxes, TensorStatisticCollectorBase]]:
         retval = {}
         for qp in quantizer_setup.quantization_points.values():
             init_config = range_init_params.get_init_config_for_quantization_point(qp)
@@ -154,8 +167,8 @@ class StatCollectorGenerator:
     @staticmethod
     def generate_stat_collector_for_range_init_config(
         init_config: RangeInitConfig,
-        reduction_shape: ReductionShape = None,
-        collector_params=None,
+        scale_shape: ReductionAxes = None,
+        collector_params: PTRangeInitCollectorParams = None,
         num_samples_to_collect_override: int = None,
     ) -> TensorStatisticCollectorBase:
         num_samples = init_config.num_init_samples
@@ -163,47 +176,73 @@ class StatCollectorGenerator:
             num_samples = num_samples_to_collect_override
         if init_config.init_type not in RANGE_INIT_TYPES_VS_DESCRIPTIONS:
             raise RuntimeError("Unknown range init type: {}".format(init_config.init_type))
+
+        use_per_sample_stats = collector_params.use_per_sample_stats(init_config.init_type == "mixed_min_max")
+        reduction_axes = collector_params.get_reduction_axes(use_per_sample_stats)
+        aggregation_axes = collector_params.get_aggregation_axes(use_per_sample_stats)
+
         if init_config.init_type == "min_max":
-            reduction_shape_converted = collector_params.convert_reduction_shape(per_sample_stats=False)
-            return PTMinMaxStatisticCollector(
-                collector_params.use_abs_max, reduction_shape_converted, reduction_shape, num_samples
+            return get_min_max_statistic_collector(
+                use_abs_max=collector_params.use_abs_max,
+                reduction_axes=reduction_axes,
+                aggregation_axes=aggregation_axes,
+                scale_shape=scale_shape,
+                num_samples=num_samples,
             )
         if init_config.init_type == "mixed_min_max":
-            reduction_shape_converted = collector_params.convert_reduction_shape(per_sample_stats=True)
-            return PTMixedMinMaxStatisticCollector(
-                collector_params.use_per_sample_stats(per_sample_stats=True),
-                collector_params.use_abs_max,
-                collector_params.use_means_of_mins,
-                collector_params.use_means_of_maxs,
-                reduction_shape_converted,
-                reduction_shape,
-                num_samples,
+            return get_mixed_min_max_statistic_collector(
+                use_abs_max=collector_params.use_abs_max,
+                reduction_axes=reduction_axes,
+                aggregation_axes=aggregation_axes,
+                scale_shape=scale_shape,
+                use_means_of_mins=collector_params.use_means_of_mins,
+                use_means_of_maxs=collector_params.use_means_of_maxs,
+                num_samples=num_samples,
             )
         if init_config.init_type == "mean_min_max":
-            reduction_shape_converted = collector_params.convert_reduction_shape(per_sample_stats=False)
-            return PTMeanMinMaxStatisticCollector(
-                collector_params.use_per_sample_stats(per_sample_stats=False),
-                collector_params.use_abs_max,
-                reduction_shape_converted,
-                reduction_shape,
-                num_samples,
+            return get_mixed_min_max_statistic_collector(
+                use_abs_max=collector_params.use_abs_max,
+                reduction_axes=reduction_axes,
+                aggregation_axes=aggregation_axes,
+                scale_shape=scale_shape,
+                use_means_of_mins=True,
+                use_means_of_maxs=True,
+                num_samples=num_samples,
             )
         if init_config.init_type == "threesigma":
-            return PTMedianMADStatisticCollector(reduction_shape, num_samples)
+            return get_median_mad_statistic_collector(
+                reduction_axes=reduction_axes,
+                aggregation_axes=aggregation_axes,
+                scale_shape=scale_shape,
+                num_samples=num_samples,
+            )
         if init_config.init_type == "percentile":
             min_percentile = init_config.init_type_specific_params.get("min_percentile", 0.1)
             max_percentile = init_config.init_type_specific_params.get("max_percentile", 99.9)
-            return PTPercentileStatisticCollector([min_percentile, max_percentile], reduction_shape, num_samples)
+            return get_percentile_tensor_collector(
+                percentiles_to_collect=(min_percentile, max_percentile),
+                reduction_axes=reduction_axes,
+                aggregation_axes=aggregation_axes,
+                scale_shape=scale_shape,
+                num_samples=num_samples,
+            )
+
         if init_config.init_type == "mean_percentile":
             min_percentile = init_config.init_type_specific_params.get("min_percentile", 0.1)
             max_percentile = init_config.init_type_specific_params.get("max_percentile", 99.9)
-            return PTMeanPercentileStatisticCollector([min_percentile, max_percentile], reduction_shape, num_samples)
+            return get_mean_percentile_statistic_collector(
+                percentiles_to_collect=(min_percentile, max_percentile),
+                reduction_axes=reduction_axes,
+                aggregation_axes=aggregation_axes,
+                scale_shape=scale_shape,
+                num_samples=num_samples,
+            )
         raise ValueError("Range init type not handled!")
 
     @classmethod
     def get_all_scale_shapes_with_params(
         cls, qp: QuantizationPointBase, target_nncf_graph: PTNNCFGraph
-    ) -> Dict[ReductionShape, PTRangeInitCollectorParams]:
+    ) -> Dict[ReductionAxes, PTRangeInitCollectorParams]:
         qconfigs = qp.get_all_configs_list()
         if qp.is_weight_quantization_point():
             module_node = target_nncf_graph.get_node_by_name(qp.insertion_point.target_node_name)
@@ -249,9 +288,13 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
         self.hook_handles = []
         self.batch_size = batch_size
 
-    def _get_fwd_hook(self, collector: TensorStatisticCollectorBase) -> Callable:
+    def _get_fwd_hook(
+        self, collector: TensorStatisticCollectorBase
+    ) -> Callable[["torch.Module", torch.Tensor, torch.Tensor], torch.Tensor]:
+        hook = create_register_input_hook(collector=collector)
+
         def fwd_hook(module, input_, output):
-            collector.register_input(input_[0])
+            hook(input_[0])
 
         return fwd_hook
 
