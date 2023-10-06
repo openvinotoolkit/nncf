@@ -22,8 +22,9 @@ FQ_CALCULATED_PARAMETERS_PATH = PTQ_TEST_ROOT / "data" / "fq_params" / "fq_param
 
 
 def pytest_addoption(parser):
-    parser.addoption("--data", action="store")
-    parser.addoption("--output", action="store", default="./tmp/")
+    parser.addoption("--data", action="store", help="Data directory")
+    parser.addoption("--output", action="store", default="./tmp/", help="Directory to store artifacts")
+    parser.addoption("--no-eval", action="store_true", help="Skip validation step")
 
 
 def pytest_configure(config):
