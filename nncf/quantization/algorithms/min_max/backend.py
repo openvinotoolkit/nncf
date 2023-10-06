@@ -58,6 +58,13 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
+    def dropout_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific Dropout metatypes.
+        """
+
+    @property
+    @abstractmethod
     def conv_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific Convolution metatypes.

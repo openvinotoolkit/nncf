@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import collections
+from copy import deepcopy
 from typing import List, Optional, TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
@@ -23,6 +24,7 @@ TModel = TypeVar("TModel")
 def transform_to_inference_graph(
     nncf_graph: NNCFGraph,
     shapeof_metatypes: List[OperatorMetatype],
+    dropout_metatypes: List[OperatorMetatype],
     read_variable_metatypes: Optional[List[OperatorMetatype]] = None,
 ) -> NNCFGraph:
     """
@@ -30,28 +32,30 @@ def transform_to_inference_graph(
 
     :param nncf_graph: NNCFGraph instance for the transformation.
     :param shapeof_metatypes: List of backend-specific ShapeOf metatypes.
+    :param dropout_metatypes: List of backend-specific Dropout metatypes.
     :param read_variable_metatypes: List of backend-specific metatypes
         that also can be interpreted as inputs (ReadValue).
     :return: NNCFGraph in the inference style.
     """
-    inference_nncf_graph = remove_shapeof_subgraphs(nncf_graph, shapeof_metatypes, read_variable_metatypes)
-    inference_nncf_graph = filter_constant_nodes(nncf_graph, read_variable_metatypes)
-    return inference_nncf_graph
+    inference_graph = deepcopy(nncf_graph)
+    remove_shapeof_subgraphs_inplace(inference_graph, shapeof_metatypes, read_variable_metatypes)
+    remove_dropout_nodes_inplace(inference_graph, dropout_metatypes)
+    filter_constant_nodes_inplace(inference_graph, read_variable_metatypes)
+    return inference_graph
 
 
-def remove_shapeof_subgraphs(
+def remove_shapeof_subgraphs_inplace(
     nncf_graph: NNCFGraph,
     shapeof_metatypes: List[OperatorMetatype],
     read_variable_metatypes: Optional[List[OperatorMetatype]] = None,
-) -> NNCFGraph:
+) -> None:
     """
-    Removes the ShapeOf subgraphs from the provided NNCFGraph instance.
+    Removes the ShapeOf subgraphs from the provided NNCFGraph instance inplace.
 
     :param nncf_graph: NNCFGraph instance for the transformation.
     :param shapeof_metatypes: List of backend-specific ShapeOf metatypes.
     :param read_variable_metatypes: List of backend-specific metatypes
         that also can be interpreted as inputs (ReadValue).
-    :return: NNCFGraph without ShapeOf subgraphs.
     """
     read_variable_metatypes = read_variable_metatypes if read_variable_metatypes else []
     nodes_to_drop = set()
@@ -85,20 +89,65 @@ def remove_shapeof_subgraphs(
             shape_of_queue.extend(nncf_graph.get_next_nodes(node) + nncf_graph.get_previous_nodes(node))
 
     nncf_graph.remove_nodes_from(nodes_to_drop)
-    return nncf_graph
 
 
-def filter_constant_nodes(
-    nncf_graph: NNCFGraph, read_variable_metatypes: Optional[List[OperatorMetatype]] = None
-) -> NNCFGraph:
+def remove_dropout_nodes_inplace(
+    nncf_graph: NNCFGraph,
+    dropout_metatypes: List[OperatorMetatype],
+) -> None:
     """
-    Removes all Constant nodes from NNCFGraph, making it inference graph.
+    Removes the Dropout nodes from the provided NNCFGraph instance and
+        connects droput previous node with dropout next nodes inplace
+        for each dropout node.
+
+    :param nncf_graph: NNCFGraph instance for the transformation.
+    :param dropout_metatypes: List of backend-specific Dropout metatypes.
+    """
+    if not dropout_metatypes:
+        return
+
+    nodes_to_drop = []
+    for node in nncf_graph.get_all_nodes():
+        if node.metatype in dropout_metatypes:
+            nodes_to_drop.append(node)
+
+            prev_nodes = nncf_graph.get_previous_nodes(node)
+            input_edges = nncf_graph.get_input_edges(node)
+            assert len(prev_nodes) == len(input_edges) == 1
+            prev_node = prev_nodes[0]
+            input_edge = input_edges[0]
+            assert not input_edge.parallel_input_port_ids
+
+            # nncf_graph.get_next_edges is not used to preserve
+            # parallel_input_port_ids
+            for output_node in nncf_graph.get_next_nodes(node):
+                output_edge = nncf_graph.get_edge(node, output_node)
+                # Connects dropout previous node with all next nodes
+                # to keep NNCFGraph connected.
+                assert input_edge.dtype == output_edge.dtype
+                assert input_edge.tensor_shape == output_edge.tensor_shape
+                nncf_graph.add_edge_between_nncf_nodes(
+                    from_node_id=prev_node.node_id,
+                    to_node_id=output_edge.to_node.node_id,
+                    tensor_shape=input_edge.tensor_shape,
+                    input_port_id=output_edge.input_port_id,
+                    output_port_id=input_edge.output_port_id,
+                    dtype=input_edge.dtype,
+                    parallel_input_port_ids=output_edge.parallel_input_port_ids,
+                )
+    nncf_graph.remove_nodes_from(nodes_to_drop)
+
+
+def filter_constant_nodes_inplace(
+    nncf_graph: NNCFGraph, read_variable_metatypes: Optional[List[OperatorMetatype]] = None
+) -> None:
+    """
+    Removes all Constant nodes from NNCFGraph inplace, making it inference graph.
     The traversing starts from the input nodes and nodes with weights.
 
     :param nncf_graph: NNCFGraph instance for the transformation.
     :param read_variable_metatypes: List of backend-specific metatypes
         that also can be interpreted as inputs (ReadValue).
-    :return: NNCFGraph without Constant nodes.
     """
     read_variable_metatypes = read_variable_metatypes if read_variable_metatypes else []
     input_nodes = nncf_graph.get_input_nodes()
@@ -119,7 +168,6 @@ def filter_constant_nodes(
         nodes_queue.extend(nncf_graph.get_next_nodes(node))
     constant_nodes = [node for node in nncf_graph.get_all_nodes() if node not in visited_nodes]
     nncf_graph.remove_nodes_from(constant_nodes)
-    return nncf_graph
 
 
 def insert_null_biases_pass(model: TModel, graph: NNCFGraph) -> TModel:

@@ -61,6 +61,10 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [om.OVShapeOfMetatype]
 
     @property
+    def dropout_metatypes(self) -> List[OperatorMetatype]:
+        return []
+
+    @property
     def conv_metatypes(self) -> List[OperatorMetatype]:
         return [om.OVConvolutionMetatype]
 

@@ -61,6 +61,10 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [om.ONNXShapeMetatype]
 
     @property
+    def dropout_metatypes(self) -> List[OperatorMetatype]:
+        return []
+
+    @property
     def conv_metatypes(self) -> List[OperatorMetatype]:
         return [om.ONNXConvolutionMetatype]
 

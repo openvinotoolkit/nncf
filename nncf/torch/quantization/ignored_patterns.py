@@ -35,33 +35,6 @@ def _add_softmax_matmul(
     pattern.add_edge(matmul_branch_nodes, matmul)
 
 
-def _add_softmax_dropout_matmul(
-    pattern: GraphPattern, matmul_aliases, reshape_squeeze_aliases, gather_aliases, transpose_aliases
-) -> None:
-    #       SOFTMAX
-    #           \
-    #            \
-    #             \
-    #             DROPOUT   RESHAPE||TRANSPOSE||GATHER||SQUEEZE
-    #                 \                 /
-    #                  \               /
-    #                   \             /
-    #                    \           /
-    #                     \         /
-    #                      \       /
-    #                        MATMUL
-    branch_matmul_nodes = reshape_squeeze_aliases + gather_aliases + transpose_aliases
-    softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: "softmax"})
-    dropout = pattern.add_node(**{GraphPattern.LABEL_ATTR: "DROPOUT", GraphPattern.METATYPE_ATTR: "dropout"})
-    matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: matmul_aliases})
-    matmul_branch_nodes = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "NON_PATTERN", GraphPattern.METATYPE_ATTR: branch_matmul_nodes}
-    )
-    pattern.add_edge(softmax, dropout)
-    pattern.add_edge(dropout, matmul)
-    pattern.add_edge(matmul_branch_nodes, matmul)
-
-
 def _add_softmax_reshape_matmul(
     pattern: GraphPattern, matmul_aliases, reshape_squeeze_aliases, gather_aliases, transpose_aliases
 ) -> None:
@@ -108,13 +81,6 @@ def create_multihead_attention_output() -> GraphPattern:
 
     pattern = GraphPattern()
     _add_softmax_matmul(
-        pattern,
-        matmul_aliases=matmul_aliases,
-        reshape_squeeze_aliases=reshape_squeeze_aliases,
-        gather_aliases=gather_aliases,
-        transpose_aliases=transpose_aliases,
-    )
-    _add_softmax_dropout_matmul(
         pattern,
         matmul_aliases=matmul_aliases,
         reshape_squeeze_aliases=reshape_squeeze_aliases,
