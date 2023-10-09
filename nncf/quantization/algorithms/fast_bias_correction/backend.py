@@ -23,6 +23,7 @@ from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.registry import Registry
+from nncf.experimental.tensor import Tensor
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -113,7 +114,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: TModel) -> np.ndarray:
+    def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: TModel) -> Tensor:
         """
         Returns bias value in the NumPy format of provided node.
 
@@ -149,7 +150,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def process_model_output(raw_data: OutputType, output_name: str) -> NNCFTensor:
+    def process_model_output(raw_data: OutputType, output_name: str) -> Tensor:
         """
         Returns backend-specific processed output from the model.
 
