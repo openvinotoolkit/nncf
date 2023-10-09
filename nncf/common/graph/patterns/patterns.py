@@ -262,8 +262,8 @@ def merge_two_types_of_operations(first_op: Dict, second_op: Dict, label: str) -
 
 class AlgorithmType(Enum):
     """
-    Algorithm type, the pattern manager uses this parameter to
-    provide patterns, specific for the target algorithm type.
+    Algorithm type which is used by the pattern manager to
+    provide patterns specific to the target algorithm type.
     """
 
     QUANTIZATION = "QUANTIZATION"
