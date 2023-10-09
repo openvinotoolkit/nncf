@@ -199,9 +199,10 @@ class ONNXModelTransformer(ModelTransformer):
         :return: New model with inserted QuantizeLinear-DequantizeLinear nodes pairs.
         """
         self._added_target_edges = Counter()
+        node_mapping = get_name_to_node_map(model)
+        children_node_mapping = get_children_node_mapping(model)
         for transformation in transformations:
-            children_node_mapping = get_children_node_mapping(model)
-            model = self._insert_quantizer_dequantizer(model, transformation, children_node_mapping)
+            model = self._insert_quantizer_dequantizer(model, transformation, node_mapping, children_node_mapping)
         return model
 
     def _get_quantize_dequantize_nodes(
@@ -303,6 +304,7 @@ class ONNXModelTransformer(ModelTransformer):
         self,
         model: onnx.ModelProto,
         transformation: ONNXQuantizerInsertionCommand,
+        node_mapping: Dict[str, onnx.NodeProto],
         children_node_mapping: Dict[str, List[onnx.ValueInfoProto]],
     ) -> onnx.ModelProto:
         """
@@ -310,10 +312,10 @@ class ONNXModelTransformer(ModelTransformer):
 
         :param model: Model to insert new nodes.
         :param transformation: QuantizeLinear-DequantizeLinear insertion transformation.
+        :param node_mapping: Mapping from node name to the node.
         :param children_node_mapping: Mapping from edge name to nodes which consume this edge as an input.
         :return: Updated model with inserted QuantizeLinear-DequantizeLinear pair.
         """
-        node_mapping = get_name_to_node_map(model)
         target_edge_name = self._get_quantizer_dequantizer_edge_name(transformation, node_mapping)
         quantizer, dequantizer = self._get_quantize_dequantize_nodes(transformation, target_edge_name)
         onnx_scale_tensor, onnx_zero_point_tensor = ONNXModelTransformer._get_scale_zero_point_tensors(
