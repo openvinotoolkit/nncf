@@ -281,6 +281,9 @@ A collection of ready-to-run Jupyter* notebooks are available to demonstrate how
 - [NNCF Post-Training Optimization of CLIP Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/228-clip-zero-shot-image-classification)
 - [NNCF Post-Training Optimization of ImageBind Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/239-image-bind)
 - [NNCF Post-Training Optimization of Whisper Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/227-whisper-subtitles-generation)
+- [NNCF Post-Training Optimization of BLIP Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/233-blip-visual-language-processing)
+- [NNCF Post-Training Optimization of DeepFloyd IF Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/238-deepfloyd-if)
+- [NNCF Post-Training Optimization of Grammatical Error Correction Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/214-grammar-correction)
 - [Quantize a Segmentation Model and Show Live Inference](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/110-ct-segmentation-quantize)
 - [Training to Deployment with TensorFlow and OpenVINO](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/301-tensorflow-training-openvino)
 - [Migrate quantization from POT API to NNCF API](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/111-yolov5-quantization-migration)
@@ -372,7 +375,7 @@ You may also use one of the Dockerfiles in the [docker](./docker) directory to b
   - ONNX\* ~=1.13.1
   - OpenVINO\* >=2022.3.0
 
-This repository is tested on Python* 3.8.10, PyTorch* 2.0.1 (NVidia CUDA\* Toolkit 11.7) and TensorFlow* 2.12.1 (NVidia CUDA\* Toolkit 11.8).
+This repository is tested on Python* 3.8.10, PyTorch* 2.0.1 (NVidia CUDA\* Toolkit 11.8) and TensorFlow* 2.12.1 (NVidia CUDA\* Toolkit 11.8).
 
 ## NNCF Compressed Model Zoo
 

@@ -650,6 +650,19 @@ class ZeroRankEltwiseModel(OVReferenceModel):
         return model
 
 
+class ParallelEdgesModel(OVReferenceModel):
+    def _create_ov_model(self) -> ov.Model:
+        input_shape = [1, 3, 3]
+
+        input_1 = opset.parameter(input_shape, name="Input")
+        mm = opset.matmul(input_1, input_1, False, False, name="Mm")
+        add = opset.add(input_1, np.array(1.0, dtype=np.float32), name="Add")
+        result_0 = opset.result(mm, name="Result_mm")
+        result_1 = opset.result(add, name="Result_add")
+        model = ov.Model([result_0, result_1], [input_1])
+        return model
+
+
 @SYNTHETIC_MODELS.register()
 class UnifiedEmbeddingModel(OVReferenceModel):
     def _create_ov_model(self):
@@ -723,4 +736,53 @@ class IfModel(OVReferenceModel):
         if_node.set_output(then_body.results[0], else_body.results[0])
         result = opset.result(if_node, name="Result")
         model = ov.Model([result], [input_1, input_2, input_3])
+        return model
+
+
+class SequentialMatmulModel(OVReferenceModel):
+    """
+    Model for mixed precision weight compression.
+    Matrices with outliers are defined in such a way that there is a different nf4, int8, relative error.
+    rel_error = nf4_error / int8_error
+    The maximum relative error is achieved with not maximum outlier 10000, because nf4 better copes with outliers.
+
+    [[   0.    1.    2.]
+    [   3.    4.    5.]
+    [   6.    7. 1000.]]
+        nf4 error = 28
+        int8 error = 13
+        rel_error=2
+
+    [[ 0.  1.  2.]
+    [ 3.  4.  5.]
+    [ 6.  7. 10000.]]
+        nf4 error = 28
+        int8 error = 40
+        rel_error= 0.7
+
+    [[ 0.  1.  2.]
+    [ 3.  4.  5.]
+    [ 6.  7. 10.]]
+        nf4 error = 0.06
+        int8 error = 16
+        rel_error= 0.03
+    """
+
+    def _create_ov_model(self):
+        input_node = opset.parameter([3, 3], name="Input_1")
+        main_values = [100, 1000, 10000, 10, 1]
+
+        last_node = input_node
+        for i, main_value in enumerate(main_values):
+            weights_data = np.arange(0, 9).reshape(3, 3)
+            weights_data[-1, -1] = main_value
+            current_weights = opset.constant(weights_data, dtype=np.float32, name=f"weights_{i}")
+            current_node = opset.matmul(
+                last_node, current_weights, transpose_a=False, transpose_b=True, name=f"MatMul_{i}"
+            )
+            last_node = current_node
+
+        result = opset.result(last_node, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+        model = ov.Model([result], [input_node])
         return model

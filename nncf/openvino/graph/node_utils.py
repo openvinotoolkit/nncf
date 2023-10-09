@@ -17,6 +17,7 @@ import openvino.runtime.opset9 as opset
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_BIAS
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
@@ -161,7 +162,7 @@ def get_ov_model_reduce_node_name(output_name: str, reduce_node_name: str, port_
 
 
 def get_inplace_reduce_op(
-    op: Type[ov.Node], reduce_node_name: str, reduction_axes: Optional[Tuple[int, ...]], use_abs: bool
+    op: Type[ov.Node], reduce_node_name: str, reduction_axes: Optional[ReductionAxes], use_abs: bool
 ) -> InplaceInsertionFnType:
     """
     Returns inplace insertion function that adds reduce node to a passed node.
@@ -169,6 +170,7 @@ def get_inplace_reduce_op(
     :param op: OpenVINO reduction operation type to insert.
     :param reduce_node_name: Reduce node name.
     :param reduction_axes: Target reduction axes for the reduction node.
+        Reduce along all axes in case reduction_axes are None.
     :param use_abs: Wheather reduce absolute values of input tensors or not.
     :returns: Inplace insertion function to use in ModelTransformer.
     """
@@ -200,37 +202,43 @@ def get_inplace_reduce_op(
     return get_reduce_op
 
 
-def get_inplace_min_op(node_name: str, reduction_shape: Tuple[int, ...]) -> InplaceInsertionFnType:
+def get_inplace_min_op(node_name: str, reduction_axes: Optional[ReductionAxes]) -> InplaceInsertionFnType:
     """
     Returns inplace min function that adds reduce min node to a passed node.
 
     :param node_name: Min reduce node name.
-    :param reduction_shape: Target reduction axes for the reduction node.
+    :param reduction_axes: Target reduction axes for the reduction node.
+        Reduce along all axes in case reduction_axes are None.
     :returns: Inplace insertion function to use in ModelTransformer.
     """
-    return get_inplace_reduce_op(opset.reduce_min, node_name, reduction_shape, False)
+    return get_inplace_reduce_op(opset.reduce_min, node_name, reduction_axes, False)
 
 
-def get_inplace_max_op(node_name: str, reduction_shape: Tuple[int, ...], use_abs_max: bool) -> InplaceInsertionFnType:
+def get_inplace_max_op(
+    node_name: str, reduction_axes: Optional[ReductionAxes], use_abs_max: bool
+) -> InplaceInsertionFnType:
     """
     Returns inplace max function that adds reduce max node to a passed node.
 
     :param node_name: Max reduce node name.
-    :param reduction_shape: Target reduction axes for the reduction node.
+    :param reduction_axes: Target reduction axes for the reduction node.
+        Reduce along all axes in case reduction_axes are None.
     :param use_abs: Wheather reduce absolute values of input tensors or not.
     :returns: Inplace insertion function to use in ModelTransformer.
     """
-    return get_inplace_reduce_op(opset.reduce_max, node_name, reduction_shape, use_abs_max)
+    return get_inplace_reduce_op(opset.reduce_max, node_name, reduction_axes, use_abs_max)
 
 
-def get_inplace_mean_op(node_name: str, reduction_shape: Tuple[int, ...]) -> InplaceInsertionFnType:
+def get_inplace_mean_op(node_name: str, reduction_axes: Optional[ReductionAxes]) -> InplaceInsertionFnType:
     """
     Returns inplace mean function that adds reduce mean node to a passed node.
 
     :param node_name: Mean reduce node name.
+    :param reduction_axes: Target reduction axes for the reduction node.
+        Reduce along all axes in case reduction_axes are None.
     :returns: Inplace insertion function to use in ModelTransformer.
     """
-    return get_inplace_reduce_op(opset.reduce_mean, node_name, reduction_shape, False)
+    return get_inplace_reduce_op(opset.reduce_mean, node_name, reduction_axes, False)
 
 
 def get_inplace_batch_mean_op(node_name: str) -> InplaceInsertionFnType:
@@ -302,7 +310,7 @@ def get_inplace_mean_per_ch(op_type: str, axis: int) -> InplaceInsertionFnType:
     return get_reduce_op
 
 
-def get_partial_shape_safe(node, port_id) -> int:
+def get_partial_shape_safe(node, port_id) -> Tuple[int, ...]:
     partial_shape = node.get_output_partial_shape(port_id)
     if partial_shape.rank.is_dynamic or not partial_shape.all_non_negative:
         raise RuntimeError(
@@ -373,18 +381,18 @@ def get_matmul_channel_axes(weights_port_id: int, ndims: int, transpose: bool) -
     return channel_axes
 
 
-def get_channel_agnostic_reduction_shape(channel_axes: List[int], shape: List[int]) -> Tuple[int]:
+def get_channel_agnostic_reduction_axes(channel_axes: List[int], shape: List[int]) -> Optional[ReductionAxes]:
     """
-    Returns filtered reduction shape without axes that corresponds channels.
+    Returns filtered reduction axes without axes that corresponds channels.
 
     :param channel_axes: List of the channel axes.
     :param shape: Shape that need to be filtered.
-    :return: Reduction shape in tuple format.
+    :return: Reduction axes in tuple format.
     """
-    reduction_shape = list(range(len(shape)))
+    reduction_axes = list(range(len(shape)))
     for channel_axis in sorted(channel_axes, reverse=True):
-        del reduction_shape[channel_axis]
-    return tuple(reduction_shape)
+        del reduction_axes[channel_axis]
+    return tuple(reduction_axes)
 
 
 def create_bias_tensor(node_without_bias: NNCFNode, graph: NNCFGraph, value: Any) -> np.ndarray:

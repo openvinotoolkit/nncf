@@ -374,11 +374,11 @@ class ChannelAlignment(Algorithm):
         for conv_in, add_in, _ in self._get_node_pairs(graph):
             target_point, node_in = self._get_target_point_and_node_in(conv_in, add_in)
             channel_axis = conv_in.metatype.output_channel_axis
-            reduction_shape = list(range(len(graph.get_output_edges(node_in)[0].tensor_shape)))
-            reduction_shape.remove(channel_axis)
+            reduction_axes = list(range(len(graph.get_output_edges(node_in)[0].tensor_shape)))
+            reduction_axes.remove(channel_axis)
 
             statistic_collector = self._backend_entity.get_statistic_collector(
-                tuple(reduction_shape), self._quantile, self.subset_size, self.inplace_statistics
+                tuple(reduction_axes), self._quantile, self.subset_size, self.inplace_statistics
             )
             statistic_container.add_statistic_point(
                 StatisticPoint(

@@ -30,3 +30,6 @@ class PTNNCFTensor(NNCFTensor):
     @property
     def device(self) -> torch.device:
         return self._tensor.device
+
+    def is_empty(self) -> bool:
+        return self.tensor.size == 0
