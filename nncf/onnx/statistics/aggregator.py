@@ -22,7 +22,7 @@ from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.onnx.graph.node_utils import get_input_edge
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
-from nncf.onnx.graph.onnx_helper import get_node_mapping
+from nncf.onnx.graph.onnx_helper import get_name_to_node_map
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.tensor import ONNXNNCFTensor
 
@@ -30,7 +30,7 @@ from nncf.onnx.tensor import ONNXNNCFTensor
 class ONNXStatisticsAggregator(StatisticsAggregator):
     def collect_statistics(self, model: onnx.ModelProto, graph: NNCFGraph) -> None:
         self.input_edges_mapping = get_input_edges_mapping(graph)
-        self.node_mapping = get_node_mapping(model)
+        self.node_mapping = get_name_to_node_map(model)
         self._registered_weights = set()
         super().collect_statistics(model, graph)
 

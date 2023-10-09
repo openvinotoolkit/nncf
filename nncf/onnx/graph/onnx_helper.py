@@ -16,9 +16,9 @@ import onnx
 from onnx import numpy_helper
 
 
-def get_node_mapping(model: onnx.ModelProto) -> Dict[str, onnx.NodeProto]:
+def get_name_to_node_map(model: onnx.ModelProto) -> Dict[str, onnx.NodeProto]:
     """
-    Retuns mapping from node name to the node.
+    Returns mapping from node name to the node.
 
     :param model: Model from mapping is built.
     :return: Mapping.

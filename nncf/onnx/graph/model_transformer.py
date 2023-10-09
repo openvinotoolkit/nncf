@@ -23,8 +23,8 @@ from nncf.onnx.graph.onnx_helper import get_children
 from nncf.onnx.graph.onnx_helper import get_children_node_mapping
 from nncf.onnx.graph.onnx_helper import get_edge_dtype
 from nncf.onnx.graph.onnx_helper import get_edge_info_mapping
+from nncf.onnx.graph.onnx_helper import get_name_to_node_map
 from nncf.onnx.graph.onnx_helper import get_node_index
-from nncf.onnx.graph.onnx_helper import get_node_mapping
 from nncf.onnx.graph.onnx_helper import get_tensor
 from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
@@ -131,7 +131,7 @@ class ONNXModelTransformer(ModelTransformer):
         :return: New model with inserted outputs.
         """
         model_outputs = set(output.name for output in self._model.graph.output)
-        node_mapping = get_node_mapping(self._model)
+        node_mapping = get_name_to_node_map(self._model)
         for transformation in transformations:
             port_id = transformation.target_point.port_id
             node_name = transformation.target_point.target_node_name
@@ -313,7 +313,7 @@ class ONNXModelTransformer(ModelTransformer):
         :param children_node_mapping: Mapping from edge name to nodes which consume this edge as an input.
         :return: Updated model with inserted QuantizeLinear-DequantizeLinear pair.
         """
-        node_mapping = get_node_mapping(model)
+        node_mapping = get_name_to_node_map(model)
         target_edge_name = self._get_quantizer_dequantizer_edge_name(transformation, node_mapping)
         quantizer, dequantizer = self._get_quantize_dequantize_nodes(transformation, target_edge_name)
         onnx_scale_tensor, onnx_zero_point_tensor = ONNXModelTransformer._get_scale_zero_point_tensors(
@@ -363,7 +363,7 @@ class ONNXModelTransformer(ModelTransformer):
         :param transformations: Bias correction transformations.
         :return: Copy of original model with updated biases.
         """
-        node_mapping = get_node_mapping(model)
+        node_mapping = get_name_to_node_map(model)
         for transformation in transformations:
             bias_tensor_position = transformation.target_point.port_id
             node_name = transformation.target_point.target_node_name
@@ -383,7 +383,7 @@ class ONNXModelTransformer(ModelTransformer):
         :return: Extracted sub-model.
         """
         input_tensor_names = []
-        node_mapping = get_node_mapping(self._model)
+        node_mapping = get_name_to_node_map(self._model)
         for input_node_name in transformation.inputs:
             input_onnx_node = node_mapping[input_node_name]
             input_tensor_names.append(input_onnx_node.input[0])
@@ -409,7 +409,7 @@ class ONNXModelTransformer(ModelTransformer):
         :return: Model with removed nodes.
         """
         for transformation in transformations:
-            node_mapping = get_node_mapping(model)
+            node_mapping = get_name_to_node_map(model)
             children_node_mapping = get_children_node_mapping(model)
             node = node_mapping[transformation.target_point.target_node_name]
 

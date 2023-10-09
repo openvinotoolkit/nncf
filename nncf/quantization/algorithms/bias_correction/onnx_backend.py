@@ -22,7 +22,7 @@ from nncf.onnx.graph.model_utils import remove_fq_from_inputs
 from nncf.onnx.graph.node_utils import get_bias_value
 from nncf.onnx.graph.node_utils import is_any_weight_quantized
 from nncf.onnx.graph.node_utils import is_node_with_bias
-from nncf.onnx.graph.onnx_helper import get_node_mapping
+from nncf.onnx.graph.onnx_helper import get_name_to_node_map
 from nncf.onnx.graph.transformations.command_creation import create_bias_correction_command
 from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
@@ -101,12 +101,12 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @staticmethod
     def get_input_name(model: onnx.ModelProto, node_name: str) -> str:
-        node_mapping = get_node_mapping(model)
+        node_mapping = get_name_to_node_map(model)
         return node_mapping[node_name].input[0]
 
     @staticmethod
     def get_output_name(model: onnx.ModelProto, node_name: str, output_id: int) -> List[str]:
-        node_mapping = get_node_mapping(model)
+        node_mapping = get_name_to_node_map(model)
         return node_mapping[node_name].output[output_id]
 
     @staticmethod
