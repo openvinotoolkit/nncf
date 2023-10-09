@@ -10,14 +10,16 @@
 # limitations under the License.
 
 from enum import Enum
+from pathlib import Path
 
 import pytest
 
 from nncf.quantization.passes import remove_dropout_nodes_inplace
 from tests.post_training.test_templates.models import NNCFGraphDropoutRemovingCase
-from tests.torch.test_compressed_graph import check_graph
+from tests.shared.nx_graph import compare_nx_graph_with_reference
+from tests.shared.paths import TEST_ROOT
 
-REF_DIR = "passes/dropout_removed"
+DATA_ROOT = TEST_ROOT / "common" / "data" / "reference_graphs"
 
 
 class TestModes(Enum):
@@ -28,7 +30,7 @@ class TestModes(Enum):
 
 @pytest.mark.parametrize("mode", [TestModes.VALID, TestModes.WRONG_TENSOR_SHAPE, TestModes.WRONG_PARALLEL_EDGES])
 def test_remove_dropout_nodes_inplace(mode: TestModes):
-    dot_reference_path = "dropout_synthetic_model.dot"
+    dot_reference_path = Path("passes") / "dropout_synthetic_model.dot"
     dropout_metatype = "DROPOUT_METATYPE"
     kwargs = {}
     if mode != TestModes.VALID:
@@ -41,4 +43,7 @@ def test_remove_dropout_nodes_inplace(mode: TestModes):
         return
 
     remove_dropout_nodes_inplace(nncf_graph, [dropout_metatype])
-    check_graph(nncf_graph, dot_reference_path, REF_DIR)
+
+    nx_graph = nncf_graph.get_graph_for_structure_analysis()
+    path_to_dot = DATA_ROOT / dot_reference_path
+    compare_nx_graph_with_reference(nx_graph, path_to_dot, check_edge_attrs=True)
