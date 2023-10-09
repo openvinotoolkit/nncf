@@ -135,7 +135,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
         <div class="visually-hidden">Toggle table of contents sidebar</div>
         <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
       </label>
@@ -267,7 +267,7 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
             <div class="visually-hidden">Toggle table of contents sidebar</div>
             <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
           </label>
@@ -275,72 +275,6 @@
         <article role="main">
           <section id="module-nncf.experimental.tensor.functions">
 <span id="nncf-experimental-tensor-functions"></span><h1><a class="reference internal" href="#module-nncf.experimental.tensor.functions" title="nncf.experimental.tensor.functions"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.experimental.tensor.functions</span></code></a><a class="headerlink" href="#module-nncf.experimental.tensor.functions" title="Permalink to this heading">#</a></h1>
-<section id="functions">
-<h2>Functions<a class="headerlink" href="#functions" title="Permalink to this heading">#</a></h2>
-<div class="table-wrapper autosummary longtable docutils container">
-<table class="autosummary longtable docutils align-default">
-<tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">device</span></code>(a)</p></td>
-<td><p>Return the device of the tensor.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">squeeze</span></code>(a[, axis])</p></td>
-<td><p>Remove axes of length one from a.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">flatten</span></code>(a)</p></td>
-<td><p>Return a copy of the tensor collapsed into one dimension.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">max</span></code>(a[, axis])</p></td>
-<td><p>Return the maximum of an array or maximum along an axis.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">min</span></code>(a[, axis])</p></td>
-<td><p>Return the minimum of an array or minimum along an axis.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">abs</span></code>(a)</p></td>
-<td><p>Calculate the absolute value element-wise.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">astype</span></code>(a, data_type)</p></td>
-<td><p>Copy of the tensor, cast to a specified type.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">reshape</span></code>(a, shape)</p></td>
-<td><p>Gives a new shape to a tensor without changing its data.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">all</span></code>(a[, axis])</p></td>
-<td><p>Test whether all tensor elements along a given axis evaluate to True.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">allclose</span></code>(a, b[, rtol, atol, equal_nan])</p></td>
-<td><p>Returns True if two arrays are element-wise equal within a tolerance.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">any</span></code>(a[, axis])</p></td>
-<td><p>Test whether any tensor elements along a given axis evaluate to True.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">count_nonzero</span></code>(a[, axis])</p></td>
-<td><p>Counts the number of non-zero values in the tensor input.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">isempty</span></code>(a)</p></td>
-<td><p>Return True if input tensor is empty.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">isclose</span></code>(a, b[, rtol, atol, equal_nan])</p></td>
-<td><p>Returns a boolean array where two arrays are element-wise equal within a tolerance.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">maximum</span></code>(x1, x2)</p></td>
-<td><p>Element-wise maximum of tensor elements.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">minimum</span></code>(x1, x2)</p></td>
-<td><p>Element-wise minimum of tensor elements.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">ones_like</span></code>(a)</p></td>
-<td><p>Return a tensor of ones with the same shape and type as a given tensor.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">where</span></code>(condition, x, y)</p></td>
-<td><p>Return elements chosen from x or y depending on condition.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">zeros_like</span></code>(a)</p></td>
-<td><p>Return an tensor of zeros with the same shape and type as a given tensor.</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-</section>
 </section>
 
         </article>
@@ -367,27 +301,8 @@
         
       </footer>
     </div>
-    <aside class="toc-drawer">
+    <aside class="toc-drawer no-toc">
       
-      
-      <div class="toc-sticky toc-scroll">
-        <div class="toc-title-container">
-          <span class="toc-title">
-            On this page
-          </span>
-        </div>
-        <div class="toc-tree-container">
-          <div class="toc-tree">
-            <ul>
-<li><a class="reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.experimental.tensor.functions</span></code></a><ul>
-<li><a class="reference internal" href="#functions">Functions</a></li>
-</ul>
-</li>
-</ul>
-
-          </div>
-        </div>
-      </div>
       
       
     </aside>
