@@ -260,6 +260,16 @@ def merge_two_types_of_operations(first_op: Dict, second_op: Dict, label: str) -
     raise RuntimeError("Incorrect dicts of operations")
 
 
+class AlgorithmType(Enum):
+    """
+    Algorithm type, the pattern manager uses this parameter to
+    provide patterns, specific for the target algorithm type.
+    """
+
+    QUANTIZATION = "QUANTIZATION"
+    NAS = "NAS"
+
+
 @dataclass
 class PatternDesc:
     """
@@ -276,7 +286,8 @@ class PatternDesc:
 
     name: str
     devices: Optional[List[TargetDevice]] = None
-    model_types: Optional[List[TargetDevice]] = None
+    model_types: Optional[List[ModelType]] = None
+    ignored_algorithms: Optional[List[AlgorithmType]] = None
 
 
 class HWFusedPatternNames(Enum):
@@ -296,7 +307,7 @@ class HWFusedPatternNames(Enum):
     NORMALIZE_L2_MULTIPLY = PatternDesc("normalize_l2_multiply")
     SCALE_SHIFT = PatternDesc("scale_shift")
     SHIFT_SCALE = PatternDesc("shift_scale")
-    SE_BLOCK = PatternDesc("se_block")
+    SE_BLOCK = PatternDesc("se_block", ignored_algorithms=[AlgorithmType.NAS])
     SOFTMAX_DIV = PatternDesc("softmax_div")
 
     # ACTIVATIONS
