@@ -138,7 +138,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             else:
                 raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
 
-            # TODO (l-bat): Disable quantizer propogation through layout changing operations
+            # TODO (l-bat): Disable quantizer propagation through layout changing operations
             channel_axis = 1  # OpenVINO activations have channel first layout: [N, C, Z, Y, X]
             axes = get_channel_agnostic_reduction_axes([channel_axis], shape)
             return axes, use_abs_max

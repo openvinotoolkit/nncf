@@ -249,10 +249,10 @@ class OVModelTransformer(ModelTransformer):
             clip_data = np.clip(data, np.finfo(np.float16).min, np.finfo(np.float16).max)
             return clip_data.astype(np.float16)
 
-        input_low = _convert_to_fp16(fq_params.input_low)
-        input_high = _convert_to_fp16(fq_params.input_high)
-        output_low = _convert_to_fp16(fq_params.output_low)
-        output_high = _convert_to_fp16(fq_params.output_high)
+        input_low = _convert_to_fp16(fq_params.input_low.data)
+        input_high = _convert_to_fp16(fq_params.input_high.data)
+        output_low = _convert_to_fp16(fq_params.output_low.data)
+        output_high = _convert_to_fp16(fq_params.output_high.data)
         return input_low, input_high, output_low, output_high
 
     @staticmethod
@@ -266,10 +266,10 @@ class OVModelTransformer(ModelTransformer):
         :param name_to_node_mapping: Mapping from node name to node instance.
         """
         fq_params = transformation.quantizer_parameters
-        input_low = fq_params.input_low
-        input_high = fq_params.input_high
-        output_low = fq_params.output_low
-        output_high = fq_params.output_high
+        input_low = fq_params.input_low.data
+        input_high = fq_params.input_high.data
+        output_low = fq_params.output_low.data
+        output_high = fq_params.output_high.data
         levels = fq_params.levels
 
         node_name = transformation.target_point.target_node_name
