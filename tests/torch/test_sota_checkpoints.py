@@ -392,7 +392,15 @@ class TestSotaCheckpoints:
         config_folder = ov_config_dir or PROJECT_ROOT / "tests" / "torch" / "data" / "ac_configs"
         ir_model_path = self.get_ir_model_path(eval_run_param)
 
-        assert ir_model_path.exists(), f"{ir_model_path} does not exists"
+        if not ir_model_path.exists():
+            add_test_result(
+                ResultInfo(
+                    model_name=eval_run_param.model_name,
+                    backend="OV",
+                    status=f"{ir_model_path} does not exists",
+                )
+            )
+            pytest.fail(f"{ir_model_path} does not exists")
 
         ac_yml_path = config_folder / f"{eval_run_param.model_name}.yml"
 

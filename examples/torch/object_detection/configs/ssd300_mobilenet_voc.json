@@ -34,6 +34,6 @@
     "clip": false,
     "flip": true,
     "top_k": 200
-  }
+  },
+  "export_via_onnx": true
 }
-

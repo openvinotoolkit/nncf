@@ -44,5 +44,6 @@
       "filter_importance": "geometric_median"
     }
   }
-  ]
+  ],
+  "export_via_onnx": true
 }
