@@ -18,7 +18,9 @@ import onnx
 from nncf import Dataset
 from nncf.experimental.tensor import Tensor
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
-from nncf.onnx.graph.onnx_graph import ONNXGraph
+from nncf.onnx.graph.onnx_helper import get_edge_dtype
+from nncf.onnx.graph.onnx_helper import get_edge_info_mapping
+from nncf.onnx.graph.onnx_helper import get_edge_shape
 from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
@@ -62,15 +64,15 @@ def _get_input_keys(original_model: onnx.ModelProto) -> str:
 
 def get_random_dataset_for_test(model: onnx.ModelProto, has_batch_dim: bool, length: Optional[int] = 10):
     keys = _get_input_keys(model)
-    onnx_graph = ONNXGraph(model)
+    edge_info_mapping = get_edge_info_mapping(model)
 
     def transform_fn(i):
         output = {}
         for key in keys:
-            edge = onnx_graph.get_edge(key)
-            input_dtype = ONNXGraph.get_edge_dtype(edge)
+            edge = edge_info_mapping[key]
+            input_dtype = get_edge_dtype(edge)
             input_np_dtype = onnx.helper.tensor_dtype_to_np_dtype(input_dtype)
-            shape = ONNXGraph.get_edge_shape(edge)
+            shape = get_edge_shape(edge)
             rng = get_random_generator()
             tensor = rng.uniform(-1, 1, shape).astype(input_np_dtype)
             if has_batch_dim:
