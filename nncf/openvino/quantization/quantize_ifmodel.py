@@ -125,15 +125,9 @@ def _add_outputs_before_if_node(model_transformer: ModelTransformer, model: ov.M
     :param if_node: If node.
     :return: Model with extra outputs before If node.
     """
-    assert if_node.metatype == OVIfMetatype
     transformation_layout = TransformationLayout()
-    name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
-    ov_node = name_to_node_mapping[if_node.node_name]
-    port_ids = range(len(ov_node.inputs()))
-    for port_id in port_ids:
-        transformation_layout.register(
-            OVOutputInsertionCommand(OVTargetPoint(TargetType.PRE_LAYER_OPERATION, if_node.node_name, port_id))
-        )
+    for command in OVBackend.create_output_insertion_commands_if_node(model, if_node):
+        transformation_layout.register(command)
     return model_transformer.transform(transformation_layout)
 
 
@@ -289,13 +283,13 @@ class OVBackend:
         return OVExtractIfBodyCommand(if_node.node_name, if_body_condition)
 
     @staticmethod
-    def create_output_insertion_commands(model: ov.Model, if_node: NNCFNode) -> List[OVOutputInsertionCommand]:
+    def create_output_insertion_commands_if_node(model: ov.Model, if_node: NNCFNode) -> List[OVOutputInsertionCommand]:
         """
-        Returns output insertion commands on
+        Returns output insertion commands on If node inputs.
 
-        :param ov.Model model:
-        :param NNCFNode if_node:
-        :return List[OVOutputInsertionCommand]:
+        :param ov.Model model: Model.
+        :param NNCFNode if_node: If node.
+        :return: Transformation commands to insert outputs before If node.
         """
         assert if_node.metatype == OVIfMetatype
         commands = []
