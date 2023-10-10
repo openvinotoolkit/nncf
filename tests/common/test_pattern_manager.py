@@ -21,6 +21,9 @@ from nncf.parameters import TargetDevice
 TEST_DEVICE_PATTERN_REGISTRY = Registry("TEST_PATTERNS_REGISTRY")
 
 
+# pylint: disable=protected-access
+
+
 class DevicePatterns(Enum):
     CPU_PATTERN = PatternDesc("CPU_PATTERN", devices=[TargetDevice.CPU])
     GPU_PATTERN = PatternDesc("GPU_PATTERN", devices=[TargetDevice.GPU])
