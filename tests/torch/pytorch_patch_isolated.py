@@ -69,7 +69,7 @@ def test_jit_script_exception_preserves_patching_isolated():
 
     try:
         torch.jit.script(compressed_model)  # supposed to fail since torch.jit.script does not support NNCF models
-    except:  # pylint:disable=bare-except
+    except:  # pylint:disable=bare-except  # noqa: E722
         pass
 
     # torch.nn.Module.__call__ is one of the fundamental patched functions, if the code object points to NNCF code,

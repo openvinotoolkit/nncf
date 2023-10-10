@@ -166,7 +166,7 @@ class PTQuantizerInsertionCommand(PTTransformationCommand):
     def __init__(
         self,
         point: PTTargetPoint,
-        quantizer: "BaseQuantizer",
+        quantizer: "BaseQuantizer",  # noqa: F821
     ):
         super().__init__(TransformationType.INSERT, point)
         self.quantizer = quantizer

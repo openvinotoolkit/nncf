@@ -94,8 +94,8 @@ from nncf.torch.nncf_network import LoadStateListener
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.adjust_padding import AdjustPaddingArgs
 from nncf.torch.quantization.adjust_padding import CalculatePaddingAdjustment
-from nncf.torch.quantization.debug_interface import QuantizationDebugInterface
 from nncf.torch.quantization.base_ctrl import QuantizationControllerBase
+from nncf.torch.quantization.debug_interface import QuantizationDebugInterface
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.default_quantization import QUANTIZATION_LAYER_METATYPES
 from nncf.torch.quantization.external_quantizer import ExternalQuantizerCallHook
