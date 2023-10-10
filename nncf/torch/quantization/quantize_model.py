@@ -19,6 +19,7 @@ from nncf.config import NNCFConfig
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.data import Dataset
+from nncf.openvino.quantization.weight_compression import insert_pre_compression_operations
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -34,7 +35,6 @@ from nncf.torch.initialization import PTInitializingDataLoader
 from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.nested_objects_traversal import objwalk
 from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
-from nncf.torch.quantization.weights_compression import insert_pre_compression_operations
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import is_tensor
 
@@ -283,7 +283,6 @@ def compress_weights_impl(
         The value -1 means no grouping.
     :return: The non-trainable model with compressed weights and dequantization operations.
     """
-
     if mode != CompressWeightsMode.INT8:
         raise AttributeError(f"Torch backend supports only INT8 mode for weight compression, but given {mode} mode")
     compressed_model, _ = replace_modules_by_nncf_modules(model)

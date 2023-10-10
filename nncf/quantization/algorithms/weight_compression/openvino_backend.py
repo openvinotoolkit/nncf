@@ -9,25 +9,134 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import math
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, Type, TypeVar, Union
+from typing import List, Optional, Tuple, TypeVar, Union
 
 import numpy as np
 import openvino.runtime as ov
 from openvino.runtime import opset9 as opset
 
+from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.statistics import _proportion_str
+from nncf.common.utils.backend import BackendType
 from nncf.common.utils.helpers import create_table
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVEmbeddingMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
-from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
-from nncf.openvino.graph.metatypes.openvino_metatypes import get_operation_const_op
+from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_const_value
-from nncf.openvino.graph.node_utils import get_matmul_channel_axes
+from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.parameters import CompressWeightsMode
+from nncf.quantization.algorithms.weight_compression.backend import ALGO_BACKENDS
+from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
+from nncf.scopes import IgnoredScope
+
+
+@ALGO_BACKENDS.register(BackendType.OPENVINO)
+class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
+    @property
+    def weighted_metatypes(self) -> List[OperatorMetatype]:
+        return [OVMatMulMetatype, OVEmbeddingMetatype]
+
+    @staticmethod
+    def is_node_with_weights(node: NNCFNode) -> bool:
+        return node.layer_attributes and node.layer_attributes.constant_attributes
+
+    @staticmethod
+    def validate_params(mode: CompressWeightsMode, ignored_scope: Optional[IgnoredScope] = None) -> None:
+        pass
+
+    @staticmethod
+    def do_compression(
+        model: ov.Model,
+        nodes_to_compress: List[NNCFNode],
+        mode: CompressWeightsMode,
+        ratio: float = None,
+        group_size: int = None,
+    ) -> ov.Model:
+        """
+        Compresses weights of Linear and Embedding layers to 8-bit integer or to nf4
+        depending on mode, ratio and group size.
+
+        :param model: The OpenVINO model for applying weight compression.
+        :param nodes_to_compress: List of nodes in the model's graph,
+            corresponding to the layers for weight compression.
+        :param mode: Defines a mode for weight compression.
+            INT8 stands for 8-bit integer quantization of all weights.
+            NF4 stands for a mixed-precision weights quantization to NF4 data type. The first and last layers
+            are always compressed to a backup precision which is 8-bit integer by default. All others are quantized
+            whether to NF4 or to a backup precision depending on criteria and the given ratio.
+        :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
+            and the rest to INT8).
+        :param group_size: number of weights (e.g. 128) in the channel dimension that share
+            quantization parameters (scale). The value -1 means no grouping.
+        """
+        all_weight_params: List[WeightNodeParams] = []
+        quantized_nodes_ids = set()
+
+        friendly_name_to_op_map = {op.get_friendly_name(): op for op in model.get_ops()}
+
+        for nncf_node in nodes_to_compress:
+            weight_port_ids = nncf_node.layer_attributes.get_const_port_ids()
+            for weight_port_id in weight_port_ids:
+                weight_op_friendly_name = nncf_node.layer_attributes.constant_attributes[weight_port_id]["name"]
+                weight_node = friendly_name_to_op_map[weight_op_friendly_name]
+                if weight_node is None:
+                    continue
+                if id(weight_node) in quantized_nodes_ids:
+                    continue
+                weight_output = weight_node.output(0)
+
+                original_weight_dtype = weight_output.get_element_type().to_dtype()
+                if original_weight_dtype not in [np.float32, np.float16, np.float64]:
+                    continue
+                const_shape = nncf_node.layer_attributes.constant_attributes[weight_port_id]["shape"]
+                channel_axes = get_weight_channel_axes(nncf_node, weight_port_id)
+                axes = get_channel_agnostic_reduction_axes(channel_axes, const_shape)
+                fq_name = f"{weight_op_friendly_name}/fq_weights_{weight_port_id}"
+                num_weights = math.prod(const_shape)
+                weight_params = WeightNodeParams(axes, num_weights, fq_name, weight_node, original_weight_dtype)
+                all_weight_params.append(weight_params)
+                quantized_nodes_ids.add(id(weight_node))
+
+        if mode == CompressWeightsMode.NF4:
+            _assign_mixed_precision(all_weight_params, ratio, group_size)
+
+        for wp in all_weight_params:
+            weight_node = wp.weight_node
+            original_weight_dtype = wp.original_weight_dtype
+
+            weight_output = weight_node.output(0)
+            weight_name = weight_node.get_friendly_name()
+            target_inputs = weight_output.get_target_inputs()
+
+            weight = get_const_value(weight_node)
+            config = wp.compression_config
+
+            if config.is_nf4:
+                original_shape = weight.shape
+                norm_weight, scale = _get_norm_weight_and_nf4_scale(weight, wp.reduction_axes, group_size)
+                compressed_const = opset.constant(norm_weight, dtype=ov.Type.nf4, name=weight_name)
+                convert = opset.convert(compressed_const, original_weight_dtype)
+                mul = opset.multiply(convert, scale.astype(original_weight_dtype), name=wp.fq_name)
+                if config.group_size != -1:
+                    mul = opset.reshape(mul, output_shape=original_shape, special_zero=False)
+                last_output = mul.output(0)
+            else:
+                compressed_weights, scale, zero_point = _int8_compress(weight, wp.reduction_axes)
+                compressed_const = opset.constant(compressed_weights, dtype=np.uint8, name=weight_name)
+                convert = opset.convert(compressed_const, original_weight_dtype)
+                sub = opset.subtract(convert, zero_point.astype(original_weight_dtype))
+                mul = opset.multiply(sub, scale.astype(original_weight_dtype), name=wp.fq_name)
+                last_output = mul.output(0)
+
+            for target_input in target_inputs:
+                target_input.replace_source_output(last_output)
+        return model
+
 
 TWeightType = TypeVar("TWeightType")
 
@@ -52,26 +161,7 @@ NF4_QUANTILES = np.array(
     ]
 )
 
-
-CENTER_OF_NF4_QUANTILES = np.array(
-    [
-        -0.8480964004993439,
-        -0.6106329262256622,
-        -0.4599952697753906,
-        -0.33967943489551544,
-        -0.23460740596055984,
-        -0.13791173323988914,
-        -0.045525018125772476,
-        0.03979014977812767,
-        0.1202552504837513,
-        0.2035212516784668,
-        0.2920137718319893,
-        0.3893125355243683,
-        0.5016634166240692,
-        0.6427869200706482,
-        0.8614784181118011,
-    ]
-)
+CENTER_OF_NF4_QUANTILES = (NF4_QUANTILES[1:] + NF4_QUANTILES[:-1]) / 2
 
 
 @dataclass
@@ -322,110 +412,3 @@ def _assign_mixed_precision(all_weight_params: List[WeightNodeParams], ratio: fl
         for weight_param in all_weight_params[1:-1]:
             weight_param.compression_config = nf4_config
     nncf_logger.info(_get_bitwidth_distribution_str(all_weight_params))
-
-
-def insert_pre_compression_operations(
-    model: ov.Model,
-    mode: CompressWeightsMode,
-    ratio: float,
-    group_size: int,
-) -> None:
-    """
-    Compress weights of Linear and Embedding layers to 8-bit integer or to nf4 depending on mode, ratio and group size.
-
-    :param model: The model to be transformed.
-    :param mode: Defines a mode for weight compression.
-        INT8 stands for 8-bit integer quantization of all weights.
-        NF4 stands for a mixed-precision weights quantization to NF4 data type. The first and last layers
-        are always compressed to a backup precision which is 8-bit integer by default. All others are quantized whether
-        to NF4 or to a backup precision depending on criteria and the given ratio.
-    :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
-        and the rest to INT8).
-    :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
-        The value -1 means no grouping.
-    """
-    allowed_metatypes_to_const_port = {OVEmbeddingMetatype: [0], OVMatMulMetatype: [0, 1]}
-
-    all_weight_params: List[WeightNodeParams] = []
-    quantized_nodes_ids = set()
-    for node in model.get_ordered_ops():
-        metatype = get_node_metatype(node)
-        if metatype not in allowed_metatypes_to_const_port:
-            continue
-
-        for const_port_id in allowed_metatypes_to_const_port[metatype]:
-            weight_node = get_operation_const_op(node, const_port_id)
-            if weight_node is None:
-                continue
-            if id(weight_node) in quantized_nodes_ids:
-                continue
-            weight_output = weight_node.output(0)
-            weight_name = weight_node.get_friendly_name()
-            target_inputs = weight_output.get_target_inputs()
-
-            original_weight_dtype = weight_output.get_element_type().to_dtype()
-            if original_weight_dtype not in [np.float32, np.float16, np.float64]:
-                continue
-            axes = _get_reduction_axes(metatype, node, const_port_id)
-            fq_name = f"{node.get_friendly_name()}/fq_weights_{const_port_id}"
-            weight = get_const_value(weight_node)
-            num_weights = weight.size
-            weight_params = WeightNodeParams(axes, num_weights, fq_name, weight_node, original_weight_dtype)
-            all_weight_params.append(weight_params)
-            quantized_nodes_ids.add(id(weight_node))
-
-    if mode == CompressWeightsMode.NF4:
-        _assign_mixed_precision(all_weight_params, ratio, group_size)
-
-    for wp in all_weight_params:
-        weight_node = wp.weight_node
-        original_weight_dtype = wp.original_weight_dtype
-
-        weight_output = weight_node.output(0)
-        weight_name = weight_node.get_friendly_name()
-        target_inputs = weight_output.get_target_inputs()
-
-        weight = get_const_value(weight_node)
-        config = wp.compression_config
-
-        if config.is_nf4:
-            original_shape = weight.shape
-            norm_weight, scale = _get_norm_weight_and_nf4_scale(weight, wp.reduction_axes, group_size)
-            compressed_const = opset.constant(norm_weight, dtype=ov.Type.nf4, name=weight_name)
-            convert = opset.convert(compressed_const, original_weight_dtype)
-            mul = opset.multiply(convert, scale.astype(original_weight_dtype), name=wp.fq_name)
-            if config.group_size != -1:
-                mul = opset.reshape(mul, output_shape=original_shape, special_zero=False)
-            last_output = mul.output(0)
-        else:
-            compressed_weights, scale, zero_point = _int8_compress(weight, wp.reduction_axes)
-            compressed_const = opset.constant(compressed_weights, dtype=np.uint8, name=weight_name)
-            convert = opset.convert(compressed_const, original_weight_dtype)
-            sub = opset.subtract(convert, zero_point.astype(original_weight_dtype))
-            mul = opset.multiply(sub, scale.astype(original_weight_dtype), name=wp.fq_name)
-            last_output = mul.output(0)
-
-        for target_input in target_inputs:
-            target_input.replace_source_output(last_output)
-
-
-def _get_reduction_axes(metatype: Type[OperatorMetatype], node: ov.Node, weight_port_id: int) -> Union[int, Tuple[int]]:
-    """
-    Determines reduction axes by given metatype and node information.
-
-    :param metatype: The metatype of the operator.
-    :param node: The OpenVINO node.
-    :param weight_port_id: The weight port ID.
-
-    :return: The reduction axes as an integer or a tuple of integers.
-    """
-    if metatype is OVMatMulMetatype:
-        transpose = node.get_attributes()[f"transpose_{'a' if weight_port_id == 0 else 'b'}"]
-        ndims = node.input(weight_port_id).get_partial_shape().rank.get_max_length()
-        channel_axes = get_matmul_channel_axes(weight_port_id, ndims, transpose)
-        axes = tuple(i for i in range(ndims) if i not in channel_axes)
-    elif metatype is OVEmbeddingMetatype:
-        axes = (metatype.const_channel_axis[0] + 1) % 2
-    else:
-        RuntimeError("Unsupported metatype to find reduction axes.")
-    return axes
