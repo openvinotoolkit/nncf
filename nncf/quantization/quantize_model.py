@@ -12,6 +12,7 @@
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 from nncf.api.compression import TModel
+from nncf.common.factory import NNCFGraphFactory
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
@@ -27,6 +28,7 @@ from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResult
 from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
 from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_quantization_param_grid
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.scopes import IgnoredScope
 
 TTensor = TypeVar("TTensor")
@@ -228,7 +230,10 @@ def quantize_with_accuracy_control(
 
 @api(canonical_alias="nncf.compress_weights")
 def compress_weights(
-    model: TModel, mode=CompressWeightsMode.INT8, ratio: Optional[float] = None, group_size: Optional[int] = None
+    model: TModel,
+    mode=CompressWeightsMode.INT8,
+    ratio: Optional[float] = None,
+    group_size: Optional[int] = None,
 ) -> TModel:
     """
     Compress model weights.
@@ -245,7 +250,6 @@ def compress_weights(
         The value -1 means no grouping.
     :return: The non-trainable model with compressed weights.
     """
-    backend = get_backend(model)
     if mode == CompressWeightsMode.INT8:
         if ratio is None:
             ratio = 1
@@ -262,16 +266,15 @@ def compress_weights(
         if group_size is None:
             group_size = 128
 
+    backend = get_backend(model)
     if backend == BackendType.TORCH:
         from nncf.torch.quantization.quantize_model import compress_weights_impl
 
         return compress_weights_impl(model, mode, ratio, group_size)
-    if backend == BackendType.OPENVINO:
-        from nncf.openvino.quantization.quantize_model import compress_weights_impl
 
-        return compress_weights_impl(model, mode, ratio, group_size)
-
-    raise RuntimeError(f"Unsupported type of backend: {backend}")
+    compression_algorithm = WeightCompression(mode, ratio, group_size)
+    graph = NNCFGraphFactory.create(model)
+    return compression_algorithm.apply(model, graph)
 
 
 def quantize_with_tune_hyperparams(

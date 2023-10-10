@@ -19,10 +19,10 @@ from attr import dataclass
 
 from nncf import CompressWeightsMode
 from nncf.openvino.graph.node_utils import get_const_value
-from nncf.openvino.quantization.weights_compression import _calculate_scale_per_group
-from nncf.openvino.quantization.weights_compression import _get_int8_err
-from nncf.openvino.quantization.weights_compression import _get_nf4_error
 from nncf.quantization import compress_weights
+from nncf.quantization.algorithms.weight_compression.openvino_backend import _calculate_scale_per_group
+from nncf.quantization.algorithms.weight_compression.openvino_backend import _get_int8_err
+from nncf.quantization.algorithms.weight_compression.openvino_backend import _get_nf4_error
 from tests.openvino.native.models import IntegerModel
 from tests.openvino.native.models import SequentialMatmulModel
 from tests.openvino.native.models import WeightsModel
@@ -345,10 +345,10 @@ def test_raise_error_with_incorrect_group_size():
 
 
 def test_raise_error_with_int8_and_non_default_ratio(mocker):
-    with pytest.raises(RuntimeError):
+    with pytest.raises(AttributeError):
         compress_weights(mocker.Mock(), mode=CompressWeightsMode.INT8, ratio=0.5)
 
 
 def test_raise_error_with_int8_and_non_default_group_size(mocker):
-    with pytest.raises(RuntimeError):
+    with pytest.raises(AttributeError):
         compress_weights(mocker.Mock(), mode=CompressWeightsMode.INT8, group_size=64)
