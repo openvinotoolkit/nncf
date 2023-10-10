@@ -23,6 +23,7 @@ from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.registry import Registry
+from nncf.experimental.tensor import Tensor
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -31,13 +32,6 @@ ALGO_BACKENDS = Registry("algo_backends")
 
 
 class FastBiasCorrectionAlgoBackend(ABC):
-    @property
-    @abstractmethod
-    def tensor_processor(self):
-        """
-        Returns backend-specific instance of the NNCFCollectorTensorProcessor.
-        """
-
     @staticmethod
     @abstractmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:
@@ -120,7 +114,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: TModel) -> np.ndarray:
+    def get_bias_value(node: NNCFNode, nncf_graph: NNCFGraph, model: TModel) -> Tensor:
         """
         Returns bias value in the NumPy format of provided node.
 
@@ -156,7 +150,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def process_model_output(raw_data: OutputType, output_name: str) -> NNCFTensor:
+    def process_model_output(raw_data: OutputType, output_name: str) -> Tensor:
         """
         Returns backend-specific processed output from the model.
 
@@ -174,37 +168,6 @@ class FastBiasCorrectionAlgoBackend(ABC):
         :param node: NNCFNode with the attributes.
         :param nncf_graph: NNCFGraph that contains node.
         :return: Boolean indicating whether the node has a bias or not.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def get_bias_shift_magnitude(current_bias_value: TTensor, updated_bias_value: TTensor) -> float:
-        """
-        Calculates bias shift magnitude based on the current and updated values.
-
-        :param current_bias_value: The original bias value.
-        :param updated_bias_value: The updated bias value.
-        :return: Magnitude between original and updated bias values.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def post_process_output_data(data: List[TTensor]) -> TTensor:
-        """
-        Convert data to backend specific type.
-
-        :param data: List of data.
-        :return: Converted data.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def reshape_tensor(data: TTensor, new_shape: List[int]) -> TTensor:
-        """
-        Reshape tensor.
-
-        :param data: Tensor.
-        :param new_shape: New shape.
         """
 
     @staticmethod

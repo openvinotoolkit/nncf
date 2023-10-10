@@ -19,6 +19,7 @@ from nncf.config import NNCFConfig
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.data import Dataset
+from nncf.parameters import CompressWeightsMode
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -260,10 +261,31 @@ def quantize_impl(
     return compressed_model
 
 
-def compress_weights_impl(model: torch.nn.Module) -> torch.nn.Module:
+def compress_weights_impl(
+    model: torch.nn.Module,
+    mode=CompressWeightsMode.INT8,
+    ratio: Optional[float] = None,
+    group_size: Optional[int] = None,
+) -> torch.nn.Module:
     """
-    Implementation of the `compress_weights()` method for the PyTorch backend.
+    Implementation of the `compress_weights()` method for the PyTorch backend. Currently it supports INT8
+    mode only with default ratio and group_size.
+
+    :param model: a Torch model for compression.
+    :param mode: Defines a mode for weight compression.
+        INT8 stands for 8-bit integer quantization of all weights.
+        NF4 stands for a mixed-precision weights quantization to NF4 data type. The first and last layers
+        are always compressed to a backup precision which is 8-bit integer by default. All others are quantized whether
+        to NF4 or to a backup precision depending on criteria and the given ratio.
+    :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
+        and the rest to INT8).
+    :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
+        The value -1 means no grouping.
+    :return: The non-trainable model with compressed weights and dequantization operations.
     """
+
+    if mode != CompressWeightsMode.INT8:
+        raise AttributeError(f"Torch backend supports only INT8 mode for weight compression, but given {mode} mode")
     compressed_model, _ = replace_modules_by_nncf_modules(model)
     insert_pre_compression_operations(model)
 

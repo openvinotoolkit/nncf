@@ -16,6 +16,7 @@ import numpy as np
 import onnx
 
 from nncf import Dataset
+from nncf.experimental.tensor import Tensor
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.onnx_helper import get_edge_dtype
 from nncf.onnx.graph.onnx_helper import get_edge_info_mapping
@@ -34,10 +35,18 @@ REFERENCE_GRAPHS_TEST_ROOT = "data/reference_graphs/quantization"
 
 
 def mock_collect_statistics(mocker):
-    get_statistics_value = ONNXMinMaxTensorStatistic(min_values=-1, max_values=1)
+    get_statistics_value = ONNXMinMaxTensorStatistic(
+        min_values=np.array(-1, dtype=np.float32), max_values=np.array(1, dtype=np.float32)
+    )
     _ = mocker.patch(
         "nncf.quantization.fake_quantize.calculate_quantizer_parameters",
-        return_value=FakeQuantizeParameters(np.array(0), np.array(0), np.array(0), np.array(0), 256),
+        return_value=FakeQuantizeParameters(
+            Tensor(np.array(0, dtype=np.float32)),
+            Tensor(np.array(0, dtype=np.float32)),
+            Tensor(np.array(0, dtype=np.float32)),
+            Tensor(np.array(0, dtype=np.float32)),
+            256,
+        ),
     )
     _ = mocker.patch(
         "nncf.common.tensor_statistics.aggregator.StatisticsAggregator.collect_statistics", return_value=None

@@ -25,6 +25,8 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.experimental.tensor import Tensor
+from nncf.experimental.tensor import functions as fn
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
@@ -54,10 +56,10 @@ class CaseSymParams:
 SYM_CASES = (
     CaseSymParams(
         fq_params=FakeQuantizeParameters(
-            np.array(-0.49920455, dtype=np.float32),
-            np.array(0.49530452, dtype=np.float32),
-            np.array(-0.49920455, dtype=np.float32),
-            np.array(0.49530452, dtype=np.float32),
+            Tensor(torch.tensor(-0.49920455, dtype=torch.float32)),
+            Tensor(torch.tensor(0.49530452, dtype=torch.float32)),
+            Tensor(torch.tensor(-0.49920455, dtype=torch.float32)),
+            Tensor(torch.tensor(0.49530452, dtype=torch.float32)),
             256,
         ),
         per_channel=False,
@@ -66,10 +68,10 @@ SYM_CASES = (
     ),
     CaseSymParams(
         fq_params=FakeQuantizeParameters(
-            np.array(-0.49530452, dtype=np.float32),
-            np.array(0.49530452, dtype=np.float32),
-            np.array(-0.49530452, dtype=np.float32),
-            np.array(0.49530452, dtype=np.float32),
+            Tensor(torch.tensor(-0.49530452, dtype=torch.float32)),
+            Tensor(torch.tensor(0.49530452, dtype=torch.float32)),
+            Tensor(torch.tensor(-0.49530452, dtype=torch.float32)),
+            Tensor(torch.tensor(0.49530452, dtype=torch.float32)),
             255,
         ),
         per_channel=False,
@@ -78,33 +80,33 @@ SYM_CASES = (
     ),
     CaseSymParams(
         fq_params=FakeQuantizeParameters(
-            np.array([-0.4835594, -0.49530452, -0.49221927], dtype=np.float32).reshape(1, 3, 1, 1),
-            np.array([0.4797816, 0.49920455, 0.48837382], dtype=np.float32).reshape(1, 3, 1, 1),
-            np.array([-0.4835594, -0.49530452, -0.49221927], dtype=np.float32).reshape(1, 3, 1, 1),
-            np.array([0.4797816, 0.49920455, 0.48837382], dtype=np.float32).reshape(1, 3, 1, 1),
+            Tensor(torch.tensor([-0.4835594, -0.49530452, -0.49221927], dtype=torch.float32).reshape(1, 3, 1, 1)),
+            Tensor(torch.tensor([0.4797816, 0.49920455, 0.48837382], dtype=torch.float32).reshape(1, 3, 1, 1)),
+            Tensor(torch.tensor([-0.4835594, -0.49530452, -0.49221927], dtype=torch.float32).reshape(1, 3, 1, 1)),
+            Tensor(torch.tensor([0.4797816, 0.49920455, 0.48837382], dtype=torch.float32).reshape(1, 3, 1, 1)),
             256,
         ),
         per_channel=True,
         quant_group=QuantizerGroup.ACTIVATIONS,
-        ref_scale=np.array([0.4797816, 0.49920455, 0.48837382]).reshape(1, 3, 1, 1),
+        ref_scale=torch.tensor([0.4797816, 0.49920455, 0.48837382]).reshape(1, 3, 1, 1),
     ),
     CaseSymParams(
         fq_params=FakeQuantizeParameters(
-            np.array([-0.48837382, -0.49530452], dtype=np.float32).reshape(2, 1, 1, 1),
-            np.array([0.48837382, 0.49530452], dtype=np.float32).reshape(2, 1, 1, 1),
-            np.array([-0.48837382, -0.49530452], dtype=np.float32).reshape(2, 1, 1, 1),
-            np.array([0.48837382, 0.49530452], dtype=np.float32).reshape(2, 1, 1, 1),
+            Tensor(torch.tensor([-0.48837382, -0.49530452], dtype=torch.float32).reshape(2, 1, 1, 1)),
+            Tensor(torch.tensor([0.48837382, 0.49530452], dtype=torch.float32).reshape(2, 1, 1, 1)),
+            Tensor(torch.tensor([-0.48837382, -0.49530452], dtype=torch.float32).reshape(2, 1, 1, 1)),
+            Tensor(torch.tensor([0.48837382, 0.49530452], dtype=torch.float32).reshape(2, 1, 1, 1)),
             255,
         ),
         per_channel=True,
         quant_group=QuantizerGroup.WEIGHTS,
-        ref_scale=np.array([0.48837382, 0.49530452]).reshape(2, 1, 1, 1),
+        ref_scale=torch.tensor([0.48837382, 0.49530452]).reshape(2, 1, 1, 1),
     ),
 )
 
 
 @pytest.mark.parametrize("case_to_test", SYM_CASES)
-def test_quantizer_params_sym(case_to_test):
+def test_quantizer_params_sym(case_to_test: CaseSymParams):
     per_ch = case_to_test.per_channel
     fq_params = case_to_test.fq_params
     quant_group = case_to_test.quant_group
@@ -140,10 +142,10 @@ class CaseAsymParams:
 ASYM_CASES = (
     CaseAsymParams(
         fq_params=FakeQuantizeParameters(
-            np.array(-0.49530452, dtype=np.float32),
-            np.array(0.49143496, dtype=np.float32),
-            np.array(-0.49530452, dtype=np.float32),
-            np.array(0.49143496, dtype=np.float32),
+            Tensor(torch.tensor(-0.49530452, dtype=torch.float32)),
+            Tensor(torch.tensor(0.49143496, dtype=torch.float32)),
+            Tensor(torch.tensor(-0.49530452, dtype=torch.float32)),
+            Tensor(torch.tensor(0.49143496, dtype=torch.float32)),
             256,
         ),
         per_channel=False,
@@ -153,10 +155,10 @@ ASYM_CASES = (
     ),
     CaseAsymParams(
         fq_params=FakeQuantizeParameters(
-            np.array(-0.49530452, dtype=np.float32),
-            np.array(0.49143496, dtype=np.float32),
-            np.array(-0.49530452, dtype=np.float32),
-            np.array(0.49143496, dtype=np.float32),
+            Tensor(torch.tensor(-0.49530452, dtype=torch.float32)),
+            Tensor(torch.tensor(0.49143496, dtype=torch.float32)),
+            Tensor(torch.tensor(-0.49530452, dtype=torch.float32)),
+            Tensor(torch.tensor(0.49143496, dtype=torch.float32)),
             256,
         ),
         per_channel=False,
@@ -166,35 +168,35 @@ ASYM_CASES = (
     ),
     CaseAsymParams(
         fq_params=FakeQuantizeParameters(
-            np.array([-0.48051512, -0.49776307, -0.44099426], dtype=np.float32).reshape(1, 3, 1, 1),
-            np.array([0.4767611, 0.47861832, 0.48837382], dtype=np.float32).reshape(1, 3, 1, 1),
-            np.array([-0.48051512, -0.49776307, -0.44099426], dtype=np.float32).reshape(1, 3, 1, 1),
-            np.array([0.4767611, 0.47861832, 0.48837382], dtype=np.float32).reshape(1, 3, 1, 1),
+            Tensor(torch.tensor([-0.48051512, -0.49776307, -0.44099426], dtype=torch.float32).reshape(1, 3, 1, 1)),
+            Tensor(torch.tensor([0.4767611, 0.47861832, 0.48837382], dtype=torch.float32).reshape(1, 3, 1, 1)),
+            Tensor(torch.tensor([-0.48051512, -0.49776307, -0.44099426], dtype=torch.float32).reshape(1, 3, 1, 1)),
+            Tensor(torch.tensor([0.4767611, 0.47861832, 0.48837382], dtype=torch.float32).reshape(1, 3, 1, 1)),
             256,
         ),
         per_channel=True,
         quant_group=QuantizerGroup.ACTIVATIONS,
-        ref_inp_low=np.array([-0.48051512, -0.49776307, -0.44099426]).reshape(1, 3, 1, 1),
-        ref_inp_range=np.array([0.9572762, 0.9763814, 0.9293681]).reshape(1, 3, 1, 1),
+        ref_inp_low=torch.tensor([-0.48051512, -0.49776307, -0.44099426]).reshape(1, 3, 1, 1),
+        ref_inp_range=torch.tensor([0.9572762, 0.9763814, 0.9293681]).reshape(1, 3, 1, 1),
     ),
     CaseAsymParams(
         fq_params=FakeQuantizeParameters(
-            np.array([-0.4845584, -0.49583155], dtype=np.float32).reshape(2, 1, 1, 1),
-            np.array([0.48837382, 0.4767611], dtype=np.float32).reshape(2, 1, 1, 1),
-            np.array([-0.4845584, -0.49583155], dtype=np.float32).reshape(2, 1, 1, 1),
-            np.array([0.48837382, 0.4767611], dtype=np.float32).reshape(2, 1, 1, 1),
+            Tensor(torch.tensor([-0.4845584, -0.49583155], dtype=torch.float32).reshape(2, 1, 1, 1)),
+            Tensor(torch.tensor([0.48837382, 0.4767611], dtype=torch.float32).reshape(2, 1, 1, 1)),
+            Tensor(torch.tensor([-0.4845584, -0.49583155], dtype=torch.float32).reshape(2, 1, 1, 1)),
+            Tensor(torch.tensor([0.48837382, 0.4767611], dtype=torch.float32).reshape(2, 1, 1, 1)),
             256,
         ),
         per_channel=True,
         quant_group=QuantizerGroup.WEIGHTS,
-        ref_inp_low=np.array([-0.4845584, -0.49583155]).reshape(2, 1, 1, 1),
-        ref_inp_range=np.array([0.97293222, 0.97259265]).reshape(2, 1, 1, 1),
+        ref_inp_low=torch.tensor([-0.4845584, -0.49583155]).reshape(2, 1, 1, 1),
+        ref_inp_range=torch.tensor([0.97293222, 0.97259265]).reshape(2, 1, 1, 1),
     ),
 )
 
 
 @pytest.mark.parametrize("case_to_test", ASYM_CASES)
-def test_quantizer_params_asym(case_to_test):
+def test_quantizer_params_asym(case_to_test: CaseSymParams):
     per_ch = case_to_test.per_channel
     fq_params = case_to_test.fq_params
     quant_group = case_to_test.quant_group
@@ -212,8 +214,8 @@ def test_quantizer_params_asym(case_to_test):
     )
     quantizer = PTMinMaxAlgoBackend._create_quantizer(qconfig, scale_shape, fq_params, target_type)
     assert quantizer.levels == fq_params.levels
-    assert np.allclose(quantizer.input_low.detach().numpy(), case_to_test.ref_inp_low)
-    assert np.allclose(quantizer.input_range.detach().numpy(), case_to_test.ref_inp_range)
+    assert fn.allclose(quantizer.input_low.data, case_to_test.ref_inp_low)
+    assert fn.allclose(quantizer.input_range.data, case_to_test.ref_inp_range)
 
 
 class LinearTestModel(nn.Module):
@@ -270,10 +272,7 @@ def calculate_statistics(data, mode, qgroup, half_range=False):
     else:
         max_values = np.amax(data, axes)
 
-    statistics = PTMinMaxTensorStatistic(
-        min_values=torch.from_numpy(np.array(min_values)),
-        max_values=torch.from_numpy(np.array(max_values)),
-    )
+    statistics = PTMinMaxTensorStatistic(min_values=torch.tensor(min_values), max_values=torch.tensor(max_values))
     signedness_to_force = True if qgroup == QuantizerGroup.WEIGHTS else None
     qconfig = QuantizerConfig(num_bits=8, mode=mode, per_channel=per_ch, signedness_to_force=signedness_to_force)
     narrow_range = get_quantizer_narrow_range(qconfig, qgroup)
@@ -346,8 +345,8 @@ def test_quantizer_parameters_export(tmp_path: Path):
 
     for name, param in fq_params.items():
         assert name in torch_ptq_params
-        assert np.allclose(param["input_low"], torch_ptq_params[name]["input_low"])
-        assert np.allclose(param["input_high"], torch_ptq_params[name]["input_high"])
+        assert fn.allclose(param["input_low"], torch_ptq_params[name]["input_low"])
+        assert fn.allclose(param["input_high"], torch_ptq_params[name]["input_high"])
 
 
 class TestFQParams(TemplateTestFQParams):

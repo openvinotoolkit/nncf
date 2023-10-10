@@ -620,6 +620,12 @@ class ONNXDeformableConvolutionMetatype(ONNXOpMetatype):
     op_names = ["DeformConv"]
 
 
+@ONNX_OPERATION_METATYPES.register()
+class ONNXErfMetatype(ONNXOpMetatype):
+    name = "ErfOp"
+    op_names = ["Erf"]
+
+
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     """
     Returns a list of the operator metatypes.

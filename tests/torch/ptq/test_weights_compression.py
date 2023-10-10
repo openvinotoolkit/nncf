@@ -9,8 +9,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
 import torch
 
+from nncf import CompressWeightsMode
 from nncf.quantization import compress_weights
 
 
@@ -70,3 +72,18 @@ def test_compress_shared_weights():
 
     for key, val in compressed_model.wte.pre_ops.items():
         assert compressed_model.lm_head.get_pre_op(key) is val
+
+
+def test_raise_error_with_int8_and_non_default_ratio(mocker):
+    with pytest.raises(RuntimeError):
+        compress_weights(mocker.Mock(), mode=CompressWeightsMode.INT8, ratio=0.5)
+
+
+def test_raise_error_with_int8_and_non_default_group_size(mocker):
+    with pytest.raises(RuntimeError):
+        compress_weights(mocker.Mock(), mode=CompressWeightsMode.INT8, group_size=64)
+
+
+def test_raise_error_with_nf4(mocker):
+    with pytest.raises(RuntimeError):
+        compress_weights(mocker.Mock(), mode=CompressWeightsMode.NF4)
