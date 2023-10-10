@@ -28,6 +28,7 @@ from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.common import dump_model
 from tests.openvino.native.common import get_dataset_for_test
+from tests.openvino.native.common import get_openvino_version
 from tests.openvino.native.models import SYNTHETIC_MODELS
 from tests.openvino.native.models import DepthwiseConv3DModel
 from tests.openvino.native.models import DepthwiseConv4DModel
@@ -39,7 +40,8 @@ from tests.openvino.native.quantization.test_fq_params_calculation import quanti
 from tests.openvino.omz_helpers import convert_model
 from tests.openvino.omz_helpers import download_model
 
-QUANTIZED_REF_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / "data" / "reference_graphs" / "quantized"
+OV_VERSION = get_openvino_version()
+QUANTIZED_REF_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / "data" / OV_VERSION / "reference_graphs" / "quantized"
 
 
 @pytest.mark.parametrize("model_creator_func", SYNTHETIC_MODELS.values())
