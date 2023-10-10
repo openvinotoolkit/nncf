@@ -246,7 +246,7 @@ class OVBackend:
         ]
         for index in input_indices:
             if not ov_node.inputs()[index].get_tensor().get_names():
-                ov_node.inputs()[index].get_tensor().set_names(set([f"if_{index}_input"]))
+                ov_node.inputs()[index].get_tensor().set_names(set([f"{if_node.node_name}_{index}_input"]))
             input_names.append(ov_node.inputs()[index].get_tensor().get_any_name())
         return input_names
 
@@ -262,7 +262,7 @@ class OVBackend:
         name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
         ov_node = name_to_node_mapping[if_node.node_name]
         if not ov_node.inputs()[0].get_tensor().get_names():
-            ov_node.inputs()[0].get_tensor().set_names(set(["if_0_input"]))
+            ov_node.inputs()[0].get_tensor().set_names(set([f"{if_node.node_name}_0_input"]))
         return ov_node.inputs()[0].get_tensor().get_any_name()
 
     @staticmethod
