@@ -165,12 +165,12 @@ def apply_algorithm_if_bodies(
         return quantized_model, current_model_num
     model_transformer_fp32 = factory.ModelTransformerFactory.create(parent_model)
     for if_node in parent_graph.get_nodes_by_metatypes(OVBackend.if_node_metatypes()):
-        then_model_input_names = OVBackend.get_if_body_input_names(parent_model, if_node, True)
-        else_model_input_names = OVBackend.get_if_body_input_names(parent_model, if_node, False)
-        if_cond_input_name = OVBackend.get_if_cond_input_name(parent_model, if_node)
         parent_model_with_additional_outputs = _add_outputs_before_if_node(
             model_transformer_fp32, parent_model, if_node
         )
+        then_model_input_names = OVBackend.get_if_body_input_names(parent_model, if_node, True)
+        else_model_input_names = OVBackend.get_if_body_input_names(parent_model, if_node, False)
+        if_cond_input_name = OVBackend.get_if_cond_input_name(parent_model_with_additional_outputs, if_node)
         then_dataset, else_dataset = _make_dataset_for_if_bodies(
             factory.EngineFactory.create(parent_model_with_additional_outputs),
             parent_dataset,
@@ -245,8 +245,6 @@ class OVBackend:
             for desc in ov_node.get_input_descriptions(OVBackend._get_if_body_port_id(if_body_condition))
         ]
         for index in input_indices:
-            if not ov_node.inputs()[index].get_tensor().get_names():
-                ov_node.inputs()[index].get_tensor().set_names(set([f"{if_node.node_name}_{index}_input"]))
             input_names.append(ov_node.inputs()[index].get_tensor().get_any_name())
         return input_names
 
@@ -261,8 +259,6 @@ class OVBackend:
         """
         name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
         ov_node = name_to_node_mapping[if_node.node_name]
-        if not ov_node.inputs()[0].get_tensor().get_names():
-            ov_node.inputs()[0].get_tensor().set_names(set([f"{if_node.node_name}_0_input"]))
         return ov_node.inputs()[0].get_tensor().get_any_name()
 
     @staticmethod
