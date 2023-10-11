@@ -10,6 +10,7 @@
 # limitations under the License.
 from abc import abstractmethod
 from collections import Counter
+from copy import deepcopy
 from typing import Dict
 
 import pytest
@@ -30,7 +31,6 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.passes import transform_to_inference_graph
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from nncf.scopes import IgnoredScope
 from tests.common.quantization.metatypes import Conv2dTestMetatype
@@ -171,12 +171,7 @@ class TemplateTestPTQParams:
         assert min_max_algo._quantize_outputs == quantize_outputs
         hw_patterns = test_params["test_model_type_pass"]["hw_patterns"]
         ignored_patterns = test_params["test_model_type_pass"]["ignored_patterns"]
-        inference_nncf_graph = transform_to_inference_graph(
-            nncf_graph,
-            min_max_algo._backend_entity.shapeof_metatypes,
-            min_max_algo._backend_entity.dropout_metatypes,
-            min_max_algo._backend_entity.read_variable_metatypes,
-        )
+        inference_nncf_graph = min_max_algo._backend_entity.transform_to_inference_graph(nncf_graph)
         q_setup = min_max_algo._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)
         act_num_q, weight_num_q = 0, 0
         for quantization_point in q_setup.quantization_points.values():
@@ -197,12 +192,7 @@ class TemplateTestPTQParams:
         nncf_graph = test_params["test_ignored_scopes"]["nncf_graph"]
         hw_patterns = test_params["test_model_type_pass"]["hw_patterns"]
         ignored_patterns = test_params["test_model_type_pass"]["ignored_patterns"]
-        inference_nncf_graph = transform_to_inference_graph(
-            nncf_graph,
-            min_max_algo._backend_entity.shapeof_metatypes,
-            min_max_algo._backend_entity.dropout_metatypes,
-            min_max_algo._backend_entity.read_variable_metatypes,
-        )
+        inference_nncf_graph = min_max_algo._backend_entity.transform_to_inference_graph(nncf_graph)
         q_setup = min_max_algo._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)
         act_num_q, weight_num_q = 0, 0
         for quantization_point in q_setup.quantization_points.values():
@@ -223,12 +213,7 @@ class TemplateTestPTQParams:
         nncf_graph = test_params["test_model_type_pass"]["nncf_graph"]
         hw_patterns = test_params["test_model_type_pass"]["hw_patterns"]
         ignored_patterns = test_params["test_model_type_pass"]["ignored_patterns"]
-        inference_nncf_graph = transform_to_inference_graph(
-            nncf_graph,
-            min_max_algo._backend_entity.shapeof_metatypes,
-            min_max_algo._backend_entity.dropout_metatypes,
-            min_max_algo._backend_entity.read_variable_metatypes,
-        )
+        inference_nncf_graph = min_max_algo._backend_entity.transform_to_inference_graph(nncf_graph)
         q_setup = min_max_algo._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)
         for quantization_point in q_setup.quantization_points.values():
             if quantization_point.is_activation_quantization_point():
@@ -290,7 +275,7 @@ class TemplateTestPTQParams:
     @pytest.mark.parametrize("validate_scopes", (True, False))
     def test_validate_scope(self, test_params, validate_scopes):
         nncf_graph = test_params["test_model_type_pass"]["nncf_graph"]
-        inference_nncf_graph = transform_to_inference_graph(nncf_graph, [], [])
+        inference_nncf_graph = deepcopy(nncf_graph)
         ignored_patterns = test_params["test_model_type_pass"]["ignored_patterns"]
         algo = MinMaxQuantization(
             ignored_scope=IgnoredScope(names=["some_node"], validate=validate_scopes),

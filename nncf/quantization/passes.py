@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import collections
-from copy import deepcopy
 from typing import List, Optional, TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
@@ -19,29 +18,6 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 
 TModel = TypeVar("TModel")
-
-
-def transform_to_inference_graph(
-    nncf_graph: NNCFGraph,
-    shapeof_metatypes: List[OperatorMetatype],
-    dropout_metatypes: List[OperatorMetatype],
-    read_variable_metatypes: Optional[List[OperatorMetatype]] = None,
-) -> NNCFGraph:
-    """
-    This method contains pipeline of the passes that uses to provide inference graph without constant flows.
-
-    :param nncf_graph: NNCFGraph instance for the transformation.
-    :param shapeof_metatypes: List of backend-specific ShapeOf metatypes.
-    :param dropout_metatypes: List of backend-specific Dropout metatypes.
-    :param read_variable_metatypes: List of backend-specific metatypes
-        that also can be interpreted as inputs (ReadValue).
-    :return: NNCFGraph in the inference style.
-    """
-    inference_graph = deepcopy(nncf_graph)
-    remove_shapeof_subgraphs_inplace(inference_graph, shapeof_metatypes, read_variable_metatypes)
-    remove_dropout_nodes_inplace(inference_graph, dropout_metatypes)
-    filter_constant_nodes_inplace(inference_graph, read_variable_metatypes)
-    return inference_graph
 
 
 def remove_shapeof_subgraphs_inplace(

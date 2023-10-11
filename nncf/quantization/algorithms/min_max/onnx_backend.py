@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from copy import deepcopy
 from typing import Dict, List, Optional, Set, Union
 
 import numpy as np
@@ -42,6 +43,7 @@ from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.quantization.passes import remove_shapeof_subgraphs_inplace
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 
 
@@ -57,24 +59,12 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [om.ONNXTopKMetatype, om.ONNXNonMaxSuppressionMetatype]
 
     @property
-    def shapeof_metatypes(self) -> List[OperatorMetatype]:
-        return [om.ONNXShapeMetatype]
-
-    @property
-    def dropout_metatypes(self) -> List[OperatorMetatype]:
-        return []
-
-    @property
     def conv_metatypes(self) -> List[OperatorMetatype]:
         return [om.ONNXConvolutionMetatype]
 
     @property
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
         return [om.ONNXConvolutionMetatype, om.ONNXConvolutionTransposeMetatype, *MATMUL_METATYPES]
-
-    @property
-    def read_variable_metatypes(self) -> List[OperatorMetatype]:
-        return []
 
     @property
     def add_metatypes(self) -> List[OperatorMetatype]:
@@ -173,6 +163,14 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             "The following range estimator parameters are not supported by ONNX backend by now: "
             f"{str(range_estimator_params)}"
         )
+
+    @staticmethod
+    def transform_to_inference_graph(graph: NNCFGraph) -> NNCFGraph:
+        inference_graph = deepcopy(graph)
+        remove_shapeof_subgraphs_inplace(
+            nncf_graph=inference_graph, shapeof_metatypes=[om.ONNXShapeMetatype], read_variable_metatypes=[]
+        )
+        return inference_graph
 
     @staticmethod
     def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:

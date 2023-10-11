@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from copy import deepcopy
 from typing import Dict, List, Optional, Set, Tuple
 
 import numpy as np
@@ -43,6 +44,8 @@ from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.quantization.passes import filter_constant_nodes_inplace
+from nncf.quantization.passes import remove_shapeof_subgraphs_inplace
 
 
 # pylint:disable=too-many-public-methods
@@ -57,14 +60,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [om.OVTopKMetatype, om.OVNonMaxSuppressionMetatype]
 
     @property
-    def shapeof_metatypes(self) -> List[OperatorMetatype]:
-        return [om.OVShapeOfMetatype]
-
-    @property
-    def dropout_metatypes(self) -> List[OperatorMetatype]:
-        return []
-
-    @property
     def conv_metatypes(self) -> List[OperatorMetatype]:
         return [om.OVConvolutionMetatype]
 
@@ -77,10 +72,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             om.OVGroupConvolutionBackpropDataMetatype,
             om.OVMatMulMetatype,
         ]
-
-    @property
-    def read_variable_metatypes(self) -> List[OperatorMetatype]:
-        return [om.OVReadValueMetatype]
 
     @property
     def add_metatypes(self) -> List[OperatorMetatype]:
@@ -203,6 +194,18 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
             collector.register_statistic_branch(container_key, reducer, aggregator)
         return collector
+
+    @staticmethod
+    def transform_to_inference_graph(graph: NNCFGraph) -> NNCFGraph:
+        inference_graph = deepcopy(graph)
+        read_variable_metatypes = [om.OVReadValueMetatype]
+        remove_shapeof_subgraphs_inplace(
+            nncf_graph=inference_graph,
+            shapeof_metatypes=[om.OVShapeOfMetatype],
+            read_variable_metatypes=read_variable_metatypes,
+        )
+        filter_constant_nodes_inplace(nncf_graph=inference_graph, read_variable_metatypes=read_variable_metatypes)
+        return inference_graph
 
     @staticmethod
     def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:

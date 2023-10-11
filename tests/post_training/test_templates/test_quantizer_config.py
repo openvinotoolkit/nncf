@@ -32,7 +32,6 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
-from nncf.quantization.passes import transform_to_inference_graph
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from tests.post_training.test_templates.models import NNCFGraphToTest
 from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseConv
@@ -89,12 +88,7 @@ class TemplateTestQuantizerConfig:
         min_max_algo = algo.algorithms[0]
         min_max_algo._backend_entity = self.get_algo_backend()
         nncf_graph = single_conv_nncf_graph.nncf_graph
-        inference_nncf_graph = transform_to_inference_graph(
-            nncf_graph,
-            min_max_algo._backend_entity.shapeof_metatypes,
-            min_max_algo._backend_entity.dropout_metatypes,
-            min_max_algo._backend_entity.read_variable_metatypes,
-        )
+        inference_nncf_graph = min_max_algo._backend_entity.transform_to_inference_graph(nncf_graph)
         q_setup = min_max_algo._get_quantizer_setup(
             nncf_graph, inference_nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
         )
@@ -146,12 +140,7 @@ class TemplateTestQuantizerConfig:
         min_max_algo = algo.algorithms[0]
         min_max_algo._backend_entity = self.get_algo_backend()
         nncf_graph = single_conv_nncf_graph.nncf_graph
-        inference_nncf_graph = transform_to_inference_graph(
-            nncf_graph,
-            min_max_algo._backend_entity.shapeof_metatypes,
-            min_max_algo._backend_entity.dropout_metatypes,
-            min_max_algo._backend_entity.read_variable_metatypes,
-        )
+        inference_nncf_graph = min_max_algo._backend_entity.transform_to_inference_graph(nncf_graph)
         if signed_weights is False or signed_activations in [True, False]:  # Incompatible with HW CPU config
             with pytest.raises(
                 ValueError,
@@ -189,12 +178,7 @@ class TemplateTestQuantizerConfig:
         min_max_algo = algo.algorithms[0]
         min_max_algo._backend_entity = self.get_algo_backend()
         nncf_graph = depthwise_conv_nncf_graph.nncf_graph
-        inference_nncf_graph = transform_to_inference_graph(
-            nncf_graph,
-            min_max_algo._backend_entity.shapeof_metatypes,
-            min_max_algo._backend_entity.dropout_metatypes,
-            min_max_algo._backend_entity.read_variable_metatypes,
-        )
+        inference_nncf_graph = min_max_algo._backend_entity.transform_to_inference_graph(nncf_graph)
         q_setup = min_max_algo._get_quantizer_setup(
             nncf_graph, inference_nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
         )
