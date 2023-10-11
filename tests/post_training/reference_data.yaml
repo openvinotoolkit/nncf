@@ -104,7 +104,7 @@ timm/efficientnet_b0_backend_OLD_TORCH:
     metric_value: 0.75538
     metric_value_fp32: 0.77292
 timm/efficientnet_b0_backend_TORCH:
-    metric_value: 0.7680
+    metric_value: 0.76798
     metric_value_fp32: 0.77292
 timm/efficientnet_b0_backend_ONNX:
     metric_value: 0.76582
