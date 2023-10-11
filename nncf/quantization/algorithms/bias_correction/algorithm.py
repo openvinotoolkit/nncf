@@ -124,7 +124,7 @@ class BiasCorrection(Algorithm):
             self._backend_entity = OVBiasCorrectionAlgoBackend()
         else:
             raise RuntimeError(
-                "Cannot return backend-specific entity because {} is not supported!".format(model_backend)
+                "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
             )
 
     def apply(

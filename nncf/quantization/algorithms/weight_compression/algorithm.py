@@ -91,7 +91,7 @@ class WeightCompression(Algorithm):
             self._backend_entity = OVWeightCompressionAlgoBackend()
         else:
             raise RuntimeError(
-                "Cannot return backend-specific entity because {} is not supported!".format(model_backend)
+                "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
             )
 
     def apply(

@@ -138,6 +138,111 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return model
 
 
+
+@ALGO_BACKENDS.register(BackendType.OPENVINO)
+class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
+    @property
+    def weighted_metatypes(self) -> List[OperatorMetatype]:
+        return [OVMatMulMetatype, OVEmbeddingMetatype]
+
+    @staticmethod
+    def is_node_with_weights(node: NNCFNode) -> bool:
+        return node.layer_attributes and node.layer_attributes.constant_attributes
+
+    @staticmethod
+    def validate_params(mode: CompressWeightsMode) -> None:
+        pass
+
+    @staticmethod
+    def do_compression(
+        model: ov.Model,
+        nodes_to_compress: List[NNCFNode],
+        mode: CompressWeightsMode,
+        ratio: float = None,
+        group_size: int = None,
+    ) -> ov.Model:
+        """
+        Compresses weights of Linear and Embedding layers to 8-bit integer or to nf4
+        depending on mode, ratio and group size.
+
+        :param model: The OpenVINO model for applying weight compression.
+        :param nodes_to_compress: List of nodes in the model's graph,
+            corresponding to the layers for weight compression.
+        :param mode: Defines a mode for weight compression.
+            INT8 stands for 8-bit integer quantization of all weights.
+            NF4 stands for a mixed-precision weights quantization to NF4 data type. The first and last layers
+            are always compressed to a backup precision which is 8-bit integer by default. All others are quantized
+            whether to NF4 or to a backup precision depending on criteria and the given ratio.
+        :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
+            and the rest to INT8).
+        :param group_size: number of weights (e.g. 128) in the channel dimension that share
+            quantization parameters (scale). The value -1 means no grouping.
+        :return: A resulting model with quantized weights and with dequantization operations in the graph.
+        """
+        all_weight_params: List[WeightNodeParams] = []
+        quantized_nodes_ids = set()
+
+        friendly_name_to_op_map = {op.get_friendly_name(): op for op in model.get_ops()}
+
+        for nncf_node in nodes_to_compress:
+            weight_port_ids = nncf_node.layer_attributes.get_const_port_ids()
+            for weight_port_id in weight_port_ids:
+                weight_op_friendly_name = nncf_node.layer_attributes.constant_attributes[weight_port_id]["name"]
+                weight_node = friendly_name_to_op_map[weight_op_friendly_name]
+                if weight_node is None:
+                    continue
+                if id(weight_node) in quantized_nodes_ids:
+                    continue
+                weight_output = weight_node.output(0)
+
+                original_weight_dtype = weight_output.get_element_type().to_dtype()
+                if original_weight_dtype not in [np.float32, np.float16, np.float64]:
+                    continue
+                const_shape = nncf_node.layer_attributes.constant_attributes[weight_port_id]["shape"]
+                channel_axes = get_weight_channel_axes(nncf_node, weight_port_id)
+                axes = get_channel_agnostic_reduction_axes(channel_axes, const_shape)
+                fq_name = f"{weight_op_friendly_name}/fq_weights_{weight_port_id}"
+                num_weights = np.prod(const_shape)
+                weight_params = WeightNodeParams(axes, num_weights, fq_name, weight_node, original_weight_dtype)
+                all_weight_params.append(weight_params)
+                quantized_nodes_ids.add(id(weight_node))
+
+        if mode == CompressWeightsMode.NF4:
+            _assign_mixed_precision(all_weight_params, ratio, group_size)
+
+        for wp in all_weight_params:
+            weight_node = wp.weight_node
+            original_weight_dtype = wp.original_weight_dtype
+
+            weight_output = weight_node.output(0)
+            weight_name = weight_node.get_friendly_name()
+            target_inputs = weight_output.get_target_inputs()
+
+            weight = get_const_value(weight_node)
+            config = wp.compression_config
+
+            if config.is_nf4:
+                original_shape = weight.shape
+                norm_weight, scale = _get_norm_weight_and_nf4_scale(weight, wp.reduction_axes, group_size)
+                compressed_const = opset.constant(norm_weight, dtype=ov.Type.nf4, name=weight_name)
+                convert = opset.convert(compressed_const, original_weight_dtype)
+                mul = opset.multiply(convert, scale.astype(original_weight_dtype), name=wp.fq_name)
+                if config.group_size != -1:
+                    mul = opset.reshape(mul, output_shape=original_shape, special_zero=False)
+                last_output = mul.output(0)
+            else:
+                compressed_weights, scale, zero_point = _int8_compress(weight, wp.reduction_axes)
+                compressed_const = opset.constant(compressed_weights, dtype=np.uint8, name=weight_name)
+                convert = opset.convert(compressed_const, original_weight_dtype)
+                sub = opset.subtract(convert, zero_point.astype(original_weight_dtype))
+                mul = opset.multiply(sub, scale.astype(original_weight_dtype), name=wp.fq_name)
+                last_output = mul.output(0)
+
+            for target_input in target_inputs:
+                target_input.replace_source_output(last_output)
+        return model
+
+
 TWeightType = TypeVar("TWeightType")
 
 NF4_QUANTILES = np.array(
