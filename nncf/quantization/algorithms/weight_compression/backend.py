@@ -37,7 +37,7 @@ class WeightCompressionAlgoBackend(ABC):
         Checks whether the node with weights or not.
 
         :param node: NNCFNode to check.
-        :return: boolean indicating whether the node has weights or not.
+        :return: Boolean indicating whether the node has weights or not.
         """
 
     @staticmethod

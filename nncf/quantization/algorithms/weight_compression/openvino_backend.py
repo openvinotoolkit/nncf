@@ -32,7 +32,6 @@ from nncf.quantization.algorithms.weight_compression.backend import ALGO_BACKEND
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
 
-
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     @property
@@ -55,24 +54,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         ratio: float = None,
         group_size: int = None,
     ) -> ov.Model:
-        """
-        Compresses weights of Linear and Embedding layers to 8-bit integer or to nf4
-        depending on mode, ratio and group size.
-
-        :param model: The OpenVINO model for applying weight compression.
-        :param nodes_to_compress: List of nodes in the model's graph,
-            corresponding to the layers for weight compression.
-        :param mode: Defines a mode for weight compression.
-            INT8 stands for 8-bit integer quantization of all weights.
-            NF4 stands for a mixed-precision weights quantization to NF4 data type. The first and last layers
-            are always compressed to a backup precision which is 8-bit integer by default. All others are quantized
-            whether to NF4 or to a backup precision depending on criteria and the given ratio.
-        :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
-            and the rest to INT8).
-        :param group_size: number of weights (e.g. 128) in the channel dimension that share
-            quantization parameters (scale). The value -1 means no grouping.
-        :return: A resulting model with quantized weights and with dequantization operations in the graph.
-        """
         all_weight_params: List[WeightNodeParams] = []
         quantized_nodes_ids = set()
 
