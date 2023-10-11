@@ -36,7 +36,7 @@
                 "metric_type": "Acc@1",
                 "resume": "resnet50_imagenet_int4_int8.pth",
                 "model_description": "ResNet-50",
-                "compression_description": "Mixed, 43.12% INT8 / 56.88% INT4",
+                "compression_description": "Mixed, 43.12% INT8 / 56.88% INT4"
             },
             "resnet50_imagenet_rb_sparsity_int8": {
                 "config": "examples/torch/classification/configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json",
