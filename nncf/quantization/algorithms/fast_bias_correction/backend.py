@@ -144,7 +144,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
         :param node: NNCFNode to check.
         :param nncf_graph: NNCFGraph instance.
 
-        :return: boolean indicating whether the node has a quantized weights or not
+        :return: Boolean indicating whether the node has a quantized weights or not
         """
 
     @staticmethod
