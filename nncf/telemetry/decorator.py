@@ -14,6 +14,7 @@ from typing import Callable, List, Union
 
 from nncf.telemetry.events import get_current_category
 from nncf.telemetry.events import telemetry_category
+from nncf.telemetry.extractors import CollectedEvent
 from nncf.telemetry.extractors import TelemetryExtractor
 from nncf.telemetry.extractors import VerbatimTelemetryExtractor
 from nncf.telemetry.wrapper import telemetry
@@ -48,7 +49,7 @@ class tracked_function:
         def wrapped(*args, **kwargs):
             bound_args = fn_signature.bind(*args, **kwargs)
             bound_args.apply_defaults()
-            events = []  # type: CollectedEvent
+            events: List[CollectedEvent] = []
             for collector in self._collectors:
                 argname = collector.argname
                 argvalue = bound_args.arguments[argname] if argname is not None else None

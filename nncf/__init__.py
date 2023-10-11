@@ -12,29 +12,29 @@
 Neural Network Compression Framework (NNCF) for enhanced OpenVINO™ inference.
 """
 
-from nncf.common.logging import nncf_logger
-from nncf.common.logging.logger import disable_logging
-from nncf.common.logging.logger import set_log_level
-from nncf.common.strip import strip
-from nncf.config import NNCFConfig
-from nncf.data import Dataset
-from nncf.parameters import CompressWeightsMode
-from nncf.parameters import DropType
-from nncf.parameters import ModelType
-from nncf.parameters import TargetDevice
-from nncf.quantization import QuantizationPreset
-from nncf.quantization import compress_weights
-from nncf.quantization import quantize
-from nncf.quantization import quantize_with_accuracy_control
-from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-from nncf.scopes import IgnoredScope
-from nncf.version import __version__
+from nncf.common.logging import nncf_logger as nncf_logger
+from nncf.common.logging.logger import disable_logging as disable_logging
+from nncf.common.logging.logger import set_log_level as set_log_level
+from nncf.common.strip import strip as strip
+from nncf.config import NNCFConfig as NNCFConfig
+from nncf.data import Dataset as Dataset
+from nncf.parameters import CompressWeightsMode as CompressWeightsMode
+from nncf.parameters import DropType as DropType
+from nncf.parameters import ModelType as ModelType
+from nncf.parameters import TargetDevice as TargetDevice
+from nncf.quantization import QuantizationPreset as QuantizationPreset
+from nncf.quantization import compress_weights as compress_weights
+from nncf.quantization import quantize as quantize
+from nncf.quantization import quantize_with_accuracy_control as quantize_with_accuracy_control
+from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters as AdvancedQuantizationParameters
+from nncf.scopes import IgnoredScope as IgnoredScope
+from nncf.version import __version__ as __version__
 
 _SUPPORTED_FRAMEWORKS = ["torch", "tensorflow", "onnx", "openvino"]
 
 
-from importlib.util import find_spec as _find_spec  # pylint:disable=wrong-import-position
-from pathlib import Path as _Path  # pylint:disable=wrong-import-position
+from importlib.util import find_spec as _find_spec  # noqa: E402 # pylint:disable=wrong-import-position
+from pathlib import Path as _Path  # noqa: E402 # pylint:disable=wrong-import-position
 
 _AVAILABLE_FRAMEWORKS = {}
 

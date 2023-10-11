@@ -64,7 +64,7 @@ class ElasticityBuilder(PTCompressionAlgorithmBuilder):
         all_elasticity_dims = {e.value for e in ElasticityDim}
         available_elasticity_dims_str = self._algo_config.get("available_elasticity_dims", all_elasticity_dims)
         self._available_elasticity_dims = list(map(ElasticityDim, available_elasticity_dims_str))
-        self._elasticity_builders = OrderedDict()  # type: Dict[ElasticityDim, SingleElasticityBuilder]
+        self._elasticity_builders: Dict[ElasticityDim, SingleElasticityBuilder] = OrderedDict()
         self._builder_states = None
 
     def initialize(self, model: NNCFNetwork) -> None:

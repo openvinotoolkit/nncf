@@ -18,6 +18,8 @@ import torch
 from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
+from nncf import NNCFConfig
+from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.progress_bar import ProgressBar
@@ -28,6 +30,7 @@ from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.torch.nested_objects_traversal import objwalk
 from nncf.torch.structures import AutoQPrecisionInitArgs
 from nncf.torch.structures import DistributedCallbacksArgs
+from nncf.torch.structures import ExecutionParameters
 from nncf.torch.structures import LeGRInitArgs
 from nncf.torch.structures import QuantizationPrecisionInitArgs
 from nncf.torch.utils import default_distributed_unwrapper
@@ -241,7 +244,7 @@ def default_criterion_fn(outputs: Any, target: Any, criterion: Any) -> torch.Ten
 
 @api(canonical_alias="nncf.torch.register_default_init_args")
 def register_default_init_args(
-    nncf_config: "NNCFConfig",
+    nncf_config: NNCFConfig,
     train_loader: torch.utils.data.DataLoader,
     criterion: _Loss = None,
     criterion_fn: Callable[[Any, Any, _Loss], torch.Tensor] = None,
@@ -250,7 +253,7 @@ def register_default_init_args(
             torch.utils.data.DataLoader,
             torch.nn.Module,
             torch.optim.Optimizer,
-            "CompressionAlgorithmController",
+            CompressionAlgorithmController,
             Optional[int],
         ],
         type(None),
@@ -260,10 +263,10 @@ def register_default_init_args(
     autoq_eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,
     model_eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float] = None,
     distributed_callbacks: Tuple[Callable, Callable] = None,
-    execution_parameters: "ExecutionParameters" = None,
+    execution_parameters: ExecutionParameters = None,
     legr_train_optimizer: torch.optim.Optimizer = None,
     device: str = None,
-) -> "NNCFConfig":
+) -> NNCFConfig:
     nncf_config.register_extra_structs(
         [
             QuantizationRangeInitArgs(data_loader=wrap_dataloader_for_init(train_loader), device=device),

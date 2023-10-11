@@ -25,8 +25,8 @@ OV_OPERATOR_METATYPES = OperatorMetatypeRegistry("openvino_operator_metatypes")
 
 
 class OVOpMetatype(OperatorMetatype):
-    op_names = []  # type: List[str]
-    subtypes = []  # type: List[Type[OperatorMetatype]]
+    op_names: List[str] = []
+    subtypes: List[Type[OperatorMetatype]] = []
 
     @classmethod
     def get_all_aliases(cls) -> List[str]:

@@ -612,7 +612,7 @@ LAYERS_MAP = {
 }
 
 
-def get_test_layers_desk():
+def get_test_layers_desc():
     models = ["Conv1D", "Conv2D", "Conv3D", "DepthwiseConv2D", "Conv1DTranspose", "Conv2DTranspose", "Conv3DTranspose"]
     result = []
     for model_name in models:
@@ -626,7 +626,7 @@ def get_test_layers_desk():
 
 
 @pytest.mark.parametrize(
-    "layer_name,input_type,data_type", get_test_layers_desk(), ids=[" ".join(l) for l in get_test_layers_desk()]
+    "layer_name,input_type,data_type", get_test_layers_desc(), ids=[" ".join(dsc) for dsc in get_test_layers_desc()]
 )
 def test_quantize_pre_post_processing(layer_name, input_type, data_type):
     layer_desk = LAYERS_MAP[layer_name](input_type, data_type)

@@ -67,7 +67,7 @@ def collect_api_entities() -> APIInfo:
     """
     retval = APIInfo()
     modules = {}
-    skipped_modules = {}  # type: Dict[str, str]
+    skipped_modules: Dict[str, str] = {}
     import nncf
 
     for _, modname, _ in pkgutil.walk_packages(path=nncf.__path__, prefix=nncf.__name__ + ".", onerror=lambda x: None):
@@ -135,6 +135,7 @@ mock_modules = [
     "onnxruntime",
     "openvino",
     "tensorflow",
+    "keras",
     "tensorflow_addons",
     # Need add backend implementation functions to avoid endless loops on registered functions by mock module,
     "nncf.experimental.tensor.torch_functions",

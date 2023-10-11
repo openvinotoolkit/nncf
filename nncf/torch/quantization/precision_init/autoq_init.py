@@ -32,6 +32,7 @@ from nncf.config.schemata.defaults import AUTOQ_EVAL_SUBSET_RATIO
 from nncf.config.schemata.defaults import AUTOQ_ITER_NUMBER
 from nncf.config.schemata.defaults import AUTOQ_WARMUP_ITER_NUMBER
 from nncf.config.schemata.defaults import PRECISION_INIT_BITWIDTHS
+from nncf.torch.automl.agent.ddpg.ddpg import DDPG
 from nncf.torch.quantization.precision_constraints import HardwareQuantizationConstraints
 from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitializer
 from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitParams
@@ -103,7 +104,7 @@ class AutoQPrecisionInitParams(BasePrecisionInitParams):
 class AutoQPrecisionInitializer(BasePrecisionInitializer):
     def __init__(
         self,
-        algo: "ExperimentalQuantizationController",
+        algo: "ExperimentalQuantizationController",  # noqa: F821
         params: AutoQPrecisionInitParams,
         hw_precision_constraints: HardwareQuantizationConstraints,
     ):
@@ -119,7 +120,6 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
     def apply_init(self) -> SingleConfigQuantizerSetup:
         from nncf.common.utils.debug import DEBUG_LOG_DIR  # pylint: disable=cyclic-import
-        from nncf.torch.automl.agent.ddpg.ddpg import DDPG  # pylint: disable=cyclic-import
         from nncf.torch.automl.environment.quantization_env import QuantizationEnv  # pylint: disable=cyclic-import
 
         if self._dump_autoq_data or is_debug():
@@ -216,7 +216,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
         nncf_logger.info("[AutoQ] Elapsed time of AutoQ Precision Initialization (): {}".format(end_ts - start_ts))
         return final_quantizer_setup
 
-    def _search(self, agent: "DDPG", env: "QuantizationEnv") -> Tuple[pd.Series, float]:
+    def _search(self, agent: DDPG, env: "QuantizationEnv") -> Tuple[pd.Series, float]:  # noqa: F821
         # pylint: disable=too-many-branches,too-many-statements
         best_reward = -math.inf
         episode = 0
@@ -360,7 +360,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
         return best_policy, best_reward
 
-    def _dump_best_episode(self, info_tuple: Tuple, bit_stats_df: pd.DataFrame, env: "QuantizationEnv"):
+    def _dump_best_episode(self, info_tuple: Tuple, bit_stats_df: pd.DataFrame, env: "QuantizationEnv"):  # noqa: F821
         if self._dump_autoq_data:
             episode = info_tuple[0]
             self.best_policy_dict[episode] = env.master_df["action"].astype("int")
@@ -385,7 +385,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
             self.tb_writer.add_text("AutoQ/best_policy", best_policy_string, episode)
 
     def _dump_episode(
-        self, episodic_info_tuple: Tuple, bit_stats_df: pd.DataFrame, env: "QuantizationEnv", agent: "DDPG"
+        self, episodic_info_tuple: Tuple, bit_stats_df: pd.DataFrame, env: "QuantizationEnv", agent: DDPG  # noqa: F821
     ):
         if self._dump_autoq_data:
             episode, final_reward, _, accuracy, model_ratio, bop_ratio, _, _, _ = episodic_info_tuple
@@ -437,7 +437,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
             if episode % int((self._iter_number + 10) / 10) == 0:
                 agent.save_model(self.dump_dir)
 
-    def _add_to_tensorboard(self, tb_writer: "SummaryWriter", log_tuple: Tuple):
+    def _add_to_tensorboard(self, tb_writer: "SummaryWriter", log_tuple: Tuple):  # noqa: F821
         episode, final_reward, best_reward, accuracy, model_ratio, bop_ratio, value_loss, policy_loss, delta = log_tuple
 
         tb_writer.add_scalar("AutoQ/reward/last", final_reward, episode)

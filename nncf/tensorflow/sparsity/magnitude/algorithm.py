@@ -18,7 +18,7 @@ from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
-from nncf.common.graph import OUTPUT_NOOP_METATYPES
+from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.schedulers import StubCompressionScheduler
@@ -67,7 +67,7 @@ class MagnitudeSparsityBuilder(TFCompressionAlgorithmBuilder):
 
         transformations = TFTransformationLayout()
 
-        processed_shared_layer_names = set()  # type: Set[str]
+        processed_shared_layer_names: Set[str] = set()
 
         for node in nncf_graph.get_all_nodes():
             if node.is_shared():

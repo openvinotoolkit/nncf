@@ -24,6 +24,7 @@ from torch.nn.parallel import DistributedDataParallel
 from nncf import nncf_logger
 from nncf.common.utils.api_marker import api
 from nncf.torch.dynamic_graph.structs import NamespaceTarget
+from nncf.torch.dynamic_graph.structs import PatchedOperatorInfo
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.wrappers import ignore_scope
 from nncf.torch.dynamic_graph.wrappers import wrap_module_call
@@ -50,20 +51,6 @@ def get_namespace_to_extract_functions_from(namespace_target: NamespaceTarget) -
         return torch._C._VariableFunctions
     raise RuntimeError("{} namespace wasn't found in {}".format(namespace_target, NamespaceTarget))
     # pylint: enable=protected-access
-
-
-class PatchedOperatorInfo:
-    def __init__(self, name: str, operator_namespace: NamespaceTarget, skip_trace: bool = False):
-        """
-        Information about patched operator.
-        :param name: Operator name
-        :param operator_namespace: Python module, from which operator was gotten.
-        :param skip_trace: If it is set to True, the both operator and its internal calls
-         to otherwise traced functions do not appear into the model graph.
-        """
-        self.name = name
-        self.operator_namespace = operator_namespace
-        self.skip_trace = skip_trace
 
 
 class FunctionsToPatchWithoutTracing:
@@ -246,7 +233,7 @@ class OriginalOpInfo:
         self.op = op
 
 
-ORIGINAL_OPERATORS = []  # type: List[OriginalOpInfo]
+ORIGINAL_OPERATORS: List[OriginalOpInfo] = []
 ORIGINAL_CALL = torch.nn.Module.__call__
 _JIT_ALREADY_WRAPPED = False
 _OPERATORS_ALREADY_WRAPPED = False

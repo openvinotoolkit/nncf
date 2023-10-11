@@ -156,12 +156,12 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
             [range_estimator_params.min, range_estimator_params.max],
             [PTMinMaxTensorStatistic.MIN_STAT, PTMinMaxTensorStatistic.MAX_STAT],
         ):
-            if not params.statistics_type in PT_REDUCERS_MAP:
+            if params.statistics_type not in PT_REDUCERS_MAP:
                 raise RuntimeError(
                     f"Statistic type: {params.statistics_type} is not supported for Torch PTQ backend yet."
                 )
 
-            if not params.aggregator_type in AGGREGATORS_MAP:
+            if params.aggregator_type not in AGGREGATORS_MAP:
                 raise RuntimeError(
                     f"Aggregator type: {params.aggregator_type} is not supported for Torch PTQ backend yet."
                 )

@@ -144,7 +144,7 @@ class NNCFGraphCA:
         #           Conv_2
         #             |
         #           Output_1
-        if use_one_layer_attrs and not conv_layer_attrs is None and conv_2_layer_attrs is None:
+        if use_one_layer_attrs and conv_layer_attrs is not None and conv_2_layer_attrs is None:
             conv_2_layer_attrs = conv_layer_attrs
         nodes = [
             NodeWithType("Input_1", InputNoopMetatype),
