@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import math
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, TypeVar, Union
 
@@ -72,6 +71,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             and the rest to INT8).
         :param group_size: number of weights (e.g. 128) in the channel dimension that share
             quantization parameters (scale). The value -1 means no grouping.
+        :return: A resulting model with quantized weights and with dequantization operations in the graph.
         """
         all_weight_params: List[WeightNodeParams] = []
         quantized_nodes_ids = set()
@@ -96,7 +96,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 channel_axes = get_weight_channel_axes(nncf_node, weight_port_id)
                 axes = get_channel_agnostic_reduction_axes(channel_axes, const_shape)
                 fq_name = f"{weight_op_friendly_name}/fq_weights_{weight_port_id}"
-                num_weights = math.prod(const_shape)
+                num_weights = np.prod(const_shape)
                 weight_params = WeightNodeParams(axes, num_weights, fq_name, weight_node, original_weight_dtype)
                 all_weight_params.append(weight_params)
                 quantized_nodes_ids.add(id(weight_node))

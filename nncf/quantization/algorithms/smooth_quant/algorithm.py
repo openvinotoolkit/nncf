@@ -91,7 +91,7 @@ class SmoothQuant(Algorithm):
             self._backend_entity = OVSmoothQuantAlgoBackend()
         else:
             raise RuntimeError(
-                "Cannot return backend-specific entity because {} is not supported!".format(model_backend)
+                "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
             )
 
     def apply(

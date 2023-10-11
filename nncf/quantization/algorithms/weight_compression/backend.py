@@ -67,7 +67,7 @@ class WeightCompressionAlgoBackend(ABC):
         Compress weights of Linear and Embedding layers to 8-bit integer or to nf4
         depending on mode, ratio and group size.
 
-        :param model:  Model for applying weight compression.
+        :param model: Model for applying weight compression.
         :param nodes_to_compress: List of nodes in the model's graph,
             corresponding to the layers for weight compression.
         :param mode: Defines a mode for weight compression.
@@ -79,4 +79,5 @@ class WeightCompressionAlgoBackend(ABC):
             and the rest to INT8).
         :param group_size: Number of weights (e.g. 128) in the channel dimension
             that share quantization parameters (scale). The value -1 means no grouping.
+        :return: A resulting model with compressed weights.
         """
