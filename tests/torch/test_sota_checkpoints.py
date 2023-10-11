@@ -51,6 +51,7 @@ class EvalRunParamsStruct:
     diff_target_min: float
     diff_target_max: float
     multiprocessing_distributed: bool
+    skip_ov: bool
 
 
 @dataclass
@@ -80,6 +81,10 @@ class ResultInfo:
             "Status": self.status,
         }
 
+
+PYTORCH = "PT"
+OPENVINO = "OV"
+TRAIN = "TRAIN"
 
 TEST_RESULT: List[ResultInfo] = []
 
@@ -114,6 +119,7 @@ def read_reference_file(ref_path: Path) -> List[EvalRunParamsStruct]:
                         diff_target_min=sample_dict.get("diff_target_min", DIFF_TARGET_MIN_GLOBAL),
                         diff_target_max=sample_dict.get("diff_target_max", DIFF_TARGET_MAX_GLOBAL),
                         multiprocessing_distributed=sample_dict.get("multiprocessing_distributed", False),
+                        skip_ov=sample_dict.get("skip_ov", False),
                     )
                 )
     return param_list
@@ -314,7 +320,7 @@ class TestSotaCheckpoints:
         if not is_ok:
             result_info = ResultInfo(
                 model_name=eval_run_param.model_name,
-                backend="PT",
+                backend=PYTORCH,
                 status=f"exit_code: {exit_code}",
             )
             add_test_result(result_info)
@@ -338,7 +344,7 @@ class TestSotaCheckpoints:
         )
         result_info = ResultInfo(
             model_name=eval_run_param.model_name,
-            backend="PT",
+            backend=PYTORCH,
             metric_type=eval_run_param.metric_type,
             expected=eval_run_param.expected,
             measured=metric_value,
@@ -357,7 +363,10 @@ class TestSotaCheckpoints:
     @pytest.mark.convert
     def test_convert(self, eval_run_param: EvalRunParamsStruct, openvino, sota_checkpoints_dir):
         if not openvino:
-            pytest.skip()
+            pytest.skip("Skip if not --run-openvino-eval")
+        if eval_run_param.skip_ov:
+            pytest.skip("Test skipped by 'skip_ov' in param")
+
         os.chdir(PROJECT_ROOT)
         ir_model_path = self.get_ir_model_path(eval_run_param)
         resume_file_path = None
@@ -385,9 +394,11 @@ class TestSotaCheckpoints:
     @pytest.mark.oveval
     def test_openvino_eval(self, eval_run_param: EvalRunParamsStruct, ov_data_dir, openvino, ov_config_dir):
         if not openvino:
-            pytest.skip()
+            pytest.skip("Skip if not --run-openvino-eval")
         if ov_data_dir is None:
             pytest.fail("--ov-data-dir is not set")
+        if eval_run_param.skip_ov:
+            pytest.skip("Test skipped by 'skip_ov' in param")
 
         config_folder = ov_config_dir or PROJECT_ROOT / "tests" / "torch" / "data" / "ac_configs"
         ir_model_path = self.get_ir_model_path(eval_run_param)
@@ -396,7 +407,7 @@ class TestSotaCheckpoints:
             add_test_result(
                 ResultInfo(
                     model_name=eval_run_param.model_name,
-                    backend="OV",
+                    backend=OPENVINO,
                     status=f"{ir_model_path} does not exists",
                 )
             )
@@ -418,7 +429,7 @@ class TestSotaCheckpoints:
             add_test_result(
                 ResultInfo(
                     model_name=eval_run_param.model_name,
-                    backend="OV",
+                    backend=OPENVINO,
                     status=f"Accuracy checker return code: {exit_code}",
                 )
             )
@@ -443,7 +454,7 @@ class TestSotaCheckpoints:
         )
         result_info = ResultInfo(
             model_name=eval_run_param.model_name,
-            backend="OV",
+            backend=OPENVINO,
             metric_type=eval_run_param.metric_type,
             expected=eval_run_param.expected,
             measured=metric_value,
@@ -497,7 +508,7 @@ class TestSotaCheckpoints:
         add_test_result(
             ResultInfo(
                 model_name=eval_run_param.model_name,
-                backend="TRAIN",
+                backend=TRAIN,
                 metric_type=eval_run_param.metric_type,
                 measured=metric_value,
                 diff_fp32=diff_fp32,
