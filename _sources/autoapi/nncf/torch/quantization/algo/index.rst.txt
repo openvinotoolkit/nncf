@@ -22,7 +22,7 @@ Classes
 
 .. py:class:: QuantizationController(target_model, config, debug_interface, weight_quantizers, non_weight_quantizers, groups_of_adjacent_quantizers, quantizers_input_shapes, build_time_metric_info = None, build_time_range_init_params = None)
 
-   Bases: :py:obj:`QuantizationControllerBase`
+   Bases: :py:obj:`nncf.torch.quantization.base_ctrl.QuantizationControllerBase`
 
    Controller for the quantization algorithm in PT.
 

@@ -19,6 +19,7 @@ Subpackages
    common/index.rst
    config/index.rst
    quantization/index.rst
+   tensorflow/index.rst
    torch/index.rst
 
 
