@@ -75,8 +75,8 @@ def _get_q_linear_params(node: onnx.NodeProto, model: onnx.ModelProto) -> Tuple[
     :return: axis, scale, zero_point parameters of the node.
     """
     assert node.op_type in ONNXQuantizeLinearMetatype.get_all_aliases()
-    scale = get_tensor_value(node.input[1])
-    zero_point = get_tensor_value(node.input[2])
+    scale = get_tensor_value(model, node.input[1])
+    zero_point = get_tensor_value(model, node.input[2])
     axis = None
     for attr in node.attribute:
         if attr.name == "axis":
@@ -95,8 +95,8 @@ def _get_input_constant_tensor(node: onnx.NodeProto, port_id: int, model: onnx.M
     :param onnx_graph: ONNXGraph.
     :return: Tensor value.
     """
-    if has_tensor(node.input[port_id]):
-        return get_tensor_value(node.input[port_id])
+    if has_tensor(model, node.input[port_id]):
+        return get_tensor_value(model, node.input[port_id])
     extractor = onnx.utils.Extractor(model)
     constant_subgraph = extractor.extract_model([], [node.input[port_id]])
     engine = ONNXEngine(constant_subgraph)
@@ -147,7 +147,7 @@ def compress_quantize_weights_transformation(model: onnx.ModelProto) -> onnx.Mod
                 axis, scale, zero_point = _get_q_linear_params(node, model)
                 quantized_weight = quantize_tensor(original_precision_weight, axis, scale, zero_point)
 
-                initializer = get_tensor(initializer_to_update_name)
+                initializer = get_tensor(model, initializer_to_update_name)
                 int8_weight_tensor = numpy_helper.from_array(quantized_weight, name=initializer.name)
                 initializer.CopyFrom(int8_weight_tensor)
                 remove_node(node, model, parents_node_mapping, children_node_mapping)
