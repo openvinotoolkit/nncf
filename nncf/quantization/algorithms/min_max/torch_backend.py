@@ -35,6 +35,7 @@ from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.quantization.passes import filter_constant_nodes_inplace
 from nncf.quantization.passes import remove_dropout_nodes_inplace
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.torch.graph.graph import PTTargetPoint
@@ -193,6 +194,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def transform_to_inference_graph(graph: NNCFGraph) -> NNCFGraph:
         inference_graph = deepcopy(graph)
         remove_dropout_nodes_inplace(nncf_graph=inference_graph, dropout_metatypes=[om.PTDropoutMetatype])
+        filter_constant_nodes_inplace(nncf_graph=inference_graph)
         return inference_graph
 
     @staticmethod
