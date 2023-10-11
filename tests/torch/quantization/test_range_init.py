@@ -966,7 +966,7 @@ QUANTIZER_RANGE_INIT_TEST_CASES = [
 
 
 def quantizer_range_init_scale_shape_idfn(fixture_value):
-    test_struct = fixture_value[0]  # type: QRISSTS
+    test_struct: QRISSTS = fixture_value[0]
     postfix = ""
     if test_struct.is_weights:
         postfix += "-W"
@@ -1002,7 +1002,7 @@ def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test
             logarithm_scale=False,
         )
         q_cls = QUANTIZATION_MODULES.get(quantization_mode)
-        quantizer = q_cls(qconfig)  # type: BaseQuantizer
+        quantizer: BaseQuantizer = q_cls(qconfig)
         range_init_config = RangeInitConfig(init_type=initializer_type, num_init_samples=1)
 
         if test_struct.is_weights:

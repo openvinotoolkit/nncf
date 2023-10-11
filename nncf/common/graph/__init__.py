@@ -9,4 +9,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nncf.common.graph.graph import *
+# Make these names available from nncf.common.graph directly
+from nncf.common.graph.graph import LayerName as LayerName
+from nncf.common.graph.graph import NNCFGraph as NNCFGraph
+from nncf.common.graph.graph import NNCFGraphEdge as NNCFGraphEdge
+from nncf.common.graph.graph import NNCFGraphPatternIO as NNCFGraphPatternIO
+from nncf.common.graph.graph import NNCFNode as NNCFNode
+from nncf.common.graph.graph import NNCFNodeName as NNCFNodeName

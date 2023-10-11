@@ -89,9 +89,7 @@ class InsertionPointTestModel(nn.Module):
 class TestInsertionCommands:
     @pytest.fixture()
     def setup(self):
-        self.compressed_model = NNCFNetwork(
-            InsertionPointTestModel(), [ModelInputInfo([1, 1, 10, 10])]
-        )  # type: NNCFNetwork
+        self.compressed_model = NNCFNetwork(InsertionPointTestModel(), [ModelInputInfo([1, 1, 10, 10])])
 
     conv1_node_name = "InsertionPointTestModel/NNCFConv2d[conv1]/conv2d_0"
     point_for_conv1_weights = PTTargetPoint(
@@ -422,7 +420,7 @@ class TestInsertionPointGraph:
         nncf_network = NNCFNetwork(model, [ModelInputInfo([1, 3, 300, 300])])
         nncf_graph = nncf_network.nncf.get_original_graph()
 
-        for nncf_node in nncf_graph.get_all_nodes():  # type: NNCFNode
+        for nncf_node in nncf_graph.get_all_nodes():
             assert nncf_node.node_name in ref_scope_vs_metatype_dict
             ref_metatype = ref_scope_vs_metatype_dict[nncf_node.node_name]
             assert nncf_node.metatype == ref_metatype
@@ -436,7 +434,7 @@ class TestInsertionPointGraph:
         pattern = PatternsManager.get_full_hw_pattern_graph(backend=BackendType.TORCH, device=TargetDevice.ANY)
         merged_ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(pattern)
 
-        data_dir = TEST_ROOT / "torch/data/reference_graphs/pattern_merging"  # type: Path
+        data_dir: Path = TEST_ROOT / "torch/data/reference_graphs/pattern_merging"
 
         path_to_dot_file = data_dir / "{}.dot".format(dot_file_name)
 

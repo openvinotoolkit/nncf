@@ -170,8 +170,8 @@ def replace_modules_by_nncf_modules(
     The dictionary will also include the extended modules that have already been present in the model.
     """
     modules_vs_scopes_dict = collect_all_scopes_for_extendable_and_extended_modules(model, predicate=predicate_fn)
-    inter_dict = {}  # type: Dict[nn.Module, Set[Scope]]
-    ret_dict = {}  # type: Dict[nn.Module, List[Scope]]
+    inter_dict: Dict[nn.Module, Set[Scope]] = {}
+    ret_dict: Dict[nn.Module, List[Scope]] = {}
     for module, scope_set in modules_vs_scopes_dict.items():
         if is_nncf_module(module):
             # The module has already been extended, track it in the return value

@@ -14,7 +14,6 @@ from collections import Counter
 
 import pytest
 
-from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.insertion_point_graph import ConstantNodesFilter

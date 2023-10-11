@@ -37,7 +37,7 @@ def test_repeat():
     mask = SymbolicMask(10, mask_producers)
     repeated_tensor = SymbolicMaskProcessor.repeat(mask, repeats)
     for idx, repeated_producer in enumerate(repeated_tensor.mask_producers):
-        assert not mask_producers[idx] is repeated_producer
+        assert mask_producers[idx] is not repeated_producer
         assert mask_producers[idx].id == repeated_producer.id
         assert mask_producers[idx].sparse_multiplier * repeats == repeated_producer.sparse_multiplier
 

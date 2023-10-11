@@ -176,9 +176,9 @@ class QuantizationEnv:
         self.model_bitwidth_space = sorted(list(self.model_bitwidth_space))
 
         # Create mapping of QuantizerId to the space of the corresponding quantizer's allowed qconfigs
-        self.qconfig_space_map = OrderedDict.fromkeys(
+        self.qconfig_space_map: Dict[QuantizerId, List[QuantizerConfig]] = OrderedDict.fromkeys(
             self.qctrl.all_quantizations.keys()
-        )  # type: Dict[QuantizerId, List[QuantizerConfig]]
+        )
         if self.hw_cfg_type is None:
             for qid in self.qconfig_space_map.keys():
                 conf = self.qctrl.all_quantizations[qid].get_quantizer_config()
@@ -554,7 +554,7 @@ class QuantizationEnv:
         return self.evaluate_strategy(self.collected_strategy, skip_constraint=self.skip_constraint)
 
     def select_config_for_actions(self, actions) -> Dict[QuantizationPointId, QuantizerConfig]:
-        retval = OrderedDict()  # type: Dict[QuantizationPointId, QuantizerConfig]
+        retval: Dict[QuantizationPointId, QuantizerConfig] = OrderedDict()
         for action, qp_id_set, qconf_space in zip(actions, self.master_df["qp_id_set"], self.master_df["qconf_space"]):
             matches = []
             for qconf in qconf_space:
@@ -681,7 +681,7 @@ class QuantizationEnv:
             intersecting_bw_space = self.adjq_groupwise_intersecting_bw_space[i]
 
             # Determine the lowest realizable hardware precision given current action of the groups
-            if not group_min_predicted_bw in intersecting_bw_space:
+            if group_min_predicted_bw not in intersecting_bw_space:
                 group_final_min_bw = min(intersecting_bw_space)
             else:
                 group_final_min_bw = group_min_predicted_bw

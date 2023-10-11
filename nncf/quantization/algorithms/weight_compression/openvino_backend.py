@@ -32,6 +32,7 @@ from nncf.quantization.algorithms.weight_compression.backend import ALGO_BACKEND
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
 
+
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     @property

@@ -13,4 +13,4 @@ Backend-specific implementations of quantization algorithms.
 """
 
 # Required for correct QUANTIZATION_MODULES registry functioning
-from . import layers
+from . import layers as layers

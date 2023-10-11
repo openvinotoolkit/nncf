@@ -9,8 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nncf.common.graph.patterns.patterns import GraphPattern
-from nncf.common.graph.patterns.patterns import HWFusedPatternNames
-from nncf.common.graph.patterns.patterns import IgnoredPatternNames
-from nncf.common.graph.patterns.patterns import Patterns
-from nncf.common.graph.patterns.patterns import merge_two_types_of_operations
+from nncf.common.graph.patterns.patterns import GraphPattern as GraphPattern
+from nncf.common.graph.patterns.patterns import HWFusedPatternNames as HWFusedPatternNames
+from nncf.common.graph.patterns.patterns import IgnoredPatternNames as IgnoredPatternNames
+from nncf.common.graph.patterns.patterns import Patterns as Patterns
+from nncf.common.graph.patterns.patterns import merge_two_types_of_operations as merge_two_types_of_operations

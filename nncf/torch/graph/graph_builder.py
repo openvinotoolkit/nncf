@@ -9,15 +9,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import defaultdict
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Set
 
 import torch
 
-from nncf.common.graph import INPUT_NOOP_METATYPES
+from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
+from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.dynamic_graph.layer_attributes_handlers import set_nodes_attributes_in_nncf_graph
+from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 
@@ -29,7 +31,7 @@ class GraphBuilder:
     def build_graph(
         self,
         model: torch.nn.Module,
-        context_to_use: Optional["TracingContext"] = None,
+        context_to_use: Optional[TracingContext] = None,
         as_eval: bool = False,
         input_infos: List[ModelInputInfo] = None,
     ) -> PTNNCFGraph:
@@ -42,7 +44,7 @@ class GraphConverter:
     @staticmethod
     def convert(dynamic_graph: DynamicGraph, input_infos: List[ModelInputInfo] = None) -> PTNNCFGraph:
         # pylint:disable=too-many-branches
-        module_id_vs_known_op_addrs_map = defaultdict(set)  # type: Dict[int, Set[Scope]]
+        module_id_vs_known_op_addrs_map: Dict[int, Set[Scope]] = defaultdict(set)
         for dynamic_graph_node in dynamic_graph.get_all_nodes():
             module_id_vs_known_op_addrs_map[dynamic_graph_node.calling_module_id].add(
                 dynamic_graph_node.op_exec_context.op_address

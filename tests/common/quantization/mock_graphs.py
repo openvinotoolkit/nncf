@@ -15,12 +15,12 @@ from unittest.mock import MagicMock
 
 import networkx as nx
 
-from nncf.common.graph import BaseLayerAttributes
-from nncf.common.graph import Dtype
 from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
-from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
+from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
@@ -84,7 +84,7 @@ def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph, nncf_graph_cls=NNCFG
     # pylint:disable=too-many-branches
     mock_graph = nncf_graph_cls()
     key_vs_id = {}
-    edge_vs_output_idx_and_creator_id = {}  # type: Dict[Tuple[str, str], Tuple[int, int]]
+    edge_vs_output_idx_and_creator_id: Dict[Tuple[str, str], Tuple[int, int]] = {}
     from networkx.algorithms.dag import lexicographical_topological_sort
 
     for idx, curr_node_key in enumerate(lexicographical_topological_sort(nx_graph)):
