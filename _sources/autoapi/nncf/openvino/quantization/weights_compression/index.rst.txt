@@ -1,8 +1,0 @@
-:orphan:
-
-:py:mod:`nncf.openvino.quantization.weights_compression`
-========================================================
-
-.. py:module:: nncf.openvino.quantization.weights_compression
-
-
