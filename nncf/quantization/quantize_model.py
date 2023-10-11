@@ -273,7 +273,7 @@ def compress_weights(
     if backend == BackendType.TORCH:
         from nncf.torch.quantization.quantize_model import compress_weights_impl
 
-        return compress_weights_impl(model, mode, ratio, group_size)
+        return compress_weights_impl(model, mode, ratio, group_size, ignored_scope)
 
     compression_algorithm = WeightCompression(mode, ratio, group_size, ignored_scope)
     graph = NNCFGraphFactory.create(model)
