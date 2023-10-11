@@ -265,7 +265,7 @@ class ChannelAlignment(Algorithm):
         return True
 
     def _check_producer_conv_node(self, conv_node: NNCFNode):
-        return not conv_node.layer_attributes is None
+        return conv_node.layer_attributes is not None
 
     def _get_target_patterns(self) -> GraphPattern:
         input_attrs = {

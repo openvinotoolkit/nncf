@@ -31,7 +31,7 @@ class LeGR:
 
     def __init__(
         self,
-        pruning_ctrl: "FilterPruningController",
+        pruning_ctrl: "FilterPruningController",  # noqa: F821
         target_model: nn.Module,
         legr_init_args: LeGRInitArgs,
         train_steps: int = PRUNING_LEGR_TRAIN_STEPS,

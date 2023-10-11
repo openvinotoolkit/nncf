@@ -21,6 +21,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 from nncf.api.compression import CompressionAlgorithmController
+from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
 from nncf.common.accuracy_aware_training.runner_factory import AdaptiveCompressionLevelTrainingRunnerCreator
 from nncf.common.accuracy_aware_training.runner_factory import EarlyExitTrainingRunnerCreator
 from nncf.common.accuracy_aware_training.statistics import TrainingLoopStatistics
@@ -89,7 +90,7 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
     """
 
     def __init__(self, compression_controller: CompressionAlgorithmController):
-        self.runner = None  # type: BaseAccuracyAwareTrainingRunner
+        self.runner: BaseAccuracyAwareTrainingRunner = None
         self.compression_controller = compression_controller
         self._current_compression_rate = None
 

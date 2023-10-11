@@ -13,6 +13,6 @@ Backend-specific implementations of quantization algorithms.
 """
 
 # Required for correct registry functioning
-from nncf.tensorflow.quantization.layers import FakeQuantize
-from nncf.tensorflow.quantization.quantizers import AsymmetricQuantizer
-from nncf.tensorflow.quantization.quantizers import SymmetricQuantizer
+from nncf.tensorflow.quantization.layers import FakeQuantize as FakeQuantize
+from nncf.tensorflow.quantization.quantizers import AsymmetricQuantizer as AsymmetricQuantizer
+from nncf.tensorflow.quantization.quantizers import SymmetricQuantizer as SymmetricQuantizer

@@ -30,7 +30,7 @@ class ManualPrecisionInitParams(BasePrecisionInitParams):
 class ManualPrecisionInitializer(BasePrecisionInitializer):
     def __init__(
         self,
-        algo: "ExperimentalQuantizationController",
+        algo: "ExperimentalQuantizationController",  # noqa: F821
         params: ManualPrecisionInitParams,
         hw_precision_constraints: HardwareQuantizationConstraints = None,
     ):

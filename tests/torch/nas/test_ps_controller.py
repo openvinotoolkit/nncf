@@ -26,7 +26,7 @@ from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.nas.helpers import move_model_to_cuda_if_available
 from tests.torch.nas.models.synthetic import ThreeConvModel
 from tests.torch.nas.models.synthetic import ThreeConvModelMode
-from tests.torch.nas.test_scheduler import fixture_schedule_params  # pylint: disable=unused-import
+from tests.torch.nas.test_scheduler import fixture_schedule_params  # pylint: disable=unused-import  # noqa: F401
 
 
 class PSControllerTestDesc(NamedTuple):

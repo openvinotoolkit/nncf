@@ -22,7 +22,8 @@ disable = arguments-differ,
           duplicate-code,
           consider-using-f-string,
           logging-fstring-interpolation,
-          cyclic-import
+          cyclic-import,
+          useless-import-alias
 
 max-line-length = 120
 ignore-docstrings = yes

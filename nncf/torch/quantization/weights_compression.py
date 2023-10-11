@@ -54,7 +54,7 @@ def _insert_pre_compression_operations(
     if compression_hist is None:
         compression_hist = {}
     for _, layer in module.named_children():
-        if not type(layer) in allowed_types:
+        if type(layer) not in allowed_types:
             _insert_pre_compression_operations(layer, allowed_types, level_high, compression_hist)
             continue
 

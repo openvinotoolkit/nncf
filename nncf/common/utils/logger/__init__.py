@@ -20,6 +20,6 @@ warning_deprecated(
 )
 
 # pylint:disable=unused-import
-from nncf.common.logging.logger import disable_logging
-from nncf.common.logging.logger import nncf_logger as logger
-from nncf.common.logging.logger import set_log_level
+from nncf.common.logging.logger import disable_logging as disable_logging  # noqa: E402
+from nncf.common.logging.logger import nncf_logger as logger  # noqa: E402, F401
+from nncf.common.logging.logger import set_log_level as set_log_level  # noqa: E402

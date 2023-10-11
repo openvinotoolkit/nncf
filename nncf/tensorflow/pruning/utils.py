@@ -70,7 +70,7 @@ def broadcast_filter_mask(filter_mask, shape, dim):
     return broadcasted_filter_mask
 
 
-def collect_output_shapes(model: "NNCFNetwork", graph: NNCFGraph) -> Dict[NNCFNodeName, List[int]]:
+def collect_output_shapes(model: "NNCFNetwork", graph: NNCFGraph) -> Dict[NNCFNodeName, List[int]]:  # noqa: F821
     """
     Collects output dimension shapes for convolutions and fully connected layers
     from the connected edges in the NNCFGraph.

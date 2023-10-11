@@ -453,7 +453,7 @@ class ElasticKernelBuilder(SingleElasticityBuilder):
         target_scopes: Optional[List[str]] = None,
     ):
         super().__init__(ignored_scopes, target_scopes)
-        self._node_names_to_make_elastic = []  # type: List[NNCFNodeName]
+        self._node_names_to_make_elastic: List[NNCFNodeName] = []
         self._params = params
 
     def build(self, target_model: NNCFNetwork) -> ElasticKernelHandler:
@@ -464,7 +464,7 @@ class ElasticKernelBuilder(SingleElasticityBuilder):
         :param target_model: a target NNCFNetwork for adding modifications
         :return: a handler object that can manipulate the elastic kernel.
         """
-        elastic_kernel_ops = []  # type: List[ElasticKernelOp]
+        elastic_kernel_ops: List[ElasticKernelOp] = []
         transformation_commands = []
 
         graph = target_model.nncf.get_original_graph()
@@ -473,7 +473,7 @@ class ElasticKernelBuilder(SingleElasticityBuilder):
 
         if not self._node_names_to_make_elastic:
             elastic_kernel_types = [NNCFConv2d.op_func_name]
-            all_elastic_kernel_nodes = graph.get_nodes_by_types(elastic_kernel_types)  # type: List[NNCFNode]
+            all_elastic_kernel_nodes: List[NNCFNode] = graph.get_nodes_by_types(elastic_kernel_types)
             self._node_names_to_make_elastic = [node.node_name for node in all_elastic_kernel_nodes]
 
         for node_name in self._node_names_to_make_elastic:

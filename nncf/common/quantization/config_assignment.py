@@ -72,7 +72,7 @@ def assign_qconfig_lists_to_modules(
     :return: A dict of each weighted node vs. the list of quantizer configs allowed for quantizing the associated
       weights
     """
-    retval = {}  # type: Dict[NNCFNode, List[QuantizerConfig]]
+    retval: Dict[NNCFNode, List[QuantizerConfig]] = {}
     default_qconfig = deepcopy(default_weight_qconfig)
     if global_weight_constraints is not None:
         default_qconfig = global_weight_constraints.apply_constraints_to(default_qconfig)
