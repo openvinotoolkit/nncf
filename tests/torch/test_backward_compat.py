@@ -21,15 +21,13 @@ from examples.torch.common.execution import get_device
 from examples.torch.common.execution import prepare_model_for_execution
 from examples.torch.common.model_loader import load_model
 from nncf.api.compression import CompressionStage
-from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.logging.logger import NNCFDeprecationWarning
 from nncf.config import NNCFConfig
 from nncf.torch import register_default_init_args
 from nncf.torch.checkpoint_loading import load_state
-from nncf.torch.nncf_network import LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX
-from nncf.torch.nncf_network import LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME
 from nncf.torch.quantization.algo import QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME
 from nncf.torch.quantization.algo import QuantizerBuilderStateVersion
+from nncf.torch.quantization.external_quantizer import EXTERNAL_QUANTIZERS_STORAGE_PREFIX
 from tests.shared.helpers import get_cli_dict_args
 from tests.shared.paths import ROOT_PYTHONPATH_ENV
 from tests.shared.paths import TEST_ROOT
@@ -37,7 +35,6 @@ from tests.torch.helpers import Command
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.helpers import register_bn_adaptation_init_args
-from tests.torch.quantization.test_range_init import SingleConv2dIdentityModel
 from tests.torch.test_compressed_graph import get_basic_quantization_config
 from tests.torch.test_sanity_sample import create_command_line
 
@@ -164,42 +161,6 @@ def test_loaded_model_evals_according_to_saved_acc(_params, tmp_path, dataset_di
         assert torch.load(checkpoint_path)["best_acc1"] == pytest.approx(metrics["Accuracy"], abs=1e-2)
 
 
-old_style_sd = {
-    f"{LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.weight": torch.ones([3, 3, 1, 1]),
-    f"{LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.bias": torch.ones([3]),
-    f"{LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op._num_bits": 8 * torch.ones([1], dtype=torch.int32),
-    f"{LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op.signed_tensor": torch.ones([1], dtype=torch.int32),
-    f"{LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op.enabled": torch.ones([1], dtype=torch.int32),
-    f"{LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME}.conv2d.pre_ops.0.op.scale": torch.ones([3, 1, 1, 1]),
-    f"{LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX}./{MODEL_INPUT_OP_NAME}_0|OUTPUT._num_bits": 8
-    * torch.ones([1], dtype=torch.int32),
-    f"{LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX}./{MODEL_INPUT_OP_NAME}_0|OUTPUT.signed_tensor": torch.zeros(
-        [1], dtype=torch.int32
-    ),
-    f"{LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX}./{MODEL_INPUT_OP_NAME}_0|OUTPUT.enabled": torch.ones(
-        [1], dtype=torch.int32
-    ),
-    f"{LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX}./{MODEL_INPUT_OP_NAME}_0|OUTPUT.scale": torch.ones([1]),
-}
-
-
-def test_renamed_activation_quantizer_storage_in_state_dict():
-    model = SingleConv2dIdentityModel()
-    config = get_basic_quantization_config(input_info={"sample_size": [1, 3, 100, 100]})
-    register_bn_adaptation_init_args(config)
-    compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
-
-    with pytest.warns(NNCFDeprecationWarning):
-        _ = load_state(compressed_model, old_style_sd, is_resume=True)
-
-
-def test_can_compress_with_config_and_resume_of_old_checkpoint():
-    model = SingleConv2dIdentityModel()
-    config = get_basic_quantization_config(input_info={"sample_size": [1, 3, 100, 100]})
-    register_bn_adaptation_init_args(config)
-    create_compressed_model_and_algo_for_test(model, config, compression_state=old_style_sd)
-
-
 # BN Wrapping backward compatibility test
 
 
@@ -217,39 +178,41 @@ class ConvBNLayer(torch.nn.Module):
 
 
 sd_without_nncf_bn_wrapping = {
-    "nncf_module.conv.weight": torch.ones([9, 3, 3, 3]),
-    "nncf_module.conv.bias": torch.ones([9]),
-    "nncf_module.conv.nncf_padding_value": torch.ones([1]),
-    "nncf_module.conv.pre_ops.0.op._num_bits": torch.ones([1]),
-    "nncf_module.conv.pre_ops.0.op.signed_tensor": torch.ones([1]),
-    "nncf_module.conv.pre_ops.0.op.enabled": torch.ones([1]),
-    "nncf_module.conv.pre_ops.0.op.scale": torch.ones([9, 1, 1, 1]),
-    "nncf_module.bn.weight": torch.ones([9]),
-    "nncf_module.bn.bias": torch.ones([9]),
-    "nncf_module.bn.running_mean": torch.ones([9]),
-    "nncf_module.bn.running_var": torch.ones([9]),
-    "nncf_module.bn.num_batches_tracked": torch.ones([]),
-    "nncf_module.conv1.weight": torch.ones([3, 9, 3, 3]),
-    "nncf_module.conv1.bias": torch.ones([3]),
-    "nncf_module.conv1.nncf_padding_value": torch.ones([1]),
-    "nncf_module.conv1.pre_ops.0.op._num_bits": torch.ones([1]),
-    "nncf_module.conv1.pre_ops.0.op.signed_tensor": torch.ones([1]),
-    "nncf_module.conv1.pre_ops.0.op.enabled": torch.ones([1]),
-    "nncf_module.conv1.pre_ops.0.op.scale": torch.ones([3, 1, 1, 1]),
-    "nncf_module.bn1.weight": torch.ones([3]),
-    "nncf_module.bn1.bias": torch.ones([3]),
-    "nncf_module.bn1.running_mean": torch.ones([3]),
-    "nncf_module.bn1.running_var": torch.ones([3]),
-    "nncf_module.bn1.num_batches_tracked": torch.ones([]),
-    "external_quantizers./nncf_model_input_0|OUTPUT._num_bits": torch.ones([1]),
-    "external_quantizers./nncf_model_input_0|OUTPUT.signed_tensor": torch.ones([1]),
-    "external_quantizers./nncf_model_input_0|OUTPUT.enabled": torch.ones([1]),
-    "external_quantizers./nncf_model_input_0|OUTPUT.scale": torch.ones([1]),
+    "conv.weight": torch.ones([9, 3, 3, 3]),
+    "conv.bias": torch.ones([9]),
+    "conv.nncf_padding_value": torch.ones([1]),
+    "conv.pre_ops.0.op._num_bits": torch.ones([1]),
+    "conv.pre_ops.0.op.signed_tensor": torch.ones([1]),
+    "conv.pre_ops.0.op.enabled": torch.ones([1]),
+    "conv.pre_ops.0.op.scale": torch.ones([9, 1, 1, 1]),
+    "bn.weight": torch.ones([9]),
+    "bn.bias": torch.ones([9]),
+    "bn.running_mean": torch.ones([9]),
+    "bn.running_var": torch.ones([9]),
+    "bn.num_batches_tracked": torch.ones([]),
+    "conv1.weight": torch.ones([3, 9, 3, 3]),
+    "conv1.bias": torch.ones([3]),
+    "conv1.nncf_padding_value": torch.ones([1]),
+    "conv1.pre_ops.0.op._num_bits": torch.ones([1]),
+    "conv1.pre_ops.0.op.signed_tensor": torch.ones([1]),
+    "conv1.pre_ops.0.op.enabled": torch.ones([1]),
+    "conv1.pre_ops.0.op.scale": torch.ones([3, 1, 1, 1]),
+    "bn1.weight": torch.ones([3]),
+    "bn1.bias": torch.ones([3]),
+    "bn1.running_mean": torch.ones([3]),
+    "bn1.running_var": torch.ones([3]),
+    "bn1.num_batches_tracked": torch.ones([]),
+    f"{EXTERNAL_QUANTIZERS_STORAGE_PREFIX}./nncf_model_input_0|OUTPUT._num_bits": torch.ones([1]),
+    f"{EXTERNAL_QUANTIZERS_STORAGE_PREFIX}./nncf_model_input_0|OUTPUT.signed_tensor": torch.ones([1]),
+    f"{EXTERNAL_QUANTIZERS_STORAGE_PREFIX}./nncf_model_input_0|OUTPUT.enabled": torch.ones([1]),
+    f"{EXTERNAL_QUANTIZERS_STORAGE_PREFIX}./nncf_model_input_0|OUTPUT.scale": torch.ones([1]),
     # Old bn layer names:            |||||||||||
-    "external_quantizers.ConvBNLayer/BatchNorm2d[bn]/batch_norm_0|OUTPUT._num_bits": torch.ones([1]),
-    "external_quantizers.ConvBNLayer/BatchNorm2d[bn]/batch_norm_0|OUTPUT.signed_tensor": torch.ones([1]),
-    "external_quantizers.ConvBNLayer/BatchNorm2d[bn]/batch_norm_0|OUTPUT.enabled": torch.ones([1]),
-    "external_quantizers.ConvBNLayer/BatchNorm2d[bn]/batch_norm_0|OUTPUT.scale": torch.ones([1]),
+    f"{EXTERNAL_QUANTIZERS_STORAGE_PREFIX}.ConvBNLayer/BatchNorm2d[bn]/batch_norm_0|OUTPUT._num_bits": torch.ones([1]),
+    f"{EXTERNAL_QUANTIZERS_STORAGE_PREFIX}.ConvBNLayer/BatchNorm2d[bn]/batch_norm_0|OUTPUT.signed_tensor": torch.ones(
+        [1]
+    ),
+    f"{EXTERNAL_QUANTIZERS_STORAGE_PREFIX}.ConvBNLayer/BatchNorm2d[bn]/batch_norm_0|OUTPUT.enabled": torch.ones([1]),
+    f"{EXTERNAL_QUANTIZERS_STORAGE_PREFIX}.ConvBNLayer/BatchNorm2d[bn]/batch_norm_0|OUTPUT.scale": torch.ones([1]),
 }
 
 compression_state_without_bn_wrapping = {

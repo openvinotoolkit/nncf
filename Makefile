@@ -10,6 +10,10 @@ ifdef DATA
 	DATA_ARG := --data $(DATA)
 endif
 
+ifdef WEEKLY_MODELS
+	WEEKLY_MODELS_ARG := --weekly-models $(WEEKLY_MODELS)
+endif
+
 install-pre-commit:
 	pip install pre-commit==3.2.2
 
@@ -113,18 +117,24 @@ test-examples-tensorflow:
 # PyTorch backend
 install-torch-test:
 	pip install -U pip
-	pip install -e .[torch]
-	pip install -r tests/torch/requirements.txt
+	pip install -e .[torch] --index-url https://download.pytorch.org/whl/cu118 --extra-index-url=https://pypi.org/simple  # ticket 119128
+	pip install -r tests/torch/requirements.txt --index-url https://download.pytorch.org/whl/cu118 --extra-index-url=https://pypi.org/simple
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/cross_fw/examples/requirements.txt
-	pip install -r examples/torch/requirements.txt
+	pip install -r examples/torch/requirements.txt --index-url https://download.pytorch.org/whl/cu118 --extra-index-url=https://pypi.org/simple
 
 install-torch-dev: install-torch-test install-pre-commit install-pylint
 	pip install -r examples/post_training_quantization/torch/mobilenet_v2/requirements.txt
 	pip install -r examples/post_training_quantization/torch/ssd300_vgg16/requirements.txt
 
 test-torch:
-	pytest ${COVERAGE_ARGS} tests/common tests/torch --junitxml ${JUNITXML_PATH} $(DATA_ARG)
+	pytest ${COVERAGE_ARGS} tests/common tests/torch -m "not weekly and not nightly" --junitxml ${JUNITXML_PATH} $(DATA_ARG)
+
+test-torch-nightly:
+	pytest ${COVERAGE_ARGS} tests/torch -m nightly --junitxml ${JUNITXML_PATH} $(DATA_ARG)
+
+test-torch-weekly:
+	pytest ${COVERAGE_ARGS} tests/torch -m weekly --junitxml ${JUNITXML_PATH} $(DATA_ARG) ${WEEKLY_MODELS_ARG}
 
 COMMON_PYFILES := $(shell python3 tools/collect_pylint_input_files_for_backend.py common)
 pylint-torch:

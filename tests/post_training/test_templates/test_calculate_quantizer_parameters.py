@@ -19,6 +19,7 @@ import pytest
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.experimental.tensor import functions as fns
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from tests.post_training.conftest import FQ_CALCULATED_PARAMETERS_PATH
@@ -32,10 +33,10 @@ def compare_fq_parameters(ref_params, params):
     assert ref_params.input_high.shape == params.input_high.shape
     assert ref_params.output_low.shape == params.output_low.shape
     assert ref_params.output_high.shape == params.output_high.shape
-    assert np.allclose(ref_params.input_low, params.input_low)
-    assert np.allclose(ref_params.input_high, params.input_high)
-    assert np.allclose(ref_params.output_low, params.output_low)
-    assert np.allclose(ref_params.output_high, params.output_high)
+    assert fns.allclose(ref_params.input_low, params.input_low)
+    assert fns.allclose(ref_params.input_high, params.input_high)
+    assert fns.allclose(ref_params.output_low, params.output_low)
+    assert fns.allclose(ref_params.output_high, params.output_high)
 
 
 def get_test_reference_key(q_group, q_config, narrow_range, hf_range):
@@ -213,7 +214,7 @@ class TemplateTestFQParams(ABC):
         else:
             max_values = np.amax(data, axis=axes, keepdims=q_config.per_channel)
 
-        statistics = self.tensor_statistic(max_values=max_values, min_values=min_values)
+        statistics = self.tensor_statistic(min_values=min_values, max_values=max_values)
 
         if not case_to_test.should_fail:
             fq_params = calculate_quantizer_parameters(statistics, q_config, quant_group, narrow_range, half_range)

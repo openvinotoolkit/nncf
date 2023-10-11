@@ -34,7 +34,7 @@ learning frameworks.
 | Compression algorithm                                                       |OpenVINO|PyTorch|   TensorFlow   |     ONNX       |
 |:----------------------------------------------------------------------------| :---: | :---: |:--------:|:------------------:|
 | [Post-Training Quantization](./docs/compression_algorithms/post_training/Quantization.md) | Supported | Supported |Supported| Supported |
-| [Weights Compression](./docs/compression_algorithms/CompressWeights.md) | Not supported | Supported |Not supported| Not supported |
+| [Weights Compression](./docs/compression_algorithms/CompressWeights.md) | Supported | Supported |Not supported| Not supported |
 
 ### Training-Time Compression Algorithms
 
@@ -280,6 +280,10 @@ A collection of ready-to-run Jupyter* notebooks are available to demonstrate how
 - [NNCF Post-Training Optimization of Segment Anything Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/237-segment-anything)
 - [NNCF Post-Training Optimization of CLIP Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/228-clip-zero-shot-image-classification)
 - [NNCF Post-Training Optimization of ImageBind Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/239-image-bind)
+- [NNCF Post-Training Optimization of Whisper Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/227-whisper-subtitles-generation)
+- [NNCF Post-Training Optimization of BLIP Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/233-blip-visual-language-processing)
+- [NNCF Post-Training Optimization of DeepFloyd IF Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/238-deepfloyd-if)
+- [NNCF Post-Training Optimization of Grammatical Error Correction Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/214-grammar-correction)
 - [Quantize a Segmentation Model and Show Live Inference](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/110-ct-segmentation-quantize)
 - [Training to Deployment with TensorFlow and OpenVINO](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/301-tensorflow-training-openvino)
 - [Migrate quantization from POT API to NNCF API](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/111-yolov5-quantization-migration)
@@ -287,6 +291,7 @@ A collection of ready-to-run Jupyter* notebooks are available to demonstrate how
 - [Optimizing PyTorch models with NNCF of OpenVINO by 8-bit quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/302-pytorch-quantization-aware-training)
 - [Optimizing TensorFlow models with NNCF of OpenVINO by 8-bit quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/305-tensorflow-quantization-aware-training)
 - [Accelerate Inference of Sparse Transformer Models with OpenVINO and 4th Gen Intel Xeon Scalable Processors](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/116-sparsity-optimization)
+- [Quantization with accuracy control using NNCF](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/122-quantizing-model-with-accuracy-control)
 
 ### Post-Training Quantization Samples
 
@@ -366,11 +371,11 @@ You may also use one of the Dockerfiles in the [docker](./docker) directory to b
 - Python\* 3.7 or later
 - Supported frameworks:
   - PyTorch\* >=1.13.0, <2.1
-  - TensorFlow\* >=2.4.0, <=2.12.0
+  - TensorFlow\* >=2.8.4, <=2.12.1
   - ONNX\* ~=1.13.1
   - OpenVINO\* >=2022.3.0
 
-This repository is tested on Python* 3.8.10, PyTorch* 2.0.1 (NVidia CUDA\* Toolkit 11.7) and TensorFlow* 2.12.0 (NVidia CUDA\* Toolkit 11.8).
+This repository is tested on Python* 3.8.10, PyTorch* 2.0.1 (NVidia CUDA\* Toolkit 11.8) and TensorFlow* 2.12.1 (NVidia CUDA\* Toolkit 11.8).
 
 ## NNCF Compressed Model Zoo
 

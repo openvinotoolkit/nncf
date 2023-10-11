@@ -76,6 +76,14 @@ def create_linear_arithmetic_operations() -> GraphPattern:
     return linear
 
 
+@PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_SHIFT_SCALE)
+def create_linear_shift_scale() -> GraphPattern:
+    linear = linear_operations()
+    shift_scale = create_shift_scale()
+    linear.join_patterns(shift_scale)
+    return linear
+
+
 @PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.BATCH_NORM_ACTIVATIONS)
 def create_batch_norm_activations_operations() -> GraphPattern:
     batch_norm = batch_norm_operations()

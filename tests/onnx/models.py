@@ -1630,3 +1630,117 @@ class EmbeddingModel(ONNXReferenceModel):
         model = onnx.helper.make_model(graph_def, opset_imports=[op])
         onnx.checker.check_model(model)
         super().__init__(model, [input_shape], "embedding_model.dot")
+
+
+@ALL_SYNTHETIC_MODELS.register()
+class UnifiedEmbeddingModel(ONNXReferenceModel):
+    #       X
+    #      / \
+    #     | Convert
+    #     |     \
+    #   MatMul  Gather
+    #     |       |
+    #  Reshape    |
+    #     \      /
+    #      Concat
+    #         |
+    #       MatMul
+    #         |
+    #         Y
+    def __init__(self):
+        model_input_name, model_output_name = "X", "Y"
+        model_input_channels = 3
+        model_output_channels = 6
+        input_shape = [1, model_input_channels]
+        X = onnx.helper.make_tensor_value_info(model_input_name, onnx.TensorProto.FLOAT, input_shape)
+        Y = onnx.helper.make_tensor_value_info(model_output_name, onnx.TensorProto.FLOAT, [1, model_output_channels])
+
+        rng = np.random.default_rng(seed=0)
+
+        cast_output_name = "Cast_Y"
+        cast_node = onnx.helper.make_node(
+            name="Cast",
+            op_type="Cast",
+            to=onnx.TensorProto.INT64,
+            inputs=[model_input_name],
+            outputs=[cast_output_name],
+        )
+
+        embedding_output_name = "Embedding_Y"
+        embedding_tensor_name = "Embedding_W"
+        embedding_tensor = create_initializer_tensor(
+            name=embedding_tensor_name,
+            tensor_array=rng.uniform(0, 1, (4, 5)).astype(np.float32),
+            data_type=onnx.TensorProto.FLOAT,
+        )
+        embedding_node = onnx.helper.make_node(
+            name="Embedding",
+            op_type="Gather",
+            axis=0,
+            inputs=[embedding_tensor_name, cast_output_name],
+            outputs=[embedding_output_name],
+        )
+
+        matmul_1_tensor_name = "W_1"
+        matmul_1_output_name = "MatMul_1_Y"
+        matmul_1_tensor = create_initializer_tensor(
+            name=matmul_1_tensor_name,
+            tensor_array=rng.uniform(0, 1, (3, 3, 5)).astype(np.float32),
+            data_type=onnx.TensorProto.FLOAT,
+        )
+        matmul_1_node = onnx.helper.make_node(
+            name="MatMul_1",
+            op_type="MatMul",
+            inputs=[model_input_name, matmul_1_tensor_name],
+            outputs=[matmul_1_output_name],
+        )
+
+        reshape_tensor_name = "R"
+        reshape_tensor = create_initializer_tensor(
+            name=reshape_tensor_name,
+            tensor_array=np.array([1, 3, 5]).astype(np.float32),
+            data_type=onnx.TensorProto.FLOAT,
+        )
+        reshape_output_name = "Reshape_Y"
+        reshape_node = onnx.helper.make_node(
+            name="Reshape",
+            op_type="Reshape",
+            inputs=[matmul_1_output_name, reshape_tensor_name],
+            outputs=[reshape_output_name],
+        )
+
+        concat_output_name = "Concat_Y"
+        concat_node = onnx.helper.make_node(
+            name="Concat",
+            op_type="Concat",
+            inputs=[embedding_output_name, reshape_output_name],
+            outputs=[concat_output_name],
+            axis=0,
+        )
+
+        matmul_2_tensor_name = "W_2"
+        matmul_2_tensor = create_initializer_tensor(
+            name=matmul_2_tensor_name,
+            tensor_array=rng.uniform(0, 1, (1, 5)).astype(np.float32),
+            data_type=onnx.TensorProto.FLOAT,
+        )
+        matmul_2_node = onnx.helper.make_node(
+            name="MatMul_2",
+            op_type="MatMul",
+            inputs=[concat_output_name, matmul_2_tensor_name],
+            outputs=[model_output_name],
+        )
+
+        graph_def = onnx.helper.make_graph(
+            nodes=[cast_node, embedding_node, matmul_1_node, reshape_node, concat_node, matmul_2_node],
+            name="UnifiedEmbeddingModel",
+            inputs=[X],
+            outputs=[Y],
+            initializer=[embedding_tensor, matmul_1_tensor, matmul_2_tensor, reshape_tensor],
+        )
+
+        op = onnx.OperatorSetIdProto()
+        op.version = OPSET_VERSION
+        model = onnx.helper.make_model(graph_def, opset_imports=[op])
+        onnx.checker.check_model(model)
+        super().__init__(model, [input_shape], "unified_embedding_model.dot")

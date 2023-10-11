@@ -12,6 +12,7 @@
 from typing import List
 
 import numpy as np
+import openvino.runtime as ov
 
 from nncf.common.graph.transformations.commands import Command
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -147,16 +148,18 @@ class OVModelExtractionCommand(Command):
         raise NotImplementedError()
 
 
-class OVNullBiasInsertionCommand(TransformationCommand):
+class OVBiasInsertionCommand(TransformationCommand):
     """
-    Inserts null bias for the corresponding node.
+    Inserts bias for the corresponding node.
     """
 
-    def __init__(self, target_point: OVTargetPoint):
+    def __init__(self, target_point: OVTargetPoint, bias_value: np.ndarray):
         """
         :param target_point: The TargetPoint instance for the insertion that contains layer's information.
+        :param bias_value: Constant value for the bias layer.
         """
         super().__init__(TransformationType.INSERT, target_point)
+        self.bias_value = bias_value
 
     def union(self, other: "TransformationCommand") -> "TransformationCommand":
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
@@ -185,6 +188,43 @@ class OVMultiplyInsertionCommand(OVInsertionCommand):
         self.scale_value = scale_value
         self.destination_node_names = destination_node_names
         self.multiply_node_name = multiply_node_name
+
+    def union(self, other: "TransformationCommand") -> "TransformationCommand":
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
+
+class OVUpdateIfBodyCommand(TransformationCommand):
+    """
+    Updates If node body.
+    """
+
+    def __init__(self, target_point: OVTargetPoint, body_model: ov.Model):
+        """
+        :param target_point: The TargetPoint instance for the change that contains layer's information.
+        :param body_model: A new model to set.
+        """
+        super().__init__(TransformationType.CHANGE, target_point)
+        self.subgraph_model = body_model
+
+    def union(self, other: "TransformationCommand") -> "TransformationCommand":
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
+
+class OVExtractIfBodyCommand(Command):
+    """
+    Extracts If node body.
+    """
+
+    def __init__(self, if_node_name: str, if_body_condition: bool):
+        """
+        :param target_point: The TargetPoint instance for the extraction that contains layer's information.
+        :param if_body_condition: If true extracts then body, else - else body.
+        """
+        super().__init__(TransformationType.EXTRACT)
+        self.if_node_name = if_node_name
+        self.if_body_condition = if_body_condition
 
     def union(self, other: "TransformationCommand") -> "TransformationCommand":
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand

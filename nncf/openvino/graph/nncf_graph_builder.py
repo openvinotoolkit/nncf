@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import defaultdict
 from typing import List, Type
 
 import openvino.runtime as ov
@@ -16,16 +17,15 @@ import openvino.runtime as ov
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.layer_attributes import get_weighted_layer_attributes
-from nncf.openvino.graph.metatypes.openvino_metatypes import METATYPES_WITH_CONST_PORT_ID
-from nncf.openvino.graph.metatypes.openvino_metatypes import OV_OPERATOR_METATYPES
+from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_CONST_PORT_ID
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGRUSequenceMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVLSTMSequenceMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import get_operation_const_op
 
 
@@ -79,23 +79,6 @@ class GraphConverter:
         return inputs
 
     @staticmethod
-    def _get_node_metatype(node: ov.Node) -> Type[OperatorMetatype]:
-        """
-        Determine NNCF meta type for OpenVINO node.
-
-        :param node: OpenVINO node.
-        :return: NNCF meta type which corresponds to OpenVINO node.
-        """
-        node_type = node.get_type_name()
-        metatype = OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
-        if metatype is not UnknownMetatype:
-            if metatype.get_subtypes():
-                subtype = metatype.determine_subtype(node)
-                if subtype is not None:
-                    metatype = subtype
-        return metatype
-
-    @staticmethod
     def _add_edges_to_nncf_graph(model: ov.Model, graph: NNCFGraph) -> None:
         """
         Adds edges between NNCFNodes to the NNCFGraph.
@@ -106,19 +89,28 @@ class GraphConverter:
         for op in model.get_ops():
             in_node_id = graph.get_node_by_name(op.get_friendly_name()).node_id
             for output_port_id, out in enumerate(op.outputs()):
+                node_vs_target_inputs = defaultdict(list)
                 for inp in out.get_target_inputs():
-                    out_node = inp.get_node()
+                    node_vs_target_inputs[inp.get_node()].append(inp)
+
+                for out_node, inputs in node_vs_target_inputs.items():
                     tensor_shape = list(out.partial_shape.get_max_shape())
                     output_node_id = graph.get_node_by_name(out_node.get_friendly_name()).node_id
                     ov_dtype = out.get_element_type().get_type_name()
                     nncf_dtype = GraphConverter.convert_to_nncf_dtype(ov_dtype)
+
+                    parallel_inputs = None
+                    if len(inputs) > 1:
+                        parallel_inputs = [inp.get_index() for inp in inputs[1:]]
+
                     graph.add_edge_between_nncf_nodes(
                         from_node_id=in_node_id,
                         to_node_id=output_node_id,
                         tensor_shape=tensor_shape,
-                        input_port_id=inp.get_index(),
+                        input_port_id=inputs[0].get_index(),
                         output_port_id=output_port_id,
                         dtype=Dtype(nncf_dtype),
+                        parallel_input_port_ids=parallel_inputs,
                     )
 
     @staticmethod
@@ -130,9 +122,10 @@ class GraphConverter:
         :param graph: NNCFGraph.
         """
         node_type = node.get_type_name()
-        metatype = GraphConverter._get_node_metatype(node)
+        metatype = get_node_metatype(node)
         graph.add_nncf_node(node_name=node.get_friendly_name(), node_type=node_type, node_metatype=metatype)
 
+    # pylint: disable=too-many-branches
     @staticmethod
     def create_nncf_graph(model: ov.Model) -> NNCFGraph:
         """
@@ -159,13 +152,13 @@ class GraphConverter:
                         inference_nodes.append(inp.get_node())
 
         for node in model.get_ops():
-            metatype = GraphConverter._get_node_metatype(node)
+            metatype = get_node_metatype(node)
             # Add nodes from constant subgraphs
             node_name = node.get_friendly_name()
             if node_name not in visited:
                 GraphConverter._add_nncf_node(node, nncf_graph)
             # Set const port id
-            elif metatype in METATYPES_WITH_CONST_PORT_ID:
+            elif metatype in OPERATIONS_WITH_CONST_PORT_ID:
                 const_attrs, act_attrs = {}, {}
                 for inp in GraphConverter._filter_weight_input_ports(node.inputs(), metatype):
                     inp_name = inp.get_source_output().get_node().get_friendly_name()
@@ -192,8 +185,10 @@ class GraphConverter:
                         node_attributes = node.get_attributes()
                         const_transpose_name = attribute_names[const_port_id]
                         const_attrs[const_port_id]["transpose"] = node_attributes[const_transpose_name]
-
                         act_attrs["transpose"] = node_attributes[attribute_names[act_port_id]]
+                    elif metatype == OVGRUSequenceMetatype:
+                        node_attributes = node.get_attributes()
+                        act_attrs["linear_before_reset"] = node_attributes["linear_before_reset"]
 
                     if const_attrs or act_attrs:
                         nncf_node = nncf_graph.get_node_by_name(node_name)

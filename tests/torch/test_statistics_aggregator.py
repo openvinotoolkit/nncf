@@ -62,7 +62,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
 
     @pytest.fixture
     def is_backend_support_custom_estimators(self) -> bool:
-        return False
+        return True
 
     @pytest.fixture(scope="session")
     def test_params(self):

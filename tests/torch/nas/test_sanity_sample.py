@@ -96,6 +96,7 @@ def fixture_nas_desc(request, dataset_dir):
     return desc.finalize(dataset_dir)
 
 
+@pytest.mark.nightly
 def test_e2e_supernet_training(nas_desc: NASSampleTestDescriptor, tmp_path, mocker):
     validator = nas_desc.get_validator()
     args = validator.get_default_args(tmp_path)

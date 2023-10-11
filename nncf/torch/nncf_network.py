@@ -23,7 +23,6 @@ import torch
 from torch import nn
 
 from nncf import nncf_logger
-from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
@@ -61,16 +60,11 @@ from nncf.torch.knowledge_distillation.knowledge_distillation_handler import Kno
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.nested_objects_traversal import objwalk
 from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
+from nncf.torch.quantization.external_quantizer import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.torch.utils import compute_FLOPs_hook
 from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import training_mode_switcher
-
-LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME = "nncf_module"
-LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX = "external_quantizers"
-
-EXTERNAL_QUANTIZERS_STORAGE_NAME = "external_quantizers"
-CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX = "_nncf." + EXTERNAL_QUANTIZERS_STORAGE_NAME
 
 Module = TypeVar("Module", bound=nn.Module)
 
@@ -545,6 +539,15 @@ class NNCFNetworkInterface(torch.nn.Module):
             raise RuntimeError(f"Module type {compression_module_type} was not registered")
         return self.__getattr__(attr_name)
 
+    def is_compression_module_registered(self, compression_module_type: ExtraCompressionModuleType) -> bool:
+        """
+        Check that extra compression module was registered.
+
+        :param compression_module_type: Type of the extra compression module.
+        :return: True if the extra compression module is registered, otherwise False.
+        """
+        return compression_module_type in self._extra_module_types
+
     @staticmethod
     def _compression_module_type_to_attr_name(compression_module_type: ExtraCompressionModuleType):
         """
@@ -967,26 +970,6 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
         # self._nncf is being set in the creation function defined in the NNCFNetworkMeta metaclass
         return self._nncf
 
-    def __getattr__(self, key):
-        """
-        Only defined for purposes of deprecation warnings. This method should be removed after v2.5.0.
-        """
-        try:
-            return super().__getattr__(key)
-        except AttributeError as e:
-            if hasattr(self._nncf, key):
-                warning_deprecated(
-                    "Old style of accessing NNCF-specific attributes and methods on NNCFNetwork "
-                    "objects is deprecated. "
-                    "Access the NNCF-specific attrs through the NNCFInterface, which is "
-                    "set up as an `nncf` attribute on the compressed model object.\n"
-                    "For instance, instead of `compressed_model.get_graph()` "
-                    "you should now write `compressed_model.nncf.get_graph()`.\n"
-                    "The old style will be removed after NNCF v2.5.0"
-                )
-                return getattr(self._nncf, key)
-            raise e
-
     def __setattr__(self, key, value):
         # If setting `forward`, set it on the original model.
         if key == "forward":
@@ -1003,16 +986,6 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
                 "if `fn` already had 0-th `self` argument bound or never had it in the first place."
             )
         super().__setattr__(key, value)
-
-    def get_nncf_wrapped_model(self) -> "NNCFNetwork":
-        warning_deprecated(
-            "Calls to NNCFNetwork.get_nncf_wrapped_model() are deprecated and will be removed "
-            "in NNCF v2.6.0.\n"
-            "Starting from NNCF v2.5.0, the compressed model object already inherits the original "
-            "class of the uncompressed model and the forward signature, so the call to "
-            ".get_nncf_wrapped_model() may be simply omitted."
-        )
-        return self
 
 
 class NNCFSkippingIter:

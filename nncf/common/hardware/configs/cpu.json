@@ -258,6 +258,12 @@
                 "activations": "q8_a"
             }
         },
+        {
+            "type": "GroupNormalization",
+            "quantization": {
+                "activations": "q8_a"
+            }
+        },
         {"type": "Flatten"},
         {"type": "Squeeze"},
         {"type": "Unsqueeze"},

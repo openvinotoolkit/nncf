@@ -165,6 +165,14 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             self._add_barrier_after_node(barred_node_key)
         self._branch_nodes_directly_dominating_outputs = None
 
+    def get_input_node_keys(self) -> List[str]:
+        """
+        Returns graph input node keys.
+
+        :return: List of the input node keys.
+        """
+        return self._input_node_keys_vs_nncf_nodes.keys()
+
     def get_node_keys_by_metatype(self, metatype: Type[OperatorMetatype]) -> List[str]:
         """
         Returns a list of node keys, whose metatype is corresponding to the 'metatype'.

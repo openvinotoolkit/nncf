@@ -20,8 +20,12 @@ from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
+from nncf.openvino.graph.node_utils import get_number_if_op
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
+from nncf.openvino.quantization.quantize_ifmodel import apply_algorithm_if_bodies
+from nncf.openvino.quantization.weights_compression import insert_pre_compression_operations
+from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -88,6 +92,64 @@ def dump_parameters(model: ov.Model, parameters: Dict, path: Optional[List] = No
             model.set_rt_info(str(value), rt_path)
     except RuntimeError as e:
         nncf_logger.debug(f"Unable to dump optimization parameters due to error: {e}")
+
+
+@tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
+def native_quantize_if_op_impl(
+    model: ov.Model,
+    calibration_dataset: Dataset,
+    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    target_device: TargetDevice = TargetDevice.ANY,
+    subset_size: int = 300,
+    fast_bias_correction: bool = True,
+    model_type: Optional[ModelType] = None,
+    ignored_scope: Optional[IgnoredScope] = None,
+    advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
+) -> ov.Model:
+    """
+    Implementation of the `quantize()` method for the OpenVINO backend via the OpenVINO Runtime API.
+    """
+    if not fast_bias_correction:
+        raise NotImplementedError(
+            "The BiasCorrection algorithm is not supported for OpenVINO models with If operation."
+        )
+    quantization_algorithm = PostTrainingQuantization(
+        preset=preset,
+        target_device=target_device,
+        subset_size=subset_size,
+        fast_bias_correction=fast_bias_correction,
+        model_type=model_type,
+        ignored_scope=ignored_scope,
+        advanced_parameters=advanced_parameters,
+    )
+
+    graph = GraphConverter.create_nncf_graph(model)
+    if_ops_number = get_number_if_op(model)
+    all_models_number = if_ops_number * 2 + 1
+    nncf_logger.info(
+        f"The model consists of {if_ops_number} If node(-s) with then and else bodies. \
+            Main model and all If bodies will be quantized recursively."
+    )
+    quantized_model, _ = apply_algorithm_if_bodies(
+        quantization_algorithm, model, graph, calibration_dataset, subset_size, 1, all_models_number
+    )
+
+    if is_weight_compression_needed(advanced_parameters):
+        compress_quantize_weights_transformation(quantized_model)
+
+    dump_parameters(
+        quantized_model,
+        {
+            "preset": preset.value,
+            "target_device": target_device.value,
+            "subset_size": subset_size,
+            "fast_bias_correction": fast_bias_correction,
+            "model_type": model_type,
+            "ignored_scope": ignored_scope,
+            "advanced_parameters": convert_to_dict_recursively(advanced_parameters),
+        },
+    )
+    return quantized_model
 
 
 @tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
@@ -182,6 +244,10 @@ def native_quantize_with_accuracy_control_impl(
         copied_parameters,
     )
 
+    if advanced_accuracy_restorer_parameters.intermediate_model_dir:
+        quantized_model_path = f"{advanced_accuracy_restorer_parameters.intermediate_model_dir}/intermediate_model.xml"
+        ov.serialize(quantized_model, quantized_model_path)
+
     evaluator = Evaluator(validation_fn)
     evaluator.enable_iteration_count()
     initial_metric_results = evaluator.collect_metric_results(model, validation_dataset, model_name="initial")
@@ -239,7 +305,7 @@ def native_quantize_with_accuracy_control_impl(
             advanced_accuracy_restorer_parameters.max_num_iterations,
             max_drop,
             drop_type,
-            advanced_accuracy_restorer_parameters.num_ranking_processes,
+            advanced_accuracy_restorer_parameters.num_ranking_workers,
         )
         quantized_model = accuracy_restorer.apply(
             model,
@@ -292,6 +358,8 @@ def quantize_impl(
         quantize_fn = pot_quantize_impl
     else:
         quantize_fn = native_quantize_impl
+        if get_number_if_op(model) > 0:
+            quantize_fn = native_quantize_if_op_impl
 
     return quantize_fn(
         model,
@@ -369,3 +437,28 @@ def quantize_with_accuracy_control_impl(
         advanced_quantization_parameters,
         advanced_accuracy_restorer_parameters,
     )
+
+
+def compress_weights_impl(
+    model: ov.Model,
+    mode: CompressWeightsMode = CompressWeightsMode.INT8,
+    ratio: Optional[float] = None,
+    group_size: Optional[int] = None,
+) -> ov.Model:
+    """
+    Implementation of the `compress_weights()` method for the OpenVINO backend.
+
+    :param model: an OpenVINO model for compression.
+    :param mode: Defines a mode for weight compression.
+        INT8 stands for 8-bit integer quantization of all weights.
+        NF4 stands for a mixed-precision weights quantization to NF4 data type. The first and last layers
+        are always compressed to a backup precision which is 8-bit integer by default. All others are quantized whether
+        to NF4 or to a backup precision depending on criteria and the given ratio.
+    :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4 and
+        the rest to INT8).
+    :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
+        The value -1 means no grouping.
+    :return: The non-trainable model with compressed weights and dequantization operations.
+    """
+    insert_pre_compression_operations(model, mode, ratio, group_size)
+    return model

@@ -18,6 +18,7 @@ from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
+from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.hardware.opset import HWConfigOpName
 
 OV_OPERATOR_METATYPES = OperatorMetatypeRegistry("openvino_operator_metatypes")
@@ -672,26 +673,17 @@ class OVAbsMetatype(OVOpMetatype):
     op_names = ["Abs"]
 
 
-GENERAL_WEIGHT_LAYER_METATYPES = [
-    OVConvolutionMetatype,
-    OVGroupConvolutionMetatype,
-    OVDepthwiseConvolutionMetatype,
-    OVConvolutionBackpropDataMetatype,
-    OVGroupConvolutionBackpropDataMetatype,
-    OVMatMulMetatype,
-    OVLSTMSequenceMetatype,
-    OVGRUSequenceMetatype,
-    OVEmbeddingMetatype,
-]
+@OV_OPERATOR_METATYPES.register()
+class OVIfMetatype(OVOpMetatype):
+    name = "IfOp"
+    op_names = ["If"]
 
-METATYPES_WITH_CONST_PORT_ID = GENERAL_WEIGHT_LAYER_METATYPES + [OVAddMetatype]
 
-# Contains the operation metatypes for which bias can be applied.
-OPERATIONS_WITH_BIAS_METATYPES = [
-    OVConvolutionMetatype,
-    # TODO: add all metatypes with bias
-    OVMatMulMetatype,
-]
+@OV_OPERATOR_METATYPES.register()
+class OVGroupNormalizationMetatype(OVOpMetatype):
+    name = "GroupNormalizationOp"
+    op_names = ["GroupNormalization"]
+    hw_config_names = [HWConfigOpName.GROUPNORMALIZATION]
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
@@ -772,3 +764,20 @@ def _is_embedding(node: ov.Node) -> bool:
             return True
 
     return False
+
+
+def get_node_metatype(node: ov.Node) -> Type[OperatorMetatype]:
+    """
+    Determine NNCF meta type for OpenVINO node.
+
+    :param node: OpenVINO node.
+    :return: NNCF meta type which corresponds to OpenVINO node.
+    """
+    node_type = node.get_type_name()
+    metatype = OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
+    if metatype is not UnknownMetatype:
+        if metatype.get_subtypes():
+            subtype = metatype.determine_subtype(node)
+            if subtype is not None:
+                metatype = subtype
+    return metatype

@@ -24,8 +24,6 @@ from collections import defaultdict
 from copy import deepcopy
 from typing import Dict, List, Optional, Tuple, TypeVar
 
-from tqdm import tqdm
-
 from nncf import Dataset
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -33,6 +31,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging import nncf_logger
+from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
@@ -63,6 +62,10 @@ class SmoothQuant(Algorithm):
         :param alpha: The parameter that regulates the calculation of the scale.
             The default value is 0.95. Negative value switches off the algorithm.
         """
+
+        if alpha < 0:
+            raise RuntimeError("Smooth Quant algorithm does not support negative alpha parameter!")
+
         super().__init__()
         self._subset_size = subset_size
         self._inplace_statistics = inplace_statistics
@@ -98,10 +101,6 @@ class SmoothQuant(Algorithm):
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
     ) -> TModel:
-        if self._alpha < 0:
-            nncf_logger.info("Skipping SmoothQuant algorithm because alfa parameter is negative.")
-            return model
-
         self._set_backend_entity(model)
 
         nodes_to_smooth_data = self._get_nodes_to_smooth_data(graph)
@@ -111,7 +110,7 @@ class SmoothQuant(Algorithm):
         node_groups = self._group_nodes_by_source(nodes_to_smooth_data, graph)
 
         best_scale = None
-        for group_id, nodes in tqdm(node_groups.items(), desc="Applying Smooth Quant"):
+        for group_id, nodes in track(node_groups.items(), description="Applying Smooth Quant"):
             best_ratio = 0.0
             empty_statistic = False
             for node_to_smooth in nodes:
@@ -222,12 +221,6 @@ class SmoothQuant(Algorithm):
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         statistic_container = StatisticPointsContainer()
 
-        if self._alpha < 0:
-            nncf_logger.debug(
-                "Skipping statistics collection for SmoothQuant algorithm because alfa parameter is negative."
-            )
-            return statistic_container
-
         self._set_backend_entity(model)
 
         nodes_to_smooth_data = self._get_nodes_to_smooth_data(graph)
@@ -239,11 +232,11 @@ class SmoothQuant(Algorithm):
                 target_node_name=node_to_smooth.node_name,
                 port_id=node_data["input_act_port"],
             )
-            input_reduction_shape = self._calculate_input_reduction_shape(
+            input_reduction_axes = self._calculate_input_reduction_axes(
                 graph, node_to_smooth, node_data["input_act_port"]
             )
             stat_collector = self._backend_entity.get_abs_max_channel_collector(
-                self._subset_size, input_reduction_shape, self._inplace_statistics, STATISTIC_BRANCH_KEY
+                self._subset_size, input_reduction_axes, self._inplace_statistics, STATISTIC_BRANCH_KEY
             )
             statistic_container.add_statistic_point(
                 StatisticPoint(
@@ -323,21 +316,21 @@ class SmoothQuant(Algorithm):
             return self._backend_entity.calculate_weight_scale(scale_value, weights_size, channel_axis)
         return scale_value
 
-    def _calculate_input_reduction_shape(self, nncf_graph: NNCFGraph, node: NNCFNode, input_port: int) -> Tuple[int]:
+    def _calculate_input_reduction_axes(self, nncf_graph: NNCFGraph, node: NNCFNode, input_port: int) -> Tuple[int]:
         """
-        Returns reduction shape for specified input.
+        Returns reduction axes for specified input.
 
         :param nncf_graph: NNCFGraph instance.
         :param node: NNCFNode to check.
         :param input_port: Specified input port id.
-        :return: Calculated reduction shape.
+        :return: Calculated reduction axes.
         """
         shape = nncf_graph.get_input_edges(node)[input_port].tensor_shape
-        reduction_shape = tuple([0])
+        reduction_axes = tuple([0])
         if len(shape) > 1:
             channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port)
-            reduction_shape = self._backend_entity.get_channel_agnostic_reduction_shape(channel_axis, shape)
-        return reduction_shape
+            reduction_axes = self._backend_entity.get_channel_agnostic_reduction_axes(channel_axis, shape)
+        return reduction_axes
 
     def _process_weight_statistics(self, node: NNCFNode, weights: TTensor, port_id: int) -> TTensor:
         """

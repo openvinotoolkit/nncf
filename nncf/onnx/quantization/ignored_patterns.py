@@ -12,7 +12,7 @@ from nncf.common.graph.patterns.patterns import GraphPattern
 from nncf.common.graph.patterns.patterns import IgnoredPatternNames
 from nncf.common.utils.registry import Registry
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
-from nncf.onnx.graph.metatypes.onnx_metatypes import MATMUL_METATYPES
+from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
 
 ONNX_IGNORED_PATTERNS = Registry("IGNORED_PATTERNS")
 
