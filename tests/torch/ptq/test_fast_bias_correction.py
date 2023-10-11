@@ -11,6 +11,7 @@
 
 from typing import List
 
+import pytest
 import torch
 
 from nncf.common.factory import NNCFGraphFactory
@@ -64,10 +65,14 @@ class TestTorchFBCAlgorithm(TemplateTestFBCAlgorithm):
 class TestTorchCudaFBCAlgorithm(TestTorchFBCAlgorithm):
     @staticmethod
     def list_to_backend_type(data: List) -> torch.Tensor:
+        if not torch.cuda.is_available():
+            pytest.skip("Skipping for CPU-only setups")
         return torch.Tensor(data).cuda()
 
     @staticmethod
     def backend_specific_model(model: bool, tmp_dir: str):
+        if not torch.cuda.is_available():
+            pytest.skip("Skipping for CPU-only setups")
         return get_nncf_network(model.cuda(), model.INPUT_SIZE)
 
     @staticmethod
