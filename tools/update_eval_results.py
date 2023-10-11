@@ -2,7 +2,7 @@
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-#     http://www.apache.org/licenses/LICENSE-2.0
+#      http://www.apache.org/licenses/LICENSE-2.0
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import argparse
-import fileinput
 
 # pylint:skip-file
 import json
@@ -63,7 +62,7 @@ RESULTS_ANCHOR_IN_SAMPLE_OWN_README = '<a name="results"></a>'
 TORCH_EXAMPLES_PATH = PROJECT_ROOT / "examples" / "torch"
 TF_EXAMPLES_PATH = PROJECT_ROOT / "examples" / "tensorflow"
 
-TORCH_SAMPLE_TYPE_TO_DESCRIPTOR = {
+TORCH_SAMPLE_TYPE_TO_DESCRIPTOR: Dict[str, SampleDescriptor] = {
     "classification": SampleDescriptor(
         path_to_readme=TORCH_EXAMPLES_PATH / "classification" / "README.md",
         result_table_anchor_in_main_readme='<a name="pytorch_classification"></a>',
@@ -130,10 +129,9 @@ TORCH_SAMPLE_TYPE_TO_DESCRIPTOR = {
             )
         ],
     ),
-}  # type: Dict[str, SampleDescriptor]
+}
 
-
-TF_SAMPLE_TYPE_TO_DESCRIPTOR = {
+TF_SAMPLE_TYPE_TO_DESCRIPTOR: Dict[str, SampleDescriptor] = {
     "classification": SampleDescriptor(
         path_to_readme=TF_EXAMPLES_PATH / "classification" / "README.md",
         result_table_anchor_in_main_readme='<a name="tensorflow_classification"></a>',
@@ -168,7 +166,7 @@ TF_SAMPLE_TYPE_TO_DESCRIPTOR = {
             )
         ],
     ),
-}  # type: Dict[str, SampleDescriptor]
+}
 
 
 def get_fp32_and_compressed_metrics(

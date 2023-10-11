@@ -21,7 +21,7 @@ from nncf.common.logging.logger import nncf_logger
 from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
-from nncf.onnx.graph.onnx_graph import ONNXGraph
+from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 
 
@@ -45,10 +45,9 @@ def get_bias_value(node_with_bias: NNCFNode, model: onnx.ModelProto) -> np.ndarr
     :param model: The model that contains this operation.
     :return: The bias value that is applied to the output tensor of the node's operation.
     """
-    onnx_graph = ONNXGraph(model)
     assert node_with_bias.layer_attributes.has_bias()
     bias_name = node_with_bias.layer_attributes.bias_attrs["name"]
-    return onnx_graph.get_tensor_value(bias_name)
+    return get_tensor_value(model, bias_name)
 
 
 def get_input_edges_mapping(nncf_graph: NNCFGraph) -> Dict[str, Tuple[str, int]]:
@@ -68,20 +67,25 @@ def get_input_edges_mapping(nncf_graph: NNCFGraph) -> Dict[str, Tuple[str, int]]
     return input_edges_mapping
 
 
-def get_input_edge(input_node_name: str, input_edges_mapping: Dict[str, Tuple[str, int]], onnx_graph: ONNXGraph) -> str:
+def get_input_edge(
+    input_node_name: str,
+    input_edges_mapping: Dict[str, Tuple[str, int]],
+    node_mapping: Dict[str, onnx.NodeProto],
+) -> str:
     """
     Returns input edge corresponding to the NNCF input node with the name input_node_name.
 
     :param input_node_name: Name of NNCF input node.
     :param input_edges_mapping: A mapping of NNCF input node names and
-        a tuple with the consumed node names and their input port ids.
-    :param onnx_graph: Instance of ONNXGraph of the model.
+    a tuple with the consumed node names and their input port ids.
+    :param node_mapping: Mapping of node names to the nodes.
     :return: Input edge name.
     """
     input_edges = set()
     for node_info in input_edges_mapping[input_node_name]:
         name, port_id = node_info
-        input_edges.add(onnx_graph.get_node_edge_names(name)["input"][port_id])
+        node = node_mapping[name]
+        input_edges.add(node.input[port_id])
     assert len(input_edges) == 1
     return input_edges.pop()
 

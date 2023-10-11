@@ -11,13 +11,12 @@
 """
 Base subpackage for NNCF TensorFlow functionality.
 """
+# pylint:skip-file
 import tensorflow
 from packaging import version
 
 from nncf import nncf_logger
 from nncf.common.logging.logger import warn_bkc_version_mismatch
-
-# pylint: skip-file
 from nncf.version import BKC_TF_VERSION
 
 try:
@@ -36,11 +35,15 @@ elif not (tensorflow_version_major == 2 and 8 <= tensorflow_version_minor <= 13)
     )
 
 
-from nncf.common.accuracy_aware_training.training_loop import AdaptiveCompressionTrainingLoop
-from nncf.common.accuracy_aware_training.training_loop import EarlyExitCompressionTrainingLoop
-from nncf.tensorflow.helpers import create_compressed_model
-from nncf.tensorflow.helpers.callback_creation import create_compression_callbacks
-from nncf.tensorflow.initialization import register_default_init_args
+from nncf.common.accuracy_aware_training.training_loop import (
+    AdaptiveCompressionTrainingLoop as AdaptiveCompressionTrainingLoop,
+)
+from nncf.common.accuracy_aware_training.training_loop import (
+    EarlyExitCompressionTrainingLoop as EarlyExitCompressionTrainingLoop,
+)
+from nncf.tensorflow.helpers import create_compressed_model as create_compressed_model
+from nncf.tensorflow.helpers.callback_creation import create_compression_callbacks as create_compression_callbacks
+from nncf.tensorflow.initialization import register_default_init_args as register_default_init_args
 from nncf.tensorflow.pruning.filter_pruning import algorithm as filter_pruning_algorithm
 
 # Required for correct COMPRESSION_ALGORITHMS registry functioning

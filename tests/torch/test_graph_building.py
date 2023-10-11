@@ -17,11 +17,11 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from nncf.common.graph import Dtype
+from nncf.common.graph import NNCFGraphEdge
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.definitions import NNCFGraphNodeType
-from nncf.common.graph.graph import NNCFGraphEdge
+from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.layer_attributes import GetItemLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
@@ -571,7 +571,7 @@ def test_input_info_specification_from_config(mocker, input_info_test_struct):
     mock_model = MockModel(stub_fn)
     config = get_basic_quantization_config("symmetric")
     input_info_config_entry = input_info_test_struct[0]
-    target_argument_info = input_info_test_struct[1]  # type: List[ModelInputInfo]
+    target_argument_info: List[ModelInputInfo] = input_info_test_struct[1]
     config["input_info"] = input_info_config_entry
     register_bn_adaptation_init_args(config)
 

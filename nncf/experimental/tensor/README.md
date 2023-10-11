@@ -6,7 +6,7 @@ making them more portable and reusable.
 
 ## Usage
 
-The main idea is common algorithms should use wrapped tensors and provide to backend-specific function unwrapped tensor.
+Common algorithms should use wrapped tensors and provide the unwrapped tensor to the backend-specific function.
 
 ### Initialization Tensor
 
@@ -32,6 +32,8 @@ tenor_b = Tensor(np.array([1,2]))
 tensor_a + tenor_b  # Tensor(array([2, 4]))
 ```
 
+**NOTE** Division operations for the numpy backend are performed with warnings disabled for the same for all backends.
+
 ### Comparison operators
 
 All math operations are overrided to operated with wrapped object and return `Tensor`
@@ -55,16 +57,16 @@ nncf_tensor.max()  # Tensor(2)
 All available functions you can found in [functions.py](functions.py).
 
 ```python
-from nncf.experimental.tensor import functions
-functions.max(nncf_tensor)  # Tensor(2)
+from nncf.experimental.tensor import functions as fns
+fns.max(nncf_tensor)  # Tensor(2)
 ```
 
 **NOTE** A function requires at least one positional argument, which is used to dispatch the function
 to the appropriate implementation depending on the type of argument.
 
 ```python
-functions.max(nncf_tensor)  # Correct
-functions.max(a=nncf_tensor)  # TypeError: wrapper requires at least 1 positional argument
+fns.max(nncf_tensor)  # Correct
+fns.max(a=nncf_tensor)  # TypeError: wrapper requires at least 1 positional argument
 ```
 
 ### Loop over Tensor
@@ -100,7 +102,7 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
     class Tensor:
         ...
         def foo(self, arg1: Type) -> "Tensor":
-            return functions.foo(self, arg1)
+            return fns.foo(self, arg1)
     ```
 
 2. Add function to [function.py](function.py)
@@ -120,28 +122,36 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
         return NotImplemented(f"Function `foo` is not implemented for {type(a)}")
     ```
 
-3. Add function name to `__all__` in [function.py](function.py)
+    **NOTE** For the case when the first argument has type `List[Tensor]`, use the `_dispatch_list` function. This function dispatches function by first element in the first argument.
 
-4. Add backend specific implementation of method to:
+    ```python
+    @functools.singledispatch
+    def foo(x: List[Tensor], axis: int = 0) -> Tensor:
+        if isinstance(x, List):
+            unwrapped_x = [i.data for i in x]
+            return Tensor(_dispatch_list(foo, unwrapped_x, axis=axis))
+        raise NotImplementedError(f"Function `foo` is not implemented for {type(x)}")
+    ```
 
-    - [numpy_function.py](numpy_function.py)
+3. Add backend specific implementation of method to:
+
+    - [numpy_function.py](numpy_functions.py)
 
         ```python
-        @functions.foo.register(np.ndarray)
-        @functions.foo.register(np.number)
+        @_register_numpy_types(fns.foo)
         def _(a: TType, arg1: Type) -> np.ndarray:
             return np.foo(a, arg1)
         ```
 
-    - [torch_function.py](torch_function.py)
+    - [torch_function.py](torch_functions.py)
 
         ```python
-        @functions.foo.register(torch.Tensor)
+        @fns.foo.register(torch.Tensor)
         def _(a: torch.Tensor, arg1: Type) -> torch.Tensor:
             return torch.foo(a, arg1)
         ```
 
-5. Add test of method to [test template](tests/shared/test_templates/template_test_nncf_tensor.py) for Tensor class
+4. Add test of method to [test template](../../../tests/shared/test_templates/template_test_nncf_tensor.py) for Tensor class
 
 ### Add new backend
 

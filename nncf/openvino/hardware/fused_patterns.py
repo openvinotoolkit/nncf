@@ -575,6 +575,14 @@ def create_linear_arithmetic_activations() -> GraphPattern:
     return linear
 
 
+@OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_SHIFT_SCALE)
+def create_linear_shift_scale() -> GraphPattern:
+    linear = linear_operations()
+    shift_scale = create_shift_scale()
+    linear.join_patterns(shift_scale)
+    return linear
+
+
 @OPENVINO_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ARITHMETIC_ACTIVATIONS_ARITHMETIC)
 def create_linear_arithmetic_activations_arithmetic() -> GraphPattern:
     linear_arithmetic_activations = create_linear_arithmetic_activations()

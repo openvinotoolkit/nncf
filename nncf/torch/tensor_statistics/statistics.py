@@ -9,8 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Tuple
-
 import torch
 
 from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
@@ -18,10 +16,6 @@ from nncf.common.tensor_statistics.statistics import MedianMADTensorStatistic
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.tensor_statistics.statistics import PercentileTensorStatistic
 from nncf.common.tensor_statistics.statistics import TensorStatistic
-
-
-def _reshape_all(targets: Tuple[torch.Tensor, ...], target_shape: Tuple[int, ...]):
-    return map(lambda stat: torch.reshape(stat, target_shape), targets)
 
 
 class PTMinMaxTensorStatistic(MinMaxTensorStatistic):

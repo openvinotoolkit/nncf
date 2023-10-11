@@ -11,7 +11,7 @@
 
 from typing import List, Type
 
-from nncf.common.graph import OperatorMetatype
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.hardware.config import HWConfig
 from nncf.torch.graph.operator_metatypes import get_operator_metatypes
 

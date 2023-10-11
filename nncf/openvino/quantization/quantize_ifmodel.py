@@ -125,15 +125,9 @@ def _add_outputs_before_if_node(model_transformer: ModelTransformer, model: ov.M
     :param if_node: If node.
     :return: Model with extra outputs before If node.
     """
-    assert if_node.metatype == OVIfMetatype
     transformation_layout = TransformationLayout()
-    name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
-    ov_node = name_to_node_mapping[if_node.node_name]
-    port_ids = range(len(ov_node.inputs()))
-    for port_id in port_ids:
-        transformation_layout.register(
-            OVOutputInsertionCommand(OVTargetPoint(TargetType.PRE_LAYER_OPERATION, if_node.node_name, port_id))
-        )
+    for command in OVBackend.create_output_insertion_commands_if_node(model, if_node):
+        transformation_layout.register(command)
     return model_transformer.transform(transformation_layout)
 
 
@@ -165,12 +159,12 @@ def apply_algorithm_if_bodies(
         return quantized_model, current_model_num
     model_transformer_fp32 = factory.ModelTransformerFactory.create(parent_model)
     for if_node in parent_graph.get_nodes_by_metatypes(OVBackend.if_node_metatypes()):
-        then_model_input_names = OVBackend.get_if_body_input_names(parent_model, if_node, True)
-        else_model_input_names = OVBackend.get_if_body_input_names(parent_model, if_node, False)
-        if_cond_input_name = OVBackend.get_if_cond_input_name(parent_model, if_node)
         parent_model_with_additional_outputs = _add_outputs_before_if_node(
             model_transformer_fp32, parent_model, if_node
         )
+        then_model_input_names = OVBackend.get_if_body_input_names(parent_model, if_node, True)
+        else_model_input_names = OVBackend.get_if_body_input_names(parent_model, if_node, False)
+        if_cond_input_name = OVBackend.get_if_cond_input_name(parent_model_with_additional_outputs, if_node)
         then_dataset, else_dataset = _make_dataset_for_if_bodies(
             factory.EngineFactory.create(parent_model_with_additional_outputs),
             parent_dataset,
@@ -244,7 +238,8 @@ class OVBackend:
             desc.input_index
             for desc in ov_node.get_input_descriptions(OVBackend._get_if_body_port_id(if_body_condition))
         ]
-        input_names.extend([ov_node.input_values()[index].any_name for index in input_indices])
+        for index in input_indices:
+            input_names.append(ov_node.inputs()[index].get_tensor().get_any_name())
         return input_names
 
     @staticmethod
@@ -258,7 +253,7 @@ class OVBackend:
         """
         name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
         ov_node = name_to_node_mapping[if_node.node_name]
-        return ov_node.input_values()[0].any_name
+        return ov_node.inputs()[0].get_tensor().get_any_name()
 
     @staticmethod
     def create_update_body_command(if_node: NNCFNode, if_body_condition: bool, body: ov.Model) -> OVUpdateIfBodyCommand:
@@ -288,13 +283,13 @@ class OVBackend:
         return OVExtractIfBodyCommand(if_node.node_name, if_body_condition)
 
     @staticmethod
-    def create_output_insertion_commands(model: ov.Model, if_node: NNCFNode) -> List[OVOutputInsertionCommand]:
+    def create_output_insertion_commands_if_node(model: ov.Model, if_node: NNCFNode) -> List[OVOutputInsertionCommand]:
         """
-        Returns output insertion commands on
+        Returns output insertion commands on If node inputs.
 
-        :param ov.Model model:
-        :param NNCFNode if_node:
-        :return List[OVOutputInsertionCommand]:
+        :param ov.Model model: Model.
+        :param NNCFNode if_node: If node.
+        :return: Transformation commands to insert outputs before If node.
         """
         assert if_node.metatype == OVIfMetatype
         commands = []

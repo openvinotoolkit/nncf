@@ -18,11 +18,11 @@ from typing import Dict, List, Optional, Set, Tuple
 import networkx as nx
 import pytest
 
-from nncf.common.graph import Dtype
 from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
-from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.transformations.commands import TargetType
@@ -182,7 +182,7 @@ class RunOnIpGraphTestStruct:
         self.expected_count_finished_quant = expected_count_finished_quant
         self.expected_count_active_quant = expected_count_active_quant
         self.ignored_scopes = ignored_scopes
-        self.retval_qps = {}  # type: Dict[QuantizationPointId, MultiConfigQuantizationPoint]
+        self.retval_qps: Dict[QuantizationPointId, MultiConfigQuantizationPoint] = {}
         for id_, qp_data in retval_qp_data.items():
             if qp_data.target_type is TargetType.OPERATION_WITH_WEIGHTS:
                 qip = WeightQuantizationInsertionPoint(qp_data.node_name)
@@ -1528,8 +1528,8 @@ class TestQuantizerPropagationSolver:
             assert quant_prop in active_propagating_quantizers_queue
 
         for pq in untouched_quantizers:
-            assert not pq in quant_prop_solver.get_active_propagating_quantizers_queue()
-            assert not pq in quant_prop_solver.get_finished_propagating_quantizers()
+            assert pq not in quant_prop_solver.get_active_propagating_quantizers_queue()
+            assert pq not in quant_prop_solver.get_finished_propagating_quantizers()
 
         # The quantizers that were added during preparation were not registered
         # as active for the solvers; but the ones that may have appeared due to an upward

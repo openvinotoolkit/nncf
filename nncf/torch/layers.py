@@ -10,7 +10,7 @@
 # limitations under the License.
 import math
 import numbers
-from typing import Dict, Optional, Tuple
+from typing import Dict, Tuple, Union
 
 import torch
 import torch.nn.functional as F
@@ -513,8 +513,7 @@ class RNNCellBaseNNCF(nn.Module):
                 "input_ has inconsistent input_size: got {}, expected {}".format(input_.size(1), self.input_size)
             )
 
-    def check_forward_hidden(self, input_, hx, hidden_label=""):
-        # type: (Tensor, Tensor, str) -> None
+    def check_forward_hidden(self, input_: torch.Tensor, hx: torch.Tensor, hidden_label: str = ""):
         if input_.size(0) != hx.size(0):
             raise RuntimeError(
                 "Input batch size {} doesn't match hidden{} batch size {}".format(
@@ -548,8 +547,7 @@ class LSTMCellForwardNNCF(nn.Module):
         self.input_linear = input_linear
         self.hidden_linear = hidden_linear
 
-    def forward(self, input_, hidden):
-        # type: (Tensor, Tuple[Tensor, Tensor]) -> (Tensor, Tensor)
+    def forward(self, input_: torch.Tensor, hidden: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         hx, cx = hidden
         gates = self.input_linear(input_) + self.hidden_linear(hx)
 
@@ -611,8 +609,8 @@ class StackedRNN(nn.Module):
         for i in range(self.num_layers):
             all_output = []
             for j in range(self.num_directions):
-                l = i * self.num_directions + j
-                hy, output = self.inners[l](input_, hidden[l], batch_sizes)
+                k = i * self.num_directions + j
+                hy, output = self.inners[k](input_, hidden[k], batch_sizes)
                 next_hidden.append(hy)
                 all_output.append(output)
 
@@ -898,18 +896,19 @@ class NNCF_RNN(nn.Module):
         return [[getattr(self, weight) for weight in weights] for weights in self._all_weights]
 
     @staticmethod
-    def apply_permutation(tensor, permutation, dim=1):
-        # type: (Tensor, Tensor, int) -> Tensor
+    def apply_permutation(tensor: torch.Tensor, permutation: torch.Tensor, dim: int = 1) -> torch.Tensor:
         return tensor.index_select(dim, permutation)
 
-    def permute_hidden(self, hx, permutation):
-        # type: (Tuple[Tensor, Tensor], Optional[Tensor]) -> Tuple[Tensor, Tensor]
+    def permute_hidden(
+        self, hx: torch.Tensor, permutation: torch.Tensor
+    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         if permutation is None:
             return hx
         return self.apply_permutation(hx[0], permutation), self.apply_permutation(hx[1], permutation)
 
-    def prepare_hidden(self, hx, permutation):
-        # type: (Tuple[Tuple[Tensor], Tuple[Tensor]], Optional[Tensor]) -> Tuple[Tuple[Tensor], Tuple[Tensor]]
+    def prepare_hidden(
+        self, hx: torch.Tensor, permutation: torch.Tensor
+    ) -> Union[torch.Tensor, Tuple[Tuple[torch.Tensor, ...], Tuple[torch.Tensor, ...]]]:
         if permutation is None:
             return hx
         split_size = len(hx[0])

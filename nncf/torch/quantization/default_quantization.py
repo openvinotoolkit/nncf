@@ -17,7 +17,7 @@ from nncf.torch.graph.operator_metatypes import PTOperatorMetatype
 
 # If a metatype is not in this list, then it is considered to be QuantizationTrait.NON_QUANTIZABLE.
 
-DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
+DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT: Dict[QuantizationTrait, List[PTOperatorMetatype]] = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [
         operator_metatypes.PTConv2dMetatype,
         operator_metatypes.PTModuleConv2dMetatype,
@@ -88,7 +88,7 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT = {
         operator_metatypes.PTEmbeddingBagMetatype,
         operator_metatypes.PTModuleEmbeddingBagMetatype,
     ],
-}  # type: Dict[QuantizationTrait, List[PTOperatorMetatype]]
+}
 
 
-QUANTIZATION_LAYER_METATYPES = OPERATORS_WITH_WEIGHTS_METATYPES  # type: List[PTOperatorMetatype]
+QUANTIZATION_LAYER_METATYPES: List[PTOperatorMetatype] = OPERATORS_WITH_WEIGHTS_METATYPES

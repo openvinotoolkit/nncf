@@ -1,0 +1,83 @@
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from abc import ABC
+from abc import abstractmethod
+from typing import List, TypeVar
+
+from nncf.common.graph import NNCFNode
+from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.utils.registry import Registry
+from nncf.parameters import CompressWeightsMode
+
+TModel = TypeVar("TModel")
+ALGO_BACKENDS = Registry("algo_backends")
+
+
+class WeightCompressionAlgoBackend(ABC):
+    @property
+    @abstractmethod
+    def weighted_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific metatypes.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def is_node_with_weights(node: NNCFNode) -> bool:
+        """
+        Checks whether the node with weights or not.
+
+        :param node: NNCFNode to check.
+        :return: Boolean indicating whether the node has weights or not.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def validate_params(mode: CompressWeightsMode) -> None:
+        """
+        Performs validation of the algorithm's parameters and raises an error for unsupported configuration of
+        parameters. Should be called on early algorithm steps to prevent execution of time-consuming operations.
+
+        :param mode: Defines a mode for weight compression.
+            INT8 stands for 8-bit integer quantization of all weights.
+            NF4 stands for a mixed-precision weights quantization to NF4 data type. The first and last layers
+            are always compressed to a backup precision which is 8-bit integer by default. All others are quantized
+            whether to NF4 or to a backup precision depending on criteria and the given ratio.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def do_compression(
+        model: TModel,
+        nodes_to_compress: List[NNCFNode],
+        mode: CompressWeightsMode,
+        ratio: float = None,
+        group_size: int = None,
+    ) -> TModel:
+        """
+        Compress weights of Linear and Embedding layers to 8-bit integer or to nf4
+        depending on mode, ratio and group size.
+
+        :param model: Model for applying weight compression.
+        :param nodes_to_compress: List of nodes in the model's graph,
+            corresponding to the layers for weight compression.
+        :param mode: Defines a mode for weight compression.
+            INT8 stands for 8-bit integer quantization of all weights.
+            NF4 stands for a mixed-precision weights quantization to NF4 data type. The first and last layers
+            are always compressed to a backup precision which is 8-bit integer by default. All others are quantized
+            whether to NF4 or to a backup precision depending on criteria and the given ratio.
+        :param ratio: The ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
+            and the rest to INT8).
+        :param group_size: Number of weights (e.g. 128) in the channel dimension
+            that share quantization parameters (scale). The value -1 means no grouping.
+        :return: A resulting model with compressed weights.
+        """

@@ -56,19 +56,18 @@ def replace_lstm(model):
             bias=module_.bias,
         )
 
-        def get_param_names(bias):
-            # type: (bool) -> List[str]
+        def get_param_names(bias: bool) -> List[str]:
             suffixes = ["ih", "hh"]
             names = ["weight_" + suffix for suffix in suffixes]
             if bias:
                 names += ["bias_" + suffix for suffix in suffixes]
             return names
 
-        for l in range(custom_lstm.num_layers):
+        for layer_idx in range(custom_lstm.num_layers):
             for d in range(custom_lstm.num_directions):
                 for name in get_param_names(custom_lstm.bias):
                     suffix = "_reverse" if d == 1 else ""
-                    param_name = name + "_l{}{}".format(l, suffix)
+                    param_name = name + "_l{}{}".format(layer_idx, suffix)
                     param = getattr(module_, param_name)
                     getattr(custom_lstm, param_name).data.copy_(param.data)
         custom_lstm.to(device)
@@ -86,8 +85,7 @@ def replace_lstm(model):
     return model
 
 
-def clone_test_data(data_list):
-    # type: (LSTMTestData) -> List[torch.Tensor]
+def clone_test_data(data_list) -> List[torch.Tensor]:
     results = []
     x = data_list[0]
     result = x if isinstance(x, PackedSequence) else x.clone()
@@ -117,18 +115,17 @@ LSTMTestData = namedtuple("LSTMTestData", ["x", "h0", "c0", "weight_ih", "weight
 class TestLSTMCell:
     @staticmethod
     def generate_lstm_data(
-        p,
-        num_layers=1,
-        num_directions=1,
-        variable_length=False,
-        sorted_=True,
-        batch_first=True,
-        use_cuda=False,
-        bias=True,
-        empty_initial=False,
-        is_backward=False,
-    ):
-        # type: (LSTMTestSizes, int, int, bool, bool, bool, bool, bool, bool, bool) -> LSTMTestData
+        p: LSTMTestSizes,
+        num_layers: int = 1,
+        num_directions: int = 1,
+        variable_length: bool = False,
+        sorted_: bool = True,
+        batch_first: bool = True,
+        use_cuda: bool = False,
+        bias: bool = True,
+        empty_initial: bool = False,
+        is_backward: bool = False,
+    ) -> LSTMTestData:
         num_chunks = 4
         seq_list = []
         if variable_length:
@@ -174,8 +171,7 @@ class TestLSTMCell:
         return result
 
     @staticmethod
-    def set_weights(cell, data):
-        # type: (nn.LSTMCell, LSTMTestData) -> None
+    def set_weights(cell: nn.LSTMCell, data: LSTMTestData):
         for name in TestLSTM.get_param_names(bias=True):
             param = getattr(data, name)
             if param:
@@ -389,13 +385,11 @@ class TestLSTM:
             torch.testing.assert_close(test, ref, rtol=1e-1, atol=1e-1)
 
     @classmethod
-    def flatten_nested_lists(cls, nested_list):
-        # type: (List) -> List[torch.Tensor]
+    def flatten_nested_lists(cls, nested_list: List) -> List[torch.Tensor]:
         return [tensor for tensor_tuple in nested_list for tensor in tensor_tuple]
 
     @classmethod
-    def get_test_lstm_hidden(cls, data):
-        # type: (LSTMTestData) -> List[Tuple[torch.Tensor, ...]]
+    def get_test_lstm_hidden(cls, data: LSTMTestData) -> List[Tuple[torch.Tensor, ...]]:
         result = []
         hidden_names = ["h0", "c0"]
         for name in hidden_names:
@@ -408,28 +402,27 @@ class TestLSTM:
         return result
 
     @classmethod
-    def get_ref_lstm_hidden(cls, data):
-        # type: (LSTMTestData) -> Tuple[torch.Tensor, torch.Tensor]
+    def get_ref_lstm_hidden(cls, data: LSTMTestData) -> Tuple[torch.Tensor, torch.Tensor]:
         hidden = cls.get_test_lstm_hidden(data)
         hidden_states = [torch.unsqueeze(tensor, dim=0) for tensor in hidden[0]]
         cell_states = [torch.unsqueeze(tensor, dim=0) for tensor in hidden[1]]
         return (torch.cat(hidden_states, dim=0), torch.cat(cell_states, dim=0))
 
     @classmethod
-    def set_ref_lstm_weights(cls, data, nn_lstm, num_layers, num_directions, bias):
-        # type: (LSTMTestData, nn.LSTM, int, int, bool) -> None
-        for l in range(num_layers):
+    def set_ref_lstm_weights(
+        cls, data: LSTMTestData, nn_lstm: nn.LSTM, num_layers: int, num_directions: int, bias: bool
+    ):
+        for layer_idx in range(num_layers):
             for d in range(num_directions):
-                i = l * num_directions + d
+                i = layer_idx * num_directions + d
                 for name in cls.get_param_names(bias):
                     suffix = "_reverse" if d == 1 else ""
                     param = getattr(data, name)
-                    param_name = name + "_l{}{}".format(l, suffix)
+                    param_name = name + "_l{}{}".format(layer_idx, suffix)
                     getattr(nn_lstm, param_name).data.copy_(param[i].data)
 
     @classmethod
-    def get_param_names(cls, bias):
-        # type: (bool) -> List[str]
+    def get_param_names(cls, bias: bool) -> List[str]:
         suffixes = ["ih", "hh"]
         names = ["weight_" + suffix for suffix in suffixes]
         if bias:

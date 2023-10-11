@@ -39,7 +39,7 @@ from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.module_operations import UpdateInputs
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.quantization.algo import QuantizationControllerBase
+from nncf.torch.quantization.base_ctrl import QuantizationControllerBase
 from nncf.torch.quantization.schedulers import QUANTIZATION_SCHEDULERS
 from nncf.torch.utils import get_model_device
 

@@ -68,11 +68,11 @@ class GroupsOfAdjacentQuantizers:
         quantization_point_id_vs_quantizer_id: Dict[QuantizationPointId, QuantizerId],
     ):
         for group_idx, group in quantizer_setup.shared_input_operation_set_groups.items():
-            act_quant_tuples = []  # type: List[Tuple[QuantizerId, BaseQuantizer]]
-            wt_quant_tuples = []  # type: List[Tuple[QuantizerId, BaseQuantizer]]
+            act_quant_tuples: List[Tuple[QuantizerId, BaseQuantizer]] = []
+            wt_quant_tuples: List[Tuple[QuantizerId, BaseQuantizer]] = []
 
-            quantized_node_per_activation_qp_id = {}  # type: Dict[NNCFNodeName, QuantizationPointId]
-            module_scope_per_weight_qp_id = {}  # type: Dict[NNCFNodeName, QuantizationPointId]
+            quantized_node_per_activation_qp_id: Dict[NNCFNodeName, QuantizationPointId] = {}
+            module_scope_per_weight_qp_id: Dict[NNCFNodeName, QuantizationPointId] = {}
 
             for qp_id in group:
                 qp = quantizer_setup.quantization_points[qp_id]

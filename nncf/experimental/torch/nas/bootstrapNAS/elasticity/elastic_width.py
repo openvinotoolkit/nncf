@@ -19,8 +19,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import torch
 from torch import nn
 
-from nncf.common.graph import BaseLayerAttributes
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
@@ -718,8 +718,8 @@ class ElasticWidthHandler(SingleElasticityHandler):
             assert all(
                 out_channels[group.elements[0].node_name] == out_channels[node.node_name] for node in group.elements
             )
-            first_elastic_width_info = group.elements[0]  # type: ElasticWidthInfo
-            first_elastic_op = first_elastic_width_info.elastic_op  # type: ElasticOutputWidthOp
+            first_elastic_width_info: ElasticWidthInfo = group.elements[0]
+            first_elastic_op: ElasticOutputWidthOp = first_elastic_width_info.elastic_op
             new_out_channels_num = first_elastic_op.get_active_width()
             num_of_pruned_elems = first_elastic_op.max_width - new_out_channels_num
             self._shape_pruning_processor.prune_cluster_shapes(
@@ -925,9 +925,9 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
         super().__init__(params, ignored_scopes, target_scopes)
         self._weights_normalizer = None
         self._overwriting_pruning_groups = params.overwrite_groups is not None
-        self._grouped_node_names_to_prune = (
+        self._grouped_node_names_to_prune: List[List[NNCFNodeName]] = (
             params.overwrite_groups if params.overwrite_groups is not None else []
-        )  # type: List[List[NNCFNodeName]]
+        )
         self._overwrite_groups_widths = params.overwrite_groups_widths
         self._add_dynamic_inputs = params.add_dynamic_inputs
         self._params = params

@@ -133,7 +133,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             else:
                 raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
 
-            # TODO (l-bat): Disable quantizer propogation through layout changing operations
+            # TODO (l-bat): Disable quantizer propagation through layout changing operations
             channel_axis = 1  # OpenVINO activations have channel first layout: [N, C, Z, Y, X]
             axes = get_channel_agnostic_reduction_axes([channel_axis], shape)
             return axes, use_abs_max
@@ -166,12 +166,12 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             [range_estimator_params.min, range_estimator_params.max],
             [OVMinMaxTensorStatistic.MIN_STAT, OVMinMaxTensorStatistic.MAX_STAT],
         ):
-            if not params.statistics_type in OV_REDUCERS_MAP:
+            if params.statistics_type not in OV_REDUCERS_MAP:
                 raise RuntimeError(
                     f"Statistic type: {params.statistics_type} is not supported for OpenVino PTQ backend yet."
                 )
 
-            if not params.aggregator_type in AGGREGATORS_MAP:
+            if params.aggregator_type not in AGGREGATORS_MAP:
                 raise RuntimeError(
                     f"Aggregator type: {params.aggregator_type} is not supported for OpenVino PTQ backend yet."
                 )

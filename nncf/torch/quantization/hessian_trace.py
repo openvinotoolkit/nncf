@@ -132,7 +132,7 @@ class HessianTraceEstimator:
         :return: Tensor with average hessian trace per parameter
         """
         avg_total_trace = 0.0
-        avg_traces_per_iter = []  # type: List[Tensor]
+        avg_traces_per_iter: List[Tensor] = []
         mean_avg_traces_per_param = None
 
         for i in range(max_iter):

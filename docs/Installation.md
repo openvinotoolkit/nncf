@@ -34,7 +34,7 @@ Use the same `pip install` syntax as above to install NNCF along with the backen
 pip install .[<BACKEND>]
 ```
 
-List of  supported backends: `torch`, `tf`, `onnx` and `openvino`.
+List of supported backends: `torch`, `tf`, `onnx` and `openvino`.
 
 For development purposes install extra packages by
 
@@ -61,3 +61,14 @@ Note that in order for this to work for pip versions >= 21.3, your Git version m
 ## As a Docker image
 
 Use one of the Dockerfiles in the [docker](../docker) directory to build an image with an environment already set up and ready for running NNCF [sample scripts](../README.md#model-compression-samples).
+
+## Corresponding versions
+
+The following table lists the recommended corresponding versions of backend packages
+as well as the supported versions of Python:
+
+| NNCF    | OpenVINO   | PyTorch  | ONNX     | TensorFlow | Python  |
+| ------- | ---------- | -------- | -------- | ---------- | ------- |
+| `2.6.0` | `2023.1.0` | `2.0.1`  | `1.13.1` | `2.12.0`   | `3.8`   |
+| `2.5.0` | `2023.0.0` | `1.13.1` | `1.13.1` | `2.11.1`   | `3.8`   |
+| `2.4.0` | `2022.1.0` | `1.12.1` | `1.12.0` | `2.8.2`    | `3.8`   |
