@@ -31,6 +31,7 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.passes import filter_constant_nodes_inplace
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from nncf.scopes import IgnoredScope
 from tests.common.quantization.metatypes import Conv2dTestMetatype
@@ -276,6 +277,7 @@ class TemplateTestPTQParams:
     def test_validate_scope(self, test_params, validate_scopes):
         nncf_graph = test_params["test_model_type_pass"]["nncf_graph"]
         inference_nncf_graph = deepcopy(nncf_graph)
+        filter_constant_nodes_inplace(inference_nncf_graph)
         ignored_patterns = test_params["test_model_type_pass"]["ignored_patterns"]
         algo = MinMaxQuantization(
             ignored_scope=IgnoredScope(names=["some_node"], validate=validate_scopes),
