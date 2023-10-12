@@ -431,7 +431,7 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="#nncf.strip" title="nncf.strip"><code class="xref py py-obj docutils literal notranslate"><span class="pre">strip</span></code></a>(model[, do_copy])</p></td>
 <td><p>Returns the model object with as much custom NNCF additions as possible removed</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.compress_weights" title="nncf.compress_weights"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compress_weights</span></code></a>(model[, mode, ratio, group_size])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.compress_weights" title="nncf.compress_weights"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compress_weights</span></code></a>(model[, mode, ratio, group_size, ...])</p></td>
 <td><p>Compress model weights.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantize" title="nncf.quantize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">quantize</span></code></a>(model, calibration_dataset[, preset, ...])</p></td>
@@ -699,7 +699,7 @@ for this type of device.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nncf.compress_weights">
-<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">compress_weights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">CompressWeightsMode.INT8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/quantization/quantize_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.compress_weights" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">compress_weights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">CompressWeightsMode.INT8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignored_scope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/quantization/quantize_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.compress_weights" title="Permalink to this definition">#</a></dt>
 <dd><p>Compress model weights.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -714,6 +714,8 @@ to NF4 or to a backup precision depending on criteria and the given ratio.</p></
 and the rest to INT8).</p></li>
 <li><p><strong>group_size</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
 The value -1 means no grouping.</p></li>
+<li><p><strong>ignored_scope</strong> (<em>Optional</em><em>[</em><em>nncf.scopes.IgnoredScope</em><em>]</em>) – An ignored scope that defined the list of model control
+flow graph nodes to be ignored during quantization.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>

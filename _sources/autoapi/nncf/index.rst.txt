@@ -225,7 +225,7 @@ Functions
    An enum with values corresponding to the available quantization presets.
 
 
-.. py:function:: compress_weights(model, mode=CompressWeightsMode.INT8, ratio = None, group_size = None)
+.. py:function:: compress_weights(model, mode=CompressWeightsMode.INT8, ratio = None, group_size = None, ignored_scope = None)
 
    Compress model weights.
 
@@ -239,6 +239,8 @@ Functions
        and the rest to INT8).
    :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
        The value -1 means no grouping.
+   :param ignored_scope: An ignored scope that defined the list of model control
+       flow graph nodes to be ignored during quantization.
    :return: The non-trainable model with compressed weights.
 
 
