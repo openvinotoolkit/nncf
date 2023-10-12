@@ -30,6 +30,7 @@ from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
+from nncf.scopes import IgnoredScope
 
 
 @ALGO_BACKENDS.register(BackendType.OPENVINO)
@@ -43,7 +44,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return node.layer_attributes and node.layer_attributes.constant_attributes
 
     @staticmethod
-    def validate_params(mode: CompressWeightsMode) -> None:
+    def validate_params(mode: CompressWeightsMode, ignored_scope: Optional[IgnoredScope] = None) -> None:
         pass
 
     @staticmethod

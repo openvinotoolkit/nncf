@@ -234,6 +234,7 @@ def compress_weights(
     mode=CompressWeightsMode.INT8,
     ratio: Optional[float] = None,
     group_size: Optional[int] = None,
+    ignored_scope: Optional[IgnoredScope] = None,
 ) -> TModel:
     """
     Compress model weights.
@@ -248,6 +249,8 @@ def compress_weights(
         and the rest to INT8).
     :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
         The value -1 means no grouping.
+    :param ignored_scope: An ignored scope that defined the list of model control
+        flow graph nodes to be ignored during quantization.
     :return: The non-trainable model with compressed weights.
     """
     if mode == CompressWeightsMode.INT8:
@@ -270,9 +273,9 @@ def compress_weights(
     if backend == BackendType.TORCH:
         from nncf.torch.quantization.quantize_model import compress_weights_impl
 
-        return compress_weights_impl(model, mode, ratio, group_size)
+        return compress_weights_impl(model, mode, ratio, group_size, ignored_scope)
 
-    compression_algorithm = WeightCompression(mode, ratio, group_size)
+    compression_algorithm = WeightCompression(mode, ratio, group_size, ignored_scope)
     graph = NNCFGraphFactory.create(model)
     return compression_algorithm.apply(model, graph)
 
