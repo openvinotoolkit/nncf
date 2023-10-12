@@ -62,17 +62,14 @@ class TestTorchFBCAlgorithm(TemplateTestFBCAlgorithm):
         raise ValueError("Not found node with bias")
 
 
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="Skipping for CPU-only setups")
 class TestTorchCudaFBCAlgorithm(TestTorchFBCAlgorithm):
     @staticmethod
     def list_to_backend_type(data: List) -> torch.Tensor:
-        if not torch.cuda.is_available():
-            pytest.skip("Skipping for CPU-only setups")
         return torch.Tensor(data).cuda()
 
     @staticmethod
     def backend_specific_model(model: bool, tmp_dir: str):
-        if not torch.cuda.is_available():
-            pytest.skip("Skipping for CPU-only setups")
         return get_nncf_network(model.cuda(), model.INPUT_SIZE)
 
     @staticmethod
