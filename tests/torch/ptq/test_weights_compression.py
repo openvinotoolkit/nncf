@@ -75,15 +75,16 @@ def test_compress_shared_weights():
 
 
 def test_raise_error_with_int8_and_non_default_ratio(mocker):
-    with pytest.raises(RuntimeError):
+    with pytest.raises(AttributeError):
         compress_weights(mocker.Mock(), mode=CompressWeightsMode.INT8, ratio=0.5)
 
 
 def test_raise_error_with_int8_and_non_default_group_size(mocker):
-    with pytest.raises(RuntimeError):
+    with pytest.raises(AttributeError):
         compress_weights(mocker.Mock(), mode=CompressWeightsMode.INT8, group_size=64)
 
 
 def test_raise_error_with_nf4(mocker):
-    with pytest.raises(RuntimeError):
-        compress_weights(mocker.Mock(), mode=CompressWeightsMode.NF4)
+    with pytest.raises(AttributeError):
+        dummy_torch_model = torch.nn.Module()
+        compress_weights(dummy_torch_model, mode=CompressWeightsMode.NF4)

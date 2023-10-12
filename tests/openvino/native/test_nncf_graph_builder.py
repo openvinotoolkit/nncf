@@ -17,12 +17,14 @@ from nncf.common.graph.layer_attributes import Dtype
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.native.common import compare_nncf_graphs
+from tests.openvino.native.common import get_openvino_version
 from tests.openvino.native.models import SYNTHETIC_MODELS
 from tests.openvino.native.models import ParallelEdgesModel
 from tests.openvino.omz_helpers import convert_model
 from tests.openvino.omz_helpers import download_model
 
-REFERENCE_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / "data" / "reference_graphs" / "original_nncf_graph"
+OV_VERSION = get_openvino_version()
+REFERENCE_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / "data" / OV_VERSION / "reference_graphs" / "original_nncf_graph"
 
 
 @pytest.mark.parametrize("model_cls_to_test", SYNTHETIC_MODELS.values())

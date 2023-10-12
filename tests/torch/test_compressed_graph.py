@@ -836,8 +836,8 @@ def _case_dir(type_hw_config):
 
 def prepare_potential_quantizer_graph(graph: PTNNCFGraph, quantizer_setup: SingleConfigQuantizerSetup) -> nx.DiGraph:
     quantizers_weights_attr = {}
-    pre_hooked_quantizers_activations_attr = {}  # type: Dict[NNCFNodeName, Tuple[int, str]]
-    post_hooked_quantizers_activations_attr = {}  # type: Dict[NNCFNodeName, str]
+    pre_hooked_quantizers_activations_attr: Dict[NNCFNodeName, Tuple[int, str]] = {}
+    post_hooked_quantizers_activations_attr: Dict[NNCFNodeName, str] = {}
 
     # pylint:disable=protected-access
     for qp in quantizer_setup.quantization_points.values():

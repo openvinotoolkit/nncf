@@ -51,8 +51,8 @@ class NNCFNetwork(tf.keras.Model):
         # This workaround allows not add dependencies from hooks to the model.
         # See `tensorflow.python.training.tracking.autotrackable.AutoTrackable`
         # class for more details.
-        self.__dict__["_pre_hooks"] = {}  # type: Dict[str, List[Hook]]
-        self.__dict__["_post_hooks"] = {}  # type: Dict[str, List[Hook]]
+        self.__dict__["_pre_hooks"]: Dict[str, List[Hook]] = {}
+        self.__dict__["_post_hooks"]: Dict[str, List[Hook]] = {}
 
     @property
     def nncf_operations(self) -> List[NNCFOperation]:

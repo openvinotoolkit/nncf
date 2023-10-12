@@ -24,8 +24,6 @@ from nncf.openvino.graph.node_utils import get_number_if_op
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
 from nncf.openvino.quantization.quantize_ifmodel import apply_algorithm_if_bodies
-from nncf.openvino.quantization.weights_compression import insert_pre_compression_operations
-from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -437,28 +435,3 @@ def quantize_with_accuracy_control_impl(
         advanced_quantization_parameters,
         advanced_accuracy_restorer_parameters,
     )
-
-
-def compress_weights_impl(
-    model: ov.Model,
-    mode: CompressWeightsMode = CompressWeightsMode.INT8,
-    ratio: Optional[float] = None,
-    group_size: Optional[int] = None,
-) -> ov.Model:
-    """
-    Implementation of the `compress_weights()` method for the OpenVINO backend.
-
-    :param model: an OpenVINO model for compression.
-    :param mode: Defines a mode for weight compression.
-        INT8 stands for 8-bit integer quantization of all weights.
-        NF4 stands for a mixed-precision weights quantization to NF4 data type. The first and last layers
-        are always compressed to a backup precision which is 8-bit integer by default. All others are quantized whether
-        to NF4 or to a backup precision depending on criteria and the given ratio.
-    :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4 and
-        the rest to INT8).
-    :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
-        The value -1 means no grouping.
-    :return: The non-trainable model with compressed weights and dequantization operations.
-    """
-    insert_pre_compression_operations(model, mode, ratio, group_size)
-    return model

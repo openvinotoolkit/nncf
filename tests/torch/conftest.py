@@ -15,13 +15,13 @@ import pytest
 
 try:
     import torch
-except:  # pylint: disable=bare-except
+except:  # pylint: disable=bare-except  # noqa: E722
     torch = None
 from nncf.common.quantization.structs import QuantizationMode
 from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
 from tests.shared.case_collection import skip_marked_cases_if_options_not_specified
-from tests.shared.install_fixtures import tmp_venv_with_nncf  # pylint:disable=unused-import
-from tests.shared.logging import nncf_caplog  # pylint:disable=unused-import
+from tests.shared.install_fixtures import tmp_venv_with_nncf  # pylint:disable=unused-import  # noqa: F401
+from tests.shared.logging import nncf_caplog  # pylint:disable=unused-import  # noqa: F401
 
 pytest.register_assert_rewrite("tests.torch.helpers")
 

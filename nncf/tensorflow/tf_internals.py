@@ -8,26 +8,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=unused-import
 
-from packaging import version
-from tensorflow.python.eager import context as eager_context
+# pylint: disable=unused-import
+# pylint: disable=import-error
+# pylint: disable=no-name-in-module
+
+from keras import backend as backend
+from keras import layers as layers
+from keras.layers import Rescaling as Rescaling
+from packaging import version as version
+from tensorflow.python.eager import context as eager_context  # noqa: F401
 
 from nncf.tensorflow import tensorflow_version
 
 if version.parse(tensorflow_version) < version.parse("2.13"):
-    from keras import backend
-    from keras import engine as keras_engine
-    from keras import layers
-    from keras.applications import imagenet_utils
-    from keras.engine.keras_tensor import KerasTensor
-    from keras.layers import Rescaling
-    from keras.utils.control_flow_util import smart_cond
+    from keras import engine as keras_engine  # noqa: F401
+    from keras.applications import imagenet_utils as imagenet_utils
+    from keras.engine.keras_tensor import KerasTensor as KerasTensor
+    from keras.utils.control_flow_util import smart_cond as smart_cond
 else:
-    from keras import backend
-    from keras import layers
-    from keras.layers import Rescaling
-    from keras.src import engine as keras_engine  # pylint: disable=no-name-in-module,import-error
-    from keras.src.applications import imagenet_utils  # pylint: disable=no-name-in-module,import-error
-    from keras.src.engine.keras_tensor import KerasTensor  # pylint: disable=no-name-in-module,import-error
-    from keras.src.utils.control_flow_util import smart_cond  # pylint: disable=no-name-in-module,import-error
+    from keras.src import engine as keras_engine  # noqa: F401
+    from keras.src.applications import imagenet_utils as imagenet_utils  # noqa: E501
+    from keras.src.engine.keras_tensor import KerasTensor as KerasTensor  # noqa: E501
+    from keras.src.utils.control_flow_util import smart_cond as smart_cond  # noqa: E501

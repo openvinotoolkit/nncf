@@ -95,7 +95,7 @@ class StructuredMaskContext:
         """
         self.sparsifier_operand = sparsifier_operand
         self.module_node_name = module_node_name
-        operand_mask: torch.Tensor = sparsifier_operand.weight_ctx.binary_mask  # type: ignore
+        operand_mask: torch.Tensor = sparsifier_operand.weight_ctx.binary_mask
         self.operand_mask_shape = operand_mask.shape
         self.grid_size = self._resolve_grid_size(grid_size)
         self.structured_mask_shape = torch.Size(
