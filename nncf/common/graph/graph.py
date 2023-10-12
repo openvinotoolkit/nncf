@@ -198,7 +198,7 @@ class NNCFGraph:
         self._output_nncf_nodes: Dict[int, NNCFNode] = {}
         self._node_ids_vs_layer_names: Dict[int, LayerName] = {}
         self._layer_name_vs_shared_nodes: Dict[LayerName, List[NNCFNode]] = defaultdict(list)
-        self._node_name_to_node_id_map: Dict[str, int] = {}
+        self._node_name_to_node_id_map: Dict[str, List[int]] = {}
 
     @property
     def nodes(self) -> Dict[str, NNCFNode]:
@@ -458,9 +458,8 @@ class NNCFGraph:
         if node_id in self._node_id_to_key_dict:
             raise ValueError(f"NNCF node with id {node_id} is already in the NNCFGraph")
 
-        if node_name in self._node_name_to_node_id_map:
-            raise ValueError(f"NNCF node with name {node_name} is already in the NNCFGraph")
-        self._node_name_to_node_id_map[node_name] = node_id
+        node_ids = self._node_name_to_node_id_map.setdefault(node_name, [])
+        node_ids.append(node_id)
 
         node_key = f"{node_id} {node_name}"
 
@@ -639,10 +638,13 @@ class NNCFGraph:
         return out_graph
 
     def get_node_by_name(self, name: NNCFNodeName) -> NNCFNode:
-        node_id = self._node_name_to_node_id_map.get(name, None)
-        if node_id is None:
+        node_ids = self._node_name_to_node_id_map.get(name, None)
+        if node_ids is None:
             raise RuntimeError("Could not find a node {} in NNCFGraph!".format(name))
-        node_key = f"{node_id} {name}"
+        if len(node_ids) > 1:
+            raise RuntimeError(f"More than one node in NNCFGraph matches name {name}")
+
+        node_key = f"{node_ids[0]} {name}"
         return self._nodes[node_key]
 
     def __eq__(self, other: "NNCFGraph"):
