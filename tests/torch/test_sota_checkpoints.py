@@ -39,7 +39,8 @@ class EvalRunParamsStruct:
 
     config_name: str
     reference: Optional[str]
-    expected: float
+    target_ov: float
+    target_pt: float
     metric_type: str
     dataset_name: str
     sample_type: str
@@ -103,11 +104,14 @@ def read_reference_file(ref_path: Path) -> List[EvalRunParamsStruct]:
         for dataset_name in datasets:
             model_dict = datasets[dataset_name]
             for model_name, sample_dict in model_dict.items():
+                if "target_pt" not in sample_dict:
+                    continue
                 param_list.append(
                     EvalRunParamsStruct(
                         config_name=sample_dict["config"],
                         reference=sample_dict.get("reference", None),
-                        expected=sample_dict["target"],
+                        target_pt=sample_dict["target_pt"],
+                        target_ov=sample_dict["target_ov"],
                         metric_type=sample_dict["metric_type"],
                         dataset_name=dataset_name,
                         sample_type=sample_type_,
@@ -209,7 +213,7 @@ class TestSotaCheckpoints:
         self.ref_fp32_dict = OrderedDict()
         for run_param in EVAL_TEST_STRUCT:
             if run_param.reference is None:
-                self.ref_fp32_dict[run_param.model_name] = run_param.expected
+                self.ref_fp32_dict[run_param.model_name] = run_param.target_ov
 
     @pytest.fixture(params=EVAL_TEST_STRUCT, ids=idfn)
     def eval_run_param(self, request):
@@ -251,24 +255,19 @@ class TestSotaCheckpoints:
 
     @staticmethod
     def threshold_check(
-        diff_target,
-        diff_fp32,
-        diff_target_min,
-        diff_target_max,
-        diff_fp32_min,
-        diff_fp32_max,
+        diff_target: float, diff_fp32: Optional[float], param: EvalRunParamsStruct
     ) -> Tuple[bool, List[str]]:
         err_msgs = []
-
-        if diff_target < diff_target_min or diff_target > diff_target_max:
+        if diff_target < param.diff_target_min or diff_target > param.diff_target_max:
             err_msgs.append(
-                f"Target diff is not within thresholds: {diff_target_min} < {diff_target} < {diff_target_max}"
+                "Target diff is not within thresholds: "
+                + f"{param.diff_target_min} < {diff_target} < {param.diff_target_max}"
             )
-
         if diff_fp32 is not None:
-            if diff_fp32 < diff_fp32_min or diff_fp32 > diff_fp32_max:
-                err_msgs.append(f"FP32 diff is not within thresholds: {diff_fp32_min} < {diff_fp32} < {diff_fp32_max}")
-
+            if diff_fp32 < param.diff_fp32_min or diff_fp32 > param.diff_fp32_max:
+                err_msgs.append(
+                    f"FP32 diff is not within thresholds: {param.diff_fp32_min} < {diff_fp32} < {param.diff_fp32_max}"
+                )
         if err_msgs:
             return ";".join(err_msgs)
         return None
@@ -318,35 +317,28 @@ class TestSotaCheckpoints:
         diff_target = None
         diff_fp32 = None
         if not is_ok:
+            status = f"exit_code: {exit_code}"
             result_info = ResultInfo(
                 model_name=eval_run_param.model_name,
                 backend=PYTORCH,
-                status=f"exit_code: {exit_code}",
+                status=status,
             )
             add_test_result(result_info)
-            pytest.fail(f"exit_code: {exit_code}")
+            pytest.fail(status)
 
         metric_value = self.read_metric(metrics_dump_file_path)
-
         fp32_metric = self.get_reference_fp32_metric(pytest.metrics_dump_path, eval_run_param.reference)
 
-        diff_target = round((metric_value - eval_run_param.expected), 2)
+        diff_target = round((metric_value - eval_run_param.target_pt), 2)
         if fp32_metric:
             diff_fp32 = round((metric_value - fp32_metric), 2)
 
-        threshold_errors = self.threshold_check(
-            diff_target=diff_target,
-            diff_fp32=diff_fp32,
-            diff_target_min=eval_run_param.diff_target_min,
-            diff_target_max=eval_run_param.diff_target_max,
-            diff_fp32_min=eval_run_param.diff_fp32_min,
-            diff_fp32_max=eval_run_param.diff_fp32_max,
-        )
+        threshold_errors = self.threshold_check(diff_target=diff_target, diff_fp32=diff_fp32, param=eval_run_param)
         result_info = ResultInfo(
             model_name=eval_run_param.model_name,
             backend=PYTORCH,
             metric_type=eval_run_param.metric_type,
-            expected=eval_run_param.expected,
+            expected=eval_run_param.target_pt,
             measured=metric_value,
             diff_fp32=diff_fp32,
             diff_target=diff_target,
@@ -414,49 +406,41 @@ class TestSotaCheckpoints:
             pytest.fail(f"{ir_model_path} does not exists")
 
         ac_yml_path = config_folder / f"{eval_run_param.model_name}.yml"
-
         report_csv_path = pytest.metrics_dump_path / f"{eval_run_param.model_name}.csv"
 
         # Ensure that report file does not exists
         report_csv_path.unlink(missing_ok=True)
 
         cmd = self.generate_accuracy_check_cmd(ac_yml_path, ov_data_dir, ir_model_path.parent, report_csv_path)
-
         runner = Command(cmd, cwd=PROJECT_ROOT, env=self.get_env())
         exit_code = runner.run(assert_returncode_zero=False)
 
         if exit_code:
+            status = f"Accuracy checker return code: {exit_code}"
             add_test_result(
                 ResultInfo(
                     model_name=eval_run_param.model_name,
                     backend=OPENVINO,
-                    status=f"Accuracy checker return code: {exit_code}",
+                    status=status,
                 )
             )
-            pytest.fail(f"Accuracy checker return code: {exit_code}")
+            pytest.fail(status)
 
         metric_value = self.get_metric_from_ac_csv(report_csv_path)
-
         fp32_metric = self.get_reference_fp32_metric(pytest.metrics_dump_path, eval_run_param.reference)
 
-        diff_target = round((metric_value - eval_run_param.expected), 2)
+        diff_target = round((metric_value - eval_run_param.target_ov), 2)
         diff_fp32 = None
         if fp32_metric:
             diff_fp32 = round((metric_value - fp32_metric), 2)
 
-        threshold_errors = self.threshold_check(
-            diff_target=diff_target,
-            diff_fp32=diff_fp32,
-            diff_target_min=eval_run_param.diff_target_min,
-            diff_target_max=eval_run_param.diff_target_max,
-            diff_fp32_min=eval_run_param.diff_fp32_min,
-            diff_fp32_max=eval_run_param.diff_fp32_max,
-        )
+        threshold_errors = self.threshold_check(diff_target=diff_target, diff_fp32=diff_fp32, param=eval_run_param)
+
         result_info = ResultInfo(
             model_name=eval_run_param.model_name,
             backend=OPENVINO,
             metric_type=eval_run_param.metric_type,
-            expected=eval_run_param.expected,
+            expected=eval_run_param.target_ov,
             measured=metric_value,
             diff_fp32=diff_fp32,
             diff_target=diff_target,
@@ -491,15 +475,13 @@ class TestSotaCheckpoints:
             cuda_ip=cuda_ip,
             weights_path=weights_path,
         )
-
-        fp32_metric = self.ref_fp32_dict[eval_run_param.reference]
-
         runner = Command(cmd, cwd=PROJECT_ROOT, env=self.get_env())
         exit_code = runner.run(assert_returncode_zero=False)
 
         is_ok = exit_code == 0 and metrics_dump_file_path.exists()
         err_msg = None
         if is_ok:
+            fp32_metric = self.ref_fp32_dict[eval_run_param.reference]
             metric_value = self.read_metric(str(metrics_dump_file_path))
             diff_fp32 = round((metric_value - fp32_metric), 2)
             if -1 < diff_fp32:
