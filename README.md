@@ -406,3 +406,12 @@ Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines on contrib
 - [Notebooks](https://github.com/openvinotoolkit/openvino_notebooks#-model-training)
 - [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)
 - [OpenVINO Model Optimization Guide](https://docs.openvino.ai/latest/openvino_docs_model_optimization_guide.html)
+
+## Telemetry
+
+NNCF as part of the OpenVINO™ toolkit collects anonymous usage data for the purpose of improving OpenVINO™ tools.
+You can opt-out at any time by running the following command in the Python environment where you have NNCF installed:
+
+`opt_in_out --opt_out`
+
+More information is available at https://docs.openvino.ai/latest/openvino_docs_telemetry_information.html.
