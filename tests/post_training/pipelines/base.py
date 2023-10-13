@@ -108,6 +108,7 @@ class BaseTestPipeline(ABC):
         output_dir: Path,
         data_dir: Path,
         reference_data: dict,
+        no_eval: bool,
         params: dict = None,
     ) -> None:
         self.reported_name = reported_name
@@ -118,6 +119,7 @@ class BaseTestPipeline(ABC):
         self.data_dir = Path(data_dir)
         self.reference_data = reference_data
         self.params = params or {}
+        self.no_eval = no_eval
 
         self.output_model_dir = self.output_dir / self.reported_name / self.backend.value
         self.output_model_dir.mkdir(parents=True, exist_ok=True)
@@ -250,7 +252,11 @@ class BaseTestPipeline(ABC):
         """
         Validate and compare result with reference
         """
+        if self.no_eval:
+            print("Validation skipped")
+            return
         print("Validation...")
+
         self._validate()
 
         metric_value = self.run_info.metric_value
