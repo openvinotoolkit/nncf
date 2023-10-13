@@ -8,10 +8,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import dataclasses
 import itertools
 from collections import Counter
 from functools import partial
+from typing import Callable
 from typing import Dict, List
 
 import onnx
@@ -446,17 +447,31 @@ class UNetLikeModel(torch.nn.Module):
         return z1
 
 
-CAT_UNIFIED_SCALE_TEST_STRUCTS = [(SingleCatModel, 3, 4), (DoubleCatModel, 3, 4), (UNetLikeModel, 4, 6)]
+@dataclasses.dataclass
+class UnifiedScaleTestStruct:
+    model_builder: Callable
+    ref_aq_module_count: int
+    ref_quantizations_count: int
+
+
+CAT_UNIFIED_SCALE_TEST_STRUCTS = [
+    UnifiedScaleTestStruct(
+        model_builder=SingleCatModel,
+        ref_aq_module_count=3,
+        ref_quantizations_count=4)
+    ,
+    UnifiedScaleTestStruct(model_builder=DoubleCatModel, ref_aq_module_count=3, ref_quantizations_count=4),
+    UnifiedScaleTestStruct(model_builder=UNetLikeModel, ref_aq_module_count=4, ref_quantizations_count=6)]
 
 
 @pytest.mark.parametrize(
-    "target_device, model_creator, ref_aq_module_count, ref_quantizations",
+    "target_device, unified_scale_test_case",
     [
-        (t_dev,) + rest
-        for t_dev, rest in itertools.product([x.value for x in HWConfigType], CAT_UNIFIED_SCALE_TEST_STRUCTS)
+        (t_dev, usts)
+        for t_dev, usts in itertools.product([x.value for x in HWConfigType], CAT_UNIFIED_SCALE_TEST_STRUCTS)
     ],
 )
-def test_unified_scales_with_concat(target_device, model_creator, ref_aq_module_count, ref_quantizations):
+def test_unified_scales_with_concat(target_device, unified_scale_test_case: UnifiedScaleTestStruct):
     nncf_config = get_quantization_config_without_range_init(model_size=1)
     nncf_config["input_info"] = [
         {
@@ -470,12 +485,12 @@ def test_unified_scales_with_concat(target_device, model_creator, ref_aq_module_
     nncf_config["target_device"] = target_device
     register_bn_adaptation_init_args(nncf_config)
 
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(model_creator(), nncf_config)
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(unified_scale_test_case.model_builder(), nncf_config)
 
-    assert len(compression_ctrl.non_weight_quantizers) == ref_aq_module_count
+    assert len(compression_ctrl.non_weight_quantizers) == unified_scale_test_case.ref_aq_module_count
 
     total_quantizations = sum(len(info.affected_insertions) for info in compression_ctrl.non_weight_quantizers.values())
-    assert total_quantizations == ref_quantizations
+    assert total_quantizations == unified_scale_test_case.ref_quantizations_count
 
 
 class SimplerModelForUnifiedScalesTesting(torch.nn.Module):

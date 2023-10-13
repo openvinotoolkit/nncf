@@ -68,7 +68,6 @@ class TestQuantizerPropagationStateGraph:
         qpsg = QPSG(ip_graph)
 
         qpsg.nodes["5 /F_0"][QPSG.OPERATOR_METATYPE_NODE_ATTR] = CatTestMetatype
-        qpsg.nodes["6 /G_0"][QPSG.OPERATOR_METATYPE_NODE_ATTR] = Conv2dTestMetatype
         qpsg.skip_check = False
         yield qpsg
         if not qpsg.skip_check:
