@@ -54,19 +54,26 @@ class StatisticsAggregator(ABC):
         engine = factory.EngineFactory.create(model_with_outputs)
 
         dataset_length = self.dataset.get_length()
+        batch_size = self.dataset.get_batch_size()
+        collected_statistics_num = 0
+        if batch_size is not None and dataset_length is not None:
+            dataset_length *= batch_size
         total = (
             min(dataset_length or self.stat_subset_size, self.stat_subset_size)
             if self.stat_subset_size is not None
             else None
         )
-        for input_data in track(
-            islice(self.dataset.get_inference_data(), self.stat_subset_size),
-            total=total,
-            description="Statistics collection",
-        ):
-            outputs = engine.infer(input_data)
-            processed_outputs = self._process_outputs(outputs)
-            self._register_statistics(processed_outputs, merged_statistics)
+        with track(total=total, description="Statistics collection") as pbar:
+            for input_data in islice(self.dataset.get_inference_data(), self.stat_subset_size):
+                batch_size_to_collect = min(total - collected_statistics_num, batch_size)
+                sliced_iput = self._get_sliced_data(input_data, batch_size_to_collect)
+                outputs = engine.infer(sliced_iput)
+                processed_outputs = self._process_outputs(outputs)
+                self._register_statistics(processed_outputs, merged_statistics)
+                collected_statistics_num += batch_size_to_collect
+                pbar.progress.update(pbar.task, advance=batch_size_to_collect)
+                if collected_statistics_num == total:
+                    break
 
     def register_statistic_points(self, statistic_points: StatisticPointsContainer) -> None:
         """
@@ -134,3 +141,8 @@ class StatisticsAggregator(ABC):
         :param outputs: raw model outputs
         :return: processed model outputs in Dict[str, NNCFTensor] format
         """
+
+    @staticmethod
+    @abstractmethod
+    def _get_sliced_data(inputs: Any, end: int) -> Any:
+        """ """

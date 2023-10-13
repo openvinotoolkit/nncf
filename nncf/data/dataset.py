@@ -81,6 +81,12 @@ class Dataset(Generic[DataItem, ModelInput]):
             return self._data_source.__len__()
         return None
 
+    def get_batch_size(self) -> Optional[int]:
+        """ """
+        if hasattr(self._data_source, "batch_size"):
+            return self._data_source.batch_size
+        return None
+
 
 class DataProvider(Generic[DataItem, ModelInput]):
     def __init__(
