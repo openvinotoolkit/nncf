@@ -223,7 +223,7 @@ class Ranker:
                 )
                 ranking_scores.append(float(ranking_score))
 
-        for _ in range(self._num_workers - 1):
+        for _ in range(len(prepared_model_queue)):
             prepared_model = prepared_model_queue.pop(0).result()
             ranking_score = self._calculate_ranking_score(
                 prepared_model, ranking_subset_indices, reference_values_for_each_item
