@@ -47,7 +47,7 @@ from tests.common.quantization.mock_graphs import get_two_branch_mock_model_grap
 from tests.common.quantization.mock_graphs import mark_input_ports_lexicographically_based_on_input_node_key
 
 
-def get_edge_paths(graph, start_node_key, finish_node_key) -> List[List[Tuple]]:
+def get_edge_paths(graph: QPSG, start_node_key: str, finish_node_key: str) -> List[List[Tuple]]:
     node_paths = list(nx.all_simple_paths(graph, start_node_key, finish_node_key))
     edge_paths = []
     for path in node_paths:
@@ -55,7 +55,7 @@ def get_edge_paths(graph, start_node_key, finish_node_key) -> List[List[Tuple]]:
     return edge_paths
 
 
-def get_edge_paths_for_propagation(graph, start_node_key, finish_node_key) -> List[List[Tuple]]:
+def get_edge_paths_for_propagation(graph: QPSG, start_node_key: str, finish_node_key: str) -> List[List[Tuple]]:
     paths = get_edge_paths(graph, start_node_key, finish_node_key)
     return [list(reversed(path)) for path in paths]
 

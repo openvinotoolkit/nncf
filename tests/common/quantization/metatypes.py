@@ -158,6 +158,11 @@ class DivideTestMetatype(TestMetatype):
 
 
 @METATYPES_FOR_TEST.register()
+class GenericBinaryOpMetatype(TestMetatype):
+    name = "binary_op"
+
+
+@METATYPES_FOR_TEST.register()
 @INPUT_NOOP_METATYPES.register()
 class ParameterTestMetatype(TestMetatype):
     name = "parameter"
