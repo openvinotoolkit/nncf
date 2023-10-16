@@ -20,7 +20,6 @@ from nncf.common.graph.graph import NNCFNodeName
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.patterns.manager import TargetDevice
-from nncf.common.graph.patterns.patterns import AlgorithmType
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.torch.graph.graph import PTNNCFGraph
@@ -258,9 +257,7 @@ def get_merged_original_graph_with_pattern(orig_graph: nx.DiGraph, hw_fused_ops:
     if not hw_fused_ops:
         return merged_graph
     # pylint: disable=protected-access
-    pattern_fusing_graph = PatternsManager.get_full_hw_pattern_graph(
-        backend=BackendType.TORCH, device=TargetDevice.ANY, algorithm=AlgorithmType.NAS
-    )
+    pattern_fusing_graph = PatternsManager.get_full_hw_pattern_graph(backend=BackendType.TORCH, device=TargetDevice.ANY)
     matches = find_subgraphs_matching_pattern(orig_graph, pattern_fusing_graph)
     nx.set_node_attributes(merged_graph, False, SearchGraph.IS_DUMMY_NODE_ATTR)
     nx.set_node_attributes(merged_graph, False, SearchGraph.IS_MERGED_NODE_ATTR)

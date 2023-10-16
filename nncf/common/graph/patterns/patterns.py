@@ -260,16 +260,6 @@ def merge_two_types_of_operations(first_op: Dict, second_op: Dict, label: str) -
     raise RuntimeError("Incorrect dicts of operations")
 
 
-class AlgorithmType(Enum):
-    """
-    Algorithm type which is used by the pattern manager to
-    provide patterns specific to the target algorithm type.
-    """
-
-    QUANTIZATION = "QUANTIZATION"
-    NAS = "NAS"
-
-
 @dataclass
 class PatternDesc:
     """
@@ -286,8 +276,7 @@ class PatternDesc:
 
     name: str
     devices: Optional[List[TargetDevice]] = None
-    model_types: Optional[List[ModelType]] = None
-    ignored_algorithms: Optional[List[AlgorithmType]] = None
+    model_types: Optional[List[TargetDevice]] = None
 
 
 class HWFusedPatternNames(Enum):
@@ -298,6 +287,8 @@ class HWFusedPatternNames(Enum):
 
     # ATOMIC OPERATIONS
     L2_NORM = PatternDesc("l2_norm")
+    MVN = PatternDesc("mvn")
+    GELU = PatternDesc("gelu")
 
     # BLOCK PATTERNS
     ADD_SCALE_SHIFT_OUTPUT = PatternDesc("add_scale_shift_output")
@@ -307,7 +298,6 @@ class HWFusedPatternNames(Enum):
     NORMALIZE_L2_MULTIPLY = PatternDesc("normalize_l2_multiply")
     SCALE_SHIFT = PatternDesc("scale_shift")
     SHIFT_SCALE = PatternDesc("shift_scale")
-    SE_BLOCK = PatternDesc("se_block", ignored_algorithms=[AlgorithmType.NAS])
     SOFTMAX_DIV = PatternDesc("softmax_div")
 
     # ACTIVATIONS
@@ -349,6 +339,7 @@ class HWFusedPatternNames(Enum):
     LINEAR_ACTIVATIONS_BATCH_NORM = PatternDesc("linear_activations_batch_norm")
     LINEAR_ACTIVATIONS_SCALE_SHIFT = PatternDesc("linear_activations_scale_shift")
     LINEAR_ARITHMETIC = PatternDesc("linear_arithmetic")
+    LINEAR_SHIFT_SCALE = PatternDesc("linear_shift_scale")
     LINEAR_ARITHMETIC_ACTIVATIONS = PatternDesc("linear_arithmetic_activations")
     # Found in PicoDet models
     LINEAR_ARITHMETIC_ACTIVATIONS_ARITHMETIC = PatternDesc("linear_arithmetic_activations_arithmetic")
@@ -404,5 +395,6 @@ class IgnoredPatternNames(Enum):
         model_types=[ModelType.TRANSFORMER],
         devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU, TargetDevice.VPU],
     )
+    SE_BLOCK = PatternDesc("se_block")
     FC_BN_HSWISH_ACTIVATION = PatternDesc("fc_bn_hswish_activation")
     EQUAL_LOGICALNOT = PatternDesc("equal_logicalnot")

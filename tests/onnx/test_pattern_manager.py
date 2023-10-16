@@ -24,7 +24,6 @@ IGNORING_HW_PATTERN_REASONS = {
     HWFusedPatternNames.MVN_SCALE_SHIFT: "Not relevant for ONNX.",
     HWFusedPatternNames.NORMALIZE_L2_MULTIPLY: "Not relevant for ONNX.",
     HWFusedPatternNames.LINEAR_WITH_BIAS: "Linear layers contains biases in ONNX.",
-    HWFusedPatternNames.SE_BLOCK: "Not relevant for ONNX.",
     HWFusedPatternNames.SOFTMAX_DIV: "Not relevant for ONNX.",
     HWFusedPatternNames.HSWISH_ACTIVATION_V2: "Is already covered by HSWISH_ACTIVATION for ONNX.",
     HWFusedPatternNames.SOFTMAX: "Not relevant for ONNX.",
@@ -52,6 +51,7 @@ IGNORING_HW_PATTERN_REASONS = {
 IGNORING_IGNORED_PATTERN_REASONS = {
     IgnoredPatternNames.FC_BN_HSWISH_ACTIVATION: "Not relevant for ONNX.",
     IgnoredPatternNames.EQUAL_LOGICALNOT: "Not relevant for ONNX.",
+    IgnoredPatternNames.SE_BLOCK: "Not relevant for ONNX.",
 }
 
 
