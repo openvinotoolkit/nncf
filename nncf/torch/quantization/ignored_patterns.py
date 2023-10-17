@@ -98,10 +98,16 @@ def create_se_block() -> GraphPattern:
     MEAN_OPERATIONS = {
         GraphPattern.LABEL_ATTR: "REDUCE_MEAN",
         GraphPattern.METATYPE_ATTR: ["avg_pool2d", "adaptive_avg_pool2d", "avg_pool3d", "adaptive_avg_pool3d", "mean"],
+        GraphPattern.NON_PATTERN_NODE_WITH_TYPE: True,
     }
     SYGMOID_OPERATIONS = {
         GraphPattern.LABEL_ATTR: "SIGMOID",
         GraphPattern.METATYPE_ATTR: ["sigmoid", "hardsigmoid"],
+    }
+    MUL_OPERATION = {
+        GraphPattern.LABEL_ATTR: "MUL",
+        GraphPattern.METATYPE_ATTR: "__mul__",
+        GraphPattern.NON_PATTERN_NODE_WITH_TYPE: True,
     }
 
     def get_se_block_pattern() -> GraphPattern:
@@ -112,7 +118,7 @@ def create_se_block() -> GraphPattern:
         activation_node_1 = pattern.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
         linear_node_2 = pattern.add_node(**LINEAR_OPERATIONS)
         activation_node_2 = pattern.add_node(**SYGMOID_OPERATIONS)
-        multiply_node = pattern.add_node(label="MUL", type="__mul__")
+        multiply_node = pattern.add_node(**MUL_OPERATION)
 
         pattern.add_edge(any_node, reduce_mean_node)
         pattern.add_edge(reduce_mean_node, linear_node_1)
@@ -133,7 +139,7 @@ def create_se_block() -> GraphPattern:
         linear_node_2 = pattern.add_node(**LINEAR_OPERATIONS)
         add_node_2 = pattern.add_node(label="ADD_BIAS", type=["__add__", "__sub__"])
         activation_node_2 = pattern.add_node(**SYGMOID_OPERATIONS)
-        multiply_node = pattern.add_node(label="MUL", type="__mul__")
+        multiply_node = pattern.add_node(**MUL_OPERATION)
 
         pattern.add_edge(any_node, reduce_mean_node)
         pattern.add_edge(reduce_mean_node, linear_node_1)
@@ -161,7 +167,7 @@ def create_se_block() -> GraphPattern:
         linear_node_2 = pattern.add_node(**LINEAR_OPERATIONS)
         activation_node_2 = pattern.add_node(**SYGMOID_OPERATIONS)
         reshape_node_2 = pattern.add_node(**RESHAPE_NODES)
-        multiply_node = pattern.add_node(label="MUL", type="__mul__")
+        multiply_node = pattern.add_node(**MUL_OPERATION)
 
         pattern.add_edge(any_node, reduce_mean_node)
         pattern.add_edge(reduce_mean_node, reshape_node_1)
@@ -186,7 +192,7 @@ def create_se_block() -> GraphPattern:
         add_node_2 = pattern.add_node(label="ADD_BIAS", type=["__add__", "__sub__"])
         activation_node_2 = pattern.add_node(**SYGMOID_OPERATIONS)
         reshape_node_2 = pattern.add_node(**RESHAPE_NODES)
-        multiply_node = pattern.add_node(label="MUL", type="__mul__")
+        multiply_node = pattern.add_node(**MUL_OPERATION)
 
         pattern.add_edge(any_node, reduce_mean_node)
         pattern.add_edge(reduce_mean_node, reshape_node_1)

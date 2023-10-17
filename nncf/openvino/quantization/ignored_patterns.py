@@ -118,7 +118,11 @@ def create_se_block() -> GraphPattern:
         **{GraphPattern.LABEL_ATTR: "ANY", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
     )
     reduce_mean_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "REDUCE_MEAN", GraphPattern.METATYPE_ATTR: om.OVReduceMeanMetatype}
+        **{
+            GraphPattern.LABEL_ATTR: "REDUCE_MEAN",
+            GraphPattern.METATYPE_ATTR: om.OVReduceMeanMetatype,
+            GraphPattern.NON_PATTERN_NODE_WITH_TYPE: True,
+        }
     )
     linear_node_1 = pattern.add_node(
         **{GraphPattern.METATYPE_ATTR: LINEAR_OPERATIONS, GraphPattern.LABEL_ATTR: "LINEAR"}
@@ -138,7 +142,11 @@ def create_se_block() -> GraphPattern:
         **{GraphPattern.LABEL_ATTR: "SIGMOID", GraphPattern.METATYPE_ATTR: om.OVSigmoidMetatype}
     )
     multiply_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype}
+        **{
+            GraphPattern.LABEL_ATTR: "MULTIPLY",
+            GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype,
+            GraphPattern.NON_PATTERN_NODE_WITH_TYPE: True,
+        }
     )
 
     pattern.add_edge(any_node, reduce_mean_node)

@@ -80,6 +80,7 @@ class GraphPattern:
     NODE_TYPE_ATTR = "metatype"
     ANY_PATTERN_NODE_TYPE = "ANY_PATTERN_NODE"
     NON_PATTERN_NODE_TYPE = "NON_PATTERN_NODE"
+    NON_PATTERN_NODE_WITH_TYPE = "NON_PATTERN_NODE_WITH_TYPE"
 
     def __init__(self):
         self._graph = nx.DiGraph()
