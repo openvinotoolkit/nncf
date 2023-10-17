@@ -506,11 +506,13 @@ def map_apply_for_all_nodes(apply_for_all_nodes):
     return {advanced_parameter_name: advanced_parameters}
 
 
-def map_smooth_quant_alpha(smooth_quant_alpha):
+def map_smooth_quant_alphas(smooth_quant_alphas):
     ctx = get_algorithm_parameters_context()
     advanced_parameter_name = ctx.param_name_map[ParameterNames.advanced_parameters]
     advanced_parameters = ctx.params.get(advanced_parameter_name, AdvancedQuantizationParameters())
-    advanced_parameters.smooth_quant_alpha = smooth_quant_alpha
+    for key in ["convolution", "matmul"]:
+        if key in smooth_quant_alphas:
+            advanced_parameters.smooth_quant_params.__setattr__(key, smooth_quant_alphas[key])
     return {advanced_parameter_name: advanced_parameters}
 
 
@@ -592,7 +594,7 @@ def get_pot_quantization_parameters_mapping():
         "saturation_fix": map_saturation_fix,
         "apply_for_all_nodes": map_apply_for_all_nodes,
         "threshold": map_threshold,
-        "smooth_quant_alpha": map_smooth_quant_alpha,
+        "smooth_quant_alphas": map_smooth_quant_alphas,
     }
 
     default_parameters = {"use_layerwise_tuning": False}
@@ -1000,7 +1002,7 @@ def quantize_model_with_accuracy_control(
 
 
 def filter_configuration(config: Config) -> Config:
-    fields_to_filter = ["smooth_quant_alpha"]
+    fields_to_filter = ["smooth_quant_alphas"]
     algorithms_to_update = defaultdict(dict)
 
     # Drop params before configure

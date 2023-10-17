@@ -26,11 +26,37 @@ TTensor = TypeVar("TTensor")
 
 
 class SmoothQuantAlgoBackend(ABC):
+    def get_alpha_map(self, alpha_map: Dict[str, float]) -> Dict[OperatorMetatype, float]:
+        """
+        Returns alpha map by metatypes.
+
+        :param convolution_alpha: Alpha value for Convolution layers.
+        :param matmul_alpha: Alpha value for MatMul layers.
+        :return: Alpha map by metatypes.
+        """
+        alpha_by_metatype_map = {}
+        name_to_metatype = {"convolution": self.convolution_metatype, "matmul": self.matmul_metatype}
+        for type_name, alpha_value in alpha_map.items():
+            metatype = name_to_metatype[type_name]
+            alpha_by_metatype_map[metatype] = alpha_value
+        return alpha_by_metatype_map
+
     @property
     @abstractmethod
-    def weighted_metatypes(self) -> List[OperatorMetatype]:
+    def convolution_metatype(self) -> OperatorMetatype:
         """
-        Property for the backend-specific metatypes.
+        Parameter for backend-specific metatype for Convolution.
+
+        :return: OperatorMetatype
+        """
+
+    @property
+    @abstractmethod
+    def matmul_metatype(self) -> OperatorMetatype:
+        """
+        Parameter for backend-specific metatype for MatMul.
+
+        :return: OperatorMetatype
         """
 
     @staticmethod

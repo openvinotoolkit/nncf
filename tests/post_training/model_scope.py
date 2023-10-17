@@ -13,7 +13,6 @@ import copy
 
 from nncf import ModelType
 from nncf import QuantizationPreset
-from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from tests.post_training.pipelines.base import ALL_PTQ_BACKENDS
 from tests.post_training.pipelines.base import NNCF_PTQ_BACKENDS
 from tests.post_training.pipelines.base import BackendType
@@ -53,7 +52,6 @@ TEST_MODELS = [
         "ptq_params": {
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
-            "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=-1.0),
         },
         "backends": [BackendType.TORCH, BackendType.ONNX, BackendType.OV, BackendType.POT],
     },
@@ -73,7 +71,6 @@ TEST_MODELS = [
         "ptq_params": {
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
-            "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=-1.0),
         },
         "backends": ALL_PTQ_BACKENDS,
     },
@@ -146,7 +143,7 @@ TEST_MODELS = [
         "ptq_params": {
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
-            "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=0.05),
+            # "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=0.05),
         },
         "backends": [BackendType.TORCH, BackendType.ONNX, BackendType.OV],
     },

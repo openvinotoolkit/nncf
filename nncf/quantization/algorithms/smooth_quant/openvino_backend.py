@@ -20,6 +20,7 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_weight_value
@@ -34,8 +35,12 @@ from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBac
 
 class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     @property
-    def weighted_metatypes(self) -> List[OperatorMetatype]:
-        return [OVMatMulMetatype]
+    def convolution_metatype(self) -> OperatorMetatype:
+        return OVConvolutionMetatype
+
+    @property
+    def matmul_metatype(self) -> OperatorMetatype:
+        return OVMatMulMetatype
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:
@@ -72,12 +77,12 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return collector
 
     @staticmethod
-    def process_weight_statistics(weights: np.ndarray, channel_axis: int) -> np.ndarray:
+    def process_weight_statistics(weights: np.ndarray, reduction_shape: Tuple[int]) -> np.ndarray:
         if len(weights.shape) > 1:
             base_axes = list(range(weights.ndim - 2))
             transpose_axes = base_axes + [-1, -2]
             weights = np.transpose(weights, axes=transpose_axes)
-        return np.max(np.abs(weights), axis=channel_axis)
+        return np.max(np.abs(weights), axis=reduction_shape)
 
     @staticmethod
     def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
@@ -159,7 +164,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def get_weight_channel_axis(node: NNCFNode, port_id: int) -> int:
-        channel_axis = 1 if node.metatype.const_channel_axis is None else node.metatype.const_channel_axis[0]
+        channel_axis = 1
 
         if port_id not in node.layer_attributes.constant_attributes:
             raise RuntimeError(f"{node.node_name} should contain {port_id} in the attributes map.")
