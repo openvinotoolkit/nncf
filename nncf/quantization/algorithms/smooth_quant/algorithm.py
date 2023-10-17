@@ -73,7 +73,6 @@ class SmoothQuant(Algorithm):
         self._backend_entity = None
         self._algorithm_key = f"SQ_{hash(self)}"
         self._cached_multiply_names = Counter()
-        self._validate_alpha_map(alpha_map)
         self._alpha_map = alpha_map
 
     @property
@@ -96,16 +95,6 @@ class SmoothQuant(Algorithm):
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
             )
 
-    def _validate_alpha_map(self, alpha_map: Dict[str, float]) -> None:
-        """
-        Validates the alpha map for case of the negative value.
-
-        :param alpha_map: Map for the validation.
-        """
-        for layer_type, alpha_value in alpha_map.items():
-            if alpha_value < 0:
-                raise RuntimeError(f"Smooth Quant algorithm does not support negative parameter for {layer_type}!")
-
     def apply(
         self,
         model: TModel,
@@ -114,7 +103,7 @@ class SmoothQuant(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         self._set_backend_entity(model)
-        alpha_map = self._backend_entity.get_alpha_map(self._alpha_map)
+        alpha_map = self._get_alpha_map()
 
         nodes_to_smooth_data = self._get_nodes_to_smooth_data(graph, alpha_map.keys())
         model_transformer = ModelTransformerFactory.create(model)
@@ -237,7 +226,7 @@ class SmoothQuant(Algorithm):
         statistic_container = StatisticPointsContainer()
 
         self._set_backend_entity(model)
-        alpha_map = self._backend_entity.get_alpha_map(self._alpha_map)
+        alpha_map = self._get_alpha_map()
 
         nodes_to_smooth_data = self._get_nodes_to_smooth_data(graph, alpha_map.keys())
 
@@ -376,3 +365,25 @@ class SmoothQuant(Algorithm):
         unique_index = self._cached_multiply_names[scale_node_name]
         self._cached_multiply_names[scale_node_name] += 1
         return f"{scale_node_name}_{unique_index}/sq_multiply"
+
+    def _get_alpha_map(self) -> Dict[OperatorMetatype, float]:
+        """
+        Returns alpha map by metatypes.
+
+        :return: Alpha map by metatypes.
+        """
+        alpha_by_metatype_map = {}
+        name_to_metatype = {
+            "convolution": self._backend_entity.convolution_metatype,
+            "matmul": self._backend_entity.matmul_metatype,
+        }
+        for type_name, alpha_value in self._alpha_map.items():
+            if alpha_value < 0:
+                nncf_logger.debug(
+                    f"Smooth Quant algorithm does not support negative parameter for {type_name}! "
+                    "Skipping these layers."
+                )
+                continue
+            metatype = name_to_metatype[type_name]
+            alpha_by_metatype_map[metatype] = alpha_value
+        return alpha_by_metatype_map
