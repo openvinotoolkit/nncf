@@ -98,7 +98,7 @@ def create_se_block() -> GraphPattern:
     MEAN_OPERATIONS = {
         GraphPattern.LABEL_ATTR: "REDUCE_MEAN",
         GraphPattern.METATYPE_ATTR: ["avg_pool2d", "adaptive_avg_pool2d", "avg_pool3d", "adaptive_avg_pool3d", "mean"],
-        GraphPattern.NON_PATTERN_NODE_WITH_TYPE: True,
+        GraphPattern.PATTERN_NODE_TO_EXCLUDE: True,
     }
     SYGMOID_OPERATIONS = {
         GraphPattern.LABEL_ATTR: "SIGMOID",
@@ -107,12 +107,12 @@ def create_se_block() -> GraphPattern:
     MUL_OPERATION = {
         GraphPattern.LABEL_ATTR: "MUL",
         GraphPattern.METATYPE_ATTR: "__mul__",
-        GraphPattern.NON_PATTERN_NODE_WITH_TYPE: True,
+        GraphPattern.PATTERN_NODE_TO_EXCLUDE: True,
     }
 
     def get_se_block_pattern() -> GraphPattern:
         pattern = GraphPattern()
-        any_node = pattern.add_node(label="ANY", type=GraphPattern.NON_PATTERN_NODE_TYPE)
+        any_node = pattern.add_node(label="NON_PATTERN_NODE", type=GraphPattern.NON_PATTERN_NODE_TYPE)
         reduce_mean_node = pattern.add_node(**MEAN_OPERATIONS)
         linear_node_1 = pattern.add_node(**LINEAR_OPERATIONS)
         activation_node_1 = pattern.add_node(**ATOMIC_ACTIVATIONS_OPERATIONS)
@@ -131,7 +131,7 @@ def create_se_block() -> GraphPattern:
 
     def get_se_block_with_bias_pattern() -> GraphPattern:
         pattern = GraphPattern()
-        any_node = pattern.add_node(label="ANY", type=GraphPattern.NON_PATTERN_NODE_TYPE)
+        any_node = pattern.add_node(label="NON_PATTERN_NODE", type=GraphPattern.NON_PATTERN_NODE_TYPE)
         reduce_mean_node = pattern.add_node(**MEAN_OPERATIONS)
         linear_node_1 = pattern.add_node(**LINEAR_OPERATIONS)
         add_node_1 = pattern.add_node(label="ADD_BIAS", type=["__add__", "__sub__"])
@@ -159,7 +159,7 @@ def create_se_block() -> GraphPattern:
 
     def get_se_block_with_reshape() -> GraphPattern:
         pattern = GraphPattern()
-        any_node = pattern.add_node(label="ANY", type=GraphPattern.NON_PATTERN_NODE_TYPE)
+        any_node = pattern.add_node(label="NON_PATTERN_NODE", type=GraphPattern.NON_PATTERN_NODE_TYPE)
         reduce_mean_node = pattern.add_node(**MEAN_OPERATIONS)
         reshape_node_1 = pattern.add_node(**RESHAPE_NODES)
         linear_node_1 = pattern.add_node(**LINEAR_OPERATIONS)
@@ -182,7 +182,7 @@ def create_se_block() -> GraphPattern:
 
     def get_se_block_with_bias_and_reshape() -> GraphPattern:
         pattern = GraphPattern()
-        any_node = pattern.add_node(label="ANY", type=GraphPattern.NON_PATTERN_NODE_TYPE)
+        any_node = pattern.add_node(label="NON_PATTERN_NODE", type=GraphPattern.NON_PATTERN_NODE_TYPE)
         reduce_mean_node = pattern.add_node(**MEAN_OPERATIONS)
         reshape_node_1 = pattern.add_node(**RESHAPE_NODES)
         linear_node_1 = pattern.add_node(**LINEAR_OPERATIONS)

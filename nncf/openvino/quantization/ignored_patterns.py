@@ -121,7 +121,7 @@ def create_se_block() -> GraphPattern:
         **{
             GraphPattern.LABEL_ATTR: "REDUCE_MEAN",
             GraphPattern.METATYPE_ATTR: om.OVReduceMeanMetatype,
-            GraphPattern.NON_PATTERN_NODE_WITH_TYPE: True,
+            GraphPattern.PATTERN_NODE_TO_EXCLUDE: True,
         }
     )
     linear_node_1 = pattern.add_node(
@@ -145,7 +145,7 @@ def create_se_block() -> GraphPattern:
         **{
             GraphPattern.LABEL_ATTR: "MULTIPLY",
             GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype,
-            GraphPattern.NON_PATTERN_NODE_WITH_TYPE: True,
+            GraphPattern.PATTERN_NODE_TO_EXCLUDE: True,
         }
     )
 

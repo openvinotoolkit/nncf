@@ -15,7 +15,7 @@ import networkx.algorithms.isomorphism as ism
 
 from nncf.common.graph.patterns import GraphPattern
 
-ATTRS_TO_SKIP = [GraphPattern.LABEL_ATTR, GraphPattern.NON_PATTERN_NODE_WITH_TYPE]
+ATTRS_TO_SKIP = [GraphPattern.LABEL_ATTR, GraphPattern.PATTERN_NODE_TO_EXCLUDE]
 
 
 def _are_nodes_matched(node_1, node_2) -> bool:
@@ -106,7 +106,7 @@ def _is_subgraph_matching_strict(graph: nx.DiGraph, pattern: nx.DiGraph, subgrap
 def _copy_subgraph_excluding_non_pattern_node(subgraph: Dict[str, str], pattern_graph: GraphPattern) -> Dict[str, str]:
     """
     Copies a matching subgraph excluding the nodes having GraphPattern.NON_PATTERN_NODE_TYPE
-       or GraphPattern.NON_PATTERN_NODE_WITH_TYPE.
+       or GraphPattern.PATTERN_NODE_TO_EXCLUDE.
 
     :param subgraph: Subgraph
     :param pattern_graph: A graph consists of patterns to match.
@@ -118,7 +118,7 @@ def _copy_subgraph_excluding_non_pattern_node(subgraph: Dict[str, str], pattern_
         pattern_node_types = pattern_node.get(GraphPattern.METATYPE_ATTR, [])
         if GraphPattern.NON_PATTERN_NODE_TYPE in pattern_node_types:
             continue
-        if pattern_node.get(GraphPattern.NON_PATTERN_NODE_WITH_TYPE, False):
+        if pattern_node.get(GraphPattern.PATTERN_NODE_TO_EXCLUDE, False):
             continue
         output[node_from_graph] = node_from_pattern
 

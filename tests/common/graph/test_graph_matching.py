@@ -241,7 +241,7 @@ def test_non_pattern_graph_with_type():
         ref_graph.add_edge("2", "3")
 
         pattern = GraphPattern()
-        node_1 = pattern.add_node(**{GraphPattern.METATYPE_ATTR: "a", GraphPattern.NON_PATTERN_NODE_WITH_TYPE: True})
+        node_1 = pattern.add_node(**{GraphPattern.METATYPE_ATTR: "a", GraphPattern.PATTERN_NODE_TO_EXCLUDE: True})
         node_2 = pattern.add_node(**{GraphPattern.METATYPE_ATTR: "b"})
         node_3 = pattern.add_node(**{GraphPattern.METATYPE_ATTR: "c"})
         pattern.add_edge(node_1, node_2)
