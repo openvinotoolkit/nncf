@@ -284,6 +284,8 @@ A collection of ready-to-run Jupyter* notebooks are available to demonstrate how
 - [NNCF Post-Training Optimization of BLIP Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/233-blip-visual-language-processing)
 - [NNCF Post-Training Optimization of DeepFloyd IF Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/238-deepfloyd-if)
 - [NNCF Post-Training Optimization of Grammatical Error Correction Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/214-grammar-correction)
+- [NNCF Post-Training Optimization of Dolly 2.0 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/240-dolly-2-instruction-following)
+- [NNCF Post-Training Optimization of Massively Multilingual Speech Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/255-mms-massively-multilingual-speech)
 - [NNCF Post-Training Optimization of OneFormer Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/249-oneformer-segmentation)
 - [NNCF Post-Training Optimization of InstructPix2Pix Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/231-instruct-pix2pix-image-editing)
 - [Quantize a Segmentation Model and Show Live Inference](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/110-ct-segmentation-quantize)
