@@ -94,6 +94,7 @@ from nncf.torch.nncf_network import LoadStateListener
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.adjust_padding import AdjustPaddingArgs
 from nncf.torch.quantization.adjust_padding import CalculatePaddingAdjustment
+from nncf.torch.quantization.base_ctrl import QuantizationControllerBase
 from nncf.torch.quantization.debug_interface import QuantizationDebugInterface
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.default_quantization import QUANTIZATION_LAYER_METATYPES
@@ -176,9 +177,9 @@ class QuantizerSetupGeneratorBase:
         self.ignored_scopes = self._quantization_config.get("ignored_scopes")
         self.target_scopes = self._quantization_config.get("target_scopes")
 
-        self.global_quantizer_constraints = {}  # type: Dict[QuantizerGroup, QuantizationConstraints]
-        self._ignored_scopes_per_group = {}  # type: Dict[QuantizerGroup, List[str]]
-        self._target_scopes_per_group = {}  # type: Dict[QuantizerGroup, List[str]]
+        self.global_quantizer_constraints: Dict[QuantizerGroup, QuantizationConstraints] = {}
+        self._ignored_scopes_per_group: Dict[QuantizerGroup, List[str]] = {}
+        self._target_scopes_per_group: Dict[QuantizerGroup, List[str]] = {}
 
         for quantizer_group in QuantizerGroup:
             self._parse_group_params(self._quantization_config, quantizer_group)
@@ -442,15 +443,15 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         self._weight_quantizers = OrderedDict()  # Quantizers applied via UpdateWeights
         self._non_weight_quantizers = OrderedDict()  # All the other quantizers
         self._quantizers_input_shapes = OrderedDict()
-        self._processed_insertion_points = set()  # type: Set[PTTargetPoint]
-        self._groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers()  # type: GroupsOfAdjacentQuantizers
-        self._setup_to_module_id_translation_dict = {}  # type: Dict[QuantizationPointId, QuantizerId]
+        self._processed_insertion_points: Set[PTTargetPoint] = set()
+        self._groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers = GroupsOfAdjacentQuantizers()
+        self._setup_to_module_id_translation_dict: Dict[QuantizationPointId, QuantizerId] = {}
         self.eval_ops_exec_ctx = []
-        self._build_time_metric_infos = None  # type: Optional[NetworkQuantizationShareMetricBuildTimeInfo]
+        self._build_time_metric_infos: Optional[QuantizationShareBuildTimeInfo] = None
         self.hw_config = None
-        self._legacy_single_config_quantizer_setup_from_comp_state = None  # type: Optional[SingleConfigQuantizerSetup]
-        self._pt_quantizer_setup = None  # type: Optional[PTQuantizerSetup]
-        self._minmax_values_for_range_init = {}  # type: Optional[Dict[QuantizationPointId, MinMaxTensorStatistic]]
+        self._legacy_single_config_quantizer_setup_from_comp_state: Optional[SingleConfigQuantizerSetup] = None
+        self._pt_quantizer_setup: Optional[PTQuantizerSetup] = None
+        self._minmax_values_for_range_init: Optional[Dict[QuantizationPointId, MinMaxTensorStatistic]] = {}
 
         # can be False to disable setting of adjust padding operations on precision init, because it may add unnecessary
         # noise on model evaluation (e.g. in AutoQ)
@@ -474,7 +475,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         if self.should_init:
             self._parse_init_params()
 
-        self._use_logarithm_scale_per_group = {}  # type: Dict[QuantizerGroup, bool]
+        self._use_logarithm_scale_per_group: Dict[QuantizerGroup, bool] = {}
 
         for quantizer_group in QuantizerGroup:
             group_name = quantizer_group.value
@@ -885,10 +886,10 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         minmax_values_for_range_init: Dict[QuantizationPointId, MinMaxTensorStatistic],
     ) -> Tuple[List[PTInsertionCommand], Dict[QuantizationPointId, QuantizerId]]:
         insertion_commands = []
-        qp_id_vs_quant_module_id_dict = {}  # type: Dict[QuantizationPointId, QuantizerId]
+        qp_id_vs_quant_module_id_dict: Dict[QuantizationPointId, QuantizerId] = {}
         target_model_graph = target_model.nncf.get_original_graph()
         non_unified_scales_quantization_point_ids = set(quantizer_setup.quantization_points.keys())
-        already_weight_quantized_shared_layers = {}  # type: Dict[str, QuantizerId]
+        already_weight_quantized_shared_layers: Dict[str, QuantizerId] = {}
 
         for unified_scales_group in quantizer_setup.unified_scale_groups.values():
             for us_qp_id in unified_scales_group:
@@ -1158,7 +1159,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
             quantizer.apply_minmax_init(min_values=min_values, max_values=max_values, log_module_name=str(primary_ip))
 
-        qids = []  # type: List[QuantizerId]
+        qids: List[QuantizerId] = []
         for ip in insertion_points:
             if is_weights(ip):
                 qids.append(WeightQuantizerId(ip.target_node_name))
@@ -1264,27 +1265,6 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 bn_adaptation.run(model)
 
 
-class QuantizationControllerBase(PTCompressionAlgorithmController):
-    """
-    Base controller class for the quantization controllers in PT.
-    """
-
-    def enable_activation_quantization(self):
-        raise NotImplementedError
-
-    def enable_weight_quantization(self):
-        raise NotImplementedError
-
-    def disable_activation_quantization(self):
-        raise NotImplementedError
-
-    def disable_weight_quantization(self):
-        raise NotImplementedError
-
-    def init_range(self):
-        raise NotImplementedError
-
-
 @api()
 class QuantizationController(QuantizationControllerBase):
     """
@@ -1311,9 +1291,9 @@ class QuantizationController(QuantizationControllerBase):
         algo_config = self._get_algo_config()
         self._build_time_range_init_params = build_time_range_init_params
 
-        self.weight_quantizers = weight_quantizers  # type: Dict[WeightQuantizerId, WeightQuantizerInfo]
-        self.non_weight_quantizers = non_weight_quantizers  # type: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo]
-        self.all_quantizations = OrderedDict()  # type: Dict[QuantizerId, BaseQuantizer]
+        self.weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo] = weight_quantizers
+        self.non_weight_quantizers: Dict[NonWeightQuantizerId, NonWeightQuantizerInfo] = non_weight_quantizers
+        self.all_quantizations: Dict[QuantizerId, BaseQuantizer] = OrderedDict()
         self.all_quantizations.update({k: v.quantizer_module_ref for k, v in self.weight_quantizers.items()})
         self.all_quantizations.update({k: v.quantizer_module_ref for k, v in self.non_weight_quantizers.items()})
         self._quantizers_input_shapes = quantizers_input_shapes
@@ -1336,7 +1316,7 @@ class QuantizationController(QuantizationControllerBase):
         else:
             export_mode = QuantizerExportMode.FAKE_QUANTIZE
 
-        for quantizer in self.all_quantizations.values():  # type: BaseQuantizer
+        for quantizer in self.all_quantizations.values():
             quantizer.set_export_mode(export_mode)
 
         params = algo_config.get("params", None)
@@ -1374,7 +1354,7 @@ class QuantizationController(QuantizationControllerBase):
     def _broadcast_initialized_params_for_each_quantizer(self):
         # NOTE: Order of quantization modules must be the same on GPUs to correctly broadcast num_bits
         sorted_quantizers = OrderedDict(sorted(self.all_quantizations.items(), key=lambda x: str(x[0])))
-        for quantizer in sorted_quantizers.values():  # type: BaseQuantizer
+        for quantizer in sorted_quantizers.values():
             quantizer.broadcast_initialized_params()
 
     def _do_runtime_range_init(self, range_init_params: PTRangeInitParams):
@@ -1532,7 +1512,7 @@ class ExperimentalQuantizationBuilder(QuantizationBuilder):
 
     def _build_controller(self, model: NNCFNetwork) -> "ExperimentalQuantizationController":
         groups_of_adjacent_quantizers = GroupsOfAdjacentQuantizers()
-        all_quantizations = {}  # type: Dict[QuantizerId, BaseQuantizer]
+        all_quantizations: Dict[QuantizerId, BaseQuantizer] = {}
         all_quantizations.update({k: v.quantizer_module_ref for k, v in self._weight_quantizers.items()})
         all_quantizations.update({k: v.quantizer_module_ref for k, v in self._non_weight_quantizers.items()})
 
@@ -1604,7 +1584,7 @@ class ExperimentalQuantizationController(QuantizationController):
         self._initial_quantizer_setup = initial_quantizer_setup
         self._tensor_stats = tensor_stats
         self.setup_to_module_id_translation_dict = setup_to_module_id_translation_dict
-        self.module_id_to_qp_id_translation_dict = {}  # type: Dict[QuantizerId, Set[QuantizationPointId]]
+        self.module_id_to_qp_id_translation_dict: Dict[QuantizerId, Set[QuantizationPointId]] = {}
         for qp_id, qid in self.setup_to_module_id_translation_dict.items():
             if qid in self.module_id_to_qp_id_translation_dict:
                 self.module_id_to_qp_id_translation_dict[qid].add(qp_id)

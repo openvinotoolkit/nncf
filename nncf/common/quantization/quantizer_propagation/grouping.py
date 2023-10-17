@@ -23,7 +23,7 @@ class UnifiedScalePropagatingQuantizerGroupManager:
 
     def __init__(self):
         self._next_gid = 0
-        self._group_vs_prop_quants_dict = {}  # type: Dict[int, Set[PropagatingQuantizer]]
+        self._group_vs_prop_quants_dict: Dict[int, Set[PropagatingQuantizer]] = {}
 
     def _get_next_gid(self) -> int:
         retval = self._next_gid
@@ -111,8 +111,8 @@ class QuantizersWaitingForMergeManager:
     """
 
     def __init__(self):
-        self._branching_node_keys_vs_quantizers_waiting_for_merge = {}  # type: Dict[str, Set[PropagatingQuantizer]]
-        self._quantizers_vs_branching_node_keys = {}  # type: Dict[PropagatingQuantizer, str]
+        self._branching_node_keys_vs_quantizers_waiting_for_merge: Dict[str, Set[PropagatingQuantizer]] = {}
+        self._quantizers_vs_branching_node_keys: Dict[PropagatingQuantizer, str] = {}
 
     def add_propagating_quantizer_to_wait_on_node_key(self, pq: PropagatingQuantizer, branching_node_key: str):
         """

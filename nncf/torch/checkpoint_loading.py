@@ -92,7 +92,7 @@ class ProcessedKeys:
     """Contains checkpoint keys with their status of matching with model keys"""
 
     def __init__(self):
-        self._keys = {}  # type: Dict[ProcessedKeyStatus, Set[str]]
+        self._keys: Dict[ProcessedKeyStatus, Set[str]] = {}
         for key_status in ProcessedKeyStatus:
             self._keys[key_status] = set()
 

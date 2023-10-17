@@ -18,6 +18,8 @@ from torch import nn
 from torch.nn.modules.loss import _Loss
 from torch.utils.data import DataLoader
 
+from nncf import NNCFConfig
+from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.utils.api_marker import api
 from nncf.config.structures import NNCFExtraConfigStruct
 
@@ -82,7 +84,7 @@ class AutoQPrecisionInitArgs(NNCFExtraConfigStruct):
         self,
         data_loader: DataLoader,
         eval_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], float],
-        nncf_config: "NNCFConfig",
+        nncf_config: NNCFConfig,
     ):
         self.data_loader = data_loader
         self.eval_fn = eval_fn
@@ -115,7 +117,7 @@ class LeGRInitArgs(NNCFExtraConfigStruct):
                 torch.utils.data.DataLoader,
                 torch.nn.Module,
                 torch.optim.Optimizer,
-                "CompressionAlgorithmController",
+                CompressionAlgorithmController,
                 Optional[int],
             ],
             type(None),
@@ -123,7 +125,7 @@ class LeGRInitArgs(NNCFExtraConfigStruct):
         val_loader: torch.utils.data.DataLoader,
         val_fn: Callable[[torch.nn.Module, torch.utils.data.DataLoader], Tuple[float, float]],
         train_optimizer: Optional[torch.optim.Optimizer],
-        nncf_config: "NNCFConfig",
+        nncf_config: NNCFConfig,
     ):
         self.train_loader = train_loader
         self.train_steps_fn = train_fn

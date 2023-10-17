@@ -64,10 +64,10 @@ class PropagatingQuantizer:
         :param unified_scale_type: The type of unified scales for this quantizer - if unspecified,
           this quantizer won't require unified scales.
         """
-        self.potential_quant_configs = quant_configs  # type: List[QuantizerConfig]
+        self.potential_quant_configs: List[QuantizerConfig] = quant_configs
         self.affected_edges = set()
-        self.affected_ip_nodes = set()  # type: Set[str]
-        self.propagation_path = []  # type: PropagationPath
+        self.affected_ip_nodes: Set[str] = set()
+        self.propagation_path: PropagationPath = []
         self.current_location_node_key = init_location_node_key
         self.last_accepting_location_node_key = None
         self.id = id_
@@ -94,8 +94,8 @@ class SharedAffectedOpsPropagatingQuantizerGroup:
     """Combines propagating quantizers that share affected operations"""
 
     def __init__(self, affecting_prop_quants: Set[PropagatingQuantizer], affected_op_node_keys: Set[str]):
-        self.affecting_prop_quants = affecting_prop_quants  # type: Set[PropagatingQuantizer]
-        self.affected_op_node_keys = affected_op_node_keys  # type: Set[str]
+        self.affecting_prop_quants: Set[PropagatingQuantizer] = affecting_prop_quants
+        self.affected_op_node_keys: Set[str] = affected_op_node_keys
 
     def update(self, other: "SharedAffectedOpsPropagatingQuantizerGroup"):
         self.affected_op_node_keys.update(other.affected_op_node_keys)

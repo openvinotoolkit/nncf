@@ -20,7 +20,8 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
-from nncf.onnx.graph.onnx_graph import ONNXGraph
+from nncf.onnx.graph.onnx_helper import get_tensor
+from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
@@ -60,7 +61,7 @@ def test_quantizer_insertion(target_layers, should_raise, quantizer_number):
     if should_raise:
         try:
             _ = model_transformer.transform(transformation_layout)
-        except RuntimeError:
+        except KeyError:
             return
     transformed_model = model_transformer.transform(transformation_layout)
     onnx.checker.check_model(transformed_model)
@@ -124,17 +125,15 @@ def test_inserted_quantizer_parameters(test_parameters):
     transformed_model = model_transformer.transform(transformation_layout)
     onnx.checker.check_model(transformed_model)
 
-    onnx_graph = ONNXGraph(transformed_model)
-
     # pylint:disable=no-member
     for node in transformed_model.graph.node:
         op_type = node.op_type
         if op_type == "QuantizeLinear":
             for attr in node.attribute:
                 assert test_parameters.onnx_attributes[attr.name] == onnx.helper.get_attribute_value(attr)
-            assert np.allclose(onnx_graph.get_tensor_value(node.input[1]), np.array(test_parameters.scale))
-            assert np.allclose(onnx_graph.get_tensor_value(node.input[2]), np.array(test_parameters.zero_point))
-            assert onnx_graph.get_tensor_value(node.input[2]).dtype == test_parameters.onnx_dtype
+            assert np.allclose(get_tensor_value(transformed_model, node.input[1]), np.array(test_parameters.scale))
+            assert np.allclose(get_tensor_value(transformed_model, node.input[2]), np.array(test_parameters.zero_point))
+            assert get_tensor_value(transformed_model, node.input[2]).dtype == test_parameters.onnx_dtype
 
 
 TARGET_LAYERS = [["ReLU1"], ["Conv1", "BN1"], ["Conv1", "BN1", "ReLU1"]]
@@ -160,8 +159,7 @@ def test_output_insertion(target_layers, target_layer_outputs):
 
     transformed_model = model_transformer.transform(transformation_layout)
 
-    onnx_graph = ONNXGraph(transformed_model)
-    assert Counter([out.name for out in onnx_graph.get_model_outputs()]) == Counter(target_layer_outputs)
+    assert Counter([out.name for out in transformed_model.graph.output]) == Counter(target_layer_outputs)
 
 
 CONV_LAYERS = [["Conv1", "Conv2"]]
@@ -182,11 +180,11 @@ def test_bias_correction(layers, values, refs):
     model_transformer = ONNXModelTransformer(model)
 
     transformed_model = model_transformer.transform(transformation_layout)
-    onnx_graph = ONNXGraph(transformed_model)
+    node_dict = {node.name: node for node in transformed_model.graph.node}
 
     for conv_layer, bias_reference in zip(layers, refs):
-        bias_tensor_name = onnx_graph.get_node_by_name(conv_layer).input[2]
-        bias_tensor = onnx_graph.get_tensor(bias_tensor_name)
+        bias_tensor_name = node_dict[conv_layer].input[2]
+        bias_tensor = get_tensor(transformed_model, bias_tensor_name)
         bias_value = onnx.numpy_helper.to_array(bias_tensor)
         assert np.all(bias_value == bias_reference)
 

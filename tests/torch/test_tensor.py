@@ -22,11 +22,10 @@ class TestPTNNCFTensorOperators(TemplateTestNNCFTensorOperators):
         return torch.tensor(x)
 
 
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="Skipping for CPU-only setups")
 class TestCudaPTNNCFTensorOperators(TemplateTestNNCFTensorOperators):
     @staticmethod
     def to_tensor(x):
-        if not torch.cuda.is_available():
-            pytest.skip("Skipping for CPU-only setups")
         return torch.tensor(x).cuda()
 
     def test_device(self):

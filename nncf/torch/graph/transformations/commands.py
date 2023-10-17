@@ -141,8 +141,8 @@ class PTInsertionCommand(PTTransformationCommand):
         priority: TransformationPriority = TransformationPriority.DEFAULT_PRIORITY,
     ):
         super().__init__(TransformationType.INSERT, point)
-        self.fn = fn  # type: Callable
-        self.priority = priority  # type: TransformationPriority
+        self.fn: Callable = fn
+        self.priority: TransformationPriority = priority
 
     def union(self, other: "PTTransformationCommand") -> "PTTransformationCommand":
         # TODO: keep all TransformationCommands atomic, refactor TransformationLayout instead
@@ -166,7 +166,7 @@ class PTQuantizerInsertionCommand(PTTransformationCommand):
     def __init__(
         self,
         point: PTTargetPoint,
-        quantizer: "BaseQuantizer",
+        quantizer: "BaseQuantizer",  # noqa: F821
     ):
         super().__init__(TransformationType.INSERT, point)
         self.quantizer = quantizer

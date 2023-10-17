@@ -13,6 +13,7 @@ from copy import deepcopy
 
 import numpy as np
 import openvino.runtime as ov
+from packaging import version
 
 from nncf import Dataset
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
@@ -64,3 +65,15 @@ class NumpyEncoder(json.JSONEncoder):
 def dump_to_json(local_path, data):
     with open(local_path, "w", encoding="utf8") as file:
         json.dump(deepcopy(data), file, indent=4, cls=NumpyEncoder)
+
+
+def get_openvino_version() -> str:
+    ov_version = ov.__version__
+    pos = ov_version.find("-")
+    if pos != -1:
+        ov_version = ov_version[:pos]
+
+    ov_version = version.parse(ov_version).base_version
+    version_major, version_minor = ov_version.split(".")[:2]
+
+    return f"{version_major}.{version_minor}"

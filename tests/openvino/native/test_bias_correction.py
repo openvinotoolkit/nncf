@@ -24,7 +24,10 @@ from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.quantization.algorithms.bias_correction.openvino_backend import OVBiasCorrectionAlgoBackend
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.native.common import compare_nncf_graphs
+from tests.openvino.native.common import get_openvino_version
 from tests.post_training.test_templates.test_bias_correction import TemplateTestBCAlgorithm
+
+OV_VERSION = get_openvino_version()
 
 
 class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
@@ -67,7 +70,15 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
 
     @staticmethod
     def get_ref_path(suffix: str) -> str:
-        return OPENVINO_NATIVE_TEST_ROOT / "data" / "reference_graphs" / "quantized" / "subgraphs" / f"{suffix}.dot"
+        return (
+            OPENVINO_NATIVE_TEST_ROOT
+            / "data"
+            / OV_VERSION
+            / "reference_graphs"
+            / "quantized"
+            / "subgraphs"
+            / f"{suffix}.dot"
+        )
 
     @staticmethod
     def compare_nncf_graphs(model: ov.Model, ref_path: str) -> None:

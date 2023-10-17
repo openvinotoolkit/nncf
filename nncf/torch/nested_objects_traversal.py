@@ -65,7 +65,7 @@ class TupleRebuildingSetter:
 
 class NestedObjectIndex:
     def __init__(self, obj, path=(), memo=None, previous_level_setter=None):
-        self._flat_nested_obj_indexing = []  # type: List[InputIndexEntry]
+        self._flat_nested_obj_indexing: List[InputIndexEntry] = []
         self._nested_object_paths_generator(obj, self._flat_nested_obj_indexing, path, memo, previous_level_setter)
 
     @staticmethod
@@ -142,7 +142,7 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
         if id(obj) not in memo:
             memo.add(id(obj))
             indices_to_apply_fn_to = set()
-            indices_vs_named_tuple_data = {}  # type: Dict[Any, Tuple[list, Type, List[str]]]
+            indices_vs_named_tuple_data: Dict[Any, Tuple[list, Type, List[str]]] = {}
             for idx, value in iterator(obj):
                 next_level_it = maybe_get_iterator(value)
                 if next_level_it is None:

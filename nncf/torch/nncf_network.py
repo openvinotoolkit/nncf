@@ -23,6 +23,7 @@ import torch
 from torch import nn
 
 from nncf import nncf_logger
+from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
@@ -239,13 +240,11 @@ class NNCFNetworkInterface(torch.nn.Module):
         else:
             self._wrap_outputs_fn = wrap_nncf_model_outputs_with_objwalk
 
-        self._nncf_replaced_modules = {}  # type: Dict[torch.nn.Module, List[Scope]]
+        self._nncf_replaced_modules: Dict[torch.nn.Module, List[Scope]] = {}
         self._scopes_without_shape_matching = scopes_without_shape_matching
         self.debug_interface = CombinedDebugInterface() if is_debug() else None
-        self._extra_module_types = []  # type: List[ExtraCompressionModuleType]
-        self._insertions_into_original_graph = (
-            {}
-        )  # type: Dict[PTTargetPoint, List[Tuple[Callable, TransformationPriority]]]
+        self._extra_module_types: List[ExtraCompressionModuleType] = []
+        self._insertions_into_original_graph: Dict[PTTargetPoint, List[Tuple[Callable, TransformationPriority]]] = {}
 
         _orig_graph_build_forward_fn = self._get_dummy_forward_fn_for_graph_building(
             with_input_tracing=True, with_output_tracing=True
@@ -271,7 +270,7 @@ class NNCFNetworkInterface(torch.nn.Module):
                 model, _orig_context, as_eval=True
             )
             self._original_graph = GraphConverter.convert(self._original_dynamic_graph, input_infos=self._input_infos)
-        self._compressed_graph = None  # type: PTNNCFGraph
+        self._compressed_graph: PTNNCFGraph = None
 
         self._compressed_context = TracingContext()
 
@@ -288,7 +287,7 @@ class NNCFNetworkInterface(torch.nn.Module):
             )
         self._load_listener = None
 
-        self.compression_controller = None  # type: PTCompressionAlgorithmController
+        self.compression_controller: CompressionAlgorithmController = None
 
     @property
     def _original_unbound_forward(self):
@@ -602,8 +601,8 @@ class NNCFNetworkInterface(torch.nn.Module):
     def get_insertion_point_graph(self) -> InsertionPointGraph:
         # Set up a pre- and post-hooks on almost every op in PyTorch
         nncf_graph = self.get_original_graph()
-        pre_hooks = []  # type: List[PreHookInsertionPoint]
-        post_hooks = []  # type: List[PostHookInsertionPoint]
+        pre_hooks: List[PreHookInsertionPoint] = []
+        post_hooks: List[PostHookInsertionPoint] = []
         for node in nncf_graph.get_all_nodes():
             # Pre-hook insertion point nodes
             # Will insert a pre-hook IP for each input edge. The input edge must be marked with
@@ -744,7 +743,7 @@ class NNCFNetworkInterface(torch.nn.Module):
             retval[nncf_node.node_name] = op_address
         return retval
 
-    def set_compression_controller(self, ctrl: "PTCompressionAlgorithmController"):
+    def set_compression_controller(self, ctrl: CompressionAlgorithmController):
         self.compression_controller = ctrl
 
     def strip(self, do_copy: bool = True) -> "NNCFNetwork":
@@ -927,7 +926,7 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
         graph tracing and calling compression-related hooks.
         """
         # pylint:disable=protected-access
-        with self.nncf._compressed_context as ctx:  # type: TracingContext
+        with self.nncf._compressed_context as ctx:
             ctx.base_module_thread_local_replica = self
             args, kwargs = replicate_same_tensors((args, kwargs))
             if not self.nncf._in_user_dummy_forward:

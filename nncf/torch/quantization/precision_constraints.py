@@ -17,7 +17,7 @@ from nncf.common.quantization.structs import QuantizerId
 
 class HardwareQuantizationConstraints:
     def __init__(self):
-        self._constraints = {}  # type: Dict[QuantizerId, List[QuantizerConfig]]
+        self._constraints: Dict[QuantizerId, List[QuantizerConfig]] = {}
 
     def add(self, quantizer_id: QuantizerId, qconfigs: List[QuantizerConfig]):
         self._constraints[quantizer_id] = qconfigs
@@ -28,7 +28,7 @@ class HardwareQuantizationConstraints:
         return []
 
     def get_bitwidth_vs_qconfigs_dict(self, quantizer_id: QuantizerId) -> Dict[int, List[QuantizerConfig]]:
-        bitwidths_vs_qconfigs = {}  # type: Dict[int, List[QuantizerConfig]]
+        bitwidths_vs_qconfigs: Dict[int, List[QuantizerConfig]] = {}
         for qc in self.get(quantizer_id):
             if qc.num_bits not in bitwidths_vs_qconfigs:
                 bitwidths_vs_qconfigs[qc.num_bits] = [qc]

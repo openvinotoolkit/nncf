@@ -39,7 +39,7 @@ def accuracy_aware_fit(
         result_dict_to_val_metric_fn = lambda metric: metric
 
     # pylint:disable=line-too-long
-    with cls_instance.distribute_strategy.scope(), tf_internals.keras_engine.training_utils.RespectCompiledTrainableState(
+    with cls_instance.distribute_strategy.scope(), tf_internals.keras_engine.training_utils.RespectCompiledTrainableState(  # noqa: E501
         cls_instance
     ):
         # pylint: disable=protected-access

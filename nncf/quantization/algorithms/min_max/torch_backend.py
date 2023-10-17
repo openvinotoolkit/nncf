@@ -11,7 +11,6 @@
 
 from typing import Dict, List, Optional, Set, Tuple
 
-import numpy as np
 import torch
 
 import nncf.torch.graph.operator_metatypes as om
@@ -19,7 +18,6 @@ from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
-from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
@@ -38,7 +36,6 @@ from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTQuantizerInsertionCommand
 from nncf.torch.hardware.config import PTHWConfig
-from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.init_range import PTRangeInitCollectorParams
@@ -113,10 +110,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 
     @staticmethod
-    def model_transformer(model: NNCFNetwork) -> ModelTransformer:
-        return PTModelTransformer(model)
-
-    @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
         if NNCFGraphNodeType.INPUT_NODE in target_node_name or target_type == TargetType.POST_LAYER_OPERATION:
             port_id = None
@@ -139,10 +132,10 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def unify_statistics(statistics: List[PTMinMaxTensorStatistic]) -> PTMinMaxTensorStatistic:
         max_values, min_values = [], []
         for statistic in statistics:
-            max_values.append(torch.tensor(statistic.max_values).flatten())
-            min_values.append(torch.tensor(statistic.min_values).flatten())
-        max_values = torch.max(torch.tensor(max_values))
-        min_values = torch.min(torch.tensor(min_values))
+            max_values.append(statistic.max_values.flatten())
+            min_values.append(statistic.min_values.flatten())
+        max_values = torch.amax(torch.stack(max_values), dim=0)
+        min_values = torch.amin(torch.stack(min_values), dim=0)
         return PTMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     @staticmethod
@@ -163,12 +156,12 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
             [range_estimator_params.min, range_estimator_params.max],
             [PTMinMaxTensorStatistic.MIN_STAT, PTMinMaxTensorStatistic.MAX_STAT],
         ):
-            if not params.statistics_type in PT_REDUCERS_MAP:
+            if params.statistics_type not in PT_REDUCERS_MAP:
                 raise RuntimeError(
                     f"Statistic type: {params.statistics_type} is not supported for Torch PTQ backend yet."
                 )
 
-            if not params.aggregator_type in AGGREGATORS_MAP:
+            if params.aggregator_type not in AGGREGATORS_MAP:
                 raise RuntimeError(
                     f"Aggregator type: {params.aggregator_type} is not supported for Torch PTQ backend yet."
                 )
@@ -279,13 +272,12 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def _fill_quantizer_parameters(quantizer: BaseQuantizer, parameters: FakeQuantizeParameters) -> None:
         quantizer.eps = 0
         if isinstance(quantizer, AsymmetricQuantizer):
-            quantizer.input_low = torch.nn.Parameter(torch.from_numpy(parameters.input_low))
-            quantizer.input_range = torch.nn.Parameter(
-                torch.from_numpy(np.array(parameters.input_high - parameters.input_low))
-            )
+            quantizer.input_low = torch.nn.Parameter(parameters.input_low.data)
+            input_range = parameters.input_high - parameters.input_low
+            quantizer.input_range = torch.nn.Parameter(input_range.data)
         else:
-            quantizer.signed = np.any(parameters.input_low < 0)
-            quantizer.scale = torch.nn.Parameter(torch.from_numpy(parameters.input_high))
+            quantizer.signed = bool(torch.any(parameters.input_low.data < 0))
+            quantizer.scale = torch.nn.Parameter(parameters.input_high.data)
 
     @staticmethod
     def _create_quantizer_insertion_command(

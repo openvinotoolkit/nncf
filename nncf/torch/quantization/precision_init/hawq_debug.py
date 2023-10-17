@@ -25,6 +25,9 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.adjust_padding import add_adjust_padding_nodes
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
+
+# pylint:disable=unused-import
+from nncf.torch.quantization.precision_init.definitions import QConfigSequenceForHAWQToEvaluate
 from nncf.torch.quantization.precision_init.perturbations import PerturbationObserver
 from nncf.torch.quantization.precision_init.perturbations import Perturbations
 from nncf.torch.quantization.precision_init.traces_order import TracesPerLayer
@@ -159,7 +162,7 @@ class HAWQDebugger:
 
     @skip_if_dependency_unavailable(dependencies=["matplotlib.pyplot"])
     def dump_density_of_quantization_noise(self):
-        noise_per_config = []  # type: List[Tensor]
+        noise_per_config: List[Tensor] = []
         for qconfig_sequence in self._weight_qconfig_sequences_in_trace_order:
             qnoise = 0
             for i in range(self._num_weights):
@@ -213,7 +216,7 @@ class HAWQDebugger:
 
     def dump_bitwidth_graph(
         self,
-        algo_ctrl: "QuantizationController",
+        algo_ctrl: "QuantizationController",  # noqa: F821
         model: NNCFNetwork,
         groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers,
     ):

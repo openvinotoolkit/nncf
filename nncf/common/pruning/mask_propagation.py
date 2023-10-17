@@ -109,7 +109,7 @@ class MaskPropagationAlgorithm:
                 input_masks = get_input_masks(node, self._graph)
                 if any(input_masks):
                     assert len(input_masks) == 1
-                    input_mask = input_masks[0]  # type: SymbolicMask
+                    input_mask: SymbolicMask = input_masks[0]
 
                     for producer in input_mask.mask_producers:
                         previously_dims_equal = (

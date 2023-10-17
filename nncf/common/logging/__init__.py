@@ -9,4 +9,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nncf.common.logging.logger import nncf_logger
+from nncf.common.logging.logger import nncf_logger as nncf_logger
