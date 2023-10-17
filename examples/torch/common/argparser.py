@@ -142,7 +142,7 @@ def get_common_argument_parser():
 
     # Dataset
     parser.add_argument(
-        "--data", dest="dataset_dir", type=str, help="Path to the root directory of the selected dataset. "
+        "--data", dest="dataset_dir", type=str, help="Path to the root directory of the selected dataset."
     )
 
     # Settings
@@ -171,7 +171,11 @@ def get_common_argument_parser():
 
     parser.add_argument("--save-freq", default=5, type=int, help="Checkpoint save frequency (epochs). Default: 5")
     parser.add_argument(
-        "--to-ir", type=str, metavar="PATH", default=None, help="Export to OpenVINO model by given path"
+        "--to-ir",
+        type=str,
+        metavar="PATH",
+        default=None,
+        help="Directory to export model to OpenVINO format.",
     )
 
     # Display

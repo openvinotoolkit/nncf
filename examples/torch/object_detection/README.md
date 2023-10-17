@@ -49,6 +49,7 @@ This scenario demonstrates quantization with fine-tuning of SSD300 on VOC datase
 - Use `--weights` flag with the path to a compatible PyTorch checkpoint in order to load all matching weights from the checkpoint into the model - useful if you need to start compression-aware training from a previously trained uncompressed (FP32) checkpoint instead of performing compression-aware training from scratch. This flag is optional, but highly recommended to use.
 - Use `--multiprocessing-distributed` flag to run in the distributed mode.
 - Use `--resume` flag with the path to a previously saved model to resume training.
+- Use `--to-ir` to specify the path to the directory where the model will be exported to OpenVINO format.
 - Use the `--no_strip_on_export` to export not stripped model.
 - Use the `--export_via_onnx` to export model via ONNX representation.
 
@@ -63,7 +64,7 @@ If you want to validate an FP32 model checkpoint, make sure the compression algo
 ### Export compressed model
 
 To export trained model to ONNX format use the following command:
-`python main.py -m export --config configs/ssd300_vgg_voc_int8.json --data <path_to_dataset> --resume <path_to_compressed_model_checkpoint> --to-onnx=../../results/ssd300_int8.onnx`
+`python main.py -m export --config configs/ssd300_vgg_voc_int8.json --data <path_to_dataset> --resume <path_to_compressed_model_checkpoint> --to-ir=../../results`
 
 ### Export to OpenVINO Intermediate Representation (IR)
 
