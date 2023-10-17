@@ -95,10 +95,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [om.OVScaledDotProductAttentionMetatype]
 
     @property
-    def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
-        return {om.OVConcatMetatype: self.overflow_fix_metatypes}
-
-    @property
     def hw_config(self) -> HWConfig:
         return OVHWConfig
 

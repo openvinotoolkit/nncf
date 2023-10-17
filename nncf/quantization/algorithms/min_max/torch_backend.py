@@ -107,10 +107,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return []
 
     @property
-    def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
-        return {om.PTCatMetatype: self.overflow_fix_metatypes}
-
-    @property
     def hw_config(self) -> HWConfig:
         return PTHWConfig
 
@@ -333,9 +329,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.PTModuleLayerNormMetatype,
                 om.PTGroupNormMetatype,
                 om.PTModuleGroupNormMetatype,
-                # Batchnorm
-                om.PTBatchNormMetatype,
-                om.PTModuleBatchNormMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
                 types.append(om.PTMulMetatype)

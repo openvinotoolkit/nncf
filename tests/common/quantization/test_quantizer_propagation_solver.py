@@ -8,8 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
 from collections import Counter
 from collections import namedtuple
 from dataclasses import dataclass
@@ -39,15 +37,18 @@ from nncf.common.quantization.quantizer_propagation.structs import PropagationPa
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
 from nncf.common.quantization.quantizer_setup import MultiConfigQuantizationPoint
+from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
-from tests.common.quantization.metatypes import DEFAULT_TEST_QUANT_TRAIT_MAP, CatTestMetatype, GenericBinaryOpMetatype
+from nncf.common.quantization.structs import UnifiedScaleType
+from tests.common.quantization.metatypes import DEFAULT_TEST_QUANT_TRAIT_MAP, CatTestMetatype, GenericBinaryUnifiedScaleOpMetatype
 from tests.common.quantization.metatypes import BatchNormTestMetatype
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import DropoutTestMetatype
 from tests.common.quantization.metatypes import GeluTestMetatype
+from tests.common.quantization.metatypes import GenericBinaryOpMetatype
 from tests.common.quantization.metatypes import MatMulTestMetatype
 from tests.common.quantization.metatypes import MaxPool2dTestMetatype
 from tests.common.quantization.metatypes import MinTestMetatype
@@ -60,7 +61,13 @@ from tests.common.quantization.mock_graphs import mark_input_ports_lexicographic
 from tests.common.quantization.test_quantizer_propagation_graph import get_edge_paths_for_propagation
 
 
-class TwoFcAfterDropout:
+class GraphProvider(abc.ABC):
+    @abc.abstractmethod
+    def get_graph(self) -> nx.DiGraph():
+        pass
+
+
+class TwoFcAfterDropout(GraphProvider):
     DROPOUT_OP_TYPE_STR = "dropout"
     DROPOUT_NODE_NAME = f"TwoFcAfterDropoutModel/{DROPOUT_OP_TYPE_STR}_0"
 
@@ -70,8 +77,7 @@ class TwoFcAfterDropout:
     FC_2_SCOPE_STR = "TwoFcAfterDropoutModel/NNCFLinear[branch2]"
     FC_2_NODE_NAME = f"{FC_2_SCOPE_STR}/linear_0"
 
-    @staticmethod
-    def get_graph():
+    def get_graph(self) -> nx.DiGraph:
         graph = nx.DiGraph()
         dropout_node_attrs = {
             NNCFNode.NODE_NAME_ATTR: TwoFcAfterDropout.DROPOUT_NODE_NAME,
@@ -98,19 +104,61 @@ class TwoFcAfterDropout:
         return graph
 
 
-class ConcatBeforeBinaryOp:
+class TwoInputModelWithQuantizableConcat(GraphProvider):
+    CONCAT_NODE_NAME = "concat"
+    CONV_NODE_NAME = "conv"
+
+    def get_graph(self) -> nx.DiGraph:
+        #  (I1)     (I2)
+        #   |        |
+        #   \       /
+        #    (concat)
+        #       |
+        #     (conv)
+        #
+
+        graph = nx.DiGraph()
+        input_1_attrs = {
+            NNCFNode.NODE_NAME_ATTR: "I1",
+            NNCFNode.NODE_TYPE_ATTR: NNCFGraphNodeType.INPUT_NODE
+        }
+
+        input_2_attrs = {
+            NNCFNode.NODE_NAME_ATTR: "I2",
+            NNCFNode.NODE_TYPE_ATTR: NNCFGraphNodeType.INPUT_NODE
+        }
+
+        graph.add_node("I1", **input_1_attrs)
+        graph.add_node("I2", **input_2_attrs)
+
+        concat_node_attrs = {NNCFNode.NODE_NAME_ATTR: TwoInputModelWithQuantizableConcat.CONCAT_NODE_NAME,
+                             NNCFNode.NODE_TYPE_ATTR: CatTestMetatype.name}
+
+        graph.add_node(TwoInputModelWithQuantizableConcat.CONCAT_NODE_NAME, **concat_node_attrs)
+
+        graph.add_edge("I1", TwoInputModelWithQuantizableConcat.CONCAT_NODE_NAME)
+        graph.add_edge("I2", TwoInputModelWithQuantizableConcat.CONCAT_NODE_NAME)
+
+
+        graph.add_node(TwoInputModelWithQuantizableConcat.CONV_NODE_NAME, **{
+            NNCFNode.NODE_NAME_ATTR: QuantizableConcatSharingInputWithBinaryOp.CONV_NODE_NAME,
+            NNCFNode.NODE_TYPE_ATTR: Conv2dTestMetatype.name
+        })
+        graph.add_edge(TwoInputModelWithQuantizableConcat.CONCAT_NODE_NAME,
+                       TwoInputModelWithQuantizableConcat.CONV_NODE_NAME)
+
+        mark_input_ports_lexicographically_based_on_input_node_key(graph)
+        return graph
+
+
+class ThreeInputGraphWithConcatAndBinaryOp(GraphProvider, ABC):
     BINARY_OP_NAME = "binary_op"
     CONCAT_NODE_NAME = "concat"
 
-    @staticmethod
-    def get_graph():
-        #  (I1)  (I2)   (I3)
-        #    |    |      |
-        #    \    /      |
-        #   (concat)     |
-        #       \        /
-        #      (binary_op)
+    def __init__(self, use_unified_scale_binary_op: bool):
+        self._use_unified_scale_binary_op = use_unified_scale_binary_op
 
+    def _build_common_graph_part(self) -> nx.DiGraph:
         graph = nx.DiGraph()
         input_1_attrs = {
             NNCFNode.NODE_NAME_ATTR: "I1",
@@ -130,20 +178,73 @@ class ConcatBeforeBinaryOp:
         concat_node_attrs = {NNCFNode.NODE_NAME_ATTR: ConcatBeforeBinaryOp.CONCAT_NODE_NAME,
                              NNCFNode.NODE_TYPE_ATTR: CatTestMetatype.name}
 
+        binary_op_type = GenericBinaryUnifiedScaleOpMetatype.name if self._use_unified_scale_binary_op else GenericBinaryOpMetatype.name
         binary_op_attrs = {NNCFNode.NODE_NAME_ATTR: ConcatBeforeBinaryOp.BINARY_OP_NAME,
-                           NNCFNode.NODE_TYPE_ATTR: GenericBinaryOpMetatype.name}
+                           NNCFNode.NODE_TYPE_ATTR: binary_op_type}
 
         graph.add_node("I1", **input_1_attrs)
         graph.add_node("I2", **input_2_attrs)
         graph.add_node("I3", **input_3_attrs)
         graph.add_node(ConcatBeforeBinaryOp.CONCAT_NODE_NAME, **concat_node_attrs)
         graph.add_node(ConcatBeforeBinaryOp.BINARY_OP_NAME, **binary_op_attrs)
-        graph.add_edge("I1", ConcatBeforeBinaryOp.CONCAT_NODE_NAME)
-        graph.add_edge("I2", ConcatBeforeBinaryOp.CONCAT_NODE_NAME)
-        graph.add_edge(ConcatBeforeBinaryOp.CONCAT_NODE_NAME, ConcatBeforeBinaryOp.BINARY_OP_NAME)
-        graph.add_edge("I3", ConcatBeforeBinaryOp.BINARY_OP_NAME)
+        return graph
+
+
+class ConcatBeforeBinaryOp(ThreeInputGraphWithConcatAndBinaryOp):
+    def get_graph(self) -> nx.DiGraph:
+        #  (I1)  (I2)   (I3)
+        #    |    |      |
+        #    \    /      |
+        #   (concat)     |
+        #       \        /
+        #      (binary_op)
+        graph = self._build_common_graph_part()
+        graph.add_edge("I1", ThreeInputGraphWithConcatAndBinaryOp.CONCAT_NODE_NAME)
+        graph.add_edge("I2", ThreeInputGraphWithConcatAndBinaryOp.CONCAT_NODE_NAME)
+        graph.add_edge(ThreeInputGraphWithConcatAndBinaryOp.CONCAT_NODE_NAME,
+                       ThreeInputGraphWithConcatAndBinaryOp.BINARY_OP_NAME)
+        graph.add_edge("I3", ThreeInputGraphWithConcatAndBinaryOp.BINARY_OP_NAME)
 
         mark_input_ports_lexicographically_based_on_input_node_key(graph)
+        return graph
+
+
+class ConcatSharingInputWithBinaryOp(ThreeInputGraphWithConcatAndBinaryOp):
+    def get_graph(self) -> nx.DiGraph:
+        #  (I1)     (I2)         (I3)
+        #   |        |            |
+        #   \       /\            /
+        #    (concat)  (binary_op)
+        #
+        graph = self._build_common_graph_part()
+        graph.add_edge("I1", ThreeInputGraphWithConcatAndBinaryOp.CONCAT_NODE_NAME)
+        graph.add_edge("I2", ThreeInputGraphWithConcatAndBinaryOp.CONCAT_NODE_NAME)
+        graph.add_edge("I2",
+                       ThreeInputGraphWithConcatAndBinaryOp.BINARY_OP_NAME)
+        graph.add_edge("I3", ThreeInputGraphWithConcatAndBinaryOp.BINARY_OP_NAME)
+
+        mark_input_ports_lexicographically_based_on_input_node_key(graph)
+        return graph
+
+
+class QuantizableConcatSharingInputWithBinaryOp(ConcatSharingInputWithBinaryOp):
+    CONV_NODE_NAME = "conv"
+
+    def get_graph(self) -> nx.DiGraph:
+        #  (I1)     (I2)         (I3)
+        #   |        |            |
+        #   \       /\            /
+        #    (concat)  (binary_op)
+        #       |
+        #     (conv)
+        #
+        graph = super().get_graph()
+        graph.add_node(QuantizableConcatSharingInputWithBinaryOp.CONV_NODE_NAME, **{
+            NNCFNode.NODE_NAME_ATTR: QuantizableConcatSharingInputWithBinaryOp.CONV_NODE_NAME,
+            NNCFNode.NODE_TYPE_ATTR: Conv2dTestMetatype.name
+        })
+        graph.add_edge(ThreeInputGraphWithConcatAndBinaryOp.CONCAT_NODE_NAME,
+                       QuantizableConcatSharingInputWithBinaryOp.CONV_NODE_NAME)
         return graph
 
 
@@ -1451,9 +1552,7 @@ class TestQuantizerPropagationSolver:
         return request.param
 
     def test_check_transition_via_path(self, path_transition_test_struct: PathTransitionTestStruct):
-        init_node_to_trait_configs_and_target_node_dict = (
-            path_transition_test_struct.init_node_to_trait_configs_and_target_node_dict
-        )
+        init_node_to_trait_configs_and_target_node_dict = path_transition_test_struct.init_node_to_trait_configs_and_target_node_dict
         starting_primary_quantizer_ip_node = path_transition_test_struct.starting_primary_quantizer_ip_node
         primary_quantizer_qconfigs = path_transition_test_struct.primary_quantizer_qconfigs
         target_node = path_transition_test_struct.target_node_for_primary_quantizer
@@ -1489,7 +1588,7 @@ class TestQuantizerPropagationSolver:
         PropagationStepTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_post_hook_node_key('0 /O_0'))
             },
@@ -1500,7 +1599,7 @@ class TestQuantizerPropagationSolver:
         PropagationStepTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('3 /C_0'))
             },
@@ -1510,13 +1609,13 @@ class TestQuantizerPropagationSolver:
         ),
         PropagationStepTestStruct(
             init_node_to_trait_configs_and_target_node_dict={
-                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('1 /A_0')),
-                '7 /G_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '7 /G_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('5 /E_0')),
-                '10 /J_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '10 /J_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('9 /I_0'))
             },
@@ -1529,13 +1628,13 @@ class TestQuantizerPropagationSolver:
         # (i.e. when passing through an upward branching node)
         PropagationStepTestStruct(
             init_node_to_trait_configs_and_target_node_dict={
-                '10 /J_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '10 /J_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_post_hook_node_key('9 /I_0')),
-                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('1 /A_0')),
-                '7 /G_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '7 /G_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('5 /E_0')),
             },
@@ -1551,9 +1650,7 @@ class TestQuantizerPropagationSolver:
         return request.param
 
     def test_propagation_step(self, propagation_step_test_struct: PropagationStepTestStruct):
-        init_node_to_trait_configs_and_target_node_dict = (
-            propagation_step_test_struct.init_node_to_trait_configs_and_target_node_dict
-        )
+        init_node_to_trait_configs_and_target_node_dict = propagation_step_test_struct.init_node_to_trait_configs_and_target_node_dict
         expected_finished_status = propagation_step_test_struct.expected_finished_status
         current_location_node_key_for_propagated_quant = (
             propagation_step_test_struct.current_location_node_key_for_propagated_quant
@@ -1699,7 +1796,7 @@ class TestQuantizerPropagationSolver:
             ignored_scopes={'/conv2d_0': IgnoreReason.USER_REQUESTED, '/matmul_0': IgnoreReason.USER_REQUESTED}
         ),
         RunOnIpGraphTestStruct(
-            base_nx_graph=TwoFcAfterDropout.get_graph(),
+            base_nx_graph=TwoFcAfterDropout().get_graph(),
             retval_qp_data={1: MultiQPSerializedDataForTest(TargetType.OPERATOR_PRE_HOOK,
                                                             TwoFcAfterDropout.FC_1_NODE_NAME, [QuantizerConfig()],
                                                             input_port_id=0,
@@ -1714,7 +1811,7 @@ class TestQuantizerPropagationSolver:
         ),
 
         RunOnIpGraphTestStruct(
-            base_nx_graph=TwoFcAfterDropout.get_graph(),
+            base_nx_graph=TwoFcAfterDropout().get_graph(),
             retval_qp_data={1: MultiQPSerializedDataForTest(TargetType.OPERATOR_PRE_HOOK,
                                                             TwoFcAfterDropout.FC_1_NODE_NAME, [QuantizerConfig()],
                                                             input_port_id=0,
@@ -1867,7 +1964,7 @@ class TestQuantizerPropagationSolver:
     ):
         quant_prop_solver = QuantizerPropagationSolver()
         prep_data_dict = {
-            int_prop_test_struct.initial_node_name: (
+            int_prop_test_struct.initial_node_name: TraitConfigTargetNodeStruct(
                 QuantizationTrait.INPUTS_QUANTIZABLE,
                 [QuantizerConfig()],
                 int_prop_test_struct.target_node_name,
@@ -1911,25 +2008,91 @@ class TestQuantizerPropagationSolver:
             "5 /E_0", input_port_id=1
         )
 
-    @pytest.mark.parametrize("graph_cls", [ConcatBeforeBinaryOp])
-    def test_quantization_setup_has_unified_scale_groups_with_proper_types_based_on_granularity(self, graph_cls):
+    @dataclass
+    class GranularityBasedUnifiedScaleTestStruct:
+        graph_provider: GraphProvider
+        is_binary_op_per_channel: bool
+        ref_qp_vs_unified_scale_type: Optional[Dict[str, UnifiedScaleType]]
+
+    @pytest.mark.parametrize("test_struct", [
+        GranularityBasedUnifiedScaleTestStruct(
+            graph_provider=TwoInputModelWithQuantizableConcat(),
+            is_binary_op_per_channel=False,
+            ref_qp_vs_unified_scale_type={
+                'I1|OUTPUT': UnifiedScaleType.UNIFY_ONLY_PER_TENSOR,
+                'I2|OUTPUT': UnifiedScaleType.UNIFY_ONLY_PER_TENSOR}),
+        GranularityBasedUnifiedScaleTestStruct(
+            graph_provider=ConcatBeforeBinaryOp(use_unified_scale_binary_op=True),
+            is_binary_op_per_channel=False,
+            ref_qp_vs_unified_scale_type={
+                                         'I1|OUTPUT': UnifiedScaleType.UNIFY_ONLY_PER_TENSOR,
+                                         'I2|OUTPUT': UnifiedScaleType.UNIFY_ONLY_PER_TENSOR,
+                                         'I3|OUTPUT': UnifiedScaleType.UNIFY_ALWAYS, }),
+        GranularityBasedUnifiedScaleTestStruct(
+            graph_provider=ConcatBeforeBinaryOp(use_unified_scale_binary_op=False),
+            is_binary_op_per_channel=False,
+            ref_qp_vs_unified_scale_type={
+                                         'I1|OUTPUT': UnifiedScaleType.UNIFY_ONLY_PER_TENSOR,
+                                         'I2|OUTPUT': UnifiedScaleType.UNIFY_ONLY_PER_TENSOR }),
+        GranularityBasedUnifiedScaleTestStruct(
+            graph_provider=ConcatBeforeBinaryOp(use_unified_scale_binary_op=True),
+            is_binary_op_per_channel=True,
+            ref_qp_vs_unified_scale_type=None),  # should fail since per-channel-only ops cannot have unified scales
+        GranularityBasedUnifiedScaleTestStruct(
+            graph_provider=ConcatBeforeBinaryOp(use_unified_scale_binary_op=False),
+            is_binary_op_per_channel=True,
+            ref_qp_vs_unified_scale_type={
+                'I1|OUTPUT': UnifiedScaleType.UNIFY_ONLY_PER_TENSOR,
+                'I2|OUTPUT': UnifiedScaleType.UNIFY_ONLY_PER_TENSOR}),
+        GranularityBasedUnifiedScaleTestStruct(
+            graph_provider=ConcatSharingInputWithBinaryOp(use_unified_scale_binary_op=True),
+            is_binary_op_per_channel=False,
+            ref_qp_vs_unified_scale_type={
+                # since concat does not have its other arg quantized, the quantizer of binary op will stay at pre-hook
+                f'{ConcatSharingInputWithBinaryOp.BINARY_OP_NAME}|INPUT0': UnifiedScaleType.UNIFY_ALWAYS,
+                'I3|OUTPUT': UnifiedScaleType.UNIFY_ALWAYS, }),
+        GranularityBasedUnifiedScaleTestStruct(
+            graph_provider=QuantizableConcatSharingInputWithBinaryOp(use_unified_scale_binary_op=True),
+            is_binary_op_per_channel=False,
+            ref_qp_vs_unified_scale_type={
+                'I1|OUTPUT': UnifiedScaleType.UNIFY_ONLY_PER_TENSOR,
+                'I2|OUTPUT': UnifiedScaleType.UNIFY_ONLY_PER_TENSOR,
+                'I3|OUTPUT': UnifiedScaleType.UNIFY_ALWAYS, },)
+    ])
+    def test_quantization_setup_has_unified_scale_groups_with_proper_types_based_on_granularity(self,
+                                                                                                test_struct: GranularityBasedUnifiedScaleTestStruct,
+                                                                                                mocker):
         class TestHWConfig(HWConfig):
             def get_operations_with_unified_scales(self) -> Set[Type[OperatorMetatype]]:
-                return {CatTestMetatype, GenericBinaryOpMetatype}
+                return {CatTestMetatype, GenericBinaryUnifiedScaleOpMetatype}
 
             def get_metatype_vs_quantizer_configs_map(
                     self, for_weights=False
             ) -> Dict[Type[OperatorMetatype], Optional[List[QuantizerConfig]]]:
-                return {GenericBinaryOpMetatype: [QuantizerConfig(per_channel=False)],
+                return {GenericBinaryUnifiedScaleOpMetatype: [QuantizerConfig(per_channel=test_struct.is_binary_op_per_channel)],
+                        GenericBinaryOpMetatype: [QuantizerConfig(per_channel=test_struct.is_binary_op_per_channel)],
+                        Conv2dTestMetatype: [QuantizerConfig(per_channel=False)],
                         CatTestMetatype: []}
 
         quant_prop_solver = QuantizerPropagationSolver(
             run_consistency_checks=True, default_trait_to_metatype_map=DEFAULT_TEST_QUANT_TRAIT_MAP,
             hw_config=TestHWConfig())
-        nncf_graph = get_nncf_graph_from_mock_nx_graph(graph_cls.get_graph())
+        nncf_graph = get_nncf_graph_from_mock_nx_graph(test_struct.graph_provider.get_graph())
         ip_graph = get_ip_graph_for_test(nncf_graph)
-        retval = quant_prop_solver.run_on_ip_graph(ip_graph)
-        pass
+
+        register_us_group_w_t_spy = mocker.spy(MultiConfigQuantizerSetup, "register_unified_scale_group_with_types")
+        if test_struct.ref_qp_vs_unified_scale_type is None:
+            with pytest.raises(RuntimeError):
+                quant_proposal = quant_prop_solver.run_on_ip_graph(ip_graph)
+        else:
+            quant_proposal = quant_prop_solver.run_on_ip_graph(ip_graph)
+            assert register_us_group_w_t_spy.called
+
+            setup = quant_proposal.quantizer_setup
+            test_qp_vs_unified_scale_type = {str(setup.quantization_points[qp_id].insertion_point): tp
+                   for qp_id, tp in setup._unified_scale_qpid_vs_type.items()}
+
+            assert test_qp_vs_unified_scale_type == test_struct.ref_qp_vs_unified_scale_type
 
 
 def test_metatypes_to_ignore(mocker):

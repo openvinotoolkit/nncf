@@ -350,7 +350,6 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
             self._debug_interface.visualize_insertion_point_graph(insertion_point_graph)
         from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 
-        scales_unification_map = {PTCatMetatype: UNIFICATION_PRODUCING_METATYPES}
         ignored_scopes_for_solver = {
             name: IgnoreReason.USER_REQUESTED for name in self._ignored_scopes_per_group[QuantizerGroup.ACTIVATIONS]
         }
@@ -368,8 +367,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
             scope_overrides=self._quantization_config.get("scope_overrides", {}),
             global_constraints=self.global_quantizer_constraints,
             additional_unified_scale_op_scopes=self._unified_scale_ops,
-            quantize_outputs=self._quantize_outputs,
-            scales_unification_map=scales_unification_map,
+            quantize_outputs=self._quantize_outputs
         )
 
         merged_ip_graph = insertion_point_graph.get_ip_graph_with_merged_hw_optimized_operations(

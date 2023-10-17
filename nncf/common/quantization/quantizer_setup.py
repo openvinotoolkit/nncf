@@ -251,9 +251,9 @@ class QuantizerSetupBase:
 
     def register_unified_scale_group(self, qp_group: List[QuantizationPointId]) -> int:
         for qp_id in qp_group:
-            gid = self.get_unified_scale_group_id(qp_id) is not None
-            if gid:
-                raise nncf.InternalError("QP id {} is already in unified scale group {}".format(qp_id, gid))
+            gid = self.get_unified_scale_group_id(qp_id)
+            if gid is not None:
+                raise RuntimeError(f"QP id {qp_id} is already in unified scale group {gid}")
         gid = self._next_unified_scale_gid
         self.unified_scale_groups[self._next_unified_scale_gid] = set(qp_group)
         self._next_unified_scale_gid += 1
@@ -261,9 +261,9 @@ class QuantizerSetupBase:
 
     def register_shared_inputs_group(self, qp_group: List[QuantizationPointId]) -> int:
         for qp_id in qp_group:
-            gid = self.get_shared_inputs_group_id(qp_id) is not None
-            if gid:
-                raise nncf.InternalError("QP id {} is already in shared input group {}".format(qp_id, gid))
+            gid = self.get_shared_inputs_group_id(qp_id)
+            if gid is not None:
+                raise RuntimeError(f"QP id {qp_id} is already in shared input group {gid}")
         gid = self._next_shared_inputs_gid
         self.shared_input_operation_set_groups[self._next_shared_inputs_gid] = set(qp_group)
         self._next_shared_inputs_gid += 1
@@ -495,9 +495,17 @@ class MultiConfigQuantizerSetup(QuantizerSetupBase):
                 for qid in per_tensor_qids:
                     retval.remove_unified_scale_from_point(qid)
 
-                retval.register_unified_scale_group(list(per_tensor_qids))
+                if len(per_tensor_qids) > 1:
+                    retval.register_unified_scale_group(list(per_tensor_qids))
+                else:
+                    nncf_logger.debug(
+                        "Not making a unified scale group out of single per-tensor quantizer remaining in "
+                        "the group after segregating per-tensor and per-channel quantizers within same original "
+                        "unified scale group")
 
+            remaining_per_channel_qids = []
             for per_channel_qid in per_channel_qids:
+                retval.remove_unified_scale_from_point(per_channel_qid)
                 us_type = self._unified_scale_qpid_vs_type[per_channel_qid]
                 if us_type is UnifiedScaleType.UNIFY_ONLY_PER_TENSOR:
                     nncf_logger.debug(
@@ -505,7 +513,14 @@ class MultiConfigQuantizerSetup(QuantizerSetupBase):
                         "unified scale point that only supports per-tensor scale unification, disabling "
                         "unified scales for this point."
                     )
-                retval.remove_unified_scale_from_point(per_channel_qid)
+                else:
+                    remaining_per_channel_qids.append(per_channel_qid)
+
+            if len(remaining_per_channel_qids) > 1:
+                retval.register_unified_scale_group(list(remaining_per_channel_qids))
+            elif len(remaining_per_channel_qids) == 1:
+                nncf_logger.debug("Not making a unified scale group out of single per-channel quantizer remaining in "
+                                  "the group after removing quantizers with UnifiedScaleType.UNIFY_ONLY_PER_TENSOR")
 
         return retval
 

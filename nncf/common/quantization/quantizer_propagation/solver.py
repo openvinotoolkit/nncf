@@ -336,8 +336,7 @@ class QuantizerPropagationSolver:
         run_consistency_checks: bool = False,
         quantize_outputs: bool = False,
         post_processing_marker_metatypes: List[OperatorMetatype] = None,
-        metatypes_to_ignore: List[OperatorMetatype] = None,
-        scales_unification_map: Dict[OperatorMetatype, OperatorMetatype] = None,
+        metatypes_to_ignore: List[OperatorMetatype] = None
     ):
         """
         Initializes the solver with parameters affecting the resulting quantizer setup.
@@ -389,8 +388,6 @@ class QuantizerPropagationSolver:
             If None automatic ignoring will be skipped.
         :param metatypes_to_ignore: The framework specific NNCF metatypes,
             which should be automatically ignored.
-        :param scales_unification_map: The framework-specific map with NNCF metatypes, which generating a quantizer
-            that can be unified if it so requires based on metatype.
         """
         if default_trait_to_metatype_map is None:
             self._default_trait_to_metatype_map = {}
@@ -446,7 +443,6 @@ class QuantizerPropagationSolver:
         self._quantizable_layer_nodes = quantizable_layer_nodes
         self._post_processing_marker_metatypes = post_processing_marker_metatypes
         self._metatypes_to_ignore = metatypes_to_ignore
-        self._scales_unification_map = scales_unification_map
 
     def _filter_by_weight_ignored_target_scopes(
         self,
@@ -729,7 +725,7 @@ class QuantizerPropagationSolver:
         # only concat unified scale groups appear here
         unified_scale_grouped_paths = (
             quant_prop_graph.get_paths_to_immediately_dominating_insertion_points_grouped_by_unified_scales(
-                curr_node_key, self._unified_scales_operation_set, self._scales_unification_map
+                curr_node_key, self._unified_scales_operation_set
             )
         )
 

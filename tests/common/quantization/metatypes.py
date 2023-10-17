@@ -158,6 +158,11 @@ class DivideTestMetatype(TestMetatype):
 
 
 @METATYPES_FOR_TEST.register()
+class GenericBinaryUnifiedScaleOpMetatype(TestMetatype):
+    name = "binary_unified_scale_op"
+
+
+@METATYPES_FOR_TEST.register()
 class GenericBinaryOpMetatype(TestMetatype):
     name = "binary_op"
 
