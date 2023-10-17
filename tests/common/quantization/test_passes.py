@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from nncf.quantization.passes import remove_dropout_nodes_inplace
+from nncf.quantization.passes import remove_dropout_nodes
 from tests.post_training.test_templates.models import NNCFGraphDropoutRemovingCase
 from tests.shared.nx_graph import compare_nx_graph_with_reference
 from tests.shared.paths import TEST_ROOT
@@ -39,10 +39,10 @@ def test_remove_dropout_nodes_inplace(mode: TestModes):
     nncf_graph = NNCFGraphDropoutRemovingCase(dropout_metatype, **kwargs).nncf_graph
     if mode != TestModes.VALID:
         with pytest.raises(AssertionError):
-            remove_dropout_nodes_inplace(nncf_graph, [dropout_metatype])
+            remove_dropout_nodes(nncf_graph, [dropout_metatype])
         return
 
-    remove_dropout_nodes_inplace(nncf_graph, [dropout_metatype])
+    remove_dropout_nodes(nncf_graph, [dropout_metatype])
 
     nx_graph = nncf_graph.get_graph_for_structure_analysis()
     path_to_dot = DATA_ROOT / dot_reference_path

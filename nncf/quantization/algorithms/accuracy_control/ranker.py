@@ -28,7 +28,7 @@ from nncf.quantization.algorithms.accuracy_control.backend import AccuracyContro
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.accuracy_control.rank_functions import create_normalized_mse_func
 from nncf.quantization.algorithms.accuracy_control.subset_selection import select_subset
-from nncf.quantization.passes import remove_shapeof_subgraphs_inplace
+from nncf.quantization.passes import remove_shapeof_subgraphs
 
 TModel = TypeVar("TModel")
 TPModel = TypeVar("TPModel")
@@ -99,9 +99,7 @@ class Ranker:
         ]
 
         quantized_model_graph_without_shapeof = deepcopy(quantized_model_graph)
-        remove_shapeof_subgraphs_inplace(
-            quantized_model_graph_without_shapeof, self._algo_backend.get_shapeof_metatypes()
-        )
+        remove_shapeof_subgraphs(quantized_model_graph_without_shapeof, self._algo_backend.get_shapeof_metatypes())
 
         for quantizer_node in reversed(quantizers):
             if processed.get(quantizer_node.node_name, False):

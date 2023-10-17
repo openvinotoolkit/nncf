@@ -58,6 +58,27 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
+    def shapeof_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific ShapeOf metatypes.
+        """
+
+    @property
+    @abstractmethod
+    def dropout_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific Dropout metatypes.
+        """
+
+    @property
+    @abstractmethod
+    def read_variable_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific metatypes that also can be interpreted as inputs (ReadValue).
+        """
+
+    @property
+    @abstractmethod
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific metatypes for which overflow_fix is applicable.
@@ -158,13 +179,6 @@ class MinMaxAlgoBackend(ABC):
         :param inplace: Whether to calculate statistic inplace or not.
         :param num_samples: Maximum number of samples to collect.
         :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def transform_to_inference_graph(graph: NNCFGraph) -> NNCFGraph:
-        """
-        Returns inference NNCFGraph without constant flows and training time operations.
         """
 
     @staticmethod
