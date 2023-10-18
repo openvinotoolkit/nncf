@@ -122,36 +122,45 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return OVMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     @staticmethod
-    def _get_reduction_axes_and_use_abs_max(
+    def _get_activation_shape(target_point, nncf_graph, node):
+        if target_point.type == TargetType.PRE_LAYER_OPERATION:
+            return nncf_graph.get_input_edges(node)[target_point.port_id].tensor_shape
+        elif target_point.type == TargetType.POST_LAYER_OPERATION:
+            return nncf_graph.get_output_edges(node)[target_point.port_id].tensor_shape
+        else:
+            raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
+
+    @staticmethod
+    def _get_batch_axis():
+        return 0  # TODO (?)
+
+    @staticmethod
+    def _get_reduction_axes(
         nncf_graph: NNCFGraph, target_point: OVTargetPoint, quantizer_config: QuantizerConfig
     ) -> Tuple[ReductionAxes, bool]:
-        use_abs_max = quantizer_config.mode == QuantizationMode.SYMMETRIC
-        if not quantizer_config.per_channel:
-            return None, use_abs_max
-
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        if not target_point.is_weight_target_point():
-            if target_point.type == TargetType.PRE_LAYER_OPERATION:
-                shape = nncf_graph.get_input_edges(node)[target_point.port_id].tensor_shape
-            elif target_point.type == TargetType.POST_LAYER_OPERATION:
-                shape = nncf_graph.get_output_edges(node)[target_point.port_id].tensor_shape
+        if target_point.is_weight_target_point():
+            assert isinstance(node.layer_attributes, OVLayerAttributes)
+            shape = node.layer_attributes.constant_attributes[target_point.port_id]["shape"]
+            if quantizer_config.per_channel:
+                channel_axes = get_weight_channel_axes(node, target_point.port_id)
+                reduction_axes = get_channel_agnostic_reduction_axes(channel_axes, shape)
             else:
-                raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
+                reduction_axes = tuple(range(len(shape)))
+            return reduction_axes
 
-            # TODO (l-bat): Disable quantizer propagation through layout changing operations
-            channel_axis = 1  # OpenVINO activations have channel first layout: [N, C, Z, Y, X]
-            axes = get_channel_agnostic_reduction_axes([channel_axis], shape)
-            return axes, use_abs_max
-
-        assert isinstance(node.layer_attributes, OVLayerAttributes)
-        const_shape = node.layer_attributes.constant_attributes[target_point.port_id]["shape"]
-
+        shape = OVMinMaxAlgoBackend._get_activation_shape(target_point, nncf_graph, node)
         if quantizer_config.per_channel:
-            channel_axes = get_weight_channel_axes(node, target_point.port_id)
-            axes = get_channel_agnostic_reduction_axes(channel_axes, const_shape)
+            # TODO (l-bat): Disable quantizer propagation through layout changing operations
+            axis = 1  # OpenVINO activations have channel first layout: [N, C, Z, Y, X]
         else:
-            axes = tuple(range(len(const_shape)))
-        return axes, use_abs_max
+            axis = OVMinMaxAlgoBackend._get_batch_axis()
+        reduction_axes = get_channel_agnostic_reduction_axes([axis], shape)
+        return reduction_axes
+
+    @staticmethod
+    def _get_aggregation_axes(target_point: OVTargetPoint):
+        return None if target_point.is_weight_target_point() else (0,)
 
     @staticmethod
     def get_statistic_collector(
@@ -162,25 +171,15 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         inplace: bool,
         num_samples: int = None,
     ) -> TensorCollector:
-        reduction_axes, use_abs_max = OVMinMaxAlgoBackend._get_reduction_axes_and_use_abs_max(
-            nncf_graph, target_point, quantizer_config
-        )
+        use_abs_max = quantizer_config.mode == QuantizationMode.SYMMETRIC
+        reduction_axes = OVMinMaxAlgoBackend._get_reduction_axes(nncf_graph, target_point, quantizer_config)
+        aggregation_axes = OVMinMaxAlgoBackend._get_aggregation_axes(target_point)
 
         collector = TensorCollector(OVMinMaxTensorStatistic)
         for params, container_key in zip(
             [range_estimator_params.min, range_estimator_params.max],
             [OVMinMaxTensorStatistic.MIN_STAT, OVMinMaxTensorStatistic.MAX_STAT],
         ):
-            if params.statistics_type not in OV_REDUCERS_MAP:
-                raise RuntimeError(
-                    f"Statistic type: {params.statistics_type} is not supported for OpenVino PTQ backend yet."
-                )
-
-            if params.aggregator_type not in AGGREGATORS_MAP:
-                raise RuntimeError(
-                    f"Aggregator type: {params.aggregator_type} is not supported for OpenVino PTQ backend yet."
-                )
-
             kwargs = {"reduction_axes": reduction_axes, "inplace": inplace}
             if params.statistics_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
                 if container_key == OVMinMaxTensorStatistic.MIN_STAT:
@@ -194,8 +193,11 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 statistic_type = StatisticsType.ABS_MAX
             reducer = OV_REDUCERS_MAP[statistic_type](**kwargs)
 
-            kwargs = {"num_samples": num_samples, "tensor_processor": OVNNCFCollectorTensorProcessor}
-            aggregator = AGGREGATORS_MAP[params.aggregator_type](**kwargs)
+            aggregator = AGGREGATORS_MAP[params.aggregator_type](
+                num_samples=num_samples,
+                aggregation_axes=aggregation_axes,
+                tensor_processor=OVNNCFCollectorTensorProcessor,
+            )
 
             collector.register_statistic_branch(container_key, reducer, aggregator)
         return collector

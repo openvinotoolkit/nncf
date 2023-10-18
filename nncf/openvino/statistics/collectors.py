@@ -271,16 +271,12 @@ class OVAbsQuantileReducer(AbsQuantileReducer):
         return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
 
 
-def get_mean_statistic_collector(
-    num_samples: int, channel_axis: int, window_size: Optional[int] = None, inplace: bool = True
-) -> TensorCollector:
+def get_mean_statistic_collector(num_samples: int, channel_axis: int, inplace: bool = True) -> TensorCollector:
     """
     Mean statistic collector builder.
 
     :param num_samples: Maximum number of samples to collect.
     :param channel_axis: Channel axis to use during reduction phase.
-    :param window_size: Number of samples from the end of the list of collected samples to aggregate.
-        Aggregates all available collected statistics in case parameter is None.
     :param inplace: Whether the mean reducer should be calculated inplace or out of place.
     :return: Mean statistic collector.
     """
@@ -296,7 +292,6 @@ def get_mean_statistic_collector(
     kwargs = {
         "tensor_processor": OVNNCFCollectorTensorProcessor,
         "num_samples": num_samples,
-        "window_size": window_size,
     }
     aggregate_mean = MeanAggregator(**kwargs)
     aggregate_shape = ShapeAggregator()
