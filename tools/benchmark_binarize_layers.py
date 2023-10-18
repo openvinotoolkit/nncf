@@ -32,7 +32,8 @@ TEST_PARAMS_STRUCT = [
 
 
 # reference impl
-# pylint:disable=abstract-method
+
+
 class ReferenceXNORBinarize(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x):
@@ -46,7 +47,6 @@ class ReferenceXNORBinarize(torch.autograd.Function):
         return grad_outputs[0]
 
 
-# pylint:disable=abstract-method
 class ReferenceDOREFABinarize(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x):
@@ -60,7 +60,6 @@ class ReferenceDOREFABinarize(torch.autograd.Function):
         return grad_outputs[0]
 
 
-# pylint:disable=abstract-method
 class ReferenceActivationBinarize(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input_, scale, threshold):

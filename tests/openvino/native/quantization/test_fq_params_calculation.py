@@ -56,7 +56,6 @@ def get_fq_nodes_stats_algo(model):
     return nodes
 
 
-# pylint: disable=protected-access
 def quantize_model(ov_model, q_params):
     dataset = get_dataset_for_test(ov_model)
     graph = GraphConverter.create_nncf_graph(ov_model)

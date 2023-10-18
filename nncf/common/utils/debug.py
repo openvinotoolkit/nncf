@@ -28,7 +28,7 @@ def set_debug_log_dir(dir_: str):
 
 @contextmanager
 def nncf_debug():
-    from nncf.common.logging.logger import set_log_level  # pylint: disable=cyclic-import
+    from nncf.common.logging.logger import set_log_level
 
     set_log_level(logging.DEBUG)
     yield

@@ -43,7 +43,6 @@ class GraphBuilder:
 class GraphConverter:
     @staticmethod
     def convert(dynamic_graph: DynamicGraph, input_infos: List[ModelInputInfo] = None) -> PTNNCFGraph:
-        # pylint:disable=too-many-branches
         module_id_vs_known_op_addrs_map: Dict[int, Set[Scope]] = defaultdict(set)
         for dynamic_graph_node in dynamic_graph.get_all_nodes():
             module_id_vs_known_op_addrs_map[dynamic_graph_node.calling_module_id].add(

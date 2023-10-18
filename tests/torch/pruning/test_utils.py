@@ -21,7 +21,6 @@ from tests.torch.pruning.helpers import BranchingModel
 from tests.torch.pruning.helpers import get_basic_pruning_config
 
 
-# pylint: disable=protected-access
 @pytest.mark.parametrize(
     "total,sparsity_rate,multiple_of,ref",
     [(20, 0.2, None, 4), (20, 0.2, 8, 4), (20, 0.1, 2, 2), (20, 0.1, 5, 0), (20, 0.5, None, 4)],

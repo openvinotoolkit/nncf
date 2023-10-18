@@ -140,7 +140,6 @@ def test_weight_normed_modules_are_replaced_correctly():
     assert isinstance(wrapped_conv.weight_v, torch.nn.Parameter)
     assert not isinstance(wrapped_conv.weight, torch.nn.Parameter)
 
-    # pylint:disable=protected-access
     assert len(wrapped_conv._forward_pre_hooks) == 1
 
 
@@ -185,7 +184,6 @@ def test_custom_module_registering():
     assert RegisteredUserModule in UNWRAPPED_USER_MODULES.registry_dict.values()
     assert UnregisteredUserModule not in UNWRAPPED_USER_MODULES.registry_dict.values()
 
-    # pylint: disable=protected-access
     modules = [nncf_model.registered_user_module, nncf_model.unregistered_user_module.conv]
     base_modules = [RegisteredUserModule, torch.nn.Conv2d]
     names = ["NNCFUserRegisteredUserModule", "NNCFConv2d"]
@@ -236,7 +234,6 @@ def test_get_weighted_original_graph_nodes():
     assert set(weighted_nodes) == set(ref_weighted_nodes)
 
 
-# pylint: disable=protected-access
 def test_get_op_nodes_in_scope():
     model = TwoConvTestModel()
     nncf_model: NNCFNetwork = NNCFNetwork(deepcopy(model), input_infos=[ModelInputInfo([1, 1, 4, 4])])
@@ -360,10 +357,10 @@ def test_setting_attrs():
     model = ModelWithAttr()
     assert model.CLASS_ATTR == 0
     assert model.instance_attr == 0
-    # pylint:disable=protected-access
+
     assert model._input_infos == 0
     nncf_network = NNCFNetwork(model, input_infos=[ModelInputInfo([1])])
-    # pylint:disable=protected-access
+
     assert nncf_network._input_infos == 0
 
     nncf_network.instance_attr = 1
@@ -447,8 +444,8 @@ def test_temporary_clean_view():
         )
     sd_after_tmp_clean_view = sparse_quantized_model.state_dict()
     for key in old_sd.keys():
-        assert key in sd_after_tmp_clean_view  # pylint: disable=E1135
-        assert torch.all(torch.eq(sd_after_tmp_clean_view[key], old_sd[key]))  # pylint: disable=E1136
+        assert key in sd_after_tmp_clean_view
+        assert torch.all(torch.eq(sd_after_tmp_clean_view[key], old_sd[key]))
     sparse_quantized_model.nncf.rebuild_graph()
     graph_after_tmp_clean_view = sparse_quantized_model.nncf.get_graph()
     assert graph_after_tmp_clean_view == old_graph
@@ -724,7 +721,7 @@ def test_safety_change_scope_in_get_nncf_modules():
 
 
 class EmbeddingWithSharedWeights(torch.nn.Embedding):
-    def forward(self, x, run_as_matmul=False):  # pylint: disable=arguments-renamed
+    def forward(self, x, run_as_matmul=False):
         if run_as_matmul:
             return F.linear(x, self.weight)
         return super().forward(x)

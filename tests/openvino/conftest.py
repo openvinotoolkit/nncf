@@ -11,7 +11,6 @@
 
 from pathlib import Path
 
-# pylint:disable=unused-import
 import pytest
 
 from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS

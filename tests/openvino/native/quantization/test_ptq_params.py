@@ -46,7 +46,6 @@ def get_ignored_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPatter
     return PatternsManager.get_full_ignored_pattern_graph(backend=BackendType.OPENVINO, device=device)
 
 
-# pylint: disable=protected-access
 @pytest.mark.parametrize("target_device", [TargetDevice.CPU, TargetDevice.GPU, TargetDevice.VPU])
 def test_target_device(target_device):
     min_max_algo = MinMaxQuantization(target_device=target_device)

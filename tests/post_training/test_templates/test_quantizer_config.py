@@ -39,7 +39,6 @@ from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseCo
 from tests.post_training.test_templates.models import NNCFGraphToTestSumAggregation
 
 
-# pylint: disable=protected-access,too-many-branches
 class TemplateTestQuantizerConfig:
     @abstractmethod
     def get_algo_backend(self):

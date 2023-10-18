@@ -92,7 +92,7 @@ def is_url(uri):
     try:
         parsed_url = urllib.parse.urlparse(uri)
         return parsed_url.scheme and parsed_url.netloc
-    except:  # pylint: disable=bare-except  # noqa: E722
+    except:  # noqa: E722
         return False
 
 

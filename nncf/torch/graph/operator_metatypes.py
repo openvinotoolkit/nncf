@@ -29,7 +29,6 @@ ModuleAttributes = TypeVar("ModuleAttributes", bound=BaseLayerAttributes)
 PT_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
 
 
-# pylint: disable=too-many-lines
 class PTOperatorMetatype(OperatorMetatype):
     """
     Base class for grouping PyTorch operators based on their semantic meaning.

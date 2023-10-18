@@ -700,7 +700,7 @@ class YOLOv4Loss:
         use_softmax_loss=False,
         use_giou_loss=False,
         use_diou_loss=True,
-    ):  # pylint: disable=R0915
+    ):
         """
         YOLOv3 loss function.
 

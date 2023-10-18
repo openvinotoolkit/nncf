@@ -65,7 +65,6 @@ def calc_rb_mask_decorator(fn):
         else:
             thread_id = "dummy"
 
-        # pylint: disable=redundant-keyword-arg
         tf.print(thread_id, args[1], output_stream=f"file://{MASKS_SEEDS_PATH}")
         mask = fn(*args, **kwargs)
         return mask
@@ -180,7 +179,7 @@ class TestSparseModules:
         trainable = model.layers[1].ops_weights[op.name]["trainable"]
         assert tf.equal(trainable, tf.constant(not frozen))
         cls = SparseLoss
-        # pylint: disable=protected-access
+
         loss = cls(algo.loss._target_ops)
         try:
             assert loss() == 0

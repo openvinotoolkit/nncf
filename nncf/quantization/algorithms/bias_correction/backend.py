@@ -27,7 +27,6 @@ TModel = TypeVar("TModel")
 OutputType = TypeVar("OutputType")
 
 
-# pylint:disable=too-many-public-methods
 class BiasCorrectionAlgoBackend(ABC):
     @property
     @abstractmethod

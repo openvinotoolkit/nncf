@@ -246,7 +246,6 @@ def _replace_module_by_scope(base_model: torch.nn.Module, scope: Scope, replaced
     curr_module = base_model
     owning_module = base_model
     for scope_element in scope[1:]:  # omit first scope element which corresponds to base module
-        # pylint: disable=protected-access
         child_module = curr_module._modules.get(scope_element.calling_field_name)
         if child_module is None:
             raise RuntimeError(
@@ -265,7 +264,6 @@ def _replace_module_by_scope(base_model: torch.nn.Module, scope: Scope, replaced
     nncf_logger.debug(f"Extending module at {str(scope)}...")
     last_calling_field_name = scope[-1].calling_field_name
     if isinstance(owning_module, nn.Sequential):
-        # pylint:disable=protected-access
         owning_module._modules[last_calling_field_name] = replaced_module
     else:
         setattr(owning_module, last_calling_field_name, replaced_module)

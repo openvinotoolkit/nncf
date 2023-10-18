@@ -133,7 +133,6 @@ def test_omz_models_sq_placement(model_name_params, tmp_path, omz_cache_dir):
     compare_nncf_graphs(quantized_model, path_ref_graph)
 
 
-# pylint: disable=protected-access
 def smooth_quant_model(ov_model: ov.Model, q_params: Dict, quantize=True):
     dataset = get_dataset_for_test(ov_model)
     graph = GraphConverter.create_nncf_graph(ov_model)

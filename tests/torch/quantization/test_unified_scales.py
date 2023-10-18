@@ -34,8 +34,6 @@ from tests.torch.helpers import resolve_constant_node_inputs_to_values
 from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
 from tests.torch.quantization.test_onnx_export import get_successors
 
-# pylint: disable=no-member
-
 
 def make_op_address_for_coalescing_test(scope_str: str) -> OperationAddress:
     op_address = OperationAddress.from_str(scope_str)
@@ -572,7 +570,6 @@ class TestsWithONNXInspection:
         return list(output_nodes.values())
 
     def test_unified_scales_are_identical_in_onnx(self, tmp_path):
-        # pylint:disable=no-member
         nncf_config = get_quantization_config_without_range_init(model_size=1)
         nncf_config["compression"]["quantize_outputs"] = True
         nncf_config["input_info"] = [
@@ -631,7 +628,6 @@ class TestsWithONNXInspection:
                 assert curr_values == ref_values  # All inputs for unified scale quantizers must be equal
 
     def test_weight_and_act_quantizer_scale_unification(self, tmp_path):
-        # pylint:disable=no-member
         nncf_config = get_quantization_config_without_range_init(model_size=1)
         nncf_config["input_info"] = [
             {"sample_size": [1, 5], "type": "long", "filler": "zeros"},

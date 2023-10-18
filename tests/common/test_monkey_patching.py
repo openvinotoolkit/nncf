@@ -14,12 +14,12 @@ from nncf.common.utils.patcher import PATCHER
 CORRECT_WRAPPER_STACK = "base"
 
 
-def wrapper1(self, fn, *args, **kwargs):  # pylint: disable=unused-argument
+def wrapper1(self, fn, *args, **kwargs):
     kwargs["wrapper_stack"] += "_wrapper1"
     return fn(*args, **kwargs)
 
 
-def wrapper2(self, fn, *args, **kwargs):  # pylint: disable=unused-argument
+def wrapper2(self, fn, *args, **kwargs):
     kwargs["wrapper_stack"] += "_wrapper2"
     return fn(*args, **kwargs)
 
@@ -44,7 +44,7 @@ class TestOverrideClass:
 def test_patcher():
     global CORRECT_WRAPPER_STACK
 
-    def wrapper3(self, fn, *args, **kwargs):  # pylint: disable=unused-argument
+    def wrapper3(self, fn, *args, **kwargs):
         kwargs["wrapper_stack"] += "_wrapper3"
         return fn(*args, **kwargs)
 

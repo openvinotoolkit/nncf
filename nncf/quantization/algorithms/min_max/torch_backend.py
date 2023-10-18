@@ -47,7 +47,7 @@ from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcess
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 
 
-# pylint:disable=too-many-public-methods
+@ALGO_BACKENDS.register(BackendType.TORCH)
 class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
         TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,

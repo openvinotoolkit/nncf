@@ -730,7 +730,6 @@ class TestComponentUpdateInTraining:
         )
 
         class CheckInitImportanceThresholdCallback(CompressionCallback):
-            # pylint: disable=protected-access
             def on_step_begin(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
                 super().on_step_begin(args, state, control, **kwargs)
                 if state.global_step < recipe.scheduler_params.warmup_start_epoch * steps_per_epoch:

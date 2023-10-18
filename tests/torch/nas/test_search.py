@@ -24,7 +24,7 @@ from tests.torch.nas.creators import NAS_MODEL_DESCS
 from tests.torch.nas.creators import create_bnas_model_and_ctrl_by_test_desc
 from tests.torch.nas.creators import create_bootstrap_training_model_and_ctrl
 from tests.torch.nas.models.synthetic import ThreeConvModel
-from tests.torch.nas.test_all_elasticity import fixture_nas_model_name  # pylint: disable=unused-import  # noqa: F401
+from tests.torch.nas.test_all_elasticity import fixture_nas_model_name  # noqa: F401
 
 
 class SearchTestDesc(NamedTuple):

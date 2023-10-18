@@ -105,12 +105,12 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController, ABC):
         self.prepare_for_export()
         backend = get_backend(self.model)
         if backend is BackendType.TENSORFLOW:
-            from nncf.tensorflow.exporter import TFExporter  # pylint: disable=cyclic-import
+            from nncf.tensorflow.exporter import TFExporter
 
             exporter = TFExporter(self.model, input_names, output_names, model_args)
         else:
             assert backend is BackendType.TORCH
-            from nncf.torch.exporter import PTExporter  # pylint: disable=cyclic-import
+            from nncf.torch.exporter import PTExporter
 
             exporter = PTExporter(self.model, input_names, output_names, model_args)
         if save_format is not None:

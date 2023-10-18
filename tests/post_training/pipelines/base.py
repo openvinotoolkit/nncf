@@ -294,7 +294,7 @@ class BaseTestPipeline(ABC):
 
         After run torch.jit.trace in convert_model, PyTorch does not clear the trace cache automatically.
         """
-        # pylint: disable=protected-access
+
         torch._C._jit_clear_class_registry()
         torch.jit._recursive.concrete_type_store = torch.jit._recursive.ConcreteTypeStore()
         torch.jit._state._clear_class_state()

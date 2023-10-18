@@ -13,7 +13,7 @@ import os.path as osp
 
 import tensorflow as tf
 import tensorflow_addons as tfa
-from tensorflow.keras.optimizers import schedules  # pylint:disable=no-name-in-module
+from tensorflow.keras.optimizers import schedules
 
 from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
 from nncf.common.accuracy_aware_training.runner import BaseAdaptiveCompressionLevelTrainingRunner

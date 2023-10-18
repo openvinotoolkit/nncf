@@ -173,9 +173,7 @@ class TestStructuredMaskContext:
         f"Some tests may fail with error",
     )
     @pytest.mark.parametrize("is_dependent_mask", [True, False], ids=["dependent", "independent"])
-    def test_structured_mask_setter_with_device_change(
-        self, is_dependent_mask: bool, nncf_caplog
-    ):  # pylint: disable=redefined-outer-name
+    def test_structured_mask_setter_with_device_change(self, is_dependent_mask: bool, nncf_caplog):
         mask_name = "dependent_structured_mask" if is_dependent_mask else "independent_structured_mask"
         operand = MovementSparsifier(mock_linear_nncf_node(1, 1))
         ctx = StructuredMaskContext(operand, "linear", (1, 1), True)
@@ -346,7 +344,6 @@ desc_test_resolve_dependent_structured = {
 
 
 class TestStructuredMaskHandler:
-    # pylint: disable=protected-access
     @pytest.mark.parametrize(
         "run_recipe", STRUCTURED_MASK_SUPPORTED_RECIPES, ids=[r.model_family for r in STRUCTURED_MASK_SUPPORTED_RECIPES]
     )
@@ -425,7 +422,6 @@ class TestStructuredMaskHandler:
                 assert re.fullmatch(r"\[[0-9]+ items\]", item) is not None
         assert Path(tmp_path, f"{file_name}.csv").is_file()
 
-    # pylint: disable=protected-access
     def _get_handler_from_ctrl(self, compression_ctrl) -> Tuple[StructuredMaskHandler, List[StructuredMaskContext]]:
         handler = compression_ctrl._structured_mask_handler
         all_ctxes = []

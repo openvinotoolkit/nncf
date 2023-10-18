@@ -12,11 +12,12 @@ import argparse
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-import datasets
 import evaluate
 import jstyleson
 import numpy as np
 from transformers.training_args import ParallelMode
+
+import datasets
 
 # isort: off
 from nncf import NNCFConfig
@@ -144,7 +145,7 @@ class CompressionTrainer(Trainer):
 
 
 def prepare_dataset(args, training_args):
-    raw_datasets = datasets.load_dataset("glue", args.task_name)  # pylint: disable=no-member
+    raw_datasets = datasets.load_dataset("glue", args.task_name)
     num_labels = len(raw_datasets["train"].features["label"].names)
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
 

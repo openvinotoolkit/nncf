@@ -100,7 +100,6 @@ def get_dataset_for_test(dataset_name: str, data_dir: Path) -> Path:
     raise RuntimeError(f"Unknown dataset: {dataset_name}.")
 
 
-# pylint: disable=protected-access
 def get_nncf_dataset_from_ac_config(model_path, config_path, data_dir, framework="openvino", device="CPU"):
     args = [
         "-c",

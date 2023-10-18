@@ -85,7 +85,7 @@ def test_ptq_quantization(test_case_name, data, output, result, no_eval):
 
         pipeline = pipeline_cls(**pipeline_kwargs)
         pipeline.run()
-    # pylint:disable=broad-except
+
     except Exception as e:
         err_msg = str(e)
         traceback.print_exc()

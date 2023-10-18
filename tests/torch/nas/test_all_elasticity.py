@@ -68,7 +68,7 @@ def test_bn_adaptation_on_minimal_subnet_width_stage():
     model, ctrl = create_bnas_model_and_ctrl_by_test_desc(RESNET50_2_MANUAL_BLOCKS_DESC)
 
     multi_elasticity_handler = ctrl.multi_elasticity_handler
-    # pylint: disable=protected-access
+
     bn_adaptation = ctrl._bn_adaptation
 
     multi_elasticity_handler.enable_all()

@@ -43,7 +43,7 @@ from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
 
-# pylint:disable=too-many-public-methods
+@ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:

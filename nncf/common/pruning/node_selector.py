@@ -91,7 +91,7 @@ class PruningNodeSelector:
         :param graph: Graph to work with and their initialization parameters as values.
         :return: Clusterization of pruned nodes.
         """
-        # pylint:disable=too-many-branches
+
         all_nodes_to_prune = graph.get_nodes_by_types(self._prune_operations_types)  # NNCFNodes here
 
         # 1. Clusters for special ops

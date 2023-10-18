@@ -12,7 +12,7 @@
 import copy
 
 import numpy as np
-from scipy.special import expit  # pylint: disable=E0611
+from scipy.special import expit
 from scipy.special import softmax
 
 

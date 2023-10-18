@@ -81,7 +81,7 @@ def wrap_operator(operator, operator_info: PatchedOperatorInfo):
             if operator_info.skip_trace:
                 result = operator(*args, **kwargs)
             elif ctx.is_forwarding:
-                from nncf.torch.dynamic_graph.trace_functions import forward_trace_only  # pylint: disable=cyclic-import
+                from nncf.torch.dynamic_graph.trace_functions import forward_trace_only
 
                 result = forward_trace_only(operator, *args, **kwargs)
             else:
@@ -112,14 +112,13 @@ def wrap_operator(operator, operator_info: PatchedOperatorInfo):
         ctx.in_operator = False
         return result
 
-    # pylint: disable=protected-access
     wrapped._original_op = operator
     wrapped._operator_namespace = operator_info.operator_namespace
     return wrapped
 
 
 def wrap_module_call(module_call):
-    from nncf.torch.dynamic_graph.patch_pytorch import ORIGINAL_OPERATORS  # pylint: disable=cyclic-import
+    from nncf.torch.dynamic_graph.patch_pytorch import ORIGINAL_OPERATORS
 
     NAMES_ORIGINAL_OPERATORS = [op.name for op in ORIGINAL_OPERATORS]
 
@@ -199,7 +198,7 @@ def _collect_module_attrs_and_ignored_algorithms(
 ) -> Tuple[BaseLayerAttributes, List[str]]:
     layer_attrs = None
     ignored_algos = []
-    from nncf.torch.graph.operator_metatypes import OP_NAMES_WITH_WEIGHTS  # pylint:disable=cyclic-import
+    from nncf.torch.graph.operator_metatypes import OP_NAMES_WITH_WEIGHTS
 
     if op_name in OP_NAMES_WITH_WEIGHTS:
         curr_module = ctx.get_current_module()

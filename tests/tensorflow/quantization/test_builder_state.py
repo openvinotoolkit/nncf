@@ -74,7 +74,7 @@ def test_quantization_configs__on_resume_with_compression_state(tmp_path, mocker
 
     builder = QuantizationBuilder(config)
     builder.load_state(compression_state_to_load["builder_state"])
-    # pylint:disable=protected-access
+
     loaded_quantizer_setup = builder._quantizer_setup
     assert _quantization_setup_cmp(loaded_quantizer_setup, saved_quantizer_setup)
 
@@ -151,7 +151,7 @@ def test_checkpoint_callback_make_checkpoints(mocker, tmp_path):
 
     builder = QuantizationBuilder(config)
     builder.load_state(new_compression_state["builder_state"])
-    # pylint:disable=protected-access
+
     new_quantizer_setup = builder._quantizer_setup
 
     assert _quantization_setup_cmp(quantizer_setup, new_quantizer_setup)

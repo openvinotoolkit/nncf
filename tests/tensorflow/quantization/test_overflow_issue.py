@@ -46,7 +46,7 @@ def check_quantized_values_equals(y_train, y_val, eps, range_len, narrow_range):
     ids=["full_range", "narrow_range"],
 )
 def test_min_adj(bits, low, range_, narrow_range, ref):
-    res = Quantizer._min_adj(bits, low, range_, narrow_range).numpy()  # pylint: disable=protected-access
+    res = Quantizer._min_adj(bits, low, range_, narrow_range).numpy()
     assert abs(res - ref) < EPS
 
 
@@ -61,7 +61,7 @@ def get_weights_for_overflow_issue_test(low, range_len, narrow_range, init_w_as_
             mid_points = [-(i + 1 / 2) * quant_len for i in range(127)]
         else:
             # Range with zero
-            min_adj = Quantizer._min_adj(7, low, range_len, narrow_range).numpy()  # pylint: disable=protected-access
+            min_adj = Quantizer._min_adj(7, low, range_len, narrow_range).numpy()
             mid_points = [min_adj + (i + 1 / 2) * quant_len for i in range(127)]
 
         new_w = mid_points * int(np.round(0.5 + DIM_SPLIT / 128))
@@ -115,7 +115,7 @@ class TestQuantizedWeightsEqualAfterFixApplied:
             assert (np.abs(np.abs(w_int7 - new_w) - quant_len / 2) < 1e-6).all(), "Middle points calculated incorrectly"
 
         apply_overflow_fix_to_layer(layer, "kernel", quantizer)
-        assert not quantizer._half_range  # pylint: disable=protected-access
+        assert not quantizer._half_range
         w_int8 = layer(tf.ones((1, 1))).numpy()
 
         check_quantized_values_equals(w_int7, w_int8, EPS, range_len, narrow_range)
@@ -159,7 +159,7 @@ class TestQuantizedWeightsEqualAfterFixApplied:
             assert (np.abs(np.abs(w_int7 - new_w) - quant_len / 2) < EPS).all(), "Middle points calculated incorrectly"
 
         apply_overflow_fix_to_layer(layer, "kernel", quantizer)
-        assert not quantizer._half_range  # pylint: disable=protected-access
+        assert not quantizer._half_range
         w_int8 = layer(tf.ones((1, 1))).numpy()
 
         check_quantized_values_equals(w_int7, w_int8, EPS, range_len, narrow_range)

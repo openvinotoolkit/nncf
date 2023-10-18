@@ -33,8 +33,6 @@ from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuil
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.nncf_network import NNCFNetwork
-
-# pylint:disable=too-many-branches
 from nncf.torch.utils import is_dist_avail_and_initialized
 from nncf.torch.utils import is_main_process
 from nncf.torch.utils import maybe_convert_legacy_names_in_compress_state
@@ -143,7 +141,7 @@ def create_compressed_model(
 
     try:
         if is_legacy_model_state_dict:
-            from nncf.torch import load_state  # pylint: disable=cyclic-import
+            from nncf.torch import load_state
 
             state_dict_to_load = compression_state.get("state_dict", compression_state)
             load_state(compressed_model, state_dict_to_load, is_resume=True)

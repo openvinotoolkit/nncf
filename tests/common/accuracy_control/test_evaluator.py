@@ -83,7 +83,6 @@ def test_determine_mode(ts: TestCase):
     def _validation_fn(dummy_model, dummy_dataset):
         return (ts.metric_value, ts.values_for_each_item)
 
-    # pylint: disable=W0212
     if ts.raise_exception:
         with pytest.raises(RuntimeError):
             _ = Evaluator.determine_mode(None, Dataset([None]), _validation_fn)

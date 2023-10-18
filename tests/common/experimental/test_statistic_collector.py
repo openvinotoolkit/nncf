@@ -27,8 +27,6 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.experimental.common.tensor_statistics.collectors import TensorType
 
-# pylint: disable=(protected-access)
-
 
 class NumpyNNCFTensor(NNCFTensor):
     def __init__(self, tensor: np.array, dummy_device: Optional[str] = None):

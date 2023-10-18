@@ -25,8 +25,6 @@ from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.adjust_padding import add_adjust_padding_nodes
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.precision_init.adjacent_quantizers import GroupsOfAdjacentQuantizers
-
-# pylint:disable=unused-import
 from nncf.torch.quantization.precision_init.definitions import QConfigSequenceForHAWQToEvaluate
 from nncf.torch.quantization.precision_init.perturbations import PerturbationObserver
 from nncf.torch.quantization.precision_init.perturbations import Perturbations
@@ -47,7 +45,7 @@ class HAWQDebugger:
         self._num_weights = len(traces_per_layer.traces_order)
         self._perturbations = perturbations
 
-        from nncf.common.utils.debug import DEBUG_LOG_DIR  # pylint: disable=cyclic-import
+        from nncf.common.utils.debug import DEBUG_LOG_DIR
 
         self._dump_dir = Path(DEBUG_LOG_DIR) / Path("hawq_dumps")
         self._dump_dir.mkdir(parents=True, exist_ok=True)
@@ -220,7 +218,7 @@ class HAWQDebugger:
         model: NNCFNetwork,
         groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers,
     ):
-        from nncf.torch.quantization.precision_init.bitwidth_graph import BitwidthGraph  # pylint: disable=cyclic-import
+        from nncf.torch.quantization.precision_init.bitwidth_graph import BitwidthGraph
 
         bw_graph = BitwidthGraph(algo_ctrl, model, groups_of_adjacent_quantizers).get()
         nx_graph = add_adjust_padding_nodes(bw_graph, model)

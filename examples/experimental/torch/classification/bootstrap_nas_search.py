@@ -91,7 +91,6 @@ def main(argv):
     start_worker(main_worker, config)
 
 
-# pylint:disable=too-many-branches,too-many-statements
 def main_worker(current_gpu, config: SampleConfig):
     configure_device(current_gpu, config)
     config.mlflow = SafeMLFLow(config)

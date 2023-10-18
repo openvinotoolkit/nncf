@@ -18,8 +18,6 @@ from tests.common.quantization.mock_graphs import NodeWithType
 from tests.common.quantization.mock_graphs import create_mock_graph
 from tests.common.quantization.mock_graphs import get_nncf_graph_from_mock_nx_graph
 
-# pylint:disable=protected-access
-
 
 def get_nncf_graph_for_test(edge_shape, dtype):
     nodes = [
