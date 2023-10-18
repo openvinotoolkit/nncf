@@ -122,7 +122,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return OVMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     @staticmethod
-    def _get_activation_shape(target_point, nncf_graph, node):
+    def _get_activation_shape(target_point: OVTargetPoint, nncf_graph: NNCFGraph, node: NNCFNode) -> List[int]:
         if target_point.type == TargetType.PRE_LAYER_OPERATION:
             return nncf_graph.get_input_edges(node)[target_point.port_id].tensor_shape
         elif target_point.type == TargetType.POST_LAYER_OPERATION:
@@ -131,13 +131,17 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
 
     @staticmethod
-    def _get_batch_axis():
+    def _get_batch_axis() -> int:
         return 0  # TODO (?)
+
+    @staticmethod
+    def _get_aggregation_axes(target_point: OVTargetPoint):
+        return None if target_point.is_weight_target_point() else (0,)
 
     @staticmethod
     def _get_reduction_axes(
         nncf_graph: NNCFGraph, target_point: OVTargetPoint, quantizer_config: QuantizerConfig
-    ) -> Tuple[ReductionAxes, bool]:
+    ) -> ReductionAxes:
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
         if target_point.is_weight_target_point():
             assert isinstance(node.layer_attributes, OVLayerAttributes)
@@ -157,10 +161,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             axis = OVMinMaxAlgoBackend._get_batch_axis()
         reduction_axes = get_channel_agnostic_reduction_axes([axis], shape)
         return reduction_axes
-
-    @staticmethod
-    def _get_aggregation_axes(target_point: OVTargetPoint):
-        return None if target_point.is_weight_target_point() else (0,)
 
     @staticmethod
     def get_statistic_collector(
