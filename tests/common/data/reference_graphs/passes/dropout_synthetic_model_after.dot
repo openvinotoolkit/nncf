@@ -13,7 +13,7 @@ strict digraph  {
 "1 /Split_1_0" -> "6 /Output_2_1_0";
 "1 /Split_1_0" -> "7 /Output_2_2_0";
 "1 /Split_1_0" -> "8 /Output_2_3_0";
-"1 /Split_1_0" -> "10 /Output_2_4_0";
 "1 /Split_1_0" -> "9 /Output_3_0";
+"1 /Split_1_0" -> "10 /Output_2_4_0";
 "1 /Split_1_0" -> "11 /Output_3_1_0"  [label="parallel_input_port_ids:[2, 3, 4, 5, 6, 7, 8, 9]"];
 }

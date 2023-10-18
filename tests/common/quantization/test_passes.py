@@ -30,20 +30,25 @@ class TestModes(Enum):
 
 @pytest.mark.parametrize("mode", [TestModes.VALID, TestModes.WRONG_TENSOR_SHAPE, TestModes.WRONG_PARALLEL_EDGES])
 def test_remove_dropout_nodes_inplace(mode: TestModes):
-    dot_reference_path = Path("passes") / "dropout_synthetic_model.dot"
+    def _check_graphs(dot_file_name, nncf_graph) -> None:
+        nx_graph = nncf_graph.get_graph_for_structure_analysis()
+        path_to_dot = DATA_ROOT / dot_file_name
+        compare_nx_graph_with_reference(nx_graph, path_to_dot, check_edge_attrs=True)
+
+    dot_reference_path_before = Path("passes") / "dropout_synthetic_model_before.dot"
+    dot_reference_path_after = Path("passes") / "dropout_synthetic_model_after.dot"
     dropout_metatype = "DROPOUT_METATYPE"
     kwargs = {}
     if mode != TestModes.VALID:
         kwargs.update({mode.value: True})
 
     nncf_graph = NNCFGraphDropoutRemovingCase(dropout_metatype, **kwargs).nncf_graph
+
     if mode != TestModes.VALID:
         with pytest.raises(AssertionError):
             remove_dropout_nodes(nncf_graph, [dropout_metatype])
         return
 
+    _check_graphs(dot_reference_path_before, nncf_graph)
     remove_dropout_nodes(nncf_graph, [dropout_metatype])
-
-    nx_graph = nncf_graph.get_graph_for_structure_analysis()
-    path_to_dot = DATA_ROOT / dot_reference_path
-    compare_nx_graph_with_reference(nx_graph, path_to_dot, check_edge_attrs=True)
+    _check_graphs(dot_reference_path_after, nncf_graph)

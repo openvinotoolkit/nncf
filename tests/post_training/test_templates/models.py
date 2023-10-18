@@ -288,7 +288,7 @@ class NNCFGraphDropoutRemovingCase:
             parallel_input_port_ids=list(range(2, 10)),
         )
         if wrong_parallel_edges:
-            dropout_4 = self.nncf_graph.add_nncf_node("100 /dropoiut", "dropout", dropout_metatype)
+            dropout_4 = self.nncf_graph.add_nncf_node("100 /dropout", "dropout", dropout_metatype)
             self.nncf_graph.add_edge_between_nncf_nodes(
                 self.nncf_graph.get_node_by_key("0 /Input_1_0").node_id,
                 dropout_4.node_id,
