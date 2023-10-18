@@ -597,12 +597,22 @@ class NNCFGraph:
             attrs_edge = {}
             u = u.replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO)
             v = v.replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO)
+            label = {}
+            if edge[NNCFGraph.PARALLEL_INPUT_PORT_IDS_ATTR]:
+                label["parallel_input_port_ids"] = edge[NNCFGraph.PARALLEL_INPUT_PORT_IDS_ATTR]
+
             if extended:
                 if edge[NNCFGraph.DTYPE_EDGE_ATTR] is Dtype.INTEGER:
                     attrs_edge["style"] = "dashed"
                 else:
                     attrs_edge["style"] = "solid"
-                attrs_edge["label"] = edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
+                label["shape"] = edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
+                label[
+                    "ports"
+                ] = f"{edge[NNCFGraph.OUTPUT_PORT_ID_EDGE_ATTR]}\u2192{edge[NNCFGraph.INPUT_PORT_ID_EDGE_ATTR]}"
+
+            if label:
+                attrs_edge["label"] = "\n".join((f"{k}:{v}" for k, v in label.items()))
             out_graph.add_edge(u, v, **attrs_edge)
         return out_graph
 
