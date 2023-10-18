@@ -268,7 +268,13 @@ class SmoothQuant(Algorithm):
                 continue
 
             ports_map = self._backend_entity.get_input_ports_map(node_with_weight, nncf_graph)
-            weight_node = nncf_graph.get_input_edges(node_with_weight)[ports_map["weight"]].from_node
+            input_edges = nncf_graph.get_input_edges(node_with_weight)
+            weight_node = input_edges[ports_map["weight"]].from_node
+            activation_node = input_edges[ports_map["activation"]].from_node
+
+            # Skipping agnostic layers as inputs to propagate quantizer
+            if activation_node.metatype in self._backend_entity.quantize_agnostic_metatypes:
+                continue
 
             # Skipping shared weights
             if len(nncf_graph.get_next_nodes(weight_node)) > 1:

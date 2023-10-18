@@ -44,6 +44,15 @@ class SmoothQuantAlgoBackend(ABC):
         :return: OperatorMetatype
         """
 
+    @property
+    @abstractmethod
+    def quantize_agnostic_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Parameter for backend-specific quantize agnostic metatypes.
+
+        :return: List of OperatorMetatype.
+        """
+
     @staticmethod
     @abstractmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:
