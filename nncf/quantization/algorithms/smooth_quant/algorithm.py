@@ -101,6 +101,11 @@ class SmoothQuant(Algorithm):
         statistic_points: Optional[StatisticPointsContainer] = None,
         dataset: Optional[Dataset] = None,
     ) -> TModel:
+
+        backend = get_backend(model)
+        if backend != BackendType.OPENVINO:
+            return model
+
         self._set_backend_entity(model)
 
         nodes_to_smooth_data = self._get_nodes_to_smooth_data(graph)
@@ -220,6 +225,10 @@ class SmoothQuant(Algorithm):
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         statistic_container = StatisticPointsContainer()
+
+        backend = get_backend(model)
+        if backend != BackendType.OPENVINO:
+            return statistic_container
 
         self._set_backend_entity(model)
 
