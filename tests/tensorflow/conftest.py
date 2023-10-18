@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from pathlib import Path
+import os
 
 import pytest
 
@@ -58,6 +59,14 @@ def pytest_addoption(parser):
     parser.addoption("--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVINO")
     parser.addoption("--run-weekly-tests", action="store_true", default=False, help="To run weekly tests")
     parser.addoption("--models-dir", type=str, default=None, help="Path to checkpoints directory for weekly tests")
+    parser.addoption(
+        "--regen-dot",
+        action="store_true",
+        default=False,
+        help="If specified, the "
+        "reference .dot files will be regenerated "
+        "using the current state of the repository.",
+    )
 
 
 @pytest.fixture(scope="module")
@@ -103,6 +112,12 @@ def models_dir(request):
 @pytest.fixture(scope="module")
 def install_tests(request):
     return request.config.getoption("--run-install-tests", skip=True)
+
+
+def pytest_configure(config):
+    regen_dot = config.getoption("--regen-dot", False)
+    if regen_dot:
+        os.environ["NNCF_TEST_REGEN_DOT"] = "1"
 
 
 # Custom markers specifying tests to be run only if a specific option

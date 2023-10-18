@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import os
+from pathlib import Path
 from typing import List
 
 import networkx as nx
@@ -20,6 +21,7 @@ from packaging import version
 from nncf import NNCFConfig
 from nncf.common.hardware.config import HWConfigType
 from tests.shared.nx_graph import compare_nx_graph_with_reference
+from tests.shared.paths import TEST_ROOT
 from tests.tensorflow import test_models
 from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_empty_config
@@ -327,8 +329,7 @@ def remove_control_edges_from_graph_def(graph_def):
 
 def prepare_and_check_graph_def(
     tf_graph: tf.Graph,
-    graph_path: str,
-    ref_graph_exist: bool,
+    graph_path: Path,
     graph_to_layer_var_names_map=None,
     remove_control_edges=False,
 ):
@@ -340,36 +341,31 @@ def prepare_and_check_graph_def(
     if graph_to_layer_var_names_map:
         rename_graph_def_nodes(graph_def, graph_to_layer_var_names_map)
 
-    if not ref_graph_exist:
+    if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
+        graph_dir = graph_path.parent
+        graph_fname = graph_path.name
+        if not graph_path.exists():
+            graph_dir.mkdir(parents=True, exist_ok=True)
         graph_dir, ref_graph_filename = os.path.split(graph_path)
-        tf.io.write_graph(graph_def, graph_dir, ref_graph_filename, as_text=False)
+        tf.io.write_graph(graph_def, graph_dir, graph_fname, as_text=False)
 
-    check_graph_def(graph_def, graph_path)
+    check_graph_def(graph_def, str(graph_path))
 
 
 def prepare_and_check_nx_graph(
-    tf_graph: tf.Graph, graph_path: str, ref_graph_exist: bool, graph_to_layer_var_names_map: dict
+    tf_graph: tf.Graph, graph_path: Path, graph_to_layer_var_names_map: dict
 ):
     nx_graph = get_nx_graph_from_tf_graph(tf_graph, graph_to_layer_var_names_map)
 
-    compare_nx_graph_with_reference(nx_graph, graph_path)
+    compare_nx_graph_with_reference(nx_graph, str(graph_path), sort_dot_graph=False)
 
 
-def check_model_graph(compressed_model, ref_graph_filename, ref_graph_dir, rename_resource_nodes):
+def check_model_graph(compressed_model, ref_graph_filename: str, ref_graph_dir: str, rename_resource_nodes: bool):
     tf_version = version.parse(tf.__version__).base_version
     tf_version_major, tf_version_minor = tuple(map(int, tf_version.split(".")))[:2]
-    data_dir = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "data", "reference_graphs", f"{tf_version_major}.{tf_version_minor}"
-    )
-    graph_dir = os.path.join(data_dir, ref_graph_dir)
-    graph_path = os.path.abspath(os.path.join(graph_dir, ref_graph_filename))
-
-    # validate file with graph manually!
-    ref_graph_exist = True
-    if not os.path.exists(graph_path):
-        if not os.path.exists(graph_dir):
-            os.makedirs(graph_dir)
-        ref_graph_exist = False
+    data_dir = TEST_ROOT / "tensorflow" / "data" / "reference_graphs" / f"{tf_version_major}.{tf_version_minor}"
+    graph_dir = data_dir / ref_graph_dir
+    graph_path = graph_dir / ref_graph_filename
 
     compressed_graph, graph_to_layer_var_names_map = keras_model_to_tf_graph(compressed_model)
     if not rename_resource_nodes:
@@ -380,10 +376,9 @@ def check_model_graph(compressed_model, ref_graph_filename, ref_graph_dir, renam
 
     ref_graph_ext = os.path.splitext(ref_graph_filename)[1]
     if ref_graph_ext == ".pb":
-        prepare_and_check_graph_def(compressed_graph, graph_path, ref_graph_exist, graph_to_layer_var_names_map)
-
+        prepare_and_check_graph_def(compressed_graph, graph_path, graph_to_layer_var_names_map)
     else:
-        prepare_and_check_nx_graph(compressed_graph, graph_path, ref_graph_exist, graph_to_layer_var_names_map)
+        prepare_and_check_nx_graph(compressed_graph, graph_path, graph_to_layer_var_names_map)
 
 
 @pytest.fixture(scope="module", autouse=True)
