@@ -16,11 +16,11 @@ from typing import Dict, List, Optional, Set
 
 import networkx as nx
 
-from nncf.common.graph import Dtype
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
+from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.logging import nncf_logger
@@ -107,11 +107,11 @@ class InsertionPointGraph(nx.DiGraph):
             # Post-hook all nodes if an exact list is not specified
             allowed_post_hook_insertion_points = self._get_default_post_hook_ip_list(nncf_graph)
 
-        target_node_name_vs_pre_hook_ips = defaultdict(set)  # type: Dict[NNCFNodeName, Set[PreHookInsertionPoint]]
+        target_node_name_vs_pre_hook_ips: Dict[NNCFNodeName, Set[PreHookInsertionPoint]] = defaultdict(set)
         for pre_hook_ip in allowed_pre_hook_insertion_points:
             target_node_name_vs_pre_hook_ips[pre_hook_ip.target_node_name].add(pre_hook_ip)
 
-        target_node_name_vs_post_hook_ips = defaultdict(set)  # type: Dict[NNCFNodeName, Set[PostHookInsertionPoint]]
+        target_node_name_vs_post_hook_ips: Dict[NNCFNodeName, Set[PostHookInsertionPoint]] = defaultdict(set)
         for post_hook_ip in allowed_post_hook_insertion_points:
             target_node_name_vs_post_hook_ips[post_hook_ip.target_node_name].add(post_hook_ip)
 

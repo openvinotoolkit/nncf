@@ -266,6 +266,7 @@ def compress_weights_impl(
     mode=CompressWeightsMode.INT8,
     ratio: Optional[float] = None,
     group_size: Optional[int] = None,
+    ignored_scope: Optional[IgnoredScope] = None,
 ) -> torch.nn.Module:
     """
     Implementation of the `compress_weights()` method for the PyTorch backend. Currently it supports INT8
@@ -281,11 +282,14 @@ def compress_weights_impl(
         and the rest to INT8).
     :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
         The value -1 means no grouping.
+    :param ignored_scope: An ignored scope that defined the list of model control
+        flow graph nodes to be ignored during quantization.
     :return: The non-trainable model with compressed weights and dequantization operations.
     """
-
+    if ignored_scope is not None:
+        raise AttributeError("Torch backend does not support ignored scope.")
     if mode != CompressWeightsMode.INT8:
-        raise AttributeError(f"Torch backend supports only INT8 mode for weight compression, but given {mode} mode")
+        raise AttributeError(f"Torch backend supports only INT8 mode for weight compression, but given {mode} mode.")
     compressed_model, _ = replace_modules_by_nncf_modules(model)
     insert_pre_compression_operations(model)
 

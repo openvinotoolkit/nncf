@@ -10,19 +10,24 @@
 # limitations under the License.
 
 import itertools
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
+from nncf.quantization.algorithms.channel_alignment.algorithm import ChannelAlignment
+from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
+from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
+from nncf.quantization.algorithms.pipeline import Pipeline
+from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import StatisticsCollectorParameters
 from nncf.quantization.range_estimator import StatisticsType
 
+ParamGrid = Dict[str, List[Any]]
 
-def get_quantization_param_grid() -> Dict[str, Any]:
-    """
-    Returns params grid for post-training quantization algorithm.
-    """
+
+def _get_minmax_quantization_param_grid() -> ParamGrid:
     min_param_values = [
         StatisticsCollectorParameters(
             statistics_type=StatisticsType.MIN,
@@ -58,7 +63,6 @@ def get_quantization_param_grid() -> Dict[str, Any]:
 
     param_grid = {
         "preset": [QuantizationPreset.PERFORMANCE, QuantizationPreset.MIXED],
-        "fast_bias_correction": [True, False],
         "advanced_parameters:weights_range_estimator_params": [
             RangeEstimatorParameters(
                 min=StatisticsCollectorParameters(statistics_type=StatisticsType.MIN),
@@ -70,5 +74,38 @@ def get_quantization_param_grid() -> Dict[str, Any]:
             for min_v, max_v in itertools.product(min_param_values, max_param_values)
         ],
     }
-
     return param_grid
+
+
+def _get_smooth_quant_param_grid() -> ParamGrid:
+    return {"advanced_parameters:smooth_quant_alpha": [0.15, 0.25, 0.5, 0.75, 0.95]}
+
+
+def _get_channel_alignment_param_grid() -> ParamGrid:
+    return {}
+
+
+def _get_bias_correction_param_grid() -> ParamGrid:
+    return {"fast_bias_correction": [True, False]}
+
+
+def get_quantization_param_grids(pipeline: Pipeline) -> List[ParamGrid]:
+    """
+    Returns params grid for post-training quantization algorithm.
+    """
+    algorithm_cls_to_param_grid = {
+        SmoothQuant: _get_smooth_quant_param_grid(),
+        ChannelAlignment: _get_channel_alignment_param_grid(),
+        MinMaxQuantization: _get_minmax_quantization_param_grid(),
+        FastBiasCorrection: _get_bias_correction_param_grid(),
+        BiasCorrection: _get_bias_correction_param_grid(),
+    }
+
+    param_grids = []
+    for step in pipeline.pipeline_steps:
+        param_grid = {}
+        for algorithm in step:
+            param_grid.update(algorithm_cls_to_param_grid[algorithm.__class__])
+        param_grids.append(param_grid)
+
+    return param_grids

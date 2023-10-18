@@ -22,6 +22,7 @@ from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.native.common import get_dataset_for_test
+from tests.openvino.native.common import get_openvino_version
 from tests.openvino.native.models import SYNTHETIC_MODELS
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import FPModel
@@ -33,7 +34,8 @@ from tests.openvino.omz_helpers import download_model
 from tests.shared.helpers import compare_stats
 from tests.shared.helpers import load_json
 
-REFERENCE_SCALES_DIR = OPENVINO_NATIVE_TEST_ROOT / "data" / "reference_scales"
+OV_VERSION = get_openvino_version()
+REFERENCE_SCALES_DIR = OPENVINO_NATIVE_TEST_ROOT / "data" / OV_VERSION / "reference_scales"
 
 
 def get_fq_nodes_stats_algo(model):

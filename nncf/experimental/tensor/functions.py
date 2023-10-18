@@ -441,7 +441,7 @@ def _initialize_backends():
     import nncf.experimental.tensor.numpy_functions
 
     try:
-        import nncf.experimental.tensor.torch_functions
+        import nncf.experimental.tensor.torch_functions  # noqa: F401
     except ImportError:
         pass
 

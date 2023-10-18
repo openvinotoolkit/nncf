@@ -8,6 +8,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# noqa
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity import elasticity_builder as elasticity_algo
 from nncf.experimental.torch.nas.bootstrapNAS.search.search import SearchAlgorithm
 from nncf.experimental.torch.nas.bootstrapNAS.training import progressive_shrinking_builder as ps_algo

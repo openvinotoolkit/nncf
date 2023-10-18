@@ -54,7 +54,7 @@ class Patcher:
         else:
             if inspect.isclass(obj_cls):
                 try:
-                    fn = obj_cls.__getattribute__(obj_cls, fn_name)  # type: ignore
+                    fn = obj_cls.__getattribute__(obj_cls, fn_name)
                 except AttributeError:
                     return
                 self._patch_class_fn(obj_cls, fn_name, fn, wrapper, force)

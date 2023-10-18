@@ -25,8 +25,8 @@ ONNX_OPERATION_METATYPES = OperatorMetatypeRegistry("onnx_operator_metatypes")
 
 
 class ONNXOpMetatype(OperatorMetatype):
-    op_names = []  # type: List[str]
-    subtypes = []  # type: List[Type[OperatorMetatype]]
+    op_names: List[str] = []
+    subtypes: List[Type[OperatorMetatype]] = []
 
     @classmethod
     def get_all_aliases(cls) -> List[str]:

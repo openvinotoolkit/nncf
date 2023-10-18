@@ -147,10 +147,10 @@ class FilterPruningController(BasePruningAlgoController):
             pruning_operations_metatype=PT_PRUNING_OPERATOR_METATYPES, prunable_types=prunable_types
         )
         self.pruning_quotas = {}
-        self.nodes_flops = {}  # type: Dict[NNCFNodeName, int]
-        self.nodes_params_num = {}  # type: Dict[NNCFNodeName, int]
-        self._next_nodes = {}  # type: Dict[int, List[NNCFNodeName]]
-        self._output_shapes = {}  # type: Dict[NNCFNodeName, int]
+        self.nodes_flops: Dict[NNCFNodeName, int] = {}
+        self.nodes_params_num: Dict[NNCFNodeName, int] = {}
+        self._next_nodes: Dict[int, List[NNCFNodeName]] = {}
+        self._output_shapes: Dict[NNCFNodeName, int] = {}
         _, modules_out_channels = get_prunable_layers_in_out_channels(self._graph)
         self._init_pruned_layers_params(modules_out_channels)
         self.flops_count_init()

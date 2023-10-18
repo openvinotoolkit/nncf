@@ -240,9 +240,9 @@ class TemplateTestChannelAlignment:
     def test_get_node_pairs(self, first_conv_attrs, second_conv_attrs, ref_match):
         algorithm = ChannelAlignment()
         algorithm._backend_entity = self.get_backend_cls()
-        if not first_conv_attrs is None:
+        if first_conv_attrs is not None:
             first_conv_attrs = self.convert_conv_layer_attrs(first_conv_attrs)
-        if not second_conv_attrs is None:
+        if second_conv_attrs is not None:
             second_conv_attrs = self.convert_conv_layer_attrs(second_conv_attrs)
         nncf_graph = NNCFGraphCA(
             self.get_conv_metatype(),

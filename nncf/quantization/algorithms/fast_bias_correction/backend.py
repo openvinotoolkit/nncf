@@ -20,7 +20,6 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
-from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.utils.registry import Registry
 from nncf.experimental.tensor import Tensor
@@ -145,7 +144,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
         :param node: NNCFNode to check.
         :param nncf_graph: NNCFGraph instance.
 
-        :return: boolean indicating whether the node has a quantized weights or not
+        :return: Boolean indicating whether the node has a quantized weights or not
         """
 
     @staticmethod

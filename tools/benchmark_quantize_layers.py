@@ -195,7 +195,7 @@ if __name__ == "__main__":
     file_name = "benchmark_quantize_layers_result.csv" if len(sys.argv) == 1 else sys.argv[1]
     print(f"Benchmark results will be saved to file {file_name}")
 
-    benchmark_data = []  # type: List[Dict[str, Any]]
+    benchmark_data: List[Dict[str, Any]] = []
     device_ids = range(torch.cuda.device_count())
     ngpus_per_node = len(device_ids)
     world_size = ngpus_per_node
@@ -208,7 +208,7 @@ if __name__ == "__main__":
 
         input_size = param_struct.batch.input_size
         if param_struct.exec_type == ExecutionType.DISTRIBUTED_DATA_PARALLEL:
-            output = []  # type: List[Dict[str, float]]
+            output: List[Dict[str, float]] = []
             try:
                 mp.spawn(
                     run_worker,
@@ -216,7 +216,7 @@ if __name__ == "__main__":
                     args=(world_size, module, input_size, num_runs, param_struct.dtype, output),
                 )
                 run_data = output[0]
-            except:  # pylint:disable=bare-except
+            except:  # pylint:disable=bare-except  # noqa: E722
                 run_data = {"time": -1}
         else:
             run_data = call_fn(module, input_size, param_struct.device, num_runs, dtype=param_struct.dtype)

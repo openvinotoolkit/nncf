@@ -19,10 +19,11 @@ from attr import dataclass
 
 from nncf import CompressWeightsMode
 from nncf.openvino.graph.node_utils import get_const_value
-from nncf.openvino.quantization.weights_compression import _calculate_scale_per_group
-from nncf.openvino.quantization.weights_compression import _get_int8_err
-from nncf.openvino.quantization.weights_compression import _get_nf4_error
 from nncf.quantization import compress_weights
+from nncf.quantization.algorithms.weight_compression.openvino_backend import _calculate_scale_per_group
+from nncf.quantization.algorithms.weight_compression.openvino_backend import _get_int8_err
+from nncf.quantization.algorithms.weight_compression.openvino_backend import _get_nf4_error
+from nncf.scopes import IgnoredScope
 from tests.openvino.native.models import IntegerModel
 from tests.openvino.native.models import SequentialMatmulModel
 from tests.openvino.native.models import WeightsModel
@@ -328,6 +329,27 @@ CALCULATE_SCALE_DESCS = [
 ]
 
 
+@pytest.mark.parametrize(
+    ("ignored_scope", "num_compressed"),
+    (
+        (IgnoredScope(types=["MatMul"]), 1),
+        (IgnoredScope(types=["Gather"]), 2),
+        (IgnoredScope(names=["MatMul_1"]), 2),
+        (IgnoredScope(patterns=["MatMul_\\d"]), 1),
+    ),
+)
+def test_weight_compress_with_ignored_scope(ignored_scope, num_compressed):
+    model = IntegerModel().ov_model
+    compressed_model = compress_weights(model, ignored_scope=ignored_scope)
+    ref_compressed_weights = TEST_MODELS[IntegerModel]
+    act_num = 0
+    for op in compressed_model.get_ops():
+        if op.get_type_name() == "Constant" and op.get_friendly_name() in ref_compressed_weights:
+            if op.get_element_type() == ov.Type(np.uint8):
+                act_num += 1
+    assert act_num == num_compressed
+
+
 @pytest.mark.parametrize("desc", CALCULATE_SCALE_DESCS)
 def test_calculate_scale_per_group(desc: CalculateScaleDesc):
     act_scale, _ = _calculate_scale_per_group(desc.weight, reduction_axes=desc.axis, group_size=desc.group_size)
@@ -345,10 +367,10 @@ def test_raise_error_with_incorrect_group_size():
 
 
 def test_raise_error_with_int8_and_non_default_ratio(mocker):
-    with pytest.raises(RuntimeError):
+    with pytest.raises(AttributeError):
         compress_weights(mocker.Mock(), mode=CompressWeightsMode.INT8, ratio=0.5)
 
 
 def test_raise_error_with_int8_and_non_default_group_size(mocker):
-    with pytest.raises(RuntimeError):
+    with pytest.raises(AttributeError):
         compress_weights(mocker.Mock(), mode=CompressWeightsMode.INT8, group_size=64)

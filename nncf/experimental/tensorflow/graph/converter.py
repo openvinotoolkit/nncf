@@ -294,9 +294,9 @@ class SubclassedConverter(TFModelConverter):
 
         # If `op_name` in `visited_ops` then operation `visited_ops[op_name]`
         # (i.e. operation with `op_name` name) is reachable from the `input_ops`.
-        input_ops = [graph.get_operation_by_name(name) for name in op_names]  # type: List[tf.Operation]
+        input_ops: List[tf.Operation] = [graph.get_operation_by_name(name) for name in op_names]
         queue = deque(input_ops)
-        visited_ops = {op.name: op for op in input_ops}  # type: Dict[str, tf.Operation]
+        visited_ops: Dict[str, tf.Operation] = {op.name: op for op in input_ops}
         while len(queue) != 0:
             v = queue.popleft()
             # A successor of node `v` is a node `u` such that exists
@@ -398,7 +398,7 @@ class SubclassedConverter(TFModelConverter):
         """
         const_ops = [op for op in graph.get_operations() if op.type == "Const"]
 
-        const_op_name_to_op_names_map = {}  # type: Dict[str, List[str]]
+        const_op_name_to_op_names_map: Dict[str, List[str]] = {}
         for const_op in const_ops:
             # Traverse the `graph` from the `const_op` and find the reachable ops
             # which are marked as visited (i.e. it's name in `marked_ops` dict)
@@ -418,7 +418,7 @@ class SubclassedConverter(TFModelConverter):
                         queue.append(u)
                         visited_ops[u.name] = u
 
-        op_name_to_const_op_names_map = {}  # type: Dict[str, List[Tuple[str, bool]]]
+        op_name_to_const_op_names_map: Dict[str, List[Tuple[str, bool]]] = {}
         for const_op_name, op_names in const_op_name_to_op_names_map.items():
             is_shared = len(op_names) > 1
             for op_name in op_names:

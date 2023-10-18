@@ -12,7 +12,7 @@
 from collections import OrderedDict
 from inspect import Parameter
 from inspect import Signature
-from typing import Any, List
+from typing import Any, List, Set
 
 import torch
 
@@ -60,7 +60,7 @@ def replicate_same_tensors(obj: Any) -> Any:
     at runtime one and the same tensor could be wrapped by input/output wrappers twice,
     which will disrupt the traced graph structure and possibly hook calls.
     """
-    observed_tensor_object_ids = set()  # type: Set[int]
+    observed_tensor_object_ids: Set[int] = set()
 
     def replicate_fn(tensor: torch.Tensor) -> torch.Tensor:
         tensor_object_id = id(tensor)
@@ -104,7 +104,7 @@ class InputInfoWrapManager:
         bound_params = fwd_signature.bind(*arg_iis, **kwarg_iis)
 
         self._fwd_params_to_input_infos_odict = bound_params.arguments
-        self._fwd_signature = fwd_signature  # type: Signature
+        self._fwd_signature: Signature = fwd_signature
 
     def set_device(self, device: str):
         self._device = device

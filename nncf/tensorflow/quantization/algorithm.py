@@ -18,12 +18,12 @@ from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
 from nncf.common.compression import BaseCompressionAlgorithmController
-from nncf.common.graph import INPUT_NOOP_METATYPES
-from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import ConvertDtypeLayerAttributes
+from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
+from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TransformationPriority
@@ -164,8 +164,8 @@ class TFQuantizationSetup:
 
     def __init__(self):
         super().__init__()
-        self._quantization_points = []  # type: List[TFQuantizationPoint]
-        self._unified_scale_groups = []  # type: List[List[QuantizationPointId]]
+        self._quantization_points: List[TFQuantizationPoint] = []
+        self._unified_scale_groups: List[List[QuantizationPointId]] = []
 
     def add_quantization_point(self, point: TFQuantizationPoint):
         """
@@ -458,8 +458,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         )
         setup = TFQuantizationSetup()
 
-        quantized_layer_names_vs_qconfigs = {}  # type: Dict[str, QuantizerConfig]
-        qp_id_to_index = {}  # type: Dict[QuantizationPointId, int]
+        quantized_layer_names_vs_qconfigs: Dict[str, QuantizerConfig] = {}
+        qp_id_to_index: Dict[QuantizationPointId, int] = {}
         tf_setup_qp_index = 0
         applied_overflow_fix = False
         first_conv_nodes = get_first_nodes_of_type(nncf_graph, ["Conv2D", "Conv3D"])
@@ -578,7 +578,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             if metatype in OUTPUT_NOOP_METATYPES:
                 continue
 
-            if not metatype in QUANTIZATION_LAYER_METATYPES:
+            if metatype not in QUANTIZATION_LAYER_METATYPES:
                 continue
 
             assert issubclass(metatype, TFLayerWithWeightsMetatype) or issubclass(metatype, TFOpWithWeightsMetatype)
@@ -610,7 +610,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         input_preprocessing_nodes = self._get_input_preprocessing_nodes(nncf_graph, model)
         input_preprocessing_node_names = [n.node_name for n in input_preprocessing_nodes]
         if custom_layer_node_names:
-            custom_layer_node_names_str = ", ".join([str(l) for l in custom_layer_node_names])
+            custom_layer_node_names_str = ", ".join([str(n) for n in custom_layer_node_names])
             nncf_logger.warning(
                 f"Following custom layers will be ignored during quantization (custom layer quantization not supported "
                 f"by NNCF yet):\n[{custom_layer_node_names_str}]"

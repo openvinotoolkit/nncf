@@ -12,6 +12,7 @@
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 from nncf.api.compression import TModel
+from nncf.common.factory import NNCFGraphFactory
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
@@ -25,8 +26,9 @@ from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParame
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResults
 from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
-from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_quantization_param_grid
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_quantization_param_grids
+from nncf.quantization.algorithms.post_training.pipeline import create_ptq_pipeline
+from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.scopes import IgnoredScope
 
 TTensor = TypeVar("TTensor")
@@ -228,7 +230,11 @@ def quantize_with_accuracy_control(
 
 @api(canonical_alias="nncf.compress_weights")
 def compress_weights(
-    model: TModel, mode=CompressWeightsMode.INT8, ratio: Optional[float] = None, group_size: Optional[int] = None
+    model: TModel,
+    mode=CompressWeightsMode.INT8,
+    ratio: Optional[float] = None,
+    group_size: Optional[int] = None,
+    ignored_scope: Optional[IgnoredScope] = None,
 ) -> TModel:
     """
     Compress model weights.
@@ -243,9 +249,10 @@ def compress_weights(
         and the rest to INT8).
     :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
         The value -1 means no grouping.
+    :param ignored_scope: An ignored scope that defined the list of model control
+        flow graph nodes to be ignored during quantization.
     :return: The non-trainable model with compressed weights.
     """
-    backend = get_backend(model)
     if mode == CompressWeightsMode.INT8:
         if ratio is None:
             ratio = 1
@@ -262,16 +269,15 @@ def compress_weights(
         if group_size is None:
             group_size = 128
 
+    backend = get_backend(model)
     if backend == BackendType.TORCH:
         from nncf.torch.quantization.quantize_model import compress_weights_impl
 
-        return compress_weights_impl(model, mode, ratio, group_size)
-    if backend == BackendType.OPENVINO:
-        from nncf.openvino.quantization.quantize_model import compress_weights_impl
+        return compress_weights_impl(model, mode, ratio, group_size, ignored_scope)
 
-        return compress_weights_impl(model, mode, ratio, group_size)
-
-    raise RuntimeError(f"Unsupported type of backend: {backend}")
+    compression_algorithm = WeightCompression(mode, ratio, group_size, ignored_scope)
+    graph = NNCFGraphFactory.create(model)
+    return compression_algorithm.apply(model, graph)
 
 
 def quantize_with_tune_hyperparams(
@@ -327,12 +333,12 @@ def quantize_with_tune_hyperparams(
         "advanced_parameters": advanced_quantization_parameters,
     }
 
-    quantization_param_grid = get_quantization_param_grid()
+    param_grids = get_quantization_param_grids(create_ptq_pipeline(**init_quantization_params))
 
     hyperparameter_tuner = HyperparameterTuner(
-        PostTrainingQuantization,
+        create_ptq_pipeline,
         init_quantization_params,
-        quantization_param_grid,
+        param_grids,
         calibration_dataset,
         validation_fn,
         tuner_subset_size,
