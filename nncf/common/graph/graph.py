@@ -609,8 +609,8 @@ class NNCFGraph:
                 label["shape"] = edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
 
             if label:
-                if len(label) == 1 and extended:
-                    attrs_edge["label"] = label.popitem()[1]
+                if "shape" in label and len(label) == 1:
+                    attrs_edge["label"] = label["shape"]
                 else:
                     attrs_edge["label"] = ", ".join((f"{k}:{v}" for k, v in label.items()))
             out_graph.add_edge(u, v, **attrs_edge)
