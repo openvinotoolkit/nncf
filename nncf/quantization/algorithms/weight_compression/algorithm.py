@@ -24,12 +24,15 @@ from typing import Dict, List, Optional, TypeVar
 from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.scopes import should_consider_scope
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.backend import ALGO_BACKENDS
+from nncf.scopes import IgnoredScope
+from nncf.scopes import get_ignored_node_names_from_ignored_scope
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -48,6 +51,7 @@ class WeightCompression(Algorithm):
         mode: CompressWeightsMode,
         ratio: float = None,
         group_size: int = None,
+        ignored_scope: Optional[IgnoredScope] = None,
     ):
         """
         :param mode: Defines a mode for weight compression.
@@ -59,11 +63,14 @@ class WeightCompression(Algorithm):
             and the rest to INT8).
         :param group_size: number of weights (e.g. 128) in the channel dimension
             that share quantization parameters (scale). The value -1 means no grouping.
+        :param ignored_scope: An ignored scope that defined the list of model control
+            flow graph nodes to be ignored during quantization.
         """
         super().__init__()
         self._mode = mode
         self._group_size = group_size
         self._ratio = ratio
+        self._ignored_scope = IgnoredScope() if ignored_scope is None else ignored_scope
         self._backend_entity = None
         self._algorithm_key = f"CW_{hash(self)}"
 
@@ -95,7 +102,7 @@ class WeightCompression(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         self._set_backend_entity(model)
-        self._backend_entity.validate_params(self._mode)
+        self._backend_entity.validate_params(self._mode, self._ignored_scope)
         nodes_to_compress = self._get_nodes_to_compress(graph)
         transformed_model = self._backend_entity.do_compression(
             model, nodes_to_compress, self._mode, self._ratio, self._group_size
@@ -111,9 +118,15 @@ class WeightCompression(Algorithm):
         """
         weighted_metatypes = self._backend_entity.weighted_metatypes
         ordered_nodes_to_compress = []
+        ignored_names = list(
+            get_ignored_node_names_from_ignored_scope(
+                self._ignored_scope, nncf_graph, strict=self._ignored_scope.validate
+            )
+        )
         for node in nncf_graph.topological_sort():
             is_node_with_weights = self._backend_entity.is_node_with_weights(node)
-            if node.metatype in weighted_metatypes and is_node_with_weights:
+            is_within_scope = should_consider_scope(node.node_name, ignored_names)
+            if node.metatype in weighted_metatypes and is_node_with_weights and is_within_scope:
                 ordered_nodes_to_compress.append(node)
         return ordered_nodes_to_compress
 

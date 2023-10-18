@@ -11,12 +11,13 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List, TypeVar
+from typing import List, Optional, TypeVar
 
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.utils.registry import Registry
 from nncf.parameters import CompressWeightsMode
+from nncf.scopes import IgnoredScope
 
 TModel = TypeVar("TModel")
 ALGO_BACKENDS = Registry("algo_backends")
@@ -42,7 +43,7 @@ class WeightCompressionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def validate_params(mode: CompressWeightsMode) -> None:
+    def validate_params(mode: CompressWeightsMode, ignored_scope: Optional[IgnoredScope] = None) -> None:
         """
         Performs validation of the algorithm's parameters and raises an error for unsupported configuration of
         parameters. Should be called on early algorithm steps to prevent execution of time-consuming operations.
@@ -52,6 +53,8 @@ class WeightCompressionAlgoBackend(ABC):
             NF4 stands for a mixed-precision weights quantization to NF4 data type. The first and last layers
             are always compressed to a backup precision which is 8-bit integer by default. All others are quantized
             whether to NF4 or to a backup precision depending on criteria and the given ratio.
+        :param ignored_scope: An ignored scope that defined the list of model control
+            flow graph nodes to be ignored during quantization.
         """
 
     @staticmethod

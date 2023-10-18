@@ -111,7 +111,11 @@ def min_max_quantize_model(
     quantization_params = {} if quantization_params is None else quantization_params
 
     advanced_parameters = quantization_params.get("advanced_parameters", AdvancedQuantizationParameters())
+
+    # ONNX backend does not support these algorithms
     advanced_parameters.disable_bias_correction = True
+    advanced_parameters.disable_channel_alignment = True
+    advanced_parameters.smooth_quant_alpha = -1
     quantization_params["advanced_parameters"] = advanced_parameters
 
     post_training_quantization = PostTrainingQuantization(subset_size=1, **quantization_params)

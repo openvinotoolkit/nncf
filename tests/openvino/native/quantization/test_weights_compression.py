@@ -23,6 +23,7 @@ from nncf.quantization import compress_weights
 from nncf.quantization.algorithms.weight_compression.openvino_backend import _calculate_scale_per_group
 from nncf.quantization.algorithms.weight_compression.openvino_backend import _get_int8_err
 from nncf.quantization.algorithms.weight_compression.openvino_backend import _get_nf4_error
+from nncf.scopes import IgnoredScope
 from tests.openvino.native.models import IntegerModel
 from tests.openvino.native.models import SequentialMatmulModel
 from tests.openvino.native.models import WeightsModel
@@ -326,6 +327,27 @@ CALCULATE_SCALE_DESCS = [
         group_size=2,
     ),
 ]
+
+
+@pytest.mark.parametrize(
+    ("ignored_scope", "num_compressed"),
+    (
+        (IgnoredScope(types=["MatMul"]), 1),
+        (IgnoredScope(types=["Gather"]), 2),
+        (IgnoredScope(names=["MatMul_1"]), 2),
+        (IgnoredScope(patterns=["MatMul_\\d"]), 1),
+    ),
+)
+def test_weight_compress_with_ignored_scope(ignored_scope, num_compressed):
+    model = IntegerModel().ov_model
+    compressed_model = compress_weights(model, ignored_scope=ignored_scope)
+    ref_compressed_weights = TEST_MODELS[IntegerModel]
+    act_num = 0
+    for op in compressed_model.get_ops():
+        if op.get_type_name() == "Constant" and op.get_friendly_name() in ref_compressed_weights:
+            if op.get_element_type() == ov.Type(np.uint8):
+                act_num += 1
+    assert act_num == num_compressed
 
 
 @pytest.mark.parametrize("desc", CALCULATE_SCALE_DESCS)
