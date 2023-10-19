@@ -917,16 +917,21 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         return from_node_key in self._branch_nodes_directly_dominating_outputs
 
     def get_visualized_graph(self):
+        # .dot format reserves ':' character in node names
+        __RESERVED_DOT_CHARACTER = ":"
+        __CHARACTER_REPLACE_TO = "^"
+
         out_graph = nx.DiGraph()
         unified_scale_group_vs_pq_node_id_dict: Dict[int, List[str]] = {}
         for node_key, node in self.nodes.items():
+            dot_node_key = node_key.replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO)
             node_type = node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
             if self.is_insertion_point(node_type):
                 insertion_point_data: TargetPoint = node[
                     QuantizerPropagationStateGraph.QUANT_INSERTION_POINT_DATA_NODE_ATTR
                 ]
                 label = "TP: {}".format(str(insertion_point_data))
-                out_graph.add_node(node_key, label=label, color="red")
+                out_graph.add_node(dot_node_key, label=label, color="red")
                 if node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR] is not None:
                     prop_quantizer: PropagatingQuantizer = node[
                         QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR
@@ -947,7 +952,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                         else "yellow"
                     )
                     out_graph.add_node(quant_node_key, color=pq_color, label=quant_node_label)
-                    out_graph.add_edge(quant_node_key, node_key, style="dashed")
+                    out_graph.add_edge(quant_node_key, dot_node_key, style="dashed")
                     if prop_quantizer.unified_scale_type is not None:
                         gid = self._unified_scale_group_manager.get_group_id_by_propagating_quantizer_id(
                             prop_quantizer.id
@@ -958,9 +963,9 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                             unified_scale_group_vs_pq_node_id_dict[gid] = [quant_node_key]
 
             elif node_type == QuantizerPropagationStateGraphNodeType.OPERATOR:
-                out_graph.add_node(node_key)
+                out_graph.add_node(dot_node_key)
             elif node_type == QuantizerPropagationStateGraphNodeType.AUXILIARY_BARRIER:
-                out_graph.add_node(node_key, color="green", label=node["label"])
+                out_graph.add_node(dot_node_key, color="green", label=node["label"])
             else:
                 raise RuntimeError("Invalid QuantizerPropagationStateGraph node!")
         for u, v in self.edges:
@@ -973,6 +978,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             is_integer_path = edge[QuantizerPropagationStateGraph.IS_INTEGER_PATH_EDGE_ATTR]
             if is_integer_path:
                 attrs = {"color": "violet", "style": "bold"}
+            u = u.replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO)
+            v = v.replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO)
             out_graph.add_edge(u, v, **attrs)
 
         for gid, group_pq_node_keys in unified_scale_group_vs_pq_node_id_dict.items():
@@ -989,6 +996,8 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 except StopIteration:
                     done = True
                     next_pq_node_key = group_pq_node_keys[0]  # back to the first elt
+                curr_pq_node_key = curr_pq_node_key.replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO)
+                next_pq_node_key = next_pq_node_key.replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO)
                 out_graph.add_edge(
                     curr_pq_node_key,
                     next_pq_node_key,
