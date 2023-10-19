@@ -98,8 +98,9 @@ class Ranker:
             if x.metatype in self._algo_backend.get_quantizer_metatypes()
         ]
 
-        quantized_model_graph_without_shapeof = deepcopy(quantized_model_graph)
-        remove_shapeof_subgraphs(quantized_model_graph_without_shapeof, self._algo_backend.get_shapeof_metatypes())
+        quantized_model_graph_without_shapeof = remove_shapeof_subgraphs(
+            deepcopy(quantized_model_graph), self._algo_backend.get_shapeof_metatypes()
+        )
 
         for quantizer_node in reversed(quantizers):
             if processed.get(quantizer_node.node_name, False):

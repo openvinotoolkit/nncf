@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from abc import abstractmethod
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import List
 
@@ -88,7 +89,7 @@ class TemplateTestQuantizerConfig:
         min_max_algo._backend_entity = self.get_algo_backend()
         nncf_graph = single_conv_nncf_graph.nncf_graph
         inference_nncf_graph = transform_to_inference_graph(
-            nncf_graph,
+            deepcopy(nncf_graph),
             min_max_algo._backend_entity.shapeof_metatypes,
             min_max_algo._backend_entity.dropout_metatypes,
             min_max_algo._backend_entity.read_variable_metatypes,
@@ -142,7 +143,7 @@ class TemplateTestQuantizerConfig:
         min_max_algo._backend_entity = self.get_algo_backend()
         nncf_graph = single_conv_nncf_graph.nncf_graph
         inference_nncf_graph = transform_to_inference_graph(
-            nncf_graph,
+            deepcopy(nncf_graph),
             min_max_algo._backend_entity.shapeof_metatypes,
             min_max_algo._backend_entity.dropout_metatypes,
             min_max_algo._backend_entity.read_variable_metatypes,
@@ -184,7 +185,7 @@ class TemplateTestQuantizerConfig:
         min_max_algo._backend_entity = self.get_algo_backend()
         nncf_graph = depthwise_conv_nncf_graph.nncf_graph
         inference_nncf_graph = transform_to_inference_graph(
-            nncf_graph,
+            deepcopy(nncf_graph),
             min_max_algo._backend_entity.shapeof_metatypes,
             min_max_algo._backend_entity.dropout_metatypes,
             min_max_algo._backend_entity.read_variable_metatypes,

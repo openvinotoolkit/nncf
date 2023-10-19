@@ -226,8 +226,7 @@ def create_test_params():
 @pytest.mark.parametrize("nncf_graph,test_case", create_test_params())
 def test_find_quantizer_nodes_to_cut(nncf_graph: NNCFGraph, test_case: TestCase):
     quantizer_node = nncf_graph.get_node_by_name(test_case.node_name)
-    nncf_graph_without_shapeof = deepcopy(nncf_graph)
-    remove_shapeof_subgraphs(nncf_graph_without_shapeof, SHAPEOF_METATYPES)
+    nncf_graph_without_shapeof = remove_shapeof_subgraphs(deepcopy(nncf_graph), SHAPEOF_METATYPES)
     nodes, ops = find_quantizer_nodes_to_cut(
         nncf_graph_without_shapeof,
         quantizer_node,
