@@ -39,7 +39,7 @@ def transform_to_inference_graph(
     """
     inference_graph = deepcopy(nncf_graph)
     remove_shapeof_subgraphs(inference_graph, shapeof_metatypes, read_variable_metatypes)
-    remove_dropout_nodes(inference_graph, dropout_metatypes)
+    remove_nodes_and_reconnect_graph(inference_graph, dropout_metatypes)
     filter_constant_nodes(inference_graph, read_variable_metatypes)
     return inference_graph
 
@@ -91,24 +91,25 @@ def remove_shapeof_subgraphs(
     nncf_graph.remove_nodes_from(nodes_to_drop)
 
 
-def remove_dropout_nodes(
+def remove_nodes_and_reconnect_graph(
     nncf_graph: NNCFGraph,
-    dropout_metatypes: List[OperatorMetatype],
+    metatypes: List[OperatorMetatype],
 ) -> None:
     """
-    Removes the Dropout nodes from the provided NNCFGraph instance and
-        connects droput previous node with dropout next nodes inplace
-        for each dropout node.
+    Removes nodes with metatypes specified by `metatypes` parameter from
+    the provided NNCFGraph instance and connects previous node of a matched node
+    with next nodes of a matched node inplace for each matched node.
+    Matched nodes should have only one input node and only one output port.
 
     :param nncf_graph: NNCFGraph instance for the transformation.
-    :param dropout_metatypes: List of backend-specific Dropout metatypes.
+    :param metatypes: List of backend-specific metatypes.
     """
-    if not dropout_metatypes:
+    if not metatypes:
         return
 
     nodes_to_drop = []
-    for node in nncf_graph.get_nodes_by_metatypes(dropout_metatypes):
-        if node.metatype in dropout_metatypes:
+    for node in nncf_graph.get_nodes_by_metatypes(metatypes):
+        if node.metatype in metatypes:
             nodes_to_drop.append(node)
 
             prev_nodes = nncf_graph.get_previous_nodes(node)
@@ -122,7 +123,7 @@ def remove_dropout_nodes(
             # parallel_input_port_ids
             for output_node in nncf_graph.get_next_nodes(node):
                 output_edge = nncf_graph.get_edge(node, output_node)
-                # Connects dropout previous node with all next nodes
+                # Connects previous node with all next nodes
                 # to keep NNCFGraph connected.
                 assert input_edge.dtype == output_edge.dtype
                 assert input_edge.tensor_shape == output_edge.tensor_shape

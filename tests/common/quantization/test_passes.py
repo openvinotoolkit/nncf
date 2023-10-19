@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from nncf.quantization.passes import remove_dropout_nodes
+from nncf.quantization.passes import remove_nodes_and_reconnect_graph
 from tests.post_training.test_templates.models import NNCFGraphDropoutRemovingCase
 from tests.shared.nx_graph import compare_nx_graph_with_reference
 from tests.shared.paths import TEST_ROOT
@@ -29,7 +29,7 @@ class TestModes(Enum):
 
 
 @pytest.mark.parametrize("mode", [TestModes.VALID, TestModes.WRONG_TENSOR_SHAPE, TestModes.WRONG_PARALLEL_EDGES])
-def test_remove_dropout_nodes_inplace(mode: TestModes):
+def test_remove_nodes_and_reconnect_graph(mode: TestModes):
     def _check_graphs(dot_file_name, nncf_graph) -> None:
         nx_graph = nncf_graph.get_graph_for_structure_analysis()
         path_to_dot = DATA_ROOT / dot_file_name
@@ -46,9 +46,9 @@ def test_remove_dropout_nodes_inplace(mode: TestModes):
 
     if mode != TestModes.VALID:
         with pytest.raises(AssertionError):
-            remove_dropout_nodes(nncf_graph, [dropout_metatype])
+            remove_nodes_and_reconnect_graph(nncf_graph, [dropout_metatype])
         return
 
     _check_graphs(dot_reference_path_before, nncf_graph)
-    remove_dropout_nodes(nncf_graph, [dropout_metatype])
+    remove_nodes_and_reconnect_graph(nncf_graph, [dropout_metatype])
     _check_graphs(dot_reference_path_after, nncf_graph)
