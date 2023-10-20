@@ -95,9 +95,9 @@
     },
     "MatMul_1/fq_output_0": {
         "input_low": 0.0,
-        "input_high": 1.7037991285324097,
+        "input_high": 7.999999797903001e-05,
         "output_low": 0.0,
-        "output_high": 1.7037991285324097
+        "output_high": 7.999999797903001e-05
     },
     "MatMul_1/fq_weights_1": {
         "input_low": [

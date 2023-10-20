@@ -94,10 +94,10 @@
         "output_high": 0.91275554895401
     },
     "MatMul_1/fq_output_0": {
-        "input_low": 0.0,
-        "input_high": 1.7037991285324097,
-        "output_low": 0.0,
-        "output_high": 1.7037991285324097
+        "input_low": -0.0008062992128543556,
+        "input_high": 0.0007999999797903001,
+        "output_low": -0.0008062992128543556,
+        "output_high": 0.0007999999797903001
     },
     "MatMul_1/fq_weights_1": {
         "input_low": [
@@ -182,10 +182,10 @@
         ]
     },
     "Gather_2/fq_output_0": {
-        "input_low": 0.0,
-        "input_high": 0.91275554895401,
-        "output_low": 0.0,
-        "output_high": 0.91275554895401
+        "input_low": -0.0008062992128543556,
+        "input_high": 0.0007999999797903001,
+        "output_low": -0.0008062992128543556,
+        "output_high": 0.0007999999797903001
     },
     "Gather_2/fq_weights_0": {
         "input_low": [
