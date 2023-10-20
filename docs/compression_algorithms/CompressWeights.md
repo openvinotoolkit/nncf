@@ -32,7 +32,7 @@ from nncf import CompressWeightsMode
 compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4)
 ```
 
-- Compress part of weights to nf4 with a different group size and the rest layers to 8-bit integer data type.
+- Compress weights of 90% of layers to nf4 with the group size 64, and the rest of layers to 8-bit integer data type.
 
 ```python
 from nncf import compress_weights
