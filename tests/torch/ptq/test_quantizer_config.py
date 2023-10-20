@@ -55,8 +55,8 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
     @pytest.fixture(
         params=[
             (TargetType.PRE_LAYER_OPERATION, "/Sum_1_0", (0, 2), (0, 1, 2)),
-            (TargetType.POST_LAYER_OPERATION, "/Conv_1_0", (0, 2, 3), (0, 1, 2, 3)),
-            (TargetType.OPERATION_WITH_WEIGHTS, "/Conv_1_0", (1, 2, 3), (0, 1, 2, 3)),
+            (TargetType.POST_LAYER_OPERATION, "/Conv_1_0", (0, 2, 3), (1, 2, 3)),
+            (TargetType.OPERATION_WITH_WEIGHTS, "/Conv_1_0", (1, 2, 3), (1, 2, 3)),
         ]
     )
     def statistic_collector_parameters(self, request) -> ParamsCls:
