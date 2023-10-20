@@ -297,6 +297,12 @@
                 "weights": ["q8_w_sym", "q8_w_asym"]
             }
         },
-        {"type": "EmbeddingBag"}
+        {"type": "EmbeddingBag"},
+        {
+            "type": "BatchNorm",
+            "quantization": {
+                "activations": ["q8_a_ch"]
+            }
+        }
     ]
 }

@@ -253,6 +253,7 @@ class ONNXConcatMetatype(ONNXOpMetatype):
 class ONNXBatchNormMetatype(ONNXOpMetatype):
     name = "BatchNormalizationOp"
     op_names = ["BatchNormalization"]
+    hw_config_names = [HWConfigOpName.BATCH_NORM]
 
 
 @ONNX_OPERATION_METATYPES.register()

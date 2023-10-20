@@ -216,6 +216,7 @@ class OVConcatMetatype(OVOpMetatype):
 class OVBatchNormMetatype(OVOpMetatype):
     name = "BatchNormalizationOp"
     op_names = ["BatchNormInference"]
+    hw_config_names = [HWConfigOpName.BATCH_NORM]
 
 
 @OV_OPERATOR_METATYPES.register()
