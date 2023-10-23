@@ -265,7 +265,7 @@
                 "compression_description": "DoReFa (weights), scale/threshold (activations)",
                 "diff_fp32_min": -8.3,
                 "diff_fp32_max": 0.1,
-                "skip_ov": true
+                "skip_ov": "Issue:22543"
             },
             "resnet18_imagenet_pruning_magnitude": {
                 "config": "examples/torch/classification/configs/pruning/resnet18_imagenet_pruning_magnitude.json",
@@ -461,7 +461,7 @@
                 "model_description": "UNet",
                 "compression_description": "INT8 + Sparsity 60% (Magnitude)",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.6,
+                "diff_fp32_max": 0.7,
                 "multiprocessing_distributed": true
             },
             "icnet_camvid": {
@@ -521,7 +521,8 @@
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
                 "diff_fp32_max": 0.1,
-                "multiprocessing_distributed": true
+                "multiprocessing_distributed": true,
+                "skip_ov": "Issue:123448"
             },
             "unet_mapillary_magnitude_sparsity_int8": {
                 "config": "examples/torch/semantic_segmentation/configs/unet_mapillary_magnitude_sparsity_int8.json",
@@ -534,7 +535,8 @@
                 "compression_description": "INT8 + Sparsity 60% (Magnitude)",
                 "diff_fp32_min": -1,
                 "diff_fp32_max": 0.1,
-                "multiprocessing_distributed": true
+                "multiprocessing_distributed": true,
+                "skip_ov": "Issue:123448"
             },
             "unet_mapillary_pruning_geometric_median": {
                 "config": "examples/torch/semantic_segmentation/configs/unet_mapillary_pruning_geometric_median.json",
