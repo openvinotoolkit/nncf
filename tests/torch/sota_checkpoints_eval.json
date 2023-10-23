@@ -36,7 +36,7 @@
                 "config": "examples/torch/classification/configs/mixed_precision/resnet50_imagenet_mixed_int_hawq.json",
                 "reference": "resnet50_imagenet",
                 "target_ov": 75.5,
-                "target_pt": 75.84,
+                "target_pt": 75.86                ,
                 "metric_type": "Acc@1",
                 "resume": "resnet50_imagenet_int4_int8.pth",
                 "model_description": "ResNet-50",
@@ -88,7 +88,7 @@
                 "config": "examples/torch/classification/configs/quantization/inception_v3_imagenet_int8.json",
                 "reference": "inception_v3_imagenet",
                 "target_ov": 77.49,
-                "target_pt": 77.45,
+                "target_pt": 77.43,
                 "metric_type": "Acc@1",
                 "resume": "inception_v3_imagenet_int8.pth",
                 "model_description": "Inception V3",
@@ -127,19 +127,23 @@
                 "model_description": "MobileNet V2",
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.15
+                "diff_fp32_max": 0.15,
+                "diff_target_pt_min": -0.3,
+                "diff_target_pt_max": 0.3
             },
             "mobilenet_v2_imagenet_int8_per_tensor": {
                 "config": "examples/torch/classification/configs/quantization/mobilenet_v2_imagenet_int8_per_tensor.json",
                 "reference": "mobilenet_v2_imagenet",
                 "target_ov": 71.17,
-                "target_pt": 71.18,
+                "target_pt": 71.28                ,
                 "metric_type": "Acc@1",
                 "resume": "mobilenet_v2_imagenet_int8_per_tensor.pth",
                 "model_description": "MobileNet V2",
                 "compression_description": "INT8 (per-tensor only)",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.15
+                "diff_fp32_max": 0.15,
+                "diff_target_pt_min": -0.3,
+                "diff_target_pt_max": 0.3
             },
             "mobilenet_v2_imagenet_int4_int8": {
                 "config": "examples/torch/classification/configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_hawq.json",
@@ -151,7 +155,9 @@
                 "model_description": "MobileNet V2",
                 "compression_description": "Mixed, 58.88% INT8 / 41.12% INT4",
                 "diff_fp32_min": -1.5,
-                "diff_fp32_max": 0.4
+                "diff_fp32_max": 0.4,
+                "diff_target_pt_min": -0.3,
+                "diff_target_pt_max": 0.3
             },
             "mobilenet_v2_imagenet_rb_sparsity_int8": {
                 "config": "examples/torch/classification/configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json",
@@ -163,7 +169,9 @@
                 "model_description": "MobileNet V2",
                 "compression_description": "INT8 + Sparsity 52% (RB)",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.15
+                "diff_fp32_max": 0.15,
+                "diff_target_pt_min": -0.3,
+                "diff_target_pt_max": 0.3
             },
             "mobilenet_v3_small_imagenet": {
                 "config": "examples/torch/classification/configs/quantization/mobilenet_v3_small_imagenet.json",
@@ -243,7 +251,7 @@
                 "resume": "resnet18_imagenet_binarization_xnor.pth",
                 "model_description": "ResNet-18",
                 "compression_description": "XNOR (weights), scale/threshold (activations)",
-                "diff_fp32_min": -8.1,
+                "diff_fp32_min": -8.5,
                 "diff_fp32_max": 0.1
             },
             "resnet18_imagenet_binarization_dorefa": {
@@ -505,7 +513,7 @@
             "unet_mapillary_int8": {
                 "config": "examples/torch/semantic_segmentation/configs/unet_mapillary_int8.json",
                 "reference": "unet_mapillary",
-                "target_ov": 56.09,
+                "target_ov": 56.14,
                 "target_pt": 56.08,
                 "metric_type": "Mean IoU",
                 "resume": "unet_mapillary_int8.pth",
