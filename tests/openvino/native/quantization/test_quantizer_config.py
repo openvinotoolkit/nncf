@@ -12,10 +12,12 @@
 import pytest
 
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
@@ -27,6 +29,9 @@ from tests.post_training.test_templates.models import NNCFGraphToTestSumAggregat
 from tests.post_training.test_templates.test_quantizer_config import TemplateTestQuantizerConfig
 
 ParamsCls = TemplateTestQuantizerConfig.TestGetStatisticsCollectorParameters
+
+
+# pylint: disable=protected-access
 
 
 class TestQuantizerConfig(TemplateTestQuantizerConfig):
@@ -44,6 +49,9 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
         assert len(aggrs) == 2
         assert MeanAggregator in aggrs
         assert aggrs[0].__class__ == aggrs[1].__class__
+
+    def get_reduction_axes(self, reducer: TensorReducerBase) -> ReductionAxes:
+        return reducer._reduction_axes
 
     @pytest.fixture(
         params=[

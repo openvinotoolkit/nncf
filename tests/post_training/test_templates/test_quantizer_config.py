@@ -25,13 +25,13 @@ from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MinReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import QuantizationParameters
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.passes import transform_to_inference_graph
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from tests.post_training.test_templates.models import NNCFGraphToTest
@@ -54,6 +54,10 @@ class TemplateTestQuantizerConfig:
         pass
 
     @abstractmethod
+    def get_reduction_axes(self, reducer) -> ReductionAxes:
+        pass
+
+    @abstractmethod
     @pytest.fixture
     def single_conv_nncf_graph(self) -> NNCFGraphToTest:
         pass
@@ -72,8 +76,8 @@ class TemplateTestQuantizerConfig:
     class TestGetStatisticsCollectorParameters:
         target_type: TargetType
         target_node_name: str
-        ref_per_ch_reduction_shape: List[int]
-        ref_per_tensor_reduction_shape: List[int]
+        ref_per_ch_reduction_axes: List[int]
+        ref_per_tensor_reduction_axes: List[int]
 
     @abstractmethod
     @pytest.fixture
@@ -81,8 +85,7 @@ class TemplateTestQuantizerConfig:
         pass
 
     def test_default_quantizer_config(self, single_conv_nncf_graph):
-        algo = PostTrainingQuantization()
-        min_max_algo = algo.algorithms[0]
+        min_max_algo = MinMaxQuantization()
         min_max_algo._backend_entity = self.get_algo_backend()
         nncf_graph = single_conv_nncf_graph.nncf_graph
         inference_nncf_graph = transform_to_inference_graph(
@@ -127,18 +130,15 @@ class TemplateTestQuantizerConfig:
         signed_activations,
         single_conv_nncf_graph,
     ):
-        algo = PostTrainingQuantization(
+        min_max_algo = MinMaxQuantization(
             preset=preset,
-            advanced_parameters=AdvancedQuantizationParameters(
-                activations_quantization_params=QuantizationParameters(
-                    num_bits=activation_bits, per_channel=activation_per_channel, signedness_to_force=signed_activations
-                ),
-                weights_quantization_params=QuantizationParameters(
-                    num_bits=weight_bits, per_channel=weight_per_channel, signedness_to_force=signed_weights
-                ),
+            activations_quantization_params=QuantizationParameters(
+                num_bits=activation_bits, per_channel=activation_per_channel, signedness_to_force=signed_activations
+            ),
+            weights_quantization_params=QuantizationParameters(
+                num_bits=weight_bits, per_channel=weight_per_channel, signedness_to_force=signed_weights
             ),
         )
-        min_max_algo = algo.algorithms[0]
         min_max_algo._backend_entity = self.get_algo_backend()
         nncf_graph = single_conv_nncf_graph.nncf_graph
         inference_nncf_graph = transform_to_inference_graph(
@@ -179,8 +179,7 @@ class TemplateTestQuantizerConfig:
                         assert quantization_point.qconfig.signedness_to_force == signed_activations
 
     def test_depthwise_conv_default_quantizer_config(self, depthwise_conv_nncf_graph):
-        algo = PostTrainingQuantization()
-        min_max_algo = algo.algorithms[0]
+        min_max_algo = MinMaxQuantization()
         min_max_algo._backend_entity = self.get_algo_backend()
         nncf_graph = depthwise_conv_nncf_graph.nncf_graph
         inference_nncf_graph = transform_to_inference_graph(
@@ -223,12 +222,7 @@ class TemplateTestQuantizerConfig:
         statistic_collector_parameters: TestGetStatisticsCollectorParameters,
     ):
         params = statistic_collector_parameters
-        algo = PostTrainingQuantization(
-            advanced_parameters=AdvancedQuantizationParameters(
-                activations_range_estimator_params=range_estimator_params
-            )
-        )
-        min_max_algo = algo.algorithms[0]
+        min_max_algo = MinMaxQuantization(activations_range_estimator_params=range_estimator_params)
         min_max_algo._backend_entity = self.get_algo_backend()
         q_config = QuantizerConfig(num_bits=8, mode=q_config_mode, per_channel=q_config_per_channel)
 
@@ -278,8 +272,8 @@ class TemplateTestQuantizerConfig:
 
         for reducer in reducers:
             if q_config_per_channel:
-                assert reducer._reduction_shape == params.ref_per_ch_reduction_shape
+                assert self.get_reduction_axes(reducer) == params.ref_per_ch_reduction_axes
             else:
-                assert reducer._reduction_shape == params.ref_per_tensor_reduction_shape
+                assert self.get_reduction_axes(reducer) == params.ref_per_tensor_reduction_axes
 
         assert tensor_collector.num_samples == num_samples

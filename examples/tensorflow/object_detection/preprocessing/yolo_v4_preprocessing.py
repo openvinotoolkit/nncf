@@ -152,13 +152,19 @@ class YOLOv4Preprocessor:
         true_boxes[..., 2:4] = boxes_wh / input_shape[::-1]
 
         batch_size = true_boxes.shape[0]
-        grid_shapes = [input_shape // {0: 32, 1: 16, 2: 8}[l] for l in range(num_layers)]
+        grid_shapes = [input_shape // {0: 32, 1: 16, 2: 8}[layer_idx] for layer_idx in range(num_layers)]
         y_true = [
             np.zeros(
-                (batch_size, grid_shapes[l][0], grid_shapes[l][1], len(anchor_mask[l]), 5 + num_classes),
+                (
+                    batch_size,
+                    grid_shapes[layer_idx][0],
+                    grid_shapes[layer_idx][1],
+                    len(anchor_mask[layer_idx]),
+                    5 + num_classes,
+                ),
                 dtype="float32",
             )
-            for l in range(num_layers)
+            for layer_idx in range(num_layers)
         ]
 
         # Expand dim to apply broadcasting.
@@ -196,22 +202,22 @@ class YOLOv4Preprocessor:
                 best_anchors = np.expand_dims(best_anchors, -1)
 
             for t, row in enumerate(best_anchors):
-                for l in range(num_layers):
+                for layer_idx in range(num_layers):
                     for n in row:
                         # use different matching policy for single & multi anchor assign
                         if multi_anchor_assign:
-                            matching_rule = iou[t, n] > iou_thresh and n in anchor_mask[l]
+                            matching_rule = iou[t, n] > iou_thresh and n in anchor_mask[layer_idx]
                         else:
-                            matching_rule = n in anchor_mask[l]
+                            matching_rule = n in anchor_mask[layer_idx]
 
                         if matching_rule:
-                            i = np.floor(true_boxes[b, t, 0] * grid_shapes[l][1]).astype("int32")
-                            j = np.floor(true_boxes[b, t, 1] * grid_shapes[l][0]).astype("int32")
-                            k = anchor_mask[l].index(n)
+                            i = np.floor(true_boxes[b, t, 0] * grid_shapes[layer_idx][1]).astype("int32")
+                            j = np.floor(true_boxes[b, t, 1] * grid_shapes[layer_idx][0]).astype("int32")
+                            k = anchor_mask[layer_idx].index(n)
                             c = true_boxes[b, t, 4].astype("int32")
-                            y_true[l][b, j, i, k, 0:4] = true_boxes[b, t, 0:4]
-                            y_true[l][b, j, i, k, 4] = 1
-                            y_true[l][b, j, i, k, 5 + c] = 1
+                            y_true[layer_idx][b, j, i, k, 0:4] = true_boxes[b, t, 0:4]
+                            y_true[layer_idx][b, j, i, k, 4] = 1
+                            y_true[layer_idx][b, j, i, k, 5 + c] = 1
         return y_true
 
     def _preprocess2(self, image_data, box_data):

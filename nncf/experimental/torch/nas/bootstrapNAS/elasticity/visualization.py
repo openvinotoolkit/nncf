@@ -88,7 +88,7 @@ class SubnetGraph:
         node_name: NNCFNodeName, width_handler: ElasticWidthHandler
     ) -> Optional[NNCFNode]:
         try:
-            propagation_graph = width_handler.propagation_graph  # type: PTNNCFGraph
+            propagation_graph: PTNNCFGraph = width_handler.propagation_graph
             result = propagation_graph.get_node_by_name(node_name)
         except RuntimeError:
             result = None

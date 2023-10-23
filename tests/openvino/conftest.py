@@ -16,7 +16,7 @@ import pytest
 
 from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
 from tests.shared.case_collection import skip_marked_cases_if_options_not_specified
-from tests.shared.install_fixtures import tmp_venv_with_nncf
+from tests.shared.install_fixtures import tmp_venv_with_nncf  # noqa: F401
 from tests.shared.paths import TEST_ROOT
 
 

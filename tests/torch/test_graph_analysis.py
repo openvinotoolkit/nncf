@@ -12,10 +12,10 @@ from collections import Counter
 
 import networkx as nx
 
-from nncf.common.graph import Dtype
 from nncf.common.graph import NNCFGraphEdge
 from nncf.common.graph import NNCFGraphPatternIO
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.layer_attributes import Dtype
 from tests.common.quantization.mock_graphs import get_mock_nncf_node_attrs
 from tests.common.quantization.mock_graphs import get_nncf_graph_from_mock_nx_graph
 from tests.common.quantization.mock_graphs import mark_input_ports_lexicographically_based_on_input_node_key
@@ -78,7 +78,7 @@ def test_graph_pattern_io_building():
             ["/C_0"],
             NNCFGraphPatternIO(
                 input_edges=[make_mock_edge("/B_0", "/C_0", input_port_id=0, output_port_id=0)],
-                output_edges=[make_mock_edge("/C_0", "/D_0", input_port_id=0, output_port_id=0)],
+                output_edges=[make_mock_edge("/C_0", "/D_0", input_port_id=1, output_port_id=0)],
             ),
         ),
         (
@@ -86,7 +86,7 @@ def test_graph_pattern_io_building():
             NNCFGraphPatternIO(
                 input_edges=[],
                 output_edges=[
-                    make_mock_edge("/C_0", "/D_0", input_port_id=0, output_port_id=0),
+                    make_mock_edge("/C_0", "/D_0", input_port_id=1, output_port_id=0),
                     make_mock_edge("/A_0", "/D_0", input_port_id=0, output_port_id=1),
                 ],
             ),
@@ -95,7 +95,7 @@ def test_graph_pattern_io_building():
             ["/D_0"],
             NNCFGraphPatternIO(
                 input_edges=[
-                    make_mock_edge("/C_0", "/D_0", input_port_id=0, output_port_id=0),
+                    make_mock_edge("/C_0", "/D_0", input_port_id=1, output_port_id=0),
                     make_mock_edge("/A_0", "/D_0", input_port_id=0, output_port_id=1),
                 ],
                 output_edges=[

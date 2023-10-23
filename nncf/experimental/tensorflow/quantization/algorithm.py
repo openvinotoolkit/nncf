@@ -258,8 +258,8 @@ class QuantizationBuilderV2(QuantizationBuilder):
         # Logic of the TFQuantizationSetupV2 creation
 
         quantization_setup = TFQuantizationSetupV2()
-        node_name_to_qconfig_map = {}  # type: Dict[str, QuantizerConfig]
-        qp_id_to_setup_index_map = {}  # type: Dict[QuantizationPointId, int]
+        node_name_to_qconfig_map: Dict[str, QuantizerConfig] = {}
+        qp_id_to_setup_index_map: Dict[QuantizationPointId, int] = {}
         first_conv_nodes = get_first_nodes_of_type(nncf_graph, ["Conv2D", "Conv3D"])
 
         for idx, (qp_id, qp) in enumerate(qp_solution.quantization_points.items()):

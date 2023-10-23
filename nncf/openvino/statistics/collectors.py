@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Deque, List, Optional, Union
+from typing import Deque, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -43,17 +43,18 @@ from nncf.openvino.tensor import OVNNCFTensor
 from nncf.quantization.advanced_parameters import StatisticsType
 
 
+# pylint: disable=too-many-public-methods
 class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     """
     A realization of the processing methods for OVNNCFTensors.
     """
 
     @staticmethod
-    def reduce_min(x: NNCFTensor, axis: Union[int, tuple], keepdims: bool = True) -> NNCFTensor:
+    def reduce_min(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = True) -> NNCFTensor:
         return OVNNCFTensor(np.amin(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
-    def reduce_max(x: NNCFTensor, axis: Union[int, tuple], keepdims: bool = True) -> NNCFTensor:
+    def reduce_max(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = True) -> NNCFTensor:
         return OVNNCFTensor(np.amax(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
@@ -69,30 +70,44 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return OVNNCFTensor(np.maximum(x1.tensor, x2.tensor))
 
     @staticmethod
-    def mean(x: NNCFTensor, axis: Union[int, tuple], keepdims: bool = False) -> NNCFTensor:
+    def mean(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
         return OVNNCFTensor(np.mean(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
-    def median(x: NNCFTensor, axis: Union[int, tuple, list], keepdims: bool = False) -> NNCFTensor:
+    def median(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
         return OVNNCFTensor(np.median(x.tensor, axis=axis, keepdims=keepdims))
 
     @classmethod
     def masked_mean(
-        cls, x: NNCFTensor, axis: Optional[Union[int, tuple, list]], mask: Optional[NNCFTensor], keepdims: bool = False
+        cls,
+        x: NNCFTensor,
+        axis: Optional[Union[int, Tuple[int, ...], List[int]]],
+        mask: Optional[NNCFTensor],
+        keepdims: bool = False,
     ) -> NNCFTensor:
         if mask is None:
             return cls.mean(x, axis=axis, keepdims=keepdims)
         masked_x = np.ma.array(x.tensor, mask=mask.tensor)
-        return OVNNCFTensor(np.ma.mean(masked_x, axis=axis, keepdims=False).data)
+        result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims)
+        if isinstance(result, np.ma.MaskedArray):
+            return OVNNCFTensor(result.data)
+        return OVNNCFTensor(result)
 
     @classmethod
     def masked_median(
-        cls, x: NNCFTensor, axis: Optional[Union[int, tuple, list]], mask: Optional[NNCFTensor], keepdims: bool = False
+        cls,
+        x: NNCFTensor,
+        axis: Optional[Union[int, Tuple[int, ...], List[int]]],
+        mask: Optional[NNCFTensor],
+        keepdims: bool = False,
     ) -> NNCFTensor:
         if mask is None:
             return cls.median(x, axis=axis, keepdims=keepdims)
         masked_x = np.ma.array(x.tensor, mask=mask.tensor)
-        return OVNNCFTensor(np.ma.median(masked_x, axis=axis, keepdims=keepdims).data)
+        result = np.ma.median(masked_x, axis=axis, keepdims=keepdims)
+        if isinstance(result, np.ma.MaskedArray):
+            return OVNNCFTensor(result.data)
+        return OVNNCFTensor(result)
 
     @staticmethod
     def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
@@ -102,29 +117,17 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         t = x.reshape(x.shape[0], x.shape[1], -1)
         return OVNNCFTensor(np.mean(t, axis=(0, 2)))
 
-    @classmethod
-    def no_outliers_map(
-        cls,
-        x: NNCFTensor,
-        fn: Callable[[NNCFTensor, int, NNCFTensor], Any],
-        axis: int = 0,
-        alpha: float = 0.01,
-        keepdims: bool = False,
-    ) -> NNCFTensor:
-        if len(x.shape) == 1:
-            return fn(x, axis=None, mask=None, keepdims=keepdims)
-
-        x = x.tensor
-        if axis:
-            x = np.moveaxis(x, axis, 0)
-
-        low_values, high_values = np.quantile(x, [alpha, 1 - alpha], 0)
-        outliers_mask = np.logical_or(x < low_values, high_values < x)
-        return fn(OVNNCFTensor(x), axis=0, mask=OVNNCFTensor(outliers_mask), keepdims=keepdims)
-
     @staticmethod
     def batch_mean(x: NNCFTensor) -> NNCFTensor:
         return OVNNCFTensor(np.mean(x.tensor, axis=0, keepdims=True))
+
+    @staticmethod
+    def logical_or(input_: NNCFTensor, other: NNCFTensor) -> NNCFTensor:
+        return OVNNCFTensor(np.logical_or(input_.tensor, other.tensor))
+
+    @staticmethod
+    def less(input_: NNCFTensor, other: NNCFTensor) -> NNCFTensor:
+        return OVNNCFTensor(input_.tensor < other.tensor)
 
     @staticmethod
     def stack(x: Union[List[NNCFTensor], Deque[NNCFTensor]], axis: int = 0) -> NNCFTensor:
@@ -136,15 +139,43 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return [OVNNCFTensor(np.squeeze(e, axis)) for e in np.split(x.tensor, x.tensor.shape[axis], axis=axis)]
 
     @staticmethod
+    def squeeze(x: NNCFTensor, dim: Optional[Union[int, Tuple[int, ...]]] = None) -> NNCFTensor:
+        return OVNNCFTensor(np.squeeze(x.tensor, axis=dim))
+
+    @staticmethod
     def sum(tensor: NNCFTensor) -> TensorElementsType:
         return np.sum(tensor.tensor)
 
     @staticmethod
     def quantile(
-        tensor: NNCFTensor, quantile: Union[float, List[float]], axis: Union[int, tuple, list], keepdims: bool = False
+        tensor: NNCFTensor,
+        quantile: Union[float, List[float]],
+        axis: Union[int, Tuple[int, ...], List[int]],
+        keepdims: bool = False,
     ) -> List[NNCFTensor]:
         result = np.quantile(tensor.tensor, quantile, axis, keepdims=keepdims)
         return [OVNNCFTensor(x) for x in result]
+
+    @classmethod
+    def percentile(
+        cls,
+        tensor: NNCFTensor,
+        percentile: Union[float, List[float]],
+        axis: Union[int, Tuple[int, ...], List[int]],
+        keepdims: bool = False,
+    ) -> List[TensorElementsType]:
+        quantile = np.true_divide(percentile, 100)
+        return cls.quantile(tensor, quantile=quantile, axis=axis, keepdims=keepdims)
+
+    @staticmethod
+    def sub(a: NNCFTensor, b: NNCFTensor) -> NNCFTensor:
+        return NNCFTensor(a.tensor - b.tensor)
+
+    @staticmethod
+    def zero_elements(x: NNCFTensor) -> NNCFTensor:
+        np_tensor = x.tensor
+        eps = np.finfo(np_tensor.dtype).eps
+        return NNCFTensor(np.abs(np_tensor) < eps)
 
 
 class OVNoopReducer(NoopReducer):
@@ -157,7 +188,7 @@ class OVMinReducer(MinReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return get_inplace_min_op(self.name, self._reduction_shape)
+        return get_inplace_min_op(self.name, self._reduction_axes)
 
     def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
         return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
@@ -168,7 +199,7 @@ class OVMaxReducer(MaxReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return get_inplace_max_op(self.name, self._reduction_shape, False)
+        return get_inplace_max_op(self.name, self._reduction_axes, False)
 
     def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
         return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
@@ -179,7 +210,7 @@ class OVAbsMaxReducer(AbsMaxReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return get_inplace_max_op(self.name, self._reduction_shape, True)
+        return get_inplace_max_op(self.name, self._reduction_axes, True)
 
     def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
         return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
@@ -190,7 +221,7 @@ class OVMeanReducer(MeanReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return get_inplace_mean_op(self.name, self._reduction_shape)
+        return get_inplace_mean_op(self.name, self._reduction_axes)
 
     def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
         return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
@@ -212,7 +243,7 @@ class OVMeanPerChanelReducer(MeanPerChReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return get_inplace_mean_per_ch(self.name, self._reduction_shape)
+        return get_inplace_mean_per_ch(self.name, self._reduction_axes)
 
     def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
         return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
@@ -240,19 +271,30 @@ class OVAbsQuantileReducer(AbsQuantileReducer):
         return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
 
 
-def get_mean_stat_collector(num_samples, channel_axis, window_size=None, inplace=True):
+def get_mean_statistic_collector(
+    num_samples: int, channel_axis: int, window_size: Optional[int] = None, inplace: bool = True
+) -> TensorCollector:
+    """
+    Mean statistic collector builder.
+
+    :param num_samples: Maximum number of samples to collect.
+    :param channel_axis: Channel axis to use during reduction phase.
+    :param window_size: Number of samples from the end of the list of collected samples to aggregate.
+        Aggregates all available collected statistics in case parameter is None.
+    :param inplace: Whether the mean reducer should be calculated inplace or out of place.
+    :return: Mean statistic collector.
+    """
     # TODO(dlyakhov): use inplace OVBatchMeanReducer and OVMeanPerChanelReducer
     # after migration on openvino-dev=2023.0
     inplace = False
     if channel_axis == 0:
         reducer = OVBatchMeanReducer(inplace)
     else:
-        reducer = OVMeanPerChanelReducer(channel_axis, inplace)
+        reducer = OVMeanPerChanelReducer(channel_axis=channel_axis, inplace=inplace)
     noop_reducer = OVNoopReducer()
 
     kwargs = {
         "tensor_processor": OVNNCFCollectorTensorProcessor,
-        "use_per_sample_stats": False,
         "num_samples": num_samples,
         "window_size": window_size,
     }

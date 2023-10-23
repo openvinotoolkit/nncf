@@ -561,7 +561,7 @@ class TestsWithONNXInspection:
 
     @staticmethod
     def group_nodes_by_output_target(nodes: List[onnx.NodeProto], graph: onnx.GraphProto) -> List[List[onnx.NodeProto]]:
-        output_nodes = {}  # type: Dict[str, List[onnx.NodeProto]]
+        output_nodes: Dict[str, List[onnx.NodeProto]] = {}
         for node in nodes:
             succs = get_successors(node, graph)
             assert len(succs) == 1

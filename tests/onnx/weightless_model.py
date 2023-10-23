@@ -19,8 +19,6 @@ import onnx
 from onnx import TensorProto  # pylint:disable=no-name-in-module
 from onnx.external_data_helper import uses_external_data
 
-from nncf.onnx.graph.onnx_graph import ONNXGraph
-
 # pylint: disable=no-member
 
 
@@ -32,8 +30,7 @@ def load_model_topology_with_zeros_weights(model_path: Union[str, Path]) -> onnx
     :return: Onnx model with filled the all external tensors by random values.
     """
     model = onnx.load_model(model_path, load_external_data=False)
-    onnx_graph = ONNXGraph(model)
-    for tensor in onnx_graph.onnx_model.graph.initializer:
+    for tensor in model.graph.initializer:
         if uses_external_data(tensor):
             np_dtype = onnx.helper.tensor_dtype_to_np_dtype(tensor.data_type)
             np_tensor = np.zeros(list(tensor.dims)).astype(np_dtype)

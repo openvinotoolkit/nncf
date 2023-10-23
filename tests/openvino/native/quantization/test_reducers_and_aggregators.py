@@ -9,9 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any, List, Optional, Tuple
+
 import numpy as np
 import pytest
 
+from nncf.common.graph.layer_attributes import Dtype
 from nncf.openvino.statistics.collectors import OVAbsMaxReducer
 from nncf.openvino.statistics.collectors import OVAbsQuantileReducer
 from nncf.openvino.statistics.collectors import OVBatchMeanReducer
@@ -23,7 +26,7 @@ from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.openvino.statistics.collectors import OVNoopReducer
 from nncf.openvino.statistics.collectors import OVQuantileReducer
 from nncf.openvino.tensor import OVNNCFTensor
-from tests.experimental.common.test_reducers_and_aggregators import TemplateTestReducersAggreagtors
+from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggreagtors
 
 
 class TestReducersAggregators(TemplateTestReducersAggreagtors):
@@ -31,7 +34,7 @@ class TestReducersAggregators(TemplateTestReducersAggreagtors):
     def tensor_processor(self):
         return OVNNCFCollectorTensorProcessor
 
-    def get_nncf_tensor(self, x: np.array):
+    def get_nncf_tensor(self, x: np.array, dtype: Optional[Dtype] = None):
         return OVNNCFTensor(x)
 
     @pytest.fixture(scope="module")
@@ -52,3 +55,12 @@ class TestReducersAggregators(TemplateTestReducersAggreagtors):
         val_ = np.array(val)
         ref_ = np.array(ref)
         return np.allclose(val_, ref_) and val_.shape == ref_.shape
+
+    def squeeze_tensor(self, ref_tensor: List[Any], axes: Optional[Tuple[int]] = None):
+        return np.squeeze(np.array(ref_tensor), axes)
+
+    def cast_tensor(self, tensor, dtype: Dtype):
+        return tensor
+
+    def expand_dims(self, tensor, dims: Tuple[int, ...]):
+        return np.expand_dims(np.array(tensor), dims)

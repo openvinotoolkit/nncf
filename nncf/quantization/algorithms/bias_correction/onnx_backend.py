@@ -17,13 +17,12 @@ import onnx
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.model_utils import remove_fq_from_inputs
 from nncf.onnx.graph.node_utils import get_bias_value
 from nncf.onnx.graph.node_utils import is_any_weight_quantized
 from nncf.onnx.graph.node_utils import is_node_with_bias
-from nncf.onnx.graph.onnx_graph import ONNXGraph
+from nncf.onnx.graph.onnx_helper import get_name_to_node_map
 from nncf.onnx.graph.transformations.command_creation import create_bias_correction_command
 from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
@@ -43,7 +42,7 @@ from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionA
 class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @property
     def tensor_processor(self) -> ONNXNNCFCollectorTensorProcessor:
-        return ONNXNNCFCollectorTensorProcessor()
+        return ONNXNNCFCollectorTensorProcessor
 
     @property
     def types_to_insert_bias(self):
@@ -77,12 +76,12 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @staticmethod
     def mean_statistic_collector(
-        reduction_shape: ReductionShape,
+        channel_axis: int,
         inplace: bool,
         num_samples: Optional[int] = None,
         window_size: Optional[int] = None,
     ) -> ONNXMeanStatisticCollector:
-        return ONNXMeanStatisticCollector(reduction_shape, num_samples, window_size)
+        return ONNXMeanStatisticCollector(channel_axis, num_samples, window_size)
 
     @staticmethod
     def raw_statistic_collector(inplace: bool, num_samples: int = None) -> ONNXMeanStatisticCollector:
@@ -102,15 +101,13 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @staticmethod
     def get_input_name(model: onnx.ModelProto, node_name: str) -> str:
-        onnx_graph = ONNXGraph(model)
-        node = onnx_graph.get_node_by_name(node_name)
-        return node.input[0]
+        node_mapping = get_name_to_node_map(model)
+        return node_mapping[node_name].input[0]
 
     @staticmethod
     def get_output_name(model: onnx.ModelProto, node_name: str, output_id: int) -> List[str]:
-        onnx_graph = ONNXGraph(model)
-        node = onnx_graph.get_node_by_name(node_name)
-        return node.output[output_id]
+        node_mapping = get_name_to_node_map(model)
+        return node_mapping[node_name].output[output_id]
 
     @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:

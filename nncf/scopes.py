@@ -121,7 +121,7 @@ def get_ignored_node_names_from_ignored_scope(
             raise RuntimeError(
                 f"Ignored nodes with name {list(skipped_names)} were not found in the NNCFGraph. " + error_msg
             )
-        nncf_logger.info(f"{len(matched_by_names)} ignored nodes was found by name in the NNCFGraph")
+        nncf_logger.info(f"{len(matched_by_names)} ignored nodes were found by name in the NNCFGraph")
 
     matched_by_patterns = []
     if ignored_scope.patterns:
@@ -134,7 +134,7 @@ def get_ignored_node_names_from_ignored_scope(
             matched_by_patterns.extend(matches)
         if strict and not_matched_patterns:
             raise RuntimeError(f"No matches for ignored patterns {not_matched_patterns} in the NNCFGraph. " + error_msg)
-        nncf_logger.info(f"{len(matched_by_patterns)} ignored nodes was found by patterns in the NNCFGraph")
+        nncf_logger.info(f"{len(matched_by_patterns)} ignored nodes were found by patterns in the NNCFGraph")
 
     matched_by_types = []
     if ignored_scope.types:
@@ -148,6 +148,6 @@ def get_ignored_node_names_from_ignored_scope(
             raise RuntimeError(
                 f"Nodes with ignored types {list(not_matched_types)} were not found in the NNCFGraph. " + error_msg
             )
-        nncf_logger.info(f"{len(matched_by_types)} ignored nodes was found by types in the NNCFGraph")
+        nncf_logger.info(f"{len(matched_by_types)} ignored nodes were found by types in the NNCFGraph")
 
     return set(matched_by_names + matched_by_types + matched_by_patterns)

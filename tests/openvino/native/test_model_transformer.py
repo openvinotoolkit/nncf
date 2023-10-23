@@ -39,6 +39,7 @@ from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.native.common import compare_nncf_graphs
+from tests.openvino.native.common import get_openvino_version
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import ConvNotBiasModel
 from tests.openvino.native.models import FPModel
@@ -48,7 +49,8 @@ from tests.openvino.native.models import SimpleSplitModel
 from tests.openvino.native.models import WeightsModel
 from tests.openvino.native.models import ZeroRankEltwiseModel
 
-REFERENCE_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / "data" / "reference_graphs" / "original_nncf_graph"
+OV_VERSION = get_openvino_version()
+REFERENCE_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / "data" / OV_VERSION / "reference_graphs" / "original_nncf_graph"
 
 TARGET_INSERT_LAYERS = [["Add"], ["MatMul"], ["Add", "MatMul"]]
 TARGET_PRE_LAYER_FQS = [["Add/fq_input_0"], ["MatMul/fq_input_0"], ["Add/fq_input_0", "MatMul/fq_input_0"]]
@@ -286,7 +288,7 @@ def test_split_inplace_fn_insertion(test_params: InplaceOpTestCase):
 )
 def test_inplace_reduce_fn_dynamic_shapes(input_shape, raise_error):
     input_1 = opset.parameter(input_shape, name="Input")
-    fn = get_inplace_min_op("test", reduction_shape=None)
+    fn = get_inplace_min_op("test", reduction_axes=None)
     if raise_error:
         with pytest.raises(RuntimeError):
             fn(input_1, 0)
@@ -297,8 +299,8 @@ def test_inplace_reduce_fn_dynamic_shapes(input_shape, raise_error):
     assert all(np.equal(get_prev_node(op, 1).get_data(), ref_const))
 
 
-@pytest.mark.parametrize("reduction_shape", [None, np.array([], dtype=np.int64)])
-def test_inplace_reduce_fn_zero_rank_output(reduction_shape):
+@pytest.mark.parametrize("reduction_axes", [None, np.array([], dtype=np.int64)])
+def test_inplace_reduce_fn_zero_rank_output(reduction_axes):
     model = ZeroRankEltwiseModel().ov_model
     target_layer = "Add"
     port_id = 1
@@ -310,7 +312,7 @@ def test_inplace_reduce_fn_zero_rank_output(reduction_shape):
         OVInplaceFnInsertionCommand,
         port_id,
         {
-            "inplace_op_fn": get_inplace_min_op(name, reduction_shape=reduction_shape),
+            "inplace_op_fn": get_inplace_min_op(name, reduction_axes=reduction_axes),
             "fn_output_port_id": 0,
         },
     )
