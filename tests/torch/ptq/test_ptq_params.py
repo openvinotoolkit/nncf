@@ -28,8 +28,8 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.advanced_parameters import QuantizationMode
 from nncf.quantization.advanced_parameters import QuantizationParameters
+from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from nncf.scopes import IgnoredScope
 from nncf.torch.graph.graph import PTTargetPoint
@@ -96,8 +96,7 @@ class OneDepthwiseConvModel(nn.Module, ToNNCFNetworkInterface):
 
 @pytest.mark.parametrize("target_device", TargetDevice)
 def test_target_device(target_device):
-    algo = PostTrainingQuantization(target_device=target_device)
-    min_max_algo = algo.algorithms[0]
+    min_max_algo = MinMaxQuantization(target_device=target_device)
     min_max_algo._backend_entity = PTMinMaxAlgoBackend()
     assert min_max_algo._target_device == target_device
 

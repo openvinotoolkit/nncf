@@ -26,8 +26,8 @@ from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParame
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResults
 from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
-from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_quantization_param_grid
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_quantization_param_grids
+from nncf.quantization.algorithms.post_training.pipeline import create_ptq_pipeline
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.scopes import IgnoredScope
 
@@ -333,12 +333,12 @@ def quantize_with_tune_hyperparams(
         "advanced_parameters": advanced_quantization_parameters,
     }
 
-    quantization_param_grid = get_quantization_param_grid()
+    param_grids = get_quantization_param_grids(create_ptq_pipeline(**init_quantization_params))
 
     hyperparameter_tuner = HyperparameterTuner(
-        PostTrainingQuantization,
+        create_ptq_pipeline,
         init_quantization_params,
-        quantization_param_grid,
+        param_grids,
         calibration_dataset,
         validation_fn,
         tuner_subset_size,
