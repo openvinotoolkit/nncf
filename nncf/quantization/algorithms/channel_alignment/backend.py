@@ -11,13 +11,12 @@
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Any, Optional, Tuple, TypeVar
+from typing import Any, Tuple, TypeVar
 
 import numpy as np
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
-from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase

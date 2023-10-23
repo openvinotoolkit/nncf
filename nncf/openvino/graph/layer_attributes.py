@@ -84,6 +84,12 @@ OVConvLayout = List[OVConvLayoutElem]
 
 
 def get_conv_weights_layout_from_node(node: NNCFNode) -> OVConvLayout:
+    """
+    Calculates weights layout for a target convolution node.
+
+    :param node: Target convolution node.
+    :return: Target convolution Node weights layout.
+    """
     layer_attributes = node.layer_attributes
     port_id = _get_port_id_from_layer_attributes(layer_attributes)
     return get_conv_weights_layout(
@@ -92,6 +98,12 @@ def get_conv_weights_layout_from_node(node: NNCFNode) -> OVConvLayout:
 
 
 def get_linear_weights_layout_from_node(node: NNCFNode) -> OVConvLayout:
+    """
+    Calculates weights layout for a target linear node.
+
+    :param node: Target linear node.
+    :return: Target linear Node weight layout.
+    """
     layer_attributes = node.layer_attributes
     port_id = _get_port_id_from_layer_attributes(layer_attributes)
     constant_layer_attrs = layer_attributes.constant_attributes[port_id]
@@ -102,13 +114,20 @@ def get_linear_weights_layout_from_node(node: NNCFNode) -> OVConvLayout:
     )
 
 
-def _get_port_id_from_layer_attributes(layer_attributes):
+def _get_port_id_from_layer_attributes(layer_attributes) -> int:
     port_ids = list(layer_attributes.constant_attributes.keys())
     assert len(port_ids) == 1
     return port_ids[0]
 
 
 def get_conv_weights_layout(ov_metatype: OVOpMetatype, weights_shape: Tuple[int, ...]) -> OVConvLayout:
+    """
+    Calculates weights layout for a target convolution node.
+
+    :param ov_metatype: Target convolution node OpenVINO metatype.
+    :param weights_shape: Shape of the target convolution node weight.
+    :return: Target convolution node weights layout.
+    """
     weights_layout = ov_metatype.const_layout
     kernel_size = weights_shape[len(weights_layout) :]
     weights_layout += [OVConvLayoutElem.SPATIAL] * len(kernel_size)
@@ -116,6 +135,13 @@ def get_conv_weights_layout(ov_metatype: OVOpMetatype, weights_shape: Tuple[int,
 
 
 def get_linear_weights_layout(weights_shape: Tuple[int, ...], transpose: bool, port_id: int) -> OVConvLayout:
+    """
+    Calculates weights layout for a target linear node.
+
+    :param weights_shape: Shape of the target linear node weight.
+    :param port_id: Port id of the target liner node weights.
+    :return: Target linear node weight layout.
+    """
     weights_layout = [OVConvLayoutElem.SPATIAL] * (len(weights_shape) - 2)
     if len(weights_shape) > 1:
         if (transpose and port_id == 0) or (not transpose and port_id == 1):
