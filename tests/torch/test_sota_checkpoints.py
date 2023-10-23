@@ -23,12 +23,18 @@ import pytest
 
 from tests.shared.metric_thresholds import DIFF_FP32_MAX_GLOBAL
 from tests.shared.metric_thresholds import DIFF_FP32_MIN_GLOBAL
-from tests.shared.metric_thresholds import DIFF_TARGET_MAX_GLOBAL
-from tests.shared.metric_thresholds import DIFF_TARGET_MIN_GLOBAL
 from tests.shared.paths import DATASET_DEFINITIONS_PATH
 from tests.shared.paths import PROJECT_ROOT
 from tests.shared.paths import TEST_ROOT
 from tests.torch.helpers import Command
+
+DIFF_TARGET_PT_MIN = -0.1
+DIFF_TARGET_PT_MAX = 0.1
+DIFF_TARGET_OV_MIN = -0.01
+DIFF_TARGET_OV_MAX = 0.01
+PYTORCH = "PT"
+OPENVINO = "OV"
+TRAIN = "TRAIN"
 
 
 @dataclass
@@ -49,8 +55,10 @@ class EvalRunParamsStruct:
     diff_fp32_min: float
     diff_fp32_max: float
     model_name: str
-    diff_target_min: float
-    diff_target_max: float
+    diff_target_ov_min: float
+    diff_target_ov_max: float
+    diff_target_pt_min: float
+    diff_target_pt_max: float
     multiprocessing_distributed: bool
     skip_ov: bool
 
@@ -83,10 +91,6 @@ class ResultInfo:
         }
 
 
-PYTORCH = "PT"
-OPENVINO = "OV"
-TRAIN = "TRAIN"
-
 TEST_RESULT: List[ResultInfo] = []
 
 
@@ -108,6 +112,7 @@ def read_reference_file(ref_path: Path) -> List[EvalRunParamsStruct]:
                     continue
                 param_list.append(
                     EvalRunParamsStruct(
+                        model_name=model_name,
                         config_name=sample_dict["config"],
                         reference=sample_dict.get("reference", None),
                         target_pt=sample_dict["target_pt"],
@@ -119,9 +124,10 @@ def read_reference_file(ref_path: Path) -> List[EvalRunParamsStruct]:
                         batch=sample_dict.get("batch", None),
                         diff_fp32_min=sample_dict.get("diff_fp32_min", DIFF_FP32_MIN_GLOBAL),
                         diff_fp32_max=sample_dict.get("diff_fp32_max", DIFF_FP32_MAX_GLOBAL),
-                        model_name=model_name,
-                        diff_target_min=sample_dict.get("diff_target_min", DIFF_TARGET_MIN_GLOBAL),
-                        diff_target_max=sample_dict.get("diff_target_max", DIFF_TARGET_MAX_GLOBAL),
+                        diff_target_ov_min=sample_dict.get("diff_target_ov_min", DIFF_TARGET_OV_MIN),
+                        diff_target_ov_max=sample_dict.get("diff_target_ov_max", DIFF_TARGET_OV_MAX),
+                        diff_target_pt_min=sample_dict.get("diff_target_pt_min", DIFF_TARGET_PT_MIN),
+                        diff_target_pt_max=sample_dict.get("diff_target_pt_max", DIFF_TARGET_PT_MAX),
                         multiprocessing_distributed=sample_dict.get("multiprocessing_distributed", False),
                         skip_ov=sample_dict.get("skip_ov", False),
                     )
@@ -255,19 +261,21 @@ class TestSotaCheckpoints:
 
     @staticmethod
     def threshold_check(
-        diff_target: float, diff_fp32: Optional[float], param: EvalRunParamsStruct
+        diff_target: float,
+        diff_fp32: Optional[float],
+        diff_target_min=float,
+        diff_target_max=float,
+        diff_fp32_min=float,
+        diff_fp32_max=float,
     ) -> Tuple[bool, List[str]]:
         err_msgs = []
-        if diff_target < param.diff_target_min or diff_target > param.diff_target_max:
+        if diff_target < diff_target_min or diff_target > diff_target_max:
             err_msgs.append(
-                "Target diff is not within thresholds: "
-                + f"{param.diff_target_min} < {diff_target} < {param.diff_target_max}"
+                "Target diff is not within thresholds: " + f"{diff_target_min} < {diff_target} < {diff_target_max}"
             )
         if diff_fp32 is not None:
-            if diff_fp32 < param.diff_fp32_min or diff_fp32 > param.diff_fp32_max:
-                err_msgs.append(
-                    f"FP32 diff is not within thresholds: {param.diff_fp32_min} < {diff_fp32} < {param.diff_fp32_max}"
-                )
+            if diff_fp32 < diff_fp32_min or diff_fp32 > diff_fp32_max:
+                err_msgs.append(f"FP32 diff is not within thresholds: {diff_fp32_min} < {diff_fp32} < {diff_fp32_max}")
         if err_msgs:
             return ";".join(err_msgs)
         return None
@@ -333,7 +341,14 @@ class TestSotaCheckpoints:
         if fp32_metric:
             diff_fp32 = round((metric_value - fp32_metric), 2)
 
-        threshold_errors = self.threshold_check(diff_target=diff_target, diff_fp32=diff_fp32, param=eval_run_param)
+        threshold_errors = self.threshold_check(
+            diff_target=diff_target,
+            diff_fp32=diff_fp32,
+            diff_target_min=eval_run_param.diff_target_pt_min,
+            diff_target_max=eval_run_param.diff_target_pt_max,
+            diff_fp32_min=eval_run_param.diff_fp32_min,
+            diff_fp32_max=eval_run_param.diff_fp32_max,
+        )
         result_info = ResultInfo(
             model_name=eval_run_param.model_name,
             backend=PYTORCH,
@@ -400,10 +415,10 @@ class TestSotaCheckpoints:
                 ResultInfo(
                     model_name=eval_run_param.model_name,
                     backend=OPENVINO,
-                    status=f"{ir_model_path} does not exists",
+                    status="IR does not exists",
                 )
             )
-            pytest.fail(f"{ir_model_path} does not exists")
+            pytest.fail("IR does not exists")
 
         ac_yml_path = config_folder / f"{eval_run_param.model_name}.yml"
         report_csv_path = pytest.metrics_dump_path / f"{eval_run_param.model_name}.csv"
@@ -434,7 +449,14 @@ class TestSotaCheckpoints:
         if fp32_metric:
             diff_fp32 = round((metric_value - fp32_metric), 2)
 
-        threshold_errors = self.threshold_check(diff_target=diff_target, diff_fp32=diff_fp32, param=eval_run_param)
+        threshold_errors = self.threshold_check(
+            diff_target=diff_target,
+            diff_fp32=diff_fp32,
+            diff_target_min=eval_run_param.diff_target_ov_min,
+            diff_target_max=eval_run_param.diff_target_ov_max,
+            diff_fp32_min=eval_run_param.diff_fp32_min,
+            diff_fp32_max=eval_run_param.diff_fp32_max,
+        )
 
         result_info = ResultInfo(
             model_name=eval_run_param.model_name,
