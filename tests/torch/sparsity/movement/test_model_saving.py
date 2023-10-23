@@ -18,6 +18,7 @@ import onnxruntime
 import pytest
 import torch
 from addict import Dict
+from datasets import Dataset
 from onnx import numpy_helper
 from openvino.runtime import Core
 from openvino.runtime import serialize
@@ -28,7 +29,6 @@ from packaging import version
 from scipy.special import softmax
 from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
 
-from datasets import Dataset
 from nncf.torch import create_compressed_model
 from nncf.torch.checkpoint_loading import load_state
 from tests.torch.helpers import PTTensorListComparator

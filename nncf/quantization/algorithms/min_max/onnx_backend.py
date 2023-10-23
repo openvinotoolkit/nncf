@@ -43,7 +43,6 @@ from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 
 
-@ALGO_BACKENDS.register(BackendType.ONNX)
 class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:

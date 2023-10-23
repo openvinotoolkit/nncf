@@ -13,13 +13,13 @@ import subprocess
 from pathlib import Path
 from typing import Any, Iterable
 
+import datasets
 import evaluate
 import numpy as np
 import openvino.runtime as ov
 import torch
 import transformers
 
-import datasets
 import nncf
 from nncf.parameters import ModelType
 

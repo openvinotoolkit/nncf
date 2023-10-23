@@ -35,7 +35,6 @@ from nncf.onnx.tensor import ONNXNNCFTensor
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 
 
-@ALGO_BACKENDS.register(BackendType.ONNX)
 class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @property
     def tensor_processor(self) -> ONNXNNCFCollectorTensorProcessor:
