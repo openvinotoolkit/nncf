@@ -780,9 +780,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
         return group_dict[None]
 
     def get_paths_to_immediately_dominating_insertion_points_grouped_by_unified_scales(
-        self,
-        insertion_point_node_key: str,
-        unified_scale_op_metatypes: Set[Type[OperatorMetatype]]
+        self, insertion_point_node_key: str, unified_scale_op_metatypes: Set[Type[OperatorMetatype]]
     ) -> Dict[Optional[int], List[PropagationPath]]:
         """Paths are lists of edges."""
         next_group_idx = 0

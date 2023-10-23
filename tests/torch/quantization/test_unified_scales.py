@@ -12,8 +12,7 @@ import dataclasses
 import itertools
 from collections import Counter
 from functools import partial
-from typing import Callable
-from typing import Dict, List
+from typing import Callable, Dict, List
 
 import onnx
 import pytest
@@ -455,13 +454,10 @@ class UnifiedScaleTestStruct:
 
 
 CAT_UNIFIED_SCALE_TEST_STRUCTS = [
-    UnifiedScaleTestStruct(
-        model_builder=SingleCatModel,
-        ref_aq_module_count=3,
-        ref_quantizations_count=4)
-    ,
+    UnifiedScaleTestStruct(model_builder=SingleCatModel, ref_aq_module_count=3, ref_quantizations_count=4),
     UnifiedScaleTestStruct(model_builder=DoubleCatModel, ref_aq_module_count=3, ref_quantizations_count=4),
-    UnifiedScaleTestStruct(model_builder=UNetLikeModel, ref_aq_module_count=4, ref_quantizations_count=6)]
+    UnifiedScaleTestStruct(model_builder=UNetLikeModel, ref_aq_module_count=4, ref_quantizations_count=6),
+]
 
 
 @pytest.mark.parametrize(
@@ -485,7 +481,9 @@ def test_unified_scales_with_concat(target_device, unified_scale_test_case: Unif
     nncf_config["target_device"] = target_device
     register_bn_adaptation_init_args(nncf_config)
 
-    _, compression_ctrl = create_compressed_model_and_algo_for_test(unified_scale_test_case.model_builder(), nncf_config)
+    _, compression_ctrl = create_compressed_model_and_algo_for_test(
+        unified_scale_test_case.model_builder(), nncf_config
+    )
 
     assert len(compression_ctrl.non_weight_quantizers) == unified_scale_test_case.ref_aq_module_count
 

@@ -501,7 +501,8 @@ class MultiConfigQuantizerSetup(QuantizerSetupBase):
                     nncf_logger.debug(
                         "Not making a unified scale group out of single per-tensor quantizer remaining in "
                         "the group after segregating per-tensor and per-channel quantizers within same original "
-                        "unified scale group")
+                        "unified scale group"
+                    )
 
             remaining_per_channel_qids = []
             for per_channel_qid in per_channel_qids:
@@ -519,8 +520,10 @@ class MultiConfigQuantizerSetup(QuantizerSetupBase):
             if len(remaining_per_channel_qids) > 1:
                 retval.register_unified_scale_group(list(remaining_per_channel_qids))
             elif len(remaining_per_channel_qids) == 1:
-                nncf_logger.debug("Not making a unified scale group out of single per-channel quantizer remaining in "
-                                  "the group after removing quantizers with UnifiedScaleType.UNIFY_ONLY_PER_TENSOR")
+                nncf_logger.debug(
+                    "Not making a unified scale group out of single per-channel quantizer remaining in "
+                    "the group after removing quantizers with UnifiedScaleType.UNIFY_ONLY_PER_TENSOR"
+                )
 
         return retval
 

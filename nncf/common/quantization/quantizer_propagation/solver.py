@@ -336,7 +336,7 @@ class QuantizerPropagationSolver:
         run_consistency_checks: bool = False,
         quantize_outputs: bool = False,
         post_processing_marker_metatypes: List[OperatorMetatype] = None,
-        metatypes_to_ignore: List[OperatorMetatype] = None
+        metatypes_to_ignore: List[OperatorMetatype] = None,
     ):
         """
         Initializes the solver with parameters affecting the resulting quantizer setup.

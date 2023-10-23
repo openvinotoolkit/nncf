@@ -352,9 +352,7 @@ def prepare_and_check_graph_def(
     check_graph_def(graph_def, str(graph_path))
 
 
-def prepare_and_check_nx_graph(
-    tf_graph: tf.Graph, graph_path: Path, graph_to_layer_var_names_map: dict
-):
+def prepare_and_check_nx_graph(tf_graph: tf.Graph, graph_path: Path, graph_to_layer_var_names_map: dict):
     nx_graph = get_nx_graph_from_tf_graph(tf_graph, graph_to_layer_var_names_map)
 
     compare_nx_graph_with_reference(nx_graph, str(graph_path), sort_dot_graph=False)

@@ -12,11 +12,12 @@ import argparse
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-import datasets
 import evaluate
 import jstyleson
 import numpy as np
 from transformers.training_args import ParallelMode
+
+import datasets
 
 # isort: off
 from nncf import NNCFConfig
