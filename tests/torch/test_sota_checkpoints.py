@@ -60,7 +60,7 @@ class EvalRunParamsStruct:
     diff_target_pt_min: float
     diff_target_pt_max: float
     multiprocessing_distributed: bool
-    skip_ov: bool
+    skip_ov: str
 
 
 @dataclass
@@ -129,7 +129,7 @@ def read_reference_file(ref_path: Path) -> List[EvalRunParamsStruct]:
                         diff_target_pt_min=sample_dict.get("diff_target_pt_min", DIFF_TARGET_PT_MIN),
                         diff_target_pt_max=sample_dict.get("diff_target_pt_max", DIFF_TARGET_PT_MAX),
                         multiprocessing_distributed=sample_dict.get("multiprocessing_distributed", False),
-                        skip_ov=sample_dict.get("skip_ov", False),
+                        skip_ov=sample_dict.get("skip_ov", ""),
                     )
                 )
     return param_list
@@ -372,7 +372,7 @@ class TestSotaCheckpoints:
         if not openvino:
             pytest.skip("Skip if not --run-openvino-eval")
         if eval_run_param.skip_ov:
-            pytest.skip("Test skipped by 'skip_ov' in param")
+            pytest.skip(f"Skip by: {eval_run_param.skip_ov}")
 
         os.chdir(PROJECT_ROOT)
         ir_model_path = self.get_ir_model_path(eval_run_param)
@@ -405,7 +405,7 @@ class TestSotaCheckpoints:
         if ov_data_dir is None:
             pytest.fail("--ov-data-dir is not set")
         if eval_run_param.skip_ov:
-            status = "Skip by: {eval_run_param.skip_ov}"
+            status = f"Skip by: {eval_run_param.skip_ov}"
             add_test_result(
                 ResultInfo(
                     model_name=eval_run_param.model_name,
