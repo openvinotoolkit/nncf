@@ -405,7 +405,15 @@ class TestSotaCheckpoints:
         if ov_data_dir is None:
             pytest.fail("--ov-data-dir is not set")
         if eval_run_param.skip_ov:
-            pytest.skip("Test skipped by 'skip_ov' in param")
+            status = "Skip by: {eval_run_param.skip_ov}"
+            add_test_result(
+                ResultInfo(
+                    model_name=eval_run_param.model_name,
+                    backend=OPENVINO,
+                    status=status,
+                )
+            )
+            pytest.skip(status)
 
         config_folder = ov_config_dir or PROJECT_ROOT / "tests" / "torch" / "data" / "ac_configs"
         ir_model_path = self.get_ir_model_path(eval_run_param)
