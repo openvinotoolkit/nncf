@@ -45,6 +45,8 @@ from nncf.torch.quantization.precision_init.adjacent_quantizers import GroupsOfA
 from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitializer
 from nncf.torch.quantization.precision_init.base_init import BasePrecisionInitParams
 from nncf.torch.quantization.precision_init.compression_ratio import CompressionRatioCalculator
+from nncf.torch.quantization.precision_init.definitions import CoveringQConfigSequenceForQuantNoiseCalculation
+from nncf.torch.quantization.precision_init.definitions import QConfigSequenceForHAWQToEvaluate
 from nncf.torch.quantization.precision_init.hawq_debug import HAWQDebugger
 from nncf.torch.quantization.precision_init.perturbations import PerturbationObserver
 from nncf.torch.quantization.precision_init.perturbations import Perturbations
@@ -104,10 +106,6 @@ class HAWQPrecisionInitParams(BasePrecisionInitParams):
         )
 
 
-QConfigSequenceForHAWQToEvaluate = List[QuantizerConfig]
-CoveringQConfigSequenceForQuantNoiseCalculation = List[QuantizerConfig]
-
-
 class TraceOrderBitwidthMatcher:
     def __init__(self, available_bitwidths: List[int], traces_order: TracesOrder):
         self._available_bitwidths = available_bitwidths
@@ -152,12 +150,12 @@ class TraceOrderBitwidthMatcher:
 
     @staticmethod
     def _generate_covering_qconfig_sequences(observed_qconfs: List[Dict[QuantizerConfig, QuantizerConfig]]):
-        covering_qconfig_sequences = []  # type: List[CoveringQConfigSequenceForQuantNoiseCalculation]
+        covering_qconfig_sequences: List[CoveringQConfigSequenceForQuantNoiseCalculation] = []
         # For each index, put the largest qconf subset that only varies in bitwidth on top
         # so that the associated covering configurations would not require model regeneration
-        optimized_observed_qconfs = []  # type: List[List[QuantizerConfig]]
+        optimized_observed_qconfs: List[List[QuantizerConfig]] = []
         for qconf_oset in observed_qconfs:
-            variants = []  # type: List[List[QuantizerConfig]]
+            variants: List[List[QuantizerConfig]] = []
             for qconf in qconf_oset.keys():
                 variants.append(list(filter(qconf.is_a_bitwidth_variant, qconf_oset.keys())))
             max_bw_varying_variant = max(variants, key=len)
@@ -166,7 +164,7 @@ class TraceOrderBitwidthMatcher:
 
         max_depth = max([len(qconfs_for_trace_idx) for qconfs_for_trace_idx in optimized_observed_qconfs])
         for i in range(max_depth):
-            covering_conf = []  # type: CoveringQConfigSequenceForQuantNoiseCalculation
+            covering_conf: CoveringQConfigSequenceForQuantNoiseCalculation = []
             for qconfs_for_trace_idx in optimized_observed_qconfs:
                 if i < len(qconfs_for_trace_idx):
                     covering_conf.append(qconfs_for_trace_idx[i])
@@ -188,10 +186,10 @@ class TraceOrderBitwidthMatcher:
         """
         if len(possible_qconfigs_sequence_in_trace_order) != len(self._traces_order):
             raise ValueError("The size of the qconfig space and the traces do not match!")
-        retval = []  # type: List[QConfigSequenceForHAWQToEvaluate]
+        retval: List[QConfigSequenceForHAWQToEvaluate] = []
         observed_qconfs_in_retval = [OrderedDict() for _ in range(len(self._traces_order))]
         for bitwidth_sequence in self._bitwidth_sequences:
-            current_qconfig_sequence_in_trace_order = []  # type: QConfigSequenceForHAWQToEvaluate
+            current_qconfig_sequence_in_trace_order: QConfigSequenceForHAWQToEvaluate = []
             for trace_idx, bitwidth in enumerate(bitwidth_sequence):
                 if trace_idx in indices_for_bitwidth_adjustment_only:
                     bitwidth_adjusted_default_qconfig = deepcopy(
@@ -220,7 +218,7 @@ class TraceOrderBitwidthMatcher:
 class HAWQPrecisionInitializer(BasePrecisionInitializer):
     def __init__(
         self,
-        algo: "ExperimentalQuantizationController",
+        algo: "ExperimentalQuantizationController",  # noqa: F821
         params: HAWQPrecisionInitParams,
         hw_precision_constraints: HardwareQuantizationConstraints,
     ):
@@ -464,7 +462,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         for wq_id in weight_quantizers.values():
             quantized_module = wq_id.quantized_module
             for param_name, param in quantized_module.named_parameters():
-                if (quantized_module, param_name) in gradients_to_enable and not "bias" in param_name:
+                if (quantized_module, param_name) in gradients_to_enable and "bias" not in param_name:
                     param.requires_grad = True
         return HAWQPrecisionInitializer.ParamsToRestore(originally_disabled_gradients, skipped_gradients_to_enable)
 
@@ -536,8 +534,8 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
     def get_qconfig_sequences_constrained_by_traces_order(
         self, traces_order: TracesOrder
     ) -> Tuple[List[QConfigSequenceForHAWQToEvaluate], List[CoveringQConfigSequenceForQuantNoiseCalculation]]:
-        possible_qconfigs_sequence_in_trace_order = []  # type: List[List[QuantizerConfig]]
-        trace_order_indices_of_defaulted_qconfig_sequence = set()  # type: Set[int]
+        possible_qconfigs_sequence_in_trace_order: List[List[QuantizerConfig]] = []
+        trace_order_indices_of_defaulted_qconfig_sequence: Set[int] = set()
         quantizer_ids_in_exec_order = list(self._weight_quantizations_by_execution_order.keys())
         assert len(quantizer_ids_in_exec_order) == len(traces_order)
         for trace_idx in range(len(traces_order)):
@@ -586,14 +584,12 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         perturbations = Perturbations()
         qp_ids_in_trace_order = self._get_weight_qp_ids_in_trace_order(traces_order)
         ctrl = self._algo
-        observers_for_all_qconfig_sequences = []  # type: List[List[PerturbationObserver]]
+        observers_for_all_qconfig_sequences: List[List[PerturbationObserver]] = []
         for qconfig_sequence in qconfig_sequences_to_run:
             quantizer_setup_to_run = self._apply_qconfig_sequence_to_quantizer_setup(
                 qconfig_sequence, qp_ids_in_trace_order, ctrl.get_quantizer_setup_for_current_state()
             )
-            ctrl, model = ctrl.apply_new_quantizer_setup(
-                quantizer_setup_to_run
-            )  # type: Tuple[ExperimentalQuantizationController, NNCFNetwork]
+            ctrl, model = ctrl.apply_new_quantizer_setup(quantizer_setup_to_run)
 
             hook_handles = []
             observers = []

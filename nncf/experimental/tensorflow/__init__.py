@@ -9,4 +9,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nncf.experimental.tensorflow.quantization import algorithm as experimental_quantization_algorithm
+from nncf.experimental.tensorflow.quantization import algorithm as experimental_quantization_algorithm  # noqa: F401

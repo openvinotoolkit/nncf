@@ -558,12 +558,12 @@ class QuantizersSwitcher:
     """Enables/disables quantizers with saving and restoring original state"""
 
     def __init__(self, quantizers: List[BaseQuantizer]):
-        self.originally_disabled = []  # type: List[BaseQuantizer]
-        self.originally_enabled = []  # type: List[BaseQuantizer]
+        self.originally_disabled: List[BaseQuantizer] = []
+        self.originally_enabled: List[BaseQuantizer] = []
         self._quantizers = quantizers
 
     def disable_quantizers(self):
-        for module in self._quantizers:  # type: BaseQuantizer
+        for module in self._quantizers:
             if not module.is_enabled_quantization():
                 self.originally_disabled.append(module)
             if module not in self.originally_enabled:
@@ -571,7 +571,7 @@ class QuantizersSwitcher:
         self.originally_enabled = []
 
     def enable_quantizers(self):
-        for module in self._quantizers:  # type: BaseQuantizer
+        for module in self._quantizers:
             if module.is_enabled_quantization():
                 self.originally_enabled.append(module)
             if module not in self.originally_disabled:

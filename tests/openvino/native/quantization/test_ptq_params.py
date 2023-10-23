@@ -26,8 +26,8 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVSoftmaxMetatype
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.parameters import TargetDevice
+from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.scopes import IgnoredScope
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
@@ -49,8 +49,7 @@ def get_ignored_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPatter
 # pylint: disable=protected-access
 @pytest.mark.parametrize("target_device", [TargetDevice.CPU, TargetDevice.GPU, TargetDevice.VPU])
 def test_target_device(target_device):
-    algo = PostTrainingQuantization(target_device=target_device)
-    min_max_algo = algo.algorithms[0]
+    min_max_algo = MinMaxQuantization(target_device=target_device)
     min_max_algo._backend_entity = OVMinMaxAlgoBackend()
     assert min_max_algo._target_device.value == HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device.value]
 

@@ -8,9 +8,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Dict, List, Type
 
-from nncf.common.graph import INPUT_NOOP_METATYPES
-from nncf.common.graph import OUTPUT_NOOP_METATYPES
+from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
+from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph as QPSG
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
@@ -25,7 +27,7 @@ from tests.common.quantization.mock_graphs import get_randomly_connected_model_g
 def test_set_quantization_traits_for_quant_prop_graph_nodes():
     # Test all patchable metatypes. If a patchable metatype is not registered
     # in quantization trait-to-metatype dict, the test will fail.
-    tested_op_metatypes = get_operator_metatypes()  # type: List[Type[OperatorMetatype]]
+    tested_op_metatypes: List[Type[OperatorMetatype]] = get_operator_metatypes()
     tested_op_names = set()
     for op_meta in tested_op_metatypes:
         if op_meta not in INPUT_NOOP_METATYPES and op_meta not in OUTPUT_NOOP_METATYPES:
@@ -59,7 +61,7 @@ def test_set_quantization_traits_for_quant_prop_graph_nodes():
 
 
 def test_quantization_traits_are_unambiguous_for_op_names():
-    op_name_to_trait_dict = {}  # type: Dict[str, QuantizationTrait]
+    op_name_to_trait_dict: Dict[str, QuantizationTrait] = {}
     for trait, arches in DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT.items():
         for op_meta in arches:
             aliases = op_meta.get_all_aliases()

@@ -14,6 +14,7 @@ from typing import Any, Callable, List, Optional
 
 import torch
 
+from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.utils import get_model_device
 
@@ -93,11 +94,9 @@ class GraphTracer:
         self.custom_forward_fn = custom_forward_fn
 
     def trace_graph(
-        self, model: torch.nn.Module, context_to_use: Optional["TracingContext"] = None, as_eval: bool = False
+        self, model: torch.nn.Module, context_to_use: Optional[TracingContext] = None, as_eval: bool = False
     ) -> DynamicGraph:
         sd = deepcopy(model.state_dict())
-
-        from nncf.torch.dynamic_graph.context import TracingContext  # pylint: disable=cyclic-import
 
         if context_to_use is None:
             context_to_use = TracingContext()

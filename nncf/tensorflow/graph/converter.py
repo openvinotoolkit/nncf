@@ -20,7 +20,6 @@ from tensorflow.python.framework.convert_to_constants import convert_variables_t
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
-from nncf.common.graph import OperatorMetatype
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
@@ -32,6 +31,7 @@ from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
 from nncf.common.graph.layer_attributes import PermuteLayerAttributes
 from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.graph.utils import get_concat_axis
 from nncf.common.graph.utils import get_split_axis
@@ -139,12 +139,12 @@ class CustomLayerInfo:
     """
 
     def __init__(self):
-        self.requires_inputs_from_nodes = set()  # type: Set[str]
-        self.gives_outputs_from_nodes = set()  # type: Set[str]
-        self.shared_weight_node_names_vs_weighted_op_node_names = defaultdict(set)  # type: Dict[str, Set[str]]
-        self.node_infos = {}  # type: Dict[str, CustomLayerNodeInfo]
-        self.edge_infos = {}  # type: Dict[Tuple[str, str], CustomLayerEdgeInfo]
-        self.graphdef_node_name_to_pretty_node_name = {}  # type: Dict[str, str]
+        self.requires_inputs_from_nodes: Set[str] = set()
+        self.gives_outputs_from_nodes: Set[str] = set()
+        self.shared_weight_node_names_vs_weighted_op_node_names: Dict[str, Set[str]] = defaultdict(set)
+        self.node_infos: Dict[str, CustomLayerNodeInfo] = {}
+        self.edge_infos: Dict[Tuple[str, str], CustomLayerEdgeInfo] = {}
+        self.graphdef_node_name_to_pretty_node_name: Dict[str, str] = {}
 
 
 class TFModelConverter(ABC):
@@ -171,9 +171,9 @@ class BaseFunctionalSequentialConverter(TFModelConverter):
 
     def __init__(self, model: tf.keras.Model):
         self._model = model
-        self._node_info = {}  # type: Dict[str, Dict]
+        self._node_info: Dict[str, Dict] = {}
         self._custom_layer_infos = self._collect_custom_layer_infos(self._model)
-        self._nncf_node_names_vs_custom_layer_name = {}  # type: Dict[NNCFNodeName, str]
+        self._nncf_node_names_vs_custom_layer_name: Dict[NNCFNodeName, str] = {}
 
     @staticmethod
     def _get_type_spec(tensor):
@@ -411,7 +411,7 @@ class BaseFunctionalSequentialConverter(TFModelConverter):
     def _add_custom_layer_subgraph(self, nncf_graph: NNCFGraph, custom_layer_name: str) -> NNCFGraph:
         # TODO (vshampor): filter meaningless ops such as Identity, resource read etc.
         custom_layer_info = self._custom_layer_infos[custom_layer_name]
-        node_name_vs_nncf_node_ids = {}  # type: Dict[NNCFNodeName, int]
+        node_name_vs_nncf_node_ids: Dict[NNCFNodeName, int] = {}
         for node_info in custom_layer_info.node_infos.values():
             weight_node_name = node_info.weight_node_name
             is_shared = False
@@ -469,11 +469,11 @@ class FunctionalConverter(BaseFunctionalSequentialConverter):
     def __init__(self, model: tf.keras.Model):
         super().__init__(model)
         self._model_config = self._model.get_config()
-        self._layer_info = {}  # type: Dict[str, Dict]
+        self._layer_info: Dict[str, Dict] = {}
         self._collect_layer_information()
         self._layer_name_to_node_names = defaultdict(set)
         self._collect_node_information()
-        self._edge_info = {}  # type: Dict[Tuple[str, str], Dict]
+        self._edge_info: Dict[Tuple[str, str], Dict] = {}
         self._collect_edge_information()
 
     def _collect_layer_information(self):
@@ -576,8 +576,8 @@ class FunctionalConverter(BaseFunctionalSequentialConverter):
 
     def convert(self) -> NNCFGraph:
         nncf_graph = NNCFGraph()
-        node_name_vs_nncf_node_ids = {}  # type: Dict[str, int]
-        output_node_id_vs_model_output_idx = {}  # type: Dict[int, int]
+        node_name_vs_nncf_node_ids: Dict[str, int] = {}
+        output_node_id_vs_model_output_idx: Dict[int, int] = {}
 
         # Regular nodes
         for node_name, node_info in self._node_info.items():

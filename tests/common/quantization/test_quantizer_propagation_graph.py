@@ -18,10 +18,10 @@ from typing import Dict, List, Optional, Set, Tuple
 import networkx as nx
 import pytest
 
-from nncf.common.graph import Dtype
 from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
-from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
@@ -758,7 +758,7 @@ class TestQuantizerPropagationStateGraph:
             target_node = quantizers_test_struct.target_node_for_quantizer
             is_merged = quantizers_test_struct.is_merged
             prop_path = quantizers_test_struct.prop_path
-            node_key_vs_trait_dict = {}  # type: Dict[str, QuantizationTrait]
+            node_key_vs_trait_dict: Dict[str, QuantizationTrait] = {}
             for node_key in quant_prop_graph.nodes:
                 node_key_vs_trait_dict[node_key] = QuantizationTrait.QUANTIZATION_AGNOSTIC
             primary_prop_quant = None
@@ -1310,7 +1310,7 @@ def create_graph_for_output_quant_as_weights() -> NNCFGraph:
     return get_nncf_graph_from_mock_nx_graph(mock_graph)
 
 
-MODEL_GRAPH = create_graph_for_output_quant_as_weights()  # type: NNCFGraph
+MODEL_GRAPH: NNCFGraph = create_graph_for_output_quant_as_weights()
 
 
 class TestOutputQuantAsWeightsSetup:

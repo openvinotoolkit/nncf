@@ -500,7 +500,7 @@ class FilterPruningController(BasePruningAlgoController):
 
         cumulative_filters_importance = tf.zeros(filters_num)
         # Calculate cumulative importance for all filters in this group
-        shared_nodes = set()  # type: Set[str]
+        shared_nodes: Set[str] = set()
         for minfo in group.elements:
             layer_name = minfo.layer_name
             if layer_name in shared_nodes:

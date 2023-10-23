@@ -24,8 +24,8 @@ from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.parameters import TargetDevice
+from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.scopes import IgnoredScope
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
@@ -49,8 +49,7 @@ def get_ignored_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPatter
 
 @pytest.mark.parametrize("target_device", TargetDevice)
 def test_target_device(target_device):
-    algo = PostTrainingQuantization(target_device=target_device)
-    min_max_algo = algo.algorithms[0]
+    min_max_algo = MinMaxQuantization(target_device=target_device)
     min_max_algo._backend_entity = ONNXMinMaxAlgoBackend()
     assert min_max_algo._target_device == target_device
 

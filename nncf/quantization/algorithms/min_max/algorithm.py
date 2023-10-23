@@ -171,9 +171,9 @@ class MinMaxQuantization(Algorithm):
     def _reset_cache(self):
         # It prevents the duplicate weight quantizers from being added.
         # It can happen when you have layers that share the identical weight tensor.
-        self._quantization_target_points_to_qconfig = (
-            collections.OrderedDict()
-        )  # type: OrderedDict[TargetPoint, QuantizerConfig]
+        self._quantization_target_points_to_qconfig: OrderedDict[
+            TargetPoint, QuantizerConfig
+        ] = collections.OrderedDict()
         self._unified_scale_groups = []
 
     @property
@@ -227,7 +227,7 @@ class MinMaxQuantization(Algorithm):
             self._backend_entity = PTMinMaxAlgoBackend()
         else:
             raise RuntimeError(
-                "Cannot return backend-specific entity because {} is not supported!".format(model_backend)
+                "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
             )
 
     def _get_range_estimator_parameters(

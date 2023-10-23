@@ -93,7 +93,13 @@ class NNCFTelemetry(ITelemetry):
 
     def __init__(self):
         try:
-            self._impl = Telemetry(app_name="nncf", app_version=__version__, tid=self.MEASUREMENT_ID, backend="ga4")
+            self._impl = Telemetry(
+                app_name="nncf",
+                app_version=__version__,
+                tid=self.MEASUREMENT_ID,
+                backend="ga4",
+                enable_opt_in_dialog=False,
+            )
         # pylint:disable=broad-except
         except Exception as e:
             nncf_logger.debug(f"Failed to instantiate telemetry object: exception {e}")

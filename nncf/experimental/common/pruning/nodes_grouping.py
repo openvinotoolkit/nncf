@@ -72,7 +72,7 @@ def get_pruning_groups(
     :return: list of groups with parameters of pruning.
     """
     # 1. Initialize masks for producing nodes
-    all_nodes_to_prune = graph.get_nodes_by_types(prune_operations_types)  # type: List[NNCFNode]
+    all_nodes_to_prune: List[NNCFNode] = graph.get_nodes_by_types(prune_operations_types)
     roots = {}
     for node in all_nodes_to_prune:
         assert isinstance(node.layer_attributes, (LinearLayerAttributes, ConvolutionLayerAttributes))

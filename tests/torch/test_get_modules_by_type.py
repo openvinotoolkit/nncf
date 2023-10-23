@@ -90,14 +90,14 @@ def test_get_all_modules_by_type__for_multiple_type():
 
 def test_get_all_modules_by_type__for_not_exact_type():
     model = ModelForNameTest()
-    l = get_all_modules_by_type(model, "Avg")
-    assert not l
+    layer = get_all_modules_by_type(model, "Avg")
+    assert not layer
 
 
 def test_get_all_modules_by_type__for_subtype():
     model = ModelForNameTest()
-    l = get_all_modules_by_type(model, "AvgPool2d_dummy")
-    assert not l
+    layer = get_all_modules_by_type(model, "AvgPool2d_dummy")
+    assert not layer
 
 
 IGNORED_SCOPES = [

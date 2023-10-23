@@ -24,6 +24,93 @@ ONNX_HW_FUSED_PATTERNS = Registry("onnx")
 # BLOCK PATTERNS
 
 
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.MVN)
+def create_mvn() -> GraphPattern:
+    pattern = GraphPattern()
+    pattern_input_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "*INPUT_NODE*", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
+    )
+    reduce_mean_node_1 = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "REDUCE_MEAN_1", GraphPattern.METATYPE_ATTR: om.ONNXReduceMeanMetatype}
+    )
+    sub_node = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "SUBTRACT",
+            GraphPattern.METATYPE_ATTR: [om.ONNXSubMetatype],
+        }
+    )
+    pow_node = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "POW",
+            GraphPattern.METATYPE_ATTR: [om.ONNXPowMetatype],
+        }
+    )
+    reduce_mean_node_2 = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "REDUCE_MEAN_2", GraphPattern.METATYPE_ATTR: om.ONNXReduceMeanMetatype}
+    )
+    add_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD", GraphPattern.METATYPE_ATTR: om.ONNXAddLayerMetatype})
+    sqrt_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SQRT", GraphPattern.METATYPE_ATTR: om.ONNXSqrtMetatype})
+    div_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "DIV", GraphPattern.METATYPE_ATTR: om.ONNXDivLayerMetatype})
+
+    pattern.add_edge(pattern_input_node, reduce_mean_node_1)
+    pattern.add_edge(reduce_mean_node_1, sub_node)
+    pattern.add_edge(pattern_input_node, sub_node)
+    pattern.add_edge(sub_node, pow_node)
+    pattern.add_edge(pow_node, reduce_mean_node_2)
+    pattern.add_edge(reduce_mean_node_2, add_node)
+    pattern.add_edge(add_node, sqrt_node)
+    pattern.add_edge(sqrt_node, div_node)
+    pattern.add_edge(sub_node, div_node)
+    return pattern
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.MVN_SCALE_SHIFT)
+def create_mvn_scale_shift() -> GraphPattern:
+    mvn = create_mvn()
+    scale_shift = create_scale_shift()
+
+    mvn.join_patterns(scale_shift)
+    return mvn
+
+
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.GELU)
+def create_gelu() -> GraphPattern:
+    pattern = GraphPattern()
+    pattern_input_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "*INPUT_NODE*", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
+    )
+    div_node = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "DIV",
+            GraphPattern.METATYPE_ATTR: [om.ONNXDivLayerMetatype, om.ONNXMulLayerMetatype],
+        }
+    )
+    erf_node = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "ERF",
+            GraphPattern.METATYPE_ATTR: om.ONNXErfMetatype,
+        }
+    )
+    add_node = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "ADD",
+            GraphPattern.METATYPE_ATTR: [om.ONNXAddLayerMetatype, om.ONNXSubMetatype],
+        }
+    )
+    mul_node = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "MUL",
+            GraphPattern.METATYPE_ATTR: [om.ONNXMulLayerMetatype, om.ONNXDivLayerMetatype],
+        }
+    )
+    pattern.add_edge(pattern_input_node, div_node)
+    pattern.add_edge(div_node, erf_node)
+    pattern.add_edge(erf_node, add_node)
+    pattern.add_edge(add_node, mul_node)
+    pattern.add_edge(pattern_input_node, mul_node)
+    return pattern
+
+
 @ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.SCALE_SHIFT)
 def create_scale_shift() -> GraphPattern:
     pattern = GraphPattern()
@@ -372,6 +459,15 @@ def create_linear_arithmetic_activations() -> GraphPattern:
     return linear
 
 
+@ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_SHIFT_SCALE)
+def create_linear_shift_scale() -> GraphPattern:
+    linear = linear_operations()
+    shift_scale = create_shift_scale()
+
+    linear.join_patterns(shift_scale)
+    return linear
+
+
 @ONNX_HW_FUSED_PATTERNS.register(HWFusedPatternNames.LINEAR_ARITHMETIC_ACTIVATIONS_ARITHMETIC)
 def create_linear_arithmetic_activations_arithmetic() -> GraphPattern:
     linear_arithmetic_activations = create_linear_arithmetic_activations()
@@ -423,6 +519,9 @@ def atomic_activations_operations() -> GraphPattern:
 
     hswish_without_denominator = create_hswish_without_denominator()
     pattern.add_pattern_alternative(hswish_without_denominator)
+
+    gelu = create_gelu()
+    pattern.add_pattern_alternative(gelu)
     return pattern
 
 
