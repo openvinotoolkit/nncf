@@ -88,6 +88,7 @@ class ResultInfo:
             "Diff FP32": self.diff_fp32,
             "Diff target": self.diff_target,
             "Status": self.status,
+            "Build url": os.environ.get("BUILD_URL", ""),
         }
 
 
