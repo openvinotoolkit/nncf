@@ -24,7 +24,6 @@ from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBas
 from nncf.common.utils.registry import Registry
 
 TModel = TypeVar("TModel")
-ALGO_BACKENDS = Registry("algo_backends")
 
 
 @dataclass

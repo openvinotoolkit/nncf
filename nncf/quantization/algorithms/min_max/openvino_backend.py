@@ -40,13 +40,11 @@ from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import RangeEstimatorParameters
 from nncf.quantization.advanced_parameters import StatisticsType
-from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
 
 # pylint:disable=too-many-public-methods
-@ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:

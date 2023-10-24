@@ -20,7 +20,6 @@ from nncf.parameters import CompressWeightsMode
 from nncf.scopes import IgnoredScope
 
 TModel = TypeVar("TModel")
-ALGO_BACKENDS = Registry("algo_backends")
 
 
 class WeightCompressionAlgoBackend(ABC):

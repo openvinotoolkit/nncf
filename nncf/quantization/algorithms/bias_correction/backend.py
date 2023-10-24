@@ -26,7 +26,6 @@ from nncf.common.utils.registry import Registry
 
 TModel = TypeVar("TModel")
 OutputType = TypeVar("OutputType")
-ALGO_BACKENDS = Registry("algo_backends")
 
 
 # pylint:disable=too-many-public-methods

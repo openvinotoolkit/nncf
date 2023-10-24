@@ -28,11 +28,9 @@ from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.onnx.graph.transformations.commands import ONNXNullBiasInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.statistics.collectors import ONNXMeanStatisticCollector
-from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 
 
-@ALGO_BACKENDS.register(BackendType.ONNX)
 class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @property
     def types_to_insert_bias(self):

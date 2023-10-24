@@ -33,12 +33,10 @@ from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.openvino.statistics.collectors import get_mean_statistic_collector
 from nncf.openvino.statistics.collectors import get_raw_stat_collector
 from nncf.openvino.tensor import OVNNCFTensor
-from nncf.quantization.algorithms.bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 
 
 # pylint:disable=too-many-public-methods
-@ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @property
     def tensor_processor(self) -> OVNNCFCollectorTensorProcessor:

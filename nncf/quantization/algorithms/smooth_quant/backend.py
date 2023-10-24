@@ -24,7 +24,6 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
-ALGO_BACKENDS = Registry("algo_backends")
 
 
 class SmoothQuantAlgoBackend(ABC):

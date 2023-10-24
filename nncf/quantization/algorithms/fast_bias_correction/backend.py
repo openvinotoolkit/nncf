@@ -27,7 +27,6 @@ from nncf.experimental.tensor import Tensor
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
 OutputType = TypeVar("OutputType")
-ALGO_BACKENDS = Registry("algo_backends")
 
 
 class FastBiasCorrectionAlgoBackend(ABC):

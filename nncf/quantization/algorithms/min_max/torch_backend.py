@@ -29,7 +29,6 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import StatisticsType
-from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
@@ -50,7 +49,6 @@ from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 
 
 # pylint:disable=too-many-public-methods
-@ALGO_BACKENDS.register(BackendType.TORCH)
 class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
         TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,

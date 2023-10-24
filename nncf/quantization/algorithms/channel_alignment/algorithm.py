@@ -28,7 +28,6 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.quantization.algorithms.algorithm import Algorithm
-from nncf.quantization.algorithms.channel_alignment.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend
 from nncf.quantization.algorithms.channel_alignment.backend import LayoutDescriptor
 
@@ -75,8 +74,8 @@ class ChannelAlignment(Algorithm):
         self._algorithm_key = f"CA_{hash(self)}"
 
     @property
-    def available_backends(self) -> Dict[str, BackendType]:
-        return ALGO_BACKENDS.registry_dict
+    def available_backends(self) -> List[BackendType]:
+        return [BackendType.OPENVINO]
 
     def _set_backend_entity(self, model: TModel) -> None:
         """

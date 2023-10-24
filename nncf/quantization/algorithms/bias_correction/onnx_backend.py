@@ -33,12 +33,10 @@ from nncf.onnx.statistics.collectors import ONNXMeanStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
 from nncf.onnx.statistics.collectors import ONNXRawStatisticCollector
 from nncf.onnx.tensor import ONNXNNCFTensor
-from nncf.quantization.algorithms.bias_correction.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 
 
 # pylint:disable=too-many-public-methods
-@ALGO_BACKENDS.register(BackendType.ONNX)
 class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @property
     def tensor_processor(self) -> ONNXNNCFCollectorTensorProcessor:

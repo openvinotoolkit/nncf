@@ -51,7 +51,6 @@ from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.advanced_parameters import changes_asdict
 from nncf.quantization.algorithms.algorithm import Algorithm
-from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.quantization.fake_quantize import get_quantizer_narrow_range
 from nncf.quantization.passes import transform_to_inference_graph
@@ -177,8 +176,8 @@ class MinMaxQuantization(Algorithm):
         self._unified_scale_groups = []
 
     @property
-    def available_backends(self) -> Dict[str, BackendType]:
-        return ALGO_BACKENDS.registry_dict
+    def available_backends(self) -> List[BackendType]:
+        return [BackendType.ONNX, BackendType.OPENVINO, BackendType.TORCH]
 
     def _get_quantizer_constraints(
         self, group: QuantizerGroup, preset: QuantizationPreset, quantization_params: Optional[QuantizationParameters]

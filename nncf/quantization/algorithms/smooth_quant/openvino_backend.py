@@ -30,11 +30,9 @@ from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.openvino.statistics.collectors import OVAbsMaxReducer
 from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
-from nncf.quantization.algorithms.smooth_quant.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
 
 
-@ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     @property
     def weighted_metatypes(self) -> List[OperatorMetatype]:

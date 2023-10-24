@@ -9,7 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Dict, Optional, TypeVar
+import itertools
+from typing import Callable, List, Optional, TypeVar
 
 from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
@@ -71,8 +72,11 @@ class PostTrainingQuantization(Algorithm):
         )
 
     @property
-    def available_backends(self) -> Dict[str, BackendType]:
-        return
+    def available_backends(self) -> List[BackendType]:
+        backends = set(BackendType)
+        for algorithm in itertools.chain.from_iterable(self._pipeline.pipeline_steps):
+            backends = backends.intersection(algorithm.available_backends)
+        return list(backends)
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         return self._pipeline.get_statistic_points_for_step(0, model, graph)

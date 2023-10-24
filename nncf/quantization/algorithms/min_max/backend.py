@@ -30,7 +30,6 @@ from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 
 TModel = TypeVar("TModel")
-ALGO_BACKENDS = Registry("algo_backends")
 
 
 # pylint:disable=too-many-public-methods
