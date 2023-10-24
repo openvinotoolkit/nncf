@@ -19,7 +19,6 @@ from openvino.runtime import opset9 as opset
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.logging import nncf_logger
-from nncf.common.utils.backend import BackendType
 from nncf.common.utils.helpers import create_table
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVEmbeddingMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype

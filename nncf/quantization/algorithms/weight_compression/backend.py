@@ -15,7 +15,6 @@ from typing import List, Optional, TypeVar
 
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.utils.registry import Registry
 from nncf.parameters import CompressWeightsMode
 from nncf.scopes import IgnoredScope
 
