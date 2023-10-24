@@ -91,6 +91,7 @@ class TemplateTestQuantizerConfig:
         inference_nncf_graph = transform_to_inference_graph(
             deepcopy(nncf_graph),
             min_max_algo._backend_entity.shapeof_metatypes,
+            min_max_algo._backend_entity.dropout_metatypes,
             min_max_algo._backend_entity.read_variable_metatypes,
         )
         q_setup = min_max_algo._get_quantizer_setup(
@@ -144,6 +145,7 @@ class TemplateTestQuantizerConfig:
         inference_nncf_graph = transform_to_inference_graph(
             deepcopy(nncf_graph),
             min_max_algo._backend_entity.shapeof_metatypes,
+            min_max_algo._backend_entity.dropout_metatypes,
             min_max_algo._backend_entity.read_variable_metatypes,
         )
         if signed_weights is False or signed_activations in [True, False]:  # Incompatible with HW CPU config
@@ -185,6 +187,7 @@ class TemplateTestQuantizerConfig:
         inference_nncf_graph = transform_to_inference_graph(
             deepcopy(nncf_graph),
             min_max_algo._backend_entity.shapeof_metatypes,
+            min_max_algo._backend_entity.dropout_metatypes,
             min_max_algo._backend_entity.read_variable_metatypes,
         )
         q_setup = min_max_algo._get_quantizer_setup(

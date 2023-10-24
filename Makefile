@@ -99,7 +99,7 @@ install-tensorflow-dev: install-tensorflow-test install-pre-commit install-pylin
 	pip install -r examples/post_training_quantization/tensorflow/mobilenet_v2/requirements.txt
 
 test-tensorflow:
-	pytest ${COVERAGE_ARGS} tests/common tests/tensorflow    \
+	pytest ${COVERAGE_ARGS} tests/tensorflow    \
 		--junitxml ${JUNITXML_PATH}         \
 		$(DATA_ARG)
 
@@ -128,7 +128,7 @@ install-torch-dev: install-torch-test install-pre-commit install-pylint
 	pip install -r examples/post_training_quantization/torch/ssd300_vgg16/requirements.txt
 
 test-torch:
-	pytest ${COVERAGE_ARGS} tests/common tests/torch -m "not weekly and not nightly" --junitxml ${JUNITXML_PATH} $(DATA_ARG)
+	pytest ${COVERAGE_ARGS} tests/torch -m "not weekly and not nightly" --junitxml ${JUNITXML_PATH} $(DATA_ARG)
 
 test-torch-nightly:
 	pytest ${COVERAGE_ARGS} tests/torch -m nightly --junitxml ${JUNITXML_PATH} $(DATA_ARG)

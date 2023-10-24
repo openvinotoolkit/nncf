@@ -43,6 +43,12 @@
         "output_low": 0.0,
         "output_high": 2.4107847213745117
     },
+    "Sigmoid/fq_output_0": {
+        "input_low": 0.0,
+        "input_high": 0.9998180866241455,
+        "output_low": 0.0,
+        "output_high": 0.9998180866241455
+    },
     "Add0/fq_output_0": {
         "input_low": 0.0,
         "input_high": 2.4112234115600586,

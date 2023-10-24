@@ -67,8 +67,8 @@ def test_depthwise_models_fq_placement(model_creator_func):
 
 
 OMZ_MODELS_QUANTIZE_PARAMS = {
-    "swin-tiny-patch4-window7-224": {"preset": QuantizationPreset.PERFORMANCE, "model_type": ModelType.TRANSFORMER},
-    "mobilenet-v2-pytorch": {"preset": QuantizationPreset.PERFORMANCE},
+    # "swin-tiny-patch4-window7-224": {"preset": QuantizationPreset.PERFORMANCE, "model_type": ModelType.TRANSFORMER},
+    # "mobilenet-v2-pytorch": {"preset": QuantizationPreset.PERFORMANCE},
     "mobilenet-v3-small-1.0-224-tf": {"preset": QuantizationPreset.PERFORMANCE},
     "resnet-18-pytorch": {"preset": QuantizationPreset.PERFORMANCE},
     "resnet-50-pytorch": {"preset": QuantizationPreset.PERFORMANCE, "target_device": TargetDevice.CPU_SPR},

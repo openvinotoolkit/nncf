@@ -12,6 +12,7 @@ from nncf.common.graph.patterns.patterns import GraphPattern
 from nncf.common.graph.patterns.patterns import IgnoredPatternNames
 from nncf.common.utils.registry import Registry
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
+from nncf.openvino.graph.metatypes.groups import LINEAR_OPERATIONS
 
 OPENVINO_IGNORED_PATTERNS = Registry("IGNORED_PATTERNS")
 
@@ -107,4 +108,54 @@ def create_equal_logicalnot() -> GraphPattern:
     )
 
     pattern.add_edge(equal_node, logical_not_node)
+    return pattern
+
+
+@OPENVINO_IGNORED_PATTERNS.register(IgnoredPatternNames.SE_BLOCK)
+def create_se_block() -> GraphPattern:
+    pattern = GraphPattern()
+    any_node = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "ANY", GraphPattern.METATYPE_ATTR: GraphPattern.NON_PATTERN_NODE_TYPE}
+    )
+    reduce_mean_node = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "REDUCE_MEAN",
+            GraphPattern.METATYPE_ATTR: om.OVReduceMeanMetatype,
+            GraphPattern.PATTERN_NODE_TO_EXCLUDE: True,
+        }
+    )
+    linear_node_1 = pattern.add_node(
+        **{GraphPattern.METATYPE_ATTR: LINEAR_OPERATIONS, GraphPattern.LABEL_ATTR: "LINEAR"}
+    )
+    add_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD_BIAS", GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
+    activation_node_1 = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "RELU, PRELU, SWISH",
+            GraphPattern.METATYPE_ATTR: [om.OVReluMetatype, om.OVPReluMetatype, om.OVSwishMetatype],
+        }
+    )
+    linear_node_2 = pattern.add_node(
+        **{GraphPattern.METATYPE_ATTR: LINEAR_OPERATIONS, GraphPattern.LABEL_ATTR: "LINEAR"}
+    )
+    add_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD_BIAS", GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
+    activation_node_2 = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "SIGMOID", GraphPattern.METATYPE_ATTR: om.OVSigmoidMetatype}
+    )
+    multiply_node = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "MULTIPLY",
+            GraphPattern.METATYPE_ATTR: om.OVMultiplyMetatype,
+            GraphPattern.PATTERN_NODE_TO_EXCLUDE: True,
+        }
+    )
+
+    pattern.add_edge(any_node, reduce_mean_node)
+    pattern.add_edge(reduce_mean_node, linear_node_1)
+    pattern.add_edge(linear_node_1, add_node_1)
+    pattern.add_edge(add_node_1, activation_node_1)
+    pattern.add_edge(activation_node_1, linear_node_2)
+    pattern.add_edge(linear_node_2, add_node_2)
+    pattern.add_edge(add_node_2, activation_node_2)
+    pattern.add_edge(activation_node_2, multiply_node)
+    pattern.add_edge(any_node, multiply_node)
     return pattern
