@@ -70,6 +70,14 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return []
 
     @property
+    def dropout_metatypes(self) -> List[OperatorMetatype]:
+        return [om.PTDropoutMetatype]
+
+    @property
+    def read_variable_metatypes(self) -> List[OperatorMetatype]:
+        return []
+
+    @property
     def conv_metatypes(self) -> List[OperatorMetatype]:
         return [om.PTModuleConv1dMetatype, om.PTModuleConv2dMetatype, om.PTModuleConv3dMetatype]
 
@@ -84,10 +92,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
             om.PTModuleConvTranspose2dMetatype,
             om.PTModuleConvTranspose3dMetatype,
         ]
-
-    @property
-    def read_variable_metatypes(self) -> List[OperatorMetatype]:
-        return []
 
     @property
     def add_metatypes(self) -> List[OperatorMetatype]:
@@ -307,6 +311,10 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.PTDivMetatype,
                 om.PTMaxMetatype,
                 om.PTSqueezeMetatype,
+                om.PTLayerNormMetatype,
+                om.PTModuleLayerNormMetatype,
+                om.PTGroupNormMetatype,
+                om.PTModuleGroupNormMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
                 types.append(om.PTMulMetatype)

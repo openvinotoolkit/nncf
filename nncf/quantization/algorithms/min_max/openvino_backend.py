@@ -57,10 +57,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [om.OVTopKMetatype, om.OVNonMaxSuppressionMetatype]
 
     @property
-    def shapeof_metatypes(self) -> List[OperatorMetatype]:
-        return [om.OVShapeOfMetatype]
-
-    @property
     def conv_metatypes(self) -> List[OperatorMetatype]:
         return [om.OVConvolutionMetatype]
 
@@ -75,16 +71,24 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         ]
 
     @property
-    def read_variable_metatypes(self) -> List[OperatorMetatype]:
-        return [om.OVReadValueMetatype]
-
-    @property
     def add_metatypes(self) -> List[OperatorMetatype]:
         return [om.OVAddMetatype]
 
     @property
     def group_conv_metatypes(self) -> List[OperatorMetatype]:
         return [om.OVGroupConvolutionMetatype]
+
+    @property
+    def shapeof_metatypes(self) -> List[OperatorMetatype]:
+        return [om.OVShapeOfMetatype]
+
+    @property
+    def dropout_metatypes(self) -> List[OperatorMetatype]:
+        return []
+
+    @property
+    def read_variable_metatypes(self) -> List[OperatorMetatype]:
+        return [om.OVReadValueMetatype]
 
     @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:

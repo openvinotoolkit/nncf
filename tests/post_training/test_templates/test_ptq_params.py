@@ -165,6 +165,7 @@ class TemplateTestPTQParams:
         inference_nncf_graph = transform_to_inference_graph(
             deepcopy(nncf_graph),
             min_max_algo._backend_entity.shapeof_metatypes,
+            min_max_algo._backend_entity.dropout_metatypes,
             min_max_algo._backend_entity.read_variable_metatypes,
         )
         q_setup = min_max_algo._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)
@@ -189,6 +190,7 @@ class TemplateTestPTQParams:
         inference_nncf_graph = transform_to_inference_graph(
             deepcopy(nncf_graph),
             min_max_algo._backend_entity.shapeof_metatypes,
+            min_max_algo._backend_entity.dropout_metatypes,
             min_max_algo._backend_entity.read_variable_metatypes,
         )
         q_setup = min_max_algo._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)
@@ -213,6 +215,7 @@ class TemplateTestPTQParams:
         inference_nncf_graph = transform_to_inference_graph(
             deepcopy(nncf_graph),
             min_max_algo._backend_entity.shapeof_metatypes,
+            min_max_algo._backend_entity.dropout_metatypes,
             min_max_algo._backend_entity.read_variable_metatypes,
         )
         q_setup = min_max_algo._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)
@@ -276,7 +279,7 @@ class TemplateTestPTQParams:
     @pytest.mark.parametrize("validate_scopes", (True, False))
     def test_validate_scope(self, test_params, validate_scopes):
         nncf_graph = test_params["test_model_type_pass"]["nncf_graph"]
-        inference_nncf_graph = transform_to_inference_graph(deepcopy(nncf_graph), [])
+        inference_nncf_graph = transform_to_inference_graph(deepcopy(nncf_graph), [], [])
         ignored_patterns = test_params["test_model_type_pass"]["ignored_patterns"]
         algo = MinMaxQuantization(
             ignored_scope=IgnoredScope(names=["some_node"], validate=validate_scopes),

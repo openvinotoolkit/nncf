@@ -57,10 +57,6 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [om.ONNXTopKMetatype, om.ONNXNonMaxSuppressionMetatype]
 
     @property
-    def shapeof_metatypes(self) -> List[OperatorMetatype]:
-        return [om.ONNXShapeMetatype]
-
-    @property
     def conv_metatypes(self) -> List[OperatorMetatype]:
         return [om.ONNXConvolutionMetatype]
 
@@ -69,16 +65,24 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [om.ONNXConvolutionMetatype, om.ONNXConvolutionTransposeMetatype, *MATMUL_METATYPES]
 
     @property
-    def read_variable_metatypes(self) -> List[OperatorMetatype]:
-        return []
-
-    @property
     def add_metatypes(self) -> List[OperatorMetatype]:
         return [om.ONNXAddLayerMetatype]
 
     @property
     def group_conv_metatypes(self) -> List[OperatorMetatype]:
         return self.conv_metatypes
+
+    @property
+    def shapeof_metatypes(self) -> List[OperatorMetatype]:
+        return [om.ONNXShapeMetatype]
+
+    @property
+    def dropout_metatypes(self) -> List[OperatorMetatype]:
+        return []
+
+    @property
+    def read_variable_metatypes(self) -> List[OperatorMetatype]:
+        return []
 
     @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:

@@ -1,0 +1,19 @@
+strict digraph  {
+"0 /Input_1_0" [id=0, type=Input_1];
+"1 /Split_1_0" [id=1, type=Split_1];
+"5 /Output_1_0" [id=5, type=Output_1];
+"6 /Output_2_1_0" [id=6, type=Output_2_1];
+"7 /Output_2_2_0" [id=7, type=Output_2_2];
+"8 /Output_2_3_0" [id=8, type=Output_2_3];
+"9 /Output_3_0" [id=9, type=Output_3];
+"10 /Output_2_4_0" [id=10, type=output];
+"11 /Output_3_1_0" [id=11, type=output];
+"0 /Input_1_0" -> "1 /Split_1_0";
+"1 /Split_1_0" -> "5 /Output_1_0";
+"1 /Split_1_0" -> "6 /Output_2_1_0";
+"1 /Split_1_0" -> "7 /Output_2_2_0";
+"1 /Split_1_0" -> "8 /Output_2_3_0";
+"1 /Split_1_0" -> "9 /Output_3_0";
+"1 /Split_1_0" -> "10 /Output_2_4_0";
+"1 /Split_1_0" -> "11 /Output_3_1_0"  [label="parallel_input_port_ids:[2, 3, 4, 5, 6, 7, 8, 9]"];
+}

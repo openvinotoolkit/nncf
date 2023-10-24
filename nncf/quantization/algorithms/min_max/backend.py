@@ -51,13 +51,6 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def shapeof_metatypes(self) -> List[OperatorMetatype]:
-        """
-        Property for the backend-specific ShapeOf metatypes.
-        """
-
-    @property
-    @abstractmethod
     def conv_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific Convolution metatypes.
@@ -65,9 +58,16 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
+    def shapeof_metatypes(self) -> List[OperatorMetatype]:
         """
-        Property for the backend-specific metatypes for which overflow_fix is applicable.
+        Property for the backend-specific ShapeOf metatypes.
+        """
+
+    @property
+    @abstractmethod
+    def dropout_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific Dropout metatypes.
         """
 
     @property
@@ -75,6 +75,13 @@ class MinMaxAlgoBackend(ABC):
     def read_variable_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific metatypes that also can be interpreted as inputs (ReadValue).
+        """
+
+    @property
+    @abstractmethod
+    def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific metatypes for which overflow_fix is applicable.
         """
 
     @property

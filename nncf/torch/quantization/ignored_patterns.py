@@ -69,8 +69,15 @@ def _add_softmax_reshape_matmul(
 
 @PT_IGNORED_PATTERNS.register(IgnoredPatternNames.MULTIHEAD_ATTENTION_OUTPUT)
 def create_multihead_attention_output() -> GraphPattern:
-    matmul_aliases = ["linear", "addmm", "matmul", "bmm", "mm", "baddbmm"]
-    reshape_squeeze_aliases = ["reshape", "view", "flatten", "squeeze", "unsqueeze", "squeeze", "flatten", "unsqueeze"]
+    matmul_aliases = ["linear", "addmm", "matmul", "bmm", "mm", "baddbmm", "__matmul__"]
+    reshape_squeeze_aliases = [
+        "reshape",
+        "view",
+        "flatten",
+        "unsqueeze",
+        "squeeze",
+        "unbind",
+    ]
     gather_aliases = ["gather", "index_select", "where", "index_select", "__getitem__"]
     transpose_aliases = ["transpose", "permute", "transpose_"]
 
