@@ -10,9 +10,7 @@
 # limitations under the License.
 from pathlib import Path
 
-import openvino as ov
 import torch
-from openvino.tools.mo import convert_model
 
 from examples.common.sample_config import SampleConfig
 from examples.torch.common.example_logger import logger
@@ -25,9 +23,8 @@ def export_model(ctrl: CompressionAlgorithmController, config: SampleConfig) -> 
     Export compressed model ot OpenVINO format.
 
     :param controller: The compression controller.
-    :param config: Quantization config.
+    :param config: The config.
     """
-
     model = ctrl.model if config.no_strip_on_export else ctrl.strip()
     model = model.eval().cpu()
 
@@ -43,21 +40,30 @@ def export_model(ctrl: CompressionAlgorithmController, config: SampleConfig) -> 
         input_tensor_list = input_tensor_list[0]
         input_shape_list = input_shape_list[0]
 
-    model_path = Path(config.to_ir)
+    model_path = Path(config.export_model_path)
     model_path.parent.mkdir(exist_ok=True, parents=True)
+    extension = model_path.suffix
 
-    if config.export_via_onnx:
-        model_onnx_path = model_path.with_suffix(".onnx")
+    if extension == ".onnx":
         with torch.no_grad():
-            torch.onnx.export(model, input_tensor_list, model_onnx_path, input_names=input_names)
-        ov_model = convert_model(model_onnx_path, compress_to_fp16=False)
-    else:
-        ov_model = convert_model(
-            model, example_input=input_tensor_list, input_shape=input_shape_list, compress_to_fp16=False
-        )
-        # Rename input nodes
-        for input_node, input_name in zip(ov_model.inputs, input_names):
-            input_node.node.set_friendly_name(input_name)
+            torch.onnx.export(model, input_tensor_list, model_path, input_names=input_names)
+    elif extension == ".xml":
+        import openvino as ov
+        from openvino.tools.mo import convert_model
 
-    ov.save_model(ov_model, model_path)
+        if config.export_to_ir_via_onnx:
+            model_onnx_path = model_path.with_suffix(".onnx")
+            with torch.no_grad():
+                torch.onnx.export(model, input_tensor_list, model_onnx_path, input_names=input_names)
+            ov_model = convert_model(model_onnx_path, compress_to_fp16=False)
+        else:
+            ov_model = convert_model(
+                model, example_input=input_tensor_list, input_shape=input_shape_list, compress_to_fp16=False
+            )
+            # Rename input nodes
+            for input_node, input_name in zip(ov_model.inputs, input_names):
+                input_node.node.set_friendly_name(input_name)
+        ov.save_model(ov_model, model_path)
+    else:
+        raise ValueError(f"--export-model-path argument should have suffix `.xml` or `.onnx` but got {extension}")
     logger.info(f"Saved to {model_path}")

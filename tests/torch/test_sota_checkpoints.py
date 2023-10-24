@@ -155,7 +155,7 @@ def generate_run_examples_command(
     multiprocessing_distributed: bool = False,
     resume_file_path: Optional[Path] = None,
     weights_path: Optional[Path] = None,
-    to_ir: Optional[Path] = None,
+    export_model_path: Optional[Path] = None,
     batch: Optional[int] = None,
     cpu_only: bool = False,
     checkpoint_dir: Optional[Path] = None,
@@ -176,8 +176,8 @@ def generate_run_examples_command(
         cmd += ["--pretrained"]
     if weights_path is not None and weights_path.exists():
         cmd += ["--weights", weights_path.as_posix()]
-    if to_ir is not None:
-        cmd += ["--to-ir", to_ir.as_posix()]
+    if export_model_path is not None:
+        cmd += ["--export-model-path", export_model_path.as_posix()]
     if metrics_dump_file_path is not None:
         cmd += ["--metrics-dump", metrics_dump_file_path.as_posix()]
     if log_dir is not None:
@@ -372,8 +372,6 @@ class TestSotaCheckpoints:
     def test_convert(self, eval_run_param: EvalRunParamsStruct, openvino, sota_checkpoints_dir):
         if not openvino:
             pytest.skip("Skip if not --run-openvino-eval")
-        if eval_run_param.skip_ov:
-            pytest.skip(f"Skip by: {eval_run_param.skip_ov}")
 
         os.chdir(PROJECT_ROOT)
         ir_model_path = self.get_ir_model_path(eval_run_param)
@@ -388,7 +386,7 @@ class TestSotaCheckpoints:
             mode="export",
             config=eval_run_param.config_name,
             cpu_only=True,
-            to_ir=ir_model_path,
+            export_model_path=ir_model_path,
             resume_file_path=resume_file_path,
         )
         runner = Command(cmd, cwd=PROJECT_ROOT, env=self.get_env())

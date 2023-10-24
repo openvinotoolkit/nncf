@@ -104,8 +104,13 @@ def get_common_argument_parser():
     parser.add_argument("--dist-url", default="tcp://127.0.0.1:8899", help="URL used to set up distributed training")
     parser.add_argument("--rank", default=0, type=int, help="Node rank for distributed training")
     parser.add_argument("--dist-backend", default="nccl", type=str, help="Distributed backend")
-    parser.add_argument("--no_strip_on_export", help="Set to export not stripped model.", action="store_true")
-    parser.add_argument("--export_via_onnx", help="Export model via ONNX representation.", action="store_true")
+    parser.add_argument("--no-strip-on-export", help="Set to export not stripped model.", action="store_true")
+    parser.add_argument(
+        "--export-to-ir-via-onnx",
+        help="When used with the `exported-model-path` option to export to OpenVINO, will produce the serialized OV IR object by first exporting "
+        "the torch model object to an .onnx file and then converting that .onnx file to an OV IR file.",
+        action="store_true",
+    )
 
     # Hyperparameters
     parser.add_argument(
@@ -171,11 +176,11 @@ def get_common_argument_parser():
 
     parser.add_argument("--save-freq", default=5, type=int, help="Checkpoint save frequency (epochs). Default: 5")
     parser.add_argument(
-        "--to-ir",
+        "--export-model-path",
         type=str,
         metavar="PATH",
         default=None,
-        help="Directory to export model to OpenVINO format.",
+        help="The path to export the model in OpenVINO or ONNX format by using the .xml or .onnx suffix, respectively.",
     )
 
     # Display
@@ -197,6 +202,6 @@ def get_common_argument_parser():
 
 def parse_args(parser, argv):
     args = parser.parse_args(argv)
-    if "export" in args.mode and args.to_ir is None:
-        raise RuntimeError("--mode export requires --to-ir argument to be set")
+    if "export" in args.mode and args.export_model_path is None:
+        raise RuntimeError("--mode export requires --export-model-path argument to be set")
     return args

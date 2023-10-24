@@ -56,9 +56,9 @@ It may take a few epochs to get the baseline accuracy results.
 - Use the `--weights` flag with the path to a compatible PyTorch checkpoint in order to load all matching weights from the checkpoint into the model - useful
   if you need to start compression-aware training from a previously trained uncompressed (FP32) checkpoint instead of performing compression-aware training fr
   om scratch.
-- Use `--to-ir` to specify the path to the directory where the model will be exported to OpenVINO format.
-- Use the `--no_strip_on_export` to export not stripped model.
-- Use the `--export_via_onnx` to export model via ONNX representation.
+- Use `--export-model-path` to specify the path to export the model in OpenVINO or ONNX format by using the .xml or .onnx suffix, respectively.
+- Use the `--no-strip-on-export` to export not stripped model.
+- Use the `--export-to-ir-via-onnx` to to export to OpenVINO, will produce the serialized OV IR object by first exporting the torch model object to an .onnx file and then converting that .onnx file to an OV IR file.
 
 ### Validate your model checkpoint
 

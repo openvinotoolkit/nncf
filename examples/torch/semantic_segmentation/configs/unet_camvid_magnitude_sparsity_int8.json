@@ -63,5 +63,5 @@
             "algorithm": "quantization"
     }
     ],
-    "export_via_onnx": true
+    "export_to_ir_via_onnx": true
 }

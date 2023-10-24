@@ -35,5 +35,5 @@
     "flip": true,
     "top_k": 200
   },
-  "export_via_onnx": true
+  "export_to_ir_via_onnx": true
 }
