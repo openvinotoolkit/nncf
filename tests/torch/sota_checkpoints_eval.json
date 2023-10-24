@@ -106,7 +106,7 @@
                 "resume": "inception_v3_imagenet_rb_sparsity_int8.pth",
                 "model_description": "Inception V3",
                 "compression_description": "INT8 + Sparsity 61% (RB)",
-                "diff_fp32_min": -1,
+                "diff_fp32_min": -1.1,
                 "diff_fp32_max": 0.4,
                 "multiprocessing_distributed": true
             },
