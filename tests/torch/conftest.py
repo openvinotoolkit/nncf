@@ -248,8 +248,8 @@ def runs_subprocess_in_precommit():
 
 
 @pytest.fixture(scope="module")
-def cuda_ip(request):
-    return request.config.getoption("--cuda-ip")
+def distributed_mode_sync_port(request):
+    return request.config.getoption("--distributed-mode-sync-port")
 
 
 @pytest.fixture

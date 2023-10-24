@@ -60,7 +60,7 @@ class EvalRunParamsStruct:
     diff_target_pt_min: float
     diff_target_pt_max: float
     multiprocessing_distributed: bool
-    skip_ov: str
+    skip_ov: Optional[str]
 
 
 @dataclass
@@ -104,13 +104,15 @@ def read_reference_file(ref_path: Path) -> List[EvalRunParamsStruct]:
         sota_eval_config = json.load(source, object_pairs_hook=OrderedDict)
 
     param_list = []
+    model_names = []
     for sample_type_ in sota_eval_config:
         datasets = sota_eval_config[sample_type_]
         for dataset_name in datasets:
             model_dict = datasets[dataset_name]
             for model_name, sample_dict in model_dict.items():
-                if "target_pt" not in sample_dict:
-                    continue
+                if model_name in model_names:
+                    raise RuntimeError(f"Model name {model_name} is not unique.")
+                model_names.append(model_name)
                 param_list.append(
                     EvalRunParamsStruct(
                         model_name=model_name,
@@ -130,13 +132,13 @@ def read_reference_file(ref_path: Path) -> List[EvalRunParamsStruct]:
                         diff_target_pt_min=sample_dict.get("diff_target_pt_min", DIFF_TARGET_PT_MIN),
                         diff_target_pt_max=sample_dict.get("diff_target_pt_max", DIFF_TARGET_PT_MAX),
                         multiprocessing_distributed=sample_dict.get("multiprocessing_distributed", False),
-                        skip_ov=sample_dict.get("skip_ov", ""),
+                        skip_ov=sample_dict.get("skip_ov", None),
                     )
                 )
     return param_list
 
 
-EVAL_TEST_STRUCT = read_reference_file(Path(TEST_ROOT) / "torch" / "sota_checkpoints_eval.json")
+EVAL_TEST_STRUCT = read_reference_file(TEST_ROOT / "torch" / "sota_checkpoints_eval.json")
 
 
 def idfn(val):
@@ -159,8 +161,8 @@ def generate_run_examples_command(
     batch: Optional[int] = None,
     cpu_only: bool = False,
     checkpoint_dir: Optional[Path] = None,
-    cuda_ip: Optional[str] = None,
-):
+    distributed_mode_sync_port: Optional[str] = None,
+) -> str:
     cmd = [
             sys.executable,
             "tests/torch/run_examples_for_test_sota.py",
@@ -190,14 +192,14 @@ def generate_run_examples_command(
         cmd += ["--cpu-only"]
     if checkpoint_dir:
         cmd += ["--checkpoint-save-dir", checkpoint_dir.as_posix()]
-    if cuda_ip is not None:
-        print(f"Setting distributed mode synchronization URL to tcp://127.0.0.1:{cuda_ip}")
-        cmd += [f"--dist-url=tcp://127.0.0.1:{cuda_ip}"]
+    if distributed_mode_sync_port is not None:
+        print(f"Setting distributed mode synchronization URL to tcp://127.0.0.1:{distributed_mode_sync_port}")
+        cmd += [f"--dist-url=tcp://127.0.0.1:{distributed_mode_sync_port}"]
     return " ".join(cmd)
 
 
 @pytest.fixture(autouse=True, scope="class")
-def make_metrics_dump_path(metrics_dump_dir):
+def create_metrics_dump_dir(metrics_dump_dir):
     if pytest.metrics_dump_path is None:
         data = datetime.datetime.now()
         pytest.metrics_dump_path = (
@@ -207,20 +209,20 @@ def make_metrics_dump_path(metrics_dump_dir):
     else:
         pytest.metrics_dump_path = Path(pytest.metrics_dump_path)
     pytest.metrics_dump_path.mkdir(exist_ok=True, parents=True)
-    assert not pytest.metrics_dump_path.is_dir() or not os.listdir(
-        pytest.metrics_dump_path
+    assert not pytest.metrics_dump_path.is_dir() or not next(
+        pytest.metrics_dump_path.iterdir(), None
     ), f"metrics_dump_path dir should be empty: {pytest.metrics_dump_path}"
     print(f"metrics_dump_path: {pytest.metrics_dump_path}")
 
 
 @pytest.mark.nightly
 class TestSotaCheckpoints:
-    def setup_class(self):
-        self.report_dict = OrderedDict()
-        self.ref_fp32_dict = OrderedDict()
+    def setup_class(cls):
+        cls.report_dict = OrderedDict()
+        cls.ref_fp32_dict = OrderedDict()
         for run_param in EVAL_TEST_STRUCT:
             if run_param.reference is None:
-                self.ref_fp32_dict[run_param.model_name] = run_param.target_ov
+                cls.ref_fp32_dict[run_param.model_name] = run_param.target_ov
 
     @pytest.fixture(params=EVAL_TEST_STRUCT, ids=idfn)
     def eval_run_param(self, request):
@@ -263,12 +265,12 @@ class TestSotaCheckpoints:
     @staticmethod
     def threshold_check(
         diff_target: float,
-        diff_fp32: Optional[float],
-        diff_target_min=float,
-        diff_target_max=float,
-        diff_fp32_min=float,
-        diff_fp32_max=float,
-    ) -> Tuple[bool, List[str]]:
+        diff_target_min: float,
+        diff_target_max: float,
+        diff_fp32: Optional[float] = None,
+        diff_fp32_min: Optional[float] = None,
+        diff_fp32_max: Optional[float] = None,
+    ) -> Optional[str]:
         err_msgs = []
         if diff_target < diff_target_min or diff_target > diff_target_max:
             err_msgs.append(
@@ -344,9 +346,9 @@ class TestSotaCheckpoints:
 
         threshold_errors = self.threshold_check(
             diff_target=diff_target,
-            diff_fp32=diff_fp32,
             diff_target_min=eval_run_param.diff_target_pt_min,
             diff_target_max=eval_run_param.diff_target_pt_max,
+            diff_fp32=diff_fp32,
             diff_fp32_min=eval_run_param.diff_fp32_min,
             diff_fp32_max=eval_run_param.diff_fp32_max,
         )
@@ -458,9 +460,9 @@ class TestSotaCheckpoints:
 
         threshold_errors = self.threshold_check(
             diff_target=diff_target,
-            diff_fp32=diff_fp32,
             diff_target_min=eval_run_param.diff_target_ov_min,
             diff_target_max=eval_run_param.diff_target_ov_max,
+            diff_fp32=diff_fp32,
             diff_fp32_min=eval_run_param.diff_fp32_min,
             diff_fp32_max=eval_run_param.diff_fp32_max,
         )
@@ -480,7 +482,9 @@ class TestSotaCheckpoints:
             pytest.fail(threshold_errors)
 
     @pytest.mark.train
-    def test_train(self, eval_run_param: EvalRunParamsStruct, cuda_ip, sota_data_dir, sota_checkpoints_dir):
+    def test_train(
+        self, eval_run_param: EvalRunParamsStruct, distributed_mode_sync_port, sota_data_dir, sota_checkpoints_dir
+    ):
         if sota_data_dir is None:
             pytest.skip("Path to datasets is not set")
 
@@ -501,7 +505,7 @@ class TestSotaCheckpoints:
             metrics_dump_file_path=metrics_dump_file_path,
             log_dir=log_dir,
             checkpoint_dir=checkpoint_dir,
-            cuda_ip=cuda_ip,
+            distributed_mode_sync_port=distributed_mode_sync_port,
             weights_path=weights_path,
         )
         runner = Command(cmd, cwd=PROJECT_ROOT, env=self.get_env())
