@@ -19,7 +19,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, TypeVar
+from typing import List, Optional, TypeVar
 
 from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
