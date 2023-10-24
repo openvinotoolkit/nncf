@@ -75,7 +75,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 if original_weight_dtype not in [np.float32, np.float16, np.float64]:
                     continue
                 const_shape = nncf_node.layer_attributes.constant_attributes[weight_port_id]["shape"]
-                channel_axes = get_weight_channel_axes(nncf_node, weight_port_id)
+                channel_axes = get_weight_channel_axes(nncf_node)
                 axes = get_channel_agnostic_reduction_axes(channel_axes, const_shape)
                 fq_name = f"{weight_op_friendly_name}/fq_weights_{weight_port_id}"
                 num_weights = np.prod(const_shape)
