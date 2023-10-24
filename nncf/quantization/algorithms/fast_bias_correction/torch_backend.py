@@ -65,8 +65,9 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         channel_axis: int,
         inplace: bool,
         num_samples: Optional[int] = None,
+        window_size: Optional[int] = None,
     ) -> TensorCollector:
-        return get_mean_statistic_collector(num_samples, channel_axis)
+        return get_mean_statistic_collector(num_samples, channel_axis, window_size)
 
     @staticmethod
     def get_sub_input_output_names(subgraph: NNCFNetwork) -> Tuple[str, str]:

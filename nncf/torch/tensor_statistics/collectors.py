@@ -496,7 +496,9 @@ def get_mean_percentile_statistic_collector(
     return tensor_collector
 
 
-def get_mean_statistic_collector(num_samples: int, channel_axis: int) -> TensorCollector:
+def get_mean_statistic_collector(
+    num_samples: int, channel_axis: int, window_size: Optional[int] = None
+) -> TensorCollector:
     """
     Mean statistic collector builder.
 
@@ -515,6 +517,7 @@ def get_mean_statistic_collector(num_samples: int, channel_axis: int) -> TensorC
     kwargs = {
         "tensor_processor": PTNNCFCollectorTensorProcessor,
         "num_samples": num_samples,
+        "window_size": window_size,
     }
     aggregate_mean = MeanAggregator(**kwargs)
     aggregate_shape = ShapeAggregator()

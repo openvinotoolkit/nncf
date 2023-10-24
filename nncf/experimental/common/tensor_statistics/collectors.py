@@ -12,6 +12,7 @@
 from abc import ABC
 from abc import abstractmethod
 from collections import defaultdict
+from collections import deque
 from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 from nncf.common.tensor import TensorType
@@ -124,6 +125,7 @@ class AggregatorBase:
         tensor_processor: NNCFCollectorTensorProcessor,
         aggregation_axes: Optional[AggregationAxes] = None,
         num_samples: Optional[int] = None,
+        window_size=None,
     ):
         """
         :param tensor_processor: Backend-specific tensor processor.
@@ -146,7 +148,8 @@ class AggregatorBase:
         self._keepdims = True
         self._num_samples = num_samples
         self._collected_samples = 0
-        self._container = []
+        self._window_size = window_size
+        self._container = deque(maxlen=window_size)
 
     @property
     def num_samples(self) -> int:
@@ -684,8 +687,11 @@ class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
         aggregation_axes: Optional[AggregationAxes] = None,
         num_samples: Optional[int] = None,
         quantile: float = 0.01,
+        window_size=None,
     ):
         super().__init__(tensor_processor, aggregation_axes=aggregation_axes, num_samples=num_samples)
+        self._window_size = window_size
+        self._container = deque(maxlen=window_size)
         self._quantile = quantile
 
     def _aggregate_impl(self) -> NNCFTensor:
@@ -762,9 +768,12 @@ class PercentileAggregator(AggregatorBase):
         percentiles_to_collect: List[float],
         aggregation_axes: Optional[AggregationAxes] = None,
         num_samples: Optional[int] = None,
+        window_size=None,
     ):
         super().__init__(tensor_processor, aggregation_axes=aggregation_axes, num_samples=num_samples)
         self._percentiles_to_collect = percentiles_to_collect
+        self._window_size = window_size
+        self._container = deque(maxlen=window_size)
 
     def _register_reduced_input_impl(self, x: TensorType) -> None:
         return self._container.append(x)
