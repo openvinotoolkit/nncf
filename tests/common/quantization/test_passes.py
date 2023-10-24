@@ -31,7 +31,7 @@ class TestModes(Enum):
 @pytest.mark.parametrize("mode", [TestModes.VALID, TestModes.WRONG_TENSOR_SHAPE, TestModes.WRONG_PARALLEL_EDGES])
 def test_remove_nodes_and_reconnect_graph(mode: TestModes):
     def _check_graphs(dot_file_name, nncf_graph) -> None:
-        nx_graph = nncf_graph.get_graph_for_structure_analysis()
+        nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
         path_to_dot = DATA_ROOT / dot_file_name
         compare_nx_graph_with_reference(nx_graph, path_to_dot, check_edge_attrs=True)
 

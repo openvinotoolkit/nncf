@@ -56,8 +56,7 @@ class Command:
             try:
                 start_time = time.time()
                 with subprocess.Popen(
-                    "source /home/dlyakhov/env/ov_latest/bin/activate;" + self.cmd,
-                    executable="/bin/bash",
+                    self.cmd,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     shell=True,
