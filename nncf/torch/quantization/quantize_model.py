@@ -141,9 +141,9 @@ def _create_nncf_config(
     preset: Union[QuantizationPreset, None],
     target_device: TargetDevice,
     subset_size: int,
-    model_type: Optional[ModelType],
-    ignored_scope: Optional[IgnoredScope],
-    advanced_parameters: Optional[AdvancedQuantizationParameters],
+    model_type: Union[ModelType, None],
+    ignored_scope: Union[IgnoredScope, None],
+    advanced_parameters: Union[AdvancedQuantizationParameters, None],
 ) -> NNCFConfig:
     """
     Creates the NNCFConfig for the quantization algorithm.

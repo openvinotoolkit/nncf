@@ -196,9 +196,9 @@ def _create_quantization_config(
     target_device: TargetDevice,
     subset_size: int,
     fast_bias_correction: bool,
-    model_type: Optional[ModelType],
-    ignored_scope: Optional[IgnoredScope],
-    advanced_parameters: Optional[AdvancedQuantizationParameters],
+    model_type: Union[ModelType, None],
+    ignored_scope: Union[IgnoredScope, None],
+    advanced_parameters: Union[AdvancedQuantizationParameters, None],
 ) -> Dict[str, Any]:
     """
     Creates a quantization configuration.
