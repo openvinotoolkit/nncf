@@ -275,9 +275,12 @@ def compress_weights_impl(
     :param model: a Torch model for compression.
     :param mode: Defines a mode for weight compression.
         INT8 stands for 8-bit integer quantization of all weights.
-        NF4 stands for a mixed-precision weights quantization to NF4 data type. The first and last layers
-        are always compressed to a backup precision which is 8-bit integer by default. All others are quantized whether
-        to NF4 or to a backup precision depending on criteria and the given ratio.
+        INT4_SYM stands for a mixed-precision weights quantization with 4-bit integer as a primary precision.
+            The first and last layers are always compressed to a backup precision, which is 8-bit integer,
+            by default. All others are quantized whether to 4-bit integer or to a backup precision depending on
+            criteria and the given ratio. Weights are quantized to a primary precision symmetrically.
+        INT4_ASYM is the same as INT4_SYM mode, but weights are quantized to a primary precision asymmetrically.
+        NF4 is the same as INT4_SYM mode, but primary precision is NF4 data type.
     :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
         and the rest to INT8).
     :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
