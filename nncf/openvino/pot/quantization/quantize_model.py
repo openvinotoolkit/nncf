@@ -12,7 +12,7 @@
 import logging
 import tempfile
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, Optional
+from typing import Any, Callable, Dict, Iterable, Optional, Union
 
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
@@ -192,22 +192,22 @@ def _create_quantization_group_config(
 
 
 def _create_quantization_config(
-    preset: QuantizationPreset,
+    preset: Union[QuantizationPreset, None],
     target_device: TargetDevice,
     subset_size: int,
     fast_bias_correction: bool,
-    model_type: Optional[ModelType],
-    ignored_scope: Optional[IgnoredScope],
-    advanced_parameters: Optional[AdvancedQuantizationParameters],
+    model_type: Union[ModelType, None],
+    ignored_scope: Union[IgnoredScope, None],
+    advanced_parameters: Union[AdvancedQuantizationParameters, None],
 ) -> Dict[str, Any]:
     """
     Creates a quantization configuration.
 
-    :param preset: A preset that controls the quantization mode
-        (symmetric and asymmetric). It can take the following values:
+    :param preset: A preset controls the quantization mode (symmetric and asymmetric).
+        It can take the following values:
         - `performance`: Symmetric quantization of weights and activations.
-        - `mixed`: Symmetric quantization of weights and asymmetric
-          quantization of activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
+        - `None`: `mixed` preset is used for `transformer` model type otherwise `performace`.
     :param target_device: A target device the specificity of which will be
         taken into account while compressing in order to obtain the best
         performance for this type of device.
@@ -224,6 +224,9 @@ def _create_quantization_config(
         fine-tuning the quantization algorithm.
     :return: A POT quantization configuration as dict.
     """
+    if preset is None:
+        preset = QuantizationPreset.MIXED if model_type == ModelType.TRANSFORMER else QuantizationPreset.PERFORMANCE
+
     config = {
         "target_device": target_device.value,
         "preset": preset.value,
@@ -320,7 +323,7 @@ def _create_engine_config(
 def quantize_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
@@ -423,7 +426,7 @@ def quantize_with_accuracy_control_impl(
     validation_fn: Callable[[ov.CompiledModel, Iterable[Any]], float],
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
