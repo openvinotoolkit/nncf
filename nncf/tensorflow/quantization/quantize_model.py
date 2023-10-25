@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 import tensorflow as tf
 
@@ -133,7 +133,7 @@ def _create_nncf_config(
 def quantize_impl(
     model: tf.Module,
     calibration_dataset: Dataset,
-    preset: Optional[QuantizationPreset],
+    preset: Union[QuantizationPreset, None],
     target_device: TargetDevice,
     subset_size: int,
     fast_bias_correction: bool,

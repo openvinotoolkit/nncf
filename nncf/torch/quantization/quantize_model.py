@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, Union
 
 import torch
 
@@ -85,6 +85,11 @@ def _get_transformer_quantization_config(preset: QuantizationPreset, subset_size
     """
     Returns the quantization config for transformer-based models.
 
+    :param preset: A preset that controls the quantization mode
+        (symmetric and asymmetric). It can take the following values:
+        - `performance`: Symmetric quantization of weights and activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric
+          quantization of activations.
     :param subset_size: Size of a subset to calculate activations
         statistics used for quantization.
     :return: The quantization config for transformer-based models.
@@ -133,7 +138,7 @@ def _get_default_quantization_config(preset: QuantizationPreset, subset_size: in
 
 
 def _create_nncf_config(
-    preset: Optional[QuantizationPreset],
+    preset: Union[QuantizationPreset, None],
     target_device: TargetDevice,
     subset_size: int,
     model_type: Optional[ModelType],
@@ -148,6 +153,7 @@ def _create_nncf_config(
         - `performance`: Symmetric quantization of weights and activations.
         - `mixed`: Symmetric quantization of weights and asymmetric
           quantization of activations.
+        - `None`: `mixed` preset is used for `transformer` model type otherwise `performace`.
     :param target_device: A target device the specificity of which will be taken
         into account while compressing in order to obtain the best performance
         for this type of device.
@@ -192,7 +198,7 @@ def _create_nncf_config(
 def quantize_impl(
     model: torch.nn.Module,
     calibration_dataset: Dataset,
-    preset: Optional[QuantizationPreset],
+    preset: Union[QuantizationPreset, None],
     target_device: TargetDevice,
     subset_size: int,
     fast_bias_correction: bool,

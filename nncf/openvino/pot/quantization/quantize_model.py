@@ -12,7 +12,7 @@
 import logging
 import tempfile
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, Optional
+from typing import Any, Callable, Dict, Iterable, Optional, Union
 
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
@@ -192,7 +192,7 @@ def _create_quantization_group_config(
 
 
 def _create_quantization_config(
-    preset: Optional[QuantizationPreset],
+    preset: Union[QuantizationPreset, None],
     target_device: TargetDevice,
     subset_size: int,
     fast_bias_correction: bool,
@@ -203,11 +203,11 @@ def _create_quantization_config(
     """
     Creates a quantization configuration.
 
-    :param preset: A preset that controls the quantization mode
-        (symmetric and asymmetric). It can take the following values:
+    :param preset: A preset controls the quantization mode (symmetric and asymmetric).
+        It can take the following values:
         - `performance`: Symmetric quantization of weights and activations.
-        - `mixed`: Symmetric quantization of weights and asymmetric
-          quantization of activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
+        - `None`: `mixed` preset is used for `transformer` model type otherwise `performace`.
     :param target_device: A target device the specificity of which will be
         taken into account while compressing in order to obtain the best
         performance for this type of device.
@@ -225,10 +225,7 @@ def _create_quantization_config(
     :return: A POT quantization configuration as dict.
     """
     if preset is None:
-        if model_type == ModelType.TRANSFORMER:
-            preset = QuantizationPreset.MIXED
-        else:
-            preset = QuantizationPreset.PERFORMANCE
+        preset = QuantizationPreset.MIXED if model_type == ModelType.TRANSFORMER else QuantizationPreset.PERFORMANCE
 
     config = {
         "target_device": target_device.value,
