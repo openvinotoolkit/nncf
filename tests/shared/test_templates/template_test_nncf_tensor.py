@@ -314,7 +314,7 @@ class TemplateTestNNCFTensorOperators:
         res = fns.count_nonzero(nncf_tensor, axis=axis)
 
         assert isinstance(res, Tensor)
-        assert fns.allclose(res.data, ref_tensor)
+        assert fns.allclose(res, ref_tensor)
         assert res.device == nncf_tensor.device
 
     def test_fn_zeros_like(self):
@@ -388,7 +388,7 @@ class TemplateTestNNCFTensorOperators:
         tensor = Tensor(self.to_tensor(val))
         res = fns.all(tensor, axis=axis)
         assert isinstance(res, Tensor)
-        assert fns.allclose(res.data, self.to_tensor(ref))
+        assert fns.allclose(res, self.to_tensor(ref))
         assert res.device == tensor.device
 
     @pytest.mark.parametrize(
@@ -405,7 +405,7 @@ class TemplateTestNNCFTensorOperators:
         res = fns.any(tensor, axis=axis)
 
         assert isinstance(res, Tensor)
-        assert fns.allclose(res.data, self.to_tensor(ref))
+        assert fns.allclose(res, self.to_tensor(ref))
         assert res.device == tensor.device
 
     def test_fn_where(self):
@@ -521,7 +521,7 @@ class TemplateTestNNCFTensorOperators:
 
     def test_not_implemented(self):
         with pytest.raises(NotImplementedError, match="is not implemented for"):
-            fns.device({}, [1, 2])
+            fns.device(Tensor(None))
 
     @pytest.mark.parametrize(
         "x, axis, ref",
@@ -571,7 +571,7 @@ class TemplateTestNNCFTensorOperators:
         res = fns.stack(list_tensor, axis=axis)
 
         assert isinstance(res, Tensor)
-        assert fns.all(res.data == ref)
+        assert fns.all(res == ref)
         assert res.device == list_tensor[0].device
 
     def test_fn_moveaxis(self):
@@ -618,7 +618,7 @@ class TemplateTestNNCFTensorOperators:
         res = fns.mean(tensor, axis, keepdims)
 
         assert isinstance(res, Tensor)
-        assert fns.allclose(res.data, ref_tensor)
+        assert fns.allclose(res, ref_tensor)
         assert res.device == tensor.device
 
     @pytest.mark.parametrize(
@@ -636,7 +636,7 @@ class TemplateTestNNCFTensorOperators:
         res = fns.round(tensor, decimals)
 
         assert isinstance(res, Tensor)
-        assert fns.allclose(res.data, ref_tensor)
+        assert fns.allclose(res, ref_tensor)
         assert res.device == tensor.device
 
     @pytest.mark.parametrize(

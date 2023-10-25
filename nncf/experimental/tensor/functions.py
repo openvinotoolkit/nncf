@@ -9,31 +9,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import functools
-from typing import Callable, List, Optional, Tuple, Union
+from contextlib import AbstractContextManager
+from typing import List, Optional, Tuple, Union
 
+from nncf.experimental.tensor.dispatcher import WrapperType
+from nncf.experimental.tensor.dispatcher import tensor_dispatch
 from nncf.experimental.tensor.enums import TensorDataType
 from nncf.experimental.tensor.enums import TensorDeviceType
 from nncf.experimental.tensor.tensor import Tensor
-from nncf.experimental.tensor.tensor import unwrap_tensor_data
 
 
-def _tensor_guard(func: callable):
-    """
-    A decorator that ensures that the first argument to the decorated function is a Tensor.
-    """
-
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        if isinstance(args[0], Tensor):
-            return func(*args, **kwargs)
-        raise NotImplementedError(f"Function `{func.__name__}` is not implemented for {type(args[0])}")
-
-    return wrapper
-
-
-@functools.singledispatch
-@_tensor_guard
+@tensor_dispatch(wrapper_type=WrapperType.TensorToAny)
 def device(a: Tensor) -> TensorDeviceType:
     """
     Return the device of the tensor.
@@ -41,11 +27,9 @@ def device(a: Tensor) -> TensorDeviceType:
     :param a: The input tensor.
     :return: The device of the tensor.
     """
-    return device(a.data)
 
 
-@functools.singledispatch
-@_tensor_guard
+@tensor_dispatch()
 def squeeze(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:
     """
     Remove axes of length one from a.
@@ -56,11 +40,9 @@ def squeeze(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Te
       This is always a itself or a view into a. Note that if all axes are squeezed,
       the result is a 0d array and not a scalar.
     """
-    return Tensor(squeeze(a.data, axis=axis))
 
 
-@functools.singledispatch
-@_tensor_guard
+@tensor_dispatch()
 def flatten(a: Tensor) -> Tensor:
     """
     Return a copy of the tensor collapsed into one dimension.
@@ -68,11 +50,9 @@ def flatten(a: Tensor) -> Tensor:
     :param a: The input tensor.
     :return: A copy of the input tensor, flattened to one dimension.
     """
-    return Tensor(flatten(a.data))
 
 
-@functools.singledispatch
-@_tensor_guard
+@tensor_dispatch()
 def max(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
     """
     Return the maximum of an array or maximum along an axis.
@@ -81,11 +61,9 @@ def max(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor
     :param axis: Axis or axes along which to operate. By default, flattened input is used.
     :return: Maximum of a.
     """
-    return Tensor(max(a.data, axis))
 
 
-@functools.singledispatch
-@_tensor_guard
+@tensor_dispatch()
 def min(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
     """
     Return the minimum of an array or minimum along an axis.
@@ -94,11 +72,9 @@ def min(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor
     :param axis: Axis or axes along which to operate. By default, flattened input is used.
     :return: Minimum of a.
     """
-    return Tensor(min(a.data, axis))
 
 
-@functools.singledispatch
-@_tensor_guard
+@tensor_dispatch()
 def abs(a: Tensor) -> Tensor:  # pylint: disable=redefined-builtin
     """
     Calculate the absolute value element-wise.
@@ -106,12 +82,10 @@ def abs(a: Tensor) -> Tensor:  # pylint: disable=redefined-builtin
     :param a: The input tensor.
     :return: A tensor containing the absolute value of each element in x.
     """
-    return Tensor(abs(a.data))
 
 
-@functools.singledispatch
-@_tensor_guard
-def astype(a: Tensor, data_type: TensorDataType) -> Tensor:
+@tensor_dispatch()
+def astype(a: Tensor, dtype: TensorDataType) -> Tensor:
     """
     Copy of the tensor, cast to a specified type.
 
@@ -120,11 +94,9 @@ def astype(a: Tensor, data_type: TensorDataType) -> Tensor:
 
     :return: Copy of the tensor in specified type.
     """
-    return Tensor(astype(a.data, data_type))
 
 
-@functools.singledispatch
-@_tensor_guard
+@tensor_dispatch()
 def dtype(a: Tensor) -> TensorDataType:
     """
     Return data type of the tensor.
@@ -132,11 +104,9 @@ def dtype(a: Tensor) -> TensorDataType:
     :param a: The input tensor.
     :return: The data type of the tensor.
     """
-    return dtype(a.data)
 
 
-@functools.singledispatch
-@_tensor_guard
+@tensor_dispatch()
 def reshape(a: Tensor, shape: Tuple[int, ...]) -> Tensor:
     """
     Gives a new shape to a tensor without changing its data.
@@ -145,11 +115,9 @@ def reshape(a: Tensor, shape: Tuple[int, ...]) -> Tensor:
     :param shape: The new shape should be compatible with the original shape.
     :return: Reshaped tensor.
     """
-    return Tensor(reshape(a.data, shape))
 
 
-@functools.singledispatch
-@_tensor_guard
+@tensor_dispatch()
 def all(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
     """
     Test whether all tensor elements along a given axis evaluate to True.
@@ -158,11 +126,9 @@ def all(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor
     :param axis: Axis or axes along which a logical AND reduction is performed.
     :return: A new boolean or tensor.
     """
-    return Tensor(all(a.data, axis=axis))
 
 
-@functools.singledispatch
-@_tensor_guard
+@tensor_dispatch()
 def allclose(
     a: Tensor, b: Union[Tensor, float], rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False
 ) -> Tensor:
@@ -178,19 +144,9 @@ def allclose(
       Defaults to False.
     :return: True if the two arrays are equal within the given tolerance, otherwise False.
     """
-    return Tensor(
-        allclose(
-            a.data,
-            unwrap_tensor_data(b),
-            rtol=rtol,
-            atol=atol,
-            equal_nan=equal_nan,
-        )
-    )
 
 
-@functools.singledispatch
-@_tensor_guard
+@tensor_dispatch()
 def any(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
     """
     Test whether any tensor elements along a given axis evaluate to True.
@@ -199,11 +155,9 @@ def any(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor
     :param axis: Axis or axes along which a logical OR reduction is performed.
     :return: A new boolean or tensor.
     """
-    return Tensor(any(a.data, axis))
 
 
-@functools.singledispatch
-@_tensor_guard
+@tensor_dispatch()
 def count_nonzero(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:
     """
     Counts the number of non-zero values in the tensor input.
@@ -213,11 +167,9 @@ def count_nonzero(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None)
     :return: Number of non-zero values in the tensor along a given axis.
       Otherwise, the total number of non-zero values in the tensor is returned.
     """
-    return Tensor(count_nonzero(a.data, axis))
 
 
-@functools.singledispatch
-@_tensor_guard
+@tensor_dispatch(wrapper_type=WrapperType.TensorToAny)
 def isempty(a: Tensor) -> bool:
     """
     Return True if input tensor is empty.
@@ -225,11 +177,9 @@ def isempty(a: Tensor) -> bool:
     :param a: The input tensor.
     :return: True if tensor is empty, otherwise False.
     """
-    return isempty(a.data)
 
 
-@functools.singledispatch
-@_tensor_guard
+@tensor_dispatch()
 def isclose(
     a: Tensor, b: Union[Tensor, float], rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False
 ) -> Tensor:
@@ -245,19 +195,9 @@ def isclose(
       Defaults to False.
     :return: Returns a boolean tensor of where a and b are equal within the given tolerance.
     """
-    return Tensor(
-        isclose(
-            a.data,
-            unwrap_tensor_data(b),
-            rtol=rtol,
-            atol=atol,
-            equal_nan=equal_nan,
-        )
-    )
 
 
-@functools.singledispatch
-@_tensor_guard
+@tensor_dispatch()
 def maximum(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
     """
     Element-wise maximum of tensor elements.
@@ -266,11 +206,9 @@ def maximum(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
     :param x2: The second input tensor.
     :return: Output tensor.
     """
-    return Tensor(maximum(x1.data, unwrap_tensor_data(x2)))
 
 
-@functools.singledispatch
-@_tensor_guard
+@tensor_dispatch()
 def minimum(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
     """
     Element-wise minimum of tensor elements.
@@ -279,11 +217,9 @@ def minimum(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
     :param x2: The second input tensor.
     :return: Output tensor.
     """
-    return Tensor(minimum(x1.data, unwrap_tensor_data(x2)))
 
 
-@functools.singledispatch
-@_tensor_guard
+@tensor_dispatch()
 def ones_like(a: Tensor) -> Tensor:
     """
     Return a tensor of ones with the same shape and type as a given tensor.
@@ -291,11 +227,9 @@ def ones_like(a: Tensor) -> Tensor:
     :param a: The shape and data-type of a define these same attributes of the returned tensor.
     :return: Tensor of ones with the same shape and type as a.
     """
-    return Tensor(ones_like(a.data))
 
 
-@functools.singledispatch
-@_tensor_guard
+@tensor_dispatch()
 def where(condition: Tensor, x: Union[Tensor, float], y: Union[Tensor, float]) -> Tensor:
     """
     Return elements chosen from x or y depending on condition.
@@ -305,17 +239,9 @@ def where(condition: Tensor, x: Union[Tensor, float], y: Union[Tensor, float]) -
     :param y: Value at indices where condition is False.
     :return: A tensor with elements from x where condition is True, and elements from y elsewhere.
     """
-    return Tensor(
-        where(
-            condition.data,
-            unwrap_tensor_data(x),
-            unwrap_tensor_data(y),
-        )
-    )
 
 
-@functools.singledispatch
-@_tensor_guard
+@tensor_dispatch()
 def zeros_like(a: Tensor) -> Tensor:
     """
     Return an tensor of zeros with the same shape and type as a given tensor.
@@ -323,10 +249,9 @@ def zeros_like(a: Tensor) -> Tensor:
     :param input: The shape and data-type of a define these same attributes of the returned tensor.
     :return: tensor of zeros with the same shape and type as a.
     """
-    return Tensor(zeros_like(a.data))
 
 
-@functools.singledispatch
+@tensor_dispatch(wrapper_type=WrapperType.ListToTensor)
 def stack(x: List[Tensor], axis: int = 0) -> Tensor:
     """
     Stacks a list of Tensors rank-R tensors into one Tensor rank-(R+1) tensor.
@@ -335,27 +260,20 @@ def stack(x: List[Tensor], axis: int = 0) -> Tensor:
     :param axis: The axis to stack along.
     :return: Stacked Tensor.
     """
-    if isinstance(x, List):
-        return Tensor(_dispatch_list(stack, x, axis=axis))
-    raise NotImplementedError(f"Function `stack` is not implemented for {type(x)}")
 
 
-@functools.singledispatch
-@_tensor_guard
-def unstack(a: Tensor, axis: int = 0) -> List[Tensor]:
+@tensor_dispatch(wrapper_type=WrapperType.TensorToList)
+def unstack(x: Tensor, axis: int = 0) -> List[Tensor]:
     """
     Unstack a Tensor into list.
 
-    :param a: Tensor to unstack.
+    :param x: Tensor to unstack.
     :param axis: The axis to unstack along.
     :return: List of Tensor.
     """
-    res = unstack(a.data, axis=axis)
-    return [Tensor(i) for i in res]
 
 
-@functools.singledispatch
-@_tensor_guard
+@tensor_dispatch()
 def moveaxis(a: Tensor, source: Union[int, Tuple[int, ...]], destination: Union[int, Tuple[int, ...]]) -> Tensor:
     """
     Move axes of an array to new positions.
@@ -365,11 +283,9 @@ def moveaxis(a: Tensor, source: Union[int, Tuple[int, ...]], destination: Union[
     :param destination: Destination positions for each of the original axes. These must also be unique.
     :return: Array with moved axes.
     """
-    return Tensor(moveaxis(a.data, source, destination))
 
 
-@functools.singledispatch
-@_tensor_guard
+@tensor_dispatch()
 def mean(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> Tensor:
     """
     Compute the arithmetic mean along the specified axis.
@@ -379,12 +295,10 @@ def mean(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims
     :param keepdims: Destination positions for each of the original axes. These must also be unique.
     :return: Array with moved axes.
     """
-    return Tensor(mean(a.data, axis, keepdims))
 
 
-@functools.singledispatch
-@_tensor_guard
-def round(a: Tensor, decimals=0) -> Tensor:  # pylint: disable=redefined-builtin
+@tensor_dispatch()
+def round(a: Tensor, decimals: int = 0) -> Tensor:  # pylint: disable=redefined-builtin
     """
     Evenly round to the given number of decimals.
 
@@ -393,47 +307,16 @@ def round(a: Tensor, decimals=0) -> Tensor:  # pylint: disable=redefined-builtin
       it specifies the number of positions to the left of the decimal point.
     :return: An array of the same type as a, containing the rounded values.
     """
-    return Tensor(round(a.data, decimals))
 
 
-@functools.singledispatch
-@_tensor_guard
-def _binary_op_nowarn(a: Tensor, b: Union[Tensor, float], operator_fn: Callable) -> Tensor:
+@tensor_dispatch(wrapper_type=WrapperType.TensorToAny)
+def disable_error_handling(a: Tensor) -> AbstractContextManager:
     """
-    Applies a binary operation with disable warnings.
+    Return context manager that disable handling of floating-point errors.
 
-    :param a: The first tensor.
-    :param b: The second tensor.
-    :param operator_fn: The binary operation function.
-    :return: The result of the binary operation.
+    :param a: Tensor to detect backend.
+    :return: An context Manager.
     """
-    return Tensor(_binary_op_nowarn(a.data, unwrap_tensor_data(b), operator_fn))
-
-
-@functools.singledispatch
-@_tensor_guard
-def _binary_reverse_op_nowarn(a: Tensor, b: Union[Tensor, float], operator_fn: Callable) -> Tensor:
-    """
-    Applies a binary reverse operation with disable warnings.
-
-    :param a: The first tensor.
-    :param b: The second tensor.
-    :param operator_fn: The binary operation function.
-    :return: The result of the binary operation.
-    """
-    return Tensor(_binary_reverse_op_nowarn(a.data, unwrap_tensor_data(b), operator_fn))
-
-
-def _dispatch_list(fn: "functools._SingleDispatchCallable", tensor_list: List[Tensor], *args, **kwargs):
-    """
-    Dispatches the function to the type of the wrapped data of the first element in tensor_list.
-
-    :param fn: A function wrapped by `functools.singledispatch`.
-    :param tensor_list: List of Tensors.
-    :return: The result value of the function call.
-    """
-    unwrapped_list = [i.data for i in tensor_list]
-    return fn.dispatch(type(unwrapped_list[0]))(unwrapped_list, *args, **kwargs)
 
 
 def _initialize_backends():

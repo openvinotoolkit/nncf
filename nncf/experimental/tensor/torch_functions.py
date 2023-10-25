@@ -9,7 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, List, Optional, Tuple, Union
+from contextlib import AbstractContextManager
+from contextlib import nullcontext
+from typing import List, Optional, Tuple, Union
 
 import torch
 
@@ -188,11 +190,6 @@ def _(a: torch.Tensor, decimals=0) -> torch.Tensor:
     return torch.round(a, decimals=decimals)
 
 
-@fns._binary_op_nowarn.register(torch.Tensor)  # pylint: disable=protected-access
-def _(a: torch.Tensor, b: Union[torch.Tensor, float], operator_fn: Callable) -> torch.Tensor:
-    return operator_fn(a, b)
-
-
-@fns._binary_reverse_op_nowarn.register(torch.Tensor)  # pylint: disable=protected-access
-def _(a: torch.Tensor, b: Union[torch.Tensor, float], operator_fn: Callable) -> torch.Tensor:
-    return operator_fn(b, a)
+@fns.disable_error_handling.register(torch.Tensor)
+def _(a: torch.Tensor) -> AbstractContextManager:
+    return nullcontext

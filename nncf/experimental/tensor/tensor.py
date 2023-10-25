@@ -10,7 +10,6 @@
 # limitations under the License.
 from __future__ import annotations
 
-import operator
 from typing import Any, Optional, Tuple, TypeVar, Union
 
 from nncf.experimental.tensor.enums import TensorDataType
@@ -24,7 +23,7 @@ class Tensor:
     An interface to framework specific tensors for common NNCF algorithms.
     """
 
-    def __init__(self, data: Optional[TTensor]):
+    def __init__(self, data: TTensor):
         self._data = data.data if isinstance(data, Tensor) else data
 
     @property
@@ -86,16 +85,16 @@ class Tensor:
         return Tensor(self.data ** unwrap_tensor_data(other))
 
     def __truediv__(self, other: Union[Tensor, float]) -> Tensor:
-        return _call_function("_binary_op_nowarn", self, other, operator.truediv)
+        return Tensor(self.data / unwrap_tensor_data(other))
 
     def __rtruediv__(self, other: Union[Tensor, float]) -> Tensor:
-        return _call_function("_binary_reverse_op_nowarn", self, other, operator.truediv)
+        return Tensor(other / self.data)
 
     def __floordiv__(self, other: Union[Tensor, float]) -> Tensor:
-        return _call_function("_binary_op_nowarn", self, other, operator.floordiv)
+        return Tensor(self.data // unwrap_tensor_data(other))
 
     def __rfloordiv__(self, other: Union[Tensor, float]) -> Tensor:
-        return _call_function("_binary_reverse_op_nowarn", self, other, operator.floordiv)
+        return Tensor(other // self.data)
 
     def __neg__(self) -> Tensor:
         return Tensor(-self.data)
