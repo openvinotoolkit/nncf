@@ -48,6 +48,7 @@ from nncf.torch.knowledge_distillation import algo as knowledge_distillation_alg
 # listed below for importing convenience
 
 from nncf.torch.model_creation import create_compressed_model
+from nncf.torch.model_creation import wrap_model
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.initialization import register_default_init_args
 from nncf.torch.layers import register_module

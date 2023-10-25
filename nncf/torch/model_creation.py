@@ -309,3 +309,23 @@ def create_compression_algorithm_builder_from_algo_names(
     else:
         builder = PTCompositeCompressionAlgorithmBuilder(config, should_init=should_init)
     return builder
+
+
+def wrap_model(model: torch.nn.Module, example_input: Any) -> NNCFNetwork:
+    """
+    Creates NNCFNetwork instance for the PyTorch model where the first item of dataset
+    is used for model tracing.
+
+    :param model: PyTorch model
+    :example_input: An example input that will be used for model tracing. A tuple is interpreted as an example input
+        of a set of non keyword arguments, and a dict as an example input of a set of keywords arguments.
+    :return: A model wrapped by NNCFNetwork.
+    """
+
+    input_info = ExactInputsInfo.from_example_input(example_input)
+
+    with training_mode_switcher(model, is_training=False):
+        nncf_network = NNCFNetwork(model, input_info=input_info)
+        nncf_network.nncf.get_tracing_context().disable_trace_dynamic_graph()
+
+    return nncf_network
