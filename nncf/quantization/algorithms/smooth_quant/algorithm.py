@@ -37,7 +37,6 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.quantization.algorithms.algorithm import Algorithm
-from nncf.quantization.algorithms.smooth_quant.backend import ALGO_BACKENDS
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -75,8 +74,8 @@ class SmoothQuant(Algorithm):
         self._cached_multiply_names = Counter()
 
     @property
-    def available_backends(self) -> Dict[str, BackendType]:
-        return ALGO_BACKENDS.registry_dict
+    def available_backends(self) -> List[BackendType]:
+        return [BackendType.OPENVINO]
 
     def _set_backend_entity(self, model: TModel) -> None:
         """

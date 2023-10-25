@@ -14,7 +14,10 @@ from typing import Dict, List, Optional, TypeVar, Union
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.logging import nncf_logger
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import get_backend
 from nncf.data.dataset import Dataset
 from nncf.quantization.algorithms.algorithm import Algorithm
 
@@ -109,6 +112,7 @@ class Pipeline:
         current_graph = graph
 
         pipeline_step = self.pipeline_steps[step_index]
+        pipeline_step = self._remove_unsupported_algorithms(pipeline_step, get_backend(current_model))
         for algorithm in pipeline_step[:-1]:
             current_model = algorithm.apply(current_model, current_graph, step_statistics)
             current_graph = NNCFGraphFactory.create(current_model)
@@ -174,9 +178,22 @@ class Pipeline:
         :return: Statistics that should be collected to execute `step_index`-th pipeline step.
         """
         container = StatisticPointsContainer()
-        for algorithm in self.pipeline_steps[step_index]:
+        pipeline_step = self.pipeline_steps[step_index]
+        pipeline_step = self._remove_unsupported_algorithms(pipeline_step, get_backend(model))
+        for algorithm in pipeline_step:
             for statistic_points in algorithm.get_statistic_points(model, graph).values():
                 for statistic_point in statistic_points:
                     container.add_statistic_point(statistic_point)
 
         return container
+
+    @staticmethod
+    def _remove_unsupported_algorithms(pipeline_step: PipelineStep, backend: BackendType) -> PipelineStep:
+        step = []
+        for algorithm in pipeline_step:
+            if backend not in algorithm.available_backends:
+                nncf_logger.debug(f"{backend.name} does not support {algorithm.__class__.__name__} algorithm yet.")
+                continue
+            step.append(algorithm)
+
+        return step

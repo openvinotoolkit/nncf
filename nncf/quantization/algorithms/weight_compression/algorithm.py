@@ -19,7 +19,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, TypeVar
+from typing import List, Optional, TypeVar
 
 from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
@@ -30,7 +30,6 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.algorithm import Algorithm
-from nncf.quantization.algorithms.weight_compression.backend import ALGO_BACKENDS
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
 
@@ -75,8 +74,8 @@ class WeightCompression(Algorithm):
         self._algorithm_key = f"CW_{hash(self)}"
 
     @property
-    def available_backends(self) -> Dict[str, BackendType]:
-        return ALGO_BACKENDS.registry_dict
+    def available_backends(self) -> List[BackendType]:
+        return [BackendType.OPENVINO]
 
     def _set_backend_entity(self, model: TModel) -> None:
         """

@@ -19,7 +19,6 @@ from openvino.runtime import opset9 as opset
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.logging import nncf_logger
-from nncf.common.utils.backend import BackendType
 from nncf.common.utils.helpers import create_table
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVEmbeddingMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
@@ -27,13 +26,11 @@ from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.parameters import CompressWeightsMode
-from nncf.quantization.algorithms.weight_compression.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
 from nncf.scopes import IgnoredScope
 
 
-@ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     @property
     def weighted_metatypes(self) -> List[OperatorMetatype]:
