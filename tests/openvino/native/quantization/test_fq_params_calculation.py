@@ -133,8 +133,8 @@ OMZ_MODELS = [
     ids=[QuantizationPreset.PERFORMANCE.value, QuantizationPreset.MIXED.value],
 )
 @pytest.mark.parametrize("model_name", OMZ_MODELS)
-def test_omz_models_fq_scales(model_name, preset, inplace_statistics, tmp_path):
-    download_model(model_name, tmp_path)
+def test_omz_models_fq_scales(model_name, preset, inplace_statistics, tmp_path, omz_cache_dir):
+    download_model(model_name, tmp_path, omz_cache_dir)
     convert_model(model_name, tmp_path)
     model_path = tmp_path / "public" / model_name / "FP32" / f"{model_name}.xml"
     model = ov.Core().read_model(model_path)
