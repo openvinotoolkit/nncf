@@ -32,7 +32,6 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import copy_model
 from nncf.common.utils.backend import get_backend
 from nncf.quantization.algorithms.algorithm import Algorithm
-from nncf.quantization.algorithms.bias_correction.backend import ALGO_BACKENDS
 
 TModel = TypeVar("TModel")
 
@@ -104,8 +103,8 @@ class BiasCorrection(Algorithm):
             raise RuntimeError("BiasCorrection algorithm does not support apply_for_all_nodes=True yet")
 
     @property
-    def available_backends(self) -> Dict[str, BackendType]:
-        return ALGO_BACKENDS.registry_dict
+    def available_backends(self) -> List[BackendType]:
+        return [BackendType.ONNX, BackendType.OPENVINO]
 
     def _set_backend_entity(self, model: TModel) -> None:
         """
