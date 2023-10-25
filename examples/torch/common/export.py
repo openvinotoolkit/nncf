@@ -23,7 +23,7 @@ def export_model(ctrl: CompressionAlgorithmController, config: SampleConfig) -> 
     Export compressed model ot OpenVINO format.
 
     :param controller: The compression controller.
-    :param config: The config.
+    :param config: The sample config.
     """
     model = ctrl.model if config.no_strip_on_export else ctrl.strip()
     model = model.eval().cpu()

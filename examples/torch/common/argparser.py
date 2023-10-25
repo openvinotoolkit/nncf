@@ -107,8 +107,9 @@ def get_common_argument_parser():
     parser.add_argument("--no-strip-on-export", help="Set to export not stripped model.", action="store_true")
     parser.add_argument(
         "--export-to-ir-via-onnx",
-        help="When used with the `exported-model-path` option to export to OpenVINO, will produce the serialized OV IR object by first exporting "
-        "the torch model object to an .onnx file and then converting that .onnx file to an OV IR file.",
+        help="When used with the `exported-model-path` option to export to OpenVINO, will produce the serialized "
+        "OV IR object by first exporting the torch model object to an .onnx file and then converting that .onnx file "
+        "to an OV IR file.",
         action="store_true",
     )
 
