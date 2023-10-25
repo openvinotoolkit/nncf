@@ -192,7 +192,7 @@ def _create_quantization_group_config(
 
 
 def _create_quantization_config(
-    preset: QuantizationPreset,
+    preset: Optional[QuantizationPreset],
     target_device: TargetDevice,
     subset_size: int,
     fast_bias_correction: bool,
@@ -224,6 +224,12 @@ def _create_quantization_config(
         fine-tuning the quantization algorithm.
     :return: A POT quantization configuration as dict.
     """
+    if preset is None:
+        if model_type == ModelType.TRANSFORMER:
+            preset = QuantizationPreset.MIXED
+        else:
+            preset = QuantizationPreset.PERFORMANCE
+
     config = {
         "target_device": target_device.value,
         "preset": preset.value,
@@ -320,7 +326,7 @@ def _create_engine_config(
 def quantize_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
@@ -423,7 +429,7 @@ def quantize_with_accuracy_control_impl(
     validation_fn: Callable[[ov.CompiledModel, Iterable[Any]], float],
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,

@@ -87,7 +87,7 @@ def create_nncf_network(model: torch.nn.Module, dataset: Dataset) -> NNCFNetwork
 def quantize_impl(
     model: torch.nn.Module,
     calibration_dataset: Dataset,
-    preset: QuantizationPreset,
+    preset: Optional[QuantizationPreset],
     target_device: TargetDevice,
     subset_size: int,
     fast_bias_correction: bool,

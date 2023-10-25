@@ -133,7 +133,7 @@ def _create_nncf_config(
 def quantize_impl(
     model: tf.Module,
     calibration_dataset: Dataset,
-    preset: QuantizationPreset,
+    preset: Optional[QuantizationPreset],
     target_device: TargetDevice,
     subset_size: int,
     fast_bias_correction: bool,
@@ -156,6 +156,9 @@ def quantize_impl(
         )
     if target_device == TargetDevice.CPU_SPR:
         raise RuntimeError("target_device == CPU_SPR is not supported.")
+
+    if preset is None:
+        preset = QuantizationPreset.PERFORMANCE
 
     nncf_config = _create_nncf_config(preset, target_device, subset_size, ignored_scope, advanced_parameters)
 

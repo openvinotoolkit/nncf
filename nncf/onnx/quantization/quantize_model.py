@@ -31,7 +31,7 @@ from nncf.telemetry.events import NNCF_ONNX_CATEGORY
 def quantize_impl(
     model: onnx.ModelProto,
     calibration_dataset: Dataset,
-    preset: QuantizationPreset,
+    preset: Optional[QuantizationPreset],
     target_device: TargetDevice,
     subset_size: int,
     fast_bias_correction: bool,

@@ -30,7 +30,7 @@ TModel = TypeVar("TModel")
 
 
 def create_ptq_pipeline(
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,

@@ -81,7 +81,7 @@ class CalibrationDataLoader(PTInitializingDataLoader):
         return length
 
 
-def _get_transformer_quantization_config(subset_size: int) -> Dict[str, Any]:
+def _get_transformer_quantization_config(preset: QuantizationPreset, subset_size: int) -> Dict[str, Any]:
     """
     Returns the quantization config for transformer-based models.
 
@@ -91,7 +91,7 @@ def _get_transformer_quantization_config(subset_size: int) -> Dict[str, Any]:
     """
     return {
         "algorithm": "quantization",
-        "preset": "mixed",
+        "preset": preset.value,
         "initializer": {
             "range": {"num_init_samples": subset_size, "type": DEFAULT_RANGE_TYPE},
             "batchnorm_adaptation": {"num_bn_adaptation_samples": 0},
@@ -133,7 +133,7 @@ def _get_default_quantization_config(preset: QuantizationPreset, subset_size: in
 
 
 def _create_nncf_config(
-    preset: QuantizationPreset,
+    preset: Optional[QuantizationPreset],
     target_device: TargetDevice,
     subset_size: int,
     model_type: Optional[ModelType],
@@ -161,10 +161,16 @@ def _create_nncf_config(
         fine-tuning the quantization algorithm.
     :return: NNCFConfig for the quantization algorithm.
     """
-    if model_type is None:
+    if preset is None:
+        if model_type == ModelType.TRANSFORMER:
+            preset = QuantizationPreset.MIXED
+        else:
+            preset = QuantizationPreset.PERFORMANCE
+
+    if model_type == ModelType.TRANSFORMER:
+        compression_config = _get_transformer_quantization_config(preset, subset_size)
+    else:
         compression_config = _get_default_quantization_config(preset, subset_size)
-    elif model_type == ModelType.TRANSFORMER:
-        compression_config = _get_transformer_quantization_config(subset_size)
 
     if ignored_scope is not None:
         _ignored_scope = convert_ignored_scope_to_list(ignored_scope)
@@ -186,7 +192,7 @@ def _create_nncf_config(
 def quantize_impl(
     model: torch.nn.Module,
     calibration_dataset: Dataset,
-    preset: QuantizationPreset,
+    preset: Optional[QuantizationPreset],
     target_device: TargetDevice,
     subset_size: int,
     fast_bias_correction: bool,

@@ -96,7 +96,7 @@ class MinMaxQuantization(Algorithm):
 
     def __init__(
         self,
-        preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+        preset: Optional[QuantizationPreset] = None,
         target_device: TargetDevice = TargetDevice.ANY,
         subset_size: int = 300,
         model_type: Optional[ModelType] = None,
@@ -156,6 +156,13 @@ class MinMaxQuantization(Algorithm):
             QuantizerGroup.WEIGHTS: weights_range_estimator_params,
             QuantizerGroup.ACTIVATIONS: activations_range_estimator_params,
         }
+
+        # preset definition
+        if preset is None:
+            if model_type == ModelType.TRANSFORMER:
+                preset = QuantizationPreset.MIXED
+            else:
+                preset = QuantizationPreset.PERFORMANCE
 
         # Calculates global quantizer constraints
         self._global_quantizer_constraints = {}
