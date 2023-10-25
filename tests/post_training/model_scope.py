@@ -53,10 +53,7 @@ TEST_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {
             "preset": QuantizationPreset.MIXED,
-            "model_type": ModelType.TRANSFORMER,
-            "advanced_parameters": AdvancedQuantizationParameters(
-                smooth_quant_params=AdvancedSmoothQuantParameters(matmul=-1.0)
-            ),
+            "model_type": ModelType.TRANSFORMER
         },
         "backends": [BackendType.TORCH, BackendType.ONNX, BackendType.OV, BackendType.POT],
     },
@@ -75,10 +72,7 @@ TEST_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {
             "preset": QuantizationPreset.MIXED,
-            "model_type": ModelType.TRANSFORMER,
-            "advanced_parameters": AdvancedQuantizationParameters(
-                smooth_quant_params=AdvancedSmoothQuantParameters(matmul=-1.0)
-            ),
+            "model_type": ModelType.TRANSFORMER
         },
         "backends": ALL_PTQ_BACKENDS,
     },
