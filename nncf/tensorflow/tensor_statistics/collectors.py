@@ -129,6 +129,18 @@ class TFNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         raise NotImplementedError()
 
     @staticmethod
+    def transpose(x: NNCFTensor, axes: Tuple[int, ...]) -> NNCFTensor:
+        raise NotImplementedError()
+
+    @staticmethod
+    def reshape(x: NNCFTensor, shape: Tuple[int, ...]) -> NNCFTensor:
+        raise NotImplementedError()
+
+    @staticmethod
+    def cat(x: List[NNCFTensor], axis: int) -> NNCFTensor:
+        raise NotImplementedError()
+
+    @staticmethod
     def sub(a: NNCFTensor, b: NNCFTensor) -> NNCFTensor:
         raise NotImplementedError()
 

@@ -82,7 +82,7 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
             device = x.tensor.device
             result = torch.tensor(np.median(x.tensor.detach().cpu().numpy(), axis=axis, keepdims=keepdims))
             return PTNNCFTensor(result.type(x.tensor.dtype).to(device))
-        return PTNNCFTensor(torch.quantile(x.tensor, q=0.5, dim=axis, keepdim=keepdims).values)
+        return PTNNCFTensor(torch.quantile(x.tensor, q=0.5, dim=axis, keepdim=keepdims))
 
     @classmethod
     def masked_mean(
@@ -122,6 +122,19 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @staticmethod
     def batch_mean(x: NNCFTensor) -> NNCFTensor:
         return PTNNCFTensor(torch.mean(x.tensor, axis=0, keepdims=True))
+
+    @staticmethod
+    def transpose(x: NNCFTensor, axes: Tuple[int, ...]) -> NNCFTensor:
+        return PTNNCFTensor(torch.permute(x.tensor, axes))
+
+    @staticmethod
+    def reshape(x: NNCFTensor, shape: Tuple[int, ...]) -> NNCFTensor:
+        return PTNNCFTensor(torch.reshape(x.tensor, shape))
+
+    @staticmethod
+    def cat(x: List[NNCFTensor], axis: int) -> NNCFTensor:
+        x = [t.tensor for t in x]
+        return PTNNCFTensor(torch.cat(x, axis))
 
     @staticmethod
     def logical_or(input_: NNCFTensor, other: NNCFTensor) -> NNCFTensor:
