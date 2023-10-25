@@ -13,6 +13,7 @@ from typing import Any, Callable, Dict, Optional, Set
 
 import torch
 
+from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.graph import DynamicGraph
@@ -32,14 +33,19 @@ class GraphBuilder:
         model: torch.nn.Module,
         context_to_use: Optional[TracingContext] = None,
         as_eval: bool = False,
+        trace_parameters: bool = False,
     ) -> DynamicGraph:
         tracer = GraphTracer(self.custom_forward_fn)
-        return tracer.trace_graph(model, context_to_use, as_eval)
+        return tracer.trace_graph(model, context_to_use, as_eval, trace_parameters)
 
     def build_graph(
-        self, model: torch.nn.Module, context_to_use: Optional[TracingContext] = None, as_eval: bool = False
+        self,
+        model: torch.nn.Module,
+        context_to_use: Optional[TracingContext] = None,
+        as_eval: bool = False,
+        trace_parameters: bool = False,
     ) -> PTNNCFGraph:
-        dynamic_graph = self.build_dynamic_graph(model, context_to_use, as_eval)
+        dynamic_graph = self.build_dynamic_graph(model, context_to_use, as_eval, trace_parameters)
         return GraphConverter.convert(dynamic_graph)
 
 
@@ -77,8 +83,12 @@ class GraphConverter:
             is_shared = len(module_id_vs_sorted_scopes_map[dynamic_graph_node.calling_module_id]) > 1
             canonical_scope = module_id_vs_sorted_scopes_map[dynamic_graph_node.calling_module_id][0]
 
+            node_name = str(op_address)
+            if metatype in CONST_NOOP_METATYPES:
+                node_name = dynamic_graph_node.layer_attributes.name
+
             nncf_graph.add_nncf_node(
-                node_name=str(op_address),
+                node_name=node_name,
                 node_type=op_address.operator_name,
                 node_metatype=metatype,
                 layer_attributes=dynamic_graph_node.layer_attributes,

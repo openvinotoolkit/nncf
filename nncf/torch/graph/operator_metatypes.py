@@ -15,6 +15,7 @@ from typing import Dict, List, Optional, Type, TypeVar
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
+from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
@@ -145,6 +146,13 @@ class PTInputNoopMetatype(PTOperatorMetatype):
 class PTOutputNoopMetatype(PTOperatorMetatype):
     name = "output_noop"
     external_op_names = [name, NNCFGraphNodeType.OUTPUT_NODE]
+
+
+@PT_OPERATOR_METATYPES.register()
+@CONST_NOOP_METATYPES.register()
+class PTConstNoopMetatype(PTOperatorMetatype):
+    name = "const_noop"
+    external_op_names = [name, NNCFGraphNodeType.CONST_NODE]
 
 
 @PT_OPERATOR_METATYPES.register()

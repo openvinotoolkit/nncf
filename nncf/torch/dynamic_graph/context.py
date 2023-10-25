@@ -31,7 +31,7 @@ from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
-from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
+from nncf.torch.dynamic_graph.trace_tensor import TracedTensorMixin
 
 
 class ThreadLocalGlobalContext(threading.local):
@@ -67,12 +67,14 @@ class TracingThreadLocals(threading.local):
         self.scopes = []
         self.module_call_stack = []
         self.in_operator = False
+        self.in_parameter_trace = False
         self.num_nested_hooks = 0
         self.base_module_replica = None
         self.operator_counters = {}
         self.node_call_tracker = {}
         self.traced_tensor_weakrefs = []
         self.nested_contexts_stack = []
+        self.processed_parameters = {}
 
 
 class CopySafeThreadingVars:
@@ -132,7 +134,7 @@ class TracingContext:
         previous_context = self._threading.thread_local.nested_contexts_stack.pop(-1)
         for traced_tensor_weakref in self._threading.thread_local.traced_tensor_weakrefs:
             tt = traced_tensor_weakref()
-            if tt is None or not isinstance(tt, TracedTensor):
+            if tt is None or not isinstance(tt, TracedTensorMixin):
                 continue
             if previous_context is None:
                 tt.strip()
@@ -163,16 +165,35 @@ class TracingContext:
     def register_global_buffer(self, name: str, buffer):
         self.global_buffer_store[name] = buffer
 
-    def register_traced_tensor(self, tt: TracedTensor):
+    def register_traced_tensor(self, tt: torch.Tensor):
         """
         Registers a weak reference to a traced tensor in the context so that in case
         the block under context retains a reference to an intermediate tensor somewhere,
-        the context can mark this traced tensor reference as "expired" tracing-wise upon context
-        exit.
-        :param tt: A TracedTensor to be registered.
+        the context strips this traced tensor upon context exit.
+
+        :param tt: A tensor with TracedTensorMixin tracing capabilities to be registered.
         """
         wr = weakref.ref(tt)
         self._threading.thread_local.traced_tensor_weakrefs.append(wr)
+
+    def register_processed_parameter(self, param_name: str, tensor: torch.Tensor):
+        """
+        Registers the processed parameter in the context to avoid double calculation of hooks
+        for the same parameters.
+
+        :param param_name: The parameter name.
+        :param tensor: The processed parameter.
+        """
+        self._threading.thread_local.processed_parameters[param_name] = tensor
+
+    def get_processed_parameter(self, param_name: str) -> Union[torch.Tensor, None]:
+        """
+        Rerturn the processed parameter by name.
+
+        :param param_name: The parameter name.
+
+        """
+        return self._threading.thread_local.processed_parameters.get(param_name, None)
 
     def maybe_add_node(
         self,
@@ -338,6 +359,14 @@ class TracingContext:
     @in_operator.setter
     def in_operator(self, val):
         self._threading.thread_local.in_operator = val
+
+    @property
+    def in_parameter_trace(self):
+        return self._threading.thread_local.in_parameter_trace
+
+    @in_parameter_trace.setter
+    def in_parameter_trace(self, val):
+        self._threading.thread_local.in_parameter_trace = val
 
     @property
     def module_call_stack(self) -> List[torch.nn.Module]:

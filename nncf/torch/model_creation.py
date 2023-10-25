@@ -312,7 +312,7 @@ def create_compression_algorithm_builder_from_algo_names(
     return builder
 
 
-def wrap_model(model: torch.nn.Module, example_input: Any) -> NNCFNetwork:
+def wrap_model(model: torch.nn.Module, example_input: Any, **kwargs) -> NNCFNetwork:
     """
     Wraps a PyTorch model to the NNCFNetwork class.
 
@@ -327,7 +327,7 @@ def wrap_model(model: torch.nn.Module, example_input: Any) -> NNCFNetwork:
     input_info = ExampleInputInfo.from_example_input(example_input)
 
     with training_mode_switcher(model, is_training=False):
-        nncf_network = NNCFNetwork(model, input_info=input_info)
+        nncf_network = NNCFNetwork(model, input_info=input_info, **kwargs)
         nncf_network.nncf.get_tracing_context().disable_trace_dynamic_graph()
 
     return nncf_network

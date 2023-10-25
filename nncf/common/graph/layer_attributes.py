@@ -268,3 +268,12 @@ class ConvertDtypeLayerAttributes(BaseLayerAttributes):
 
     src_dtype: Any
     dst_dtype: Any
+
+
+@dataclass
+class ParameterLayerAttributes(BaseLayerAttributes):
+    """
+    :param name: Parameter name.
+    """
+
+    name: str

@@ -40,7 +40,7 @@ from nncf.torch.dynamic_graph.io_handling import FillerInputElement
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.io_handling import LoaderInputInfo
 from nncf.torch.dynamic_graph.io_handling import ModelInputInfo
-from nncf.torch.dynamic_graph.trace_tensor import trace_tensors
+from nncf.torch.dynamic_graph.trace_functions import trace_tensors
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.initialization import PTInitializingDataLoader
 from nncf.torch.nested_objects_traversal import objwalk
@@ -633,7 +633,8 @@ def test_integer_path_marking():
 
 def test_trace_output_with_no_tensors():
     output = None
-    trace_tensors(output, MagicMock())
+    with TracingContext() as ctx:
+        trace_tensors(output, MagicMock(), ctx)
 
 
 class ModelWithRepeatInputs(torch.nn.Module):

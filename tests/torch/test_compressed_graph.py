@@ -186,8 +186,9 @@ class ModelDesc:
 
         self.wrap_inputs_fn = wrap_inputs_fn
 
-    @property
-    def dot_filename(self):
+    def dot_filename(self, trace_parameters=False):
+        if trace_parameters:
+            return self.model_name + "_with_parameters_tracing.dot"
         return self.model_name + ".dot"
 
 
@@ -252,7 +253,8 @@ def check_model_graph(compressed_model: NNCFNetwork, ref_dot_file_name: str, ref
 
 @pytest.mark.parametrize("desc", TEST_MODELS_DESC, ids=[m.model_name for m in TEST_MODELS_DESC])
 class TestModelsGraph:
-    def test_build_graph(self, desc: ModelDesc):
+    @pytest.mark.parametrize("trace_parameters", (False, True))
+    def test_build_graph(self, desc: ModelDesc, trace_parameters):
         net = desc.model_builder()
         input_sample_sizes = desc.input_sample_sizes
         if isinstance(input_sample_sizes, tuple):
@@ -263,8 +265,8 @@ class TestModelsGraph:
         if not dummy_forward_fn:
             dummy_forward_fn = create_dummy_forward_fn(input_info, desc.wrap_inputs_fn)
         graph_builder = GraphBuilder(custom_forward_fn=dummy_forward_fn)
-        graph = graph_builder.build_graph(net)
-        check_graph(graph, desc.dot_filename, "original")
+        graph = graph_builder.build_graph(net, trace_parameters=trace_parameters)
+        check_graph(graph, desc.dot_filename(trace_parameters), "original")
 
     def get_sparsifiable_modules(self, algo_name):
         # counts wrapped NNCF modules to ignore the ones that are called in the training mode only
@@ -296,7 +298,7 @@ class TestModelsGraph:
         sparsifiable_modules = self.get_sparsifiable_modules(algo)
         ref_num_sparsed = len(get_all_modules_by_type(model, sparsifiable_modules))
         assert ref_num_sparsed == len(compression_ctrl.sparsified_module_info)
-        check_model_graph(compressed_model, desc.dot_filename, algo)
+        check_model_graph(compressed_model, desc.dot_filename(), algo)
 
     def test_quantize_network(self, desc: ModelDesc, _case_config):
         model = desc.model_builder()
@@ -306,7 +308,7 @@ class TestModelsGraph:
         compressed_model, _ = create_compressed_model_and_algo_for_test(
             model, config, dummy_forward_fn=desc.dummy_forward_fn, wrap_inputs_fn=desc.wrap_inputs_fn
         )
-        check_model_graph(compressed_model, desc.dot_filename, _case_config.graph_dir)
+        check_model_graph(compressed_model, desc.dot_filename(), _case_config.graph_dir)
 
     def test_sparse_quantize_network(self, desc: ModelDesc):
         model = desc.model_builder()
@@ -323,7 +325,7 @@ class TestModelsGraph:
         ref_num_sparsed = len(get_all_modules_by_type(compressed_model, sparsifiable_modules))
 
         assert ref_num_sparsed == len(compression_ctrl.child_ctrls[0].sparsified_module_info)
-        check_model_graph(compressed_model, desc.dot_filename, "quantized_rb_sparsity")
+        check_model_graph(compressed_model, desc.dot_filename(), "quantized_rb_sparsity")
 
 
 @pytest.mark.skip(reason="Sporadic failures")
@@ -868,7 +870,7 @@ def test_compressed_graph_models_hw(desc, hw_config_type):
     sketch_graph = compressed_model.nncf.get_original_graph()
 
     potential_quantizer_graph = prepare_potential_quantizer_graph(sketch_graph, single_config_quantizer_setup)
-    path_to_dot = get_full_path_to_the_graph(desc.dot_filename, _case_dir(hw_config_type.value))
+    path_to_dot = get_full_path_to_the_graph(desc.dot_filename(), _case_dir(hw_config_type.value))
     compare_nx_graph_with_reference(potential_quantizer_graph, path_to_dot, sort_dot_graph=False)
 
 
