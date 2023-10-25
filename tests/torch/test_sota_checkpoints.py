@@ -61,6 +61,7 @@ class EvalRunParamsStruct:
     diff_target_pt_max: float
     multiprocessing_distributed: bool
     skip_ov: Optional[str]
+    xfail_ov: Optional[str]
 
 
 @dataclass
@@ -72,9 +73,10 @@ class ResultInfo:
     model_name: str
     backend: str
     metric_type: Optional[str] = None
-    expected: Optional[float] = None
     measured: Optional[float] = None
+    expected: Optional[float] = None
     diff_fp32: Optional[float] = None
+    target_fp32: Optional[float] = None
     diff_target: Optional[float] = None
     status: Optional[str] = None
 
@@ -83,10 +85,11 @@ class ResultInfo:
             "Model": self.model_name,
             "Backend": self.backend,
             "Metrics type": self.metric_type,
-            "Expected": self.expected,
             "Measured": self.measured,
+            "Expected": self.expected,
+            "Diff expected": self.diff_target,
+            "Target FP32": self.target_fp32,
             "Diff FP32": self.diff_fp32,
-            "Diff target": self.diff_target,
             "Status": self.status,
             "Build url": os.environ.get("BUILD_URL", ""),
         }
@@ -133,6 +136,7 @@ def read_reference_file(ref_path: Path) -> List[EvalRunParamsStruct]:
                         diff_target_pt_max=sample_dict.get("diff_target_pt_max", DIFF_TARGET_PT_MAX),
                         multiprocessing_distributed=sample_dict.get("multiprocessing_distributed", False),
                         skip_ov=sample_dict.get("skip_ov", None),
+                        xfail_ov=sample_dict.get("xfail_ov", None),
                     )
                 )
     return param_list
@@ -352,19 +356,21 @@ class TestSotaCheckpoints:
             diff_fp32_min=eval_run_param.diff_fp32_min,
             diff_fp32_max=eval_run_param.diff_fp32_max,
         )
+
         result_info = ResultInfo(
             model_name=eval_run_param.model_name,
             backend=PYTORCH,
             metric_type=eval_run_param.metric_type,
-            expected=eval_run_param.target_pt,
             measured=metric_value,
-            diff_fp32=diff_fp32,
+            expected=eval_run_param.target_pt,
             diff_target=diff_target,
-            status=threshold_errors,
+            target_fp32=fp32_metric,
+            diff_fp32=diff_fp32,
+            status=status,
         )
         add_test_result(result_info)
         if threshold_errors is not None:
-            pytest.fail(threshold_errors)
+            pytest.fail(status)
 
     @staticmethod
     def get_ir_model_path(eval_run_param: EvalRunParamsStruct):
@@ -405,6 +411,7 @@ class TestSotaCheckpoints:
             pytest.skip("Skip if not --run-openvino-eval")
         if ov_data_dir is None:
             pytest.fail("--ov-data-dir is not set")
+        print(eval_run_param)
         if eval_run_param.skip_ov:
             status = f"Skip by: {eval_run_param.skip_ov}"
             add_test_result(
@@ -466,20 +473,28 @@ class TestSotaCheckpoints:
             diff_fp32_min=eval_run_param.diff_fp32_min,
             diff_fp32_max=eval_run_param.diff_fp32_max,
         )
+        status = threshold_errors
+        if eval_run_param.xfail_ov is not None:
+            status = f"XFAIL: {eval_run_param.xfail_ov} {threshold_errors}"
 
         result_info = ResultInfo(
             model_name=eval_run_param.model_name,
             backend=OPENVINO,
             metric_type=eval_run_param.metric_type,
-            expected=eval_run_param.target_ov,
             measured=metric_value,
-            diff_fp32=diff_fp32,
+            expected=eval_run_param.target_ov,
             diff_target=diff_target,
-            status=threshold_errors,
+            target_fp32=fp32_metric,
+            diff_fp32=diff_fp32,
+            status=status,
         )
+
         add_test_result(result_info)
         if threshold_errors is not None:
-            pytest.fail(threshold_errors)
+            if eval_run_param.xfail_ov is not None:
+                pytest.xfail(status)
+            else:
+                pytest.fail(status)
 
     @pytest.mark.train
     def test_train(
@@ -526,6 +541,7 @@ class TestSotaCheckpoints:
                 backend=TRAIN,
                 metric_type=eval_run_param.metric_type,
                 measured=metric_value,
+                target_fp32=fp32_metric,
                 diff_fp32=diff_fp32,
                 status=err_msg,
             )

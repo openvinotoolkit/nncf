@@ -522,7 +522,7 @@
                 "diff_fp32_min": -1,
                 "diff_fp32_max": 0.1,
                 "multiprocessing_distributed": true,
-                "skip_ov": "Issue-123448"
+                "xfail_ov": "Issue-112675"
             },
             "unet_mapillary_magnitude_sparsity_int8": {
                 "config": "examples/torch/semantic_segmentation/configs/unet_mapillary_magnitude_sparsity_int8.json",
@@ -536,7 +536,7 @@
                 "diff_fp32_min": -1,
                 "diff_fp32_max": 0.1,
                 "multiprocessing_distributed": true,
-                "skip_ov": "Issue-123448"
+                "xfail_ov": "Issue-112675"
             },
             "unet_mapillary_pruning_geometric_median": {
                 "config": "examples/torch/semantic_segmentation/configs/unet_mapillary_pruning_geometric_median.json",
