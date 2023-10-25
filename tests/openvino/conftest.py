@@ -22,7 +22,6 @@ from tests.shared.paths import TEST_ROOT
 
 def pytest_addoption(parser):
     parser.addoption("--data", type=str, default=None, help="Directory path to cached data.")
-    parser.addoption("--omz_cache", type=str, default=None, help="Directory path to cached OMZ models.")
 
 
 @pytest.fixture(name="data_dir")
@@ -35,7 +34,7 @@ def data(request):
 
 @pytest.fixture(name="omz_cache_dir")
 def models(request):
-    option = request.config.getoption("--omz_cache")
+    option = request.config.getoption("--data")
     if option is None:
         return Path(MODELS_PATH)
     return Path(option)
