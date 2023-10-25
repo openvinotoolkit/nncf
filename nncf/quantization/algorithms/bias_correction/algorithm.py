@@ -134,7 +134,6 @@ class BiasCorrection(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         self._set_backend_entity(model)
-        model = self._backend_entity.insert_null_biases(model, graph)
         main_transformations_layout = TransformationLayout()
         main_model_transformer = ModelTransformerFactory.create(model)
 
@@ -488,8 +487,6 @@ class BiasCorrection(Algorithm):
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         self._set_backend_entity(model)
         model_copy = self._backend_entity.remove_fq_from_inputs(copy_model(model), graph)
-        graph_copy = NNCFGraphFactory.create(model_copy)
-        model_copy = self._backend_entity.insert_null_biases(model_copy, graph_copy)
         nncf_graph = NNCFGraphFactory.create(model_copy)
         statistic_container = StatisticPointsContainer()
 

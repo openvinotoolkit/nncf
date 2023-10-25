@@ -19,7 +19,6 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.metatypes.groups import FAKE_QUANTIZE_OPERATIONS
-from nncf.openvino.graph.model_utils import insert_null_biases
 from nncf.openvino.graph.model_utils import remove_fq_from_inputs
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
@@ -132,7 +131,3 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @staticmethod
     def remove_fq_from_inputs(model: ov.Model, nncf_graph: NNCFGraph) -> ov.Model:
         return remove_fq_from_inputs(model, nncf_graph)
-
-    @staticmethod
-    def insert_null_biases(model: ov.Model, nncf_graph: NNCFGraph) -> ov.Model:
-        return insert_null_biases(model, nncf_graph)
