@@ -18,7 +18,7 @@ from pathlib import Path
 import nncf
 from nncf.torch import disable_tracing
 
-import openvino.runtime as ov
+import openvino as ov
 import torch
 import torchvision
 from fastdownload import FastDownload

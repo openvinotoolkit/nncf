@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 import torch
 from fastdownload import FastDownload
 from openvino.tools import mo

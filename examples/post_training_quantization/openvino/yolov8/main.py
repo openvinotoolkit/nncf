@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, Tuple
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 import torch
 from tqdm import tqdm
 from ultralytics.cfg import get_cfg

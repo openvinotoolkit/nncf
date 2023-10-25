@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 import torch
 from anomalib.data.mvtec import MVTec
 from anomalib.data.utils import download
@@ -169,6 +169,10 @@ ov.save_model(ov_model, fp32_ir_path, compress_to_fp16=False)
 print(f"[1/7] Save FP32 model: {fp32_ir_path}")
 fp32_size = get_model_size(fp32_ir_path, verbose=True)
 
+# To avoid an accuracy drop when saving a model due to compression of unquantized
+# weights to FP16, compress_to_fp16=False should be used. This is necessary because
+# nncf.quantize_with_accuracy_control(...) keeps the most impactful operations within
+# the model in the original precision to achieve the specified model accuracy.
 int8_ir_path = f"{ROOT}/stfpm_int8.xml"
 ov.save_model(ov_quantized_model, int8_ir_path, compress_to_fp16=False)
 print(f"[2/7] Save INT8 model: {int8_ir_path}")
