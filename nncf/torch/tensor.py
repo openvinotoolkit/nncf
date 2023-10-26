@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Union
+
 import torch
 
 from nncf.common.tensor import NNCFTensor
@@ -19,7 +21,7 @@ class PTNNCFTensor(NNCFTensor):
     A realisation of torch tensors wrapper for common NNCF algorithms.
     """
 
-    def __init__(self, tensor: torch.tensor):
+    def __init__(self, tensor: Union[torch.tensor, "PTNNCFTensor", tuple]):
         # In case somebody attempts to wrap
         # tensor twice
         if isinstance(tensor, self.__class__):
