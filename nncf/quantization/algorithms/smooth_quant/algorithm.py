@@ -370,7 +370,7 @@ class SmoothQuant(Algorithm):
         scale_node_name = f"{source_name}_{source_port_id}"
         unique_index = self._cached_multiply_names[scale_node_name]
         self._cached_multiply_names[scale_node_name] += 1
-        return f"{scale_node_name}_{unique_index}/sq_multiply"
+        return f"{scale_node_name}_{unique_index}/nncf_smooth_quant"
 
     def _get_alpha_map(self) -> Dict[OperatorMetatype, float]:
         """

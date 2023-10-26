@@ -192,9 +192,20 @@ class OVSubtractMetatype(OVOpMetatype):
 
 
 @OV_OPERATOR_METATYPES.register()
+class OVSQMultiplyMetatype(OVOpMetatype):
+    name = "SQMultiplyOp"
+    op_names = ["Multiply"]
+
+    @classmethod
+    def matches(cls, node: ov.Node) -> bool:
+        return _is_smooth_quant_multiply(node)
+
+
+@OV_OPERATOR_METATYPES.register()
 class OVMultiplyMetatype(OVOpMetatype):
     name = "MultiplyOp"
     op_names = ["Multiply"]
+    subtypes = [OVSQMultiplyMetatype]
     hw_config_names = [HWConfigOpName.MULTIPLY]
 
 
@@ -752,6 +763,18 @@ def _is_depthwise_conv(node: ov.Node) -> bool:
     inp_channels = inp_channels.get_length()
     groups = groups.get_length()
     return groups == inp_channels and inp_channels > 1
+
+
+def _is_smooth_quant_multiply(node: ov.Node) -> bool:
+    """
+    Returns True if node name contains SmoothQuant node patttern. False - otherwise.
+
+    :param node: Multiply node to check whether it was produced by SmoothQuant.
+    :return: True if Multiply is from SmoothQuant, false - otherwise.
+    """
+    if "nncf_smooth_quant" in node.get_friendly_name():
+        return True
+    return False
 
 
 def _is_embedding(node: ov.Node) -> bool:

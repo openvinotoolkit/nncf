@@ -13,8 +13,6 @@ import copy
 
 from nncf import ModelType
 from nncf import QuantizationPreset
-from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from tests.post_training.pipelines.base import ALL_PTQ_BACKENDS
 from tests.post_training.pipelines.base import NNCF_PTQ_BACKENDS
 from tests.post_training.pipelines.base import BackendType
@@ -51,10 +49,7 @@ TEST_MODELS = [
         "reported_name": "timm/crossvit_9_240",
         "model_id": "crossvit_9_240",
         "pipeline_cls": ImageClassificationTimm,
-        "ptq_params": {
-            "preset": QuantizationPreset.MIXED,
-            "model_type": ModelType.TRANSFORMER
-        },
+        "ptq_params": {"preset": QuantizationPreset.MIXED, "model_type": ModelType.TRANSFORMER},
         "backends": [BackendType.TORCH, BackendType.ONNX, BackendType.OV, BackendType.POT],
     },
     {
@@ -70,10 +65,7 @@ TEST_MODELS = [
         "reported_name": "timm/deit3_small_patch16_224",
         "model_id": "deit3_small_patch16_224",
         "pipeline_cls": ImageClassificationTimm,
-        "ptq_params": {
-            "preset": QuantizationPreset.MIXED,
-            "model_type": ModelType.TRANSFORMER
-        },
+        "ptq_params": {"preset": QuantizationPreset.MIXED, "model_type": ModelType.TRANSFORMER},
         "backends": ALL_PTQ_BACKENDS,
     },
     {
