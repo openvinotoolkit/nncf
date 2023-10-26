@@ -13,7 +13,7 @@ import torch
 from torch import nn
 
 from nncf.data import Dataset
-from nncf.experimental.torch.quantization.quantize_model import create_nncf_network
+from nncf.torch.quantization.quantize_model import create_nncf_network
 
 
 class TestModel(nn.Module):
