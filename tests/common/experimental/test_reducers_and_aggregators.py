@@ -60,14 +60,48 @@ class OfflineAggregatorTestCase:
 
 OFFLINE_AGGREGATORS_TEST_CASES = [
     OfflineAggregatorTestCase(
-        aggregation_axes=None,
+        aggregation_axes=(0,),
         min_ref=np.array([[[-50000, -4, -8], [-12, -16, -20], [-24, -28, -32]]]),
         max_ref=np.array([[[50000, 4, 8], [12, 16, 20], [24, 28, 32]]]),
     ),
     OfflineAggregatorTestCase(
-        aggregation_axes=(1,),
+        aggregation_axes=(
+            0,
+            2,
+        ),
         min_ref=np.array([[[-50000, -28, -32]]]),
         max_ref=np.array([[[50000, 28, 32]]]),
+    ),
+    OfflineAggregatorTestCase(
+        aggregation_axes=(2,),
+        min_ref=np.array(
+            [
+                [[[-50000, 5, 10]]],
+                [[[-40000, 4, 8]]],
+                [[[-30000, 3, 6]]],
+                [[[-20000, 2, 4]]],
+                [[[-10000, 1, 2]]],
+                [[[0, 0, 0]]],
+                [[[-6, -7, -8]]],
+                [[[-12, -14, -16]]],
+                [[[-18, -21, -24]]],
+                [[[-24, -28, -32]]],
+            ]
+        ),
+        max_ref=np.array(
+            [
+                [[[50000, -5, -10]]],
+                [[[40000, -4, -8]]],
+                [[[30000, -3, -6]]],
+                [[[20000, -2, -4]]],
+                [[[10000, -1, -2]]],
+                [[[0, 0, 0]]],
+                [[[6, 7, 8]]],
+                [[[12, 14, 16]]],
+                [[[18, 21, 24]]],
+                [[[24, 28, 32]]],
+            ]
+        ),
     ),
 ]
 
@@ -269,7 +303,7 @@ class TemplateTestReducersAggreagtors:
             input_ = input_.reshape((1, 3, 3))
             input_with_outliers = input_with_outliers.reshape((1, 3, 3))
 
-        aggregation_axes = (0,) if use_per_sample_stats else None
+        aggregation_axes = (0, 1) if use_per_sample_stats else (0,)
         aggregator = aggregator_cls(tensor_processor=tensor_processor, aggregation_axes=aggregation_axes)
         for i in range(1, 6):
             aggregator.register_reduced_input(self.get_nncf_tensor(input_ * i, Dtype.FLOAT))
@@ -297,6 +331,10 @@ class TemplateTestReducersAggreagtors:
                 "mad_values": np.array([2.5, 5.0, 7.5, 10.0, 12.5, 15.0, 17.5, 20.0, 22.5]),
             },
             (0,): {
+                "median_values": np.array([4.5, 9.0, 13.5, 18.0, 22.5, 27.0, 31.5, 36.0, 40.5]),
+                "mad_values": np.array([2.5, 5.0, 7.5, 10.0, 12.5, 15.0, 17.5, 20.0, 22.5]),
+            },
+            (0, 1): {
                 "median_values": np.array([18.0]),
                 "mad_values": np.array([12.0]),
             },
@@ -309,6 +347,12 @@ class TemplateTestReducersAggreagtors:
                 95: np.array([7.6, 15.2, 22.8, 30.4, 38.0, 45.6, 53.2, 60.8, 68.4]),
             },
             (0,): {
+                5: np.array([0.4, 0.8, 1.2, 1.6, 2.0, 2.4, 2.8, 3.2, 3.6]),
+                10: np.array([0.8, 1.6, 2.4, 3.2, 4.0, 4.8, 5.6, 6.4, 7.2]),
+                90: np.array([7.2, 14.4, 21.6, 28.8, 36.0, 43.2, 50.4, 57.6, 64.8]),
+                95: np.array([7.6, 15.2, 22.8, 30.4, 38.0, 45.6, 53.2, 60.8, 68.4]),
+            },
+            (0, 1): {
                 5: np.array([0.0]),
                 10: np.array([0.0]),
                 90: np.array([48.0]),
@@ -327,7 +371,7 @@ class TemplateTestReducersAggreagtors:
             ),
         ],
     )
-    @pytest.mark.parametrize("aggregation_axes", [None, (0,)])
+    @pytest.mark.parametrize("aggregation_axes", [None, (0,), (0, 1)])
     def test_mad_percentile_aggregators(self, aggregator_cls, tensor_processor, aggregation_axes):
         aggregator = aggregator_cls(tensor_processor=tensor_processor, aggregation_axes=aggregation_axes)
         input_ = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9], dtype=np.float32)

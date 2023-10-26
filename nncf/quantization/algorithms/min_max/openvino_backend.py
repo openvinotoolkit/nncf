@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set
 
 import numpy as np
 
@@ -136,7 +136,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def _get_aggregation_axes(target_point: OVTargetPoint):
-        return None if target_point.is_weight_target_point() else (0,)
+        return (0,) if target_point.is_weight_target_point() else (0, 1)
 
     @staticmethod
     def _get_reduction_axes(

@@ -130,21 +130,15 @@ class AggregatorBase:
         """
         :param tensor_processor: Backend-specific tensor processor.
         :param aggregation_axes: Axes along which to operate.
+            Registered statistics are stacked along zero axis,
+            axes >=1 correspond to recieved statistic axes shifted left by 1.
         :param num_samples: Maximum number of samples to collect. Aggregator
             skips tensor registration if tensor registration was called num_samples times before.
             Aggregator never skips registration if num_samples is None.
         """
 
         self._tensor_processor = tensor_processor
-        self._tensor_aggregation_axes = tuple(aggregation_axes) if aggregation_axes is not None else aggregation_axes
-        self._stacked_tensor_aggregation_axis = 0
-        if self._tensor_aggregation_axes is not None:
-            self._stacked_tensor_all_aggregation_axes = (
-                self._stacked_tensor_aggregation_axis,
-                *map(lambda x: x + 1, self._tensor_aggregation_axes),
-            )
-        else:
-            self._stacked_tensor_all_aggregation_axes = self._stacked_tensor_aggregation_axis
+        self._aggregation_axes = (0,) if aggregation_axes is None else aggregation_axes
         self._keepdims = True
         self._num_samples = num_samples
         self._collected_samples = 0
@@ -617,20 +611,43 @@ class OnlineAggregatorBase(AggregatorBase, ABC):
 
         :param NNCFTensor x: _description_
         """
-        if self._tensor_aggregation_axes is not None:  # Should aggregate firstly the tensor
-            x = self._aggregation_fn(x, axis=self._tensor_aggregation_axes, keepdims=self._keepdims)
-        stacked_tensors = self._tensor_processor.stack(
-            [x, *self._container], axis=self._stacked_tensor_aggregation_axis
-        )
-        aggregated_tensors = self._aggregation_fn(
-            stacked_tensors, axis=self._stacked_tensor_aggregation_axis, keepdims=self._keepdims
-        )
-        squeezed = self._tensor_processor.squeeze(aggregated_tensors, self._stacked_tensor_aggregation_axis)
-        self._container = [squeezed]
+        online_aggregation_axes = tuple(dim - 1 for dim in self._aggregation_axes if dim != 0)
+        if online_aggregation_axes:
+            reduced = self._aggregation_fn(x, axis=online_aggregation_axes, keepdims=self._keepdims)
+        else:
+            reduced = x
+        if 0 in self._aggregation_axes:
+            stacked_tensors = self._tensor_processor.stack([reduced, *self._container], axis=0)
+            aggregated = self._aggregation_fn(stacked_tensors, axis=0, keepdims=self._keepdims)
+            aggregated = self._tensor_processor.squeeze(aggregated, 0)
+            self._container = [aggregated]
+        else:
+            self._container.append(reduced)
+
+        # online_aggregation_axes = tuple(dim - 1 for dim in self._aggregation_axes if dim != 0)
+        # if online_aggregation_axes:
+        #     reduced = self._aggregation_fn(x, axis=online_aggregation_axes, keepdims=self._keepdims)
+        # else:
+        #     reduced = x
+        # if 0 in self._aggregation_axes:
+        #     if self._container:
+        #         reduced = self._aggregation_fn(
+        #             self._tensor_processor.stack([reduced, *self._container]), axis=0, keepdims=self._keepdims
+        #         )
+        #         reduced = self._tensor_processor.squeeze(reduced)
+        #     self._container = [reduced]
+        # else:
+        #     self._container.append(reduced)
 
     def _aggregate_impl(self) -> NNCFTensor:
-        assert len(self._container) == 1
-        return self._container[0].tensor
+        if 0 in self._aggregation_axes:
+            if self._keepdims:
+                return self._container[0].tensor
+        return self._tensor_processor.stack(self._container).tensor
+
+    # def _aggregate_impl(self) -> NNCFTensor:
+    #     assert len(self._container) == 1
+    #     return self._container[0].tensor
 
     @abstractmethod
     def _aggregation_fn(self, stacked_value: NNCFTensor, axis: AggregationAxes, keepdims: bool) -> NNCFTensor:
@@ -659,11 +676,9 @@ class OfflineAggregatorBase(AggregatorBase, ABC):
         self._container.append(x)
 
     def _aggregate_impl(self) -> NNCFTensor:
-        stacked_val = self._tensor_processor.stack(self._container, axis=self._stacked_tensor_aggregation_axis)
-        aggregated = self._aggregation_fn(
-            stacked_val, axis=self._stacked_tensor_all_aggregation_axes, keepdims=self._keepdims
-        )
-        return self._tensor_processor.squeeze(aggregated, self._stacked_tensor_aggregation_axis).tensor
+        stacked_val = self._tensor_processor.stack(self._container)
+        aggregated = self._aggregation_fn(stacked_val, axis=self._aggregation_axes, keepdims=self._keepdims)
+        return self._tensor_processor.squeeze(aggregated, 0).tensor
 
     @abstractmethod
     def _aggregation_fn(self, stacked_value: NNCFTensor, axis: AggregationAxes, keepdims: bool) -> NNCFTensor:
@@ -695,21 +710,21 @@ class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
         self._quantile = quantile
 
     def _aggregate_impl(self) -> NNCFTensor:
-        stacked_samples = self._tensor_processor.stack(self._container, axis=self._stacked_tensor_aggregation_axis)
+        stacked_samples = self._tensor_processor.stack(self._container)
         low_values, high_values = self._tensor_processor.quantile(
             stacked_samples,
             quantile=(self._quantile, 1 - self._quantile),
-            axis=self._stacked_tensor_all_aggregation_axes,
+            axis=self._aggregation_axes,
         )
         tp = self._tensor_processor
         outliers_mask = tp.logical_or(tp.less(stacked_samples, low_values), tp.less(high_values, stacked_samples))
         aggregated = self._aggregation_fn(
             stacked_samples=stacked_samples,
             mask=outliers_mask,
-            axis=self._stacked_tensor_all_aggregation_axes,
+            axis=self._aggregation_axes,
             keepdims=self._keepdims,
         )
-        return self._tensor_processor.squeeze(aggregated, self._stacked_tensor_aggregation_axis).tensor
+        return self._tensor_processor.squeeze(aggregated, 0).tensor
 
     @abstractmethod
     def _aggregation_fn(
@@ -746,15 +761,15 @@ class MedianAbsoluteDeviationAggregator(AggregatorBase):
         stacked_val = self._tensor_processor.stack(self._container)
         mask = self._tensor_processor.zero_elements(stacked_val)
         median_per_ch = self._tensor_processor.masked_median(
-            stacked_val, mask=mask, axis=self._stacked_tensor_all_aggregation_axes, keepdims=True
+            stacked_val, mask=mask, axis=self._aggregation_axes, keepdims=True
         )
         mad_values = self._tensor_processor.median(
             self._tensor_processor.abs(self._tensor_processor.sub(stacked_val, median_per_ch)),
-            axis=self._stacked_tensor_all_aggregation_axes,
+            axis=self._aggregation_axes,
             keepdims=self._keepdims,
         )
-        squeezed_mad_values = self._tensor_processor.squeeze(mad_values, self._stacked_tensor_aggregation_axis)
-        squeezed_median_per_ch = self._tensor_processor.squeeze(median_per_ch, self._stacked_tensor_aggregation_axis)
+        squeezed_mad_values = self._tensor_processor.squeeze(mad_values, 0)
+        squeezed_median_per_ch = self._tensor_processor.squeeze(median_per_ch, 0)
         return {
             MedianMADTensorStatistic.MEDIAN_VALUES_STAT: squeezed_median_per_ch.tensor,
             MedianMADTensorStatistic.MAD_VALUES_STAT: squeezed_mad_values.tensor,
@@ -783,14 +798,12 @@ class PercentileAggregator(AggregatorBase):
         percentiles = self._tensor_processor.percentile(
             stacked_val,
             self._percentiles_to_collect,
-            axis=self._stacked_tensor_all_aggregation_axes,
+            axis=self._aggregation_axes,
             keepdims=self._keepdims,
         )
         retval = {}
         for idx, percentile in enumerate(self._percentiles_to_collect):
-            retval[percentile] = self._tensor_processor.squeeze(
-                percentiles[idx], self._stacked_tensor_aggregation_axis
-            ).tensor
+            retval[percentile] = self._tensor_processor.squeeze(percentiles[idx], 0).tensor
         return retval
 
 
