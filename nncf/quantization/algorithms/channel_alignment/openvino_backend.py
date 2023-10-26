@@ -25,7 +25,7 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 from nncf.openvino.graph.layer_attributes import OV_CONV_METATYPES
 from nncf.openvino.graph.layer_attributes import get_conv_weights_layout_from_node
 from nncf.openvino.graph.layer_attributes import get_linear_weights_layout_from_node
-from nncf.openvino.graph.layout import OVConvLayoutElem
+from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
@@ -116,17 +116,17 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
                 f"Metatype {node.metatype} of node {node.node_name} dimensions description retrieving is not supported"
             )
 
-        if OVConvLayoutElem.GROUPS in weights_layout:
+        if OVLayoutElem.GROUPS in weights_layout:
             # Using groups dim as output channels dim for ChannelAlignment algorithm
             # TODO(dlyakhov) support group convolutions with groups number not in [1, out_channels]
             return LayoutDescriptor(
-                weights_layout.index(OVConvLayoutElem.GROUPS),
-                weights_layout.index(OVConvLayoutElem.C_IN),
+                weights_layout.index(OVLayoutElem.GROUPS),
+                weights_layout.index(OVLayoutElem.C_IN),
                 node.metatype.output_channel_axis,
             )
         return LayoutDescriptor(
-            weights_layout.index(OVConvLayoutElem.C_OUT) if OVConvLayoutElem.C_OUT in weights_layout else None,
-            weights_layout.index(OVConvLayoutElem.C_IN),
+            weights_layout.index(OVLayoutElem.C_OUT) if OVLayoutElem.C_OUT in weights_layout else None,
+            weights_layout.index(OVLayoutElem.C_IN),
             node.metatype.output_channel_axis,
         )
 

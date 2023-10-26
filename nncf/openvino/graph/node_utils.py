@@ -19,7 +19,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.openvino.graph.layer_attributes import get_linear_weights_layout_from_node
-from nncf.openvino.graph.layout import OVConvLayoutElem
+from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_BIAS
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
@@ -365,9 +365,7 @@ def get_matmul_channel_axes(node: ov.Node) -> List[int]:
     :return: List of channel axes for the MatMul operation.
     """
     weights_layout = get_linear_weights_layout_from_node(node)
-    return [
-        idx for idx, elem in enumerate(weights_layout) if elem in [OVConvLayoutElem.SPATIAL, OVConvLayoutElem.C_OUT]
-    ]
+    return [idx for idx, elem in enumerate(weights_layout) if elem in [OVLayoutElem.SPATIAL, OVLayoutElem.C_OUT]]
 
 
 def get_channel_agnostic_reduction_axes(channel_axes: List[int], shape: List[int]) -> Optional[ReductionAxes]:

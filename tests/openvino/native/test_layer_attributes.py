@@ -23,7 +23,7 @@ from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.layer_attributes import get_conv_weights_layout_from_node
 from nncf.openvino.graph.layer_attributes import get_linear_weights_layout_from_node
-from nncf.openvino.graph.layout import OVConvLayoutElem
+from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 
 
@@ -154,7 +154,7 @@ class LayerAttributesTestCase:
     node_creator: Callable
     input_shape: Tuple[int, ...]
     ref_layer_attrs: OVLayerAttributes
-    ref_weights_layout: Tuple[OVConvLayoutElem]
+    ref_weights_layout: Tuple[OVLayoutElem]
 
 
 TEST_CASES_CONV = [
@@ -177,10 +177,10 @@ TEST_CASES_CONV = [
             {},
         ),
         (
-            OVConvLayoutElem.C_OUT,
-            OVConvLayoutElem.C_IN,
-            OVConvLayoutElem.SPATIAL,
-            OVConvLayoutElem.SPATIAL,
+            OVLayoutElem.C_OUT,
+            OVLayoutElem.C_IN,
+            OVLayoutElem.SPATIAL,
+            OVLayoutElem.SPATIAL,
         ),
     ),
     LayerAttributesTestCase(
@@ -202,10 +202,10 @@ TEST_CASES_CONV = [
             {},
         ),
         (
-            OVConvLayoutElem.C_OUT,
-            OVConvLayoutElem.C_IN,
-            OVConvLayoutElem.SPATIAL,
-            OVConvLayoutElem.SPATIAL,
+            OVLayoutElem.C_OUT,
+            OVLayoutElem.C_IN,
+            OVLayoutElem.SPATIAL,
+            OVLayoutElem.SPATIAL,
         ),
     ),
     LayerAttributesTestCase(
@@ -227,11 +227,11 @@ TEST_CASES_CONV = [
             {},
         ),
         (
-            OVConvLayoutElem.GROUPS,
-            OVConvLayoutElem.C_OUT,
-            OVConvLayoutElem.C_IN,
-            OVConvLayoutElem.SPATIAL,
-            OVConvLayoutElem.SPATIAL,
+            OVLayoutElem.GROUPS,
+            OVLayoutElem.C_OUT,
+            OVLayoutElem.C_IN,
+            OVLayoutElem.SPATIAL,
+            OVLayoutElem.SPATIAL,
         ),
     ),
     LayerAttributesTestCase(
@@ -253,11 +253,11 @@ TEST_CASES_CONV = [
             {},
         ),
         (
-            OVConvLayoutElem.GROUPS,
-            OVConvLayoutElem.C_OUT,
-            OVConvLayoutElem.C_IN,
-            OVConvLayoutElem.SPATIAL,
-            OVConvLayoutElem.SPATIAL,
+            OVLayoutElem.GROUPS,
+            OVLayoutElem.C_OUT,
+            OVLayoutElem.C_IN,
+            OVLayoutElem.SPATIAL,
+            OVLayoutElem.SPATIAL,
         ),
     ),
     LayerAttributesTestCase(
@@ -279,10 +279,10 @@ TEST_CASES_CONV = [
             {},
         ),
         (
-            OVConvLayoutElem.C_IN,
-            OVConvLayoutElem.C_OUT,
-            OVConvLayoutElem.SPATIAL,
-            OVConvLayoutElem.SPATIAL,
+            OVLayoutElem.C_IN,
+            OVLayoutElem.C_OUT,
+            OVLayoutElem.SPATIAL,
+            OVLayoutElem.SPATIAL,
         ),
     ),
     LayerAttributesTestCase(
@@ -304,11 +304,11 @@ TEST_CASES_CONV = [
             {},
         ),
         (
-            OVConvLayoutElem.GROUPS,
-            OVConvLayoutElem.C_IN,
-            OVConvLayoutElem.C_OUT,
-            OVConvLayoutElem.SPATIAL,
-            OVConvLayoutElem.SPATIAL,
+            OVLayoutElem.GROUPS,
+            OVLayoutElem.C_IN,
+            OVLayoutElem.C_OUT,
+            OVLayoutElem.SPATIAL,
+            OVLayoutElem.SPATIAL,
         ),
     ),
 ]
@@ -328,7 +328,7 @@ TEST_CASES_LINEAR = [
             ),
             {"transpose": False},
         ),
-        (OVConvLayoutElem.C_OUT, OVConvLayoutElem.C_IN),
+        (OVLayoutElem.C_OUT, OVLayoutElem.C_IN),
     ),
     LayerAttributesTestCase(
         get_matmul_a,
@@ -343,7 +343,7 @@ TEST_CASES_LINEAR = [
             ),
             {"transpose": True},
         ),
-        (OVConvLayoutElem.C_IN, OVConvLayoutElem.C_OUT),
+        (OVLayoutElem.C_IN, OVLayoutElem.C_OUT),
     ),
     LayerAttributesTestCase(
         get_matmul_a_swapped,
@@ -358,7 +358,7 @@ TEST_CASES_LINEAR = [
             ),
             {"transpose": False},
         ),
-        (OVConvLayoutElem.C_IN, OVConvLayoutElem.C_OUT),
+        (OVLayoutElem.C_IN, OVLayoutElem.C_OUT),
     ),
     LayerAttributesTestCase(
         get_matmul_b_swapped,
@@ -373,7 +373,7 @@ TEST_CASES_LINEAR = [
             ),
             {"transpose": True},
         ),
-        (OVConvLayoutElem.C_OUT, OVConvLayoutElem.C_IN),
+        (OVLayoutElem.C_OUT, OVLayoutElem.C_IN),
     ),
     LayerAttributesTestCase(
         get_1d_matmul,
@@ -388,7 +388,7 @@ TEST_CASES_LINEAR = [
             ),
             {"transpose": False},
         ),
-        (OVConvLayoutElem.C_IN,),
+        (OVLayoutElem.C_IN,),
     ),
 ]
 

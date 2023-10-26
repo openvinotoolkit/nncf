@@ -19,7 +19,7 @@ from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
-from nncf.openvino.graph.layout import OVConvLayoutElem
+from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
@@ -80,7 +80,7 @@ OV_CONV_METATYPES = [
 ]
 
 
-OVConvLayout = List[OVConvLayoutElem]
+OVConvLayout = List[OVLayoutElem]
 
 
 def get_conv_weights_layout_from_node(node: NNCFNode) -> OVConvLayout:
@@ -91,7 +91,7 @@ def get_conv_weights_layout_from_node(node: NNCFNode) -> OVConvLayout:
     :return: Target convolution Node weights layout.
     """
     layer_attributes = node.layer_attributes
-    port_id = _get_port_id_from_layer_attributes(layer_attributes)
+    port_id = _get_constant_port_id_from_layer_attributes(layer_attributes)
     return get_conv_weights_layout(
         ov_metatype=node.metatype, weights_shape=layer_attributes.constant_attributes[port_id]["shape"]
     )
@@ -105,16 +105,22 @@ def get_linear_weights_layout_from_node(node: NNCFNode) -> OVConvLayout:
     :return: Target linear Node weight layout.
     """
     layer_attributes = node.layer_attributes
-    port_id = _get_port_id_from_layer_attributes(layer_attributes)
+    port_id = _get_constant_port_id_from_layer_attributes(layer_attributes)
     constant_layer_attrs = layer_attributes.constant_attributes[port_id]
     return get_linear_weights_layout(
         weights_shape=constant_layer_attrs["shape"],
-        transpose=constant_layer_attrs.get("transpose", False),
+        transpose=constant_layer_attrs["transpose"],
         port_id=port_id,
     )
 
 
-def _get_port_id_from_layer_attributes(layer_attributes) -> int:
+def _get_constant_port_id_from_layer_attributes(layer_attributes: OVLayerAttributes) -> int:
+    """
+    Returns constant ports id for convolutional and linear ops layer attributes.
+
+    :param layer_attributes: Target convolutional/linear layer op layer attributes.
+    :return: Constant port id for the target convolutional/linear model.
+    """
     port_ids = list(layer_attributes.constant_attributes.keys())
     assert len(port_ids) == 1
     return port_ids[0]
@@ -130,7 +136,7 @@ def get_conv_weights_layout(ov_metatype: OVOpMetatype, weights_shape: Tuple[int,
     """
     weights_layout = ov_metatype.const_layout
     kernel_size = weights_shape[len(weights_layout) :]
-    weights_layout += [OVConvLayoutElem.SPATIAL] * len(kernel_size)
+    weights_layout += [OVLayoutElem.SPATIAL] * len(kernel_size)
     return tuple(weights_layout)
 
 
@@ -142,14 +148,14 @@ def get_linear_weights_layout(weights_shape: Tuple[int, ...], transpose: bool, p
     :param port_id: Port id of the target liner node weights.
     :return: Target linear node weight layout.
     """
-    weights_layout = [OVConvLayoutElem.SPATIAL] * (len(weights_shape) - 2)
+    weights_layout = [OVLayoutElem.SPATIAL] * (len(weights_shape) - 2)
     if len(weights_shape) > 1:
         if (transpose and port_id == 0) or (not transpose and port_id == 1):
-            weights_layout += [OVConvLayoutElem.C_IN, OVConvLayoutElem.C_OUT]
+            weights_layout += [OVLayoutElem.C_IN, OVLayoutElem.C_OUT]
         else:
-            weights_layout += [OVConvLayoutElem.C_OUT, OVConvLayoutElem.C_IN]
+            weights_layout += [OVLayoutElem.C_OUT, OVLayoutElem.C_IN]
     else:
-        weights_layout += [OVConvLayoutElem.C_IN]
+        weights_layout += [OVLayoutElem.C_IN]
     return tuple(weights_layout)
 
 
@@ -182,13 +188,13 @@ def get_weighted_layer_attributes(
         weights_layout = get_conv_weights_layout(ov_metatype=ov_metatype, weights_shape=weights_shape)
         kwargs.update(
             {
-                "in_channels": weights_shape[weights_layout.index(OVConvLayoutElem.C_IN)],
-                "out_channels": weights_shape[weights_layout.index(OVConvLayoutElem.C_OUT)],
+                "in_channels": weights_shape[weights_layout.index(OVLayoutElem.C_IN)],
+                "out_channels": weights_shape[weights_layout.index(OVLayoutElem.C_OUT)],
                 "kernel_size": tuple(
-                    dim for dim, elem in zip(weights_shape, weights_layout) if elem == OVConvLayoutElem.SPATIAL
+                    dim for dim, elem in zip(weights_shape, weights_layout) if elem == OVLayoutElem.SPATIAL
                 ),
-                "groups": weights_shape[weights_layout.index(OVConvLayoutElem.GROUPS)]
-                if OVConvLayoutElem.GROUPS in weights_layout
+                "groups": weights_shape[weights_layout.index(OVLayoutElem.GROUPS)]
+                if OVLayoutElem.GROUPS in weights_layout
                 else 1,
             }
         )
@@ -197,14 +203,14 @@ def get_weighted_layer_attributes(
     if ov_metatype == OVMatMulMetatype:
         weights_shape = attrs["shape"]
         weights_layout = get_linear_weights_layout(
-            weights_shape=weights_shape, transpose=attrs.get("transpose", False), port_id=port_id
+            weights_shape=weights_shape, transpose=attrs["transpose"], port_id=port_id
         )
 
         kwargs = {
             "weight_requires_grad": False,
-            "in_features": weights_shape[weights_layout.index(OVConvLayoutElem.C_IN)],
-            "out_features": weights_shape[weights_layout.index(OVConvLayoutElem.C_OUT)]
-            if OVConvLayoutElem.C_OUT in weights_layout
+            "in_features": weights_shape[weights_layout.index(OVLayoutElem.C_IN)],
+            "out_features": weights_shape[weights_layout.index(OVLayoutElem.C_OUT)]
+            if OVLayoutElem.C_OUT in weights_layout
             else None,
             "with_bias": False,
         }

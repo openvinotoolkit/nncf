@@ -12,7 +12,7 @@
 from enum import Enum
 
 
-class OVConvLayoutElem(Enum):
+class OVLayoutElem(Enum):
     """
     Layout elements descriptor for convolutional and linear openvino layers:
         C_IN: Input channels dimension.

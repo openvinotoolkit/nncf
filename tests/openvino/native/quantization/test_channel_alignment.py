@@ -17,7 +17,7 @@ import pytest
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
-from nncf.openvino.graph.layout import OVConvLayoutElem
+from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
@@ -68,30 +68,30 @@ class TestOVChannelAlignment(TemplateTestChannelAlignment):
         "weights_layout,node_type,ref_layout_desc",
         [
             (
-                (OVConvLayoutElem.C_OUT, OVConvLayoutElem.C_IN, OVConvLayoutElem.SPATIAL, OVConvLayoutElem.SPATIAL),
+                (OVLayoutElem.C_OUT, OVLayoutElem.C_IN, OVLayoutElem.SPATIAL, OVLayoutElem.SPATIAL),
                 NodeType.CONVOLUTION,
                 LayoutDescriptor(0, 1, 1),
             ),
             (
                 (
-                    OVConvLayoutElem.GROUPS,
-                    OVConvLayoutElem.C_OUT,
-                    OVConvLayoutElem.C_IN,
-                    OVConvLayoutElem.SPATIAL,
-                    OVConvLayoutElem.SPATIAL,
+                    OVLayoutElem.GROUPS,
+                    OVLayoutElem.C_OUT,
+                    OVLayoutElem.C_IN,
+                    OVLayoutElem.SPATIAL,
+                    OVLayoutElem.SPATIAL,
                 ),
                 NodeType.CONVOLUTION,
                 LayoutDescriptor(0, 2, 1),
             ),
-            ((OVConvLayoutElem.C_IN, OVConvLayoutElem.C_OUT), NodeType.LINEAR, LayoutDescriptor(1, 0, -1)),
-            ((OVConvLayoutElem.C_IN,), NodeType.LINEAR, LayoutDescriptor(None, 0, -1)),
+            ((OVLayoutElem.C_IN, OVLayoutElem.C_OUT), NodeType.LINEAR, LayoutDescriptor(1, 0, -1)),
+            ((OVLayoutElem.C_IN,), NodeType.LINEAR, LayoutDescriptor(None, 0, -1)),
             (
                 (
-                    OVConvLayoutElem.SPATIAL,
-                    OVConvLayoutElem.SPATIAL,
-                    OVConvLayoutElem.SPATIAL,
-                    OVConvLayoutElem.C_IN,
-                    OVConvLayoutElem.C_OUT,
+                    OVLayoutElem.SPATIAL,
+                    OVLayoutElem.SPATIAL,
+                    OVLayoutElem.SPATIAL,
+                    OVLayoutElem.C_IN,
+                    OVLayoutElem.C_OUT,
                 ),
                 NodeType.LINEAR,
                 LayoutDescriptor(4, 3, -1),

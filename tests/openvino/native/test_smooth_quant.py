@@ -19,7 +19,7 @@ import torch
 from openvino.tools.mo import convert_model
 
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
-from nncf.openvino.graph.layout import OVConvLayoutElem
+from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.quantization.algorithms.smooth_quant.openvino_backend import OVSmoothQuantAlgoBackend
@@ -84,32 +84,32 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
         (
             (
                 OVMatMulMetatype,
-                (OVConvLayoutElem.C_OUT, OVConvLayoutElem.C_IN),
+                (OVLayoutElem.C_OUT, OVLayoutElem.C_IN),
                 1,
             ),
             (
                 OVMatMulMetatype,
-                (OVConvLayoutElem.C_IN,),
+                (OVLayoutElem.C_IN,),
                 0,
             ),
             (
                 OVMatMulMetatype,
                 (
-                    OVConvLayoutElem.SPATIAL,
-                    OVConvLayoutElem.SPATIAL,
-                    OVConvLayoutElem.SPATIAL,
-                    OVConvLayoutElem.C_IN,
-                    OVConvLayoutElem.C_OUT,
+                    OVLayoutElem.SPATIAL,
+                    OVLayoutElem.SPATIAL,
+                    OVLayoutElem.SPATIAL,
+                    OVLayoutElem.C_IN,
+                    OVLayoutElem.C_OUT,
                 ),
                 3,
             ),
             (
                 OVConvolutionMetatype,
                 (
-                    OVConvLayoutElem.C_IN,
-                    OVConvLayoutElem.C_OUT,
-                    OVConvLayoutElem.SPATIAL,
-                    OVConvLayoutElem.SPATIAL,
+                    OVLayoutElem.C_IN,
+                    OVLayoutElem.C_OUT,
+                    OVLayoutElem.SPATIAL,
+                    OVLayoutElem.SPATIAL,
                 ),
                 0,
             ),

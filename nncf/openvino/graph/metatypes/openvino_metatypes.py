@@ -20,7 +20,7 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.hardware.opset import HWConfigOpName
-from nncf.openvino.graph.layout import OVConvLayoutElem
+from nncf.openvino.graph.layout import OVLayoutElem
 
 OV_OPERATOR_METATYPES = OperatorMetatypeRegistry("openvino_operator_metatypes")
 
@@ -60,7 +60,7 @@ class OVConvolutionMetatype(OVOpMetatype):
     op_names = ["Convolution"]
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     const_channel_axis = [0]
-    const_layout = [OVConvLayoutElem.C_OUT, OVConvLayoutElem.C_IN]
+    const_layout = [OVLayoutElem.C_OUT, OVLayoutElem.C_IN]
     output_channel_axis = 1
 
 
@@ -70,7 +70,7 @@ class OVConvolutionBackpropDataMetatype(OVOpMetatype):
     op_names = ["ConvolutionBackpropData"]
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     const_channel_axis = [1]
-    const_layout = [OVConvLayoutElem.C_IN, OVConvLayoutElem.C_OUT]
+    const_layout = [OVLayoutElem.C_IN, OVLayoutElem.C_OUT]
     output_channel_axis = 1
 
 
@@ -80,7 +80,7 @@ class OVDepthwiseConvolutionMetatype(OVOpMetatype):
     op_names = ["GroupConvolution"]
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
     const_channel_axis = [0, 1]
-    const_layout = [OVConvLayoutElem.GROUPS, OVConvLayoutElem.C_OUT, OVConvLayoutElem.C_IN]
+    const_layout = [OVLayoutElem.GROUPS, OVLayoutElem.C_OUT, OVLayoutElem.C_IN]
     output_channel_axis = 1
 
     @classmethod
@@ -95,7 +95,7 @@ class OVGroupConvolutionMetatype(OVOpMetatype):
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     subtypes = [OVDepthwiseConvolutionMetatype]
     const_channel_axis = [0, 1]
-    const_layout = [OVConvLayoutElem.GROUPS, OVConvLayoutElem.C_OUT, OVConvLayoutElem.C_IN]
+    const_layout = [OVLayoutElem.GROUPS, OVLayoutElem.C_OUT, OVLayoutElem.C_IN]
     output_channel_axis = 1
 
 
@@ -105,7 +105,7 @@ class OVGroupConvolutionBackpropDataMetatype(OVOpMetatype):
     op_names = ["GroupConvolutionBackpropData"]
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     const_channel_axis = [0, 2]
-    const_layout = [OVConvLayoutElem.GROUPS, OVConvLayoutElem.C_IN, OVConvLayoutElem.C_OUT]
+    const_layout = [OVLayoutElem.GROUPS, OVLayoutElem.C_IN, OVLayoutElem.C_OUT]
     output_channel_axis = 1
 
 
