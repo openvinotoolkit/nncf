@@ -42,7 +42,7 @@ from nncf.quantization.algorithms.algorithm import Algorithm
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
 STATISTIC_BRANCH_KEY = "abs_max"
-ALPHA_MAP = {"convolution": 0.05, "matmul": 0.05}
+ALPHA_MAP = {"convolution": 0.05, "matmul": 0.95}
 
 
 class SmoothQuant(Algorithm):
