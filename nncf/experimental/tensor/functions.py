@@ -73,28 +73,36 @@ def flatten(a: Tensor) -> Tensor:
 
 @functools.singledispatch
 @_tensor_guard
-def max(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
+def max(
+    a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = False
+) -> Tensor:  # pylint: disable=redefined-builtin
     """
     Return the maximum of an array or maximum along an axis.
 
     :param a: The input tensor.
     :param axis: Axis or axes along which to operate. By default, flattened input is used.
+    :param keepdim: If this is set to True, the axes which are reduced are left in the result as dimensions with size
+        one. With this option, the result will broadcast correctly against the input array. False, by default.
     :return: Maximum of a.
     """
-    return Tensor(max(a.data, axis))
+    return Tensor(max(a.data, axis, keepdims))
 
 
 @functools.singledispatch
 @_tensor_guard
-def min(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
+def min(
+    a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = False
+) -> Tensor:  # pylint: disable=redefined-builtin
     """
     Return the minimum of an array or minimum along an axis.
 
     :param a: The input tensor.
     :param axis: Axis or axes along which to operate. By default, flattened input is used.
+    :param keepdim: If this is set to True, the axes which are reduced are left in the result as dimensions with size
+        one. With this option, the result will broadcast correctly against the input array. False, by default.
     :return: Minimum of a.
     """
-    return Tensor(min(a.data, axis))
+    return Tensor(min(a.data, axis, keepdims))
 
 
 @functools.singledispatch
