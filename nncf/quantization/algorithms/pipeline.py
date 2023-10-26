@@ -111,8 +111,8 @@ class Pipeline:
         current_model = model
         current_graph = graph
 
-        pipeline_step = self.pipeline_steps[step_index]
-        pipeline_step = self._remove_unsupported_algorithms(pipeline_step, get_backend(current_model))
+        pipeline_steps = self._remove_unsupported_algorithms(get_backend(model))
+        pipeline_step = pipeline_steps[step_index]
         for algorithm in pipeline_step[:-1]:
             current_model = algorithm.apply(current_model, current_graph, step_statistics)
             current_graph = NNCFGraphFactory.create(current_model)
@@ -142,13 +142,14 @@ class Pipeline:
         :return: The updated model after executing the pipeline from the specified pipeline
             step to the end.
         """
+        pipeline_steps = self._remove_unsupported_algorithms(get_backend(model))
         if step_index_to_statistics is None:
             step_index_to_statistics = {}
 
         # The `step_model` and `step_graph` entities are required to execute `step_index`-th pipeline step
         step_model = model
         step_graph = graph
-        for step_index in range(start_step_index, len(self.pipeline_steps)):
+        for step_index in range(start_step_index, len(pipeline_steps)):
             # Create graph required to run current pipeline step
             if step_graph is None:
                 step_graph = NNCFGraphFactory.create(step_model)
@@ -178,8 +179,8 @@ class Pipeline:
         :return: Statistics that should be collected to execute `step_index`-th pipeline step.
         """
         container = StatisticPointsContainer()
-        pipeline_step = self.pipeline_steps[step_index]
-        pipeline_step = self._remove_unsupported_algorithms(pipeline_step, get_backend(model))
+        pipeline_steps = self._remove_unsupported_algorithms(get_backend(model))
+        pipeline_step = pipeline_steps[step_index]
         for algorithm in pipeline_step:
             for statistic_points in algorithm.get_statistic_points(model, graph).values():
                 for statistic_point in statistic_points:
@@ -187,13 +188,17 @@ class Pipeline:
 
         return container
 
-    @staticmethod
-    def _remove_unsupported_algorithms(pipeline_step: PipelineStep, backend: BackendType) -> PipelineStep:
-        step = []
-        for algorithm in pipeline_step:
-            if backend not in algorithm.available_backends:
-                nncf_logger.debug(f"{backend.name} does not support {algorithm.__class__.__name__} algorithm yet.")
-                continue
-            step.append(algorithm)
+    def _remove_unsupported_algorithms(self, backend: BackendType) -> List[PipelineStep]:
+        pipeline_steps = []
+        for pipeline_step in self._pipeline_steps:
+            step = []
+            for algorithm in pipeline_step:
+                if backend not in algorithm.available_backends:
+                    nncf_logger.debug(f"{backend.name} does not support {algorithm.__class__.__name__} algorithm yet.")
+                    continue
+                step.append(algorithm)
 
-        return step
+            if step:
+                pipeline_steps.append(step)
+
+        return pipeline_steps

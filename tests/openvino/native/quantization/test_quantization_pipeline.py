@@ -98,7 +98,7 @@ def test_meta_information(model_creator_func, ignored_options):
     def check_parameters(quantized_model, parameters, path):
         for key, value in parameters.items():
             rt_path = path + [key]
-            if isinstance(value, (QuantizationPreset, TargetDevice)):
+            if isinstance(value, TargetDevice):
                 value = value.value
             if isinstance(value, IgnoredScope):
                 check_parameters(quantized_model, value.__dict__, rt_path)

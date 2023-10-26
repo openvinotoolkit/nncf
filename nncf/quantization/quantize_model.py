@@ -38,7 +38,7 @@ TTensor = TypeVar("TTensor")
 def quantize(
     model: TModel,
     calibration_dataset: Dataset,
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
@@ -54,11 +54,12 @@ def quantize(
     :param calibration_dataset: A representative dataset for the
         calibration process.
     :type  calibration_dataset: nncf.Dataset
-    :param preset: A preset that controls the quantization mode
-        (symmetric and asymmetric). It can take the following values:
+    :param preset: A preset controls the quantization mode (symmetric and asymmetric).
+        It can take the following values:
         - `performance`: Symmetric quantization of weights and activations.
-        - `mixed`: Symmetric quantization of weights and asymmetric
-          quantization of activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
+        Default value is None. In this case, `mixed` preset is used for `transformer`
+        model type otherwise `performace`.
     :type  preset: nncf.QuantizationPreset
     :param target_device: A target device the specificity of which will be taken
         into account while compressing in order to obtain the best performance
@@ -152,7 +153,7 @@ def quantize_with_accuracy_control(
     validation_fn: Callable[[Any, Iterable[Any]], float],
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
@@ -179,7 +180,12 @@ def quantize_with_accuracy_control(
     :param max_drop: The maximum accuracy drop that should be achieved after the quantization.
     :param drop_type: The accuracy drop type, which determines how the maximum accuracy
         drop between the original model and the compressed model is calculated.
-    :param preset: A preset that controls the quantization mode.
+    :param preset: A preset controls the quantization mode (symmetric and asymmetric).
+        It can take the following values:
+        - `performance`: Symmetric quantization of weights and activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
+        Default value is None. In this case, `mixed` preset is used for `transformer`
+        model type otherwise `performace`.
     :type preset: nncf.QuantizationPreset
     :param target_device: A target device the specificity of which will be taken
         into account while compressing in order to obtain the best performance
@@ -288,7 +294,7 @@ def quantize_with_tune_hyperparams(
     initial_metric_results: MetricResults,
     quantized_metric_results: MetricResults,
     tuner_subset_size: int = 300,
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
@@ -306,7 +312,12 @@ def quantize_with_tune_hyperparams(
     :param initial_metric_results: Initial metric results.
     :param quantized_metric_results: Quantized metric results.
     :param tuner_subset_size: Tuner subset size.
-    :param preset: A preset that controls the quantization mode.
+    :param preset: A preset controls the quantization mode (symmetric and asymmetric).
+        It can take the following values:
+        - `performance`: Symmetric quantization of weights and activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
+        Default value is None. In this case, `mixed` preset is used for `transformer`
+        model type otherwise `performace`.
     :param target_device: A target device the specificity of which will be taken
         into account while compressing in order to obtain the best performance
         for this type of device.
