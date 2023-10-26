@@ -699,6 +699,23 @@ def test_successive_insertion_transformation(target_type, node_name, input_port_
         transformed_model = model_transformer.transform(transformation_layout)
         transformed_model.nncf.rebuild_graph()
 
+    if target_type == TargetType.OPERATION_WITH_WEIGHTS:
+        pre_ops = transformed_model.conv1.pre_ops
+        assert len(pre_ops) == 2
+        for module, op_ref in zip(pre_ops._modules.values(), ops):
+            assert isinstance(module, UpdateWeight)
+            assert module.op is op_ref
+    else:
+        if target_type == TargetType.OPERATOR_POST_HOOK:
+            hooks = transformed_model.nncf._compressed_context._post_hooks
+        else:
+            hooks = transformed_model.nncf._compressed_context._pre_hooks
+        assert len(hooks) == 1
+        _, hook_ops = hooks.popitem()
+        assert len(hook_ops) == 2
+        for hook_op, op in zip(hook_ops, ops):
+            assert hook_op is op
+
     checker = HookChecker(transformed_model, "conv1")
     checker.add_ref(
         ref_hooks=ops,

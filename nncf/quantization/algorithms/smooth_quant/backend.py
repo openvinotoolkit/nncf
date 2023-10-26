@@ -11,13 +11,12 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, List, Optional, Tuple, TypeVar
+from typing import List, Optional, Tuple, TypeVar
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 
@@ -28,20 +27,20 @@ TTensor = TypeVar("TTensor")
 class SmoothQuantAlgoBackend(ABC):
     @property
     @abstractmethod
-    def convolution_metatype(self) -> OperatorMetatype:
+    def convolution_metatypes(self) -> List[OperatorMetatype]:
         """
-        Parameter for backend-specific metatype for Convolution.
+        Parameter for backend-specific metatypes for Convolution.
 
-        :return: OperatorMetatype
+        :return: OperatorMetatype list.
         """
 
     @property
     @abstractmethod
-    def matmul_metatype(self) -> OperatorMetatype:
+    def matmul_metatypes(self) -> List[OperatorMetatype]:
         """
-        Parameter for backend-specific metatype for MatMul.
+        Parameter for backend-specific metatypes for MatMul.
 
-        :return: OperatorMetatype
+        :return: OperatorMetatype list.
         """
 
     @property
@@ -55,11 +54,10 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:
+    def target_point(target_node_name: str, port_id: int) -> TargetPoint:
         """
         Returns backend-specific target point.
 
-        :param target_type: Type of the location that should be modified.
         :param target_node_name: Name of the located node.
         :param port_id: Port ID of the tensor for the statistics distribution.
         :return: Backend-specific TargetPoint.
@@ -77,7 +75,7 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_input_ports_map(node: NNCFNode, nncf_graph: NNCFGraph) -> Dict[str, int]:
+    def get_activations_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
         """
         Returns map with activation & weighted ports.
 
@@ -210,14 +208,14 @@ class SmoothQuantAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def scale_insertion_command(
-        source_node: NNCFNode, scale_value: TTensor, port_id: int, nodes: List[NNCFNode]
+        source_node: NNCFNode, scale_value: TTensor, source_output_port_id: int, nodes: List[NNCFNode]
     ) -> TransformationCommand:
         """
         Returns command to insert Smooth Quant node.
 
         :param source_node: NNCFNode instance.
         :param scale_value: Smooth Quant value.
-        :param port_id: Output port for source node.
+        :param source_output_port_id: Output port for source node.
         :param nodes: List of consumers for Smooth node.
         :return: TransformationCommand instance.
         """
@@ -245,11 +243,10 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def calculate_port_based_channel_axis(port_id: int, transpose: bool) -> int:
-        """
-        Returns port-based channel axis.
+    def is_node_with_shared_weight(node: NNCFNode, nncf_graph: NNCFGraph):
+        pass
 
-        :param port_id: Specified input port id.
-        :param transpose: Transpose position.
-        :return: Channel axis.
-        """
+    @staticmethod
+    @abstractmethod
+    def get_filter_fn_for_statistics(activation_port_id: int):
+        pass

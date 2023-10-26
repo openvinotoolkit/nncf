@@ -17,6 +17,7 @@ import openvino as ov
 import pytest
 import torch
 
+from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
@@ -24,11 +25,53 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.quantization.algorithms.smooth_quant.openvino_backend import OVSmoothQuantAlgoBackend
 from tests.post_training.test_templates.test_smooth_quant import TemplateTestSQAlgorithm
 
+OV_LINEAR_MODEL_MM_OP_MAP = {
+    "MatMul1": "/MatMul",
+    "MatMul2": "/MatMul_1",
+    "MatMul3": "/MatMul_2",
+    "MatMul4": "/MatMul_4",
+    "MatMul5": "32",
+    "MatMul6": "37",
+    "MatMul7": "54",
+    "MatMul8": "68",
+    "Linear1": "/linear_2/MatMul",
+    "Linear2": "/linear_1/MatMul",
+    "Linear3": "/linear_3/MatMul",
+    "Linear4": "/linear_4/MatMul",
+}
+
+
+OV_LINEAR_MODEL_SQ_OP_MAP = {
+    "MatMul1": "/Reshape_0_0/nncf_smooth_quant",
+    "MatMul2": "/Reshape_0_0/nncf_smooth_quant",
+    "MatMul3": "/Reshape_1_0_0/nncf_smooth_quant",
+    "MatMul4": "/Reshape_1_0_1/nncf_smooth_quant",
+    "MatMul5": "/Reshape_2_0_0/nncf_smooth_quant",
+    "MatMul6": "/ReduceMax_0_0/nncf_smooth_quant",
+    "MatMul7": "/Reshape_3_0_0/nncf_smooth_quant",
+    "MatMul8": "/Reshape_4_0_0/nncf_smooth_quant",
+    "Linear1": "/Split_1_0/nncf_smooth_quant",
+    "Linear2": "/Split_0_0/nncf_smooth_quant",
+    "Linear3": "/Add_0_0/nncf_smooth_quant",
+    "Linear4": "/Add_0_0/nncf_smooth_quant",
+}
+
 
 class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
     @staticmethod
     def fn_to_type(tensor) -> np.ndarray:
         return np.array(tensor)
+
+    @pytest.fixture(params=[False, True], ids=["out_of_palce", "inplace"])
+    def inplace_statistics(self, request) -> bool:
+        return request.param
+
+    def get_node_name_map(self) -> Dict[str, str]:
+        return OV_LINEAR_MODEL_MM_OP_MAP
+
+    @staticmethod
+    def get_target_node_name(command: TransformationCommand):
+        return command.target_point.target_node_name
 
     @staticmethod
     def get_transform_fn() -> Callable:
@@ -53,10 +96,14 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
     @staticmethod
     def check_scales(model: ov.Model, reference_values: Dict[str, np.ndarray]) -> None:
         ops_list = {op.get_friendly_name(): op for op in model.get_ops()}
-        for ref_name, ref_value in reference_values.items():
-            node = ops_list[ref_name]
-            const_node = node.input(1).get_source_output().get_node()
-
+        for ref_names, ref_value in reference_values.items():
+            const_nodes = []
+            for ref_name in ref_names:
+                node = ops_list[OV_LINEAR_MODEL_SQ_OP_MAP[ref_name]]
+                const_nodes.append(node.input(1).get_source_output().get_node())
+            # Check unified group acutally shares one constant
+            assert all(node is const_nodes[0] for node in const_nodes[1:])
+            const_node = const_nodes[0]
             assert const_node.get_type_name() == "Constant"
 
             value = const_node.data
