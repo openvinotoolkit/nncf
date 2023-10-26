@@ -474,7 +474,7 @@ class TestSotaCheckpoints:
             diff_fp32_max=eval_run_param.diff_fp32_max,
         )
         status = threshold_errors
-        if eval_run_param.xfail_ov is not None:
+        if eval_run_param.xfail_ov is not None and threshold_errors is not threshold_errors:
             status = f"XFAIL: {eval_run_param.xfail_ov} {threshold_errors}"
 
         result_info = ResultInfo(
@@ -490,7 +490,7 @@ class TestSotaCheckpoints:
         )
 
         add_test_result(result_info)
-        if threshold_errors is not None:
+        if status is not None:
             if eval_run_param.xfail_ov is not None:
                 pytest.xfail(status)
             else:
