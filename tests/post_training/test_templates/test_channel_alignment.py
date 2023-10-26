@@ -497,4 +497,4 @@ class TemplateTestChannelAlignment:
             assert isinstance(aggr, MedianAggregator)
             assert aggr.num_samples == num_samples_ref
             assert aggr._keepdims
-            assert aggr._stacked_tensor_all_aggregation_axes == 0
+            assert aggr._aggregation_axes == (0,)
