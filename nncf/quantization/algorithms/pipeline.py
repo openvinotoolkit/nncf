@@ -71,7 +71,6 @@ class Pipeline:
         :param pipeline_steps: A sequence of pipeline steps to be executed in order.
         """
         self._pipeline_steps = pipeline_steps
-        self._verified = False
 
     @property
     def pipeline_steps(self) -> List[PipelineStep]:
@@ -109,12 +108,11 @@ class Pipeline:
         :param graph: A graph assosiated with a model.
         :return: The updated model after executing the pipeline step.
         """
-        self._remove_unsupported_algorithms(get_backend(model))
-
         current_model = model
         current_graph = graph
 
-        pipeline_step = self.pipeline_steps[step_index]
+        pipeline_steps = self._remove_unsupported_algorithms(get_backend(model))
+        pipeline_step = pipeline_steps[step_index]
         for algorithm in pipeline_step[:-1]:
             current_model = algorithm.apply(current_model, current_graph, step_statistics)
             current_graph = NNCFGraphFactory.create(current_model)
@@ -144,14 +142,14 @@ class Pipeline:
         :return: The updated model after executing the pipeline from the specified pipeline
             step to the end.
         """
-        self._remove_unsupported_algorithms(get_backend(model))
+        pipeline_steps = self._remove_unsupported_algorithms(get_backend(model))
         if step_index_to_statistics is None:
             step_index_to_statistics = {}
 
         # The `step_model` and `step_graph` entities are required to execute `step_index`-th pipeline step
         step_model = model
         step_graph = graph
-        for step_index in range(start_step_index, len(self.pipeline_steps)):
+        for step_index in range(start_step_index, len(pipeline_steps)):
             # Create graph required to run current pipeline step
             if step_graph is None:
                 step_graph = NNCFGraphFactory.create(step_model)
@@ -180,9 +178,9 @@ class Pipeline:
         :param graph: A graph assosiated with a model.
         :return: Statistics that should be collected to execute `step_index`-th pipeline step.
         """
-        self._remove_unsupported_algorithms(get_backend(model))
         container = StatisticPointsContainer()
-        pipeline_step = self.pipeline_steps[step_index]
+        pipeline_steps = self._remove_unsupported_algorithms(get_backend(model))
+        pipeline_step = pipeline_steps[step_index]
         for algorithm in pipeline_step:
             for statistic_points in algorithm.get_statistic_points(model, graph).values():
                 for statistic_point in statistic_points:
@@ -190,10 +188,7 @@ class Pipeline:
 
         return container
 
-    def _remove_unsupported_algorithms(self, backend: BackendType):
-        if self._verified:
-            return
-
+    def _remove_unsupported_algorithms(self, backend: BackendType) -> List[PipelineStep]:
         pipeline_steps = []
         for pipeline_step in self._pipeline_steps:
             step = []
@@ -206,5 +201,4 @@ class Pipeline:
             if step:
                 pipeline_steps.append(step)
 
-        self._pipeline_steps = pipeline_steps
-        self._verified = True
+        return pipeline_steps
