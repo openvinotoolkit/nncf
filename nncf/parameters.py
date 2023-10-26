@@ -78,10 +78,3 @@ class CompressWeightsMode(Enum):
     INT4_SYM = "int4_sym"
     INT4_ASYM = "int4_asym"
     NF4 = "nf4"
-
-    @property
-    def num_bits(self) -> int:
-        """
-        :return: number of bits that is used for storing a single quantized value in the given mode.
-        """
-        return 8 if self == CompressWeightsMode.INT8 else 4

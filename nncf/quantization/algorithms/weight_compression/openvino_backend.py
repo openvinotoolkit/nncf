@@ -145,7 +145,7 @@ class WeightCompressionConfig:
         """
         :return: number of bits that is used for storing a single quantized value in the given mode.
         """
-        return self.mode.num_bits
+        return 8 if self.mode == CompressWeightsMode.INT8 else 4
 
 
 @dataclass
