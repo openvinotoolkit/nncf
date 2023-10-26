@@ -45,8 +45,8 @@ OMZ_MODELS = [
 
 
 @pytest.mark.parametrize("model_name", OMZ_MODELS)
-def test_compare_nncf_graph_omz_models(tmp_path, model_name):
-    download_model(model_name, tmp_path)
+def test_compare_nncf_graph_omz_models(tmp_path, omz_cache_dir, model_name):
+    download_model(model_name, tmp_path, omz_cache_dir)
     convert_model(model_name, tmp_path)
     model_path = tmp_path / "public" / model_name / "FP32" / f"{model_name}.xml"
     model = ov.Core().read_model(model_path)

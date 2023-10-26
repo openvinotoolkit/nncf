@@ -96,7 +96,7 @@ class MinMaxQuantization(Algorithm):
 
     def __init__(
         self,
-        preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+        preset: Optional[QuantizationPreset] = None,
         target_device: TargetDevice = TargetDevice.ANY,
         subset_size: int = 300,
         model_type: Optional[ModelType] = None,
@@ -111,8 +111,12 @@ class MinMaxQuantization(Algorithm):
         backend_params: Optional[Dict[str, Any]] = None,
     ):
         """
-        :param preset: A preset that controls the quantization mode,
-            defaults to QuantizationPreset.PERFORMANCE.
+        :param preset: A preset controls the quantization mode (symmetric and asymmetric).
+            It can take the following values:
+            - `performance`: Symmetric quantization of weights and activations.
+            - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
+            Default value is None. In this case, `mixed` preset is used for `transformer`
+            model type otherwise `performace`.
         :param target_device: A target device the specificity of which will be taken
             into account while compressing in order to obtain the best performance
             for this type of device, defaults to TargetDevice.ANY.
@@ -156,6 +160,13 @@ class MinMaxQuantization(Algorithm):
             QuantizerGroup.WEIGHTS: weights_range_estimator_params,
             QuantizerGroup.ACTIVATIONS: activations_range_estimator_params,
         }
+
+        # preset definition
+        if preset is None:
+            if model_type == ModelType.TRANSFORMER:
+                preset = QuantizationPreset.MIXED
+            else:
+                preset = QuantizationPreset.PERFORMANCE
 
         # Calculates global quantizer constraints
         self._global_quantizer_constraints = {}

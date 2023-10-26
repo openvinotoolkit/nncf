@@ -16,7 +16,7 @@ from typing import List, Optional
 
 import numpy as np
 import onnx
-import openvino.runtime as ov
+import openvino as ov
 import torch
 from fastdownload import FastDownload
 from fastdownload import download_url
