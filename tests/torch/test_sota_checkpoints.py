@@ -143,6 +143,8 @@ def read_reference_file(ref_path: Path) -> List[EvalRunParamsStruct]:
 
 
 EVAL_TEST_STRUCT = read_reference_file(TEST_ROOT / "torch" / "sota_checkpoints_eval.json")
+REF_PT_FP32_METRIC = {p.model_name: p.target_pt for p in EVAL_TEST_STRUCT if p.reference is None}
+REF_OV_FP32_METRIC = {p.model_name: p.target_ov for p in EVAL_TEST_STRUCT if p.reference is None}
 
 
 def idfn(val):
@@ -221,13 +223,6 @@ def create_metrics_dump_dir(metrics_dump_dir):
 
 @pytest.mark.nightly
 class TestSotaCheckpoints:
-    def setup_class(cls):
-        cls.report_dict = OrderedDict()
-        cls.ref_fp32_dict = OrderedDict()
-        for run_param in EVAL_TEST_STRUCT:
-            if run_param.reference is None:
-                cls.ref_fp32_dict[run_param.model_name] = run_param.target_ov
-
     @pytest.fixture(params=EVAL_TEST_STRUCT, ids=idfn)
     def eval_run_param(self, request):
         return request.param
@@ -257,7 +252,7 @@ class TestSotaCheckpoints:
     def get_reference_fp32_metric(self, metrics_dump_path: Path, reference_name: str) -> Tuple[Optional[float], bool]:
         fp32_metric = None
         if reference_name is not None:
-            fp32_metric = self.ref_fp32_dict[reference_name]
+            fp32_metric = REF_PT_FP32_METRIC[reference_name]
             reference_metric_file_path = self.get_metric_file_name(metrics_dump_path, reference_name)
             if reference_metric_file_path.exists():
                 acc = self.read_metric(reference_metric_file_path)
@@ -366,11 +361,11 @@ class TestSotaCheckpoints:
             diff_target=diff_target,
             target_fp32=fp32_metric,
             diff_fp32=diff_fp32,
-            status=status,
+            status=threshold_errors,
         )
         add_test_result(result_info)
         if threshold_errors is not None:
-            pytest.fail(status)
+            pytest.fail(threshold_errors)
 
     @staticmethod
     def get_ir_model_path(eval_run_param: EvalRunParamsStruct):
@@ -458,7 +453,7 @@ class TestSotaCheckpoints:
             pytest.fail(status)
 
         metric_value = self.get_metric_from_ac_csv(report_csv_path)
-        fp32_metric = self.get_reference_fp32_metric(pytest.metrics_dump_path, eval_run_param.reference)
+        fp32_metric = REF_OV_FP32_METRIC[eval_run_param.reference]
 
         diff_target = round((metric_value - eval_run_param.target_ov), 2)
         diff_fp32 = None
@@ -474,7 +469,7 @@ class TestSotaCheckpoints:
             diff_fp32_max=eval_run_param.diff_fp32_max,
         )
         status = threshold_errors
-        if eval_run_param.xfail_ov is not None and threshold_errors is not threshold_errors:
+        if eval_run_param.xfail_ov is not None and threshold_errors is not None:
             status = f"XFAIL: {eval_run_param.xfail_ov} {threshold_errors}"
 
         result_info = ResultInfo(
@@ -529,7 +524,7 @@ class TestSotaCheckpoints:
         is_ok = exit_code == 0 and metrics_dump_file_path.exists()
         err_msg = None
         if is_ok:
-            fp32_metric = self.ref_fp32_dict[eval_run_param.reference]
+            fp32_metric = REF_PT_FP32_METRIC[eval_run_param.reference]
             metric_value = self.read_metric(str(metrics_dump_file_path))
             diff_fp32 = round((metric_value - fp32_metric), 2)
             if -1 < diff_fp32:
