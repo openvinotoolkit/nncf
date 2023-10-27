@@ -73,9 +73,7 @@ def flatten(a: Tensor) -> Tensor:
 
 @functools.singledispatch
 @_tensor_guard
-def max(
-    a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = False
-) -> Tensor:
+def max(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = False) -> Tensor:
     """
     Return the maximum of an array or maximum along an axis.
 
@@ -90,9 +88,7 @@ def max(
 
 @functools.singledispatch
 @_tensor_guard
-def min(
-    a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = False
-) -> Tensor:
+def min(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = False) -> Tensor:
     """
     Return the minimum of an array or minimum along an axis.
 
