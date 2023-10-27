@@ -302,6 +302,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.PTAddMetatype,
                 om.PTPowerMetatype,
                 om.PTSubMetatype,
+                om.PTAvgPool2dMetatype,
+                om.PTAvgPool3dMetatype,
                 om.PTMeanMetatype,
                 om.PTSumMetatype,
                 om.PTReduceL2,

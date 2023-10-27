@@ -184,6 +184,8 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.ONNXPowMetatype,
                 om.ONNXSqueezeMetatype,
                 om.ONNXSubMetatype,
+                om.ONNXAveragePoolMetatype,
+                om.ONNXGlobalAveragePoolMetatype,
                 om.ONNXReduceMeanMetatype,
                 om.ONNXReduceL2Metatype,
                 om.ONNXReduceSumMetatype,

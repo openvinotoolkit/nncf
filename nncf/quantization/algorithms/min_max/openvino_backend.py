@@ -214,6 +214,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.OVPowerMetatype,
                 om.OVSqueezeMetatype,
                 om.OVSubtractMetatype,
+                om.OVAvgPoolMetatype,
                 om.OVReduceMeanMetatype,
                 om.OVReduceL2Metatype,
                 om.OVSumMetatype,
