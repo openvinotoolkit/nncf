@@ -65,8 +65,8 @@ def quantize(
         into account while compressing in order to obtain the best performance
         for this type of device.
     :type  target_device: nncf.TargetDevice
-    :param subset_size: Size of a subset to calculate activations
-        statistics used for quantization.
+    :param subset_size: Size of a subset to calculate activations statistics used for quantization.
+        Must be positive.
     :param fast_bias_correction: Setting this option to `False` enables a different
         bias correction method which is more accurate, in general, and takes
         more time but requires less memory.
@@ -81,6 +81,10 @@ def quantize(
     :return: The quantized model.
     :rtype: TModel
     """
+
+    if subset_size < 1:
+        raise RuntimeError("Subset size must be positive.")
+
     backend = get_backend(model)
     if backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.quantize_model import quantize_impl
