@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import abc
 from collections import Counter
 from collections import namedtuple
 from dataclasses import dataclass
@@ -154,7 +155,7 @@ class TwoInputModelWithQuantizableConcat(GraphProvider):
         return graph
 
 
-class ThreeInputGraphWithConcatAndBinaryOp(GraphProvider, ABC):
+class ThreeInputGraphWithConcatAndBinaryOp(GraphProvider, abc.ABC):
     BINARY_OP_NAME = "binary_op"
     CONCAT_NODE_NAME = "concat"
 
