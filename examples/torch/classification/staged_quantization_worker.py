@@ -212,7 +212,7 @@ def staged_quantization_main_worker(current_gpu, config):
 
     best_acc1 = 0
     # optionally resume from a checkpoint
-    if resuming_checkpoint is not None and config.to_ir is None:
+    if resuming_checkpoint is not None and config.export_model_path is None:
         best_acc1 = resuming_checkpoint["best_acc1"]
         if "train" in config.mode:
             kd_loss_calculator.original_model.load_state_dict(resuming_checkpoint["original_model_state_dict"])
