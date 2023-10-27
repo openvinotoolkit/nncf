@@ -735,6 +735,24 @@ class MedianNoOutliersAggregator(NoOutliersAggregatorBase):
 
 
 class MedianAbsoluteDeviationAggregator(TensorAggregatorBase):
+    def __init__(
+        self,
+        tensor_processor: NNCFCollectorTensorProcessor,
+        aggregation_axes: Optional[AggregationAxes] = None,
+        num_samples: Optional[int] = None,
+        window_size=None,
+    ):
+        super().__init__(
+            tensor_processor=tensor_processor,
+            aggregation_axes=aggregation_axes,
+            num_samples=num_samples,
+            window_size=window_size,
+        )
+        if 0 not in self._aggregation_axes:
+            raise NotImplementedError(
+                "Aggregation without 0 dim is not supported yet for MedianAbsoluteDeviationAggregator"
+            )
+
     def _register_reduced_input_impl(self, x: TensorType) -> None:
         return self._container.append(x)
 
@@ -772,6 +790,8 @@ class PercentileAggregator(TensorAggregatorBase):
         window_size=None,
     ):
         super().__init__(tensor_processor, aggregation_axes=aggregation_axes, num_samples=num_samples)
+        if 0 not in self._aggregation_axes:
+            raise NotImplementedError("Aggregation without 0 dim is not supported yet for PercentileAggregator")
         self._percentiles_to_collect = percentiles_to_collect
         self._window_size = window_size
         self._container = deque(maxlen=window_size)

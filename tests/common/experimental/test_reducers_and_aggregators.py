@@ -327,7 +327,7 @@ class TemplateTestReducersAggreagtors:
         assert self.all_close(ret_val, self.cast_tensor(refs, Dtype.FLOAT))
 
     @pytest.fixture(
-        name="aggregator_cls",
+        name="MAD_precentile_aggregator_cls",
         params=[
             MedianAbsoluteDeviationAggregator,
             partial(
@@ -377,8 +377,8 @@ class TemplateTestReducersAggreagtors:
     }
 
     @pytest.mark.parametrize("aggregation_axes", [None, (0,), (0, 1)])
-    def test_mad_percentile_aggregators(self, aggregator_cls, tensor_processor, aggregation_axes):
-        aggregator = aggregator_cls(tensor_processor=tensor_processor, aggregation_axes=aggregation_axes)
+    def test_mad_percentile_aggregators(self, MAD_precentile_aggregator_cls, tensor_processor, aggregation_axes):
+        aggregator = MAD_precentile_aggregator_cls(tensor_processor=tensor_processor, aggregation_axes=aggregation_axes)
         input_ = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9])
         for i in range(9):
             aggregator.register_reduced_input(self.get_nncf_tensor(input_ * i, Dtype.FLOAT))
@@ -402,8 +402,8 @@ class TemplateTestReducersAggreagtors:
         },
     }
 
-    def test_mad_percentile_aggregators_different_sizes(self, aggregator_cls, tensor_processor):
-        aggregator = aggregator_cls(tensor_processor=tensor_processor, aggregation_axes=(0, 1, 3))
+    def test_mad_percentile_aggregators_different_sizes(self, MAD_precentile_aggregator_cls, tensor_processor):
+        aggregator = MAD_precentile_aggregator_cls(tensor_processor=tensor_processor, aggregation_axes=(0, 1, 3))
         for shape in ((2, 3, 4), (4, 3, 8)):
             aggregator.register_reduced_input(
                 self.get_nncf_tensor(np.arange(np.prod(shape)).reshape(shape), Dtype.FLOAT)
@@ -414,6 +414,12 @@ class TemplateTestReducersAggreagtors:
         assert len(ret_val) == len(ref_values)
         for k, v in ref_values.items():
             assert self.all_close(ret_val[k], self.cast_tensor(v, Dtype.FLOAT))
+
+    def test_mad_percentile_aggregators_not_implemented_aggregation_axes(
+        self, MAD_precentile_aggregator_cls, tensor_processor
+    ):
+        with pytest.raises(NotImplementedError):
+            MAD_precentile_aggregator_cls(tensor_processor=tensor_processor, aggregation_axes=(1, 2, 3))
 
     @pytest.mark.parametrize(
         "reducer_name",
