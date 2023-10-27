@@ -576,7 +576,7 @@ class TestSotaCheckpoints:
             pytest.fail(status)
 
         metric_value = self.get_metric_from_ac_csv(report_csv_path)
-        fp32_metric = REF_OV_FP32_METRIC[eval_run_param.reference, None]
+        fp32_metric = REF_OV_FP32_METRIC.get(eval_run_param.reference, None)
 
         diff_target = round((metric_value - eval_run_param.target_ov), 2)
         diff_fp32 = None
