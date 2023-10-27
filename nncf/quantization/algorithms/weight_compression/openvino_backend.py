@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, TypeVar, Union
 
@@ -19,6 +18,7 @@ from openvino.runtime import opset9 as opset
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.logging import nncf_logger
+from nncf.common.logging.track_progress import track
 from nncf.common.utils.helpers import create_table
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVEmbeddingMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
@@ -86,7 +86,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         nncf_logger.info(_get_bitwidth_distribution_str(all_weight_params))
 
-        for wp in all_weight_params:
+        for wp in track(all_weight_params, description="Applying Weight Compression"):
             weight_node = wp.weight_node
             original_weight_dtype = wp.original_weight_dtype
 
@@ -176,8 +176,10 @@ def _do_integer_quantization(
     The method quantizes the given weights to integer data type in accordance with the compression config.
     The config defines a quantization mode:
         INT8 mode refers to unsigned int8 asymmetric weight compression - quantization to [0, 255] range.
-        INT4_ASYM - to unsigned int4 asymmetric weight compression - quantization to [0, 15] range.
-        INT4_SYM - to unsigned int4 symmetric weight compression - quantization to [0, 15] range.
+        INT4_ASYM mode refers to unsigned int4 asymmetric weight compression with a typical non-fixed zero-point -
+            quantization to [0, 15] range.
+        INT4_SYM mode refers to unsigned int4 symmetric weight compression with a fixed zero point equals to 8 -
+            quantization to [0, 15] range.
         NF4 mode requires a dedicated procedure and it is not supported in this method.
     One of the parameter of compression config is a group size. Quantization is per-channel, if group size equals to -1,
     otherwise it's per-group, i.e. group size number of weights in the channel dimension share quantization parameters
@@ -364,7 +366,7 @@ def _assign_mixed_precision(
         errors = []
         num_internal_weights = 0
         # NOTE: first and last layers are always in 8 bit: no need to calculate error for them
-        for weight_param in all_weight_params[1:-1]:
+        for weight_param in track(all_weight_params[1:-1], description="Searching for Mixed-Precision Configuration"):
             weight = get_const_value(weight_param.weight_node)
             backup_config = weight_param.compression_config
             reduction_axes = weight_param.reduction_axes
