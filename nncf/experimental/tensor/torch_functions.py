@@ -53,19 +53,23 @@ def _(a: torch.Tensor) -> torch.Tensor:
 
 
 @fns.max.register(torch.Tensor)
-def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> torch.Tensor:
+def _(
+    a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: Optional[bool] = False
+) -> torch.Tensor:
     # Analog of numpy.max is torch.amax
     if axis is None:
         return torch.amax(a)
-    return torch.amax(a, dim=axis)
+    return torch.amax(a, dim=axis, keepdim=keepdim)
 
 
 @fns.min.register(torch.Tensor)
-def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> torch.Tensor:
+def _(
+    a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: Optional[bool] = False
+) -> torch.Tensor:
     # Analog of numpy.min is torch.amin
     if axis is None:
         return torch.amin(a)
-    return torch.amin(a, dim=axis)
+    return torch.amin(a, dim=axis, keepdim=keepdim)
 
 
 @fns.abs.register(torch.Tensor)
