@@ -95,14 +95,14 @@ class ResultInfo:
         }
 
 
-TEST_RESULT: List[ResultInfo] = []
-
-
-def add_test_result(run_info: ResultInfo):
-    TEST_RESULT.append(run_info)
-
-
 def read_reference_file(ref_path: Path) -> List[EvalRunParamsStruct]:
+    """
+    Reads the reference file to get a list of `EvalRunParamsStruct` objects.
+
+    :param ref_path: The path to the JSON reference file.
+    :return: A list of `EvalRunParamsStruct` objects.
+    """
+
     with ref_path.open(encoding="UTF-8") as source:
         sota_eval_config = json.load(source, object_pairs_hook=OrderedDict)
 
@@ -150,7 +150,6 @@ REF_OV_FP32_METRIC = {p.model_name: p.target_ov for p in EVAL_TEST_STRUCT if p.r
 def idfn(val):
     if isinstance(val, EvalRunParamsStruct):
         return val.model_name
-    return None
 
 
 def generate_run_examples_command(
@@ -169,6 +168,25 @@ def generate_run_examples_command(
     checkpoint_dir: Optional[Path] = None,
     distributed_mode_sync_port: Optional[str] = None,
 ) -> str:
+    """
+    Generates a command line to run script `tests/torch/run_examples_for_test_sota.py`.
+
+    :param sample_type: The type of sample to run.
+    :param mode: The mode to run the example in (e.g., train, eval, export).
+    :param config: The path to the configuration file.
+    :param dataset_path: The path to the dataset directory.
+    :param log_dir: The path to the log directory.
+    :param metrics_dump_file_path: The path to the metrics dump file.
+    :param multiprocessing_distributed: Whether to use multiprocessing distributed training.
+    :param resume_file_path: The path to the resume file.
+    :param weights_path: The path to the weights file.
+    :param export_model_path: The path to the export model directory.
+    :param batch: The batch size.
+    :param cpu_only: Whether to use the CPU only.
+    :param checkpoint_dir: The path to the checkpoint directory.
+    :param distributed_mode_sync_port: The port to use for distributed mode synchronization.
+    :return: A command line to run the run_examples_for_test_sota.py script.
+    """
     cmd = [
             sys.executable,
             "tests/torch/run_examples_for_test_sota.py",
@@ -204,45 +222,100 @@ def generate_run_examples_command(
     return " ".join(cmd)
 
 
-@pytest.fixture(autouse=True, scope="class")
-def create_metrics_dump_dir(metrics_dump_dir):
-    if pytest.metrics_dump_path is None:
+@pytest.fixture(scope="module")
+def metrics_dump_dir(request):
+    """
+    Path to collect metrics from the tests.
+    To set this by pytest argument use '--metrics-dump-path'.
+    By default metrics_dump_dir is `PROJECT_ROOT/test_results/metrics_dump_YYYY_MM_DD_HH_MM_SS`.
+    """
+    dump_path = request.config.getoption("--metrics-dump-path")
+
+    if dump_path is None:
         data = datetime.datetime.now()
-        pytest.metrics_dump_path = (
+        dump_path = (
             PROJECT_ROOT / "test_results" / "metrics_dump_"
             f"{'_'.join([str(getattr(data, atr)) for atr in ['year', 'month', 'day', 'hour', 'minute', 'second']])}"
         )
     else:
-        pytest.metrics_dump_path = Path(pytest.metrics_dump_path)
-    pytest.metrics_dump_path.mkdir(exist_ok=True, parents=True)
-    assert not pytest.metrics_dump_path.is_dir() or not next(
-        pytest.metrics_dump_path.iterdir(), None
-    ), f"metrics_dump_path dir should be empty: {pytest.metrics_dump_path}"
-    print(f"metrics_dump_path: {pytest.metrics_dump_path}")
+        dump_path = Path(dump_path)
+    dump_path.mkdir(exist_ok=True, parents=True)
+    assert not dump_path.is_dir() or not next(
+        dump_path.iterdir(), None
+    ), f"metrics_dump_path dir should be empty: {dump_path}"
+    print(f"metrics_dump_path: {dump_path}")
+    return dump_path
 
 
 @pytest.mark.nightly
 class TestSotaCheckpoints:
+    """
+    Test examples for PyTorch compression and checkpoints that provided
+    in https://github.com/openvinotoolkit/nncf/blob/develop/docs/ModelZoo.md#pytorch
+    """
+
+    @pytest.fixture(scope="class")
+    def collected_data(self, metrics_dump_dir):
+        """
+        Fixture to collect information about tests in `ResultInfo` struct
+        and dump it to `metrics_dump_dir / results.csv`.
+        """
+        data: List[ResultInfo] = []
+        yield data
+        if metrics_dump_dir and data:
+            path = metrics_dump_dir / "results.csv"
+            data_frame = pd.DataFrame.from_records([x.to_dict() for x in data])
+            data_frame = data_frame.sort_values("Model").reset_index(drop=True)
+            data_frame.to_csv(path, index=False)
+            print(f"Result file: {path}")
+
     @pytest.fixture(params=EVAL_TEST_STRUCT, ids=idfn)
-    def eval_run_param(self, request):
+    def eval_run_param(self, request) -> EvalRunParamsStruct:
+        """
+        Returns the test cases that were built from the `tests/torch/sota_checkpoints_eval.json` file.
+        """
         return request.param
 
     @staticmethod
-    def get_metric_file_name(metrics_dump_path: Path, model_name: str):
+    def get_metric_file_name(metrics_dump_path: Path, model_name: str) -> Path:
+        """
+        Returns the path to the file that contains the metrics for the target model.
+
+        :param metrics_dump_path: The directory that contains the metrics from the test evaluation.
+        :param model_name: The name of the target model.
+        :return: The path to the file that contains the metrics for the target model.
+        """
         return metrics_dump_path / f"{model_name}.metrics.json"
 
     @staticmethod
-    def read_metric(metric_file_name: str):
+    def read_metric(metric_file_name: str) -> float:
+        """
+        Reads the metric value from the given metric file.
+
+        :param metric_file_name: Path to the metric file.
+        :return: The metric value.
+        """
         with open(metric_file_name, encoding="utf8") as metric_file:
             metrics = json.load(metric_file)
         return metrics["Accuracy"]
 
     @staticmethod
-    def generate_accuracy_check_cmd(config_path: Path, ov_data_dir: str, model_folder: Path, report_csv_path: Path):
+    def generate_accuracy_check_cmd(
+        config_path: Path, ov_data_dir: Path, model_folder: Path, report_csv_path: Path
+    ) -> str:
+        """
+        Generates a command line to run the accuracy_check tool.
+
+        :param config_path: Path to the config file for the accuracy checker.
+        :param ov_data_dir: Path to the dataset directory.
+        :param model_folder: Directory that contains the target model in OpenVINO format.
+        :param report_csv_path: Path to the report file.
+        :return: A command line to run the accuracy_check tool.
+        """
         cmd = [
             "accuracy_check",
             "--config", config_path.as_posix(),
-            "--source", ov_data_dir,
+            "--source", ov_data_dir.as_posix(),
             "--definitions", DATASET_DEFINITIONS_PATH.as_posix(),
             "--models", model_folder.as_posix(),
             "--csv_result", report_csv_path.as_posix(),
@@ -250,6 +323,15 @@ class TestSotaCheckpoints:
         return " ".join(cmd)
 
     def get_reference_fp32_metric(self, metrics_dump_path: Path, reference_name: str) -> Tuple[Optional[float], bool]:
+        """
+        Get reference metric to not compressed model.
+        In case of exists reference data will get reference metric from it others reference data gets
+        from `tests/torch/sota_checkpoints_eval.json`.
+
+        :param metrics_dump_path: Directory that collect in metric data.
+        :param reference_name: Name of the target model.
+        :return: Reference metric.
+        """
         fp32_metric = None
         if reference_name is not None:
             fp32_metric = REF_PT_FP32_METRIC[reference_name]
@@ -270,6 +352,11 @@ class TestSotaCheckpoints:
         diff_fp32_min: Optional[float] = None,
         diff_fp32_max: Optional[float] = None,
     ) -> Optional[str]:
+        """
+        Checks whether the difference meets the target thresholds.
+        If the difference is not within the target thresholds, the method returns an error message.
+        Otherwise, the method returns `None`.
+        """
         err_msgs = []
         if diff_target < diff_target_min or diff_target > diff_target_max:
             err_msgs.append(
@@ -284,6 +371,10 @@ class TestSotaCheckpoints:
 
     @staticmethod
     def get_env():
+        """
+        Returns a copy of the current environment with the `PYTHONPATH` variable updated
+        to include the project root directory
+        """
         env = os.environ.copy()
         if "PYTHONPATH" in env:
             env["PYTHONPATH"] += ":" + str(PROJECT_ROOT)
@@ -292,13 +383,22 @@ class TestSotaCheckpoints:
         return env
 
     @pytest.mark.eval
-    def test_eval(self, sota_checkpoints_dir, sota_data_dir, eval_run_param: EvalRunParamsStruct):
+    def test_eval(
+        self,
+        sota_checkpoints_dir: str,
+        sota_data_dir: str,
+        eval_run_param: EvalRunParamsStruct,
+        collected_data: List[ResultInfo],
+        metrics_dump_dir: Path,
+    ):
+        """
+        Runs a test example to validate the target models on the PyTorch backend.
+        """
         if sota_data_dir is None:
             pytest.skip("Path to datasets is not set")
 
-        metrics_dump_path: Path = pytest.metrics_dump_path
-        metrics_dump_file_path = self.get_metric_file_name(metrics_dump_path, model_name=eval_run_param.model_name)
-        log_dir = metrics_dump_path / "logs"
+        metrics_dump_file_path = self.get_metric_file_name(metrics_dump_dir, model_name=eval_run_param.model_name)
+        log_dir = metrics_dump_dir / "logs"
 
         resume_file_path = None
         if eval_run_param.resume_file:
@@ -333,11 +433,11 @@ class TestSotaCheckpoints:
                 backend=PYTORCH,
                 status=status,
             )
-            add_test_result(result_info)
+            collected_data.append(result_info)
             pytest.fail(status)
 
         metric_value = self.read_metric(metrics_dump_file_path)
-        fp32_metric = self.get_reference_fp32_metric(pytest.metrics_dump_path, eval_run_param.reference)
+        fp32_metric = self.get_reference_fp32_metric(metrics_dump_dir, eval_run_param.reference)
 
         diff_target = round((metric_value - eval_run_param.target_pt), 2)
         if fp32_metric:
@@ -363,21 +463,28 @@ class TestSotaCheckpoints:
             diff_fp32=diff_fp32,
             status=threshold_errors,
         )
-        add_test_result(result_info)
+        collected_data.append(result_info)
         if threshold_errors is not None:
             pytest.fail(threshold_errors)
 
     @staticmethod
-    def get_ir_model_path(eval_run_param: EvalRunParamsStruct):
-        return PROJECT_ROOT / "ir_models" / eval_run_param.model_name / f"{eval_run_param.model_name}.xml"
+    def get_ir_model_path(model_name: str):
+        """
+        Get path to OpenVINO model by model name.
+        """
+        return PROJECT_ROOT / "ir_models" / model_name / f"{model_name}.xml"
 
     @pytest.mark.convert
-    def test_convert(self, eval_run_param: EvalRunParamsStruct, openvino, sota_checkpoints_dir):
+    def test_convert(self, eval_run_param: EvalRunParamsStruct, openvino: bool, sota_checkpoints_dir: str):
+        """
+        Runs a test example to convert target models to OpenVINO format.
+        """
         if not openvino:
             pytest.skip("Skip if not --run-openvino-eval")
-
+        if eval_run_param.skip_ov:
+            pytest.skip("Skipped by 'skip_ov' in sota_checkpoints_eval.json")
         os.chdir(PROJECT_ROOT)
-        ir_model_path = self.get_ir_model_path(eval_run_param)
+        ir_model_path = self.get_ir_model_path(eval_run_param.model_name)
         resume_file_path = None
         if eval_run_param.resume_file:
             assert sota_checkpoints_dir is not None, "sota_checkpoints_dir is not set"
@@ -397,19 +504,35 @@ class TestSotaCheckpoints:
 
     @staticmethod
     def get_metric_from_ac_csv(path: Path):
+        """
+        Get metric value from the report of accuracy_checker.
+
+        :param path: Path ot report file of accuracy_checker.
+        :return: Metric value.
+        """
         data = pd.read_csv(path)
         return round(data["metric_value"].iloc[0] * 100, 2)
 
     @pytest.mark.oveval
-    def test_openvino_eval(self, eval_run_param: EvalRunParamsStruct, ov_data_dir, openvino, ov_config_dir):
+    def test_openvino_eval(
+        self,
+        eval_run_param: EvalRunParamsStruct,
+        ov_data_dir: Path,
+        openvino: bool,
+        ov_config_dir: str,
+        collected_data: List[ResultInfo],
+        metrics_dump_dir: Path,
+    ):
+        """
+        Runs a test example to validate the target models on the PyTorch backend.
+        """
         if not openvino:
             pytest.skip("Skip if not --run-openvino-eval")
         if ov_data_dir is None:
             pytest.fail("--ov-data-dir is not set")
-        print(eval_run_param)
         if eval_run_param.skip_ov:
             status = f"Skip by: {eval_run_param.skip_ov}"
-            add_test_result(
+            collected_data.append(
                 ResultInfo(
                     model_name=eval_run_param.model_name,
                     backend=OPENVINO,
@@ -419,10 +542,10 @@ class TestSotaCheckpoints:
             pytest.skip(status)
 
         config_folder = ov_config_dir or PROJECT_ROOT / "tests" / "torch" / "data" / "ac_configs"
-        ir_model_path = self.get_ir_model_path(eval_run_param)
+        ir_model_path = self.get_ir_model_path(eval_run_param.model_name)
 
         if not ir_model_path.exists():
-            add_test_result(
+            collected_data.append(
                 ResultInfo(
                     model_name=eval_run_param.model_name,
                     backend=OPENVINO,
@@ -432,7 +555,7 @@ class TestSotaCheckpoints:
             pytest.fail("IR does not exists")
 
         ac_yml_path = config_folder / f"{eval_run_param.model_name}.yml"
-        report_csv_path = pytest.metrics_dump_path / f"{eval_run_param.model_name}.csv"
+        report_csv_path = metrics_dump_dir / f"{eval_run_param.model_name}.csv"
 
         # Ensure that report file does not exists
         report_csv_path.unlink(missing_ok=True)
@@ -443,7 +566,7 @@ class TestSotaCheckpoints:
 
         if exit_code:
             status = f"Accuracy checker return code: {exit_code}"
-            add_test_result(
+            collected_data.append(
                 ResultInfo(
                     model_name=eval_run_param.model_name,
                     backend=OPENVINO,
@@ -453,7 +576,7 @@ class TestSotaCheckpoints:
             pytest.fail(status)
 
         metric_value = self.get_metric_from_ac_csv(report_csv_path)
-        fp32_metric = REF_OV_FP32_METRIC[eval_run_param.reference]
+        fp32_metric = REF_OV_FP32_METRIC[eval_run_param.reference, None]
 
         diff_target = round((metric_value - eval_run_param.target_ov), 2)
         diff_fp32 = None
@@ -484,7 +607,7 @@ class TestSotaCheckpoints:
             status=status,
         )
 
-        add_test_result(result_info)
+        collected_data.append(result_info)
         if status is not None:
             if eval_run_param.xfail_ov is not None:
                 pytest.xfail(status)
@@ -493,25 +616,34 @@ class TestSotaCheckpoints:
 
     @pytest.mark.train
     def test_train(
-        self, eval_run_param: EvalRunParamsStruct, distributed_mode_sync_port, sota_data_dir, sota_checkpoints_dir
+        self,
+        eval_run_param: EvalRunParamsStruct,
+        distributed_mode_sync_port: str,
+        sota_data_dir: Path,
+        sota_checkpoints_dir: Path,
+        collected_data: List[ResultInfo],
+        metrics_dump_dir: Path,
     ):
+        """
+        Runs a test example to train target metric metric is within the 1% threshold.
+        """
         if sota_data_dir is None:
             pytest.skip("Path to datasets is not set")
 
         if eval_run_param.reference is None:
             pytest.skip("Only compressed models must be trained")
 
-        metric_file_name = self.get_metric_file_name(pytest.metrics_dump_path, eval_run_param.model_name)
-        metrics_dump_file_path = pytest.metrics_dump_path / metric_file_name
-        log_dir = pytest.metrics_dump_path / "logs"
-        checkpoint_dir = pytest.metrics_dump_path / "checkpoints"
-        weights_path = Path(sota_checkpoints_dir) / f"{eval_run_param.reference}.pth"
+        metric_file_name = self.get_metric_file_name(metrics_dump_dir, eval_run_param.model_name)
+        metrics_dump_file_path = metrics_dump_dir / metric_file_name
+        log_dir = metrics_dump_dir / "logs"
+        checkpoint_dir = metrics_dump_dir / "checkpoints"
+        weights_path = sota_checkpoints_dir / f"{eval_run_param.reference}.pth"
 
         cmd = generate_run_examples_command(
             sample_type=eval_run_param.sample_type,
             mode="train",
             config=eval_run_param.config_name,
-            dataset_path=Path(sota_data_dir) / eval_run_param.dataset_name,
+            dataset_path=sota_data_dir / eval_run_param.dataset_name,
             metrics_dump_file_path=metrics_dump_file_path,
             log_dir=log_dir,
             checkpoint_dir=checkpoint_dir,
@@ -524,13 +656,13 @@ class TestSotaCheckpoints:
         is_ok = exit_code == 0 and metrics_dump_file_path.exists()
         err_msg = None
         if is_ok:
-            fp32_metric = REF_PT_FP32_METRIC[eval_run_param.reference]
+            fp32_metric = REF_PT_FP32_METRIC[eval_run_param.reference, None]
             metric_value = self.read_metric(str(metrics_dump_file_path))
             diff_fp32 = round((metric_value - fp32_metric), 2)
             if -1 < diff_fp32:
                 err_msg = f"FP32 diff is not within thresholds: -1 < {diff_fp32}"
 
-        add_test_result(
+        collected_data.append(
             ResultInfo(
                 model_name=eval_run_param.model_name,
                 backend=TRAIN,
@@ -543,14 +675,3 @@ class TestSotaCheckpoints:
         )
         if err_msg:
             pytest.fail(err_msg)
-
-
-@pytest.fixture(autouse=True, scope="class")
-def results():
-    yield
-    if pytest.metrics_dump_path and TEST_RESULT:
-        path = pytest.metrics_dump_path / "results.csv"
-        data_frame = pd.DataFrame.from_records([x.to_dict() for x in TEST_RESULT])
-        data_frame = data_frame.sort_values("Model").reset_index(drop=True)
-        data_frame.to_csv(path, index=False)
-        print(f"Result file: {path}")
