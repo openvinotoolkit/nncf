@@ -44,6 +44,10 @@ def single_input_transform_fn(data_item):
 
 def multiple_inputs_transform_fn(data_item):
     return data_item[0], data_item[1]
+    return {
+        "input_0": data_item[0],
+        "input_1": data_item[1],
+    }
 
 
 def test_transform_fn_single_input():
