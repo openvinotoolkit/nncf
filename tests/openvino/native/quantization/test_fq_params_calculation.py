@@ -94,8 +94,7 @@ def test_synthetic_models_fq_scales(model_creator_func, preset, inplace_statisti
     # dump_to_json(ref_stats_path, nodes)
 
     ref_nodes = load_json(ref_stats_path)
-    params = ["input_low", "input_high", "output_low", "output_high"]
-    compare_stats(ref_nodes, nodes, params)
+    compare_stats(ref_nodes, nodes)
 
 
 @pytest.mark.parametrize(
@@ -116,8 +115,7 @@ def test_overflow_fix_scales(overflow_fix):
     # dump_to_json(ref_stats_path, nodes)
 
     ref_nodes = load_json(ref_stats_path)
-    params = ["input_low", "input_high", "output_low", "output_high"]
-    compare_stats(ref_nodes, nodes, params)
+    compare_stats(ref_nodes, nodes)
 
 
 OMZ_MODELS = [
@@ -149,8 +147,7 @@ def test_omz_models_fq_scales(model_name, preset, inplace_statistics, tmp_path, 
     # dump_to_json(ref_stats_path, nodes)
 
     ref_nodes = load_json(ref_stats_path)
-    params = ["input_low", "input_high", "output_low", "output_high"]
-    compare_stats(ref_nodes, nodes, params)
+    compare_stats(ref_nodes, nodes)
 
 
 REF_NODES_SHAPES = {

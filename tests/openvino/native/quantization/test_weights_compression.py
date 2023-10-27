@@ -179,8 +179,7 @@ def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
         dump_to_json(ref_stats_path, actual_stats)
 
     ref_stats = load_json(ref_stats_path)
-    params = ["compressed_weight", "zero_point", "scale"]
-    compare_stats(ref_stats, actual_stats, params, strict=False)
+    compare_stats(ref_stats, actual_stats)
 
 
 @pytest.mark.parametrize("group_size", (1, 3))

@@ -97,5 +97,4 @@ def test_overflow_fix_scales(_seed, overflow_fix):
     # dump_to_json(ref_stats_path, fq_nodes_params)
 
     ref_nodes_params = load_json(ref_stats_path)
-    params = ["input_low", "input_high"]
-    compare_stats(ref_nodes_params, fq_nodes_params, params)
+    compare_stats(ref_nodes_params, fq_nodes_params)
