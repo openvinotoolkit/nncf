@@ -362,32 +362,32 @@ def _assign_mixed_precision(
     :param primary_config: Information on how to compress (quantize) weights to primary precision.
     :return: None.
     """
-    if ratio != 1:
-        errors = []
-        num_internal_weights = 0
-        # NOTE: first and last layers are always in 8 bit: no need to calculate error for them
-        for weight_param in track(all_weight_params[1:-1], description="Searching for Mixed-Precision Configuration"):
-            weight = get_const_value(weight_param.weight_node)
-            backup_config = weight_param.compression_config
-            reduction_axes = weight_param.reduction_axes
-            backup_error = _get_integer_quantization_error(weight, reduction_axes, backup_config)
-            eps = np.finfo(weight.dtype).eps
-            error = 1 / (backup_error + eps)
-            errors.append(error)
-            num_internal_weights += weight_param.num_weights
-        # NOTE: index is defined in the array of all weight params by taking into account that errors were not
-        # calculated for first and last layers.
-        indexes_of_layers_in_ascending_order_of_errors = [
-            i[0] + 1 for i in sorted(enumerate(errors), reverse=False, key=lambda x: x[1])
-        ]
-        num_weights_in_4bit = 0
-        for index in indexes_of_layers_in_ascending_order_of_errors:
-            weight_param = all_weight_params[index]
-            current_ratio = (num_weights_in_4bit + weight_param.num_weights) / num_internal_weights
-            if current_ratio >= ratio:
-                break
-            weight_param.compression_config = primary_config
-            num_weights_in_4bit += weight_param.num_weights
-    else:
+    if ratio == 1:
         for weight_param in all_weight_params[1:-1]:
             weight_param.compression_config = primary_config
+        return
+    errors = []
+    num_internal_weights = 0
+    # NOTE: first and last layers are always in 8 bit: no need to calculate error for them
+    for weight_param in track(all_weight_params[1:-1], description="Searching for Mixed-Precision Configuration"):
+        weight = get_const_value(weight_param.weight_node)
+        backup_config = weight_param.compression_config
+        reduction_axes = weight_param.reduction_axes
+        backup_error = _get_integer_quantization_error(weight, reduction_axes, backup_config)
+        eps = np.finfo(weight.dtype).eps
+        error = 1 / (backup_error + eps)
+        errors.append(error)
+        num_internal_weights += weight_param.num_weights
+    # NOTE: index is defined in the array of all weight params by taking into account that errors were not
+    # calculated for first and last layers.
+    indexes_of_layers_in_ascending_order_of_errors = [
+        i[0] + 1 for i in sorted(enumerate(errors), reverse=False, key=lambda x: x[1])
+    ]
+    num_weights_in_4bit = 0
+    for index in indexes_of_layers_in_ascending_order_of_errors:
+        weight_param = all_weight_params[index]
+        current_ratio = (num_weights_in_4bit + weight_param.num_weights) / num_internal_weights
+        if current_ratio >= ratio:
+            break
+        weight_param.compression_config = primary_config
+        num_weights_in_4bit += weight_param.num_weights
