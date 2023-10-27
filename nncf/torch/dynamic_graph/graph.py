@@ -524,7 +524,7 @@ class NodeManager:
     # TODO: optimize by matching exact module type
     @staticmethod
     def _within_iteration(scope: Scope):
-        from nncf.torch.layers import ITERATION_MODULES  # pylint: disable=cyclic-import
+        from nncf.torch.layers import ITERATION_MODULES
 
         for scope_element in scope.scope_elements:
             if scope_element.calling_module_class_name in ITERATION_MODULES.registry_dict:
@@ -645,8 +645,8 @@ class DynamicGraph:
             op_address, tensor_metas, input_comparators_per_scope, inputs, node_parameters
         )
 
-        from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME  # pylint: disable=cyclic-import
-        from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME  # pylint: disable=cyclic-import
+        from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
+        from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 
         if node.op_exec_context.operator_name == MODEL_INPUT_OP_NAME:
             self._input_nncf_nodes.append(node)

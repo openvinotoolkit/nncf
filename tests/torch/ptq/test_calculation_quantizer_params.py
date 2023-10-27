@@ -39,9 +39,6 @@ from tests.post_training.test_templates.test_calculate_quantizer_parameters impo
 from tests.torch.helpers import get_all_inputs_for_graph_node
 from tests.torch.helpers import get_nodes_by_type
 
-# pylint: disable=protected-access
-# pylint: disable=too-many-function-args
-
 INPUT_SHAPE = (2, 3, 4, 5)
 
 

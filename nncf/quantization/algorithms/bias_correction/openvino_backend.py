@@ -34,7 +34,6 @@ from nncf.openvino.tensor import OVNNCFTensor
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 
 
-# pylint:disable=too-many-public-methods
 class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @property
     def tensor_processor(self) -> OVNNCFCollectorTensorProcessor:

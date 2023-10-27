@@ -152,7 +152,7 @@ class RetinaNetPreprocessor:
 
         # Flips image randomly during training.
         if self._aug_rand_hflip:
-            image, boxes = input_utils.random_horizontal_flip(image, boxes)  # pylint: disable=W0632
+            image, boxes = input_utils.random_horizontal_flip(image, boxes)
 
         # Converts boxes from normalized coordinates to pixel coordinates.
         boxes = box_utils.denormalize_boxes(boxes, image_shape)

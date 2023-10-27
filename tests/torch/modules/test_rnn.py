@@ -231,8 +231,8 @@ def test_export_lstm_cell(tmp_path):
     assert os.path.exists(test_path)
 
     onnx_num = 0
-    model = onnx.load(test_path)  # pylint: disable=no-member
-    # pylint: disable=no-member
+    model = onnx.load(test_path)
+
     for node in model.graph.node:
         if node.op_type == "FakeQuantize":
             onnx_num += 1
@@ -449,7 +449,7 @@ def test_export_stacked_bi_lstm(tmp_path):
     assert os.path.exists(test_path)
 
     onnx_num = 0
-    # pylint: disable=no-member
+
     model = onnx.load(test_path)
     for node in model.graph.node:
         if node.op_type == "FakeQuantize":

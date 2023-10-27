@@ -30,7 +30,6 @@ class OperatorInput:
         op_args_index_entries = NestedObjectIndex(self.op_args, previous_level_setter=partial(setattr, self, "op_args"))
         op_kwargs_index_entries = NestedObjectIndex(self.op_kwargs)
 
-        # pylint:disable=unnecessary-comprehension
         self._index = {
             idx: entry
             for idx, entry in enumerate(

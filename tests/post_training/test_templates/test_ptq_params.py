@@ -86,9 +86,6 @@ class ModelToTestOverflowFix:
             self.weight_quantization_target_point_names.append(node.node_name)
 
 
-# pylint: disable=protected-access
-
-
 class TemplateTestPTQParams:
     @abstractmethod
     def get_algo_backend(self):

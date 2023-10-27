@@ -43,7 +43,6 @@ from nncf.openvino.tensor import OVNNCFTensor
 from nncf.quantization.advanced_parameters import StatisticsType
 
 
-# pylint: disable=too-many-public-methods
 class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     """
     A realization of the processing methods for OVNNCFTensors.

@@ -19,7 +19,6 @@ from tests.common.quantization.test_filter_constant_nodes import create_mock_gra
 from tests.common.quantization.test_filter_constant_nodes import get_nncf_graph_from_mock_nx_graph
 
 
-# pylint: disable=protected-access
 class NNCFGraphToTest:
     def __init__(
         self,

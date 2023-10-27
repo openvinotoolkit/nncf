@@ -220,7 +220,7 @@ class RpnHead(tf.keras.layers.Layer):
         min_level,
         max_level,
         anchors_per_location,
-        num_convs=2,  # pylint: disable=W0613
+        num_convs=2,
         num_filters=256,
         use_separable_conv=False,
         activation="relu",
@@ -288,7 +288,7 @@ class RpnHead(tf.keras.layers.Layer):
             for level in range(self._min_level, self._max_level + 1):
                 self._norm_activations[level] = norm_activation(name="rpn-l%d-bn" % level)
 
-    def _shared_rpn_heads(self, features, anchors_per_location, level, is_training):  # pylint: disable=W0613
+    def _shared_rpn_heads(self, features, anchors_per_location, level, is_training):
         """Shared RPN heads."""
         features = self._rpn_conv(features)
         if self._use_batch_norm:

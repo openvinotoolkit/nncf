@@ -465,7 +465,7 @@ def quantize_with_accuracy_control_impl(
     )
 
     # Check whether it is possible to calculate the metric for one data item.
-    # pylint: disable=W0703
+
     use_original_metric = True
     try:
         ie = ov.Core()

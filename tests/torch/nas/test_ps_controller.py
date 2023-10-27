@@ -26,7 +26,7 @@ from tests.torch.helpers import create_ones_mock_dataloader
 from tests.torch.nas.helpers import move_model_to_cuda_if_available
 from tests.torch.nas.models.synthetic import ThreeConvModel
 from tests.torch.nas.models.synthetic import ThreeConvModelMode
-from tests.torch.nas.test_scheduler import fixture_schedule_params  # pylint: disable=unused-import  # noqa: F401
+from tests.torch.nas.test_scheduler import fixture_schedule_params  # noqa: F401
 
 
 class PSControllerTestDesc(NamedTuple):
@@ -106,7 +106,6 @@ def run_train(training_ctrl, model, mock_dataloader, calc_loss_fn):
     return output_storage
 
 
-# pylint: disable=protected-access
 class TestProgressiveTrainingController:
     @pytest.mark.parametrize(
         "bn_adapt_section_is_called",

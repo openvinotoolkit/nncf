@@ -81,7 +81,7 @@ class TensorFlowGraphBuilder:
             )
 
         # Step 3: Convert the GraphDef to a tf.Graph
-        with tf.Graph().as_default() as graph:  # pylint:disable=not-context-manager
+        with tf.Graph().as_default() as graph:
             tf.graph_util.import_graph_def(graph_def, name="")
 
         return graph, input_tensors, output_tensors

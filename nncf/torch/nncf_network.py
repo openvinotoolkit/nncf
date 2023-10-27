@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=too-many-lines
+
 import functools
 import inspect
 import types
@@ -128,7 +128,6 @@ class NNCFNetworkInterface(torch.nn.Module):
     when saving/loading checkpoints
     """
 
-    # pylint:disable=too-many-public-methods
     MODEL_STATE_VERSION_ATTR = "_nncf_model_state_version"
     MODEL_STATE_VERSION = 1
 
@@ -360,8 +359,8 @@ class NNCFNetworkInterface(torch.nn.Module):
     def get_clean_shallow_copy(self) -> "NNCFNetwork":
         # WARNING: Will reset pre- and post-ops of the underlying model. Use save_nncf_module_additions
         # and load_nncf_module_additions to preserve these, or temporary_clean_view().
-        from nncf.torch.utils import load_module_state  # pylint: disable=cyclic-import
-        from nncf.torch.utils import save_module_state  # pylint: disable=cyclic-import
+        from nncf.torch.utils import load_module_state
+        from nncf.torch.utils import save_module_state
 
         saved_state = save_module_state(self._model_ref)
         new_interface = NNCFNetworkInterface(
@@ -374,7 +373,7 @@ class NNCFNetworkInterface(torch.nn.Module):
             self._target_scopes,
             wrap_outputs_fn=self._wrap_outputs_fn,
         )
-        self._model_ref._nncf = new_interface  # pylint:disable=protected-access
+        self._model_ref._nncf = new_interface
         self._model_ref.nncf.reset_nncf_modules()
         load_module_state(self._model_ref, saved_state)
         return self._model_ref
@@ -562,7 +561,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         if compression_module_type not in self._extra_module_types:
             raise RuntimeError("Module type {} was not registered".format(compression_module_type))
         module_dict = self.__getattr__(attr_name)
-        # pylint: disable=protected-access
+
         module_dict._modules = OrderedDict(sorted(module_dict._modules.items()))
         self.__setattr__(attr_name, module_dict)
 
@@ -817,7 +816,7 @@ class NNCFNetworkMeta(type):
             ignored_scopes,
             target_scopes,
             wrap_outputs_fn,
-        )  # pylint:disable=protected-access
+        )
         # The new class will also have an adjusted metaclass to avoid a "metaclass conflict" upon
         # class creation
         original_metaclass = type(original_model.__class__)
@@ -853,7 +852,7 @@ class NNCFNetworkMeta(type):
             # its forward method, which it effectively doesn't have. Employing a special iterator allows to hide the
             # NNCFInterface object during iteration.
             def nncf_safe_iter(self: torch.nn.Sequential):
-                return NNCFSkippingIter(iter(self._modules.values()))  # pylint:disable=protected-access
+                return NNCFSkippingIter(iter(self._modules.values()))
 
             original_model.__class__.__iter__ = nncf_safe_iter
         return original_model
@@ -925,7 +924,7 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
         Wraps the original forward call, doing additional actions before and after the call to facilitate model
         graph tracing and calling compression-related hooks.
         """
-        # pylint:disable=protected-access
+
         with self.nncf._compressed_context as ctx:
             ctx.base_module_thread_local_replica = self
             args, kwargs = replicate_same_tensors((args, kwargs))
@@ -1012,7 +1011,6 @@ class LoadStateListener:
     """
 
     def __init__(self, model: "NNCFNetwork", all_quantizations: Dict[str, torch.nn.Module]):
-        # pylint: disable=protected-access
         self.hook = model._register_load_state_dict_pre_hook(
             functools.partial(self.hook_fn, quantize_modules=list(all_quantizations.values()))
         )

@@ -53,7 +53,7 @@ class CalibrationDataLoader(NNCFDataLoader):
             if isinstance(batch_size, tf.Tensor):
                 batch_size = batch_size.numpy()
             batch_size = int(batch_size)
-        except:  # pylint: disable=W0702 # noqa: E722
+        except:  # noqa: E722
             batch_size = 1
         return batch_size
 

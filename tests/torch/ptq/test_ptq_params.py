@@ -48,8 +48,6 @@ from tests.torch.ptq.helpers import get_nncf_network
 from tests.torch.ptq.helpers import get_single_conv_nncf_graph
 from tests.torch.ptq.helpers import get_single_no_weight_matmul_nncf_graph
 
-# pylint: disable=protected-access
-
 
 def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
     return PatternsManager.get_full_hw_pattern_graph(backend=BackendType.TORCH, device=device)

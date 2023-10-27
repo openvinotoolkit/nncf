@@ -73,7 +73,6 @@ def test_io_nodes_naming_scheme(tmp_path):
         assert node.output[0] == f"output.{idx}"
 
 
-# pylint: disable=protected-access
 @pytest.mark.parametrize(
     "save_format, refs",
     (
@@ -86,7 +85,6 @@ def test_io_nodes_naming_scheme(tmp_path):
     ),
 )
 def test_exporter_parser_format(save_format: str, refs: Any):
-    # pylint: disable=broad-except
     try:
         save_format, args = PTExporter.parse_format(save_format)
     except Exception as e:
@@ -108,7 +106,7 @@ def test_exported_version(tmp_path: str, save_format: str, ref_opset: int):
     onnx_checkpoint_path = tmp_path / "model.onnx"
     compression_ctrl.export_model(onnx_checkpoint_path, save_format)
     model_proto = onnx.load_model(onnx_checkpoint_path)
-    # pylint: disable=no-member
+
     assert model_proto.opset_import[0].version == ref_opset
 
 

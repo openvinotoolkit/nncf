@@ -19,8 +19,8 @@ execution_type = sys.argv[1]
 package_type = sys.argv[2]
 
 # Do not remove - these imports are for testing purposes.
-# pylint:disable=unused-import
-# pylint:disable=wrong-import-position
+
+
 import nncf  # noqa: F401, E402
 from nncf.torch import create_compressed_model  # noqa: F401, E402
 

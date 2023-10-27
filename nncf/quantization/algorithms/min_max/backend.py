@@ -31,7 +31,6 @@ from nncf.quantization.range_estimator import RangeEstimatorParameters
 TModel = TypeVar("TModel")
 
 
-# pylint:disable=too-many-public-methods
 class MinMaxAlgoBackend(ABC):
     @property
     @abstractmethod

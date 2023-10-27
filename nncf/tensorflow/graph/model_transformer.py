@@ -156,7 +156,6 @@ class TFModelTransformer(ModelTransformer):
         else:
             raise TypeError("Insertion transform does not support {} target point type".format(target_point.type))
 
-    # pylint:disable=too-many-branches
     def _shared_insert_layers(self, target_points: List[TargetPoint], layers_to_insert: List[Callable]):
         functional_model = is_functional_model(self._model)
         if functional_model:

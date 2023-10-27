@@ -73,9 +73,7 @@ def flatten(a: Tensor) -> Tensor:
 
 @functools.singledispatch
 @_tensor_guard
-def max(
-    a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = False
-) -> Tensor:  # pylint: disable=redefined-builtin
+def max(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = False) -> Tensor:
     """
     Return the maximum of an array or maximum along an axis.
 
@@ -90,9 +88,7 @@ def max(
 
 @functools.singledispatch
 @_tensor_guard
-def min(
-    a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = False
-) -> Tensor:  # pylint: disable=redefined-builtin
+def min(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = False) -> Tensor:
     """
     Return the minimum of an array or minimum along an axis.
 
@@ -107,7 +103,7 @@ def min(
 
 @functools.singledispatch
 @_tensor_guard
-def abs(a: Tensor) -> Tensor:  # pylint: disable=redefined-builtin
+def abs(a: Tensor) -> Tensor:
     """
     Calculate the absolute value element-wise.
 
@@ -158,7 +154,7 @@ def reshape(a: Tensor, shape: Tuple[int, ...]) -> Tensor:
 
 @functools.singledispatch
 @_tensor_guard
-def all(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
+def all(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:
     """
     Test whether all tensor elements along a given axis evaluate to True.
 
@@ -199,7 +195,7 @@ def allclose(
 
 @functools.singledispatch
 @_tensor_guard
-def any(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
+def any(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:
     """
     Test whether any tensor elements along a given axis evaluate to True.
 
@@ -392,7 +388,7 @@ def mean(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims
 
 @functools.singledispatch
 @_tensor_guard
-def round(a: Tensor, decimals=0) -> Tensor:  # pylint: disable=redefined-builtin
+def round(a: Tensor, decimals=0) -> Tensor:
     """
     Evenly round to the given number of decimals.
 
@@ -445,7 +441,6 @@ def _dispatch_list(fn: "functools._SingleDispatchCallable", tensor_list: List[Te
 
 
 def _initialize_backends():
-    # pylint: disable=unused-import
     import nncf.experimental.tensor.numpy_functions
 
     try:

@@ -86,7 +86,7 @@ def create_compressed_model(
                 "`tensorflow_hub.KerasLayer` layer yet."
             )
 
-        from nncf.experimental.tensorflow.nncf_network import NNCFNetwork  # pylint: disable=cyclic-import
+        from nncf.experimental.tensorflow.nncf_network import NNCFNetwork
 
         input_signature = get_input_signature(config)
         model = NNCFNetwork(model, input_signature)

@@ -72,7 +72,7 @@ class DepthBasicConvTestModel(nn.Module):
 
     def forward(self, x):
         output = self.conv1(x)
-        # pylint: disable=protected-access
+
         for name, module in self.branch_with_blocks._modules.items():
             if name not in self._skipped_layers:
                 output = module(output)
@@ -227,7 +227,7 @@ def test_can_export_model_with_one_skipped_block_resnet18(tmp_path):
     ctrl.export_model(str(onnx_model_without_block_path))
 
     # load onnx graphs
-    # pylint:disable=no-member
+
     load_model_fn = onnx.load_model
     onnx_resnet18_without_one_block = load_model_fn(onnx_model_without_block_path)
     onnx_resnet18_orig = load_model_fn(orig_onnx_model_path)
@@ -534,7 +534,6 @@ def test_check_dinamic_graph_not_grow():
     ]
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, nncf_config)
 
-    # pylint: disable=protected-access
     ctx = compressed_model.nncf.get_tracing_context()
     ctx.set_elastic_blocks(skipped_blocks)
     nodes_count = ctx.graph.get_nodes_count()
@@ -563,7 +562,7 @@ def test_validate_depth_config():
 
     check = [[1, 4], [1, 3], [2], [0], [1, 9], [1], [2], [3], [2, 3], [5, 6, 7, 8, 9]]
     valid_1 = [[1, 4], [1], [], [], [1, 9], [1], [], [], [], [9]]
-    # pylint: disable=protected-access
+
     for i, valid_value in enumerate(valid_1):
         assert valid_value == depth_handler._remove_inconsistent_blocks(check[i])
 

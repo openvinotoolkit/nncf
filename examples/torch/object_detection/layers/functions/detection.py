@@ -55,7 +55,6 @@ class DetectionOutput(nn.Module):
         return grad_out
 
 
-# pylint:disable=abstract-method
 class DetectionOutputFunction(torch.autograd.Function):
     """At test time, Detect is the final layer of SSD.  Decode location preds,
     apply non-maximum suppression to location predictions based on conf

@@ -33,8 +33,8 @@ from nncf.version import __version__ as __version__
 _SUPPORTED_FRAMEWORKS = ["torch", "tensorflow", "onnx", "openvino"]
 
 
-from importlib.util import find_spec as _find_spec  # noqa: E402 # pylint:disable=wrong-import-position
-from pathlib import Path as _Path  # noqa: E402 # pylint:disable=wrong-import-position
+from importlib.util import find_spec as _find_spec  # noqa: E402
+from pathlib import Path as _Path  # noqa: E402
 
 _AVAILABLE_FRAMEWORKS = {}
 

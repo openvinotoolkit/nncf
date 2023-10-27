@@ -125,7 +125,6 @@ class GraphConverter:
         metatype = get_node_metatype(node)
         graph.add_nncf_node(node_name=node.get_friendly_name(), node_type=node_type, node_metatype=metatype)
 
-    # pylint: disable=too-many-branches
     @staticmethod
     def create_nncf_graph(model: ov.Model) -> NNCFGraph:
         """

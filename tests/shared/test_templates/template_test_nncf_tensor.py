@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=too-many-function-args
 
 import operator
 from abc import abstractmethod
@@ -47,7 +46,6 @@ COMPARISON_OPERATOR_MAP = {
 }
 
 
-# pylint: disable=too-many-public-methods
 class TemplateTestNNCFTensorOperators:
     @staticmethod
     @abstractmethod

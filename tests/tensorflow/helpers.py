@@ -220,7 +220,7 @@ def remove_node_by_name(node_name: str, tf_graph: tf.Graph) -> tf.Graph:
         graph_def.node[idx].input.pop(port_idx)
         graph_def.node[idx].input.extend(incoming_edges)
 
-    with tf.Graph().as_default() as graph:  # pylint:disable=not-context-manager
+    with tf.Graph().as_default() as graph:
         tf.graph_util.import_graph_def(graph_def, name="")
 
     return graph

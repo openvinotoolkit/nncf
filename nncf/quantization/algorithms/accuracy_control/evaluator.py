@@ -212,7 +212,7 @@ class Evaluator:
         metric_mode = None
 
         data_item = dataset.get_data([0])
-        # pylint: disable=W0703
+
         try:
             metric_value, values_for_each_item = validation_fn(model_for_inference, data_item)
         except Exception:
@@ -231,7 +231,6 @@ class Evaluator:
 
         convert_to_float_possible = True
         if values_for_each_item is not None:
-            # pylint: disable=W0703
             try:
                 _ = float(values_for_each_item[0])
             except Exception:

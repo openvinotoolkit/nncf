@@ -125,7 +125,6 @@ class TemplateTestSQAlgorithm:
 
         self.check_scales(quantized_model, reference_values)
 
-    # pylint:disable=protected-access
     def test_get_abs_max_channel_collector(self):
         backend = self.get_backend()
         reduction_axes = (3, 2, 1)
@@ -167,7 +166,6 @@ class TemplateTestSQAlgorithm:
             ),
         ),
     )
-    # pylint:disable=protected-access
     def test__get_nodes_to_smooth_data(self, model_cls, references, tmpdir):
         model = self.backend_specific_model(model_cls(), tmpdir)
         nncf_graph = NNCFGraphFactory.create(model)
@@ -218,7 +216,6 @@ class TemplateTestSQAlgorithm:
         node = NNCFNode(attributes)
 
         try:
-            # pylint: disable=protected-access
             activation_channel_axis = backend.get_activation_channel_axis(node, port_id)
         except RuntimeError as e:
             if isinstance(e, reference_value):
@@ -238,7 +235,6 @@ class TemplateTestSQAlgorithm:
         node = NNCFNode(attributes)
 
         try:
-            # pylint: disable=protected-access
             activation_channel_axis = backend.get_weight_channel_axis(node, port_id)
         except RuntimeError as e:
             if isinstance(e, reference_value):

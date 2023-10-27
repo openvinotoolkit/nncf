@@ -174,7 +174,6 @@ def log_sum_exp(x):
     return torch.log(torch.sum(torch.exp(x - x_max), 1, keepdim=True)) + x_max
 
 
-# pylint:disable=abstract-method
 class NMSFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, boxes, scores, threshold, top_k=200):

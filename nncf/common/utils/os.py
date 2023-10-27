@@ -15,7 +15,6 @@ from pathlib import Path
 import psutil
 
 
-# pylint: disable=W1514
 @contextmanager
 def safe_open(file: Path, *args, **kwargs):
     """
@@ -52,7 +51,7 @@ def get_available_cpu_count(logical: bool = True) -> int:
     try:
         num_cpu = psutil.cpu_count(logical=logical)
         return num_cpu if num_cpu is not None else 1
-    except Exception:  # pylint: disable=broad-except
+    except Exception:
         return 1
 
 
@@ -62,5 +61,5 @@ def get_available_memory_amount() -> int:
     """
     try:
         return psutil.virtual_memory()[1]
-    except Exception:  # pylint: disable=broad-except
+    except Exception:
         return 0

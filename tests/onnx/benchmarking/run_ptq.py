@@ -23,11 +23,8 @@ import nncf
 from nncf.scopes import IgnoredScope
 from tests.onnx.opset_converter import convert_opset_version
 
-# pylint: disable=unused-import
 # This import need to register custom Conerter
 from tests.onnx.quantization.common import find_ignored_scopes
-
-# pylint: disable=redefined-outer-name,protected-access
 
 
 def process_fn(data_item, model_evaluator: ModelEvaluator, has_batch_dim: Optional[bool] = False):

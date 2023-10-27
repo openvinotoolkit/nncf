@@ -36,8 +36,6 @@ from tests.post_training.test_templates.models import NNCFGraphToTest
 from tests.post_training.test_templates.models import NNCFGraphToTestMatMul
 from tests.post_training.test_templates.test_ptq_params import TemplateTestPTQParams
 
-# pylint: disable=protected-access
-
 
 def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
     return PatternsManager.get_full_hw_pattern_graph(backend=BackendType.ONNX, device=device)

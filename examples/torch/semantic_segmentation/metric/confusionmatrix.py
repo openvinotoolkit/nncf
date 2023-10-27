@@ -88,7 +88,7 @@ class ConfusionMatrix(Metric):
         bincount_2d = np.bincount(x.astype(np.int32), minlength=self.num_classes**2)
 
         # See Pylint issue #2721
-        # pylint: disable=no-member
+
         assert bincount_2d.size == self.num_classes**2
         conf = bincount_2d.reshape((self.num_classes, self.num_classes))
 

@@ -48,7 +48,6 @@ class BCStatsCollectors(Enum):
     RAW = "raw"
 
 
-# pylint: disable=too-many-public-methods
 class TemplateTestStatisticsAggregator:
     @abstractmethod
     def get_min_max_algo_backend_cls(self) -> Type[MinMaxAlgoBackend]:
@@ -783,7 +782,7 @@ class TemplateTestStatisticsAggregator:
 
         dataset = self.get_dataset(dataset_samples)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
-        # pylint: disable=protected-access
+
         merged_statistics = statistics_aggregator._get_merged_statistic_points(statistics_points, model, nncf_graph)
         merged_stats_checkers_map = {
             "split_concat": self._check_split_concat_merged_stats,
