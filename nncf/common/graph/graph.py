@@ -621,15 +621,11 @@ class NNCFGraph:
         :return: A user-friendly graph .dot file, making it easier to debug the network and setup
         ignored/target scopes.
         """
-        # .dot format reserves ':' character in node names
-        __RESERVED_DOT_CHARACTER = ":"
-        __CHARACTER_REPLACE_TO = "^"
-
         out_graph = nx.DiGraph()
         for node in self.get_all_nodes():
             attrs_node = {}
             attrs_node["label"] = f"{node.node_id} {node.node_name}"
-            node_key = self.get_node_key_by_id(node.node_id).replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO)
+            node_key = self.get_node_key_by_id(node.node_id)
             out_graph.add_node(node_key, **attrs_node)
 
         for u, v in self._nx_graph.edges:
@@ -642,13 +638,9 @@ class NNCFGraph:
                 f"{edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]} \\n"
                 f"{edge[NNCFGraph.OUTPUT_PORT_ID_EDGE_ATTR]} -> {edge[NNCFGraph.INPUT_PORT_ID_EDGE_ATTR]}"
             )
-            u = u.replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO)
-            v = v.replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO)
             out_graph.add_edge(u, v, label=edge_label, style=style)
 
-        mapping = {
-            k: v["label"].replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO) for k, v in out_graph.nodes.items()
-        }
+        mapping = {k: v["label"] for k, v in out_graph.nodes.items()}
         out_graph = nx.relabel_nodes(out_graph, mapping)
         for node in out_graph.nodes.values():
             node.pop("label")
