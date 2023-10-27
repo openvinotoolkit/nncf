@@ -141,7 +141,7 @@ def create_se_block() -> GraphPattern:
     activation_node_2 = pattern.add_node(
         **{
             GraphPattern.LABEL_ATTR: "SIGMOID",
-            GraphPattern.METATYPE_ATTR: [om.OVSigmoidMetatype, om.OVHardSigmoidMetatype],
+            GraphPattern.METATYPE_ATTR: [om.OVSigmoidMetatype, om.OVHSigmoidMetatype],
         }
     )
     multiply_node = pattern.add_node(
