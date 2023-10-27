@@ -28,8 +28,8 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.advanced_parameters import QuantizationMode
 from nncf.quantization.advanced_parameters import QuantizationParameters
+from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from nncf.scopes import IgnoredScope
 from nncf.torch.graph.graph import PTTargetPoint
@@ -47,8 +47,6 @@ from tests.torch.helpers import create_depthwise_conv
 from tests.torch.ptq.helpers import get_nncf_network
 from tests.torch.ptq.helpers import get_single_conv_nncf_graph
 from tests.torch.ptq.helpers import get_single_no_weight_matmul_nncf_graph
-
-# pylint: disable=protected-access
 
 
 def get_hw_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPattern:
@@ -96,8 +94,7 @@ class OneDepthwiseConvModel(nn.Module, ToNNCFNetworkInterface):
 
 @pytest.mark.parametrize("target_device", TargetDevice)
 def test_target_device(target_device):
-    algo = PostTrainingQuantization(target_device=target_device)
-    min_max_algo = algo.algorithms[0]
+    min_max_algo = MinMaxQuantization(target_device=target_device)
     min_max_algo._backend_entity = PTMinMaxAlgoBackend()
     assert min_max_algo._target_device == target_device
 
@@ -182,6 +179,22 @@ class TestPTQParams(TemplateTestPTQParams):
     "params",
     (
         {
+            "preset": None,
+            "target_device": TargetDevice.ANY,
+            "subset_size": 1,
+            "model_type": ModelType.TRANSFORMER,
+            "ignored_scope": IgnoredScope(),
+            "advanced_parameters": AdvancedQuantizationParameters(),
+        },
+        {
+            "preset": None,
+            "target_device": TargetDevice.ANY,
+            "subset_size": 1,
+            "model_type": None,
+            "ignored_scope": IgnoredScope(),
+            "advanced_parameters": AdvancedQuantizationParameters(),
+        },
+        {
             "preset": QuantizationPreset.MIXED,
             "target_device": TargetDevice.ANY,
             "subset_size": 1,
@@ -235,7 +248,14 @@ def test_create_nncf_config(params):
     assert config["compression"]["overflow_fix"] == params["advanced_parameters"].overflow_fix.value
     assert config["compression"]["quantize_outputs"] == params["advanced_parameters"].quantize_outputs
 
-    assert config["compression"]["preset"] == params["preset"].value
+    preset = params["preset"]
+    if params["preset"] is None:
+        if params["model_type"] == ModelType.TRANSFORMER:
+            preset = QuantizationPreset.MIXED
+        else:
+            preset = QuantizationPreset.PERFORMANCE
+
+    assert config["compression"]["preset"] == preset.value
 
     range_config = config["compression"]["initializer"]["range"]
     if isinstance(range_config, dict):

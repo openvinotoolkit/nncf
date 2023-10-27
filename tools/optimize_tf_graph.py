@@ -26,7 +26,7 @@ def to_frozen_graph(model: tf.keras.Model):
     func = saving_utils.trace_model_call(model)
     concrete_func = func.get_concrete_function()
 
-    graph_captures = concrete_func.graph._captures  # pylint: disable=protected-access
+    graph_captures = concrete_func.graph._captures
     captured_inputs = [t_name.name for t_val, t_name in graph_captures.values()]
 
     input_names = [
@@ -42,7 +42,7 @@ def to_frozen_graph(model: tf.keras.Model):
             concrete_func, lower_control_flow=False, aggressive_inlining=True
         )
         graph_def = frozen_func.graph.as_graph_def(add_shapes=True)
-        with tf.Graph().as_default():  # pylint: disable=not-context-manager
+        with tf.Graph().as_default():
             tf.import_graph_def(graph_def, name="")
             frozen_graph = tf_optimize_grappler(input_names, output_names, graph_def)
 

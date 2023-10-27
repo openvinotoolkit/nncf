@@ -216,7 +216,7 @@ if __name__ == "__main__":
                     args=(world_size, module, input_size, num_runs, param_struct.dtype, output),
                 )
                 run_data = output[0]
-            except:  # pylint:disable=bare-except  # noqa: E722
+            except:  # noqa: E722
                 run_data = {"time": -1}
         else:
             run_data = call_fn(module, input_size, param_struct.device, num_runs, dtype=param_struct.dtype)

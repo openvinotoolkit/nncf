@@ -391,7 +391,7 @@ def scatter_plot(
     :param save_to_file: Save plot to file as image, defaults to None.
     """
     import pandas as pd
-    import plotly.express as px  # pylint:disable=import-error
+    import plotly.express as px
 
     column_names = list(data.keys())
     for column in column_names:

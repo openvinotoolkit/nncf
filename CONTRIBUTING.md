@@ -34,9 +34,12 @@ If your testing code is more extensive than unit tests (in terms of test executi
 
 Changes to NNCF Python code should conform to [Python Style Guide](./docs/styleguide/PyGuide.md)
 
-Pylint is used throughout the project to ensure code cleanliness and quality.
-A Pylint run is also done as part of the pre-commit scope - the pre-commit `pytest` scope will not be run if your code fails the Pylint checks.
-The Pylint rules and exceptions for this repository are described in the standard [.pylintrc](./.pylintrc) format - make sure your local linter uses these.
+Basic code style and static checks are enforced using a `pre-commit` Github action.
+The exact checks that are run are described in the corresponding [config file](./.pre-commit-config.yaml).
+The checks can be run locally using `make pre-commit`.
+Most of these checks do in-place fixes at the same time they are run using `make pre-commit`.
+Static analysis is done via `ruff` which does not do in-place fixes by default - run `ruff --fix` locally to autofix errors for which it is possible to do so.
+Developers may use other tools locally (such as `pylint`) as long as no tool-specific control code is introduced and the pre-commit checks pass.
 
 ## Binary files
 

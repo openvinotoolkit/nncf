@@ -57,7 +57,6 @@ class PriorBox(nn.Module):
         return PriorBoxFunction.apply(input_fm, img_tensor, self)
 
 
-# pylint:disable=abstract-method
 class PriorBoxFunction(torch.autograd.Function):
     """Compute priorbox coordinates in point form for each source
     feature map.

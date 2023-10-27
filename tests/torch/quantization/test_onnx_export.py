@@ -52,7 +52,7 @@ def test_onnx_export_to_fake_quantize(tmp_path):
     num_fq = 0
     num_model_nodes = 0
     num_other_nodes = 0
-    # pylint:disable=no-member
+
     for node in onnx_model_proto.graph.node:
         op_type = node.op_type
         if op_type == "FakeQuantize":
@@ -78,7 +78,7 @@ def test_onnx_export_to_quantize_dequantize(tmp_path):
     num_dq = 0
     num_model_nodes = 0
     num_other_nodes = 0
-    # pylint:disable=no-member
+
     for node in onnx_model_proto.graph.node:
         op_type = node.op_type
         if op_type == "QuantizeLinear":
@@ -123,7 +123,7 @@ def test_onnx_export_to_quantize_dequantize_per_channel(
     else:
         quantizer.input_low = torch.nn.Parameter(torch.rand_like(quantizer.input_low))
         quantizer.input_range = torch.nn.Parameter(torch.rand_like(quantizer.input_range))
-    # pylint: disable=protected-access
+
     quantizer._export_mode = export_mode
 
     x = torch.rand(INPUT_TENSOR_SHAPE)
@@ -149,9 +149,6 @@ class TargetCompressionIdxTestModel(torch.nn.Module):
         return x
 
 
-# pylint: disable=no-member
-
-
 def get_weight_fq_for_conv_node(node: onnx.NodeProto, graph: onnx.GraphProto):
     weight_input_tensor_id = node.input[1]
     matches = [x for x in graph.node if weight_input_tensor_id in x.output]
@@ -173,7 +170,7 @@ def test_target_compression_idx(tmp_path):
     model = TargetCompressionIdxTestModel()
     nncf_config = get_config_for_export_mode(should_be_onnx_standard=False)
     onnx_model_proto = load_exported_onnx_version(nncf_config, model, path_to_storage_dir=tmp_path)
-    onnx_graph = onnx_model_proto.graph  # pylint:disable=no-member
+    onnx_graph = onnx_model_proto.graph
     conv_nodes = get_nodes_by_type(onnx_model_proto, "Conv")
     assert len(conv_nodes) == 1
     conv_node = next(iter(conv_nodes))
@@ -238,7 +235,7 @@ def test_branching_fqs_are_not_chained(tmp_path, export_mode):
     quantizer_nodes = get_nodes_by_type(onnx_model_proto, target_node_type)
     # Quantizer nodes should, for this model, immediately be followed by the quantized operation. Chained quantizers
     # mean that the ONNX export was incorrect.
-    # pylint:disable=no-member
+
     follower_node_lists = [get_successors(x, onnx_model_proto.graph) for x in quantizer_nodes]
     follower_nodes = []
     for lst in follower_node_lists:
@@ -318,10 +315,10 @@ def test_export_quantized_weights_with_middle_quants(tmp_path, is_half_range, qu
 
     onnx_checkpoint_path = str(tmp_path / "two_conv_model_int8.onnx")
     compression_ctrl.export_model(onnx_checkpoint_path)
-    model_onnx = onnx.load(onnx_checkpoint_path)  # pylint: disable=no-member
+    model_onnx = onnx.load(onnx_checkpoint_path)
 
     fq_nodes = get_nodes_by_type(model_onnx, "FakeQuantize")
-    # pylint:disable=no-member
+
     inputs = [get_all_inputs_for_graph_node(fq_node, model_onnx.graph) for fq_node in fq_nodes]
 
     for quantizer, fq_parametres in zip(quantizers, inputs[1::2]):
@@ -351,7 +348,7 @@ def test_torch_onnx_export(tmp_path):
     num_fq = 0
     num_model_nodes = 0
     num_other_nodes = 0
-    # pylint:disable=no-member
+
     for node in onnx_model_proto.graph.node:
         op_type = node.op_type
         if op_type == "FakeQuantize":

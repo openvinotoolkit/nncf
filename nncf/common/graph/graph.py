@@ -177,7 +177,6 @@ class NNCFGraphPatternIO:
         self.output_edges = output_edges
 
 
-# pylint:disable=too-many-public-methods
 class NNCFGraph:
     """
     Wrapper over a regular directed acyclic graph that represents a control flow/execution graph of a DNN
@@ -196,9 +195,9 @@ class NNCFGraph:
         self._nodes: Dict[str, NNCFNode] = {}
         self._input_nncf_nodes: Dict[int, NNCFNode] = {}
         self._output_nncf_nodes: Dict[int, NNCFNode] = {}
-
         self._node_ids_vs_layer_names: Dict[int, LayerName] = {}
         self._layer_name_vs_shared_nodes: Dict[LayerName, List[NNCFNode]] = defaultdict(list)
+        self._node_name_to_node_id_map: Dict[str, List[int]] = {}
 
     @property
     def nodes(self) -> Dict[str, NNCFNode]:
@@ -458,6 +457,9 @@ class NNCFGraph:
         if node_id in self._node_id_to_key_dict:
             raise ValueError(f"NNCF node with id {node_id} is already in the NNCFGraph")
 
+        node_ids = self._node_name_to_node_id_map.setdefault(node_name, [])
+        node_ids.append(node_id)
+
         node_key = f"{node_id} {node_name}"
 
         self._node_id_to_key_dict[node_id] = node_key
@@ -594,12 +596,22 @@ class NNCFGraph:
             attrs_edge = {}
             u = u.replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO)
             v = v.replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO)
+            label = {}
+            if edge[NNCFGraph.PARALLEL_INPUT_PORT_IDS_ATTR]:
+                label["parallel_input_port_ids"] = edge[NNCFGraph.PARALLEL_INPUT_PORT_IDS_ATTR]
+
             if extended:
                 if edge[NNCFGraph.DTYPE_EDGE_ATTR] is Dtype.INTEGER:
                     attrs_edge["style"] = "dashed"
                 else:
                     attrs_edge["style"] = "solid"
-                attrs_edge["label"] = edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
+                label["shape"] = edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
+
+            if label:
+                if "shape" in label and len(label) == 1:
+                    attrs_edge["label"] = label["shape"]
+                else:
+                    attrs_edge["label"] = ", ".join((f"{k}:{v}" for k, v in label.items()))
             out_graph.add_edge(u, v, **attrs_edge)
         return out_graph
 
@@ -635,16 +647,14 @@ class NNCFGraph:
         return out_graph
 
     def get_node_by_name(self, name: NNCFNodeName) -> NNCFNode:
-        matches = [node for node in self.get_all_nodes() if node.node_name == name]
-        if not matches:
+        node_ids = self._node_name_to_node_id_map.get(name, None)
+        if node_ids is None:
             raise RuntimeError("Could not find a node {} in NNCFGraph!".format(name))
-        if len(matches) > 1:
-            raise RuntimeError(
-                "More than one node in NNCFGraph matches name {}:\n{}".format(
-                    name, "\t\n".join([str(n.node_id) for n in matches])
-                )
-            )
-        return next(iter(matches))
+        if len(node_ids) > 1:
+            raise RuntimeError(f"More than one node in NNCFGraph matches name {name}")
+
+        node_key = f"{node_ids[0]} {name}"
+        return self._nodes[node_key]
 
     def __eq__(self, other: "NNCFGraph"):
         nm = iso.categorical_node_match(

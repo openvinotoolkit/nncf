@@ -24,7 +24,6 @@ from tests.torch.helpers import LeNet
 from tests.torch.helpers import RandomDatasetMock
 
 
-# pylint: disable=too-many-branches
 def check_fq(model: NNCFNetwork, striped: bool):
     compression_module_type = ExtraCompressionModuleType.EXTERNAL_QUANTIZER
     if model.nncf.is_compression_module_registered(compression_module_type):

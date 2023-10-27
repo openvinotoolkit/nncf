@@ -19,7 +19,7 @@ from typing import Any, Callable, Dict, List, Tuple, Union
 import numpy as np
 import onnx
 import torch
-from onnx import numpy_helper  # pylint: disable=no-name-in-module
+from onnx import numpy_helper
 from torch import nn
 from torch.nn import Module
 from torch.nn import functional as F
@@ -44,9 +44,6 @@ from tests.shared.command import Command as BaseCommand
 from tests.shared.helpers import BaseTensorListComparator
 
 TensorType = Union[torch.Tensor, np.ndarray, numbers.Number]
-
-
-# pylint: disable=no-member
 
 
 def fill_conv_weight(conv, value, dim=2):

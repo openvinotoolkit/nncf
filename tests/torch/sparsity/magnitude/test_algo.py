@@ -51,7 +51,7 @@ def test_can_create_magnitude_sparse_algo__with_defaults():
     nncf_stats = compression_ctrl.statistics()
     for layer_info in nncf_stats.magnitude_sparsity.thresholds:
         assert layer_info.threshold == approx(0.24, 0.1)
-    # pylint: disable=protected-access
+
     assert isinstance(compression_ctrl._weight_importance_fn, type(normed_magnitude))
 
     for sparse_module in sparse_model_conv.values():

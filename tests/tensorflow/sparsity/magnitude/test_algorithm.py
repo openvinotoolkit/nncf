@@ -46,8 +46,8 @@ def test_can_create_magnitude_sparse_algo__with_defaults():
     assert len(conv_names) == len(wrappers)
     assert len(conv_names) == len(correct_wrappers)
 
-    assert compression_ctrl._threshold == approx(0.24, 0.1)  # pylint: disable=protected-access
-    # pylint: disable=protected-access
+    assert compression_ctrl._threshold == approx(0.24, 0.1)
+
     assert isinstance(compression_ctrl._weight_importance_fn, type(normed_magnitude))
 
     for i, wrapper in enumerate(wrappers):
@@ -103,7 +103,7 @@ def test_magnitude_sparse_algo_sets_threshold(weight_importance, sparsity_level,
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     if sparsity_level:
         compression_ctrl.set_sparsity_level(sparsity_level)
-    assert compression_ctrl._threshold == pytest.approx(threshold, 0.01)  # pylint: disable=protected-access
+    assert compression_ctrl._threshold == pytest.approx(threshold, 0.01)
 
 
 def test_can_create_magnitude_algo__without_levels():

@@ -21,13 +21,11 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
-from nncf.common.utils.registry import Registry
 from nncf.experimental.tensor import Tensor
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
 OutputType = TypeVar("OutputType")
-ALGO_BACKENDS = Registry("algo_backends")
 
 
 class FastBiasCorrectionAlgoBackend(ABC):

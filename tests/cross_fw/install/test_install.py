@@ -107,11 +107,16 @@ class TestInstall:
         package_type: str,
         backend_clopt: List[str],
         host_configuration_clopt: str,
+        ov_version_override: str,
     ):
         skip_if_backend_not_selected(backend, backend_clopt)
         if "pypi" in package_type:
             pytest.xfail("Disabled until NNCF is exposed in a release")
         venv_path = create_venv_with_nncf(tmp_path, package_type, venv_type, extra_reqs={backend})
+        if ov_version_override is not None:
+            pip_with_venv = get_pip_executable_with_venv(venv_path)
+            ov_version_cmd_line = f"{pip_with_venv} install {ov_version_override}"
+            subprocess.run(ov_version_cmd_line, check=True, shell=True)
         run_install_checks(venv_path, tmp_path, package_type, backend=backend, install_type=host_configuration_clopt)
 
     @staticmethod

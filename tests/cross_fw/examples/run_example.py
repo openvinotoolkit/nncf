@@ -16,9 +16,6 @@ from typing import Dict, Tuple
 
 from tests.shared.paths import PROJECT_ROOT
 
-# pylint: disable=maybe-no-member
-# pylint: disable=import-error
-
 
 def post_training_quantization_mobilenet_v2(example_root_dir: str) -> Dict[str, float]:
     sys.path.append(example_root_dir)

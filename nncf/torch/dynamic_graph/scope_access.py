@@ -23,7 +23,7 @@ def get_module_by_scope(model: torch.nn.Module, scope: Scope) -> Optional[torch.
             # The module used is being created in-place every time and never stored in the model,
             # happens for nn.Softmax in BERT implementations.
             return None
-        # pylint: disable=protected-access
+
         next_module = curr_module._modules.get(scope_element.calling_field_name)
         if next_module is None:
             raise RuntimeError(

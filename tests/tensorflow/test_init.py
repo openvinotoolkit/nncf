@@ -64,7 +64,6 @@ class TestInitialization(RunTest):
     @pytest.mark.init
     @pytest.mark.parametrize("eval_test_struct", RunTest.param_list, ids=RunTest.ids_list)
     def test_init(self, sota_checkpoints_dir, sota_data_dir, eval_test_struct: EvalRunParamsStruct):
-        # pylint: disable=too-many-branches
         if sota_data_dir is None:
             pytest.skip("Path to datasets is not set")
 

@@ -509,7 +509,7 @@ def test_match_key(desc: MatchKeyDesc, mocker, nncf_caplog):
     num_loaded_layers = len(new_dict)
 
     assert num_loaded_layers == desc.num_loaded
-    # pylint: disable=protected-access
+
     assert key_matcher._processed_keys._keys == desc.processed_keys._keys
     if desc.expects_error:
         with pytest.raises(RuntimeError):

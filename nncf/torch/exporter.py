@@ -143,7 +143,7 @@ class PTExporter(Exporter):
                 input_names = self._input_names
             else:
                 input_names = generate_input_names_list(len(input_tensor_list))
-            # pylint:disable=unexpected-keyword-arg
+
             with torch.no_grad():
                 # Should call this, otherwise the operations executed during export will end up in the graph.
                 model.nncf.disable_dynamic_graph_building()

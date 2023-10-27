@@ -45,11 +45,11 @@ class StatisticsCallback(tf.keras.callbacks.Callback):
         if log_tensorboard:
             if log_dir is None:
                 raise ValueError("log_dir must be specified if log_tensorboard is true.")
-            # pylint: disable=no-member
+
             self._file_writer = tf.summary.create_file_writer(log_dir + "/compression")
 
     def _dump_to_tensorboard(self, logs: dict, step: int):
-        with self._file_writer.as_default():  # pylint: disable=E1129
+        with self._file_writer.as_default():
             for name, value in logs.items():
                 tf.summary.scalar(name, value, step=step)
 

@@ -38,7 +38,6 @@ def dict_update(src: Dict, dst: Dict, recursive: bool = True):
 
 
 def maybe_reapply_weight_norm(src: torch.nn.Module, dst: torch.nn.Module) -> torch.nn.Module:
-    # pylint:disable=protected-access
     for k, hook in src._forward_pre_hooks.items():
         if isinstance(hook, WeightNorm):
             # The code below presumes that the `hook` object does not
@@ -676,7 +675,6 @@ class VariableRecurrent(nn.Module):
         if flat_hidden:
             hidden = (hidden,)
         with forward_nncf_trace():
-            # pylint:disable=unnecessary-comprehension
             batch_size_elements = [b for b in batch_sizes]
         for batch_size in batch_size_elements:
             step_input = input_[input_offset : input_offset + batch_size]

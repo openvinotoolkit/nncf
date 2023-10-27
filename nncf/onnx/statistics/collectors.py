@@ -26,7 +26,6 @@ from nncf.onnx.statistics.statistics import ONNXRawTensorStatistic
 from nncf.onnx.tensor import ONNXNNCFTensor
 
 
-# pylint: disable=too-many-public-methods
 class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     """
     A realization of the processing methods for ONNXNNCFTensors.

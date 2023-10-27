@@ -11,6 +11,7 @@
 
 from typing import List
 
+import pytest
 import torch
 
 from nncf.common.factory import NNCFGraphFactory
@@ -61,6 +62,7 @@ class TestTorchFBCAlgorithm(TemplateTestFBCAlgorithm):
         raise ValueError("Not found node with bias")
 
 
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="Skipping for CPU-only setups")
 class TestTorchCudaFBCAlgorithm(TestTorchFBCAlgorithm):
     @staticmethod
     def list_to_backend_type(data: List) -> torch.Tensor:

@@ -101,7 +101,6 @@ class ExtensionNamespace:
                     async_result = pool.apply_async(self._loader.load)
                     self._loaded_namespace = async_result.get(timeout=timeout)
                 except MPTimeoutError as error:
-                    # pylint: disable=line-too-long
                     msg = textwrap.dedent(
                         f"""\
                         The extension load function failed to execute within {timeout} seconds.

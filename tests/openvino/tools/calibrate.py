@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint:disable=too-many-lines
+
 
 import functools
 import json
@@ -733,7 +733,6 @@ def get_allow_reshape_input(accuracy_checker_config) -> bool:
     return False
 
 
-# pylint:disable=too-many-branches
 def maybe_reshape_model(model, dataset, subset_size, input_to_tensor_name):
     dataset_inputs_shapes = defaultdict(set)
     for input_dict in islice(dataset.get_inference_data(), subset_size):
@@ -801,7 +800,6 @@ def maybe_reshape_model(model, dataset, subset_size, input_to_tensor_name):
     return model, model_inputs_shapes
 
 
-# pylint: disable=protected-access
 def get_transform_fn(model_evaluator: ModelEvaluator, ov_model):
     if model_evaluator.launcher._lstm_inputs:
         compiled_original_model = ov.Core().compile_model(ov_model)

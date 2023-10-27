@@ -213,7 +213,6 @@ class TemplateTestReducersAggreagtors:
         for _ in range(3):
             aggregator.register_reduced_input(self.get_nncf_tensor(input_))
 
-        # pylint: disable=protected-access
         assert aggregator._collected_samples == 3
         aggregated = aggregator.aggregate()
         assert len(aggregated) == 3
@@ -227,7 +226,6 @@ class TemplateTestReducersAggreagtors:
         for _ in range(3):
             aggregator.register_reduced_input(self.get_nncf_tensor(input_))
 
-        # pylint: disable=protected-access
         assert aggregator._collected_samples == 1
         assert ref_shape == aggregator.aggregate()
 

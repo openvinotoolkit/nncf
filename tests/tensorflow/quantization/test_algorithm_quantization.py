@@ -42,12 +42,10 @@ def compare_qspecs(qspec: TFQuantizerSpec, quantizer):
     assert qspec.half_range == quantizer.half_range
     assert isinstance(quantizer, NNCF_QUANTIZATION_OPERATIONS.get(qspec.mode))
     if qspec.mode == QuantizationMode.SYMMETRIC:
-        # pylint: disable=protected-access
         assert qspec.signedness_to_force == quantizer.signedness_to_force
 
 
 def get_quantizers(model):
-    # pylint: disable=protected-access
     activation_quantizers = [layer._quantizer for layer in model.layers if isinstance(layer, FakeQuantize)]
     weight_quantizers = []
     for layer in model.layers:
@@ -253,7 +251,7 @@ def get_quantize_inputs_test_model(input_shapes):
     inputs = []
     for i, input_shape in enumerate(input_shapes):
         inputs.append(tf.keras.Input(shape=input_shape[1:], name="input_{}".format(i + 1)))
-    # pylint: disable=unbalanced-tuple-unpacking
+
     input_1, input_2, input_3, input_4, input_5 = inputs
 
     conv1 = layers.Conv2D(filters=8, kernel_size=3)
@@ -292,7 +290,7 @@ def get_quantize_inputs_test_model(input_shapes):
     x_45 = conv6(x_45)
     x_45 = layers.Flatten()(x_45)
     in_5_flat = layers.Flatten()(input_5)
-    # pylint: disable=E1120
+
     x_45 = tf.pad(x_45, [[0, 0], [0, in_5_flat.shape[1] - x_45.shape[1]]])
     x_45 += in_5_flat
     x = tf.concat([x_1, x_2, x_3, x_45], -1)
@@ -637,7 +635,7 @@ def test_quantize_pre_post_processing(layer_name, input_type, data_type):
 
     channel_axes = get_channel_axis(layer_desk.input_type, layer_name, layer_desk.layer)
     q.setup_input_transformation(layer_desk.shape, channel_axes)
-    # pylint: disable=protected-access
+
     preprocess = q._pre_processing_fn(layer_desk.inputs)
     postprocess = q._post_processing_fn(preprocess)
     assert tf.math.reduce_all(preprocess == layer_desk.inputs_transformed)

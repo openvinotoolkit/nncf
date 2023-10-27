@@ -26,8 +26,8 @@ from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParame
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResults
 from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
-from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_quantization_param_grid
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_quantization_param_grids
+from nncf.quantization.algorithms.post_training.pipeline import create_ptq_pipeline
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.scopes import IgnoredScope
 
@@ -38,7 +38,7 @@ TTensor = TypeVar("TTensor")
 def quantize(
     model: TModel,
     calibration_dataset: Dataset,
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
@@ -54,11 +54,12 @@ def quantize(
     :param calibration_dataset: A representative dataset for the
         calibration process.
     :type  calibration_dataset: nncf.Dataset
-    :param preset: A preset that controls the quantization mode
-        (symmetric and asymmetric). It can take the following values:
+    :param preset: A preset controls the quantization mode (symmetric and asymmetric).
+        It can take the following values:
         - `performance`: Symmetric quantization of weights and activations.
-        - `mixed`: Symmetric quantization of weights and asymmetric
-          quantization of activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
+        Default value is None. In this case, `mixed` preset is used for `transformer`
+        model type otherwise `performace`.
     :type  preset: nncf.QuantizationPreset
     :param target_device: A target device the specificity of which will be taken
         into account while compressing in order to obtain the best performance
@@ -152,7 +153,7 @@ def quantize_with_accuracy_control(
     validation_fn: Callable[[Any, Iterable[Any]], float],
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
@@ -179,7 +180,12 @@ def quantize_with_accuracy_control(
     :param max_drop: The maximum accuracy drop that should be achieved after the quantization.
     :param drop_type: The accuracy drop type, which determines how the maximum accuracy
         drop between the original model and the compressed model is calculated.
-    :param preset: A preset that controls the quantization mode.
+    :param preset: A preset controls the quantization mode (symmetric and asymmetric).
+        It can take the following values:
+        - `performance`: Symmetric quantization of weights and activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
+        Default value is None. In this case, `mixed` preset is used for `transformer`
+        model type otherwise `performace`.
     :type preset: nncf.QuantizationPreset
     :param target_device: A target device the specificity of which will be taken
         into account while compressing in order to obtain the best performance
@@ -234,6 +240,7 @@ def compress_weights(
     mode=CompressWeightsMode.INT8,
     ratio: Optional[float] = None,
     group_size: Optional[int] = None,
+    ignored_scope: Optional[IgnoredScope] = None,
 ) -> TModel:
     """
     Compress model weights.
@@ -248,6 +255,8 @@ def compress_weights(
         and the rest to INT8).
     :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
         The value -1 means no grouping.
+    :param ignored_scope: An ignored scope that defined the list of model control
+        flow graph nodes to be ignored during quantization.
     :return: The non-trainable model with compressed weights.
     """
     if mode == CompressWeightsMode.INT8:
@@ -270,9 +279,9 @@ def compress_weights(
     if backend == BackendType.TORCH:
         from nncf.torch.quantization.quantize_model import compress_weights_impl
 
-        return compress_weights_impl(model, mode, ratio, group_size)
+        return compress_weights_impl(model, mode, ratio, group_size, ignored_scope)
 
-    compression_algorithm = WeightCompression(mode, ratio, group_size)
+    compression_algorithm = WeightCompression(mode, ratio, group_size, ignored_scope)
     graph = NNCFGraphFactory.create(model)
     return compression_algorithm.apply(model, graph)
 
@@ -285,7 +294,7 @@ def quantize_with_tune_hyperparams(
     initial_metric_results: MetricResults,
     quantized_metric_results: MetricResults,
     tuner_subset_size: int = 300,
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
@@ -303,7 +312,12 @@ def quantize_with_tune_hyperparams(
     :param initial_metric_results: Initial metric results.
     :param quantized_metric_results: Quantized metric results.
     :param tuner_subset_size: Tuner subset size.
-    :param preset: A preset that controls the quantization mode.
+    :param preset: A preset controls the quantization mode (symmetric and asymmetric).
+        It can take the following values:
+        - `performance`: Symmetric quantization of weights and activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
+        Default value is None. In this case, `mixed` preset is used for `transformer`
+        model type otherwise `performace`.
     :param target_device: A target device the specificity of which will be taken
         into account while compressing in order to obtain the best performance
         for this type of device.
@@ -330,12 +344,12 @@ def quantize_with_tune_hyperparams(
         "advanced_parameters": advanced_quantization_parameters,
     }
 
-    quantization_param_grid = get_quantization_param_grid()
+    param_grids = get_quantization_param_grids(create_ptq_pipeline(**init_quantization_params))
 
     hyperparameter_tuner = HyperparameterTuner(
-        PostTrainingQuantization,
+        create_ptq_pipeline,
         init_quantization_params,
-        quantization_param_grid,
+        param_grids,
         calibration_dataset,
         validation_fn,
         tuner_subset_size,

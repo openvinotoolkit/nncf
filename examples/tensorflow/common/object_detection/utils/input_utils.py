@@ -334,7 +334,7 @@ def random_horizontal_flip(image, boxes=None, masks=None, seed=None):
             row is in the form of [ymin, xmin, ymax, xmax].
         :return: Flipped boxes.
         """
-        ymin, xmin, ymax, xmax = tf.split(boxes, 4, axis=1)  # pylint: disable=E1120, E1124
+        ymin, xmin, ymax, xmax = tf.split(boxes, 4, axis=1)
         flipped_xmin = tf.subtract(1.0, xmax)
         flipped_xmax = tf.subtract(1.0, xmin)
         flipped_boxes = tf.concat([ymin, flipped_xmin, ymax, flipped_xmax], 1)
@@ -411,7 +411,7 @@ def random_vertical_flip(image, boxes=None, masks=None, probability=0.1, seed=No
         Returns:
           Flipped boxes.
         """
-        ymin, xmin, ymax, xmax = tf.split(boxes, 4, axis=1)  # pylint: disable=E1120, E1124
+        ymin, xmin, ymax, xmax = tf.split(boxes, 4, axis=1)
         flipped_ymin = tf.subtract(1.0, ymax)
         flipped_ymax = tf.subtract(1.0, ymin)
         flipped_boxes = tf.concat([flipped_ymin, xmin, flipped_ymax, xmax], 1)
@@ -494,7 +494,7 @@ def random_rotation90(image, boxes=None, masks=None, probability=0.1, seed=None)
                Each row is in the form of [ymin, xmin, ymax, xmax].
         :return: Rotated boxes.
         """
-        ymin, xmin, ymax, xmax = tf.split(boxes, 4, axis=1)  # pylint: disable=E1120, E1124
+        ymin, xmin, ymax, xmax = tf.split(boxes, 4, axis=1)
         rotated_ymin = tf.subtract(1.0, xmax)
         rotated_ymax = tf.subtract(1.0, xmin)
         rotated_xmin = ymin

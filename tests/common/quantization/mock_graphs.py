@@ -81,7 +81,6 @@ def mark_input_ports_lexicographically_based_on_input_node_key(graph: nx.DiGraph
 
 
 def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph, nncf_graph_cls=NNCFGraph) -> NNCFGraph:
-    # pylint:disable=too-many-branches
     mock_graph = nncf_graph_cls()
     key_vs_id = {}
     edge_vs_output_idx_and_creator_id: Dict[Tuple[str, str], Tuple[int, int]] = {}

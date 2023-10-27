@@ -11,6 +11,8 @@
 
 import os
 import subprocess
+from pathlib import Path
+from typing import Any, Dict, List
 
 import pytest
 
@@ -42,7 +44,14 @@ def example_test_cases():
 
 
 @pytest.mark.parametrize("example_name, example_params", example_test_cases())
-def test_examples(tmp_path, example_name, example_params, backends_list, is_check_performance):
+def test_examples(
+    tmp_path: Path,
+    example_name: str,
+    example_params: Dict[str, Any],
+    backends_list: List[str],
+    is_check_performance: bool,
+    ov_version_override: str,
+):
     backend = example_params["backend"]
     skip_if_backend_not_selected(backend, backends_list)
     venv_path = create_venv_with_nncf(tmp_path, "pip_e_local", "venv", set([backend]))
@@ -51,6 +60,11 @@ def test_examples(tmp_path, example_name, example_params, backends_list, is_chec
         requirements = PROJECT_ROOT / example_params["requirements"]
         run_cmd_line = f"{pip_with_venv} install -r {requirements}"
         subprocess.run(run_cmd_line, check=True, shell=True)
+
+    if ov_version_override is not None:
+        pip_with_venv = get_pip_executable_with_venv(venv_path)
+        ov_version_cmd_line = f"{pip_with_venv} install {ov_version_override}"
+        subprocess.run(ov_version_cmd_line, check=True, shell=True)
 
     env = os.environ.copy()
     env["PYTHONPATH"] = str(PROJECT_ROOT)  # need this to be able to import from tests.* in run_example.py

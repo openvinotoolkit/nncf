@@ -63,7 +63,7 @@ class BinarizedFunctionsCPULoader(ExtensionLoader):
             )
         except ExtensionLoaderTimeoutException as e:
             raise e
-        except Exception as e:  # pylint:disable=broad-except
+        except Exception as e:
             nncf_logger.warning(
                 f"Could not compile CPU binarization extensions. "
                 f"Falling back on torch native operations - "

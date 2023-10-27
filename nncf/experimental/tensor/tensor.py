@@ -128,11 +128,11 @@ class Tensor:
     def flatten(self) -> Tensor:
         return _call_function("flatten", self)
 
-    def max(self, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:
-        return _call_function("max", self, axis)
+    def max(self, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = False) -> Tensor:
+        return _call_function("max", self, axis, keepdims)
 
-    def min(self, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:
-        return _call_function("min", self, axis)
+    def min(self, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = False) -> Tensor:
+        return _call_function("min", self, axis, keepdims)
 
     def abs(self) -> Tensor:
         return _call_function("abs", self)

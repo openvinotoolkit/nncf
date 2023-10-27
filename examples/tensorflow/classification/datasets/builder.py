@@ -130,7 +130,7 @@ class DatasetBuilder(BaseDatasetBuilder):
         label = self._label_preprocessing_fn(label)
         label = tf.cast(label, tf.int32)
         if self._one_hot:
-            label = tf.one_hot(label, self.num_classes)  # pylint: disable=E1120
+            label = tf.one_hot(label, self.num_classes)
             label = tf.reshape(label, [self.num_classes])
 
         return image, label

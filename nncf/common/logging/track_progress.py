@@ -50,13 +50,13 @@ class SeparatorColumn(ProgressColumn):
 class TimeElapsedColumnWithStyle(TimeElapsedColumn):
     def render(self, task: "Task") -> Text:
         text = super().render(task)
-        return Text(text._text[0], style=INTEL_BLUE_COLOR)  # pylint: disable=protected-access
+        return Text(text._text[0], style=INTEL_BLUE_COLOR)
 
 
 class TimeRemainingColumnWithStyle(TimeRemainingColumn):
     def render(self, task: "Task") -> Text:
         text = super().render(task)
-        return Text(text._text[0], style=INTEL_BLUE_COLOR)  # pylint: disable=protected-access
+        return Text(text._text[0], style=INTEL_BLUE_COLOR)
 
 
 class track:

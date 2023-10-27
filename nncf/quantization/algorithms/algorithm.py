@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, Optional, TypeVar
+from typing import List, Optional, TypeVar
 
 from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
@@ -28,11 +28,11 @@ class Algorithm(ABC):
 
     @property
     @abstractmethod
-    def available_backends(self) -> Dict[str, BackendType]:
+    def available_backends(self) -> List[BackendType]:
         """
-        Returns dictionary of the available backends for the algorithm.
+        Returns list of the available backends for the algorithm.
 
-        :return: Dict of backends supported by the algorithm.
+        :return: List of backends supported by the algorithm.
         """
 
     @abstractmethod

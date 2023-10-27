@@ -10,8 +10,6 @@
 # limitations under the License.
 from nncf.common.deprecation import warning_deprecated
 
-# pylint:disable=wrong-import-position
-
 warning_deprecated(
     "Importing from nncf.common.utils.logger is deprecated. "
     "Import `from nncf` directly instead, i.e.: \n"
@@ -19,7 +17,7 @@ warning_deprecated(
     "`from nncf import nncf_logger` instead of `from nncf.common.utils.logger import logger as nncf_logger`"
 )
 
-# pylint:disable=unused-import
+
 from nncf.common.logging.logger import disable_logging as disable_logging  # noqa: E402
 from nncf.common.logging.logger import nncf_logger as logger  # noqa: E402, F401
 from nncf.common.logging.logger import set_log_level as set_log_level  # noqa: E402
