@@ -139,7 +139,7 @@ def create_se_block() -> GraphPattern:
     )
     multiply_node = rest_pattern.add_node(
         **{
-            GraphPattern.LABEL_ATTR: "MULTIPLY",
+            GraphPattern.LABEL_ATTR: "LAST_MULTIPLY",
             GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype,
             GraphPattern.PATTERN_NODE_TO_EXCLUDE: True,
         }
@@ -147,11 +147,12 @@ def create_se_block() -> GraphPattern:
     rest_pattern.add_edge(conv_node_2, sigmoid_node)
     rest_pattern.add_edge(sigmoid_node, multiply_node)
     pattern.join_patterns(rest_pattern)
+    # Connect all NON_PATTERN_NODE with all MULTIPLY
     for component in pattern.get_weakly_connected_subgraphs():
         for node_id, attrs in component.nodes(data=True):
             if attrs[GraphPattern.LABEL_ATTR] == "NON_PATTERN_NODE":
-                non_pattern_node_1 = node_id
-            if attrs[GraphPattern.LABEL_ATTR] == "MULTIPLY":
-                nmultiply_node_1 = node_id
-        pattern.add_edge(non_pattern_node_1, nmultiply_node_1)
+                non_pattern_node = node_id
+            if attrs[GraphPattern.LABEL_ATTR] == "LAST_MULTIPLY":
+                multiply_node = node_id
+        pattern.add_edge(non_pattern_node, multiply_node)
     return pattern
