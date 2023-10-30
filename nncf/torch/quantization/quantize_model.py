@@ -45,9 +45,11 @@ def create_nncf_network(model: torch.nn.Module, dataset: Dataset) -> NNCFNetwork
     """
 
     def get_inputs(dataloader_output: Any) -> Tuple[Tuple, Dict]:
-        if not isinstance(dataloader_output, tuple):
-            dataloader_output = (dataloader_output,)
-        return dataloader_output, {}
+        if isinstance(dataloader_output, dict):
+            return (), dataloader_output
+        if isinstance(dataloader_output, tuple):
+            return dataloader_output, {}
+        return (dataloader_output,), {}
 
     def wrap_inputs(args, kwargs):
         return wrap_nncf_model_inputs_with_objwalk(args, kwargs)
@@ -58,8 +60,8 @@ def create_nncf_network(model: torch.nn.Module, dataset: Dataset) -> NNCFNetwork
     def create_dummy_forward_fn(dataset, device):
         def dummy_forward(model):
             with no_nncf_trace():
-                args = next(iter(dataset.get_inference_data()))
-                args, kwargs = get_inputs(args)
+                data = next(iter(dataset.get_inference_data()))
+                args, kwargs = get_inputs(data)
 
                 def send_to_device(tensor):
                     return tensor.to(device)
