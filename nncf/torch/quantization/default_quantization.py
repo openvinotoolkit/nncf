@@ -44,6 +44,27 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT: Dict[QuantizationTrait, List[PTOperatorMetaty
         operator_metatypes.PTModuleBatchNormMetatype,
         operator_metatypes.PTAvgPool2dMetatype,
         operator_metatypes.PTAvgPool3dMetatype,
+        # 1. Single input activations except Relu and PRelu could not be
+        # executed in INT8 precision by the OpenVINO runtime.
+        # List of supported operations for INT8 execution:
+        # https://docs.openvino.ai/2023.1/openvino_docs_OV_UG_lpt.html#input-model-requirements
+        # 2. In case an activation from Torch is fused to
+        # a specific OpenVINO operation in runtime, it is better to not quantize
+        # this actictivation to keep specific operations fusing.
+        # operator_metatypes.PTHardTanhMetatype,
+        # operator_metatypes.PTHardSwishMetatype,
+        # operator_metatypes.PTHardSigmoidMetatype,
+        # operator_metatypes.PTTanhMetatype,
+        # operator_metatypes.PTELUMetatype,
+        # operator_metatypes.PTLeakyRELUMetatype,
+        # operator_metatypes.PTGELUMetatype,
+        # operator_metatypes.PTErfMetatype,
+        # PTPRELUMetatype is not considered to be QUANTIZATION_AGNOSTIC, because:
+        # 1. Runtime doesn't provide performance benefits by quantizing the stand-alone RELU's (ticket: 59548)
+        # 2. It's frequently better for the end accuracy to have quantizers set up after the RELU
+        # so that the input distribution to the quantizer is non-negative
+        # and we can therefore have better quantization resolution while preserving the original dynamic range
+        # operator_metatypes.PTPRELUMetatype,
     ],
     QuantizationTrait.QUANTIZATION_AGNOSTIC: [
         operator_metatypes.PTThresholdMetatype,
