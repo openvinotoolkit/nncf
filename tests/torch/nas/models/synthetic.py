@@ -335,6 +335,9 @@ class TwoSequentialFcLNTestModel(nn.Module):
     # fc1 -> ln1 -> fc2 -> ln2
     #
     INPUT_SIZE = [1, 1]
+    IMPORTANCE = {
+        "fc1.weight": torch.Tensor([[0.9], [0.1]]),
+    }
 
     def __init__(self):
         super().__init__()
@@ -360,6 +363,19 @@ class TwoSequentialFcLNTestModel(nn.Module):
         ref_ln_weights_1 = torch.Tensor([1, 0]).to(device)
         ref_ln_bias_1 = torch.Tensor([1, 0]).to(device)
         ref_fc_weights_2 = torch.Tensor([[1, 2], [4, 3], [5, 6]]).to(device)
+        assert torch.equal(self.fc1.weight, ref_fc_weights_1)
+        assert torch.equal(self.fc1.bias, ref_fc_bias_1)
+        assert torch.equal(self.fc2.weight, ref_fc_weights_2)
+        assert torch.equal(self.ln1.weight, ref_ln_weights_1)
+        assert torch.equal(self.ln1.bias, ref_ln_bias_1)
+
+    def check_custom_reorg(self):
+        device = get_model_device(self)
+        ref_fc_weights_1 = torch.Tensor([[3], [4]]).to(device)
+        ref_fc_bias_1 = torch.Tensor([3, 4]).to(device)
+        ref_ln_weights_1 = torch.Tensor([0, 1]).to(device)
+        ref_ln_bias_1 = torch.Tensor([0, 1]).to(device)
+        ref_fc_weights_2 = torch.Tensor([[2, 1], [3, 4], [6, 5]]).to(device)
         assert torch.equal(self.fc1.weight, ref_fc_weights_1)
         assert torch.equal(self.fc1.bias, ref_fc_bias_1)
         assert torch.equal(self.fc2.weight, ref_fc_weights_2)

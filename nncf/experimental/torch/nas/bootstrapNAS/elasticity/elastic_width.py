@@ -11,6 +11,7 @@
 
 
 import random
+import re
 from collections import OrderedDict
 from copy import deepcopy
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -76,6 +77,14 @@ WidthList = List[WidthType]
 ElasticWidthSearchSpace = Dict[PruningGroupID, WidthList]
 
 
+def sum_filter(weight_tensor, dim=0):
+    """
+    Calculates the sum for weight_tensor for the selected dimension.
+    """
+    weight_tensor = weight_tensor.transpose(0, dim).contiguous()
+    return torch.sum(weight_tensor.view(weight_tensor.shape[0], -1), dim=1)
+
+
 class ElasticWidthOp:
     """
     Base class for introducing elastic width for the operations. On the forward pass it takes parameters of operations
@@ -133,6 +142,7 @@ class EWParamsStateNames:
     WIDTH_STEP = "width_step"
     WIDTH_MULTIPLIERS = "width_multipliers"
     FILTER_IMPORTANCE = "filter_importance"
+    FILTER_IMPORTANCE_PATH = "filter_importance_path"
     OVERWRITE_GROUPS = "overwrite_groups"
     OVERWRITE_GROUPS_WIDTHS = "overwrite_groups_widths"
     ADD_DYNAMIC_INPUTS = "add_dynamic_inputs"
@@ -149,6 +159,7 @@ class ElasticWidthParams(BaseElasticityParams):
         width_step: int,
         width_multipliers: List[float],
         filter_importance: str,
+        filter_importance_path: Optional[str] = None,
         overwrite_groups: Optional[List[str]] = None,
         overwrite_groups_widths: Optional[List[str]] = None,
         add_dynamic_inputs: Optional[List[str]] = None,
@@ -169,14 +180,18 @@ class ElasticWidthParams(BaseElasticityParams):
         values are obtained by multiplying the original width value with the values in the given list.
         The obtained values are rounded to the nearest smaller value divisible by alignment constant (e.g. 8).
         This parameter is mutually exclusive with `width_step`.
-        :param filter_importance: The type of filter importance metric. Can be one of `L1`, `L2`, `geometric_median`.
-        `L1` by default.
+        :param filter_importance: The type of filter importance metric. Can be one of `L1`, `L2`, `geometric_median`,
+        `custom`. `L1` by default.
+        :param filter_importance_path: Path of custom weight importance. Valid Only when `filter_importance` is `custom`.
         """
         self.min_width = min_width
         self.max_num_widths = max_num_widths
         self.width_step = width_step
         self.width_multipliers = width_multipliers
+        assert filter_importance != "custom" or filter_importance_path is not None, \
+            "Missing custom weight importance path."
         self.filter_importance = filter_importance
+        self.filter_importance_path = filter_importance_path
 
         self.overwrite_groups = overwrite_groups
         self.overwrite_groups_widths = overwrite_groups_widths
@@ -193,6 +208,7 @@ class ElasticWidthParams(BaseElasticityParams):
             cls._state_names.WIDTH_STEP: config.get(cls._state_names.WIDTH_STEP, 32),
             cls._state_names.WIDTH_MULTIPLIERS: config.get(cls._state_names.WIDTH_MULTIPLIERS),
             cls._state_names.FILTER_IMPORTANCE: config.get(cls._state_names.FILTER_IMPORTANCE, "L1"),
+            cls._state_names.FILTER_IMPORTANCE_PATH: config.get(cls._state_names.FILTER_IMPORTANCE_PATH, None),
             cls._state_names.OVERWRITE_GROUPS: config.get(cls._state_names.OVERWRITE_GROUPS, None),
             cls._state_names.OVERWRITE_GROUPS_WIDTHS: config.get(cls._state_names.OVERWRITE_GROUPS_WIDTHS, None),
             cls._state_names.ADD_DYNAMIC_INPUTS: config.get(cls._state_names.ADD_DYNAMIC_INPUTS, None),
@@ -499,6 +515,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
         self,
         target_model: NNCFNetwork,
         filter_importance_fn: Callable[[torch.Tensor, int], torch.Tensor],
+        filter_importance_path: Optional[str],
         weights_normalizer_fn: Optional[Callable[[torch.Tensor], torch.Tensor]],
         node_name_vs_dynamic_input_width_op_map: Dict[NNCFNodeName, ElasticWidthOp],
         pruned_module_groups_info: Clusterization[ElasticWidthInfo](id_fn=lambda x: x.node_name),
@@ -523,6 +540,10 @@ class ElasticWidthHandler(SingleElasticityHandler):
         self._pruned_module_groups_info = pruned_module_groups_info
         self._transformation_commands = transformation_commands
         self._filter_importance_fn = filter_importance_fn
+        self._filter_importance = None
+        if filter_importance_path is not None:
+            self._filter_importance = torch.load(filter_importance_path)
+            nncf_logger.debug("Loaded custom weight importance.")
         self._weights_normalizer_fn = weights_normalizer_fn
         self._add_dynamic_inputs = add_dynamic_inputs
 
@@ -684,7 +705,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
                         if not previous_nodes:
                             break
                         for previous in previous_nodes:
-                            if "output_mask" in previous.data:
+                            if "output_mask" in previous.attributes:
                                 if previous.attributes["output_mask"] is not None:
                                     input_masks.append(previous.attributes["output_mask"])
                                     input_masks = [i for i in input_masks if i]
@@ -758,6 +779,18 @@ class ElasticWidthHandler(SingleElasticityHandler):
                     group_id = cluster.id
         return group_id
 
+    def get_importance_by_node_name(self, node_name: NNCFNodeName):
+        """
+        Return custom weight importance for the current node.
+
+        :param node_name: node name
+        :return: importance tensor
+        """
+        # Map node name to module name
+        key = ".".join(re.findall(re.compile(r'[[](.*?)[]]', re.S), node_name)) + ".weight"
+        assert key in self._filter_importance, f"Cannot find the custom weight importance of {node_name}"
+        return self._filter_importance[key]
+
     def reorganize_weights(self) -> None:
         """
         Reorder output filters in descending order of their importance.
@@ -777,6 +810,8 @@ class ElasticWidthHandler(SingleElasticityHandler):
                 weight = minfo.module.weight
                 if self._weights_normalizer_fn:
                     weight = self._weights_normalizer_fn(minfo.module.weight)
+                if self._filter_importance is not None:
+                    weight = self.get_importance_by_node_name(minfo.node_name).to(device)
                 filters_importance = self._filter_importance_fn(weight, minfo.module.target_weight_dim_for_compression)
                 cumulative_filters_importance += filters_importance
 
@@ -940,7 +975,8 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
         :return: a handler object that can manipulate the elastic width.
         """
         filter_importance_str = self._params.filter_importance
-        filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(filter_importance_str)
+        filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(filter_importance_str, sum_filter)
+        filter_importance_path = self._params.filter_importance_path
 
         graph = target_model.nncf.get_original_graph()
         device = next(target_model.parameters()).device
@@ -1044,6 +1080,7 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
         return ElasticWidthHandler(
             target_model,
             filter_importance,
+            filter_importance_path,
             self._weights_normalizer,
             node_name_vs_dynamic_input_width_op_map,
             pruned_module_groups_info,

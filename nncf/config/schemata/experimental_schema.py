@@ -115,8 +115,13 @@ ELASTIC_WIDTH_SCHEMA = {
         "filter_importance": with_attributes(
             STRING,
             description="The type of filter importance metric. Can be"
-            " one of `L1`, `L2`, `geometric_median`."
+            " one of `L1`, `L2`, `geometric_median`, `custom`."
             " `L2` by default.",
+        ),
+        "filter_importance_path": with_attributes(
+            STRING,
+            description="The path of custom weight importance. Valid Only when "
+            "`filter_importance` is `custom`",
         ),
     },
     "additionalProperties": False,

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import copy
-
+import tempfile
 import pytest
 import torch
 from torch import nn
@@ -144,6 +144,38 @@ def test_width_reorg(basic_model):
     after_reorg = model(dummy_input)
 
     model.check_reorg()
+    compare_tensors_ignoring_the_order(after_reorg, before_reorg)
+
+
+def test_width_custom_reorg(basic_model):
+    if not isinstance(basic_model, TwoSequentialFcLNTestModel):
+        pytest.skip("Skip test for conv model")
+
+    config = get_empty_config(input_sample_sizes=basic_model.INPUT_SIZE)
+    importance = basic_model.IMPORTANCE
+    with tempfile.NamedTemporaryFile() as filter_importance_tempfile:
+        torch.save(importance, filter_importance_tempfile)
+        config.update(
+            {
+                "bootstrapNAS": {
+                    "training": {
+                        "elasticity": {"width": {
+                            "filter_importance": "custom",
+                            "filter_importance_path": filter_importance_tempfile.name
+                        }},
+                    }
+                }
+            }
+        )
+        model, ctrl = create_bootstrap_training_model_and_ctrl(basic_model, config)
+    model.eval()
+    device = next(model.parameters()).device
+    dummy_input = torch.Tensor([1]).reshape(basic_model.INPUT_SIZE).to(device)
+    before_reorg = model(dummy_input)
+    ctrl.multi_elasticity_handler.width_handler.reorganize_weights()
+    after_reorg = model(dummy_input)
+
+    model.check_custom_reorg()
     compare_tensors_ignoring_the_order(after_reorg, before_reorg)
 
 
