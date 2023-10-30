@@ -13,6 +13,7 @@ from nncf.common.graph.patterns.patterns import IgnoredPatternNames
 from nncf.common.utils.registry import Registry
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
+from nncf.onnx.hardware.fused_patterns import atomic_activations_operations
 
 ONNX_IGNORED_PATTERNS = Registry("IGNORED_PATTERNS")
 
@@ -87,4 +88,71 @@ def create_multihead_attention_output() -> GraphPattern:
     pattern = GraphPattern()
     _add_softmax_matmul(pattern)
     _add_softmax_reshape_matmul(pattern)
+    return pattern
+
+
+@ONNX_IGNORED_PATTERNS.register(IgnoredPatternNames.SE_BLOCK)
+def create_se_block() -> GraphPattern:
+    #       NON_PATTERN_NODE--------
+    #    (PATTERN_NODE_TO_EXCLUDE) |
+    #              |               |
+    #         REDUCE_MEAN          |
+    #              |               |
+    #         CONVOLUTION          |
+    #              |               |
+    #          ACTIVATION          |
+    #              |               |
+    #         CONVOLUTION          |
+    #              |               |
+    #     SIGMOID||HARDSIGMOID     |
+    #              |               |
+    #              |               |
+    #             MUL---------------
+    #   (PATTERN_NODE_TO_EXCLUDE)
+    pattern = GraphPattern()
+    non_pattern_node = pattern.add_node(label="NON_PATTERN_NODE", type=GraphPattern.NON_PATTERN_NODE_TYPE)
+    reduce_mean_node = pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "REDUCE_MEAN",
+            GraphPattern.METATYPE_ATTR: om.ONNXReduceMeanMetatype,
+            GraphPattern.PATTERN_NODE_TO_EXCLUDE: True,
+        }
+    )
+    conv_node_1 = pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "CONVOLUTION", GraphPattern.METATYPE_ATTR: om.ONNXConvolutionMetatype}
+    )
+
+    pattern.add_edge(non_pattern_node, reduce_mean_node)
+    pattern.add_edge(reduce_mean_node, conv_node_1)
+    pattern.join_patterns(atomic_activations_operations())
+
+    rest_pattern = GraphPattern()
+    conv_node_2 = rest_pattern.add_node(
+        **{GraphPattern.LABEL_ATTR: "CONVOLUTION", GraphPattern.METATYPE_ATTR: om.ONNXConvolutionMetatype}
+    )
+
+    sigmoid_node = rest_pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "SIGMOID",
+            GraphPattern.METATYPE_ATTR: [om.ONNXSigmoidMetatype, om.ONNXHardSigmoidMetatype],
+        }
+    )
+    multiply_node = rest_pattern.add_node(
+        **{
+            GraphPattern.LABEL_ATTR: "LAST_MULTIPLY",
+            GraphPattern.METATYPE_ATTR: om.ONNXMulLayerMetatype,
+            GraphPattern.PATTERN_NODE_TO_EXCLUDE: True,
+        }
+    )
+    rest_pattern.add_edge(conv_node_2, sigmoid_node)
+    rest_pattern.add_edge(sigmoid_node, multiply_node)
+    pattern.join_patterns(rest_pattern)
+    # Connect all NON_PATTERN_NODE with all MULTIPLY
+    for component in pattern.get_weakly_connected_subgraphs():
+        for node_id, attrs in component.nodes(data=True):
+            if attrs[GraphPattern.LABEL_ATTR] == "NON_PATTERN_NODE":
+                non_pattern_node = node_id
+            if attrs[GraphPattern.LABEL_ATTR] == "LAST_MULTIPLY":
+                multiply_node = node_id
+        pattern.add_edge(non_pattern_node, multiply_node)
     return pattern
