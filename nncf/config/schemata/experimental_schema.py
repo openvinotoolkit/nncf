@@ -301,6 +301,9 @@ BOOTSTRAP_NAS_SEARCH_SCHEMA = {
             description="Defines the reference accuracy from the pre-trained model used "
             "to generate the super-network.",
         ),
+        "compression": make_object_or_array_of_objects_schema(
+            {"oneOf": [{"$ref": f"#/$defs/{KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG}"}]}
+        ),
     },
     "additionalProperties": False,
 }
