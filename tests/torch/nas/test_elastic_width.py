@@ -95,9 +95,7 @@ def test_elastic_width_with_maximum_value():
 
 
 def test_elastic_width_with_intermediate_value():
-    width_handler, supernet = create_two_conv_width_supernet(
-        elasticity_params={"width": BASIC_ELASTIC_WIDTH_PARAMS}
-    )
+    width_handler, supernet = create_two_conv_width_supernet(elasticity_params={"width": BASIC_ELASTIC_WIDTH_PARAMS})
     device = get_model_device(supernet)
 
     ACTIVE_WIDTH = 1
@@ -196,13 +194,9 @@ def fixture_nas_model_name(request):
 
 def test_weight_reorg(nas_model_name, _seed):
     if nas_model_name in ["inception_v3"]:
-        pytest.skip(
-            "Skip test for Inception-V3 because of invalid padding update in elastic kernel (60990)"
-        )
+        pytest.skip("Skip test for Inception-V3 because of invalid padding update in elastic kernel (60990)")
 
-    compressed_model, training_ctrl, dummy_forward = create_bootstrap_nas_training_algo(
-        nas_model_name
-    )
+    compressed_model, training_ctrl, dummy_forward = create_bootstrap_nas_training_algo(nas_model_name)
     compressed_model.eval()
     before_reorg = dummy_forward(compressed_model)
     width_handler = training_ctrl.multi_elasticity_handler.width_handler

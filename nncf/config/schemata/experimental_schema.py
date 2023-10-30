@@ -35,9 +35,7 @@ from nncf.config.schemata.common.targeting import TARGET_SCOPES_DESCRIPTION
 # Experimental Quantization
 ########################################################################################################################
 EXPERIMENTAL_QUANTIZATION_SCHEMA = copy.deepcopy(QUANTIZATION_SCHEMA)
-EXPERIMENTAL_QUANTIZATION_SCHEMA["properties"]["algorithm"][
-    "const"
-] = EXPERIMENTAL_QUANTIZATION_ALGO_NAME_IN_CONFIG
+EXPERIMENTAL_QUANTIZATION_SCHEMA["properties"]["algorithm"]["const"] = EXPERIMENTAL_QUANTIZATION_ALGO_NAME_IN_CONFIG
 
 ########################################################################################################################
 # BootstrapNAS
@@ -124,8 +122,7 @@ ELASTIC_WIDTH_SCHEMA = {
         ),
         "filter_importance_path": with_attributes(
             STRING,
-            description="The path of custom weight importance. Valid Only when "
-            "`filter_importance` is `custom`",
+            description="The path of custom weight importance. Valid Only when " "`filter_importance` is `custom`",
         ),
     },
     "additionalProperties": False,
@@ -176,9 +173,7 @@ STAGE_DESCRIPTOR_SCHEMA = {
             description="Elasticity dimensions that are enabled for subnet sampling,"
             "the rest elastic dimensions are disabled",
         ),
-        "epochs": with_attributes(
-            NUMBER, description="Duration of the training stage in epochs"
-        ),
+        "epochs": with_attributes(NUMBER, description="Duration of the training stage in epochs"),
         "depth_indicator": with_attributes(
             NUMBER,
             description="Restricts the maximum number of blocks in each "
@@ -315,11 +310,7 @@ BOOTSTRAP_NAS_SEARCH_SCHEMA = {
             "to generate the super-network.",
         ),
         "compression": make_object_or_array_of_objects_schema(
-            {
-                "oneOf": [
-                    {"$ref": f"#/$defs/{KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG}"}
-                ]
-            }
+            {"oneOf": [{"$ref": f"#/$defs/{KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG}"}]}
         ),
     },
     "additionalProperties": False,
@@ -376,9 +367,7 @@ MOVEMENT_SCHEDULER_PARAMS_SCHEMA = {
             NUMBER,
             description="Index of the starting epoch (include) for warmup stage.",
         ),
-        "warmup_end_epoch": with_attributes(
-            NUMBER, description="Index of the end epoch (exclude) for warmup stage."
-        ),
+        "warmup_end_epoch": with_attributes(NUMBER, description="Index of the end epoch (exclude) for warmup stage."),
         "importance_regularization_factor": with_attributes(
             NUMBER,
             description="The regularization factor on weight importance scores. With a larger "
