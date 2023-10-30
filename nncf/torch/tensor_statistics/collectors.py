@@ -179,7 +179,12 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
                 np.quantile(tensor.tensor.detach().cpu().numpy(), q=quantile, axis=axis, keepdims=keepdims)
             )
         else:
-            result = torch.quantile(tensor.tensor, torch.tensor(quantile).type(tensor.tensor.dtype), axis, keepdims)
+            result = torch.quantile(
+                tensor.tensor,
+                torch.tensor(quantile, dtype=tensor.tensor.dtype, device=tensor.tensor.device),
+                axis,
+                keepdims,
+            )
         result = result.type(tensor.tensor.dtype).to(device)
         return [PTNNCFTensor(x) for x in result]
 

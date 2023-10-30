@@ -850,7 +850,9 @@ def _moveaxes_flatten_cat(
         transposed_t = tensor_processor.transpose(tensor, transpose_dims)
         reshaped_tensors.append(tensor_processor.reshape(transposed_t, reshape_shape))
 
-    shape_after_aggregation = tuple(1 if idx in aggregation_axes else dim for idx, dim in enumerate(tensor_shape))
+    shape_after_aggregation = (1,) + tuple(
+        1 if idx in aggregation_axes else dim for idx, dim in enumerate(tensor_shape)
+    )
     return tensor_processor.cat(reshaped_tensors, axis=0), shape_after_aggregation
 
 
