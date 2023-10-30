@@ -218,7 +218,7 @@ timm/mobilenetv3_small_050_backend_ONNX:
     metric_value: 0.5456
     metric_value_fp32: 0.56338
 timm/mobilenetv3_small_050_backend_OV:
-    metric_value: 0.38638
+    metric_value: 0.413
     metric_value_fp32: 0.56338
 timm/mobilenetv3_small_050_backend_POT:
     metric_value: 0.54104
