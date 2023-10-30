@@ -226,13 +226,13 @@ with open("hello.txt") as hello_file:
     for line in hello_file:
         print(line)
 ```
+
 Use `pathlib.Path` instead of `os.*` methods for handling paths.
 It is preferrable to have `pathlib.Path` objects instead of `str` to represent file paths in the code logic if performance is not critical, converting these to `str` for external APIs that cannot handle `Path` objects.
 
 <a id="s3.7-abstract-classes"></a>
 <a id="37-abstract-classes"></a>
 <a id="abstract-classes"></a>
-
 
 ### 3.7 Abstract Classes
 
@@ -811,25 +811,25 @@ Parameters of test cases and fixtures should be type-hinted just like any other 
 Test cases should ideally all have docstrings, except for the simple ones which are sufficiently described either by their names or by the simplicity of the code.
 
 For purposes of setting up test environment for a given case, or reusing setup/teardown code, or parametrizing complex cases the [fixture](https://docs.pytest.org/en/7.4.x/explanation/fixtures.html#about-fixtures) approach should be used.
-[Fixture scoping](https://docs.pytest.org/en/6.2.x/fixture.html#scope-sharing-fixtures-across-classes-modules-packages-or-session) should be leveraged depending on the use case - for instance, a class-scoped fixture can be utilized to provide a storage object for data gathered in individual cases inside the class, and to post-process this data after the test cases in the class have all been executed.
+[Fixture scoping](https://docs.pytest.org/en/7.4.x/fixture.html#scope-sharing-fixtures-across-classes-modules-packages-or-session) should be leveraged depending on the use case - for instance, a class-scoped fixture can be utilized to provide a storage object for data gathered in individual cases inside the class, and to post-process this data after the test cases in the class have all been executed.
 The fixtures that are meant to be reused in multiple test files should be defined in a corresponding `conftest.py` file, instead of importing these where they are needed from another non-`conftest.py` file where they were defined - otherwise the linters will try to remove it as an unused import and also the import itself may have an effect on how the fixture is executed based on its scope.
 
-Test cases may be parametrized either using a `@pytest.mark.parametrize` decorator (for simple parametrizations), or by using [parametrized fixtures](https://docs.pytest.org/en/6.2.x/fixture.html#parametrizing-fixtures) in case the test requires complex parametrization, or in case the parameters have to be preprocessed in a complex fashion before being passed into the test.
+Test cases may be parametrized either using a `@pytest.mark.parametrize` decorator (for simple parametrizations), or by using [parametrized fixtures](https://docs.pytest.org/en/7.4.x/fixture.html#parametrizing-fixtures) in case the test requires complex parametrization, or in case the parameters have to be preprocessed in a complex fashion before being passed into the test.
 The parameter set ("test structs") for each test case should be represented as a collection of type-hinted class objects (or dataclass objects).
 Do not use tuples, or namedtuples, or dicts to represent an individual parameter - these cannot be typed or refactored effectively, and for complex cases it is hard to visually tell by looking at the definiton of the parameter (test struct) just what each sub-parameter means.
+A set of IDs should be defined manually or by using an `idfn` for each case defined by the structs so that it is easier to distinguish visually between the test cases.
 When instantiating a test struct object, specify init arguments explicitly as keywords for increased visibility.
 
 Bad:
 
 ```python3
-@pytest.mark.parametrize([(42, "foo", None),
-                          (1337, "bar", RuntimeError)])
+@pytest.mark.parametrize("param", [(42, "foo", None), (1337, "bar", RuntimeError)])
 def test_case_parametrized(param):
     assert function_call() == param[0]
     assert another_object.attribute != param[1]
     if param[2] is not None:
-      with pytest.raises(param[2]):
-        should_raise()
+        with pytest.raises(param[2]):
+            should_raise()
 ```
 
 Good:
@@ -837,22 +837,35 @@ Good:
 ```python3
 @dataclass
 class StructForTest:
-  expected_return_value: int
-  prohibited_attribute_value: str
-  raises: Optional[Type[Exception]]
-  
-@pytest.mark.parametrize([StructForTest(expected_return_value=42,
-                                        prohibited_attribute_value="foo",
-                                        raises=None),
-                          StructForTest(expected_return_value=1337, 
-                                        prohibited_attribute_value="bar", 
-                                        raises=RuntimeError)])
+    expected_return_value: int
+    prohibited_attribute_value: str
+    raises: Optional[Type[Exception]]
+
+
+def idfn(x: StructForTest) -> str:
+    return f"{x.expected_return_value}-{x.prohibited_attribute_value}-{x.raises}"
+
+
+@pytest.mark.parametrize(
+    "ts",
+    [
+        StructForTest(
+            expected_return_value=42, prohibited_attribute_value="foo", raises=None
+        ),
+        StructForTest(
+            expected_return_value=1337,
+            prohibited_attribute_value="bar",
+            raises=RuntimeError,
+        ),
+    ],
+    idfn=idfn,
+)
 def test_case_parametrized(ts: StructForTest):
     assert function_call() == ts.expected_return_value
     assert another_object.attribute != ts.prohibited_attribute_value
     if ts.raises is not None:
-      with pytest.raises(ts.raises):
-        should_raise()
+        with pytest.raises(ts.raises):
+            should_raise()
 ```
 
 The xunit-style setup and teardown functions ([described here](https://docs.pytest.org/en/7.4.x/how-to/xunit_setup.html#xunitsetup)) are disallowed.
