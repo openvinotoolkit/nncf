@@ -8,12 +8,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import pytest
 from openvino.runtime import Model
 from openvino.runtime import Shape
 from openvino.runtime import Type
 from openvino.runtime import op
 from openvino.runtime import opset8
-import pytest
 
 import nncf
 from nncf import Dataset
