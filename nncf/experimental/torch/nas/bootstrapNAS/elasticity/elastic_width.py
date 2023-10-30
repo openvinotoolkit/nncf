@@ -182,7 +182,8 @@ class ElasticWidthParams(BaseElasticityParams):
         This parameter is mutually exclusive with `width_step`.
         :param filter_importance: The type of filter importance metric. Can be one of `L1`, `L2`, `geometric_median`,
         `custom`. `L1` by default.
-        :param filter_importance_path: Path of custom weight importance. Valid Only when `filter_importance` is `custom`.
+        :param filter_importance_path: Path to custom weight importance. Valid only when `filter_importance`
+        is `custom`.
         """
         self.min_width = min_width
         self.max_num_widths = max_num_widths
