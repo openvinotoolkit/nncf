@@ -139,50 +139,64 @@ class LinearMultiShapeModel(nn.Module):
     def __init__(self) -> None:
         super().__init__()
         with set_torch_seed():
-            self.matmul_1_data = torch.randn((4, 4), dtype=torch.float32)
-            self.matmul_2_data = torch.randn((4, 4), dtype=torch.float32)
-            self.matmul_3_data = torch.randn((1, 8, 2), dtype=torch.float32)
-            self.matmul_4_data = torch.randn((1, 8, 3), dtype=torch.float32)
-            self.matmul_5_data = torch.randn((1), dtype=torch.float32)
-            self.matmul_6_data = torch.randn((8), dtype=torch.float32)
+            self.matmul_1_data = self.get_data((4, 4))
+            self.matmul_2_data = self.get_data((4, 4))
+            self.matmul_3_data = self.get_data((1, 8, 2))
+            self.matmul_4_data = self.get_data((1, 8, 3))
+            self.matmul_5_data = self.get_data((1))
+            self.matmul_6_data = self.get_data((8))
 
             self.linear_1 = nn.Linear(2, 8)
-            self.linear_1.weight.data = torch.randn((8, 2), dtype=torch.float32)
-            self.linear_1.bias.data = torch.randn((1, 8), dtype=torch.float32)
+            self.linear_1.weight.data = self.get_data((8, 2))
+            self.linear_1.bias.data = self.get_data((1, 8))
 
             self.linear_2 = nn.Linear(2, 8)
-            self.linear_2.weight.data = torch.randn((8, 2), dtype=torch.float32)
-            self.linear_2.bias.data = torch.randn((1, 8), dtype=torch.float32)
+            self.linear_2.weight.data = self.get_data((8, 2))
+            self.linear_2.bias.data = self.get_data((1, 8))
 
-            self.matmul_7_data = torch.randn((6, 6), dtype=torch.float32)
-            self.matmul_8_data = torch.randn((10, 6), dtype=torch.float32)
+            self.matmul_7_data = self.get_data((6, 6))
+            self.matmul_8_data = self.get_data((10, 6))
+
+            self.add_1_data = self.get_data((1, 3, 2, 4))
+            self.add_2_data = self.get_data((1, 3, 8))
+            self.add_3_data = self.get_data((1, 6))
+            self.add_4_data = self.get_data((1, 8))
+
+    @staticmethod
+    def get_data(shape: Tuple[int]) -> torch.Tensor:
+        return torch.randn(shape, dtype=torch.float32)
 
     def forward(self, x):
         x = torch.reshape(x, (1, 3, 2, 4))
+        x = torch.add(x, self.add_1_data)
 
         x_1 = torch.matmul(x, self.matmul_1_data)
         x_2 = torch.matmul(x, self.matmul_2_data)
 
         x = torch.add(x_1, x_2)
         x_1 = torch.reshape(x, (1, 3, 8))
+        x_1 = torch.add(x_1, self.add_2_data)
 
         x_1_1 = torch.matmul(x_1, self.matmul_3_data)
         x_1_1 = torch.reshape(x_1_1, (1, 6))
+        x_1_1 = torch.add(x_1_1, self.add_3_data)
         x_1_1 = torch.matmul(self.matmul_5_data, x_1_1)
 
         x_1_2 = torch.matmul(self.matmul_4_data, x_1)
         x_1_2 = torch.max(x_1_2, 1).values
+        x_1_2 = torch.add(x_1_2, self.add_4_data)
         x_1_2 = torch.matmul(x_1_2, self.matmul_6_data)
 
         x_2, x_3 = torch.split(x, 2, 3)
         x_2 = self.linear_1(x_2)
         x_2 = torch.min(x_2, -1).values
         x_2 = torch.flatten(x_2)
-        x_2 = torch.matmul(x_2, self.matmul_7_data)
         x_3 = self.linear_2(x_3)
         x_3 = torch.mean(x_3, -1)
         x_3 = torch.flatten(x_3)
-        x_3 = torch.matmul(self.matmul_8_data, x_3)
+        x_2_3 = torch.add(x_2, x_3)
+        x_2 = torch.matmul(x_2_3, self.matmul_7_data)
+        x_3 = torch.matmul(self.matmul_8_data, x_2_3)
         return x_1_1, x_1_2, x_2, x_3
 
 

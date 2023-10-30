@@ -49,7 +49,7 @@ def min_max_quantize_model(
     advanced_parameters = quantization_params.get("advanced_parameters", AdvancedQuantizationParameters())
     advanced_parameters.disable_bias_correction = True
     advanced_parameters.disable_channel_alignment = True
-    advanced_parameters.smooth_quant_alpha = -1
+    advanced_parameters.smooth_quant_params = AdvancedQuantizationParameters(matmul=-1)
     quantization_params["advanced_parameters"] = advanced_parameters
 
     post_training_quantization = PostTrainingQuantization(subset_size=1, **quantization_params)

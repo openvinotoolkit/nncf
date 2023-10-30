@@ -21,6 +21,7 @@ from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.parameters import ModelType
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
@@ -79,7 +80,9 @@ class TemplateTestSQAlgorithm:
             subset_size=1,
             model_type=ModelType.TRANSFORMER,
             advanced_parameters=AdvancedQuantizationParameters(
-                overflow_fix=OverflowFix.DISABLE, smooth_quant_alpha=0.95, inplace_statistics=False
+                overflow_fix=OverflowFix.DISABLE,
+                smooth_quant_params=AdvancedSmoothQuantParameters(matmul=0.95),
+                inplace_statistics=False,
             ),
         )
 
@@ -89,28 +92,16 @@ class TemplateTestSQAlgorithm:
             (
                 LinearMultiShapeModel,
                 {
-                    "/Reshape_0_0/sq_multiply": [[[[1.0594617, 1.1019668, 1.2208323, 1.1003988]]]],
-                    "/Split_1_0/sq_multiply": [[[[1.1276343, 0.7605822]]]],
-                    "/Split_0_0/sq_multiply": [[[[0.32575992, 0.33121374]]]],
-                    "/Reshape_1_0_0/sq_multiply": [
-                        [
-                            [
-                                0.3251956,
-                                0.3326432,
-                                1.5490624,
-                                0.7233769,
-                                0.3689916,
-                                0.4845651,
-                                1.2022541,
-                                1.3118246,
-                            ]
-                        ]
+                    "/Add_0_0/nncf_smooth_quant": [[[[0.684977, 0.41752037, 0.51843774, 0.4748209]]]],
+                    "/Add_2_0_0/nncf_smooth_quant": [
+                        [[0.42803988, 0.5207079, 0.38387775, 0.49169466, 0.42942598, 0.2673041, 0.59089565, 0.5632654]]
                     ],
-                    "/Reshape_1_0_1/sq_multiply": [[[0.4699388], [0.3369332], [0.3674589]]],
-                    "/Reshape_2_0_0/sq_multiply": [[0.1242606]],
-                    "/ReduceMax_0_0/sq_multiply": [
-                        [0.0944255, 0.0853033, 0.7187095, 0.3429819, 0.1422914, 0.2127623, 0.4640060, 0.7210725]
+                    "/Add_3_0_0/nncf_smooth_quant": [[0.15430021]],
+                    "/Add_4_0_0/nncf_smooth_quant": [
+                        [0.15295707, 0.10677531, 0.4993426, 0.23435812, 0.37076628, 0.07112932, 0.21237421, 0.24852793]
                     ],
+                    "/Add_5_0_0/nncf_smooth_quant": 0.13425705,
+                    "/Add_5_0_1/nncf_smooth_quant": 0.13582686,
                 },
             ),
         ),
@@ -154,14 +145,12 @@ class TemplateTestSQAlgorithm:
                 [
                     ("/MatMul_1", 0),
                     ("/MatMul", 0),
-                    ("/linear_2/MatMul", 0),
-                    ("/linear_1/MatMul", 0),
                     ("/MatMul_2", 0),
                     ("/MatMul_4", 1),
-                    ("55", 1),
-                    ("41", 0),
-                    ("19", 1),
-                    ("24", 0),
+                    ("25", 1),
+                    ("32", 0),
+                    ("64", 1),
+                    ("62", 0),
                 ],
             ),
         ),
@@ -172,7 +161,8 @@ class TemplateTestSQAlgorithm:
 
         algo = SmoothQuant()
         algo._set_backend_entity(model)
-        smooth_data = algo._get_nodes_to_smooth_data(nncf_graph)
+        alpha_map = algo._get_alpha_map()
+        smooth_data = algo._get_nodes_to_smooth_data(nncf_graph, alpha_map.keys())
         smooth_data = {d["node_to_smooth"].node_name: d["input_act_port"] for d in smooth_data}
 
         for ref_node_name, ref_port_id in references:
