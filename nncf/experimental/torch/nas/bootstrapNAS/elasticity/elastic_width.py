@@ -188,8 +188,9 @@ class ElasticWidthParams(BaseElasticityParams):
         self.max_num_widths = max_num_widths
         self.width_step = width_step
         self.width_multipliers = width_multipliers
-        assert filter_importance != "custom" or filter_importance_path is not None, \
-            "Missing custom weight importance path."
+        assert (
+            filter_importance != "custom" or filter_importance_path is not None
+        ), "Missing custom weight importance path."
         self.filter_importance = filter_importance
         self.filter_importance_path = filter_importance_path
 
@@ -204,14 +205,28 @@ class ElasticWidthParams(BaseElasticityParams):
         """
         kwargs = {
             cls._state_names.MIN_WIDTH: config.get(cls._state_names.MIN_WIDTH, 32),
-            cls._state_names.MAX_NUM_WIDTHS: config.get(cls._state_names.MAX_NUM_WIDTHS, -1),
+            cls._state_names.MAX_NUM_WIDTHS: config.get(
+                cls._state_names.MAX_NUM_WIDTHS, -1
+            ),
             cls._state_names.WIDTH_STEP: config.get(cls._state_names.WIDTH_STEP, 32),
-            cls._state_names.WIDTH_MULTIPLIERS: config.get(cls._state_names.WIDTH_MULTIPLIERS),
-            cls._state_names.FILTER_IMPORTANCE: config.get(cls._state_names.FILTER_IMPORTANCE, "L1"),
-            cls._state_names.FILTER_IMPORTANCE_PATH: config.get(cls._state_names.FILTER_IMPORTANCE_PATH, None),
-            cls._state_names.OVERWRITE_GROUPS: config.get(cls._state_names.OVERWRITE_GROUPS, None),
-            cls._state_names.OVERWRITE_GROUPS_WIDTHS: config.get(cls._state_names.OVERWRITE_GROUPS_WIDTHS, None),
-            cls._state_names.ADD_DYNAMIC_INPUTS: config.get(cls._state_names.ADD_DYNAMIC_INPUTS, None),
+            cls._state_names.WIDTH_MULTIPLIERS: config.get(
+                cls._state_names.WIDTH_MULTIPLIERS
+            ),
+            cls._state_names.FILTER_IMPORTANCE: config.get(
+                cls._state_names.FILTER_IMPORTANCE, "L1"
+            ),
+            cls._state_names.FILTER_IMPORTANCE_PATH: config.get(
+                cls._state_names.FILTER_IMPORTANCE_PATH, None
+            ),
+            cls._state_names.OVERWRITE_GROUPS: config.get(
+                cls._state_names.OVERWRITE_GROUPS, None
+            ),
+            cls._state_names.OVERWRITE_GROUPS_WIDTHS: config.get(
+                cls._state_names.OVERWRITE_GROUPS_WIDTHS, None
+            ),
+            cls._state_names.ADD_DYNAMIC_INPUTS: config.get(
+                cls._state_names.ADD_DYNAMIC_INPUTS, None
+            ),
         }
         return cls(**kwargs)
 
@@ -259,7 +274,11 @@ class ElasticOutputWidthOp(ElasticWidthOp):
     """
 
     def __init__(
-        self, max_width: int, node_name: str, params: ElasticWidthParams, fixed_width_list: Optional[List[int]] = None
+        self,
+        max_width: int,
+        node_name: str,
+        params: ElasticWidthParams,
+        fixed_width_list: Optional[List[int]] = None,
     ):
         """
         Constructor.
@@ -278,7 +297,9 @@ class ElasticOutputWidthOp(ElasticWidthOp):
                     f"Width list for {node_name} contains invalid values: {fixed_width_list}, {max_width}"
                 )
             if fixed_width_list[0] != max_width:
-                raise RuntimeError(f"Max width for {node_name} is not aligned with pre-trained model")
+                raise RuntimeError(
+                    f"Max width for {node_name} is not aligned with pre-trained model"
+                )
             self._width_list = fixed_width_list
         else:
             self._width_list = self._generate_width_list(self._max_width, params)
@@ -451,7 +472,9 @@ class ElasticInputWidthLayerNormOp(ElasticWidthOp, nn.Module):
     Introduces elastic input width for layernorm layer.
     """
 
-    def forward(self, weight: torch.Tensor, bias: torch.Tensor, normalized_shape: torch.Tensor) -> List[torch.Tensor]:
+    def forward(
+        self, weight: torch.Tensor, bias: torch.Tensor, normalized_shape: torch.Tensor
+    ) -> List[torch.Tensor]:
         """
         Trims layernorm parameters according to active number of input channels.
         :param weight: weight tensor to be trimmed
@@ -459,8 +482,14 @@ class ElasticInputWidthLayerNormOp(ElasticWidthOp, nn.Module):
         :param normalized_shape: normalized_shape to be trimmed
         :return: list of trimmed layernorm parameters
         """
-        assert len(normalized_shape) == 1, "Currently only 1-dimensional shape is supported."
-        return [weight[: self._active_width], bias[: self._active_width], (self._active_width,)]
+        assert (
+            len(normalized_shape) == 1
+        ), "Currently only 1-dimensional shape is supported."
+        return [
+            weight[: self._active_width],
+            bias[: self._active_width],
+            (self._active_width,),
+        ]
 
 
 class ElasticOutputWidthConv2DOp(ElasticOutputWidthOp, nn.Module):
@@ -468,7 +497,9 @@ class ElasticOutputWidthConv2DOp(ElasticOutputWidthOp, nn.Module):
     Introduces elastic output width for 2D convolution.
     """
 
-    def forward(self, weight: torch.Tensor, bias: Optional[torch.Tensor]) -> List[torch.Tensor]:
+    def forward(
+        self, weight: torch.Tensor, bias: Optional[torch.Tensor]
+    ) -> List[torch.Tensor]:
         """
         Trims convolution parameters according to active number of output channels.
 
@@ -476,7 +507,9 @@ class ElasticOutputWidthConv2DOp(ElasticOutputWidthOp, nn.Module):
         :param bias: bias tensor to be trimmed
         :return: list of trimmed convolution parameters
         """
-        nncf_logger.debug(f"Conv2d with active width={self._active_width} in scope={self._node_name}")
+        nncf_logger.debug(
+            f"Conv2d with active width={self._active_width} in scope={self._node_name}"
+        )
         num_out_channels = self._active_width
         new_bias = None if bias is None else bias[:num_out_channels]
         new_weights = weight[:num_out_channels, :, :, :]
@@ -488,7 +521,9 @@ class ElasticOutputWidthLinearOp(ElasticOutputWidthOp, nn.Module):
     Introduces elastic output width for linear layer.
     """
 
-    def forward(self, weight: torch.Tensor, bias: Optional[torch.Tensor]) -> List[torch.Tensor]:
+    def forward(
+        self, weight: torch.Tensor, bias: Optional[torch.Tensor]
+    ) -> List[torch.Tensor]:
         """
         Trims linear layer's parameters according to active number of output channels.
 
@@ -518,7 +553,9 @@ class ElasticWidthHandler(SingleElasticityHandler):
         filter_importance_path: Optional[str],
         weights_normalizer_fn: Optional[Callable[[torch.Tensor], torch.Tensor]],
         node_name_vs_dynamic_input_width_op_map: Dict[NNCFNodeName, ElasticWidthOp],
-        pruned_module_groups_info: Clusterization[ElasticWidthInfo](id_fn=lambda x: x.node_name),
+        pruned_module_groups_info: Clusterization[ElasticWidthInfo](
+            id_fn=lambda x: x.node_name
+        ),
         transformation_commands: List[TransformationCommand],
         add_dynamic_inputs: Optional[List[str]] = None,
     ):
@@ -536,7 +573,9 @@ class ElasticWidthHandler(SingleElasticityHandler):
         """
         super().__init__()
         self._target_model = target_model
-        self._node_name_vs_dynamic_input_width_op_map = node_name_vs_dynamic_input_width_op_map
+        self._node_name_vs_dynamic_input_width_op_map = (
+            node_name_vs_dynamic_input_width_op_map
+        )
         self._pruned_module_groups_info = pruned_module_groups_info
         self._transformation_commands = transformation_commands
         self._filter_importance_fn = filter_importance_fn
@@ -550,9 +589,12 @@ class ElasticWidthHandler(SingleElasticityHandler):
         graph = self._target_model.nncf.get_original_graph()
         prunable_types = [NNCFConv2d.op_func_name, NNCFLinear.op_func_name]
         self._shape_pruning_processor = ShapePruningProcessor(
-            prunable_types=prunable_types, pruning_operations_metatype=PT_PRUNING_OPERATOR_METATYPES
+            prunable_types=prunable_types,
+            pruning_operations_metatype=PT_PRUNING_OPERATOR_METATYPES,
         )
-        self._next_nodes = self._shape_pruning_processor.get_next_nodes(graph, pruned_module_groups_info)
+        self._next_nodes = self._shape_pruning_processor.get_next_nodes(
+            graph, pruned_module_groups_info
+        )
         # Need a copy because it will be used for adding `output_mask`/`input_masks` to nodes that are relevant to
         # Elastic Width only and therefore it should be isolated to not intercept with other algorithms.
         self._propagation_graph = deepcopy(graph)
@@ -582,7 +624,9 @@ class ElasticWidthHandler(SingleElasticityHandler):
         :param state: Output of `get_state()` method.
         """
         super().load_state(state)
-        self.width_num_params_indicator = state[self._width_state_names.WIDTH_NUM_PARAMS_INDICATOR]
+        self.width_num_params_indicator = state[
+            self._width_state_names.WIDTH_NUM_PARAMS_INDICATOR
+        ]
 
     def get_state(self) -> Dict[str, Any]:
         """
@@ -591,7 +635,9 @@ class ElasticWidthHandler(SingleElasticityHandler):
         :return: state of the object
         """
         state = super().get_state()
-        state[self._width_state_names.WIDTH_NUM_PARAMS_INDICATOR] = self.width_num_params_indicator
+        state[
+            self._width_state_names.WIDTH_NUM_PARAMS_INDICATOR
+        ] = self.width_num_params_indicator
         return state
 
     def get_transformation_commands(self) -> List[TransformationCommand]:
@@ -607,7 +653,9 @@ class ElasticWidthHandler(SingleElasticityHandler):
         if self._width_num_params_indicator == -1:
             return self._collect_ops_data_by_selection_rule(lambda op: op.width_list)
         return self._collect_ops_data_by_selection_rule(
-            lambda op: op.width_list[: min(self._width_num_params_indicator, len(op.width_list))]
+            lambda op: op.width_list[
+                : min(self._width_num_params_indicator, len(op.width_list))
+            ]
         )
 
     def get_active_config(self) -> ElasticWidthConfig:
@@ -616,7 +664,9 @@ class ElasticWidthHandler(SingleElasticityHandler):
 
         :return: map of pruning group id to width value
         """
-        return self._collect_ops_data_by_selection_rule(lambda op: op.get_active_width())
+        return self._collect_ops_data_by_selection_rule(
+            lambda op: op.get_active_width()
+        )
 
     def get_random_config(self) -> ElasticWidthConfig:
         """
@@ -625,7 +675,9 @@ class ElasticWidthHandler(SingleElasticityHandler):
         :return: map of pruning group id to width value
         """
         return self._collect_ops_data_by_selection_rule(
-            lambda op: op.width_list[random.randrange(0, self._get_width_list_len(op))]  # nosec
+            lambda op: op.width_list[
+                random.randrange(0, self._get_width_list_len(op))
+            ]  # nosec
         )
 
     def get_minimum_config(self) -> ElasticWidthConfig:
@@ -634,7 +686,9 @@ class ElasticWidthHandler(SingleElasticityHandler):
 
         :return: map of pruning group id to width value
         """
-        return self._collect_ops_data_by_selection_rule(lambda op: min(self._get_width_list(op)))
+        return self._collect_ops_data_by_selection_rule(
+            lambda op: min(self._get_width_list(op))
+        )
 
     def get_maximum_config(self) -> ElasticWidthConfig:
         """
@@ -642,13 +696,17 @@ class ElasticWidthHandler(SingleElasticityHandler):
 
         :return: map of pruning group id to width value
         """
-        return self._collect_ops_data_by_selection_rule(lambda op: max(self._get_width_list(op)))
+        return self._collect_ops_data_by_selection_rule(
+            lambda op: max(self._get_width_list(op))
+        )
 
     def activate_supernet(self) -> None:
         """
         Activates the Supernet - the original network to which elasticity was applied.
         """
-        supernet_config = self._collect_ops_data_by_selection_rule(lambda op: op.max_width)
+        supernet_config = self._collect_ops_data_by_selection_rule(
+            lambda op: op.max_width
+        )
         self.activate_subnet_for_config(supernet_config)
 
     def activate_subnet_for_config(self, config: ElasticWidthConfig) -> None:
@@ -674,11 +732,16 @@ class ElasticWidthHandler(SingleElasticityHandler):
                 names_of_processed_nodes.add(node_id)
 
         algo = MaskPropagationAlgorithm(
-            self._propagation_graph, PT_PRUNING_OPERATOR_METATYPES, PTNNCFPruningTensorProcessor
+            self._propagation_graph,
+            PT_PRUNING_OPERATOR_METATYPES,
+            PTNNCFPruningTensorProcessor,
         )
         algo.mask_propagation()
 
-        for node_name, dynamic_input_width_op in self._node_name_vs_dynamic_input_width_op_map.items():
+        for (
+            node_name,
+            dynamic_input_width_op,
+        ) in self._node_name_vs_dynamic_input_width_op_map.items():
             node = self._propagation_graph.get_node_by_name(node_name)
             input_masks = get_input_masks(node, self._propagation_graph)
             was_set = False
@@ -694,20 +757,28 @@ class ElasticWidthHandler(SingleElasticityHandler):
 
             if self._add_dynamic_inputs:
                 if node_name in self._add_dynamic_inputs and not was_set:
-                    nncf_logger.debug(f"setting input width by user's request for scope={node_name}")
+                    nncf_logger.debug(
+                        f"setting input width by user's request for scope={node_name}"
+                    )
                     nodes_to_check = [node]
                     while any(elem is None for elem in input_masks):
                         previous_nodes = []
                         for node in nodes_to_check:
-                            previous_nodes.append(self._propagation_graph.get_previous_nodes(node))
+                            previous_nodes.append(
+                                self._propagation_graph.get_previous_nodes(node)
+                            )
                         nodes_to_check.clear()
-                        previous_nodes = [item for nodes in previous_nodes for item in nodes]
+                        previous_nodes = [
+                            item for nodes in previous_nodes for item in nodes
+                        ]
                         if not previous_nodes:
                             break
                         for previous in previous_nodes:
                             if "output_mask" in previous.attributes:
                                 if previous.attributes["output_mask"] is not None:
-                                    input_masks.append(previous.attributes["output_mask"])
+                                    input_masks.append(
+                                        previous.attributes["output_mask"]
+                                    )
                                     input_masks = [i for i in input_masks if i]
                                 else:
                                     nodes_to_check.append(previous)
@@ -720,9 +791,13 @@ class ElasticWidthHandler(SingleElasticityHandler):
                             dynamic_input_width_op.set_active_width(input_width)
                             was_set = True
                     if was_set:
-                        nncf_logger.debug(f"Success setting up user's request for dynamic input at scope={node_name}")
+                        nncf_logger.debug(
+                            f"Success setting up user's request for dynamic input at scope={node_name}"
+                        )
 
-    def get_active_in_out_width_values(self) -> Tuple[Dict[NNCFNodeName, int], Dict[NNCFNodeName, int]]:
+    def get_active_in_out_width_values(
+        self,
+    ) -> Tuple[Dict[NNCFNodeName, int], Dict[NNCFNodeName, int]]:
         """
         Collects the active number of input and output channels (width) for each elastic layer in the graph.
 
@@ -736,7 +811,9 @@ class ElasticWidthHandler(SingleElasticityHandler):
 
         for group in self._pruned_module_groups_info.get_all_clusters():
             assert all(
-                out_channels[group.elements[0].node_name] == out_channels[node.node_name] for node in group.elements
+                out_channels[group.elements[0].node_name]
+                == out_channels[node.node_name]
+                for node in group.elements
             )
             first_elastic_width_info: ElasticWidthInfo = group.elements[0]
             first_elastic_op: ElasticOutputWidthOp = first_elastic_width_info.elastic_op
@@ -787,8 +864,13 @@ class ElasticWidthHandler(SingleElasticityHandler):
         :return: importance tensor
         """
         # Map node name to module name
-        key = ".".join(re.findall(re.compile(r'[[](.*?)[]]', re.S), node_name)) + ".weight"
-        assert key in self._filter_importance, f"Cannot find the custom weight importance of {node_name}"
+        key = (
+            ".".join(re.findall(re.compile(r"[[](.*?)[]]", re.S), node_name))
+            + ".weight"
+        )
+        assert (
+            key in self._filter_importance
+        ), f"Cannot find the custom weight importance of {node_name}"
         return self._filter_importance[key]
 
     def reorganize_weights(self) -> None:
@@ -800,7 +882,9 @@ class ElasticWidthHandler(SingleElasticityHandler):
 
         # 1. Calculate filter importance for all groups of prunable layers
         for group in self._pruned_module_groups_info.get_all_clusters():
-            filters_num = torch.tensor([get_filters_num(minfo.module) for minfo in group.elements])
+            filters_num = torch.tensor(
+                [get_filters_num(minfo.module) for minfo in group.elements]
+            )
             assert torch.all(filters_num == filters_num[0])
             device = group.elements[0].module.weight.device
 
@@ -811,11 +895,17 @@ class ElasticWidthHandler(SingleElasticityHandler):
                 if self._weights_normalizer_fn:
                     weight = self._weights_normalizer_fn(minfo.module.weight)
                 if self._filter_importance is not None:
-                    weight = self.get_importance_by_node_name(minfo.node_name).to(device)
-                filters_importance = self._filter_importance_fn(weight, minfo.module.target_weight_dim_for_compression)
+                    weight = self.get_importance_by_node_name(minfo.node_name).to(
+                        device
+                    )
+                filters_importance = self._filter_importance_fn(
+                    weight, minfo.module.target_weight_dim_for_compression
+                )
                 cumulative_filters_importance += filters_importance
 
-            _, reorder_indexes = torch.sort(cumulative_filters_importance, dim=0, descending=True)
+            _, reorder_indexes = torch.sort(
+                cumulative_filters_importance, dim=0, descending=True
+            )
             device = get_model_device(self._target_model)
             reorder_indexes.to(device)
             # 1.2 Setup reorder indexes as output mask to reorganize filters
@@ -825,11 +915,16 @@ class ElasticWidthHandler(SingleElasticityHandler):
 
         # 2. Propagating masks across the graph
         reorder_algo = FilterReorderingAlgorithm(
-            self._target_model, self._propagation_graph, PT_PRUNING_OPERATOR_METATYPES, PTNNCFPruningTensorProcessor
+            self._target_model,
+            self._propagation_graph,
+            PT_PRUNING_OPERATOR_METATYPES,
+            PTNNCFPruningTensorProcessor,
         )
         reorder_algo.reorder_filters()
 
-    def find_pairs_of_nodes_with_different_width(self, pairs_of_nodes: List[Tuple[str, str]]) -> List[int]:
+    def find_pairs_of_nodes_with_different_width(
+        self, pairs_of_nodes: List[Tuple[str, str]]
+    ) -> List[int]:
         """
         Find pairs of nodes that have different output shapes. It's need to resolve conflict between elastic width and
         elastic depth. The conflicting situation happens when layers are trimmed and skipped independently.
@@ -847,19 +942,33 @@ class ElasticWidthHandler(SingleElasticityHandler):
             end_node = self._propagation_graph.get_node_by_name(end_node_name)
             end_mask = end_node.attributes["output_mask"]
 
-            all_start_output_shapes = self._propagation_graph.get_output_shapes_for_node(start_node_name)
+            all_start_output_shapes = (
+                self._propagation_graph.get_output_shapes_for_node(start_node_name)
+            )
             start_output_shape = list(OrderedDict.fromkeys(all_start_output_shapes))
-            all_end_output_shape = self._propagation_graph.get_output_shapes_for_node(end_node_name)
+            all_end_output_shape = self._propagation_graph.get_output_shapes_for_node(
+                end_node_name
+            )
             end_output_shape = list(OrderedDict.fromkeys(all_end_output_shape))
 
             start_width = ElasticWidthHandler.mask_to_width(start_mask)
             end_width = ElasticWidthHandler.mask_to_width(end_mask)
 
-            if start_width is None and end_width is None and start_output_shape != end_output_shape:
+            if (
+                start_width is None
+                and end_width is None
+                and start_output_shape != end_output_shape
+            ):
                 reason = f"it has a different shapes on boundaries: {start_output_shape} != {end_output_shape}"
-            elif start_width is not None and end_width is not None and start_width != end_width:
+            elif (
+                start_width is not None
+                and end_width is not None
+                and start_width != end_width
+            ):
                 reason = f"it has a different width on boundaries: {start_width} != {end_width}"
-            elif (start_width is None or end_width is None) and not (start_width is None and end_width is None):
+            elif (start_width is None or end_width is None) and not (
+                start_width is None and end_width is None
+            ):
                 reason = (
                     f"it has empty width on one of the boundaries. "
                     f"Width: {start_width} vs {end_width}. Shapes: {start_output_shape} vs {end_output_shape}"
@@ -882,12 +991,16 @@ class ElasticWidthHandler(SingleElasticityHandler):
         width_list_len = self._get_width_list_len(op)
         return op.width_list[:width_list_len]
 
-    def _collect_ops_data_by_selection_rule(self, selection_rule: Callable) -> Dict[PruningGroupID, Any]:
+    def _collect_ops_data_by_selection_rule(
+        self, selection_rule: Callable
+    ) -> Dict[PruningGroupID, Any]:
         elastic_width_config = {}
         for cluster in self._pruned_module_groups_info.get_all_clusters():
             all_max_out_channels = {el.elastic_op.max_width for el in cluster.elements}
             if len(all_max_out_channels) != 1:
-                raise RuntimeError("Invalid grouping of layers with different number of output channels")
+                raise RuntimeError(
+                    "Invalid grouping of layers with different number of output channels"
+                )
 
             first_elastic_width_info = next(iter(cluster.elements))
             op = first_elastic_width_info.elastic_op
@@ -911,7 +1024,9 @@ class ElasticWidthHandler(SingleElasticityHandler):
             mask_len = sum(actual_mask.size())
             width = int(sum(actual_mask))
             device = actual_mask.device
-            ref_mask = ElasticWidthHandler._width_to_mask(width, mask_len, device).tensor
+            ref_mask = ElasticWidthHandler._width_to_mask(
+                width, mask_len, device
+            ).tensor
             assert torch.equal(
                 ref_mask, actual_mask
             ), f"Invalid mask {actual_mask}: the first {width} values must be ones, the rest - zeros."
@@ -919,7 +1034,9 @@ class ElasticWidthHandler(SingleElasticityHandler):
         return result
 
     @staticmethod
-    def _width_to_mask(active_width: int, max_width: int, device: torch.device) -> PTNNCFTensor:
+    def _width_to_mask(
+        active_width: int, max_width: int, device: torch.device
+    ) -> PTNNCFTensor:
         """
         Encodes width to tensor filled by 1 and 0. We intentionally construct mask in a way that first N values are
         equal to 1, and the rest values are 0. The N encodes width value. The mask tensors allows to fully reuse mask
@@ -975,7 +1092,9 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
         :return: a handler object that can manipulate the elastic width.
         """
         filter_importance_str = self._params.filter_importance
-        filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(filter_importance_str, sum_filter)
+        filter_importance = FILTER_IMPORTANCE_FUNCTIONS.get(
+            filter_importance_str, sum_filter
+        )
         filter_importance_path = self._params.filter_importance_path
 
         graph = target_model.nncf.get_original_graph()
@@ -994,13 +1113,17 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
                 prune_first=True,
                 prune_downsample_convs=True,
             )
-            groups_of_nodes_to_prune = pruning_node_selector.create_pruning_groups(graph)
+            groups_of_nodes_to_prune = pruning_node_selector.create_pruning_groups(
+                graph
+            )
             for group in groups_of_nodes_to_prune.get_all_clusters():
                 grouped_node_names = [node.node_name for node in group.elements]
                 self._grouped_node_names_to_prune.append(grouped_node_names)
 
         transformation_commands = []
-        pruned_module_groups_info = Clusterization[ElasticWidthInfo](id_fn=lambda x: x.node_name)
+        pruned_module_groups_info = Clusterization[ElasticWidthInfo](
+            id_fn=lambda x: x.node_name
+        )
         node_name_vs_dynamic_input_width_op_map = OrderedDict()
 
         metatype_vs_elastic_op_creator = {
@@ -1025,13 +1148,19 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
                     layer_attrs,
                     node_name,
                     self._params,
-                    self._overwrite_groups_widths[i] if self._overwriting_pruning_groups else [],
+                    self._overwrite_groups_widths[i]
+                    if self._overwriting_pruning_groups
+                    else [],
                 )
                 elastic_width_operation.to(device)
-                update_conv_params_op = UpdateWeightAndOptionalBias(elastic_width_operation)
+                update_conv_params_op = UpdateWeightAndOptionalBias(
+                    elastic_width_operation
+                )
                 transformation_commands.append(
                     PTInsertionCommand(
-                        PTTargetPoint(TargetType.PRE_LAYER_OPERATION, target_node_name=node_name),
+                        PTTargetPoint(
+                            TargetType.PRE_LAYER_OPERATION, target_node_name=node_name
+                        ),
                         update_conv_params_op,
                         TransformationPriority.PRUNING_PRIORITY,
                     )
@@ -1065,13 +1194,19 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
             nodes = graph.get_nodes_by_metatypes([metatype])
             for node in nodes:
                 node_name = node.node_name
-                nncf_logger.debug(f"Adding Dynamic Input Op for {metatype.name} in scope: {node_name}")
+                nncf_logger.debug(
+                    f"Adding Dynamic Input Op for {metatype.name} in scope: {node_name}"
+                )
                 layer_attrs = node.layer_attributes
                 update_module_params = op_creator(layer_attrs, node_name).to(device)
-                node_name_vs_dynamic_input_width_op_map[node_name] = update_module_params.op
+                node_name_vs_dynamic_input_width_op_map[
+                    node_name
+                ] = update_module_params.op
                 transformation_commands.append(
                     PTInsertionCommand(
-                        PTTargetPoint(TargetType.PRE_LAYER_OPERATION, target_node_name=node_name),
+                        PTTargetPoint(
+                            TargetType.PRE_LAYER_OPERATION, target_node_name=node_name
+                        ),
                         update_module_params,
                         priority=TransformationPriority.DEFAULT_PRIORITY,
                     )
@@ -1094,7 +1229,9 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
 
         :param state: Output of `get_state()` method.
         """
-        params_from_state = state[SingleElasticityBuilder._state_names.ELASTICITY_PARAMS]
+        params_from_state = state[
+            SingleElasticityBuilder._state_names.ELASTICITY_PARAMS
+        ]
         params = ElasticWidthParams.from_state(params_from_state)
         if self._params and self._params != params:
             nncf_logger.warning(
@@ -1102,15 +1239,31 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
                 "state. The one from state is taken by ignoring the ones from init."
             )
         self._params = params
-        self._grouped_node_names_to_prune = state[self._state_names.GROUPED_NODE_NAMES_TO_PRUNE]
+        self._grouped_node_names_to_prune = state[
+            self._state_names.GROUPED_NODE_NAMES_TO_PRUNE
+        ]
 
-        if params_from_state.get(self._state_names.OVERWRITE_GROUP_WIDTHS, None) is not None:
-            self._overwrite_groups_widths = params_from_state[self._state_names.OVERWRITE_GROUP_WIDTHS]
+        if (
+            params_from_state.get(self._state_names.OVERWRITE_GROUP_WIDTHS, None)
+            is not None
+        ):
+            self._overwrite_groups_widths = params_from_state[
+                self._state_names.OVERWRITE_GROUP_WIDTHS
+            ]
             self._overwriting_pruning_groups = True
-            if len(self._grouped_node_names_to_prune) != len(self._overwrite_groups_widths):
-                raise RuntimeError("Mismatch between number of groups for pruning and their corresponding widths")
-        if params_from_state.get(self._state_names.ADD_DYNAMIC_INPUTS, None) is not None:
-            self._add_dynamic_inputs = params_from_state[self._state_names.ADD_DYNAMIC_INPUTS]
+            if len(self._grouped_node_names_to_prune) != len(
+                self._overwrite_groups_widths
+            ):
+                raise RuntimeError(
+                    "Mismatch between number of groups for pruning and their corresponding widths"
+                )
+        if (
+            params_from_state.get(self._state_names.ADD_DYNAMIC_INPUTS, None)
+            is not None
+        ):
+            self._add_dynamic_inputs = params_from_state[
+                self._state_names.ADD_DYNAMIC_INPUTS
+            ]
 
     def get_state(self) -> Dict[str, Any]:
         """
@@ -1136,7 +1289,10 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
         if fixed_width_list is None:
             fixed_width_list = []
         return ElasticOutputWidthConv2DOp(
-            conv_layer_attrs.out_channels, node_name, params, fixed_width_list=fixed_width_list
+            conv_layer_attrs.out_channels,
+            node_name,
+            params,
+            fixed_width_list=fixed_width_list,
         )
 
     @staticmethod
@@ -1151,23 +1307,36 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
             fixed_width_list = []
         nncf_logger.debug(f"Adding Dynamic Linear Layer in scope: {str(node_name)}")
         return ElasticOutputWidthLinearOp(
-            linear_layer_attrs.out_features, node_name, params, fixed_width_list=fixed_width_list
+            linear_layer_attrs.out_features,
+            node_name,
+            params,
+            fixed_width_list=fixed_width_list,
         )
 
     @staticmethod
-    def _create_dynamic_conv_input_op(conv_layer_attrs: BaseLayerAttributes, node_name: str) -> UpdateWeight:
+    def _create_dynamic_conv_input_op(
+        conv_layer_attrs: BaseLayerAttributes, node_name: str
+    ) -> UpdateWeight:
         assert isinstance(conv_layer_attrs, ConvolutionLayerAttributes)
-        dynamic_conv_input_op = ElasticInputWidthConvOp(max_width=conv_layer_attrs.in_channels, node_name=node_name)
+        dynamic_conv_input_op = ElasticInputWidthConvOp(
+            max_width=conv_layer_attrs.in_channels, node_name=node_name
+        )
         return UpdateWeight(dynamic_conv_input_op)
 
     @staticmethod
-    def _create_dynamic_dw_conv_input_op(conv_layer_attrs: BaseLayerAttributes, node_name: str) -> UpdateNumGroups:
+    def _create_dynamic_dw_conv_input_op(
+        conv_layer_attrs: BaseLayerAttributes, node_name: str
+    ) -> UpdateNumGroups:
         assert isinstance(conv_layer_attrs, ConvolutionLayerAttributes)
-        dynamic_dw_conv_input_op = ElasticInputWidthDWConvOp(max_width=conv_layer_attrs.groups, node_name=node_name)
+        dynamic_dw_conv_input_op = ElasticInputWidthDWConvOp(
+            max_width=conv_layer_attrs.groups, node_name=node_name
+        )
         return UpdateNumGroups(dynamic_dw_conv_input_op)
 
     @staticmethod
-    def _create_dynamic_bn_input_op(generic_layer_attrs: BaseLayerAttributes, node_name: str) -> UpdateBatchNormParams:
+    def _create_dynamic_bn_input_op(
+        generic_layer_attrs: BaseLayerAttributes, node_name: str
+    ) -> UpdateBatchNormParams:
         assert isinstance(generic_layer_attrs, GenericWeightedLayerAttributes)
         dynamic_bn_input_op = ElasticInputWidthBatchNormOp(
             max_width=generic_layer_attrs.get_num_filters(), node_name=node_name
@@ -1175,7 +1344,9 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
         return UpdateBatchNormParams(dynamic_bn_input_op)
 
     @staticmethod
-    def _create_dynamic_ln_input_op(generic_layer_attrs: BaseLayerAttributes, node_name: str) -> UpdateLayerNormParams:
+    def _create_dynamic_ln_input_op(
+        generic_layer_attrs: BaseLayerAttributes, node_name: str
+    ) -> UpdateLayerNormParams:
         assert isinstance(generic_layer_attrs, GenericWeightedLayerAttributes)
         dynamic_ln_input_op = ElasticInputWidthLayerNormOp(
             max_width=generic_layer_attrs.get_num_filters(), node_name=node_name
@@ -1183,7 +1354,9 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
         return UpdateLayerNormParams(dynamic_ln_input_op)
 
     @staticmethod
-    def _create_dynamic_linear_input_op(linear_layer_attrs: BaseLayerAttributes, node_name: str) -> UpdateWeight:
+    def _create_dynamic_linear_input_op(
+        linear_layer_attrs: BaseLayerAttributes, node_name: str
+    ) -> UpdateWeight:
         assert isinstance(linear_layer_attrs, LinearLayerAttributes)
         dynamic_linear_input_op = ElasticInputWidthLinearOp(
             max_width=linear_layer_attrs.in_features, node_name=node_name

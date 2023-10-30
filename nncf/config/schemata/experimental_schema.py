@@ -35,7 +35,9 @@ from nncf.config.schemata.common.targeting import TARGET_SCOPES_DESCRIPTION
 # Experimental Quantization
 ########################################################################################################################
 EXPERIMENTAL_QUANTIZATION_SCHEMA = copy.deepcopy(QUANTIZATION_SCHEMA)
-EXPERIMENTAL_QUANTIZATION_SCHEMA["properties"]["algorithm"]["const"] = EXPERIMENTAL_QUANTIZATION_ALGO_NAME_IN_CONFIG
+EXPERIMENTAL_QUANTIZATION_SCHEMA["properties"]["algorithm"][
+    "const"
+] = EXPERIMENTAL_QUANTIZATION_ALGO_NAME_IN_CONFIG
 
 ########################################################################################################################
 # BootstrapNAS
@@ -155,10 +157,12 @@ ELASTICITY_SCHEMA = {
             "are available - [width, depth, kernel]",
         ),
         "ignored_scopes": with_attributes(
-            make_string_or_array_of_strings_schema(), description=IGNORED_SCOPES_DESCRIPTION
+            make_string_or_array_of_strings_schema(),
+            description=IGNORED_SCOPES_DESCRIPTION,
         ),
         "target_scopes": with_attributes(
-            make_string_or_array_of_strings_schema(), description=TARGET_SCOPES_DESCRIPTION
+            make_string_or_array_of_strings_schema(),
+            description=TARGET_SCOPES_DESCRIPTION,
         ),
     },
     "additionalProperties": False,
@@ -172,7 +176,9 @@ STAGE_DESCRIPTOR_SCHEMA = {
             description="Elasticity dimensions that are enabled for subnet sampling,"
             "the rest elastic dimensions are disabled",
         ),
-        "epochs": with_attributes(NUMBER, description="Duration of the training stage in epochs"),
+        "epochs": with_attributes(
+            NUMBER, description="Duration of the training stage in epochs"
+        ),
         "depth_indicator": with_attributes(
             NUMBER,
             description="Restricts the maximum number of blocks in each "
@@ -201,7 +207,8 @@ STAGE_DESCRIPTOR_SCHEMA = {
             "beginning of the stage",
         ),
         "bn_adapt": with_attributes(
-            BOOLEAN, description="if True, triggers batchnorm adaptation in the beginning of the stage"
+            BOOLEAN,
+            description="if True, triggers batchnorm adaptation in the beginning of the stage",
         ),
         "init_lr": with_attributes(
             NUMBER,
@@ -210,10 +217,12 @@ STAGE_DESCRIPTOR_SCHEMA = {
             "the beginning of the stage.",
         ),
         "epochs_lr": with_attributes(
-            NUMBER, description="Number of epochs to compute the adjustment of the learning rate."
+            NUMBER,
+            description="Number of epochs to compute the adjustment of the learning rate.",
         ),
         "sample_rate": with_attributes(
-            NUMBER, description="Number of iterations to activate the random subnet. Default value is 1."
+            NUMBER,
+            description="Number of iterations to activate the random subnet. Default value is 1.",
         ),
     },
     "description": "Defines a supernet training stage: how many epochs it takes, which elasticities with which "
@@ -267,7 +276,8 @@ BOOTSTRAP_NAS_TRAINING_SCHEMA = {
         "elasticity": ELASTICITY_SCHEMA,
         "lr_schedule": LR_SCHEDULE_SCHEMA,
         "train_steps": with_attributes(
-            NUMBER, description="Defines the number of samples used for each training epoch."
+            NUMBER,
+            description="Defines the number of samples used for each training epoch.",
         ),
     },
     "additionalProperties": False,
@@ -282,14 +292,17 @@ BOOTSTRAP_NAS_SEARCH_SCHEMA = {
     "type": "object",
     "properties": {
         "algorithm": with_attributes(
-            SEARCH_ALGORITHMS_SCHEMA, description="Defines the search algorithm. Default algorithm is NSGA-II."
+            SEARCH_ALGORITHMS_SCHEMA,
+            description="Defines the search algorithm. Default algorithm is NSGA-II.",
         ),
         "batchnorm_adaptation": BATCHNORM_ADAPTATION_SCHEMA,
         "num_evals": with_attributes(
-            NUMBER, description="Defines the number of evaluations that will be used by the search algorithm."
+            NUMBER,
+            description="Defines the number of evaluations that will be used by the search algorithm.",
         ),
         "population": with_attributes(
-            NUMBER, description="Defines the population size when using an evolutionary search algorithm."
+            NUMBER,
+            description="Defines the population size when using an evolutionary search algorithm.",
         ),
         "acc_delta": with_attributes(
             NUMBER,
@@ -302,7 +315,11 @@ BOOTSTRAP_NAS_SEARCH_SCHEMA = {
             "to generate the super-network.",
         ),
         "compression": make_object_or_array_of_objects_schema(
-            {"oneOf": [{"$ref": f"#/$defs/{KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG}"}]}
+            {
+                "oneOf": [
+                    {"$ref": f"#/$defs/{KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG}"}
+                ]
+            }
         ),
     },
     "additionalProperties": False,
@@ -336,10 +353,12 @@ MOVEMENT_SPARSE_STRUCTURE_BY_SCOPES_SCHEMA = {
             enum=MOVEMENT_SPARSE_STRUCTURE_MODE,
         ),
         "sparse_factors": with_attributes(
-            ARRAY_OF_NUMBERS, description='The block shape for weights to sparsify. Required when `mode`="block".'
+            ARRAY_OF_NUMBERS,
+            description='The block shape for weights to sparsify. Required when `mode`="block".',
         ),
         "axis": with_attributes(
-            NUMBER, description='The dimension for weights to sparsify. Required when `mode`="per_dim".'
+            NUMBER,
+            description='The dimension for weights to sparsify. Required when `mode`="per_dim".',
         ),
         "target_scopes": with_attributes(
             make_string_or_array_of_strings_schema(),
@@ -354,9 +373,12 @@ MOVEMENT_SCHEDULER_PARAMS_SCHEMA = {
     "type": "object",
     "properties": {
         "warmup_start_epoch": with_attributes(
-            NUMBER, description="Index of the starting epoch (include) for warmup stage."
+            NUMBER,
+            description="Index of the starting epoch (include) for warmup stage.",
         ),
-        "warmup_end_epoch": with_attributes(NUMBER, description="Index of the end epoch (exclude) for warmup stage."),
+        "warmup_end_epoch": with_attributes(
+            NUMBER, description="Index of the end epoch (exclude) for warmup stage."
+        ),
         "importance_regularization_factor": with_attributes(
             NUMBER,
             description="The regularization factor on weight importance scores. With a larger "
@@ -396,7 +418,11 @@ MOVEMENT_SCHEDULER_PARAMS_SCHEMA = {
         ),
     },
     "additionalProperties": False,
-    "required": ["warmup_start_epoch", "warmup_end_epoch", "importance_regularization_factor"],
+    "required": [
+        "warmup_start_epoch",
+        "warmup_end_epoch",
+        "importance_regularization_factor",
+    ],
 }
 
 
