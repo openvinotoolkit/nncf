@@ -10,15 +10,15 @@ strict digraph  {
 "8 nncf_model_input_2" [id=8, type=nncf_model_input];
 "9 nncf_model_output_0" [id=9, type=nncf_model_output];
 "10 nncf_model_output_1" [id=10, type=nncf_model_output];
-"0 QuantizeLinear_X_1_1" -> "1 DequantizeLinear_X_1_1"  [label="[1, 6, 3, 3]", style=dashed];
-"1 DequantizeLinear_X_1_1" -> "5 Add1"  [label="[1, 6, 3, 3]", style=solid];
-"2 QuantizeLinear_X_2_1" -> "3 DequantizeLinear_X_2_1"  [label="[2, 6, 3, 3]", style=dashed];
-"3 DequantizeLinear_X_2_1" -> "5 Add1"  [label="[2, 6, 3, 3]", style=solid];
-"4 Concat1" -> "9 nncf_model_output_0"  [label="[6, 6, 3, 3]", style=solid];
-"5 Add1" -> "10 nncf_model_output_1"  [label="[2, 6, 3, 3]", style=solid];
-"6 nncf_model_input_0" -> "0 QuantizeLinear_X_1_1"  [label="[1, 6, 3, 3]", style=solid];
-"6 nncf_model_input_0" -> "4 Concat1"  [label="[1, 6, 3, 3]", style=solid];
-"7 nncf_model_input_1" -> "2 QuantizeLinear_X_2_1"  [label="[2, 6, 3, 3]", style=solid];
-"7 nncf_model_input_1" -> "4 Concat1"  [label="[2, 6, 3, 3]", style=solid];
-"8 nncf_model_input_2" -> "4 Concat1"  [label="[3, 6, 3, 3]", style=solid];
+"0 QuantizeLinear_X_1_1" -> "1 DequantizeLinear_X_1_1"  [label="shape:[1, 6, 3, 3]\nports:0→0", style=dashed];
+"1 DequantizeLinear_X_1_1" -> "5 Add1"  [label="shape:[1, 6, 3, 3]\nports:0→0", style=solid];
+"2 QuantizeLinear_X_2_1" -> "3 DequantizeLinear_X_2_1"  [label="shape:[2, 6, 3, 3]\nports:0→0", style=dashed];
+"3 DequantizeLinear_X_2_1" -> "5 Add1"  [label="shape:[2, 6, 3, 3]\nports:0→1", style=solid];
+"4 Concat1" -> "9 nncf_model_output_0"  [label="shape:[6, 6, 3, 3]\nports:0→0", style=solid];
+"5 Add1" -> "10 nncf_model_output_1"  [label="shape:[2, 6, 3, 3]\nports:0→0", style=solid];
+"6 nncf_model_input_0" -> "0 QuantizeLinear_X_1_1"  [label="shape:[1, 6, 3, 3]\nports:0→0", style=solid];
+"6 nncf_model_input_0" -> "4 Concat1"  [label="shape:[1, 6, 3, 3]\nports:1→0", style=solid];
+"7 nncf_model_input_1" -> "2 QuantizeLinear_X_2_1"  [label="shape:[2, 6, 3, 3]\nports:0→0", style=solid];
+"7 nncf_model_input_1" -> "4 Concat1"  [label="shape:[2, 6, 3, 3]\nports:1→1", style=solid];
+"8 nncf_model_input_2" -> "4 Concat1"  [label="shape:[3, 6, 3, 3]\nports:0→2", style=solid];
 }

@@ -9,14 +9,14 @@ strict digraph  {
 "7 nncf_model_input_1" [id=7, type=nncf_model_input];
 "8 nncf_model_output_0" [id=8, type=nncf_model_output];
 "9 nncf_model_output_1" [id=9, type=nncf_model_output];
-"0 QuantizeLinear_X_1_1" -> "1 DequantizeLinear_X_1_1"  [label="[1, 6, 3, 3]", style=dashed];
-"1 DequantizeLinear_X_1_1" -> "4 Add2"  [label="[1, 6, 3, 3]", style=solid];
-"1 DequantizeLinear_X_1_1" -> "5 Add1"  [label="[1, 6, 3, 3]", style=solid];
-"2 QuantizeLinear_X_2_1" -> "3 DequantizeLinear_X_2_1"  [label="[2, 6, 3, 3]", style=dashed];
-"3 DequantizeLinear_X_2_1" -> "4 Add2"  [label="[2, 6, 3, 3]", style=solid];
-"3 DequantizeLinear_X_2_1" -> "5 Add1"  [label="[2, 6, 3, 3]", style=solid];
-"4 Add2" -> "8 nncf_model_output_0"  [label="[2, 6, 3, 3]", style=solid];
-"5 Add1" -> "9 nncf_model_output_1"  [label="[2, 6, 3, 3]", style=solid];
-"6 nncf_model_input_0" -> "0 QuantizeLinear_X_1_1"  [label="[1, 6, 3, 3]", style=solid];
-"7 nncf_model_input_1" -> "2 QuantizeLinear_X_2_1"  [label="[2, 6, 3, 3]", style=solid];
+"0 QuantizeLinear_X_1_1" -> "1 DequantizeLinear_X_1_1"  [label="shape:[1, 6, 3, 3]\nports:0→0", style=dashed];
+"1 DequantizeLinear_X_1_1" -> "4 Add2"  [label="shape:[1, 6, 3, 3]\nports:0→0", style=solid];
+"1 DequantizeLinear_X_1_1" -> "5 Add1"  [label="shape:[1, 6, 3, 3]\nports:0→1", style=solid];
+"2 QuantizeLinear_X_2_1" -> "3 DequantizeLinear_X_2_1"  [label="shape:[2, 6, 3, 3]\nports:0→0", style=dashed];
+"3 DequantizeLinear_X_2_1" -> "4 Add2"  [label="shape:[2, 6, 3, 3]\nports:0→1", style=solid];
+"3 DequantizeLinear_X_2_1" -> "5 Add1"  [label="shape:[2, 6, 3, 3]\nports:0→0", style=solid];
+"4 Add2" -> "8 nncf_model_output_0"  [label="shape:[2, 6, 3, 3]\nports:0→0", style=solid];
+"5 Add1" -> "9 nncf_model_output_1"  [label="shape:[2, 6, 3, 3]\nports:0→0", style=solid];
+"6 nncf_model_input_0" -> "0 QuantizeLinear_X_1_1"  [label="shape:[1, 6, 3, 3]\nports:0→0", style=solid];
+"7 nncf_model_input_1" -> "2 QuantizeLinear_X_2_1"  [label="shape:[2, 6, 3, 3]\nports:0→0", style=solid];
 }
