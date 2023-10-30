@@ -126,8 +126,8 @@ class AdvancedSmoothQuantParameters:
     :type matmul: float
     """
 
-    convolution: float = 0.05
-    matmul: float = 0.05
+    convolution: float = -1
+    matmul: float = 0.95
 
 
 @api()
