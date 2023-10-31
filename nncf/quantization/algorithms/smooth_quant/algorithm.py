@@ -342,7 +342,7 @@ class SmoothQuant(Algorithm):
         :return: Calculated reduction axes.
         """
         shape = nncf_graph.get_input_edges(node)[input_port].tensor_shape
-        reduction_axes = tuple([0])
+        reduction_axes = tuple([])
         if len(shape) > 1:
             channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port)
             reduction_axes = self._backend_entity.get_channel_agnostic_reduction_axes(channel_axis, shape)
@@ -360,8 +360,9 @@ class SmoothQuant(Algorithm):
         channel_axis = 0
         if len(weights.shape) > 1:
             channel_axis = self._backend_entity.get_weight_channel_axis(node, port_id)
-        reduction_shape = tuple([i for i, _ in enumerate(weights.shape) if i != channel_axis])
-        return self._backend_entity.process_weight_statistics(weights, reduction_shape)
+        reduction_shape = [i for i, _ in enumerate(weights.shape)]
+        reduction_shape.pop(channel_axis)
+        return self._backend_entity.process_weight_statistics(weights, tuple(reduction_shape))
 
     def _create_scale_node_name(self, source_name: str, source_port_id: int) -> str:
         """
