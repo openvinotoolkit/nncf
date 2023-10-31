@@ -147,7 +147,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
-        channel_axis = -2 if node.metatype == OVMatMulMetatype else 1
+        channel_axis = 1
 
         if port_id > 1:
             raise RuntimeError(f"{node.metatype.name} can not take more than 2 input tensors.")
@@ -165,7 +165,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def get_weight_channel_axis(node: NNCFNode, port_id: int) -> int:
-        channel_axis = 0 if node.metatype == OVMatMulMetatype else 1
+        channel_axis = 1
 
         if port_id > 1:
             raise RuntimeError(f"{node.metatype.name} can not take more than 2 input tensors.")
