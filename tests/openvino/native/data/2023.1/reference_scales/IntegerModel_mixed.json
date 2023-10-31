@@ -183,9 +183,9 @@
     },
     "Gather_2/fq_output_0": {
         "input_low": 0.0,
-        "input_high": 0.524762749671936,
+        "input_high": 0.91275554895401,
         "output_low": 0.0,
-        "output_high": 0.524762749671936
+        "output_high": 0.91275554895401
     },
     "Gather_2/fq_weights_0": {
         "input_low": [
