@@ -39,9 +39,9 @@ def create_nncf_network(model: torch.nn.Module, dataset: Dataset) -> NNCFNetwork
     Creates NNCFNetwork instance for the PyTorch model where the first item of dataset
     is used for model tracing.
 
-    :param model: PyTorch model
-    :param dataset: Dataset for model tracing
-    :return: NNCFNetwork instance for the input model
+    :param model: PyTorch model.
+    :param dataset: Dataset for model tracing.
+    :return: NNCFNetwork instance for the input model.
     """
 
     def get_inputs(dataloader_output: Any) -> Tuple[Tuple, Dict]:
