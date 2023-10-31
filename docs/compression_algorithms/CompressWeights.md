@@ -40,6 +40,160 @@ from nncf import CompressWeightsMode
 compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4, group_size=64, ratio=0.9)
 ```
 
+<table>
+<thead>
+  <tr>
+    <th class="tg-0pky">Model</th>
+    <th class="tg-0pky">Mode</th>
+    <th class="tg-0pky">Perplexity</th>
+    <th class="tg-0pky">Perplexity <br>Increase</th>
+    <th class="tg-0pky">Model Size <br>(Gb)</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td class="tg-0pky">databricks/dolly-v2-3b</td>
+    <td class="tg-0pky">fp32</td>
+    <td class="tg-0pky">5.01</td>
+    <td class="tg-0pky">0</td>
+    <td class="tg-0pky">10.3</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">databricks/dolly-v2-3b</td>
+    <td class="tg-0pky">int8</td>
+    <td class="tg-0pky">5.07</td>
+    <td class="tg-0pky">0.05</td>
+    <td class="tg-0pky">2.6</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">databricks/dolly-v2-3b</td>
+    <td class="tg-0pky">int4_asym_g32_r50</td>
+    <td class="tg-0pky">5.28</td>
+    <td class="tg-0pky">0.26</td>
+    <td class="tg-0pky">2.2</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">databricks/dolly-v2-3b</td>
+    <td class="tg-0pky">nf4_g128_r60</td>
+    <td class="tg-0pky">5.19</td>
+    <td class="tg-0pky">0.18</td>
+    <td class="tg-0pky">1.9</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">facebook/opt-6.7b</td>
+    <td class="tg-0pky">fp32</td>
+    <td class="tg-0pky">4.25</td>
+    <td class="tg-0pky">0</td>
+    <td class="tg-0pky">24.8</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">facebook/opt-6.7b</td>
+    <td class="tg-0pky">int8</td>
+    <td class="tg-0pky">4.27</td>
+    <td class="tg-0pky">0.01</td>
+    <td class="tg-0pky">6.2</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">facebook/opt-6.7b</td>
+    <td class="tg-0pky">int4_asym_g64_r80</td>
+    <td class="tg-0pky">4.32</td>
+    <td class="tg-0pky">0.07</td>
+    <td class="tg-0pky">4.1</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">facebook/opt-6.7b</td>
+    <td class="tg-0pky">nf4_g64</td>
+    <td class="tg-0pky">4.35</td>
+    <td class="tg-0pky">0.1</td>
+    <td class="tg-0pky">3.6</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">meta-llama/Llama-2-7b-chat-hf</td>
+    <td class="tg-0pky">fp32</td>
+    <td class="tg-0pky">3.28</td>
+    <td class="tg-0pky">0</td>
+    <td class="tg-0pky">25.1</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">meta-llama/Llama-2-7b-chat-hf</td>
+    <td class="tg-0pky">int8</td>
+    <td class="tg-0pky">3.29</td>
+    <td class="tg-0pky">0.01</td>
+    <td class="tg-0pky">6.3</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">meta-llama/Llama-2-7b-chat-hf</td>
+    <td class="tg-0pky">int4_asym_g128_r80</td>
+    <td class="tg-0pky">3.41</td>
+    <td class="tg-0pky">0.14</td>
+    <td class="tg-0pky">4.0</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">meta-llama/Llama-2-7b-chat-hf</td>
+    <td class="tg-0pky">nf4_g128</td>
+    <td class="tg-0pky">3.41</td>
+    <td class="tg-0pky">0.13</td>
+    <td class="tg-0pky">3.5</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">togethercomputer/RedPajama-INCITE-7B-Instruct</td>
+    <td class="tg-0pky">fp32</td>
+    <td class="tg-0pky">4.15</td>
+    <td class="tg-0pky">0</td>
+    <td class="tg-0pky">25.6</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">togethercomputer/RedPajama-INCITE-7B-Instruct</td>
+    <td class="tg-0pky">int8</td>
+    <td class="tg-0pky">4.17</td>
+    <td class="tg-0pky">0.02</td>
+    <td class="tg-0pky">6.4</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">togethercomputer/RedPajama-INCITE-7B-Instruct</td>
+    <td class="tg-0pky">nf4_ov_g32_r60</td>
+    <td class="tg-0pky">4.28</td>
+    <td class="tg-0pky">0.13</td>
+    <td class="tg-0pky">5.1</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">togethercomputer/RedPajama-INCITE-7B-Instruct</td>
+    <td class="tg-0pky">int4_asym_g128</td>
+    <td class="tg-0pky">4.17</td>
+    <td class="tg-0pky">0.02</td>
+    <td class="tg-0pky">3.6</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">meta-llama/Llama-2-13b-chat-hf</td>
+    <td class="tg-0pky">fp32</td>
+    <td class="tg-0pky">2.92</td>
+    <td class="tg-0pky">0</td>
+    <td class="tg-0pky">48.5</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">meta-llama/Llama-2-13b-chat-hf</td>
+    <td class="tg-0pky">int8</td>
+    <td class="tg-0pky">2.91</td>
+    <td class="tg-0pky">0</td>
+    <td class="tg-0pky">12.1</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">meta-llama/Llama-2-13b-chat-hf</td>
+    <td class="tg-0pky">int4_asym_sym_g64_r80</td>
+    <td class="tg-0pky">2.98</td>
+    <td class="tg-0pky">0.06</td>
+    <td class="tg-0pky">8.0</td>
+  </tr>
+  <tr>
+    <td class="tg-0pky">meta-llama/Llama-2-13b-chat-hf</td>
+    <td class="tg-0pky">nf4_g128</td>
+    <td class="tg-0pky">2.95</td>
+    <td class="tg-0pky">0.04</td>
+    <td class="tg-0pky">6.6</td>
+  </tr>
+</tbody>
+</table>
+
 ##### Limitations
 
 - The algorithm is supported for OpenVINO and PyTorch models.
