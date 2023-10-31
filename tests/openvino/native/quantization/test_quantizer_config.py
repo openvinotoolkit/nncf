@@ -59,18 +59,8 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
                 (TargetType.PRE_LAYER_OPERATION, "/Sum_1_0", (0, 2), (0, 1, 2)),
                 marks=pytest.mark.skip("Ticket 102414: remove hardcoded axes for activations"),
             ),
-            (
-                TargetType.POST_LAYER_OPERATION,
-                "/Conv_1_0",
-                (0, 2, 3),
-                (1, 2, 3),
-            ),  # per-tensor: all tensor tensor except batch index is reduced
-            (
-                TargetType.OPERATION_WITH_WEIGHTS,
-                "/Conv_1_0",
-                (1, 2, 3),
-                (0, 1, 2, 3),
-            ),  # per-tensor: all weight tensor is reduced
+            (TargetType.POST_LAYER_OPERATION, "/Conv_1_0", (0, 2, 3), None),
+            (TargetType.OPERATION_WITH_WEIGHTS, "/Conv_1_0", (1, 2, 3), None),
         ]
     )
     def statistic_collector_parameters(self, request) -> ParamsCls:
