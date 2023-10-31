@@ -38,8 +38,8 @@ class PTEngine(Engine):
         """
         Runs Torch model on the provided input.
 
-        :param input_data: inputs for the model
-        :return output_data: model outputs
+        :param input_data: Inputs for the model.
+        :return: Model outputs.
         """
         if isinstance(input_data, dict):
             return self._model(**input_data)
