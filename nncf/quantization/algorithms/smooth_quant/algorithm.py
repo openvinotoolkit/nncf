@@ -273,7 +273,11 @@ class SmoothQuant(Algorithm):
             activation_node = input_edges[ports_map["activation"]].from_node
 
             # Skipping agnostic layers as inputs to propagate quantizer
-            if activation_node.metatype in self._backend_entity.quantize_agnostic_metatypes:
+            # Only for Convolution layers
+            if (
+                node_with_weight.metatype == self._backend_entity.convolution_metatype
+                and activation_node.metatype in self._backend_entity.quantize_agnostic_metatypes
+            ):
                 continue
 
             # Skipping shared weights
