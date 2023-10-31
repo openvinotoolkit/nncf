@@ -605,12 +605,6 @@ class OnlineAggregatorBase(AggregatorBase, ABC):
     """
 
     def _register_reduced_input_impl(self, x: NNCFTensor) -> None:
-        """
-        The function aggregates firstly the input tensor.
-
-
-        :param NNCFTensor x: _description_
-        """
         online_aggregation_axes = tuple(dim - 1 for dim in self._aggregation_axes if dim != 0)
         if online_aggregation_axes:
             reduced = self._aggregation_fn(x, axis=online_aggregation_axes, keepdims=self._keepdims)
@@ -624,30 +618,11 @@ class OnlineAggregatorBase(AggregatorBase, ABC):
         else:
             self._container.append(reduced)
 
-        # online_aggregation_axes = tuple(dim - 1 for dim in self._aggregation_axes if dim != 0)
-        # if online_aggregation_axes:
-        #     reduced = self._aggregation_fn(x, axis=online_aggregation_axes, keepdims=self._keepdims)
-        # else:
-        #     reduced = x
-        # if 0 in self._aggregation_axes:
-        #     if self._container:
-        #         reduced = self._aggregation_fn(
-        #             self._tensor_processor.stack([reduced, *self._container]), axis=0, keepdims=self._keepdims
-        #         )
-        #         reduced = self._tensor_processor.squeeze(reduced)
-        #     self._container = [reduced]
-        # else:
-        #     self._container.append(reduced)
-
     def _aggregate_impl(self) -> NNCFTensor:
         if 0 in self._aggregation_axes:
             if self._keepdims:
                 return self._container[0].tensor
         return self._tensor_processor.stack(self._container).tensor
-
-    # def _aggregate_impl(self) -> NNCFTensor:
-    #     assert len(self._container) == 1
-    #     return self._container[0].tensor
 
     @abstractmethod
     def _aggregation_fn(self, stacked_value: NNCFTensor, axis: AggregationAxes, keepdims: bool) -> NNCFTensor:
@@ -701,8 +676,8 @@ class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
         tensor_processor: NNCFCollectorTensorProcessor,
         aggregation_axes: Optional[AggregationAxes] = None,
         num_samples: Optional[int] = None,
-        quantile: float = 0.01,
         window_size=None,
+        quantile: float = 0.01,
     ):
         super().__init__(tensor_processor, aggregation_axes=aggregation_axes, num_samples=num_samples)
         self._window_size = window_size
