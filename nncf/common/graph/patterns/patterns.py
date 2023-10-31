@@ -91,7 +91,7 @@ class GraphPattern:
         Add DiGraph nodes of other to self and add edge between
         last node of self's graph and first node of other's graph.
 
-        The first and last nodes are found by nx.lexicographical_topological_sort().
+        The first and the last nodes are found by nx.lexicographical_topological_sort().
 
         For more complex cases that are not covered by this function, use `join_patterns()`.
 
@@ -195,7 +195,7 @@ class GraphPattern:
 
         If edges is None, connect all weakly connected components of self and other by adding edges between
         the last nodes of every weakly component of self and the first nodes of every weakly component other.
-        The first and last nodes are found by nx.lexicographical_topological_sort().
+        The first and the last nodes are found by nx.lexicographical_topological_sort().
 
         # A: (a) (b)
         # B: (c) (d)
