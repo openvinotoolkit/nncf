@@ -83,7 +83,7 @@ def quantize(
     """
 
     if subset_size < 1:
-        raise RuntimeError("Subset size must be positive.")
+        raise ValueError("Subset size must be positive.")
 
     backend = get_backend(model)
     if backend == BackendType.OPENVINO:
