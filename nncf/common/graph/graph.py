@@ -609,7 +609,7 @@ class NNCFGraph:
                 label["shape"] = edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]
                 label[
                     "ports"
-                ] = f"{edge[NNCFGraph.OUTPUT_PORT_ID_EDGE_ATTR]}\u2192{edge[NNCFGraph.INPUT_PORT_ID_EDGE_ATTR]}"
+                ] = f"{edge[NNCFGraph.OUTPUT_PORT_ID_EDGE_ATTR]} -> {edge[NNCFGraph.INPUT_PORT_ID_EDGE_ATTR]}"
 
             if label:
                 attrs_edge["label"] = "\n".join((f"{k}:{v}" for k, v in label.items()))
@@ -636,7 +636,7 @@ class NNCFGraph:
                 style = "solid"
             edge_label = (
                 f"{edge[NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR]} \\n"
-                f"{edge[NNCFGraph.OUTPUT_PORT_ID_EDGE_ATTR]} \u2192 {edge[NNCFGraph.INPUT_PORT_ID_EDGE_ATTR]}"
+                f"{edge[NNCFGraph.OUTPUT_PORT_ID_EDGE_ATTR]}  -> {edge[NNCFGraph.INPUT_PORT_ID_EDGE_ATTR]}"
             )
             out_graph.add_edge(u, v, label=edge_label, style=style)
 
