@@ -90,7 +90,6 @@ def test_synthetic_models_fq_scales(model_creator_func, preset, inplace_statisti
 
     # Uncomment lines below to generate reference for new models.
     # from tests.shared.helpers import dump_to_json
-
     # dump_to_json(ref_stats_path, nodes)
 
     ref_nodes = load_json(ref_stats_path)
