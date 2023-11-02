@@ -45,8 +45,7 @@ compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_ASYM, g
 ```
 
 - `NF4` mode can be considered for improving accuracy, but currently models quantized to nf4 should not be faster models
-  quantized to 8-bit integer on client processors. Some speed up is expected on server processors in the future releases.
-  Here's the example how to compress weights to nf4 data type with group size = 128, except first embedding and last linear layers - they are compressed to 8-bit integer data type.
+  quantized to 8-bit integer. Here's the example how to compress weights to nf4 data type with group size = 128.
   Different `group_size` and `ratio` are also supported.
 
 ```python
@@ -199,7 +198,7 @@ Here is the perplexity and model size before and after weight compression for di
   </tr>
   <tr>
     <td class="tg-0pky">meta-llama/Llama-2-13b-chat-hf</td>
-    <td class="tg-0pky">int4_asym_sym_g64_r80</td>
+    <td class="tg-0pky">int4_sym_g64_r80</td>
     <td class="tg-0pky">2.98</td>
     <td class="tg-0pky">0.06</td>
     <td class="tg-0pky">8.0</td>
