@@ -10,15 +10,17 @@
 # limitations under the License.
 
 import pathlib
+from collections import defaultdict
 
 import networkx as nx
 
 
 def write_dot_graph(G: nx.DiGraph, path: pathlib.Path):
     # NOTE: writing dot files with colons even in labels or other node/edge/graph attributes leads to an
-    # error. See https://github.com/networkx/networkx/issues/5962. This limits the networkx version in
-    # NNCF to 2.8.3 unless this is fixed upstream or an inconvenient workaround is made in NNCF.
-    nx.nx_pydot.write_dot(G, str(path))
+    # error. See https://github.com/networkx/networkx/issues/5962. If `relabel` is True in this function,
+    # then the colons (:) will be replaced with (^) symbols.
+    relabeled = relabel_graph_for_dot_visualization(G)
+    nx.nx_pydot.write_dot(relabeled, str(path))
 
 
 def get_graph_without_data(G: nx.DiGraph) -> nx.DiGraph:
@@ -36,4 +38,44 @@ def get_graph_without_data(G: nx.DiGraph) -> nx.DiGraph:
 
 
 def read_dot_graph(path: pathlib.Path) -> nx.DiGraph:
-    return nx.nx_pydot.read_dot(str(path))
+    loaded: nx.DiGraph = nx.nx_pydot.read_dot(str(path))
+    return relabel_graph_for_dot_visualization(loaded, from_reference=True)
+
+
+def relabel_graph_for_dot_visualization(nx_graph: nx.Graph, from_reference: bool = False) -> nx.DiGraph:
+    """
+    Relabels NetworkX graph nodes to exclude reserved symbols in keys.
+        In case replaced names match for two different nodes, integer index is added to its keys.
+        While nodes keys are being updated, visualized nodes names corresponds to the original nodes names.
+
+    :param nx_graph: NetworkX graph to visualize via dot.
+    :return: NetworkX graph with reserved symbols in nodes keys replaced.
+    """
+
+    # .dot format reserves ':' character in node names
+    if not from_reference:
+        # dumping to disk
+        __CHARACTER_REPLACE_FROM = ":"
+        __CHARACTER_REPLACE_TO = "^"
+    else:
+        # loading from disk
+        __CHARACTER_REPLACE_FROM = "^"
+        __CHARACTER_REPLACE_TO = ":"
+
+    hits = defaultdict(lambda: 0)
+    mapping = {}
+    for original_name in nx_graph.nodes():
+        dot_name = original_name.replace(__CHARACTER_REPLACE_FROM, __CHARACTER_REPLACE_TO)
+        hits[dot_name] += 1
+        if hits[dot_name] > 1:
+            dot_name = f"{dot_name}_{hits}"
+        if original_name != dot_name:
+            mapping[original_name] = dot_name
+
+    relabeled_graph = nx.relabel_nodes(nx_graph, mapping)
+    nx.set_node_attributes(
+        relabeled_graph,
+        name="label",
+        values={dot_key: original_key for original_key, dot_key in mapping.items()},
+    )
+    return relabeled_graph
