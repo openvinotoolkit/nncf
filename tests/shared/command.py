@@ -79,7 +79,7 @@ class Command:
 
                     self.process.wait()
                     self.exec_time = time.time() - start_time
-            except Exception as e:  # pylint:disable=broad-except
+            except Exception as e:
                 self.thread_exc = e
 
         thread = threading.Thread(target=target)

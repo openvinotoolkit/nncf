@@ -21,7 +21,6 @@ from nncf.torch.quantization.extensions import QuantizedFunctionsCUDA
 from nncf.torch.utils import add_domain
 
 
-# pylint:disable=abstract-method
 class QuantizeSymmetric(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input_, scale, level_low, level_high, levels):
@@ -73,7 +72,6 @@ class QuantizeSymmetric(torch.autograd.Function):
         return grad_input, grad_scale, None, None, None
 
 
-# pylint:disable=abstract-method
 class QuantizeAsymmetric(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input_, input_low, input_range, level_low, level_high, levels):
@@ -133,7 +131,6 @@ def _quantize_autograd_to_range(input_, input_low, input_high, levels):
     return output
 
 
-# pylint:disable=abstract-method
 class ExportQuantizeToFakeQuantize(torch.autograd.Function):
     @staticmethod
     def symbolic(
@@ -160,7 +157,6 @@ class ExportQuantizeToFakeQuantize(torch.autograd.Function):
         return grad_outputs[0]
 
 
-# pylint:disable=abstract-method
 class ExportQuantizeToONNXQuantDequant(torch.autograd.Function):
     @staticmethod
     def symbolic(g, input_, y_scale, y_zero_point, axis):
@@ -212,7 +208,6 @@ def asymmetric_quantize(input_, levels, level_low, level_high, input_low, input_
     return QuantizeAsymmetric.apply(input_, input_low_tuned, input_range_tuned, level_low, level_high, levels)
 
 
-# pylint:disable=abstract-method
 class TuneRange(torch.autograd.Function):
     """
     Makes sure that the zero-point quantum in the quantized domain points exactly to floating point zero,

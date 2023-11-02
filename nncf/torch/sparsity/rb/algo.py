@@ -84,7 +84,6 @@ class RBSparsityController(BaseSparsityAlgoController):
 
     def set_sparsity_level(self, sparsity_level, target_sparsified_module_info: SparseModuleInfo = None):
         if target_sparsified_module_info is None:
-            # pylint:disable=no-value-for-parameter
             self._loss.set_target_sparsity_loss(sparsity_level)
         else:
             sparse_op = target_sparsified_module_info.operand

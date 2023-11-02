@@ -92,7 +92,7 @@ def test_ambiguous_function():
     graph = tracer.trace_graph(mod)
 
     unique_op_exec_contexts = set()
-    # pylint:disable=protected-access
+
     for _, node in graph._nx_graph.nodes.items():
         node_op_address = node[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR].op_address
         assert node_op_address not in unique_op_exec_contexts
@@ -211,7 +211,6 @@ def test_activation_shape_tracing(input_shape: Tuple):
         (f"8 /{MODEL_OUTPUT_OP_NAME}_0", [final_shape], []),
     ]
     for node_id, ref_input_shapes, ref_output_shapes in ref_node_ids_and_io_edge_shapes:
-        # pylint:disable=protected-access
         input_edges = graph.get_nncf_graph_pattern_io(
             [
                 node_id,

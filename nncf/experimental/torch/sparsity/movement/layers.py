@@ -331,7 +331,6 @@ class MaskCalculationHook:
     """
 
     def __init__(self, module: nn.Module):
-        # pylint: disable=protected-access
         self.hook = module._register_state_dict_hook(self.hook_fn)
 
     def hook_fn(self, module, state_dict: Dict, prefix: str, local_metadata):

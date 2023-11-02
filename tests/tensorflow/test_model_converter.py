@@ -94,7 +94,7 @@ def get_model_with_reshapes_and_concats(batch_size=None):
     x = layers.Reshape((16, -1))(x)
     ones = tf.ones_like(x)
     t1 = layers.concatenate([x, ones])
-    # pylint: disable=E1120,E1123
+
     t2 = tf.concat([x, ones], axis=-1)
     y = tf.concat([t1, t2], axis=-1)
     y = tf.transpose(y, [2, 0, 1])

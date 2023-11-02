@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint:disable=too-many-lines
+
 from collections import deque
 from copy import copy
 from copy import deepcopy
@@ -20,6 +20,7 @@ import networkx as nx
 from nncf import nncf_logger
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.graph import relabel_graph_for_dot_visualization
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import NoopMetatype
@@ -49,7 +50,7 @@ from nncf.common.scopes import should_consider_scope
 
 
 class QuantizerPropagationStateGraph(nx.DiGraph):
-    # pylint:disable=too-many-public-methods,too-many-return-statements
+
     """
     This class is based upon InsertionPointGraph and represents
     a"chessboard" for PropagatingQuantizer items.  It tracks the current state of
@@ -60,6 +61,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
     the same graph node/edge. This class is mainly operated upon by the
     QuantizerPropagationSolver objects.
     """
+
     PROPAGATING_QUANTIZER_NODE_ATTR = "propagating_quantizer"
     AFFECTING_PROPAGATING_QUANTIZERS_ATTR = "affecting_propagating_quantizers"
     QUANTIZATION_TRAIT_NODE_ATTR = "quantization_trait"
@@ -265,7 +267,6 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             QuantizerPropagationStateGraphNodeType.POST_HOOK,
         ]
 
-    # pylint:disable=too-many-branches
     def merge_quantizer_into_path(self, prop_quantizer: PropagatingQuantizer, path: PropagationPath):
         curr_node = self.nodes[prop_quantizer.current_location_node_key]
         curr_node[QuantizerPropagationStateGraph.PROPAGATING_QUANTIZER_NODE_ATTR] = None
@@ -348,7 +349,6 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             major_unified_scale_type = UnifiedScaleType.UNIFY_ONLY_PER_TENSOR
         return major_unified_scale_type
 
-    # pylint:disable=too-many-statements
     def merge_quantizers_for_branching_node(
         self,
         quantizers_to_merge: List[PropagatingQuantizer],
@@ -997,7 +997,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                     label="Unified group {}".format(gid),
                 )
 
-        return out_graph
+        return relabel_graph_for_dot_visualization(out_graph)
 
     def traverse_graph(
         self,

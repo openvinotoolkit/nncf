@@ -16,10 +16,8 @@ from typing import Union
 
 import numpy as np
 import onnx
-from onnx import TensorProto  # pylint:disable=no-name-in-module
+from onnx import TensorProto
 from onnx.external_data_helper import uses_external_data
-
-# pylint: disable=no-member
 
 
 def load_model_topology_with_zeros_weights(model_path: Union[str, Path]) -> onnx.ModelProto:

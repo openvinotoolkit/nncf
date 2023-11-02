@@ -76,7 +76,7 @@ def paste_instance_masks(masks, detected_boxes, image_height, image_width):
         w = np.maximum(w, 1)
         h = np.maximum(h, 1)
 
-        mask = cv2.resize(padded_mask, (w, h))  # pylint: disable=E1101
+        mask = cv2.resize(padded_mask, (w, h))
         mask = np.array(mask > 0.5, dtype=np.uint8)
 
         x_0 = min(max(ref_box[0], 0), image_width)

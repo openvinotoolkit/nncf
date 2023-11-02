@@ -10,8 +10,6 @@
 # limitations under the License.
 
 import argparse
-
-# pylint:skip-file
 import json
 import sys
 from collections import OrderedDict
@@ -20,7 +18,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-# pylint:disable=import-error
 from mdutils import MdUtils
 
 from tests.shared.metric_thresholds import DIFF_FP32_MAX_GLOBAL

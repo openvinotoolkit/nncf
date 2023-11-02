@@ -21,8 +21,6 @@ from nncf.onnx.graph.node_utils import get_quantization_axis
 from nncf.onnx.graph.node_utils import get_reduction_shape
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 
-# pylint: disable=protected-access
-
 
 @dataclass
 class TestCase:

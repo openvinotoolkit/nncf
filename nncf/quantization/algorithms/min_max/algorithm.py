@@ -51,7 +51,6 @@ from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.advanced_parameters import changes_asdict
 from nncf.quantization.algorithms.algorithm import Algorithm
-from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.quantization.fake_quantize import get_quantizer_narrow_range
 from nncf.quantization.passes import transform_to_inference_graph
@@ -97,7 +96,7 @@ class MinMaxQuantization(Algorithm):
 
     def __init__(
         self,
-        preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+        preset: Optional[QuantizationPreset] = None,
         target_device: TargetDevice = TargetDevice.ANY,
         subset_size: int = 300,
         model_type: Optional[ModelType] = None,
@@ -112,8 +111,12 @@ class MinMaxQuantization(Algorithm):
         backend_params: Optional[Dict[str, Any]] = None,
     ):
         """
-        :param preset: A preset that controls the quantization mode,
-            defaults to QuantizationPreset.PERFORMANCE.
+        :param preset: A preset controls the quantization mode (symmetric and asymmetric).
+            It can take the following values:
+            - `performance`: Symmetric quantization of weights and activations.
+            - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
+            Default value is None. In this case, `mixed` preset is used for `transformer`
+            model type otherwise `performace`.
         :param target_device: A target device the specificity of which will be taken
             into account while compressing in order to obtain the best performance
             for this type of device, defaults to TargetDevice.ANY.
@@ -158,6 +161,13 @@ class MinMaxQuantization(Algorithm):
             QuantizerGroup.ACTIVATIONS: activations_range_estimator_params,
         }
 
+        # preset definition
+        if preset is None:
+            if model_type == ModelType.TRANSFORMER:
+                preset = QuantizationPreset.MIXED
+            else:
+                preset = QuantizationPreset.PERFORMANCE
+
         # Calculates global quantizer constraints
         self._global_quantizer_constraints = {}
         for quantizer_group in QuantizerGroup:
@@ -177,8 +187,8 @@ class MinMaxQuantization(Algorithm):
         self._unified_scale_groups = []
 
     @property
-    def available_backends(self) -> Dict[str, BackendType]:
-        return ALGO_BACKENDS.registry_dict
+    def available_backends(self) -> List[BackendType]:
+        return [BackendType.ONNX, BackendType.OPENVINO, BackendType.TORCH]
 
     def _get_quantizer_constraints(
         self, group: QuantizerGroup, preset: QuantizationPreset, quantization_params: Optional[QuantizationParameters]
@@ -505,7 +515,10 @@ class MinMaxQuantization(Algorithm):
         hw_patterns = PatternsManager.get_full_hw_pattern_graph(backend=backend, device=device, model_type=model_type)
 
         inference_nncf_graph = transform_to_inference_graph(
-            deepcopy(nncf_graph), self._backend_entity.shapeof_metatypes, self._backend_entity.read_variable_metatypes
+            deepcopy(nncf_graph),
+            self._backend_entity.shapeof_metatypes,
+            self._backend_entity.dropout_metatypes,
+            self._backend_entity.read_variable_metatypes,
         )
 
         quantizer_setup = self._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)

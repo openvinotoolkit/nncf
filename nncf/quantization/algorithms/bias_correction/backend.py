@@ -22,14 +22,11 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
-from nncf.common.utils.registry import Registry
 
 TModel = TypeVar("TModel")
 OutputType = TypeVar("OutputType")
-ALGO_BACKENDS = Registry("algo_backends")
 
 
-# pylint:disable=too-many-public-methods
 class BiasCorrectionAlgoBackend(ABC):
     @property
     @abstractmethod
@@ -204,15 +201,4 @@ class BiasCorrectionAlgoBackend(ABC):
         :param model: TModel instance.
         :param nncf_graph: NNCFGraph instance.
         :return: TModel without activation Fake Quantize nodes (or Quantize-Dequantize pairs).
-        """
-
-    @staticmethod
-    @abstractmethod
-    def insert_null_biases(model: TModel, nncf_graph: NNCFGraph) -> TModel:
-        """
-        This method finds and inserts zero biases for the layers that should have it.
-
-        :param model: TModel instance.
-        :param nncf_graph: NNCFGraph instance.
-        :return: TModel instance with zero biases
         """

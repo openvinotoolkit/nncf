@@ -13,6 +13,7 @@ import itertools
 from typing import Any, Dict, List
 
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.utils.backend import BackendType
 from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
 from nncf.quantization.algorithms.channel_alignment.algorithm import ChannelAlignment
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
@@ -89,7 +90,7 @@ def _get_bias_correction_param_grid() -> ParamGrid:
     return {"fast_bias_correction": [True, False]}
 
 
-def get_quantization_param_grids(pipeline: Pipeline) -> List[ParamGrid]:
+def get_quantization_param_grids(pipeline: Pipeline, backend: BackendType) -> List[ParamGrid]:
     """
     Returns params grid for post-training quantization algorithm.
     """
@@ -105,7 +106,10 @@ def get_quantization_param_grids(pipeline: Pipeline) -> List[ParamGrid]:
     for step in pipeline.pipeline_steps:
         param_grid = {}
         for algorithm in step:
+            if backend not in algorithm.available_backends:
+                continue
             param_grid.update(algorithm_cls_to_param_grid[algorithm.__class__])
-        param_grids.append(param_grid)
+        if param_grid:
+            param_grids.append(param_grid)
 
     return param_grids

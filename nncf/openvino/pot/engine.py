@@ -64,7 +64,6 @@ class DatasetWrapper:
         for idx, x in enumerate(self._iterable):
             yield (idx, x)
 
-    # pylint: disable=protected-access
     def __len__(self) -> int:
         if self._length is None:
             data_source = None

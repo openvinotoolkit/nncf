@@ -77,11 +77,11 @@ OMZ_MODELS_QUANTIZE_PARAMS = {
 
 
 @pytest.mark.parametrize("model_name_params", OMZ_MODELS_QUANTIZE_PARAMS.items(), ids=list(OMZ_MODELS_QUANTIZE_PARAMS))
-def test_omz_models_fq_placement(model_name_params, tmp_path):
+def test_omz_models_fq_placement(model_name_params, tmp_path, omz_cache_dir):
     model_name, q_params = model_name_params
     params_str = "_".join([param.value for param in q_params.values()])
     q_params.update({"inplace_statistics": True})
-    download_model(model_name, tmp_path)
+    download_model(model_name, tmp_path, omz_cache_dir)
     convert_model(model_name, tmp_path)
     model_path = tmp_path / "public" / model_name / "FP32" / f"{model_name}.xml"
     model = ov.Core().read_model(model_path)
@@ -116,10 +116,10 @@ OMZ_MODELS_SQ_PARAMS = {
 
 
 @pytest.mark.parametrize("model_name_params", OMZ_MODELS_SQ_PARAMS.items(), ids=list(OMZ_MODELS_SQ_PARAMS))
-def test_omz_models_sq_placement(model_name_params, tmp_path):
+def test_omz_models_sq_placement(model_name_params, tmp_path, omz_cache_dir):
     model_name, q_params = model_name_params
     q_params.update({"inplace_statistics": True})
-    download_model(model_name, tmp_path)
+    download_model(model_name, tmp_path, omz_cache_dir)
     convert_model(model_name, tmp_path)
     model_path = tmp_path / "public" / model_name / "FP32" / f"{model_name}.xml"
     model = ov.Core().read_model(model_path)
@@ -133,7 +133,6 @@ def test_omz_models_sq_placement(model_name_params, tmp_path):
     compare_nncf_graphs(quantized_model, path_ref_graph)
 
 
-# pylint: disable=protected-access
 def smooth_quant_model(ov_model: ov.Model, q_params: Dict, quantize=True):
     dataset = get_dataset_for_test(ov_model)
     graph = GraphConverter.create_nncf_graph(ov_model)

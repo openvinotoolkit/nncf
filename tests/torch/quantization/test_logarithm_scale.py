@@ -94,7 +94,7 @@ def test_logarithm_scale_parameter(logarithm_scale_setting_1, logarithm_scale_se
             sd1 = model1.state_dict()
 
             for k, v0 in sd0.items():
-                v1 = sd1[k]  # pylint: disable=E1136
+                v1 = sd1[k]
                 diff = (v1 - v0).abs().sum().item() / v1.numel()
                 assert diff < 1e-6, "symmetric {} logarithm_scales {} param {} is corrupted mean({}-{})={}".format(
                     symmetric, logarithm_scales, k, v0, v1, diff

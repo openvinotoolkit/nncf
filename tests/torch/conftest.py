@@ -15,13 +15,13 @@ import pytest
 
 try:
     import torch
-except:  # pylint: disable=bare-except  # noqa: E722
+except:  # noqa: E722
     torch = None
 from nncf.common.quantization.structs import QuantizationMode
 from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
 from tests.shared.case_collection import skip_marked_cases_if_options_not_specified
-from tests.shared.install_fixtures import tmp_venv_with_nncf  # pylint:disable=unused-import  # noqa: F401
-from tests.shared.logging import nncf_caplog  # pylint:disable=unused-import  # noqa: F401
+from tests.shared.install_fixtures import tmp_venv_with_nncf  # noqa: F401
+from tests.shared.logging import nncf_caplog  # noqa: F401
 
 pytest.register_assert_rewrite("tests.torch.helpers")
 
@@ -242,7 +242,7 @@ def runs_subprocess_in_precommit():
     # memory which has not been cached (and thus remains reserved) in the owning pytest process by PyTorch,
     # and the tests below may fail with an OOM. To avoid this, need to call torch.cuda.empty_cache()
     # each time a GPU-powered subprocess is executed during a test.
-    # pylint: disable=W0702,W0621
+
     try:
         import torch
 

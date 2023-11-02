@@ -21,10 +21,8 @@ from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
-from nncf.common.utils.registry import Registry
 
 TModel = TypeVar("TModel")
-ALGO_BACKENDS = Registry("algo_backends")
 
 
 @dataclass

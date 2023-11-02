@@ -130,9 +130,7 @@ def main(argv):
     if not is_staged_quantization(config):
         start_worker(main_worker, config)
     else:
-        from examples.torch.classification.staged_quantization_worker import (
-            staged_quantization_main_worker,  # pylint: disable=cyclic-import
-        )
+        from examples.torch.classification.staged_quantization_worker import staged_quantization_main_worker
 
         start_worker(staged_quantization_main_worker, config)
 
@@ -145,7 +143,6 @@ def inception_criterion_fn(model_outputs: Any, target: Any, criterion: _Loss) ->
     return loss1 + 0.4 * loss2
 
 
-# pylint:disable=too-many-branches,too-many-statements
 def main_worker(current_gpu, config: SampleConfig):
     configure_device(current_gpu, config)
     config.mlflow = SafeMLFLow(config)
@@ -277,7 +274,7 @@ def main_worker(current_gpu, config: SampleConfig):
     if "train" in config.mode:
         if is_accuracy_aware_training(config):
             # validation function that returns the target metric value
-            # pylint: disable=E1123
+
             def validate_fn(model, epoch):
                 top1, _, _ = validate(val_loader, model, criterion, config, epoch=epoch)
                 return top1

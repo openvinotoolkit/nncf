@@ -46,7 +46,6 @@ class QuantizationControllerBaseForTest(QuantizationControllerBase):
 
 
 class QuantizationCtrlBaseSpy:
-    # pylint:disable=no-member
     def __init__(self, mocker):
         self._mocked_ctrl = QuantizationControllerBaseForTest(mocker.stub)
         mocker.patch.object(self._mocked_ctrl, "enable_weight_quantization")

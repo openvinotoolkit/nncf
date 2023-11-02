@@ -598,7 +598,6 @@ class FunctionalConverter(BaseFunctionalSequentialConverter):
             )
             node_name_vs_nncf_node_ids[node_name] = nncf_node.node_id
 
-            # pylint:disable=protected-access
             if layer in self._model._output_layers:
                 output_idx = self._model._output_layers.index(layer)
                 output_node_id_vs_model_output_idx[nncf_node.node_id] = output_idx

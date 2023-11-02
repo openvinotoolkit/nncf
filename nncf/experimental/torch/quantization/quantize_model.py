@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, Union
 
 import torch
 
@@ -87,7 +87,7 @@ def create_nncf_network(model: torch.nn.Module, dataset: Dataset) -> NNCFNetwork
 def quantize_impl(
     model: torch.nn.Module,
     calibration_dataset: Dataset,
-    preset: QuantizationPreset,
+    preset: Union[QuantizationPreset, None],
     target_device: TargetDevice,
     subset_size: int,
     fast_bias_correction: bool,

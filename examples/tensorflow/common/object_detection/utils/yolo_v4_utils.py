@@ -183,7 +183,7 @@ def box_candidates(box1, box2, wh_thr=2, ar_thr=20, area_thr=0.1):  # box1(4,n),
     return (w2 > wh_thr) & (h2 > wh_thr) & (w2 * h2 / (w1 * h1 + 1e-16) > area_thr) & (ar < ar_thr)  # candidates
 
 
-def merge_mosaic_bboxes(bboxes, crop_x, crop_y, image_size):  # pylint: disable=R0912
+def merge_mosaic_bboxes(bboxes, crop_x, crop_y, image_size):
     # adjust & merge mosaic samples bboxes as following area order:
     # -----------
     # |     |   |

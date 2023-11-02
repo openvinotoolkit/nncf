@@ -96,7 +96,7 @@ def dump_parameters(model: ov.Model, parameters: Dict, path: Optional[List] = No
 def native_quantize_if_op_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
@@ -138,7 +138,7 @@ def native_quantize_if_op_impl(
     dump_parameters(
         quantized_model,
         {
-            "preset": preset.value,
+            "preset": preset,
             "target_device": target_device.value,
             "subset_size": subset_size,
             "fast_bias_correction": fast_bias_correction,
@@ -154,7 +154,7 @@ def native_quantize_if_op_impl(
 def native_quantize_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
@@ -184,7 +184,7 @@ def native_quantize_impl(
     dump_parameters(
         quantized_model,
         {
-            "preset": preset.value,
+            "preset": preset,
             "target_device": target_device.value,
             "subset_size": subset_size,
             "fast_bias_correction": fast_bias_correction,
@@ -206,7 +206,7 @@ def native_quantize_with_accuracy_control_impl(
     validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
@@ -321,7 +321,7 @@ def native_quantize_with_accuracy_control_impl(
     dump_parameters(
         quantized_model,
         {
-            "preset": preset.value,
+            "preset": preset,
             "target_device": target_device.value,
             "subset_size": subset_size,
             "fast_bias_correction": fast_bias_correction,
@@ -339,7 +339,7 @@ def native_quantize_with_accuracy_control_impl(
 def quantize_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
@@ -396,7 +396,7 @@ def quantize_with_accuracy_control_impl(
     validation_fn: Callable[[Any, Iterable[Any]], float],
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,

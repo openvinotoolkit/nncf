@@ -152,7 +152,6 @@ class TestInsertionCommands:
 
         self.compressed_model.nncf.insert_at_point(insertion_point, [hook])
 
-        # pylint:disable=protected-access
         if insertion_point.insertion_type == PTInsertionType.OPERATOR_PRE_HOOK:
             ctx = self.compressed_model.nncf.get_tracing_context()
             pre_hook_id = PreHookId(insertion_point.op_address, input_port_id=insertion_point.input_port_id)
@@ -177,10 +176,8 @@ class TestInsertionCommands:
         for idx, order in enumerate(ordering):
             assert iterable1[idx] is iterable2[order]
 
-    # pylint:disable=undefined-variable
     @pytest.mark.parametrize("case", priority_test_cases, ids=[x[1].name + "-" + x[0] for x in priority_test_cases])
     def test_priority(self, case, setup):
-        # pylint:disable=too-many-branches
         priority_type = case[0]
         insertion_type = case[1]
 
@@ -232,7 +229,6 @@ class TestInsertionCommands:
         elif priority_type == "different":
             order = [2, 0, 1]
 
-        # pylint:disable=protected-access
         if insertion_type == TargetType.OPERATOR_PRE_HOOK:
             ctx = self.compressed_model.nncf.get_tracing_context()
             pre_hook_id = PreHookId(
@@ -536,7 +532,6 @@ def test_quantizer_insertion_transformations(target_type, node_name, input_port_
     assert transformed_model.nncf.is_compression_module_registered(compression_module_type)
 
     if target_type == TargetType.OPERATION_WITH_WEIGHTS:
-        # pylint: disable=protected-access
         op = transformed_model.conv1.pre_ops._modules["0"]
         assert isinstance(op, UpdateWeight)
         assert isinstance(op.op, BaseOp)

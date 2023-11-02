@@ -86,7 +86,6 @@ def get_basic_quantization_config(
     return config
 
 
-# pylint:disable=redefined-outer-name
 def get_basic_quantization_config_with_hw_config_type(hw_config_type, input_sample_size):
     config = get_empty_config(input_sample_sizes=input_sample_size)
     config["target_device"] = hw_config_type
@@ -120,7 +119,7 @@ def check_graph(graph: PTNNCFGraph, path_to_dot: str, graph_dir: str, sort_dot_g
     :param sort_dot_graph: If True the dumped graph will be sorted, if False - otherwise.
     :return: None
     """
-    # pylint:disable=protected-access
+
     nx_graph = graph.get_graph_for_structure_analysis()
     path_to_dot = get_full_path_to_the_graph(path_to_dot, graph_dir)
     compare_nx_graph_with_reference(nx_graph, path_to_dot, sort_dot_graph=sort_dot_graph)
@@ -808,9 +807,7 @@ def hw_config_type(request):
     return type_hw
 
 
-# pylint:disable=too-many-branches
 @pytest.mark.parametrize("desc", TEST_HW_MODELS_DESC, ids=[m.model_name for m in TEST_HW_MODELS_DESC])
-# pylint:disable=redefined-outer-name
 def test_compressed_graph_models_hw(desc, hw_config_type):
     model = desc.model_builder()
     config = get_basic_quantization_config_with_hw_config_type(
@@ -819,7 +816,6 @@ def test_compressed_graph_models_hw(desc, hw_config_type):
     input_info_list = create_input_infos(config)
     compressed_model = NNCFNetwork(model, input_infos=input_info_list)
 
-    # pylint:disable=protected-access
     quantization_builder = QuantizationBuilder(config, should_init=False)
     single_config_quantizer_setup = quantization_builder._get_single_config_quantizer_setup(compressed_model)
     sketch_graph = compressed_model.nncf.get_original_graph()
@@ -839,7 +835,6 @@ def prepare_potential_quantizer_graph(graph: PTNNCFGraph, quantizer_setup: Singl
     pre_hooked_quantizers_activations_attr: Dict[NNCFNodeName, Tuple[int, str]] = {}
     post_hooked_quantizers_activations_attr: Dict[NNCFNodeName, str] = {}
 
-    # pylint:disable=protected-access
     for qp in quantizer_setup.quantization_points.values():
         if qp.is_weight_quantization_point():
             target_node_name = qp.insertion_point.target_node_name

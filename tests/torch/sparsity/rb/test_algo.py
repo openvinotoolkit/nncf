@@ -84,7 +84,7 @@ def test_can_set_sparse_layers_to_loss():
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     loss = compression_ctrl.loss
     assert isinstance(loss, SparseLoss)
-    # pylint: disable=protected-access
+
     for layer in loss._sparse_layers:
         assert isinstance(layer, RBSparsifyingWeight)
 
@@ -221,7 +221,6 @@ def test_create_rb_algo_with_per_layer_loss():
     config["compression"] = {"algorithm": "rb_sparsity", "params": {"sparsity_level_setting_mode": "local"}}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(MockModel(), config)
 
-    # pylint: disable=protected-access
     assert isinstance(compression_ctrl._loss, SparseLossForPerLayerSparsity)
 
 
@@ -230,7 +229,6 @@ def test_rb_sparsity__can_set_sparsity_level_for_module():
     config["compression"] = {"algorithm": "rb_sparsity", "params": {"sparsity_level_setting_mode": "local"}}
     _, compression_ctrl = create_compressed_model_and_algo_for_test(BasicConvTestModel(), config)
 
-    # pylint: disable=protected-access
     assert list(compression_ctrl._loss.per_layer_target.values())[0] == 1
 
     compression_ctrl.set_sparsity_level(0.7, compression_ctrl.sparsified_module_info[0])

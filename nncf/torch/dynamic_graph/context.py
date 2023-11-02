@@ -86,7 +86,6 @@ class CopySafeThreadingVars:
         return CopySafeThreadingVars()
 
 
-# pylint: disable=too-many-public-methods
 class TracingContext:
     def __init__(self):
         self.graph = DynamicGraph()
@@ -473,7 +472,7 @@ def disable_tracing(method):
     :param method: A method to patch.
     """
 
-    def no_nncf_trace_wrapper(self, fn, *args, **kwargs):  # pylint: disable=unused-argument
+    def no_nncf_trace_wrapper(self, fn, *args, **kwargs):
         with no_nncf_trace():
             return fn(*args, **kwargs)
 

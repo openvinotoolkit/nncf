@@ -25,7 +25,6 @@ class TFNNCFPruningTensorProcessor(NNCFPruningBaseTensorProcessor):
 
     @classmethod
     def concatenate(cls, tensors: List[NNCFTensor], axis: int) -> NNCFTensor:
-        # pylint: disable=E1120,E1123
         ret_tensor = tf.concat([t.tensor for t in tensors], axis=axis)
         return TFNNCFTensor(ret_tensor)
 
@@ -51,7 +50,6 @@ class TFNNCFPruningTensorProcessor(NNCFPruningBaseTensorProcessor):
 
     @classmethod
     def split(cls, tensor: NNCFTensor, output_shapes: List[int]) -> List[NNCFTensor]:
-        # pylint: disable=E1120
         chunks = len(output_shapes)
         ret_tensors = tf.split(tensor.tensor, chunks)
         return [TFNNCFTensor(ret_tensor) for ret_tensor in ret_tensors]

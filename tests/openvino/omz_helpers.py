@@ -25,8 +25,8 @@ def run_command(command: List[str]):
     return cmd_output
 
 
-def download_model(name, path):
-    com_line = ["omz_downloader", "--name", name, "-o", str(path)]
+def download_model(name, path, omz_cache_dir):
+    com_line = ["omz_downloader", "--name", name, "-o", str(path), "--cache_dir", str(omz_cache_dir)]
     _ = run_command(com_line)
 
 

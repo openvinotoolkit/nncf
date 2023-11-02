@@ -21,7 +21,6 @@ def logit(x):
     return torch.log(x / (1 - x))
 
 
-# pylint:disable=abstract-method
 class STRound(torch.autograd.Function):
     @staticmethod
     def symbolic(g, input_, inplace=False):
@@ -37,7 +36,6 @@ class STRound(torch.autograd.Function):
         return grad_outputs[0]
 
 
-# pylint:disable=abstract-method
 class STThreshold(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input_, threshold: float = 0.5):

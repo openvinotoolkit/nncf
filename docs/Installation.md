@@ -67,8 +67,9 @@ Use one of the Dockerfiles in the [docker](../docker) directory to build an imag
 The following table lists the recommended corresponding versions of backend packages
 as well as the supported versions of Python:
 
-| NNCF    | OpenVINO   | PyTorch  | ONNX     | TensorFlow | Python  |
-| ------- | ---------- | -------- | -------- | ---------- | ------- |
-| `2.6.0` | `2023.1.0` | `2.0.1`  | `1.13.1` | `2.12.0`   | `3.8`   |
-| `2.5.0` | `2023.0.0` | `1.13.1` | `1.13.1` | `2.11.1`   | `3.8`   |
-| `2.4.0` | `2022.1.0` | `1.12.1` | `1.12.0` | `2.8.2`    | `3.8`   |
+| NNCF      | OpenVINO   | PyTorch  | ONNX     | TensorFlow | Python |
+|-----------|------------|----------|----------|------------|--------|
+| `develop` | `2023.1.0` | `2.1`    | `1.13.1` | `2.12.0`   | `3.8`  |
+| `2.6.0`   | `2023.1.0` | `2.0.1`  | `1.13.1` | `2.12.0`   | `3.8`  |
+| `2.5.0`   | `2023.0.0` | `1.13.1` | `1.13.1` | `2.11.1`   | `3.8`  |
+| `2.4.0`   | `2022.1.0` | `1.12.1` | `1.12.0` | `2.8.2`    | `3.8`  |

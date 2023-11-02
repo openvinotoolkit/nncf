@@ -25,7 +25,7 @@ def get_single_concat_test_model(input_shapes):
     inputs = []
     for i, input_shape in enumerate(input_shapes):
         inputs.append(tf.keras.Input(shape=input_shape[1:], name="input_{}".format(i + 1)))
-    # pylint: disable=unbalanced-tuple-unpacking
+
     input_1, input_2 = inputs
 
     x_1 = layers.Multiply()([input_1, input_1])
@@ -40,7 +40,7 @@ def get_double_concat_test_model(input_shapes):
     inputs = []
     for i, input_shape in enumerate(input_shapes):
         inputs.append(tf.keras.Input(shape=input_shape[1:], name="input_{}".format(i + 1)))
-    # pylint: disable=unbalanced-tuple-unpacking
+
     input_1, input_2 = inputs
 
     x_1 = input_1 * input_1
@@ -56,7 +56,7 @@ def get_unet_like_test_model(input_shapes):
     inputs = []
     for i, input_shape in enumerate(input_shapes):
         inputs.append(tf.keras.Input(shape=input_shape[1:], name="input_{}".format(i + 1)))
-    # pylint: disable=unbalanced-tuple-unpacking
+
     input_1, _ = inputs
 
     conv_1 = layers.Conv2D(filters=8, kernel_size=1)(input_1)
@@ -168,7 +168,7 @@ def get_eltwise_quantizer_linking_test_model(input_shapes):
     inputs = []
     for i, input_shape in enumerate(input_shapes):
         inputs.append(tf.keras.Input(shape=input_shape[1:], name="input_{}".format(i + 1)))
-    # pylint: disable=unbalanced-tuple-unpacking
+
     input_1, input_2 = inputs
 
     def path(input_1, input_2):

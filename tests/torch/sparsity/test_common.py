@@ -360,7 +360,6 @@ def test_scheduler_get_state(scheduler_cls):
     assert new_scheduler.current_step == 4
     assert new_scheduler.current_epoch == 0
     if scheduler_cls == PolynomialSparsityScheduler:
-        # pylint: disable=protected-access
         assert new_scheduler._steps_per_epoch == 5
     if scheduler_cls == AdaptiveSparsityScheduler:
         assert new_scheduler.num_bad_epochs == 1

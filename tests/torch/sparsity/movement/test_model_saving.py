@@ -18,7 +18,7 @@ import onnxruntime
 import pytest
 import torch
 from addict import Dict
-from datasets import Dataset  # pylint: disable=no-name-in-module
+from datasets import Dataset
 from onnx import numpy_helper
 from openvino.runtime import Core
 from openvino.runtime import serialize
@@ -224,7 +224,7 @@ class TestONNXExport:
 
         # Zero out first 75% elements
         ctrl.reset_independent_structured_mask()
-        groups = ctrl._structured_mask_handler._structured_mask_ctx_groups  # pylint: disable=protected-access
+        groups = ctrl._structured_mask_handler._structured_mask_ctx_groups
         for group in groups:
             for ctx in group.structured_mask_contexts:
                 shape = ctx.independent_structured_mask.shape

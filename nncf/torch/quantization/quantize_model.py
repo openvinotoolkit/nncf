@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, Union
 
 import torch
 
@@ -81,17 +81,22 @@ class CalibrationDataLoader(PTInitializingDataLoader):
         return length
 
 
-def _get_transformer_quantization_config(subset_size: int) -> Dict[str, Any]:
+def _get_transformer_quantization_config(preset: QuantizationPreset, subset_size: int) -> Dict[str, Any]:
     """
     Returns the quantization config for transformer-based models.
 
+    :param preset: A preset that controls the quantization mode
+        (symmetric and asymmetric). It can take the following values:
+        - `performance`: Symmetric quantization of weights and activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric
+          quantization of activations.
     :param subset_size: Size of a subset to calculate activations
         statistics used for quantization.
     :return: The quantization config for transformer-based models.
     """
     return {
         "algorithm": "quantization",
-        "preset": "mixed",
+        "preset": preset.value,
         "initializer": {
             "range": {"num_init_samples": subset_size, "type": DEFAULT_RANGE_TYPE},
             "batchnorm_adaptation": {"num_bn_adaptation_samples": 0},
@@ -133,12 +138,12 @@ def _get_default_quantization_config(preset: QuantizationPreset, subset_size: in
 
 
 def _create_nncf_config(
-    preset: QuantizationPreset,
+    preset: Union[QuantizationPreset, None],
     target_device: TargetDevice,
     subset_size: int,
-    model_type: Optional[ModelType],
-    ignored_scope: Optional[IgnoredScope],
-    advanced_parameters: Optional[AdvancedQuantizationParameters],
+    model_type: Union[ModelType, None],
+    ignored_scope: Union[IgnoredScope, None],
+    advanced_parameters: Union[AdvancedQuantizationParameters, None],
 ) -> NNCFConfig:
     """
     Creates the NNCFConfig for the quantization algorithm.
@@ -148,6 +153,7 @@ def _create_nncf_config(
         - `performance`: Symmetric quantization of weights and activations.
         - `mixed`: Symmetric quantization of weights and asymmetric
           quantization of activations.
+        - `None`: `mixed` preset is used for `transformer` model type otherwise `performace`.
     :param target_device: A target device the specificity of which will be taken
         into account while compressing in order to obtain the best performance
         for this type of device.
@@ -161,10 +167,16 @@ def _create_nncf_config(
         fine-tuning the quantization algorithm.
     :return: NNCFConfig for the quantization algorithm.
     """
-    if model_type is None:
+    if preset is None:
+        if model_type == ModelType.TRANSFORMER:
+            preset = QuantizationPreset.MIXED
+        else:
+            preset = QuantizationPreset.PERFORMANCE
+
+    if model_type == ModelType.TRANSFORMER:
+        compression_config = _get_transformer_quantization_config(preset, subset_size)
+    else:
         compression_config = _get_default_quantization_config(preset, subset_size)
-    elif model_type == ModelType.TRANSFORMER:
-        compression_config = _get_transformer_quantization_config(subset_size)
 
     if ignored_scope is not None:
         _ignored_scope = convert_ignored_scope_to_list(ignored_scope)
@@ -186,7 +198,7 @@ def _create_nncf_config(
 def quantize_impl(
     model: torch.nn.Module,
     calibration_dataset: Dataset,
-    preset: QuantizationPreset,
+    preset: Union[QuantizationPreset, None],
     target_device: TargetDevice,
     subset_size: int,
     fast_bias_correction: bool,
@@ -275,9 +287,14 @@ def compress_weights_impl(
     :param model: a Torch model for compression.
     :param mode: Defines a mode for weight compression.
         INT8 stands for 8-bit integer quantization of all weights.
-        NF4 stands for a mixed-precision weights quantization to NF4 data type. The first and last layers
-        are always compressed to a backup precision which is 8-bit integer by default. All others are quantized whether
-        to NF4 or to a backup precision depending on criteria and the given ratio.
+        INT4_SYM stands for a mixed-precision weights quantization with 4-bit integer as a primary precision.
+            Weights are quantized to a primary precision symmetrically with a fixed zero point equals to 8.
+            The first and the last layers are always compressed to a backup precision, which is 8-bit integer,
+            by default. All others are quantized whether to 4-bit integer or to a backup precision depending on
+            criteria and the given ratio.
+        INT4_ASYM is the same as INT4_SYM mode, but weights are quantized to a primary precision asymmetrically
+            with a typical non-fixed zero point.
+        NF4 is the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
     :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
         and the rest to INT8).
     :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).

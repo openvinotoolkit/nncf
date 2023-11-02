@@ -171,7 +171,7 @@ class MemoryConsumptionStatisticsCollector(StatisticsCollector):
 
         memory_consumption_fp_model = {}
         memory_consumption_compressed_model = {}
-        # pylint: disable=protected-access
+
         original_nx_graph = original_graph._nx_graph
         nx.set_edge_attributes(original_nx_graph, 32, "precision")
 
@@ -191,7 +191,6 @@ class MemoryConsumptionStatisticsCollector(StatisticsCollector):
         return stats
 
     def _get_precision_for_activation_tensor(self, u_node: str, v_node: str, original_nx_graph: nx.DiGraph) -> int:
-        # pylint: disable=protected-access
         pred_u_nodes = original_nx_graph._pred[u_node]
         precision_enter_activation_tensor = max(
             [0] + [original_nx_graph.edges[pred_u_node, u_node]["precision"] for pred_u_node in pred_u_nodes]
@@ -241,18 +240,16 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
         self._target_device = target_device
 
     def collect(self) -> QuantizationConfigurationStatistics:
-        # pylint: disable=too-many-branches
         merged_original_graph = self.get_merged_original_graph_with_patterns(
             self._compressed_model.nncf.get_original_graph()
         )
         self.stats.quantized_edges_in_cfg = 0
         nx.set_edge_attributes(merged_original_graph, False, self.QUANTIZED_EDGES_ATTR)
         nx.set_edge_attributes(merged_original_graph, False, self.PASSED_EDGES_ATTR)
-        # pylint: disable=protected-access
+
         input_nodes = [node for node in merged_original_graph.nodes if len(merged_original_graph._pred[node]) == 0]
         queue = deque()
         for input_node in input_nodes:
-            # pylint: disable=protected-access
             next_nodes = merged_original_graph._succ[input_node]
             for next_node_key in next_nodes:
                 edge = merged_original_graph.edges[input_node, next_node_key]
@@ -261,7 +258,7 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
                 self.stats.quantized_edges_in_cfg += 1
                 queue.appendleft(next_node_key)
         visited_nodes = {}
-        # pylint: disable=too-many-nested-blocks
+
         while len(queue) != 0:
             node_key = queue.pop()
             if node_key in visited_nodes:
@@ -310,7 +307,6 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
         return self.stats
 
     def _all_enter_edges_in_node_of_type(self, graph, node_key, type_edge):
-        # pylint: disable=protected-access
         prev_nodes = graph._pred[node_key]
         retval = True
         for prev_node_key in prev_nodes:
@@ -321,7 +317,6 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
         return retval
 
     def _marking_edges(self, graph, node_key, queue, mark=True):
-        # pylint: disable=protected-access
         next_nodes = graph._succ[node_key]
         for next_node_key in next_nodes:
             edge = graph.edges[node_key, next_node_key]
@@ -333,7 +328,7 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
 
     def get_merged_original_graph_with_patterns(self, original_graph: PTNNCFGraph):
         pattern = PatternsManager.get_full_hw_pattern_graph(backend=BackendType.TORCH, device=self._target_device)
-        # pylint: disable=protected-access
+
         matches = find_subgraphs_matching_pattern(original_graph._nx_graph, pattern)
         merged_graph = deepcopy(original_graph._nx_graph)
         nx.set_node_attributes(merged_graph, False, self.IS_MERGED_GRAPH_ATTR)
@@ -357,7 +352,7 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
             merged_nodes = []
             for node_key in match:
                 merged_node_key += node_key + "\n"
-                # pylint: disable=protected-access
+
                 merged_nodes.append(original_graph._nx_graph.nodes[node_key])
                 merged_graph.remove_node(node_key)
             merged_node_attrs = {
