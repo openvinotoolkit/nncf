@@ -17,6 +17,7 @@ import torch
 
 import nncf
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.torch.model_creation import create_nncf_network
@@ -49,7 +50,7 @@ def min_max_quantize_model(
     advanced_parameters = quantization_params.get("advanced_parameters", AdvancedQuantizationParameters())
     advanced_parameters.disable_bias_correction = True
     advanced_parameters.disable_channel_alignment = True
-    advanced_parameters.smooth_quant_params = AdvancedQuantizationParameters(matmul=-1)
+    advanced_parameters.smooth_quant_params = AdvancedSmoothQuantParameters(matmul=-1)
     quantization_params["advanced_parameters"] = advanced_parameters
 
     post_training_quantization = PostTrainingQuantization(subset_size=1, **quantization_params)
