@@ -36,7 +36,8 @@ from nncf.common.utils.dot_file_rw import get_graph_without_data
 from nncf.common.utils.dot_file_rw import read_dot_graph
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.torch.dynamic_graph.context import PreHookId
-from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.torch.dynamic_graph.io_handling import FillerInputElement
+from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTInputNoopMetatype
@@ -89,7 +90,9 @@ class InsertionPointTestModel(nn.Module):
 class TestInsertionCommands:
     @pytest.fixture()
     def setup(self):
-        self.compressed_model = NNCFNetwork(InsertionPointTestModel(), [ModelInputInfo([1, 1, 10, 10])])
+        self.compressed_model = NNCFNetwork(
+            InsertionPointTestModel(), FillerInputInfo([FillerInputElement([1, 1, 10, 10])])
+        )
 
     conv1_node_name = "InsertionPointTestModel/NNCFConv2d[conv1]/conv2d_0"
     point_for_conv1_weights = PTTargetPoint(
@@ -413,7 +416,7 @@ class TestInsertionPointGraph:
                 return x
 
         model = ModelForMetatypeTesting()
-        nncf_network = NNCFNetwork(model, [ModelInputInfo([1, 3, 300, 300])])
+        nncf_network = NNCFNetwork(model, FillerInputInfo([FillerInputElement([1, 3, 300, 300])]))
         nncf_graph = nncf_network.nncf.get_original_graph()
 
         for nncf_node in nncf_graph.get_all_nodes():
@@ -455,7 +458,7 @@ class TestInsertionPointGraph:
 
 
 def test_extraction_with_fused_bias_transformations():
-    model = NNCFNetwork(InsertionPointTestModel(), [ModelInputInfo([1, 1, 10, 10])])
+    model = NNCFNetwork(InsertionPointTestModel(), FillerInputInfo([FillerInputElement([1, 1, 10, 10])]))
     model_transformer = PTModelTransformer(model)
 
     command = PTModelExtractionWithFusedBiasCommand("InsertionPointTestModel/NNCFConv2d[conv1]/conv2d_0")
@@ -469,7 +472,7 @@ def test_extraction_with_fused_bias_transformations():
 
 
 def test_bias_correction_transformations():
-    model = NNCFNetwork(InsertionPointTestModel(), [ModelInputInfo([1, 1, 10, 10])])
+    model = NNCFNetwork(InsertionPointTestModel(), FillerInputInfo([FillerInputElement([1, 1, 10, 10])]))
     model_transformer = PTModelTransformer(model)
 
     new_bias = torch.Tensor([42])
@@ -484,7 +487,7 @@ def test_bias_correction_transformations():
 
 
 def test_rebuild_graph_after_insert_transformation():
-    model = NNCFNetwork(InsertionPointTestModel(), [ModelInputInfo([1, 1, 10, 10])])
+    model = NNCFNetwork(InsertionPointTestModel(), FillerInputInfo([FillerInputElement([1, 1, 10, 10])]))
 
     graph = model.nncf.get_graph()
 
@@ -518,7 +521,7 @@ def test_rebuild_graph_after_insert_transformation():
     ),
 )
 def test_quantizer_insertion_transformations(target_type, node_name, input_port_id, ref_name):
-    model = NNCFNetwork(InsertionPointTestModel(), [ModelInputInfo([1, 1, 10, 10])])
+    model = NNCFNetwork(InsertionPointTestModel(), FillerInputInfo([FillerInputElement([1, 1, 10, 10])]))
     model_transformer = PTModelTransformer(model)
 
     target_point = PTTargetPoint(target_type, node_name, input_port_id=input_port_id)

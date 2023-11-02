@@ -11,7 +11,7 @@
 import torch
 
 from nncf import NNCFConfig
-from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from tests.torch.helpers import get_empty_config
 
 
@@ -75,8 +75,8 @@ def distributed_init_test_default(gpu, ngpus_per_node, config):
 
 
 def create_rank_dataloader(config, rank, num_samples=10, batch_size=3):
-    input_infos_list = create_input_infos(config)
-    input_sample_size = input_infos_list[0].shape
+    input_infos_list = FillerInputInfo.from_nncf_config(config)
+    input_sample_size = input_infos_list.elements[0].shape
     data_loader = torch.utils.data.DataLoader(
         RankDatasetMock(input_sample_size[1:], rank, num_samples),
         batch_size=batch_size,

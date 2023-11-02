@@ -65,7 +65,7 @@ class DebugGraphContext:
 
     def dump_graph(self, file_name):
         dyn_graph = self._model.nncf.get_dynamic_graph()
-        nncf_graph = GraphConverter.convert(dyn_graph, self._input_info)
+        nncf_graph = GraphConverter.convert(dyn_graph)
         nncf_graph.visualize_graph(f"{file_name}.dot")
 
     def __enter__(self):

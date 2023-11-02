@@ -279,7 +279,7 @@ class TestONNXExport:
         for i in range(len(dataset)):
             item = dataset[i : i + 1]
             onnx_input = {}
-            for input_name, input_info in zip(input_names, recipe.model_input_info):
+            for input_name, input_info in zip(input_names, recipe.model_input_info.elements):
                 onnx_input[input_name] = torch.tensor(item[input_info.keyword], dtype=input_info.type).numpy()
             outputs = sess.run(None, onnx_input)
             for name, output in zip(output_names, outputs):
