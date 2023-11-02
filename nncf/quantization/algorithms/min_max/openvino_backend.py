@@ -219,6 +219,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.OVSumMetatype,
                 om.OVSquaredDifferenceMetatype,
                 om.OVMVNMetatype,
+                om.OVBatchNormMetatype,
                 om.OVDivideMetatype,
                 om.OVSqrtMetatype,
                 om.OVMaximumMetatype,
