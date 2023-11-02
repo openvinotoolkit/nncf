@@ -81,7 +81,7 @@ def create_ptq_pipeline(
     # Add the `SmoothQuant` algorithm as the first step of the pipeline.
     # It is added only for `ModelType.TRANSFORMER`.
     sq_params = advanced_parameters.smooth_quant_params
-    if model_type == ModelType.TRANSFORMER and (sq_params.convolution >= 0 or sq_params.matmul >= 0):
+    if (sq_params.convolution >= 0 or sq_params.matmul >= 0):
         alpha_map = {"convolution": sq_params.convolution, "matmul": sq_params.matmul}
         pipeline_steps.append([SmoothQuant(subset_size, advanced_parameters.inplace_statistics, alpha_map=alpha_map)])
 
