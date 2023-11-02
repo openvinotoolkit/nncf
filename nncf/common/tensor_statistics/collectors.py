@@ -327,6 +327,42 @@ class NNCFCollectorTensorProcessor(ABC):
         """
 
     @staticmethod
+    @abstractmethod
+    def transpose(x: NNCFTensor, axes: Tuple[int, ...]) -> NNCFTensor:
+        """
+        Returns an array with axes transposed.
+
+        :param x: The input tensor.
+        :param axes: Tuple which contains a permutation of [0,1,…,N-1] where N is the number of axes of a.
+            The ith axis of the returned array will correspond to the axis numbered axes[i] of the input.
+        :return: x with its axes permuted.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def reshape(x: NNCFTensor, shape: Tuple[int, ...]) -> NNCFTensor:
+        """
+        Gives a new shape to an array without changing its data.
+
+        :param x: The input tensor.
+        :param shape: New shape for the input tensor. The new shape should be compatible with the original shape.
+            One shape dimension can be -1. In this case, the value is inferred
+            from the length of the array and remaining dimensions.
+        :return: Reshaped x.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def cat(x: List[NNCFTensor], axis: int) -> NNCFTensor:
+        """
+        Join a sequence of arrays along an existing axis.
+
+        :param x: The input tensor.
+        :param axis: The axis along which the arrays will be joined.
+        :return: The concatenated array.
+        """
+
+    @staticmethod
     def logical_or(input_: NNCFTensor, other: NNCFTensor) -> NNCFTensor:
         """
         Computes the element-wise logical OR of the given input tensors.

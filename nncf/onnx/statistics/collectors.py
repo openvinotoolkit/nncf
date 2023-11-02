@@ -139,6 +139,19 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return ONNXNNCFTensor(np.mean(t, axis=(0, 2)))
 
     @staticmethod
+    def transpose(x: NNCFTensor, axes: Tuple[int, ...]) -> NNCFTensor:
+        return ONNXNNCFTensor(np.transpose(x.tensor, axes))
+
+    @staticmethod
+    def reshape(x: NNCFTensor, shape: Tuple[int, ...]) -> NNCFTensor:
+        return ONNXNNCFTensor(np.reshape(x.tensor, shape))
+
+    @staticmethod
+    def cat(x: List[NNCFTensor], axis: int) -> NNCFTensor:
+        x = [t.tensor for t in x]
+        return ONNXNNCFTensor(np.concatenate(x, axis))
+
+    @staticmethod
     def batch_mean(x: NNCFTensor) -> NNCFTensor:
         return ONNXNNCFTensor(np.mean(x.tensor, axis=0, keepdims=True))
 
