@@ -173,17 +173,10 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     ) -> List[NNCFTensor]:
         device = tensor.device
         # See https://github.com/pytorch/pytorch/issues/61582
-        if not isinstance(axis, int):
-            result = torch.tensor(
-                np.quantile(tensor.tensor.detach().cpu().numpy(), q=quantile, axis=axis, keepdims=keepdims)
-            )
-        else:
-            result = torch.quantile(
-                tensor.tensor,
-                torch.tensor(quantile, dtype=tensor.tensor.dtype, device=tensor.tensor.device),
-                axis,
-                keepdims,
-            )
+        # https://github.com/pytorch/pytorch/issues/64947
+        result = torch.tensor(
+            np.quantile(tensor.tensor.detach().cpu().numpy(), q=quantile, axis=axis, keepdims=keepdims)
+        )
         result = result.type(tensor.tensor.dtype).to(device)
         return [PTNNCFTensor(x) for x in result]
 
