@@ -158,9 +158,9 @@ def test_width_custom_reorg(basic_model):
         pytest.skip("Skip test for conv model")
 
     config = get_empty_config(input_sample_sizes=basic_model.INPUT_SIZE)
-    importance = basic_model.IMPORTANCE
-    with tempfile.NamedTemporaryFile() as filter_importance_tempfile:
-        torch.save(importance, filter_importance_tempfile)
+    custom_importance = basic_model.IMPORTANCE
+    with tempfile.NamedTemporaryFile() as custom_importance_tempfile:
+        torch.save(custom_importance, custom_importance_tempfile)
         config.update(
             {
                 "bootstrapNAS": {
@@ -168,7 +168,7 @@ def test_width_custom_reorg(basic_model):
                         "elasticity": {
                             "width": {
                                 "filter_importance": "custom",
-                                "filter_importance_path": filter_importance_tempfile.name,
+                                "custom_importance_path": custom_importance_tempfile.name,
                             }
                         },
                     }

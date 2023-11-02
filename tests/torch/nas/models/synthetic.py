@@ -336,7 +336,7 @@ class TwoSequentialFcLNTestModel(nn.Module):
     #
     INPUT_SIZE = [1, 1]
     IMPORTANCE = {
-        "fc1.weight": torch.Tensor([[0.9], [0.1]]),
+        "TwoSequentialFcLNTestModel/NNCFLinear[fc1]/linear_0": torch.Tensor([[0.9], [0.1]]),
     }
 
     def __init__(self):
