@@ -59,7 +59,7 @@ def quantize(
         - `performance`: Symmetric quantization of weights and activations.
         - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
         Default value is None. In this case, `mixed` preset is used for `transformer`
-        model type otherwise `performace`.
+        model type otherwise `performance`.
     :type  preset: nncf.QuantizationPreset
     :param target_device: A target device the specificity of which will be taken
         into account while compressing in order to obtain the best performance
@@ -189,7 +189,7 @@ def quantize_with_accuracy_control(
         - `performance`: Symmetric quantization of weights and activations.
         - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
         Default value is None. In this case, `mixed` preset is used for `transformer`
-        model type otherwise `performace`.
+        model type otherwise `performance`.
     :type preset: nncf.QuantizationPreset
     :param target_device: A target device the specificity of which will be taken
         into account while compressing in order to obtain the best performance
@@ -326,7 +326,7 @@ def quantize_with_tune_hyperparams(
         - `performance`: Symmetric quantization of weights and activations.
         - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
         Default value is None. In this case, `mixed` preset is used for `transformer`
-        model type otherwise `performace`.
+        model type otherwise `performance`.
     :param target_device: A target device the specificity of which will be taken
         into account while compressing in order to obtain the best performance
         for this type of device.
