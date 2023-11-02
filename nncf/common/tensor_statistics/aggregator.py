@@ -59,6 +59,7 @@ class StatisticsAggregator(ABC):
             if self.stat_subset_size is not None
             else None
         )
+        empty_statistics = True
         for input_data in track(
             islice(self.dataset.get_inference_data(), self.stat_subset_size),
             total=total,
@@ -67,6 +68,11 @@ class StatisticsAggregator(ABC):
             outputs = engine.infer(input_data)
             processed_outputs = self._process_outputs(outputs)
             self._register_statistics(processed_outputs, merged_statistics)
+            empty_statistics = False
+        if empty_statistics:
+            raise RuntimeError(
+                "Calibration dataset must not be empty. Please provide calibration dataset with at least one sample."
+            )
 
     def register_statistic_points(self, statistic_points: StatisticPointsContainer) -> None:
         """
