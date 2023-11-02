@@ -374,7 +374,7 @@ You may also use one of the Dockerfiles in the [docker](./docker) directory to b
 - Ubuntu\* 18.04 or later (64-bit)
 - Python\* 3.7 or later
 - Supported frameworks:
-  - PyTorch\* >=1.13.0, <2.1
+  - PyTorch\* >=2.0, <2.2
   - TensorFlow\* >=2.8.4, <=2.12.1
   - ONNX\* ~=1.13.1
   - OpenVINO\* >=2022.3.0
