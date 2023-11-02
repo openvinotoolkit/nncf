@@ -56,6 +56,7 @@ def fixture_basic_model(request):
 
 BASIC_ELASTIC_WIDTH_PARAMS = {
     "filter_importance": "L1",
+    "external_importance_path": None,
     "add_dynamic_inputs": None,
     "max_num_widths": -1,
     "min_width": 1,
@@ -158,17 +159,17 @@ def test_width_custom_reorg(basic_model):
         pytest.skip("Skip test for conv model")
 
     config = get_empty_config(input_sample_sizes=basic_model.INPUT_SIZE)
-    custom_importance = basic_model.IMPORTANCE
-    with tempfile.NamedTemporaryFile() as custom_importance_tempfile:
-        torch.save(custom_importance, custom_importance_tempfile)
+    external_importance = basic_model.IMPORTANCE
+    with tempfile.NamedTemporaryFile() as external_importance_tempfile:
+        torch.save(external_importance, external_importance_tempfile)
         config.update(
             {
                 "bootstrapNAS": {
                     "training": {
                         "elasticity": {
                             "width": {
-                                "filter_importance": "custom",
-                                "custom_importance_path": custom_importance_tempfile.name,
+                                "filter_importance": "external",
+                                "external_importance_path": external_importance_tempfile.name,
                             }
                         },
                     }

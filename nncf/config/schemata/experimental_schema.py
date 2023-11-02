@@ -117,12 +117,12 @@ ELASTIC_WIDTH_SCHEMA = {
         "filter_importance": with_attributes(
             STRING,
             description="The type of filter importance metric. Can be"
-            " one of `L1`, `L2`, `geometric_median`, `custom`."
+            " one of `L1`, `L2`, `geometric_median`, `external`."
             " `L2` by default.",
         ),
-        "filter_importance_path": with_attributes(
+        "external_importance_path": with_attributes(
             STRING,
-            description="Path to the custom weight importance (PyTorch tensor) per node "
+            description="Path to the custom external weight importance (PyTorch tensor) per node "
                         "that needs to weight reorder. Valid only when filter_importance "
                         "is `custom`. The file should be loaded via the torch interface "
                         "torch.load(), represented as a dictionary. It maps NNCF node name "
