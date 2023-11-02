@@ -765,8 +765,8 @@ model type otherwise <cite>performace</cite>.</p></li>
 <li><p><strong>target_device</strong> (<a class="reference internal" href="#nncf.TargetDevice" title="nncf.TargetDevice"><em>nncf.TargetDevice</em></a>) – A target device the specificity of which will be taken
 into account while compressing in order to obtain the best performance
 for this type of device.</p></li>
-<li><p><strong>subset_size</strong> (<em>int</em>) – Size of a subset to calculate activations
-statistics used for quantization.</p></li>
+<li><p><strong>subset_size</strong> (<em>int</em>) – Size of a subset to calculate activations statistics used for quantization.
+Must be positive.</p></li>
 <li><p><strong>fast_bias_correction</strong> (<em>bool</em>) – Setting this option to <cite>False</cite> enables a different
 bias correction method which is more accurate, in general, and takes
 more time but requires less memory.</p></li>
