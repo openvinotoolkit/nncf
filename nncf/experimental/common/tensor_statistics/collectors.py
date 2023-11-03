@@ -125,7 +125,7 @@ class AggregatorBase:
         tensor_processor: NNCFCollectorTensorProcessor,
         aggregation_axes: Optional[AggregationAxes] = None,
         num_samples: Optional[int] = None,
-        window_size=None,
+        window_size: Optional[int] = None,
     ):
         """
         :param tensor_processor: Backend-specific tensor processor.
