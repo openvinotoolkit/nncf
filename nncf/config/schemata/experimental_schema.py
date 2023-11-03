@@ -123,14 +123,14 @@ ELASTIC_WIDTH_SCHEMA = {
         "external_importance_path": with_attributes(
             STRING,
             description="Path to the custom external weight importance (PyTorch tensor) per node "
-                        "that needs to weight reorder. Valid only when filter_importance "
-                        "is `custom`. The file should be loaded via the torch interface "
-                        "torch.load(), represented as a dictionary. It maps NNCF node name "
-                        "to importance tensor with the same shape as the weights in the node "
-                        "module. For example, node `Model/NNCFLinear[fc1]/linear_0` has a "
-                        "3x1 linear module with weight [0.2, 0.3, 0.9], and in the dict"
-                        "{'Model/NNCFLinear[fc1]/linear_0': tensor([0.4, 0.01, 0.2])} represents "
-                        "the corresponding weight importance.",
+            "that needs to weight reorder. Valid only when filter_importance "
+            "is `custom`. The file should be loaded via the torch interface "
+            "torch.load(), represented as a dictionary. It maps NNCF node name "
+            "to importance tensor with the same shape as the weights in the node "
+            "module. For example, node `Model/NNCFLinear[fc1]/linear_0` has a "
+            "3x1 linear module with weight [0.2, 0.3, 0.9], and in the dict"
+            "{'Model/NNCFLinear[fc1]/linear_0': tensor([0.4, 0.01, 0.2])} represents "
+            "the corresponding weight importance.",
         ),
     },
     "additionalProperties": False,

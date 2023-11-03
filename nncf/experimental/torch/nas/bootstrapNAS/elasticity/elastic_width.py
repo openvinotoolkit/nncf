@@ -11,7 +11,6 @@
 
 
 import random
-import re
 from collections import OrderedDict
 from copy import deepcopy
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -806,8 +805,9 @@ class ElasticWidthHandler(SingleElasticityHandler):
         :param node_name: node name
         :return: importance tensor
         """
-        assert should_consider_scope(node_name, ignored_scopes=None, target_scopes=self._external_importance.keys()), \
-            f"Cannot match {node_name} in custom weight importance"
+        assert should_consider_scope(
+            node_name, ignored_scopes=None, target_scopes=self._external_importance.keys()
+        ), f"Cannot match {node_name} in custom weight importance"
         return self._external_importance[node_name]
 
     def reorganize_weights(self) -> None:
