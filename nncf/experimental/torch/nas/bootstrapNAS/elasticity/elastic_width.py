@@ -181,9 +181,9 @@ class ElasticWidthParams(BaseElasticityParams):
         The obtained values are rounded to the nearest smaller value divisible by alignment constant (e.g. 8).
         This parameter is mutually exclusive with `width_step`.
         :param filter_importance: The type of filter importance metric. Can be one of `L1`, `L2`, `geometric_median`,
-        `custom`. `L1` by default.
-        :param external_importance_path: Path to the custom weight importance (PyTorch tensor) per node that needs
-        to weight reorder. Valid only when filter_importance is `custom`.
+        `external`. `L1` by default.
+        :param external_importance_path: Path to the custom external weight importance (PyTorch tensor) per node that needs
+        to weight reorder. Valid only when filter_importance is `external`.
         """
         self.min_width = min_width
         self.max_num_widths = max_num_widths
@@ -191,7 +191,7 @@ class ElasticWidthParams(BaseElasticityParams):
         self.width_multipliers = width_multipliers
         assert (
             filter_importance != "external" or external_importance_path is not None
-        ), "Missing custom weight importance path."
+        ), "Missing external weight importance path."
         self.filter_importance = filter_importance
         self.external_importance_path = external_importance_path
 
@@ -554,7 +554,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
         self._external_importance = None
         if external_importance_path is not None:
             self._external_importance = torch.load(external_importance_path)
-            nncf_logger.debug("Loaded custom weight importance.")
+            nncf_logger.debug("Loaded custom external weight importance.")
         self._weights_normalizer_fn = weights_normalizer_fn
         self._add_dynamic_inputs = add_dynamic_inputs
 
@@ -800,14 +800,14 @@ class ElasticWidthHandler(SingleElasticityHandler):
 
     def get_external_importance(self, node_name: NNCFNodeName):
         """
-        Return custom weight importance for the current node.
+        Return custom weight importance for the current node from external source.
 
         :param node_name: node name
         :return: importance tensor
         """
         assert should_consider_scope(
             node_name, ignored_scopes=None, target_scopes=self._external_importance.keys()
-        ), f"Cannot match {node_name} in custom weight importance"
+        ), f"Cannot match {node_name} in external weight importance data structure"
         return self._external_importance[node_name]
 
     def reorganize_weights(self) -> None:
