@@ -154,7 +154,7 @@ def test_width_reorg(basic_model):
     compare_tensors_ignoring_the_order(after_reorg, before_reorg)
 
 
-def test_width_custom_reorg(basic_model):
+def test_width_custom_external_reorg(basic_model):
     if not isinstance(basic_model, TwoSequentialFcLNTestModel):
         pytest.skip("Skip test for conv model")
 
@@ -184,7 +184,7 @@ def test_width_custom_reorg(basic_model):
     ctrl.multi_elasticity_handler.width_handler.reorganize_weights()
     after_reorg = model(dummy_input)
 
-    model.check_custom_reorg()
+    model.check_custom_external_reorg()
     compare_tensors_ignoring_the_order(after_reorg, before_reorg)
 
 

@@ -182,8 +182,8 @@ class ElasticWidthParams(BaseElasticityParams):
         This parameter is mutually exclusive with `width_step`.
         :param filter_importance: The type of filter importance metric. Can be one of `L1`, `L2`, `geometric_median`,
         `external`. `L1` by default.
-        :param external_importance_path: Path to the custom external weight importance (PyTorch tensor) per node that needs
-        to weight reorder. Valid only when filter_importance is `external`.
+        :param external_importance_path: Path to the custom external weight importance (PyTorch tensor) per node
+        that will be used for weight reordering. Valid only when filter_importance is `external`.
         """
         self.min_width = min_width
         self.max_num_widths = max_num_widths

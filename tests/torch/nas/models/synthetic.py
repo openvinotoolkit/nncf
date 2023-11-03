@@ -369,7 +369,7 @@ class TwoSequentialFcLNTestModel(nn.Module):
         assert torch.equal(self.ln1.weight, ref_ln_weights_1)
         assert torch.equal(self.ln1.bias, ref_ln_bias_1)
 
-    def check_custom_reorg(self):
+    def check_custom_external_reorg(self):
         device = get_model_device(self)
         ref_fc_weights_1 = torch.Tensor([[3], [4]]).to(device)
         ref_fc_bias_1 = torch.Tensor([3, 4]).to(device)
