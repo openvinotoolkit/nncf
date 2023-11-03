@@ -5,8 +5,7 @@ ignore:
 
 codecov:
   notify:
-     after_n_builds: 2
-     wait_for_ci: no
+     wait_for_ci: true
   max_report_age: off
 
 coverage:
@@ -15,6 +14,7 @@ coverage:
       default:
         branches:
           - develop
+        target: 90%
         informational: true
         only_pulls: true
         paths:
@@ -23,15 +23,33 @@ coverage:
       default:
         branches:
           - develop
+        target: 90%
         informational: true
         only_pulls: true
         paths:
-          - "nncf/onnx"
-          - "nncf/common"  # extend this once we collect coverage reports for more than just onnx and common part of precommit
+          - "nncf"
 
 comment:
-  layout: "diff, flags, files"
+  layout: "reach, diff, files, flags"
   require_changes: false
 
   require_head: false
   require_base: false
+
+flag_management:
+  individual_flags:
+    - name: COMMON
+      paths:
+        - nncf/common
+    - name: TORCH
+      paths:
+        - nncf/torch
+    - name: TENSORFLOW
+      paths:
+        - nncf/tensorflow
+    - name: ONNX
+      paths:
+        - nncf/onnx
+    - name: OPENVINO
+      paths:
+        - nncf/openvino
