@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Optional, Union
 
 import torch
 
@@ -28,14 +28,6 @@ from nncf.torch.quantization.weights_compression import insert_pre_compression_o
 from nncf.torch.utils import training_mode_switcher
 
 DEFAULT_RANGE_TYPE = "mean_min_max"
-
-
-def get_inputs(dataloader_output: Any) -> Tuple[Tuple, Dict]:
-    if isinstance(dataloader_output, dict):
-        return (), dataloader_output
-    if isinstance(dataloader_output, tuple):
-        return dataloader_output, {}
-    return (dataloader_output,), {}
 
 
 def create_nncf_network_ptq(model: torch.nn.Module, dataset: Dataset) -> NNCFNetwork:
