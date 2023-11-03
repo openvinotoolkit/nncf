@@ -73,9 +73,7 @@ def relabel_graph_for_dot_visualization(nx_graph: nx.Graph, from_reference: bool
             mapping[original_name] = dot_name
 
     relabeled_graph = nx.relabel_nodes(nx_graph, mapping)
-    nx.set_node_attributes(
-        relabeled_graph,
-        name="label",
-        values={dot_key: original_key for original_key, dot_key in mapping.items()},
-    )
+    for _, node_data in nx_graph.nodes(data=True):
+        if "label" in node_data:
+            node_data["label"] = node_data["label"].replace(__CHARACTER_REPLACE_FROM, __CHARACTER_REPLACE_TO)
     return relabeled_graph
