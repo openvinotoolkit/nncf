@@ -18,7 +18,12 @@ PT_IGNORED_PATTERNS = Registry("IGNORED_PATTERNS")
 
 
 def _add_softmax_matmul(
-    pattern: GraphPattern, matmul_aliases, reshape_squeeze_aliases, gather_aliases, transpose_aliases, concat_aliases,
+    pattern: GraphPattern,
+    matmul_aliases,
+    reshape_squeeze_aliases,
+    gather_aliases,
+    transpose_aliases,
+    concat_aliases,
 ) -> None:
     #       SOFTMAX  RESHAPE||TRANSPOSE||GATHER||SQUEEZE||CONCAT
     #           \              /
@@ -38,7 +43,12 @@ def _add_softmax_matmul(
 
 
 def _add_softmax_reshape_matmul(
-    pattern: GraphPattern, matmul_aliases, reshape_squeeze_aliases, gather_aliases, transpose_aliases, concat_aliases,
+    pattern: GraphPattern,
+    matmul_aliases,
+    reshape_squeeze_aliases,
+    gather_aliases,
+    transpose_aliases,
+    concat_aliases,
 ) -> None:
     #       SOFTMAX
     #           \
