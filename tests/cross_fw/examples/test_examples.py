@@ -34,7 +34,7 @@ MODEL_SIZE_RELATIVE_TOLERANCE = 0.05
 
 ACCURACY_METRICS = "accuracy_metrics"
 MODEL_SIZE_METRICS = "model_size_metrics"
-PERFORMNACE_METRICS = "performance_metrics"
+PERFORMANCE_METRICS = "performance_metrics"
 
 
 def example_test_cases():
@@ -85,6 +85,6 @@ def test_examples(
         for name, value in example_params[MODEL_SIZE_METRICS].items():
             assert measured_metrics[name] == pytest.approx(value, rel=MODEL_SIZE_RELATIVE_TOLERANCE)
 
-    if is_check_performance and PERFORMNACE_METRICS in example_params:
-        for name, value in example_params[PERFORMNACE_METRICS].items():
+    if is_check_performance and PERFORMANCE_METRICS in example_params:
+        for name, value in example_params[PERFORMANCE_METRICS].items():
             assert measured_metrics[name] == pytest.approx(value, rel=PERFORMANCE_RELATIVE_TOLERANCE)

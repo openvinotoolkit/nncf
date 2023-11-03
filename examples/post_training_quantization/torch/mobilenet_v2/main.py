@@ -13,7 +13,7 @@ import os
 import re
 import subprocess
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import numpy as np
 import openvino as ov
@@ -24,9 +24,9 @@ from sklearn.metrics import accuracy_score
 from torchvision import datasets
 from torchvision import models
 from torchvision import transforms
-from tqdm import tqdm
 
 import nncf
+from nncf.common.logging.track_progress import track
 
 ROOT = Path(__file__).parent.resolve()
 CHECKPOINT_URL = "https://huggingface.co/alexsu52/mobilenet_v2_imagenette/resolve/main/pytorch_model.bin"
@@ -53,7 +53,7 @@ def validate(model: ov.Model, val_loader: torch.utils.data.DataLoader) -> float:
     compiled_model = ov.compile_model(model)
     output = compiled_model.outputs[0]
 
-    for images, target in tqdm(val_loader):
+    for images, target in track(val_loader, description="Validating"):
         pred = compiled_model(images)[output]
         predictions.append(np.argmax(pred, axis=1))
         references.append(target)
@@ -84,9 +84,9 @@ def get_model_size(ir_path: str, m_type: str = "Mb", verbose: bool = True) -> fl
         bin_size /= 1024
     model_size = xml_size + bin_size
     if verbose:
-        print(f"Model graph (xml):   {xml_size:.3f} Mb")
-        print(f"Model weights (bin): {bin_size:.3f} Mb")
-        print(f"Model size:          {model_size:.3f} Mb")
+        print(f"Model graph (xml):   {xml_size:.3f} {m_type}")
+        print(f"Model weights (bin): {bin_size:.3f} {m_type}")
+        print(f"Model size:          {model_size:.3f} {m_type}")
     return model_size
 
 
@@ -123,7 +123,7 @@ torch_model = load_checkpoint(torch_model)
 # >>    model(transform_fn(data_item))
 
 
-def transform_fn(data_item):
+def transform_fn(data_item: Tuple[torch.Tensor, int]) -> torch.Tensor:
     images, _ = data_item
     return images
 
@@ -149,28 +149,11 @@ torch_quantized_model = nncf.quantize(
 # Benchmark performance, calculate compression rate and validate accuracy
 
 dummy_input = torch.randn(1, 3, 224, 224)
-
-fp32_onnx_path = f"{ROOT}/mobilenet_v2_fp32.onnx"
-torch.onnx.export(
-    torch_model.cpu(),
-    dummy_input,
-    fp32_onnx_path,
-    input_names=["input"],
-    output_names=["output"],
-    dynamic_axes={"input": {0: "-1"}},
+ov_input_shape = (-1, 3, 224, 224)
+ov_model = mo.convert_model(torch_model.cpu(), example_input=dummy_input, input_shape=ov_input_shape)
+ov_quantized_model = mo.convert_model(
+    torch_quantized_model.cpu(), example_input=dummy_input, input_shape=ov_input_shape
 )
-ov_model = mo.convert_model(fp32_onnx_path)
-
-int8_onnx_path = f"{ROOT}/mobilenet_v2_int8.onnx"
-torch.onnx.export(
-    torch_quantized_model.cpu(),
-    dummy_input,
-    int8_onnx_path,
-    input_names=["input"],
-    output_names=["output"],
-    dynamic_axes={"input": {0: "-1"}},
-)
-ov_quantized_model = mo.convert_model(int8_onnx_path)
 
 fp32_ir_path = f"{ROOT}/mobilenet_v2_fp32.xml"
 ov.save_model(ov_model, fp32_ir_path, compress_to_fp16=False)
