@@ -81,7 +81,7 @@ class TemplateTestSQAlgorithm:
             model_type=ModelType.TRANSFORMER,
             advanced_parameters=AdvancedQuantizationParameters(
                 overflow_fix=OverflowFix.DISABLE,
-                smooth_quant_params=AdvancedSmoothQuantParameters(matmul=0.95),
+                smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=0.95),
                 inplace_statistics=False,
             ),
         )

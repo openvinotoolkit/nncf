@@ -82,7 +82,7 @@ def _get_minmax_quantization_param_grid() -> ParamGrid:
 def _get_smooth_quant_param_grid() -> ParamGrid:
     alpha_values = [0.15, 0.25, 0.5, 0.75, 0.95]
     return {
-        "advanced_parameters:smooth_quant_params": [
+        "advanced_parameters:smooth_quant_alphas": [
             AdvancedSmoothQuantParameters(matmul=alpha_v) for alpha_v in itertools.product(alpha_values)
         ]
     }

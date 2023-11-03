@@ -159,6 +159,13 @@ class AdvancedQuantizationParameters:
     :type weights_range_estimator_params: nncf.quantization.range_estimator.RangeEstimatorParameters
     :param bias_correction_params: Advanced bias correction parameters.
     :type bias_correction_params: nncf.quantization.advanced_parameters.AdvancedBiasCorrectionParameters
+    :param smooth_quant_alphas: SmoothQuant-related parameters mapping.
+        It regulates the calculation of the smooth scale. The default value stored in AdvancedSmoothQuantParameters.
+        A negative value for each field switches off type smoothing. In case of inaccurate results,
+        fields may be adjusted in the range from 0 to 1 or set -1 to disable smoothing for type.
+    :type smooth_quant_alpha: AdvancedSmoothQuantParameters
+    :param smooth_quant_alpha: Deprecated SmoothQuant-related parameter.
+    :type smooth_quant_alpha: float
     :param backend_params: Backend-specific parameters.
     :type backend_params: Dict[str, Any]
     """
@@ -182,7 +189,9 @@ class AdvancedQuantizationParameters:
     bias_correction_params: AdvancedBiasCorrectionParameters = field(default_factory=AdvancedBiasCorrectionParameters)
 
     # Advanced SmoothQuant algorithm parameters
-    smooth_quant_params: AdvancedSmoothQuantParameters = field(default_factory=AdvancedSmoothQuantParameters)
+    smooth_quant_alphas: AdvancedSmoothQuantParameters = field(default_factory=AdvancedSmoothQuantParameters)
+    # Deprecated parameter
+    smooth_quant_alpha: float = None
 
     # Backend specific parameters
     backend_params: Dict[str, Any] = field(default_factory=dict)

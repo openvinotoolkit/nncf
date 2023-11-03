@@ -18,6 +18,7 @@ import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
 from openvino.tools import pot
 
+from nncf.common.deprecation import warning_deprecated
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
@@ -339,12 +340,19 @@ def quantize_impl(
     if advanced_parameters is None:
         advanced_parameters = AdvancedQuantizationParameters()
 
-    sq_params = advanced_parameters.smooth_quant_params
+    if advanced_parameters.smooth_quant_alpha is not None:
+        warning_deprecated(
+            "`AdvancedQuantizationParameters(smooth_quant_alpha=..)` is deprecated."
+            "Please, use `AdvancedQuantizationParameters(smooth_quant_alphas)` option "
+            "with AdvancedSmoothQuantParameters(convolution=.., matmul=..)) as value instead."
+        )
+
+    sq_params = advanced_parameters.smooth_quant_alphas
 
     if model_type == ModelType.TRANSFORMER and (sq_params.convolution > 0 or sq_params.matmul > 0):
         nncf_logger.warning(
             'IMPORTANT. The AdvancedSmoothQuant parameter value > 0" IS NOT SUPPORTED for the POT backend!'
-            'Please, use "AdvancedSmoothQuant(convolution = -1, matmul = -1)".'
+            'Please, use "AdvancedSmoothQuantParameters(convolution = -1, matmul = -1)".'
         )
 
     algorithm_parameters = _create_quantization_config(
@@ -445,12 +453,19 @@ def quantize_with_accuracy_control_impl(
     if advanced_quantization_parameters is None:
         advanced_quantization_parameters = AdvancedQuantizationParameters()
 
-    sq_params = advanced_quantization_parameters.smooth_quant_params
+    if advanced_quantization_parameters.smooth_quant_alpha is not None:
+        warning_deprecated(
+            "`AdvancedQuantizationParameters(smooth_quant_alpha=..)` is deprecated."
+            "Please, use `AdvancedQuantizationParameters(smooth_quant_alphas)` option "
+            "with AdvancedSmoothQuantParameters(convolution=.., matmul=..)) as value instead."
+        )
+
+    sq_params = advanced_quantization_parameters.smooth_quant_alphas
 
     if model_type == ModelType.TRANSFORMER and (sq_params.convolution > 0 or sq_params.matmul > 0):
         nncf_logger.warning(
-            'IMPORTANT. The AdvancedSmoothQuant parameter value > 0" IS NOT SUPPORTED for the POT backend!'
-            'Please, use "AdvancedSmoothQuant(convolution = -1, matmul = -1)".'
+            'IMPORTANT. The AdvancedSmoothQuantParameters parameter value > 0" IS NOT SUPPORTED for the POT backend!'
+            'Please, use "AdvancedSmoothQuantParameters(convolution = -1, matmul = -1)".'
         )
 
     if advanced_quantization_parameters.disable_bias_correction:

@@ -54,9 +54,7 @@ TEST_MODELS = [
         "ptq_params": {
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
-            "advanced_parameters": AdvancedQuantizationParameters(
-                smooth_quant_params=AdvancedSmoothQuantParameters(matmul=-1)
-            ),
+            "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=-1.0),
         },
         "backends": [BackendType.TORCH, BackendType.ONNX, BackendType.OV, BackendType.POT],
     },
@@ -77,7 +75,7 @@ TEST_MODELS = [
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(
-                smooth_quant_params=AdvancedSmoothQuantParameters(matmul=-1)
+                smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=-1)
             ),
         },
         "backends": ALL_PTQ_BACKENDS,
@@ -152,7 +150,7 @@ TEST_MODELS = [
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(
-                smooth_quant_params=AdvancedSmoothQuantParameters(matmul=0.05)
+                smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=0.05)
             ),
         },
         "backends": [BackendType.TORCH, BackendType.ONNX, BackendType.OV],

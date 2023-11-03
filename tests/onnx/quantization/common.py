@@ -116,7 +116,7 @@ def min_max_quantize_model(
     # ONNX backend does not support these algorithms
     advanced_parameters.disable_bias_correction = True
     advanced_parameters.disable_channel_alignment = True
-    advanced_parameters.smooth_quant_params = AdvancedSmoothQuantParameters(convolution=-1, matmul=-1)
+    advanced_parameters.smooth_quant_alphas = AdvancedSmoothQuantParameters(convolution=-1, matmul=-1)
     quantization_params["advanced_parameters"] = advanced_parameters
 
     post_training_quantization = PostTrainingQuantization(subset_size=1, **quantization_params)
