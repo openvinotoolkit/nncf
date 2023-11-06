@@ -12,6 +12,9 @@ on:
       coverage_artifact_name_in_pr:
         required: true
         type: string
+      coverage_flags: 
+        required: true
+        type: string     
     secrets:
       CODECOV_TOKEN:
         required: true
