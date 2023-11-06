@@ -15,7 +15,7 @@ from examples.tensorflow.object_detection.models.model_selector import get_prede
 from tests.shared.paths import PROJECT_ROOT
 
 
-def RetinaNet(input_shape=None):  # pylint: disable=W0613
+def RetinaNet(input_shape=None):
     path_to_config = PROJECT_ROOT / "examples" / "tensorflow" / "object_detection" / "configs" / "retinanet_coco.json"
 
     config_from_json = SampleConfig.from_json(path_to_config)

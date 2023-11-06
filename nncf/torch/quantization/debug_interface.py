@@ -46,7 +46,7 @@ class QuantizationDebugInterface(DebugInterface):
         }
         self.graph_size = 0
 
-        from nncf.common.utils.debug import DEBUG_LOG_DIR  # pylint: disable=cyclic-import
+        from nncf.common.utils.debug import DEBUG_LOG_DIR
 
         self.dump_dir = Path(DEBUG_LOG_DIR) / Path("debug_dumps")
         self.dump_dir.mkdir(parents=True, exist_ok=True)
@@ -78,7 +78,7 @@ class QuantizationDebugInterface(DebugInterface):
 
     def post_forward_actions(self, module: NNCFNetwork):
         self.register_forward_call()
-        # pylint:disable=protected-access
+
         ctx = module.nncf.get_tracing_context()
         self.set_graph_size(ctx.graph.get_nodes_count())
 

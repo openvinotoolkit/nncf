@@ -146,6 +146,12 @@ class OVSigmoidMetatype(OVOpMetatype):
 
 
 @OV_OPERATOR_METATYPES.register()
+class OVHSigmoidMetatype(OVOpMetatype):
+    name = "HSigmoidOp"
+    op_names = ["HSigmoid"]
+
+
+@OV_OPERATOR_METATYPES.register()
 class OVHardSigmoidMetatype(OVOpMetatype):
     name = "HardSigmoidOp"
     op_names = ["HardSigmoid"]

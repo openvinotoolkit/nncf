@@ -21,7 +21,6 @@ from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import ReductionAxes
-from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
@@ -40,13 +39,10 @@ from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import RangeEstimatorParameters
 from nncf.quantization.advanced_parameters import StatisticsType
-from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
 
-# pylint:disable=too-many-public-methods
-@ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:
@@ -55,10 +51,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
         return [om.OVTopKMetatype, om.OVNonMaxSuppressionMetatype]
-
-    @property
-    def shapeof_metatypes(self) -> List[OperatorMetatype]:
-        return [om.OVShapeOfMetatype]
 
     @property
     def conv_metatypes(self) -> List[OperatorMetatype]:
@@ -75,16 +67,24 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         ]
 
     @property
-    def read_variable_metatypes(self) -> List[OperatorMetatype]:
-        return [om.OVReadValueMetatype]
-
-    @property
     def add_metatypes(self) -> List[OperatorMetatype]:
         return [om.OVAddMetatype]
 
     @property
     def group_conv_metatypes(self) -> List[OperatorMetatype]:
         return [om.OVGroupConvolutionMetatype]
+
+    @property
+    def shapeof_metatypes(self) -> List[OperatorMetatype]:
+        return [om.OVShapeOfMetatype]
+
+    @property
+    def dropout_metatypes(self) -> List[OperatorMetatype]:
+        return []
+
+    @property
+    def read_variable_metatypes(self) -> List[OperatorMetatype]:
+        return [om.OVReadValueMetatype]
 
     @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
@@ -215,11 +215,13 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.OVPowerMetatype,
                 om.OVSqueezeMetatype,
                 om.OVSubtractMetatype,
+                om.OVAvgPoolMetatype,
                 om.OVReduceMeanMetatype,
                 om.OVReduceL2Metatype,
                 om.OVSumMetatype,
                 om.OVSquaredDifferenceMetatype,
                 om.OVMVNMetatype,
+                om.OVBatchNormMetatype,
                 om.OVDivideMetatype,
                 om.OVSqrtMetatype,
                 om.OVMaximumMetatype,

@@ -29,6 +29,9 @@ def pytest_addoption(parser):
         nargs="+",
         default=["all"],
     )
+    parser.addoption(
+        "--ov_version_override", default=None, help="Parameter to set OpenVINO into the env with the version from PyPI"
+    )
 
 
 @pytest.fixture(scope="module")
@@ -39,3 +42,8 @@ def backend_clopt(request):
 @pytest.fixture(scope="module")
 def host_configuration_clopt(request):
     return request.config.getoption("--host-configuration")
+
+
+@pytest.fixture(scope="module")
+def ov_version_override(request):
+    return request.config.getoption("--ov_version_override")

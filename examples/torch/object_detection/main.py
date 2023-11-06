@@ -105,7 +105,6 @@ def main(argv):
     start_worker(main_worker, config)
 
 
-# pylint:disable=too-many-branches,too-many-statements
 def main_worker(current_gpu, config):
     #################################
     # Setup experiment environment
@@ -236,7 +235,7 @@ def main_worker(current_gpu, config):
 
     if "train" in config.mode and is_accuracy_aware_training(config):
         # validation function that returns the target metric value
-        # pylint: disable=E1123
+
         def validate_fn(model, epoch):
             model.eval()
             mAP = test_net(model, config.device, test_data_loader, distributed=config.distributed)
@@ -417,7 +416,6 @@ def train_step(batch_iterator, compression_ctrl, config, criterion, net, train_d
     return batch_iterator, batch_loss, batch_loss_c, batch_loss_l, loss_comp
 
 
-# pylint: disable=too-many-statements
 def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion, optimizer, config, lr_scheduler):
     net.train()
     loc_loss = 0

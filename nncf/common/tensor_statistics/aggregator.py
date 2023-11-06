@@ -62,6 +62,7 @@ class StatisticsAggregator(ABC):
             if self.stat_subset_size is not None
             else None
         )
+
         with track(total=total, description="Statistics collection") as pbar:
             for input_data in islice(self.dataset.get_inference_data(), self.stat_subset_size):
                 batch_size_to_collect = (
@@ -75,6 +76,10 @@ class StatisticsAggregator(ABC):
                 pbar.progress.update(pbar.task, advance=batch_size_to_collect)
                 if total and collected_statistics_num == total:
                     break
+        if collected_statistics_num == 0:
+            raise RuntimeError(
+                "Calibration dataset must not be empty. Please provide calibration dataset with at least one sample."
+            )
 
     def register_statistic_points(self, statistic_points: StatisticPointsContainer) -> None:
         """

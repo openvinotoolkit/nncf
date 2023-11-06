@@ -69,8 +69,6 @@ from tests.torch.quantization.quantization_helpers import distributed_init_test_
 from tests.torch.quantization.quantization_helpers import get_quantization_config_without_range_init
 from tests.torch.quantization.quantization_helpers import get_squeezenet_quantization_config
 from tests.torch.quantization.quantization_helpers import post_compression_test_distr_init
-
-# pylint:disable=unused-import
 from tests.torch.test_compressed_graph import get_full_path_to_the_graph
 from tests.torch.test_models import inception_v3
 from tests.torch.test_models import squeezenet1_1
@@ -383,7 +381,6 @@ def test_hawq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
 
     # There may be less traces required to be calculated during HAWQ than there are weightable layers.
     def side_effect_fn(self, max_iter=500, tolerance=1e-5):
-        # pylint:disable=protected-access
         return pregen_traces_for_all_layers[: len(self._parameter_handler.parameters)]
 
     mocked_trace.side_effect = side_effect_fn
@@ -492,7 +489,6 @@ def test_hawq_on_single_conv_without_quantizers(_seed, dataset_dir, tmp_path, pa
     sample_normal_patch = mocker.patch(f"{ph_import}.sample_normal_like_params", autospec=True)
 
     def mock_sampling_fn(self):
-        # pylint:disable=protected-access
         return list(map(lambda x: torch.from_numpy(random_sample(x.shape)).to(device=self._device), self.parameters))
 
     sample_rademacher_patch.side_effect = mock_sampling_fn

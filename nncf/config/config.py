@@ -97,7 +97,7 @@ class NNCFConfig(dict):
           the resolution of the redefinable parameter should occur.
         :return: The value of the parameter that should be applied for the algo specified by `algo_name`.
         """
-        from nncf.config.extractors import extract_algo_specific_config  # pylint: disable=cyclic-import
+        from nncf.config.extractors import extract_algo_specific_config
 
         algo_config = extract_algo_specific_config(self, algo_name)
         param = self.get(param_name)

@@ -33,10 +33,10 @@ def is_named_tuple(obj) -> bool:
 
 def maybe_get_iterator(obj):
     it = None
-    # pylint:disable=isinstance-second-argument-not-valid-type
+
     if isinstance(obj, Mapping):
         it = iteritems
-        # pylint:disable=isinstance-second-argument-not-valid-type
+
     elif isinstance(obj, (Sequence, Set)) and not isinstance(obj, string_types):
         it = enumerate
     return it
@@ -120,8 +120,7 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
     Walks through the indexable container hierarchy of obj and replaces all sub-objects matching a criterion
     with the result of a given function application.
     """
-    # pylint:disable=too-many-nested-blocks
-    # pylint:disable=too-many-branches
+
     if memo is None:
         memo = set()
 
@@ -129,7 +128,7 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
     named_tuple_fields = None
     if is_named_tuple(obj):
         named_tuple_class = obj.__class__
-        # pylint:disable=protected-access
+
         named_tuple_fields = obj._fields
 
     was_tuple = is_tuple(obj)

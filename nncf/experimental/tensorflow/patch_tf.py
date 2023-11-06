@@ -248,7 +248,7 @@ class TFPatcher:
                 (obj,) = args  # self
                 eager_context = context.context()
                 old_name = eager_context.scope_name
-                name = obj._name  # pylint: disable=protected-access
+                name = obj._name
 
                 if not name:
                     scope_name = ""
@@ -263,7 +263,7 @@ class TFPatcher:
                 def _restore_name_scope(*_):
                     eager_context.scope_name = old_name
 
-                obj._exit_fns.append(_restore_name_scope)  # pylint: disable=protected-access
+                obj._exit_fns.append(_restore_name_scope)
             else:
                 scope_name = func(*args, **kwargs)
             return scope_name

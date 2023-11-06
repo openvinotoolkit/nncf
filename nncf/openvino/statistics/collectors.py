@@ -43,7 +43,6 @@ from nncf.openvino.tensor import OVNNCFTensor
 from nncf.quantization.advanced_parameters import StatisticsType
 
 
-# pylint: disable=too-many-public-methods
 class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     """
     A realization of the processing methods for OVNNCFTensors.
@@ -116,6 +115,19 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         x = np.moveaxis(x.tensor, axis, 1)
         t = x.reshape(x.shape[0], x.shape[1], -1)
         return OVNNCFTensor(np.mean(t, axis=(0, 2)))
+
+    @staticmethod
+    def transpose(x: NNCFTensor, axes: Tuple[int, ...]) -> NNCFTensor:
+        return OVNNCFTensor(np.transpose(x.tensor, axes))
+
+    @staticmethod
+    def reshape(x: NNCFTensor, shape: Tuple[int, ...]) -> NNCFTensor:
+        return OVNNCFTensor(np.reshape(x.tensor, shape))
+
+    @staticmethod
+    def cat(x: List[NNCFTensor], axis: int) -> NNCFTensor:
+        x = [t.tensor for t in x]
+        return OVNNCFTensor(np.concatenate(x, axis))
 
     @staticmethod
     def batch_mean(x: NNCFTensor) -> NNCFTensor:

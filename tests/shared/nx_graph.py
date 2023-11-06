@@ -55,7 +55,6 @@ def sort_dot(path):
             self.edge_end_id = edge_end_id
 
         def __lt__(self, other: "LineOrder"):
-            # pylint:disable=too-many-return-statements
             if self.node_id is not None:
                 if other.node_id is None:
                     return True

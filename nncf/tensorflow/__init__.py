@@ -11,7 +11,7 @@
 """
 Base subpackage for NNCF TensorFlow functionality.
 """
-# pylint:skip-file
+
 import tensorflow
 from packaging import version
 

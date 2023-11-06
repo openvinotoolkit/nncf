@@ -58,7 +58,6 @@ def test_training_mode_switcher(_seed, model: nn.Module):
     randomly_change_model_state(model)
     saved_state = save_module_state(model)
     with training_mode_switcher(model, True):
-        # pylint: disable=unnecessary-pass
         pass
 
     compare_saved_model_state_and_current_model_state(model, saved_state)
@@ -80,7 +79,6 @@ def test_bn_training_state_switcher(_seed, model: nn.Module):
     randomly_change_model_state(model)
     saved_state = save_module_state(model)
 
-    # pylint: disable=protected-access
     with runner._bn_training_state_switcher():
         check_were_only_bn_training_state_changed(model, saved_state)
 

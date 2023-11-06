@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import tensorflow as tf
-import tensorflow.keras.backend as K  # pylint: disable=no-name-in-module
+import tensorflow.keras.backend as K
 
 from examples.tensorflow.common.object_detection.architecture import nn_ops
 

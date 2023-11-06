@@ -291,8 +291,6 @@ def get_params_to_optimize(model_without_dp, aux_lr, config):
     return params_to_optimize
 
 
-# pylint: disable=too-many-branches
-# pylint: disable=too-many-statements
 def train(
     model,
     model_without_dp,

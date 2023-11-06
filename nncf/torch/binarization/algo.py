@@ -119,7 +119,7 @@ class BinarizationController(QuantizationControllerBase):
         scheduler_cls = QUANTIZATION_SCHEDULERS.get("staged")
         algo_config = extract_algo_specific_config(config, "binarization")
         self._scheduler = scheduler_cls(self, algo_config.get("params", {}))
-        from nncf.torch.utils import is_main_process  # pylint: disable=cyclic-import
+        from nncf.torch.utils import is_main_process
 
         if is_main_process():
             self._compute_and_display_flops_binarization_rate()

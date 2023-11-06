@@ -73,7 +73,7 @@ def test_scope_and_call_counters_are_reset_on_exceptions():
             model(torch.ones([1]))
     assert not ctx.module_call_stack
     assert not ctx.relative_scopes_stack
-    # pylint:disable=protected-access
+
     assert not ctx._threading.thread_local.operator_counters
 
 

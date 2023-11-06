@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
 import torch
 from torch import nn
 
@@ -42,25 +43,36 @@ def single_input_transform_fn(data_item):
     return data_item[0]
 
 
-def multiple_inputs_transform_fn(data_item):
-    return data_item[0], data_item[1]
-
-
 def test_transform_fn_single_input():
     model = ModelWithSingleInput()
 
     # Check the transformation function
-    _ = model(single_input_transform_fn(next(iter(dataloader))))
+    model(single_input_transform_fn(next(iter(dataloader))))
     # Start quantization
     calibration_dataset = nncf.Dataset(dataloader, single_input_transform_fn)
-    _ = nncf.quantize(model, calibration_dataset)
+    nncf.quantize(model, calibration_dataset)
 
 
-def test_transform_fn_multiple_inputs():
+def multiple_inputs_transform_tuple_fn(data_item):
+    return data_item[0], data_item[1]
+
+
+def multiple_inputs_transform_dict_fn(data_item):
+    return {"input_0": data_item[0], "input_1": data_item[1]}
+
+
+@pytest.mark.parametrize(
+    "transform_fn", (multiple_inputs_transform_tuple_fn, multiple_inputs_transform_dict_fn), ids=["tuple", "dict"]
+)
+def test_transform_fn_multiple_inputs(transform_fn):
     model = ModelWithMultipleInputs()
 
     # Check the transformation function
-    _ = model(*multiple_inputs_transform_fn(next(iter(dataloader))))
+    input_data = transform_fn(next(iter(dataloader)))
+    if isinstance(input_data, tuple):
+        model(*input_data)
+    if isinstance(input_data, dict):
+        model(**input_data)
     # Start quantization
-    calibration_dataset = nncf.Dataset(dataloader, multiple_inputs_transform_fn)
-    _ = nncf.quantize(model, calibration_dataset)
+    calibration_dataset = nncf.Dataset(dataloader, transform_fn)
+    nncf.quantize(model, calibration_dataset)

@@ -16,40 +16,7 @@ from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.openvino.graph.metatypes.groups import FAKE_QUANTIZE_OPERATIONS
-from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
-from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
-from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
-from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
-from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
-from nncf.openvino.graph.node_utils import create_bias_tensor
-from nncf.openvino.graph.node_utils import is_node_with_bias
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
-
-
-def insert_null_biases(model: ov.Model, graph: NNCFGraph) -> ov.Model:
-    """
-    This method finds and inserts zero biases for the layers that should have it.
-
-    :param model: ov.Model instance.
-    :param graph: Model graph.
-    :return: Updated ov.Model instance with zero biases
-    """
-    types_to_insert_bias = [
-        OVConvolutionMetatype,
-        OVGroupConvolutionMetatype,
-        OVDepthwiseConvolutionMetatype,
-        OVConvolutionBackpropDataMetatype,
-        OVGroupConvolutionBackpropDataMetatype,
-    ]
-    nodes_without_biases = graph.get_nodes_by_metatypes(types_to_insert_bias)
-    nodes_without_biases = [node for node in nodes_without_biases if not is_node_with_bias(node, graph)]
-    transformation_layout = TransformationLayout()
-    model_transformer = ModelTransformerFactory.create(model)
-    for node_without_bias in nodes_without_biases:
-        const_value = create_bias_tensor(node_without_bias, graph, 0)
-        bias_insertion_command = OVCommandCreator.create_command_to_insert_bias(node_without_bias, const_value)
-        transformation_layout.register(bias_insertion_command)
-    return model_transformer.transform(transformation_layout)
 
 
 def remove_fq_from_inputs(model: ov.Model, graph: NNCFGraph) -> ov.Model:

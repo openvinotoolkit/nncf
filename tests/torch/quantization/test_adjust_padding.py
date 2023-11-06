@@ -187,7 +187,7 @@ def test_onnx_export_to_fake_quantize_with_adjust_pad(tmp_path):
     num_model_nodes = 0
     num_adjust_pad_nodes = 0
     num_other_nodes = 0
-    # pylint:disable=no-member
+
     for node in onnx_model_proto.graph.node:
         op_type = node.op_type
         if op_type == "FakeQuantize":

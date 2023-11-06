@@ -50,8 +50,6 @@ def load_json(stats_path):
 class NumpyEncoder(json.JSONEncoder):
     """Special json encoder for numpy types"""
 
-    # pylint: disable=W0221, E0202
-
     def default(self, o):
         if isinstance(o, np.integer):
             return int(o)

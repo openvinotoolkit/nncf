@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 import tensorflow as tf
 
@@ -53,7 +53,7 @@ class CalibrationDataLoader(NNCFDataLoader):
             if isinstance(batch_size, tf.Tensor):
                 batch_size = batch_size.numpy()
             batch_size = int(batch_size)
-        except:  # pylint: disable=W0702 # noqa: E722
+        except:  # noqa: E722
             batch_size = 1
         return batch_size
 
@@ -133,7 +133,7 @@ def _create_nncf_config(
 def quantize_impl(
     model: tf.Module,
     calibration_dataset: Dataset,
-    preset: QuantizationPreset,
+    preset: Union[QuantizationPreset, None],
     target_device: TargetDevice,
     subset_size: int,
     fast_bias_correction: bool,
@@ -156,6 +156,9 @@ def quantize_impl(
         )
     if target_device == TargetDevice.CPU_SPR:
         raise RuntimeError("target_device == CPU_SPR is not supported.")
+
+    if preset is None:
+        preset = QuantizationPreset.PERFORMANCE
 
     nncf_config = _create_nncf_config(preset, target_device, subset_size, ignored_scope, advanced_parameters)
 

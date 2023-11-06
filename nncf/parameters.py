@@ -62,12 +62,20 @@ class DropType(Enum):
 class CompressWeightsMode(Enum):
     """
     Defines a mode for weight compression.
-
     :param INT8: Stands for 8-bit integer quantization of all weights.
-    :param NF4: Stands for a mixed-precision weights quantization to NF4 data type. The first and last
-        layers are always compressed to a backup precision which is 8-bit integer by default. All others are quantized
-        whether to NF4 or to a backup precision depending on criteria and the given ratio.
+    :param INT4_SYM: Stands for a mixed-precision weights quantization with 4-bit integer as a primary precision.
+        Weights are quantized to a primary precision symmetrically with a fixed zero point equals to 8.
+        The first and the last layers are always compressed to a backup precision, which is 8-bit integer,
+        by default. All others are quantized whether to 4-bit integer or to a backup precision depending on
+        criteria and the given ratio.
+        https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#symmetric-quantization
+    :param INT4_ASYM: The same as INT4_SYM mode, but weights are quantized to a primary precision asymmetrically
+        with a typical non-fixed zero point.
+        https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#asymmetric-quantization
+    :param NF4: The the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
     """
 
     INT8 = "int8"
+    INT4_SYM = "int4_sym"
+    INT4_ASYM = "int4_asym"
     NF4 = "nf4"

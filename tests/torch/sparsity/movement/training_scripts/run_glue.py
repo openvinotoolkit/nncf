@@ -144,7 +144,7 @@ class CompressionTrainer(Trainer):
 
 
 def prepare_dataset(args, training_args):
-    raw_datasets = datasets.load_dataset("glue", args.task_name)  # pylint: disable=no-member
+    raw_datasets = datasets.load_dataset("glue", args.task_name)
     num_labels = len(raw_datasets["train"].features["label"].names)
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
 

@@ -32,9 +32,6 @@ from tests.torch.helpers import create_random_mock_dataloader
 REFERENCE_SCALES_DIR = TEST_ROOT / "torch" / "data" / "reference_scales"
 
 
-# pylint: disable=protected-access
-
-
 def min_max_quantize_model(
     original_model: torch.nn.Module, quantization_params: Dict[str, Any] = None
 ) -> torch.nn.Module:
@@ -97,5 +94,4 @@ def test_overflow_fix_scales(_seed, overflow_fix):
     # dump_to_json(ref_stats_path, fq_nodes_params)
 
     ref_nodes_params = load_json(ref_stats_path)
-    params = ["input_low", "input_high"]
-    compare_stats(ref_nodes_params, fq_nodes_params, params)
+    compare_stats(ref_nodes_params, fq_nodes_params)

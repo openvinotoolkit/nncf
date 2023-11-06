@@ -9,7 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Dict, Optional, TypeVar
+import itertools
+from typing import Callable, List, Optional, TypeVar
 
 from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
@@ -37,7 +38,7 @@ class PostTrainingQuantization(Algorithm):
 
     def __init__(
         self,
-        preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+        preset: Optional[QuantizationPreset] = None,
         target_device: TargetDevice = TargetDevice.ANY,
         subset_size: int = 300,
         fast_bias_correction: bool = True,
@@ -46,11 +47,12 @@ class PostTrainingQuantization(Algorithm):
         advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
     ):
         """
-        :param preset: A preset that controls the quantization mode
-            (symmetric and asymmetric). It can take the following values:
+        :param preset: A preset controls the quantization mode (symmetric and asymmetric).
+            It can take the following values:
             - `performance`: Symmetric quantization of weights and activations.
-            - `mixed`: Symmetric quantization of weights and asymmetric
-            quantization of activations.
+            - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
+            Default value is None. In this case, `mixed` preset is used for `transformer`
+            model type otherwise `performace`.
         :param target_device: A target device the specificity of which will be taken
             into account while compressing in order to obtain the best performance
             for this type of device.
@@ -71,8 +73,11 @@ class PostTrainingQuantization(Algorithm):
         )
 
     @property
-    def available_backends(self) -> Dict[str, BackendType]:
-        return
+    def available_backends(self) -> List[BackendType]:
+        backends = set(BackendType)
+        for algorithm in itertools.chain.from_iterable(self._pipeline.pipeline_steps):
+            backends = backends.intersection(algorithm.available_backends)
+        return list(backends)
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         return self._pipeline.get_statistic_points_for_step(0, model, graph)

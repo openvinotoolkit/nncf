@@ -30,7 +30,6 @@ TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
 
 
-# pylint: disable=protected-access
 class TemplateTestBCAlgorithm:
     @staticmethod
     @abstractmethod

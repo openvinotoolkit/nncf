@@ -56,7 +56,6 @@ class NoCompressionAlgorithmBuilder(PTCompressionAlgorithmBuilder):
         pass
 
 
-# pylint:disable=abstract-method
 class NoCompressionAlgorithmController(PTCompressionAlgorithmController):
     def __init__(self, target_model):
         super().__init__(target_model)

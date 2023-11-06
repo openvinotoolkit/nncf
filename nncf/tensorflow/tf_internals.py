@@ -9,9 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=unused-import
-# pylint: disable=import-error
-# pylint: disable=no-name-in-module
 
 from keras import backend as backend
 from keras import layers as layers

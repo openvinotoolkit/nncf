@@ -48,7 +48,6 @@ class BCStatsCollectors(Enum):
     RAW = "raw"
 
 
-# pylint: disable=too-many-public-methods
 class TemplateTestStatisticsAggregator:
     @abstractmethod
     def get_min_max_algo_backend_cls(self) -> Type[MinMaxAlgoBackend]:
@@ -783,7 +782,7 @@ class TemplateTestStatisticsAggregator:
 
         dataset = self.get_dataset(dataset_samples)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
-        # pylint: disable=protected-access
+
         merged_statistics = statistics_aggregator._get_merged_statistic_points(statistics_points, model, nncf_graph)
         merged_stats_checkers_map = {
             "split_concat": self._check_split_concat_merged_stats,
@@ -895,3 +894,31 @@ class TemplateTestStatisticsAggregator:
             else:
                 ref_subset_size = subset_size
         assert statistics_aggregator.stat_subset_size == ref_subset_size
+
+    def test_collect_with_empty_dataset(self, dataset_samples):
+        model = self.get_backend_model(dataset_samples)
+        dataset_samples = []
+        dataset = self.get_dataset(dataset_samples)
+        graph = NNCFGraphFactory.create(model)
+
+        inplace_statistics = False
+        quantizer_config = QuantizerConfig(mode=QuantizationMode.ASYMMETRIC, per_channel=False)
+        target_point = self.get_target_point(TargetType.POST_LAYER_OPERATION)
+        algorithm_name = "TestAlgo"
+        statistic_point = self.create_statistics_point(
+            model,
+            quantizer_config,
+            target_point,
+            len(dataset_samples),
+            algorithm_name,
+            inplace_statistics,
+            RangeEstimatorParametersSet.MEAN_MINMAX,
+        )
+        statistics_points = StatisticPointsContainer()
+        statistics_points.add_statistic_point(statistic_point)
+
+        statistics_aggregator = self.get_statistics_aggregator(dataset)
+        statistics_aggregator.register_statistic_points(statistics_points)
+        with pytest.raises(RuntimeError) as e:
+            statistics_aggregator.collect_statistics(model, graph)
+            assert "Calibration dataset must not be empty" in e.info

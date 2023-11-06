@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint:disable=too-many-lines
 
 from abc import ABC
 from abc import abstractmethod
@@ -281,7 +280,6 @@ class PTQuantizerSetup(QuantizerSetupBase):
 
 
 class BaseQuantizer(nn.Module, ABC):
-    # pylint:disable=too-many-public-methods
     def __init__(self, qspec: PTQuantizerSpec):
         super().__init__()
         self._narrow_range = qspec.narrow_range
@@ -315,7 +313,6 @@ class BaseQuantizer(nn.Module, ABC):
             """
 
             def __init__(self, module):
-                # pylint: disable=protected-access
                 self.hook = module._register_load_state_dict_pre_hook(partial(self.hook_fn, module=module))
 
             def hook_fn(
