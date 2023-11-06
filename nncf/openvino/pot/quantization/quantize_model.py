@@ -351,7 +351,7 @@ def quantize_impl(
 
     if model_type == ModelType.TRANSFORMER and (sq_params.convolution > 0 or sq_params.matmul > 0):
         nncf_logger.warning(
-            'IMPORTANT. The AdvancedSmoothQuant parameter value > 0" IS NOT SUPPORTED for the POT backend!'
+            'IMPORTANT. The AdvancedSmoothQuant parameter value > 0 IS NOT SUPPORTED for the POT backend!'
             'Please, use "AdvancedSmoothQuantParameters(convolution = -1, matmul = -1)".'
         )
 
