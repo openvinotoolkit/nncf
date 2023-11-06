@@ -344,7 +344,7 @@ def quantize_impl(
         warning_deprecated(
             "`AdvancedQuantizationParameters(smooth_quant_alpha=..)` is deprecated."
             "Please, use `AdvancedQuantizationParameters(smooth_quant_alphas)` option "
-            "with AdvancedSmoothQuantParameters(convolution=.., matmul=..)) as value instead."
+            "with AdvancedSmoothQuantParameters(convolution=.., matmul=..) as value instead."
         )
 
     sq_params = advanced_parameters.smooth_quant_alphas
@@ -457,14 +457,14 @@ def quantize_with_accuracy_control_impl(
         warning_deprecated(
             "`AdvancedQuantizationParameters(smooth_quant_alpha=..)` is deprecated."
             "Please, use `AdvancedQuantizationParameters(smooth_quant_alphas)` option "
-            "with AdvancedSmoothQuantParameters(convolution=.., matmul=..)) as value instead."
+            "with AdvancedSmoothQuantParameters(convolution=.., matmul=..) as value instead."
         )
 
     sq_params = advanced_quantization_parameters.smooth_quant_alphas
 
     if model_type == ModelType.TRANSFORMER and (sq_params.convolution > 0 or sq_params.matmul > 0):
         nncf_logger.warning(
-            'IMPORTANT. The AdvancedSmoothQuantParameters parameter value > 0" IS NOT SUPPORTED for the POT backend!'
+            "IMPORTANT. The AdvancedSmoothQuantParameters parameter value > 0 IS NOT SUPPORTED for the POT backend!"
             'Please, use "AdvancedSmoothQuantParameters(convolution = -1, matmul = -1)".'
         )
 

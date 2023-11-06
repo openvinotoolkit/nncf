@@ -86,7 +86,7 @@ def create_ptq_pipeline(
         warning_deprecated(
             "`AdvancedQuantizationParameters(smooth_quant_alpha=..)` is deprecated."
             "Please, use `AdvancedQuantizationParameters(smooth_quant_alphas)` option "
-            "with AdvancedSmoothQuantParameters(convolution=.., matmul=..)) as value instead."
+            "with AdvancedSmoothQuantParameters(convolution=.., matmul=..) as value instead."
         )
         if sq_alpha < 0:
             sq_params.convolution = -1
