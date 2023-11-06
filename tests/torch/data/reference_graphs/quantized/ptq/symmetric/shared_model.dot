@@ -9,13 +9,13 @@ strict digraph  {
 "7 SharedLayersModel/NNCFConv2d[shared_conv]/conv2d_1" [id=7, type=conv2d];
 "8 SharedLayersModel/__mul___0" [id=8, type=__mul__];
 "9 /nncf_model_output_0" [id=9, type=nncf_model_output];
-"0 /nncf_model_input_0" -> "1 SymmetricQuantizer/symmetric_quantize_0";
-"1 SymmetricQuantizer/symmetric_quantize_0" -> "3 SharedLayersModel/NNCFConv2d[shared_conv]/conv2d_0";
-"2 SharedLayersModel/NNCFConv2d[shared_conv]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "3 SharedLayersModel/NNCFConv2d[shared_conv]/conv2d_0";
-"3 SharedLayersModel/NNCFConv2d[shared_conv]/conv2d_0" -> "4 SharedLayersModel/__add___0";
-"4 SharedLayersModel/__add___0" -> "5 SharedLayersModel/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[SharedLayersModel/__add___0|OUTPUT]/symmetric_quantize_0";
-"5 SharedLayersModel/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[SharedLayersModel/__add___0|OUTPUT]/symmetric_quantize_0" -> "7 SharedLayersModel/NNCFConv2d[shared_conv]/conv2d_1";
-"6 SharedLayersModel/NNCFConv2d[shared_conv]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_1" -> "7 SharedLayersModel/NNCFConv2d[shared_conv]/conv2d_1";
-"7 SharedLayersModel/NNCFConv2d[shared_conv]/conv2d_1" -> "8 SharedLayersModel/__mul___0";
-"8 SharedLayersModel/__mul___0" -> "9 /nncf_model_output_0";
+"0 /nncf_model_input_0" -> "1 SymmetricQuantizer/symmetric_quantize_0"  [label="shape:(1, 1, 5, 6)\nports:0 -> 0", style=solid];
+"1 SymmetricQuantizer/symmetric_quantize_0" -> "3 SharedLayersModel/NNCFConv2d[shared_conv]/conv2d_0"  [label="shape:(1, 1, 5, 6)\nports:0 -> 0", style=solid];
+"2 SharedLayersModel/NNCFConv2d[shared_conv]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "3 SharedLayersModel/NNCFConv2d[shared_conv]/conv2d_0"  [label="shape:(1, 1, 1, 1)\nports:0 -> 1", style=solid];
+"3 SharedLayersModel/NNCFConv2d[shared_conv]/conv2d_0" -> "4 SharedLayersModel/__add___0"  [label="parallel_input_port_ids:[1]\nshape:(1, 1, 5, 6)\nports:0 -> 0", style=solid];
+"4 SharedLayersModel/__add___0" -> "5 SharedLayersModel/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[SharedLayersModel/__add___0|OUTPUT]/symmetric_quantize_0"  [label="shape:(1, 1, 5, 6)\nports:0 -> 0", style=solid];
+"5 SharedLayersModel/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[SharedLayersModel/__add___0|OUTPUT]/symmetric_quantize_0" -> "7 SharedLayersModel/NNCFConv2d[shared_conv]/conv2d_1"  [label="shape:(1, 1, 5, 6)\nports:0 -> 0", style=solid];
+"6 SharedLayersModel/NNCFConv2d[shared_conv]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_1" -> "7 SharedLayersModel/NNCFConv2d[shared_conv]/conv2d_1"  [label="shape:(1, 1, 1, 1)\nports:0 -> 1", style=solid];
+"7 SharedLayersModel/NNCFConv2d[shared_conv]/conv2d_1" -> "8 SharedLayersModel/__mul___0"  [label="parallel_input_port_ids:[1]\nshape:(1, 1, 5, 6)\nports:0 -> 0", style=solid];
+"8 SharedLayersModel/__mul___0" -> "9 /nncf_model_output_0"  [label="shape:(1, 1, 5, 6)\nports:0 -> 0", style=solid];
 }

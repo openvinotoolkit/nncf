@@ -8,12 +8,12 @@ strict digraph  {
 "6 /nncf_model_output_1" [id=6, type=nncf_model_output];
 "7 /nncf_model_output_2" [id=7, type=nncf_model_output];
 "8 /nncf_model_output_3" [id=8, type=nncf_model_output];
-"0 /nncf_model_input_0" -> "1 GatherModel/where_0";
-"0 /nncf_model_input_0" -> "2 GatherModel/index_select_0";
-"0 /nncf_model_input_0" -> "3 GatherModel/index_select_1";
-"0 /nncf_model_input_0" -> "4 GatherModel/__getitem___0";
-"1 GatherModel/where_0" -> "5 /nncf_model_output_0";
-"2 GatherModel/index_select_0" -> "6 /nncf_model_output_1";
-"3 GatherModel/index_select_1" -> "7 /nncf_model_output_2";
-"4 GatherModel/__getitem___0" -> "8 /nncf_model_output_3";
+"0 /nncf_model_input_0" -> "1 GatherModel/where_0"  [label="shape:(1, 1, 4, 4)\nports:0 -> 1", style=solid];
+"0 /nncf_model_input_0" -> "2 GatherModel/index_select_0"  [label="shape:(1, 1, 4, 4)\nports:0 -> 0", style=solid];
+"0 /nncf_model_input_0" -> "3 GatherModel/index_select_1"  [label="shape:(1, 1, 4, 4)\nports:0 -> 0", style=solid];
+"0 /nncf_model_input_0" -> "4 GatherModel/__getitem___0"  [label="shape:(1, 1, 4, 4)\nports:0 -> 0", style=solid];
+"1 GatherModel/where_0" -> "5 /nncf_model_output_0"  [label="shape:(1, 1, 4, 4)\nports:0 -> 0", style=solid];
+"2 GatherModel/index_select_0" -> "6 /nncf_model_output_1"  [label="shape:(1, 1, 4, 4)\nports:0 -> 0", style=solid];
+"3 GatherModel/index_select_1" -> "7 /nncf_model_output_2"  [label="shape:(1, 1, 4, 4)\nports:0 -> 0", style=solid];
+"4 GatherModel/__getitem___0" -> "8 /nncf_model_output_3"  [label="shape:(1, 4, 4)\nports:0 -> 0", style=solid];
 }

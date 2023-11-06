@@ -10,15 +10,15 @@ strict digraph  {
 "8 nncf_model_input_0" [id=8, type=nncf_model_input];
 "9 nncf_model_output_0" [id=9, type=nncf_model_output];
 "10 nncf_model_output_1" [id=10, type=nncf_model_output];
-"0 Relu" -> "5 QuantizeLinear_relu_X_1"  [label="shape:[1, 1, 5, 5]\nports:0→0", style=solid];
-"1 Identity" -> "2 QuantizeLinear_identity_1_1"  [label="shape:[1, 1, 5, 5]\nports:0→0", style=solid];
-"1 Identity" -> "4 Softmax"  [label="shape:[1, 1, 5, 5]\nports:0→0", style=solid];
-"2 QuantizeLinear_identity_1_1" -> "3 DequantizeLinear_identity_1_1"  [label="shape:[1, 1, 5, 5]\nports:0→0", style=dashed];
-"3 DequantizeLinear_identity_1_1" -> "7 Mul"  [label="shape:[1, 1, 5, 5]\nports:0→1", style=solid];
-"4 Softmax" -> "10 nncf_model_output_1"  [label="shape:[1, 1, 5, 5]\nports:0→0", style=solid];
-"5 QuantizeLinear_relu_X_1" -> "6 DequantizeLinear_relu_X_1"  [label="shape:[1, 1, 5, 5]\nports:0→0", style=dashed];
-"6 DequantizeLinear_relu_X_1" -> "7 Mul"  [label="shape:[1, 1, 5, 5]\nports:0→0", style=solid];
-"7 Mul" -> "9 nncf_model_output_0"  [label="shape:[1, 1, 5, 5]\nports:0→0", style=solid];
-"8 nncf_model_input_0" -> "0 Relu"  [label="shape:[1, 1, 5, 5]\nports:0→0", style=solid];
-"8 nncf_model_input_0" -> "1 Identity"  [label="shape:[1, 1, 5, 5]\nports:1→0", style=solid];
+"0 Relu" -> "5 QuantizeLinear_relu_X_1"  [label="shape:[1, 1, 5, 5]\nports:0 -> 0", style=solid];
+"1 Identity" -> "2 QuantizeLinear_identity_1_1"  [label="shape:[1, 1, 5, 5]\nports:0 -> 0", style=solid];
+"1 Identity" -> "4 Softmax"  [label="shape:[1, 1, 5, 5]\nports:0 -> 0", style=solid];
+"2 QuantizeLinear_identity_1_1" -> "3 DequantizeLinear_identity_1_1"  [label="shape:[1, 1, 5, 5]\nports:0 -> 0", style=dashed];
+"3 DequantizeLinear_identity_1_1" -> "7 Mul"  [label="shape:[1, 1, 5, 5]\nports:0 -> 1", style=solid];
+"4 Softmax" -> "10 nncf_model_output_1"  [label="shape:[1, 1, 5, 5]\nports:0 -> 0", style=solid];
+"5 QuantizeLinear_relu_X_1" -> "6 DequantizeLinear_relu_X_1"  [label="shape:[1, 1, 5, 5]\nports:0 -> 0", style=dashed];
+"6 DequantizeLinear_relu_X_1" -> "7 Mul"  [label="shape:[1, 1, 5, 5]\nports:0 -> 0", style=solid];
+"7 Mul" -> "9 nncf_model_output_0"  [label="shape:[1, 1, 5, 5]\nports:0 -> 0", style=solid];
+"8 nncf_model_input_0" -> "0 Relu"  [label="shape:[1, 1, 5, 5]\nports:0 -> 0", style=solid];
+"8 nncf_model_input_0" -> "1 Identity"  [label="shape:[1, 1, 5, 5]\nports:1 -> 0", style=solid];
 }

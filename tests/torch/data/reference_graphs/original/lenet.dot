@@ -11,15 +11,15 @@ strict digraph  {
 "9 LeNet/Linear[fc2]/linear_0" [id=9, type=linear];
 "10 LeNet/relu_3" [id=10, type=relu];
 "11 LeNet/Linear[fc3]/linear_0" [id=11, type=linear];
-"0 LeNet/Conv2d[conv1]/conv2d_0" -> "1 LeNet/relu_0";
-"1 LeNet/relu_0" -> "2 LeNet/max_pool2d_0";
-"2 LeNet/max_pool2d_0" -> "3 LeNet/Conv2d[conv2]/conv2d_0";
-"3 LeNet/Conv2d[conv2]/conv2d_0" -> "4 LeNet/relu_1";
-"4 LeNet/relu_1" -> "5 LeNet/max_pool2d_1";
-"5 LeNet/max_pool2d_1" -> "6 LeNet/view_0";
-"6 LeNet/view_0" -> "7 LeNet/Linear[fc1]/linear_0";
-"7 LeNet/Linear[fc1]/linear_0" -> "8 LeNet/relu_2";
-"8 LeNet/relu_2" -> "9 LeNet/Linear[fc2]/linear_0";
-"9 LeNet/Linear[fc2]/linear_0" -> "10 LeNet/relu_3";
-"10 LeNet/relu_3" -> "11 LeNet/Linear[fc3]/linear_0";
+"0 LeNet/Conv2d[conv1]/conv2d_0" -> "1 LeNet/relu_0"  [label="shape:(1, 6, 28, 28)\nports:0 -> 0", style=solid];
+"1 LeNet/relu_0" -> "2 LeNet/max_pool2d_0"  [label="shape:(1, 6, 28, 28)\nports:0 -> 0", style=solid];
+"2 LeNet/max_pool2d_0" -> "3 LeNet/Conv2d[conv2]/conv2d_0"  [label="shape:(1, 6, 14, 14)\nports:0 -> 0", style=solid];
+"3 LeNet/Conv2d[conv2]/conv2d_0" -> "4 LeNet/relu_1"  [label="shape:(1, 16, 10, 10)\nports:0 -> 0", style=solid];
+"4 LeNet/relu_1" -> "5 LeNet/max_pool2d_1"  [label="shape:(1, 16, 10, 10)\nports:0 -> 0", style=solid];
+"5 LeNet/max_pool2d_1" -> "6 LeNet/view_0"  [label="shape:(1, 16, 5, 5)\nports:0 -> 0", style=solid];
+"6 LeNet/view_0" -> "7 LeNet/Linear[fc1]/linear_0"  [label="shape:(1, 400)\nports:0 -> 0", style=solid];
+"7 LeNet/Linear[fc1]/linear_0" -> "8 LeNet/relu_2"  [label="shape:(1, 120)\nports:0 -> 0", style=solid];
+"8 LeNet/relu_2" -> "9 LeNet/Linear[fc2]/linear_0"  [label="shape:(1, 120)\nports:0 -> 0", style=solid];
+"9 LeNet/Linear[fc2]/linear_0" -> "10 LeNet/relu_3"  [label="shape:(1, 84)\nports:0 -> 0", style=solid];
+"10 LeNet/relu_3" -> "11 LeNet/Linear[fc3]/linear_0"  [label="shape:(1, 84)\nports:0 -> 0", style=solid];
 }

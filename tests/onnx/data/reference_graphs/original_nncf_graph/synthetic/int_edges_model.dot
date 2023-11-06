@@ -3,7 +3,7 @@ strict digraph  {
 "1 Constant1" [id=1, type=ConstantOfShape];
 "2 nncf_model_input_0" [id=2, type=nncf_model_input];
 "3 nncf_model_output_0" [id=3, type=nncf_model_output];
-"0 Shape1" -> "1 Constant1"  [label="shape:[4]\nports:0→0", style=dashed];
-"1 Constant1" -> "3 nncf_model_output_0"  [label="shape:[1, 6, 3, 3]\nports:0→0", style=solid];
-"2 nncf_model_input_0" -> "0 Shape1"  [label="shape:[1, 6, 3, 3]\nports:0→0", style=solid];
+"0 Shape1" -> "1 Constant1"  [label="shape:[4]\nports:0 -> 0", style=dashed];
+"1 Constant1" -> "3 nncf_model_output_0"  [label="shape:[1, 6, 3, 3]\nports:0 -> 0", style=solid];
+"2 nncf_model_input_0" -> "0 Shape1"  [label="shape:[1, 6, 3, 3]\nports:0 -> 0", style=solid];
 }

@@ -8,12 +8,12 @@ strict digraph  {
 "9 /Output_3_0" [id=9, type=Output_3];
 "10 /Output_2_4_0" [id=10, type=output];
 "11 /Output_3_1_0" [id=11, type=output];
-"0 /Input_1_0" -> "1 /Split_1_0"  [label="shape:[1, 1, 1, 1]\nports:0→0", style=solid];
-"1 /Split_1_0" -> "5 /Output_1_0"  [label="shape:[1, 1, 1, 1]\nports:0→0", style=solid];
-"1 /Split_1_0" -> "6 /Output_2_1_0"  [label="shape:[1, 1, 1, 1]\nports:1→0", style=solid];
-"1 /Split_1_0" -> "7 /Output_2_2_0"  [label="shape:[1, 1, 1, 1]\nports:1→0", style=solid];
-"1 /Split_1_0" -> "8 /Output_2_3_0"  [label="shape:[1, 1, 1, 1]\nports:1→0", style=solid];
-"1 /Split_1_0" -> "9 /Output_3_0"  [label="shape:[1, 1, 1, 1]\nports:2→0", style=solid];
-"1 /Split_1_0" -> "10 /Output_2_4_0"  [label="shape:[1, 1, 1, 1]\nports:1→15", style=solid];
-"1 /Split_1_0" -> "11 /Output_3_1_0"  [label="parallel_input_port_ids:[2, 3, 4, 5, 6, 7, 8, 9]\nshape:[1, 1, 1, 1]\nports:2→1", style=solid];
+"0 /Input_1_0" -> "1 /Split_1_0"  [label="shape:[1, 1, 1, 1]\nports:0 -> 0", style=solid];
+"1 /Split_1_0" -> "5 /Output_1_0"  [label="shape:[1, 1, 1, 1]\nports:0 -> 0", style=solid];
+"1 /Split_1_0" -> "6 /Output_2_1_0"  [label="shape:[1, 1, 1, 1]\nports:1 -> 0", style=solid];
+"1 /Split_1_0" -> "7 /Output_2_2_0"  [label="shape:[1, 1, 1, 1]\nports:1 -> 0", style=solid];
+"1 /Split_1_0" -> "8 /Output_2_3_0"  [label="shape:[1, 1, 1, 1]\nports:1 -> 0", style=solid];
+"1 /Split_1_0" -> "9 /Output_3_0"  [label="shape:[1, 1, 1, 1]\nports:2 -> 0", style=solid];
+"1 /Split_1_0" -> "10 /Output_2_4_0"  [label="shape:[1, 1, 1, 1]\nports:1 -> 15", style=solid];
+"1 /Split_1_0" -> "11 /Output_3_1_0"  [label="parallel_input_port_ids:[2, 3, 4, 5, 6, 7, 8, 9]\nshape:[1, 1, 1, 1]\nports:2 -> 1", style=solid];
 }

@@ -9,13 +9,13 @@ strict digraph  {
 "7 MatMulDivConv/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" [id=7, type=symmetric_quantize];
 "8 MatMulDivConv/NNCFConv2d[conv]/conv2d_0" [id=8, type=conv2d];
 "9 /nncf_model_output_0" [id=9, type=nncf_model_output];
-"0 /nncf_model_input_0" -> "1 SymmetricQuantizer/symmetric_quantize_0";
-"1 SymmetricQuantizer/symmetric_quantize_0" -> "4 MatMulDivConv/matmul_0";
-"2 /nncf_model_input_1" -> "3 SymmetricQuantizer/symmetric_quantize_1";
-"3 SymmetricQuantizer/symmetric_quantize_1" -> "4 MatMulDivConv/matmul_0";
-"4 MatMulDivConv/matmul_0" -> "5 MatMulDivConv/__truediv___0";
-"5 MatMulDivConv/__truediv___0" -> "6 MatMulDivConv/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[MatMulDivConv/__truediv___0|OUTPUT]/symmetric_quantize_0";
-"6 MatMulDivConv/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[MatMulDivConv/__truediv___0|OUTPUT]/symmetric_quantize_0" -> "8 MatMulDivConv/NNCFConv2d[conv]/conv2d_0";
-"7 MatMulDivConv/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "8 MatMulDivConv/NNCFConv2d[conv]/conv2d_0";
-"8 MatMulDivConv/NNCFConv2d[conv]/conv2d_0" -> "9 /nncf_model_output_0";
+"0 /nncf_model_input_0" -> "1 SymmetricQuantizer/symmetric_quantize_0"  [label="shape:(1, 1, 5, 5)\nports:0 -> 0", style=solid];
+"1 SymmetricQuantizer/symmetric_quantize_0" -> "4 MatMulDivConv/matmul_0"  [label="shape:(1, 1, 5, 5)\nports:0 -> 0", style=solid];
+"2 /nncf_model_input_1" -> "3 SymmetricQuantizer/symmetric_quantize_1"  [label="shape:(1, 1, 5, 5)\nports:0 -> 0", style=solid];
+"3 SymmetricQuantizer/symmetric_quantize_1" -> "4 MatMulDivConv/matmul_0"  [label="shape:(1, 1, 5, 5)\nports:0 -> 1", style=solid];
+"4 MatMulDivConv/matmul_0" -> "5 MatMulDivConv/__truediv___0"  [label="shape:(1, 1, 5, 5)\nports:0 -> 0", style=solid];
+"5 MatMulDivConv/__truediv___0" -> "6 MatMulDivConv/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[MatMulDivConv/__truediv___0|OUTPUT]/symmetric_quantize_0"  [label="shape:(1, 1, 5, 5)\nports:0 -> 0", style=solid];
+"6 MatMulDivConv/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[MatMulDivConv/__truediv___0|OUTPUT]/symmetric_quantize_0" -> "8 MatMulDivConv/NNCFConv2d[conv]/conv2d_0"  [label="shape:(1, 1, 5, 5)\nports:0 -> 0", style=solid];
+"7 MatMulDivConv/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "8 MatMulDivConv/NNCFConv2d[conv]/conv2d_0"  [label="shape:(2, 1, 2, 2)\nports:0 -> 1", style=solid];
+"8 MatMulDivConv/NNCFConv2d[conv]/conv2d_0" -> "9 /nncf_model_output_0"  [label="shape:(1, 2, 4, 4)\nports:0 -> 0", style=solid];
 }

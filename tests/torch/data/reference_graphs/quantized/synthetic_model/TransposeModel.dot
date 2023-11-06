@@ -4,8 +4,8 @@ strict digraph  {
 "2 TransposeModel/permute_0" [id=2, type=permute];
 "3 /nncf_model_output_0" [id=3, type=nncf_model_output];
 "4 /nncf_model_output_1" [id=4, type=nncf_model_output];
-"0 /nncf_model_input_0" -> "1 TransposeModel/transpose_0";
-"0 /nncf_model_input_0" -> "2 TransposeModel/permute_0";
-"1 TransposeModel/transpose_0" -> "3 /nncf_model_output_0";
-"2 TransposeModel/permute_0" -> "4 /nncf_model_output_1";
+"0 /nncf_model_input_0" -> "1 TransposeModel/transpose_0"  [label="shape:(1,)\nports:0 -> 0", style=solid];
+"0 /nncf_model_input_0" -> "2 TransposeModel/permute_0"  [label="shape:(1,)\nports:0 -> 0", style=solid];
+"1 TransposeModel/transpose_0" -> "3 /nncf_model_output_0"  [label="shape:(1,)\nports:0 -> 0", style=solid];
+"2 TransposeModel/permute_0" -> "4 /nncf_model_output_1"  [label="shape:(1,)\nports:0 -> 0", style=solid];
 }

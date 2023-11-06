@@ -3,7 +3,7 @@ strict digraph  {
 "1 Conv" [id=1, type=Convolution];
 "2 Result_Conv.0" [id=2, type=Result];
 "3 Constant_144" [id=3, type=Constant];
-"0 Parameter_Conv" -> "1 Conv"  [label="shape:[1, 3, 4, 2]\nports:0→0", style=solid];
-"1 Conv" -> "2 Result_Conv.0"  [label="shape:[1, 3, 4, 2]\nports:0→0", style=solid];
-"3 Constant_144" -> "1 Conv"  [label="shape:[3, 3, 1, 1]\nports:0→1", style=solid];
+"0 Parameter_Conv" -> "1 Conv"  [label="shape:[1, 3, 4, 2]\nports:0 -> 0", style=solid];
+"1 Conv" -> "2 Result_Conv.0"  [label="shape:[1, 3, 4, 2]\nports:0 -> 0", style=solid];
+"3 Constant_144" -> "1 Conv"  [label="shape:[3, 3, 1, 1]\nports:0 -> 1", style=solid];
 }

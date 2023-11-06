@@ -5,9 +5,9 @@ strict digraph  {
 "3 MatMul" [id=3, type=MatMul];
 "4 nncf_model_input_0" [id=4, type=nncf_model_input];
 "5 nncf_model_output_0" [id=5, type=nncf_model_output];
-"0 Identity" -> "1 Embedding"  [label="shape:[10, 20]\nports:0→0", style=solid];
-"1 Embedding" -> "2 Gather"  [label="shape:[1, 10, 20]\nports:0→0", style=solid];
-"2 Gather" -> "3 MatMul"  [label="shape:[10, 20]\nports:0→0", style=solid];
-"3 MatMul" -> "5 nncf_model_output_0"  [label="shape:[10, 10]\nports:0→0", style=solid];
-"4 nncf_model_input_0" -> "1 Embedding"  [label="shape:[1, 10]\nports:0→1", style=dashed];
+"0 Identity" -> "1 Embedding"  [label="shape:[10, 20]\nports:0 -> 0", style=solid];
+"1 Embedding" -> "2 Gather"  [label="shape:[1, 10, 20]\nports:0 -> 0", style=solid];
+"2 Gather" -> "3 MatMul"  [label="shape:[10, 20]\nports:0 -> 0", style=solid];
+"3 MatMul" -> "5 nncf_model_output_0"  [label="shape:[10, 10]\nports:0 -> 0", style=solid];
+"4 nncf_model_input_0" -> "1 Embedding"  [label="shape:[1, 10]\nports:0 -> 1", style=dashed];
 }

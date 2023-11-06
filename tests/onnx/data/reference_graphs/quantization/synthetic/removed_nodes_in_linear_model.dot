@@ -12,16 +12,16 @@ strict digraph  {
 "10 Conv2" [id=10, type=Conv];
 "11 nncf_model_input_0" [id=11, type=nncf_model_input];
 "12 nncf_model_output_0" [id=12, type=nncf_model_output];
-"0 QuantizeLinear_Conv1_W_1" -> "1 DequantizeLinear_Conv1_W_1"  [label="shape:[32, 3, 3, 3]\nports:0→0", style=dashed];
-"1 DequantizeLinear_Conv1_W_1" -> "2 Conv1"  [label="shape:[32, 3, 3, 3]\nports:0→1", style=solid];
-"2 Conv1" -> "3 BN1"  [label="shape:[1, 32, 30, 30]\nports:0→0", style=solid];
-"3 BN1" -> "4 ReLU1"  [label="shape:[1, 32, 30, 30]\nports:0→0", style=solid];
-"4 ReLU1" -> "5 QuantizeLinear_ReLU1_Y_1"  [label="shape:[1, 32, 30, 30]\nports:0→0", style=solid];
-"5 QuantizeLinear_ReLU1_Y_1" -> "6 DequantizeLinear_ReLU1_Y_1"  [label="shape:[1, 32, 30, 30]\nports:0→0", style=dashed];
-"6 DequantizeLinear_ReLU1_Y_1" -> "7 Avg_Pool1"  [label="shape:[1, 32, 30, 30]\nports:0→0", style=solid];
-"7 Avg_Pool1" -> "10 Conv2"  [label="shape:[1, 32, 1, 1]\nports:0→0", style=solid];
-"8 QuantizeLinear_Conv2_W_1" -> "9 DequantizeLinear_Conv2_W_1"  [label="shape:[10, 32, 1, 1]\nports:0→0", style=dashed];
-"9 DequantizeLinear_Conv2_W_1" -> "10 Conv2"  [label="shape:[10, 32, 1, 1]\nports:0→1", style=solid];
-"10 Conv2" -> "12 nncf_model_output_0"  [label="shape:[1, 10, 1, 1]\nports:0→0", style=solid];
-"11 nncf_model_input_0" -> "2 Conv1"  [label="shape:[1, 3, 32, 32]\nports:0→0", style=solid];
+"0 QuantizeLinear_Conv1_W_1" -> "1 DequantizeLinear_Conv1_W_1"  [label="shape:[32, 3, 3, 3]\nports:0 -> 0", style=dashed];
+"1 DequantizeLinear_Conv1_W_1" -> "2 Conv1"  [label="shape:[32, 3, 3, 3]\nports:0 -> 1", style=solid];
+"2 Conv1" -> "3 BN1"  [label="shape:[1, 32, 30, 30]\nports:0 -> 0", style=solid];
+"3 BN1" -> "4 ReLU1"  [label="shape:[1, 32, 30, 30]\nports:0 -> 0", style=solid];
+"4 ReLU1" -> "5 QuantizeLinear_ReLU1_Y_1"  [label="shape:[1, 32, 30, 30]\nports:0 -> 0", style=solid];
+"5 QuantizeLinear_ReLU1_Y_1" -> "6 DequantizeLinear_ReLU1_Y_1"  [label="shape:[1, 32, 30, 30]\nports:0 -> 0", style=dashed];
+"6 DequantizeLinear_ReLU1_Y_1" -> "7 Avg_Pool1"  [label="shape:[1, 32, 30, 30]\nports:0 -> 0", style=solid];
+"7 Avg_Pool1" -> "10 Conv2"  [label="shape:[1, 32, 1, 1]\nports:0 -> 0", style=solid];
+"8 QuantizeLinear_Conv2_W_1" -> "9 DequantizeLinear_Conv2_W_1"  [label="shape:[10, 32, 1, 1]\nports:0 -> 0", style=dashed];
+"9 DequantizeLinear_Conv2_W_1" -> "10 Conv2"  [label="shape:[10, 32, 1, 1]\nports:0 -> 1", style=solid];
+"10 Conv2" -> "12 nncf_model_output_0"  [label="shape:[1, 10, 1, 1]\nports:0 -> 0", style=solid];
+"11 nncf_model_input_0" -> "2 Conv1"  [label="shape:[1, 3, 32, 32]\nports:0 -> 0", style=solid];
 }
