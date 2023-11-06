@@ -142,7 +142,7 @@ class GraphConverter:
         """
         ignored_algorithms = []
         if "nncf_smooth_quant" in node.get_friendly_name():
-            ignored_algorithms.append("quantization")
+            ignored_algorithms.append("ptq_quantization")
         return ignored_algorithms
 
     @staticmethod

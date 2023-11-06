@@ -378,7 +378,7 @@ class MinMaxQuantization(Algorithm):
         """
         nncf_node_names = []
         for nncf_node in inference_nncf_graph.get_all_nodes():
-            if "quantization" in nncf_node.ignored_algorithms:
+            if "ptq_quantization" in nncf_node.ignored_algorithms:
                 nncf_node_names.append(nncf_node.node_name)
         return IgnoredScope(names=nncf_node_names)
 
