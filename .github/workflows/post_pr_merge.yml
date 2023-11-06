@@ -24,6 +24,7 @@ jobs:
       merge_commit_sha: ${{ github.event.pull_request.merge_commit_sha }}
       last_sha_in_pr: ${{ github.event.pull_request.head.sha }}
       coverage_artifact_name_in_pr: coverage_common
+      coverage_flags: COMMON
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
   upload-coverage-onnx:
@@ -33,5 +34,6 @@ jobs:
       merge_commit_sha: ${{ github.event.pull_request.merge_commit_sha }}
       last_sha_in_pr: ${{ github.event.pull_request.head.sha }}
       coverage_artifact_name_in_pr: coverage_onnx
+      coverage_flags: ONNX
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
