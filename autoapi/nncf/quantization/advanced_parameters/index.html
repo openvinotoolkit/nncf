@@ -316,10 +316,13 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedBiasCorrectionParameters" title="nncf.quantization.advanced_parameters.AdvancedBiasCorrectionParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedBiasCorrectionParameters</span></code></a></p></td>
 <td><p>Contains advanced parameters for fine-tuning bias correction algorithm.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedQuantizationParameters" title="nncf.quantization.advanced_parameters.AdvancedQuantizationParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedQuantizationParameters</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedSmoothQuantParameters" title="nncf.quantization.advanced_parameters.AdvancedSmoothQuantParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedSmoothQuantParameters</span></code></a></p></td>
+<td><p>Contains advanced alpha parameters for SmoothQuant algorithm.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedQuantizationParameters" title="nncf.quantization.advanced_parameters.AdvancedQuantizationParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedQuantizationParameters</span></code></a></p></td>
 <td><p>Contains advanced parameters for fine-tuning quantization algorithm.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters" title="nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedAccuracyRestorerParameters</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters" title="nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedAccuracyRestorerParameters</span></code></a></p></td>
 <td><p>Contains advanced parameters for fine-tuning the accuracy restorer algorithm.</p></td>
 </tr>
 </tbody>
@@ -401,6 +404,23 @@ The bias correction are skipped If the value is higher than threshold.</p></li>
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="nncf.quantization.advanced_parameters.AdvancedSmoothQuantParameters">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.quantization.advanced_parameters.</span></span><span class="sig-name descname"><span class="pre">AdvancedSmoothQuantParameters</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/quantization/advanced_parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.quantization.advanced_parameters.AdvancedSmoothQuantParameters" title="Permalink to this definition">#</a></dt>
+<dd><p>Contains advanced alpha parameters for SmoothQuant algorithm.
+It regulates the calculation of the smooth scale for different node types.
+A negative value switches off the algorithm for current node type. In case of inaccurate results,
+this parameter may be adjusted in the range from 0 to 1 or set -1 to disable SmoothQuant algorithm.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>convolution</strong> (<em>float</em>) – Whether to apply smoothing for Convolution layers.</p></li>
+<li><p><strong>matmul</strong> (<em>float</em>) – Whether to apply smoothing for MatMul layers.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="nncf.quantization.advanced_parameters.AdvancedQuantizationParameters">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.quantization.advanced_parameters.</span></span><span class="sig-name descname"><span class="pre">AdvancedQuantizationParameters</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/quantization/advanced_parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.quantization.advanced_parameters.AdvancedQuantizationParameters" title="Permalink to this definition">#</a></dt>
 <dd><p>Contains advanced parameters for fine-tuning quantization algorithm.</p>
@@ -415,14 +435,16 @@ of the model outputs.</p></li>
 backend graph operations or by default Python implementation, defaults to True.</p></li>
 <li><p><strong>disable_channel_alignment</strong> (<em>bool</em>) – Whether to disable the channel alignment.</p></li>
 <li><p><strong>disable_bias_correction</strong> (<em>bool</em>) – Whether to disable the bias correction.</p></li>
-<li><p><strong>smooth_quant_alpha</strong> (<em>float</em>) – SmoothQuant-related parameter. It regulates the calculation of the smooth scale.
-The default value is 0.95. A negative value switches off the algorithm. In case of inaccurate results,
-this parameter may be adjusted in the range from 0 to 1 or set -1 to disable SmoothQuant algorithm.</p></li>
 <li><p><strong>activations_quantization_params</strong> (<a class="reference internal" href="#nncf.quantization.advanced_parameters.QuantizationParameters" title="nncf.quantization.advanced_parameters.QuantizationParameters"><em>nncf.quantization.advanced_parameters.QuantizationParameters</em></a>) – Quantization parameters for activations.</p></li>
 <li><p><strong>weights_quantization_params</strong> (<a class="reference internal" href="#nncf.quantization.advanced_parameters.QuantizationParameters" title="nncf.quantization.advanced_parameters.QuantizationParameters"><em>nncf.quantization.advanced_parameters.QuantizationParameters</em></a>) – Quantization parameters for weights.</p></li>
 <li><p><strong>activations_range_estimator_params</strong> (<a class="reference internal" href="../range_estimator/index.html#nncf.quantization.range_estimator.RangeEstimatorParameters" title="nncf.quantization.range_estimator.RangeEstimatorParameters"><em>nncf.quantization.range_estimator.RangeEstimatorParameters</em></a>) – Range estimator parameters for activations.</p></li>
 <li><p><strong>weights_range_estimator_params</strong> (<a class="reference internal" href="../range_estimator/index.html#nncf.quantization.range_estimator.RangeEstimatorParameters" title="nncf.quantization.range_estimator.RangeEstimatorParameters"><em>nncf.quantization.range_estimator.RangeEstimatorParameters</em></a>) – Range estimator parameters for weights.</p></li>
 <li><p><strong>bias_correction_params</strong> (<a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedBiasCorrectionParameters" title="nncf.quantization.advanced_parameters.AdvancedBiasCorrectionParameters"><em>nncf.quantization.advanced_parameters.AdvancedBiasCorrectionParameters</em></a>) – Advanced bias correction parameters.</p></li>
+<li><p><strong>smooth_quant_alphas</strong> – SmoothQuant-related parameters mapping.
+It regulates the calculation of the smooth scale. The default value stored in AdvancedSmoothQuantParameters.
+A negative value for each field switches off type smoothing. In case of inaccurate results,
+fields may be adjusted in the range from 0 to 1 or set -1 to disable smoothing for type.</p></li>
+<li><p><strong>smooth_quant_alpha</strong> (<em>float</em>) – Deprecated SmoothQuant-related parameter.</p></li>
 <li><p><strong>backend_params</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – Backend-specific parameters.</p></li>
 </ul>
 </dd>
@@ -517,6 +539,7 @@ quantized with initial parameters, should be saved.</p></li>
 <li><a class="reference internal" href="#nncf.quantization.advanced_parameters.OverflowFix"><code class="docutils literal notranslate"><span class="pre">OverflowFix</span></code></a></li>
 <li><a class="reference internal" href="#nncf.quantization.advanced_parameters.QuantizationParameters"><code class="docutils literal notranslate"><span class="pre">QuantizationParameters</span></code></a></li>
 <li><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedBiasCorrectionParameters"><code class="docutils literal notranslate"><span class="pre">AdvancedBiasCorrectionParameters</span></code></a></li>
+<li><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedSmoothQuantParameters"><code class="docutils literal notranslate"><span class="pre">AdvancedSmoothQuantParameters</span></code></a></li>
 <li><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedQuantizationParameters"><code class="docutils literal notranslate"><span class="pre">AdvancedQuantizationParameters</span></code></a></li>
 <li><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters"><code class="docutils literal notranslate"><span class="pre">AdvancedAccuracyRestorerParameters</span></code></a></li>
 </ul>
