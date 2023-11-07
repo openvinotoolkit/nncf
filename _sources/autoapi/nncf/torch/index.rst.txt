@@ -56,7 +56,7 @@ Functions
 
    The main function used to produce a model ready for compression fine-tuning from an original PyTorch
    model and a configuration object.
-   dummy_forward_fn
+
    :param model: The original model. Should have its parameters already loaded from a checkpoint or another
        source.
    :param config: A configuration object used to determine the exact compression modifications to be applied

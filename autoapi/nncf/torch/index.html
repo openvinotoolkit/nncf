@@ -395,15 +395,12 @@
 <dt class="sig sig-object py" id="nncf.torch.create_compressed_model">
 <span class="sig-prename descclassname"><span class="pre">nncf.torch.</span></span><span class="sig-name descname"><span class="pre">create_compressed_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compression_state</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dummy_forward_fn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wrap_inputs_fn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wrap_outputs_fn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dump_graphs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/torch/model_creation.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.create_compressed_model" title="Permalink to this definition">#</a></dt>
 <dd><p>The main function used to produce a model ready for compression fine-tuning from an original PyTorch
-model and a configuration object.
-dummy_forward_fn
-:param model: The original model. Should have its parameters already loaded from a checkpoint or another</p>
-<blockquote>
-<div><p>source.</p>
-</div></blockquote>
+model and a configuration object.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>torch.nn.Module</em>) – The original model. Should have its parameters already loaded from a checkpoint or another
+source.</p></li>
 <li><p><strong>config</strong> (<a class="reference internal" href="../index.html#nncf.NNCFConfig" title="nncf.NNCFConfig"><em>nncf.NNCFConfig</em></a>) – A configuration object used to determine the exact compression modifications to be applied
 to the model</p></li>
 <li><p><strong>compression_state</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em><em>]</em>) – representation of the entire compression state to unambiguously restore
@@ -426,10 +423,9 @@ tensor among nncf.nncf_model_input function, which is a no-operation function an
 to be traced by NNCF in the internal graph representation. Output is the tuple of (args, kwargs), where args
 and kwargs are the same as were supplied in input, but each tensor in the original input. Must be specified
 if dummy_forward_fn is specified.</p></li>
-<li><p><strong>wrap_outputs_fn</strong> (<em>Callable</em><em>[</em><em>[</em><em>Tuple</em><em>, </em><em>Dict</em><em>]</em><em>, </em><em>Tuple</em><em>[</em><em>Tuple</em><em>, </em><em>Dict</em><em>]</em><em>]</em>) – same as <cite>wrap_inputs_fn</cite>, but applies to model outputs</p></li>
+<li><p><strong>wrap_outputs_fn</strong> (<em>Callable</em><em>[</em><em>[</em><em>Any</em><em>]</em><em>, </em><em>Any</em><em>]</em>) – same as <cite>wrap_inputs_fn</cite>, but applies to model outputs</p></li>
 <li><p><strong>dump_graphs</strong> – Whether to dump the internal graph representation of the
 original and compressed models in the .dot format into the log directory.</p></li>
-<li><p><strong>model</strong> (<em>torch.nn.Module</em>) – </p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
