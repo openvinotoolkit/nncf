@@ -136,7 +136,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def _get_aggregation_axes(target_point: OVTargetPoint):
-        return None if target_point.is_weight_target_point() else (0,)
+        return None if target_point.is_weight_target_point() else (0, 1)
 
     @staticmethod
     def _get_reduction_axes(
