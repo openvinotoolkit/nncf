@@ -70,7 +70,9 @@ SINGLE_INPUT_INFO_SCHEMA = {
             " during tracing and exporting.",
         ),
         "keyword": with_attributes(
-            STRING, description="Keyword to be used when passing the tensor to the model's 'forward' method."
+            STRING,
+            description="Keyword to be used when passing the tensor to the model's 'forward' method - "
+            "leave unspecified to pass the corresponding argument as a positional arg.",
         ),
     },
     "additionalProperties": False,
@@ -105,11 +107,8 @@ NNCF_CONFIG_SCHEMA = {
             "This information is used to build the internal graph representation "
             "that is leveraged for proper compression functioning, and for "
             "exporting the compressed model to an executable format.\n"
-            "For instance, in PyTorch a dummy tensor with a "
-            "corresponding shape and filler will be generated for each entry "
-            "and passed as a corresponding argument into the model's forward "
-            "method. Keywords can be specified for each entry - if left "
-            "unspecified, the dummy tensor will be passed as a positional arg.",
+            "If this field is unspecified, NNCF will try to deduce the input shapes and tensor types for the graph "
+            "building purposes based on dataloader objects that are passed to compression algorithms by the user.",
         ),
         "target_device": with_attributes(
             TARGET_DEVICE_SCHEMA,
@@ -148,7 +147,6 @@ NNCF_CONFIG_SCHEMA = {
         ),
         "log_dir": with_attributes(STRING, description="Log directory for NNCF-specific logging outputs."),
     },
-    "required": ["input_info"],
     "$defs": REF_VS_ALGO_SCHEMA,
 }
 

@@ -13,7 +13,8 @@ import torch
 
 from nncf.common.quantization.quantizer_setup import DEFAULT_QUANTIZER_CONFIG
 from nncf.common.quantization.structs import QuantizationMode
-from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.torch.dynamic_graph.io_handling import FillerInputElement
+from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.algo import QuantizationBuilder
@@ -49,7 +50,7 @@ class TestHWConfigRules:
         nncf_config["compression"].update({"quantize_inputs": should_be_quantize_inputs})
         nncf_config["target_device"] = "ANY"  # for compatibility
 
-        net = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 2, 1, 1])])
+        net = NNCFNetwork(model, input_info=FillerInputInfo([FillerInputElement([1, 2, 1, 1])]))
         hw_config = PTHWConfig.from_dict(hw_config_dict)
         qbuilder = QuantizationBuilder(nncf_config, should_init=False)
         qbuilder.hw_config = hw_config

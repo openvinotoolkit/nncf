@@ -14,7 +14,7 @@ from typing import List, Optional
 
 import numpy as np
 import torch
-from datasets import Dataset
+from datasets import Dataset  # pylint: disable=no-name-in-module
 from transformers import TrainingArguments
 from transformers.trainer import Trainer
 from transformers.trainer_callback import TrainerCallback

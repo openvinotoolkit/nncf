@@ -47,7 +47,7 @@ class Exporter(ABC):
         self._model = model
         self._input_names = input_names
         self._output_names = output_names
-        self._model_args = model_args if model_args else ({},)
+        self._model_args = model_args
 
     @abstractmethod
     def export_model(self, save_path: str, save_format: Optional[str] = None) -> None:

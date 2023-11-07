@@ -21,7 +21,7 @@ from examples.torch.object_detection.datasets.coco import COCODataset
 from examples.torch.object_detection.datasets.voc0712 import VOCAnnotationTransform
 from examples.torch.object_detection.datasets.voc0712 import VOCDetection
 from examples.torch.object_detection.utils.augmentations import SSDAugmentation
-from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 
 VOC_MEAN = (0.406, 0.456, 0.485)
 VOC_STD = (0.255, 0.224, 0.229)
@@ -45,8 +45,8 @@ def get_training_dataset(dataset_name, path_to_annotations, path_to_imgs, config
     # for VOC path_to_imgs = path_to_annotations = voc_root
     assert dataset_name in ["voc", "coco"]
     preprocessing = get_preprocessing(config)
-    input_info_list = create_input_infos(config)
-    image_size = input_info_list[0].shape[-1]
+    input_info = FillerInputInfo.from_nncf_config(config)
+    image_size = input_info.elements[0].shape[-1]
     ssd_transform = SSDAugmentation(image_size, preprocessing.mean, preprocessing.std, preprocessing.normalize_coef)
     if dataset_name == "voc":
         training_dataset = VOCDetection(
@@ -72,8 +72,8 @@ def get_testing_dataset(dataset_name, path_to_annotations, path_to_imgs, config)
     # for VOC path_to_imgs = path_to_annotations = voc_root
     assert dataset_name in ["voc", "coco"]
     preprocessing = get_preprocessing(config)
-    input_info_list = create_input_infos(config)
-    image_size = input_info_list[0].shape[-1]
+    input_info = FillerInputInfo.from_nncf_config(config)
+    image_size = input_info.elements[0].shape[-1]
     transform = BaseTransform(image_size, preprocessing.mean, preprocessing.std, preprocessing.normalize_coef)
     if dataset_name == "voc":
         testing_dataset = VOCDetection(
