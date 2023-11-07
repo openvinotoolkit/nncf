@@ -23,6 +23,7 @@ from nncf.onnx.graph.onnx_helper import get_edge_info_mapping
 from nncf.onnx.graph.onnx_helper import get_edge_shape
 from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from tests.onnx.common import get_random_generator
@@ -115,7 +116,7 @@ def min_max_quantize_model(
     # ONNX backend does not support these algorithms
     advanced_parameters.disable_bias_correction = True
     advanced_parameters.disable_channel_alignment = True
-    advanced_parameters.smooth_quant_alpha = -1
+    advanced_parameters.smooth_quant_alphas = AdvancedSmoothQuantParameters(convolution=-1, matmul=-1)
     quantization_params["advanced_parameters"] = advanced_parameters
 
     post_training_quantization = PostTrainingQuantization(subset_size=1, **quantization_params)
