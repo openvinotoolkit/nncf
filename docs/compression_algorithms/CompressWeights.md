@@ -220,3 +220,8 @@ Here is the perplexity and model size before and after weight compression for di
 - The compressed model is not trainable.
 - INT4_SYM, INT4_ASYM and NF4 modes, grouped quantization and mixed precision selection is available for OpenVINO backend only.
 - NF4 support is experimental - models quantized to nf4 should not be faster models quantized to 8-bit integer.
+
+#### Additional resources
+- [LLM Weight Compression](https://docs.openvino.ai/nightly/weight_compression.html)
+- [Optimize and Deploy Generative AI Models using Hugging Face Optimum Intel](https://docs.openvino.ai/nightly/gen_ai_guide.html)
+- [Optimum Intel documentation](https://huggingface.co/docs/optimum/intel/inference)
