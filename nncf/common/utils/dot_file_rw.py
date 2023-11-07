@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import copy
 import pathlib
 from collections import defaultdict
 
@@ -52,6 +52,8 @@ def relabel_graph_for_dot_visualization(nx_graph: nx.Graph, from_reference: bool
     :return: NetworkX graph with reserved symbols in nodes keys replaced.
     """
 
+    nx_graph = copy.deepcopy(nx_graph)
+
     # .dot format reserves ':' character in node names
     if not from_reference:
         # dumping to disk
@@ -73,7 +75,7 @@ def relabel_graph_for_dot_visualization(nx_graph: nx.Graph, from_reference: bool
             mapping[original_name] = dot_name
 
     relabeled_graph = nx.relabel_nodes(nx_graph, mapping)
-    for _, node_data in nx_graph.nodes(data=True):
+    for _, node_data in relabeled_graph.nodes(data=True):
         if "label" in node_data:
             node_data["label"] = node_data["label"].replace(__CHARACTER_REPLACE_FROM, __CHARACTER_REPLACE_TO)
     return relabeled_graph
