@@ -86,7 +86,7 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
             (OVMatMulMetatype, OVLayerAttributes({0: {"transpose": False}}), 0, -1),
             (OVMatMulMetatype, OVLayerAttributes({0: {"transpose": True}}), 0, -2),
             (OVMatMulMetatype, OVLayerAttributes({1: {"transpose": False}}), 2, RuntimeError),
-            (OVConvolutionMetatype, OVLayerAttributes({1: {}}), 1, 0),
+            (OVConvolutionMetatype, OVLayerAttributes({1: {}}), 1, 1),
         ),
     )
     def test_get_weight_channel_axis(self, node_metatype, layer_attributes, port_id, reference_value):

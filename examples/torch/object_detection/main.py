@@ -60,7 +60,7 @@ from nncf.config.structures import ModelEvaluationArgs
 from nncf.config.utils import is_accuracy_aware_training
 from nncf.torch import create_compressed_model
 from nncf.torch import load_state
-from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.initialization import register_default_init_args
 from nncf.torch.utils import is_main_process
 
@@ -363,8 +363,8 @@ def create_dataloaders(config):
 
 
 def create_model(config: SampleConfig):
-    input_info_list = create_input_infos(config.nncf_config)
-    image_size = input_info_list[0].shape[-1]
+    input_info = FillerInputInfo.from_nncf_config(config.nncf_config)
+    image_size = input_info[0].shape[-1]
     ssd_net = build_ssd(config.model, config.ssd_params, image_size, config.num_classes, config)
     weights = config.get("weights")
     if weights:

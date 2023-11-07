@@ -23,16 +23,16 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+from nncf import NNCFConfig
 from nncf.common.graph import NNCFNodeName
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch import nncf_model_input
 from nncf.torch import nncf_model_output
-from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
-from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
-from nncf.torch.dynamic_graph.graph_tracer import create_mock_tensor
+from nncf.torch.dynamic_graph.io_handling import FillerInputElement
+from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.layers import NNCF_MODULES_DICT
@@ -199,9 +199,9 @@ def sr_wrap_inputs_fn(model_args, model_kwargs):
 
 def sr_dummy_forward_fn(model_, input_sample_sizes: Tuple[List[int]]):
     device = get_model_device(model_)
-    config = {"input_info": [{"sample_size": sizes} for sizes in input_sample_sizes]}
-    input_info_list = create_input_infos(config)
-    tensor_list = [create_mock_tensor(info, device) for info in input_info_list]
+    config = NNCFConfig.from_dict({"input_info": [{"sample_size": sizes} for sizes in input_sample_sizes]})
+    input_info = FillerInputInfo.from_nncf_config(config)
+    tensor_list = [info.get_tensor_for_input().to(device) for info in input_info.elements]
     args = (tuple(tensor_list),)
     args, _ = sr_wrap_inputs_fn(args, {})
     return nncf_model_output(model_(*args))
@@ -256,12 +256,12 @@ class TestModelsGraph:
         net = desc.model_builder()
         input_sample_sizes = desc.input_sample_sizes
         if isinstance(input_sample_sizes, tuple):
-            input_info_list = [ModelInputInfo(sample_size) for sample_size in input_sample_sizes]
+            input_info = FillerInputInfo([FillerInputElement(sample_size) for sample_size in input_sample_sizes])
         else:
-            input_info_list = [ModelInputInfo(input_sample_sizes)]
+            input_info = FillerInputInfo([FillerInputElement(input_sample_sizes)])
         dummy_forward_fn = desc.dummy_forward_fn
         if not dummy_forward_fn:
-            dummy_forward_fn = create_dummy_forward_fn(input_info_list, desc.wrap_inputs_fn)
+            dummy_forward_fn = create_dummy_forward_fn(input_info, desc.wrap_inputs_fn)
         graph_builder = GraphBuilder(custom_forward_fn=dummy_forward_fn)
         graph = graph_builder.build_graph(net)
         check_graph(graph, desc.dot_filename, "original")
@@ -349,7 +349,7 @@ def test_gnmt_quantization(_case_config):
 
     compressed_model = NNCFNetwork(
         model,
-        input_infos=create_input_infos(config),
+        input_info=FillerInputInfo.from_nncf_config(config),
         dummy_forward_fn=forward_fn_,
         wrap_inputs_fn=gnmt_wrap_inputs_fn,
         scopes_without_shape_matching=[
@@ -813,8 +813,8 @@ def test_compressed_graph_models_hw(desc, hw_config_type):
     config = get_basic_quantization_config_with_hw_config_type(
         hw_config_type.value, input_sample_size=desc.input_sample_sizes
     )
-    input_info_list = create_input_infos(config)
-    compressed_model = NNCFNetwork(model, input_infos=input_info_list)
+    input_info = FillerInputInfo.from_nncf_config(config)
+    compressed_model = NNCFNetwork(model, input_info=input_info)
 
     quantization_builder = QuantizationBuilder(config, should_init=False)
     single_config_quantizer_setup = quantization_builder._get_single_config_quantizer_setup(compressed_model)

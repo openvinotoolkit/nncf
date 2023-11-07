@@ -223,3 +223,7 @@ def extract_accuracy_aware_training_params(config: NNCFConfig) -> Dict[str, obje
     validate_accuracy_aware_schema(config, params)
 
     return params
+
+
+def has_input_info_field(config: NNCFConfig) -> bool:
+    return config.get("input_info") is not None

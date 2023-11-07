@@ -29,6 +29,7 @@ from torchvision.transforms import transforms
 from examples.common.sample_config import SampleConfig
 from examples.torch.classification.main import create_cifar
 from examples.torch.object_detection.models.ssd_vgg import SSD_VGG
+from nncf import NNCFConfig
 from nncf.common.graph import NNCFNodeName
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
@@ -36,7 +37,7 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.utils.debug import set_debug_log_dir
 from nncf.torch import register_default_init_args
 from nncf.torch.checkpoint_loading import load_state
-from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.initialization import default_criterion_fn
 from nncf.torch.quantization.adjust_padding import add_adjust_padding_nodes
 from nncf.torch.quantization.hessian_trace import HessianTraceEstimator
@@ -76,8 +77,8 @@ from tests.torch.test_models.mobilenet import MobileNetV2
 from tests.torch.test_models.mobilenet import mobilenet_v2
 
 
-def create_test_dataloaders(config, dataset_dir):
-    input_info = create_input_infos(config)[0]
+def create_test_dataloaders(config: NNCFConfig, dataset_dir):
+    input_info = FillerInputInfo.from_nncf_config(config).elements[0]
     image_size = input_info.shape[-1]
     batch_size = input_info.shape[0]
     normalize = transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))

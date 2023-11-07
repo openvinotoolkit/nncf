@@ -143,7 +143,7 @@ class NNCFGraphEdge:
         self.to_node = to_node
         self.input_port_id = input_port_id
         self.output_port_id = output_port_id
-        self.tensor_shape = tensor_shape
+        self.tensor_shape: Tuple[int] = tuple(tensor_shape)
         self.dtype = dtype
         self.parallel_input_port_ids = parallel_input_port_ids
 
@@ -434,7 +434,8 @@ class NNCFGraph:
         :param layer_name: The name of the framework-specific "layer" object that houses the operation represented by
             the node and associated trainable weights, if any.
         :param ignored_algorithms: A list of compression algorithm names (from the same set of strings that are
-            specified in the `"algorithm": ...` section of the .json NNCF config) which should ignore this operation.
+            specified in the `"algorithm": ...` section of the .json NNCF config or `ptq_quantization`)
+            which should ignore this operation.
         :param is_in_iteration_scope: Whether the node to be currently added corresponds to an iteration of an RNN
             cycle (where the number of iterations is determined dynamically based on the RNN input shape).
         :param is_integer_input: Only valid for input nodes - whether the input node corresponds to an integer input.

@@ -80,7 +80,7 @@ class NNCFConfig(dict):
     def has_extra_struct(self, struct_cls: Type[NNCFExtraConfigStruct]) -> NNCFExtraConfigStruct:
         return struct_cls.get_id() in self.__nncf_extra_structs
 
-    def get_all_extra_structs_for_copy(self) -> List[NNCFExtraConfigStruct]:
+    def get_all_extra_structs(self) -> List[NNCFExtraConfigStruct]:
         return list(self.__nncf_extra_structs.values())
 
     def get_redefinable_global_param_value_for_algo(self, param_name: str, algo_name: str) -> Optional[str]:

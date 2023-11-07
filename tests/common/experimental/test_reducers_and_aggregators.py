@@ -60,48 +60,46 @@ class OfflineAggregatorTestCase:
 
 OFFLINE_AGGREGATORS_TEST_CASES = [
     OfflineAggregatorTestCase(
-        aggregation_axes=None,
-        min_ref=np.array([[[-50000, -4, -8], [-12, -16, -20], [-24, -28, -32]]]),
-        max_ref=np.array([[[50000, 4, 8], [12, 16, 20], [24, 28, 32]]]),
-    ),
-    OfflineAggregatorTestCase(
         aggregation_axes=(0,),
         min_ref=np.array([[[-50000, -4, -8], [-12, -16, -20], [-24, -28, -32]]]),
         max_ref=np.array([[[50000, 4, 8], [12, 16, 20], [24, 28, 32]]]),
     ),
     OfflineAggregatorTestCase(
-        aggregation_axes=(0, 2),
-        min_ref=np.array([[-50000, -28, -32]]),
-        max_ref=np.array([[50000, 28, 32]]),
+        aggregation_axes=(
+            0,
+            2,
+        ),
+        min_ref=np.array([[[-50000, -28, -32]]]),
+        max_ref=np.array([[[50000, 28, 32]]]),
     ),
     OfflineAggregatorTestCase(
         aggregation_axes=(2,),
         min_ref=np.array(
             [
-                [[-50000, 5, 10]],
-                [[-40000, 4, 8]],
-                [[-30000, 3, 6]],
-                [[-20000, 2, 4]],
-                [[-10000, 1, 2]],
-                [[0, 0, 0]],
-                [[-6, -7, -8]],
-                [[-12, -14, -16]],
-                [[-18, -21, -24]],
-                [[-24, -28, -32]],
+                [[[-50000, 5, 10]]],
+                [[[-40000, 4, 8]]],
+                [[[-30000, 3, 6]]],
+                [[[-20000, 2, 4]]],
+                [[[-10000, 1, 2]]],
+                [[[0, 0, 0]]],
+                [[[-6, -7, -8]]],
+                [[[-12, -14, -16]]],
+                [[[-18, -21, -24]]],
+                [[[-24, -28, -32]]],
             ]
         ),
         max_ref=np.array(
             [
-                [[50000, -5, -10]],
-                [[40000, -4, -8]],
-                [[30000, -3, -6]],
-                [[20000, -2, -4]],
-                [[10000, -1, -2]],
-                [[0, 0, 0]],
-                [[6, 7, 8]],
-                [[12, 14, 16]],
-                [[18, 21, 24]],
-                [[24, 28, 32]],
+                [[[50000, -5, -10]]],
+                [[[40000, -4, -8]]],
+                [[[30000, -3, -6]]],
+                [[[20000, -2, -4]]],
+                [[[10000, -1, -2]]],
+                [[[0, 0, 0]]],
+                [[[6, 7, 8]]],
+                [[[12, 14, 16]]],
+                [[[18, 21, 24]]],
+                [[[24, 28, 32]]],
             ]
         ),
     ),
@@ -254,8 +252,8 @@ class TemplateTestReducersAggreagtors:
         assert self.all_close(max_aggregator.aggregate(), max_ref)
 
     NO_OUTLIERS_TEST_PARAMS = [
-        (MeanAggregator, True, 1, 1404.5138888888905),
-        (MedianAggregator, True, 1, 24.0),
+        (MeanAggregator, True, 1, [1404.5138888888905]),
+        (MedianAggregator, True, 1, [24.0]),
         (
             MeanAggregator,
             False,
@@ -263,16 +261,16 @@ class TemplateTestReducersAggreagtors:
             [2503.125, -2493.75, 5009.375, -4987.5, 7515.625, -7481.25, 10021.875, -9975.0, 12528.125],
         ),
         (MedianAggregator, False, 1, [4.5, 5.0, 13.5, 10.0, 22.5, 15.0, 31.5, 20.0, 40.5]),
-        (MeanAggregator, True, 2, [2512.5, -1651.04166667, 3352.08333333]),
-        (MedianAggregator, True, 2, [13.0, 12.5, 21.0]),
+        (MeanAggregator, True, 2, [[2512.5, -1651.04166667, 3352.08333333]]),
+        (MedianAggregator, True, 2, [[13.0, 12.5, 21.0]]),
         (MeanAggregator, False, 2, DEFALUT_3D_MEAN_VALUE),
         (MedianAggregator, False, 2, DEFALUT_3D_MEDIAN_VALUE),
-        (MeanAggregator, True, 3, DEFALUT_3D_MEAN_VALUE),
-        (MedianAggregator, True, 3, DEFALUT_3D_MEDIAN_VALUE),
+        (MeanAggregator, True, 3, [DEFALUT_3D_MEAN_VALUE]),
+        (MedianAggregator, True, 3, [DEFALUT_3D_MEDIAN_VALUE]),
         (MeanAggregator, False, 3, [DEFALUT_3D_MEAN_VALUE]),
         (MedianAggregator, False, 3, [DEFALUT_3D_MEDIAN_VALUE]),
-        (default_test_mean_no_outlier, True, 1, 20.0893),
-        (default_test_median_no_outlier, True, 1, 30.0),
+        (default_test_mean_no_outlier, True, 1, [20.0893]),
+        (default_test_median_no_outlier, True, 1, [30.0]),
         (
             default_test_mean_no_outlier,
             False,
@@ -280,12 +278,12 @@ class TemplateTestReducersAggreagtors:
             [4.16666667, 8.33333333, 12.5, 16.66666667, 20.83333333, 25.0, 29.16666667, 33.33333333, 37.5],
         ),
         (default_test_median_no_outlier, False, 1, [5.0, 4.0, 15.0, 8.0, 25.0, 12.0, 35.0, 16.0, 45.0]),
-        (default_test_mean_no_outlier, True, 2, [16.66666667, 20.83333333, 25.0]),
-        (default_test_median_no_outlier, True, 2, [14.0, 10.0, 24.0]),
+        (default_test_mean_no_outlier, True, 2, [[16.66666667, 20.83333333, 25.0]]),
+        (default_test_median_no_outlier, True, 2, [[14.0, 10.0, 24.0]]),
         (default_test_mean_no_outlier, False, 2, NO_OUTLIERS_DEFAULT_3D_MEAN_VALUE),
         (default_test_median_no_outlier, False, 2, NO_OUTLIERS_DEFAULT_3D_MEDIAN_VALUE),
-        (default_test_mean_no_outlier, True, 3, NO_OUTLIERS_DEFAULT_3D_MEAN_VALUE),
-        (default_test_median_no_outlier, True, 3, NO_OUTLIERS_DEFAULT_3D_MEDIAN_VALUE),
+        (default_test_mean_no_outlier, True, 3, [NO_OUTLIERS_DEFAULT_3D_MEAN_VALUE]),
+        (default_test_median_no_outlier, True, 3, [NO_OUTLIERS_DEFAULT_3D_MEDIAN_VALUE]),
         (default_test_mean_no_outlier, False, 3, [NO_OUTLIERS_DEFAULT_3D_MEAN_VALUE]),
         (default_test_median_no_outlier, False, 3, [NO_OUTLIERS_DEFAULT_3D_MEDIAN_VALUE]),
     ]
@@ -348,8 +346,8 @@ class TemplateTestReducersAggreagtors:
                 "mad_values": np.array([2.5, 5.0, 7.5, 10.0, 12.5, 15.0, 17.5, 20.0, 22.5]),
             },
             (0, 1): {
-                "median_values": np.array(18.0),
-                "mad_values": np.array(12.0),
+                "median_values": np.array([18.0]),
+                "mad_values": np.array([12.0]),
             },
         },
         PercentileAggregator: {
@@ -366,10 +364,10 @@ class TemplateTestReducersAggreagtors:
                 95: np.array([7.6, 15.2, 22.8, 30.4, 38.0, 45.6, 53.2, 60.8, 68.4]),
             },
             (0, 1): {
-                5: np.array(0.0),
-                10: np.array(0.0),
-                90: np.array(48.0),
-                95: np.array(56.0),
+                5: np.array([0.0]),
+                10: np.array([0.0]),
+                90: np.array([48.0]),
+                95: np.array([56.0]),
             },
         },
     }
@@ -389,14 +387,14 @@ class TemplateTestReducersAggreagtors:
 
     REF_MAD_PERCENTILE_REF_VALUES_DYNAMIC_TENSORS = {
         MedianAbsoluteDeviationAggregator: {
-            "median_values": np.array([28.5, 35.5, 43.5]),
-            "mad_values": np.array([24.0, 24.0, 24.0]),
+            "median_values": np.array([[28.5, 35.5, 43.5]]).reshape(1, 3, 1),
+            "mad_values": np.array([[[24.0, 24.0, 24.0]]]).reshape(1, 3, 1),
         },
         PercentileAggregator: {
-            5: np.array([0.95, 5.95, 9.95]),
-            10: np.array([1.9, 7.9, 15.5]),
-            90: np.array([75.1, 83.1, 91.1]),
-            95: np.array([77.05, 85.05, 93.05]),
+            5: np.array([[[0.95, 5.95, 9.95]]]).reshape(1, 3, 1),
+            10: np.array([[[1.9, 7.9, 15.5]]]).reshape(1, 3, 1),
+            90: np.array([[[75.1, 83.1, 91.1]]]).reshape(1, 3, 1),
+            95: np.array([[[77.05, 85.05, 93.05]]]).reshape(1, 3, 1),
         },
     }
 

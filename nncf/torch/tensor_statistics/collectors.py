@@ -20,6 +20,7 @@ from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcesso
 from nncf.common.tensor_statistics.collectors import NNCFTensor
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
+from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
 from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
@@ -33,7 +34,6 @@ from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
 from nncf.experimental.common.tensor_statistics.collectors import PercentileAggregator
 from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
-from nncf.experimental.common.tensor_statistics.collectors import TensorAggregatorBase
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.torch.tensor import PTNNCFTensor
@@ -443,8 +443,8 @@ def get_percentile_tensor_collector(
 
 
 def _get_collection_without_reduction(
-    aggregator_cls: TensorAggregatorBase,
-    statistic_cls: TensorAggregatorBase,
+    aggregator_cls: AggregatorBase,
+    statistic_cls: AggregatorBase,
     reduction_axes: Tuple[int, ...],
     aggregation_axes: Tuple[int, ...],
     num_samples: int,

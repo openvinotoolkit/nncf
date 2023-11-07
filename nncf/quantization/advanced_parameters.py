@@ -113,6 +113,25 @@ class AdvancedBiasCorrectionParameters:
 
 @api()
 @dataclass
+class AdvancedSmoothQuantParameters:
+    """
+    Contains advanced alpha parameters for SmoothQuant algorithm.
+    It regulates the calculation of the smooth scale for different node types.
+    A negative value switches off the algorithm for current node type. In case of inaccurate results,
+    this parameter may be adjusted in the range from 0 to 1 or set -1 to disable SmoothQuant algorithm.
+
+    :param convolution: Whether to apply smoothing for Convolution layers.
+    :type convolution: float
+    :param matmul: Whether to apply smoothing for MatMul layers.
+    :type matmul: float
+    """
+
+    convolution: float = -1
+    matmul: float = 0.95
+
+
+@api()
+@dataclass
 class AdvancedQuantizationParameters:
     """
     Contains advanced parameters for fine-tuning quantization algorithm.
@@ -130,10 +149,6 @@ class AdvancedQuantizationParameters:
     :type disable_channel_alignment: bool
     :param disable_bias_correction: Whether to disable the bias correction.
     :type disable_bias_correction: bool
-    :param smooth_quant_alpha: SmoothQuant-related parameter. It regulates the calculation of the smooth scale.
-        The default value is 0.95. A negative value switches off the algorithm. In case of inaccurate results,
-        this parameter may be adjusted in the range from 0 to 1 or set -1 to disable SmoothQuant algorithm.
-    :type smooth_quant_alpha: float
     :param activations_quantization_params: Quantization parameters for activations.
     :type activations_quantization_params: nncf.quantization.advanced_parameters.QuantizationParameters
     :param weights_quantization_params: Quantization parameters for weights.
@@ -144,6 +159,13 @@ class AdvancedQuantizationParameters:
     :type weights_range_estimator_params: nncf.quantization.range_estimator.RangeEstimatorParameters
     :param bias_correction_params: Advanced bias correction parameters.
     :type bias_correction_params: nncf.quantization.advanced_parameters.AdvancedBiasCorrectionParameters
+    :param smooth_quant_alphas: SmoothQuant-related parameters mapping.
+        It regulates the calculation of the smooth scale. The default value stored in AdvancedSmoothQuantParameters.
+        A negative value for each field switches off type smoothing. In case of inaccurate results,
+        fields may be adjusted in the range from 0 to 1 or set -1 to disable smoothing for type.
+    :type smooth_quant_alpha: AdvancedSmoothQuantParameters
+    :param smooth_quant_alpha: Deprecated SmoothQuant-related parameter.
+    :type smooth_quant_alpha: float
     :param backend_params: Backend-specific parameters.
     :type backend_params: Dict[str, Any]
     """
@@ -154,7 +176,6 @@ class AdvancedQuantizationParameters:
     inplace_statistics: bool = True
     disable_channel_alignment: bool = True
     disable_bias_correction: bool = False
-    smooth_quant_alpha: float = 0.95
 
     # Advanced Quantization parameters
     activations_quantization_params: QuantizationParameters = field(default_factory=QuantizationParameters)
@@ -166,6 +187,11 @@ class AdvancedQuantizationParameters:
 
     # Advanced BiasCorrection algorithm parameters
     bias_correction_params: AdvancedBiasCorrectionParameters = field(default_factory=AdvancedBiasCorrectionParameters)
+
+    # Advanced SmoothQuant algorithm parameters
+    smooth_quant_alphas: AdvancedSmoothQuantParameters = field(default_factory=AdvancedSmoothQuantParameters)
+    # Deprecated parameter
+    smooth_quant_alpha: float = None
 
     # Backend specific parameters
     backend_params: Dict[str, Any] = field(default_factory=dict)
