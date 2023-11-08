@@ -640,6 +640,22 @@ def test_filler_input_info_arg_generation(filler_gen_test_struct: FillerInputInf
         check_arg(test_kwarg, ref_kwarg)
 
 
+@pytest.mark.parametrize("input_info", [FillerInputInfo([FillerInputElement([1, 3, 3, 3])]),
+                                        ExactInputsInfo((torch.Tensor([1]), torch.Tensor([1])), {'a': torch.Tensor([1]),
+                                                                                                 'b': torch.Tensor([1])})],
+                         ids=["filler", "exact"])
+@pytest.mark.parametrize("device", ["cuda", "cpu"])
+def test_input_infos_respect_device_setting(input_info: ModelInputInfo, device: str):
+    if device == "cuda" and not torch.cuda.is_available():
+        pytest.skip("Skipped checking CUDA device test cases on CPU-only hosts")
+    forward_inputs = input_info.get_forward_inputs(device)
+
+    def assert_on_device(x: torch.Tensor):
+        assert device in str(x.device)
+
+    objwalk(forward_inputs, is_tensor, assert_on_device)
+
+
 class MockInitDataLoader(PTInitializingDataLoader):
     def get_inputs(self, dataloader_output: Any) -> Tuple[Tuple, Dict]:
         return dataloader_output[0], dataloader_output[1]
