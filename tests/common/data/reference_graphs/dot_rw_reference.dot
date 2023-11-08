@@ -1,5 +1,5 @@
 strict digraph  {
-"Node^^A" [label="^baz"];
-"Node^^B" [label="qux^"];
-"Node^^A" -> "Node^^B"  [label="foo^bar"];
+"Node^^A" [label=":baz"];
+"Node^^B" [label="qux:"];
+"Node^^A" -> "Node^^B"  [label="foo:bar"];
 }
