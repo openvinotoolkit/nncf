@@ -30,7 +30,7 @@ coverage:
           - "nncf"
 
 comment:
-  layout: "reach, diff, files, flags"
+  layout: "reach, diff, files, flags, components"
   require_changes: false
 
   require_head: false
@@ -51,5 +51,28 @@ flag_management:
       paths:
         - nncf/onnx
     - name: OPENVINO
+      paths:
+        - nncf/openvino
+
+component_management:
+  individual_flags:
+    - component_id: common
+      name: common
+      paths:
+        - nncf/common
+    - component_id: torch
+      name: torch
+      paths:
+        - nncf/torch
+    - component_id: tensorflow
+      name: tensorflow
+      paths:
+        - nncf/tensorflow
+    - component_id: onnx
+      name: onnx
+      paths:
+        - nncf/onnx
+    - component_id: openvino
+      name: openvino
       paths:
         - nncf/openvino
