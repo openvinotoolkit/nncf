@@ -87,10 +87,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [om.OVReadValueMetatype]
 
     @property
-    def constant_metatypes(self) -> List[OperatorMetatype]:
-        return [om.OVConstantMetatype]
-
-    @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
         return {om.OVConcatMetatype: self.overflow_fix_metatypes}
 
