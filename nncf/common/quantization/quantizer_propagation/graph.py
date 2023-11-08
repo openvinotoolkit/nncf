@@ -20,7 +20,6 @@ import networkx as nx
 from nncf import nncf_logger
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
-from nncf.common.utils.dot_file_rw import relabel_graph_for_dot_visualization
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import NoopMetatype

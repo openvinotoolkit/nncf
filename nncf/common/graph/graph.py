@@ -22,7 +22,6 @@ from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.patterns import GraphPattern
-from nncf.common.utils.dot_file_rw import relabel_graph_for_dot_visualization
 from nncf.common.utils.dot_file_rw import write_dot_graph
 
 NNCFNodeName = str
@@ -761,5 +760,3 @@ class NNCFGraph:
                 subgraph_list.append(self.get_node_by_key(node_key))
             output.append(subgraph_list)
         return output
-
-
