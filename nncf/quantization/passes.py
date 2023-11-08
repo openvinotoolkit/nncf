@@ -23,7 +23,7 @@ def transform_to_inference_graph(
     shapeof_metatypes: List[OperatorMetatype],
     dropout_metatypes: List[OperatorMetatype],
     read_variable_metatypes: Optional[List[OperatorMetatype]] = None,
-    nncf_graph_contains_constants: bool = True,
+    constant_metatypes: Optional[List[OperatorMetatype]] = None,
 ) -> NNCFGraph:
     """
     This method contains inplace pipeline of the passes that uses to provide inference graph without constant flows.
@@ -33,13 +33,13 @@ def transform_to_inference_graph(
     :param dropout_metatypes: List of backend-specific Dropout metatypes.
     :param read_variable_metatypes: List of backend-specific metatypes
         that also can be interpreted as inputs (ReadValue).
-    :param nncf_graph_contains_constants: Whether NNCFGraph contains constant nodes or not.
+    :param constant_metatypes: List of backend-specific metatypes
+        that can be interpreted as constants.
     :return: NNCFGraph in the inference style.
     """
     remove_shapeof_subgraphs(nncf_graph, shapeof_metatypes, read_variable_metatypes)
     remove_nodes_and_reconnect_graph(nncf_graph, dropout_metatypes)
-    if nncf_graph_contains_constants:
-        filter_constant_nodes(nncf_graph, read_variable_metatypes)
+    filter_constant_nodes(nncf_graph, read_variable_metatypes, constant_metatypes)
     return nncf_graph
 
 
@@ -143,7 +143,9 @@ def remove_nodes_and_reconnect_graph(
 
 
 def filter_constant_nodes(
-    nncf_graph: NNCFGraph, read_variable_metatypes: Optional[List[OperatorMetatype]] = None
+    nncf_graph: NNCFGraph,
+    read_variable_metatypes: Optional[List[OperatorMetatype]] = None,
+    constant_nodes_metatypes: Optional[List[OperatorMetatype]] = None,
 ) -> NNCFGraph:
     """
     Removes all Constant nodes from NNCFGraph inplace, making it inference graph.
@@ -152,13 +154,18 @@ def filter_constant_nodes(
     :param nncf_graph: NNCFGraph instance for the transformation.
     :param read_variable_metatypes: List of backend-specific metatypes
         that also can be interpreted as inputs (ReadValue).
+    :param constant_nodes_metatypes: List of backend-specific metatypes
+        that can be interpreted as constants.
     :return: NNCFGraph without Constant nodes.
     """
     read_variable_metatypes = read_variable_metatypes if read_variable_metatypes else []
+    constant_nodes_metatypes = constant_nodes_metatypes if constant_nodes_metatypes else []
     input_nodes = nncf_graph.get_input_nodes()
     similar_input_nodes = nncf_graph.get_nodes_by_metatypes(read_variable_metatypes)
+    potential_input_nodes = [node for node in nncf_graph.get_all_nodes() if not nncf_graph.get_input_edges(node)]
+    potential_input_nodes = [node for node in potential_input_nodes if node.metatype not in constant_nodes_metatypes]
 
-    start_nodes = input_nodes + similar_input_nodes
+    start_nodes = input_nodes + similar_input_nodes + potential_input_nodes
 
     if not start_nodes:
         return nncf_graph
