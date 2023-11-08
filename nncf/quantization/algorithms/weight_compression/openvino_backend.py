@@ -334,7 +334,7 @@ def _get_bitwidth_distribution_str(all_weight_params: List[WeightNodeParams]) ->
         num_bits_vs_num_weights_map[num_bits] = (n_total, n_internal)
 
     # Table creation
-    header = ["Num bits (N)", "% all weight", "% internal weights"]
+    header = ["Num bits (N)", "% all parameters (layers)", "% internal parameters (layers)"]
     rows = []
     for bitwidth, (n_total, n_internal) in num_bits_vs_num_weights_map.items():
         rows.append(
