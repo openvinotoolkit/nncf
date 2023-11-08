@@ -9,7 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from copy import deepcopy
-from typing import List, Tuple
+from dataclasses import dataclass
+from typing import Any, Dict, List, Tuple, Union
 from unittest.mock import MagicMock
 
 import pytest
@@ -17,6 +18,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+from nncf import NNCFConfig
 from nncf.common.graph import NNCFGraphEdge
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
@@ -28,14 +30,22 @@ from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
 from nncf.common.graph.layer_attributes import PermuteLayerAttributes
 from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 from nncf.common.graph.layer_attributes import TransposeLayerAttributes
+from nncf.config.structures import BNAdaptationInitArgs
+from nncf.config.structures import NNCFExtraConfigStruct
+from nncf.config.structures import QuantizationRangeInitArgs
+from nncf.torch import create_compressed_model
 from nncf.torch import nncf_model_input
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.context import get_current_context
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
-from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
+from nncf.torch.dynamic_graph.io_handling import EXTRA_STRUCTS_WITH_DATALOADERS
+from nncf.torch.dynamic_graph.io_handling import ExactInputsInfo
+from nncf.torch.dynamic_graph.io_handling import FillerInputElement
+from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
+from nncf.torch.dynamic_graph.io_handling import ModelInputInfo
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
 from nncf.torch.dynamic_graph.trace_tensor import trace_tensors
 from nncf.torch.graph.graph_builder import GraphBuilder
@@ -45,6 +55,9 @@ from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
 from nncf.torch.graph.operator_metatypes import PTSplitMetatype
 from nncf.torch.graph.operator_metatypes import PTSqueezeMetatype
 from nncf.torch.graph.operator_metatypes import PTTransposeMetatype
+from nncf.torch.initialization import PTInitializingDataLoader
+from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.nncf_network import NNCFNetworkMeta
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.test_compressed_graph import get_basic_quantization_config
@@ -80,19 +93,12 @@ def test_ambiguous_function():
                 x = F.relu(layer(x))
 
     mod = Model()
-    input_info = ModelInputInfo([1, 1, 1, 1])
 
-    tracer = GraphTracer(
-        custom_forward_fn=create_dummy_forward_fn(
-            [
-                input_info,
-            ]
-        )
-    )
+    tracer = GraphTracer(custom_forward_fn=create_dummy_forward_fn(FillerInputInfo([FillerInputElement([1, 1, 1, 1])])))
     graph = tracer.trace_graph(mod)
 
     unique_op_exec_contexts = set()
-    # pylint:disable=protected-access
+
     for _, node in graph._nx_graph.nodes.items():
         node_op_address = node[DynamicGraph.OP_EXEC_CONTEXT_NODE_ATTR].op_address
         assert node_op_address not in unique_op_exec_contexts
@@ -168,25 +174,26 @@ class ModelForTest(torch.nn.Module):
 
     @staticmethod
     def simple_user_dummy_forward(model):
-        mock_tensor = torch.zeros(input_shapes[0])
+        mock_tensor = torch.zeros(INPUT_SHAPES[0])
         args = (mock_tensor,)
         kwargs = {}
         args, kwargs = ModelForTest.simple_wrap_fn(args, kwargs)
         return wrap_nncf_model_outputs_with_objwalk(model(*args, **kwargs))
 
 
-input_shapes = [(1, 3, 224, 224), (2, 3, 224, 224), (1, 3, 500, 500)]
+INPUT_SHAPES = [(1, 3, 224, 224), (2, 3, 224, 224), (1, 3, 500, 500)]
 
 
-@pytest.mark.parametrize("input_shape", input_shapes)
-def test_activation_shape_tracing(input_shape: Tuple):
+@pytest.mark.parametrize("input_shape", INPUT_SHAPES)
+def test_activation_shape_tracing(input_shape: Tuple[int, ...]):
     model = ModelForTest()
-    input_info = ModelInputInfo(input_shape)
     graph_builder = GraphBuilder(
         create_dummy_forward_fn(
-            [
-                input_info,
-            ],
+            FillerInputInfo(
+                [
+                    FillerInputElement(input_shape),
+                ]
+            ),
             with_input_tracing=True,
             with_output_tracing=True,
         )
@@ -211,7 +218,6 @@ def test_activation_shape_tracing(input_shape: Tuple):
         (f"8 /{MODEL_OUTPUT_OP_NAME}_0", [final_shape], []),
     ]
     for node_id, ref_input_shapes, ref_output_shapes in ref_node_ids_and_io_edge_shapes:
-        # pylint:disable=protected-access
         input_edges = graph.get_nncf_graph_pattern_io(
             [
                 node_id,
@@ -251,15 +257,12 @@ class ModelForTestWithReshapeFlattenAndConcat(ModelForTest):
         return y
 
 
-@pytest.mark.parametrize("input_shape", input_shapes)
+@pytest.mark.parametrize("input_shape", INPUT_SHAPES)
 def test_concat_attributes_saved_during_graph_building(input_shape):
     model = ModelForTestWithReshapeFlattenAndConcat()
-    input_info = ModelInputInfo(input_shape)
     graph_builder = GraphBuilder(
         create_dummy_forward_fn(
-            [
-                input_info,
-            ],
+            FillerInputInfo([FillerInputElement(input_shape)]),
             with_input_tracing=True,
             with_output_tracing=True,
         )
@@ -283,15 +286,16 @@ def test_concat_attributes_saved_during_graph_building(input_shape):
                 assert cat_nodes_with_attributes[node.node_name] is None
 
 
-@pytest.mark.parametrize("input_shape", input_shapes)
+@pytest.mark.parametrize("input_shape", INPUT_SHAPES)
 def test_reshape_attributes_saved_during_graph_building(input_shape):
     model = ModelForTestWithReshapeFlattenAndConcat()
-    input_info = ModelInputInfo(input_shape)
     graph_builder = GraphBuilder(
         create_dummy_forward_fn(
-            [
-                input_info,
-            ],
+            FillerInputInfo(
+                [
+                    FillerInputElement(input_shape),
+                ]
+            ),
             with_input_tracing=True,
             with_output_tracing=True,
         )
@@ -340,12 +344,13 @@ transpose_input_shapes = [(1, 10, 20, 10), (10, 10, 10, 10)]
 @pytest.mark.parametrize("input_shape", transpose_input_shapes)
 def test_permute_attributes_saved_during_graph_building(input_shape):
     model = ModelWithPermute()
-    input_info = ModelInputInfo(input_shape)
     graph_builder = GraphBuilder(
         create_dummy_forward_fn(
-            [
-                input_info,
-            ],
+            FillerInputInfo(
+                [
+                    FillerInputElement(input_shape),
+                ]
+            ),
             with_input_tracing=True,
             with_output_tracing=True,
         )
@@ -391,15 +396,16 @@ class ModelForTestWithSplit(ModelForTest):
         return y
 
 
-@pytest.mark.parametrize("input_shape", input_shapes)
+@pytest.mark.parametrize("input_shape", INPUT_SHAPES)
 def test_split_attributes(input_shape):
     model = ModelForTestWithSplit(input_shape)
-    input_info = ModelInputInfo(input_shape)
     graph_builder = GraphBuilder(
         create_dummy_forward_fn(
-            [
-                input_info,
-            ],
+            FillerInputInfo(
+                [
+                    FillerInputElement(input_shape),
+                ]
+            ),
             with_input_tracing=True,
             with_output_tracing=True,
         )
@@ -431,11 +437,12 @@ class SplitByGetItemModel(ModelWithDummyParameter):
 @pytest.mark.parametrize("input_shape", [(3, 2)])
 def test_getitem_attributes(input_shape):
     model = SplitByGetItemModel()
-    input_info = ModelInputInfo(input_shape)
     custom_forward_fn = create_dummy_forward_fn(
-        [
-            input_info,
-        ],
+        FillerInputInfo(
+            [
+                FillerInputElement(input_shape),
+            ]
+        ),
         with_input_tracing=True,
         with_output_tracing=True,
     )
@@ -478,12 +485,13 @@ def test_parallel_edges_in_nncf_graph():
 
     input_shape = (3, 3)
     model = ParallelEdgesModel()
-    input_info = ModelInputInfo(input_shape)
     graph_builder = GraphBuilder(
         create_dummy_forward_fn(
-            [
-                input_info,
-            ],
+            FillerInputInfo(
+                [
+                    FillerInputElement(input_shape),
+                ]
+            ),
             with_input_tracing=True,
             with_output_tracing=True,
         )
@@ -507,50 +515,6 @@ def test_parallel_edges_in_nncf_graph():
     assert set(input_node_output_edges) == ref_output_edges
 
 
-TEST_KEYWORD_1 = "keyword1"
-TEST_KEYWORD_2 = "keyword2"
-INPUT_INFO_CONFIG_VS_FORWARD_ARGS = [
-    (
-        {"sample_size": [2, 3, 300, 300], "type": "float", "filler": "zeros"},
-        [ModelInputInfo([2, 3, 300, 300], type_str="float", filler=ModelInputInfo.FILLER_TYPE_ZEROS)],
-    ),
-    (
-        [
-            {"sample_size": [1, 128], "type": "long", "filler": "ones"},
-            {"sample_size": [1, 128], "type": "long", "filler": "ones"},
-            {"sample_size": [1, 128], "type": "long", "filler": "zeros"},
-        ],
-        [
-            ModelInputInfo([1, 128], type_str="long", filler=ModelInputInfo.FILLER_TYPE_ONES),
-            ModelInputInfo([1, 128], type_str="long", filler=ModelInputInfo.FILLER_TYPE_ONES),
-            ModelInputInfo([1, 128], type_str="long", filler=ModelInputInfo.FILLER_TYPE_ONES),
-        ],
-    ),
-    (
-        [
-            {"sample_size": [2, 3, 300, 300], "type": "float", "filler": "zeros"},
-            {"sample_size": [1, 128], "type": "long", "filler": "ones", "keyword": TEST_KEYWORD_1},
-        ],
-        [
-            ModelInputInfo([2, 3, 300, 300], type_str="float", filler=ModelInputInfo.FILLER_TYPE_ZEROS),
-            ModelInputInfo([1, 128], type_str="long", filler=ModelInputInfo.FILLER_TYPE_ONES, keyword=TEST_KEYWORD_1),
-        ],
-    ),
-    (
-        [
-            {"sample_size": [8, 7], "type": "float", "filler": "random", "keyword": TEST_KEYWORD_1},
-            {"sample_size": [2, 3, 300, 300], "type": "float", "filler": "zeros"},
-            {"sample_size": [1, 128], "type": "long", "filler": "ones", "keyword": TEST_KEYWORD_2},
-        ],
-        [
-            ModelInputInfo([2, 3, 300, 300], type_str="float", filler=ModelInputInfo.FILLER_TYPE_ZEROS),
-            ModelInputInfo([8, 7], type_str="float", filler=ModelInputInfo.FILLER_TYPE_ONES, keyword=TEST_KEYWORD_1),
-            ModelInputInfo([1, 128], type_str="long", filler=ModelInputInfo.FILLER_TYPE_ONES, keyword=TEST_KEYWORD_2),
-        ],
-    ),
-]
-
-
 class MockModel(torch.nn.Module):
     def __init__(self, stub_forward):
         super().__init__()
@@ -561,45 +525,176 @@ class MockModel(torch.nn.Module):
         return self.stub_forward(*args, **kwargs)
 
 
-@pytest.fixture(params=INPUT_INFO_CONFIG_VS_FORWARD_ARGS, name="input_info_test_struct")
-def input_info_test_struct_(request):
-    return request.param
+class RandomRefTensor:
+    def __init__(self, shape: List[int]):
+        self.tensor = torch.rand(shape)
 
 
-def test_input_info_specification_from_config(mocker, input_info_test_struct):
+def check_arg(test_arg: torch.Tensor, ref_arg: Union[torch.Tensor, RandomRefTensor]):
+    if isinstance(ref_arg, RandomRefTensor):
+        assert test_arg.shape == ref_arg.tensor.shape
+        assert not torch.allclose(test_arg, torch.ones_like(test_arg))
+        assert not torch.allclose(test_arg, torch.zeros_like(test_arg))
+    else:
+        assert torch.allclose(test_arg, ref_arg)
+
+
+class MockInputInfo(ModelInputInfo):
+    MOCK_ARGS = (torch.Tensor([42.0]),)
+    MOCK_KWARGS = {"foo": torch.ones([1, 3])}
+
+    def get_forward_inputs(self, device: str = None) -> Tuple[Tuple, Dict]:
+        return MockInputInfo.MOCK_ARGS, MockInputInfo.MOCK_KWARGS
+
+
+@pytest.fixture(scope="function")
+def mock_model_with_stub_forward(mocker) -> MockModel:
     stub_fn = mocker.stub()
     mock_model = MockModel(stub_fn)
-    config = get_basic_quantization_config("symmetric")
-    input_info_config_entry = input_info_test_struct[0]
-    target_argument_info: List[ModelInputInfo] = input_info_test_struct[1]
-    config["input_info"] = input_info_config_entry
-    register_bn_adaptation_init_args(config)
+    return mock_model
 
-    _, _ = create_compressed_model_and_algo_for_test(mock_model, config)
+
+def test_input_info_args_are_passed_into_forward(mock_model_with_stub_forward: MockModel):
+    stub_fn = mock_model_with_stub_forward.stub_forward
+
+    _ = NNCFNetwork(mock_model_with_stub_forward, input_info=MockInputInfo())
     forward_call_args = stub_fn.call_args[0]
     forward_call_kwargs = stub_fn.call_args[1]
 
-    ref_args_info = list(filter(lambda x: x.keyword is None, target_argument_info))
-    ref_kw_vs_arg_info = {x.keyword: x for x in target_argument_info if x.keyword is not None}
+    ref_args, ref_kwargs = MockInputInfo.MOCK_ARGS, MockInputInfo.MOCK_KWARGS
 
-    def check_arg(arg: torch.Tensor, ref_arg_info: ModelInputInfo):
-        assert list(arg.shape) == ref_arg_info.shape
-        assert arg.dtype == ref_arg_info.type
-
-    assert len(forward_call_args) == len(ref_args_info)
-    assert len(forward_call_kwargs) == len(ref_kw_vs_arg_info)
-    assert set(forward_call_kwargs.keys()) == set(ref_kw_vs_arg_info.keys())
+    assert len(forward_call_args) == len(ref_args)
+    assert len(forward_call_kwargs) == len(ref_kwargs)
+    assert set(forward_call_kwargs.keys()) == set(ref_kwargs.keys())
 
     for idx, arg in enumerate(forward_call_args):
-        check_arg(arg, ref_args_info[idx])
+        check_arg(arg, ref_args[idx])
 
     for keyword, arg in forward_call_kwargs.items():
-        check_arg(arg, ref_kw_vs_arg_info[keyword])
+        check_arg(arg, ref_kwargs[keyword])
+
+
+@dataclass
+class FillerInputInfoGenerationTestStruct:
+    config_input_info_subdict: Union[List[Dict], Dict]
+    ref_args: Tuple[torch.Tensor, ...]
+    ref_kwargs: Dict[str, torch.Tensor]
+
+
+TEST_KEYWORD_1 = "keyword1"
+TEST_KEYWORD_2 = "keyword2"
+
+FILLER_GEN_TEST_STRUCTS = [
+    FillerInputInfoGenerationTestStruct(
+        config_input_info_subdict={"sample_size": [2, 3, 300, 300], "type": "float", "filler": "zeros"},
+        ref_args=(torch.zeros([2, 3, 300, 300]),),
+        ref_kwargs={},
+    ),
+    FillerInputInfoGenerationTestStruct(
+        config_input_info_subdict=[
+            {"sample_size": [1, 128], "type": "long", "filler": "ones"},
+            {"sample_size": [1, 128], "type": "long", "filler": "ones"},
+            {"sample_size": [1, 128], "type": "long", "filler": "zeros"},
+        ],
+        ref_args=(
+            torch.ones([1, 128], dtype=torch.long),
+            torch.ones([1, 128], dtype=torch.long),
+            torch.zeros([1, 128], dtype=torch.long),
+        ),
+        ref_kwargs={},
+    ),
+    FillerInputInfoGenerationTestStruct(
+        config_input_info_subdict=[
+            {"sample_size": [2, 3, 300, 300], "type": "float", "filler": "zeros"},
+            {"sample_size": [1, 128], "type": "long", "filler": "ones", "keyword": TEST_KEYWORD_1},
+        ],
+        ref_args=(torch.zeros([2, 3, 300, 300]),),
+        ref_kwargs={TEST_KEYWORD_1: torch.ones([1, 128], dtype=torch.long)},
+    ),
+    FillerInputInfoGenerationTestStruct(
+        config_input_info_subdict=[
+            {"sample_size": [8, 7], "type": "float", "filler": "random", "keyword": TEST_KEYWORD_1},
+            {"sample_size": [2, 3, 300, 300], "type": "float", "filler": "zeros"},
+            {"sample_size": [1, 128], "type": "long", "filler": "ones", "keyword": TEST_KEYWORD_2},
+        ],
+        ref_args=(torch.zeros([2, 3, 300, 300]),),
+        ref_kwargs={TEST_KEYWORD_1: RandomRefTensor([8, 7]), TEST_KEYWORD_2: torch.ones([1, 128], dtype=torch.long)},
+    ),
+]
+
+
+@pytest.mark.parametrize("filler_gen_test_struct", FILLER_GEN_TEST_STRUCTS)
+def test_filler_input_info_arg_generation(filler_gen_test_struct: FillerInputInfoGenerationTestStruct):
+    filler_input_info = FillerInputInfo.from_nncf_config(
+        NNCFConfig.from_dict({"input_info": filler_gen_test_struct.config_input_info_subdict})
+    )
+    test_args, test_kwargs = filler_input_info.get_forward_inputs()
+
+    for test_arg, ref_arg in zip(test_args, filler_gen_test_struct.ref_args):
+        check_arg(test_arg, ref_arg)
+
+    for test_kw_and_arg, ref_kw_and_arg in zip(test_kwargs.items(), filler_gen_test_struct.ref_kwargs.items()):
+        test_kw, test_kwarg = test_kw_and_arg
+        ref_kw, ref_kwarg = ref_kw_and_arg
+        assert test_kw == ref_kw
+        check_arg(test_kwarg, ref_kwarg)
+
+
+class MockInitDataLoader(PTInitializingDataLoader):
+    def get_inputs(self, dataloader_output: Any) -> Tuple[Tuple, Dict]:
+        return dataloader_output[0], dataloader_output[1]
+
+    def get_target(self, dataloader_output: Any) -> Any:
+        return torch.empty([1])
+
+
+class MockDataset(torch.utils.data.Dataset):
+    def __init__(self):
+        super().__init__()
+        self._length = 2
+
+    def __getitem__(self, idx):
+        if idx >= self._length:
+            raise StopIteration
+        return MockInputInfo.MOCK_ARGS, MockInputInfo.MOCK_KWARGS
+
+    def __len__(self):
+        return self._length
+
+
+STRUCTS_FOR_TEST = [
+    QuantizationRangeInitArgs(data_loader=MockInitDataLoader(torch.utils.data.DataLoader(MockDataset()))),
+    BNAdaptationInitArgs(data_loader=MockInitDataLoader(torch.utils.data.DataLoader(MockDataset()))),
+]
+
+
+@pytest.mark.parametrize("extra_struct_for_test", STRUCTS_FOR_TEST)
+def test_compressed_model_creation_can_build_exact_input_infos_from_dataloader_in_config(
+    extra_struct_for_test: NNCFExtraConfigStruct, mock_model_with_stub_forward: MockModel, mocker
+):
+    checked_types_set = {type(x) for x in STRUCTS_FOR_TEST}
+    assert checked_types_set == set(
+        EXTRA_STRUCTS_WITH_DATALOADERS
+    )  # all future structs with suitable dataloaders must be tested
+    config = NNCFConfig()
+    config.register_extra_structs([extra_struct_for_test])
+    nncf_network_init_spy = mocker.spy(NNCFNetworkMeta, "__call__")  # sic!
+
+    _ = create_compressed_model(mock_model_with_stub_forward, config)
+    input_info_received_by_nncf_network_init = nncf_network_init_spy.call_args.kwargs["input_info"]  # input_info
+    assert isinstance(input_info_received_by_nncf_network_init, ExactInputsInfo)
+    test_args, test_kwargs = input_info_received_by_nncf_network_init.get_forward_inputs()
+
+    for idx, arg in enumerate(test_args):
+        check_arg(arg, MockInputInfo.MOCK_ARGS[idx])
+
+    for keyword, arg in test_kwargs.items():
+        check_arg(arg, MockInputInfo.MOCK_KWARGS[keyword])
 
 
 def create_model_and_control_with_defaults():
     model = ModelForTest()
-    config = get_basic_quantization_config("symmetric", input_sample_sizes=list(input_shapes[0]))
+    config = get_basic_quantization_config("symmetric", input_sample_sizes=list(INPUT_SHAPES[0]))
     register_bn_adaptation_init_args(config)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     return compressed_model, compression_ctrl
@@ -607,7 +702,7 @@ def create_model_and_control_with_defaults():
 
 def create_model_with_user_dummy():
     model = ModelForTest()
-    config = get_basic_quantization_config("symmetric", input_sample_sizes=list(input_shapes[0]))
+    config = get_basic_quantization_config("symmetric", input_sample_sizes=list(INPUT_SHAPES[0]))
     register_bn_adaptation_init_args(config)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(
         model,
@@ -620,7 +715,7 @@ def create_model_with_user_dummy():
 
 def create_model_with_user_wrap_inputs_fn():
     model = ModelForTest()
-    config = get_basic_quantization_config("symmetric", input_sample_sizes=list(input_shapes[0]))
+    config = get_basic_quantization_config("symmetric", input_sample_sizes=list(INPUT_SHAPES[0]))
     register_bn_adaptation_init_args(config)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(
         model,
@@ -644,7 +739,7 @@ class TestGraphStability:
 
     def test_dynamic_graph_does_not_inflate_during_multiple_forwards(self, model_and_ctrl_creator):
         compressed_model, _ = model_and_ctrl_creator()
-        input_tensor = torch.zeros(input_shapes[0])
+        input_tensor = torch.zeros(INPUT_SHAPES[0])
         ref_graph = deepcopy(compressed_model.nncf.get_dynamic_graph())
         for _ in range(0, 10):
             _ = compressed_model(input_tensor)
@@ -700,7 +795,7 @@ class TestGraphStability:
 
 def test_nncf_graph_auxiliary_node_structure():
     model = ModelForTest()
-    config = get_basic_quantization_config("symmetric", input_sample_sizes=list(input_shapes[0]))
+    config = get_basic_quantization_config("symmetric", input_sample_sizes=list(INPUT_SHAPES[0]))
     register_bn_adaptation_init_args(config)
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config)
 
@@ -737,9 +832,11 @@ def test_get_all_nodes():
 
     builder = GraphBuilder(
         create_dummy_forward_fn(
-            [
-                ModelInputInfo((1, 1, 4, 4)),
-            ]
+            FillerInputInfo(
+                [
+                    FillerInputElement((1, 1, 4, 4)),
+                ]
+            )
         )
     )
     graph = builder.build_graph(model)
@@ -767,11 +864,13 @@ class ModelWithIntegerPaths(torch.nn.Module):
 
 
 def test_integer_path_marking():
-    input_infos = [
-        ModelInputInfo(ModelWithIntegerPaths.INPUT_SHAPE),
-    ]
+    input_infos = FillerInputInfo(
+        [
+            FillerInputElement(ModelWithIntegerPaths.INPUT_SHAPE),
+        ]
+    )
     builder = GraphBuilder(create_dummy_forward_fn(input_infos))
-    nncf_graph = builder.build_graph(ModelWithIntegerPaths(), input_infos=input_infos)
+    nncf_graph = builder.build_graph(ModelWithIntegerPaths())
     edges = list(nncf_graph.get_all_edges())
     num_integer_edges = sum([1 for edge in edges if edge.dtype is Dtype.INTEGER])
     # cat -> __floordiv__,  __floordiv__ -> __getitem__0 (to get single_idx),
@@ -791,10 +890,8 @@ class ModelWithRepeatInputs(torch.nn.Module):
 
 
 def test_dynamic_graph_assigns_contiguous_input_ports_for_edges_with_multiplicity():
-    input_infos = [
-        ModelInputInfo([1, 3, 3, 3]),
-    ]
-    tracer = GraphTracer(create_dummy_forward_fn(input_infos, with_input_tracing=True, with_output_tracing=True))
+    input_info = FillerInputInfo([FillerInputElement([1, 3, 3, 3])])
+    tracer = GraphTracer(create_dummy_forward_fn(input_info, with_input_tracing=True, with_output_tracing=True))
     dynamic_graph = tracer.trace_graph(ModelWithRepeatInputs())
     stack_in_edges = [e for e in dynamic_graph.get_all_edges() if e.to_node_id == 2]  # node id 2 == torch.stack
     all_input_port_ids = set()

@@ -13,7 +13,7 @@ import torch
 from torch import nn
 
 from nncf.data import Dataset
-from nncf.experimental.torch.quantization.quantize_model import create_nncf_network
+from nncf.torch.quantization.quantize_model import create_nncf_network_ptq
 
 
 class TestModel(nn.Module):
@@ -26,7 +26,7 @@ class TestModel(nn.Module):
         return x
 
 
-def test_create_nncf_network():
+def test_create_nncf_network_with_nncf_dataset():
     input_shape = (1, 3, 5, 5)
     model = TestModel(input_shape)
 
@@ -35,7 +35,7 @@ def test_create_nncf_network():
         return x
 
     dataset = Dataset([(torch.empty(input_shape), 1)] * 3, transform_fn)
-    nncf_network = create_nncf_network(model, dataset)
+    nncf_network = create_nncf_network_ptq(model, dataset)
     nncf_graph = nncf_network.nncf.get_original_graph()
     all_nodes = nncf_graph.get_all_nodes()
     assert len(all_nodes) == 2

@@ -35,6 +35,10 @@ class TestReducersAggregators(TemplateTestReducersAggreagtors):
         return OVNNCFCollectorTensorProcessor
 
     def get_nncf_tensor(self, x: np.array, dtype: Optional[Dtype] = None):
+        if dtype is Dtype.INTEGER:
+            x = x.astype(np.int64)
+        if dtype is Dtype.FLOAT:
+            x = x.astype(np.float32)
         return OVNNCFTensor(x)
 
     @pytest.fixture(scope="module")

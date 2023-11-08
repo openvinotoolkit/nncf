@@ -33,7 +33,6 @@ def test_timeout_extension_loader_isolated(tmp_path, use_cuda):
     os.environ[EXTENSION_LOAD_TIMEOUT_ENV_VAR] = "1"
     os.environ["TORCH_EXTENSIONS_DIR"] = tmp_path.as_posix()
 
-    # pylint: disable=protected-access
     build_dir = Path(quant_func._loader.get_build_dir())
     lock_file = build_dir / "lock"
     lock_file.touch()

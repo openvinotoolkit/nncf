@@ -18,7 +18,6 @@ from nncf.tensorflow.tf_internals import layers
 NUM_CLASSES = 1000
 
 
-# pylint: disable=R0915
 def Xception(input_shape=None):
     input_shape = imagenet_utils.obtain_input_shape(
         input_shape, default_size=299, min_size=71, data_format=backend.image_data_format(), require_flatten=True

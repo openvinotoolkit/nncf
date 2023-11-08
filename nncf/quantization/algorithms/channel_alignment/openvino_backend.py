@@ -19,7 +19,6 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
-from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import MedianAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
@@ -37,12 +36,10 @@ from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.openvino.statistics.collectors import OVQuantileReducer
 from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
-from nncf.quantization.algorithms.channel_alignment.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend
 from nncf.quantization.algorithms.channel_alignment.backend import LayoutDescriptor
 
 
-@ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:

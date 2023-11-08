@@ -28,7 +28,6 @@ from optimum.intel import OVQuantizer
 
 import nncf
 from nncf import TargetDevice
-from nncf.experimental.torch.quantization.quantize_model import quantize_impl as pt_impl_experimental
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 
 DEFAULT_VAL_THREADS = 4
@@ -36,17 +35,16 @@ DEFAULT_VAL_THREADS = 4
 
 class BackendType(Enum):
     FP32 = "FP32"
-    OLD_TORCH = "OLD_TORCH"  # Quantization via create_compressed_model
-    TORCH = "TORCH"  # PTQ implementation
+    TORCH = "TORCH"
     ONNX = "ONNX"
     OV = "OV"
     POT = "POT"
     OPTIMUM = "OPTIMUM"
 
 
-NNCF_PTQ_BACKENDS = [BackendType.OLD_TORCH, BackendType.TORCH, BackendType.ONNX, BackendType.OV]
+NNCF_PTQ_BACKENDS = [BackendType.TORCH, BackendType.ONNX, BackendType.OV]
 ALL_PTQ_BACKENDS = NNCF_PTQ_BACKENDS + [BackendType.POT]
-PT_BACKENDS = [BackendType.TORCH, BackendType.OLD_TORCH]
+PT_BACKENDS = [BackendType.TORCH]
 OV_BACKENDS = [BackendType.OV, BackendType.POT, BackendType.OPTIMUM]
 
 
@@ -169,23 +167,12 @@ class BaseTestPipeline(ABC):
             quantizer = OVQuantizer.from_pretrained(self.model_hf)
             quantizer.quantize(calibration_dataset=self.calibration_dataset, save_directory=self.output_model_dir)
         else:
-            quantize_fn = nncf.quantize
-            if self.backend == BackendType.TORCH:
-                # Use experimental torch api
-                quantize_fn = pt_impl_experimental
-                if "preset" not in self.ptq_params:
-                    self.ptq_params["preset"] = nncf.QuantizationPreset.PERFORMANCE
-                if "subset_size" not in self.ptq_params:
-                    self.ptq_params["subset_size"] = 300
-                if "fast_bias_correction" not in self.ptq_params:
-                    self.ptq_params["fast_bias_correction"] = True
-
             if self.backend == BackendType.POT:
                 self.ptq_params["advanced_parameters"] = AdvancedQuantizationParameters(
                     backend_params={"use_pot": True}
                 )
 
-            self.quantized_model = quantize_fn(
+            self.quantized_model = nncf.quantize(
                 model=self.model,
                 target_device=TargetDevice.CPU,
                 calibration_dataset=self.calibration_dataset,
@@ -198,7 +185,7 @@ class BaseTestPipeline(ABC):
         """
         print("Quantization...")
 
-        if self.backend in [BackendType.TORCH, BackendType.OLD_TORCH]:
+        if self.backend in PT_BACKENDS:
             cpu_threads_num = os.environ.get("CPU_THREADS_NUM")
             if cpu_threads_num is not None:
                 torch.set_num_threads(int(cpu_threads_num))
@@ -294,7 +281,7 @@ class BaseTestPipeline(ABC):
 
         After run torch.jit.trace in convert_model, PyTorch does not clear the trace cache automatically.
         """
-        # pylint: disable=protected-access
+
         torch._C._jit_clear_class_registry()
         torch.jit._recursive.concrete_type_store = torch.jit._recursive.ConcreteTypeStore()
         torch.jit._state._clear_class_state()

@@ -32,8 +32,6 @@ from nncf.quantization.algorithms.channel_alignment.backend import LayoutDescrip
 from tests.post_training.test_templates.models import NNCFGraphCA
 from tests.post_training.test_templates.models import NNCFGraphCAWithBias
 
-# pylint: disable=protected-access
-
 EPS = 1e-3
 
 VALID_CONV_LAYER_ATTR = ConvolutionLayerAttributes(
@@ -285,8 +283,6 @@ class TemplateTestChannelAlignment:
 
     @pytest.mark.parametrize("empty_statistics", [False, True])
     @pytest.mark.parametrize("num_biases", [0, 1, 2])
-    # pylint: disable=too-many-statements
-    # pylint: disable=too-many-branches
     def test_transformation_layout(self, empty_statistics, num_biases, mocker):
         mocked_transformer = mocker.MagicMock()
         self.mock_model_transformer_factory(mocker, mocked_transformer)
@@ -496,5 +492,5 @@ class TemplateTestChannelAlignment:
         for aggr in statistic_collector.aggregators.values():
             assert isinstance(aggr, MedianAggregator)
             assert aggr.num_samples == num_samples_ref
-            assert not aggr._keepdims
+            assert aggr._keepdims
             assert aggr._aggregation_axes == (0,)

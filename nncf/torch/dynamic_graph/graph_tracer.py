@@ -8,85 +8,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from collections import OrderedDict
 from copy import deepcopy
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, Dict, Optional, Tuple, TypeVar
 
 import torch
 
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.graph import DynamicGraph
+from nncf.torch.dynamic_graph.io_handling import ModelInputInfo
 from nncf.torch.utils import get_model_device
-
-
-class ModelInputInfo:
-    FILLER_TYPE_ONES = "ones"
-    FILLER_TYPE_ZEROS = "zeros"
-    FILLER_TYPE_RANDOM = "random"
-    FILLER_TYPES = [FILLER_TYPE_ONES, FILLER_TYPE_ZEROS, FILLER_TYPE_RANDOM]
-
-    def __init__(self, shape: List[int], type_str: str = "float", keyword=None, filler=None):
-        self.shape = shape
-        self.type = self._string_to_torch_type(type_str)
-        self.keyword = keyword
-        if filler is None:
-            self.filler = self.FILLER_TYPE_ONES
-        else:
-            self.filler = filler
-            if self.filler not in self.FILLER_TYPES:
-                raise RuntimeError("Unknown input filler type: {}".format(filler))
-
-    @staticmethod
-    def _string_to_torch_type(string):
-        if string == "long":
-            return torch.long
-        return torch.float32
-
-    @staticmethod
-    def torch_type_to_string(dtype: torch.dtype):
-        if dtype is torch.long:
-            return "long"
-        return "float"
-
-    def is_integer_input(self):
-        return self.type != torch.float32
-
-    def __eq__(self, other):
-        return self.type == other.type and self.keyword == other.keyword
-
-
-def create_input_infos(config) -> Optional[List[ModelInputInfo]]:
-    input_infos = config.get("input_info")
-    if input_infos is None:
-        return input_infos
-    if isinstance(input_infos, dict):
-        return [
-            ModelInputInfo(
-                input_infos.get("sample_size"),
-                input_infos.get("type"),
-                input_infos.get("keyword"),
-                input_infos.get("filler"),
-            ),
-        ]
-    if isinstance(input_infos, list):
-        return [
-            ModelInputInfo(
-                info_dict.get("sample_size"), info_dict.get("type"), info_dict.get("keyword"), info_dict.get("filler")
-            )
-            for info_dict in input_infos
-        ]
-    raise RuntimeError("Invalid input_infos specified in config - should be either dict or list of dicts")
-
-
-def create_mock_tensor(input_info: ModelInputInfo, device: str):
-    args = {"size": input_info.shape, "dtype": input_info.type, "device": device}
-    if input_info.filler == ModelInputInfo.FILLER_TYPE_ZEROS:
-        return torch.zeros(**args)
-    if input_info.filler == ModelInputInfo.FILLER_TYPE_ONES:
-        return torch.ones(**args)
-    if input_info.filler == ModelInputInfo.FILLER_TYPE_RANDOM:
-        return torch.rand(**args)
-    raise RuntimeError
 
 
 class GraphTracer:
@@ -102,7 +32,7 @@ class GraphTracer:
             context_to_use = TracingContext()
 
         context_to_use.enable_trace_dynamic_graph()
-        from nncf.torch.utils import training_mode_switcher  # pylint: disable=cyclic-import
+        from nncf.torch.utils import training_mode_switcher
 
         with context_to_use as _ctx:
             _ctx.base_module_thread_local_replica = model
@@ -118,33 +48,29 @@ class GraphTracer:
         return context_to_use.graph
 
 
+T = TypeVar("T")
+WrapInputsFnType = Callable[[Tuple, Dict], Tuple[Tuple, Dict]]
+WrapOutputsFnType = Callable[[T], T]
+
+
 def create_dummy_forward_fn(
-    input_infos: List[ModelInputInfo],
-    with_input_tracing=False,
-    wrap_inputs_fn=None,
-    wrap_outputs_fn=None,
-    with_output_tracing=False,
+    input_info: ModelInputInfo,
+    with_input_tracing: bool = False,
+    wrap_inputs_fn: WrapInputsFnType = None,
+    wrap_outputs_fn: WrapOutputsFnType = None,
+    with_output_tracing: bool = False,
 ):
     def default_dummy_forward_fn(model):
-        from nncf.torch.dynamic_graph.io_handling import replicate_same_tensors  # pylint: disable=cyclic-import
-        from nncf.torch.dynamic_graph.io_handling import (
-            wrap_nncf_model_inputs_with_objwalk,  # pylint: disable=cyclic-import
-        )
-        from nncf.torch.dynamic_graph.io_handling import (
-            wrap_nncf_model_outputs_with_objwalk,  # pylint: disable=cyclic-import
-        )
+        from nncf.torch.dynamic_graph.io_handling import replicate_same_tensors
+        from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_inputs_with_objwalk
+        from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
 
         device = get_model_device(model)
-        args_list = [create_mock_tensor(info, device) for info in input_infos if info.keyword is None]
-        kwargs = OrderedDict()
-        for info in input_infos:
-            if info.keyword is not None:
-                kwargs[info.keyword] = create_mock_tensor(info, device)
-        args = tuple(args_list)
+        args, kwargs = input_info.get_forward_inputs(device=str(device))
 
         if with_input_tracing:
             if wrap_inputs_fn is None:
-                # We control the input argument structure w.r.t. tensors
+                # We control the input argument structure w.r.t. tensors if input_info is a FillerInputInfo
                 # - a simple objwalk application should be sufficient in this simple case.
                 # For more control, wrap_inputs_fn is used when this is used in NNCFNetwork
                 # which is guaranteed to be the same as during the actual NNCFNetwork.forward

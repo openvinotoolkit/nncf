@@ -13,6 +13,8 @@ import itertools
 from typing import Any, Dict, List
 
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.utils.backend import BackendType
+from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.algorithms.bias_correction.algorithm import BiasCorrection
 from nncf.quantization.algorithms.channel_alignment.algorithm import ChannelAlignment
 from nncf.quantization.algorithms.fast_bias_correction.algorithm import FastBiasCorrection
@@ -78,7 +80,12 @@ def _get_minmax_quantization_param_grid() -> ParamGrid:
 
 
 def _get_smooth_quant_param_grid() -> ParamGrid:
-    return {"advanced_parameters:smooth_quant_alpha": [0.15, 0.25, 0.5, 0.75, 0.95]}
+    alpha_values = [0.15, 0.25, 0.5, 0.75, 0.95]
+    return {
+        "advanced_parameters:smooth_quant_alphas": [
+            AdvancedSmoothQuantParameters(matmul=alpha_v) for alpha_v in itertools.product(alpha_values)
+        ]
+    }
 
 
 def _get_channel_alignment_param_grid() -> ParamGrid:
@@ -89,7 +96,7 @@ def _get_bias_correction_param_grid() -> ParamGrid:
     return {"fast_bias_correction": [True, False]}
 
 
-def get_quantization_param_grids(pipeline: Pipeline) -> List[ParamGrid]:
+def get_quantization_param_grids(pipeline: Pipeline, backend: BackendType) -> List[ParamGrid]:
     """
     Returns params grid for post-training quantization algorithm.
     """
@@ -105,7 +112,10 @@ def get_quantization_param_grids(pipeline: Pipeline) -> List[ParamGrid]:
     for step in pipeline.pipeline_steps:
         param_grid = {}
         for algorithm in step:
+            if backend not in algorithm.available_backends:
+                continue
             param_grid.update(algorithm_cls_to_param_grid[algorithm.__class__])
-        param_grids.append(param_grid)
+        if param_grid:
+            param_grids.append(param_grid)
 
     return param_grids

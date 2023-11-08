@@ -84,7 +84,8 @@ def test_raise_error_with_int8_and_non_default_group_size(mocker):
         compress_weights(mocker.Mock(), mode=CompressWeightsMode.INT8, group_size=64)
 
 
-def test_raise_error_with_nf4(mocker):
+@pytest.mark.parametrize("mode", [CompressWeightsMode.NF4, CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT4_SYM])
+def test_raise_error_with_not_int8(mode):
     with pytest.raises(AttributeError):
         dummy_torch_model = torch.nn.Module()
-        compress_weights(dummy_torch_model, mode=CompressWeightsMode.NF4)
+        compress_weights(dummy_torch_model, mode=mode)

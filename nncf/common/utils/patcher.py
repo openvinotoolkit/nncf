@@ -116,7 +116,7 @@ class Patcher:
         else:
             if "_partialmethod" in obj_cls.__dict__:
                 while "_partialmethod" in obj_cls.__dict__:
-                    obj_cls = obj_cls._partialmethod.keywords["__fn"]  # pylint: disable=protected-access
+                    obj_cls = obj_cls._partialmethod.keywords["__fn"]
             while isinstance(obj_cls, (partial, partialmethod)):
                 obj_cls = obj_cls.keywords["__fn"]
 

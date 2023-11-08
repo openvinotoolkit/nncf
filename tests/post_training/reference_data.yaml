@@ -107,7 +107,7 @@ timm/efficientnet_b0_backend_TORCH:
     metric_value: 0.7680
     metric_value_fp32: 0.77292
 timm/efficientnet_b0_backend_ONNX:
-    metric_value: 0.76582
+    metric_value: 0.7686
     metric_value_fp32: 0.77292
 timm/efficientnet_b0_backend_OV:
     metric_value: 0.7688
@@ -117,7 +117,7 @@ timm/efficientnet_b0_backend_POT:
     metric_value_fp32: 0.77292
 
 timm/efficientnet_b0_BC_backend_ONNX:
-    metric_value: 0.76446
+    metric_value: 0.7686
     metric_value_fp32: 0.77292
 timm/efficientnet_b0_BC_backend_OV:
     metric_value: 0.76794
@@ -172,7 +172,7 @@ timm/inception_resnet_v2_backend_OV:
     metric_value_fp32: 0.80102
 
 timm/levit_128_backend_TORCH:
-    metric_value: 0.72938
+    metric_value: 0.73346
     metric_value_fp32: 0.7405
 timm/levit_128_backend_ONNX:
     metric_value: 0.73184
@@ -215,10 +215,10 @@ timm/mobilenetv3_small_050_backend_TORCH:
     metric_value: 0.39514
     metric_value_fp32: 0.56338
 timm/mobilenetv3_small_050_backend_ONNX:
-    metric_value: 0.53962
+    metric_value: 0.5456
     metric_value_fp32: 0.56338
 timm/mobilenetv3_small_050_backend_OV:
-    metric_value: 0.38638
+    metric_value: 0.413
     metric_value_fp32: 0.56338
 timm/mobilenetv3_small_050_backend_POT:
     metric_value: 0.54104
@@ -318,7 +318,7 @@ timm/vgg11_backend_OV:
     metric_value_fp32: 0.68344
 
 timm/visformer_small_backend_TORCH:
-    metric_value: 0.77446
+    metric_value: 0.77728
     metric_value_fp32: 0.77902
 timm/visformer_small_backend_ONNX:
     metric_value: 0.77432

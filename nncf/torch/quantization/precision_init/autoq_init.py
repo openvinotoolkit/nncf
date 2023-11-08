@@ -119,8 +119,8 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
         self._hw_cfg_type = params.hw_cfg_type
 
     def apply_init(self) -> SingleConfigQuantizerSetup:
-        from nncf.common.utils.debug import DEBUG_LOG_DIR  # pylint: disable=cyclic-import
-        from nncf.torch.automl.environment.quantization_env import QuantizationEnv  # pylint: disable=cyclic-import
+        from nncf.common.utils.debug import DEBUG_LOG_DIR
+        from nncf.torch.automl.environment.quantization_env import QuantizationEnv
 
         if self._dump_autoq_data or is_debug():
             dump_dir = self._init_args.config.get("log_dir", None)
@@ -153,9 +153,7 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
 
         start_ts = datetime.now()
 
-        from nncf.torch.automl.environment.quantization_env import (
-            QuantizationEnvParams,  # pylint: disable=cyclic-import
-        )
+        from nncf.torch.automl.environment.quantization_env import QuantizationEnvParams
 
         env_params = QuantizationEnvParams(
             compression_ratio=self._params.compression_ratio,
@@ -217,7 +215,6 @@ class AutoQPrecisionInitializer(BasePrecisionInitializer):
         return final_quantizer_setup
 
     def _search(self, agent: DDPG, env: "QuantizationEnv") -> Tuple[pd.Series, float]:  # noqa: F821
-        # pylint: disable=too-many-branches,too-many-statements
         best_reward = -math.inf
         episode = 0
         episode_reward = 0.0

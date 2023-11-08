@@ -125,12 +125,10 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
     **NOTE** To control work with Tensors, different types of wrapper functions can be selected
     `@tensor_dispatch(wrapper_type=WrapperType.TensorToTensor)`:
 
-    * `WrapperType.TensorToTensor` (default) - expects Tensor as first argument, result will be wrapped to Tensor.
-    * `WrapperType.TensorToAny` - expects Tensor as first argument, result will not be wrapped to Tensor.
-    * `WrapperType.TensorToList` - expects Tensor as first argument, each element in result list will be wrapped to Tensor.
-    * `WrapperType.ListToTensor` - expects List of Tensors as first argument, result will be wrapped to Tensor.
-
-
+    - `WrapperType.TensorToTensor` (default) expects Tensor as first argument, result will be wrapped to Tensor.
+    - `WrapperType.TensorToAny` expects Tensor as first argument, result will not be wrapped to Tensor.
+    - `WrapperType.TensorToList` expects Tensor as first argument, each element in result list will be wrapped to Tensor.
+    - `WrapperType.ListToTensor` expects List of Tensors as first argument, result will be wrapped to Tensor.
 
 3. Add backend specific implementation of method to:
 

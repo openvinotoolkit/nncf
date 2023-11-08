@@ -23,13 +23,11 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import StatisticsType
-from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
@@ -49,8 +47,6 @@ from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcess
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 
 
-# pylint:disable=too-many-public-methods
-@ALGO_BACKENDS.register(BackendType.TORCH)
 class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     TARGET_TYPE_TO_PT_INS_TYPE_MAP = {
         TargetType.PRE_LAYER_OPERATION: TargetType.OPERATOR_PRE_HOOK,
@@ -305,6 +301,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.PTAddMetatype,
                 om.PTPowerMetatype,
                 om.PTSubMetatype,
+                om.PTAvgPool2dMetatype,
+                om.PTAvgPool3dMetatype,
                 om.PTMeanMetatype,
                 om.PTSumMetatype,
                 om.PTReduceL2,
@@ -315,6 +313,9 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.PTModuleLayerNormMetatype,
                 om.PTGroupNormMetatype,
                 om.PTModuleGroupNormMetatype,
+                # Batchnorm
+                om.PTBatchNormMetatype,
+                om.PTModuleBatchNormMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
                 types.append(om.PTMulMetatype)

@@ -67,7 +67,6 @@ def initialize_sparsifier_parameters_by_linspace(
             operand.bias_importance.copy_(bias_init_tensor)
 
 
-# pylint: disable=protected-access
 def force_update_sparsifier_binary_masks_by_threshold(operand: MovementSparsifier, threshold: Optional[float] = None):
     if threshold is not None:
         operand.importance_threshold = threshold

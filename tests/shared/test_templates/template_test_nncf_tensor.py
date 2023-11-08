@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=too-many-function-args
 
 import operator
 from abc import abstractmethod
@@ -47,7 +46,6 @@ COMPARISON_OPERATOR_MAP = {
 }
 
 
-# pylint: disable=too-many-public-methods
 class TemplateTestNNCFTensorOperators:
     @staticmethod
     @abstractmethod
@@ -217,36 +215,95 @@ class TemplateTestNNCFTensorOperators:
         assert res.device == nncf_tensor.device
 
     @pytest.mark.parametrize(
-        "val, axis, ref",
+        "val, axis, keepdims, ref",
         (
-            (1, None, 1),
-            ([1], None, 1),
-            ([[[[1], [2]], [[3], [4]]]], None, 4),
-            ([[1, 2], [3, 4]], 1, [2, 4]),
+            (1, None, False, 1),
+            (1, None, True, 1),
+            ([1], None, False, 1),
+            ([1], None, True, 1),
+            ([[[[1], [2]], [[3], [4]]]], None, False, 4),
+            ([[[[1], [2]], [[3], [4]]]], None, True, 4),
+            ([[1, 2], [3, 4]], 1, False, [2, 4]),
+            ([[1, 2], [3, 4]], 1, True, [[2], [4]]),
+            ([[[[1], [2]], [[3], [4]]]], (0, 1), False, [[3], [4]]),
+            ([[[[1], [2]], [[3], [4]]]], (0, 1), True, [[[[3], [4]]]]),
         ),
     )
-    def test_fn_max(self, val, axis, ref):
+    def test_fn_max(self, val, axis, keepdims, ref):
         tensor = self.to_tensor(val)
         nncf_tensor = Tensor(tensor)
         ref_tensor = self.to_tensor(ref)
-        res = fns.max(nncf_tensor, axis=axis)
+        res = fns.max(nncf_tensor, axis=axis, keepdims=keepdims)
         assert isinstance(res, Tensor)
         assert fns.allclose(res, ref_tensor)
         assert res.device == nncf_tensor.device
 
     @pytest.mark.parametrize(
-        "val, axis, ref",
+        "val, axis, keepdims, ref",
         (
-            (1, None, 1),
-            ([1], None, 1),
-            ([[[[1], [2]], [[3], [4]]]], None, 1),
-            ([[1, 2], [3, 4]], 1, [1, 3]),
+            (1, None, False, 1),
+            (1, None, True, 1),
+            ([1], None, False, 1),
+            ([1], None, True, 1),
+            ([[[[1], [2]], [[3], [4]]]], None, False, 1),
+            ([[[[1], [2]], [[3], [4]]]], None, True, 1),
+            ([[1, 2], [3, 4]], 1, False, [1, 3]),
+            ([[1, 2], [3, 4]], 1, True, [[1], [3]]),
+            ([[[[1], [2]], [[3], [4]]]], (0, 1), False, [[1], [2]]),
+            ([[[[1], [2]], [[3], [4]]]], (0, 1), True, [[[[1], [2]]]]),
         ),
     )
-    def test_min(self, val, axis, ref):
+    def test_fn_min(self, val, axis, keepdims, ref):
+        tensor = self.to_tensor(val)
+        nncf_tensor = Tensor(tensor)
+        ref_tensor = self.to_tensor(ref)
+        res = fns.min(nncf_tensor, axis=axis, keepdims=keepdims)
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res, ref_tensor)
+        assert res.device == nncf_tensor.device
+
+    @pytest.mark.parametrize(
+        "val, axis, keepdims, ref",
+        (
+            (1, None, False, 1),
+            (1, None, True, 1),
+            ([1], None, False, 1),
+            ([1], None, True, 1),
+            ([[[[1], [2]], [[3], [4]]]], None, False, 1),
+            ([[[[1], [2]], [[3], [4]]]], None, True, 1),
+            ([[1, 2], [3, 4]], 1, False, [1, 3]),
+            ([[1, 2], [3, 4]], 1, True, [[1], [3]]),
+            ([[[[1], [2]], [[3], [4]]]], (0, 1), False, [[1], [2]]),
+            ([[[[1], [2]], [[3], [4]]]], (0, 1), True, [[[[1], [2]]]]),
+        ),
+    )
+    def test_min(self, val, axis, keepdims, ref):
         nncf_tensor = Tensor(self.to_tensor(val))
         ref_tensor = self.to_tensor(ref)
-        res = nncf_tensor.min(axis=axis)
+        res = nncf_tensor.min(axis=axis, keepdims=keepdims)
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res, ref_tensor)
+        assert res.device == nncf_tensor.device
+
+    @pytest.mark.parametrize(
+        "val, axis, keepdims, ref",
+        (
+            (1, None, False, 1),
+            (1, None, True, 1),
+            ([1], None, False, 1),
+            ([1], None, True, 1),
+            ([[[[1], [2]], [[3], [4]]]], None, False, 4),
+            ([[[[1], [2]], [[3], [4]]]], None, True, 4),
+            ([[1, 2], [3, 4]], 1, False, [2, 4]),
+            ([[1, 2], [3, 4]], 1, True, [[2], [4]]),
+            ([[[[1], [2]], [[3], [4]]]], (0, 1), False, [[3], [4]]),
+            ([[[[1], [2]], [[3], [4]]]], (0, 1), True, [[[[3], [4]]]]),
+        ),
+    )
+    def test_max(self, val, axis, keepdims, ref):
+        nncf_tensor = Tensor(self.to_tensor(val))
+        ref_tensor = self.to_tensor(ref)
+        res = nncf_tensor.max(axis=axis, keepdims=keepdims)
         assert isinstance(res, Tensor)
         assert fns.allclose(res, ref_tensor)
         assert res.device == nncf_tensor.device

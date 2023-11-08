@@ -27,7 +27,6 @@ def create_default_legr_config():
     return config
 
 
-# pylint:disable=protected-access
 def test_legr_coeffs_loading(tmp_path):
     file_name = tmp_path / "ranking_coeffs.json"
     model = PruningTestModel()

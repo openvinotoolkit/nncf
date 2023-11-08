@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint:disable=too-many-lines
+
 from collections import Counter
 from collections import namedtuple
 from itertools import permutations
@@ -198,7 +198,6 @@ class RunOnIpGraphTestStruct:
 
 
 class TestQuantizerPropagationSolver:
-    # pylint:disable=too-many-public-methods
     def test_setup_initial_quantizers_in_quant_prop_graph(self):
         ops_to_quantize = [
             BatchNormTestMetatype.name,
@@ -1560,7 +1559,6 @@ class TestQuantizerPropagationSolver:
         _ = quant_prop_solver.propagation_step(pq, quant_prop_graph)
         finished_pqs = quant_prop_solver.get_finished_propagating_quantizers()
 
-        # pylint:disable=no-member
         assert quant_prop_graph.remove_propagating_quantizer.call_count == 1
         assert quant_prop_graph.clone_propagating_quantizer.call_count == 1
         assert len(finished_pqs) == 1

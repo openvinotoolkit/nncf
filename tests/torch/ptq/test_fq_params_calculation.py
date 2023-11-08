@@ -17,6 +17,7 @@ import torch
 
 import nncf
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.torch.model_creation import create_nncf_network
@@ -30,9 +31,6 @@ from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import create_random_mock_dataloader
 
 REFERENCE_SCALES_DIR = TEST_ROOT / "torch" / "data" / "reference_scales"
-
-
-# pylint: disable=protected-access
 
 
 def min_max_quantize_model(
@@ -52,7 +50,7 @@ def min_max_quantize_model(
     advanced_parameters = quantization_params.get("advanced_parameters", AdvancedQuantizationParameters())
     advanced_parameters.disable_bias_correction = True
     advanced_parameters.disable_channel_alignment = True
-    advanced_parameters.smooth_quant_alpha = -1
+    advanced_parameters.smooth_quant_alphas = AdvancedSmoothQuantParameters(matmul=-1)
     quantization_params["advanced_parameters"] = advanced_parameters
 
     post_training_quantization = PostTrainingQuantization(subset_size=1, **quantization_params)
@@ -97,5 +95,4 @@ def test_overflow_fix_scales(_seed, overflow_fix):
     # dump_to_json(ref_stats_path, fq_nodes_params)
 
     ref_nodes_params = load_json(ref_stats_path)
-    params = ["input_low", "input_high"]
-    compare_stats(ref_nodes_params, fq_nodes_params, params)
+    compare_stats(ref_nodes_params, fq_nodes_params)

@@ -126,7 +126,6 @@ class QuantizationEnvParams:
 
 
 class QuantizationEnv:
-    # pylint:disable=too-many-branches,too-many-statements
     def __init__(
         self,
         model: NNCFNetwork,

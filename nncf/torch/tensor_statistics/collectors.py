@@ -20,6 +20,7 @@ from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcesso
 from nncf.common.tensor_statistics.collectors import NNCFTensor
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
+from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
 from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
@@ -33,7 +34,6 @@ from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
 from nncf.experimental.common.tensor_statistics.collectors import PercentileAggregator
 from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
-from nncf.experimental.common.tensor_statistics.collectors import TensorAggregatorBase
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.torch.tensor import PTNNCFTensor
@@ -43,7 +43,6 @@ from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 from nncf.torch.tensor_statistics.statistics import PTPercentileTensorStatistic
 
 
-# pylint: disable=too-many-public-methods
 class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     """
     A realization of the processing methods for PTNNCFTensors.
@@ -82,7 +81,7 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
             device = x.tensor.device
             result = torch.tensor(np.median(x.tensor.detach().cpu().numpy(), axis=axis, keepdims=keepdims))
             return PTNNCFTensor(result.type(x.tensor.dtype).to(device))
-        return PTNNCFTensor(torch.quantile(x.tensor, q=0.5, dim=axis, keepdim=keepdims).values)
+        return PTNNCFCollectorTensorProcessor.quantile(x, quantile=[0.5], axis=axis, keepdims=keepdims)[0]
 
     @classmethod
     def masked_mean(
@@ -124,6 +123,19 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return PTNNCFTensor(torch.mean(x.tensor, axis=0, keepdims=True))
 
     @staticmethod
+    def transpose(x: NNCFTensor, axes: Tuple[int, ...]) -> NNCFTensor:
+        return PTNNCFTensor(torch.permute(x.tensor, axes))
+
+    @staticmethod
+    def reshape(x: NNCFTensor, shape: Tuple[int, ...]) -> NNCFTensor:
+        return PTNNCFTensor(torch.reshape(x.tensor, shape))
+
+    @staticmethod
+    def cat(x: List[NNCFTensor], axis: int) -> NNCFTensor:
+        x = [t.tensor for t in x]
+        return PTNNCFTensor(torch.cat(x, axis))
+
+    @staticmethod
     def logical_or(input_: NNCFTensor, other: NNCFTensor) -> NNCFTensor:
         return PTNNCFTensor(torch.logical_or(input_.tensor, other.tensor))
 
@@ -139,7 +151,7 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @staticmethod
     def unstack(x: NNCFTensor, axis: int = 0) -> List[NNCFTensor]:
         tensor = x.tensor
-        if list(tensor.shape) == []:  # pylint: disable=C1803
+        if list(tensor.shape) == []:
             tensor = tensor.unsqueeze(0)
         tensor_list = torch.unbind(tensor, dim=axis)
         return [PTNNCFTensor(t) for t in tensor_list]
@@ -161,12 +173,18 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     ) -> List[NNCFTensor]:
         device = tensor.device
         # See https://github.com/pytorch/pytorch/issues/61582
-        if not isinstance(axis, int):
+        # https://github.com/pytorch/pytorch/issues/64947
+        if len(tensor.tensor) <= 16_000_000 and isinstance(axis, int):
+            result = torch.quantile(
+                tensor.tensor,
+                torch.tensor(quantile, dtype=tensor.tensor.dtype, device=tensor.tensor.device),
+                axis,
+                keepdims,
+            )
+        else:
             result = torch.tensor(
                 np.quantile(tensor.tensor.detach().cpu().numpy(), q=quantile, axis=axis, keepdims=keepdims)
             )
-        else:
-            result = torch.quantile(tensor.tensor, torch.tensor(quantile).type(tensor.tensor.dtype), axis, keepdims)
         result = result.type(tensor.tensor.dtype).to(device)
         return [PTNNCFTensor(x) for x in result]
 
@@ -425,8 +443,8 @@ def get_percentile_tensor_collector(
 
 
 def _get_collection_without_reduction(
-    aggregator_cls: TensorAggregatorBase,
-    statistic_cls: TensorAggregatorBase,
+    aggregator_cls: AggregatorBase,
+    statistic_cls: AggregatorBase,
     reduction_axes: Tuple[int, ...],
     aggregation_axes: Tuple[int, ...],
     num_samples: int,

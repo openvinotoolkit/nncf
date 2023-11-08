@@ -72,7 +72,7 @@ ARITHMETIC_OPERATIONS = {
 }
 
 # This type may be useful in the future
-# pylint: disable=unused-variable
+
 POOLING_OPERATIONS = {
     GraphPattern.METATYPE_ATTR: ["adaptive_avg_pool2d", "adaptive_avg_pool3d", "avg_pool2d", "avg_pool3d"],
     GraphPattern.LABEL_ATTR: "POOLING",

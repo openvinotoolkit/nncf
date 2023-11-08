@@ -45,7 +45,7 @@ def load_state(
 
     model_state_dict = model.state_dict()
 
-    from nncf.torch.utils import maybe_convert_legacy_names_in_model_state  # pylint: disable=cyclic-import
+    from nncf.torch.utils import maybe_convert_legacy_names_in_model_state
 
     maybe_convert_legacy_names_in_model_state(state_dict_to_load)
     key_matcher = KeyMatcher(is_resume, state_dict_to_load, model_state_dict, keys_to_ignore)

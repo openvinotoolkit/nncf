@@ -14,9 +14,6 @@ from typing import Any, Callable, Mapping, Optional
 import tensorflow as tf
 
 
-# pylint:disable=too-many-lines
-# pylint:disable=too-many-statements
-# pylint:disable=abstract-method
 def make_divisible(
     value: float,
     divisor: int,

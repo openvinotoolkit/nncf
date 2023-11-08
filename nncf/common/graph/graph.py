@@ -143,7 +143,7 @@ class NNCFGraphEdge:
         self.to_node = to_node
         self.input_port_id = input_port_id
         self.output_port_id = output_port_id
-        self.tensor_shape = tensor_shape
+        self.tensor_shape: Tuple[int] = tuple(tensor_shape)
         self.dtype = dtype
         self.parallel_input_port_ids = parallel_input_port_ids
 
@@ -177,7 +177,6 @@ class NNCFGraphPatternIO:
         self.output_edges = output_edges
 
 
-# pylint:disable=too-many-public-methods
 class NNCFGraph:
     """
     Wrapper over a regular directed acyclic graph that represents a control flow/execution graph of a DNN
@@ -435,7 +434,8 @@ class NNCFGraph:
         :param layer_name: The name of the framework-specific "layer" object that houses the operation represented by
             the node and associated trainable weights, if any.
         :param ignored_algorithms: A list of compression algorithm names (from the same set of strings that are
-            specified in the `"algorithm": ...` section of the .json NNCF config) which should ignore this operation.
+            specified in the `"algorithm": ...` section of the .json NNCF config or `ptq_quantization`)
+            which should ignore this operation.
         :param is_in_iteration_scope: Whether the node to be currently added corresponds to an iteration of an RNN
             cycle (where the number of iterations is determined dynamically based on the RNN input shape).
         :param is_integer_input: Only valid for input nodes - whether the input node corresponds to an integer input.
@@ -574,29 +574,18 @@ class NNCFGraph:
         :param extended: whether the graph edges should have attributes: shape of the tensor and tensor primitive type.
         :return: An nx.DiGraph to be used for structure analysis
         """
-        # .dot format reserves ':' character in node names
-        __RESERVED_DOT_CHARACTER = ":"
-        __CHARACTER_REPLACE_TO = "^"
-
         out_graph = nx.DiGraph()
         for node_name, node in self._nx_graph.nodes.items():
-            visualization_node_name = node_name.replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO)
             attrs_node = {"id": node[NNCFNode.ID_NODE_ATTR], "type": node[NNCFNode.NODE_TYPE_ATTR]}
             for attr in ["color", "label", "style"]:
                 if attr in node:
                     attrs_node[attr] = node[attr]
-            # If the node_name has reserved character, use visualization_node_name as node name.
-            # While use 'label' attribute with original node name for visualization.
-            if "label" not in attrs_node and __RESERVED_DOT_CHARACTER in node_name:
-                attrs_node["label"] = node_name
 
-            out_graph.add_node(visualization_node_name, **attrs_node)
+            out_graph.add_node(node_name, **attrs_node)
 
         for u, v in self._nx_graph.edges:
             edge = self._nx_graph.edges[u, v]
             attrs_edge = {}
-            u = u.replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO)
-            v = v.replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO)
             label = {}
             if edge[NNCFGraph.PARALLEL_INPUT_PORT_IDS_ATTR]:
                 label["parallel_input_port_ids"] = edge[NNCFGraph.PARALLEL_INPUT_PORT_IDS_ATTR]
@@ -614,7 +603,7 @@ class NNCFGraph:
                 else:
                     attrs_edge["label"] = ", ".join((f"{k}:{v}" for k, v in label.items()))
             out_graph.add_edge(u, v, **attrs_edge)
-        return out_graph
+        return relabel_graph_for_dot_visualization(out_graph)
 
     def _get_graph_for_visualization(self) -> nx.DiGraph:
         """
@@ -645,7 +634,7 @@ class NNCFGraph:
         for node in out_graph.nodes.values():
             node.pop("label")
 
-        return out_graph
+        return relabel_graph_for_dot_visualization(out_graph)
 
     def get_node_by_name(self, name: NNCFNodeName) -> NNCFNode:
         node_ids = self._node_name_to_node_id_map.get(name, None)
@@ -771,3 +760,35 @@ class NNCFGraph:
                 subgraph_list.append(self.get_node_by_key(node_key))
             output.append(subgraph_list)
         return output
+
+
+def relabel_graph_for_dot_visualization(nx_graph: nx.Graph) -> nx.Graph:
+    """
+    Relabels NetworkX graph nodes to exclude reserved symbols in keys.
+        In case replaced names match for two different nodes, integer index is added to its keys.
+        While nodes keys are being updated, visualized nodes names corresponds to the original nodes names.
+
+    :param nx_graph: NetworkX graph to visualize via dot.
+    :return: NetworkX graph with reserved symbols in nodes keys replaced.
+    """
+    # .dot format reserves ':' character in node names
+    __RESERVED_DOT_CHARACTER = ":"
+    __CHARACTER_REPLACE_TO = "^"
+
+    hits = defaultdict(lambda: 0)
+    mapping = {}
+    for original_name in nx_graph.nodes():
+        dot_name = original_name.replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO)
+        hits[dot_name] += 1
+        if hits[dot_name] > 1:
+            dot_name = f"{dot_name}_{hits}"
+        if original_name != dot_name:
+            mapping[original_name] = dot_name
+
+    relabeled_graph = nx.relabel_nodes(nx_graph, mapping)
+    nx.set_node_attributes(
+        relabeled_graph,
+        name="label",
+        values={dot_key: original_key for original_key, dot_key in mapping.items()},
+    )
+    return relabeled_graph

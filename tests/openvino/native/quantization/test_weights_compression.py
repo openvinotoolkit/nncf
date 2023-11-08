@@ -9,8 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from functools import partial
-from typing import List
+import os
+from typing import Callable, List
 
 import numpy as np
 import openvino.runtime as ov
@@ -20,58 +20,23 @@ from attr import dataclass
 from nncf import CompressWeightsMode
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.quantization import compress_weights
-from nncf.quantization.algorithms.weight_compression.openvino_backend import _calculate_scale_per_group
-from nncf.quantization.algorithms.weight_compression.openvino_backend import _get_int8_err
-from nncf.quantization.algorithms.weight_compression.openvino_backend import _get_nf4_error
+from nncf.quantization.algorithms.weight_compression.openvino_backend import WeightCompressionConfig
+from nncf.quantization.algorithms.weight_compression.openvino_backend import _get_integer_quantization_error
+from nncf.quantization.algorithms.weight_compression.openvino_backend import _reshape_weights_for_grouped_quantization
 from nncf.scopes import IgnoredScope
+from tests.openvino.native.common import get_openvino_version
 from tests.openvino.native.models import IntegerModel
 from tests.openvino.native.models import SequentialMatmulModel
 from tests.openvino.native.models import WeightsModel
 from tests.openvino.native.quantization.test_fq_params_calculation import REFERENCE_SCALES_DIR
 from tests.shared.helpers import compare_stats
+from tests.shared.helpers import dump_to_json
 from tests.shared.helpers import load_json
 
 TEST_MODELS = {
-    IntegerModel: ["gather_2_data", "matmul_1_data", "matmul_2_data"],
+    IntegerModel: ["matmul_2_data", "gather_2_data", "matmul_1_data"],
     WeightsModel: ["weights_0", "weights_1"],
 }
-
-
-@pytest.mark.parametrize("model_creator_func", TEST_MODELS)
-def test_compress_weights_int8(model_creator_func, tmp_path):
-    ref_compressed_weights = TEST_MODELS[model_creator_func]
-    name = model_creator_func().__class__.__name__
-    model = model_creator_func().ov_model
-    compressed_model = compress_weights(model)
-
-    n_compressed_weights = 0
-    for op in compressed_model.get_ops():
-        if op.get_type_name() == "Constant" and op.get_friendly_name() in ref_compressed_weights:
-            assert op.get_element_type() == ov.Type(np.uint8)
-            n_compressed_weights += 1
-    ov.serialize(compressed_model, tmp_path / (name + ".xml"))
-    assert n_compressed_weights == len(ref_compressed_weights)
-
-
-@pytest.mark.parametrize("model_creator_func", TEST_MODELS)
-def test_compress_weights_nf4(model_creator_func):
-    if issubclass(IntegerModel, model_creator_func):
-        pytest.xfail("Waiting for the merge NF4 support in OV - PR 19900")
-    ref_compressed_weights = TEST_MODELS[model_creator_func]
-    model = model_creator_func().ov_model
-    compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4, ratio=1, group_size=1)
-
-    n_compressed_weights = 0
-    for op in compressed_model.get_ordered_ops():
-        if op.get_type_name() == "Constant" and op.get_friendly_name() in ref_compressed_weights:
-            if n_compressed_weights in (0, len(ref_compressed_weights) - 1):
-                assert op.get_element_type() == ov.Type(np.uint8)
-            else:
-                assert op.get_element_type() == ov.Type.nf4
-
-            n_compressed_weights += 1
-
-    assert n_compressed_weights == len(ref_compressed_weights)
 
 
 def get_next_node(node):
@@ -81,87 +46,140 @@ def get_next_node(node):
     return next_node
 
 
-def test_compare_compressed_weights():
+def check_int8_node(op: ov.Node):
+    assert op.get_element_type() == ov.Type(np.uint8)
+    compressed_weight = get_const_value(op)
+
+    convert_node = get_next_node(op)
+    assert convert_node.get_type_name() == "Convert"
+
+    sub_node = get_next_node(convert_node)
+    assert sub_node.get_type_name() == "Subtract"
+
+    convert_node = sub_node.input_value(1).get_node()
+    assert convert_node.get_type_name() == "Convert"
+
+    zero_point_node = convert_node.input_value(0).get_node()
+    zero_point = get_const_value(zero_point_node)
+
+    mul_node = get_next_node(sub_node)
+    assert mul_node.get_type_name() == "Multiply"
+    scale_node = mul_node.input_value(1).get_node()
+    scale = get_const_value(scale_node)
+
+    return {
+        "compressed_weight": compressed_weight,
+        "zero_point": zero_point,
+        "scale": scale,
+    }
+
+
+def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int = 3):
+    assert op.get_element_type() == ov.Type.u4
+    weight_shape = op.shape
+    # NOTE: get_const_value doesn't work for 4-bit types
+    assert list(weight_shape)[-1] == group_size
+    reduced_weight_shape = list(weight_shape)
+    reduced_weight_shape[-1] = 1
+
+    convert_node = get_next_node(op)
+    assert convert_node.get_type_name() == "Convert"
+
+    sub_node = get_next_node(convert_node)
+    assert sub_node.get_type_name() == "Subtract"
+
+    convert_node = sub_node.input_value(1).get_node()
+    assert convert_node.get_type_name() == "Convert"
+
+    zero_point_node = convert_node.input_value(0).get_node()
+    assert zero_point_node.get_element_type() == ov.Type.u4
+    if mode == CompressWeightsMode.INT4_SYM:
+        assert list(zero_point_node.shape) == [1]
+    else:
+        assert list(zero_point_node.shape) == reduced_weight_shape
+
+    mul_node = get_next_node(sub_node)
+    assert mul_node.get_type_name() == "Multiply"
+    scale_node = mul_node.input_value(1).get_node()
+    assert list(scale_node.shape) == reduced_weight_shape
+
+    reshape_node = get_next_node(mul_node)
+    assert reshape_node.get_type_name() == "Reshape"
+
+    return {
+        "scale": get_const_value(scale_node),
+    }
+
+
+def check_nf4_grouped(op: ov.Node, group_size: int = 3):
+    assert op.get_element_type() == ov.Type.nf4
+    weight_shape = op.shape
+    # NOTE: get_const_value doesn't work for 4-bit types
+    assert list(weight_shape)[-1] == group_size
+    reduced_weight_shape = list(weight_shape)
+    reduced_weight_shape[-1] = 1
+
+    convert_node = get_next_node(op)
+    assert convert_node.get_type_name() == "Convert"
+
+    mul_node = get_next_node(convert_node)
+    assert mul_node.get_type_name() == "Multiply"
+    scale_node = mul_node.input_value(1).get_node()
+    assert list(scale_node.shape) == reduced_weight_shape
+
+    reshape_node = get_next_node(mul_node)
+    assert reshape_node.get_type_name() == "Reshape"
+
+    return {
+        "scale": get_const_value(scale_node),
+    }
+
+
+def check_int4_sym_grouped(op: ov.Node):
+    return check_int4_grouped(op, mode=CompressWeightsMode.INT4_SYM)
+
+
+def check_int4_asym_grouped(op: ov.Node):
+    return check_int4_grouped(op, mode=CompressWeightsMode.INT4_ASYM)
+
+
+def get_mixed_mapping(primary_fn: Callable, list_layers: List[str]):
+    mapping = {node_name: check_int8_node for node_name in list_layers}
+
+    for node_name in TEST_MODELS[IntegerModel][1:-1]:
+        mapping[node_name] = primary_fn
+    return mapping
+
+
+@pytest.mark.parametrize(
+    ("mode", "group_size", "check_fn_per_node_map"),
+    (
+        (CompressWeightsMode.INT8, -1, {node_name: check_int8_node for node_name in TEST_MODELS[IntegerModel]}),
+        (CompressWeightsMode.INT4_SYM, 3, get_mixed_mapping(check_int4_sym_grouped, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.INT4_ASYM, 3, get_mixed_mapping(check_int4_asym_grouped, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.NF4, 3, get_mixed_mapping(check_nf4_grouped, TEST_MODELS[IntegerModel])),
+    ),
+)
+def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
+    ov_version = get_openvino_version()
+    if mode == CompressWeightsMode.NF4 and ov_version != "2023.2":
+        pytest.xfail("NF4 is not supported until 2023.2")
     model = IntegerModel().ov_model
-    compressed_model = compress_weights(model)
-    nodes = {}
-    ref_compressed_weights = TEST_MODELS[IntegerModel]
+    compressed_model = compress_weights(model, mode=mode, group_size=group_size)
+    actual_stats = {}
     for op in compressed_model.get_ops():
-        if op.get_type_name() == "Constant" and op.get_friendly_name() in ref_compressed_weights:
-            assert op.get_element_type() == ov.Type(np.uint8)
-            compressed_weight = get_const_value(op)
+        op_name = op.get_friendly_name()
+        if op.get_type_name() == "Constant" and op_name in check_fn_per_node_map:
+            check_fn = check_fn_per_node_map[op_name]
+            actual_stats[op_name] = check_fn(op)
 
-            convert_node = get_next_node(op)
-            assert convert_node.get_type_name() == "Convert"
+    ref_stats_path = REFERENCE_SCALES_DIR / f"IntegerModel_compressed_weights_{mode.value}.json"
 
-            sub_node = get_next_node(convert_node)
-            assert sub_node.get_type_name() == "Subtract"
-            zero_point_node = sub_node.input_value(1).get_node()
-            zero_point = get_const_value(zero_point_node)
+    if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
+        dump_to_json(ref_stats_path, actual_stats)
 
-            mul_node = get_next_node(sub_node)
-            assert mul_node.get_type_name() == "Multiply"
-            scale_node = mul_node.input_value(1).get_node()
-            scale = get_const_value(scale_node)
-
-            nodes[op.get_friendly_name()] = {
-                "compressed_weight": compressed_weight,
-                "zero_point": zero_point,
-                "scale": scale,
-            }
-
-    ref_stats_path = REFERENCE_SCALES_DIR / "IntegerModel_compressed_weights.json"
-
-    # from tests.shared.helpers import dump_to_json
-    # dump_to_json(ref_stats_path, nodes)
-
-    ref_nodes = load_json(ref_stats_path)
-    params = ["compressed_weight", "zero_point", "scale"]
-    compare_stats(ref_nodes, nodes, params)
-
-
-# TODO(nlyalyus) Waiting for the merge NF4 support in OV - PR 19900
-@pytest.mark.xfail
-def test_compare_compressed_weights_nf4():
-    model = IntegerModel().ov_model
-    compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4, ratio=1, group_size=3)
-
-    nodes = {}
-    ref_nf4_weight = TEST_MODELS[IntegerModel][1]
-    for op in compressed_model.get_ordered_ops():
-        if op.get_type_name() == "Constant" and op.get_friendly_name() in ref_nf4_weight:
-            assert op.get_element_type() == ov.Type.nf4
-            # TODO: should be fixed in python api
-            with pytest.raises(RuntimeError):
-                get_const_value(op)
-
-            convert_node = get_next_node(op)
-            assert convert_node.get_type_name() == "Convert"
-
-            mul_node = get_next_node(convert_node)
-            assert mul_node.get_type_name() == "Multiply"
-            scale_node = mul_node.input_value(1).get_node()
-            scale = get_const_value(scale_node)
-
-            reshape_node = get_next_node(mul_node)
-            assert reshape_node.get_type_name() == "Reshape"
-
-            nodes[op.get_friendly_name()] = {
-                # "compressed_weight": compressed_weight,
-                "scale": scale,
-            }
-
-    ref_stats_path = REFERENCE_SCALES_DIR / "IntegerModel_compressed_weights_nf4.json"
-
-    # from tests.shared.helpers import dump_to_json
-    # dump_to_json(ref_stats_path, nodes)
-
-    ref_nodes = load_json(ref_stats_path)
-    params = [
-        # "compressed_weight",
-        "scale"
-    ]
-    compare_stats(ref_nodes, nodes, params)
+    ref_stats = load_json(ref_stats_path)
+    compare_stats(ref_stats, actual_stats)
 
 
 @pytest.mark.parametrize("group_size", (1, 3))
@@ -185,15 +203,13 @@ def test_mixed_precision(ratio, group_size, ref_nf4_nodes):
 
 
 @dataclass
-class BaseDesc:
+class QuantErrorDesc:
     weight: List[float]
     ref_error: int = 0
     axis = (1,)
     name: str = ""
     atol: float = None
-
-    def get_error_fn(self) -> float:
-        raise NotImplementedError
+    config: WeightCompressionConfig = WeightCompressionConfig()
 
     def __str__(self):
         prefix = "exact_match_" if self.ref_error == 0 else ""
@@ -201,84 +217,89 @@ class BaseDesc:
         return prefix + name
 
 
-@dataclass
-class Int8Desc(BaseDesc):
-    def get_error_fn(self) -> float:
-        return partial(_get_int8_err, reduction_axes=self.axis)
-
-    def __str__(self):
-        base_str = super().__str__()
-        return "int8_" + base_str
-
-
-@dataclass
-class NF4Desc(BaseDesc):
-    group_size: int = -1
-
-    def get_error_fn(self) -> float:
-        return partial(_get_nf4_error, reduction_axes=self.axis, group_size=self.group_size)
-
-    def __str__(self):
-        base_str = super().__str__()
-        return "nf4_" + base_str
-
-
 SCALE_1 = 1.2
 SCALE_2 = 3.4
 SCALE_3 = 5.6
 SCALE_4 = 7.8
 LINSPACE = np.arange(0, 256, 17)
-NF4_LOOKUP = np.array(
-    [
-        -1.0,
-        -0.6961928009986877,
-        -0.5250730514526367,
-        -0.39491748809814453,
-        -0.28444138169288635,
-        -0.18477343022823334,
-        -0.09105003625154495,
-        0.0,
-        0.07958029955625534,
-        0.16093020141124725,
-        0.24611230194568634,
-        0.33791524171829224,
-        0.44070982933044434,
-        0.5626170039176941,
-        0.7229568362236023,
-        1.0,
-    ]
-)
 
-TWO_ROWS_NF4 = np.vstack((NF4_LOOKUP * SCALE_1, NF4_LOOKUP * SCALE_2))
-TWO_OTHER_ROWS_NF4 = np.vstack((NF4_LOOKUP * SCALE_3, NF4_LOOKUP * SCALE_4))
 TWO_ROWS_LINSPACE = np.vstack((LINSPACE * SCALE_1, LINSPACE * SCALE_2))
-TWO_GROUPS_IN_TWO_ROWS_NF4 = np.hstack((TWO_ROWS_NF4, TWO_OTHER_ROWS_NF4))
-TWO_GROUPS_IN_TWO_ROWS_NO_1_NF4 = np.hstack((TWO_ROWS_NF4[:, 1:-1], TWO_OTHER_ROWS_NF4[:, 1:-1]))
 
+LINSPACE_INT4_ASYM = np.arange(0, 16)
+TWO_ROWS_LINSPACE_INT4_ASYM = np.vstack((LINSPACE_INT4_ASYM * SCALE_1, LINSPACE_INT4_ASYM * SCALE_2))
+
+LINSPACE_INT4_SYM = np.arange(-7, 8)
+TWO_ROWS_LINSPACE_INT4_SYM = np.vstack((LINSPACE_INT4_SYM * SCALE_1, LINSPACE_INT4_SYM * SCALE_2))
+
+TWO_OTHER_ROWS_LINSPACE_INT4_SYM = np.vstack((LINSPACE_INT4_SYM * SCALE_3, LINSPACE_INT4_SYM * SCALE_4))
+TWO_GROUPS_IN_TWO_ROWS_SYM = np.hstack((TWO_ROWS_LINSPACE_INT4_SYM, TWO_OTHER_ROWS_LINSPACE_INT4_SYM))
+
+TWO_OTHER_ROWS_LINSPACE_INT4_ASYM = np.vstack((LINSPACE_INT4_ASYM * SCALE_3, LINSPACE_INT4_ASYM * SCALE_4))
+TWO_GROUPS_IN_TWO_ROWS_ASYM = np.hstack((TWO_ROWS_LINSPACE_INT4_ASYM, TWO_OTHER_ROWS_LINSPACE_INT4_ASYM))
+
+
+int4_sym_config = WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=-1)
+int4_asym_config = WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=-1)
+int4_sym_grouped_config = WeightCompressionConfig(mode=CompressWeightsMode.INT4_SYM, group_size=15)
+int4_asym_grouped_config = WeightCompressionConfig(mode=CompressWeightsMode.INT4_ASYM, group_size=16)
 LIST_DESCS = [
     # zero error
-    Int8Desc(name="2 rows of 0-255 linspace", weight=TWO_ROWS_LINSPACE),
-    NF4Desc(name="2 rows of exact quantiles", weight=TWO_ROWS_NF4),
-    NF4Desc(name="two groups in two rows", weight=TWO_GROUPS_IN_TWO_ROWS_NF4, group_size=16),
+    QuantErrorDesc(name="2 rows of scaled [0, 255] linspace", weight=TWO_ROWS_LINSPACE),
+    QuantErrorDesc(name="2 rows of scaled [-7, 7] linspace", weight=TWO_ROWS_LINSPACE_INT4_SYM, config=int4_sym_config),
+    QuantErrorDesc(
+        name="2 rows of scaled [0, 15] linspace", weight=TWO_ROWS_LINSPACE_INT4_ASYM, config=int4_asym_config
+    ),
+    QuantErrorDesc(
+        name="two groups in two rows sym",
+        weight=TWO_GROUPS_IN_TWO_ROWS_SYM,
+        config=int4_sym_grouped_config,
+    ),
+    QuantErrorDesc(
+        name="two groups in two rows asym",
+        weight=TWO_GROUPS_IN_TWO_ROWS_ASYM,
+        config=int4_asym_grouped_config,
+    ),
     # non-zero error
-    Int8Desc(name="2 rows 1-254 linspace", weight=TWO_ROWS_LINSPACE[:, 1:-1], ref_error=239, atol=1),
-    Int8Desc(name="2 columns of 0-255 linspace", weight=np.transpose(TWO_ROWS_LINSPACE), ref_error=46818, atol=1),
-    NF4Desc(name="2 rows of exact quantiles without -1 and 1", weight=TWO_ROWS_NF4[:, 1:-1], ref_error=5e-3, atol=1e-3),
-    NF4Desc(name="2 columns of exact quantiles", weight=np.transpose(TWO_ROWS_NF4), ref_error=1e-2, atol=1e-2),
-    NF4Desc(
-        name="two groups in two rows without -1 and 1",
-        weight=TWO_GROUPS_IN_TWO_ROWS_NO_1_NF4,
-        group_size=14,
-        ref_error=2e-2,
-        atol=1e-2,
+    QuantErrorDesc(name="2 rows scaled [1, 254] linspace", weight=TWO_ROWS_LINSPACE[:, 1:-1], ref_error=239, atol=1),
+    QuantErrorDesc(
+        name="2 columns of scaled [0, 255] linspace", weight=np.transpose(TWO_ROWS_LINSPACE), ref_error=46818, atol=1
+    ),
+    QuantErrorDesc(
+        name="2 rows of scaled [0, 15] linspace for sym",
+        weight=TWO_ROWS_LINSPACE_INT4_ASYM,
+        config=int4_sym_config,
+        ref_error=4.12,
+        atol=1,
+    ),
+    QuantErrorDesc(
+        name="2 columns of of scaled [0, 15] linspace for sym",
+        weight=np.transpose(TWO_ROWS_LINSPACE_INT4_ASYM),
+        config=int4_sym_config,
+        ref_error=5.87,
+        atol=1,
+    ),
+    QuantErrorDesc(
+        name="2 rows [1,14] linspace for asym",
+        weight=TWO_ROWS_LINSPACE_INT4_ASYM[:, 1:-1],
+        config=int4_asym_config,
+        ref_error=1.49,
+        atol=1,
+    ),
+    QuantErrorDesc(
+        name="2 columns of [0-15] linspace for asym",
+        weight=np.transpose(TWO_ROWS_LINSPACE_INT4_ASYM),
+        config=int4_asym_config,
+        ref_error=162,
+        atol=1,
     ),
 ]
 
 
 @pytest.mark.parametrize("desc", LIST_DESCS, ids=map(str, LIST_DESCS))
-def test_quantization_error_calculation(desc: BaseDesc):
+def test_quantization_error_calculation(desc: QuantErrorDesc):
     weight = desc.weight
-    actual_error = desc.get_error_fn()(weight)
+    axis = (1,)
+    actual_error = _get_integer_quantization_error(weight, axis, desc.config)
     ref_error = desc.ref_error
     atol = desc.atol if desc.atol is not None else 1e-8
     assert np.allclose(actual_error, ref_error, atol=atol)
@@ -352,18 +373,21 @@ def test_weight_compress_with_ignored_scope(ignored_scope, num_compressed):
 
 @pytest.mark.parametrize("desc", CALCULATE_SCALE_DESCS)
 def test_calculate_scale_per_group(desc: CalculateScaleDesc):
-    act_scale, _ = _calculate_scale_per_group(desc.weight, reduction_axes=desc.axis, group_size=desc.group_size)
+    reshaped_weight, reduction_axis = _reshape_weights_for_grouped_quantization(
+        desc.weight, reduction_axes=desc.axis, group_size=desc.group_size
+    )
+    act_scale = np.max(np.abs(reshaped_weight), axis=reduction_axis, keepdims=True)  # [a1, r//gs, 1, a2]
     assert np.allclose(act_scale, desc.ref_scale)
 
 
 def test_raise_error_for_many_axes():
     with pytest.raises(RuntimeError):
-        _calculate_scale_per_group(WEIGHTS_2x4, reduction_axes=(0, 1), group_size=1)
+        _reshape_weights_for_grouped_quantization(WEIGHTS_2x4, reduction_axes=(0, 1), group_size=1)
 
 
 def test_raise_error_with_incorrect_group_size():
     with pytest.raises(RuntimeError):
-        _calculate_scale_per_group(WEIGHTS_2x4, reduction_axes=(0,), group_size=3)
+        _reshape_weights_for_grouped_quantization(WEIGHTS_2x4, reduction_axes=(0,), group_size=3)
 
 
 def test_raise_error_with_int8_and_non_default_ratio(mocker):

@@ -53,29 +53,33 @@ def flatten(a: Tensor) -> Tensor:
 
 
 @tensor_dispatch()
-def max(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
+def max(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = False) -> Tensor:
     """
     Return the maximum of an array or maximum along an axis.
 
     :param a: The input tensor.
     :param axis: Axis or axes along which to operate. By default, flattened input is used.
+    :param keepdims: If this is set to True, the axes which are reduced are left in the result as dimensions with size
+        one. With this option, the result will broadcast correctly against the input array. False, by default.
     :return: Maximum of a.
     """
 
 
 @tensor_dispatch()
-def min(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
+def min(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = False) -> Tensor:
     """
     Return the minimum of an array or minimum along an axis.
 
     :param a: The input tensor.
     :param axis: Axis or axes along which to operate. By default, flattened input is used.
+    :param keepdim: If this is set to True, the axes which are reduced are left in the result as dimensions with size
+        one. With this option, the result will broadcast correctly against the input array. False, by default.
     :return: Minimum of a.
     """
 
 
 @tensor_dispatch()
-def abs(a: Tensor) -> Tensor:  # pylint: disable=redefined-builtin
+def abs(a: Tensor) -> Tensor:
     """
     Calculate the absolute value element-wise.
 
@@ -118,7 +122,7 @@ def reshape(a: Tensor, shape: Tuple[int, ...]) -> Tensor:
 
 
 @tensor_dispatch()
-def all(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
+def all(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:
     """
     Test whether all tensor elements along a given axis evaluate to True.
 
@@ -147,7 +151,7 @@ def allclose(
 
 
 @tensor_dispatch()
-def any(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:  # pylint: disable=redefined-builtin
+def any(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:
     """
     Test whether any tensor elements along a given axis evaluate to True.
 
@@ -298,7 +302,7 @@ def mean(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims
 
 
 @tensor_dispatch()
-def round(a: Tensor, decimals: int = 0) -> Tensor:  # pylint: disable=redefined-builtin
+def round(a: Tensor, decimals: int = 0) -> Tensor:
     """
     Evenly round to the given number of decimals.
 
@@ -320,7 +324,6 @@ def disable_error_handling(a: Tensor) -> AbstractContextManager:
 
 
 def _initialize_backends():
-    # pylint: disable=unused-import
     import nncf.experimental.tensor.numpy_functions
 
     try:

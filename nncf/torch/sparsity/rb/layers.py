@@ -54,7 +54,6 @@ class RBSparsifyingWeight(BinaryMask):
 
 class MaskCalculationHook:
     def __init__(self, module):
-        # pylint: disable=protected-access
         self.hook = module._register_state_dict_hook(self.hook_fn)
 
     def hook_fn(self, module, destination, prefix, local_metadata):

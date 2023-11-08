@@ -38,7 +38,7 @@ TTensor = TypeVar("TTensor")
 def quantize(
     model: TModel,
     calibration_dataset: Dataset,
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
@@ -54,18 +54,19 @@ def quantize(
     :param calibration_dataset: A representative dataset for the
         calibration process.
     :type  calibration_dataset: nncf.Dataset
-    :param preset: A preset that controls the quantization mode
-        (symmetric and asymmetric). It can take the following values:
+    :param preset: A preset controls the quantization mode (symmetric and asymmetric).
+        It can take the following values:
         - `performance`: Symmetric quantization of weights and activations.
-        - `mixed`: Symmetric quantization of weights and asymmetric
-          quantization of activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
+        Default value is None. In this case, `mixed` preset is used for `transformer`
+        model type otherwise `performance`.
     :type  preset: nncf.QuantizationPreset
     :param target_device: A target device the specificity of which will be taken
         into account while compressing in order to obtain the best performance
         for this type of device.
     :type  target_device: nncf.TargetDevice
-    :param subset_size: Size of a subset to calculate activations
-        statistics used for quantization.
+    :param subset_size: Size of a subset to calculate activations statistics used for quantization.
+        Must be positive.
     :param fast_bias_correction: Setting this option to `False` enables a different
         bias correction method which is more accurate, in general, and takes
         more time but requires less memory.
@@ -80,6 +81,10 @@ def quantize(
     :return: The quantized model.
     :rtype: TModel
     """
+
+    if subset_size < 1:
+        raise ValueError("Subset size must be positive.")
+
     backend = get_backend(model)
     if backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.quantize_model import quantize_impl
@@ -152,7 +157,7 @@ def quantize_with_accuracy_control(
     validation_fn: Callable[[Any, Iterable[Any]], float],
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
@@ -179,7 +184,12 @@ def quantize_with_accuracy_control(
     :param max_drop: The maximum accuracy drop that should be achieved after the quantization.
     :param drop_type: The accuracy drop type, which determines how the maximum accuracy
         drop between the original model and the compressed model is calculated.
-    :param preset: A preset that controls the quantization mode.
+    :param preset: A preset controls the quantization mode (symmetric and asymmetric).
+        It can take the following values:
+        - `performance`: Symmetric quantization of weights and activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
+        Default value is None. In this case, `mixed` preset is used for `transformer`
+        model type otherwise `performance`.
     :type preset: nncf.QuantizationPreset
     :param target_device: A target device the specificity of which will be taken
         into account while compressing in order to obtain the best performance
@@ -242,9 +252,14 @@ def compress_weights(
     :param model: A model to be compressed.
     :param mode: Defines a mode for weight compression.
         INT8 stands for 8-bit integer quantization of all weights.
-        NF4 stands for a mixed-precision weights quantization to NF4 data type. The first and last layers
-        are always compressed to a backup precision which is 8-bit integer by default. All others are quantized whether
-        to NF4 or to a backup precision depending on criteria and the given ratio.
+        INT4_SYM stands for a mixed-precision weights quantization with 4-bit integer as a primary precision.
+            Weights are quantized to a primary precision symmetrically with a fixed zero point equals to 8.
+            The first and the last layers are always compressed to a backup precision, which is 8-bit integer,
+            by default. All others are quantized whether to 4-bit integer or to a backup precision depending on
+            criteria and the given ratio.
+        INT4_ASYM is the same as INT4_SYM mode, but weights are quantized to a primary precision asymmetrically
+            with a typical non-fixed zero point.
+        NF4 is the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
     :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
         and the rest to INT8).
     :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
@@ -263,7 +278,7 @@ def compress_weights(
                 "INT8 mode assumes per-channel quantization of all layers in 8 bit. "
                 "Default values of `ratio` (1) and `group_size` (-1) parameters can not be overridden"
             )
-    if mode == CompressWeightsMode.NF4:
+    else:
         if ratio is None:
             ratio = 1
         if group_size is None:
@@ -288,7 +303,7 @@ def quantize_with_tune_hyperparams(
     initial_metric_results: MetricResults,
     quantized_metric_results: MetricResults,
     tuner_subset_size: int = 300,
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
@@ -306,7 +321,12 @@ def quantize_with_tune_hyperparams(
     :param initial_metric_results: Initial metric results.
     :param quantized_metric_results: Quantized metric results.
     :param tuner_subset_size: Tuner subset size.
-    :param preset: A preset that controls the quantization mode.
+    :param preset: A preset controls the quantization mode (symmetric and asymmetric).
+        It can take the following values:
+        - `performance`: Symmetric quantization of weights and activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
+        Default value is None. In this case, `mixed` preset is used for `transformer`
+        model type otherwise `performance`.
     :param target_device: A target device the specificity of which will be taken
         into account while compressing in order to obtain the best performance
         for this type of device.

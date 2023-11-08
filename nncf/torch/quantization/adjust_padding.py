@@ -66,8 +66,6 @@ class CalculatePaddingAdjustment:
 
 
 def add_adjust_padding_nodes(bitwidth_graph: nx.DiGraph, model: NNCFNetwork) -> nx.DiGraph():
-    # pylint:disable=protected-access
-
     NewNodeArgs = namedtuple("NewNodeArgs", ("node_key", "attr", "parent_node_key"))
     nncf_graph = model.nncf.get_graph()
     args = []

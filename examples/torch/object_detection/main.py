@@ -60,7 +60,7 @@ from nncf.config.structures import ModelEvaluationArgs
 from nncf.config.utils import is_accuracy_aware_training
 from nncf.torch import create_compressed_model
 from nncf.torch import load_state
-from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.initialization import register_default_init_args
 from nncf.torch.utils import is_main_process
 
@@ -105,7 +105,6 @@ def main(argv):
     start_worker(main_worker, config)
 
 
-# pylint:disable=too-many-branches,too-many-statements
 def main_worker(current_gpu, config):
     #################################
     # Setup experiment environment
@@ -236,7 +235,7 @@ def main_worker(current_gpu, config):
 
     if "train" in config.mode and is_accuracy_aware_training(config):
         # validation function that returns the target metric value
-        # pylint: disable=E1123
+
         def validate_fn(model, epoch):
             model.eval()
             mAP = test_net(model, config.device, test_data_loader, distributed=config.distributed)
@@ -364,8 +363,8 @@ def create_dataloaders(config):
 
 
 def create_model(config: SampleConfig):
-    input_info_list = create_input_infos(config.nncf_config)
-    image_size = input_info_list[0].shape[-1]
+    input_info = FillerInputInfo.from_nncf_config(config.nncf_config)
+    image_size = input_info[0].shape[-1]
     ssd_net = build_ssd(config.model, config.ssd_params, image_size, config.num_classes, config)
     weights = config.get("weights")
     if weights:
@@ -417,7 +416,6 @@ def train_step(batch_iterator, compression_ctrl, config, criterion, net, train_d
     return batch_iterator, batch_loss, batch_loss_c, batch_loss_l, loss_comp
 
 
-# pylint: disable=too-many-statements
 def train(net, compression_ctrl, train_data_loader, test_data_loader, criterion, optimizer, config, lr_scheduler):
     net.train()
     loc_loss = 0

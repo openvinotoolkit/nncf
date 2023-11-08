@@ -32,7 +32,6 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import copy_model
 from nncf.common.utils.backend import get_backend
 from nncf.quantization.algorithms.algorithm import Algorithm
-from nncf.quantization.algorithms.bias_correction.backend import ALGO_BACKENDS
 
 TModel = TypeVar("TModel")
 
@@ -104,8 +103,8 @@ class BiasCorrection(Algorithm):
             raise RuntimeError("BiasCorrection algorithm does not support apply_for_all_nodes=True yet")
 
     @property
-    def available_backends(self) -> Dict[str, BackendType]:
-        return ALGO_BACKENDS.registry_dict
+    def available_backends(self) -> List[BackendType]:
+        return [BackendType.ONNX, BackendType.OPENVINO]
 
     def _set_backend_entity(self, model: TModel) -> None:
         """
@@ -135,7 +134,6 @@ class BiasCorrection(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         self._set_backend_entity(model)
-        model = self._backend_entity.insert_null_biases(model, graph)
         main_transformations_layout = TransformationLayout()
         main_model_transformer = ModelTransformerFactory.create(model)
 
@@ -489,8 +487,6 @@ class BiasCorrection(Algorithm):
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         self._set_backend_entity(model)
         model_copy = self._backend_entity.remove_fq_from_inputs(copy_model(model), graph)
-        graph_copy = NNCFGraphFactory.create(model_copy)
-        model_copy = self._backend_entity.insert_null_biases(model_copy, graph_copy)
         nncf_graph = NNCFGraphFactory.create(model_copy)
         statistic_container = StatisticPointsContainer()
 

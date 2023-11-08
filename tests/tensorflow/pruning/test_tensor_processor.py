@@ -74,7 +74,6 @@ def test_elementwise_mask_propagation(all_close):
 
 
 def test_split():
-    # pylint: disable=E1120
     tensor_data = [0.0, 1.0, 2.0, 3.0]
     tf_variable = tf.Variable(tensor_data)
     tf_output = tf.split(tf_variable, 2)

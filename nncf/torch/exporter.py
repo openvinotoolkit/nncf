@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from copy import copy
 from functools import partial
 from typing import Any, Tuple
 
@@ -20,7 +19,6 @@ from nncf.common.logging import nncf_logger
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_PT_CATEGORY
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
-from nncf.torch.dynamic_graph.graph_tracer import create_mock_tensor
 from nncf.torch.nested_objects_traversal import objwalk
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import is_tensor
@@ -34,7 +32,7 @@ def generate_output_names_list(num_outputs: int):
     return [f"output.{idx}" for idx in range(0, num_outputs)]
 
 
-def count_tensors(model_retval: Any) -> int:
+def count_tensors(obj: Any) -> int:
     count = 0
 
     def counter_fn(x: torch.Tensor) -> torch.Tensor:
@@ -42,7 +40,7 @@ def count_tensors(model_retval: Any) -> int:
         count += 1
         return x
 
-    objwalk(model_retval, is_tensor, counter_fn)
+    objwalk(obj, is_tensor, counter_fn)
     return count
 
 
@@ -127,38 +125,40 @@ class PTExporter(Exporter):
         """
         original_device = get_model_device(self._model)
         model = self._model.eval().cpu()
-        input_tensor_list = []
-        for info in self._model.nncf.input_infos:
-            single_batch_info = copy(info)
-            input_shape = tuple([1] + list(info.shape)[1:])
-            single_batch_info.shape = input_shape
-            input_tensor_list.append(create_mock_tensor(single_batch_info, "cpu"))
 
-        full_arg_forward = model.nncf.get_original_forward()
-        args = self._model_args[:-1]
-        kwargs = self._model_args[-1]
-        partial_forward = partial(full_arg_forward, *args, **kwargs)
-        with model.nncf.temporary_bound_original_forward(partial_forward):
-            if self._input_names is not None:
-                input_names = self._input_names
+        args, kwargs = self._model.nncf.input_infos.get_forward_inputs()
+
+        if self._model_args is not None:
+            args = tuple(list(args) + list(self._model_args[:-1]))
+            kwargs.update(**self._model_args[-1])
+
+        def to_single_batch_tensors(obj: torch.Tensor):
+            return obj[0:1]
+
+        args = objwalk(args, is_tensor, to_single_batch_tensors)
+        kwargs = objwalk(kwargs, is_tensor, to_single_batch_tensors)
+        export_args = (*args, kwargs)  # according to a variant of passing kwargs in torch.onnx.export doc
+
+        if self._input_names is not None:
+            input_names = self._input_names
+        else:
+            input_names = generate_input_names_list(count_tensors(export_args))
+
+        with torch.no_grad():
+            # Should call this, otherwise the operations executed during export will end up in the graph.
+            model.nncf.disable_dynamic_graph_building()
+
+            if self._output_names is not None:
+                output_names = self._output_names
             else:
-                input_names = generate_input_names_list(len(input_tensor_list))
-            # pylint:disable=unexpected-keyword-arg
-            with torch.no_grad():
-                # Should call this, otherwise the operations executed during export will end up in the graph.
-                model.nncf.disable_dynamic_graph_building()
+                # Will have to run a dummy forward call in order to determine the number of outputs.
+                dummy_forward = create_dummy_forward_fn(self._model.nncf.input_infos)
+                retval = dummy_forward(self._model)
+                output_names = generate_output_names_list(count_tensors(retval))
 
-                if self._output_names is not None:
-                    output_names = self._output_names
-                else:
-                    # Will have to run a dummy forward call in order to determine the number of outputs.
-                    dummy_forward = create_dummy_forward_fn(self._model.nncf.input_infos)
-                    retval = dummy_forward(self._model)
-                    output_names = generate_output_names_list(count_tensors(retval))
+            self._torch_export_call(model, export_args, save_path, input_names, output_names, opset_version)
 
-                self._torch_export_call(model, input_tensor_list, save_path, input_names, output_names, opset_version)
-
-                model.nncf.enable_dynamic_graph_building()
+            model.nncf.enable_dynamic_graph_building()
         model.to(original_device)
 
     def _torch_export_call(self, model, input_tensor_list, save_path, input_names, output_names, opset_version):

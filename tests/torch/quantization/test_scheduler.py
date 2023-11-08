@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader
 from nncf.common.statistics import NNCFStatistics
 from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.torch import register_default_init_args
-from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.initialization import wrap_dataloader_for_init
 from nncf.torch.quantization.base_ctrl import QuantizationControllerBase
 from nncf.torch.quantization.schedulers import StagedQuantizationScheduler
@@ -46,7 +46,6 @@ class QuantizationControllerBaseForTest(QuantizationControllerBase):
 
 
 class QuantizationCtrlBaseSpy:
-    # pylint:disable=no-member
     def __init__(self, mocker):
         self._mocked_ctrl = QuantizationControllerBaseForTest(mocker.stub)
         mocker.patch.object(self._mocked_ctrl, "enable_weight_quantization")
@@ -192,8 +191,8 @@ def test_staged_scheduler_with_range_init():
     register_bn_adaptation_init_args(config)
     model = squeezenet1_1(num_classes=10, dropout=0)
 
-    input_infos_list = create_input_infos(config)
-    input_sample_size = input_infos_list[0].shape
+    input_infos_list = FillerInputInfo.from_nncf_config(config)
+    input_sample_size = input_infos_list.elements[0].shape
     data_loader = DataLoader(
         OnesDatasetMock(input_sample_size[1:]),
         batch_size=1,
@@ -254,8 +253,8 @@ def test_staged_scheduler_with_hawq():
     num_classes = 10
     model = squeezenet1_1(num_classes=num_classes, dropout=0)
 
-    input_infos_list = create_input_infos(config)
-    input_sample_size = input_infos_list[0].shape
+    input_infos_list = FillerInputInfo.from_nncf_config(config)
+    input_sample_size = input_infos_list.elements[0].shape
     data_loader = DataLoader(
         HawqDatasetMock(input_sample_size[1:], num_classes),
         batch_size=1,

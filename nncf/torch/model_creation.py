@@ -24,6 +24,7 @@ from nncf.common.utils.api_marker import api
 from nncf.common.utils.debug import set_debug_log_dir
 from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algorithm_names
+from nncf.config.extractors import has_input_info_field
 from nncf.config.telemetry_extractors import CompressionStartedFromConfig
 from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_PT_CATEGORY
@@ -31,10 +32,13 @@ from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import NoCompressionAlgorithmBuilder
 from nncf.torch.composite_compression import PTCompositeCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
-from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.dynamic_graph.graph_tracer import WrapInputsFnType
+from nncf.torch.dynamic_graph.graph_tracer import WrapOutputsFnType
+from nncf.torch.dynamic_graph.io_handling import EXTRA_STRUCTS_WITH_DATALOADERS
+from nncf.torch.dynamic_graph.io_handling import ExactInputsInfo
+from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
+from nncf.torch.dynamic_graph.io_handling import ModelInputInfo
 from nncf.torch.nncf_network import NNCFNetwork
-
-# pylint:disable=too-many-branches
 from nncf.torch.utils import is_dist_avail_and_initialized
 from nncf.torch.utils import is_main_process
 from nncf.torch.utils import maybe_convert_legacy_names_in_compress_state
@@ -54,13 +58,13 @@ def create_compressed_model(
     compression_state: Optional[Dict[str, Any]] = None,
     dummy_forward_fn: Callable[[Module], Any] = None,
     wrap_inputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
-    wrap_outputs_fn: Callable[[Tuple, Dict], Tuple[Tuple, Dict]] = None,
+    wrap_outputs_fn: Callable[[Any], Any] = None,
     dump_graphs=True,
 ) -> Tuple[CompressionAlgorithmController, NNCFNetwork]:
     """
     The main function used to produce a model ready for compression fine-tuning from an original PyTorch
     model and a configuration object.
-    dummy_forward_fn
+
     :param model: The original model. Should have its parameters already loaded from a checkpoint or another
         source.
     :param config: A configuration object used to determine the exact compression modifications to be applied
@@ -143,7 +147,7 @@ def create_compressed_model(
 
     try:
         if is_legacy_model_state_dict:
-            from nncf.torch import load_state  # pylint: disable=cyclic-import
+            from nncf.torch import load_state
 
             state_dict_to_load = compression_state.get("state_dict", compression_state)
             load_state(compressed_model, state_dict_to_load, is_resume=True)
@@ -156,12 +160,36 @@ def create_compressed_model(
     return compression_ctrl, compressed_model
 
 
+def get_input_info_from_config(config: NNCFConfig) -> ModelInputInfo:
+    if has_input_info_field(config):
+        return FillerInputInfo.from_nncf_config(config)
+
+    nncf_logger.debug(
+        "Config has no 'input_info' section, trying to use dataloader output as model inputs " "for graph building."
+    )
+    exact_info = ExactInputsInfo.from_nncf_config_dataloaders(config)
+    if exact_info is not None:
+        return exact_info
+    raise RuntimeError(
+        "Could not determine tensor inputs for the model's forward call.\n"
+        "If you are using the `nncf.quantize` API, make sure that you supply the "
+        "calibration dataloader to the `nncf.quantize` call.\n"
+        "If you are using the `create_compressed_model` API, either specify the "
+        "inputs by using the 'input_info' section in the NNCFConfig, or attach an "
+        "initialization dataloader to the NNCFConfig by calling "
+        "`NNCFConfig.register_extra_structs(...)` with one of the following extra "
+        f"structures:\n"
+        f"{EXTRA_STRUCTS_WITH_DATALOADERS}\n"
+        f"or by calling `nncf.torch.register_default_init_args`"
+    )
+
+
 def create_nncf_network(
     model: torch.nn.Module,
     config: NNCFConfig,
     dummy_forward_fn: Callable[[Module], Any] = None,
-    wrap_inputs_fn: Callable = None,
-    wrap_outputs_fn: Callable = None,
+    wrap_inputs_fn: WrapInputsFnType = None,
+    wrap_outputs_fn: WrapOutputsFnType = None,
 ) -> NNCFNetwork:
     """
     The main function used to produce a model ready for adding compression from an original PyTorch
@@ -191,7 +219,8 @@ def create_nncf_network(
         by NNCF in the internal graph representation. Output is the tuple of (args, kwargs), where args and kwargs are
         the same as were supplied in input, but each tensor in the original input. Must be specified if
         dummy_forward_fn is specified.
-    :param wrap_outputs_fn: if supplied, will be used on the module's output during a regular, non-dummy forward call.
+    :param wrap_outputs_fn: Same as `wrap_inputs_fn`, but for marking model outputs with
+
     :return: A model wrapped by NNCFNetwork, which is ready for adding compression."""
 
     if dummy_forward_fn is not None and wrap_inputs_fn is None:
@@ -208,14 +237,14 @@ def create_nncf_network(
         # model that are used on training stage only (e.g. AuxLogits of Inception-v3 model) or unused modules with
         # weights. As a consequence, no need to care about spoiling BN statistics, as they're disabled in eval mode.
 
-        input_info_list = create_input_infos(config)
+        input_info = get_input_info_from_config(config)
         scopes_without_shape_matching = config.get("scopes_without_shape_matching", [])
         ignored_scopes = config.get("ignored_scopes")
         target_scopes = config.get("target_scopes")
 
         nncf_network = NNCFNetwork(
             model,
-            input_infos=input_info_list,
+            input_info=input_info,
             dummy_forward_fn=dummy_forward_fn,
             wrap_inputs_fn=wrap_inputs_fn,
             wrap_outputs_fn=wrap_outputs_fn,

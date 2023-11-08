@@ -18,25 +18,26 @@ OPENVINO_IGNORED_PATTERNS = Registry("IGNORED_PATTERNS")
 
 
 def _add_softmax_matmul(pattern: GraphPattern) -> None:
-    #       SOFTMAX  RESHAPE||TRANSPOSE||GATHER||SQUEEZE
+    #       SOFTMAX  RESHAPE||TRANSPOSE||GATHER||SQUEEZE||CONCAT
     #           \              /
     #            \            /
     #             \          /
     #              \        /
     #               \      /
     #                MATMUL
-    reshape_transpose_gather_squeeze = [
+    branch_matmul_nodes = [
         om.OVReshapeMetatype,
         om.OVTransposeMetatype,
         om.OVGatherMetatype,
         om.OVSqueezeMetatype,
+        om.OVConcatMetatype,
     ]
     softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: om.OVSoftmaxMetatype})
     matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: om.OVMatMulMetatype})
     matmul_branch_nodes = pattern.add_node(
         **{
-            GraphPattern.LABEL_ATTR: "RESHAPE||TRANSPOSE||GATHER||SQUEEZE",
-            GraphPattern.METATYPE_ATTR: reshape_transpose_gather_squeeze,
+            GraphPattern.LABEL_ATTR: "RESHAPE||TRANSPOSE||GATHER||SQUEEZE||CONCAT",
+            GraphPattern.METATYPE_ATTR: branch_matmul_nodes,
         }
     )
     pattern.add_edge(softmax, matmul)
@@ -48,7 +49,7 @@ def _add_softmax_reshape_matmul(pattern: GraphPattern) -> None:
     #           \
     #            \
     #             \
-    #             RESHAPE   RESHAPE||TRANSPOSE||GATHER||SQUEEZE
+    #             RESHAPE   RESHAPE||TRANSPOSE||GATHER||SQUEEZE||CONCAT
     #                 \                 /
     #                  \               /
     #                   \             /
@@ -56,14 +57,20 @@ def _add_softmax_reshape_matmul(pattern: GraphPattern) -> None:
     #                     \         /
     #                      \       /
     #                        MATMUL
-    reshape_transpose_gather = [om.OVReshapeMetatype, om.OVTransposeMetatype, om.OVGatherMetatype, om.OVSqueezeMetatype]
+    branch_matmul_nodes = [
+        om.OVReshapeMetatype,
+        om.OVTransposeMetatype,
+        om.OVGatherMetatype,
+        om.OVSqueezeMetatype,
+        om.OVConcatMetatype,
+    ]
     softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: om.OVSoftmaxMetatype})
     reshape = pattern.add_node(**{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.METATYPE_ATTR: om.OVReshapeMetatype})
     matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: om.OVMatMulMetatype})
     matmul_branch_nodes = pattern.add_node(
         **{
-            GraphPattern.LABEL_ATTR: "RESHAPE||TRANSPOSE||GATHER||SQUEEZE",
-            GraphPattern.METATYPE_ATTR: reshape_transpose_gather,
+            GraphPattern.LABEL_ATTR: "RESHAPE||TRANSPOSE||GATHER||SQUEEZE||CONCAT",
+            GraphPattern.METATYPE_ATTR: branch_matmul_nodes,
         }
     )
     pattern.add_edge(softmax, reshape)
@@ -139,7 +146,10 @@ def create_se_block() -> GraphPattern:
     )
     add_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "ADD_BIAS", GraphPattern.METATYPE_ATTR: om.OVAddMetatype})
     activation_node_2 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "SIGMOID", GraphPattern.METATYPE_ATTR: om.OVSigmoidMetatype}
+        **{
+            GraphPattern.LABEL_ATTR: "SIGMOID",
+            GraphPattern.METATYPE_ATTR: [om.OVSigmoidMetatype, om.OVHSigmoidMetatype],
+        }
     )
     multiply_node = pattern.add_node(
         **{

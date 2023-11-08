@@ -140,7 +140,7 @@ class GroupTestDesc:
     ref_groups: Optional[List[PruningGroup]] = None
 
     def __str__(self) -> str:
-        return self.model_desc.model_name  # pylint: disable=no-member
+        return self.model_desc.model_name
 
 
 SYNTHETIC_DESCS = [

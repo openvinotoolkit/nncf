@@ -30,9 +30,6 @@ from tests.torch.ptq.helpers import get_sum_aggregation_nncf_graph
 ParamsCls = TemplateTestQuantizerConfig.TestGetStatisticsCollectorParameters
 
 
-# pylint: disable=protected-access
-
-
 class TestQuantizerConfig(TemplateTestQuantizerConfig):
     def get_algo_backend(self):
         return PTMinMaxAlgoBackend()

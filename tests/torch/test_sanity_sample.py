@@ -487,7 +487,6 @@ class TestSanitySample:
         with set_num_threads_locally(1) if config["sample_type"] == "semantic_segmentation" else nullcontext():
             sample.main(arg_list)
 
-        # pylint: disable=no-member
         if config["sample_type"] == "classification":
             if is_staged_quantization(config["sample_config"]):
                 import examples.torch.classification.staged_quantization_worker as staged_worker

@@ -474,7 +474,6 @@ class TestSotaCheckpoints(RunTest):
     @pytest.mark.eval
     @pytest.mark.parametrize("eval_test_struct", RunTest.param_list, ids=RunTest.ids_list)
     def test_eval(self, sota_checkpoints_dir, sota_data_dir, eval_test_struct: EvalRunParamsStruct):
-        # pylint: disable=too-many-branches
         if sota_data_dir is None:
             pytest.skip("Path to datasets is not set")
 
@@ -574,7 +573,6 @@ class TestSotaCheckpoints(RunTest):
     @pytest.mark.oveval
     @pytest.mark.parametrize("eval_test_struct", RunTest.ov_param_list, ids=RunTest.ov_ids_list)
     def test_openvino_eval(self, eval_test_struct: EvalRunParamsStruct, sota_checkpoints_dir, ov_data_dir, openvino):
-        # pylint: disable=too-many-branches
         if not openvino:
             pytest.skip()
         # WA to avoid OS error

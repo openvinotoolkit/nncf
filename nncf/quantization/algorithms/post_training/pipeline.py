@@ -30,7 +30,7 @@ TModel = TypeVar("TModel")
 
 
 def create_ptq_pipeline(
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
@@ -47,11 +47,12 @@ def create_ptq_pipeline(
         3) MinMaxQuantization
         4) FastBiasCorrection or BiasCorrection
 
-    :param preset: A preset that controls the quantization mode
-        (symmetric and asymmetric). It can take the following values:
+    :param preset: A preset controls the quantization mode (symmetric and asymmetric).
+        It can take the following values:
         - `performance`: Symmetric quantization of weights and activations.
-        - `mixed`: Symmetric quantization of weights and asymmetric
-        quantization of activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
+        Default value is None. In this case, `mixed` preset is used for `transformer`
+        model type otherwise `performace`.
     :param target_device: A target device the specificity of which will be taken
         into account while compressing in order to obtain the best performance
         for this type of device.
@@ -79,10 +80,23 @@ def create_ptq_pipeline(
 
     # Add the `SmoothQuant` algorithm as the first step of the pipeline.
     # It is added only for `ModelType.TRANSFORMER`.
-    if model_type == ModelType.TRANSFORMER and advanced_parameters.smooth_quant_alpha >= 0:
-        pipeline_steps.append(
-            [SmoothQuant(subset_size, advanced_parameters.inplace_statistics, advanced_parameters.smooth_quant_alpha)]
+    sq_params = advanced_parameters.smooth_quant_alphas
+    sq_alpha = advanced_parameters.smooth_quant_alpha
+    if sq_alpha is not None:
+        warning_deprecated(
+            "`AdvancedQuantizationParameters(smooth_quant_alpha=..)` is deprecated."
+            "Please, use `AdvancedQuantizationParameters(smooth_quant_alphas)` option "
+            "with AdvancedSmoothQuantParameters(convolution=.., matmul=..) as value instead."
         )
+        if sq_alpha < 0:
+            sq_params.convolution = -1
+            sq_params.matmul = -1
+        else:
+            sq_params.matmul = sq_alpha
+
+    if model_type == ModelType.TRANSFORMER and (sq_params.convolution >= 0 or sq_params.matmul >= 0):
+        alpha_map = {"convolution": sq_params.convolution, "matmul": sq_params.matmul}
+        pipeline_steps.append([SmoothQuant(subset_size, advanced_parameters.inplace_statistics, alpha_map=alpha_map)])
 
     # Add the `ChannelAlignment` algorithm as the second step of the pipeline.
     if not advanced_parameters.disable_channel_alignment:

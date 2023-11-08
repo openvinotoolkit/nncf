@@ -162,7 +162,6 @@ class TestSotaCheckpoints:
             err_string = "\n".join(error_lines) if error_lines else None
             return exit_code, err_string
 
-    # pylint:disable=unused-variable
     @staticmethod
     def get_onnx_model_file_path(name):
         onnx_name = str(name + ".onnx")
@@ -322,7 +321,6 @@ class TestSotaCheckpoints:
                 within_thresholds = True
         return color, within_thresholds
 
-    # pylint:disable=unused-variable
     @staticmethod
     def write_common_metrics_file(per_model_metric_file_dump_path: Path):
         metric_value = OrderedDict()
@@ -499,7 +497,6 @@ class TestSotaCheckpoints:
         self.color_dict[eval_test_struct.model_name_], is_accuracy_within_thresholds = retval
         assert is_accuracy_within_thresholds
 
-    # pylint:disable=too-many-branches
     @pytest.mark.convert
     @pytest.mark.parametrize("eval_test_struct", param_list, ids=ids_list)
     @pytest.mark.parametrize("onnx_type", ["fq", "q_dq"])

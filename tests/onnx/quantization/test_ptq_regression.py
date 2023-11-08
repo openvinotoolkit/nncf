@@ -26,7 +26,6 @@ from tqdm import tqdm
 import nncf
 
 MODELS = [
-    #  pylint: disable=line-too-long
     (
         "https://github.com/onnx/models/raw/main/vision/classification/mobilenet/model/mobilenetv2-12.onnx",
         "mobilenetv2-12",

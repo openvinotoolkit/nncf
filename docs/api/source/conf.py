@@ -56,7 +56,6 @@ class APIInfo:
         self.canonical_name_vs_fqn: Dict[str, str] = {}
 
 
-# pylint: disable=too-many-branches
 def collect_api_entities() -> APIInfo:
     """
     Collects the fully qualified names of symbols in NNCF package that contain a special attribute (set via
@@ -73,13 +72,13 @@ def collect_api_entities() -> APIInfo:
     for _, modname, _ in pkgutil.walk_packages(path=nncf.__path__, prefix=nncf.__name__ + ".", onerror=lambda x: None):
         try:
             modules[modname] = importlib.import_module(modname)
-        except Exception as e:  # pylint: disable=broad-except
+        except Exception as e:
             skipped_modules[modname] = str(e)
 
     from nncf.common.utils.api_marker import api
 
     canonical_imports_seen = set()
-    # pylint: disable=too-many-nested-blocks
+
     for modname, module in modules.items():
         print(f"{modname}")
         for obj_name, obj in inspect.getmembers(module):
@@ -87,7 +86,7 @@ def collect_api_entities() -> APIInfo:
             if objects_module == modname:
                 if inspect.isclass(obj) or inspect.isfunction(obj):
                     if hasattr(obj, api.API_MARKER_ATTR):
-                        marked_object_name = obj._nncf_api_marker  # pylint: disable=protected-access
+                        marked_object_name = obj._nncf_api_marker
                         # Check the actual name of the originally marked object
                         # so that the classes derived from base API classes don't
                         # all automatically end up in API

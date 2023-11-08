@@ -51,9 +51,9 @@ def test_no_trace_model_patching():
 
     # Not patching anything: all output nodes are traced
     _, compressed_model = create_compressed_model(TestModel(True), config)
-    assert len(compressed_model.nncf.get_original_graph().get_output_nodes()) == 2  # pylint: disable=protected-access
+    assert len(compressed_model.nncf.get_original_graph().get_output_nodes()) == 2
 
     # Patching a function results with no_nncf_trace in method not producing an output node
     disable_tracing(TestModel.ambiguous_op)
     _, compressed_model = create_compressed_model(TestModel(False), get_empty_config())
-    assert len(compressed_model.nncf.get_original_graph().get_output_nodes()) == 1  # pylint: disable=protected-access
+    assert len(compressed_model.nncf.get_original_graph().get_output_nodes()) == 1

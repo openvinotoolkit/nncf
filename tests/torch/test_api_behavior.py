@@ -94,7 +94,6 @@ def test_range_init_is_called(
     )  # autospec=True will patch the function as an instance method
     bn_adaptation_spy = mocker.patch("nncf.torch.initialization.DataLoaderBNAdaptationRunner.run")
 
-    # pylint:disable=protected-access
     def fn(self) -> SingleConfigQuantizerSetup:
         return self._algo.get_quantizer_setup_for_current_state()
 

@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=too-many-lines
+
 import functools
 import inspect
 import types
@@ -40,9 +40,11 @@ from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph import ShapeIgnoringTensorMetaComparator
 from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
-from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.torch.dynamic_graph.graph_tracer import WrapInputsFnType
+from nncf.torch.dynamic_graph.graph_tracer import WrapOutputsFnType
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.io_handling import InputInfoWrapManager
+from nncf.torch.dynamic_graph.io_handling import ModelInputInfo
 from nncf.torch.dynamic_graph.io_handling import replicate_same_tensors
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
@@ -128,7 +130,6 @@ class NNCFNetworkInterface(torch.nn.Module):
     when saving/loading checkpoints
     """
 
-    # pylint:disable=too-many-public-methods
     MODEL_STATE_VERSION_ATTR = "_nncf_model_state_version"
     MODEL_STATE_VERSION = 1
 
@@ -189,13 +190,13 @@ class NNCFNetworkInterface(torch.nn.Module):
     def __init__(
         self,
         model: torch.nn.Module,
-        input_infos: List[ModelInputInfo] = None,
+        input_info: ModelInputInfo = None,
         dummy_forward_fn: Callable = None,
-        wrap_inputs_fn: Callable = None,
+        wrap_inputs_fn: WrapInputsFnType = None,
         scopes_without_shape_matching: List[str] = None,
         ignored_scopes: List[str] = None,
         target_scopes: List[str] = None,
-        wrap_outputs_fn: Callable = None,
+        wrap_outputs_fn: WrapOutputsFnType = None,
     ):
         super().__init__()
 
@@ -216,7 +217,7 @@ class NNCFNetworkInterface(torch.nn.Module):
             self._original_instance_forward = model.__dict__.get("forward")
 
         self._forward_signature = inspect.signature(self.get_original_forward())
-        self._input_infos = input_infos
+        self._input_info = input_info
 
         self._ignored_scopes = ignored_scopes
         self._target_scopes = target_scopes
@@ -227,11 +228,11 @@ class NNCFNetworkInterface(torch.nn.Module):
 
         if wrap_inputs_fn is not None:
             self._wrap_inputs_fn = wrap_inputs_fn
-        elif self._input_infos is not None:
-            self.__input_infos_based_input_wrapper = InputInfoWrapManager(
-                self._input_infos, self._forward_signature, module_ref_for_device=model
+        elif self._input_info is not None:
+            self.__input_info_based_input_wrapper = InputInfoWrapManager(
+                self._input_info, self._forward_signature, module_ref_for_device=model
             )
-            self._wrap_inputs_fn = self.__input_infos_based_input_wrapper.wrap_inputs
+            self._wrap_inputs_fn = self.__input_info_based_input_wrapper.wrap_inputs
         else:
             raise ValueError("wrap_inputs_fn or input_infos should be passed.")
 
@@ -269,7 +270,7 @@ class NNCFNetworkInterface(torch.nn.Module):
             self._original_dynamic_graph = GraphTracer(_orig_graph_build_forward_fn).trace_graph(
                 model, _orig_context, as_eval=True
             )
-            self._original_graph = GraphConverter.convert(self._original_dynamic_graph, input_infos=self._input_infos)
+            self._original_graph = GraphConverter.convert(self._original_dynamic_graph)
         self._compressed_graph: PTNNCFGraph = None
 
         self._compressed_context = TracingContext()
@@ -312,8 +313,8 @@ class NNCFNetworkInterface(torch.nn.Module):
         return object.__getattribute__(self, "__model_ref")
 
     @property
-    def input_infos(self) -> List[ModelInputInfo]:
-        return deepcopy(self._input_infos)
+    def input_infos(self) -> ModelInputInfo:
+        return deepcopy(self._input_info)
 
     def _strip_traced_tensors(self, args: Tuple, kwargs: Dict) -> Tuple[Tuple, Dict]:
         """
@@ -360,13 +361,13 @@ class NNCFNetworkInterface(torch.nn.Module):
     def get_clean_shallow_copy(self) -> "NNCFNetwork":
         # WARNING: Will reset pre- and post-ops of the underlying model. Use save_nncf_module_additions
         # and load_nncf_module_additions to preserve these, or temporary_clean_view().
-        from nncf.torch.utils import load_module_state  # pylint: disable=cyclic-import
-        from nncf.torch.utils import save_module_state  # pylint: disable=cyclic-import
+        from nncf.torch.utils import load_module_state
+        from nncf.torch.utils import save_module_state
 
         saved_state = save_module_state(self._model_ref)
         new_interface = NNCFNetworkInterface(
             self._model_ref,
-            self._input_infos,
+            self._input_info,
             self._user_dummy_forward_fn,
             self._wrap_inputs_fn,
             self._scopes_without_shape_matching,
@@ -374,7 +375,7 @@ class NNCFNetworkInterface(torch.nn.Module):
             self._target_scopes,
             wrap_outputs_fn=self._wrap_outputs_fn,
         )
-        self._model_ref._nncf = new_interface  # pylint:disable=protected-access
+        self._model_ref._nncf = new_interface
         self._model_ref.nncf.reset_nncf_modules()
         load_module_state(self._model_ref, saved_state)
         return self._model_ref
@@ -442,7 +443,7 @@ class NNCFNetworkInterface(torch.nn.Module):
     def _get_dummy_forward_fn_for_graph_building(self, with_input_tracing, with_output_tracing):
         if self._user_dummy_forward_fn is None:
             return create_dummy_forward_fn(
-                self._input_infos,
+                self._input_info,
                 with_input_tracing=with_input_tracing,
                 wrap_inputs_fn=self._wrap_inputs_fn,
                 wrap_outputs_fn=self._wrap_outputs_fn,
@@ -499,9 +500,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         builder = GraphBuilder(dummy_forward_fn)
 
         with training_mode_switcher(self._model_ref, is_training=False):
-            self._compressed_graph = builder.build_graph(
-                self._model_ref, self._compressed_context, input_infos=self._input_infos
-            )
+            self._compressed_graph = builder.build_graph(self._model_ref, self._compressed_context)
 
     def is_scope_in_nncf_module_scope(self, scope: Scope) -> bool:
         norm_nncf_scopes = []
@@ -562,7 +561,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         if compression_module_type not in self._extra_module_types:
             raise RuntimeError("Module type {} was not registered".format(compression_module_type))
         module_dict = self.__getattr__(attr_name)
-        # pylint: disable=protected-access
+
         module_dict._modules = OrderedDict(sorted(module_dict._modules.items()))
         self.__setattr__(attr_name, module_dict)
 
@@ -773,20 +772,20 @@ class NNCFNetworkMeta(type):
     def __call__(
         cls,
         original_model: torch.nn.Module,
-        input_infos: List[ModelInputInfo] = None,
+        input_info: ModelInputInfo = None,
         dummy_forward_fn: Callable = None,
-        wrap_inputs_fn: Callable[..., None] = None,
+        wrap_inputs_fn: WrapInputsFnType = None,
         scopes_without_shape_matching: List[str] = None,
         ignored_scopes: List[str] = None,
         target_scopes: List[str] = None,
-        wrap_outputs_fn: Callable[..., None] = None,
+        wrap_outputs_fn: WrapOutputsFnType = None,
     ) -> "NNCFNetwork":
         """
         This function plays the role of a "constructor" call in the `nncf_network = NNCFNetwork(original_model, ...)`
         syntax. *_scopes arguments are to be passed as string representation of either
         `nncf.common.graph.graph.NNCFNodeName` or `nncf.torch.dynamic_graph.scope.Scope` objects.
         :param original_model: The original model object to be extended with NNCF functionality.
-        :param input_infos: A list of descriptors of each tensor input to the model. Will be used to properly generate
+        :param input_info: A list of descriptors of each tensor input to the model. Will be used to properly generate
         dummy inputs during internal forward calls of the original model for purposes of control flow graph building.
         :param dummy_forward_fn: A function to be called instead of the model's original forward function during
         control flow graph building.
@@ -810,14 +809,14 @@ class NNCFNetworkMeta(type):
         original_class = original_model.__class__
         original_model._nncf = NNCFNetworkInterface(
             original_model,
-            input_infos,
+            input_info,
             dummy_forward_fn,
             wrap_inputs_fn,
             scopes_without_shape_matching,
             ignored_scopes,
             target_scopes,
             wrap_outputs_fn,
-        )  # pylint:disable=protected-access
+        )
         # The new class will also have an adjusted metaclass to avoid a "metaclass conflict" upon
         # class creation
         original_metaclass = type(original_model.__class__)
@@ -853,7 +852,7 @@ class NNCFNetworkMeta(type):
             # its forward method, which it effectively doesn't have. Employing a special iterator allows to hide the
             # NNCFInterface object during iteration.
             def nncf_safe_iter(self: torch.nn.Sequential):
-                return NNCFSkippingIter(iter(self._modules.values()))  # pylint:disable=protected-access
+                return NNCFSkippingIter(iter(self._modules.values()))
 
             original_model.__class__.__iter__ = nncf_safe_iter
         return original_model
@@ -925,7 +924,7 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
         Wraps the original forward call, doing additional actions before and after the call to facilitate model
         graph tracing and calling compression-related hooks.
         """
-        # pylint:disable=protected-access
+
         with self.nncf._compressed_context as ctx:
             ctx.base_module_thread_local_replica = self
             args, kwargs = replicate_same_tensors((args, kwargs))
@@ -1012,7 +1011,6 @@ class LoadStateListener:
     """
 
     def __init__(self, model: "NNCFNetwork", all_quantizations: Dict[str, torch.nn.Module]):
-        # pylint: disable=protected-access
         self.hook = model._register_load_state_dict_pre_hook(
             functools.partial(self.hook_fn, quantize_modules=list(all_quantizations.values()))
         )

@@ -28,7 +28,6 @@ LR_SCHEDULER_PARAMS = LRSchedulerParams.from_dict(
 )
 
 
-# pylint: disable=protected-access
 class TestLRScheduler:
     def test_warmup_lr(self, mocker):
         warmup_lr = mocker.patch(

@@ -62,15 +62,17 @@ def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
 
 
 @_register_numpy_types(fns.max)
-def _(a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None) -> np.ndarray:
-    return np.max(a, axis=axis)
+def _(
+    a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False
+) -> np.ndarray:
+    return np.max(a, axis=axis, keepdims=keepdims)
 
 
 @_register_numpy_types(fns.min)
 def _(
-    a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None
+    a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False
 ) -> Union[np.ndarray, np.generic]:
-    return np.min(a, axis=axis)
+    return np.min(a, axis=axis, keepdims=keepdims)
 
 
 @_register_numpy_types(fns.abs)
