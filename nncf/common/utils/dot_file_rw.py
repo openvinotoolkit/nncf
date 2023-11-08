@@ -78,4 +78,8 @@ def relabel_graph_for_dot_visualization(nx_graph: nx.Graph, from_reference: bool
     for _, node_data in relabeled_graph.nodes(data=True):
         if "label" in node_data:
             node_data["label"] = node_data["label"].replace(__CHARACTER_REPLACE_FROM, __CHARACTER_REPLACE_TO)
+
+    for _, _, edge_data in relabeled_graph.edges(data=True):
+        if "label" in edge_data:
+            edge_data["label"] = edge_data["label"].replace(__CHARACTER_REPLACE_FROM, __CHARACTER_REPLACE_TO)
     return relabeled_graph
