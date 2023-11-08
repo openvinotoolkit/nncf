@@ -38,7 +38,7 @@ def get_graph_without_data(G: nx.DiGraph) -> nx.DiGraph:
 
 
 def read_dot_graph(path: pathlib.Path) -> nx.DiGraph:
-    loaded: nx.DiGraph = nx.nx_pydot.read_dot(str(path))
+    loaded = nx.DiGraph(nx.nx_pydot.read_dot(str(path)))
     return relabel_graph_for_dot_visualization(loaded, from_reference=True)
 
 

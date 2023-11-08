@@ -104,9 +104,9 @@ strict digraph  {
 "102 Transpose_1766" [id=102, type=Add];
 "103 up_sampling2d/mul" [id=103, type=Multiply];
 "104 Transpose_1728" [id=104, type=Transpose];
-"105 conv2d_17/BiasAdd^0" [id=105, label="105 conv2d_17/BiasAdd:0", type=Result];
+"105 conv2d_17/BiasAdd^0" [id=105, type=Result];
 "106 conv2d_20/BiasAdd" [id=106, type=Transpose];
-"107 conv2d_20/BiasAdd^0" [id=107, label="107 conv2d_20/BiasAdd:0", type=Result];
+"107 conv2d_20/BiasAdd^0" [id=107, type=Result];
 "108 Constant_1765" [id=108, type=Constant];
 "109 Transpose_1764" [id=109, type=Constant];
 "110 Convolution_706/fq_weights_1" [id=110, type=FakeQuantize];
