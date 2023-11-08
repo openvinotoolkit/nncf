@@ -76,6 +76,13 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
+    def constant_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific metatypes that can be interpreted as constants.
+        """
+
+    @property
+    @abstractmethod
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific metatypes for which overflow_fix is applicable.

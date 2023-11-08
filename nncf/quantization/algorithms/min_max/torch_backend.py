@@ -74,6 +74,10 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return []
 
     @property
+    def constant_metatypes(self) -> List[OperatorMetatype]:
+        return []
+
+    @property
     def conv_metatypes(self) -> List[OperatorMetatype]:
         return [om.PTModuleConv1dMetatype, om.PTModuleConv2dMetatype, om.PTModuleConv3dMetatype]
 
