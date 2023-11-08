@@ -364,7 +364,7 @@ def create_dataloaders(config):
 
 def create_model(config: SampleConfig):
     input_info = FillerInputInfo.from_nncf_config(config.nncf_config)
-    image_size = input_info[0].shape[-1]
+    image_size = input_info.elements[0].shape[-1]
     ssd_net = build_ssd(config.model, config.ssd_params, image_size, config.num_classes, config)
     weights = config.get("weights")
     if weights:
