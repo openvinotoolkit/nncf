@@ -56,8 +56,10 @@ from nncf.torch.graph.operator_metatypes import PTSplitMetatype
 from nncf.torch.graph.operator_metatypes import PTSqueezeMetatype
 from nncf.torch.graph.operator_metatypes import PTTransposeMetatype
 from nncf.torch.initialization import PTInitializingDataLoader
+from nncf.torch.nested_objects_traversal import objwalk
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import NNCFNetworkMeta
+from nncf.torch.utils import is_tensor
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.test_compressed_graph import get_basic_quantization_config
@@ -638,6 +640,26 @@ def test_filler_input_info_arg_generation(filler_gen_test_struct: FillerInputInf
         ref_kw, ref_kwarg = ref_kw_and_arg
         assert test_kw == ref_kw
         check_arg(test_kwarg, ref_kwarg)
+
+
+@pytest.mark.parametrize(
+    "input_info",
+    [
+        FillerInputInfo([FillerInputElement([1, 3, 3, 3])]),
+        ExactInputsInfo((torch.Tensor([1]), torch.Tensor([1])), {"a": torch.Tensor([1]), "b": torch.Tensor([1])}),
+    ],
+    ids=["filler", "exact"],
+)
+@pytest.mark.parametrize("device", ["cuda", "cpu"])
+def test_input_infos_respect_device_setting(input_info: ModelInputInfo, device: str):
+    if device == "cuda" and not torch.cuda.is_available():
+        pytest.skip("Skipped checking CUDA device test cases on CPU-only hosts")
+    forward_inputs = input_info.get_forward_inputs(device)
+
+    def assert_on_device(x: torch.Tensor):
+        assert device in str(x.device)
+
+    objwalk(forward_inputs, is_tensor, assert_on_device)
 
 
 class MockInitDataLoader(PTInitializingDataLoader):
