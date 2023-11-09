@@ -155,9 +155,6 @@ def test_width_reorg(basic_model):
 
 
 def test_width_custom_external_reorg(basic_model):
-    if not isinstance(basic_model, TwoSequentialFcLNTestModel):
-        pytest.skip("Skip test for conv model")
-
     config = get_empty_config(input_sample_sizes=basic_model.INPUT_SIZE)
     external_importance = basic_model.IMPORTANCE
     with tempfile.NamedTemporaryFile() as external_importance_tempfile:
