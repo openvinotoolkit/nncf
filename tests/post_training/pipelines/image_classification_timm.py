@@ -127,7 +127,7 @@ class ImageClassificationTimm(BaseTestPipeline):
 
     def prepare_calibration_dataset(self):
         dataset = datasets.ImageFolder(root=self.data_dir / "imagenet" / "val", transform=self.transform)
-        loader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size, num_workers=2, shuffle=False)
+        loader = torch.utils.data.DataLoader(dataset, batch_size=10, num_workers=2, shuffle=False)
 
         self.calibration_dataset = nncf.Dataset(loader, self.get_transform_calibration_fn())
 
