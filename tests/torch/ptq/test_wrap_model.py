@@ -13,47 +13,51 @@ import pytest
 import torch
 from torch import nn
 
+from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.model_creation import wrap_model
 
 
-class TestArgumentModel(nn.Module):
+class ArgumentModel(nn.Module):
     def __init__(self, example_input) -> None:
         super().__init__()
         self._example_input = example_input
 
     def forward(self, x):
-        assert x == self._example_input
+        with no_nncf_trace():
+            assert x == self._example_input
         return x
 
 
-class TestNonKeyWordArgumentsModel(nn.Module):
+class NonKeyWordArgumentsModel(nn.Module):
     def __init__(self, example_input) -> None:
         super().__init__()
         self._example_input = example_input
 
     def forward(self, x, y):
-        assert x == self._example_input[0]
-        assert y == self._example_input[1]
+        with no_nncf_trace():
+            assert x == self._example_input[0]
+            assert y == self._example_input[1]
         return x, y
 
 
-class TestKeyWordArgumentsModel(nn.Module):
+class KeyWordArgumentsModel(nn.Module):
     def __init__(self, example_input) -> None:
         super().__init__()
         self._example_input = example_input
 
     def forward(self, *, x, y):
-        assert x == self._example_input["x"]
-        assert y == self._example_input["y"]
+        with no_nncf_trace():
+            assert x == self._example_input["x"]
+            assert y == self._example_input["y"]
         return x, y
 
 
 @pytest.mark.parametrize(
     ("example_input", "model_cls"),
     [
-        (torch.empty(1), TestArgumentModel),
-        ((torch.empty(1), torch.empty(1)), TestNonKeyWordArgumentsModel),
-        ({"x": torch.empty(1), "y": torch.empty(1)}, TestKeyWordArgumentsModel),
+        (torch.empty(1), ArgumentModel),
+        ((torch.empty(1), torch.empty(1)), NonKeyWordArgumentsModel),
+        ({"x": torch.empty(1), "y": torch.empty(1)}, KeyWordArgumentsModel),
     ],
     ids=("tensor", "tuple", "dict"),
 )
@@ -63,12 +67,12 @@ def test_wrap_model_with_example_input(example_input, model_cls):
     nncf_graph = nncf_network.nncf.get_original_graph()
     all_nodes = nncf_graph.get_all_nodes()
 
-    num_nodes = 3
+    num_nodes = 2
     if isinstance(example_input, (tuple, dict)):
         num_nodes *= len(example_input)
 
     assert len(all_nodes) == num_nodes
 
-    num_io_nodes = num_nodes // 3
-    nodes = ["__eq__"] * num_io_nodes + ["nncf_model_input"] * num_io_nodes + ["nncf_model_output"] * num_io_nodes
+    num_io_nodes = num_nodes // 2
+    nodes = ["nncf_model_input"] * num_io_nodes + ["nncf_model_output"] * num_io_nodes
     assert sorted([node.node_type for node in all_nodes]) == nodes
