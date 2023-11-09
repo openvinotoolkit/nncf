@@ -62,7 +62,7 @@ def _unescape_colons_in_attrs_with_colons(data: Dict):
     for attr_name in data:
         attr_val = data[attr_name]
         if RESERVED_CHAR in attr_val and (attr_val[0] == '"' and attr_val[-1] == '"'):
-            data[attr_name] = [attr_name][1:-1]
+            data[attr_name] = data[attr_name][1:-1]
 
 
 def _remove_cosmetic_labels(graph: nx.DiGraph):
