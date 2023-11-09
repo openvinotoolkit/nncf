@@ -55,7 +55,7 @@ flag_management:
         - nncf/openvino
 
 component_management:
-  individual_flags:
+  individual_components:
     - component_id: common
       name: common
       paths:
