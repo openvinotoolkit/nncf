@@ -43,13 +43,15 @@ def read_dot_graph(path: pathlib.Path) -> nx.DiGraph:
     loaded = nx.DiGraph(nx.nx_pydot.read_dot(str(path)))
     return relabel_graph_for_dot_visualization(loaded, from_reference=True)
 
+
 class _Direction(IntEnum):
     TO_DOT = 0
     FROM_DOT = 0
 
 
-RESERVED_CHAR = ':'
-REPLACEMENT_CHAR = '^'
+RESERVED_CHAR = ":"
+REPLACEMENT_CHAR = "^"
+
 
 def _maybe_escape_colons_in_attrs(data: Dict):
     for attr_name in data:
