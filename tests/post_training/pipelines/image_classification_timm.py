@@ -47,6 +47,7 @@ class ImageClassificationTimm(BaseTestPipeline):
         timm_model = replace_timm_custom_modules_with_torch_native(timm_model)
         self.model_cfg = timm_model.default_cfg
         self.input_size = [1] + list(timm_model.default_cfg["input_size"])
+        self.dynamic_input_size = [-1] + list(timm_model.default_cfg["input_size"])
         self.dummy_tensor = torch.rand(self.input_size)
 
         if self.backend in PT_BACKENDS:
@@ -61,12 +62,16 @@ class ImageClassificationTimm(BaseTestPipeline):
                 export_params=True,
                 opset_version=13,
                 do_constant_folding=False,
+                input_names=["image"],
+                dynamic_axes={
+                    "image": {0: "batch"},
+                },
             )
             self.model = onnx.load(onnx_path)
             self.input_name = self.model.graph.input[0].name
 
         if self.backend in OV_BACKENDS:
-            self.model = convert_model(timm_model, example_input=self.dummy_tensor, input_shape=self.input_size)
+            self.model = convert_model(timm_model, example_input=self.dummy_tensor, input_shape=self.dynamic_input_size)
             self.input_name = list(inp.get_any_name() for inp in self.model.inputs)[0]
 
         self._dump_model_fp32()
@@ -122,7 +127,7 @@ class ImageClassificationTimm(BaseTestPipeline):
 
     def prepare_calibration_dataset(self):
         dataset = datasets.ImageFolder(root=self.data_dir / "imagenet" / "val", transform=self.transform)
-        loader = torch.utils.data.DataLoader(dataset, batch_size=1, num_workers=2, shuffle=False)
+        loader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size, num_workers=2, shuffle=False)
 
         self.calibration_dataset = nncf.Dataset(loader, self.get_transform_calibration_fn())
 

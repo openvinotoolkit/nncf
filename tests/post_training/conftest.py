@@ -25,6 +25,7 @@ def pytest_addoption(parser):
     parser.addoption("--data", action="store", help="Data directory")
     parser.addoption("--output", action="store", default="./tmp/", help="Directory to store artifacts")
     parser.addoption("--no-eval", action="store_true", help="Skip validation step")
+    parser.addoption("--batch_size", action="store", default=1, type=int, help="Batch size of calibration dataset")
 
 
 def pytest_configure(config):

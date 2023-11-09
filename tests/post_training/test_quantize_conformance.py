@@ -42,6 +42,11 @@ def fixture_no_eval(pytestconfig):
     return pytestconfig.getoption("no_eval")
 
 
+@pytest.fixture(scope="session", name="batch_size")
+def fixture_batch_size(pytestconfig):
+    return pytestconfig.getoption("batch_size")
+
+
 def read_reference_data():
     path_reference = Path(__file__).parent / "reference_data.yaml"
     with path_reference.open() as f:
@@ -53,7 +58,7 @@ REFERENCE_DATA = read_reference_data()
 
 
 @pytest.mark.parametrize("test_case_name", TEST_CASES.keys())
-def test_ptq_quantization(test_case_name, data, output, result, no_eval):
+def test_ptq_quantization(test_case_name, data, output, result, no_eval, batch_size):
     pipeline = None
     err_msg = None
     test_model_param = None
@@ -81,6 +86,7 @@ def test_ptq_quantization(test_case_name, data, output, result, no_eval):
             "data_dir": data,
             "reference_data": REFERENCE_DATA[test_case_name],
             "no_eval": no_eval,
+            "batch_size": batch_size,
         }
 
         pipeline = pipeline_cls(**pipeline_kwargs)
