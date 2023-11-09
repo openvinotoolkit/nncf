@@ -82,9 +82,9 @@ strict digraph  {
 "80 conv2d_17/BiasAdd" [id=80, type=Transpose];
 "81 Transpose_1763" [id=81, type=Add];
 "82 up_sampling2d/mul" [id=82, type=Multiply];
-"83 conv2d_17/BiasAdd^0" [id=83, type=Result];
+"83 conv2d_17/BiasAdd^0" [id=83, label="83 conv2d_17/BiasAdd:0", type=Result];
 "84 conv2d_20/BiasAdd" [id=84, type=Transpose];
-"85 conv2d_20/BiasAdd^0" [id=85, type=Result];
+"85 conv2d_20/BiasAdd^0" [id=85, label="85 conv2d_20/BiasAdd:0", type=Result];
 "86 Constant_1762" [id=86, type=Constant];
 "87 Transpose_1761" [id=87, type=Constant];
 "88 Transpose_705" [id=88, type=Constant];
