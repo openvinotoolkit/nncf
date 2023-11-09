@@ -190,4 +190,4 @@ def _(a: torch.Tensor, decimals=0) -> torch.Tensor:
 
 @fns.disable_error_handling.register(torch.Tensor)
 def _(a: torch.Tensor) -> AbstractContextManager:
-    return nullcontext
+    return nullcontext()
