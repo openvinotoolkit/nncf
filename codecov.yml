@@ -36,23 +36,6 @@ comment:
   require_head: false
   require_base: false
 
-flag_management:
-  individual_flags:
-    - name: COMMON
-      paths:
-        - nncf/common
-    - name: TORCH
-      paths:
-        - nncf/torch
-    - name: TENSORFLOW
-      paths:
-        - nncf/tensorflow
-    - name: ONNX
-      paths:
-        - nncf/onnx
-    - name: OPENVINO
-      paths:
-        - nncf/openvino
 
 component_management:
   individual_components:
