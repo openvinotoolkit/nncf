@@ -32,8 +32,6 @@ tenor_b = Tensor(np.array([1,2]))
 tensor_a + tenor_b  # Tensor(array([2, 4]))
 ```
 
-**NOTE** Division operations for the numpy backend are performed with warnings disabled for the same for all backends.
-
 ### Comparison operators
 
 All math operations are overrided to operated with wrapped object and return `Tensor`
@@ -117,9 +115,6 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
         :param arg1: __description__
         :return: __description__
         """
-        if isinstance(a, tensor.Tensor):
-            return tensor.Tensor(foo(a.data, axis))
-        return NotImplemented(f"Function `foo` is not implemented for {type(a)}")
     ```
 
     **NOTE** To control work with Tensors, different types of wrapper functions can be selected

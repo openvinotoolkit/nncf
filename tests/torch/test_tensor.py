@@ -12,7 +12,6 @@ import pytest
 import torch
 
 from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor import functions as fns
 from nncf.experimental.tensor.enums import TensorDeviceType
 from tests.shared.test_templates.template_test_nncf_tensor import TemplateTestNNCFTensorOperators
 
@@ -21,10 +20,6 @@ class TestPTNNCFTensorOperators(TemplateTestNNCFTensorOperators):
     @staticmethod
     def to_tensor(x):
         return torch.tensor(x)
-
-    def test_disable_error_handling(self):
-        with fns.disable_error_handling(Tensor(self.to_tensor(1))):
-            pass
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="Skipping for CPU-only setups")

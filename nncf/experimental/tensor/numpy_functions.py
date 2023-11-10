@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from contextlib import AbstractContextManager
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
@@ -189,8 +188,3 @@ def _(a: Union[np.ndarray, np.generic], axis: Union[int, Tuple[int, ...]] = None
 @_register_numpy_types(fns.round)
 def _(a: Union[np.ndarray, np.generic], decimals: int = 0) -> np.ndarray:
     return np.round(a, decimals=decimals)
-
-
-@_register_numpy_types(fns.disable_error_handling)
-def _(a: Union[np.ndarray, np.generic]) -> AbstractContextManager:
-    return np.errstate(invalid="ignore", divide="ignore")

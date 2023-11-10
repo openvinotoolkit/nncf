@@ -313,16 +313,6 @@ def round(a: Tensor, decimals: int = 0) -> Tensor:
     """
 
 
-@tensor_dispatch(wrapper_type=WrapperType.TensorToAny)
-def disable_error_handling(a: Tensor) -> AbstractContextManager:
-    """
-    Return context manager that disable handling of floating-point errors.
-
-    :param a: Tensor to detect backend.
-    :return: An context Manager.
-    """
-
-
 def _initialize_backends():
     import nncf.experimental.tensor.numpy_functions
 
