@@ -22,32 +22,11 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.scopes import IgnoredScope
-from nncf.torch.dynamic_graph.io_handling import ExactInputsInfo
+from nncf.torch.model_creation import wrap_model
 from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
-from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.weights_compression import insert_pre_compression_operations
-from nncf.torch.utils import training_mode_switcher
 
 DEFAULT_RANGE_TYPE = "mean_min_max"
-
-
-def create_nncf_network_ptq(model: torch.nn.Module, dataset: Dataset) -> NNCFNetwork:
-    """
-    Creates NNCFNetwork instance for the PyTorch model where the first item of dataset
-    is used for model tracing.
-
-    :param model: PyTorch model
-    :param dataset: Dataset for model tracing
-    :return: NNCFNetwork instance for the input model
-    """
-
-    input_info = ExactInputsInfo.from_nncf_dataset(dataset)
-
-    with training_mode_switcher(model, is_training=False):
-        nncf_network = NNCFNetwork(model, input_info=input_info)
-        nncf_network.nncf.get_tracing_context().disable_trace_dynamic_graph()
-
-    return nncf_network
 
 
 def quantize_impl(
@@ -70,7 +49,9 @@ def quantize_impl(
         raise RuntimeError("target_device == CPU_SPR is not supported")
 
     copied_model = deepcopy(model)
-    nncf_network = create_nncf_network_ptq(copied_model.eval(), calibration_dataset)
+
+    example_input = next(iter(calibration_dataset.get_inference_data()))
+    nncf_network = wrap_model(copied_model.eval(), example_input)
 
     quantization_algorithm = PostTrainingQuantization(
         preset=preset,

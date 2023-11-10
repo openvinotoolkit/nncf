@@ -238,6 +238,20 @@ class ExactInputsInfo(ModelInputInfo):
         return args_at_device, kwargs_at_device
 
     @classmethod
+    def from_example_input(cls, example_input: Any) -> "ExactInputsInfo":
+        """
+        Builds an ExactInputsInfo object based on the example input.
+
+        :param dataset: An nncf.Dataset whose first element will be used as an example model input
+        :return: An initialized ExactInputsInfo object.
+        """
+        if isinstance(example_input, tuple):
+            return ExactInputsInfo(example_input, {})
+        if isinstance(example_input, dict):
+            return ExactInputsInfo(tuple(), example_input)
+        return ExactInputsInfo((example_input,), {})
+
+    @classmethod
     def from_nncf_dataset(cls, dataset: Dataset) -> "ExactInputsInfo":
         """
         Checks the first element of the provided nncf.Dataset and builds an ExactInputsInfo object that would
@@ -246,12 +260,8 @@ class ExactInputsInfo(ModelInputInfo):
         :param dataset: An nncf.Dataset whose first element will be used as an example model input
         :return: An initialized ExactInputsInfo object.
         """
-        dataset_data_element = next(iter(dataset.get_inference_data()))
-        if isinstance(dataset_data_element, tuple):
-            return ExactInputsInfo(dataset_data_element, {})
-        if isinstance(dataset_data_element, dict):
-            return ExactInputsInfo(tuple(), dataset_data_element)
-        return ExactInputsInfo((dataset_data_element,), {})
+        example_input = next(iter(dataset.get_inference_data()))
+        return cls.from_example_input(example_input)
 
     @classmethod
     def from_nncf_config_dataloaders(cls, config: NNCFConfig) -> Optional["ExactInputsInfo"]:
