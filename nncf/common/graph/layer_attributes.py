@@ -13,7 +13,7 @@ from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, List, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 
 class Dtype(Enum):
@@ -32,20 +32,22 @@ class BaseLayerAttributes(ABC):
 
 
 class MultipleInputLayerAttributes(BaseLayerAttributes):
-    def __init__(self, axis: int):
+    def __init__(self, axis: int, num_inputs: Optional[int] = None):
         """
 
         :param axis: the dimension over which the inputs are combined (e.g. concatenated).
+        :param num_inputs: Number of inputs.
         """
         self.axis = axis
+        self.num_inputs = num_inputs
 
 
 class MultipleOutputLayerAttributes(BaseLayerAttributes):
     def __init__(self, chunks: Union[int, List], axis: int):
         """
 
-        :param chunks:  number of chunks (outputs)
-        :param axis: the dimension along which to make multiple outputs (e.g. split the tensor).
+        :param chunks: Number of chunks (outputs).
+        :param axis: The dimension along which to make multiple outputs (e.g. split the tensor).
         """
         self.chunks = chunks
         self.axis = axis

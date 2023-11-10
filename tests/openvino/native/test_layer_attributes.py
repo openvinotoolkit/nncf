@@ -27,7 +27,7 @@ def get_conv(input_1, node_name, input_shape, kernel=None):
     if kernel is None:
         shape = (input_shape[1] + 1, input_shape[1], 2, 1)
         kernel = opset.constant(np.ones(shape), dtype=np.float32, name="Const")
-    return opset.convolution(input_1, kernel, strides, pads, pads, dilations, name=node_name)
+    return [opset.convolution(input_1, kernel, strides, pads, pads, dilations, name=node_name)]
 
 
 def get_group_conv(input_1, node_name, input_shape, kernel=None):
@@ -37,7 +37,7 @@ def get_group_conv(input_1, node_name, input_shape, kernel=None):
     if kernel is None:
         shape = (input_shape[1], input_shape[1], 1, 1, 1)
         kernel = opset.constant(np.ones(shape), dtype=np.float32, name="Const")
-    return opset.group_convolution(input_1, kernel, strides, pads, pads, dilations, name=node_name)
+    return [opset.group_convolution(input_1, kernel, strides, pads, pads, dilations, name=node_name)]
 
 
 def get_transpose_conv(input_1, node_name, input_shape, kernel=None):
@@ -47,9 +47,11 @@ def get_transpose_conv(input_1, node_name, input_shape, kernel=None):
     if kernel is None:
         shape = (input_shape[1], input_shape[1] + 1, 2, 1)
         kernel = opset.constant(np.ones(shape), dtype=np.float32, name="Const")
-    return opset.convolution_backprop_data(
-        input_1, kernel, strides, pads_begin=pads, pads_end=pads, dilations=dilations, name=node_name
-    )
+    return [
+        opset.convolution_backprop_data(
+            input_1, kernel, strides, pads_begin=pads, pads_end=pads, dilations=dilations, name=node_name
+        )
+    ]
 
 
 def get_transpose_group_conv(input_1, node_name, input_shape, kernel=None):
@@ -85,18 +87,21 @@ def get_matmul(input_1, node_name, input_shape, transpose_a=False, transpose_b=F
     if transpose_b:
         data_shape = data_shape[::-1]
     data = opset.constant(np.ones(tuple(data_shape)), dtype=np.float32, name="Const")
-    return opset.matmul(input_1, data, transpose_a=transpose_a, transpose_b=transpose_b, name=node_name)
+    return [opset.matmul(input_1, data, transpose_a=transpose_a, transpose_b=transpose_b, name=node_name)]
 
 
 def get_shape_node(input_, op_name, input_shape):
-    return opset.shape_of(input_, name=op_name)
+    return [opset.shape_of(input_, name=op_name)]
 
 
-def get_one_layer_model(op_name: str, node_creator, input_shape):
-    input_1 = opset.parameter(input_shape, name="Input")
-    op = node_creator(input_1, op_name, input_shape)
-    result = opset.result(op, name="Result")
-    model = ov.Model([result], [input_1])
+def get_one_layer_model(op_name: str, node_creator, input_shape, num_inputs: int = 1):
+    inputs = [opset.parameter(input_shape, name=f"Input{i}") for i in range(num_inputs)]
+    acutual_inputs = inputs[0] if num_inputs == 1 else inputs
+    outputs = node_creator(acutual_inputs, op_name, input_shape)
+    results = []
+    for idx, output in enumerate(outputs):
+        results.append(opset.result(output, name=f"Result{idx}"))
+    model = ov.Model(results, inputs)
     return model
 
 

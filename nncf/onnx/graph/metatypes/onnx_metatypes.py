@@ -27,6 +27,7 @@ ONNX_OPERATION_METATYPES = OperatorMetatypeRegistry("onnx_operator_metatypes")
 class ONNXOpMetatype(OperatorMetatype):
     op_names: List[str] = []
     subtypes: List[Type[OperatorMetatype]] = []
+    input_edges_num_expected = None
 
     @classmethod
     def get_all_aliases(cls) -> List[str]:
@@ -78,6 +79,7 @@ class ONNXDepthwiseConvolutionMetatype(ONNXOpWithWeightsMetatype):
     weight_port_ids = [1]
     bias_port_id = 2
     output_channel_axis = 1
+    input_edges_num_expected = 2
 
     @classmethod
     def matches(cls, model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
@@ -94,6 +96,7 @@ class ONNXConvolutionMetatype(ONNXOpWithWeightsMetatype):
     bias_port_id = 2
     output_channel_axis = 1
     subtypes = [ONNXDepthwiseConvolutionMetatype]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -105,6 +108,7 @@ class ONNXConvolutionTransposeMetatype(ONNXOpWithWeightsMetatype):
     weight_port_ids = [1]
     bias_port_id = 2
     output_channel_axis = 1
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -117,6 +121,7 @@ class ONNXGemmMetatype(ONNXOpWithWeightsMetatype):
     bias_port_id = 2
     possible_weight_ports = [0, 1]
     output_channel_axis = -1
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -129,6 +134,7 @@ class ONNXMatMulMetatype(ONNXOpMetatype):
     bias_port_id = 2
     possible_weight_ports = [0, 1]
     output_channel_axis = -1
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -184,6 +190,7 @@ class ONNXGlobalAveragePoolMetatype(ONNXOpMetatype):
     name = "GlobalAveragePoolOp"
     op_names = ["GlobalAveragePool"]
     hw_config_names = [HWConfigOpName.AVGPOOL]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -191,6 +198,7 @@ class ONNXAveragePoolMetatype(ONNXOpMetatype):
     name = "AveragePoolOp"
     op_names = ["AveragePool"]
     hw_config_names = [HWConfigOpName.AVGPOOL]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -198,6 +206,7 @@ class ONNXGlobalMaxPoolMetatype(ONNXOpMetatype):
     name = "GlobalMaxPoolOp"
     op_names = ["GlobalMaxPool"]
     hw_config_names = [HWConfigOpName.MAXPOOL]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -205,6 +214,7 @@ class ONNXMaxPoolMetatype(ONNXOpMetatype):
     name = "MaxPoolOp"
     op_names = ["MaxPool"]
     hw_config_names = [HWConfigOpName.MAXPOOL]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -218,6 +228,7 @@ class ONNXAddLayerMetatype(ONNXOpMetatype):
     name = "AddOp"
     op_names = ["Add", "Sum"]
     hw_config_names = [HWConfigOpName.ADD]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -225,6 +236,7 @@ class ONNXSubMetatype(ONNXOpMetatype):
     name = "SubOp"
     op_names = ["Sub"]
     hw_config_names = [HWConfigOpName.SUBTRACT]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -232,6 +244,7 @@ class ONNXMulLayerMetatype(ONNXOpMetatype):
     name = "MulOp"
     op_names = ["Mul"]
     hw_config_names = [HWConfigOpName.MULTIPLY]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -239,6 +252,7 @@ class ONNXDivLayerMetatype(ONNXOpMetatype):
     name = "DivOp"
     op_names = ["Div"]
     hw_config_names = [HWConfigOpName.DIVIDE]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -252,6 +266,7 @@ class ONNXConcatMetatype(ONNXOpMetatype):
 class ONNXBatchNormMetatype(ONNXOpMetatype):
     name = "BatchNormalizationOp"
     op_names = ["BatchNormalization"]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -259,6 +274,7 @@ class ONNXResizeMetatype(ONNXOpMetatype):
     name = "ResizeOp"
     op_names = ["Resize"]
     hw_config_names = [HWConfigOpName.INTERPOLATE]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -266,6 +282,7 @@ class ONNXCenterCropPadMetatype(ONNXOpMetatype):
     name = "CenterCropPadOp"
     op_names = ["CenterCropPad"]
     hw_config_names = [HWConfigOpName.CROP]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -285,6 +302,7 @@ class ONNXTileMetatype(ONNXOpMetatype):
 class ONNXUpsampleMetatype(ONNXOpMetatype):
     name = "UpsampleOp"
     op_names = ["Upsample"]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -303,6 +321,7 @@ class ONNXShapeMetatype(ONNXOpMetatype):
 class ONNXExpandMetatype(ONNXOpMetatype):
     name = "ExpandOp"
     op_names = ["Expand"]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -316,6 +335,7 @@ class ONNXSplitMetatype(ONNXOpMetatype):
     name = "SplitOp"
     op_names = ["Split"]
     hw_config_names = [HWConfigOpName.SPLIT]
+    input_edges_num_expected = 1
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -323,6 +343,7 @@ class ONNXLessMetatype(ONNXOpMetatype):
     name = "LessOp"
     op_names = ["Less"]
     hw_config_names = [HWConfigOpName.LESS]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -330,6 +351,7 @@ class ONNXGreaterMetatype(ONNXOpMetatype):
     name = "GreaterOp"
     op_names = ["Greater"]
     hw_config_names = [HWConfigOpName.GREATER]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -337,6 +359,7 @@ class ONNXEqualMetatype(ONNXOpMetatype):
     name = "EqualOp"
     op_names = ["Equal"]
     hw_config_names = [HWConfigOpName.EQUAL]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -344,6 +367,7 @@ class ONNXNotMetatype(ONNXOpMetatype):
     name = "NotOp"
     op_names = ["Not"]
     hw_config_names = [HWConfigOpName.LOGICALNOT]
+    input_edges_num_expected = 1
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -351,6 +375,7 @@ class ONNXAndMetatype(ONNXOpMetatype):
     name = "AndOp"
     op_names = ["And"]
     hw_config_names = [HWConfigOpName.LOGICALAND]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -358,6 +383,7 @@ class ONNXOrMetatype(ONNXOpMetatype):
     name = "OrOp"
     op_names = ["Or"]
     hw_config_names = [HWConfigOpName.LOGICALOR]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -365,6 +391,7 @@ class ONNXMaximumMetatype(ONNXOpMetatype):
     name = "MaxOp"
     op_names = ["Max"]
     hw_config_names = [HWConfigOpName.MAXIMUM]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -372,6 +399,7 @@ class ONNXMinimumMetatype(ONNXOpMetatype):
     name = "MinOp"
     op_names = ["Min"]
     hw_config_names = [HWConfigOpName.MINIMUM]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -379,6 +407,7 @@ class ONNXFloorMetatype(ONNXOpMetatype):
     name = "FloorOp"
     op_names = ["Floor"]
     hw_config_names = [HWConfigOpName.FLOORMOD]
+    input_edges_num_expected = 1
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -386,6 +415,7 @@ class ONNXPowMetatype(ONNXOpMetatype):
     name = "PowOp"
     op_names = ["Pow"]
     hw_config_names = [HWConfigOpName.POWER]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -393,6 +423,7 @@ class ONNXSqrtMetatype(ONNXOpMetatype):
     name = "SqrtOp"
     op_names = ["Sqrt"]
     hw_config_names = [HWConfigOpName.POWER]
+    input_edges_num_expected = 1
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -408,6 +439,7 @@ class ONNXEmbeddingMetatype(ONNXOpMetatype):
     hw_config_names = [HWConfigOpName.EMBEDDING]
     weight_port_ids = [0]
     weight_channel_axis = 0
+    input_edges_num_expected = 2
 
     @classmethod
     def matches(cls, model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
@@ -418,12 +450,14 @@ class ONNXEmbeddingMetatype(ONNXOpMetatype):
 class ONNXLogMetatype(ONNXOpMetatype):
     name = "LogOp"
     op_names = ["Log"]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXAbsMetatype(ONNXOpMetatype):
     name = "AbsOp"
     op_names = ["Abs"]
+    input_edges_num_expected = 1
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -505,6 +539,7 @@ class ONNXCastLikeMetatype(ONNXOpMetatype):
 class ONNXReduceMinMetatype(ONNXOpMetatype):
     name = "ReduceMinOp"
     op_names = ["ReduceMin"]
+    input_edges_num_expected = 1
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -512,6 +547,7 @@ class ONNXReduceMaxMetatype(ONNXOpMetatype):
     name = "ReduceMaxOp"
     op_names = ["ReduceMax"]
     hw_config_names = [HWConfigOpName.REDUCEMAX]
+    input_edges_num_expected = 1
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -519,12 +555,14 @@ class ONNXReduceSumMetatype(ONNXOpMetatype):
     name = "ReduceSumOp"
     op_names = ["ReduceSum"]
     hw_config_names = [HWConfigOpName.REDUCESUM]
+    input_edges_num_expected = 1
 
 
 class ONNXReduceL2Metatype(ONNXOpMetatype):
     name = "ReduceL2Op"
     op_names = ["ReduceL2"]
     hw_config_names = [HWConfigOpName.REDUCEL2]
+    input_edges_num_expected = 1
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -544,6 +582,7 @@ class ONNXReduceMeanMetatype(ONNXOpMetatype):
     name = "ReduceMeanOp"
     op_names = ["ReduceMean"]
     hw_config_names = [HWConfigOpName.REDUCEMEAN]
+    input_edges_num_expected = 1
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -569,12 +608,14 @@ class ONNXTransposeMetatype(ONNXOpMetatype):
     name = "TransposeOp"
     op_names = ["Transpose"]
     hw_config_names = [HWConfigOpName.TRANSPOSE]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXDropoutMetatype(ONNXOpMetatype):
     name = "DropoutOp"
     op_names = ["Dropout"]
+    input_edges_num_expected = 1
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -582,12 +623,14 @@ class ONNXFlattenMetatype(ONNXOpMetatype):
     name = "FlattenOp"
     op_names = ["Flatten"]
     hw_config_names = [HWConfigOpName.FLATTEN]
+    input_edges_num_expected = 1
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXSoftmaxMetatype(ONNXOpMetatype):
     name = "SoftmaxOp"
     op_names = ["Softmax"]
+    input_edges_num_expected = 1
 
 
 @ONNX_OPERATION_METATYPES.register()

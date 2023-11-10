@@ -83,6 +83,11 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
+    def nodes_with_weights_metatypes(self) -> List[OperatorMetatype]:
+        pass
+
+    @property
+    @abstractmethod
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific metatypes for which overflow_fix is applicable.

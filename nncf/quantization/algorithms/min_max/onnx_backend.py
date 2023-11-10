@@ -85,6 +85,10 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [om.ONNXConstantMetatype, om.ONNXConstantOfShapeMetatype]
 
     @property
+    def nodes_with_weights_metatypes(self) -> List[OperatorMetatype]:
+        return [om]
+
+    @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
         return {om.ONNXConcatMetatype: self.overflow_fix_metatypes}
 
