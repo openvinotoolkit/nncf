@@ -317,7 +317,7 @@ def wrap_model(model: torch.nn.Module, example_input: Any) -> NNCFNetwork:
 
     This function dynamically extends the instance of PyTorch model with NNCF-enabling functionality.
 
-    :param model: PyTorch model
+    :param model: PyTorch model.
     :example_input: An example input that will be used for model tracing. A tuple is interpreted as an example input
         of a set of non keyword arguments, and a dict as an example input of a set of keywords arguments.
     :return: A model wrapped by NNCFNetwork.
