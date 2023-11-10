@@ -852,6 +852,7 @@ class ACDattasetWrapper:
 
     def __init__(self, model_evaluator):
         self.model_evaluator = model_evaluator
+        self.batch_size = self.model_evaluator.dataset.batch
 
     def __iter__(self):
         for sequence in self.model_evaluator.dataset:
@@ -1027,6 +1028,13 @@ def filter_configuration(config: Config) -> Config:
     return config
 
 
+def update_config_batch_size(accuracy_checker_config, batch_size):
+    for model in accuracy_checker_config["models"]:
+        for dataset in model["datasets"]:
+            print(f"Updated batch size value to {batch_size}")
+            dataset["batch"] = batch_size
+
+
 def main():
     args = parse_args()
     config = Config.read_config(args.config)
@@ -1034,6 +1042,7 @@ def main():
 
     xml_path, bin_path = get_model_paths(config.model)
     accuracy_checker_config = get_accuracy_checker_config(config.engine)
+    update_config_batch_size(accuracy_checker_config, 10)
     nncf_algorithms_config = get_nncf_algorithms_config(config.compression, args.output_dir)
 
     set_log_file(f"{args.output_dir}/log.txt")
