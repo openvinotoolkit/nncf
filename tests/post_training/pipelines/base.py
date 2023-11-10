@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import re
 import time
 from abc import ABC
 from abc import abstractmethod
@@ -29,6 +30,7 @@ from optimum.intel import OVQuantizer
 import nncf
 from nncf import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from tests.shared.command import Command
 
 DEFAULT_VAL_THREADS = 4
 
@@ -64,6 +66,7 @@ class RunInfo:
     time_total: Optional[float] = None
     time_quantization: Optional[float] = None
     status: Optional[str] = None
+    fps: Optional[float] = None
 
     @staticmethod
     def format_time(time_elapsed):
@@ -88,6 +91,7 @@ class RunInfo:
             "RAM MiB": self.format_memory_usage(self.quant_memory_usage),
             "Quant. time": self.format_time(self.time_quantization),
             "Total time": self.format_time(self.time_total),
+            "FPS": self.fps,
             "Status": self.status,
         }
 
@@ -107,6 +111,7 @@ class BaseTestPipeline(ABC):
         data_dir: Path,
         reference_data: dict,
         no_eval: bool,
+        run_benchmark_app: bool,
         params: dict = None,
     ) -> None:
         self.reported_name = reported_name
@@ -118,7 +123,7 @@ class BaseTestPipeline(ABC):
         self.reference_data = reference_data
         self.params = params or {}
         self.no_eval = no_eval
-
+        self.run_benchmark_app = run_benchmark_app
         self.output_model_dir = self.output_dir / self.reported_name / self.backend.value
         self.output_model_dir.mkdir(parents=True, exist_ok=True)
         self.model_name = f"{self.reported_name}_{self.backend.value}"
@@ -236,6 +241,21 @@ class BaseTestPipeline(ABC):
 
         self.run_info.num_fq_nodes = num_fq
 
+    def run_bench(self) -> None:
+        """
+        Run benchmark_app to collect performance statistics.
+        """
+        if not self.run_benchmark_app:
+            return
+        runner = Command(f"benchmark_app -m {self.path_quantized_ir}")
+        runner.run(stdout=False)
+        cmd_output = " ".join(runner.output)
+
+        match = re.search(r"Throughput\: (.+?) FPS", cmd_output)
+        if match is not None:
+            fps = match.group(1)
+            self.run_info.fps = float(fps)
+
     @abstractmethod
     def _validate(self) -> None:
         """Validate IR"""
@@ -277,6 +297,7 @@ class BaseTestPipeline(ABC):
         self.save_quantized_model()
         self.get_num_fq()
         self.validate()
+        self.run_bench()
         self.cleanup_torchscript_cache()
 
     @staticmethod
