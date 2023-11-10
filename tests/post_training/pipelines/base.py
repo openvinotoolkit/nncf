@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import datetime as dt
 import os
 import re
 import time
@@ -69,6 +70,9 @@ class RunInfo:
     time_quantization: Optional[float] = None
     status: Optional[str] = None
     fps: Optional[float] = None
+    time_stat_collection: Optional[str] = None
+    time_bias_correction: Optional[str] = None
+    time_validation: Optional[str] = None
 
     @staticmethod
     def format_time(time_elapsed):
@@ -92,6 +96,9 @@ class RunInfo:
             "Num FQ": self.num_fq_nodes,
             "RAM MiB": self.format_memory_usage(self.quant_memory_usage),
             "Quant. time": self.format_time(self.time_quantization),
+            "Stat. collection time": self.time_stat_collection,
+            "Bias correction time": self.time_bias_correction,
+            "Validation time": self.time_validation,
             "Total time": self.format_time(self.time_total),
             "FPS": self.fps,
             "Status": self.status[:LIMIT_LENGTH_OF_STATUS] if self.status is not None else None,
@@ -316,3 +323,47 @@ class BaseTestPipeline(ABC):
 
     def get_run_info(self) -> RunInfo:
         return self.run_info
+
+    def collect_data_from_stdout(self, stdout: str):
+        """
+        Parsing stdout of the test and collect additional data:
+         - time of statistic collection
+         - time of bias correction
+         - time of validation
+
+        :param stdout: stdout text
+        """
+        time_validation = None
+        time_bias_correction = None
+        time_stat_collection = None
+
+        for line in stdout.splitlines():
+            print(line)
+            match = re.search(r"Statistics\scollection.*•\s(.*)\s•.*", line)
+            if match:
+                if time_stat_collection is None:
+                    time_stat_collection = dt.datetime.strptime(match.group(1), "%H:%M:%S")
+                else:
+                    time = dt.datetime.strptime(match.group(1), "%H:%M:%S")
+                    time_stat_collection += dt.timedelta(hours=time.hour, minutes=time.minute, seconds=time.second)
+                continue
+
+            match = re.search(r"Applying.*correction.*\/(\d+)\s•\s(.*)\s•.*", line)
+            if match:
+                if time_bias_correction is None:
+                    time_bias_correction = dt.datetime.strptime(match.group(2), "%H:%M:%S")
+                else:
+                    time_bias_correction += dt.datetime.strptime(match.group(2), "%H:%M:%S")
+                continue
+
+            match = re.search(r"Validation.*\/\d+\s•\s(.*)\s•.*", line)
+            if match:
+                time_validation = dt.datetime.strptime(match.group(1), "%H:%M:%S")
+                continue
+
+        if time_stat_collection:
+            self.run_info.time_stat_collection = time_stat_collection.strftime("%H:%M:%S")
+        if time_stat_collection:
+            self.run_info.time_bias_correction = time_bias_correction.strftime("%H:%M:%S")
+        if time_validation:
+            self.run_info.time_validation = time_validation.strftime("%H:%M:%S")

@@ -22,6 +22,7 @@ import yaml
 
 from tests.post_training.model_scope import TEST_CASES
 from tests.post_training.pipelines.base import BackendType
+from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import RunInfo
 
 
@@ -55,6 +56,11 @@ def fixture_run_benchmark_app(pytestconfig):
     return pytestconfig.getoption("benchmark")
 
 
+@pytest.fixture(scope="session", name="extra_columns")
+def fixture_extra_columns(pytestconfig):
+    return pytestconfig.getoption("extra_columns")
+
+
 @pytest.fixture(scope="session", name="reference_data")
 def fixture_reference_data():
     path_reference = Path(__file__).parent / "reference_data.yaml"
@@ -64,7 +70,7 @@ def fixture_reference_data():
 
 
 @pytest.fixture(scope="session", name="result_data")
-def fixture_report_data(output, run_benchmark_app):
+def fixture_report_data(output, run_benchmark_app, extra_columns):
     data: Dict[str, RunInfo] = {}
 
     yield data
@@ -77,6 +83,8 @@ def fixture_report_data(output, run_benchmark_app):
 
         if not run_benchmark_app:
             df = df.drop(columns=["FPS"])
+        if not extra_columns:
+            df = df.drop(columns=["Stat. collection time", "Bias correction time", "Validation time"])
 
         output.mkdir(parents=True, exist_ok=True)
         df.to_csv(output / "results.csv", index=False)
@@ -93,6 +101,8 @@ def test_ptq_quantization(
     run_fp32_backend: bool,
     subset_size: Optional[int],
     run_benchmark_app: bool,
+    capsys: pytest.CaptureFixture,
+    extra_columns: bool,
 ):
     pipeline = None
     err_msg = None
@@ -138,7 +148,7 @@ def test_ptq_quantization(
             "run_benchmark_app": run_benchmark_app,
         }
 
-        pipeline = pipeline_cls(**pipeline_kwargs)
+        pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)
         pipeline.run()
 
     except Exception as e:
@@ -149,6 +159,16 @@ def test_ptq_quantization(
         run_info = pipeline.get_run_info()
         if err_msg:
             run_info.status = f"{run_info.status} | {err_msg}" if run_info.status else err_msg
+
+        # Collect stdout and stderr logs to files
+        stdout_file = pipeline.output_model_dir / "stdout.log"
+        stderr_file = pipeline.output_model_dir / "stderr.log"
+        captured = capsys.readouterr()
+        stdout_file.write_text(captured.out, encoding="utf-8")
+        stderr_file.write_text(captured.err, encoding="utf-8")
+
+        if extra_columns:
+            pipeline.collect_data_from_stdout(captured.out)
     else:
         if test_model_param is not None:
             run_info = RunInfo(

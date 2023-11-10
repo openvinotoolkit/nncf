@@ -44,6 +44,10 @@ Additional arguments:
 - `--fp32` to run validation of not quantized model
 - `--subset-size=N` to force subset_size of calibration dataset
 - `--benchmark` to collect throughput statistics, add `FPS` column to result.csv
+- `--extra_columns` to add additional columns to reports.csv:
+  - `Stat. collection time` - time of statistic collection
+  - `Bias correction time` - time of bias correction
+  - `Validation time` - time of validation
 
 ### Examples
 
@@ -87,4 +91,10 @@ Fast collection of throughput statistics:
 
 ```bash
 pytest --data=<path_to_datasets> --benchmark --no-eval --subset-size 1 tests/post_training/test_quantize_conformance.py
+```
+
+Run test with additional columns:
+
+```bash
+pytest --data=<path_to_datasets> --extra-columns tests/post_training/test_quantize_conformance.py
 ```

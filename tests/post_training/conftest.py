@@ -22,3 +22,8 @@ def pytest_addoption(parser):
     parser.addoption("--subset-size", type=int, default=None, help="Set subset size")
     parser.addoption("--fp32", action="store_true", help="Test original model")
     parser.addoption("--benchmark", action="store_true", help="Run benchmark_app")
+    parser.addoption(
+        "--extra-columns",
+        action="store_true",
+        help="Add additional columns to reports.csv",
+    )
