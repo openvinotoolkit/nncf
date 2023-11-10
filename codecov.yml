@@ -36,6 +36,11 @@ comment:
   require_head: false
   require_base: false
 
+flag_management:
+  individual_flags:
+    - name: COMMON
+      paths:
+        - nncf/common
 
 component_management:
   individual_components:
