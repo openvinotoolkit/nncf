@@ -110,7 +110,7 @@
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
             "fp32_top1": 0.9864968152866243,
-            "int8_top1": 0.9829299363057324,
+            "int8_top1": 0.9836942675159236,
             "accuracy_drop": 0.0035668789808918078
         },
         "performance_metrics": {
@@ -129,8 +129,8 @@
         "requirements": "examples/post_training_quantization/torch/ssd300_vgg16/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
-            "fp32_mAP": 0.5232756733894348,
-            "int8_mAP": 0.5140125155448914,
+            "fp32_mAP": 0.5228869318962097,
+            "int8_mAP": 0.5148677825927734,
             "accuracy_drop": 0.009263157844543457
         },
         "performance_metrics": {
