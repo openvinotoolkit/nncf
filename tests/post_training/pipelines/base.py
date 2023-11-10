@@ -94,7 +94,7 @@ class RunInfo:
             "Quant. time": self.format_time(self.time_quantization),
             "Total time": self.format_time(self.time_total),
             "FPS": self.fps,
-            "Status": self.status[:LIMIT_LENGTH_OF_STATUS],
+            "Status": self.status[:LIMIT_LENGTH_OF_STATUS] if self.status is not None else None,
         }
 
 
