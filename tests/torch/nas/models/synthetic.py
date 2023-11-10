@@ -119,6 +119,14 @@ class TwoSequentialConvBNTestModel(nn.Module):
     w1_max = 3
     w2_max = 2
     w2_min = 1
+    IMPORTANCE = {
+        "TwoSequentialConvBNTestModel/Sequential[all_layers]/NNCFConv2d[0]/conv2d_0": torch.Tensor(
+            [[[[0.7]]], [[[0.9]]], [[[0.8]]]]
+        ),
+        "TwoSequentialConvBNTestModel/Sequential[all_layers]/NNCFConv2d[3]/conv2d_0": torch.Tensor(
+            [[[[0.0]], [[0.8]], [[1.0]]], [[[0.8]], [[0.7]], [[1.0]]]]
+        ),
+    }
 
     def __init__(self):
         super().__init__()
@@ -175,6 +183,19 @@ class TwoSequentialConvBNTestModel(nn.Module):
         assert torch.equal(self.last_conv.weight, torch.Tensor([2, 2]).reshape(1, 2, 1, 1).to(device))
         assert torch.equal(last_bias, torch.zeros_like(last_bias).to(device))
 
+    def check_custom_external_reorg(self):
+        device = next(self.parameters()).device
+        ref_bias_1 = torch.Tensor([1, 2, self.w1_max]).to(device)
+        ref_weights_1 = ref_bias_1.reshape(3, 1, 1, 1).to(device)
+        ref_bias_2 = torch.Tensor([self.w2_max, 1]).to(device)
+        ref_weights_2 = torch.Tensor([[3, 0, self.w2_max], [2, 0, self.w2_min]]).reshape(2, 3, 1, 1).to(device)
+        TwoSequentialConvBNTestModel.compare_params(ref_bias_1, ref_weights_1, self.conv1, self.bn1)
+        TwoSequentialConvBNTestModel.compare_params(ref_bias_2, ref_weights_2, self.conv2, self.bn2)
+
+        last_bias = self.last_conv.bias
+        assert torch.equal(self.last_conv.weight, torch.Tensor([2, 2]).reshape(1, 2, 1, 1).to(device))
+        assert torch.equal(last_bias, torch.zeros_like(last_bias).to(device))
+
     def get_minimal_subnet_output(self, input_):
         relu1 = self._get_relu1_output(input_)
         return self._get_model_output(relu1, self.w2_max)
@@ -214,6 +235,10 @@ class TwoConvAddConvTestModel(nn.Module):
     V23 = 4
     V11 = 3
     V21 = 1
+    IMPORTANCE = {
+        "TwoConvAddConvTestModel/NNCFConv2d[conv1]/conv2d_0": torch.Tensor([[[[0.7]]], [[[0.9]]], [[[0.8]]]]),
+        "TwoConvAddConvTestModel/NNCFConv2d[conv2]/conv2d_0": torch.Tensor([[[[0.1]]], [[[0.8]]], [[[0.7]]]]),
+    }
 
     def __init__(self):
         super().__init__()
@@ -250,6 +275,22 @@ class TwoConvAddConvTestModel(nn.Module):
         assert torch.equal(self.last_conv.weight, torch.Tensor([2, 2, 2]).reshape(1, 3, 1, 1).to(device))
         assert torch.equal(last_bias, torch.zeros_like(last_bias).to(device))
 
+    def check_custom_external_reorg(self):
+        device = get_model_device(self)
+        ref_bias_1 = torch.Tensor([1, self.V13, self.V11]).to(device)
+        ref_bias_2 = torch.Tensor([2, self.V23, self.V21]).to(device)
+
+        ref_weights_1 = ref_bias_1.reshape(3, 1, 1, 1).to(device)
+        ref_weights_2 = ref_bias_2.reshape(3, 1, 1, 1).to(device)
+
+        assert torch.equal(self.conv1.weight, ref_weights_1)
+        assert torch.equal(self.conv1.bias, ref_bias_1)
+        assert torch.equal(self.conv2.weight, ref_weights_2)
+        assert torch.equal(self.conv2.bias, ref_bias_2)
+        last_bias = self.last_conv.bias
+        assert torch.equal(self.last_conv.weight, torch.Tensor([2, 2, 2]).reshape(1, 3, 1, 1).to(device))
+        assert torch.equal(last_bias, torch.zeros_like(last_bias).to(device))
+
     def get_minimal_subnet_output(self, x):
         o = (self.V13 * x + self.V13) + (self.V23 * x + self.V23)
         ref_weights = self.last_conv.weight[:, :1, :, :]
@@ -274,6 +315,10 @@ class ConvTwoFcTestModel(nn.Module):
     INPUT_SIZE = [1, 1, 1, 1]
     V11 = 2
     V13 = 4
+    IMPORTANCE = {
+        "ConvTwoFcTestModel/NNCFConv2d[conv]/conv2d_0": torch.Tensor([[[[0.9]]], [[[0.1]]], [[[0.2]]]]),
+        "ConvTwoFcTestModel/NNCFLinear[fc1]/linear_0": torch.Tensor([[0.7, 0.9, 0.8], [0.6, 0.4, 0.5]]),
+    }
 
     def __init__(self):
         super().__init__()
@@ -311,6 +356,21 @@ class ConvTwoFcTestModel(nn.Module):
         assert torch.equal(self.fc1.bias, fc_bias_1)
         assert torch.equal(self.fc2.weight, fc_weights_2)
 
+    def check_custom_external_reorg(self):
+        device = get_model_device(self)
+        ref_bias_1 = torch.Tensor([self.V11, self.V13, 1]).to(device)
+        ref_weights_1 = ref_bias_1.reshape(3, 1, 1, 1).to(device)
+
+        fc_weights_1 = torch.Tensor([[3, 2, 1], [4, 5, 6]]).to(device)
+        fc_bias_1 = torch.Tensor([3, 4]).to(device)
+        fc_weights_2 = torch.Tensor([[2, 1], [3, 4], [6, 5]]).to(device)  # last layer don't change the output order
+
+        assert torch.equal(self.conv.weight, ref_weights_1)
+        assert torch.equal(self.conv.bias, ref_bias_1)
+        assert torch.equal(self.fc1.weight, fc_weights_1)
+        assert torch.equal(self.fc1.bias, fc_bias_1)
+        assert torch.equal(self.fc2.weight, fc_weights_2)
+
     def get_minimal_subnet_output(self, x):
         device = get_model_device(self)
         fc_weight_1 = torch.Tensor([[5]]).to(device)
@@ -335,6 +395,9 @@ class TwoSequentialFcLNTestModel(nn.Module):
     # fc1 -> ln1 -> fc2 -> ln2
     #
     INPUT_SIZE = [1, 1]
+    IMPORTANCE = {
+        "TwoSequentialFcLNTestModel/NNCFLinear[fc1]/linear_0": torch.Tensor([[0.9], [0.1]]),
+    }
 
     def __init__(self):
         super().__init__()
@@ -360,6 +423,19 @@ class TwoSequentialFcLNTestModel(nn.Module):
         ref_ln_weights_1 = torch.Tensor([1, 0]).to(device)
         ref_ln_bias_1 = torch.Tensor([1, 0]).to(device)
         ref_fc_weights_2 = torch.Tensor([[1, 2], [4, 3], [5, 6]]).to(device)
+        assert torch.equal(self.fc1.weight, ref_fc_weights_1)
+        assert torch.equal(self.fc1.bias, ref_fc_bias_1)
+        assert torch.equal(self.fc2.weight, ref_fc_weights_2)
+        assert torch.equal(self.ln1.weight, ref_ln_weights_1)
+        assert torch.equal(self.ln1.bias, ref_ln_bias_1)
+
+    def check_custom_external_reorg(self):
+        device = get_model_device(self)
+        ref_fc_weights_1 = torch.Tensor([[3], [4]]).to(device)
+        ref_fc_bias_1 = torch.Tensor([3, 4]).to(device)
+        ref_ln_weights_1 = torch.Tensor([0, 1]).to(device)
+        ref_ln_bias_1 = torch.Tensor([0, 1]).to(device)
+        ref_fc_weights_2 = torch.Tensor([[2, 1], [3, 4], [6, 5]]).to(device)
         assert torch.equal(self.fc1.weight, ref_fc_weights_1)
         assert torch.equal(self.fc1.bias, ref_fc_bias_1)
         assert torch.equal(self.fc2.weight, ref_fc_weights_2)

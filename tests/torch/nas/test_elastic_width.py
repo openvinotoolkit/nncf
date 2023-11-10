@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import copy
+import tempfile
 
 import pytest
 import torch
@@ -39,7 +40,12 @@ from tests.torch.test_compressed_graph import get_full_path_to_the_graph
 
 @pytest.fixture(
     name="basic_model",
-    params=(TwoSequentialFcLNTestModel, ConvTwoFcTestModel, TwoConvAddConvTestModel, TwoSequentialConvBNTestModel),
+    params=(
+        TwoSequentialFcLNTestModel,
+        ConvTwoFcTestModel,
+        TwoConvAddConvTestModel,
+        TwoSequentialConvBNTestModel,
+    ),
 )
 def fixture_basic_model(request):
     model_cls = request.param
@@ -50,6 +56,7 @@ def fixture_basic_model(request):
 
 BASIC_ELASTIC_WIDTH_PARAMS = {
     "filter_importance": "L1",
+    "external_importance_path": None,
     "add_dynamic_inputs": None,
     "max_num_widths": -1,
     "min_width": 1,
@@ -144,6 +151,37 @@ def test_width_reorg(basic_model):
     after_reorg = model(dummy_input)
 
     model.check_reorg()
+    compare_tensors_ignoring_the_order(after_reorg, before_reorg)
+
+
+def test_width_custom_external_reorg(basic_model):
+    config = get_empty_config(input_sample_sizes=basic_model.INPUT_SIZE)
+    external_importance = basic_model.IMPORTANCE
+    with tempfile.NamedTemporaryFile() as external_importance_tempfile:
+        torch.save(external_importance, external_importance_tempfile)
+        config.update(
+            {
+                "bootstrapNAS": {
+                    "training": {
+                        "elasticity": {
+                            "width": {
+                                "filter_importance": "external",
+                                "external_importance_path": external_importance_tempfile.name,
+                            }
+                        },
+                    }
+                }
+            }
+        )
+        model, ctrl = create_bootstrap_training_model_and_ctrl(basic_model, config)
+    model.eval()
+    device = next(model.parameters()).device
+    dummy_input = torch.Tensor([1]).reshape(basic_model.INPUT_SIZE).to(device)
+    before_reorg = model(dummy_input)
+    ctrl.multi_elasticity_handler.width_handler.reorganize_weights()
+    after_reorg = model(dummy_input)
+
+    model.check_custom_external_reorg()
     compare_tensors_ignoring_the_order(after_reorg, before_reorg)
 
 
