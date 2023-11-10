@@ -14,6 +14,7 @@ import torch
 from torch import nn
 
 import nncf
+from nncf.torch.nested_objects_traversal import objwalk
 from tests.torch.test_models.alexnet import AlexNet as ModelWithSingleInput
 
 
@@ -43,11 +44,18 @@ def single_input_transform_fn(data_item):
     return data_item[0]
 
 
-def test_transform_fn_single_input():
+def test_transform_fn_single_input(use_cuda):
+    if use_cuda and not torch.cuda.is_available():
+        pytest.skip("There are no available CUDA devices")
+
     model = ModelWithSingleInput()
+    input_data = single_input_transform_fn(next(iter(dataloader)))
+    if use_cuda:
+        model = model.cuda()
+        input_data = input_data.cuda()
 
     # Check the transformation function
-    model(single_input_transform_fn(next(iter(dataloader))))
+    model(input_data)
     # Start quantization
     calibration_dataset = nncf.Dataset(dataloader, single_input_transform_fn)
     nncf.quantize(model, calibration_dataset)
@@ -64,15 +72,26 @@ def multiple_inputs_transform_dict_fn(data_item):
 @pytest.mark.parametrize(
     "transform_fn", (multiple_inputs_transform_tuple_fn, multiple_inputs_transform_dict_fn), ids=["tuple", "dict"]
 )
-def test_transform_fn_multiple_inputs(transform_fn):
+def test_transform_fn_multiple_inputs(transform_fn, use_cuda):
+    if use_cuda and not torch.cuda.is_available():
+        pytest.skip("There are no available CUDA devices")
+
     model = ModelWithMultipleInputs()
+    input_data = transform_fn(next(iter(dataloader)))
+    if use_cuda:
+        model = model.cuda()
+
+        def send_to_cuda(tensor):
+            return tensor.cuda()
+
+        input_data = objwalk(input_data, lambda _: True, send_to_cuda)
 
     # Check the transformation function
-    input_data = transform_fn(next(iter(dataloader)))
     if isinstance(input_data, tuple):
         model(*input_data)
     if isinstance(input_data, dict):
         model(**input_data)
+
     # Start quantization
     calibration_dataset = nncf.Dataset(dataloader, transform_fn)
     nncf.quantize(model, calibration_dataset)

@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from copy import deepcopy
 from typing import Any, Dict, Optional, Tuple, Union
 
 import torch
@@ -108,7 +109,8 @@ def quantize_impl(
     if target_device == TargetDevice.CPU_SPR:
         raise RuntimeError("target_device == CPU_SPR is not supported")
 
-    nncf_network = create_nncf_network(model.eval(), calibration_dataset)
+    copied_model = deepcopy(model)
+    nncf_network = create_nncf_network(copied_model.eval(), calibration_dataset)
 
     quantization_algorithm = PostTrainingQuantization(
         preset=preset,

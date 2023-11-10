@@ -14,8 +14,10 @@ from pathlib import Path
 
 import pytest
 
+from nncf.quantization.passes import filter_constant_nodes
 from nncf.quantization.passes import remove_nodes_and_reconnect_graph
 from tests.post_training.test_templates.models import NNCFGraphDropoutRemovingCase
+from tests.post_training.test_templates.models import NNCFGraphToTestConstantFiltering
 from tests.shared.nx_graph import compare_nx_graph_with_reference
 from tests.shared.paths import TEST_ROOT
 
@@ -28,13 +30,14 @@ class TestModes(Enum):
     WRONG_PARALLEL_EDGES = "wrong_parallel_edges"
 
 
+def _check_graphs(dot_file_name, nncf_graph) -> None:
+    nx_graph = nncf_graph.get_graph_for_structure_analysis()
+    path_to_dot = DATA_ROOT / dot_file_name
+    compare_nx_graph_with_reference(nx_graph, path_to_dot, check_edge_attrs=True)
+
+
 @pytest.mark.parametrize("mode", [TestModes.VALID, TestModes.WRONG_TENSOR_SHAPE, TestModes.WRONG_PARALLEL_EDGES])
 def test_remove_nodes_and_reconnect_graph(mode: TestModes):
-    def _check_graphs(dot_file_name, nncf_graph) -> None:
-        nx_graph = nncf_graph.get_graph_for_structure_analysis()
-        path_to_dot = DATA_ROOT / dot_file_name
-        compare_nx_graph_with_reference(nx_graph, path_to_dot, check_edge_attrs=True)
-
     dot_reference_path_before = Path("passes") / "dropout_synthetic_model_before.dot"
     dot_reference_path_after = Path("passes") / "dropout_synthetic_model_after.dot"
     dropout_metatype = "DROPOUT_METATYPE"
@@ -51,4 +54,20 @@ def test_remove_nodes_and_reconnect_graph(mode: TestModes):
 
     _check_graphs(dot_reference_path_before, nncf_graph)
     remove_nodes_and_reconnect_graph(nncf_graph, [dropout_metatype])
+    _check_graphs(dot_reference_path_after, nncf_graph)
+
+
+@pytest.mark.xfail
+def test_filter_constant_nodes():
+    dot_reference_path_before = Path("passes") / "test_constant_filtering_model_before.dot"
+    dot_reference_path_after = Path("passes") / "test_constant_filtering_model_after.dot"
+
+    constant_metatype = "CONSTANT_METATYPE"
+    read_variable_metatype = "READ_VARIABLE_METATYPE"
+
+    nncf_graph = NNCFGraphToTestConstantFiltering(constant_metatype, read_variable_metatype).nncf_graph
+    _check_graphs(dot_reference_path_before, nncf_graph)
+    filter_constant_nodes(
+        nncf_graph, read_variable_metatypes=[read_variable_metatype], constant_nodes_metatypes=[constant_metatype]
+    )
     _check_graphs(dot_reference_path_after, nncf_graph)
