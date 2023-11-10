@@ -44,7 +44,7 @@ Additional arguments:
 - `--fp32` to run validation of not quantized model
 - `--subset-size=N` to force subset_size of calibration dataset
 - `--benchmark` to collect throughput statistics, add `FPS` column to result.csv
-- `--extra_columns` to add additional columns to reports.csv:
+- `--extra-columns` to add additional columns to reports.csv:
   - `Stat. collection time` - time of statistic collection
   - `Bias correction time` - time of bias correction
   - `Validation time` - time of validation
