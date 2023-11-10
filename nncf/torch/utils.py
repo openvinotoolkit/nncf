@@ -11,7 +11,7 @@
 import random
 from collections import OrderedDict
 from contextlib import contextmanager
-from typing import Any, Dict, List
+from typing import Any, Dict, Generator, List
 
 import numpy as np
 import torch
@@ -418,6 +418,24 @@ def get_model_device(model: torch.nn.Module) -> torch.device:
         # The model had no parameters at all, doesn't matter which device to choose
         device = torch.device("cpu")
     return device
+
+
+def get_all_model_devices_generator(model: torch.nn.Module) -> Generator[torch.device, None, None]:
+    for p in model.parameters():
+        yield p.device
+
+
+def is_multidevice(model: torch.nn.Module) -> bool:
+    device_generator = get_all_model_devices_generator(model)
+    try:
+        curr_device = next(device_generator)
+    except StopIteration:  # no parameters
+        return False
+
+    for d in device_generator:
+        if d != curr_device:
+            return True
+    return False
 
 
 def get_model_dtype(model: torch.nn.Module) -> torch.dtype:

@@ -16,7 +16,6 @@ import torch
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.io_handling import ModelInputInfo
-from nncf.torch.utils import get_model_device
 
 
 class GraphTracer:
@@ -65,8 +64,7 @@ def create_dummy_forward_fn(
         from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_inputs_with_objwalk
         from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
 
-        device = get_model_device(model)
-        args, kwargs = input_info.get_forward_inputs(device=str(device))
+        args, kwargs = input_info.get_forward_inputs()
 
         if with_input_tracing:
             if wrap_inputs_fn is None:

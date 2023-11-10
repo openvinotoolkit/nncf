@@ -25,6 +25,7 @@ from nncf.torch.layers import NNCF_MODULES_MAP
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.torch.layers import UNWRAPPED_USER_MODULES
 from nncf.torch.layers import add_nncf_functionality_to_user_module
+from nncf.torch.utils import get_model_device
 
 
 def is_nncf_module(module: nn.Module) -> bool:
@@ -181,11 +182,14 @@ def replace_modules_by_nncf_modules(
             scope_set, ignored_scopes, target_scopes, eval_op_scopes
         ) and not _is_module_only_in_user_module(scope_set)
         if should_process:
+            device = get_model_device(module)
+
             if custom_replacer is not None:
                 replaced_module = custom_replacer(module)
             else:
                 replaced_module = nncf_module_from(module)
 
+            replaced_module.to(device)
             inter_dict[replaced_module] = scope_set
 
             new_scope_set = set()
