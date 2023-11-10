@@ -313,8 +313,9 @@ def create_compression_algorithm_builder_from_algo_names(
 
 def wrap_model(model: torch.nn.Module, example_input: Any) -> NNCFNetwork:
     """
-    Creates NNCFNetwork instance for the PyTorch model where the first item of dataset
-    is used for model tracing.
+    Wraps a PyTorch model to the NNCFNetwork class.
+
+    This function dynamically extends the instance of PyTorch model with NNCF-enabling functionality.
 
     :param model: PyTorch model
     :example_input: An example input that will be used for model tracing. A tuple is interpreted as an example input
