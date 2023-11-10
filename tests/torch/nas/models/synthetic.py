@@ -120,10 +120,12 @@ class TwoSequentialConvBNTestModel(nn.Module):
     w2_max = 2
     w2_min = 1
     IMPORTANCE = {
-        "TwoSequentialConvBNTestModel/Sequential[all_layers]/NNCFConv2d[0]/conv2d_0":
-            torch.Tensor([[[[0.7]]], [[[0.9]]], [[[0.8]]]]),
-        "TwoSequentialConvBNTestModel/Sequential[all_layers]/NNCFConv2d[3]/conv2d_0":
-            torch.Tensor([[[[0.0]], [[0.8]], [[1.0]]], [[[0.8]], [[0.7]], [[1.0]]]]),
+        "TwoSequentialConvBNTestModel/Sequential[all_layers]/NNCFConv2d[0]/conv2d_0": torch.Tensor(
+            [[[[0.7]]], [[[0.9]]], [[[0.8]]]]
+        ),
+        "TwoSequentialConvBNTestModel/Sequential[all_layers]/NNCFConv2d[3]/conv2d_0": torch.Tensor(
+            [[[[0.0]], [[0.8]], [[1.0]]], [[[0.8]], [[0.7]], [[1.0]]]]
+        ),
     }
 
     def __init__(self):
