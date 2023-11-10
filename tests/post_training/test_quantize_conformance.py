@@ -77,9 +77,7 @@ def fixture_report_data(output, run_benchmark_app, extra_columns):
 
     if data:
         test_results = OrderedDict(sorted(data.items()))
-        df = pd.DataFrame()
-        for _, test_result in test_results.items():
-            df = df.append(test_result, ignore_index=True)
+        df = pd.DataFrame(v for v in test_results.values())
 
         if not run_benchmark_app:
             df = df.drop(columns=["FPS"])
