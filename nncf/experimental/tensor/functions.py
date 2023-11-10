@@ -71,7 +71,7 @@ def min(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims:
 
     :param a: The input tensor.
     :param axis: Axis or axes along which to operate. By default, flattened input is used.
-    :param keepdim: If this is set to True, the axes which are reduced are left in the result as dimensions with size
+    :param keepdims: If this is set to True, the axes which are reduced are left in the result as dimensions with size
         one. With this option, the result will broadcast correctly against the input array. False, by default.
     :return: Minimum of a.
     """
