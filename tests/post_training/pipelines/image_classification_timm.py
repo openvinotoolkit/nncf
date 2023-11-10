@@ -17,7 +17,6 @@ import onnx
 import openvino.runtime as ov
 import timm
 import torch
-import tqdm
 from openvino.tools.mo import convert_model
 from sklearn.metrics import accuracy_score
 from timm.layers.config import set_fused_attn
@@ -26,6 +25,7 @@ from torchvision import transforms
 from torchvision.transforms import InterpolationMode
 
 import nncf
+from nncf.common.logging.track_progress import track
 from nncf.experimental.torch.replace_custom_modules.timm_custom_modules import (
     replace_timm_custom_modules_with_torch_native,
 )
@@ -148,16 +148,13 @@ class ImageClassificationTimm(BaseTestPipeline):
         jobs = int(os.environ.get("NUM_VAL_THREADS", DEFAULT_VAL_THREADS))
         infer_queue = ov.AsyncInferQueue(compiled_model, jobs)
 
-        # Disable tqdm for Jenkins
-        disable_tqdm = os.environ.get("JENKINS_HOME") is not None
-
-        with tqdm.tqdm(total=dataset_size, desc="Validation", disable=disable_tqdm) as pbar:
+        with track(total=dataset_size, description="Validation") as pbar:
 
             def process_result(request, userdata):
                 output_data = request.get_output_tensor().data
                 predicted_label = np.argmax(output_data, axis=1)
                 predictions[userdata] = [predicted_label]
-                pbar.update()
+                pbar.progress.update(pbar.task, advance=1)
 
             infer_queue.set_callback(process_result)
 
