@@ -13,6 +13,7 @@ import os
 import re
 import subprocess
 from pathlib import Path
+from typing import Callable, Tuple, Dict
 
 # nncf.torch must be imported before torchvision
 import nncf
@@ -27,7 +28,7 @@ from PIL import Image
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from torchvision.models.detection.ssd import SSD
 from torchvision.models.detection.ssd import GeneralizedRCNNTransform
-from tqdm import tqdm
+from nncf.common.logging.track_progress import track
 
 ROOT = Path(__file__).parent.resolve()
 DATASET_URL = "https://ultralytics.com/assets/coco128.zip"
@@ -49,9 +50,9 @@ def get_model_size(ir_path: str, m_type: str = "Mb", verbose: bool = True) -> fl
         bin_size /= 1024
     model_size = xml_size + bin_size
     if verbose:
-        print(f"Model graph (xml):   {xml_size:.3f} Mb")
-        print(f"Model weights (bin): {bin_size:.3f} Mb")
-        print(f"Model size:          {model_size:.3f} Mb")
+        print(f"Model graph (xml):   {xml_size:.3f} {m_type}")
+        print(f"Model weights (bin): {bin_size:.3f} {m_type}")
+        print(f"Model size:          {model_size:.3f} {m_type}")
     return model_size
 
 
@@ -73,7 +74,7 @@ class COCO128Dataset(torch.utils.data.Dataset):
         61,62,63,64,65,67,70,72,73,74,75,76,77,78,79,80,81,82,84,85,86,87,88,89,90
     ]  # fmt: skip
 
-    def __init__(self, data_path, transform):
+    def __init__(self, data_path: str, transform: Callable):
         super().__init__()
         self.transform = transform
         self.data_path = Path(data_path)
@@ -81,7 +82,7 @@ class COCO128Dataset(torch.utils.data.Dataset):
         self.labels_path = self.data_path / "labels" / "train2017"
         self.image_ids = sorted(map(lambda p: int(p.stem), self.images_path.glob("*.jpg")))
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: int) -> Tuple[torch.Tensor, Dict]:
         image_id = self.image_ids[item]
 
         img = Image.open(self.images_path / f"{image_id:012d}.jpg")
@@ -106,16 +107,16 @@ class COCO128Dataset(torch.utils.data.Dataset):
         img, target = self.transform(img, target)
         return img, target
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.image_ids)
 
 
-def validate(model, dataset, device):
+def validate(model: torch.nn.Module, dataset: COCO128Dataset, device: torch.device):
     model.to(device)
     model.eval()
     metric = MeanAveragePrecision()
     with torch.no_grad():
-        for img, target in tqdm(dataset, desc="Validating"):
+        for img, target in track(dataset, description="Validating"):
             prediction = model(img.to(device)[None])[0]
             for k in prediction.keys():
                 prediction[k] = prediction[k].to(torch.device("cpu"))
@@ -124,7 +125,7 @@ def validate(model, dataset, device):
     return computed_metrics["map_50"]
 
 
-def transform_fn(data_item):
+def transform_fn(data_item: Tuple[torch.Tensor, Dict]) -> torch.Tensor:
     # Skip label and add a batch dimension to an image tensor
     images, _ = data_item
     return images[None]

@@ -23,6 +23,7 @@ def transform_to_inference_graph(
     shapeof_metatypes: List[OperatorMetatype],
     dropout_metatypes: List[OperatorMetatype],
     read_variable_metatypes: Optional[List[OperatorMetatype]] = None,
+    nncf_graph_contains_constants: bool = True,
 ) -> NNCFGraph:
     """
     This method contains inplace pipeline of the passes that uses to provide inference graph without constant flows.
@@ -32,11 +33,13 @@ def transform_to_inference_graph(
     :param dropout_metatypes: List of backend-specific Dropout metatypes.
     :param read_variable_metatypes: List of backend-specific metatypes
         that also can be interpreted as inputs (ReadValue).
+    :param nncf_graph_contains_constants: Whether NNCFGraph contains constant nodes or not.
     :return: NNCFGraph in the inference style.
     """
     remove_shapeof_subgraphs(nncf_graph, shapeof_metatypes, read_variable_metatypes)
     remove_nodes_and_reconnect_graph(nncf_graph, dropout_metatypes)
-    filter_constant_nodes(nncf_graph, read_variable_metatypes)
+    if nncf_graph_contains_constants:
+        filter_constant_nodes(nncf_graph, read_variable_metatypes)
     return nncf_graph
 
 

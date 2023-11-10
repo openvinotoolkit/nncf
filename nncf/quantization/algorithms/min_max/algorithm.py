@@ -540,6 +540,7 @@ class MinMaxQuantization(Algorithm):
             self._backend_entity.shapeof_metatypes,
             self._backend_entity.dropout_metatypes,
             self._backend_entity.read_variable_metatypes,
+            nncf_graph_contains_constants=backend != BackendType.TORCH,
         )
 
         quantizer_setup = self._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)
