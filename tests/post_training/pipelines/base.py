@@ -49,6 +49,8 @@ ALL_PTQ_BACKENDS = NNCF_PTQ_BACKENDS + [BackendType.POT]
 PT_BACKENDS = [BackendType.TORCH]
 OV_BACKENDS = [BackendType.OV, BackendType.POT, BackendType.OPTIMUM]
 
+LIMIT_LENGTH_OF_STATUS = 120
+
 
 @dataclass
 class RunInfo:
@@ -92,7 +94,7 @@ class RunInfo:
             "Quant. time": self.format_time(self.time_quantization),
             "Total time": self.format_time(self.time_total),
             "FPS": self.fps,
-            "Status": self.status,
+            "Status": self.status[:LIMIT_LENGTH_OF_STATUS],
         }
 
 
