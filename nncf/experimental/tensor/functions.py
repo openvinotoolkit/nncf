@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from contextlib import AbstractContextManager
 from typing import List, Optional, Tuple, Union
 
 from nncf.experimental.tensor.dispatcher import WrapperType
