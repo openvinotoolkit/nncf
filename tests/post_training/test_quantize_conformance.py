@@ -12,8 +12,11 @@
 
 import time
 import traceback
+from collections import OrderedDict
 from pathlib import Path
+from typing import Dict, List, Optional
 
+import pandas as pd
 import pytest
 import yaml
 
@@ -24,17 +27,12 @@ from tests.post_training.pipelines.base import RunInfo
 
 @pytest.fixture(scope="session", name="data")
 def fixture_data(pytestconfig):
-    return pytestconfig.getoption("data")
+    return Path(pytestconfig.getoption("data"))
 
 
 @pytest.fixture(scope="session", name="output")
 def fixture_output(pytestconfig):
-    return pytestconfig.getoption("output")
-
-
-@pytest.fixture(scope="session", name="result")
-def fixture_result(pytestconfig):
-    return pytestconfig.test_results
+    return Path(pytestconfig.getoption("output"))
 
 
 @pytest.fixture(scope="session", name="no_eval")
@@ -42,34 +40,78 @@ def fixture_no_eval(pytestconfig):
     return pytestconfig.getoption("no_eval")
 
 
-def read_reference_data():
+@pytest.fixture(scope="session", name="subset_size")
+def fixture_subset_size(pytestconfig):
+    return pytestconfig.getoption("subset_size")
+
+
+@pytest.fixture(scope="session", name="run_fp32_backend")
+def fixture_run_fp32_backend(pytestconfig):
+    return pytestconfig.getoption("fp32")
+
+
+@pytest.fixture(scope="session", name="reference_data")
+def fixture_reference_data():
     path_reference = Path(__file__).parent / "reference_data.yaml"
     with path_reference.open() as f:
         data = yaml.safe_load(f)
     return data
 
 
-REFERENCE_DATA = read_reference_data()
+@pytest.fixture(scope="session", name="result_data")
+def fixture_report_data(output):
+    data: Dict[str, RunInfo] = {}
+
+    yield data
+
+    test_results = OrderedDict(sorted(data.items()))
+    df = pd.DataFrame()
+    for _, test_result in test_results.items():
+        df = df.append(test_result, ignore_index=True)
+
+    output.mkdir(parents=True, exist_ok=True)
+    df.to_csv(output / "results.csv", index=False)
 
 
 @pytest.mark.parametrize("test_case_name", TEST_CASES.keys())
-def test_ptq_quantization(test_case_name, data, output, result, no_eval):
+def test_ptq_quantization(
+    reference_data: dict,
+    test_case_name: str,
+    data: Path,
+    output: Path,
+    result_data: Dict[str, RunInfo],
+    no_eval: bool,
+    run_fp32_backend: bool,
+    subset_size: Optional[int],
+):
     pipeline = None
     err_msg = None
     test_model_param = None
     start_time = time.perf_counter()
 
     try:
-        if test_case_name not in REFERENCE_DATA:
+        if test_case_name not in reference_data:
             raise RuntimeError(f"{test_case_name} does not exist in 'reference_data.yaml'")
 
         test_model_param = TEST_CASES[test_case_name]
+
+        if test_model_param["backend"] == BackendType.FP32 and not run_fp32_backend:
+            pytest.skip("To run test for not quantized model use --fp32 argument")
+
         pipeline_cls = test_model_param["pipeline_cls"]
+
+        if subset_size:
+            test_model_param["ptq_params"]["subset_size"] = subset_size
 
         print("\n")
         print(f"Model: {test_model_param['reported_name']}")
         print(f"Backend: {test_model_param['backend']}")
         print(f"PTQ params: {test_model_param['ptq_params']}")
+
+        # Get target fp32 metric value
+        model_name = test_case_name.split("_backend_")[0]
+        test_reference = reference_data[test_case_name]
+        test_reference["metric_value_fp32"] = reference_data[f"{model_name}_backend_FP32"]["metric_value"]
 
         pipeline_kwargs = {
             "reported_name": test_model_param["reported_name"],
@@ -79,7 +121,7 @@ def test_ptq_quantization(test_case_name, data, output, result, no_eval):
             "params": test_model_param.get("params"),
             "output_dir": output,
             "data_dir": data,
-            "reference_data": REFERENCE_DATA[test_case_name],
+            "reference_data": test_reference,
             "no_eval": no_eval,
         }
 
@@ -110,7 +152,7 @@ def test_ptq_quantization(test_case_name, data, output, result, no_eval):
             )
 
     run_info.time_total = time.perf_counter() - start_time
-    result[test_case_name] = run_info.get_result_dict()
+    result_data[test_case_name] = run_info.get_result_dict()
 
     if err_msg:
         pytest.fail(err_msg)

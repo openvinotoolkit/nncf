@@ -65,7 +65,7 @@ class ImageClassificationTimm(BaseTestPipeline):
             self.model = onnx.load(onnx_path)
             self.input_name = self.model.graph.input[0].name
 
-        if self.backend in OV_BACKENDS:
+        if self.backend in OV_BACKENDS + [BackendType.FP32]:
             self.model = convert_model(timm_model, example_input=self.dummy_tensor, input_shape=self.input_size)
             self.input_name = list(inp.get_any_name() for inp in self.model.inputs)[0]
 
@@ -82,7 +82,7 @@ class ImageClassificationTimm(BaseTestPipeline):
             ov_model = convert_model(onnx_path)
             ov.serialize(ov_model, self.output_model_dir / "model_fp32.xml")
 
-        if self.backend in OV_BACKENDS:
+        if self.backend in OV_BACKENDS + [BackendType.FP32]:
             ov.serialize(self.model, self.output_model_dir / "model_fp32.xml")
 
     def prepare_preprocessor(self) -> None:

@@ -183,6 +183,11 @@ class BaseTestPipeline(ABC):
         """
         Run quantization of the model and collect time and memory usage information.
         """
+        if self.backend == BackendType.FP32:
+            # To validate not quantized model
+            self.path_quantized_ir = self.output_model_dir / "model_fp32.xml"
+            return
+
         print("Quantization...")
 
         if self.backend in PT_BACKENDS:

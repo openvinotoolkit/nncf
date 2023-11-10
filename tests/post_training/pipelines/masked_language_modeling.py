@@ -35,7 +35,7 @@ class MaskedLanguageModelingHF(BaseTestPipeline):
             self.model = self.model_hf
             self.model.config.torchscript = True  # Set to export by convert_model via torch.jit.trace
             self.dummy_tensor = self.model_hf.dummy_inputs["input_ids"]
-        if self.backend in OV_BACKENDS:
+        if self.backend in OV_BACKENDS + [BackendType.FP32]:
             self.model_hf = OVModelForSequenceClassification.from_pretrained(self.model_id, export=True, compile=False)
             self.model = self.model_hf.model
 
@@ -57,7 +57,7 @@ class MaskedLanguageModelingHF(BaseTestPipeline):
             ov_model = convert_model(onnx_path)
             ov.serialize(ov_model, self.output_model_dir / "model_fp32.xml")
 
-        if self.backend in OV_BACKENDS:
+        if self.backend in OV_BACKENDS + [BackendType.FP32]:
             ov.serialize(self.model, self.output_model_dir / "model_fp32.xml")
 
     def prepare_preprocessor(self) -> None:
