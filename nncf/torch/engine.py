@@ -34,7 +34,6 @@ class PTEngine(Engine):
 
         self._model = model
         self._model.eval()
-        self._device = get_model_device(model)
 
     def infer(
         self, input_data: Union[torch.Tensor, Tuple[torch.Tensor], Dict[str, torch.Tensor]]
@@ -45,11 +44,6 @@ class PTEngine(Engine):
         :param input_data: Inputs for the model.
         :return: Model outputs.
         """
-
-        def send_to_device(tensor):
-            return tensor.to(self._device)
-
-        input_data = objwalk(input_data, is_tensor, send_to_device)
 
         if isinstance(input_data, dict):
             return self._model(**input_data)
