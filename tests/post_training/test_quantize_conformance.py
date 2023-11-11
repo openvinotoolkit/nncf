@@ -61,6 +61,11 @@ def fixture_extra_columns(pytestconfig):
     return pytestconfig.getoption("extra_columns")
 
 
+@pytest.fixture(scope="session", name="enable_output")
+def fixture_enable_output(pytestconfig):
+    return pytestconfig.getoption("capture") == "no"
+
+
 @pytest.fixture(scope="session", name="reference_data")
 def fixture_reference_data():
     path_reference = Path(__file__).parent / "reference_data.yaml"
@@ -101,6 +106,7 @@ def test_ptq_quantization(
     run_benchmark_app: bool,
     capsys: pytest.CaptureFixture,
     extra_columns: bool,
+    enable_output: bool,
 ):
     pipeline = None
     err_msg = None
@@ -167,6 +173,12 @@ def test_ptq_quantization(
 
         if extra_columns:
             pipeline.collect_data_from_stdout(captured.out)
+
+        if enable_output:
+            # To print output with -s option
+            with capsys.disabled():
+                print(captured.out)
+                print(captured.err)
     else:
         if test_model_param is not None:
             run_info = RunInfo(
