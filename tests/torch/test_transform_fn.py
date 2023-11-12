@@ -16,7 +16,6 @@ import torch
 from torch import nn
 
 import nncf
-from nncf.torch.nested_objects_traversal import objwalk
 from tests.torch.test_models.alexnet import AlexNet as ModelWithSingleInput
 
 

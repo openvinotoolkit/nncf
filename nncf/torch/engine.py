@@ -15,9 +15,6 @@ import torch
 from torch import nn
 
 from nncf.common.engine import Engine
-from nncf.torch.nested_objects_traversal import objwalk
-from nncf.torch.utils import get_model_device
-from nncf.torch.utils import is_tensor
 
 
 class PTEngine(Engine):
