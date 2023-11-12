@@ -117,6 +117,7 @@ ATOMIC_ACTIVATIONS_OPERATIONS = [
     ov_metatypes.OVEluMetatype,
     ov_metatypes.OVPReluMetatype,
     ov_metatypes.OVSigmoidMetatype,
+    ov_metatypes.OVHSigmoidMetatype,
     ov_metatypes.OVHardSigmoidMetatype,
     ov_metatypes.OVSwishMetatype,
     ov_metatypes.OVHSwishMetatype,

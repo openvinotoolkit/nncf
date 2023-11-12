@@ -125,6 +125,7 @@ class AggregatorBase:
         tensor_processor: NNCFCollectorTensorProcessor,
         aggregation_axes: Optional[AggregationAxes] = None,
         num_samples: Optional[int] = None,
+        window_size: Optional[int] = None,
     ):
         """
         :param tensor_processor: Backend-specific tensor processor.
@@ -134,14 +135,17 @@ class AggregatorBase:
         :param num_samples: Maximum number of samples to collect. Aggregator
             skips tensor registration if tensor registration was called num_samples times before.
             Aggregator never skips registration if num_samples is None.
+        :param window_size: Number of samples from the end of the list of collected samples to aggregate.
+        Aggregates all available collected statistics in case parameter is None.
         """
 
         self._tensor_processor = tensor_processor
         self._aggregation_axes = (0,) if aggregation_axes is None else aggregation_axes
-        self._keepdims = False
+        self._keepdims = True
         self._num_samples = num_samples
         self._collected_samples = 0
-        self._container = []
+        self._window_size = window_size
+        self._container = deque(maxlen=window_size)
 
     @property
     def num_samples(self) -> int:
@@ -594,20 +598,7 @@ class ShapeAggregator(AggregatorBase):
         return self._container.shape
 
 
-class TensorAggregatorBase(AggregatorBase, ABC):
-    def __init__(
-        self,
-        tensor_processor: NNCFCollectorTensorProcessor,
-        aggregation_axes: Optional[AggregationAxes] = None,
-        num_samples: Optional[int] = None,
-        window_size=None,
-    ):
-        super().__init__(tensor_processor, aggregation_axes=aggregation_axes, num_samples=num_samples)
-        self._window_size = window_size
-        self._container = deque(maxlen=window_size)
-
-
-class OnlineAggregatorBase(TensorAggregatorBase, ABC):
+class OnlineAggregatorBase(AggregatorBase, ABC):
     """
     Base class for aggregators which are using aggregation function fn with following property:
     fn([x1, x2, x3]) == fn([fn([x1, x2]), x3]) where x1, x2, x3 are samples to aggregate.
@@ -622,19 +613,17 @@ class OnlineAggregatorBase(TensorAggregatorBase, ABC):
         else:
             reduced = x
         if 0 in self._aggregation_axes:
-            if self._container:
-                reduced = self._aggregation_fn(
-                    self._tensor_processor.stack([reduced, self._container]), axis=0, keepdims=False
-                )
-            self._container = reduced
+            stacked_tensors = self._tensor_processor.stack([reduced, *self._container], axis=0)
+            aggregated = self._aggregation_fn(stacked_tensors, axis=0, keepdims=self._keepdims)
+            aggregated = self._tensor_processor.squeeze(aggregated, 0)
+            self._container = [aggregated]
         else:
             self._container.append(reduced)
 
     def _aggregate_impl(self) -> NNCFTensor:
         if 0 in self._aggregation_axes:
             if self._keepdims:
-                return self._tensor_processor.stack([self._container]).tensor
-            return self._container.tensor
+                return self._container[0].tensor
         return self._tensor_processor.stack(self._container).tensor
 
     @abstractmethod
@@ -652,7 +641,7 @@ class MaxAggregator(OnlineAggregatorBase):
         return self._tensor_processor.reduce_max(stacked_value, axis=axis, keepdims=keepdims)
 
 
-class OfflineAggregatorBase(TensorAggregatorBase, ABC):
+class OfflineAggregatorBase(AggregatorBase, ABC):
     """
     Base class for aggregators which are using aggregation function fn which
     does not fulfill property fn([x1, x2, x3]) == fn([fn([x1, x2]), x3])
@@ -665,7 +654,8 @@ class OfflineAggregatorBase(TensorAggregatorBase, ABC):
 
     def _aggregate_impl(self) -> NNCFTensor:
         stacked_val = self._tensor_processor.stack(self._container)
-        return self._aggregation_fn(stacked_val, axis=self._aggregation_axes, keepdims=self._keepdims).tensor
+        aggregated = self._aggregation_fn(stacked_val, axis=self._aggregation_axes, keepdims=self._keepdims)
+        return self._tensor_processor.squeeze(aggregated, 0).tensor
 
     @abstractmethod
     def _aggregation_fn(self, stacked_value: NNCFTensor, axis: AggregationAxes, keepdims: bool) -> NNCFTensor:
@@ -699,13 +689,19 @@ class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
     def _aggregate_impl(self) -> NNCFTensor:
         stacked_samples = self._tensor_processor.stack(self._container)
         low_values, high_values = self._tensor_processor.quantile(
-            stacked_samples, quantile=(self._quantile, 1 - self._quantile), axis=self._aggregation_axes
+            stacked_samples,
+            quantile=(self._quantile, 1 - self._quantile),
+            axis=self._aggregation_axes,
         )
         tp = self._tensor_processor
         outliers_mask = tp.logical_or(tp.less(stacked_samples, low_values), tp.less(high_values, stacked_samples))
-        return self._aggregation_fn(
-            stacked_samples=stacked_samples, mask=outliers_mask, axis=self._aggregation_axes, keepdims=self._keepdims
-        ).tensor
+        aggregated = self._aggregation_fn(
+            stacked_samples=stacked_samples,
+            mask=outliers_mask,
+            axis=self._aggregation_axes,
+            keepdims=self._keepdims,
+        )
+        return self._tensor_processor.squeeze(aggregated, 0).tensor
 
     @abstractmethod
     def _aggregation_fn(
@@ -734,32 +730,53 @@ class MedianNoOutliersAggregator(NoOutliersAggregatorBase):
         return self._tensor_processor.masked_median(stacked_samples, axis=axis, mask=mask, keepdims=keepdims)
 
 
-class MedianAbsoluteDeviationAggregator(TensorAggregatorBase):
+class MedianAbsoluteDeviationAggregator(AggregatorBase):
+    def __init__(
+        self,
+        tensor_processor: NNCFCollectorTensorProcessor,
+        aggregation_axes: Optional[AggregationAxes] = None,
+        num_samples: Optional[int] = None,
+        window_size=None,
+    ):
+        super().__init__(
+            tensor_processor=tensor_processor,
+            aggregation_axes=aggregation_axes,
+            num_samples=num_samples,
+            window_size=window_size,
+        )
+        if 0 not in self._aggregation_axes:
+            raise NotImplementedError(
+                "Aggregation without 0 dim is not supported yet for MedianAbsoluteDeviationAggregator"
+            )
+
     def _register_reduced_input_impl(self, x: TensorType) -> None:
         return self._container.append(x)
 
     def _aggregate_impl(self) -> Dict[str, NNCFTensor]:
-        stacked_val = self._tensor_processor.stack(self._container)
+        stacked_val, shape_after_aggregation = _moveaxes_flatten_cat(
+            self._container, [x - 1 for x in self._aggregation_axes if x > 0], self._tensor_processor
+        )
 
         mask = self._tensor_processor.zero_elements(stacked_val)
-        median_per_ch = self._tensor_processor.masked_median(
-            stacked_val, mask=mask, axis=self._aggregation_axes, keepdims=True
-        )
+        median_per_ch = self._tensor_processor.masked_median(stacked_val, mask=mask, axis=0, keepdims=True)
 
         mad_values = self._tensor_processor.median(
             self._tensor_processor.abs(self._tensor_processor.sub(stacked_val, median_per_ch)),
-            axis=self._aggregation_axes,
-            keepdims=self._keepdims,
+            axis=0,
+            keepdims=False,
         )
-        if not self._keepdims:
-            median_per_ch = self._tensor_processor.squeeze(median_per_ch, self._aggregation_axes)
+        if self._keepdims:
+            median_per_ch = self._tensor_processor.reshape(median_per_ch, shape_after_aggregation)
+            mad_values = self._tensor_processor.reshape(mad_values, shape_after_aggregation)
+        else:
+            median_per_ch = self._tensor_processor.squeeze(median_per_ch, 0)
         return {
             MedianMADTensorStatistic.MEDIAN_VALUES_STAT: median_per_ch.tensor,
             MedianMADTensorStatistic.MAD_VALUES_STAT: mad_values.tensor,
         }
 
 
-class PercentileAggregator(TensorAggregatorBase):
+class PercentileAggregator(AggregatorBase):
     def __init__(
         self,
         tensor_processor: NNCFCollectorTensorProcessor,
@@ -769,6 +786,8 @@ class PercentileAggregator(TensorAggregatorBase):
         window_size=None,
     ):
         super().__init__(tensor_processor, aggregation_axes=aggregation_axes, num_samples=num_samples)
+        if 0 not in self._aggregation_axes:
+            raise NotImplementedError("Aggregation without 0 dim is not supported yet for PercentileAggregator")
         self._percentiles_to_collect = percentiles_to_collect
         self._window_size = window_size
         self._container = deque(maxlen=window_size)
@@ -777,15 +796,58 @@ class PercentileAggregator(TensorAggregatorBase):
         return self._container.append(x)
 
     def _aggregate_impl(self) -> Dict[float, NNCFTensor]:
-        stacked_val = self._tensor_processor.stack(self._container)
+        stacked_val, shape_after_aggregation = _moveaxes_flatten_cat(
+            self._container, [x - 1 for x in self._aggregation_axes if x > 0], self._tensor_processor
+        )
 
         percentiles = self._tensor_processor.percentile(
-            stacked_val, self._percentiles_to_collect, axis=self._aggregation_axes, keepdims=self._keepdims
+            stacked_val, self._percentiles_to_collect, axis=0, keepdims=False
         )
         retval = {}
         for idx, percentile in enumerate(self._percentiles_to_collect):
-            retval[percentile] = percentiles[idx].tensor
+            value = percentiles[idx]
+            if self._keepdims:
+                value = self._tensor_processor.reshape(value, shape_after_aggregation)
+            retval[percentile] = value.tensor
         return retval
+
+
+def _moveaxes_flatten_cat(
+    tensor_list: List[NNCFTensor], aggregation_axes: Tuple[int, ...], tensor_processor: NNCFCollectorTensorProcessor
+) -> Tuple[NNCFTensor, Tuple[int, ...]]:
+    """
+    Moves aggregation axes to the begining of the tensor shape for each tensor from the list, flattens
+    and concatenates them in 0 dimension. Computes target shape for the processed tensor
+    after an aggregation function is applied to it. Target shape preserves original order
+    of dimensions and replaces aggregated dimensions by 1.
+
+    :param tensor_list: NNCFTensor list to process.
+    :param aggregation_axes: Aggregation axes to move, flatten and concatinate.
+    :param tensor_processor: Backed-specific tensor processor instance.
+    :return: Tuple of the processed tensor and
+        target shape for the processed tensor after an aggregation function is applied to it.
+    """
+    tensor_shape = list(tensor_list[0].shape)
+
+    # Transpose dims to move aggregation axes forward
+    transpose_dims = list(range(len(tensor_shape)))
+    for idx, axis in enumerate(aggregation_axes):
+        transpose_dims[axis], transpose_dims[idx] = transpose_dims[idx], transpose_dims[axis]
+
+    # Shape to flatten aggregation axes
+    reshape_shape = [
+        -1,
+    ] + [
+        tensor_shape[dim] for dim in transpose_dims
+    ][len(aggregation_axes) :]
+
+    reshaped_tensors = []
+    for tensor in tensor_list:
+        transposed_t = tensor_processor.transpose(tensor, transpose_dims)
+        reshaped_tensors.append(tensor_processor.reshape(transposed_t, reshape_shape))
+
+    shape_after_aggregation = tuple(1 if idx in aggregation_axes else dim for idx, dim in enumerate(tensor_shape))
+    return tensor_processor.cat(reshaped_tensors, axis=0), shape_after_aggregation
 
 
 AGGREGATORS_MAP = {

@@ -28,6 +28,7 @@ from nncf import Dataset
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging import nncf_logger
@@ -41,6 +42,7 @@ from nncf.quantization.algorithms.algorithm import Algorithm
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
 STATISTIC_BRANCH_KEY = "abs_max"
+ALPHA_MAP = {"convolution": 0.05, "matmul": 0.95}
 
 
 class SmoothQuant(Algorithm):
@@ -51,27 +53,27 @@ class SmoothQuant(Algorithm):
     via the insertion of nodes with smoothing scales for weighted layers.
     """
 
-    def __init__(self, subset_size: int = 300, inplace_statistics: bool = True, alpha: Optional[int] = 0.95):
+    def __init__(
+        self, subset_size: int = 300, inplace_statistics: bool = True, alpha_map: Dict[str, float] = ALPHA_MAP
+    ):
         """
         :param subset_size: Size of a subset for the statistics collection,
             default is 300.
         :param inplace_statistics: Defines whether to calculate quantizers statistics
             by backend graph operations or by default Python implementation, defaults
             to True.
-        :param alpha: The parameter that regulates the calculation of the scale.
-            The default value is 0.95. Negative value switches off the algorithm.
+        :param alpha_map: The parameter that regulates the calculation of the scale for different layers.
+            The default value for each layer in the ALPHA_MAP.
+            Negative value switches off the algorithm for correspondent nodes.
         """
-
-        if alpha < 0:
-            raise RuntimeError("Smooth Quant algorithm does not support negative alpha parameter!")
 
         super().__init__()
         self._subset_size = subset_size
         self._inplace_statistics = inplace_statistics
         self._backend_entity = None
-        self._alpha = alpha
         self._algorithm_key = f"SQ_{hash(self)}"
         self._cached_multiply_names = Counter()
+        self._alpha_map = alpha_map
 
     @property
     def available_backends(self) -> List[BackendType]:
@@ -101,8 +103,9 @@ class SmoothQuant(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         self._set_backend_entity(model)
+        alpha_map = self._get_alpha_map()
 
-        nodes_to_smooth_data = self._get_nodes_to_smooth_data(graph)
+        nodes_to_smooth_data = self._get_nodes_to_smooth_data(graph, alpha_map.keys())
         model_transformer = ModelTransformerFactory.create(model)
         transformation_layout = TransformationLayout()
 
@@ -127,8 +130,10 @@ class SmoothQuant(Algorithm):
                 weight_statistics = self._process_weight_statistics(node_to_smooth, weight_value, weight_port)
                 weight_statistics = self._backend_entity.clip_statistics(weight_statistics)
 
+                alpha = alpha_map[node_to_smooth.metatype]
+
                 scales, ratio = self._backend_entity.calculate_scale_and_ratio(
-                    activations_value, weight_statistics, self._alpha
+                    activations_value, weight_statistics, alpha
                 )
 
                 if ratio > best_ratio:
@@ -221,8 +226,9 @@ class SmoothQuant(Algorithm):
         statistic_container = StatisticPointsContainer()
 
         self._set_backend_entity(model)
+        alpha_map = self._get_alpha_map()
 
-        nodes_to_smooth_data = self._get_nodes_to_smooth_data(graph)
+        nodes_to_smooth_data = self._get_nodes_to_smooth_data(graph, alpha_map.keys())
 
         for node_data in nodes_to_smooth_data:
             node_to_smooth = node_data["node_to_smooth"]
@@ -246,14 +252,15 @@ class SmoothQuant(Algorithm):
             )
         return statistic_container
 
-    def _get_nodes_to_smooth_data(self, nncf_graph: NNCFGraph) -> List[Dict]:
+    def _get_nodes_to_smooth_data(self, nncf_graph: NNCFGraph, node_metatypes: List[OperatorMetatype]) -> List[Dict]:
         """
         Collects layers whose activations will be smoothed.
 
         :param nncf_graph: NNCFGraph instance.
+        :param node_metatypes: Metatypes for nodes to search for.
         :return: List with the data for each layer.
         """
-        nodes_with_weights = nncf_graph.get_nodes_by_metatypes(self._backend_entity.weighted_metatypes)
+        nodes_with_weights = nncf_graph.get_nodes_by_metatypes(node_metatypes)
         nodes_to_smooth_data = []
 
         for node_with_weight in nodes_with_weights:
@@ -261,7 +268,17 @@ class SmoothQuant(Algorithm):
                 continue
 
             ports_map = self._backend_entity.get_input_ports_map(node_with_weight, nncf_graph)
-            weight_node = nncf_graph.get_input_edges(node_with_weight)[ports_map["weight"]].from_node
+            input_edges = nncf_graph.get_input_edges(node_with_weight)
+            weight_node = input_edges[ports_map["weight"]].from_node
+            activation_node = input_edges[ports_map["activation"]].from_node
+
+            # Skipping agnostic layers as inputs to propagate quantizer
+            # Only for Convolution layers
+            if (
+                node_with_weight.metatype == self._backend_entity.convolution_metatype
+                and activation_node.metatype in self._backend_entity.quantize_agnostic_metatypes
+            ):
+                continue
 
             # Skipping shared weights
             if len(nncf_graph.get_next_nodes(weight_node)) > 1:
@@ -325,7 +342,7 @@ class SmoothQuant(Algorithm):
         :return: Calculated reduction axes.
         """
         shape = nncf_graph.get_input_edges(node)[input_port].tensor_shape
-        reduction_axes = tuple([0])
+        reduction_axes = tuple([])
         if len(shape) > 1:
             channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port)
             reduction_axes = self._backend_entity.get_channel_agnostic_reduction_axes(channel_axis, shape)
@@ -343,7 +360,9 @@ class SmoothQuant(Algorithm):
         channel_axis = 0
         if len(weights.shape) > 1:
             channel_axis = self._backend_entity.get_weight_channel_axis(node, port_id)
-        return self._backend_entity.process_weight_statistics(weights, channel_axis)
+        reduction_shape = [i for i, _ in enumerate(weights.shape)]
+        reduction_shape.pop(channel_axis)
+        return self._backend_entity.process_weight_statistics(weights, tuple(reduction_shape))
 
     def _create_scale_node_name(self, source_name: str, source_port_id: int) -> str:
         """
@@ -356,4 +375,26 @@ class SmoothQuant(Algorithm):
         scale_node_name = f"{source_name}_{source_port_id}"
         unique_index = self._cached_multiply_names[scale_node_name]
         self._cached_multiply_names[scale_node_name] += 1
-        return f"{scale_node_name}_{unique_index}/sq_multiply"
+        return f"{scale_node_name}_{unique_index}/nncf_smooth_quant"
+
+    def _get_alpha_map(self) -> Dict[OperatorMetatype, float]:
+        """
+        Returns alpha map by metatypes.
+
+        :return: Alpha map by metatypes.
+        """
+        alpha_by_metatype_map = {}
+        name_to_metatype = {
+            "convolution": self._backend_entity.convolution_metatype,
+            "matmul": self._backend_entity.matmul_metatype,
+        }
+        for type_name, alpha_value in self._alpha_map.items():
+            if alpha_value < 0:
+                nncf_logger.debug(
+                    f"Smooth Quant algorithm does not support negative parameter for {type_name}! "
+                    "Skipping these layers."
+                )
+                continue
+            metatype = name_to_metatype[type_name]
+            alpha_by_metatype_map[metatype] = alpha_value
+        return alpha_by_metatype_map

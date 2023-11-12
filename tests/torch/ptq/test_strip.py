@@ -14,7 +14,6 @@ from torch.quantization import FakeQuantize
 
 import nncf
 from nncf.data import Dataset
-from nncf.experimental.torch.quantization.quantize_model import quantize_impl
 from nncf.parameters import TargetDevice
 from nncf.quantization import QuantizationPreset
 from nncf.torch.nncf_network import ExtraCompressionModuleType
@@ -69,7 +68,7 @@ def test_nncf_strip_api(strip_type):
 
     dataset = Dataset(RandomDatasetMock(input_size), transform_fn)
 
-    quantized_model = quantize_impl(
+    quantized_model = nncf.quantize(
         model=model,
         calibration_dataset=dataset,
         preset=QuantizationPreset.MIXED,

@@ -15,7 +15,9 @@ import torch
 from examples.common.sample_config import SampleConfig
 from examples.torch.common.example_logger import logger
 from nncf.api.compression import CompressionAlgorithmController
+from nncf.torch.exporter import count_tensors
 from nncf.torch.exporter import generate_input_names_list
+from nncf.torch.exporter import get_export_args
 
 
 def export_model(ctrl: CompressionAlgorithmController, config: SampleConfig) -> None:
@@ -28,11 +30,13 @@ def export_model(ctrl: CompressionAlgorithmController, config: SampleConfig) -> 
     model = ctrl.model if config.no_strip_on_export else ctrl.strip()
     model = model.eval().cpu()
 
-    input_names = generate_input_names_list(len(model.nncf.input_infos))
+    export_args = get_export_args(model)
+    input_names = generate_input_names_list(count_tensors(export_args))
+
     input_tensor_list = []
     input_shape_list = []
-    for info in model.nncf.input_infos:
-        input_shape = tuple([1] + list(info.shape)[1:])
+    for info in model.nncf.input_infos.elements:
+        input_shape = tuple([1] + info.shape[1:])
         input_tensor_list.append(torch.rand(input_shape))
         input_shape_list.append(input_shape)
 

@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Callable, List, Optional, Type
+from typing import Callable, Optional, Type
 
 import pytest
 from torch import Size
@@ -20,7 +20,9 @@ from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.torch.dynamic_graph.io_handling import FillerInputElement
+from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
+from nncf.torch.dynamic_graph.io_handling import ModelInputInfo
 from nncf.torch.graph.operator_metatypes import PTBatchNormMetatype
 from nncf.torch.graph.operator_metatypes import PTConv1dMetatype
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
@@ -82,14 +84,14 @@ class LayerAttributesTestDesc:
     def __init__(
         self,
         module: nn.Module,
-        model_input_info_list: List[ModelInputInfo],
+        model_input_info: ModelInputInfo,
         layer_attributes: BaseLayerAttributes,
         metatype_cls: Type[OperatorMetatype],
         layer_attributes_comparator: COMPARATOR_TYPE = default_comparator,
     ):
         self.module = module
         self.layer_attributes = layer_attributes
-        self.model_input_info_list = model_input_info_list
+        self.model_input_info = model_input_info
         self.metatype_cls = metatype_cls
         self.layer_attributes_comparator = layer_attributes_comparator
 
@@ -103,31 +105,31 @@ BATCH_NORM_REF_ATTR = GenericWeightedLayerAttributes(
 LIST_TEST_DESCS = [
     LayerAttributesTestDesc(
         module=nn.GroupNorm(1, 2),
-        model_input_info_list=[ModelInputInfo([1, 2, 1, 1])],
+        model_input_info=FillerInputInfo([FillerInputElement([1, 2, 1, 1])]),
         layer_attributes=GroupNormLayerAttributes(weight_requires_grad=True, num_channels=2, num_groups=1),
         metatype_cls=PTGroupNormMetatype,
     ),
     LayerAttributesTestDesc(
         module=nn.BatchNorm2d(1),
-        model_input_info_list=[ModelInputInfo([1, 1, 1, 1])],
+        model_input_info=FillerInputInfo([FillerInputElement([1, 1, 1, 1])]),
         layer_attributes=BATCH_NORM_REF_ATTR,
         metatype_cls=PTBatchNormMetatype,
     ),
     LayerAttributesTestDesc(
         module=nn.BatchNorm3d(1),
-        model_input_info_list=[ModelInputInfo([1, 1, 1, 1, 1])],
+        model_input_info=FillerInputInfo([FillerInputElement([1, 1, 1, 1, 1])]),
         layer_attributes=BATCH_NORM_REF_ATTR,
         metatype_cls=PTBatchNormMetatype,
     ),
     LayerAttributesTestDesc(
         module=nn.BatchNorm1d(1),
-        model_input_info_list=[ModelInputInfo([1, 1, 1])],
+        model_input_info=FillerInputInfo([FillerInputElement([1, 1, 1])]),
         layer_attributes=BATCH_NORM_REF_ATTR,
         metatype_cls=PTBatchNormMetatype,
     ),
     LayerAttributesTestDesc(
         module=nn.Conv2d(1, 1, 1),
-        model_input_info_list=[ModelInputInfo([1, 1, 1, 1])],
+        model_input_info=FillerInputInfo([FillerInputElement([1, 1, 1, 1])]),
         layer_attributes=ConvolutionLayerAttributes(
             weight_requires_grad=True,
             in_channels=1,
@@ -144,7 +146,7 @@ LIST_TEST_DESCS = [
     ),
     LayerAttributesTestDesc(
         module=nn.Conv2d(2, 2, 1, groups=2),
-        model_input_info_list=[ModelInputInfo([1, 2, 1, 1])],
+        model_input_info=FillerInputInfo([FillerInputElement([1, 2, 1, 1])]),
         layer_attributes=ConvolutionLayerAttributes(
             weight_requires_grad=True,
             in_channels=2,
@@ -161,7 +163,7 @@ LIST_TEST_DESCS = [
     ),
     LayerAttributesTestDesc(
         module=nn.Conv1d(1, 1, 1),
-        model_input_info_list=[ModelInputInfo([1, 1, 1])],
+        model_input_info=FillerInputInfo([FillerInputElement([1, 1, 1])]),
         layer_attributes=ConvolutionLayerAttributes(
             weight_requires_grad=True,
             in_channels=1,
@@ -178,7 +180,7 @@ LIST_TEST_DESCS = [
     ),
     LayerAttributesTestDesc(
         module=nn.Conv3d(1, 1, 1),
-        model_input_info_list=[ModelInputInfo([1, 1, 1, 1, 1])],
+        model_input_info=FillerInputInfo([FillerInputElement([1, 1, 1, 1, 1])]),
         layer_attributes=ConvolutionLayerAttributes(
             weight_requires_grad=True,
             in_channels=1,
@@ -195,7 +197,7 @@ LIST_TEST_DESCS = [
     ),
     LayerAttributesTestDesc(
         module=nn.ConvTranspose1d(1, 1, 1),
-        model_input_info_list=[ModelInputInfo([1, 1, 1])],
+        model_input_info=FillerInputInfo([FillerInputElement([1, 1, 1])]),
         layer_attributes=ConvolutionLayerAttributes(
             weight_requires_grad=True,
             in_channels=1,
@@ -212,7 +214,7 @@ LIST_TEST_DESCS = [
     ),
     LayerAttributesTestDesc(
         module=nn.ConvTranspose2d(1, 1, 1),
-        model_input_info_list=[ModelInputInfo([1, 1, 1, 1])],
+        model_input_info=FillerInputInfo([FillerInputElement([1, 1, 1, 1])]),
         layer_attributes=ConvolutionLayerAttributes(
             weight_requires_grad=True,
             in_channels=1,
@@ -229,7 +231,7 @@ LIST_TEST_DESCS = [
     ),
     LayerAttributesTestDesc(
         module=nn.ConvTranspose3d(1, 1, 1),
-        model_input_info_list=[ModelInputInfo([1, 1, 1, 1, 1])],
+        model_input_info=FillerInputInfo([FillerInputElement([1, 1, 1, 1, 1])]),
         layer_attributes=ConvolutionLayerAttributes(
             weight_requires_grad=True,
             in_channels=1,
@@ -246,13 +248,13 @@ LIST_TEST_DESCS = [
     ),
     LayerAttributesTestDesc(
         module=nn.Linear(1, 1),
-        model_input_info_list=[ModelInputInfo([1, 1, 1, 1])],
+        model_input_info=FillerInputInfo([FillerInputElement([1, 1, 1, 1])]),
         layer_attributes=LinearLayerAttributes(weight_requires_grad=True, in_features=1, out_features=1),
         metatype_cls=PTLinearMetatype,
     ),
     LayerAttributesTestDesc(
         module=nn.Linear(1, 1, bias=False),
-        model_input_info_list=[ModelInputInfo([1, 1, 1, 1])],
+        model_input_info=FillerInputInfo([FillerInputElement([1, 1, 1, 1])]),
         layer_attributes=LinearLayerAttributes(
             weight_requires_grad=True, in_features=1, out_features=1, with_bias=False
         ),
@@ -260,7 +262,7 @@ LIST_TEST_DESCS = [
     ),
     LayerAttributesTestDesc(
         module=nn.Embedding(2, 1),
-        model_input_info_list=[ModelInputInfo([1, 1], type_str="long")],
+        model_input_info=FillerInputInfo([FillerInputElement([1, 1], type_str="long")]),
         layer_attributes=GenericWeightedLayerAttributes(
             weight_requires_grad=True, weight_shape=Size([2, 1]), filter_dimension_idx=0
         ),
@@ -268,7 +270,7 @@ LIST_TEST_DESCS = [
     ),
     LayerAttributesTestDesc(
         module=nn.EmbeddingBag(1, 1),
-        model_input_info_list=[ModelInputInfo([1, 1], type_str="long", filler="zeros")],
+        model_input_info=FillerInputInfo([FillerInputElement([1, 1], type_str="long", filler="zeros")]),
         layer_attributes=GenericWeightedLayerAttributes(
             weight_requires_grad=True, weight_shape=Size([1, 1]), filter_dimension_idx=0
         ),
@@ -281,7 +283,7 @@ LIST_TEST_DESCS = [
 def test_can_set_valid_layer_attributes(desc: LayerAttributesTestDesc):
     single_layer_model = desc.module
 
-    nncf_network = NNCFNetwork(single_layer_model, desc.model_input_info_list)
+    nncf_network = NNCFNetwork(single_layer_model, desc.model_input_info)
 
     nncf_network.eval()
     graph = nncf_network.nncf.get_graph()

@@ -21,6 +21,7 @@ from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.parameters import ModelType
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
@@ -79,7 +80,9 @@ class TemplateTestSQAlgorithm:
             subset_size=1,
             model_type=ModelType.TRANSFORMER,
             advanced_parameters=AdvancedQuantizationParameters(
-                overflow_fix=OverflowFix.DISABLE, smooth_quant_alpha=0.95, inplace_statistics=False
+                overflow_fix=OverflowFix.DISABLE,
+                smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=0.95),
+                inplace_statistics=False,
             ),
         )
 
@@ -89,10 +92,10 @@ class TemplateTestSQAlgorithm:
             (
                 LinearMultiShapeModel,
                 {
-                    "/Reshape_0_0/sq_multiply": [[[[1.0594617, 1.1019668, 1.2208323, 1.1003988]]]],
-                    "/Split_1_0/sq_multiply": [[[[1.1276343, 0.7605822]]]],
-                    "/Split_0_0/sq_multiply": [[[[0.32575992, 0.33121374]]]],
-                    "/Reshape_1_0_0/sq_multiply": [
+                    "/Reshape_0_0/nncf_smooth_quant": [[[[1.0594617, 1.1019668, 1.2208323, 1.1003988]]]],
+                    "/Split_1_0/nncf_smooth_quant": [[[[1.1276343, 0.7605822]]]],
+                    "/Split_0_0/nncf_smooth_quant": [[[[0.32575992, 0.33121374]]]],
+                    "/Reshape_1_0_0/nncf_smooth_quant": [
                         [
                             [
                                 0.3251956,
@@ -106,10 +109,10 @@ class TemplateTestSQAlgorithm:
                             ]
                         ]
                     ],
-                    "/Reshape_1_0_1/sq_multiply": [[[0.4699388], [0.3369332], [0.3674589]]],
-                    "/Reshape_2_0_0/sq_multiply": [[0.1242606]],
-                    "/ReduceMax_0_0/sq_multiply": [
-                        [0.0944255, 0.0853033, 0.7187095, 0.3429819, 0.1422914, 0.2127623, 0.4640060, 0.7210725]
+                    "/Reshape_1_0_1/nncf_smooth_quant": [[[0.4699388], [0.3369332], [0.3674589]]],
+                    "/Reshape_2_0_0/nncf_smooth_quant": [[0.1242606]],
+                    "/ReduceMax_0_0/nncf_smooth_quant": [
+                        [0.08709318, 0.08033343, 0.67289335, 0.33452678, 0.14223875, 0.19858328, 0.46314085, 0.68816555]
                     ],
                 },
             ),
@@ -172,7 +175,8 @@ class TemplateTestSQAlgorithm:
 
         algo = SmoothQuant()
         algo._set_backend_entity(model)
-        smooth_data = algo._get_nodes_to_smooth_data(nncf_graph)
+        alpha_map = algo._get_alpha_map()
+        smooth_data = algo._get_nodes_to_smooth_data(nncf_graph, alpha_map.keys())
         smooth_data = {d["node_to_smooth"].node_name: d["input_act_port"] for d in smooth_data}
 
         for ref_node_name, ref_port_id in references:

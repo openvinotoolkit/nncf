@@ -66,8 +66,7 @@ def test_overflow_fix_scales(overflow_fix):
     # dump_to_json(ref_stats_path, q_nodes_params)
 
     ref_nodes_params = load_json(ref_stats_path)
-    params = ["scale", "zero_point"]
-    compare_stats(ref_nodes_params, q_nodes_params, params)
+    compare_stats(ref_nodes_params, q_nodes_params)
 
 
 MODELS = [
@@ -115,5 +114,4 @@ def test_scales(model, preset):
     # dump_to_json(ref_stats_path, q_nodes_params)
 
     ref_nodes_params = load_json(ref_stats_path)
-    params = ["scale", "zero_point"]
-    compare_stats(ref_nodes_params, q_nodes_params, params)
+    compare_stats(ref_nodes_params, q_nodes_params)

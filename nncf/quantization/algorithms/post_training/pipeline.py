@@ -80,10 +80,23 @@ def create_ptq_pipeline(
 
     # Add the `SmoothQuant` algorithm as the first step of the pipeline.
     # It is added only for `ModelType.TRANSFORMER`.
-    if model_type == ModelType.TRANSFORMER and advanced_parameters.smooth_quant_alpha >= 0:
-        pipeline_steps.append(
-            [SmoothQuant(subset_size, advanced_parameters.inplace_statistics, advanced_parameters.smooth_quant_alpha)]
+    sq_params = advanced_parameters.smooth_quant_alphas
+    sq_alpha = advanced_parameters.smooth_quant_alpha
+    if sq_alpha is not None:
+        warning_deprecated(
+            "`AdvancedQuantizationParameters(smooth_quant_alpha=..)` is deprecated."
+            "Please, use `AdvancedQuantizationParameters(smooth_quant_alphas)` option "
+            "with AdvancedSmoothQuantParameters(convolution=.., matmul=..) as value instead."
         )
+        if sq_alpha < 0:
+            sq_params.convolution = -1
+            sq_params.matmul = -1
+        else:
+            sq_params.matmul = sq_alpha
+
+    if model_type == ModelType.TRANSFORMER and (sq_params.convolution >= 0 or sq_params.matmul >= 0):
+        alpha_map = {"convolution": sq_params.convolution, "matmul": sq_params.matmul}
+        pipeline_steps.append([SmoothQuant(subset_size, advanced_parameters.inplace_statistics, alpha_map=alpha_map)])
 
     # Add the `ChannelAlignment` algorithm as the second step of the pipeline.
     if not advanced_parameters.disable_channel_alignment:

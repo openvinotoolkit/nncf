@@ -27,7 +27,8 @@ from nncf.common.pruning.model_analysis import cluster_special_ops
 from nncf.common.pruning.symbolic_mask import SymbolicMaskProcessor
 from nncf.common.pruning.utils import PruningAnalysisDecision
 from nncf.common.pruning.utils import PruningAnalysisReason
-from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.torch.dynamic_graph.io_handling import FillerInputElement
+from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.filter_pruning.algo import FilterPruningBuilder
@@ -705,7 +706,7 @@ def test_pruning_node_selector(test_input_info_struct_: GroupPruningModulesTestS
     )
     model = model()
     model.eval()
-    nncf_network = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 1, 8, 8])])
+    nncf_network = NNCFNetwork(model, input_info=FillerInputInfo([FillerInputElement([1, 1, 8, 8])]))
     graph = nncf_network.nncf.get_original_graph()
     pruning_groups = pruning_node_selector.create_pruning_groups(graph)
 

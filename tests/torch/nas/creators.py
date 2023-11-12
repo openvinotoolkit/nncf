@@ -26,7 +26,7 @@ from nncf.experimental.torch.nas.bootstrapNAS.training.progressive_shrinking_con
     ProgressiveShrinkingController,
 )
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
-from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.model_creation import create_nncf_network
 from nncf.torch.model_transformer import PTModelTransformer
@@ -116,8 +116,8 @@ def create_bootstrap_nas_training_algo(model_name) -> Tuple[NNCFNetwork, Progres
     nncf_config["bootstrapNAS"] = {"training": {"algorithm": "progressive_shrinking"}}
     nncf_config["input_info"][0].update({"filler": "random"})
 
-    input_info_list = create_input_infos(nncf_config)
-    dummy_forward = create_dummy_forward_fn(input_info_list)
+    input_info = FillerInputInfo.from_nncf_config(nncf_config)
+    dummy_forward = create_dummy_forward_fn(input_info)
     compressed_model, training_ctrl = create_bootstrap_training_model_and_ctrl(model, nncf_config)
     return compressed_model, training_ctrl, dummy_forward
 
