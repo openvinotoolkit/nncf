@@ -104,7 +104,7 @@ INSTALL_REQUIRES = [
     "jsonschema>=3.2.0",
     "jstyleson>=0.0.2",
     "natsort>=7.1.0",
-    "networkx>=2.6, <=2.8.2",  # see ticket 94048 or https://github.com/networkx/networkx/issues/5962
+    "networkx>=2.6, <=3.1",  # see ticket 94048 or https://github.com/networkx/networkx/issues/5962
     "ninja>=1.10.0.post2, <1.11",
     "numpy>=1.19.1, <1.27",
     "openvino-telemetry>=2023.2.0",
@@ -113,12 +113,6 @@ INSTALL_REQUIRES = [
     "psutil",
     "pydot>=1.4.1",
     "pymoo>=0.6.0.1",
-    # The recent pyparsing major version update seems to break
-    # integration with networkx - the graphs parsed from current .dot
-    # reference files no longer match against the graphs produced in tests.
-    # Using 2.x versions of pyparsing seems to fix the issue.
-    # Ticket: 69520
-    "pyparsing<3.0",
     "rich>=13.5.2",
     "scikit-learn>=0.24.0",
     "scipy>=1.3.2",
