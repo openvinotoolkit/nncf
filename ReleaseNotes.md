@@ -5,21 +5,21 @@
 Post-training Quantization:
 
 - Features:
-  - Added new types (AvgPool, GroupNorm, LayerNorm) to the ignored scope for `ModelType.Transformer` scheme.
-  - `QuantizationPreset.Mixed` was set as the default for `ModelType.Transformer` scheme.
-  - (OpenVINO) Added NF4-INT8, INT4 implementations for data-free WeightsCompression algorithm (`compress_weights(…)` pipeline).
+  - (OpenVINO) Added support for data-free 4-bit weights compression through NF4 and INT4 data types (`compress_weights(…)` pipeline).
   - (OpenVINO) Added support for [IF operation](https://docs.openvino.ai/2023.1/openvino_docs_ops_infrastructure_If_8.html) quantization.
-  - (OpenVINO) Added [extract_ov_subgraph tool](tools/extract_ov_subgraph.py) for large IR subgraph extraction.
   - (OpenVINO) Added `dump_intermediate_model` parameter support for AccuracyAwareAlgorithm (`quantize_with_accuracy_control(…)` pipeline).
   - (OpenVINO) Added support for SmoothQuant and ChannelAlignment algorithms for HyperparameterTuner algorithm (`quantize_with_tune_hyperparams(…)` pipeline).
-  - (PyTorch) Post-training quantization implementation was replaced as the default.
+  - (PyTorch) Post-training Quantization is now supported with `quantize(…)` pipeline and the common implementation of quantization algorithms. Deprecated `create_compressed_model()` method for Post-training Quantization.
+  - Added new types (AvgPool, GroupNorm, LayerNorm) to the ignored scope for `ModelType.Transformer` scheme.
+  - `QuantizationPreset.Mixed` was set as the default for `ModelType.Transformer` scheme.
 - Fixes:
   - (OpenVINO, ONNX, PyTorch) Aligned/added patterns between backends (SE block, MVN layer, multiple activations, etc.) to restore performance/metrics.
   - Fixed patterns for `ModelType.Transformer` to align with the [quantization scheme](https://docs.openvino.ai/2023.1/openvino_docs_OV_UG_lpt.html).
 - Improvements:
-  - Improved UX with the: new progress bar for pipeline, new exceptions, and .dot graph visualization updates.
+  - Improved UX with the new progress bar for pipeline, new exceptions, and .dot graph visualization updates.
   - (OpenVINO) Optimized WeightsCompression algorithm (`compress_weights(…)` pipeline) for LLM's quantization, added ignored scope support.
   - (OpenVINO) Optimized AccuracyAwareQuantization algorithm with multi-threaded approach while calculating ranking score (`quantize_with_accuracy_control(…)` pipeline).
+  - (OpenVINO) Added [extract_ov_subgraph tool](tools/extract_ov_subgraph.py) for large IR subgraph extraction.
   - (ONNX) Optimized quantization pipeline (up to 1.15x speed up).
 - Tutorials:
   - [Post-Training Optimization of BLIP Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/233-blip-visual-language-processing)
@@ -28,6 +28,7 @@ Post-training Quantization:
   - [Post-Training Optimization of Dolly 2.0 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/240-dolly-2-instruction-following)
   - [Post-Training Optimization of Massively Multilingual Speech Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/255-mms-massively-multilingual-speech)
   - [Post-Training Optimization of OneFormer Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/249-oneformer-segmentation)
+  - [Post-Training Optimization of InstructPix2Pix Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/231-instruct-pix2pix-image-editing)
 
 Compression-aware training:
 
