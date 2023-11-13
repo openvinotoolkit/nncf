@@ -17,8 +17,8 @@ Post-training Quantization:
   - Fixed patterns for `ModelType.Transformer` to align with the [quantization scheme](https://docs.openvino.ai/2023.1/openvino_docs_OV_UG_lpt.html).
 - Improvements:
   - Improved UX with the new progress bar for pipeline, new exceptions, and .dot graph visualization updates.
-  - (OpenVINO) Optimized WeightsCompression algorithm (`compress_weights(…)` pipeline) for LLM's quantization, added ignored scope support.
-  - (OpenVINO) Optimized AccuracyAwareQuantization algorithm with multi-threaded approach while calculating ranking score (`quantize_with_accuracy_control(…)` pipeline).
+  - (OpenVINO) Optimized WeightsCompression algorithm (`compress_weights(…)` pipeline) execution time for LLM's quantization, added ignored scope support.
+  - (OpenVINO) Optimized AccuracyAwareQuantization algorithm execution time with multi-threaded approach while calculating ranking score (`quantize_with_accuracy_control(…)` pipeline).
   - (OpenVINO) Added [extract_ov_subgraph tool](tools/extract_ov_subgraph.py) for large IR subgraph extraction.
   - (ONNX) Optimized quantization pipeline (up to 1.15x speed up).
 - Tutorials:
