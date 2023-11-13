@@ -11,7 +11,6 @@
 import copy
 import pathlib
 from collections import defaultdict
-from enum import IntEnum
 from typing import Dict
 
 import networkx as nx
@@ -42,11 +41,6 @@ def get_graph_without_data(G: nx.DiGraph) -> nx.DiGraph:
 def read_dot_graph(path: pathlib.Path) -> nx.DiGraph:
     loaded = nx.DiGraph(nx.nx_pydot.read_dot(str(path)))
     return relabel_graph_for_dot_visualization(loaded, from_reference=True)
-
-
-class _Direction(IntEnum):
-    TO_DOT = 0
-    FROM_DOT = 0
 
 
 RESERVED_CHAR = ":"
