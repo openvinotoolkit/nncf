@@ -27,7 +27,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.torch import register_module
-from nncf.torch.dynamic_graph.io_handling import ExactInputsInfo
+from nncf.torch.dynamic_graph.io_handling import ExampleInputInfo
 from nncf.torch.dynamic_graph.io_handling import FillerInputElement
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
@@ -836,6 +836,6 @@ def test_multidevice_model():
 
     model = MultideviceModel((3, 3), (2, 3))
     example_input = (torch.ones(3, 3, device="cpu"), torch.ones(3, 2, device="cuda"))
-    input_info = ExactInputsInfo.from_example_input(example_input)
+    input_info = ExampleInputInfo.from_example_input(example_input)
     nncf_model = NNCFNetwork(model, input_info)
     nncf_model(*example_input)

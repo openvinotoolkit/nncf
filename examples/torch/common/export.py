@@ -29,7 +29,7 @@ def export_model(ctrl: CompressionAlgorithmController, save_path: str, no_strip_
 
     model = model.eval().cpu()
 
-    export_args = get_export_args(model)
+    export_args = get_export_args(model, device="cpu")
     input_names = generate_input_names_list(count_tensors(export_args))
 
     with torch.no_grad():
