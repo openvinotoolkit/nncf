@@ -220,7 +220,7 @@ class FillerInputInfo(ModelInputInfo):
         return tuple(args_list), kwargs
 
 
-class ExampleInputInfo(ModelInputInfo):
+class ExactInputsInfo(ModelInputInfo):
     """
     An implementation of ModelInputInfo that defines the model input in terms of exact forward args and kwargs.
     """
@@ -239,6 +239,8 @@ class ExampleInputInfo(ModelInputInfo):
         kwargs_at_device = objwalk(kwargs_copy, is_tensor, to_device_fn)
         return args_at_device, kwargs_at_device
 
+
+class ExampleInputInfo(ExactInputsInfo):
     @classmethod
     def from_example_input(cls, example_input: Any) -> "ExampleInputInfo":
         """
@@ -266,7 +268,7 @@ class ExampleInputInfo(ModelInputInfo):
         return cls.from_example_input(example_input)
 
 
-class LoaderInputInfo(ModelInputInfo):
+class LoaderInputInfo(ExactInputsInfo):
     @classmethod
     def from_nncf_config_dataloaders(cls, config: NNCFConfig) -> Optional["LoaderInputInfo"]:
         """
