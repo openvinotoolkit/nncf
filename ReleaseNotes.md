@@ -1,5 +1,45 @@
 # Release Notes
 
+## New in Release 2.7.0
+
+Post-training Quantization:
+
+- Features:
+  - Added new types (AvgPool, GroupNorm, LayerNorm) to the ignored scope for `ModelType.Transformer` scheme.
+  - `QuantizationPreset.Mixed` was set as the default for `ModelType.Transformer` scheme.
+  - (OpenVINO) Added NF4-INT8, INT4 implementations for data-free WeightsCompression algorithm (`compress_weights(…)` pipeline).
+  - (OpenVINO) Added support for [IF operation](https://docs.openvino.ai/2023.1/openvino_docs_ops_infrastructure_If_8.html) quantization.
+  - (OpenVINO) Added [extract_ov_subgraph tool](tools/extract_ov_subgraph.py) for large IR subgraph extraction.
+  - (OpenVINO) Added `dump_intermediate_model` parameter support for AccuracyAwareAlgorithm (`quantize_with_accuracy_control(…)` pipeline).
+  - (OpenVINO) Added support for SmoothQuant and ChannelAlignment algorithms for HyperparameterTuner algorithm (`quantize_with_tune_hyperparams(…)` pipeline).
+  - (PyTorch) Post-training quantization implementation was replaced as the default.
+- Fixes:
+  - (OpenVINO, ONNX, PyTorch) Aligned/added patterns between backends (SE block, MVN layer, multiple activations, etc.) to restore performance/metrics.
+  - Fixed patterns for `ModelType.Transformer` to align with the [quantization scheme](https://docs.openvino.ai/2023.1/openvino_docs_OV_UG_lpt.html).
+- Improvements:
+  - Improved UX with the: new progress bar for pipeline, new exceptions, and .dot graph visualization updates.
+  - (OpenVINO) Optimized WeightsCompression algorithm (`compress_weights(…)` pipeline) for LLM's quantization, added ignored scope support.
+  - (OpenVINO) Optimized AccuracyAwareQuantization algorithm with multi-threaded approach while calculating ranking score (`quantize_with_accuracy_control(…)` pipeline).
+  - (ONNX) Optimized quantization pipeline (up to 1.15x speed up).
+- Tutorials:
+  - [Post-Training Optimization of BLIP Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/233-blip-visual-language-processing)
+  - [Post-Training Optimization of DeepFloyd IF Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/238-deepfloyd-if)
+  - [Post-Training Optimization of Grammatical Error Correction Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/214-grammar-correction)
+  - [Post-Training Optimization of Dolly 2.0 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/240-dolly-2-instruction-following)
+  - [Post-Training Optimization of Massively Multilingual Speech Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/255-mms-massively-multilingual-speech)
+  - [Post-Training Optimization of OneFormer Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/249-oneformer-segmentation)
+
+Compression-aware training:
+
+- Fixes:
+  - (PyTorch) Fixed Hessian trace calculation to solve [#2155](https://github.com/openvinotoolkit/nncf/issues/2155) issue.
+- Requirements:
+  - Updated PyTorch version (2.1.0).
+  - Updated numpy version (<1.27).
+- Deprecations/Removals:
+  - (PyTorch) Removed legacy external quantizer storage names.
+  - (PyTorch) Removed torch < 2.0 version support.
+
 ## New in Release 2.6.0
 
 Post-training Quantization:
