@@ -45,7 +45,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>69.47 (0.30)</td>
       <td><a href="../examples/torch/classification/configs/pruning/googlenet_imagenet_pruning_geometric_median.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/googlenet_imagenet_pruning_geometric_median.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/googlenet_imagenet_pruning_geometric_median.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">Inception V3</td>
@@ -61,7 +61,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>77.45 (-0.12)</td>
       <td><a href="../examples/torch/classification/configs/quantization/inception_v3_imagenet_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/inception_v3_imagenet_int8.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/inception_v3_imagenet_int8.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">Inception V3</td>
@@ -69,7 +69,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>76.36 (0.97)</td>
       <td><a href="../examples/torch/classification/configs/sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/inception_v3_imagenet_rb_sparsity_int8.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/inception_v3_imagenet_rb_sparsity_int8.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">MobileNet V2</td>
@@ -85,7 +85,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>71.07 (0.80)</td>
       <td><a href="../examples/torch/classification/configs/quantization/mobilenet_v2_imagenet_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_int8.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/mobilenet_v2_imagenet_int8.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">MobileNet V2</td>
@@ -93,7 +93,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>71.24 (0.63)</td>
       <td><a href="../examples/torch/classification/configs/quantization/mobilenet_v2_imagenet_int8_per_tensor.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_int8_per_tensor.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/mobilenet_v2_imagenet_int8_per_tensor.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">MobileNet V2</td>
@@ -101,7 +101,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>70.95 (0.92)</td>
       <td><a href="../examples/torch/classification/configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_hawq.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_int4_int8.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/mobilenet_v2_imagenet_int4_int8.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">MobileNet V2</td>
@@ -109,7 +109,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>71.09 (0.78)</td>
       <td><a href="../examples/torch/classification/configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v2_imagenet_rb_sparsity_int8.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/mobilenet_v2_imagenet_rb_sparsity_int8.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">MobileNet V3 (Small)</td>
@@ -125,7 +125,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>66.98 (0.68)</td>
       <td><a href="../examples/torch/classification/configs/quantization/mobilenet_v3_small_imagenet_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v3_small_imagenet_int8.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/mobilenet_v3_small_imagenet_int8.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">ResNet-18</td>
@@ -141,7 +141,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>61.67 (8.09)</td>
       <td><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet_binarization_xnor.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_binarization_xnor.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/resnet18_imagenet_binarization_xnor.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">ResNet-18</td>
@@ -149,7 +149,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>61.63 (8.13)</td>
       <td><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet_binarization_dorefa.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_binarization_dorefa.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/resnet18_imagenet_binarization_dorefa.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">ResNet-18</td>
@@ -157,7 +157,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>69.27 (0.49)</td>
       <td><a href="../examples/torch/classification/configs/pruning/resnet18_imagenet_pruning_magnitude.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_pruning_magnitude.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/resnet18_imagenet_pruning_magnitude.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">ResNet-18</td>
@@ -165,7 +165,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>69.31 (0.45)</td>
       <td><a href="../examples/torch/classification/configs/pruning/resnet18_imagenet_pruning_geometric_median.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_pruning_geometric_median.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/resnet18_imagenet_pruning_geometric_median.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">ResNet-18</td>
@@ -189,7 +189,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>73.11 (0.19)</td>
       <td><a href="../examples/torch/classification/configs/pruning/resnet34_imagenet_pruning_geometric_median_kd.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet34_imagenet_pruning_geometric_median_kd.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/resnet34_imagenet_pruning_geometric_median_kd.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">ResNet-50</td>
@@ -205,7 +205,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>76.46 (-0.31)</td>
       <td><a href="../examples/torch/classification/configs/quantization/resnet50_imagenet_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_int8.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/resnet50_imagenet_int8.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">ResNet-50</td>
@@ -213,7 +213,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>76.39 (-0.24)</td>
       <td><a href="../examples/torch/classification/configs/quantization/resnet50_imagenet_int8_per_tensor.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_int8_per_tensor.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/resnet50_imagenet_int8_per_tensor.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">ResNet-50</td>
@@ -221,7 +221,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>76.05 (0.10)</td>
       <td><a href="../examples/torch/classification/configs/mixed_precision/resnet50_imagenet_mixed_int_hawq.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_int4_int8.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/resnet50_imagenet_int4_int8.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">ResNet-50</td>
@@ -229,7 +229,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>75.42 (0.73)</td>
       <td><a href="../examples/torch/classification/configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_rb_sparsity_int8.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/resnet50_imagenet_rb_sparsity_int8.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">ResNet-50</td>
@@ -237,7 +237,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>75.50 (0.65)</td>
       <td><a href="../examples/torch/classification/configs/sparsity_quantization/resnet50_imagenet_rb_sparsity50_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_rb_sparsity50_int8.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/resnet50_imagenet_rb_sparsity50_int8.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">ResNet-50</td>
@@ -245,7 +245,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>75.57 (0.58)</td>
       <td><a href="../examples/torch/classification/configs/pruning/resnet50_imagenet_pruning_geometric_median.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet50_imagenet_pruning_geometric_median.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/resnet50_imagenet_pruning_geometric_median.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">ResNet-50</td>
@@ -269,7 +269,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>58.22 (-0.03)</td>
       <td><a href="../examples/torch/classification/configs/quantization/squeezenet1_1_imagenet_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/squeezenet1_1_imagenet_int8.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/squeezenet1_1_imagenet_int8.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">SqueezeNet V1.1</td>
@@ -277,7 +277,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>58.11 (0.08)</td>
       <td><a href="../examples/torch/classification/configs/quantization/squeezenet1_1_imagenet_int8_per_tensor.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/squeezenet1_1_imagenet_int8_per_tensor.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/squeezenet1_1_imagenet_int8_per_tensor.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">SqueezeNet V1.1</td>
@@ -285,7 +285,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>57.57 (0.62)</td>
       <td><a href="../examples/torch/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_hawq_old_eval.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/squeezenet1_1_imagenet_int4_int8.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/squeezenet1_1_imagenet_int4_int8.pth">Download</a></td>
     </tr>
   </tbody>
 </table>
@@ -310,7 +310,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>VOC12+07 train, VOC07 eval</td>
       <td>62.23</td>
       <td><a href="../examples/torch/object_detection/configs/ssd300_mobilenet_voc.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_mobilenet_voc.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/ssd300_mobilenet_voc.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">SSD300‑MobileNet</td>
@@ -318,7 +318,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>VOC12+07 train, VOC07 eval</td>
       <td>62.95 (-0.72)</td>
       <td><a href="../examples/torch/object_detection/configs/ssd300_mobilenet_voc_magnitude_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_mobilenet_voc_magnitude_sparsity_int8.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/ssd300_mobilenet_voc_magnitude_sparsity_int8.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">SSD300‑VGG‑BN</td>
@@ -326,7 +326,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>VOC12+07 train, VOC07 eval</td>
       <td>78.28</td>
       <td><a href="../examples/torch/object_detection/configs/ssd300_vgg_voc.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/ssd300_vgg_voc.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">SSD300‑VGG‑BN</td>
@@ -334,7 +334,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>VOC12+07 train, VOC07 eval</td>
       <td>77.81 (0.47)</td>
       <td><a href="../examples/torch/object_detection/configs/ssd300_vgg_voc_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc_int8.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/ssd300_vgg_voc_int8.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">SSD300‑VGG‑BN</td>
@@ -342,7 +342,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>VOC12+07 train, VOC07 eval</td>
       <td>77.66 (0.62)</td>
       <td><a href="../examples/torch/object_detection/configs/ssd300_vgg_voc_magnitude_sparsity_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc_magnitude_sparsity_int8.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/ssd300_vgg_voc_magnitude_sparsity_int8.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">SSD300‑VGG‑BN</td>
@@ -350,7 +350,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>VOC12+07 train, VOC07 eval</td>
       <td>78.35 (-0.07)</td>
       <td><a href="../examples/torch/object_detection/configs/ssd300_vgg_voc_pruning_geometric_median.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd300_vgg_voc_pruning_geometric_median.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/ssd300_vgg_voc_pruning_geometric_median.pth">Download</a></td>
     </tr>
   <tr>
       <td align="left">SSD512-VGG‑BN</td>
@@ -358,7 +358,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>VOC12+07 train, VOC07 eval</td>
       <td>80.26</td>
       <td><a href="../examples/torch/object_detection/configs/ssd512_vgg_voc.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd512_vgg_voc.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/ssd512_vgg_voc.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">SSD512-VGG‑BN</td>
@@ -366,7 +366,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>VOC12+07 train, VOC07 eval</td>
       <td>80.04 (0.22)</td>
       <td><a href="../examples/torch/object_detection/configs/ssd512_vgg_voc_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd512_vgg_voc_int8.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/ssd512_vgg_voc_int8.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">SSD512-VGG‑BN</td>
@@ -374,7 +374,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>VOC12+07 train, VOC07 eval</td>
       <td>79.68 (0.58)</td>
       <td><a href="../examples/torch/object_detection/configs/ssd512_vgg_voc_magnitude_sparsity_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/ssd512_vgg_voc_magnitude_sparsity_int8.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/ssd512_vgg_voc_magnitude_sparsity_int8.pth">Download</a></td>
     </tr>
   </tbody>
 </table>
@@ -399,7 +399,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>CamVid</td>
       <td>67.89</td>
       <td><a href="../examples/torch/semantic_segmentation/configs/icnet_camvid.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/icnet_camvid.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/icnet_camvid.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">ICNet</td>
@@ -407,7 +407,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>CamVid</td>
       <td>67.89 (0.00)</td>
       <td><a href="../examples/torch/semantic_segmentation/configs/icnet_camvid_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/icnet_camvid_int8.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/icnet_camvid_int8.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">ICNet</td>
@@ -415,7 +415,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>CamVid</td>
       <td>67.16 (0.73)</td>
       <td><a href="../examples/torch/semantic_segmentation/configs/icnet_camvid_magnitude_sparsity_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/icnet_camvid_magnitude_sparsity_int8.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/icnet_camvid_magnitude_sparsity_int8.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">UNet</td>
@@ -423,7 +423,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>CamVid</td>
       <td>71.95</td>
       <td><a href="../examples/torch/semantic_segmentation/configs/unet_camvid.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_camvid.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/unet_camvid.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">UNet</td>
@@ -431,7 +431,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>CamVid</td>
       <td>71.89 (0.06)</td>
       <td><a href="../examples/torch/semantic_segmentation/configs/unet_camvid_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_camvid_int8.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/unet_camvid_int8.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">UNet</td>
@@ -439,7 +439,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>CamVid</td>
       <td>72.46 (-0.51)</td>
       <td><a href="../examples/torch/semantic_segmentation/configs/unet_camvid_magnitude_sparsity_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_camvid_magnitude_sparsity_int8.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/unet_camvid_magnitude_sparsity_int8.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">UNet</td>
@@ -447,7 +447,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>Mapillary</td>
       <td>56.24</td>
       <td><a href="../examples/torch/semantic_segmentation/configs/unet_mapillary.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/unet_mapillary.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">UNet</td>
@@ -455,7 +455,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>Mapillary</td>
       <td>56.09 (0.15)</td>
       <td><a href="../examples/torch/semantic_segmentation/configs/unet_mapillary_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_int8.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/unet_mapillary_int8.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">UNet</td>
@@ -463,7 +463,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>Mapillary</td>
       <td>55.69 (0.55)</td>
       <td><a href="../examples/torch/semantic_segmentation/configs/unet_mapillary_magnitude_sparsity_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_magnitude_sparsity_int8.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/unet_mapillary_magnitude_sparsity_int8.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">UNet</td>
@@ -471,7 +471,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>Mapillary</td>
       <td>55.64 (0.60)</td>
       <td><a href="../examples/torch/semantic_segmentation/configs/unet_mapillary_pruning_geometric_median.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/unet_mapillary_pruning_geometric_median.pth">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/torch/unet_mapillary_pruning_geometric_median.pth">Download</a></td>
     </tr>
   </tbody>
 </table>
@@ -569,7 +569,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>78.39 (-0.48)</td>
       <td><a href="../examples/tensorflow/classification/configs/quantization/inception_v3_imagenet_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/inception_v3_imagenet_int8.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/inception_v3_imagenet_int8.tar.gz">Download</a></td>
     </tr>
     <tr>
       <td align="left">Inception V3</td>
@@ -577,7 +577,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>77.52 (0.39)</td>
       <td><a href="../examples/tensorflow/classification/configs/sparsity_quantization/inception_v3_imagenet_rb_sparsity_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/inception_v3_imagenet_rb_sparsity_int8.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/inception_v3_imagenet_rb_sparsity_int8.tar.gz">Download</a></td>
     </tr>
     <tr>
       <td align="left">Inception V3</td>
@@ -585,7 +585,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>77.86 (0.05)</td>
       <td><a href="../examples/tensorflow/classification/configs/sparsity/inception_v3_imagenet_magnitude_sparsity.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/inception_v3_imagenet_magnitude_sparsity.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/inception_v3_imagenet_magnitude_sparsity.tar.gz">Download</a></td>
     </tr>
     <tr>
       <td align="left">MobileNet V2</td>
@@ -601,7 +601,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>71.63 (0.22)</td>
       <td><a href="../examples/tensorflow/classification/configs/quantization/mobilenet_v2_imagenet_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_imagenet_int8.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/mobilenet_v2_imagenet_int8.tar.gz">Download</a></td>
     </tr>
     <tr>
       <td align="left">MobileNet V2</td>
@@ -609,7 +609,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>70.94 (0.91)</td>
       <td><a href="../examples/tensorflow/classification/configs/sparsity_quantization/mobilenet_v2_imagenet_rb_sparsity_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_imagenet_rb_sparsity_int8.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/mobilenet_v2_imagenet_rb_sparsity_int8.tar.gz">Download</a></td>
     </tr>
     <tr>
       <td align="left">MobileNet V2</td>
@@ -617,7 +617,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>71.34 (0.51)</td>
       <td><a href="../examples/tensorflow/classification/configs/sparsity/mobilenet_v2_imagenet_rb_sparsity.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_imagenet_rb_sparsity.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/mobilenet_v2_imagenet_rb_sparsity.tar.gz">Download</a></td>
     </tr>
     <tr>
       <td align="left">MobileNet V2 (TensorFlow Hub MobileNet V2)</td>
@@ -625,7 +625,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>71.87 (-0.02)</td>
       <td><a href="../examples/tensorflow/classification/configs/sparsity/mobilenet_v2_hub_imagenet_magnitude_sparsity.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v2_hub_imagenet_magnitude_sparsity.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/mobilenet_v2_hub_imagenet_magnitude_sparsity.tar.gz">Download</a></td>
     </tr>
     <tr>
       <td align="left">MobileNet V3 (Large)</td>
@@ -641,7 +641,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>75.04 (0.76)</td>
       <td><a href="../examples/tensorflow/classification/configs/quantization/mobilenet_v3_large_imagenet_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_large_imagenet_int8.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/mobilenet_v3_large_imagenet_int8.tar.gz">Download</a></td>
     </tr>
     <tr>
       <td align="left">MobileNet V3 (Large)</td>
@@ -649,7 +649,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>75.24 (0.56)</td>
       <td><a href="../examples/tensorflow/classification/configs/sparsity_quantization/mobilenet_v3_large_imagenet_rb_sparsity_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_large_imagenet_rb_sparsity_int8.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/mobilenet_v3_large_imagenet_rb_sparsity_int8.tar.gz">Download</a></td>
     </tr>
     <tr>
       <td align="left">MobileNet V3 (Small)</td>
@@ -665,7 +665,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>67.79 (0.59)</td>
       <td><a href="../examples/tensorflow/classification/configs/quantization/mobilenet_v3_small_imagenet_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_small_imagenet_int8.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/mobilenet_v3_small_imagenet_int8.tar.gz">Download</a></td>
     </tr>
     <tr>
       <td align="left">MobileNet V3 (Small)</td>
@@ -673,7 +673,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>67.44 (0.94)</td>
       <td><a href="../examples/tensorflow/classification/configs/sparsity_quantization/mobilenet_v3_small_imagenet_rb_sparsity_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mobilenet_v3_small_imagenet_rb_sparsity_int8.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/mobilenet_v3_small_imagenet_rb_sparsity_int8.tar.gz">Download</a></td>
     </tr>
     <tr>
       <td align="left">ResNet-50</td>
@@ -689,7 +689,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>74.99 (0.06)</td>
       <td><a href="../examples/tensorflow/classification/configs/quantization/resnet50_imagenet_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_int8.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/resnet50_imagenet_int8.tar.gz">Download</a></td>
     </tr>
     <tr>
       <td align="left">ResNet-50</td>
@@ -697,7 +697,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>74.36 (0.69)</td>
       <td><a href="../examples/tensorflow/classification/configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_rb_sparsity_int8.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/resnet50_imagenet_rb_sparsity_int8.tar.gz">Download</a></td>
     </tr>
     <tr>
       <td align="left">ResNet-50</td>
@@ -705,7 +705,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>74.38 (0.67)</td>
       <td><a href="../examples/tensorflow/classification/configs/sparsity/resnet50_imagenet_rb_sparsity.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_rb_sparsity.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/resnet50_imagenet_rb_sparsity.tar.gz">Download</a></td>
     </tr>
     <tr>
       <td align="left">ResNet-50</td>
@@ -713,7 +713,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>74.96 (0.09)</td>
       <td><a href="../examples/tensorflow/classification/configs/pruning/resnet50_imagenet_pruning_geometric_median.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_pruning_geometric_median.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/resnet50_imagenet_pruning_geometric_median.tar.gz">Download</a></td>
     </tr>
     <tr>
       <td align="left">ResNet-50</td>
@@ -721,7 +721,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>ImageNet</td>
       <td>75.09 (-0.04)</td>
       <td><a href="../examples/tensorflow/classification/configs/pruning_quantization/resnet50_imagenet_pruning_geometric_median_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/resnet50_imagenet_pruning_geometric_median_int8.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/resnet50_imagenet_pruning_geometric_median_int8.tar.gz">Download</a></td>
     </tr>
     <tr>
       <td align="left">ResNet50</td>
@@ -754,7 +754,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>COCO 2017</td>
       <td>33.43</td>
       <td><a href="../examples/tensorflow/object_detection/configs/retinanet_coco.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/retinanet_coco.tar.gz">Download</a></td>
     </tr>
     <tr>
       <td align="left">RetinaNet</td>
@@ -762,7 +762,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>COCO 2017</td>
       <td>33.12 (0.31)</td>
       <td><a href="../examples/tensorflow/object_detection/configs/quantization/retinanet_coco_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco_int8.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/retinanet_coco_int8.tar.gz">Download</a></td>
     </tr>
     <tr>
       <td align="left">RetinaNet</td>
@@ -770,7 +770,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>COCO 2017</td>
       <td>33.10 (0.33)</td>
       <td><a href="../examples/tensorflow/object_detection/configs/sparsity/retinanet_coco_magnitude_sparsity.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco_magnitude_sparsity.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/retinanet_coco_magnitude_sparsity.tar.gz">Download</a></td>
     </tr>
     <tr>
       <td align="left">RetinaNet</td>
@@ -778,7 +778,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>COCO 2017</td>
       <td>32.72 (0.71)</td>
       <td><a href="../examples/tensorflow/object_detection/configs/pruning/retinanet_coco_pruning_geometric_median.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco_pruning_geometric_median.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/retinanet_coco_pruning_geometric_median.tar.gz">Download</a></td>
     </tr>
     <tr>
       <td align="left">RetinaNet</td>
@@ -786,7 +786,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>COCO 2017</td>
       <td>32.67 (0.76)</td>
       <td><a href="../examples/tensorflow/object_detection/configs/pruning_quantization/retinanet_coco_pruning_geometric_median_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco_pruning_geometric_median_int8.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/retinanet_coco_pruning_geometric_median_int8.tar.gz">Download</a></td>
     </tr>
   <tr>
       <td align="left">YOLO v4</td>
@@ -794,7 +794,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>COCO 2017</td>
       <td>47.07</td>
       <td><a href="../examples/tensorflow/object_detection/configs/yolo_v4_coco.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/yolo_v4_coco.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/yolo_v4_coco.tar.gz">Download</a></td>
     </tr>
     <tr>
       <td align="left">YOLO v4</td>
@@ -802,7 +802,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>COCO 2017</td>
       <td>46.20 (0.87)</td>
       <td><a href="../examples/tensorflow/object_detection/configs/quantization/yolo_v4_coco_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/yolo_v4_coco_int8.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/yolo_v4_coco_int8.tar.gz">Download</a></td>
     </tr>
     <tr>
       <td align="left">YOLO v4</td>
@@ -810,7 +810,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>COCO 2017</td>
       <td>46.49 (0.58)</td>
       <td><a href="../examples/tensorflow/object_detection/configs/sparsity/yolo_v4_coco_magnitude_sparsity.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/yolo_v4_coco_magnitude_sparsity.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/yolo_v4_coco_magnitude_sparsity.tar.gz">Download</a></td>
     </tr>
   </tbody>
 </table>
@@ -835,7 +835,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>COCO 2017</td>
       <td>bbox: 37.33<br>segm: 33.56</td>
       <td><a href="../examples/tensorflow/segmentation/configs/mask_rcnn_coco.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/mask_rcnn_coco.tar.gz">Download</a></td>
     </tr>
     <tr>
       <td align="left">Mask‑R‑CNN</td>
@@ -843,7 +843,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>COCO 2017</td>
       <td>bbox: 37.19 (0.14)<br>segm: 33.54 (0.02)</td>
       <td><a href="../examples/tensorflow/segmentation/configs/quantization/mask_rcnn_coco_int8.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco_int8.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/mask_rcnn_coco_int8.tar.gz">Download</a></td>
     </tr>
     <tr>
       <td align="left">Mask‑R‑CNN</td>
@@ -851,7 +851,7 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>COCO 2017</td>
       <td>bbox: 36.94 (0.39)<br>segm: 33.23 (0.33)</td>
       <td><a href="../examples/tensorflow/segmentation/configs/sparsity/mask_rcnn_coco_magnitude_sparsity.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/mask_rcnn_coco_magnitude_sparsity.tar.gz">Download</a></td>
+      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/mask_rcnn_coco_magnitude_sparsity.tar.gz">Download</a></td>
     </tr>
   </tbody>
 </table>
