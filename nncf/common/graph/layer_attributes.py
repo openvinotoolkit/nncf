@@ -98,7 +98,7 @@ class GenericWeightedLayerAttributes(WeightedLayerAttributes):
         :param weight_requires_grad: Is True if gradients need to be computed for the corresponding Tensor,
         False otherwise.
         :param weight_shape: shape of weight tensor.
-        :param filter_dimension_idx: the axis along which the filters are stored.
+        :param filter_dimension_idx: the axis, along which the filters are stored.
         """
         super().__init__(weight_requires_grad=weight_requires_grad, with_bias=with_bias)
         self.weight_shape = weight_shape

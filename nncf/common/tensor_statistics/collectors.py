@@ -358,7 +358,7 @@ class NNCFCollectorTensorProcessor(ABC):
         Join a sequence of arrays along an existing axis.
 
         :param x: The input tensor.
-        :param axis: The axis along which the arrays will be joined.
+        :param axis: The axis, along which the arrays will be joined.
         :return: The concatenated array.
         """
 

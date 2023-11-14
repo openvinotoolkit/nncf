@@ -28,7 +28,7 @@ class NNCFPruningBaseTensorProcessor:
         Join a list of NNCFTensors along an existing axis.
 
         :param tensors: List of NNCFTensors.
-        :param axis: The axis along which the tensors will be joined.
+        :param axis: The axis, along which the tensors will be joined.
         :returns: The concatenated List of the tensors.
         """
 
