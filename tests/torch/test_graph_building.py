@@ -650,7 +650,7 @@ def test_filler_input_info_arg_generation(filler_gen_test_struct: FillerInputInf
         ExampleInputInfo((torch.Tensor([1]), torch.Tensor([1])), {"a": torch.Tensor([1]), "b": torch.Tensor([1])}),
         LoaderInputInfo((torch.Tensor([1]), torch.Tensor([1])), {"a": torch.Tensor([1]), "b": torch.Tensor([1])}),
     ],
-    ids=["filler", "exact"],
+    ids=["filler", "example", "loader"],
 )
 @pytest.mark.parametrize("device", ["cuda", "cpu"])
 def test_input_infos_respect_device_setting(input_info: ModelInputInfo, device: str):
