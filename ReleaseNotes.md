@@ -29,6 +29,9 @@ Post-training Quantization:
   - [Post-Training Optimization of Massively Multilingual Speech Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/255-mms-massively-multilingual-speech)
   - [Post-Training Optimization of OneFormer Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/249-oneformer-segmentation)
   - [Post-Training Optimization of InstructPix2Pix Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/231-instruct-pix2pix-image-editing)
+  - [Post-Training Optimization of LLaVA Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/257-llava-multimodal-chatbot)
+  - [Post-Training Optimization of Latent Consistency Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/263-latent-consistency-models-image-generation)
+  - [Post-Training Optimization of Distil-Whisper Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/267-distil-whisper-asr)
 
 Compression-aware training:
 
