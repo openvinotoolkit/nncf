@@ -33,8 +33,6 @@ class BitwidthGraph:
         groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers,
         add_flops=False,
     ):
-        # pylint:disable=too-many-branches
-        # pylint:disable=too-many-statements
         nncf_graph = model.nncf.get_graph()
         self._nx_graph = nncf_graph.get_graph_for_structure_analysis()
         if add_flops:
@@ -127,7 +125,6 @@ class BitwidthGraph:
         bitwidth_color_map: Dict[int, str],
         groups_of_adjacent_quantizers: GroupsOfAdjacentQuantizers,
     ):
-        # pylint:disable=too-many-branches
         affected_insertion_points_list = quantizer_info.affected_insertions
 
         for target_point in affected_insertion_points_list:

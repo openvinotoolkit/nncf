@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint:disable=too-many-lines
+
 """
 Contains builder and controller class definitions for the quantization algorithm.
 """
@@ -347,9 +347,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
         insertion_point_graph = self._target_model.nncf.get_insertion_point_graph()
         if self._debug_interface:
             self._debug_interface.visualize_insertion_point_graph(insertion_point_graph)
-        from nncf.common.quantization.quantizer_propagation.solver import (
-            QuantizerPropagationSolver,  # pylint: disable=cyclic-import
-        )
+        from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 
         scales_unification_map = {PTCatMetatype: UNIFICATION_PRODUCING_METATYPES}
         ignored_scopes_for_solver = {
@@ -648,7 +646,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
         # NOTE: Order of activations must be the same to correctly broadcast parameters (e.g. scales) in distributed
         # mode (see call of `_dist_broadcast_coalesced` in torch/nn/parallel/distributed.py for more details)
-        # pylint: disable=protected-access
+
         target_model.nncf.sort_compression_modules(ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
 
         if self._debug_interface is not None:
@@ -707,7 +705,6 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         self._build_time_metric_infos = setup_generator.get_build_time_metric_infos()
         return single_config_quantizer_setup
 
-    # pylint: disable=too-many-branches
     def _get_quantizer_setup(self, target_model: NNCFNetwork) -> PTQuantizerSetup:
         if self._legacy_single_config_quantizer_setup_from_comp_state is None:
             single_config_quantizer_setup = self._get_single_config_quantizer_setup(target_model)
@@ -1136,8 +1133,6 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         insertion commands registering this module for quantization at spots described by
         insertion_points.
         """
-        # pylint:disable=too-many-branches
-        # pylint:disable=too-many-statements
 
         target_model_graph = target_model.nncf.get_original_graph()
         if not insertion_points:

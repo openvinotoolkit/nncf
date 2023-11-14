@@ -32,7 +32,6 @@ class Unpickler(pickle.Unpickler):
     safe_builtins = {"range", "complex", "set", "frozenset", "slice", "dict"}
     safe_collections = {"OrderedDict", "defaultdict"}
 
-    # pylint:disable=protected-access
     allowed_classes = {
         "torch": {"Tensor", "FloatStorage", "LongStorage", "IntStorage"},
         "torch._utils": {"_rebuild_tensor", "_rebuild_tensor_v2", "_rebuild_parameter"},

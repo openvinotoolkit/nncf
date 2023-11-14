@@ -127,7 +127,7 @@ class TestScheduler:
             }
         )
         mock_handler = MultiElasticityHandler(handlers, mock_nncf_network)
-        # pylint:disable=protected-access
+
         is_handler_enabled_map = mock_handler._is_handler_enabled_map
         mock_elasticity_ctrl = mocker.stub()
         mock_elasticity_ctrl.multi_elasticity_handler = mock_handler

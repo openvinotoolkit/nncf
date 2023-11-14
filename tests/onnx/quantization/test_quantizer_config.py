@@ -29,9 +29,6 @@ from tests.post_training.test_templates.test_quantizer_config import TemplateTes
 ParamsCls = TemplateTestQuantizerConfig.TestGetStatisticsCollectorParameters
 
 
-# pylint: disable=protected-access
-
-
 class TestQuantizerConfig(TemplateTestQuantizerConfig):
     def get_algo_backend(self):
         return ONNXMinMaxAlgoBackend()

@@ -128,7 +128,7 @@ def test_flops_calulation_for_spec_layers(
     assert compression_ctrl.full_params_num == ref_full_params
     assert compression_ctrl.current_flops == ref_current_flops
     assert compression_ctrl.current_params_num == ref_current_params
-    # pylint:disable=protected-access
+
     original_graph = compression_ctrl._original_graph
     pruning_groups = compression_ctrl._pruned_layer_groups_info
     shape_pruner = ShapePruningProcessor(

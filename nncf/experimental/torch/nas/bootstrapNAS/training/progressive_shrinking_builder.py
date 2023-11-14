@@ -103,7 +103,14 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
             compression_loss_func,
         )
 
-    def _build_compression_loss_function(self, model: NNCFNetwork) -> PTCompressionLoss:
+    def _build_compression_loss_function(self, model: NNCFNetwork) -> "PTCompressionLoss":
+        """
+        Create the compression loss. KnowledgeDistillationLoss is returned when knowledge distillation
+        algorithm is added to the config. By default, ZeroCompressionLoss is returned.
+
+        :param model: The model with additional modifications necessary to enable
+            algorithm-specific compression during fine-tuning.
+        """
         compression_builder = create_compression_algorithm_builder(self._algo_config)
         compressed_model = compression_builder.apply_to(model)
         compression_ctrl = compression_builder.build_controller(compressed_model)

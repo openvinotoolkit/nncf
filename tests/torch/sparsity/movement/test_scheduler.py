@@ -104,7 +104,7 @@ class TestSchedulerParams:
             ),
         ],
     )
-    def test_warn_on_improper_config(self, desc: dict, nncf_caplog):  # pylint:disable=redefined-outer-name
+    def test_warn_on_improper_config(self, desc: dict, nncf_caplog):
         with nncf_caplog.at_level(logging.WARNING, logger=nncf_logger.name):
             _ = MovementSchedulerParams.from_dict(desc["params"])
         assert desc["match"] in nncf_caplog.text
@@ -245,7 +245,6 @@ class TestSchedulerStatus:
                     "_steps_per_epoch": ref_steps_per_epoch,
                 }
 
-    # pylint: disable=protected-access
     @pytest.mark.parametrize(
         "steps_per_epoch", [2, 4, 9, None], ids=["epoch3", "epoch1", "epoch0", "epoch0_unknown_steps_per_epoch"]
     )
@@ -376,7 +375,6 @@ class TestSchedulerStepAction:
 
 
 class TestSchedulerInferStepsPerEpoch:
-    # pylint: disable=protected-access
     def test_can_infer_steps_per_epoch(self):
         params = MovementSchedulerParams(
             power=2,
@@ -456,7 +454,7 @@ class TestSchedulerAdaptiveInitThreshold:
         scheduler.step()
         for minfo in compression_ctrl.sparsified_module_info:
             force_update_sparsifier_binary_masks_by_threshold(minfo.operand)
-        init_importance_threshold = scheduler._init_importance_threshold  # pylint: disable=protected-access
+        init_importance_threshold = scheduler._init_importance_threshold
         assert init_importance_threshold == approx(ref_threshold, abs=1e-4)
         stat = compression_ctrl.statistics().movement_sparsity
         assert stat.model_statistics.sparsity_level_for_layers == approx(ref_sparsity, abs=1e-4)
@@ -483,5 +481,5 @@ class TestSchedulerAdaptiveInitThreshold:
         for minfo in compression_ctrl.sparsified_module_info:
             initialize_sparsifier_parameters_by_linspace(minfo.operand, 0.0, 999.0)
         scheduler: MovementPolynomialThresholdScheduler = compression_ctrl.scheduler
-        threshold = scheduler._calc_init_threshold_from_controller(target_sparsity)  # pylint: disable=protected-access
+        threshold = scheduler._calc_init_threshold_from_controller(target_sparsity)
         assert threshold == approx(ref_threshold)

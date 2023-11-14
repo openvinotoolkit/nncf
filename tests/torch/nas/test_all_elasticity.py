@@ -68,7 +68,7 @@ def test_bn_adaptation_on_minimal_subnet_width_stage():
     model, ctrl = create_bnas_model_and_ctrl_by_test_desc(RESNET50_2_MANUAL_BLOCKS_DESC)
 
     multi_elasticity_handler = ctrl.multi_elasticity_handler
-    # pylint: disable=protected-access
+
     bn_adaptation = ctrl._bn_adaptation
 
     multi_elasticity_handler.enable_all()
@@ -262,6 +262,7 @@ REF_COMPRESSION_STATE_FOR_TWO_CONV = {
                             "elasticity_params": {
                                 "add_dynamic_inputs": None,
                                 "filter_importance": "L1",
+                                "external_importance_path": None,
                                 "max_num_widths": -1,
                                 "min_width": 1,
                                 "overwrite_groups": None,

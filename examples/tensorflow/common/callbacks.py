@@ -68,7 +68,6 @@ class CustomTensorBoard(tf.keras.callbacks.TensorBoard):
         self.step = initial_step
         self._track_lr = track_lr
 
-    # pylint: disable=W0237
     def on_train_batch_begin(self, epoch: int, logs: MutableMapping[str, Any] = None) -> None:
         self.step += 1
         logs = logs or {}
@@ -111,6 +110,6 @@ class CustomTensorBoard(tf.keras.callbacks.TensorBoard):
 
         # The optimizer might be wrapped by another class, so unwrap it
         while hasattr(optimizer, "_optimizer"):
-            optimizer = optimizer._optimizer  # pylint:disable=protected-access
+            optimizer = optimizer._optimizer
 
         return optimizer

@@ -19,20 +19,38 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
-from nncf.common.utils.registry import Registry
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
-ALGO_BACKENDS = Registry("algo_backends")
 
 
 class SmoothQuantAlgoBackend(ABC):
     @property
     @abstractmethod
-    def weighted_metatypes(self) -> List[OperatorMetatype]:
+    def convolution_metatype(self) -> OperatorMetatype:
         """
-        Property for the backend-specific metatypes.
+        Parameter for backend-specific metatype for Convolution.
+
+        :return: OperatorMetatype
+        """
+
+    @property
+    @abstractmethod
+    def matmul_metatype(self) -> OperatorMetatype:
+        """
+        Parameter for backend-specific metatype for MatMul.
+
+        :return: OperatorMetatype
+        """
+
+    @property
+    @abstractmethod
+    def quantize_agnostic_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Parameter for backend-specific quantize agnostic metatypes.
+
+        :return: List of OperatorMetatype.
         """
 
     @staticmethod

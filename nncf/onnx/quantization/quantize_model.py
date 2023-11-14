@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
+from typing import Optional, Union
 
 import onnx
 
@@ -31,7 +31,7 @@ from nncf.telemetry.events import NNCF_ONNX_CATEGORY
 def quantize_impl(
     model: onnx.ModelProto,
     calibration_dataset: Dataset,
-    preset: QuantizationPreset,
+    preset: Union[QuantizationPreset, None],
     target_device: TargetDevice,
     subset_size: int,
     fast_bias_correction: bool,

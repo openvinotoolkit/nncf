@@ -8,11 +8,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import abc
 import functools
 import inspect
 from abc import ABCMeta
 from abc import abstractmethod
 from copy import deepcopy
+from typing import Callable, Type
 
 import pytest
 import torch
@@ -25,7 +27,9 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.torch import register_module
-from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.torch.dynamic_graph.io_handling import ExampleInputInfo
+from nncf.torch.dynamic_graph.io_handling import FillerInputElement
+from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph.graph import PTNNCFGraph
@@ -73,9 +77,11 @@ def test_disable_shape_matching():
 
     qnet_no_shape = NNCFNetwork(
         deepcopy(model),
-        input_infos=[
-            ModelInputInfo(input_shape_1),
-        ],
+        input_info=FillerInputInfo(
+            [
+                FillerInputElement(input_shape_1),
+            ]
+        ),
         scopes_without_shape_matching=["MatMulModel"],
     )
 
@@ -94,9 +100,11 @@ def test_disable_shape_matching():
 
     qnet = NNCFNetwork(
         model,
-        input_infos=[
-            ModelInputInfo(input_shape_1),
-        ],
+        input_info=FillerInputInfo(
+            [
+                FillerInputElement(input_shape_1),
+            ]
+        ),
     )
     context = qnet.nncf.get_tracing_context()
     context.enable_trace_dynamic_graph()
@@ -110,7 +118,7 @@ def test_disable_shape_matching():
 
 def test_check_correct_modules_replacement():
     model = TwoConvTestModel()
-    nncf_model: NNCFNetwork = NNCFNetwork(TwoConvTestModel(), input_infos=[ModelInputInfo([1, 1, 4, 4])])
+    nncf_model = NNCFNetwork(TwoConvTestModel(), input_info=FillerInputInfo([FillerInputElement([1, 1, 4, 4])]))
 
     _, detected_nncf_modules = check_correct_nncf_modules_replacement(model, nncf_model)
     replaced_modules_reported_by_nncf_network = {
@@ -129,7 +137,7 @@ class WeightNormedConvModel(torch.nn.Module):
 
 
 def test_weight_normed_modules_are_replaced_correctly():
-    nncf_model = NNCFNetwork(WeightNormedConvModel(), input_infos=[ModelInputInfo([1, 1, 10])])
+    nncf_model = NNCFNetwork(WeightNormedConvModel(), input_info=FillerInputInfo([FillerInputElement([1, 1, 10])]))
 
     wrapped_conv = nncf_model.conv
     assert hasattr(wrapped_conv, "weight_g")
@@ -140,7 +148,6 @@ def test_weight_normed_modules_are_replaced_correctly():
     assert isinstance(wrapped_conv.weight_v, torch.nn.Parameter)
     assert not isinstance(wrapped_conv.weight, torch.nn.Parameter)
 
-    # pylint:disable=protected-access
     assert len(wrapped_conv._forward_pre_hooks) == 1
 
 
@@ -178,14 +185,13 @@ class TwoConvTestModelWithUserModule(TwoConvTestModel):
 
 def test_custom_module_registering():
     model = TwoConvTestModelWithUserModule()
-    nncf_model: NNCFNetwork = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 1, 4, 4])])
+    nncf_model = NNCFNetwork(model, input_info=FillerInputInfo([FillerInputElement([1, 1, 4, 4])]))
 
     from nncf.torch.layers import UNWRAPPED_USER_MODULES
 
     assert RegisteredUserModule in UNWRAPPED_USER_MODULES.registry_dict.values()
     assert UnregisteredUserModule not in UNWRAPPED_USER_MODULES.registry_dict.values()
 
-    # pylint: disable=protected-access
     modules = [nncf_model.registered_user_module, nncf_model.unregistered_user_module.conv]
     base_modules = [RegisteredUserModule, torch.nn.Conv2d]
     names = ["NNCFUserRegisteredUserModule", "NNCFConv2d"]
@@ -222,7 +228,7 @@ def test_custom_module_registering():
 
 def test_get_weighted_original_graph_nodes():
     model = TwoConvTestModelWithUserModule()
-    nncf_model: NNCFNetwork = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 1, 4, 4])])
+    nncf_model = NNCFNetwork(model, input_info=FillerInputInfo([FillerInputElement([1, 1, 4, 4])]))
     weighted_nodes = nncf_model.nncf.get_weighted_original_graph_nodes()
     ref_node_names = [
         "TwoConvTestModelWithUserModule/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0",
@@ -236,10 +242,9 @@ def test_get_weighted_original_graph_nodes():
     assert set(weighted_nodes) == set(ref_weighted_nodes)
 
 
-# pylint: disable=protected-access
 def test_get_op_nodes_in_scope():
     model = TwoConvTestModel()
-    nncf_model: NNCFNetwork = NNCFNetwork(deepcopy(model), input_infos=[ModelInputInfo([1, 1, 4, 4])])
+    nncf_model = NNCFNetwork(deepcopy(model), input_info=FillerInputInfo([FillerInputElement([1, 1, 4, 4])]))
     nncf_graph = nncf_model.nncf.get_original_graph()
 
     # Valid scopes should be successfully found
@@ -253,7 +258,7 @@ def test_get_op_nodes_in_scope():
         assert node.node_id in nodes_list
 
     fake_model = BasicConvTestModel()
-    fake_nncf_model = NNCFNetwork(deepcopy(fake_model), input_infos=[ModelInputInfo([1, 1, 4, 4])])
+    fake_nncf_model = NNCFNetwork(deepcopy(fake_model), input_info=FillerInputInfo([FillerInputElement([1, 1, 4, 4])]))
 
     # Not valid scopes shouldn't be found
     fake_nncf_modules = fake_nncf_model.nncf.get_nncf_modules()
@@ -333,7 +338,7 @@ class TwoConvTestModelWithUniqueFunction(TwoConvTestModel):
 
 def test_get_attr():
     model = TwoConvTestModelWithUniqueFunction()
-    nncf_network = NNCFNetwork(model, [ModelInputInfo([1, 1, 4, 4])])
+    nncf_network = NNCFNetwork(model, FillerInputInfo([FillerInputElement([1, 1, 4, 4])]))
 
     assert hasattr(nncf_network, "unique_attr")
     assert hasattr(nncf_network, "non_unique_attr")
@@ -360,10 +365,9 @@ def test_setting_attrs():
     model = ModelWithAttr()
     assert model.CLASS_ATTR == 0
     assert model.instance_attr == 0
-    # pylint:disable=protected-access
+
     assert model._input_infos == 0
-    nncf_network = NNCFNetwork(model, input_infos=[ModelInputInfo([1])])
-    # pylint:disable=protected-access
+    nncf_network = NNCFNetwork(model, input_info=FillerInputInfo([FillerInputElement([1])]))
     assert nncf_network._input_infos == 0
 
     nncf_network.instance_attr = 1
@@ -390,7 +394,7 @@ def mock_forward_with_matching_signature(self, x):
 @pytest.mark.parametrize("new_forward", [mock_forward, mock_forward_with_self, mock_forward_with_matching_signature])
 def test_replacing_forward_with_free_functions(new_forward, _nncf_caplog):
     model = ModelWithAttr()
-    nncf_network = NNCFNetwork(model, input_infos=[ModelInputInfo([1])])
+    nncf_network = NNCFNetwork(model, input_info=FillerInputInfo([FillerInputElement([1])]))
 
     nncf_network.forward = new_forward
     assert "set_original_unbound_forward" in _nncf_caplog.text
@@ -398,34 +402,79 @@ def test_replacing_forward_with_free_functions(new_forward, _nncf_caplog):
 
 def test_replacing_forward_with_another_own_method(_nncf_caplog):
     model = ModelWithAttr()
-    nncf_network = NNCFNetwork(model, input_infos=[ModelInputInfo([1])])
+    nncf_network = NNCFNetwork(model, input_info=FillerInputInfo([FillerInputElement([1])]))
 
     nncf_network.forward = nncf_network.other_forward
     assert "set_original_unbound_forward" in _nncf_caplog.text
 
 
-def test_replacing_forward_of_original_model():
-    def decorator(func):
-        def wrap(*args):
-            return func(*args)
+class ReplacementForwardProvider(abc.ABC):
+    @abstractmethod
+    def get_replacement_forward(self, model: torch.nn.Module) -> Callable:
+        pass
 
-        return wrap
 
+class ArgDecoratorForward(ReplacementForwardProvider):
+    def get_replacement_forward(self, model: torch.nn.Module) -> Callable:
+        def decorator(func):
+            def wrap(*args):
+                return func(*args)
+
+            return wrap
+
+        return decorator(model.forward)
+
+
+class ArgAndKwargWrapsForward(ReplacementForwardProvider):
+    def get_replacement_forward(self, model: torch.nn.Module) -> Callable:
+        old_forward = model.forward
+
+        @functools.wraps(old_forward)
+        def new_forward(*args, **kwargs):
+            return old_forward(*args, **kwargs)
+
+        return new_forward
+
+
+class EvilSelfForwardProvider(ReplacementForwardProvider):
+    def get_replacement_forward(self, model: torch.nn.Module) -> Callable:
+        old_forward = model.forward
+
+        def evil_forward(self):
+            # since `self` is just a name, and not a reserved word,
+            # in this function `self` will refer just to the 0-th actual (tensor) arg of the forward function
+            return old_forward(self)
+
+        return evil_forward
+
+
+@pytest.mark.parametrize(
+    "replacement_forward_provider_cls", [ArgDecoratorForward, ArgAndKwargWrapsForward, EvilSelfForwardProvider]
+)
+def test_replacing_forward_of_original_model(replacement_forward_provider_cls: Type[ReplacementForwardProvider]):
     model = BasicConvTestModel()
-    model.forward = decorator(model.forward)
+    provider = replacement_forward_provider_cls()
+    replacement_forward = provider.get_replacement_forward(model)
+    model.forward = replacement_forward
+    input_info = FillerInputInfo([FillerInputElement(model.INPUT_SIZE)])
+    input_args, input_kwargs = input_info.get_forward_inputs()
+    original_output = model.forward(*input_args, **input_kwargs)
 
     fn_id = id(model.__dict__["forward"])
     fn_sign = inspect.signature(model.forward)
     # type of current
-    assert isinstance(model.__dict__["forward"], type(decorator))
+    assert isinstance(model.__dict__["forward"], type(replacement_forward))
 
-    nncf_net = NNCFNetwork(model, [ModelInputInfo(model.INPUT_SIZE)])
-    nncf_net.forward(torch.ones(model.INPUT_SIZE))
+    nncf_net = NNCFNetwork(model, input_info)
 
     # Check that forward was updated
     assert fn_id != id(nncf_net.__dict__["forward"])
     assert fn_sign == inspect.signature(nncf_net.forward)
     assert isinstance(nncf_net.forward, functools.partial)
+
+    # Check that the functional outputs are the same
+    new_output = nncf_net.forward(torch.ones(model.INPUT_SIZE))
+    assert torch.equal(new_output, original_output)
 
 
 def test_temporary_clean_view():
@@ -447,8 +496,8 @@ def test_temporary_clean_view():
         )
     sd_after_tmp_clean_view = sparse_quantized_model.state_dict()
     for key in old_sd.keys():
-        assert key in sd_after_tmp_clean_view  # pylint: disable=E1135
-        assert torch.all(torch.eq(sd_after_tmp_clean_view[key], old_sd[key]))  # pylint: disable=E1136
+        assert key in sd_after_tmp_clean_view
+        assert torch.all(torch.eq(sd_after_tmp_clean_view[key], old_sd[key]))
     sparse_quantized_model.nncf.rebuild_graph()
     graph_after_tmp_clean_view = sparse_quantized_model.nncf.get_graph()
     assert graph_after_tmp_clean_view == old_graph
@@ -542,7 +591,7 @@ class ModelWithIndirectModuleCallBranch(nn.Module):
 
 
 def test_wrapping_of_indirect_module_operations():
-    model = NNCFNetwork(ModelWithIndirectModuleCallBranch(), [ModelInputInfo([1, 3, 32, 32])])
+    model = NNCFNetwork(ModelWithIndirectModuleCallBranch(), FillerInputInfo([FillerInputElement([1, 3, 32, 32])]))
     assert isinstance(model.backbone.conv_indirect, NNCFConv2d)
     assert model.backbone.features[0] is model.backbone.conv_indirect
     assert model.testBranch.module_for_indirection.features[0] is model.backbone.features[0]
@@ -553,7 +602,7 @@ def test_wrapping_of_indirect_module_operations():
 
 def test_can_work_with_sequential_models():
     sequential = torch.nn.Sequential(torch.nn.Conv2d(1, 1, 1), torch.nn.Conv2d(1, 1, 1))
-    model = NNCFNetwork(sequential, [ModelInputInfo([1, 1, 32, 32])])
+    model = NNCFNetwork(sequential, FillerInputInfo([FillerInputElement([1, 1, 32, 32])]))
     assert model.nncf not in model  # Sequential, even wrapped, should only iterate over its real modules
     model(torch.ones([1, 1, 1, 1]))
     _ = model.nncf.get_clean_shallow_copy()
@@ -572,7 +621,7 @@ class SimplestModel(torch.nn.Module):
 
 @pytest.fixture(name="simple_net")
 def simple_net_():
-    model = NNCFNetwork(SimplestModel(), [ModelInputInfo(SimplestModel.INPUT_SIZE)])
+    model = NNCFNetwork(SimplestModel(), FillerInputInfo([FillerInputElement(SimplestModel.INPUT_SIZE)]))
     return model
 
 
@@ -620,7 +669,8 @@ def test_forward_signature_is_same_as_for_original_model(simple_net):
     # Verify that if we create 2 NNCFNetworks, then each will have its own signature
     another_original_obj = MultiInputModel()
     another_nncf_net = NNCFNetwork(
-        MultiInputModel(), input_infos=[ModelInputInfo([1, 1, 1, 1]), ModelInputInfo([1, 1, 1, 1])]
+        MultiInputModel(),
+        input_info=FillerInputInfo([FillerInputElement([1, 1, 1, 1]), FillerInputElement([1, 1, 1, 1])]),
     )
     assert inspect.signature(another_nncf_net.forward) == inspect.signature(another_original_obj.forward)
     assert inspect.signature(simple_net.forward) == inspect.signature(original_obj.forward)
@@ -641,12 +691,12 @@ class ConcreteMetaModel(MetaModel):
 
 
 def test_can_wrap_models_with_metaclass():
-    _ = NNCFNetwork(ConcreteMetaModel(), [ModelInputInfo([1, 1, 1, 1])])
+    _ = NNCFNetwork(ConcreteMetaModel(), FillerInputInfo([FillerInputElement([1, 1, 1, 1])]))
 
 
 def test_reset_original_unbound_forward():
     model = ModelWithAttr()
-    nncf_network = NNCFNetwork(model, input_infos=[ModelInputInfo([1])])
+    nncf_network = NNCFNetwork(model, input_info=FillerInputInfo([FillerInputElement([1])]))
     inp = torch.ones((1,))
     assert nncf_network.forward(inp) == inp
 
@@ -674,7 +724,7 @@ def test_wrap_original_forward():
     original_model = Model()
     assert str(inspect.signature(original_model.forward)) == "(x)"
 
-    nncf_model = NNCFNetwork(deepcopy(original_model), [ModelInputInfo([1])])
+    nncf_model = NNCFNetwork(deepcopy(original_model), FillerInputInfo([FillerInputElement([1])]))
     assert original_model.forward(inp) == nncf_model.forward(inp) == inp
 
     Model.forward = get_wrapper(Model.forward)
@@ -704,7 +754,7 @@ def test_forward_hooks_are_preserved():
     original_obj.register_forward_hook(hook)
 
     hook.enabled = False
-    nncf_net = NNCFNetwork(original_obj, [ModelInputInfo(SimplestModel.INPUT_SIZE)])
+    nncf_net = NNCFNetwork(original_obj, FillerInputInfo([FillerInputElement(SimplestModel.INPUT_SIZE)]))
     hook.enabled = True
 
     assert len(nncf_net._forward_hooks) == 1
@@ -716,7 +766,7 @@ def test_forward_hooks_are_preserved():
 def test_safety_change_scope_in_get_nncf_modules():
     model = SimplestModel()
 
-    nncf_net = NNCFNetwork(model, [ModelInputInfo(SimplestModel.INPUT_SIZE)])
+    nncf_net = NNCFNetwork(model, FillerInputInfo([FillerInputElement(SimplestModel.INPUT_SIZE)]))
 
     orig_id = id(list(nncf_net.nncf._nncf_replaced_modules.values())[0][0])
     return_id = id(list(nncf_net.nncf.get_nncf_modules().values())[0])
@@ -724,7 +774,7 @@ def test_safety_change_scope_in_get_nncf_modules():
 
 
 class EmbeddingWithSharedWeights(torch.nn.Embedding):
-    def forward(self, x, run_as_matmul=False):  # pylint: disable=arguments-renamed
+    def forward(self, x, run_as_matmul=False):
         if run_as_matmul:
             return F.linear(x, self.weight)
         return super().forward(x)
@@ -759,9 +809,33 @@ def test_proxy_module_for_forward_with_super(mocker):
 @pytest.mark.parametrize("compression_module_type", ExtraCompressionModuleType)
 def test_is_compression_module_registered(compression_module_type, is_registered):
     model = SimplestModel()
-    nncf_model = NNCFNetwork(model, [ModelInputInfo(SimplestModel.INPUT_SIZE)])
+    nncf_model = NNCFNetwork(model, FillerInputInfo([FillerInputElement(SimplestModel.INPUT_SIZE)]))
     if is_registered:
         nncf_model.nncf.register_compression_module_type(compression_module_type)
         assert nncf_model.nncf.is_compression_module_registered(compression_module_type)
     else:
         assert not nncf_model.nncf.is_compression_module_registered(compression_module_type)
+
+
+class MultideviceModel(torch.nn.Module):
+    def __init__(self, linear_0, linear_1):
+        super().__init__()
+        self.linear_cpu = torch.nn.Linear(linear_0[0], linear_0[1], device="cpu")
+        self.linear_gpu = torch.nn.Linear(linear_1[0], linear_1[1], device="cuda")
+
+    def forward(self, x, y):
+        x1 = self.linear_cpu(x)
+        y1 = self.linear_gpu(y)
+        res = x1.to(y1.device) + y1
+        return res
+
+
+def test_multidevice_model():
+    if not torch.cuda.is_available():
+        pytest.skip("GPU required")
+
+    model = MultideviceModel((3, 3), (2, 3))
+    example_input = (torch.ones(3, 3, device="cpu"), torch.ones(3, 2, device="cuda"))
+    input_info = ExampleInputInfo.from_example_input(example_input)
+    nncf_model = NNCFNetwork(model, input_info)
+    nncf_model(*example_input)

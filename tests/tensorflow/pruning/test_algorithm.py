@@ -126,6 +126,6 @@ def test_collect_output_shapes(model_fn, ref_output_shapes):
     model = model_fn(input_shape)
     model.compile()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    # pylint:disable=protected-access
+
     output_shapes = collect_output_shapes(compression_ctrl.model, compression_ctrl._original_graph)
     assert output_shapes == ref_output_shapes

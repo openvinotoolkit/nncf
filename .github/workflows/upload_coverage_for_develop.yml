@@ -12,6 +12,9 @@ on:
       coverage_artifact_name_in_pr:
         required: true
         type: string
+      coverage_flags: 
+        required: true
+        type: string     
     secrets:
       CODECOV_TOKEN:
         required: true
@@ -37,4 +40,4 @@ jobs:
 
           # github.event.pull_request.merge_commit_sha is the fresh commit in the develop,
           # provided that github.event.pull_request.merged == true
-          ./codecov -f ./coverage.xml -t ${{ secrets.CODECOV_TOKEN }}  -C ${{ inputs.merge_commit_sha }} -B develop -n "${{ inputs.coverage_artifact_name_in_pr }}"
+          ./codecov -f ./coverage.xml -t ${{ secrets.CODECOV_TOKEN }} -F ${{ inputs.coverage_flags }} -C ${{ inputs.merge_commit_sha }} -B develop -n "${{ inputs.coverage_artifact_name_in_pr }}"

@@ -68,7 +68,7 @@ def test_quantizer_insertion(target_layers, should_raise, quantizer_number):
 
     num_q = 0
     num_dq = 0
-    # pylint:disable=no-member
+
     for node in transformed_model.graph.node:
         op_type = node.op_type
         if op_type == "QuantizeLinear":
@@ -125,7 +125,6 @@ def test_inserted_quantizer_parameters(test_parameters):
     transformed_model = model_transformer.transform(transformation_layout)
     onnx.checker.check_model(transformed_model)
 
-    # pylint:disable=no-member
     for node in transformed_model.graph.node:
         op_type = node.op_type
         if op_type == "QuantizeLinear":

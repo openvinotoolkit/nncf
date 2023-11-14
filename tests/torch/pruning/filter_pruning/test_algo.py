@@ -445,7 +445,7 @@ def test_collect_output_shapes(model, ref_output_shapes):
     config["compression"]["pruning_init"] = 0.0
     model = model()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    # pylint:disable=protected-access
+
     graph = compression_ctrl._model.nncf.get_original_graph()
     output_shapes = collect_output_shapes(graph)
     assert output_shapes == ref_output_shapes
@@ -724,7 +724,7 @@ def test_flops_calculator(model_module, all_weights, pruning_flops_target, ref_f
     assert pruning_algo.current_params_num == ref_params_num
 
     # Check num of sparse by node
-    # pylint:disable=protected-access
+
     num_of_sparse_by_node = pruning_algo._calculate_num_of_sparse_elements_by_node()
 
     assert len(num_of_sparse_by_node) == len(refs["num_of_sparse_by_node"])
@@ -820,7 +820,6 @@ def test_func_calculation_flops_for_conv(model):
 
     graph = pruned_model.nncf.get_original_graph()
 
-    # pylint:disable=protected-access
     for node_name, ref_shape in compression_controller._output_shapes.items():
         # ref_shape get from tracing graph
         node = graph.get_node_by_name(node_name)
@@ -844,7 +843,7 @@ def test_disconnected_graph():
         'DisconectedGraphModel/NNCFConv2d[conv3]/conv2d_0': ((8, 8), 1),
         'DisconectedGraphModel/NNCFLinear[fc]/linear_0': ((1, 3), None),
     }  # fmt: skip
-    # pylint:disable=protected-access
+
     collected_shapes = compression_controller._output_shapes
     for name, (shape, mask_sum) in nodes_output_mask_map.items():
         node = graph.get_node_by_name(name)

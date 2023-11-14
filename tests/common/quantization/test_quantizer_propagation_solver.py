@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint:disable=too-many-lines
+
 from collections import Counter
 from collections import namedtuple
 from itertools import permutations
@@ -198,7 +198,6 @@ class RunOnIpGraphTestStruct:
 
 
 class TestQuantizerPropagationSolver:
-    # pylint:disable=too-many-public-methods
     def test_setup_initial_quantizers_in_quant_prop_graph(self):
         ops_to_quantize = [
             BatchNormTestMetatype.name,
@@ -1560,7 +1559,6 @@ class TestQuantizerPropagationSolver:
         _ = quant_prop_solver.propagation_step(pq, quant_prop_graph)
         finished_pqs = quant_prop_solver.get_finished_propagating_quantizers()
 
-        # pylint:disable=no-member
         assert quant_prop_graph.remove_propagating_quantizer.call_count == 1
         assert quant_prop_graph.clone_propagating_quantizer.call_count == 1
         assert len(finished_pqs) == 1
@@ -1839,3 +1837,28 @@ class TestQuantizerPropagationSolver:
         assert double_input_pq.current_location_node_key == InsertionPointGraph.get_pre_hook_node_key(
             "5 /E_0", input_port_id=1
         )
+
+
+def test_metatypes_to_ignore(mocker):
+    # pylint: disable=protected-access
+    NOT_IGNORED_METATYHPE = "not_ignored_metatype"
+    IGNORED_METATYPE = "target_metatype"
+
+    nncf_graph = NNCFGraph()
+    nodes = []
+    for node_name, node_metatype in zip("ABC", [NOT_IGNORED_METATYHPE, IGNORED_METATYPE, NOT_IGNORED_METATYHPE]):
+        nodes.append(nncf_graph.add_nncf_node(node_name, node_name, node_metatype=node_metatype))
+    for idx in range(1, len(nodes)):
+        nncf_graph.add_edge_between_nncf_nodes(
+            nodes[idx - 1].node_id, nodes[idx].node_id, [1, 1, 1, 1], 0, 0, Dtype.FLOAT
+        )
+    ip_graph = InsertionPointGraph(nncf_graph=nncf_graph, weight_modifiable_node_names=["A", "B", "C"])
+
+    solver = QuantizerPropagationSolver(
+        metatypes_to_ignore=[IGNORED_METATYPE],
+    )
+    solver._add_node_to_ignored = mocker.MagicMock()
+    solver.run_on_ip_graph(ip_graph)
+
+    solver._add_node_to_ignored.assert_called_once()
+    assert "1 B" in solver._add_node_to_ignored.call_args[0]

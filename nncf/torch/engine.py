@@ -9,12 +9,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Union
+from typing import Any, Dict, Tuple, Union
 
 import torch
 from torch import nn
 
 from nncf.common.engine import Engine
+from nncf.torch.nested_objects_traversal import objwalk
+from nncf.torch.utils import get_model_device
+from nncf.torch.utils import is_tensor
 
 
 class PTEngine(Engine):
@@ -31,13 +34,25 @@ class PTEngine(Engine):
 
         self._model = model
         self._model.eval()
+        self._device = get_model_device(model)
 
-    def infer(self, input_data: Union[torch.Tensor, Dict[str, torch.Tensor]]) -> Union[torch.Tensor, Dict[str, Any]]:
+    def infer(
+        self, input_data: Union[torch.Tensor, Tuple[torch.Tensor], Dict[str, torch.Tensor]]
+    ) -> Union[torch.Tensor, Dict[str, Any]]:
         """
         Runs Torch model on the provided input.
 
-        :param input_data: inputs for the model
-        :return output_data: model outputs
+        :param input_data: Inputs for the model.
+        :return: Model outputs.
         """
 
+        def send_to_device(tensor):
+            return tensor.to(self._device)
+
+        input_data = objwalk(input_data, is_tensor, send_to_device)
+
+        if isinstance(input_data, dict):
+            return self._model(**input_data)
+        if isinstance(input_data, tuple):
+            return self._model(*input_data)
         return self._model(input_data)

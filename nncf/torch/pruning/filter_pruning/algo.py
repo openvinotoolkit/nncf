@@ -128,7 +128,6 @@ class FilterPruningController(BasePruningAlgoController):
         pruned_norms_operators: List[Tuple[NNCFNode, FilterPruningMask, torch.nn.Module]],
         config: NNCFConfig,
     ):
-        # pylint:disable=too-many-statements
         super().__init__(target_model, prunable_types, pruned_module_groups, config)
         params = self.pruning_config.get("params", {})
         self._pruned_norms_operators = pruned_norms_operators

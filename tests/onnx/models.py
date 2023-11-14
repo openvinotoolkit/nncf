@@ -20,8 +20,6 @@ from tests.onnx.common import get_random_generator
 OPSET_VERSION = 13
 ALL_SYNTHETIC_MODELS = Registry("ONNX_SYNTHETIC_MODELS")
 
-# pylint: disable=no-member, too-many-lines
-
 
 def create_initializer_tensor(
     name: str, tensor_array: np.ndarray, data_type: onnx.TensorProto = onnx.TensorProto.FLOAT

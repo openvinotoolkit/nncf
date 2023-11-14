@@ -123,9 +123,28 @@ class GraphConverter:
         """
         node_type = node.get_type_name()
         metatype = get_node_metatype(node)
-        graph.add_nncf_node(node_name=node.get_friendly_name(), node_type=node_type, node_metatype=metatype)
+        ignored_algorithms = GraphConverter._get_ignored_algorithms(node)
+        graph.add_nncf_node(
+            node_name=node.get_friendly_name(),
+            node_type=node_type,
+            node_metatype=metatype,
+            ignored_algorithms=ignored_algorithms,
+        )
 
-    # pylint: disable=too-many-branches
+    @staticmethod
+    def _get_ignored_algorithms(node: ov.Node) -> List[str]:
+        """
+        Creates a list of the ignored algorithms corresponding with
+        the ignored_algorithms option of add_nncf_node method.
+
+        :param node: OpenVINO node.
+        :return: List of the ignored algorithms.
+        """
+        ignored_algorithms = []
+        if "nncf_smooth_quant" in node.get_friendly_name():
+            ignored_algorithms.append("ptq_quantization")
+        return ignored_algorithms
+
     @staticmethod
     def create_nncf_graph(model: ov.Model) -> NNCFGraph:
         """

@@ -20,8 +20,8 @@ import pytest
 
 import nncf
 
-SUPPORTED_FRAMEWORKS = nncf._SUPPORTED_FRAMEWORKS  # pylint:disable=protected-access
-_REAL_FIND_SPEC = importlib._bootstrap._find_spec  # pylint:disable=protected-access
+SUPPORTED_FRAMEWORKS = nncf._SUPPORTED_FRAMEWORKS
+_REAL_FIND_SPEC = importlib._bootstrap._find_spec
 
 
 class FailForModules:

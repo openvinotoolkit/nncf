@@ -9,5 +9,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint:disable=unused-import
+
 from tests.shared.logging import nncf_caplog  # noqa: F401

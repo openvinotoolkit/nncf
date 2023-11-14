@@ -45,8 +45,6 @@ from tests.common.quantization.mock_graphs import get_nncf_graph_from_mock_nx_gr
 from tests.common.quantization.mock_graphs import get_two_branch_mock_model_graph
 from tests.common.quantization.mock_graphs import mark_input_ports_lexicographically_based_on_input_node_key
 
-# pylint:disable=too-many-lines
-
 
 def get_edge_paths(graph, start_node_key, finish_node_key) -> List[List[Tuple]]:
     node_paths = list(nx.all_simple_paths(graph, start_node_key, finish_node_key))
@@ -62,7 +60,6 @@ def get_edge_paths_for_propagation(graph, start_node_key, finish_node_key) -> Li
 
 
 class TestQuantizerPropagationStateGraph:
-    # pylint:disable=too-many-public-methods
     @staticmethod
     @pytest.fixture()
     def mock_qp_graph():
@@ -1837,6 +1834,5 @@ class TestOutputQuantAsWeightsSetup:
     ],
 )
 def test_get_weight_and_activation_qconfig_list_intersection(weight_configs, activation_configs, reference_configs):
-    # pylint: disable=protected-access
     resulted_configs = QPSG._get_weight_and_activation_qconfig_list_intersection(weight_configs, activation_configs)
     assert resulted_configs == reference_configs

@@ -67,7 +67,7 @@ def compare_qspecs(qspec: PTQuantizerSpec, quantizer: BaseQuantizer):
     assert qspec.num_bits == quantizer.num_bits
     assert isinstance(quantizer, QUANTIZATION_MODULES.get(qspec.mode))
     assert qspec.scale_shape == quantizer.scale_shape
-    # pylint:disable=protected-access
+
     assert qspec.signedness_to_force == quantizer._signedness_to_force
 
 

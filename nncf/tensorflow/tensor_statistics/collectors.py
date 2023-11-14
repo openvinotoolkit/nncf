@@ -92,7 +92,7 @@ class TFNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @staticmethod
     def unstack(x: NNCFTensor, axis: int = 0) -> List[NNCFTensor]:
         tensor = x.tensor
-        if list(tensor.shape) == []:  # pylint: disable=C1803
+        if list(tensor.shape) == []:
             tensor = tf.expand_dims(tensor, 0)
         tensor_list = tf.unstack(tensor, axis=axis)
         return [TFNNCFTensor(t) for t in tensor_list]
@@ -126,6 +126,18 @@ class TFNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
 
     @staticmethod
     def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
+        raise NotImplementedError()
+
+    @staticmethod
+    def transpose(x: NNCFTensor, axes: Tuple[int, ...]) -> NNCFTensor:
+        raise NotImplementedError()
+
+    @staticmethod
+    def reshape(x: NNCFTensor, shape: Tuple[int, ...]) -> NNCFTensor:
+        raise NotImplementedError()
+
+    @staticmethod
+    def cat(x: List[NNCFTensor], axis: int) -> NNCFTensor:
         raise NotImplementedError()
 
     @staticmethod

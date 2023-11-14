@@ -36,7 +36,8 @@ from nncf.common.utils.dot_file_rw import get_graph_without_data
 from nncf.common.utils.dot_file_rw import read_dot_graph
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.torch.dynamic_graph.context import PreHookId
-from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.torch.dynamic_graph.io_handling import FillerInputElement
+from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTInputNoopMetatype
@@ -89,7 +90,9 @@ class InsertionPointTestModel(nn.Module):
 class TestInsertionCommands:
     @pytest.fixture()
     def setup(self):
-        self.compressed_model = NNCFNetwork(InsertionPointTestModel(), [ModelInputInfo([1, 1, 10, 10])])
+        self.compressed_model = NNCFNetwork(
+            InsertionPointTestModel(), FillerInputInfo([FillerInputElement([1, 1, 10, 10])])
+        )
 
     conv1_node_name = "InsertionPointTestModel/NNCFConv2d[conv1]/conv2d_0"
     point_for_conv1_weights = PTTargetPoint(
@@ -152,7 +155,6 @@ class TestInsertionCommands:
 
         self.compressed_model.nncf.insert_at_point(insertion_point, [hook])
 
-        # pylint:disable=protected-access
         if insertion_point.insertion_type == PTInsertionType.OPERATOR_PRE_HOOK:
             ctx = self.compressed_model.nncf.get_tracing_context()
             pre_hook_id = PreHookId(insertion_point.op_address, input_port_id=insertion_point.input_port_id)
@@ -177,10 +179,8 @@ class TestInsertionCommands:
         for idx, order in enumerate(ordering):
             assert iterable1[idx] is iterable2[order]
 
-    # pylint:disable=undefined-variable
     @pytest.mark.parametrize("case", priority_test_cases, ids=[x[1].name + "-" + x[0] for x in priority_test_cases])
     def test_priority(self, case, setup):
-        # pylint:disable=too-many-branches
         priority_type = case[0]
         insertion_type = case[1]
 
@@ -232,7 +232,6 @@ class TestInsertionCommands:
         elif priority_type == "different":
             order = [2, 0, 1]
 
-        # pylint:disable=protected-access
         if insertion_type == TargetType.OPERATOR_PRE_HOOK:
             ctx = self.compressed_model.nncf.get_tracing_context()
             pre_hook_id = PreHookId(
@@ -417,7 +416,7 @@ class TestInsertionPointGraph:
                 return x
 
         model = ModelForMetatypeTesting()
-        nncf_network = NNCFNetwork(model, [ModelInputInfo([1, 3, 300, 300])])
+        nncf_network = NNCFNetwork(model, FillerInputInfo([FillerInputElement([1, 3, 300, 300])]))
         nncf_graph = nncf_network.nncf.get_original_graph()
 
         for nncf_node in nncf_graph.get_all_nodes():
@@ -459,7 +458,7 @@ class TestInsertionPointGraph:
 
 
 def test_extraction_with_fused_bias_transformations():
-    model = NNCFNetwork(InsertionPointTestModel(), [ModelInputInfo([1, 1, 10, 10])])
+    model = NNCFNetwork(InsertionPointTestModel(), FillerInputInfo([FillerInputElement([1, 1, 10, 10])]))
     model_transformer = PTModelTransformer(model)
 
     command = PTModelExtractionWithFusedBiasCommand("InsertionPointTestModel/NNCFConv2d[conv1]/conv2d_0")
@@ -473,7 +472,7 @@ def test_extraction_with_fused_bias_transformations():
 
 
 def test_bias_correction_transformations():
-    model = NNCFNetwork(InsertionPointTestModel(), [ModelInputInfo([1, 1, 10, 10])])
+    model = NNCFNetwork(InsertionPointTestModel(), FillerInputInfo([FillerInputElement([1, 1, 10, 10])]))
     model_transformer = PTModelTransformer(model)
 
     new_bias = torch.Tensor([42])
@@ -488,7 +487,7 @@ def test_bias_correction_transformations():
 
 
 def test_rebuild_graph_after_insert_transformation():
-    model = NNCFNetwork(InsertionPointTestModel(), [ModelInputInfo([1, 1, 10, 10])])
+    model = NNCFNetwork(InsertionPointTestModel(), FillerInputInfo([FillerInputElement([1, 1, 10, 10])]))
 
     graph = model.nncf.get_graph()
 
@@ -522,7 +521,7 @@ def test_rebuild_graph_after_insert_transformation():
     ),
 )
 def test_quantizer_insertion_transformations(target_type, node_name, input_port_id, ref_name):
-    model = NNCFNetwork(InsertionPointTestModel(), [ModelInputInfo([1, 1, 10, 10])])
+    model = NNCFNetwork(InsertionPointTestModel(), FillerInputInfo([FillerInputElement([1, 1, 10, 10])]))
     model_transformer = PTModelTransformer(model)
 
     target_point = PTTargetPoint(target_type, node_name, input_port_id=input_port_id)
@@ -536,7 +535,6 @@ def test_quantizer_insertion_transformations(target_type, node_name, input_port_
     assert transformed_model.nncf.is_compression_module_registered(compression_module_type)
 
     if target_type == TargetType.OPERATION_WITH_WEIGHTS:
-        # pylint: disable=protected-access
         op = transformed_model.conv1.pre_ops._modules["0"]
         assert isinstance(op, UpdateWeight)
         assert isinstance(op.op, BaseOp)

@@ -63,10 +63,6 @@ from tests.torch.quantization.quantization_helpers import distributed_init_test_
 from tests.torch.quantization.quantization_helpers import get_squeezenet_quantization_config
 from tests.torch.quantization.quantization_helpers import post_compression_test_distr_init
 
-# pylint:disable=unused-import
-# pylint:disable=protected-access
-# pylint:disable=too-many-lines
-
 
 def scale_signed_dumping_worker(gpu, ngpus_per_node, config, tmp_path):
     distributed_init_test_default(gpu, ngpus_per_node, config)
@@ -898,7 +894,6 @@ class CustomSpy:
         return retval
 
 
-# pylint:disable=redefined-outer-name
 def test_per_layer_range_init_collectors_are_called_the_required_number_of_times(
     range_init_call_count_test_struct, mocker
 ):

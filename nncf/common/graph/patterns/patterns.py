@@ -80,6 +80,7 @@ class GraphPattern:
     NODE_TYPE_ATTR = "metatype"
     ANY_PATTERN_NODE_TYPE = "ANY_PATTERN_NODE"
     NON_PATTERN_NODE_TYPE = "NON_PATTERN_NODE"
+    PATTERN_NODE_TO_EXCLUDE = "PATTERN_NODE_TO_EXCLUDE"
 
     def __init__(self):
         self._graph = nx.DiGraph()
@@ -90,7 +91,7 @@ class GraphPattern:
         Add DiGraph nodes of other to self and add edge between
         last node of self's graph and first node of other's graph.
 
-        The first and last nodes are found by nx.lexicographical_topological_sort().
+        The first and the last nodes are found by nx.lexicographical_topological_sort().
 
         For more complex cases that are not covered by this function, use `join_patterns()`.
 
@@ -194,7 +195,7 @@ class GraphPattern:
 
         If edges is None, connect all weakly connected components of self and other by adding edges between
         the last nodes of every weakly component of self and the first nodes of every weakly component other.
-        The first and last nodes are found by nx.lexicographical_topological_sort().
+        The first and the last nodes are found by nx.lexicographical_topological_sort().
 
         # A: (a) (b)
         # B: (c) (d)
@@ -298,7 +299,6 @@ class HWFusedPatternNames(Enum):
     NORMALIZE_L2_MULTIPLY = PatternDesc("normalize_l2_multiply")
     SCALE_SHIFT = PatternDesc("scale_shift")
     SHIFT_SCALE = PatternDesc("shift_scale")
-    SE_BLOCK = PatternDesc("se_block")
     SOFTMAX_DIV = PatternDesc("softmax_div")
 
     # ACTIVATIONS
@@ -396,5 +396,6 @@ class IgnoredPatternNames(Enum):
         model_types=[ModelType.TRANSFORMER],
         devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU, TargetDevice.VPU],
     )
+    SE_BLOCK = PatternDesc("se_block")
     FC_BN_HSWISH_ACTIVATION = PatternDesc("fc_bn_hswish_activation")
     EQUAL_LOGICALNOT = PatternDesc("equal_logicalnot")

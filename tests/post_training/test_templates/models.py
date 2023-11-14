@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from nncf.common.graph import NNCFGraph
+from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from tests.common.quantization.metatypes import ConstantTestMetatype
@@ -18,7 +19,6 @@ from tests.common.quantization.test_filter_constant_nodes import create_mock_gra
 from tests.common.quantization.test_filter_constant_nodes import get_nncf_graph_from_mock_nx_graph
 
 
-# pylint: disable=protected-access
 class NNCFGraphToTest:
     def __init__(
         self,
@@ -220,4 +220,110 @@ class NNCFGraphCAWithBias:
         else:
             node_edges.extend([("Conv_2", "Output_1")])
         original_mock_graph = create_mock_graph(nodes, node_edges)
+        self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
+
+
+class NNCFGraphDropoutRemovingCase:
+    def __init__(
+        self,
+        dropout_metatype,
+        wrong_dropout_node: bool = False,
+        wrong_parallel_edges: bool = False,
+        nncf_graph_cls=NNCFGraph,
+    ):
+        nodes = [
+            NodeWithType("Input_1", InputNoopMetatype),
+            NodeWithType("Split_1", None),
+            NodeWithType(
+                "Dropout_1",
+                dropout_metatype,
+            ),
+            NodeWithType("Output_1", OutputNoopMetatype),
+            NodeWithType(
+                "Dropout_2",
+                dropout_metatype,
+            ),
+            NodeWithType("Output_2_1", OutputNoopMetatype),
+            NodeWithType("Output_2_2", OutputNoopMetatype),
+            NodeWithType("Output_2_3", OutputNoopMetatype),
+            NodeWithType(
+                "Dropout_3",
+                dropout_metatype,
+            ),
+            NodeWithType("Output_3", OutputNoopMetatype),
+        ]
+        node_edges = [
+            ("Input_1", "Split_1"),
+            ("Split_1", "Dropout_1"),
+            ("Dropout_1", "Output_1"),
+            ("Split_1", "Dropout_2"),
+            ("Dropout_2", "Output_2_1"),
+            ("Dropout_2", "Output_2_2"),
+            ("Dropout_2", "Output_2_3"),
+            ("Split_1", "Dropout_3"),
+            ("Dropout_3", "Output_3"),
+        ]
+        original_mock_graph = create_mock_graph(nodes, node_edges)
+        self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
+
+        dropout_2 = self.nncf_graph.get_node_by_key("3 /Dropout_2_0")
+        output = self.nncf_graph.add_nncf_node("/Output_2_4_0", "output", OutputNoopMetatype)
+        tensor_shape = [1, 2, 1, 1] if wrong_dropout_node else [1, 1, 1, 1]
+        self.nncf_graph.add_edge_between_nncf_nodes(
+            dropout_2.node_id,
+            output.node_id,
+            tensor_shape=tensor_shape,
+            input_port_id=15,
+            output_port_id=1,
+            dtype=Dtype.FLOAT,
+        )
+
+        dropout_2 = self.nncf_graph.get_node_by_key("4 /Dropout_3_0")
+        output = self.nncf_graph.add_nncf_node("/Output_3_1_0", "output", OutputNoopMetatype)
+        self.nncf_graph.add_edge_between_nncf_nodes(
+            dropout_2.node_id,
+            output.node_id,
+            tensor_shape=tensor_shape,
+            input_port_id=1,
+            output_port_id=1,
+            dtype=Dtype.FLOAT,
+            parallel_input_port_ids=list(range(2, 10)),
+        )
+        if wrong_parallel_edges:
+            dropout_4 = self.nncf_graph.add_nncf_node("100 /dropout", "dropout", dropout_metatype)
+            self.nncf_graph.add_edge_between_nncf_nodes(
+                self.nncf_graph.get_node_by_key("0 /Input_1_0").node_id,
+                dropout_4.node_id,
+                tensor_shape=[1, 1, 1, 1],
+                input_port_id=0,
+                output_port_id=0,
+                dtype=Dtype.FLOAT,
+                parallel_input_port_ids=list(range(1, 10)),
+            )
+
+
+class NNCFGraphToTestConstantFiltering:
+    def __init__(self, constant_metatype, read_variable_metatype, nncf_graph_cls=NNCFGraph) -> None:
+        nodes = [
+            NodeWithType("Input_1", InputNoopMetatype),
+            NodeWithType("Conv", None),
+            NodeWithType("Weights", constant_metatype),
+            NodeWithType("AnyNodeBetweenWeightAndConv", None),
+            NodeWithType("Weights2", constant_metatype),
+            NodeWithType("Conv2", None),
+            NodeWithType("ReadVariable", read_variable_metatype),
+            NodeWithType("Add", None),
+            NodeWithType("Final_node", None),
+        ]
+
+        edges = [
+            ("Input_1", "Conv"),
+            ("Weights", "AnyNodeBetweenWeightAndConv"),
+            ("AnyNodeBetweenWeightAndConv", "Conv"),
+            ("Weights2", "Conv2"),
+            ("Conv2", "Add"),
+            ("ReadVariable", "Add"),
+            ("Add", "Final_node"),
+        ]
+        original_mock_graph = create_mock_graph(nodes, edges)
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)

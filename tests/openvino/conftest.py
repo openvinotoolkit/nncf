@@ -11,7 +11,6 @@
 
 from pathlib import Path
 
-# pylint:disable=unused-import
 import pytest
 
 from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
@@ -32,6 +31,14 @@ def data(request):
     return Path(option)
 
 
+@pytest.fixture(name="omz_cache_dir")
+def models(request):
+    option = request.config.getoption("--data")
+    if option is None:
+        return Path(MODELS_PATH)
+    return Path(option)
+
+
 # Custom markers specifying tests to be run only if a specific option
 # is present on the pytest command line must be registered here.
 MARKS_VS_OPTIONS = {**COMMON_SCOPE_MARKS_VS_OPTIONS}
@@ -46,4 +53,6 @@ OPENVINO_POT_TEST_ROOT = OPENVINO_TEST_ROOT / "pot"
 OPENVINO_NATIVE_TEST_ROOT = OPENVINO_TEST_ROOT / "native"
 AC_CONFIGS_DIR = OPENVINO_TEST_ROOT / "data" / "ac_configs"
 OPENVINO_DATASET_DEFINITIONS_PATH = OPENVINO_TEST_ROOT / "data" / "ov_dataset_definitions.yml"
-DATASET_PATH = "~/.cache/nncf/datasets"
+NNCF_CACHE_PATH = Path("~/.cache/nncf")
+DATASET_PATH = NNCF_CACHE_PATH / "datasets"
+MODELS_PATH = NNCF_CACHE_PATH / "models"

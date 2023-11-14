@@ -33,6 +33,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           name: coverage_common
+          flags: COMMON
   onnx:
     runs-on: ubuntu-20.04
     steps:
@@ -58,4 +59,5 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           name: coverage_onnx
+          flags: ONNX
 

@@ -172,8 +172,6 @@ def load_json(stats_path: Path):
 class NumpyEncoder(json.JSONEncoder):
     """Special json encoder for numpy types"""
 
-    # pylint: disable=W0221, E0202
-
     def default(self, o):
         if isinstance(o, np.integer):
             return int(o)
@@ -189,15 +187,14 @@ def dump_to_json(local_path: Path, data: Dict[str, np.ndarray]):
         json.dump(deepcopy(data), file, indent=4, cls=NumpyEncoder)
 
 
-def compare_stats(expected: Dict[str, np.ndarray], actual: Dict[str, np.ndarray], param_names: List[str]):
+def compare_stats(expected: Dict[str, np.ndarray], actual: Dict[str, np.ndarray]):
     assert len(expected) == len(actual)
-    for ref_name in expected:
-        ref_stats = expected[ref_name]
-        stats = actual[ref_name]
-        for param in param_names:
-            ref_param, actual_param = ref_stats.get(param), stats.get(param)
-            assert np.array(ref_param).shape == np.array(actual_param).shape
-            assert np.allclose(ref_param, actual_param, atol=1e-5)
+    for ref_node_name, ref_stats in expected.items():
+        actual_stats = actual[ref_node_name]
+        for param_name, ref_param in ref_stats.items():
+            actual_param = actual_stats.get(param_name)
+        assert np.array(ref_param).shape == np.array(actual_param).shape
+        assert np.allclose(ref_param, actual_param, atol=1e-5)
 
 
 def get_python_executable_with_venv(venv_path: Path) -> str:

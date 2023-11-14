@@ -164,9 +164,9 @@ class MaskRCNNPreprocessor:
         # Flips image randomly during training.
         if self._aug_rand_hflip:
             if self._include_mask:
-                image, boxes, masks = input_utils.random_horizontal_flip(image, boxes, masks)  # pylint: disable=W0632
+                image, boxes, masks = input_utils.random_horizontal_flip(image, boxes, masks)
             else:
-                image, boxes = input_utils.random_horizontal_flip(image, boxes)  # pylint: disable=W0632
+                image, boxes = input_utils.random_horizontal_flip(image, boxes)
 
         # Converts boxes from normalized coordinates to pixel coordinates.
         # Now the coordinates of boxes are w.r.t. the original image.

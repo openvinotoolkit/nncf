@@ -19,7 +19,7 @@ from typing import Any, Callable, Dict, List, Tuple, Union
 import numpy as np
 import onnx
 import torch
-from onnx import numpy_helper  # pylint: disable=no-name-in-module
+from onnx import numpy_helper
 from torch import nn
 from torch.nn import Module
 from torch.nn import functional as F
@@ -31,7 +31,7 @@ from nncf.config.extractors import extract_algorithm_names
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
-from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.initialization import PTInitializingDataLoader
 from nncf.torch.initialization import register_default_init_args
@@ -44,9 +44,6 @@ from tests.shared.command import Command as BaseCommand
 from tests.shared.helpers import BaseTensorListComparator
 
 TensorType = Union[torch.Tensor, np.ndarray, numbers.Number]
-
-
-# pylint: disable=no-member
 
 
 def fill_conv_weight(conv, value, dim=2):
@@ -290,14 +287,14 @@ def create_nncf_model_and_single_algo_builder(
 ) -> Tuple[NNCFNetwork, PTCompressionAlgorithmController]:
     assert isinstance(config, NNCFConfig)
     NNCFConfig.validate(config)
-    input_info_list = create_input_infos(config)
+    input_info = FillerInputInfo.from_nncf_config(config)
     scopes_without_shape_matching = config.get("scopes_without_shape_matching", [])
     ignored_scopes = config.get("ignored_scopes")
     target_scopes = config.get("target_scopes")
 
     compressed_model = NNCFNetwork(
         model,
-        input_infos=input_info_list,
+        input_info=input_info,
         dummy_forward_fn=dummy_forward_fn,
         wrap_inputs_fn=wrap_inputs_fn,
         ignored_scopes=ignored_scopes,
@@ -374,8 +371,8 @@ class RandomDatasetMock(BaseDatasetMock):
 def create_any_mock_dataloader(
     dataset_cls: type, config: NNCFConfig, num_samples: int = 1, batch_size: int = 1
 ) -> DataLoader:
-    input_infos_list = create_input_infos(config)
-    input_sample_size = input_infos_list[0].shape
+    input_info = FillerInputInfo.from_nncf_config(config)
+    input_sample_size = input_info.elements[0].shape
     data_loader = DataLoader(
         dataset_cls(input_sample_size[1:], num_samples),
         batch_size=batch_size,

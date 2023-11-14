@@ -12,7 +12,7 @@
 from typing import Any
 
 import torch
-from torch.onnx.symbolic_helper import _is_constant  # pylint:disable=protected-access
+from torch.onnx.symbolic_helper import _is_constant
 
 from nncf.common.logging import nncf_logger
 from nncf.torch.binarization.extensions import BinarizedFunctionsCUDA
@@ -36,7 +36,6 @@ def _unsqueeze_helper(g, input_, axes_i):
     return g.op("Unsqueeze", input_, axes_i=axes_i[0])
 
 
-# pylint:disable=abstract-method
 class XNORBinarizeFn(torch.autograd.Function):
     """Binarizes x into `scale` * { +1; -1}, where +1 or -1 are chosen based
     on whether the x element value is >0 or <0. `scale` is determined as mean of absolute
@@ -68,7 +67,6 @@ class XNORBinarizeFn(torch.autograd.Function):
         return grad_outputs[0]
 
 
-# pylint:disable=abstract-method
 class DOREFABinarizeFn(torch.autograd.Function):
     """Binarizes x into `scale` * { +1; -1}, where +1 or -1 are chosen based
     on whether the x element value is >0 or <0. `scale` is determined as mean of absolute
@@ -101,7 +99,8 @@ class DOREFABinarizeFn(torch.autograd.Function):
 
 
 # Activation binarization function
-# pylint:disable=abstract-method
+
+
 class ActivationBinarizationScaleThresholdFn(torch.autograd.Function):
     @staticmethod
     def symbolic(g, x, scale, threshold):

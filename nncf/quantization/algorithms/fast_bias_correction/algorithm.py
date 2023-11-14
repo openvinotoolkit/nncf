@@ -30,7 +30,6 @@ from nncf.experimental.common.tensor_statistics.statistical_functions import mea
 from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor import functions as fns
 from nncf.quantization.algorithms.algorithm import Algorithm
-from nncf.quantization.algorithms.fast_bias_correction.backend import ALGO_BACKENDS
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -92,8 +91,8 @@ class FastBiasCorrection(Algorithm):
             raise RuntimeError("FastBiasCorrection algorithm does not support apply_for_all_nodes=True yet")
 
     @property
-    def available_backends(self) -> Dict[str, BackendType]:
-        return ALGO_BACKENDS.registry_dict
+    def available_backends(self) -> List[BackendType]:
+        return [BackendType.ONNX, BackendType.OPENVINO, BackendType.TORCH]
 
     def _set_backend_entity(self, model: TModel) -> None:
         """

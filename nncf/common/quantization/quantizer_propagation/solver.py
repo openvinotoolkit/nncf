@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint:disable=too-many-lines
+
 from collections import Counter
 from collections import OrderedDict
 from collections import deque
@@ -397,9 +397,7 @@ class QuantizerPropagationSolver:
         self._hw_config: HWConfig = hw_config
         self._visualizer = None
         if is_debug():
-            from nncf.common.quantization.quantizer_propagation.visualizer import (
-                QuantizerPropagationVisualizer,  # pylint: disable=cyclic-import
-            )
+            from nncf.common.quantization.quantizer_propagation.visualizer import QuantizerPropagationVisualizer
 
             self._visualizer = QuantizerPropagationVisualizer(DEBUG_LOG_DIR + "/quant_prop")
         self._propagation_strategy = (
@@ -465,7 +463,6 @@ class QuantizerPropagationSolver:
                 nncf_logger.debug(f"Ignored adding weight quantizer for: {node_name}")
         return weight_quantizable_node_names_vs_qconfigs
 
-    # pylint:disable=too-many-branches
     def run_on_ip_graph(self, ip_graph: InsertionPointGraph) -> QuantizationProposal:
         """
         The main function to be used on an InsertionPointGraph to produce
@@ -607,7 +604,6 @@ class QuantizerPropagationSolver:
         quant_prop_graph: QuantizerPropagationStateGraph,
         branching_node_key: str,
     ):
-        # pylint:disable=too-many-branches
         waiting_pqs_list = list(waiting_pqs)
         merged_pqs = []
         unmerged_pqs = []
@@ -679,8 +675,6 @@ class QuantizerPropagationSolver:
         :return: The new state of `quant_prop_graph` with `curr_prop_quantizer` propagated one step further.
         """
 
-        # pylint:disable=too-many-branches
-        # pylint:disable=too-many-statements
         curr_node_key = curr_prop_quantizer.current_location_node_key
         curr_node = quant_prop_graph.nodes[curr_node_key]
         curr_node_type = curr_node[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
@@ -1000,7 +994,7 @@ class QuantizerPropagationSolver:
           corresponding TargetPoints.
         :return: A list of TargetPoint groups; each group is a list of TargetPoint's.
         """
-        # pylint:disable=too-many-branches
+
         if linked_scopes_groups_list is None:
             return [
                 [
@@ -1090,7 +1084,6 @@ class QuantizerPropagationSolver:
     def _setup_initial_quantizers_for_operator_node(
         self, operator_node_key: str, quant_prop_graph: QuantizerPropagationStateGraph
     ):
-        # pylint:disable=too-many-branches
         node = quant_prop_graph.nodes[operator_node_key]
 
         # preds are in sorted order for reproducibility
@@ -1200,7 +1193,6 @@ class QuantizerPropagationSolver:
             additional_pq.last_accepting_location_node_key = additional_pq_ip_key
             self._active_propagating_quantizers_queue.appendleft(additional_pq)
 
-    # pylint:disable=too-many-return-statements
     def check_branching_transition(
         self,
         quant_prop_graph: QuantizerPropagationStateGraph,
@@ -1315,7 +1307,7 @@ class QuantizerPropagationSolver:
           cloned before transition, which impacts the logic of the function.
         :return: The status of the transition determining how it should proceed.
         """
-        # pylint:disable=too-many-branches
+
         for from_node_key, to_node_key in path:
             from_node = quant_prop_graph.nodes[from_node_key]
 
@@ -1392,7 +1384,6 @@ class QuantizerPropagationSolver:
           of the merged quantizer, if any, and the second element corresponds to configurations of the quantizers
           that would have to remain on the branches (if any).
         """
-        # pylint:disable=too-many-branches
 
         if self._propagation_strategy == PropagationStrategy.DO_NOT_MERGE_BRANCH_FQS:
             # Do not merge at all

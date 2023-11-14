@@ -66,7 +66,7 @@ strict digraph  {
 "13 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/__add___1" -> "41 NNCF_RNN/StackedRNN[rnn_impl]/cat_1";
 "14 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/tanh_1" -> "15 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/__mul___2";
 "15 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/__mul___2" -> "16 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/NNCFLinear[hidden_linear]/linear_0";
-"15 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/__mul___2" -> "17 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/cat_0";
+"15 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/__mul___2" -> "17 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/cat_0"  [label="parallel_input_port_ids:[1, 2]"];
 "15 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/LSTMCellForwardNNCF[cell]/__mul___2" -> "39 NNCF_RNN/StackedRNN[rnn_impl]/cat_0";
 "17 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/cat_0" -> "18 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/view_0";
 "18 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[0]/view_0" -> "19 NNCF_RNN/StackedRNN[rnn_impl]/StackedRNNResetPoint/cat_0";
@@ -91,7 +91,7 @@ strict digraph  {
 "32 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[1]/LSTMCellForwardNNCF[cell]/__add___1" -> "41 NNCF_RNN/StackedRNN[rnn_impl]/cat_1";
 "33 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[1]/LSTMCellForwardNNCF[cell]/tanh_1" -> "34 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[1]/LSTMCellForwardNNCF[cell]/__mul___2";
 "34 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[1]/LSTMCellForwardNNCF[cell]/__mul___2" -> "35 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[1]/LSTMCellForwardNNCF[cell]/NNCFLinear[hidden_linear]/linear_0";
-"34 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[1]/LSTMCellForwardNNCF[cell]/__mul___2" -> "36 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[1]/cat_0";
+"34 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[1]/LSTMCellForwardNNCF[cell]/__mul___2" -> "36 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[1]/cat_0"  [label="parallel_input_port_ids:[1, 2]"];
 "34 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[1]/LSTMCellForwardNNCF[cell]/__mul___2" -> "39 NNCF_RNN/StackedRNN[rnn_impl]/cat_0";
 "36 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[1]/cat_0" -> "37 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[1]/view_0";
 "37 NNCF_RNN/StackedRNN[rnn_impl]/ModuleList[inners]/Recurrent[1]/view_0" -> "38 NNCF_RNN/StackedRNN[rnn_impl]/StackedRNNResetPoint/cat_1";

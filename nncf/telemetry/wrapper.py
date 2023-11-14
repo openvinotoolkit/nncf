@@ -81,7 +81,7 @@ def skip_if_raised(func: Callable[..., None]) -> Callable[..., None]:
     def wrapped(*args, **kwargs):
         try:
             func(*args, **kwargs)
-        # pylint:disable=broad-except
+
         except Exception as e:
             nncf_logger.debug(f"Skipped calling {func} - internally triggered exception {e}")
 
@@ -100,7 +100,7 @@ class NNCFTelemetry(ITelemetry):
                 backend="ga4",
                 enable_opt_in_dialog=False,
             )
-        # pylint:disable=broad-except
+
         except Exception as e:
             nncf_logger.debug(f"Failed to instantiate telemetry object: exception {e}")
 

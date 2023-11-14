@@ -302,8 +302,8 @@ def test_can_export_compressed_model_with_input_output_names(tmp_path):
 
     assert os.path.exists(test_path)
 
-    onnx_model = onnx.load(test_path)  # pylint: disable=no-member
-    # pylint: disable=no-member
+    onnx_model = onnx.load(test_path)
+
     curr_input_names = [node.name for node in onnx_model.graph.input]
     curr_output_names = [node.name for node in onnx_model.graph.output]
 
@@ -326,10 +326,10 @@ def test_can_export_compressed_model_with_specified_domain_for_custom_ops(tmp_pa
 
     assert os.path.exists(test_path)
 
-    onnx_model = onnx.load(test_path)  # pylint: disable=no-member
+    onnx_model = onnx.load(test_path)
 
     count_custom_ops = 0
-    # pylint: disable=no-member
+
     for op_node in onnx_model.graph.node:
         if op_node.op_type == "FakeQuantize":
             assert op_node.domain == DOMAIN_CUSTOM_OPS_NAME

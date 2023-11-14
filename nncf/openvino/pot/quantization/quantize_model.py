@@ -12,12 +12,13 @@
 import logging
 import tempfile
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, Optional
+from typing import Any, Callable, Dict, Iterable, Optional, Union
 
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
 from openvino.tools import pot
 
+from nncf.common.deprecation import warning_deprecated
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
@@ -192,22 +193,22 @@ def _create_quantization_group_config(
 
 
 def _create_quantization_config(
-    preset: QuantizationPreset,
+    preset: Union[QuantizationPreset, None],
     target_device: TargetDevice,
     subset_size: int,
     fast_bias_correction: bool,
-    model_type: Optional[ModelType],
-    ignored_scope: Optional[IgnoredScope],
-    advanced_parameters: Optional[AdvancedQuantizationParameters],
+    model_type: Union[ModelType, None],
+    ignored_scope: Union[IgnoredScope, None],
+    advanced_parameters: Union[AdvancedQuantizationParameters, None],
 ) -> Dict[str, Any]:
     """
     Creates a quantization configuration.
 
-    :param preset: A preset that controls the quantization mode
-        (symmetric and asymmetric). It can take the following values:
+    :param preset: A preset controls the quantization mode (symmetric and asymmetric).
+        It can take the following values:
         - `performance`: Symmetric quantization of weights and activations.
-        - `mixed`: Symmetric quantization of weights and asymmetric
-          quantization of activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
+        - `None`: `mixed` preset is used for `transformer` model type otherwise `performace`.
     :param target_device: A target device the specificity of which will be
         taken into account while compressing in order to obtain the best
         performance for this type of device.
@@ -224,6 +225,9 @@ def _create_quantization_config(
         fine-tuning the quantization algorithm.
     :return: A POT quantization configuration as dict.
     """
+    if preset is None:
+        preset = QuantizationPreset.MIXED if model_type == ModelType.TRANSFORMER else QuantizationPreset.PERFORMANCE
+
     config = {
         "target_device": target_device.value,
         "preset": preset.value,
@@ -320,7 +324,7 @@ def _create_engine_config(
 def quantize_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
@@ -336,10 +340,19 @@ def quantize_impl(
     if advanced_parameters is None:
         advanced_parameters = AdvancedQuantizationParameters()
 
-    if model_type == ModelType.TRANSFORMER and advanced_parameters.smooth_quant_alpha > 0:
+    if advanced_parameters.smooth_quant_alpha is not None:
+        warning_deprecated(
+            "`AdvancedQuantizationParameters(smooth_quant_alpha=..)` is deprecated."
+            "Please, use `AdvancedQuantizationParameters(smooth_quant_alphas)` option "
+            "with AdvancedSmoothQuantParameters(convolution=.., matmul=..) as value instead."
+        )
+
+    sq_params = advanced_parameters.smooth_quant_alphas
+
+    if model_type == ModelType.TRANSFORMER and (sq_params.convolution > 0 or sq_params.matmul > 0):
         nncf_logger.warning(
-            'IMPORTANT. The advanced parameter "smooth_quant_alpha > 0" IS NOT SUPPORTED for the POT backend!'
-            'Please, use "smooth_quant_alpha = -1".'
+            "IMPORTANT. The AdvancedSmoothQuantParameters parameter value > 0 IS NOT SUPPORTED for the POT backend!"
+            "Please, use `AdvancedSmoothQuantParameters(convolution = -1, matmul = -1)`."
         )
 
     algorithm_parameters = _create_quantization_config(
@@ -423,7 +436,7 @@ def quantize_with_accuracy_control_impl(
     validation_fn: Callable[[ov.CompiledModel, Iterable[Any]], float],
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
@@ -440,10 +453,19 @@ def quantize_with_accuracy_control_impl(
     if advanced_quantization_parameters is None:
         advanced_quantization_parameters = AdvancedQuantizationParameters()
 
-    if model_type == ModelType.TRANSFORMER and advanced_quantization_parameters.smooth_quant_alpha > 0:
+    if advanced_quantization_parameters.smooth_quant_alpha is not None:
+        warning_deprecated(
+            "`AdvancedQuantizationParameters(smooth_quant_alpha=..)` is deprecated."
+            "Please, use `AdvancedQuantizationParameters(smooth_quant_alphas)` option "
+            "with AdvancedSmoothQuantParameters(convolution=.., matmul=..) as value instead."
+        )
+
+    sq_params = advanced_quantization_parameters.smooth_quant_alphas
+
+    if model_type == ModelType.TRANSFORMER and (sq_params.convolution > 0 or sq_params.matmul > 0):
         nncf_logger.warning(
-            'IMPORTANT. The advanced parameter "smooth_quant_alpha > 0" IS NOT SUPPORTED for the POT backend!'
-            'Please, use "smooth_quant_alpha = -1".'
+            "IMPORTANT. The AdvancedSmoothQuantParameters parameter value > 0 IS NOT SUPPORTED for the POT backend!"
+            "Please, use `AdvancedSmoothQuantParameters(convolution = -1, matmul = -1)`."
         )
 
     if advanced_quantization_parameters.disable_bias_correction:
@@ -462,7 +484,7 @@ def quantize_with_accuracy_control_impl(
     )
 
     # Check whether it is possible to calculate the metric for one data item.
-    # pylint: disable=W0703
+
     use_original_metric = True
     try:
         ie = ov.Core()

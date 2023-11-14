@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint:disable=too-many-lines
+
 
 import functools
 import json
@@ -35,6 +35,7 @@ from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator imp
 from openvino.tools.pot.configs.config import Config
 
 import nncf
+from nncf.common.deprecation import warning_deprecated
 from nncf.common.logging.logger import set_log_file
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationPreset
@@ -506,12 +507,22 @@ def map_apply_for_all_nodes(apply_for_all_nodes):
     return {advanced_parameter_name: advanced_parameters}
 
 
-def map_smooth_quant_alpha(smooth_quant_alpha):
+def map_smooth_quant_alphas(smooth_quant_alphas):
     ctx = get_algorithm_parameters_context()
     advanced_parameter_name = ctx.param_name_map[ParameterNames.advanced_parameters]
     advanced_parameters = ctx.params.get(advanced_parameter_name, AdvancedQuantizationParameters())
-    advanced_parameters.smooth_quant_alpha = smooth_quant_alpha
+    for key in ["convolution", "matmul"]:
+        if key in smooth_quant_alphas:
+            advanced_parameters.smooth_quant_alphas.__setattr__(key, smooth_quant_alphas[key])
     return {advanced_parameter_name: advanced_parameters}
+
+
+def map_smooth_quant_alpha(smooth_quant_alpha):
+    warning_deprecated(
+        "`smooth_quant_alpha` parameter is deprecated."
+        "Please, use `smooth_quant_alphas: {'convolution': .., 'matmul': ..}` instead."
+    )
+    return map_smooth_quant_alphas({"matmul": smooth_quant_alpha, "convolution": -1})
 
 
 def map_threshold(threshold):
@@ -592,6 +603,7 @@ def get_pot_quantization_parameters_mapping():
         "saturation_fix": map_saturation_fix,
         "apply_for_all_nodes": map_apply_for_all_nodes,
         "threshold": map_threshold,
+        "smooth_quant_alphas": map_smooth_quant_alphas,
         "smooth_quant_alpha": map_smooth_quant_alpha,
     }
 
@@ -733,7 +745,6 @@ def get_allow_reshape_input(accuracy_checker_config) -> bool:
     return False
 
 
-# pylint:disable=too-many-branches
 def maybe_reshape_model(model, dataset, subset_size, input_to_tensor_name):
     dataset_inputs_shapes = defaultdict(set)
     for input_dict in islice(dataset.get_inference_data(), subset_size):
@@ -801,7 +812,6 @@ def maybe_reshape_model(model, dataset, subset_size, input_to_tensor_name):
     return model, model_inputs_shapes
 
 
-# pylint: disable=protected-access
 def get_transform_fn(model_evaluator: ModelEvaluator, ov_model):
     if model_evaluator.launcher._lstm_inputs:
         compiled_original_model = ov.Core().compile_model(ov_model)
@@ -1002,7 +1012,7 @@ def quantize_model_with_accuracy_control(
 
 
 def filter_configuration(config: Config) -> Config:
-    fields_to_filter = ["smooth_quant_alpha"]
+    fields_to_filter = ["smooth_quant_alphas", "smooth_quant_alpha"]
     algorithms_to_update = defaultdict(dict)
 
     # Drop params before configure
