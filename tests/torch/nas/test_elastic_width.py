@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import copy
-import tempfile
 
 import pytest
 import torch
@@ -154,26 +153,26 @@ def test_width_reorg(basic_model):
     compare_tensors_ignoring_the_order(after_reorg, before_reorg)
 
 
-def test_width_custom_external_reorg(basic_model):
+def test_width_custom_external_reorg(basic_model, tmp_path):
     config = get_empty_config(input_sample_sizes=basic_model.INPUT_SIZE)
     external_importance = basic_model.IMPORTANCE
-    with tempfile.NamedTemporaryFile() as external_importance_tempfile:
-        torch.save(external_importance, external_importance_tempfile)
-        config.update(
-            {
-                "bootstrapNAS": {
-                    "training": {
-                        "elasticity": {
-                            "width": {
-                                "filter_importance": "external",
-                                "external_importance_path": external_importance_tempfile.name,
-                            }
-                        },
-                    }
+    external_importance_tempfile = tmp_path / "importance_file"
+    torch.save(external_importance, external_importance_tempfile)
+    config.update(
+        {
+            "bootstrapNAS": {
+                "training": {
+                    "elasticity": {
+                        "width": {
+                            "filter_importance": "external",
+                            "external_importance_path": external_importance_tempfile,
+                        }
+                    },
                 }
             }
-        )
-        model, ctrl = create_bootstrap_training_model_and_ctrl(basic_model, config)
+        }
+    )
+    model, ctrl = create_bootstrap_training_model_and_ctrl(basic_model, config)
     model.eval()
     device = next(model.parameters()).device
     dummy_input = torch.Tensor([1]).reshape(basic_model.INPUT_SIZE).to(device)

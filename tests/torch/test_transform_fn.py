@@ -41,31 +41,38 @@ dataset = [
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=1)
 
 
-def single_input_transform_fn(data_item, device):
-    return data_item[0].to(device)
+def single_input_transform_fn(data_item, use_cuda):
+    if use_cuda:
+        return data_item[0].cuda()
+    return data_item[0]
 
 
 def test_transform_fn_single_input(use_cuda):
     if use_cuda and not torch.cuda.is_available():
         pytest.skip("There are no available CUDA devices")
 
-    device = torch.device("cuda" if use_cuda else "cpu")
-    model = ModelWithSingleInput().to(device)
-    input_data = single_input_transform_fn(next(iter(dataloader)), device)
+    model = ModelWithSingleInput()
+    input_data = single_input_transform_fn(next(iter(dataloader)), use_cuda)
+    if use_cuda:
+        model = model.cuda()
 
     # Check the transformation function
     model(input_data)
     # Start quantization
-    calibration_dataset = nncf.Dataset(dataloader, partial(single_input_transform_fn, device=device))
+    calibration_dataset = nncf.Dataset(dataloader, partial(single_input_transform_fn, use_cuda=use_cuda))
     nncf.quantize(model, calibration_dataset)
 
 
-def multiple_inputs_transform_tuple_fn(data_item, device):
-    return data_item[0].to(device), data_item[1].to(device)
+def multiple_inputs_transform_tuple_fn(data_item, use_cuda):
+    if use_cuda:
+        return data_item[0].cuda(), data_item[1].cuda()
+    return data_item[0], data_item[1]
 
 
-def multiple_inputs_transform_dict_fn(data_item, device):
-    return {"input_0": data_item[0].to(device), "input_1": data_item[1].to(device)}
+def multiple_inputs_transform_dict_fn(data_item, use_cuda):
+    if use_cuda:
+        return {"input_0": data_item[0].cuda(), "input_1": data_item[1].cuda()}
+    return {"input_0": data_item[0], "input_1": data_item[1]}
 
 
 @pytest.mark.parametrize(
@@ -75,9 +82,10 @@ def test_transform_fn_multiple_inputs(transform_fn, use_cuda):
     if use_cuda and not torch.cuda.is_available():
         pytest.skip("There are no available CUDA devices")
 
-    device = torch.device("cuda" if use_cuda else "cpu")
-    model = ModelWithMultipleInputs().to(device)
-    input_data = transform_fn(next(iter(dataloader)), device)
+    model = ModelWithMultipleInputs()
+    input_data = transform_fn(next(iter(dataloader)), use_cuda)
+    if use_cuda:
+        model = model.cuda()
 
     # Check the transformation function
     if isinstance(input_data, tuple):
@@ -86,5 +94,5 @@ def test_transform_fn_multiple_inputs(transform_fn, use_cuda):
         model(**input_data)
 
     # Start quantization
-    calibration_dataset = nncf.Dataset(dataloader, partial(transform_fn, device=device))
+    calibration_dataset = nncf.Dataset(dataloader, partial(transform_fn, use_cuda=use_cuda))
     nncf.quantize(model, calibration_dataset)

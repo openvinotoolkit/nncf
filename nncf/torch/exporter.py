@@ -45,8 +45,10 @@ def count_tensors(obj: Any) -> int:
     return count
 
 
-def get_export_args(model: NNCFNetwork, model_args: Optional[Tuple[Any, ...]] = None) -> Tuple:
-    args, kwargs = model.nncf.input_infos.get_forward_inputs()
+def get_export_args(
+    model: NNCFNetwork, model_args: Optional[Tuple[Any, ...]] = None, device: Optional[str] = None
+) -> Tuple:
+    args, kwargs = model.nncf.input_infos.get_forward_inputs(device)
 
     if model_args is not None:
         args = tuple(list(args) + list(model_args[:-1]))
@@ -142,7 +144,7 @@ class PTExporter(Exporter):
         original_device = get_model_device(self._model)
         model = self._model.eval().cpu()
 
-        export_args = get_export_args(self._model, model_args=self._model_args)
+        export_args = get_export_args(self._model, model_args=self._model_args, device="cpu")
 
         if self._input_names is not None:
             input_names = self._input_names

@@ -145,7 +145,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         have its 0-th implicit `self` argument bound to the model object.
         """
         if self._original_instance_forward is not None:
-            return functools.partial(self._original_instance_forward, self._model_ref)
+            return self._original_instance_forward
         return functools.partial(self._original_unbound_forward, self._model_ref)
 
     @contextmanager
@@ -224,8 +224,6 @@ class NNCFNetworkInterface(torch.nn.Module):
         self._user_dummy_forward_fn = dummy_forward_fn
         self._kd_loss_handler = None
 
-        device = get_model_device(model)
-
         if wrap_inputs_fn is not None:
             self._wrap_inputs_fn = wrap_inputs_fn
         elif self._input_info is not None:
@@ -254,7 +252,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         eval_op_scopes = self._collect_eval_op_scopes(model, _orig_graph_build_forward_fn)
 
         # all modules called in eval mode should be replaced prior to graph building
-        self._replace_modules_by_nncf_modules(model, device, eval_op_scopes)
+        self._replace_modules_by_nncf_modules(model, eval_op_scopes)
 
         _orig_context = TracingContext()
 
@@ -458,13 +456,10 @@ class NNCFNetworkInterface(torch.nn.Module):
 
         return wrapped_user_dummy_forward_fn
 
-    def _replace_modules_by_nncf_modules(
-        self, model: torch.nn.Module, device: torch.device, eval_op_scopes: List[Scope] = None
-    ):
+    def _replace_modules_by_nncf_modules(self, model: torch.nn.Module, eval_op_scopes: List[Scope] = None):
         _, self._nncf_replaced_modules = replace_modules_by_nncf_modules(
             model, ignored_scopes=self._ignored_scopes, target_scopes=self._target_scopes, eval_op_scopes=eval_op_scopes
         )
-        model.to(device)
         return model
 
     def get_nncf_module_scopes(self) -> List[List[Scope]]:
@@ -836,10 +831,12 @@ class NNCFNetworkMeta(type):
         new_class.forward = _get_nncf_forward_function_with_signature(inspect.signature(original_class.forward))
 
         # In case of overriding forward by code like `model.forward = wrapper(model.forward)`
-        forward_inst_attr_fn = original_model.__dict__.get("forward")
-        if forward_inst_attr_fn is not None:
-            new_inst_forward = _get_nncf_forward_function_with_signature(inspect.signature(forward_inst_attr_fn))
-            original_model.__dict__["forward"] = functools.partial(new_inst_forward, original_model)
+        original_instance_forward = original_model.__dict__.get("forward")
+        if original_instance_forward is not None:
+            bound_new_instance_forward = _get_nncf_forward_function_with_signature(
+                inspect.signature(original_instance_forward), bind_self_to=original_model
+            )
+            original_model.__dict__["forward"] = bound_new_instance_forward
 
         # Make resulting class keep __module__ attributes of the original class,
         # otherwise these will point to NNCF
@@ -884,15 +881,22 @@ class NNCFNetworkMeta(type):
         return other is NNCFNetwork
 
 
-def _get_nncf_forward_function_with_signature(signature: inspect.Signature):
+def _get_nncf_forward_function_with_signature(
+    signature: inspect.Signature, bind_self_to: torch.nn.Module = None
+) -> Callable:
     """
-    Create forward function with copy signature of forward function.
+    Creates a function that executes code from NNCFNetwork.forward, but with a final signature equal to the provided
+     one.
     :param signature: Signature of function that will used for forward function.
+    :param bind_self_to: If provided, will bind the `self` argument of the returned function to the provided model
+      object. This should be the model object that we are currently constructing the NNCFNetwork with.
     :return: New copy of function NNCFNetwork.forward with specified signature.
     """
     fn = NNCFNetwork.forward
     new_forward = types.FunctionType(fn.__code__, fn.__globals__, fn.__name__, fn.__defaults__, fn.__closure__)
     new_forward.__dict__.update(fn.__dict__)
+    if bind_self_to is not None:
+        new_forward = functools.partial(new_forward, bind_self_to)
     new_forward.__signature__ = signature
     if is_debug():
         new_forward = debuggable_forward(new_forward)

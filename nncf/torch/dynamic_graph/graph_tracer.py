@@ -13,10 +13,14 @@ from typing import Any, Callable, Dict, Optional, Tuple, TypeVar
 
 import torch
 
+from nncf.common.logging import nncf_logger
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.graph import DynamicGraph
+from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
+from nncf.torch.dynamic_graph.io_handling import LoaderInputInfo
 from nncf.torch.dynamic_graph.io_handling import ModelInputInfo
 from nncf.torch.utils import get_model_device
+from nncf.torch.utils import is_multidevice
 
 
 class GraphTracer:
@@ -65,8 +69,16 @@ def create_dummy_forward_fn(
         from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_inputs_with_objwalk
         from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
 
-        device = get_model_device(model)
-        args, kwargs = input_info.get_forward_inputs(device=str(device))
+        device = None
+        if isinstance(input_info, (FillerInputInfo, LoaderInputInfo)):
+            if is_multidevice(model):
+                nncf_logger.warning(
+                    "Multidevice model detected when tracing the model's dynamic graph - will pass example "
+                    "inputs to the model as-is without changing their device."
+                )
+            else:
+                device = get_model_device(model)
+        args, kwargs = input_info.get_forward_inputs(device)
 
         if with_input_tracing:
             if wrap_inputs_fn is None:
