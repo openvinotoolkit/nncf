@@ -66,7 +66,7 @@ The [COCO2017](https://cocodataset.org/) dataset in TFRecords format should be s
 
 - If you did not install the package, add the repository root folder to the `PYTHONPATH` environment variable.
 - Go to the `examples/tensorflow/object_detection` folder.
-- Download the pre-trained weights in H5 format for either [RetinaNet](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco.tar.gz) or [YOLOv4](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/yolo_v4_coco.tar.gz) and provide the path to them using `--weights` flag.
+- Download the pre-trained weights in H5 format for either [RetinaNet](https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/retinanet_coco.tar.gz) or [YOLOv4](https://storage.openvinotoolkit.org/repositories/nncf/models/v2.7.0/tensorflow/yolo_v4_coco.tar.gz) and provide the path to them using `--weights` flag.
 - (Optional) Before compressing a model, it is highly recommended checking the accuracy of the pretrained model, use the following command:
 
     ```bash
