@@ -20,87 +20,100 @@ from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 
 
-def get_conv(input_1, node_name, input_shape, kernel=None):
+def get_conv(node_name, input_shape, kernel=None):
     strides = [1, 1]
     pads = [0, 0]
     dilations = [1, 1]
     if kernel is None:
         shape = (input_shape[1] + 1, input_shape[1], 2, 1)
         kernel = opset.constant(np.ones(shape), dtype=np.float32, name="Const")
-    return [opset.convolution(input_1, kernel, strides, pads, pads, dilations, name=node_name)]
+    input_ = opset.parameter(input_shape, name="Input0")
+    output = opset.convolution(input_, kernel, strides, pads, pads, dilations, name=node_name)
+    return [input_], [output]
 
 
-def get_group_conv(input_1, node_name, input_shape, kernel=None):
+def get_group_conv(node_name, input_shape, kernel=None):
     strides = [1, 2]
     pads = [0, 1]
     dilations = [3, 1]
     if kernel is None:
         shape = (input_shape[1], input_shape[1], 1, 1, 1)
         kernel = opset.constant(np.ones(shape), dtype=np.float32, name="Const")
-    return [opset.group_convolution(input_1, kernel, strides, pads, pads, dilations, name=node_name)]
+    input_1 = opset.parameter(input_shape, name="Input0")
+    output = opset.group_convolution(input_1, kernel, strides, pads, pads, dilations, name=node_name)
+    return [input_1], [output]
 
 
-def get_transpose_conv(input_1, node_name, input_shape, kernel=None):
+def get_transpose_conv(node_name, input_shape, kernel=None):
     strides = [1, 1]
     pads = [0, 0]
     dilations = [1, 1]
     if kernel is None:
         shape = (input_shape[1], input_shape[1] + 1, 2, 1)
         kernel = opset.constant(np.ones(shape), dtype=np.float32, name="Const")
-    return [
-        opset.convolution_backprop_data(
-            input_1, kernel, strides, pads_begin=pads, pads_end=pads, dilations=dilations, name=node_name
-        )
-    ]
+    input_1 = opset.parameter(input_shape, name="Input0")
+    output = opset.convolution_backprop_data(
+        input_1, kernel, strides, pads_begin=pads, pads_end=pads, dilations=dilations, name=node_name
+    )
+    return [input_1], [output]
 
 
-def get_transpose_group_conv(input_1, node_name, input_shape, kernel=None):
+def get_transpose_group_conv(node_name, input_shape, kernel=None):
     strides = [1, 2]
     pads = [0, 1]
     dilations = [3, 1]
     if kernel is None:
         shape = (input_shape[1], 1, input_shape[1], 1, 1)
         kernel = opset.constant(np.ones(shape), dtype=np.float32, name="Const")
-    return opset.group_convolution_backprop_data(
-        input_1, kernel, strides, pads_begin=pads, pads_end=pads, dilations=dilations, name=node_name
+    input_ = opset.parameter(input_shape, name="Input0")
+    output = opset.group_convolution_backprop_data(
+        input_, kernel, strides, pads_begin=pads, pads_end=pads, dilations=dilations, name=node_name
     )
+    return [input_], [output]
 
 
-def get_convert_conv(input_1, node_name, input_shape):
+def get_convert_conv(node_name, input_shape):
     shape = (input_shape[1] + 1, input_shape[1], 1, 1)
     const = opset.constant(np.ones(shape), dtype=np.float64, name="Const")
     convert = opset.convert(const, np.float32)
-    return get_conv(input_1, node_name, input_shape, convert)
+    return get_conv(node_name, input_shape, convert)
 
 
-def get_matmul_b(input_1, node_name, input_shape):
-    return get_matmul(input_1, node_name, input_shape, transpose_b=True)
+def get_matmul_b(node_name, input_shape):
+    return get_matmul(node_name, input_shape, transpose_b=True)
 
 
-def get_matmul_a(input_1, node_name, input_shape):
-    return get_matmul(input_1, node_name, input_shape, transpose_a=True)
+def get_matmul_a(node_name, input_shape):
+    return get_matmul(node_name, input_shape, transpose_a=True)
 
 
-def get_matmul(input_1, node_name, input_shape, transpose_a=False, transpose_b=False):
+def get_matmul(node_name, input_shape, transpose_a=False, transpose_b=False):
     channel_position = 1 if transpose_a else -1
     data_shape = [input_shape[channel_position], 1]
     if transpose_b:
         data_shape = data_shape[::-1]
     data = opset.constant(np.ones(tuple(data_shape)), dtype=np.float32, name="Const")
-    return [opset.matmul(input_1, data, transpose_a=transpose_a, transpose_b=transpose_b, name=node_name)]
+    input_ = opset.parameter(input_shape, name="Input0")
+    output = opset.matmul(input_, data, transpose_a=transpose_a, transpose_b=transpose_b, name=node_name)
+    return [input_], [output]
 
 
-def get_shape_node(input_, op_name, input_shape):
-    return [opset.shape_of(input_, name=op_name)]
+def get_shape_node(op_name, input_shape):
+    input_ = opset.parameter(input_shape, name="Input0")
+    output = opset.shape_of(input_, name=op_name)
+    return [input_], [output]
 
 
-def get_one_layer_model(op_name: str, node_creator, input_shape, num_inputs: int = 1):
+def get_concat_node(op_name, input_shape):
+    num_inputs = 3
     inputs = [opset.parameter(input_shape, name=f"Input{i}") for i in range(num_inputs)]
-    acutual_inputs = inputs[0] if num_inputs == 1 else inputs
-    outputs = node_creator(acutual_inputs, op_name, input_shape)
-    results = []
-    for idx, output in enumerate(outputs):
-        results.append(opset.result(output, name=f"Result{idx}"))
+    output = opset.concat(inputs, axis=1, name=op_name)
+    return inputs, [output]
+
+
+def get_one_layer_model(op_name: str, node_creator, input_shape):
+    inputs, outputs = node_creator(op_name, input_shape)
+    results = [opset.result(o, name=f"Result{i}") for i, o in enumerate(outputs)]
     model = ov.Model(results, inputs)
     return model
 
@@ -232,7 +245,16 @@ def get_one_layer_model(op_name: str, node_creator, input_shape, num_inputs: int
                 {"transpose": True},
             ),
         ),
-    ],
+        (
+            get_concat_node,
+            (1, 3, 4),
+            OVLayerAttributes(
+                {},
+                {},
+                {},
+            ),
+        ),
+    ][::-1],
 )
 def test_layer_attributes(node_creator, input_shape, ref_layer_attrs):
     op_name = "test_node"
