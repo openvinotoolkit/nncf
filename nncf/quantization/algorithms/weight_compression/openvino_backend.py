@@ -77,8 +77,8 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 if isinstance(reduction_axes, tuple) and len(reduction_axes) != 1:
                     nncf_logger.warning(
                         f"Weight compression expects a single reduction axes, but given {len(reduction_axes)}. "
-                        f"Weight shape: {const_shape}, reduction axes: {reduction_axes}, node name: {nncf_node.name}. "
-                        "The node won't be quantized."
+                        f"Weight shape: {const_shape}, reduction axes: {reduction_axes}, "
+                        f"node name: {nncf_node.node_name}. The node won't be quantized."
                     )
                     continue
                 reduction_axis = reduction_axes[0] if isinstance(reduction_axes, tuple) else reduction_axes
