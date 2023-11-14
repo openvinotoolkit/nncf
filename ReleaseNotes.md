@@ -32,6 +32,7 @@ Post-training Quantization:
   - [Post-Training Optimization of LLaVA Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/257-llava-multimodal-chatbot)
   - [Post-Training Optimization of Latent Consistency Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/263-latent-consistency-models-image-generation)
   - [Post-Training Optimization of Distil-Whisper Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/267-distil-whisper-asr)
+  - [Post-Training Optimization of FastSAM Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/261-fast-segment-anything)
 
 Compression-aware training:
 
