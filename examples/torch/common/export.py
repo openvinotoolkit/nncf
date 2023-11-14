@@ -30,7 +30,7 @@ def export_model(ctrl: CompressionAlgorithmController, config: SampleConfig) -> 
     model = ctrl.model if config.no_strip_on_export else ctrl.strip()
     model = model.eval().cpu()
 
-    export_args = get_export_args(model)
+    export_args = get_export_args(model, device="cpu")
     input_names = generate_input_names_list(count_tensors(export_args))
 
     input_tensor_list = []
