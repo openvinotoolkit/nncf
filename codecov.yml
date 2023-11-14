@@ -80,7 +80,7 @@ component_management:
       name: openvino
       paths:
         - nncf/openvino
-    - component_id: common_ptq
-      name: quantization
+    - component_id: quantization
+      name: common_ptq
       paths:
         - nncf/quantization
