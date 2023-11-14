@@ -298,7 +298,7 @@ LIST_DESCS = [
 @pytest.mark.parametrize("desc", LIST_DESCS, ids=map(str, LIST_DESCS))
 def test_quantization_error_calculation(desc: QuantErrorDesc):
     weight = desc.weight
-    axis = (1,)
+    axis = 1
     actual_error = _get_integer_quantization_error(weight, axis, desc.config)
     ref_error = desc.ref_error
     atol = desc.atol if desc.atol is not None else 1e-8
@@ -374,20 +374,20 @@ def test_weight_compress_with_ignored_scope(ignored_scope, num_compressed):
 @pytest.mark.parametrize("desc", CALCULATE_SCALE_DESCS)
 def test_calculate_scale_per_group(desc: CalculateScaleDesc):
     reshaped_weight, reduction_axis = _reshape_weights_for_grouped_quantization(
-        desc.weight, reduction_axes=desc.axis, group_size=desc.group_size
+        desc.weight, reduction_axis=desc.axis, group_size=desc.group_size
     )
     act_scale = np.max(np.abs(reshaped_weight), axis=reduction_axis, keepdims=True)  # [a1, r//gs, 1, a2]
     assert np.allclose(act_scale, desc.ref_scale)
 
 
 def test_raise_error_for_many_axes():
-    with pytest.raises(RuntimeError):
-        _reshape_weights_for_grouped_quantization(WEIGHTS_2x4, reduction_axes=(0, 1), group_size=1)
+    with pytest.raises(AssertionError):
+        _reshape_weights_for_grouped_quantization(WEIGHTS_2x4, reduction_axis=(0, 1), group_size=1)
 
 
-def test_raise_error_with_incorrect_group_size():
-    with pytest.raises(RuntimeError):
-        _reshape_weights_for_grouped_quantization(WEIGHTS_2x4, reduction_axes=(0,), group_size=3)
+def test_raise_error_with_tuple():
+    with pytest.raises(AssertionError):
+        _reshape_weights_for_grouped_quantization(WEIGHTS_2x4, reduction_axis=(0,), group_size=3)
 
 
 def test_raise_error_with_int8_and_non_default_ratio(mocker):
