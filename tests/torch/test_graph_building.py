@@ -42,9 +42,10 @@ from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.io_handling import EXTRA_STRUCTS_WITH_DATALOADERS
-from nncf.torch.dynamic_graph.io_handling import ExactInputsInfo
+from nncf.torch.dynamic_graph.io_handling import ExampleInputInfo
 from nncf.torch.dynamic_graph.io_handling import FillerInputElement
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
+from nncf.torch.dynamic_graph.io_handling import LoaderInputInfo
 from nncf.torch.dynamic_graph.io_handling import ModelInputInfo
 from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
 from nncf.torch.dynamic_graph.trace_tensor import trace_tensors
@@ -646,9 +647,10 @@ def test_filler_input_info_arg_generation(filler_gen_test_struct: FillerInputInf
     "input_info",
     [
         FillerInputInfo([FillerInputElement([1, 3, 3, 3])]),
-        ExactInputsInfo((torch.Tensor([1]), torch.Tensor([1])), {"a": torch.Tensor([1]), "b": torch.Tensor([1])}),
+        ExampleInputInfo((torch.Tensor([1]), torch.Tensor([1])), {"a": torch.Tensor([1]), "b": torch.Tensor([1])}),
+        LoaderInputInfo((torch.Tensor([1]), torch.Tensor([1])), {"a": torch.Tensor([1]), "b": torch.Tensor([1])}),
     ],
-    ids=["filler", "exact"],
+    ids=["filler", "example", "loader"],
 )
 @pytest.mark.parametrize("device", ["cuda", "cpu"])
 def test_input_infos_respect_device_setting(input_info: ModelInputInfo, device: str):
@@ -704,7 +706,7 @@ def test_compressed_model_creation_can_build_exact_input_infos_from_dataloader_i
 
     _ = create_compressed_model(mock_model_with_stub_forward, config)
     input_info_received_by_nncf_network_init = nncf_network_init_spy.call_args.kwargs["input_info"]  # input_info
-    assert isinstance(input_info_received_by_nncf_network_init, ExactInputsInfo)
+    assert isinstance(input_info_received_by_nncf_network_init, LoaderInputInfo)
     test_args, test_kwargs = input_info_received_by_nncf_network_init.get_forward_inputs()
 
     for idx, arg in enumerate(test_args):

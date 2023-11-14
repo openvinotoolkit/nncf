@@ -8,11 +8,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import abc
 import functools
 import inspect
 from abc import ABCMeta
 from abc import abstractmethod
 from copy import deepcopy
+from typing import Callable, Type
 
 import pytest
 import torch
@@ -25,6 +27,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.torch import register_module
+from nncf.torch.dynamic_graph.io_handling import ExampleInputInfo
 from nncf.torch.dynamic_graph.io_handling import FillerInputElement
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
@@ -405,28 +408,73 @@ def test_replacing_forward_with_another_own_method(_nncf_caplog):
     assert "set_original_unbound_forward" in _nncf_caplog.text
 
 
-def test_replacing_forward_of_original_model():
-    def decorator(func):
-        def wrap(*args):
-            return func(*args)
+class ReplacementForwardProvider(abc.ABC):
+    @abstractmethod
+    def get_replacement_forward(self, model: torch.nn.Module) -> Callable:
+        pass
 
-        return wrap
 
+class ArgDecoratorForward(ReplacementForwardProvider):
+    def get_replacement_forward(self, model: torch.nn.Module) -> Callable:
+        def decorator(func):
+            def wrap(*args):
+                return func(*args)
+
+            return wrap
+
+        return decorator(model.forward)
+
+
+class ArgAndKwargWrapsForward(ReplacementForwardProvider):
+    def get_replacement_forward(self, model: torch.nn.Module) -> Callable:
+        old_forward = model.forward
+
+        @functools.wraps(old_forward)
+        def new_forward(*args, **kwargs):
+            return old_forward(*args, **kwargs)
+
+        return new_forward
+
+
+class EvilSelfForwardProvider(ReplacementForwardProvider):
+    def get_replacement_forward(self, model: torch.nn.Module) -> Callable:
+        old_forward = model.forward
+
+        def evil_forward(self):
+            # since `self` is just a name, and not a reserved word,
+            # in this function `self` will refer just to the 0-th actual (tensor) arg of the forward function
+            return old_forward(self)
+
+        return evil_forward
+
+
+@pytest.mark.parametrize(
+    "replacement_forward_provider_cls", [ArgDecoratorForward, ArgAndKwargWrapsForward, EvilSelfForwardProvider]
+)
+def test_replacing_forward_of_original_model(replacement_forward_provider_cls: Type[ReplacementForwardProvider]):
     model = BasicConvTestModel()
-    model.forward = decorator(model.forward)
+    provider = replacement_forward_provider_cls()
+    replacement_forward = provider.get_replacement_forward(model)
+    model.forward = replacement_forward
+    input_info = FillerInputInfo([FillerInputElement(model.INPUT_SIZE)])
+    input_args, input_kwargs = input_info.get_forward_inputs()
+    original_output = model.forward(*input_args, **input_kwargs)
 
     fn_id = id(model.__dict__["forward"])
     fn_sign = inspect.signature(model.forward)
     # type of current
-    assert isinstance(model.__dict__["forward"], type(decorator))
+    assert isinstance(model.__dict__["forward"], type(replacement_forward))
 
-    nncf_net = NNCFNetwork(model, FillerInputInfo([FillerInputElement(model.INPUT_SIZE)]))
-    nncf_net.forward(torch.ones(model.INPUT_SIZE))
+    nncf_net = NNCFNetwork(model, input_info)
 
     # Check that forward was updated
     assert fn_id != id(nncf_net.__dict__["forward"])
     assert fn_sign == inspect.signature(nncf_net.forward)
     assert isinstance(nncf_net.forward, functools.partial)
+
+    # Check that the functional outputs are the same
+    new_output = nncf_net.forward(torch.ones(model.INPUT_SIZE))
+    assert torch.equal(new_output, original_output)
 
 
 def test_temporary_clean_view():
@@ -767,3 +815,27 @@ def test_is_compression_module_registered(compression_module_type, is_registered
         assert nncf_model.nncf.is_compression_module_registered(compression_module_type)
     else:
         assert not nncf_model.nncf.is_compression_module_registered(compression_module_type)
+
+
+class MultideviceModel(torch.nn.Module):
+    def __init__(self, linear_0, linear_1):
+        super().__init__()
+        self.linear_cpu = torch.nn.Linear(linear_0[0], linear_0[1], device="cpu")
+        self.linear_gpu = torch.nn.Linear(linear_1[0], linear_1[1], device="cuda")
+
+    def forward(self, x, y):
+        x1 = self.linear_cpu(x)
+        y1 = self.linear_gpu(y)
+        res = x1.to(y1.device) + y1
+        return res
+
+
+def test_multidevice_model():
+    if not torch.cuda.is_available():
+        pytest.skip("GPU required")
+
+    model = MultideviceModel((3, 3), (2, 3))
+    example_input = (torch.ones(3, 3, device="cpu"), torch.ones(3, 2, device="cuda"))
+    input_info = ExampleInputInfo.from_example_input(example_input)
+    nncf_model = NNCFNetwork(model, input_info)
+    nncf_model(*example_input)
