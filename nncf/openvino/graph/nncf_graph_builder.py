@@ -10,21 +10,24 @@
 # limitations under the License.
 
 from collections import defaultdict
-from typing import List, Type
+from typing import List, Set, Type
 
 import openvino.runtime as ov
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype
+from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.layer_attributes import get_weighted_layer_attributes
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_CONST_PORT_ID
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVConcatMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGRUSequenceMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVLSTMSequenceMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import get_operation_const_op
 
@@ -173,46 +176,59 @@ class GraphConverter:
         for node in model.get_ops():
             metatype = get_node_metatype(node)
             # Add nodes from constant subgraphs
-            node_name = node.get_friendly_name()
-            if node_name not in visited:
+            node_from_constant_supgraph = node.get_friendly_name() not in visited
+            if node_from_constant_supgraph:
                 GraphConverter._add_nncf_node(node, nncf_graph)
+
             # Set const port id
-            elif metatype in OPERATIONS_WITH_CONST_PORT_ID:
-                const_attrs, act_attrs = {}, {}
-                for inp in GraphConverter._filter_weight_input_ports(node.inputs(), metatype):
-                    inp_name = inp.get_source_output().get_node().get_friendly_name()
-                    if inp_name in visited:
-                        continue
-
-                    const_port_id = inp.get_index()
-                    const_node = get_operation_const_op(node, const_port_id)
-                    if const_node is None:
-                        continue
-
-                    ov_dtype = const_node.get_element_type().get_type_name()
-                    if GraphConverter.convert_to_nncf_dtype(ov_dtype) == Dtype.INTEGER:
-                        continue
-
-                    const_attrs[const_port_id] = {
-                        "name": const_node.get_friendly_name(),
-                        "shape": tuple(const_node.get_output_shape(0)),
-                    }
-
-                    if metatype == OVMatMulMetatype:
-                        act_port_id = abs(const_port_id - 1)
-                        attribute_names = ["transpose_a", "transpose_b"]
-                        node_attributes = node.get_attributes()
-                        const_transpose_name = attribute_names[const_port_id]
-                        const_attrs[const_port_id]["transpose"] = node_attributes[const_transpose_name]
-                        act_attrs["transpose"] = node_attributes[attribute_names[act_port_id]]
-                    elif metatype == OVGRUSequenceMetatype:
-                        node_attributes = node.get_attributes()
-                        act_attrs["linear_before_reset"] = node_attributes["linear_before_reset"]
-
-                    if const_attrs or act_attrs:
-                        nncf_node = nncf_graph.get_node_by_name(node_name)
-                        layer_attributes = get_weighted_layer_attributes(node, metatype, const_attrs)
-                        nncf_node.layer_attributes = OVLayerAttributes(const_attrs, layer_attributes, act_attrs)
+            if not node_from_constant_supgraph and metatype in OPERATIONS_WITH_CONST_PORT_ID:
+                GraphConverter._set_weighted_layer_attributes(node, metatype, nncf_graph, visited)
+            else:
+                GraphConverter._set_non_weighted_layer_attributes(node, metatype, nncf_graph)
 
         GraphConverter._add_edges_to_nncf_graph(model, nncf_graph)
         return nncf_graph
+
+    def _set_non_weighted_layer_attributes(node: ov.Node, metatype: OVOpMetatype, nncf_graph: NNCFGraph):
+        if metatype == OVConcatMetatype:
+            nncf_node = nncf_graph.get_node_by_name(node.get_friendly_name())
+            nncf_node.layer_attributes = OVLayerAttributes(
+                {}, MultipleInputLayerAttributes(axis=node.get_axis(), num_inputs=len(node.inputs()))
+            )
+
+    def _set_weighted_layer_attributes(node: ov.Node, metatype: OVOpMetatype, nncf_graph: NNCFGraph, visited: Set[str]):
+        const_attrs, act_attrs = {}, {}
+        for inp in GraphConverter._filter_weight_input_ports(node.inputs(), metatype):
+            inp_name = inp.get_source_output().get_node().get_friendly_name()
+            if inp_name in visited:
+                continue
+
+            const_port_id = inp.get_index()
+            const_node = get_operation_const_op(node, const_port_id)
+            if const_node is None:
+                continue
+
+            ov_dtype = const_node.get_element_type().get_type_name()
+            if GraphConverter.convert_to_nncf_dtype(ov_dtype) == Dtype.INTEGER:
+                continue
+
+            const_attrs[const_port_id] = {
+                "name": const_node.get_friendly_name(),
+                "shape": tuple(const_node.get_output_shape(0)),
+            }
+
+            if metatype == OVMatMulMetatype:
+                act_port_id = abs(const_port_id - 1)
+                attribute_names = ["transpose_a", "transpose_b"]
+                node_attributes = node.get_attributes()
+                const_transpose_name = attribute_names[const_port_id]
+                const_attrs[const_port_id]["transpose"] = node_attributes[const_transpose_name]
+                act_attrs["transpose"] = node_attributes[attribute_names[act_port_id]]
+            elif metatype == OVGRUSequenceMetatype:
+                node_attributes = node.get_attributes()
+                act_attrs["linear_before_reset"] = node_attributes["linear_before_reset"]
+
+            if const_attrs or act_attrs:
+                nncf_node = nncf_graph.get_node_by_name(node.get_friendly_name())
+                layer_attributes = get_weighted_layer_attributes(node, metatype, const_attrs)
+                nncf_node.layer_attributes = OVLayerAttributes(const_attrs, layer_attributes, act_attrs)

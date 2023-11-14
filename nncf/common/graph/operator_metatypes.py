@@ -21,7 +21,7 @@ class OperatorMetatype:
 
     :param name: The name of the operator.
     :param hw_config_names: The names of the hardware configurations.
-    :param output_channel_axis: The axis along which the output channels of the operator are arranged.
+    :param output_channel_axis: The axis, along which the output channels of the operator are arranged.
     :param ignored_input_ports: Input ports of the operations that should not be considered for purposes of compression.
     """
 

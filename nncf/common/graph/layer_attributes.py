@@ -30,6 +30,9 @@ class BaseLayerAttributes(ABC):
     def __eq__(self, __o: object) -> bool:
         return isinstance(__o, self.__class__) and self.__dict__ == __o.__dict__
 
+    def get_backend_agnostic_attributes(self) -> "BaseLayerAttributes":
+        return self
+
 
 class MultipleInputLayerAttributes(BaseLayerAttributes):
     def __init__(self, axis: int, num_inputs: Optional[int] = None):
@@ -97,7 +100,7 @@ class GenericWeightedLayerAttributes(WeightedLayerAttributes):
         :param weight_requires_grad: Is True if gradients need to be computed for the corresponding Tensor,
         False otherwise.
         :param weight_shape: shape of weight tensor.
-        :param filter_dimension_idx: the axis along which the filters are stored.
+        :param filter_dimension_idx: the axis, along which the filters are stored.
         """
         super().__init__(weight_requires_grad=weight_requires_grad, with_bias=with_bias)
         self.weight_shape = weight_shape
@@ -111,7 +114,13 @@ class GenericWeightedLayerAttributes(WeightedLayerAttributes):
 
 
 class LinearLayerAttributes(WeightedLayerAttributes):
-    def __init__(self, weight_requires_grad: bool, in_features: int, out_features: int, with_bias: bool = True):
+    def __init__(
+        self,
+        weight_requires_grad: bool,
+        in_features: int,
+        out_features: int,
+        with_bias: bool = True,
+    ):
         """
 
         :param weight_requires_grad: Is True if gradients need to be computed for the corresponding Tensor,

@@ -328,7 +328,7 @@ class SmoothQuant(Algorithm):
         port_id = self._backend_entity.get_weight_tensor_port_id(node)
         weights_size = len(node.layer_attributes.constant_attributes[port_id]["shape"])
         if weights_size > 1:
-            channel_axis = self._backend_entity.get_weight_channel_axis(node, port_id)
+            channel_axis = self._backend_entity.get_weight_channel_axis(node)
             return self._backend_entity.calculate_weight_scale(scale_value, weights_size, channel_axis)
         return scale_value
 
@@ -359,7 +359,7 @@ class SmoothQuant(Algorithm):
         """
         channel_axis = 0
         if len(weights.shape) > 1:
-            channel_axis = self._backend_entity.get_weight_channel_axis(node, port_id)
+            channel_axis = self._backend_entity.get_weight_channel_axis(node)
         reduction_shape = [i for i, _ in enumerate(weights.shape)]
         reduction_shape.pop(channel_axis)
         return self._backend_entity.process_weight_statistics(weights, tuple(reduction_shape))
