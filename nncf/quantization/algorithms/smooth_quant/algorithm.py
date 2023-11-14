@@ -360,7 +360,9 @@ class SmoothQuant(Algorithm):
         channel_axis = 0
         if len(weights.shape) > 1:
             channel_axis = self._backend_entity.get_weight_channel_axis(node)
-        return self._backend_entity.process_weight_statistics(weights, channel_axis)
+        reduction_shape = [i for i, _ in enumerate(weights.shape)]
+        reduction_shape.pop(channel_axis)
+        return self._backend_entity.process_weight_statistics(weights, tuple(reduction_shape))
 
     def _create_scale_node_name(self, source_name: str, source_port_id: int) -> str:
         """
