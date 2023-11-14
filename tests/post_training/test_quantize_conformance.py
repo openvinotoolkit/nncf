@@ -26,12 +26,14 @@ from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import RunInfo
 
 
-@pytest.fixture(scope="session", name="data")
+@pytest.fixture(scope="session", name="data_dir")
 def fixture_data(pytestconfig):
+    if pytestconfig.getoption("data") is None:
+        raise ValueError("This test requires the --data argument to be specified.")
     return Path(pytestconfig.getoption("data"))
 
 
-@pytest.fixture(scope="session", name="output")
+@pytest.fixture(scope="session", name="output_dir")
 def fixture_output(pytestconfig):
     return Path(pytestconfig.getoption("output"))
 
@@ -75,7 +77,7 @@ def fixture_reference_data():
 
 
 @pytest.fixture(scope="session", name="result_data")
-def fixture_report_data(output, run_benchmark_app, extra_columns):
+def fixture_report_data(output_dir, run_benchmark_app, extra_columns):
     data: Dict[str, RunInfo] = {}
 
     yield data
@@ -89,16 +91,16 @@ def fixture_report_data(output, run_benchmark_app, extra_columns):
         if not extra_columns:
             df = df.drop(columns=["Stat. collection time", "Bias correction time", "Validation time"])
 
-        output.mkdir(parents=True, exist_ok=True)
-        df.to_csv(output / "results.csv", index=False)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        df.to_csv(output_dir / "results.csv", index=False)
 
 
 @pytest.mark.parametrize("test_case_name", TEST_CASES.keys())
 def test_ptq_quantization(
     reference_data: dict,
     test_case_name: str,
-    data: Path,
-    output: Path,
+    data_dir: Path,
+    output_dir: Path,
     result_data: Dict[str, RunInfo],
     no_eval: bool,
     run_fp32_backend: bool,
@@ -145,8 +147,8 @@ def test_ptq_quantization(
             "backend": test_model_param["backend"],
             "ptq_params": test_model_param["ptq_params"],
             "params": test_model_param.get("params"),
-            "output_dir": output,
-            "data_dir": data,
+            "output_dir": output_dir,
+            "data_dir": data_dir,
             "reference_data": test_reference,
             "no_eval": no_eval,
             "run_benchmark_app": run_benchmark_app,
@@ -173,12 +175,6 @@ def test_ptq_quantization(
 
         if extra_columns:
             pipeline.collect_data_from_stdout(captured.out)
-
-        if enable_output:
-            # To print output with -s option
-            with capsys.disabled():
-                print(captured.out)
-                print(captured.err)
     else:
         if test_model_param is not None:
             run_info = RunInfo(
@@ -193,6 +189,12 @@ def test_ptq_quantization(
                 backend=BackendType[splitted[1]],
                 status=err_msg,
             )
+
+    # To print output with -s option
+    if enable_output:
+        with capsys.disabled():
+            print(captured.out)
+            print(captured.err)
 
     run_info.time_total = time.perf_counter() - start_time
     result_data[test_case_name] = run_info.get_result_dict()

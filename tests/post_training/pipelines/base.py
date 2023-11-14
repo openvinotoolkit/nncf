@@ -127,13 +127,13 @@ class BaseTestPipeline(ABC):
         self.model_id = model_id
         self.backend = backend
         self.ptq_params = ptq_params
-        self.output_dir = Path(output_dir)
-        self.data_dir = Path(data_dir)
+        self.output_dir = output_dir
+        self.data_dir = data_dir
         self.reference_data = reference_data
         self.params = params or {}
         self.no_eval = no_eval
         self.run_benchmark_app = run_benchmark_app
-        self.output_model_dir = self.output_dir / self.reported_name / self.backend.value
+        self.output_model_dir: Path = self.output_dir / self.reported_name / self.backend.value
         self.output_model_dir.mkdir(parents=True, exist_ok=True)
         self.model_name = f"{self.reported_name}_{self.backend.value}"
 
