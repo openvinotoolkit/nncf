@@ -168,7 +168,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     @staticmethod
     def get_weight_channel_axis(node: NNCFNode) -> int:
         if node.metatype != OVMatMulMetatype:
-            return 1 if node.metatype.const_channel_axis is None else node.metatype.const_channel_axis[0]
+            return 1
 
         weights_layout = get_linear_weights_layout_from_node(node)
         return weights_layout.index(OVLayoutElem.C_IN)
