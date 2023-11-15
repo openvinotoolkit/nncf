@@ -786,3 +786,17 @@ class SequentialMatmulModel(OVReferenceModel):
         result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [input_node])
         return model
+
+
+class GatherWithTwoReductionAxes(OVReferenceModel):
+    def _create_ov_model(self):
+        input_1 = opset.parameter([2, 3], name="Input")
+        convert_1 = opset.convert(input_1, destination_type="i64", name="Convert_1")
+
+        gather_2_data = opset.constant(self._rng.random((3, 2, 1)), dtype=np.float32, name="gather_2_data")
+        gather_2 = opset.gather(gather_2_data, convert_1, axis=0, batch_dims=0)
+        gather_2.set_friendly_name("Gather_2")
+
+        result = opset.result(gather_2, name="Result")
+        model = ov.Model([result], [input_1])
+        return model

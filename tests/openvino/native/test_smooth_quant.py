@@ -111,7 +111,7 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
                     OVLayoutElem.SPATIAL,
                     OVLayoutElem.SPATIAL,
                 ),
-                0,
+                1,
             ),
         ),
     )
