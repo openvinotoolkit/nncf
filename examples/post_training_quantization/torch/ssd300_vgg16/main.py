@@ -29,6 +29,7 @@ from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from torchvision.models.detection.ssd import SSD
 from torchvision.models.detection.ssd import GeneralizedRCNNTransform
 from nncf.common.logging.track_progress import track
+from functools import partial
 
 ROOT = Path(__file__).parent.resolve()
 DATASET_URL = "https://ultralytics.com/assets/coco128.zip"
@@ -125,10 +126,10 @@ def validate(model: torch.nn.Module, dataset: COCO128Dataset, device: torch.devi
     return computed_metrics["map_50"]
 
 
-def transform_fn(data_item: Tuple[torch.Tensor, Dict]) -> torch.Tensor:
+def transform_fn(data_item: Tuple[torch.Tensor, Dict], device: torch.device) -> torch.Tensor:
     # Skip label and add a batch dimension to an image tensor
     images, _ = data_item
-    return images[None]
+    return images[None].to(device)
 
 
 def main():
@@ -149,7 +150,7 @@ def main():
     disable_tracing(SSD.postprocess_detections)
 
     # Quantize model
-    calibration_dataset = nncf.Dataset(dataset, transform_fn)
+    calibration_dataset = nncf.Dataset(dataset, partial(transform_fn, device=device))
     quantized_model = nncf.quantize(model, calibration_dataset)
 
     # Convert to OpenVINO
