@@ -800,3 +800,19 @@ class GatherWithTwoReductionAxes(OVReferenceModel):
         result = opset.result(gather_2, name="Result")
         model = ov.Model([result], [input_1])
         return model
+
+
+class ScaledDotProductAttentionModel(OVReferenceModel):
+    def _create_ov_model(self):
+        from openvino.runtime import opset13
+
+        query = opset13.parameter([1, 1, 1, 64], name="Input_1")
+        key = opset13.parameter([1, 1, 1, 64], name="Input_2")
+        value = opset13.parameter([1, 1, 1, 64], name="Input_3")
+        attn_mask = opset13.parameter([1, 1, 1, 1], name="Input_4")
+
+        attn = opset13.scaled_dot_product_attention(query, key, value, attn_mask)
+        result = opset.result(attn, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+        model = ov.Model([result], [query, key, value, attn_mask])
+        return model
