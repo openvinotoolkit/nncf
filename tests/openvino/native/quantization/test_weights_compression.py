@@ -25,6 +25,7 @@ from nncf.quantization.algorithms.weight_compression.openvino_backend import _ge
 from nncf.quantization.algorithms.weight_compression.openvino_backend import _reshape_weights_for_grouped_quantization
 from nncf.scopes import IgnoredScope
 from tests.openvino.native.common import get_openvino_version
+from tests.openvino.native.models import GatherWithTwoReductionAxes
 from tests.openvino.native.models import IntegerModel
 from tests.openvino.native.models import SequentialMatmulModel
 from tests.openvino.native.models import WeightsModel
@@ -200,6 +201,14 @@ def test_mixed_precision(ratio, group_size, ref_nf4_nodes):
     for op in compressed_model.get_ordered_ops():
         if op.get_type_name() == "Constant" and op.get_friendly_name() in ref_nf4_nodes:
             assert op.get_element_type() == ov.Type.nf4
+
+
+def test_not_quantize_with_multiple_reduction_axes():
+    model = GatherWithTwoReductionAxes().ov_model
+    compressed_model = compress_weights(model, mode=CompressWeightsMode.INT8)
+    for op in compressed_model.get_ordered_ops():
+        if op.get_type_name() == "Constant" and op.get_friendly_name() == "gather_2_data":
+            assert op.get_element_type() == ov.Type(np.float32)
 
 
 @dataclass
