@@ -13,6 +13,7 @@ import collections
 from typing import List, Optional, TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 
 TModel = TypeVar("TModel")
@@ -22,8 +23,8 @@ def transform_to_inference_graph(
     nncf_graph: NNCFGraph,
     shapeof_metatypes: List[OperatorMetatype],
     dropout_metatypes: List[OperatorMetatype],
+    constant_metatypes: List[OperatorMetatype],
     read_variable_metatypes: Optional[List[OperatorMetatype]] = None,
-    nncf_graph_contains_constants: bool = True,
 ) -> NNCFGraph:
     """
     This method contains inplace pipeline of the passes that uses to provide inference graph without constant flows.
@@ -36,10 +37,9 @@ def transform_to_inference_graph(
     :param nncf_graph_contains_constants: Whether NNCFGraph contains constant nodes or not.
     :return: NNCFGraph in the inference style.
     """
+    filter_constant_nodes(nncf_graph, constant_metatypes)
     remove_shapeof_subgraphs(nncf_graph, shapeof_metatypes, read_variable_metatypes)
     remove_nodes_and_reconnect_graph(nncf_graph, dropout_metatypes)
-    if nncf_graph_contains_constants:
-        filter_constant_nodes(nncf_graph, read_variable_metatypes)
     return nncf_graph
 
 
@@ -50,6 +50,7 @@ def remove_shapeof_subgraphs(
 ) -> NNCFGraph:
     """
     Removes the ShapeOf subgraphs from the provided NNCFGraph instance inplace.
+    Constant subgraph should be already removed from the given NNCFGraph.
 
     :param nncf_graph: NNCFGraph instance for the transformation.
     :param shapeof_metatypes: List of backend-specific ShapeOf metatypes.
@@ -58,12 +59,13 @@ def remove_shapeof_subgraphs(
     :return: NNCFGraph without ShapeOf subgraphs.
     """
     read_variable_metatypes = read_variable_metatypes if read_variable_metatypes else []
+    nodes_without_inputs = [node for node in nncf_graph.get_all_nodes() if not nncf_graph.get_input_edges(node)]
     nodes_to_drop = set()
     shape_of_nodes = []
     infer_nodes = []
 
     similar_inputs = nncf_graph.get_nodes_by_metatypes(read_variable_metatypes)
-    nodes_queue = collections.deque(nncf_graph.get_input_nodes() + similar_inputs)
+    nodes_queue = collections.deque(nncf_graph.get_input_nodes() + similar_inputs + nodes_without_inputs)
     while nodes_queue:
         node = nodes_queue.pop()
         if node.metatype in shapeof_metatypes:
@@ -143,7 +145,8 @@ def remove_nodes_and_reconnect_graph(
 
 
 def filter_constant_nodes(
-    nncf_graph: NNCFGraph, read_variable_metatypes: Optional[List[OperatorMetatype]] = None
+    nncf_graph: NNCFGraph,
+    constant_metatypes: Optional[List[OperatorMetatype]] = None,
 ) -> NNCFGraph:
     """
     Removes all Constant nodes from NNCFGraph inplace, making it inference graph.
@@ -154,23 +157,32 @@ def filter_constant_nodes(
         that also can be interpreted as inputs (ReadValue).
     :return: NNCFGraph without Constant nodes.
     """
-    read_variable_metatypes = read_variable_metatypes if read_variable_metatypes else []
-    input_nodes = nncf_graph.get_input_nodes()
-    similar_input_nodes = nncf_graph.get_nodes_by_metatypes(read_variable_metatypes)
-
-    start_nodes = input_nodes + similar_input_nodes
-
-    if not start_nodes:
-        return nncf_graph
+    constant_metatypes = constant_metatypes if constant_metatypes else []
+    constant_nodes = set(nncf_graph.get_nodes_by_metatypes(constant_metatypes))
 
     visited_nodes = set()
-    nodes_queue = collections.deque(start_nodes)
+    nodes_queue = collections.deque(constant_nodes)
     while nodes_queue:
         node = nodes_queue.pop()
         if node in visited_nodes:
             continue
+        input_edges_num_expected = node.metatype.input_edges_num_expected
+        if node.layer_attributes is not None and isinstance(
+            node.layer_attributes.get_backend_agnostic_attributes(), MultipleInputLayerAttributes
+        ):
+            input_edges_num_expected = node.layer_attributes.get_backend_agnostic_attributes().num_inputs
+
+        if input_edges_num_expected:
+            input_edges = nncf_graph.get_input_edges(node)
+            # Node has missed input edges thus considered to be an inference node
+            if len(input_edges) < input_edges_num_expected:
+                continue
+            # Node should have all input nodes marked as a constant node to be
+            # a constant node.
+            if any(edge.from_node not in constant_nodes for edge in input_edges):
+                continue
+        constant_nodes.add(node)
         visited_nodes.add(node)
         nodes_queue.extend(nncf_graph.get_next_nodes(node))
-    constant_nodes = [node for node in nncf_graph.get_all_nodes() if node not in visited_nodes]
     nncf_graph.remove_nodes_from(constant_nodes)
     return nncf_graph

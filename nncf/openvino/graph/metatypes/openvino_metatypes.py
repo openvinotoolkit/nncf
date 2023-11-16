@@ -62,6 +62,7 @@ class OVConvolutionMetatype(OVOpMetatype):
     const_channel_axis = [0]
     const_layout = [OVLayoutElem.C_OUT, OVLayoutElem.C_IN]
     output_channel_axis = 1
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -72,6 +73,7 @@ class OVConvolutionBackpropDataMetatype(OVOpMetatype):
     const_channel_axis = [1]
     const_layout = [OVLayoutElem.C_IN, OVLayoutElem.C_OUT]
     output_channel_axis = 1
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -82,6 +84,7 @@ class OVDepthwiseConvolutionMetatype(OVOpMetatype):
     const_channel_axis = [0, 1]
     const_layout = [OVLayoutElem.GROUPS, OVLayoutElem.C_OUT, OVLayoutElem.C_IN]
     output_channel_axis = 1
+    input_edges_num_expected = 2
 
     @classmethod
     def matches(cls, node: ov.Node) -> bool:
@@ -97,6 +100,7 @@ class OVGroupConvolutionMetatype(OVOpMetatype):
     const_channel_axis = [0, 1]
     const_layout = [OVLayoutElem.GROUPS, OVLayoutElem.C_OUT, OVLayoutElem.C_IN]
     output_channel_axis = 1
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -107,6 +111,7 @@ class OVGroupConvolutionBackpropDataMetatype(OVOpMetatype):
     const_channel_axis = [0, 2]
     const_layout = [OVLayoutElem.GROUPS, OVLayoutElem.C_IN, OVLayoutElem.C_OUT]
     output_channel_axis = 1
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -118,6 +123,7 @@ class OVMatMulMetatype(OVOpMetatype):
         -1
     ]  # const layout: [B, ..., Y, X], where const is the second operand of matrix multiplication
     output_channel_axis = -1
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -188,6 +194,7 @@ class OVAddMetatype(OVOpMetatype):
     name = "AddOp"
     op_names = ["Add"]
     hw_config_names = [HWConfigOpName.ADD]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -195,6 +202,7 @@ class OVSubtractMetatype(OVOpMetatype):
     name = "SubtractOp"
     op_names = ["Subtract"]
     hw_config_names = [HWConfigOpName.SUBTRACT]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -202,6 +210,7 @@ class OVMultiplyMetatype(OVOpMetatype):
     name = "MultiplyOp"
     op_names = ["Multiply"]
     hw_config_names = [HWConfigOpName.MULTIPLY]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -209,6 +218,7 @@ class OVDivideMetatype(OVOpMetatype):
     name = "DivideOp"
     op_names = ["Divide"]
     hw_config_names = [HWConfigOpName.DIVIDE]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -229,6 +239,7 @@ class OVConcatMetatype(OVOpMetatype):
 class OVBatchNormMetatype(OVOpMetatype):
     name = "BatchNormalizationOp"
     op_names = ["BatchNormInference"]
+    input_edges_num_expected = 5
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -236,6 +247,7 @@ class OVInterpolateMetatype(OVOpMetatype):
     name = "InterpolateOp"
     op_names = ["Interpolate"]
     hw_config_names = [HWConfigOpName.INTERPOLATE]
+    input_edges_num_expected = 4
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -256,6 +268,7 @@ class OVReshapeMetatype(OVOpMetatype):
     name = "ReshapeOp"
     op_names = ["Reshape"]
     hw_config_names = [HWConfigOpName.RESHAPE]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -275,12 +288,14 @@ class OVSplitMetatype(OVOpMetatype):
     name = "SplitOp"
     op_names = ["Split"]
     hw_config_names = [HWConfigOpName.SPLIT]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
 class OVVariadicSplitMetatype(OVOpMetatype):
     name = "VariadicSplitOp"
     op_names = ["VariadicSplit"]
+    input_edges_num_expected = 3
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -293,6 +308,7 @@ class OVShuffleChannelsMetatype(OVOpMetatype):
 class OVBroadcastMetatype(OVOpMetatype):
     name = "BroadcastOp"
     op_names = ["Broadcast"]
+    input_edges_num_expected = 3
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -331,6 +347,7 @@ class OVLSTMSequenceMetatype(OVOpMetatype):
     op_names = ["LSTMSequence"]
     hw_config_names = [HWConfigOpName.LSTMSEQUENCE]
     const_channel_axis = [1]  # const layout: [num_directions, 4 \* hidden_size, input_size]
+    input_edges_num_expected = 7
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -339,6 +356,7 @@ class OVGRUSequenceMetatype(OVOpMetatype):
     op_names = ["GRUSequence"]
     hw_config_names = [HWConfigOpName.GRUSEQUENCE]
     const_channel_axis = [1]  # const layout: [num_directions, 3 \* hidden_size, input_size]
+    input_edges_num_expected = 5
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -352,6 +370,7 @@ class OVLessMetatype(OVOpMetatype):
     name = "LessOp"
     op_names = ["Less"]
     hw_config_names = [HWConfigOpName.LESS]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -359,6 +378,7 @@ class OVLessEqualMetatype(OVOpMetatype):
     name = "LessEqualOp"
     op_names = ["LessEqual"]
     hw_config_names = [HWConfigOpName.LESSEQUAL]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -366,6 +386,7 @@ class OVGreaterMetatype(OVOpMetatype):
     name = "GreaterOp"
     op_names = ["Greater"]
     hw_config_names = [HWConfigOpName.GREATER]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -373,6 +394,7 @@ class OVGreaterEqualMetatype(OVOpMetatype):
     name = "GreaterEqualOp"
     op_names = ["GreaterEqual"]
     hw_config_names = [HWConfigOpName.GREATEREQUAL]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -380,6 +402,7 @@ class OVEqualMetatype(OVOpMetatype):
     name = "EqualOp"
     op_names = ["Equal"]
     hw_config_names = [HWConfigOpName.EQUAL]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -387,6 +410,7 @@ class OVNotEqualMetatype(OVOpMetatype):
     name = "NotEqualOp"
     op_names = ["NotEqual"]
     hw_config_names = [HWConfigOpName.NOTEQUAL]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -394,6 +418,7 @@ class OVLogicalNotMetatype(OVOpMetatype):
     name = "LogicalNotOp"
     op_names = ["LogicalNot"]
     hw_config_names = [HWConfigOpName.LOGICALNOT]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -401,6 +426,7 @@ class OVLogicalAndMetatype(OVOpMetatype):
     name = "LogicalAndOp"
     op_names = ["LogicalAnd"]
     hw_config_names = [HWConfigOpName.LOGICALAND]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -408,6 +434,7 @@ class OVLogicalOrMetatype(OVOpMetatype):
     name = "LogicalOrOp"
     op_names = ["LogicalOr"]
     hw_config_names = [HWConfigOpName.LOGICALOR]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -415,6 +442,7 @@ class OVLogicalXorMetatype(OVOpMetatype):
     name = "LogicalXorOp"
     op_names = ["LogicalXor"]
     hw_config_names = [HWConfigOpName.LOGICALXOR]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -432,6 +460,7 @@ class OVEmbeddingMetatype(OVOpMetatype):
 class OVFloorMetatype(OVOpMetatype):
     name = "FloorOp"
     op_names = ["Floor"]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -439,6 +468,7 @@ class OVFloorModMetatype(OVOpMetatype):
     name = "FloorModOp"
     op_names = ["FloorMod"]
     hw_config_names = [HWConfigOpName.FLOORMOD]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -446,6 +476,7 @@ class OVMaximumMetatype(OVOpMetatype):
     name = "MaximumOp"
     op_names = ["Maximum"]
     hw_config_names = [HWConfigOpName.MAXIMUM]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -453,6 +484,8 @@ class OVMinimumMetatype(OVOpMetatype):
     name = "MinimumOp"
     op_names = ["Minimum"]
     hw_config_names = [HWConfigOpName.MINIMUM]
+
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -467,18 +500,21 @@ class OVPowerMetatype(OVOpMetatype):
     name = "PowerOp"
     op_names = ["Power"]
     hw_config_names = [HWConfigOpName.POWER]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
 class OVLogMetatype(OVOpMetatype):
     name = "LogOp"
     op_names = ["Log"]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
 class OVRoiAlignMetatype(OVOpMetatype):
     name = "RoiAlignOp"
     op_names = ["ROIAlign"]
+    input_edges_num_expected = 3
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -486,18 +522,21 @@ class OVGatherMetatype(OVOpMetatype):
     name = "GatherOp"
     op_names = ["Gather"]
     subtypes = [OVEmbeddingMetatype]
+    input_edges_num_expected = 3
 
 
 @OV_OPERATOR_METATYPES.register()
 class OVGatherNDMetatype(OVOpMetatype):
     name = "GatherNDOp"
     op_names = ["GatherND"]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
 class OVGatherElementsMetatype(OVOpMetatype):
     name = "GatherElementsOp"
     op_names = ["GatherElements"]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -518,12 +557,14 @@ class OVSqueezeMetatype(OVOpMetatype):
 class OVNonMaxSuppressionMetatype(OVOpMetatype):
     name = "NonMaxSuppressionOp"
     op_names = ["NonMaxSuppression"]
+    input_edges_num_expected = 5
 
 
 @OV_OPERATOR_METATYPES.register()
 class OVReduceMinMetatype(OVOpMetatype):
     name = "ReduceMinOp"
     op_names = ["ReduceMin"]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -531,6 +572,7 @@ class OVReduceMaxMetatype(OVOpMetatype):
     name = "ReduceMaxOp"
     op_names = ["ReduceMax"]
     hw_config_names = [HWConfigOpName.REDUCEMAX]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -538,12 +580,14 @@ class OVReduceMeanMetatype(OVOpMetatype):
     name = "ReduceMeanOp"
     op_names = ["ReduceMean"]
     hw_config_names = [HWConfigOpName.REDUCEMEAN]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
 class OVReduceL1Metatype(OVOpMetatype):
     name = "ReduceL1Op"
     op_names = ["ReduceL1"]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -551,12 +595,14 @@ class OVReduceL2Metatype(OVOpMetatype):
     name = "ReduceL2Op"
     op_names = ["ReduceL2"]
     hw_config_names = [HWConfigOpName.REDUCEL2]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
 class OVTopKMetatype(OVOpMetatype):
     name = "TopKOp"
     op_names = ["TopK"]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -564,6 +610,7 @@ class OVStridedSliceMetatype(OVOpMetatype):
     name = "StridedSliceOp"
     op_names = ["StridedSlice"]
     hw_config_names = [HWConfigOpName.STRIDEDSLICE]
+    input_edges_num_expected = 4
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -577,6 +624,7 @@ class OVTransposeMetatype(OVOpMetatype):
     name = "TransposeOp"
     op_names = ["Transpose"]
     hw_config_names = [HWConfigOpName.TRANSPOSE]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -584,24 +632,28 @@ class OVTileMetatype(OVOpMetatype):
     name = "TileOp"
     op_names = ["Tile"]
     hw_config_names = [HWConfigOpName.TILE]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
 class OVScatterElementsUpdateMetatype(OVOpMetatype):
     name = "ScatterElementsUpdateOp"
     op_names = ["ScatterElementsUpdate"]
+    input_edges_num_expected = 4
 
 
 @OV_OPERATOR_METATYPES.register()
 class OVScatterNDUpdateMetatype(OVOpMetatype):
     name = "ScatterNDUpdateOp"
     op_names = ["ScatterNDUpdate"]
+    input_edges_num_expected = 3
 
 
 @OV_OPERATOR_METATYPES.register()
 class OVScatterUpdateMetatype(OVOpMetatype):
     name = "ScatterUpdateOp"
     op_names = ["ScatterUpdate"]
+    input_edges_num_expected = 4
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -615,6 +667,7 @@ class OVPadMetatype(OVOpMetatype):
     name = "PadOp"
     op_names = ["Pad"]
     hw_config_names = [HWConfigOpName.PAD]
+    input_edges_num_expected = 4
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -671,12 +724,14 @@ class OVClampMetatype(OVOpMetatype):
 class OVSquaredDifferenceMetatype(OVOpMetatype):
     name = "SquaredDifferenceOp"
     op_names = ["SquaredDifference"]
+    input_edges_num_expected = 2
 
 
 @OV_OPERATOR_METATYPES.register()
 class OVDeformableConvolutionMetatype(OVOpMetatype):
     name = "DeformableConvolutionOp"
     op_names = ["DeformableConvolution"]
+    input_edges_num_expected = 3
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -696,6 +751,7 @@ class OVGroupNormalizationMetatype(OVOpMetatype):
     name = "GroupNormalizationOp"
     op_names = ["GroupNormalization"]
     hw_config_names = [HWConfigOpName.GROUPNORMALIZATION]
+    input_edges_num_expected = 3
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:

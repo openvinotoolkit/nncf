@@ -164,6 +164,7 @@ class PTDepthwiseConv1dSubtype(PTDepthwiseConvOperatorSubtype):
     hw_config_name = [HWConfigOpName.DEPTHWISECONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv1d"]}
     output_channel_axis = 1
+    input_edges_num_expected = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -173,6 +174,7 @@ class PTModuleConv1dMetatype(PTModuleOperatorSubtype):
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv1d"]}
     subtypes = [PTDepthwiseConv1dSubtype]
     output_channel_axis = 1
+    input_edges_num_expected = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -182,6 +184,7 @@ class PTConv1dMetatype(PTOperatorMetatype):
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv1d"]}
     subtypes = [PTModuleConv1dMetatype]
     output_channel_axis = 1
+    input_edges_num_expected = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -190,6 +193,7 @@ class PTDepthwiseConv2dSubtype(PTDepthwiseConvOperatorSubtype):
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv2d"]}
     output_channel_axis = 1
+    input_edges_num_expected = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -199,6 +203,7 @@ class PTModuleConv2dMetatype(PTModuleOperatorSubtype):
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv2d"]}
     subtypes = [PTDepthwiseConv2dSubtype]
     output_channel_axis = 1
+    input_edges_num_expected = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -208,6 +213,7 @@ class PTConv2dMetatype(PTOperatorMetatype):
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv2d"]}
     subtypes = [PTModuleConv2dMetatype]
     output_channel_axis = 1
+    input_edges_num_expected = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -216,6 +222,7 @@ class PTDepthwiseConv3dSubtype(PTDepthwiseConvOperatorSubtype):
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv3d"]}
     output_channel_axis = 1
+    input_edges_num_expected = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -225,6 +232,7 @@ class PTModuleConv3dMetatype(PTModuleOperatorSubtype):
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv3d"]}
     subtypes = [PTDepthwiseConv3dSubtype]
     output_channel_axis = 1
+    input_edges_num_expected = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -234,6 +242,7 @@ class PTConv3dMetatype(PTOperatorMetatype):
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv3d"]}
     subtypes = [PTModuleConv3dMetatype]
     output_channel_axis = 1
+    input_edges_num_expected = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -242,6 +251,7 @@ class PTModuleConvTranspose1dMetatype(PTModuleOperatorSubtype):
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose1d"]}
     output_channel_axis = 1
+    input_edges_num_expected = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -251,6 +261,7 @@ class PTConvTranspose1dMetatype(PTOperatorMetatype):
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose1d"]}
     subtypes = [PTModuleConvTranspose1dMetatype]
     output_channel_axis = 1
+    input_edges_num_expected = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -259,6 +270,7 @@ class PTModuleConvTranspose2dMetatype(PTModuleOperatorSubtype):
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose2d"]}
     output_channel_axis = 1
+    input_edges_num_expected = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -268,6 +280,7 @@ class PTConvTranspose2dMetatype(PTOperatorMetatype):
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose2d"]}
     subtypes = [PTModuleConvTranspose2dMetatype]
     output_channel_axis = 1
+    input_edges_num_expected = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -276,6 +289,7 @@ class PTModuleConvTranspose3dMetatype(PTModuleOperatorSubtype):
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose3d"]}
     output_channel_axis = 1
+    input_edges_num_expected = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -285,12 +299,14 @@ class PTConvTranspose3dMetatype(PTOperatorMetatype):
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose3d"]}
     subtypes = [PTModuleConvTranspose3dMetatype]
     output_channel_axis = 1
+    input_edges_num_expected = 2
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTModuleDeformConv2dMetatype(PTModuleOperatorSubtype):
     name = "DeformConv2dOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["deform_conv2d"]}
+    input_edges_num_expected = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -420,6 +436,7 @@ class PTAddMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH: ["add"],
     }
     hw_config_names = [HWConfigOpName.ADD]
+    input_edges_num_expected = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -430,6 +447,7 @@ class PTSubMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH: ["sub"],
     }
     hw_config_names = [HWConfigOpName.SUBTRACT]
+    input_edges_num_expected = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -440,6 +458,7 @@ class PTMulMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH: ["mul"],
     }
     hw_config_names = [HWConfigOpName.MULTIPLY]
+    input_edges_num_expected = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -450,6 +469,7 @@ class PTDivMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH: ["div"],
     }
     hw_config_names = [HWConfigOpName.DIVIDE]
+    input_edges_num_expected = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -500,6 +520,7 @@ class PTMatMulMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH: ["matmul", "bmm", "mm"],
     }
     hw_config_names = [HWConfigOpName.MATMUL]
+    input_edges_num_expected = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -511,6 +532,7 @@ class PTBaddBmmMetatype(PTOperatorMetatype):
     # presuming that most runtime implementations will fuse the bias addition into the matrix multiplication
     # and therefore won't quantize the bias input, as this would break the hardware-fused pattern.
     ignored_input_ports: List[int] = [0]
+    input_edges_num_expected = 2
 
 
 @PT_OPERATOR_METATYPES.register()

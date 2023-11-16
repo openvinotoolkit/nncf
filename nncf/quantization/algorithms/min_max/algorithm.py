@@ -539,8 +539,8 @@ class MinMaxQuantization(Algorithm):
             deepcopy(nncf_graph),
             self._backend_entity.shapeof_metatypes,
             self._backend_entity.dropout_metatypes,
-            self._backend_entity.read_variable_metatypes,
             self._backend_entity.constant_metatypes,
+            self._backend_entity.read_variable_metatypes,
         )
 
         quantizer_setup = self._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)

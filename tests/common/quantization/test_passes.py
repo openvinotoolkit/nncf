@@ -14,6 +14,8 @@ from pathlib import Path
 
 import pytest
 
+from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.quantization.passes import filter_constant_nodes
 from nncf.quantization.passes import remove_nodes_and_reconnect_graph
 from tests.post_training.test_templates.models import NNCFGraphDropoutRemovingCase
@@ -57,17 +59,27 @@ def test_remove_nodes_and_reconnect_graph(mode: TestModes):
     _check_graphs(dot_reference_path_after, nncf_graph)
 
 
-@pytest.mark.xfail
-def test_filter_constant_nodes():
-    dot_reference_path_before = Path("passes") / "test_constant_filtering_model_before.dot"
-    dot_reference_path_after = Path("passes") / "test_constant_filtering_model_after.dot"
-
-    constant_metatype = "CONSTANT_METATYPE"
-    read_variable_metatype = "READ_VARIABLE_METATYPE"
-
-    nncf_graph = NNCFGraphToTestConstantFiltering(constant_metatype, read_variable_metatype).nncf_graph
-    _check_graphs(dot_reference_path_before, nncf_graph)
-    filter_constant_nodes(
-        nncf_graph, read_variable_metatypes=[read_variable_metatype], constant_nodes_metatypes=[constant_metatype]
+@pytest.mark.parametrize("node_between_const_and_op", [False, True])
+def test_filter_constant_nodes(node_between_const_and_op):
+    dot_reference_path_before = (
+        Path("passes") / f"test_constant_filtering_model_before{int(node_between_const_and_op)}.dot"
     )
+    dot_reference_path_after = (
+        Path("passes") / f"test_constant_filtering_model_after{int(node_between_const_and_op)}.dot"
+    )
+
+    class ConstantMetatype(OperatorMetatype):
+        pass
+
+    class NodeWithWeightMetatype(OperatorMetatype):
+        input_edges_num_expected = 2
+
+    nncf_graph = NNCFGraphToTestConstantFiltering(
+        ConstantMetatype,
+        NodeWithWeightMetatype,
+        MultipleInputLayerAttributes(1, 3),
+        node_between_const_and_op,
+    ).nncf_graph
+    _check_graphs(dot_reference_path_before, nncf_graph)
+    filter_constant_nodes(nncf_graph, constant_metatypes=[ConstantMetatype])
     _check_graphs(dot_reference_path_after, nncf_graph)

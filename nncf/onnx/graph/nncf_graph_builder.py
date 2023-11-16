@@ -67,7 +67,7 @@ class ONNXLayerAttributes(BaseLayerAttributes):
         self.weight_attrs = weight_attrs if weight_attrs is not None else {}
         self.bias_attrs = bias_attrs if bias_attrs is not None else {}
         self.node_attrs = node_attrs if node_attrs is not None else {}
-        self.layer_attributes = layer_attributes
+        self._layer_attributes = layer_attributes
 
     def has_weight(self) -> bool:
         return bool(self.weight_attrs)
@@ -77,6 +77,9 @@ class ONNXLayerAttributes(BaseLayerAttributes):
 
     def has_node_attrs(self) -> bool:
         return bool(self.node_attrs)
+
+    def get_backend_agnostic_attributes(self) -> BaseLayerAttributes:
+        return self._layer_attributes
 
 
 def get_constant_weight_port_ids(metatype: ONNXOpMetatype) -> List[int]:

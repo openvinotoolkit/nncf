@@ -266,7 +266,7 @@ class ONNXConcatMetatype(ONNXOpMetatype):
 class ONNXBatchNormMetatype(ONNXOpMetatype):
     name = "BatchNormalizationOp"
     op_names = ["BatchNormalization"]
-    input_edges_num_expected = 2
+    input_edges_num_expected = 5
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -274,7 +274,6 @@ class ONNXResizeMetatype(ONNXOpMetatype):
     name = "ResizeOp"
     op_names = ["Resize"]
     hw_config_names = [HWConfigOpName.INTERPOLATE]
-    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -282,7 +281,6 @@ class ONNXCenterCropPadMetatype(ONNXOpMetatype):
     name = "CenterCropPadOp"
     op_names = ["CenterCropPad"]
     hw_config_names = [HWConfigOpName.CROP]
-    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -335,7 +333,6 @@ class ONNXSplitMetatype(ONNXOpMetatype):
     name = "SplitOp"
     op_names = ["Split"]
     hw_config_names = [HWConfigOpName.SPLIT]
-    input_edges_num_expected = 1
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -367,7 +364,6 @@ class ONNXNotMetatype(ONNXOpMetatype):
     name = "NotOp"
     op_names = ["Not"]
     hw_config_names = [HWConfigOpName.LOGICALNOT]
-    input_edges_num_expected = 1
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -407,7 +403,6 @@ class ONNXFloorMetatype(ONNXOpMetatype):
     name = "FloorOp"
     op_names = ["Floor"]
     hw_config_names = [HWConfigOpName.FLOORMOD]
-    input_edges_num_expected = 1
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -423,7 +418,6 @@ class ONNXSqrtMetatype(ONNXOpMetatype):
     name = "SqrtOp"
     op_names = ["Sqrt"]
     hw_config_names = [HWConfigOpName.POWER]
-    input_edges_num_expected = 1
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -457,7 +451,6 @@ class ONNXLogMetatype(ONNXOpMetatype):
 class ONNXAbsMetatype(ONNXOpMetatype):
     name = "AbsOp"
     op_names = ["Abs"]
-    input_edges_num_expected = 1
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -482,6 +475,7 @@ class ONNXScatterNDMetatype(ONNXOpMetatype):
 class ONNXRoiAlignMetatype(ONNXOpMetatype):
     name = "RoiAlignOp"
     op_names = ["RoiAlign"]
+    input_edges_num_expected = 3
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -489,18 +483,21 @@ class ONNXGatherMetatype(ONNXOpMetatype):
     name = "GatherOp"
     op_names = ["Gather"]
     subtypes = [ONNXEmbeddingMetatype]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXGatherNDMetatype(ONNXOpMetatype):
     name = "GatherNDOp"
     op_names = ["GatherND"]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
 class ONNXGatherElementsMetatype(ONNXOpMetatype):
     name = "GatherElementsOp"
     op_names = ["GatherElements"]
+    input_edges_num_expected = 2
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -521,6 +518,7 @@ class ONNXSqueezeMetatype(ONNXOpMetatype):
 class ONNXNonMaxSuppressionMetatype(ONNXOpMetatype):
     name = "NonMaxSuppressionOp"
     op_names = ["NonMaxSuppression"]
+    # input_edges_num_expected = from 2 to 5
 
 
 @ONNX_OPERATION_METATYPES.register()

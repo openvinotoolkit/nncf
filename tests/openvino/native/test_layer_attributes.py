@@ -448,7 +448,7 @@ TEST_CASES_NO_WEGIHTS_LAYOUT = [
     LayerAttributesTestCase(
         get_concat_node, (1, 2, 3, 3), OVLayerAttributes({}, MultipleInputLayerAttributes(1, 3)), None
     ),
-][-1:]
+]
 
 
 def _get_node_to_test(test_descriptor: LayerAttributesTestCase):
@@ -458,8 +458,7 @@ def _get_node_to_test(test_descriptor: LayerAttributesTestCase):
     return nncf_graph.get_node_by_name(op_name)
 
 
-# @pytest.mark.parametrize("test_descriptor", TEST_CASES_CONV + TEST_CASES_LINEAR + TEST_CASES_NO_WEGIHTS_LAYOUT)
-@pytest.mark.parametrize("test_descriptor", TEST_CASES_NO_WEGIHTS_LAYOUT)
+@pytest.mark.parametrize("test_descriptor", TEST_CASES_CONV + TEST_CASES_LINEAR + TEST_CASES_NO_WEGIHTS_LAYOUT)
 def test_layer_attributes(test_descriptor: LayerAttributesTestCase):
     node = _get_node_to_test(test_descriptor)
     if test_descriptor.ref_layer_attrs is None:
