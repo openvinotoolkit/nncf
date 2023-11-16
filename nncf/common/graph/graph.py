@@ -603,7 +603,7 @@ class NNCFGraph:
                 else:
                     attrs_edge["label"] = ", ".join((f"{k}:{v}" for k, v in label.items()))
             out_graph.add_edge(u, v, **attrs_edge)
-        return relabel_graph_for_dot_visualization(out_graph)
+        return out_graph
 
     def _get_graph_for_visualization(self) -> nx.DiGraph:
         """
@@ -634,7 +634,7 @@ class NNCFGraph:
         for node in out_graph.nodes.values():
             node.pop("label")
 
-        return relabel_graph_for_dot_visualization(out_graph)
+        return out_graph
 
     def get_node_by_name(self, name: NNCFNodeName) -> NNCFNode:
         node_ids = self._node_name_to_node_id_map.get(name, None)
@@ -760,35 +760,3 @@ class NNCFGraph:
                 subgraph_list.append(self.get_node_by_key(node_key))
             output.append(subgraph_list)
         return output
-
-
-def relabel_graph_for_dot_visualization(nx_graph: nx.Graph) -> nx.Graph:
-    """
-    Relabels NetworkX graph nodes to exclude reserved symbols in keys.
-        In case replaced names match for two different nodes, integer index is added to its keys.
-        While nodes keys are being updated, visualized nodes names corresponds to the original nodes names.
-
-    :param nx_graph: NetworkX graph to visualize via dot.
-    :return: NetworkX graph with reserved symbols in nodes keys replaced.
-    """
-    # .dot format reserves ':' character in node names
-    __RESERVED_DOT_CHARACTER = ":"
-    __CHARACTER_REPLACE_TO = "^"
-
-    hits = defaultdict(lambda: 0)
-    mapping = {}
-    for original_name in nx_graph.nodes():
-        dot_name = original_name.replace(__RESERVED_DOT_CHARACTER, __CHARACTER_REPLACE_TO)
-        hits[dot_name] += 1
-        if hits[dot_name] > 1:
-            dot_name = f"{dot_name}_{hits}"
-        if original_name != dot_name:
-            mapping[original_name] = dot_name
-
-    relabeled_graph = nx.relabel_nodes(nx_graph, mapping)
-    nx.set_node_attributes(
-        relabeled_graph,
-        name="label",
-        values={dot_key: original_key for original_key, dot_key in mapping.items()},
-    )
-    return relabeled_graph

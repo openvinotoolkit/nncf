@@ -297,3 +297,30 @@ class NNCFGraphDropoutRemovingCase:
                 dtype=Dtype.FLOAT,
                 parallel_input_port_ids=list(range(1, 10)),
             )
+
+
+class NNCFGraphToTestConstantFiltering:
+    def __init__(self, constant_metatype, read_variable_metatype, nncf_graph_cls=NNCFGraph) -> None:
+        nodes = [
+            NodeWithType("Input_1", InputNoopMetatype),
+            NodeWithType("Conv", None),
+            NodeWithType("Weights", constant_metatype),
+            NodeWithType("AnyNodeBetweenWeightAndConv", None),
+            NodeWithType("Weights2", constant_metatype),
+            NodeWithType("Conv2", None),
+            NodeWithType("ReadVariable", read_variable_metatype),
+            NodeWithType("Add", None),
+            NodeWithType("Final_node", None),
+        ]
+
+        edges = [
+            ("Input_1", "Conv"),
+            ("Weights", "AnyNodeBetweenWeightAndConv"),
+            ("AnyNodeBetweenWeightAndConv", "Conv"),
+            ("Weights2", "Conv2"),
+            ("Conv2", "Add"),
+            ("ReadVariable", "Add"),
+            ("Add", "Final_node"),
+        ]
+        original_mock_graph = create_mock_graph(nodes, edges)
+        self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)

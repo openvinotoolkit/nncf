@@ -35,8 +35,9 @@ from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.dynamic_graph.graph_tracer import WrapInputsFnType
 from nncf.torch.dynamic_graph.graph_tracer import WrapOutputsFnType
 from nncf.torch.dynamic_graph.io_handling import EXTRA_STRUCTS_WITH_DATALOADERS
-from nncf.torch.dynamic_graph.io_handling import ExactInputsInfo
+from nncf.torch.dynamic_graph.io_handling import ExampleInputInfo
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
+from nncf.torch.dynamic_graph.io_handling import LoaderInputInfo
 from nncf.torch.dynamic_graph.io_handling import ModelInputInfo
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import is_dist_avail_and_initialized
@@ -167,7 +168,7 @@ def get_input_info_from_config(config: NNCFConfig) -> ModelInputInfo:
     nncf_logger.debug(
         "Config has no 'input_info' section, trying to use dataloader output as model inputs " "for graph building."
     )
-    exact_info = ExactInputsInfo.from_nncf_config_dataloaders(config)
+    exact_info = LoaderInputInfo.from_nncf_config_dataloaders(config)
     if exact_info is not None:
         return exact_info
     raise RuntimeError(
@@ -309,3 +310,24 @@ def create_compression_algorithm_builder_from_algo_names(
     else:
         builder = PTCompositeCompressionAlgorithmBuilder(config, should_init=should_init)
     return builder
+
+
+def wrap_model(model: torch.nn.Module, example_input: Any) -> NNCFNetwork:
+    """
+    Wraps a PyTorch model to the NNCFNetwork class.
+
+    This function dynamically extends the instance of PyTorch model with NNCF-enabling functionality.
+
+    :param model: PyTorch model.
+    :example_input: An example input that will be used for model tracing. A tuple is interpreted as an example input
+        of a set of non keyword arguments, and a dict as an example input of a set of keywords arguments.
+    :return: A model wrapped by NNCFNetwork.
+    """
+
+    input_info = ExampleInputInfo.from_example_input(example_input)
+
+    with training_mode_switcher(model, is_training=False):
+        nncf_network = NNCFNetwork(model, input_info=input_info)
+        nncf_network.nncf.get_tracing_context().disable_trace_dynamic_graph()
+
+    return nncf_network

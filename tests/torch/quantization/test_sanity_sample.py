@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Dict
 
 import pytest
+import torch
 from torch import nn
 
 from nncf import NNCFConfig
@@ -314,6 +315,7 @@ class ExportSampleValidator(PrecisionSampleValidator):
 
         ctrl_mock = mocker.MagicMock(spec=QuantizationController)
         model_mock = mocker.MagicMock(spec=nn.Module)
+        mocker.patch("examples.torch.common.export.get_export_args", return_value=((torch.Tensor([1, 1]),), {}))
         create_model_location = sample_location + ".create_compressed_model"
         create_model_patch = mocker.patch(create_model_location)
 

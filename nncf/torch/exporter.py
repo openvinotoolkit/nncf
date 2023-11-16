@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from functools import partial
-from typing import Any, Tuple
+from typing import Any, Optional, Tuple
 
 import torch
 from torch.onnx import OperatorExportTypes
@@ -20,6 +20,7 @@ from nncf.telemetry import tracked_function
 from nncf.telemetry.events import NNCF_PT_CATEGORY
 from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.nested_objects_traversal import objwalk
+from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import is_tensor
 
@@ -42,6 +43,23 @@ def count_tensors(obj: Any) -> int:
 
     objwalk(obj, is_tensor, counter_fn)
     return count
+
+
+def get_export_args(
+    model: NNCFNetwork, model_args: Optional[Tuple[Any, ...]] = None, device: Optional[str] = None
+) -> Tuple:
+    args, kwargs = model.nncf.input_infos.get_forward_inputs(device)
+
+    if model_args is not None:
+        args = tuple(list(args) + list(model_args[:-1]))
+        kwargs.update(**model_args[-1])
+
+    def to_single_batch_tensors(obj: torch.Tensor):
+        return obj[0:1]
+
+    args = objwalk(args, is_tensor, to_single_batch_tensors)
+    kwargs = objwalk(kwargs, is_tensor, to_single_batch_tensors)
+    return *args, kwargs  # according to a variant of passing kwargs in torch.onnx.export doc
 
 
 class PTExportFormat:
@@ -126,18 +144,7 @@ class PTExporter(Exporter):
         original_device = get_model_device(self._model)
         model = self._model.eval().cpu()
 
-        args, kwargs = self._model.nncf.input_infos.get_forward_inputs()
-
-        if self._model_args is not None:
-            args = tuple(list(args) + list(self._model_args[:-1]))
-            kwargs.update(**self._model_args[-1])
-
-        def to_single_batch_tensors(obj: torch.Tensor):
-            return obj[0:1]
-
-        args = objwalk(args, is_tensor, to_single_batch_tensors)
-        kwargs = objwalk(kwargs, is_tensor, to_single_batch_tensors)
-        export_args = (*args, kwargs)  # according to a variant of passing kwargs in torch.onnx.export doc
+        export_args = get_export_args(self._model, model_args=self._model_args, device="cpu")
 
         if self._input_names is not None:
             input_names = self._input_names
