@@ -67,10 +67,6 @@ class MinMaxAlgoBackend(ABC):
         Property for the backend-specific Dropout metatypes.
         """
 
-    @abstractmethod
-    def get_input_nodes(self, nncf_graph: NNCFGraph) -> List[OperatorMetatype]:
-        pass
-
     @property
     @abstractmethod
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
@@ -141,6 +137,16 @@ class MinMaxAlgoBackend(ABC):
         :param quantizer_config: QuantizerConfig instance for the current layer.
         :param parameters: FakeQuantizeParameters to calculate activation quantization parameters.
         :return: Backend-specific TransformationCommand for the quantizer insertion operation.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_input_nodes(nncf_graph: NNCFGraph) -> List[OperatorMetatype]:
+        """
+        Returns a list of NNCFNodes that are identified as an inputs.
+
+        :param nncf_graph: NNCFGraph to get input nodes from.
+        :return: List of NNCFNodes that are identified as an inputs.
         """
 
     @staticmethod

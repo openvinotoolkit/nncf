@@ -54,7 +54,12 @@ class AccuracyControlAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def get_graph_inputs(nncf_graph: NNCFGraph) -> List[NNCFNode]:
-        pass
+        """
+        Returns a list of NNCFNodes that are identified as an inputs.
+
+        :param nncf_graph: The NNCF graph.
+        :return: List of NNCFNodes that are identified as an inputs.
+        """
 
     @staticmethod
     @abstractmethod

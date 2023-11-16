@@ -87,9 +87,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     def read_variable_metatypes(self) -> List[OperatorMetatype]:
         return [om.OVReadValueMetatype]
 
-    def get_input_nodes(self, nncf_graph: NNCFGraph) -> List[OperatorMetatype]:
-        return get_input_nodes(nncf_graph)
-
     @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
         return {om.OVConcatMetatype: self.overflow_fix_metatypes}
@@ -101,6 +98,10 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def quant_trait_op_dict(self) -> Dict[int, OperatorMetatype]:
         return DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
+
+    @staticmethod
+    def get_input_nodes(nncf_graph: NNCFGraph) -> List[OperatorMetatype]:
+        return get_input_nodes(nncf_graph)
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:

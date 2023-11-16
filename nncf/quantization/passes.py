@@ -29,11 +29,9 @@ def transform_to_inference_graph(
     This method contains inplace pipeline of the passes that uses to provide inference graph without constant flows.
 
     :param nncf_graph: NNCFGraph instance for the transformation.
+    :param input_nodes: List of input nodes for the given NNCFGraph.
     :param shapeof_metatypes: List of backend-specific ShapeOf metatypes.
     :param dropout_metatypes: List of backend-specific Dropout metatypes.
-    :param read_variable_metatypes: List of backend-specific metatypes
-        that also can be interpreted as inputs (ReadValue).
-    :param nncf_graph_contains_constants: Whether NNCFGraph contains constant nodes or not.
     :return: NNCFGraph in the inference style.
     """
     remove_shapeof_subgraphs(nncf_graph, shapeof_metatypes, input_nodes)
@@ -53,8 +51,7 @@ def remove_shapeof_subgraphs(
 
     :param nncf_graph: NNCFGraph instance for the transformation.
     :param shapeof_metatypes: List of backend-specific ShapeOf metatypes.
-    :param read_variable_metatypes: List of backend-specific metatypes
-        that also can be interpreted as inputs (ReadValue).
+    :param input_nodes: List of input nodes for the given NNCFGraph.
     :return: NNCFGraph without ShapeOf subgraphs.
     """
     nodes_to_drop = set()
@@ -149,8 +146,7 @@ def filter_constant_nodes(
     The traversing starts from the input nodes and nodes with weights.
 
     :param nncf_graph: NNCFGraph instance for the transformation.
-    :param read_variable_metatypes: List of backend-specific metatypes
-        that also can be interpreted as inputs (ReadValue).
+    :param input_nodes: List of input nodes for the given NNCFGraph.
     :return: NNCFGraph without Constant nodes.
     """
     if not input_nodes:

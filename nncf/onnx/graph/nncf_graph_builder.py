@@ -119,7 +119,14 @@ def get_bias_tensor_port_id(metatype: ONNXOpWithWeightsMetatype) -> Optional[int
     return None
 
 
-def _get_common_layer_attributes(node, metatype: ONNXOpMetatype):
+def _get_common_layer_attributes(node, metatype: ONNXOpMetatype) -> Optional[BaseLayerAttributes]:
+    """
+    Returns layer-specific layer attributes for the given node.
+
+    :param node: Target Node to get layer attributes for.
+    :param metatype: Target node metatype.
+    :return: Target node layer attributes or None.
+    """
     if metatype == ONNXConcatMetatype:
         axis = [attr.i for attr in node.attribute if attr.name == "axis"][0]
         num_inputs = len(node.input)

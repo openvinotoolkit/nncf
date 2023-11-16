@@ -24,6 +24,7 @@ from tests.common.quantization.metatypes import METATYPES_FOR_TEST
 from tests.common.quantization.metatypes import QUANTIZABLE_METATYPES
 from tests.common.quantization.metatypes import QUANTIZE_AGNOSTIC_METATYPES
 from tests.common.quantization.metatypes import QUANTIZER_METATYPES
+from tests.common.quantization.metatypes import ShapeOfTestMetatype
 
 
 @dataclass
@@ -228,7 +229,7 @@ def test_find_quantizer_nodes_to_cut(nncf_graph: NNCFGraph, test_case: TestCase)
     # As test graphs are fully connected and does not have readvariable metatyep,
     # this should work
     input_nodes = nncf_graph.get_input_nodes()
-    nncf_graph_without_shapeof = remove_shapeof_subgraphs(deepcopy(nncf_graph), input_nodes)
+    nncf_graph_without_shapeof = remove_shapeof_subgraphs(deepcopy(nncf_graph), [ShapeOfTestMetatype], input_nodes)
     nodes, ops = find_quantizer_nodes_to_cut(
         nncf_graph_without_shapeof,
         quantizer_node,

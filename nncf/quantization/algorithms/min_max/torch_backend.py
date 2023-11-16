@@ -74,9 +74,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def read_variable_metatypes(self) -> List[OperatorMetatype]:
         return []
 
-    def get_input_nodes(self, nncf_graph: NNCFGraph) -> List[OperatorMetatype]:
-        return get_inputs_for_graph_with_several_connected_components(nncf_graph)
-
     @property
     def conv_metatypes(self) -> List[OperatorMetatype]:
         return [om.PTModuleConv1dMetatype, om.PTModuleConv2dMetatype, om.PTModuleConv3dMetatype]
@@ -112,6 +109,10 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def quant_trait_op_dict(self) -> Dict[int, OperatorMetatype]:
         return DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
+
+    @staticmethod
+    def get_input_nodes(nncf_graph: NNCFGraph) -> List[OperatorMetatype]:
+        return get_inputs_for_graph_with_several_connected_components(nncf_graph)
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:

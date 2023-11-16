@@ -71,7 +71,15 @@ class PTNNCFGraph(NNCFGraph):
         return matches[0]
 
 
-def get_inputs_for_graph_with_several_connected_components(nncf_graph: PTNNCFGraph):
+def get_inputs_for_graph_with_several_connected_components(nncf_graph: PTNNCFGraph) -> List[NNCFNode]:
+    """
+    Returns a list of NNCFNodes that are identified as an inputs. Requires MultipleInputLayerAttributes
+    for nodes with several inputs and right `input_edges_num_expected` parameter setted for
+    nncf nodes metatypes.
+
+    :param nncf_graph: NNCFGraph to get input nodes from.
+    :return: List of NNCFNodes that are identified as an inputs.
+    """
     input_nodes = set()
     for node in nncf_graph.get_all_nodes():
         input_edges_num_expected = None
@@ -84,6 +92,8 @@ def get_inputs_for_graph_with_several_connected_components(nncf_graph: PTNNCFGra
         if input_edges_num_expected:
             input_edges = nncf_graph.get_input_edges(node)
             if len(input_edges) < input_edges_num_expected:
+                # If node has missed input edges we assume this node is an input node
+                # that was disconected from an activation input.
                 input_nodes.add(node)
     input_nodes.update(nncf_graph.get_input_nodes())
     return list(input_nodes)

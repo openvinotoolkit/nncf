@@ -64,9 +64,6 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     def add_metatypes(self) -> List[OperatorMetatype]:
         return [om.ONNXAddLayerMetatype]
 
-    def get_input_nodes(self, nncf_graph: NNCFGraph) -> List[OperatorMetatype]:
-        return nncf_graph.get_input_nodes()
-
     @property
     def group_conv_metatypes(self) -> List[OperatorMetatype]:
         return self.conv_metatypes
@@ -94,6 +91,10 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def quant_trait_op_dict(self) -> Dict[int, OperatorMetatype]:
         return DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
+
+    @staticmethod
+    def get_input_nodes(nncf_graph: NNCFGraph) -> List[OperatorMetatype]:
+        return nncf_graph.get_input_nodes()
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> ONNXTargetPoint:

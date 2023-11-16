@@ -53,4 +53,10 @@ def remove_fq_from_inputs(model: ov.Model, graph: NNCFGraph) -> ov.Model:
 
 
 def get_input_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    """
+    Get all nodes from given nncf_graph that are identified as a input nodes.
+
+    :param nncf_graph: NNCFGraph to work with.
+    :return: Target NNCFGraph input nodes.
+    """
     return list(set(nncf_graph.get_input_nodes()).upadte(nncf_graph.get_nodes_by_metatypes([OVReadValueMetatype])))

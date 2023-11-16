@@ -189,14 +189,31 @@ class GraphConverter:
         GraphConverter._add_edges_to_nncf_graph(model, nncf_graph)
         return nncf_graph
 
-    def _set_non_weighted_layer_attributes(node: ov.Node, metatype: OVOpMetatype, nncf_graph: NNCFGraph):
+    def _set_non_weighted_layer_attributes(node: ov.Node, metatype: OVOpMetatype, nncf_graph: NNCFGraph) -> None:
+        """
+        Sets layer attributes for a non weighted node.
+
+        :param node: Target node.
+        :param metatype: Target node metatype.
+        :param nncf_graph: NNCFGraph to work with.
+        """
         if metatype == OVConcatMetatype:
             nncf_node = nncf_graph.get_node_by_name(node.get_friendly_name())
             nncf_node.layer_attributes = OVLayerAttributes(
                 {}, MultipleInputLayerAttributes(axis=node.get_axis(), num_inputs=len(node.inputs()))
             )
 
-    def _set_weighted_layer_attributes(node: ov.Node, metatype: OVOpMetatype, nncf_graph: NNCFGraph, visited: Set[str]):
+    def _set_weighted_layer_attributes(
+        node: ov.Node, metatype: OVOpMetatype, nncf_graph: NNCFGraph, visited: Set[str]
+    ) -> None:
+        """
+        Sets layer attributes for a weighted node.
+
+        :param node: Target node.
+        :param metatype: Target node metatype.
+        :param nncf_graph: NNCFGraph to work with.
+        :param visited: Set with node names that were already processed by the GraphConverter.
+        """
         const_attrs, act_attrs = {}, {}
         for inp in GraphConverter._filter_weight_input_ports(node.inputs(), metatype):
             inp_name = inp.get_source_output().get_node().get_friendly_name()
