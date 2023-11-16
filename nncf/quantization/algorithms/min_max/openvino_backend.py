@@ -87,10 +87,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     def read_variable_metatypes(self) -> List[OperatorMetatype]:
         return [om.OVReadValueMetatype]
 
-    @property
-    def constant_metatypes(self) -> List[OperatorMetatype]:
-        return [om.OVConstantMetatype]
-
     def get_input_nodes(self, nncf_graph: NNCFGraph) -> List[OperatorMetatype]:
         return get_input_nodes(nncf_graph)
 

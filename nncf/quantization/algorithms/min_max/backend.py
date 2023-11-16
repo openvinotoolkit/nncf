@@ -67,13 +67,6 @@ class MinMaxAlgoBackend(ABC):
         Property for the backend-specific Dropout metatypes.
         """
 
-    @property
-    @abstractmethod
-    def constant_metatypes(self) -> List[OperatorMetatype]:
-        """
-        Property for the backend-specific metatypes that can be interpreted as constants.
-        """
-
     @abstractmethod
     def get_input_nodes(self, nncf_graph: NNCFGraph) -> List[OperatorMetatype]:
         pass

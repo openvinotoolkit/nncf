@@ -74,10 +74,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def read_variable_metatypes(self) -> List[OperatorMetatype]:
         return []
 
-    @property
-    def constant_metatypes(self) -> List[OperatorMetatype]:
-        return []
-
     def get_input_nodes(self, nncf_graph: NNCFGraph) -> List[OperatorMetatype]:
         return get_inputs_for_graph_with_several_connected_components(nncf_graph)
 
