@@ -6,7 +6,7 @@ Post-training Quantization:
 
 - Features:
   - (OpenVINO) Added support for data-free 4-bit weights compression through NF4 and INT4 data types (`compress_weights(…)` pipeline).
-  - (OpenVINO) Added support for [IF operation](https://docs.openvino.ai/2023.1/openvino_docs_ops_infrastructure_If_8.html) quantization.
+  - (OpenVINO) Added support for [IF operation](https://docs.openvino.ai/latest/openvino_docs_ops_infrastructure_If_8.html) quantization.
   - (OpenVINO) Added `dump_intermediate_model` parameter support for AccuracyAwareAlgorithm (`quantize_with_accuracy_control(…)` pipeline).
   - (OpenVINO) Added support for SmoothQuant and ChannelAlignment algorithms for HyperparameterTuner algorithm (`quantize_with_tune_hyperparams(…)` pipeline).
   - (PyTorch) Post-training Quantization is now supported with `quantize(…)` pipeline and the common implementation of quantization algorithms. Deprecated `create_compressed_model()` method for Post-training Quantization.
@@ -14,7 +14,7 @@ Post-training Quantization:
   - `QuantizationPreset.Mixed` was set as the default for `ModelType.Transformer` scheme.
 - Fixes:
   - (OpenVINO, ONNX, PyTorch) Aligned/added patterns between backends (SE block, MVN layer, multiple activations, etc.) to restore performance/metrics.
-  - Fixed patterns for `ModelType.Transformer` to align with the [quantization scheme](https://docs.openvino.ai/2023.1/openvino_docs_OV_UG_lpt.html).
+  - Fixed patterns for `ModelType.Transformer` to align with the [quantization scheme](https://docs.openvino.ai/latest/openvino_docs_OV_UG_lpt.html).
 - Improvements:
   - Improved UX with the new progress bar for pipeline, new exceptions, and .dot graph visualization updates.
   - (OpenVINO) Optimized WeightsCompression algorithm (`compress_weights(…)` pipeline) execution time for LLM's quantization, added ignored scope support.
@@ -33,6 +33,8 @@ Post-training Quantization:
   - [Post-Training Optimization of Latent Consistency Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/263-latent-consistency-models-image-generation)
   - [Post-Training Optimization of Distil-Whisper Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/267-distil-whisper-asr)
   - [Post-Training Optimization of FastSAM Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/261-fast-segment-anything)
+- Known issues:
+  - (ONNX) `quantize(...)` method can generate inaccurate int8 results for models with the BatchNormalization layer that contains biases. To get the best accuracy, use the `do_constant_folding=True` option during export from PyTorch to ONNX.
 
 Compression-aware training:
 
