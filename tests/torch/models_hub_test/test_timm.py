@@ -42,7 +42,6 @@ def get_all_models() -> list:
     return filter_timm(m_list)
 
 
-@pytest.mark.models_hub
 class TestTimmModel(BaseTestModel):
     def load_model(self, model_name: str):
         m = timm.create_model(model_name, pretrained=False)

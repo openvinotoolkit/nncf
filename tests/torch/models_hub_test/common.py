@@ -24,6 +24,7 @@ from nncf.common.graph import NNCFGraph
 from nncf.torch.model_creation import wrap_model
 
 
+@pytest.mark.models_hub
 class BaseTestModel(ABC):
     @abstractmethod
     def load_model(self, model_name: str):

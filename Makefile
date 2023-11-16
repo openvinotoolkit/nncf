@@ -123,7 +123,7 @@ install-models-hub-torch:
 
 
 test-torch:
-	pytest ${COVERAGE_ARGS} tests/torch -m "not weekly and not nightly and not models_hub_test" --junitxml ${JUNITXML_PATH} $(DATA_ARG)
+	pytest ${COVERAGE_ARGS} tests/torch -m "not weekly and not nightly and not models_hub" --junitxml ${JUNITXML_PATH} $(DATA_ARG)
 
 test-torch-nightly:
 	pytest ${COVERAGE_ARGS} tests/torch -m nightly --junitxml ${JUNITXML_PATH} $(DATA_ARG)
