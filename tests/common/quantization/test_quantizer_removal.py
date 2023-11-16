@@ -18,6 +18,7 @@ import pytest
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.quantization.quantizer_removal import find_quantizer_nodes_to_cut
+from nncf.quantization.passes import filter_constant_nodes
 from nncf.quantization.passes import remove_shapeof_subgraphs
 from tests.common.quantization.metatypes import CONSTANT_METATYPES
 from tests.common.quantization.metatypes import METATYPES_FOR_TEST
@@ -226,7 +227,8 @@ def create_test_params():
 @pytest.mark.parametrize("nncf_graph,test_case", create_test_params())
 def test_find_quantizer_nodes_to_cut(nncf_graph: NNCFGraph, test_case: TestCase):
     quantizer_node = nncf_graph.get_node_by_name(test_case.node_name)
-    nncf_graph_without_shapeof = remove_shapeof_subgraphs(deepcopy(nncf_graph), SHAPEOF_METATYPES)
+    nncf_graph_without_shapeof = filter_constant_nodes(deepcopy(nncf_graph), CONSTANT_METATYPES)
+    nncf_graph_without_shapeof = remove_shapeof_subgraphs(nncf_graph_without_shapeof, SHAPEOF_METATYPES)
     nodes, ops = find_quantizer_nodes_to_cut(
         nncf_graph_without_shapeof,
         quantizer_node,
