@@ -1,1 +1,1 @@
-../../../../2.5/quantized/hw/CPU/resnet50.pb
+../../../../2.11/quantized/hw/CPU/resnet50.pb

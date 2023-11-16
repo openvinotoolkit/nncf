@@ -85,7 +85,6 @@ class HWConfig(list, ABC):
 
     @classmethod
     def from_dict(cls, dct: dict):
-        # pylint:disable=too-many-nested-blocks,too-many-branches
         hw_config = cls()
         hw_config.target_device = dct["target_device"]
 

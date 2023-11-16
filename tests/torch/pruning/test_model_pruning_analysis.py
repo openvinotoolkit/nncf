@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=too-many-lines
+
 
 from collections import Counter
 from functools import partial
@@ -70,7 +70,6 @@ from tests.torch.pruning.helpers import SplitReshapeModel
 from tests.torch.pruning.helpers import get_basic_pruning_config
 
 
-# pylint: disable=protected-access
 def create_nncf_model_and_pruning_builder(
     model: torch.nn.Module, config_params: Dict
 ) -> Tuple[NNCFNetwork, FilterPruningBuilder]:
@@ -957,7 +956,7 @@ def test_nodes_cluster():
 
     # test clean
     cluster.clean_cluster()
-    assert cluster.elements == []  # pylint: disable=use-implicit-booleaness-not-comparison
+    assert cluster.elements == []
     assert cluster.importance == 0
 
 

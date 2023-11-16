@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=too-many-lines
+
 import functools
 import inspect
 import types
@@ -23,6 +23,7 @@ import torch
 from torch import nn
 
 from nncf import nncf_logger
+from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
@@ -60,16 +61,11 @@ from nncf.torch.knowledge_distillation.knowledge_distillation_handler import Kno
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.nested_objects_traversal import objwalk
 from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
+from nncf.torch.quantization.external_quantizer import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.torch.utils import compute_FLOPs_hook
 from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import training_mode_switcher
-
-LEGACY_MODEL_WRAPPED_BY_NNCF_ATTR_NAME = "nncf_module"
-LEGACY_EXTERNAL_QUANTIZERS_STORAGE_PREFIX = "external_quantizers"
-
-EXTERNAL_QUANTIZERS_STORAGE_NAME = "external_quantizers"
-CURRENT_EXTERNAL_QUANTIZERS_STORAGE_PREFIX = "_nncf." + EXTERNAL_QUANTIZERS_STORAGE_NAME
 
 Module = TypeVar("Module", bound=nn.Module)
 
@@ -132,7 +128,6 @@ class NNCFNetworkInterface(torch.nn.Module):
     when saving/loading checkpoints
     """
 
-    # pylint:disable=too-many-public-methods
     MODEL_STATE_VERSION_ATTR = "_nncf_model_state_version"
     MODEL_STATE_VERSION = 1
 
@@ -244,13 +239,11 @@ class NNCFNetworkInterface(torch.nn.Module):
         else:
             self._wrap_outputs_fn = wrap_nncf_model_outputs_with_objwalk
 
-        self._nncf_replaced_modules = {}  # type: Dict[torch.nn.Module, List[Scope]]
+        self._nncf_replaced_modules: Dict[torch.nn.Module, List[Scope]] = {}
         self._scopes_without_shape_matching = scopes_without_shape_matching
         self.debug_interface = CombinedDebugInterface() if is_debug() else None
-        self._extra_module_types = []  # type: List[ExtraCompressionModuleType]
-        self._insertions_into_original_graph = (
-            {}
-        )  # type: Dict[PTTargetPoint, List[Tuple[Callable, TransformationPriority]]]
+        self._extra_module_types: List[ExtraCompressionModuleType] = []
+        self._insertions_into_original_graph: Dict[PTTargetPoint, List[Tuple[Callable, TransformationPriority]]] = {}
 
         _orig_graph_build_forward_fn = self._get_dummy_forward_fn_for_graph_building(
             with_input_tracing=True, with_output_tracing=True
@@ -276,7 +269,7 @@ class NNCFNetworkInterface(torch.nn.Module):
                 model, _orig_context, as_eval=True
             )
             self._original_graph = GraphConverter.convert(self._original_dynamic_graph, input_infos=self._input_infos)
-        self._compressed_graph = None  # type: PTNNCFGraph
+        self._compressed_graph: PTNNCFGraph = None
 
         self._compressed_context = TracingContext()
 
@@ -293,7 +286,7 @@ class NNCFNetworkInterface(torch.nn.Module):
             )
         self._load_listener = None
 
-        self.compression_controller = None  # type: PTCompressionAlgorithmController
+        self.compression_controller: CompressionAlgorithmController = None
 
     @property
     def _original_unbound_forward(self):
@@ -366,8 +359,8 @@ class NNCFNetworkInterface(torch.nn.Module):
     def get_clean_shallow_copy(self) -> "NNCFNetwork":
         # WARNING: Will reset pre- and post-ops of the underlying model. Use save_nncf_module_additions
         # and load_nncf_module_additions to preserve these, or temporary_clean_view().
-        from nncf.torch.utils import load_module_state  # pylint: disable=cyclic-import
-        from nncf.torch.utils import save_module_state  # pylint: disable=cyclic-import
+        from nncf.torch.utils import load_module_state
+        from nncf.torch.utils import save_module_state
 
         saved_state = save_module_state(self._model_ref)
         new_interface = NNCFNetworkInterface(
@@ -380,7 +373,7 @@ class NNCFNetworkInterface(torch.nn.Module):
             self._target_scopes,
             wrap_outputs_fn=self._wrap_outputs_fn,
         )
-        self._model_ref._nncf = new_interface  # pylint:disable=protected-access
+        self._model_ref._nncf = new_interface
         self._model_ref.nncf.reset_nncf_modules()
         load_module_state(self._model_ref, saved_state)
         return self._model_ref
@@ -544,6 +537,15 @@ class NNCFNetworkInterface(torch.nn.Module):
             raise RuntimeError(f"Module type {compression_module_type} was not registered")
         return self.__getattr__(attr_name)
 
+    def is_compression_module_registered(self, compression_module_type: ExtraCompressionModuleType) -> bool:
+        """
+        Check that extra compression module was registered.
+
+        :param compression_module_type: Type of the extra compression module.
+        :return: True if the extra compression module is registered, otherwise False.
+        """
+        return compression_module_type in self._extra_module_types
+
     @staticmethod
     def _compression_module_type_to_attr_name(compression_module_type: ExtraCompressionModuleType):
         """
@@ -559,7 +561,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         if compression_module_type not in self._extra_module_types:
             raise RuntimeError("Module type {} was not registered".format(compression_module_type))
         module_dict = self.__getattr__(attr_name)
-        # pylint: disable=protected-access
+
         module_dict._modules = OrderedDict(sorted(module_dict._modules.items()))
         self.__setattr__(attr_name, module_dict)
 
@@ -598,8 +600,8 @@ class NNCFNetworkInterface(torch.nn.Module):
     def get_insertion_point_graph(self) -> InsertionPointGraph:
         # Set up a pre- and post-hooks on almost every op in PyTorch
         nncf_graph = self.get_original_graph()
-        pre_hooks = []  # type: List[PreHookInsertionPoint]
-        post_hooks = []  # type: List[PostHookInsertionPoint]
+        pre_hooks: List[PreHookInsertionPoint] = []
+        post_hooks: List[PostHookInsertionPoint] = []
         for node in nncf_graph.get_all_nodes():
             # Pre-hook insertion point nodes
             # Will insert a pre-hook IP for each input edge. The input edge must be marked with
@@ -740,7 +742,7 @@ class NNCFNetworkInterface(torch.nn.Module):
             retval[nncf_node.node_name] = op_address
         return retval
 
-    def set_compression_controller(self, ctrl: "PTCompressionAlgorithmController"):
+    def set_compression_controller(self, ctrl: CompressionAlgorithmController):
         self.compression_controller = ctrl
 
     def strip(self, do_copy: bool = True) -> "NNCFNetwork":
@@ -814,7 +816,7 @@ class NNCFNetworkMeta(type):
             ignored_scopes,
             target_scopes,
             wrap_outputs_fn,
-        )  # pylint:disable=protected-access
+        )
         # The new class will also have an adjusted metaclass to avoid a "metaclass conflict" upon
         # class creation
         original_metaclass = type(original_model.__class__)
@@ -850,7 +852,7 @@ class NNCFNetworkMeta(type):
             # its forward method, which it effectively doesn't have. Employing a special iterator allows to hide the
             # NNCFInterface object during iteration.
             def nncf_safe_iter(self: torch.nn.Sequential):
-                return NNCFSkippingIter(iter(self._modules.values()))  # pylint:disable=protected-access
+                return NNCFSkippingIter(iter(self._modules.values()))
 
             original_model.__class__.__iter__ = nncf_safe_iter
         return original_model
@@ -922,8 +924,8 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
         Wraps the original forward call, doing additional actions before and after the call to facilitate model
         graph tracing and calling compression-related hooks.
         """
-        # pylint:disable=protected-access
-        with self.nncf._compressed_context as ctx:  # type: TracingContext
+
+        with self.nncf._compressed_context as ctx:
             ctx.base_module_thread_local_replica = self
             args, kwargs = replicate_same_tensors((args, kwargs))
             if not self.nncf._in_user_dummy_forward:
@@ -1009,7 +1011,6 @@ class LoadStateListener:
     """
 
     def __init__(self, model: "NNCFNetwork", all_quantizations: Dict[str, torch.nn.Module]):
-        # pylint: disable=protected-access
         self.hook = model._register_load_state_dict_pre_hook(
             functools.partial(self.hook_fn, quantize_modules=list(all_quantizations.values()))
         )

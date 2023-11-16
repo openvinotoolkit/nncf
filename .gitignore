@@ -108,6 +108,9 @@ ENV/
 # snapshots
 *.tar
 
+# pylint config is left at dev's discretion, CI uses ruff/isort/black instead
+.pylintrc
+
 # VSCode
 .vscode/
 

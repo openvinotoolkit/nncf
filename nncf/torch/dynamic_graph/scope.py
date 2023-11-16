@@ -97,7 +97,7 @@ class Scope:
 
     def get_iteration_scopes(self) -> List[str]:
         results = []
-        from nncf.torch.layers import ITERATION_MODULES  # pylint: disable=cyclic-import
+        from nncf.torch.layers import ITERATION_MODULES
 
         for scope_element in self.scope_elements:
             if scope_element.calling_module_class_name in ITERATION_MODULES.registry_dict:

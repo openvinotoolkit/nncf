@@ -68,7 +68,6 @@ def cross_entropy_icnet(inputs, target: torch.Tensor, weight: list):
 
 
 def do_model_specific_postprocessing(model_name, labels, model_outputs):
-    # pylint:disable=no-member
     metric_outputs = model_outputs
     if model_name == "unet":
         # UNet predicts center image crops

@@ -11,7 +11,6 @@
 
 import torch
 
-from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.quantization.quantizer_setup import DEFAULT_QUANTIZER_CONFIG
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
@@ -107,7 +106,6 @@ class TestHWConfigRules:
         assert key.target_node_name == ModelForHWConfigTest.CONV2D_OP_NODE_NAME
 
     def test_missing_non_ir_op_results_in_default_qconf_list(self):
-        # Hardswish is the non-IR op here, adjust if this no longer reflects reality
         hw_config_dict = {
             "target_device": "test",
             "config": {
@@ -128,13 +126,10 @@ class TestHWConfigRules:
             ModelForHWConfigTest(with_hardswish=True), hw_config_dict
         )
         assert len(ctrl.weight_quantizers) == 1  # Conv2d weights quantized
-        assert len(ctrl.non_weight_quantizers) == 3  # hardswish input, conv2d input, matmul input (single in this case)
+        assert len(ctrl.non_weight_quantizers) == 2  # conv2d input, matmul input (single in this case)
 
         w_key = next(iter(ctrl.weight_quantizers.keys()))
         assert str(w_key.target_node_name) == ModelForHWConfigTest.CONV2D_OP_NODE_NAME
-
-        hardswish_input_act_quantizer_ref = self.get_quantizer_module_after_op_name(MODEL_INPUT_OP_NAME, ctrl)
-        assert self.quantizer_has_default_config(hardswish_input_act_quantizer_ref)
 
     def test_unspecified_quantization_for_fundamentally_quantizable_op_results_in_default_qconfig(self):
         hw_config_dict = {  # Only the MatMul will receive a default config here (8 bit symmetric per-tensor)

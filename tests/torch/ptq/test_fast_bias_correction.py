@@ -11,6 +11,7 @@
 
 from typing import List
 
+import pytest
 import torch
 
 from nncf.common.factory import NNCFGraphFactory
@@ -55,6 +56,34 @@ class TestTorchFBCAlgorithm(TemplateTestFBCAlgorithm):
             if not is_node_with_fused_bias(node, nncf_graph):
                 continue
             bias_value = get_fused_bias_value(node, model)
+            # TODO(AlexanderDokuchaev): return atol=0.0001 after fix 109189
+            assert torch.all(torch.isclose(bias_value, ref_bias, atol=0.02)), f"{bias_value} != {ref_bias}"
+            return
+        raise ValueError("Not found node with bias")
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="Skipping for CPU-only setups")
+class TestTorchCudaFBCAlgorithm(TestTorchFBCAlgorithm):
+    @staticmethod
+    def list_to_backend_type(data: List) -> torch.Tensor:
+        return torch.Tensor(data).cuda()
+
+    @staticmethod
+    def backend_specific_model(model: bool, tmp_dir: str):
+        return get_nncf_network(model.cuda(), model.INPUT_SIZE)
+
+    @staticmethod
+    def fn_to_type(tensor):
+        return torch.Tensor(tensor).cuda()
+
+    @staticmethod
+    def check_bias(model: NNCFNetwork, ref_bias: list):
+        ref_bias = torch.Tensor(ref_bias)
+        nncf_graph = NNCFGraphFactory.create(model)
+        for node in nncf_graph.get_all_nodes():
+            if not is_node_with_fused_bias(node, nncf_graph):
+                continue
+            bias_value = get_fused_bias_value(node, model).cpu()
             # TODO(AlexanderDokuchaev): return atol=0.0001 after fix 109189
             assert torch.all(torch.isclose(bias_value, ref_bias, atol=0.02)), f"{bias_value} != {ref_bias}"
             return

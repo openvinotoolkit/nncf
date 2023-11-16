@@ -11,7 +11,7 @@
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Optional, Tuple, TypeVar
+from typing import Any, Optional, Tuple, TypeVar
 
 import numpy as np
 
@@ -21,10 +21,8 @@ from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
-from nncf.common.utils.registry import Registry
 
 TModel = TypeVar("TModel")
-ALGO_BACKENDS = Registry("algo_backends")
 
 
 @dataclass
@@ -98,12 +96,12 @@ class ChannelAlignmentAlgoBackend:
     @staticmethod
     @abstractmethod
     def get_statistic_collector(
-        reduction_shape, q: float, num_samples: int, inplace: bool
+        reduction_axes, q: float, num_samples: int, inplace: bool
     ) -> TensorStatisticCollectorBase:
         """
         Get backend-specific tensor collector that collects medians of minimal and maximal quantiles.
 
-        :param reduction_shape: Target reduction shape for the reduction.
+        :param reduction_axes: Target reduction axes for the reduction.
         :param q: Minimal quantile for the tensor collector.
         :param num_samples: Num samples to collect by the tensor collector.
         :param inplace: Should statistic be calculated inplace or out of place.
@@ -141,4 +139,16 @@ class ChannelAlignmentAlgoBackend:
 
         :param node: NNCFNode to take convolutional layer attributes from.
         :return: Convolutional layer attributes of given node if they are present and None otherwise
+        """
+
+    @staticmethod
+    @abstractmethod
+    def create_bias_tensor(node: NNCFNode, nncf_graph: NNCFGraph, value: Any) -> np.ndarray:
+        """
+        Creates bias value constant array filled by given value.
+
+        :param node: NNCFNode to add bias to.
+        :param nncf_graph: Target NNCFgraph.
+        :param value: Value to fill bias constant array.
+        :return: Bias value constant array filled by given value.
         """

@@ -27,8 +27,8 @@ KERAS_LAYER_METATYPES = OperatorMetatypeRegistry("keras_layer_metatypes")
 
 
 class TFLayerMetatype(OperatorMetatype):
-    keras_layer_names = []  # type: List[str]
-    subtypes = []  # type: List[Type[OperatorMetatype]]
+    keras_layer_names: List[str] = []
+    subtypes: List[Type[OperatorMetatype]] = []
 
     @classmethod
     def get_subtypes(cls) -> List[Type[OperatorMetatype]]:
@@ -72,8 +72,8 @@ class TFLayerMetatype(OperatorMetatype):
 
 
 class TFLayerWithWeightsMetatype(TFLayerMetatype):
-    weight_definitions = []  # type: List[WeightDef]
-    bias_attr_name = None  # type: Optional[str]
+    weight_definitions: List[WeightDef] = []
+    bias_attr_name: Optional[str] = None
 
 
 @KERAS_LAYER_METATYPES.register()

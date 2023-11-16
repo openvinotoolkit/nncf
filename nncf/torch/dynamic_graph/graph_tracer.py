@@ -14,6 +14,7 @@ from typing import Any, Callable, List, Optional
 
 import torch
 
+from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.utils import get_model_device
 
@@ -93,17 +94,15 @@ class GraphTracer:
         self.custom_forward_fn = custom_forward_fn
 
     def trace_graph(
-        self, model: torch.nn.Module, context_to_use: Optional["TracingContext"] = None, as_eval: bool = False
+        self, model: torch.nn.Module, context_to_use: Optional[TracingContext] = None, as_eval: bool = False
     ) -> DynamicGraph:
         sd = deepcopy(model.state_dict())
-
-        from nncf.torch.dynamic_graph.context import TracingContext  # pylint: disable=cyclic-import
 
         if context_to_use is None:
             context_to_use = TracingContext()
 
         context_to_use.enable_trace_dynamic_graph()
-        from nncf.torch.utils import training_mode_switcher  # pylint: disable=cyclic-import
+        from nncf.torch.utils import training_mode_switcher
 
         with context_to_use as _ctx:
             _ctx.base_module_thread_local_replica = model
@@ -127,13 +126,9 @@ def create_dummy_forward_fn(
     with_output_tracing=False,
 ):
     def default_dummy_forward_fn(model):
-        from nncf.torch.dynamic_graph.io_handling import replicate_same_tensors  # pylint: disable=cyclic-import
-        from nncf.torch.dynamic_graph.io_handling import (
-            wrap_nncf_model_inputs_with_objwalk,  # pylint: disable=cyclic-import
-        )
-        from nncf.torch.dynamic_graph.io_handling import (
-            wrap_nncf_model_outputs_with_objwalk,  # pylint: disable=cyclic-import
-        )
+        from nncf.torch.dynamic_graph.io_handling import replicate_same_tensors
+        from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_inputs_with_objwalk
+        from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
 
         device = get_model_device(model)
         args_list = [create_mock_tensor(info, device) for info in input_infos if info.keyword is None]

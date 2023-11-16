@@ -23,7 +23,6 @@ from tests.torch.nas.test_all_elasticity import ThreeConvModel
 from tests.torch.nas.test_all_elasticity import create_bnas_model_and_ctrl_by_test_desc
 
 
-# pylint: disable=no-member
 def check_onnx_weights(ctrl, path_to_onnx, ref_orig_weights, expected_num_nodes):
     ctrl.export_model(path_to_onnx)
     onnx_model = onnx.load(path_to_onnx)

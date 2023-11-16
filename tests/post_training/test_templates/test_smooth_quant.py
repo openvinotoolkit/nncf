@@ -125,16 +125,15 @@ class TemplateTestSQAlgorithm:
 
         self.check_scales(quantized_model, reference_values)
 
-    # pylint:disable=protected-access
     def test_get_abs_max_channel_collector(self):
         backend = self.get_backend()
-        reduction_shape = (3, 2, 1)
+        reduction_axes = (3, 2, 1)
         samples = 1
 
         for inplace_type in [False, True]:
             backend_tensor_collector = backend.get_abs_max_channel_collector(
                 num_samples=samples,
-                stats_reduction_shape=reduction_shape,
+                stats_reduction_axes=reduction_axes,
                 inplace=inplace_type,
                 branch_key="test_branch",
             )
@@ -145,7 +144,7 @@ class TemplateTestSQAlgorithm:
             for reducer in backend_tensor_collector.reducers:
                 assert isinstance(reducer, AbsMaxReducer)
                 assert reducer.inplace == inplace_type
-                assert reducer._reduction_shape == reduction_shape
+                assert reducer._reduction_axes == reduction_axes
 
     @pytest.mark.parametrize(
         "model_cls, references",
@@ -167,7 +166,6 @@ class TemplateTestSQAlgorithm:
             ),
         ),
     )
-    # pylint:disable=protected-access
     def test__get_nodes_to_smooth_data(self, model_cls, references, tmpdir):
         model = self.backend_specific_model(model_cls(), tmpdir)
         nncf_graph = NNCFGraphFactory.create(model)
@@ -218,7 +216,6 @@ class TemplateTestSQAlgorithm:
         node = NNCFNode(attributes)
 
         try:
-            # pylint: disable=protected-access
             activation_channel_axis = backend.get_activation_channel_axis(node, port_id)
         except RuntimeError as e:
             if isinstance(e, reference_value):
@@ -238,7 +235,6 @@ class TemplateTestSQAlgorithm:
         node = NNCFNode(attributes)
 
         try:
-            # pylint: disable=protected-access
             activation_channel_axis = backend.get_weight_channel_axis(node, port_id)
         except RuntimeError as e:
             if isinstance(e, reference_value):

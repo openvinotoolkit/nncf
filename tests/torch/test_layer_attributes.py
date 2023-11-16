@@ -14,12 +14,12 @@ import pytest
 from torch import Size
 from torch import nn
 
-from nncf.common.graph import BaseLayerAttributes
-from nncf.common.graph import OperatorMetatype
+from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.graph.operator_metatypes import PTBatchNormMetatype
 from nncf.torch.graph.operator_metatypes import PTConv1dMetatype

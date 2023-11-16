@@ -14,6 +14,7 @@ import numpy as np
 import torch
 from torch.quantization.fake_quantize import FakeQuantize
 
+from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
@@ -29,12 +30,12 @@ def replace_quantizer_to_torch_native_module(model: NNCFNetwork) -> NNCFNetwork:
     :param model: Target model.
     :return: The modified NNCF network.
     """
-    if hasattr(model.nncf, "external_quantizers"):
-        for key in model.nncf.external_quantizers.keys():
-            if model.nncf.external_quantizers[key].is_enabled_quantization():
-                model.nncf.external_quantizers[key] = convert_to_torch_fakequantizer(
-                    model.nncf.external_quantizers[key]
-                )
+    compression_module_type = ExtraCompressionModuleType.EXTERNAL_QUANTIZER
+    if model.nncf.is_compression_module_registered(compression_module_type):
+        external_quantizers = model.nncf.get_compression_modules_by_type(compression_module_type)
+        for key in external_quantizers.keys():
+            if external_quantizers[key].is_enabled_quantization():
+                external_quantizers[key] = convert_to_torch_fakequantizer(external_quantizers[key])
 
     for node in model.nncf.get_original_graph().get_all_nodes():
         if node.node_type in ["nncf_model_input", "nncf_model_output"]:
@@ -129,11 +130,13 @@ def remove_disabled_quantizers(model: NNCFNetwork) -> NNCFNetwork:
     :param model: Compressed model.
     :return: The modified NNCF network.
     """
-    if hasattr(model.nncf, "external_quantizers"):
-        for key in list(model.nncf.external_quantizers.keys()):
-            op = model.nncf.external_quantizers[key]
+    compression_module_type = ExtraCompressionModuleType.EXTERNAL_QUANTIZER
+    if model.nncf.is_compression_module_registered(compression_module_type):
+        external_quantizers = model.nncf.get_compression_modules_by_type(compression_module_type)
+        for key in list(external_quantizers.keys()):
+            op = external_quantizers[key]
             if isinstance(op, BaseQuantizer) and not op.is_enabled_quantization():
-                model.nncf.external_quantizers.pop(key)
+                external_quantizers.pop(key)
 
     for node in model.nncf.get_original_graph().get_all_nodes():
         if node.node_type in ["nncf_model_input", "nncf_model_output"]:

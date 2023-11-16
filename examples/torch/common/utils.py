@@ -24,8 +24,6 @@ from urllib.request import url2pathname
 import mlflow
 import torch
 from PIL import Image
-
-# pylint: disable=import-error
 from returns.maybe import Maybe
 from returns.maybe import Nothing
 from torch.utils import data
@@ -207,7 +205,6 @@ def make_additional_checkpoints(checkpoint_path: str, is_best: bool, epoch: int,
         copyfile(checkpoint_path, str(intermediate_checkpoint))
 
 
-# pylint:disable=no-member
 class ForkedPdb(pdb.Pdb):
     """A Pdb subclass that may be used
     from a forked multiprocessing child

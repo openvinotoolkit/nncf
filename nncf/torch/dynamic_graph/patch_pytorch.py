@@ -24,6 +24,7 @@ from torch.nn.parallel import DistributedDataParallel
 from nncf import nncf_logger
 from nncf.common.utils.api_marker import api
 from nncf.torch.dynamic_graph.structs import NamespaceTarget
+from nncf.torch.dynamic_graph.structs import PatchedOperatorInfo
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.wrappers import ignore_scope
 from nncf.torch.dynamic_graph.wrappers import wrap_module_call
@@ -41,7 +42,6 @@ def get_namespace_to_patch(namespace_target: NamespaceTarget) -> object:
 
 
 def get_namespace_to_extract_functions_from(namespace_target: NamespaceTarget) -> object:
-    # pylint: disable=protected-access
     if namespace_target == NamespaceTarget.TORCH_NN_FUNCTIONAL:
         return torch.nn.functional
     if namespace_target == NamespaceTarget.TORCH_TENSOR:
@@ -49,21 +49,6 @@ def get_namespace_to_extract_functions_from(namespace_target: NamespaceTarget) -
     if namespace_target == NamespaceTarget.TORCH:
         return torch._C._VariableFunctions
     raise RuntimeError("{} namespace wasn't found in {}".format(namespace_target, NamespaceTarget))
-    # pylint: enable=protected-access
-
-
-class PatchedOperatorInfo:
-    def __init__(self, name: str, operator_namespace: NamespaceTarget, skip_trace: bool = False):
-        """
-        Information about patched operator.
-        :param name: Operator name
-        :param operator_namespace: Python module, from which operator was gotten.
-        :param skip_trace: If it is set to True, the both operator and its internal calls
-         to otherwise traced functions do not appear into the model graph.
-        """
-        self.name = name
-        self.operator_namespace = operator_namespace
-        self.skip_trace = skip_trace
 
 
 class FunctionsToPatchWithoutTracing:
@@ -207,7 +192,7 @@ def torch_jit_script_wrapper(*args, **kwargs):
                 def rcb_wrapper(name):
                     value = rcb(name)
                     if hasattr(value, "_original_op"):
-                        value = value._original_op  # pylint: disable=protected-access
+                        value = value._original_op
                     return value
 
                 kwargs["_rcb"] = rcb_wrapper
@@ -224,7 +209,6 @@ def torch_jit_trace_make_module_wrapper(*args, **kwargs):
 
 
 def torch_jit_script_if_tracing(fn):
-    # pylint: disable=protected-access
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
         if not is_tracing():
@@ -246,7 +230,7 @@ class OriginalOpInfo:
         self.op = op
 
 
-ORIGINAL_OPERATORS = []  # type: List[OriginalOpInfo]
+ORIGINAL_OPERATORS: List[OriginalOpInfo] = []
 ORIGINAL_CALL = torch.nn.Module.__call__
 _JIT_ALREADY_WRAPPED = False
 _OPERATORS_ALREADY_WRAPPED = False
@@ -257,7 +241,7 @@ _ORIG_JIT_TRACE_MAKE_MODULE = None
 def patch_torch_jit():
     # This import statement is required, otherwise we get a
     # "RuntimeError: undefined value torch" inside the real torch.jit.script
-    # pylint:disable=unused-import,redefined-outer-name,reimported,protected-access
+
     import torch
 
     global _ORIG_JIT_SCRIPT

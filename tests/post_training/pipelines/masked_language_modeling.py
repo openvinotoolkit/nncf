@@ -11,8 +11,10 @@
 
 import numpy as np
 import onnx
+import openvino.runtime as ov
 import torch
 import transformers
+from openvino.tools.mo import convert_model
 from optimum.intel import OVQuantizer
 from optimum.intel.openvino import OVModelForSequenceClassification
 from optimum.onnxruntime import ORTModelForSequenceClassification
@@ -31,6 +33,7 @@ class MaskedLanguageModelingHF(BaseTestPipeline):
         if self.backend in PT_BACKENDS:
             self.model_hf = transformers.AutoModelForSequenceClassification.from_pretrained(self.model_id)
             self.model = self.model_hf
+            self.model.config.torchscript = True  # Set to export by convert_model via torch.jit.trace
             self.dummy_tensor = self.model_hf.dummy_inputs["input_ids"]
         if self.backend in OV_BACKENDS:
             self.model_hf = OVModelForSequenceClassification.from_pretrained(self.model_id, export=True, compile=False)
@@ -39,6 +42,23 @@ class MaskedLanguageModelingHF(BaseTestPipeline):
         if self.backend == BackendType.ONNX:
             self.model_hf = ORTModelForSequenceClassification.from_pretrained(self.model_id, export=True)
             self.model = onnx.load(self.model_hf.model_path)
+
+        self._dump_model_fp32()
+
+    def _dump_model_fp32(self) -> None:
+        """Dump IRs of fp32 models, to help debugging."""
+        if self.backend in PT_BACKENDS:
+            ov_model = convert_model(self.model, example_input=self.dummy_tensor)
+            ov.serialize(ov_model, self.output_model_dir / "model_fp32.xml")
+
+        if self.backend == BackendType.ONNX:
+            onnx_path = self.output_model_dir / "model_fp32.onnx"
+            onnx.save(self.model, onnx_path)
+            ov_model = convert_model(onnx_path)
+            ov.serialize(ov_model, self.output_model_dir / "model_fp32.xml")
+
+        if self.backend in OV_BACKENDS:
+            ov.serialize(self.model, self.output_model_dir / "model_fp32.xml")
 
     def prepare_preprocessor(self) -> None:
         self.preprocessor = transformers.AutoTokenizer.from_pretrained(self.model_id)

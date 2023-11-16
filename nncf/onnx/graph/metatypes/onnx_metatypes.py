@@ -9,21 +9,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional, Type
+from typing import Dict, List, Optional, Type
 
 import onnx
 
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
-from nncf.onnx.graph.onnx_graph import ONNXGraph
+from nncf.onnx.graph.onnx_helper import get_parent
+from nncf.onnx.graph.onnx_helper import get_parents_node_mapping
+from nncf.onnx.graph.onnx_helper import get_tensor
+from nncf.onnx.graph.onnx_helper import has_tensor
 
 ONNX_OPERATION_METATYPES = OperatorMetatypeRegistry("onnx_operator_metatypes")
 
 
 class ONNXOpMetatype(OperatorMetatype):
-    op_names = []  # type: List[str]
-    subtypes = []  # type: List[Type[OperatorMetatype]]
+    op_names: List[str] = []
+    subtypes: List[Type[OperatorMetatype]] = []
 
     @classmethod
     def get_all_aliases(cls) -> List[str]:
@@ -188,6 +191,13 @@ class ONNXAveragePoolMetatype(ONNXOpMetatype):
     name = "AveragePoolOp"
     op_names = ["AveragePool"]
     hw_config_names = [HWConfigOpName.AVGPOOL]
+
+
+@ONNX_OPERATION_METATYPES.register()
+class ONNXGlobalMaxPoolMetatype(ONNXOpMetatype):
+    name = "GlobalMaxPoolOp"
+    op_names = ["GlobalMaxPool"]
+    hw_config_names = [HWConfigOpName.MAXPOOL]
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -610,22 +620,10 @@ class ONNXDeformableConvolutionMetatype(ONNXOpMetatype):
     op_names = ["DeformConv"]
 
 
-CONSTANT_WEIGHT_LAYER_METATYPES = [
-    ONNXConvolutionMetatype,
-    ONNXDepthwiseConvolutionMetatype,
-    ONNXConvolutionTransposeMetatype,
-    ONNXEmbeddingMetatype,
-]
-
-MATMUL_METATYPES = [ONNXGemmMetatype, ONNXMatMulMetatype]
-
-GENERAL_WEIGHT_LAYER_METATYPES = CONSTANT_WEIGHT_LAYER_METATYPES + MATMUL_METATYPES
-
-# Contains the operation metatypes for which bias can be applied.
-OPERATIONS_WITH_BIAS_METATYPES = [
-    ONNXConvolutionMetatype,
-    ONNXDepthwiseConvolutionMetatype,
-]
+@ONNX_OPERATION_METATYPES.register()
+class ONNXErfMetatype(ONNXOpMetatype):
+    name = "ErfOp"
+    op_names = ["Erf"]
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
@@ -653,44 +651,12 @@ def get_metatype(model: onnx.ModelProto, node: onnx.NodeProto) -> ONNXOpMetatype
     return metatype
 
 
-def get_constant_weight_port_ids(metatype: ONNXOpMetatype) -> List[int]:
-    """
-    Returns port ids on which metatype must have a weight based on Operation definition.
-
-    :param metatype: Metatype.
-    :return: Port ids.
-    """
-    if metatype in CONSTANT_WEIGHT_LAYER_METATYPES:
-        return metatype.weight_port_ids
-    return []
-
-
-def get_possible_weight_port_ids(metatype: ONNXOpMetatype) -> List[int]:
-    """
-    Returns weight port ids on which metatype could have a weight.
-    Example: ONNXMatMulMetatype could have activations or weights on input port ids: 0, 1
-
-    :param metatype: Metatype.
-    :return: Port ids.
-    """
-    if metatype in MATMUL_METATYPES:
-        return metatype.possible_weight_ports
-    return []
-
-
-def get_bias_tensor_port_id(metatype: ONNXOpWithWeightsMetatype) -> Optional[int]:
-    """
-    Returns input port id, where a bias tensor should output.
-
-    :param node: Node, for which input port id is returned,
-    :return: Input port id, where a weight bias should output or None if node can not have bias.
-    """
-    if metatype in OPERATIONS_WITH_BIAS_METATYPES:
-        return metatype.bias_port_id
-    return None
-
-
-def get_tensor_edge_name(onnx_graph: ONNXGraph, node: onnx.NodeProto, port_id: int) -> Optional[str]:
+def get_tensor_edge_name(
+    model: onnx.ModelProto,
+    node: onnx.NodeProto,
+    port_id: int,
+    parents_node_mapping: Dict[str, onnx.NodeProto],
+) -> Optional[str]:
     """
     Returns an edge name associated with a weight of a node laying on  an input port_id.
 
@@ -707,9 +673,10 @@ def get_tensor_edge_name(onnx_graph: ONNXGraph, node: onnx.NodeProto, port_id: i
         ONNXTransposeMetatype
         ONNXQuantizeLinearMetatype
 
-    :param onnx_graph: ONNXGraph.
+    :param model: ONNX model.
     :param node: Node.
     :param port_id: Port id on which a weight edge is seeking.
+    :param parents_node_mapping: Mapping from edge name to node which outputs this edge.
     :return: Edge name associated with a weight.
     """
     PROPAGATING_NODES = (
@@ -720,14 +687,14 @@ def get_tensor_edge_name(onnx_graph: ONNXGraph, node: onnx.NodeProto, port_id: i
         + ONNXDequantizeLinearMetatype.get_all_aliases()
     )
     END_NODES = ONNXConstantMetatype.get_all_aliases()
-    parent = onnx_graph.get_parent(node, port_id)
+    parent = get_parent(node, port_id, parents_node_mapping)
     if not parent:
-        if onnx_graph.has_tensor(node.input[port_id]):
+        if has_tensor(model, node.input[port_id]):
             return node.input[port_id]
     elif parent.op_type in END_NODES:
         return node.input[port_id]
     elif parent.op_type in PROPAGATING_NODES:
-        return get_tensor_edge_name(onnx_graph, parent, 0)
+        return get_tensor_edge_name(model, parent, 0, parents_node_mapping)
     return None
 
 
@@ -776,12 +743,12 @@ def _is_embedding(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
     :return: True if the layer is embedding, False - otherwise.
     """
     tensor_port_id = ONNXEmbeddingMetatype.weight_port_ids[0]
-    onnx_graph = ONNXGraph(model)
     allowed_types_list = ["TensorProto.FLOAT"]
-    weight_edge_name = get_tensor_edge_name(onnx_graph, node, tensor_port_id)
+    parents_node_mapping = get_parents_node_mapping(model)
+    weight_edge_name = get_tensor_edge_name(model, node, tensor_port_id, parents_node_mapping)
 
     if weight_edge_name is not None:
-        tensor_data_type = onnx_graph.get_tensor(weight_edge_name).data_type
+        tensor_data_type = get_tensor(model, weight_edge_name).data_type
         if onnx.helper.tensor_dtype_to_string(tensor_data_type) in allowed_types_list:
             return True
     return False

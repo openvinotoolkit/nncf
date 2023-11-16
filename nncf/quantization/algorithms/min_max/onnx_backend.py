@@ -20,8 +20,8 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.utils.backend import BackendType
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
+from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
 from nncf.onnx.graph.node_utils import get_quantization_axis
 from nncf.onnx.graph.node_utils import get_quantized_tensor_shape
@@ -38,26 +38,19 @@ from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AggregatorType
 from nncf.quantization.advanced_parameters import StatisticsType
-from nncf.quantization.algorithms.min_max.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 
 
-# pylint:disable=too-many-public-methods
-@ALGO_BACKENDS.register(BackendType.ONNX)
 class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:
-        return om.MATMUL_METATYPES
+        return MATMUL_METATYPES
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
         return [om.ONNXTopKMetatype, om.ONNXNonMaxSuppressionMetatype]
-
-    @property
-    def shapeof_metatypes(self) -> List[OperatorMetatype]:
-        return [om.ONNXShapeMetatype]
 
     @property
     def conv_metatypes(self) -> List[OperatorMetatype]:
@@ -65,11 +58,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
-        return [om.ONNXConvolutionMetatype, om.ONNXConvolutionTransposeMetatype, *om.MATMUL_METATYPES]
-
-    @property
-    def read_variable_metatypes(self) -> List[OperatorMetatype]:
-        return []
+        return [om.ONNXConvolutionMetatype, om.ONNXConvolutionTransposeMetatype, *MATMUL_METATYPES]
 
     @property
     def add_metatypes(self) -> List[OperatorMetatype]:
@@ -78,6 +67,18 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def group_conv_metatypes(self) -> List[OperatorMetatype]:
         return self.conv_metatypes
+
+    @property
+    def shapeof_metatypes(self) -> List[OperatorMetatype]:
+        return [om.ONNXShapeMetatype]
+
+    @property
+    def dropout_metatypes(self) -> List[OperatorMetatype]:
+        return []
+
+    @property
+    def read_variable_metatypes(self) -> List[OperatorMetatype]:
+        return []
 
     @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
@@ -102,7 +103,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
     ):
-        tensor_type = np.int8 if np.any(parameters.input_low < 0) else np.uint8
+        tensor_type = np.int8 if np.any(parameters.input_low.data < 0) else np.uint8
         if target_point.is_weight_target_point():
             tensor_type = np.int8  # The weight is restricted to have only signed range
         nncf_input_node_next_nodes = ONNXMinMaxAlgoBackend._get_input_edges_mapping(nncf_graph)
@@ -182,6 +183,8 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.ONNXPowMetatype,
                 om.ONNXSqueezeMetatype,
                 om.ONNXSubMetatype,
+                om.ONNXAveragePoolMetatype,
+                om.ONNXGlobalAveragePoolMetatype,
                 om.ONNXReduceMeanMetatype,
                 om.ONNXReduceL2Metatype,
                 om.ONNXReduceSumMetatype,
@@ -189,6 +192,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.ONNXMaximumMetatype,
                 om.ONNXSqrtMetatype,
                 om.ONNXReciprocalMetatype,
+                om.ONNXBatchNormMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
                 types.append(om.ONNXMulLayerMetatype)

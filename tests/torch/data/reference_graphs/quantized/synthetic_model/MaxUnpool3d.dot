@@ -4,6 +4,6 @@ strict digraph  {
 "2 PoolUnPool/MaxUnpool3d[unpool]/max_unpool3d_0" [id=2, type=max_unpool3d];
 "3 /nncf_model_output_0" [id=3, type=nncf_model_output];
 "0 /nncf_model_input_0" -> "1 PoolUnPool/MaxPool3d[pool]/max_pool3d_0";
-"1 PoolUnPool/MaxPool3d[pool]/max_pool3d_0" -> "2 PoolUnPool/MaxUnpool3d[unpool]/max_unpool3d_0";
+"1 PoolUnPool/MaxPool3d[pool]/max_pool3d_0" -> "2 PoolUnPool/MaxUnpool3d[unpool]/max_unpool3d_0"  [label="parallel_input_port_ids:[1]"];
 "2 PoolUnPool/MaxUnpool3d[unpool]/max_unpool3d_0" -> "3 /nncf_model_output_0";
 }

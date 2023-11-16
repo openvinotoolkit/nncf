@@ -23,6 +23,7 @@ from nncf.torch.dynamic_graph.layer_attributes_handlers import OP_NAMES_REQUIRIN
 from nncf.torch.dynamic_graph.layer_attributes_handlers import get_layer_attributes_from_args_and_kwargs
 from nncf.torch.dynamic_graph.layer_attributes_handlers import get_layer_attributes_from_module
 from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
+from nncf.torch.dynamic_graph.structs import PatchedOperatorInfo
 from nncf.torch.dynamic_graph.trace_tensor import make_tensor_metas
 from nncf.torch.dynamic_graph.trace_tensor import trace_tensors
 from nncf.torch.layer_utils import _NNCFModuleMixin
@@ -47,7 +48,7 @@ def ignore_scope(cls):
     return cls
 
 
-def wrap_operator(operator, operator_info: "PatchedOperatorInfo"):
+def wrap_operator(operator, operator_info: PatchedOperatorInfo):
     """
     Wraps the input callable object (`operator`) with the functionality that allows the calls to this object
     to be tracked by the currently set global TracingContext. The wrapped functions can be then intercepted,
@@ -80,7 +81,7 @@ def wrap_operator(operator, operator_info: "PatchedOperatorInfo"):
             if operator_info.skip_trace:
                 result = operator(*args, **kwargs)
             elif ctx.is_forwarding:
-                from nncf.torch.dynamic_graph.trace_functions import forward_trace_only  # pylint: disable=cyclic-import
+                from nncf.torch.dynamic_graph.trace_functions import forward_trace_only
 
                 result = forward_trace_only(operator, *args, **kwargs)
             else:
@@ -111,14 +112,13 @@ def wrap_operator(operator, operator_info: "PatchedOperatorInfo"):
         ctx.in_operator = False
         return result
 
-    # pylint: disable=protected-access
     wrapped._original_op = operator
     wrapped._operator_namespace = operator_info.operator_namespace
     return wrapped
 
 
 def wrap_module_call(module_call):
-    from nncf.torch.dynamic_graph.patch_pytorch import ORIGINAL_OPERATORS  # pylint: disable=cyclic-import
+    from nncf.torch.dynamic_graph.patch_pytorch import ORIGINAL_OPERATORS
 
     NAMES_ORIGINAL_OPERATORS = [op.name for op in ORIGINAL_OPERATORS]
 
@@ -159,7 +159,7 @@ def wrap_module_call(module_call):
 
 
 def _execute_op(
-    op_address: "OperationAddress",
+    op_address: "OperationAddress",  # noqa: F821
     operator_info: "PatchedOperatorInfo",
     operator: Callable,
     ctx: "TracingContext",
@@ -198,7 +198,7 @@ def _collect_module_attrs_and_ignored_algorithms(
 ) -> Tuple[BaseLayerAttributes, List[str]]:
     layer_attrs = None
     ignored_algos = []
-    from nncf.torch.graph.operator_metatypes import OP_NAMES_WITH_WEIGHTS  # pylint:disable=cyclic-import
+    from nncf.torch.graph.operator_metatypes import OP_NAMES_WITH_WEIGHTS
 
     if op_name in OP_NAMES_WITH_WEIGHTS:
         curr_module = ctx.get_current_module()

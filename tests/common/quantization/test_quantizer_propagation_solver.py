@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint:disable=too-many-lines
+
 from collections import Counter
 from collections import namedtuple
 from itertools import permutations
@@ -18,11 +18,11 @@ from typing import Dict, List, Optional, Set, Tuple
 import networkx as nx
 import pytest
 
-from nncf.common.graph import Dtype
 from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
-from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.transformations.commands import TargetType
@@ -182,7 +182,7 @@ class RunOnIpGraphTestStruct:
         self.expected_count_finished_quant = expected_count_finished_quant
         self.expected_count_active_quant = expected_count_active_quant
         self.ignored_scopes = ignored_scopes
-        self.retval_qps = {}  # type: Dict[QuantizationPointId, MultiConfigQuantizationPoint]
+        self.retval_qps: Dict[QuantizationPointId, MultiConfigQuantizationPoint] = {}
         for id_, qp_data in retval_qp_data.items():
             if qp_data.target_type is TargetType.OPERATION_WITH_WEIGHTS:
                 qip = WeightQuantizationInsertionPoint(qp_data.node_name)
@@ -198,7 +198,6 @@ class RunOnIpGraphTestStruct:
 
 
 class TestQuantizerPropagationSolver:
-    # pylint:disable=too-many-public-methods
     def test_setup_initial_quantizers_in_quant_prop_graph(self):
         ops_to_quantize = [
             BatchNormTestMetatype.name,
@@ -1528,8 +1527,8 @@ class TestQuantizerPropagationSolver:
             assert quant_prop in active_propagating_quantizers_queue
 
         for pq in untouched_quantizers:
-            assert not pq in quant_prop_solver.get_active_propagating_quantizers_queue()
-            assert not pq in quant_prop_solver.get_finished_propagating_quantizers()
+            assert pq not in quant_prop_solver.get_active_propagating_quantizers_queue()
+            assert pq not in quant_prop_solver.get_finished_propagating_quantizers()
 
         # The quantizers that were added during preparation were not registered
         # as active for the solvers; but the ones that may have appeared due to an upward
@@ -1560,7 +1559,6 @@ class TestQuantizerPropagationSolver:
         _ = quant_prop_solver.propagation_step(pq, quant_prop_graph)
         finished_pqs = quant_prop_solver.get_finished_propagating_quantizers()
 
-        # pylint:disable=no-member
         assert quant_prop_graph.remove_propagating_quantizer.call_count == 1
         assert quant_prop_graph.clone_propagating_quantizer.call_count == 1
         assert len(finished_pqs) == 1
@@ -1839,3 +1837,28 @@ class TestQuantizerPropagationSolver:
         assert double_input_pq.current_location_node_key == InsertionPointGraph.get_pre_hook_node_key(
             "5 /E_0", input_port_id=1
         )
+
+
+def test_metatypes_to_ignore(mocker):
+    # pylint: disable=protected-access
+    NOT_IGNORED_METATYHPE = "not_ignored_metatype"
+    IGNORED_METATYPE = "target_metatype"
+
+    nncf_graph = NNCFGraph()
+    nodes = []
+    for node_name, node_metatype in zip("ABC", [NOT_IGNORED_METATYHPE, IGNORED_METATYPE, NOT_IGNORED_METATYHPE]):
+        nodes.append(nncf_graph.add_nncf_node(node_name, node_name, node_metatype=node_metatype))
+    for idx in range(1, len(nodes)):
+        nncf_graph.add_edge_between_nncf_nodes(
+            nodes[idx - 1].node_id, nodes[idx].node_id, [1, 1, 1, 1], 0, 0, Dtype.FLOAT
+        )
+    ip_graph = InsertionPointGraph(nncf_graph=nncf_graph, weight_modifiable_node_names=["A", "B", "C"])
+
+    solver = QuantizerPropagationSolver(
+        metatypes_to_ignore=[IGNORED_METATYPE],
+    )
+    solver._add_node_to_ignored = mocker.MagicMock()
+    solver.run_on_ip_graph(ip_graph)
+
+    solver._add_node_to_ignored.assert_called_once()
+    assert "1 B" in solver._add_node_to_ignored.call_args[0]

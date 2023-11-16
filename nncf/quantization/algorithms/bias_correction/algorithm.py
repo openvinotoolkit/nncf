@@ -13,7 +13,6 @@ from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
 import numpy as np
-from tqdm import tqdm
 
 from nncf import Dataset
 from nncf import nncf_logger
@@ -26,13 +25,13 @@ from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import copy_model
 from nncf.common.utils.backend import get_backend
 from nncf.quantization.algorithms.algorithm import Algorithm
-from nncf.quantization.algorithms.bias_correction.backend import ALGO_BACKENDS
 
 TModel = TypeVar("TModel")
 
@@ -104,8 +103,8 @@ class BiasCorrection(Algorithm):
             raise RuntimeError("BiasCorrection algorithm does not support apply_for_all_nodes=True yet")
 
     @property
-    def available_backends(self) -> Dict[str, BackendType]:
-        return ALGO_BACKENDS.registry_dict
+    def available_backends(self) -> List[BackendType]:
+        return [BackendType.ONNX, BackendType.OPENVINO]
 
     def _set_backend_entity(self, model: TModel) -> None:
         """
@@ -124,7 +123,7 @@ class BiasCorrection(Algorithm):
             self._backend_entity = OVBiasCorrectionAlgoBackend()
         else:
             raise RuntimeError(
-                "Cannot return backend-specific entity because {} is not supported!".format(model_backend)
+                "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
             )
 
     def apply(
@@ -135,7 +134,6 @@ class BiasCorrection(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         self._set_backend_entity(model)
-        model = self._backend_entity.insert_null_biases(model, graph)
         main_transformations_layout = TransformationLayout()
         main_model_transformer = ModelTransformerFactory.create(model)
 
@@ -159,8 +157,8 @@ class BiasCorrection(Algorithm):
         # for which we will create a subgraph for inference and collection of statistics.
         subgraphs_data = [self._get_subgraph_data_for_node(node, nncf_graph) for node in nodes_with_bias]
 
-        for position, (node, subgraph_data) in tqdm(
-            list(enumerate(zip(nodes_with_bias, subgraphs_data))), desc="Applying Bias correction"
+        for position, (node, subgraph_data) in track(
+            list(enumerate(zip(nodes_with_bias, subgraphs_data))), description="Applying Bias correction"
         ):
             node_name = node.node_name
 
@@ -489,8 +487,6 @@ class BiasCorrection(Algorithm):
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         self._set_backend_entity(model)
         model_copy = self._backend_entity.remove_fq_from_inputs(copy_model(model), graph)
-        graph_copy = NNCFGraphFactory.create(model_copy)
-        model_copy = self._backend_entity.insert_null_biases(model_copy, graph_copy)
         nncf_graph = NNCFGraphFactory.create(model_copy)
         statistic_container = StatisticPointsContainer()
 
@@ -509,7 +505,7 @@ class BiasCorrection(Algorithm):
                 TargetType.POST_LAYER_OPERATION, node_name, port_id=OUTPUT_PORT_OF_NODE
             )
             stat_collector = self._backend_entity.mean_statistic_collector(
-                reduction_shape=channel_axis, num_samples=self.subset_size, inplace=self.inplace_statistics
+                channel_axis=channel_axis, num_samples=self.subset_size, inplace=self.inplace_statistics
             )
             statistic_container.add_statistic_point(
                 StatisticPoint(

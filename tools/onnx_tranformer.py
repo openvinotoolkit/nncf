@@ -28,11 +28,11 @@ def main(argv):
     parser.add_argument("-o", "--output-model", help="Path to output model file", required=True)
     args = parser.parse_args(args=argv)
 
-    model = onnx.load(args.input_model)  # pylint: disable=no-member
+    model = onnx.load(args.input_model)
 
     rename_quantize(model)
 
-    onnx.save(model, args.output_model)  # pylint: disable=no-member
+    onnx.save(model, args.output_model)
 
 
 if __name__ == "__main__":

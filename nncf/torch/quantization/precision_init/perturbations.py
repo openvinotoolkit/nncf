@@ -47,7 +47,7 @@ class PerturbationObserver:
 
 class Perturbations:
     def __init__(self):
-        self._perturbations = {}  # type: Dict[int, Dict[QuantizerConfig, Tensor]]
+        self._perturbations: Dict[int, Dict[QuantizerConfig, Tensor]] = {}
 
     def add(self, layer_id: int, qconfig: QuantizerConfig, perturbation: Tensor):
         if layer_id in self._perturbations:

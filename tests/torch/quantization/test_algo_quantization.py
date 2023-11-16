@@ -67,7 +67,7 @@ def compare_qspecs(qspec: PTQuantizerSpec, quantizer: BaseQuantizer):
     assert qspec.num_bits == quantizer.num_bits
     assert isinstance(quantizer, QUANTIZATION_MODULES.get(qspec.mode))
     assert qspec.scale_shape == quantizer.scale_shape
-    # pylint:disable=protected-access
+
     assert qspec.signedness_to_force == quantizer._signedness_to_force
 
 
@@ -193,7 +193,7 @@ def test_can_load_quant_algo__with_defaults():
     assert len(model_conv) == len(quant_model_conv)
 
     for module_scope, _ in model_conv.items():
-        quant_scope = deepcopy(module_scope)  # type: Scope
+        quant_scope: Scope = deepcopy(module_scope)
         quant_scope.pop()
         quant_scope.push(ScopeElement("NNCFConv2d", "conv"))
         assert quant_scope in quant_model_conv.keys()

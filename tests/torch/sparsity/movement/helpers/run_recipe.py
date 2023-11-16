@@ -20,7 +20,7 @@ import torch
 import torch.nn
 import torch.nn.functional as F
 import torch.utils.data
-from datasets import Dataset  # pylint: disable=no-name-in-module
+from datasets import Dataset
 from transformers import AutoModelForAudioClassification
 from transformers import AutoModelForImageClassification
 from transformers import AutoModelForSequenceClassification

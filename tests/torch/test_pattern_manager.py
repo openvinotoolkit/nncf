@@ -22,7 +22,6 @@ IGNORING_HW_PATTERN_REASONS = {
     HWFusedPatternNames.MVN_SCALE_SHIFT: "Not relevant for Torch.",
     HWFusedPatternNames.NORMALIZE_L2_MULTIPLY: "Not relevant for Torch.",
     HWFusedPatternNames.SCALE_SHIFT: "Not relevant for Torch.",
-    HWFusedPatternNames.SE_BLOCK: "Not relevant for Torch.",
     HWFusedPatternNames.SOFTMAX_DIV: "Not relevant for Torch.",
     HWFusedPatternNames.HSWISH_ACTIVATION: "Not relevant for Torch.",
     HWFusedPatternNames.HSWISH_ACTIVATION_V2: "Not relevant for Torch.",
@@ -63,7 +62,10 @@ IGNORING_HW_PATTERN_REASONS = {
     HWFusedPatternNames.LINEAR_BIASED_ACTIVATION_ELEMENTWISE: "Not relevant for Torch.",
     HWFusedPatternNames.MVN_SCALE_SHIFT_ACTIVATIONS: "Not relevant for Torch.",
     HWFusedPatternNames.LINEAR_SQUEEZE_ACTIVATIONS: "Not relevant for Torch.",
+    HWFusedPatternNames.LINEAR_SQUEEZE_ARITHMETIC_ACTIVATIONS: "Not relevant for Torch.",
     HWFusedPatternNames.LINEAR_ACTIVATIONS_UNSQUEEZE_BN_SQUEEZE: "Not relevant for Torch.",
+    HWFusedPatternNames.MVN: "Not relevant for Torch.",
+    HWFusedPatternNames.GELU: "Not relevant for Torch.",
 }
 
 IGNORING_IGNORED_PATTERN_REASONS = {

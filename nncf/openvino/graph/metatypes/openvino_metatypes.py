@@ -25,8 +25,8 @@ OV_OPERATOR_METATYPES = OperatorMetatypeRegistry("openvino_operator_metatypes")
 
 
 class OVOpMetatype(OperatorMetatype):
-    op_names = []  # type: List[str]
-    subtypes = []  # type: List[Type[OperatorMetatype]]
+    op_names: List[str] = []
+    subtypes: List[Type[OperatorMetatype]] = []
 
     @classmethod
     def get_all_aliases(cls) -> List[str]:
@@ -143,6 +143,12 @@ class OVPReluMetatype(OVOpMetatype):
 class OVSigmoidMetatype(OVOpMetatype):
     name = "SigmoidOp"
     op_names = ["Sigmoid"]
+
+
+@OV_OPERATOR_METATYPES.register()
+class OVHSigmoidMetatype(OVOpMetatype):
+    name = "HSigmoidOp"
+    op_names = ["HSigmoid"]
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -673,26 +679,17 @@ class OVAbsMetatype(OVOpMetatype):
     op_names = ["Abs"]
 
 
-GENERAL_WEIGHT_LAYER_METATYPES = [
-    OVConvolutionMetatype,
-    OVGroupConvolutionMetatype,
-    OVDepthwiseConvolutionMetatype,
-    OVConvolutionBackpropDataMetatype,
-    OVGroupConvolutionBackpropDataMetatype,
-    OVMatMulMetatype,
-    OVLSTMSequenceMetatype,
-    OVGRUSequenceMetatype,
-    OVEmbeddingMetatype,
-]
+@OV_OPERATOR_METATYPES.register()
+class OVIfMetatype(OVOpMetatype):
+    name = "IfOp"
+    op_names = ["If"]
 
-METATYPES_WITH_CONST_PORT_ID = GENERAL_WEIGHT_LAYER_METATYPES + [OVAddMetatype]
 
-# Contains the operation metatypes for which bias can be applied.
-OPERATIONS_WITH_BIAS_METATYPES = [
-    OVConvolutionMetatype,
-    # TODO: add all metatypes with bias
-    OVMatMulMetatype,
-]
+@OV_OPERATOR_METATYPES.register()
+class OVGroupNormalizationMetatype(OVOpMetatype):
+    name = "GroupNormalizationOp"
+    op_names = ["GroupNormalization"]
+    hw_config_names = [HWConfigOpName.GROUPNORMALIZATION]
 
 
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:

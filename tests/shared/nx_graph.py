@@ -55,7 +55,6 @@ def sort_dot(path):
             self.edge_end_id = edge_end_id
 
         def __lt__(self, other: "LineOrder"):
-            # pylint:disable=too-many-return-statements
             if self.node_id is not None:
                 if other.node_id is None:
                     return True
@@ -98,7 +97,7 @@ def sort_dot(path):
 def _build_node_id_vs_attrs_dict(
     nx_graph: nx.DiGraph, id_from_attr: bool = False
 ) -> Dict[Union[int, str], Dict[str, str]]:
-    retval = {}  # type: Dict[Union[int, str], Dict[str, str]]
+    retval: Dict[Union[int, str], Dict[str, str]] = {}
     for node_name, node_attrs in nx_graph.nodes.items():
         # When read a dot graph dumped by pydot the extra '\n' symbol appears as a graph node.
         # https://github.com/networkx/networkx/issues/5686

@@ -14,7 +14,8 @@ import numpy as np
 import torch
 
 from nncf import nncf_logger
-from nncf.common.graph import Dtype
+from nncf.common.graph.layer_attributes import Dtype
+from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
 
 
 class TensorMeta:
@@ -59,7 +60,7 @@ class TracedTensor(torch.Tensor):
     def from_torch_tensor(tensor, tensor_meta: TensorMeta):
         tensor.tensor_meta = tensor_meta
         tensor.__class__ = TracedTensor
-        # pylint:disable=protected-access
+
         tensor._nncf_expired = False
         return tensor
 
@@ -84,14 +85,14 @@ class TracedTensor(torch.Tensor):
 
     # NOTE: This disables the __torch_function__ API altogether when using NNCF.
     # TODO: make NNCF utilize the __torch_function__ API instead.
-    # pylint:disable=protected-access
+
     if hasattr(torch._C, "_disabled_torch_function_impl"):
         __torch_function__ = torch._C._disabled_torch_function_impl
 
 
 def is_iterable(item):
     non_iterable_types = (str, bytes, bytearray, torch.Tensor, np.ndarray)
-    # pylint:disable=isinstance-second-argument-not-valid-type
+
     return isinstance(item, Iterable) and not isinstance(item, non_iterable_types)
 
 
@@ -119,7 +120,7 @@ TensorOrTupleOrList = TypeVar("TensorOrTupleOrList", List[torch.Tensor], Tuple[t
 
 
 def trace_tensors(
-    operator_output: TensorOrTupleOrList, node: "DynamicGraphNode", ctx: "TracingContext" = None
+    operator_output: TensorOrTupleOrList, node: "DynamicGraphNode", ctx: "TracingContext" = None  # noqa: F821
 ) -> TensorOrTupleOrList:
     """
     Dynamically turn torch.Tensor instances in `operator_output` into TracedTensor instances. `operator_output` is
@@ -154,7 +155,7 @@ def trace_tensors(
     return operator_output
 
 
-def make_tensor_metas(inputs: "OperatorInput") -> List[Optional[TensorMeta]]:
+def make_tensor_metas(inputs: OperatorInput) -> List[Optional[TensorMeta]]:
     """
     Produces TensorMeta data for each torch.Tensor or TracedTensor in `inputs`.
     :param inputs: An OperatorInput representation of input arguments to an operation in the traced model.

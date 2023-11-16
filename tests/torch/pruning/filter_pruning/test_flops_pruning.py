@@ -99,7 +99,7 @@ def test_init_params_for_flops_calculation(model, ref_params):
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     assert compression_ctrl.nodes_flops == ref_params["nodes_flops"]
-    # pylint: disable=protected-access
+
     inp_channels, out_channels = get_prunable_layers_in_out_channels(compression_ctrl._graph)
     assert inp_channels == ref_params["in_channels"]
     assert out_channels == ref_params["out_channels"]

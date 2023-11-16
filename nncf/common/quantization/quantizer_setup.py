@@ -235,9 +235,9 @@ class MultiConfigQuantizationPoint(QuantizationPointBase):
 
 class QuantizerSetupBase:
     def __init__(self):
-        self.quantization_points = {}  # type: Dict[QuantizationPointId, QuantizationPointBase]
-        self.unified_scale_groups = {}  # type: Dict[int, Set[QuantizationPointId]]
-        self.shared_input_operation_set_groups = {}  # type: Dict[int, Set[QuantizationPointId]]
+        self.quantization_points: Dict[QuantizationPointId, QuantizationPointBase] = {}
+        self.unified_scale_groups: Dict[int, Set[QuantizationPointId]] = {}
+        self.shared_input_operation_set_groups: Dict[int, Set[QuantizationPointId]] = {}
         self._next_unified_scale_gid = 0
         self._next_shared_inputs_gid = 0
 
@@ -331,11 +331,11 @@ class QuantizerSetupBase:
             self.unified_scale_groups.pop(gid)
 
     def equivalent_to(self, other: "QuantizerSetupBase") -> bool:
-        this_qp_id_to_other_qp_id_dict = {}  # type: Dict[QuantizationPointId, QuantizationPointId]
+        this_qp_id_to_other_qp_id_dict: Dict[QuantizationPointId, QuantizationPointId] = {}
 
         def _compare_qps(first: "QuantizerSetupBase", second: "QuantizerSetupBase") -> bool:
             for this_qp_id, this_qp in first.quantization_points.items():
-                matches = []  # type: List[QuantizationPointId]
+                matches: List[QuantizationPointId] = []
                 for other_qp_id, other_qp in second.quantization_points.items():
                     if this_qp == other_qp:
                         matches.append(other_qp_id)
@@ -395,7 +395,7 @@ class SingleConfigQuantizerSetup(QuantizerSetupBase):
 
     def __init__(self):
         super().__init__()
-        self.quantization_points = {}  # type: Dict[QuantizationPointId, SingleConfigQuantizationPoint]
+        self.quantization_points: Dict[QuantizationPointId, SingleConfigQuantizationPoint] = {}
 
     def get_state(self) -> Dict:
         """
@@ -445,8 +445,8 @@ class SingleConfigQuantizerSetup(QuantizerSetupBase):
 class MultiConfigQuantizerSetup(QuantizerSetupBase):
     def __init__(self):
         super().__init__()
-        self.quantization_points = {}  # type: Dict[QuantizationPointId, MultiConfigQuantizationPoint]
-        self._unified_scale_qpid_vs_type = {}  # type: Dict[QuantizationPointId, UnifiedScaleType]
+        self.quantization_points: Dict[QuantizationPointId, MultiConfigQuantizationPoint] = {}
+        self._unified_scale_qpid_vs_type: Dict[QuantizationPointId, UnifiedScaleType] = {}
 
     def register_unified_scale_group_with_types(
         self, qp_group: List[QuantizationPointId], us_types: List[UnifiedScaleType]
@@ -509,7 +509,7 @@ class MultiConfigQuantizerSetup(QuantizerSetupBase):
         return retval
 
     def select_first_qconfig_for_each_point(self) -> SingleConfigQuantizerSetup:
-        qp_id_vs_qconfig_dict = {}  # type: Dict[QuantizationPointId, QuantizerConfig]
+        qp_id_vs_qconfig_dict: Dict[QuantizationPointId, QuantizerConfig] = {}
         for qp_id, qp in self.quantization_points.items():
             qp_id_vs_qconfig_dict[qp_id] = qp.possible_qconfigs[0]
         return self.select_qconfigs(qp_id_vs_qconfig_dict)

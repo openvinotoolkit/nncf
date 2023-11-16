@@ -19,12 +19,10 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
-from nncf.common.utils.registry import Registry
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
-ALGO_BACKENDS = Registry("algo_backends")
 
 
 class SmoothQuantAlgoBackend(ABC):
@@ -54,7 +52,7 @@ class SmoothQuantAlgoBackend(ABC):
         Checks whether the node with weights or not.
 
         :param node: NNCFNode to check.
-        :return: boolean indicating whether the node has weights or not.
+        :return: Boolean indicating whether the node has weights or not.
         """
 
     @staticmethod
@@ -70,24 +68,24 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_channel_agnostic_reduction_shape(channel_axis: int, shape: Tuple[int]) -> Tuple[int]:
+    def get_channel_agnostic_reduction_axes(channel_axis: int, shape: Tuple[int]) -> Tuple[int]:
         """
-        Returns filtered reduction shape without axes that corresponds channels.
+        Returns filtered reduction axes without axes that corresponds channels.
 
         :param channel_axes: List of the channel axes.
         :param shape: Shape that need to be filtered.
-        :return: Reduction shape in tuple format.
+        :return: Reduction axes in tuple format.
         """
 
     @staticmethod
     @abstractmethod
     def get_abs_max_channel_collector(
-        num_samples: int, stats_reduction_shape: Tuple[int], inplace: bool, branch_key: str
+        num_samples: int, stats_reduction_axes: Tuple[int], inplace: bool, branch_key: str
     ) -> TensorCollector:
         """
         Returns TensorCollector with MaxAggregator and AbsMaxReducer.
 
-        :param stats_reduction_shape: Calculated reduction shape.
+        :param stats_reduction_axes: Calculated reduction axes.
         :param inplace: Whether to calculate statistic inplace or not.
         :param branch_key: Specific string for branch key.
         :return: TensorCollector instance.

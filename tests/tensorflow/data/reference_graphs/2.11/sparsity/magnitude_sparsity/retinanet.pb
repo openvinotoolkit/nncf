@@ -1,1 +1,1 @@
-../../../2.5/sparsity/magnitude_sparsity/retinanet.pb
+../../../2.8/sparsity/magnitude_sparsity/retinanet.pb

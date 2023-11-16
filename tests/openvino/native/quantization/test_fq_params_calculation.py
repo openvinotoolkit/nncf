@@ -22,6 +22,7 @@ from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.native.common import get_dataset_for_test
+from tests.openvino.native.common import get_openvino_version
 from tests.openvino.native.models import SYNTHETIC_MODELS
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import FPModel
@@ -33,7 +34,8 @@ from tests.openvino.omz_helpers import download_model
 from tests.shared.helpers import compare_stats
 from tests.shared.helpers import load_json
 
-REFERENCE_SCALES_DIR = OPENVINO_NATIVE_TEST_ROOT / "data" / "reference_scales"
+OV_VERSION = get_openvino_version()
+REFERENCE_SCALES_DIR = OPENVINO_NATIVE_TEST_ROOT / "data" / OV_VERSION / "reference_scales"
 
 
 def get_fq_nodes_stats_algo(model):
@@ -54,7 +56,6 @@ def get_fq_nodes_stats_algo(model):
     return nodes
 
 
-# pylint: disable=protected-access
 def quantize_model(ov_model, q_params):
     dataset = get_dataset_for_test(ov_model)
     graph = GraphConverter.create_nncf_graph(ov_model)
@@ -92,8 +93,7 @@ def test_synthetic_models_fq_scales(model_creator_func, preset, inplace_statisti
     # dump_to_json(ref_stats_path, nodes)
 
     ref_nodes = load_json(ref_stats_path)
-    params = ["input_low", "input_high", "output_low", "output_high"]
-    compare_stats(ref_nodes, nodes, params)
+    compare_stats(ref_nodes, nodes)
 
 
 @pytest.mark.parametrize(
@@ -114,8 +114,7 @@ def test_overflow_fix_scales(overflow_fix):
     # dump_to_json(ref_stats_path, nodes)
 
     ref_nodes = load_json(ref_stats_path)
-    params = ["input_low", "input_high", "output_low", "output_high"]
-    compare_stats(ref_nodes, nodes, params)
+    compare_stats(ref_nodes, nodes)
 
 
 OMZ_MODELS = [
@@ -131,8 +130,8 @@ OMZ_MODELS = [
     ids=[QuantizationPreset.PERFORMANCE.value, QuantizationPreset.MIXED.value],
 )
 @pytest.mark.parametrize("model_name", OMZ_MODELS)
-def test_omz_models_fq_scales(model_name, preset, inplace_statistics, tmp_path):
-    download_model(model_name, tmp_path)
+def test_omz_models_fq_scales(model_name, preset, inplace_statistics, tmp_path, omz_cache_dir):
+    download_model(model_name, tmp_path, omz_cache_dir)
     convert_model(model_name, tmp_path)
     model_path = tmp_path / "public" / model_name / "FP32" / f"{model_name}.xml"
     model = ov.Core().read_model(model_path)
@@ -147,8 +146,7 @@ def test_omz_models_fq_scales(model_name, preset, inplace_statistics, tmp_path):
     # dump_to_json(ref_stats_path, nodes)
 
     ref_nodes = load_json(ref_stats_path)
-    params = ["input_low", "input_high", "output_low", "output_high"]
-    compare_stats(ref_nodes, nodes, params)
+    compare_stats(ref_nodes, nodes)
 
 
 REF_NODES_SHAPES = {

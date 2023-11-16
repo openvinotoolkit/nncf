@@ -227,7 +227,7 @@ class ConcatPruningOp(BasePruningOp):
             input_mask[node.node_name] if isinstance(input_mask, dict) else input_mask for input_mask in input_masks
         ]
 
-        not_empty_masks = [mask for mask in input_masks if mask is not None]  # type: List[NNCFTensor]
+        not_empty_masks: List[NNCFTensor] = [mask for mask in input_masks if mask is not None]
         if not not_empty_masks:
             return None
 

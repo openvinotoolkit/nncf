@@ -37,12 +37,12 @@ class BasePrecisionInitParams:
 class BasePrecisionInitializer:
     def __init__(
         self,
-        algo: "ExperimentalQuantizationController",
+        algo: "ExperimentalQuantizationController",  # noqa: F821
         params: BasePrecisionInitParams,
         hw_precision_constraints: HardwareQuantizationConstraints = None,
     ):
         self._algo = algo
-        self._model = self._algo._model  # type: NNCFNetwork
+        self._model: NNCFNetwork = self._algo._model
         all_quantizers = algo.all_quantizations
         self._hw_precision_constraints = hw_precision_constraints
         self.original_precisions = {q_id: quantizer.num_bits for q_id, quantizer in all_quantizers.items()}
@@ -100,11 +100,11 @@ class WeightQuantizersHandler:
         constraints: HardwareQuantizationConstraints,
     ):
         self._wq_affected_module_node_name_vs_qid_dict = {k.target_node_name: k for k in weight_quantizers.keys()}
-        self._quantizer_module_scope_vs_qid_dict = {}  # type: Dict[Scope, WeightQuantizerId]
+        self._quantizer_module_scope_vs_qid_dict: Dict[Scope, WeightQuantizerId] = {}
         self._skipped_quantized_weight_node_names = []
-        self._skipped_weight_quantizers = {}  # type: Dict[WeightQuantizerId, BaseQuantizer]
-        self._weight_quantizers_in_execution_order_per_scope = OrderedDict()  # type: Dict[Scope, BaseQuantizer]
-        self._weight_quantizers_in_execution_order = OrderedDict()  # type: Dict[WeightQuantizerId, BaseQuantizer]
+        self._skipped_weight_quantizers: Dict[WeightQuantizerId, BaseQuantizer] = {}
+        self._weight_quantizers_in_execution_order_per_scope: Dict[Scope, BaseQuantizer] = OrderedDict()
+        self._weight_quantizers_in_execution_order: Dict[WeightQuantizerId, BaseQuantizer] = OrderedDict()
 
         quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
         weight_module_dict = model

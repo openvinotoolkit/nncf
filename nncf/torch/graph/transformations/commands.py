@@ -141,8 +141,8 @@ class PTInsertionCommand(PTTransformationCommand):
         priority: TransformationPriority = TransformationPriority.DEFAULT_PRIORITY,
     ):
         super().__init__(TransformationType.INSERT, point)
-        self.fn = fn  # type: Callable
-        self.priority = priority  # type: TransformationPriority
+        self.fn: Callable = fn
+        self.priority: TransformationPriority = priority
 
     def union(self, other: "PTTransformationCommand") -> "PTTransformationCommand":
         # TODO: keep all TransformationCommands atomic, refactor TransformationLayout instead
@@ -156,6 +156,26 @@ class PTInsertionCommand(PTTransformationCommand):
         """
         # Rebuild graph when adding quantization nodes.
         return self.priority == TransformationPriority.QUANTIZATION_PRIORITY
+
+
+class PTQuantizerInsertionCommand(PTTransformationCommand):
+    """
+    Insertion quantizer operation to the models.
+    """
+
+    def __init__(
+        self,
+        point: PTTargetPoint,
+        quantizer: "BaseQuantizer",  # noqa: F821
+    ):
+        super().__init__(TransformationType.INSERT, point)
+        self.quantizer = quantizer
+
+    def union(self, other: "PTTransformationCommand") -> "PTTransformationCommand":
+        raise NotImplementedError()
+
+    def requires_graph_rebuild(self):
+        return True
 
 
 class PTModelExtractionWithFusedBiasCommand(PTCommand):

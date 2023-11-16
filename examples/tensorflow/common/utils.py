@@ -150,7 +150,7 @@ class SummaryWriter:
             log_dir: the model folder path
             name: the summary subfolder name
         """
-        self.writer = tf.summary.create_file_writer(os.path.join(log_dir, name))  # pylint: disable=E1101
+        self.writer = tf.summary.create_file_writer(os.path.join(log_dir, name))
 
     def __call__(self, metrics, step):
         """Write metrics to summary with the given writer
@@ -160,7 +160,7 @@ class SummaryWriter:
             step: integer. The training step
         """
 
-        with self.writer.as_default():  # pylint: disable=E1129
+        with self.writer.as_default():
             for metric_name, value in metrics.items():
                 tf.summary.scalar(metric_name, value, step=step)
         self.writer.flush()

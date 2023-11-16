@@ -19,7 +19,7 @@ TF_OPERATION_METATYPES = OperatorMetatypeRegistry("tf_operation_metatypes")
 
 
 class TFOpMetatype(OperatorMetatype):
-    op_names = []  # type: List[str]
+    op_names: List[str] = []
 
     @classmethod
     def get_all_aliases(cls) -> List[str]:
@@ -46,7 +46,7 @@ class OpWeightDef:
 
 
 class TFOpWithWeightsMetatype(TFOpMetatype):
-    weight_definitions = []  # type: List[OpWeightDef]
+    weight_definitions: List[OpWeightDef] = []
 
 
 @TF_OPERATION_METATYPES.register()

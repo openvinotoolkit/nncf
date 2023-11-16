@@ -33,10 +33,10 @@ def is_named_tuple(obj) -> bool:
 
 def maybe_get_iterator(obj):
     it = None
-    # pylint:disable=isinstance-second-argument-not-valid-type
+
     if isinstance(obj, Mapping):
         it = iteritems
-        # pylint:disable=isinstance-second-argument-not-valid-type
+
     elif isinstance(obj, (Sequence, Set)) and not isinstance(obj, string_types):
         it = enumerate
     return it
@@ -65,7 +65,7 @@ class TupleRebuildingSetter:
 
 class NestedObjectIndex:
     def __init__(self, obj, path=(), memo=None, previous_level_setter=None):
-        self._flat_nested_obj_indexing = []  # type: List[InputIndexEntry]
+        self._flat_nested_obj_indexing: List[InputIndexEntry] = []
         self._nested_object_paths_generator(obj, self._flat_nested_obj_indexing, path, memo, previous_level_setter)
 
     @staticmethod
@@ -120,8 +120,7 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
     Walks through the indexable container hierarchy of obj and replaces all sub-objects matching a criterion
     with the result of a given function application.
     """
-    # pylint:disable=too-many-nested-blocks
-    # pylint:disable=too-many-branches
+
     if memo is None:
         memo = set()
 
@@ -129,7 +128,7 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
     named_tuple_fields = None
     if is_named_tuple(obj):
         named_tuple_class = obj.__class__
-        # pylint:disable=protected-access
+
         named_tuple_fields = obj._fields
 
     was_tuple = is_tuple(obj)
@@ -142,7 +141,7 @@ def objwalk(obj, unary_predicate: Callable[[Any], bool], apply_fn: Callable, mem
         if id(obj) not in memo:
             memo.add(id(obj))
             indices_to_apply_fn_to = set()
-            indices_vs_named_tuple_data = {}  # type: Dict[Any, Tuple[list, Type, List[str]]]
+            indices_vs_named_tuple_data: Dict[Any, Tuple[list, Type, List[str]]] = {}
             for idx, value in iterator(obj):
                 next_level_it = maybe_get_iterator(value)
                 if next_level_it is None:

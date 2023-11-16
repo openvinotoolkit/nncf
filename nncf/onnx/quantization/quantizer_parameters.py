@@ -54,8 +54,8 @@ def convert_fq_params_to_onnx_params(
     if levels not in [255, 256]:
         raise ValueError("Can only export to INT8/UIN8 256-level ONNX Quantize/Dequantize pairs.")
 
-    input_low, input_high = parameters.input_low, parameters.input_high
-    output_low, output_high = parameters.output_low, parameters.output_high
+    input_low, input_high = parameters.input_low.data, parameters.input_high.data
+    output_low, output_high = parameters.output_low.data, parameters.output_high.data
     if not np.allclose(input_high, output_high) or not np.allclose(input_low, output_low):
         raise ValueError(
             "ONNX Quantize/Dequantize pairs only support input_high == output_high and input_low == output_low."

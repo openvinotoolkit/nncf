@@ -21,16 +21,12 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor_statistics.collectors import ReductionShape
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
-from nncf.common.utils.registry import Registry
 
 TModel = TypeVar("TModel")
 OutputType = TypeVar("OutputType")
-ALGO_BACKENDS = Registry("algo_backends")
 
 
-# pylint:disable=too-many-public-methods
 class BiasCorrectionAlgoBackend(ABC):
     @property
     @abstractmethod
@@ -87,7 +83,7 @@ class BiasCorrectionAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def mean_statistic_collector(
-        reduction_shape: ReductionShape,
+        channel_axis: int,
         inplace: bool,
         num_samples: Optional[int] = None,
         window_size: Optional[int] = None,
@@ -95,7 +91,7 @@ class BiasCorrectionAlgoBackend(ABC):
         """
         Returns backend-specific mean statistic collector.
 
-        :param reduction_shape: Channel axis for the statistics aggregation.
+        :param channel_axis: Channel axis for the statistics aggregation.
         :param inplace: Whether to calculate statistic inplace or not.
         :param num_samples: Maximum number of samples to collect.
         :param window_size: The maximum size of the samples queue.
@@ -181,7 +177,7 @@ class BiasCorrectionAlgoBackend(ABC):
 
         :param node: NNCFNode to check.
         :param nncf_graph: NNCFGraph instance with the node.
-        :return: boolean indicating whether the node has a quantized weights or not.
+        :return: Boolean indicating whether the node has a quantized weights or not.
         """
 
     @staticmethod
@@ -205,15 +201,4 @@ class BiasCorrectionAlgoBackend(ABC):
         :param model: TModel instance.
         :param nncf_graph: NNCFGraph instance.
         :return: TModel without activation Fake Quantize nodes (or Quantize-Dequantize pairs).
-        """
-
-    @staticmethod
-    @abstractmethod
-    def insert_null_biases(model: TModel, nncf_graph: NNCFGraph) -> TModel:
-        """
-        This method finds and inserts zero biases for the layers that should have it.
-
-        :param model: TModel instance.
-        :param nncf_graph: NNCFGraph instance.
-        :return: TModel instance with zero biases
         """

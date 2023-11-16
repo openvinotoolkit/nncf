@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from copy import deepcopy
+from typing import List
 
 import pytest
 import torch
@@ -17,6 +18,7 @@ from pytest import approx
 
 from nncf.api.compression import CompressionStage
 from nncf.torch.module_operations import UpdateWeight
+from nncf.torch.sparsity.base_algo import SparseModuleInfo
 from nncf.torch.sparsity.layers import BinaryMask
 from nncf.torch.sparsity.magnitude.algo import MagnitudeSparsityController
 from nncf.torch.sparsity.magnitude.functions import normed_magnitude
@@ -49,7 +51,7 @@ def test_can_create_magnitude_sparse_algo__with_defaults():
     nncf_stats = compression_ctrl.statistics()
     for layer_info in nncf_stats.magnitude_sparsity.thresholds:
         assert layer_info.threshold == approx(0.24, 0.1)
-    # pylint: disable=protected-access
+
     assert isinstance(compression_ctrl._weight_importance_fn, type(normed_magnitude))
 
     for sparse_module in sparse_model_conv.values():
@@ -138,8 +140,8 @@ def test_magnitude_algo_binary_masks_are_applied():
     config = get_empty_config()
     config["compression"] = {"algorithm": "magnitude_sparsity"}
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    minfo_list = compression_ctrl.sparsified_module_info  # type: List[SparseModuleInfo]
-    minfo = minfo_list[0]  # type: SparseModuleInfo
+    minfo_list: List[SparseModuleInfo] = compression_ctrl.sparsified_module_info
+    minfo: SparseModuleInfo = minfo_list[0]
 
     minfo.operand.binary_mask = torch.ones_like(minfo.module.weight)  # 1x1x2x2
     input_ = torch.ones(size=(1, 1, 5, 5))

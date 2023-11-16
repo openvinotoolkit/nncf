@@ -1,0 +1,40 @@
+name: Upload coverage from an artifact of a merged PR
+
+on:
+  workflow_call:
+    inputs:
+      merge_commit_sha:
+        required: true
+        type: string
+      last_sha_in_pr:
+        required: true
+        type: string
+      coverage_artifact_name_in_pr:
+        required: true
+        type: string
+    secrets:
+      CODECOV_TOKEN:
+        required: true
+
+jobs:
+  upload-coverage:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3  # codecov uploader demands that the scanned files be present when uploading
+        with:
+          ref: ${{ inputs.merge_commit_sha }}
+      - uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: precommit.yml
+          check_artifacts: true
+          commit: ${{ inputs.last_sha_in_pr }}  # this is the latest commit in the PR
+          name: ${{ inputs.coverage_artifact_name_in_pr }}
+      - name: Upload coverage report to Codecov
+        run: |
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          chmod +x codecov
+
+          # github.event.pull_request.merge_commit_sha is the fresh commit in the develop,
+          # provided that github.event.pull_request.merged == true
+          ./codecov -f ./coverage.xml -t ${{ secrets.CODECOV_TOKEN }}  -C ${{ inputs.merge_commit_sha }} -B develop -n "${{ inputs.coverage_artifact_name_in_pr }}"

@@ -17,7 +17,7 @@ from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.torch import register_default_init_args
 from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
 from nncf.torch.initialization import wrap_dataloader_for_init
-from nncf.torch.quantization.algo import QuantizationControllerBase
+from nncf.torch.quantization.base_ctrl import QuantizationControllerBase
 from nncf.torch.quantization.schedulers import StagedQuantizationScheduler
 from tests.torch.helpers import OnesDatasetMock
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
@@ -46,7 +46,6 @@ class QuantizationControllerBaseForTest(QuantizationControllerBase):
 
 
 class QuantizationCtrlBaseSpy:
-    # pylint:disable=no-member
     def __init__(self, mocker):
         self._mocked_ctrl = QuantizationControllerBaseForTest(mocker.stub)
         mocker.patch.object(self._mocked_ctrl, "enable_weight_quantization")

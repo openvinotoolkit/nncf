@@ -281,6 +281,13 @@ A collection of ready-to-run Jupyter* notebooks are available to demonstrate how
 - [NNCF Post-Training Optimization of CLIP Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/228-clip-zero-shot-image-classification)
 - [NNCF Post-Training Optimization of ImageBind Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/239-image-bind)
 - [NNCF Post-Training Optimization of Whisper Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/227-whisper-subtitles-generation)
+- [NNCF Post-Training Optimization of BLIP Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/233-blip-visual-language-processing)
+- [NNCF Post-Training Optimization of DeepFloyd IF Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/238-deepfloyd-if)
+- [NNCF Post-Training Optimization of Grammatical Error Correction Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/214-grammar-correction)
+- [NNCF Post-Training Optimization of Dolly 2.0 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/240-dolly-2-instruction-following)
+- [NNCF Post-Training Optimization of Massively Multilingual Speech Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/255-mms-massively-multilingual-speech)
+- [NNCF Post-Training Optimization of OneFormer Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/249-oneformer-segmentation)
+- [NNCF Post-Training Optimization of InstructPix2Pix Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/231-instruct-pix2pix-image-editing)
 - [Quantize a Segmentation Model and Show Live Inference](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/110-ct-segmentation-quantize)
 - [Training to Deployment with TensorFlow and OpenVINO](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/301-tensorflow-training-openvino)
 - [Migrate quantization from POT API to NNCF API](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/111-yolov5-quantization-migration)
@@ -288,6 +295,7 @@ A collection of ready-to-run Jupyter* notebooks are available to demonstrate how
 - [Optimizing PyTorch models with NNCF of OpenVINO by 8-bit quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/302-pytorch-quantization-aware-training)
 - [Optimizing TensorFlow models with NNCF of OpenVINO by 8-bit quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/305-tensorflow-quantization-aware-training)
 - [Accelerate Inference of Sparse Transformer Models with OpenVINO and 4th Gen Intel Xeon Scalable Processors](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/116-sparsity-optimization)
+- [Quantization with accuracy control using NNCF](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/122-quantizing-model-with-accuracy-control)
 
 ### Post-Training Quantization Samples
 
@@ -366,12 +374,12 @@ You may also use one of the Dockerfiles in the [docker](./docker) directory to b
 - Ubuntu\* 18.04 or later (64-bit)
 - Python\* 3.7 or later
 - Supported frameworks:
-  - PyTorch\* >=1.13.0, <2.1
-  - TensorFlow\* >=2.4.0, <=2.12.0
+  - PyTorch\* >=2.0, <2.2
+  - TensorFlow\* >=2.8.4, <=2.12.1
   - ONNX\* ~=1.13.1
   - OpenVINO\* >=2022.3.0
 
-This repository is tested on Python* 3.8.10, PyTorch* 2.0.1 (NVidia CUDA\* Toolkit 11.7) and TensorFlow* 2.12.0 (NVidia CUDA\* Toolkit 11.8).
+This repository is tested on Python* 3.8.10, PyTorch* 2.1.0 (NVidia CUDA\* Toolkit 11.8) and TensorFlow* 2.12.1 (NVidia CUDA\* Toolkit 11.8).
 
 ## NNCF Compressed Model Zoo
 
@@ -402,3 +410,12 @@ Refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file for guidelines on contrib
 - [Notebooks](https://github.com/openvinotoolkit/openvino_notebooks#-model-training)
 - [HuggingFace Optimum Intel](https://huggingface.co/docs/optimum/intel/optimization_ov)
 - [OpenVINO Model Optimization Guide](https://docs.openvino.ai/latest/openvino_docs_model_optimization_guide.html)
+
+## Telemetry
+
+NNCF as part of the OpenVINO™ toolkit collects anonymous usage data for the purpose of improving OpenVINO™ tools.
+You can opt-out at any time by running the following command in the Python environment where you have NNCF installed:
+
+`opt_in_out --opt_out`
+
+More information is available at https://docs.openvino.ai/latest/openvino_docs_telemetry_information.html.

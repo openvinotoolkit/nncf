@@ -24,11 +24,13 @@ from nncf.common.utils.patcher import PATCHER
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph import DynamicGraphNode
 from nncf.torch.dynamic_graph.graph import DynamicGraphNodeParameters
+from nncf.torch.dynamic_graph.graph import TensorMetaComparator
 from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
+from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 
 
 class ThreadLocalGlobalContext(threading.local):
@@ -84,14 +86,13 @@ class CopySafeThreadingVars:
         return CopySafeThreadingVars()
 
 
-# pylint: disable=too-many-public-methods
 class TracingContext:
     def __init__(self):
         self.graph = DynamicGraph()
 
         self._save_context = None
         self._post_hooks = {}
-        self._pre_hooks = {}  # type: Dict[PreHookId, List[Callable]]
+        self._pre_hooks: Dict[PreHookId, List[Callable]] = {}
         self._num_nested_hooks = 0
 
         self._threading = CopySafeThreadingVars()
@@ -157,7 +158,7 @@ class TracingContext:
     def register_global_buffer(self, name: str, buffer):
         self.global_buffer_store[name] = buffer
 
-    def register_traced_tensor(self, tt: "TracedTensor"):
+    def register_traced_tensor(self, tt: TracedTensor):
         """
         Registers a weak reference to a traced tensor in the context so that in case
         the block under context retains a reference to an intermediate tensor somewhere,
@@ -318,7 +319,7 @@ class TracingContext:
     def disable_node_additions(self):
         self._may_add_nodes = False
 
-    def add_node_comparators(self, scopes_to_apply: List[str], node_input_comparator: "TensorMetaComparator" = None):
+    def add_node_comparators(self, scopes_to_apply: List[str], node_input_comparator: TensorMetaComparator = None):
         self._input_comparators_per_scope.append((node_input_comparator, scopes_to_apply))
 
     @property
@@ -421,7 +422,7 @@ class TracingContext:
                 self.start_node_name_of_skipped_block.append(self.skipped_blocks[block_index].start_node_name)
                 self.end_node_name_of_skipped_block.append(self.skipped_blocks[block_index].end_node_name)
 
-    def set_elastic_blocks(self, blocks: List["BuildingBlock"] = None):
+    def set_elastic_blocks(self, blocks: List["BuildingBlock"] = None):  # noqa: F821
         if blocks is not None:
             if isinstance(blocks, list):
                 if len(blocks) == 0:
@@ -471,7 +472,7 @@ def disable_tracing(method):
     :param method: A method to patch.
     """
 
-    def no_nncf_trace_wrapper(self, fn, *args, **kwargs):  # pylint: disable=unused-argument
+    def no_nncf_trace_wrapper(self, fn, *args, **kwargs):
         with no_nncf_trace():
             return fn(*args, **kwargs)
 

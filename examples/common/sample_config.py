@@ -48,13 +48,11 @@ class ActionWrapper(argparse.Action):
         return self._action(parser, namespace, values, option_string)
 
 
-# pylint:disable=protected-access
 class CustomArgumentGroup(argparse._ArgumentGroup):
     def _add_action(self, action):
         super()._add_action(ActionWrapper(action))
 
 
-# pylint:disable=protected-access
 class CustomActionContainer(argparse._ActionsContainer):
     def add_argument_group(self, *args, **kwargs):
         group = CustomArgumentGroup(self, *args, **kwargs)
