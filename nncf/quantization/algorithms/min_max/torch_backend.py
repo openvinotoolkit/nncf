@@ -32,6 +32,7 @@ from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.torch.graph.graph import PTTargetPoint
+from nncf.torch.graph.graph import get_inputs_for_graph_with_several_connected_components
 from nncf.torch.graph.transformations.commands import PTQuantizerInsertionCommand
 from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.nncf_network import NNCFNetwork
@@ -76,6 +77,9 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def constant_metatypes(self) -> List[OperatorMetatype]:
         return []
+
+    def get_input_nodes(self, nncf_graph: NNCFGraph) -> List[OperatorMetatype]:
+        return get_inputs_for_graph_with_several_connected_components(nncf_graph)
 
     @property
     def conv_metatypes(self) -> List[OperatorMetatype]:

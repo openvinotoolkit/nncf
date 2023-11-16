@@ -48,6 +48,7 @@ class PTOperatorMetatype(OperatorMetatype):
     """
 
     external_op_names: List[str] = []
+    input_edges_num_expected = None
 
     module_to_function_names: Dict[NamespaceTarget, List[str]] = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: [],

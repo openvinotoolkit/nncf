@@ -69,17 +69,14 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def read_variable_metatypes(self) -> List[OperatorMetatype]:
-        """
-        Property for the backend-specific metatypes that also can be interpreted as inputs (ReadValue).
-        """
-
-    @property
-    @abstractmethod
     def constant_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific metatypes that can be interpreted as constants.
         """
+
+    @abstractmethod
+    def get_input_nodes(self, nncf_graph: NNCFGraph) -> List[OperatorMetatype]:
+        pass
 
     @property
     @abstractmethod

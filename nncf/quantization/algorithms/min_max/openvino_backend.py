@@ -26,6 +26,7 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
+from nncf.openvino.graph.model_utils import get_input_nodes
 from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
@@ -89,6 +90,9 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def constant_metatypes(self) -> List[OperatorMetatype]:
         return [om.OVConstantMetatype]
+
+    def get_input_nodes(self, nncf_graph: NNCFGraph) -> List[OperatorMetatype]:
+        return get_input_nodes(nncf_graph)
 
     @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:

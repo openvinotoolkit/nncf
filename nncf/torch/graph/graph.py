@@ -14,6 +14,7 @@ from typing import Dict, List, Tuple
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 
@@ -68,3 +69,21 @@ class PTNNCFGraph(NNCFGraph):
         if not matches:
             raise RuntimeError("Node name {} not found in the node-vs-scope dict!".format(node_name))
         return matches[0]
+
+
+def get_inputs_for_graph_with_several_connected_components(nncf_graph: PTNNCFGraph):
+    input_nodes = set()
+    for node in nncf_graph.get_all_nodes():
+        input_edges_num_expected = None
+        if hasattr(node.metatype, "input_edges_num_expected"):
+            input_edges_num_expected = node.metatype.input_edges_num_expected
+        if node.layer_attributes is not None and isinstance(
+            node.layer_attributes.get_backend_agnostic_attributes(), MultipleInputLayerAttributes
+        ):
+            input_edges_num_expected = node.layer_attributes.get_backend_agnostic_attributes().num_inputs
+        if input_edges_num_expected:
+            input_edges = nncf_graph.get_input_edges(node)
+            if len(input_edges) < input_edges_num_expected:
+                input_nodes.add(node)
+    input_nodes.update(nncf_graph.get_input_nodes())
+    return list(input_nodes)

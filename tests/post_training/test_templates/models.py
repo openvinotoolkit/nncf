@@ -317,7 +317,7 @@ class NNCFGraphToTestConstantFiltering:
             NodeWithType("Weights", constant_metatype),
             NodeWithType("Weights2", constant_metatype),
             NodeWithType("Conv2", node_with_weights_metatype),
-            NodeWithType("ReadVariable", None),
+            NodeWithType("ReadVariable", InputNoopMetatype),
             NodeWithType("Add", None),
             NodeWithType("Weights3", constant_metatype),
             NodeWithType("Weights4", constant_metatype),

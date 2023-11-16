@@ -64,6 +64,9 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     def add_metatypes(self) -> List[OperatorMetatype]:
         return [om.ONNXAddLayerMetatype]
 
+    def get_input_nodes(self, nncf_graph: NNCFGraph) -> List[OperatorMetatype]:
+        return nncf_graph.get_input_nodes()
+
     @property
     def group_conv_metatypes(self) -> List[OperatorMetatype]:
         return self.conv_metatypes

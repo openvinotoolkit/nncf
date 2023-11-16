@@ -69,6 +69,7 @@ def test_filter_constant_nodes(node_between_const_and_op):
     )
 
     class ConstantMetatype(OperatorMetatype):
+        input_edges_num_expected = 1
         pass
 
     class NodeWithWeightMetatype(OperatorMetatype):
@@ -80,6 +81,9 @@ def test_filter_constant_nodes(node_between_const_and_op):
         MultipleInputLayerAttributes(1, 3),
         node_between_const_and_op,
     ).nncf_graph
+
+    additional_input_names = ["/Conv2_0", "/Concat_with_missed_input_0"]
+    input_nodes = nncf_graph.get_input_nodes() + [nncf_graph.get_node_by_name(name) for name in additional_input_names]
     _check_graphs(dot_reference_path_before, nncf_graph)
-    filter_constant_nodes(nncf_graph, constant_metatypes=[ConstantMetatype])
+    filter_constant_nodes(nncf_graph, input_nodes)
     _check_graphs(dot_reference_path_after, nncf_graph)

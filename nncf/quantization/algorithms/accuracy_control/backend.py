@@ -53,6 +53,11 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
+    def get_graph_inputs(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+        pass
+
+    @staticmethod
+    @abstractmethod
     def get_quantize_agnostic_metatypes() -> List[OperatorMetatype]:
         """
         Returns a list of quantize agnostic metatypes.

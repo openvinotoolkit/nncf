@@ -537,10 +537,9 @@ class MinMaxQuantization(Algorithm):
 
         inference_nncf_graph = transform_to_inference_graph(
             deepcopy(nncf_graph),
+            self._backend_entity.get_input_nodes(nncf_graph),
             self._backend_entity.shapeof_metatypes,
             self._backend_entity.dropout_metatypes,
-            self._backend_entity.constant_metatypes,
-            self._backend_entity.read_variable_metatypes,
         )
 
         quantizer_setup = self._get_quantizer_setup(nncf_graph, inference_nncf_graph, hw_patterns, ignored_patterns)
