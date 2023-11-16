@@ -80,10 +80,7 @@ OV_CONV_METATYPES = [
 ]
 
 
-OVConvLayout = List[OVLayoutElem]
-
-
-def get_conv_weights_layout_from_node(node: NNCFNode) -> OVConvLayout:
+def get_conv_weights_layout_from_node(node: NNCFNode) -> List[OVLayoutElem]:
     """
     Calculates weights layout for a target convolution node.
 
@@ -97,7 +94,7 @@ def get_conv_weights_layout_from_node(node: NNCFNode) -> OVConvLayout:
     )
 
 
-def get_linear_weights_layout_from_node(node: NNCFNode) -> OVConvLayout:
+def get_linear_weights_layout_from_node(node: NNCFNode) -> List[OVLayoutElem]:
     """
     Calculates weights layout for a target linear node.
 
@@ -126,7 +123,7 @@ def _get_constant_port_id_from_layer_attributes(layer_attributes: OVLayerAttribu
     return port_ids[0]
 
 
-def get_conv_weights_layout(ov_metatype: OVOpMetatype, weights_shape: Tuple[int, ...]) -> OVConvLayout:
+def get_conv_weights_layout(ov_metatype: OVOpMetatype, weights_shape: Tuple[int, ...]) -> List[OVLayoutElem]:
     """
     Calculates weights layout for a target convolution node.
 
@@ -140,7 +137,7 @@ def get_conv_weights_layout(ov_metatype: OVOpMetatype, weights_shape: Tuple[int,
     return tuple(weights_layout)
 
 
-def get_linear_weights_layout(weights_shape: Tuple[int, ...], transpose: bool, port_id: int) -> OVConvLayout:
+def get_linear_weights_layout(weights_shape: Tuple[int, ...], transpose: bool, port_id: int) -> List[OVLayoutElem]:
     """
     Calculates weights layout for a target linear node.
 
