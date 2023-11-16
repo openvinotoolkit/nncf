@@ -50,7 +50,7 @@ test-examples-onnx:
 install-openvino-test:
 	pip install -U pip
 	pip install -e .[openvino]
-	pip install -r examples/post_training_quantization/tensorflow/mobilenet_v2/requirements.txt
+	pip install tensorflow==2.12.0
 	pip install -r tests/openvino/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/cross_fw/examples/requirements.txt
