@@ -39,15 +39,16 @@ DEFAULT_VAL_THREADS = 4
 class BackendType(Enum):
     FP32 = "FP32"
     TORCH = "TORCH"
+    CUDA_TORCH = "CUDA_TORCH"
     ONNX = "ONNX"
     OV = "OV"
     POT = "POT"
     OPTIMUM = "OPTIMUM"
 
 
-NNCF_PTQ_BACKENDS = [BackendType.TORCH, BackendType.ONNX, BackendType.OV]
+NNCF_PTQ_BACKENDS = [BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.ONNX, BackendType.OV]
 ALL_PTQ_BACKENDS = NNCF_PTQ_BACKENDS + [BackendType.POT]
-PT_BACKENDS = [BackendType.TORCH]
+PT_BACKENDS = [BackendType.TORCH, BackendType.CUDA_TORCH]
 OV_BACKENDS = [BackendType.OV, BackendType.POT, BackendType.OPTIMUM]
 
 LIMIT_LENGTH_OF_STATUS = 120

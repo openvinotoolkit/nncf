@@ -21,6 +21,7 @@ def pytest_addoption(parser):
     parser.addoption("--no-eval", action="store_true", help="Skip validation step")
     parser.addoption("--subset-size", type=int, default=None, help="Set subset size")
     parser.addoption("--fp32", action="store_true", help="Test original model")
+    parser.addoption("--cuda", action="store_true", help="Enable CUDA_TORCH backend")
     parser.addoption("--benchmark", action="store_true", help="Run benchmark_app")
     parser.addoption(
         "--extra-columns",

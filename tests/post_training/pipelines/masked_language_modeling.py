@@ -65,9 +65,10 @@ class MaskedLanguageModelingHF(BaseTestPipeline):
 
     def get_transform_calibration_fn(self):
         if self.backend in PT_BACKENDS:
+            device = torch.device("cuda" if self.backend == BackendType.CUDA_TORCH else "cpu")
 
             def transform_func(data):
-                return torch.Tensor([data["input_ids"]]).type(dtype=torch.LongTensor)
+                return torch.Tensor([data["input_ids"]]).type(dtype=torch.LongTensor, device=device)
 
         else:
 

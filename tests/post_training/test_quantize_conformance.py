@@ -53,6 +53,11 @@ def fixture_run_fp32_backend(pytestconfig):
     return pytestconfig.getoption("fp32")
 
 
+@pytest.fixture(scope="session", name="run_torch_cuda_backend")
+def fixture_run_torch_cuda_backend(pytestconfig):
+    return pytestconfig.getoption("cuda")
+
+
 @pytest.fixture(scope="session", name="run_benchmark_app")
 def fixture_run_benchmark_app(pytestconfig):
     return pytestconfig.getoption("benchmark")
@@ -61,11 +66,6 @@ def fixture_run_benchmark_app(pytestconfig):
 @pytest.fixture(scope="session", name="extra_columns")
 def fixture_extra_columns(pytestconfig):
     return pytestconfig.getoption("extra_columns")
-
-
-@pytest.fixture(scope="session", name="enable_output")
-def fixture_enable_output(pytestconfig):
-    return pytestconfig.getoption("capture") == "no"
 
 
 @pytest.fixture(scope="session", name="reference_data")
@@ -104,13 +104,14 @@ def test_ptq_quantization(
     result_data: Dict[str, RunInfo],
     no_eval: bool,
     run_fp32_backend: bool,
+    run_torch_cuda_backend: bool,
     subset_size: Optional[int],
     run_benchmark_app: bool,
     capsys: pytest.CaptureFixture,
     extra_columns: bool,
-    enable_output: bool,
 ):
     pipeline = None
+    captured = None
     err_msg = None
     test_model_param = None
     start_time = time.perf_counter()
@@ -123,6 +124,9 @@ def test_ptq_quantization(
 
         if test_model_param["backend"] == BackendType.FP32 and not run_fp32_backend:
             pytest.skip("To run test for not quantized model use --fp32 argument")
+
+        if test_model_param["backend"] == BackendType.CUDA_TORCH and not run_torch_cuda_backend:
+            pytest.skip("To run test for CUDA_TORCH backend use --cuda argument")
 
         pipeline_cls = test_model_param["pipeline_cls"]
 
@@ -189,12 +193,6 @@ def test_ptq_quantization(
                 backend=BackendType[splitted[1]],
                 status=err_msg,
             )
-
-    # To print output with -s option
-    if enable_output:
-        with capsys.disabled():
-            print(captured.out)
-            print(captured.err)
 
     run_info.time_total = time.perf_counter() - start_time
     result_data[test_case_name] = run_info.get_result_dict()

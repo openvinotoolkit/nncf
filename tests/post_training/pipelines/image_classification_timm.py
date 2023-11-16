@@ -51,6 +51,9 @@ class ImageClassificationTimm(BaseTestPipeline):
 
         if self.backend in PT_BACKENDS:
             self.model = timm_model
+            if self.backend == BackendType.CUDA_TORCH:
+                self.model.cuda()
+                self.dummy_tensor = self.dummy_tensor.cuda()
 
         if self.backend == BackendType.ONNX:
             onnx_path = self.output_model_dir / "model_fp32.onnx"
@@ -107,10 +110,11 @@ class ImageClassificationTimm(BaseTestPipeline):
 
     def get_transform_calibration_fn(self):
         if self.backend in PT_BACKENDS:
+            device = torch.device("cuda" if self.backend == BackendType.CUDA_TORCH else "cpu")
 
             def transform_fn(data_item):
                 images, _ = data_item
-                return images
+                return images.to(device)
 
         else:
 
