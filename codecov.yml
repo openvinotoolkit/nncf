@@ -68,19 +68,23 @@ component_management:
       name: torch
       paths:
         - nncf/torch
+        - nncf/**/torch_*.py
     - component_id: tensorflow
       name: tensorflow
       paths:
         - nncf/tensorflow
+        - nncf/**/tensorflow_*.py
     - component_id: onnx
       name: onnx
       paths:
         - nncf/onnx
+        - nncf/**/onnx_*.py
     - component_id: openvino
       name: openvino
       paths:
         - nncf/openvino
+        - nncf/**/openvino_*.py
     - component_id: quantization
-      name: common_ptq
+      name: ptq
       paths:
         - nncf/quantization
