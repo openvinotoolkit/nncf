@@ -694,7 +694,7 @@ class OVGroupNormalizationMetatype(OVOpMetatype):
 
 @OV_OPERATOR_METATYPES.register()
 class OVScaledDotProductAttentionMetatype(OVOpMetatype):
-    name = "ScaledDotProductAttention"
+    name = "ScaledDotProductAttentionOp"
     op_names = ["ScaledDotProductAttention"]
     hw_config_names = [HWConfigOpName.SCALED_DOT_PRODUCT_ATTENTION]
     target_input_ports = [0, 1]
