@@ -51,9 +51,6 @@ class ImageClassificationTimm(BaseTestPipeline):
 
         if self.backend in PT_BACKENDS:
             self.model = timm_model
-            if self.backend == BackendType.CUDA_TORCH:
-                self.model.cuda()
-                self.dummy_tensor = self.dummy_tensor.cuda()
 
         if self.backend == BackendType.ONNX:
             onnx_path = self.output_model_dir / "model_fp32.onnx"
@@ -73,6 +70,11 @@ class ImageClassificationTimm(BaseTestPipeline):
             self.input_name = list(inp.get_any_name() for inp in self.model.inputs)[0]
 
         self._dump_model_fp32()
+
+        # Set device after dump fp32 model
+        if self.backend == BackendType.CUDA_TORCH:
+            self.model.cuda()
+            self.dummy_tensor = self.dummy_tensor.cuda()
 
     def _dump_model_fp32(self) -> None:
         """Dump IRs of fp32 models, to help debugging."""

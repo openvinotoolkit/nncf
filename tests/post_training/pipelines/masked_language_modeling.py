@@ -45,6 +45,11 @@ class MaskedLanguageModelingHF(BaseTestPipeline):
 
         self._dump_model_fp32()
 
+        # Set device after dump fp32 model
+        if self.backend == BackendType.CUDA_TORCH:
+            self.model.cuda()
+            self.dummy_tensor = self.dummy_tensor.cuda()
+
     def _dump_model_fp32(self) -> None:
         """Dump IRs of fp32 models, to help debugging."""
         if self.backend in PT_BACKENDS:
@@ -68,7 +73,7 @@ class MaskedLanguageModelingHF(BaseTestPipeline):
             device = torch.device("cuda" if self.backend == BackendType.CUDA_TORCH else "cpu")
 
             def transform_func(data):
-                return torch.Tensor([data["input_ids"]]).type(dtype=torch.LongTensor, device=device)
+                return torch.tensor([data["input_ids"]]).type(dtype=torch.LongTensor).to(device)
 
         else:
 

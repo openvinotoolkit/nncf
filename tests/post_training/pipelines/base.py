@@ -222,7 +222,9 @@ class BaseTestPipeline(ABC):
         if self.backend == BackendType.OPTIMUM:
             self.path_quantized_ir = self.output_model_dir / "openvino_model.xml"
         elif self.backend in PT_BACKENDS:
-            ov_model = convert_model(self.quantized_model, example_input=self.dummy_tensor, input_shape=self.input_size)
+            ov_model = convert_model(
+                self.quantized_model.cpu(), example_input=self.dummy_tensor.cpu(), input_shape=self.input_size
+            )
             self.path_quantized_ir = self.output_model_dir / "model.xml"
             ov.serialize(ov_model, self.path_quantized_ir)
         elif self.backend == BackendType.ONNX:
@@ -364,7 +366,7 @@ class BaseTestPipeline(ABC):
 
         if time_stat_collection:
             self.run_info.time_stat_collection = time_stat_collection.strftime("%H:%M:%S")
-        if time_stat_collection:
+        if time_bias_correction:
             self.run_info.time_bias_correction = time_bias_correction.strftime("%H:%M:%S")
         if time_validation:
             self.run_info.time_validation = time_validation.strftime("%H:%M:%S")
