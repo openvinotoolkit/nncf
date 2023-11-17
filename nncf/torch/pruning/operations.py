@@ -180,7 +180,7 @@ class PTIdentityMaskForwardPruningOp(IdentityMaskForwardPruningOp, PTPruner):
         PTHardSigmoidMetatype,
         PTNoopMetatype,
         PTInterpolateMetatype,
-        PTInstanceNormMetatype
+        PTInstanceNormMetatype,
     ]
     additional_types = ["h_sigmoid", "h_swish", "RELU"]
 

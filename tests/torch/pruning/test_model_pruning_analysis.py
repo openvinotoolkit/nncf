@@ -72,9 +72,9 @@ from tests.torch.pruning.helpers import SplitReshapeModel
 from tests.torch.pruning.helpers import get_basic_pruning_config
 
 
-def create_nncf_model_and_pruning_builder(model: torch.nn.Module,
-                                          config_params: Dict,
-                                          input_sample_size: List[int] = None) -> Tuple[NNCFNetwork, FilterPruningBuilder]:
+def create_nncf_model_and_pruning_builder(
+    model: torch.nn.Module, config_params: Dict, input_sample_size: List[int] = None
+) -> Tuple[NNCFNetwork, FilterPruningBuilder]:
     if input_sample_size is None:
         input_sample_size = [1, 1, 8, 8]
     nncf_config = get_basic_pruning_config(input_sample_size=input_sample_size)
@@ -96,7 +96,7 @@ class GroupPruningModulesTestStruct:
         final_can_prune: Dict[int, PruningAnalysisDecision],
         prune_params: Tuple[bool, bool],
         name: Optional[str] = None,
-        input_sample_size: List[int] = None
+        input_sample_size: List[int] = None,
     ):
         self.model = model
         self.non_pruned_module_nodes = non_pruned_module_nodes
@@ -104,7 +104,7 @@ class GroupPruningModulesTestStruct:
         self.pruned_groups_by_node_id = pruned_groups_by_node_id
         self.can_prune_after_analysis = can_prune_after_analysis
         self.final_can_prune = final_can_prune
-        self.prune_params = prune_params # Prune first, Prune downsample
+        self.prune_params = prune_params  # Prune first, Prune downsample
         self.input_sample_size = input_sample_size if input_sample_size is not None else [1, 1, 8, 8]
         self.name = name
 
@@ -750,7 +750,9 @@ def test_pruning_node_selector(test_input_info_struct_: GroupPruningModulesTestS
     )
     model = model()
     model.eval()
-    nncf_network = NNCFNetwork(model, input_info=FillerInputInfo([FillerInputElement(test_input_info_struct_.input_sample_size)]))
+    nncf_network = NNCFNetwork(
+        model, input_info=FillerInputInfo([FillerInputElement(test_input_info_struct_.input_sample_size)])
+    )
     graph = nncf_network.nncf.get_original_graph()
     pruning_groups = pruning_node_selector.create_pruning_groups(graph)
 
@@ -774,8 +776,9 @@ def test_pruning_node_selector(test_input_info_struct_: GroupPruningModulesTestS
 def test_symbolic_mask_propagation(test_input_info_struct_):
     model = test_input_info_struct_.model()
     prune_first, *_ = test_input_info_struct_.prune_params
-    nncf_model, _ = create_nncf_model_and_pruning_builder(model, {"prune_first_conv": prune_first},
-     input_sample_size=test_input_info_struct_.input_sample_size)
+    nncf_model, _ = create_nncf_model_and_pruning_builder(
+        model, {"prune_first_conv": prune_first}, input_sample_size=test_input_info_struct_.input_sample_size
+    )
     pruning_types = [v.op_func_name for v in NNCF_PRUNING_MODULES_DICT]
     nncf_model.eval()
     graph = nncf_model.nncf.get_graph()

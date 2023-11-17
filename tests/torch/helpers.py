@@ -96,15 +96,17 @@ def create_bn(num_features, dim=2):
 
 def create_instance_norm(num_features, dim=2, affine=True):
     in_dim_map = {
-         1: nn.InstanceNorm1d,
-         2: nn.InstanceNorm2d,
-         3: nn.InstanceNorm3d,
-     }
+        1: nn.InstanceNorm1d,
+        2: nn.InstanceNorm2d,
+        3: nn.InstanceNorm3d,
+    }
 
     return in_dim_map[dim](num_features, affine=affine)
 
-def create_grouped_conv(in_channels, out_channels, kernel_size, groups,
-                        weight_init=1, bias_init=0, padding=0, stride=1):
+
+def create_grouped_conv(
+    in_channels, out_channels, kernel_size, groups, weight_init=1, bias_init=0, padding=0, stride=1
+):
     if in_channels % groups != 0 or out_channels % groups != 0:
         raise RuntimeError(
             "Cannot create grouped convolution. Either `in_channels` or `out_channels` are not divisible by `groups`"

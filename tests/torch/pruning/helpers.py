@@ -12,14 +12,16 @@
 import copy
 
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
 from nncf.config import NNCFConfig
 from nncf.torch.dynamic_graph.context import no_nncf_trace
-from tests.torch.helpers import create_bn, create_conv, fill_linear_weight
+from tests.torch.helpers import create_bn
+from tests.torch.helpers import create_conv
 from tests.torch.helpers import create_depthwise_conv
 from tests.torch.helpers import create_grouped_conv
+from tests.torch.helpers import create_instance_norm
 from tests.torch.helpers import create_transpose_conv
 from tests.torch.helpers import fill_linear_weight
 from tests.torch.test_models.pnasnet import CellB
