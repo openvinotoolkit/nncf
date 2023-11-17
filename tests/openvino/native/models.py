@@ -16,6 +16,7 @@ import numpy as np
 import openvino.runtime as ov
 from openvino.runtime import opset9 as opset
 from openvino.runtime import opset12
+from openvino.runtime import opset13
 
 from nncf.common.utils.registry import Registry
 
@@ -804,8 +805,6 @@ class GatherWithTwoReductionAxes(OVReferenceModel):
 
 class ScaledDotProductAttentionModel(OVReferenceModel):
     def _create_ov_model(self):
-        from openvino.runtime import opset13
-
         query = opset.parameter([1, 1, 1, 64], name="Input_1")
         key = opset.parameter([1, 1, 1, 64], name="Input_2")
         value = opset.parameter([1, 1, 1, 64], name="Input_3")
