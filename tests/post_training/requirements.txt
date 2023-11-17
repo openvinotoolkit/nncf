@@ -7,7 +7,7 @@ onnx==1.13.1
 onnxruntime==1.14.1
 pytest
 pytest-cov
-openvino-dev==2023.1.0
+openvino-dev==2023.2.0
 optimum[onnxruntime,openvino]==1.8.8
 optimum-intel @ git+https://github.com/huggingface/optimum-intel@47428484598986443686b7c8ba825b4a3d7b4f73
 soundfile==0.12.1
