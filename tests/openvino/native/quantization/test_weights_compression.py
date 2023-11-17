@@ -18,7 +18,6 @@ import pytest
 from attr import dataclass
 
 from nncf import CompressWeightsMode
-from nncf.openvino.graph.node_utils import get_const_value
 from nncf.quantization import compress_weights
 from nncf.quantization.algorithms.weight_compression.openvino_backend import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.openvino_backend import _get_integer_quantization_error
@@ -49,7 +48,7 @@ def get_next_node(node):
 
 def check_int8_node(op: ov.Node):
     assert op.get_element_type() == ov.Type(np.uint8)
-    compressed_weight = get_const_value(op)
+    compressed_weight = op.data
 
     convert_node = get_next_node(op)
     assert convert_node.get_type_name() == "Convert"
@@ -61,12 +60,12 @@ def check_int8_node(op: ov.Node):
     assert convert_node.get_type_name() == "Convert"
 
     zero_point_node = convert_node.input_value(0).get_node()
-    zero_point = get_const_value(zero_point_node)
+    zero_point = zero_point_node.data
 
     mul_node = get_next_node(sub_node)
     assert mul_node.get_type_name() == "Multiply"
     scale_node = mul_node.input_value(1).get_node()
-    scale = get_const_value(scale_node)
+    scale = scale_node.data
 
     return {
         "compressed_weight": compressed_weight,
@@ -108,7 +107,7 @@ def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int =
     assert reshape_node.get_type_name() == "Reshape"
 
     return {
-        "scale": get_const_value(scale_node),
+        "scale": scale_node.data,
     }
 
 
@@ -132,7 +131,7 @@ def check_nf4_grouped(op: ov.Node, group_size: int = 7):
     assert reshape_node.get_type_name() == "Reshape"
 
     return {
-        "scale": get_const_value(scale_node),
+        "scale": scale_node.data,
     }
 
 

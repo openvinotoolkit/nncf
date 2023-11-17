@@ -24,7 +24,6 @@ from nncf.common.utils.helpers import create_table
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVEmbeddingMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
-from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.rt_info import dump_parameters
 from nncf.parameters import CompressWeightsMode
@@ -119,7 +118,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             weight_name = weight_node.get_friendly_name()
             target_inputs = weight_output.get_target_inputs()
 
-            weight = get_const_value(weight_node)
+            weight = weight_node.data
             config = wp.compression_config
             if config.mode == CompressWeightsMode.NF4:
                 original_shape = weight.shape
