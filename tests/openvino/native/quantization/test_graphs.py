@@ -213,8 +213,8 @@ def test_scaled_dot_product_attention_placement(q_params, tmp_path):
     else:
         params_str = "default"
 
+    path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / f"scaled_dot_product_attention.dot"
     result_name = f"scaled_dot_product_attention_{params_str}"
-    path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / f"{result_name}.dot"
     xml_path = tmp_path / (result_name + ".xml")
     bin_path = tmp_path / (result_name + ".bin")
     dump_model(quantized_model, str(xml_path), str(bin_path))
