@@ -382,6 +382,25 @@ class MinMaxQuantization(Algorithm):
                 nncf_node_names.append(nncf_node.node_name)
         return IgnoredScope(names=nncf_node_names)
 
+    def _get_scope_overrides(self, inference_nncf_graph: NNCFGraph) -> Dict:
+        """
+        Returns a dictionary of quantization configuration overrides for inputs to matching operation nodes.
+
+        :param inference_nncf_graph: Inference NNCFGraph instance.
+        :return: A dictionary of quantization configuration overrides for inputs to matching operation nodes.
+        """
+        scaled_dot_product_attention_node_names = [
+            node.node_name
+            for node in inference_nncf_graph.get_nodes_by_metatypes(
+                self._backend_entity.scaled_dot_product_attention_metatypes
+            )
+        ]
+
+        scope_overrides_activations = {}
+        for node_name in scaled_dot_product_attention_node_names:
+            scope_overrides_activations[node_name] = {"mode": "symmetric"}
+        return {"activations": scope_overrides_activations}
+
     def _get_quantizer_setup(
         self,
         nncf_graph: NNCFGraph,
@@ -416,6 +435,8 @@ class MinMaxQuantization(Algorithm):
             QuantizableWeightedLayerNode(node, qconf_list) for node, qconf_list in weighted_node_and_qconf_lists.items()
         ]
 
+        scope_overrides = self._get_scope_overrides(inference_nncf_graph)
+
         ip_graph = InsertionPointGraph(inference_nncf_graph)
         ip_graph = ip_graph.get_ip_graph_with_merged_hw_optimized_operations(hw_patterns)
         post_processing_types = self._backend_entity.post_processing_metatypes
@@ -434,6 +455,7 @@ class MinMaxQuantization(Algorithm):
             post_processing_marker_metatypes=post_processing_types,
             metatypes_to_ignore=metatypes_to_ignore,
             scales_unification_map=self._backend_entity.scales_unification_map,
+            scope_overrides=scope_overrides,
         )
 
         quantization_proposal = solver.run_on_ip_graph(ip_graph)
