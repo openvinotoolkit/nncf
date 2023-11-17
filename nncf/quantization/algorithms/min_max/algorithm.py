@@ -537,7 +537,7 @@ class MinMaxQuantization(Algorithm):
             global_constraints=self._global_quantizer_constraints,
             post_processing_marker_metatypes=post_processing_types,
             metatypes_to_ignore=metatypes_to_ignore,
-            scope_overrides=scope_overrides
+            scope_overrides=scope_overrides,
         )
 
         quantization_proposal = solver.run_on_ip_graph(ip_graph)
