@@ -160,11 +160,19 @@ def get_lstm(node_name, input_shape):
     return [input_1], [output]
 
 
-def get_concat_node(op_name, input_shape):
+def get_concat_node(op_name, input_shape, axis):
     num_inputs = 3
     inputs = [opset.parameter(input_shape, name=f"Input{i}") for i in range(num_inputs)]
-    output = opset.concat(inputs, axis=1, name=op_name)
+    output = opset.concat(inputs, axis=axis, name=op_name)
     return inputs, [output]
+
+
+def get_concat_axis_default(op_name, input_shape):
+    return get_concat_node(op_name, input_shape, axis=0)
+
+
+def get_concat_axis_custom(op_name, input_shape):
+    return get_concat_node(op_name, input_shape, axis=1)
 
 
 def get_one_layer_model(op_name: str, node_creator, input_shape):
@@ -446,7 +454,10 @@ TEST_CASES_NO_WEGIHTS_LAYOUT = [
         None,
     ),
     LayerAttributesTestCase(
-        get_concat_node, (1, 2, 3, 3), OVLayerAttributes({}, MultipleInputLayerAttributes(1, 3)), None
+        get_concat_axis_default, (1, 2, 3, 3), OVLayerAttributes({}, MultipleInputLayerAttributes(0, 3)), None
+    ),
+    LayerAttributesTestCase(
+        get_concat_axis_custom, (1, 2, 3, 3), OVLayerAttributes({}, MultipleInputLayerAttributes(1, 3)), None
     ),
 ]
 

@@ -199,8 +199,10 @@ class GraphConverter:
         """
         if metatype == OVConcatMetatype:
             nncf_node = nncf_graph.get_node_by_name(node.get_friendly_name())
+            axis = axis = node.get_attributes()["axis"]
+            num_inputs = len(node.inputs())
             nncf_node.layer_attributes = OVLayerAttributes(
-                {}, MultipleInputLayerAttributes(axis=node.get_axis(), num_inputs=len(node.inputs()))
+                {}, MultipleInputLayerAttributes(axis=axis, num_inputs=num_inputs)
             )
 
     def _set_weighted_layer_attributes(

@@ -59,4 +59,4 @@ def get_input_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
     :param nncf_graph: NNCFGraph to work with.
     :return: Target NNCFGraph input nodes.
     """
-    return list(set(nncf_graph.get_input_nodes()).upadte(nncf_graph.get_nodes_by_metatypes([OVReadValueMetatype])))
+    return nncf_graph.get_input_nodes() + nncf_graph.get_nodes_by_metatypes([OVReadValueMetatype])
