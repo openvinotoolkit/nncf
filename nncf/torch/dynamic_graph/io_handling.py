@@ -38,7 +38,7 @@ from nncf.torch.utils import is_traced_tensor
 @api(canonical_alias="nncf.torch.nncf_model_input")
 @register_operator(name=MODEL_INPUT_OP_NAME)
 def nncf_model_input(tensor: "torch.Tensor"):
-    return tensor
+    return torch.Tensor(tensor)
 
 
 @api(canonical_alias="nncf.torch.nncf_model_output")
