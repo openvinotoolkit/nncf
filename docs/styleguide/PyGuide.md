@@ -775,7 +775,7 @@ Always use a `.py` filename extension. Never use dashes.
 Python filenames must have a `.py` extension and must not contain dashes (`-`).
 This allows them to be imported and unit tested.
 
-Avoid having `.py` files and subpackages with names such as `utils`, `helpers` that are a "swiss army knife" containing many unrelated pieces of code used across the code base.
+Avoid having `.py` files with names such as `utils`, `helpers` that are a "swiss army knife" containing many unrelated pieces of code used across the code base.
 Instead group your new code in dedicated files/modules that are named explicitly according to the purpose of code.
 
 Bad:
