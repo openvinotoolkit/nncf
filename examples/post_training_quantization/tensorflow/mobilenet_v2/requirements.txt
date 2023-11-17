@@ -1,4 +1,4 @@
 tensorflow~=2.12.0
 tensorflow-datasets
 tqdm
-openvino-dev==2023.0.2
+openvino-dev==2023.2
