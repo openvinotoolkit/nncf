@@ -7,3 +7,5 @@ pytest
 timm==0.9.2
 scikit-learn==1.2.2
 av==11.0.0
+sentencepiece==0.1.99
+protobuf==3.20.3
