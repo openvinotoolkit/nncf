@@ -132,6 +132,22 @@ class AdvancedSmoothQuantParameters:
 
 @api()
 @dataclass
+class Mode:
+    """
+    Contains values corresponding to the available quantization modes.
+
+    :param FQ: Whether to insert FakeQuantize operations.
+    :type FQ: str
+    :param FP8: Whether to insert FakeConvert operations.
+    :type FP8: str
+    """
+
+    FQ: str = "FQ"
+    FP8: str = "FP8"
+
+
+@api()
+@dataclass
 class AdvancedQuantizationParameters:
     """
     Contains advanced parameters for fine-tuning quantization algorithm.
@@ -176,6 +192,7 @@ class AdvancedQuantizationParameters:
     inplace_statistics: bool = True
     disable_channel_alignment: bool = True
     disable_bias_correction: bool = False
+    mode: Mode = Mode.FQ
 
     # Advanced Quantization parameters
     activations_quantization_params: QuantizationParameters = field(default_factory=QuantizationParameters)

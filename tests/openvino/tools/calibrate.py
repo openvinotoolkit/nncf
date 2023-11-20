@@ -49,6 +49,7 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AggregatorType
+from nncf.quantization.advanced_parameters import Mode
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.scopes import IgnoredScope
@@ -533,6 +534,17 @@ def map_threshold(threshold):
     return {advanced_parameter_name: advanced_parameters}
 
 
+def map_mode(mode):
+    ctx = get_algorithm_parameters_context()
+    advanced_parameter_name = ctx.param_name_map[ParameterNames.advanced_parameters]
+    advanced_parameters = ctx.params.get(advanced_parameter_name, AdvancedQuantizationParameters())
+    if mode in [Mode.FQ, Mode.FP8]:
+        advanced_parameters.mode = mode
+    else:
+        ValueError(f"advanced_parameters.mode = {mode} is not supported")
+    return {advanced_parameter_name: advanced_parameters}
+
+
 def map_max_iter_num(max_iter_num):
     ctx = get_algorithm_parameters_context()
     advanced_parameters = ctx.params.get("advanced_accuracy_restorer_parameters", AdvancedAccuracyRestorerParameters())
@@ -605,6 +617,7 @@ def get_pot_quantization_parameters_mapping():
         "threshold": map_threshold,
         "smooth_quant_alphas": map_smooth_quant_alphas,
         "smooth_quant_alpha": map_smooth_quant_alpha,
+        "mode": map_mode,
     }
 
     default_parameters = {"use_layerwise_tuning": False}
@@ -1012,7 +1025,7 @@ def quantize_model_with_accuracy_control(
 
 
 def filter_configuration(config: Config) -> Config:
-    fields_to_filter = ["smooth_quant_alphas", "smooth_quant_alpha"]
+    fields_to_filter = ["smooth_quant_alphas", "smooth_quant_alpha", "mode"]
     algorithms_to_update = defaultdict(dict)
 
     # Drop params before configure

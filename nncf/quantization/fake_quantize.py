@@ -45,6 +45,19 @@ class FakeQuantizeParameters:
     levels: int
 
 
+@dataclass
+class FakeConvertParameters:
+    """
+    Class handles FakeConvert layer attributes.
+
+    :param scale:
+    :param shift:
+    """
+
+    scale: Tensor
+    shift: Tensor
+
+
 def fix_zero_filters_symmetric(max_values: Tensor, eps: float = 0.01) -> Tensor:
     """
     Fixes zero filters for symmetric quantizer.
@@ -244,6 +257,18 @@ def calculate_quantizer_parameters(
 
     output_low, output_high = input_low, input_high
     return FakeQuantizeParameters(input_low, input_high, output_low, output_high, levels)
+
+
+def calculate_convert_parameters(statistics: MinMaxTensorStatistic) -> FakeConvertParameters:
+    """ """
+    min_values = Tensor(statistics.min_values).astype(TensorDataType.float32)
+    max_values = Tensor(statistics.max_values).astype(TensorDataType.float32)
+
+    max_destination_value = 448
+    tensor_dtype = fns.finfo(max_values)
+    scale = max_destination_value / fns.maximum(max_values, fns.abs(min_values) + tensor_dtype.eps)
+    shift = fns.zeros_like(scale)
+    return FakeConvertParameters(scale, shift)
 
 
 def _calculate_scaled_parameters(

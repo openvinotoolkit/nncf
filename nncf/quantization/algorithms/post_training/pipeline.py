@@ -114,6 +114,7 @@ def create_ptq_pipeline(
                 advanced_parameters.overflow_fix,
                 advanced_parameters.quantize_outputs,
                 advanced_parameters.inplace_statistics,
+                advanced_parameters.mode,
                 advanced_parameters.activations_quantization_params,
                 advanced_parameters.weights_quantization_params,
                 advanced_parameters.activations_range_estimator_params,

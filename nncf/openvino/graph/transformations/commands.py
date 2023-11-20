@@ -20,6 +20,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.openvino.graph.node_utils import InplaceInsertionFnType
+from nncf.quantization.advanced_parameters import Mode
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
 
@@ -84,9 +85,10 @@ class OVFQNodeRemovingCommand(TransformationCommand):
 
 
 class OVQuantizerInsertionCommand(OVInsertionCommand):
-    def __init__(self, target_point: OVTargetPoint, quantizer_parameters: FakeQuantizeParameters):
+    def __init__(self, target_point: OVTargetPoint, quantizer_parameters: FakeQuantizeParameters, mode: Mode = Mode.FQ):
         super().__init__(target_point)
         self.quantizer_parameters = quantizer_parameters
+        self.mode = mode
 
     def union(self, other: "TransformationCommand") -> "TransformationCommand":
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand

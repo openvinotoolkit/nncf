@@ -47,10 +47,12 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
+from nncf.quantization.advanced_parameters import Mode
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.advanced_parameters import changes_asdict
 from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.quantization.fake_quantize import calculate_convert_parameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.quantization.fake_quantize import get_quantizer_narrow_range
 from nncf.quantization.passes import transform_to_inference_graph
@@ -104,6 +106,7 @@ class MinMaxQuantization(Algorithm):
         overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER,
         quantize_outputs: bool = False,
         inplace_statistics: bool = True,
+        mode: Mode = Mode.FQ,
         activations_quantization_params: Optional[QuantizationParameters] = None,
         weights_quantization_params: Optional[QuantizationParameters] = None,
         activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
@@ -133,6 +136,8 @@ class MinMaxQuantization(Algorithm):
         :param inplace_statistics: Defines wheather to calculate quantizers statistics
             by backend graph operations or by default Python implementation, defaults
             to True.
+        :param mode: Defines mode for the algorithm: FakeConvert (FP8), FakeQuantize (FQ) and etc.
+            By default - FQ.
         :param activations_quantization_params: Quantization parameters for model
             activations.
         :param weights_quantization_params: Quantization parameters for model weights.
@@ -145,6 +150,7 @@ class MinMaxQuantization(Algorithm):
         self._target_device = target_device
         self._subset_size = subset_size
         self._model_type = model_type
+        self._mode = mode
         self._ignored_scope = IgnoredScope() if ignored_scope is None else ignored_scope
         self._overflow_fix = overflow_fix
         self._quantize_outputs = quantize_outputs
@@ -722,9 +728,12 @@ class MinMaxQuantization(Algorithm):
                 qconfig = quantization_target_points[quantization_target_point]
                 q_group = QuantizerGroup.ACTIVATIONS
                 narrow_range = get_quantizer_narrow_range(qconfig, q_group)
-                parameters = calculate_quantizer_parameters(unified_values, qconfig, q_group, narrow_range)
+                if self._mode == Mode.FP8:
+                    parameters = calculate_convert_parameters(unified_values)
+                elif self._mode == Mode.FQ:
+                    parameters = calculate_quantizer_parameters(unified_values, qconfig, q_group, narrow_range)
                 command = self._backend_entity.create_quantizer_insertion_command(
-                    graph, quantization_target_point, qconfig, parameters
+                    graph, quantization_target_point, qconfig, parameters, self._mode
                 )
                 transformation_layout.register(command)
                 unified_ops_list.add(quantization_target_point)
@@ -750,9 +759,14 @@ class MinMaxQuantization(Algorithm):
                 statistics = tensor_collector.get_statistics()
                 if statistics.min_values is None or statistics.max_values is None:
                     raise RuntimeError(f"Statistics were not collected for the node {target_node_name}")
-                parameters = calculate_quantizer_parameters(statistics, qconfig, quant_group, narrow_range, half_range)
+                if self._mode == Mode.FP8:
+                    parameters = calculate_convert_parameters(statistics)
+                elif self._mode == Mode.FQ:
+                    parameters = calculate_quantizer_parameters(
+                        statistics, qconfig, quant_group, narrow_range, half_range
+                    )
                 command = self._backend_entity.create_quantizer_insertion_command(
-                    graph, quantization_target_point, qconfig, parameters
+                    graph, quantization_target_point, qconfig, parameters, self._mode
                 )
                 transformation_layout.register(command)
         if not transformation_layout.transformations:
