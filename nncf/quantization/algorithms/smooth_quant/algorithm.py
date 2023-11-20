@@ -127,7 +127,7 @@ class SmoothQuant(Algorithm):
 
                 weight_port = self._backend_entity.get_weight_tensor_port_id(node_to_smooth)
                 weight_value = self._backend_entity.get_weight_value(node_to_smooth, model, weight_port)
-                weight_statistics = self._process_weight_statistics(node_to_smooth, weight_value, weight_port)
+                weight_statistics = self._process_weight_statistics(node_to_smooth, weight_value)
                 weight_statistics = self._backend_entity.clip_statistics(weight_statistics)
 
                 alpha = alpha_map[node_to_smooth.metatype]
@@ -348,13 +348,12 @@ class SmoothQuant(Algorithm):
             reduction_axes = self._backend_entity.get_channel_agnostic_reduction_axes(channel_axis, shape)
         return reduction_axes
 
-    def _process_weight_statistics(self, node: NNCFNode, weights: TTensor, port_id: int) -> TTensor:
+    def _process_weight_statistics(self, node: NNCFNode, weights: TTensor) -> TTensor:
         """
         Returns processed weight statistics for node.
 
         :param node: NNCFNode to check.
         :param weights: Backend-specific weights.
-        :param port_id: Weight port id.
         :return: Weight statistic for node.
         """
         channel_axis = 0

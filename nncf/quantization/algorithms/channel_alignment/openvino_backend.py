@@ -21,7 +21,7 @@ from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.experimental.common.tensor_statistics.collectors import MedianAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.openvino.graph.layer_attributes import OV_CONV_METATYPES
+from nncf.openvino.graph.layer_attributes import CONV_OPERATIONS
 from nncf.openvino.graph.layer_attributes import get_conv_weights_layout_from_node
 from nncf.openvino.graph.layer_attributes import get_linear_weights_layout_from_node
 from nncf.openvino.graph.layout import OVLayoutElem
@@ -104,7 +104,7 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
 
     @staticmethod
     def get_dims_descriptor(node: NNCFNode) -> LayoutDescriptor:
-        if node.metatype in OV_CONV_METATYPES:
+        if node.metatype in CONV_OPERATIONS:
             weights_layout = get_conv_weights_layout_from_node(node=node)
         elif node.metatype == OVMatMulMetatype:
             weights_layout = get_linear_weights_layout_from_node(node=node)

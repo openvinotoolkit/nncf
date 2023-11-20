@@ -97,11 +97,10 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
                 (
                     OVLayoutElem.SPATIAL,
                     OVLayoutElem.SPATIAL,
-                    OVLayoutElem.SPATIAL,
                     OVLayoutElem.C_IN,
                     OVLayoutElem.C_OUT,
                 ),
-                3,
+                2,
             ),
             (
                 OVConvolutionMetatype,

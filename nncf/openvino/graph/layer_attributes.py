@@ -20,11 +20,9 @@ from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.openvino.graph.layout import OVLayoutElem
+from nncf.openvino.graph.metatypes.groups import CONV_OPERATIONS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
-from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
-from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
-from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
 
@@ -69,15 +67,6 @@ class OVLayerAttributes(BaseLayerAttributes):
 
     def get_backend_agnostic_attributes(self):
         return self._layer_attributes
-
-
-OV_CONV_METATYPES = [
-    OVConvolutionMetatype,
-    OVDepthwiseConvolutionMetatype,
-    OVGroupConvolutionMetatype,
-    OVConvolutionBackpropDataMetatype,
-    OVGroupConvolutionBackpropDataMetatype,
-]
 
 
 def get_conv_weights_layout_from_node(node: NNCFNode) -> List[OVLayoutElem]:
@@ -171,7 +160,7 @@ def get_weighted_layer_attributes(
         return None
 
     port_id, attrs = constant_attributes.copy().popitem()
-    if ov_metatype in OV_CONV_METATYPES:
+    if ov_metatype in CONV_OPERATIONS:
         node_attrs = ov_node.get_attributes()
         kwargs = {
             "weight_requires_grad": False,
