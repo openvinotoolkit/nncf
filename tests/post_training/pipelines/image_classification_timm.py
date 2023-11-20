@@ -54,14 +54,7 @@ class ImageClassificationTimm(BaseTestPipeline):
 
         if self.backend == BackendType.ONNX:
             onnx_path = self.output_model_dir / "model_fp32.onnx"
-            torch.onnx.export(
-                timm_model,
-                self.dummy_tensor,
-                onnx_path,
-                export_params=True,
-                opset_version=13,
-                do_constant_folding=False,
-            )
+            torch.onnx.export(timm_model, self.dummy_tensor, onnx_path, export_params=True, opset_version=13)
             self.model = onnx.load(onnx_path)
             self.input_name = self.model.graph.input[0].name
 

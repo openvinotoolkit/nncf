@@ -28,6 +28,7 @@ from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.common import dump_model
 from tests.openvino.native.common import get_dataset_for_test
+from tests.openvino.native.common import get_openvino_major_minor_version
 from tests.openvino.native.common import get_openvino_version
 from tests.openvino.native.models import SYNTHETIC_MODELS
 from tests.openvino.native.models import DepthwiseConv3DModel
@@ -36,6 +37,7 @@ from tests.openvino.native.models import DepthwiseConv5DModel
 from tests.openvino.native.models import GRUSequenceModel
 from tests.openvino.native.models import IfModel
 from tests.openvino.native.models import MatmulSoftmaxMatmulBlock
+from tests.openvino.native.models import ScaledDotProductAttentionModel
 from tests.openvino.native.quantization.test_fq_params_calculation import quantize_model
 from tests.openvino.omz_helpers import convert_model
 from tests.openvino.omz_helpers import download_model
@@ -196,3 +198,24 @@ def test_if_model_fq_placement():
     compare_nncf_graphs(quantized_model, QUANTIZED_REF_GRAPHS_DIR / main_model_path)
     compare_nncf_graphs(if_op.get_function(0), QUANTIZED_REF_GRAPHS_DIR / then_body_path)
     compare_nncf_graphs(if_op.get_function(1), QUANTIZED_REF_GRAPHS_DIR / else_body_path)
+
+
+@pytest.mark.parametrize("q_params", [{}, {"model_type": ModelType.TRANSFORMER}], ids=["default", "transformer"])
+def test_scaled_dot_product_attention_placement(q_params, tmp_path):
+    ov_major_version, ov_minor_version = get_openvino_major_minor_version()
+    if ov_major_version < 2023 or (ov_major_version == 2023 and ov_minor_version < 3):
+        pytest.xfail("ScaledDotProductAttention is not supported until 2023.3")
+    model = ScaledDotProductAttentionModel().ov_model
+    quantized_model = quantize_model(model, q_params)
+
+    if q_params:
+        params_str = "_".join([param.value for param in q_params.values()])
+    else:
+        params_str = "default"
+
+    path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / "scaled_dot_product_attention.dot"
+    result_name = f"scaled_dot_product_attention_{params_str}"
+    xml_path = tmp_path / (result_name + ".xml")
+    bin_path = tmp_path / (result_name + ".bin")
+    dump_model(quantized_model, str(xml_path), str(bin_path))
+    compare_nncf_graphs(quantized_model, path_ref_graph)
