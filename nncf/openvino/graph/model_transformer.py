@@ -354,7 +354,7 @@ class OVModelTransformer(ModelTransformer):
         if const_node is None:
             raise RuntimeError("Constant node was expected but could not find it.")
 
-        const_shape = const_node.get_data().shape
+        const_shape = const_node.data.shape
         const_value = np.reshape(const_value, const_shape)
         new_const_node = opset.constant(const_value, dtype=const_node.get_element_type())
         new_const_node.set_friendly_name(const_node.get_friendly_name())
