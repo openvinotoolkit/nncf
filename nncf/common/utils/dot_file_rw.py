@@ -50,8 +50,6 @@ REPLACEMENT_CHAR = "^"
 def _maybe_escape_colons_in_attrs(data: Dict):
     for attr_name in data:
         attr_val = data[attr_name]
-        if not isinstance(attr_val, str):
-            continue
         if RESERVED_CHAR in attr_val and not (attr_val[0] == '"' or attr_val[-1] == '"'):
             data[attr_name] = '"' + data[attr_name] + '"'  # escaped colons are allowed
 

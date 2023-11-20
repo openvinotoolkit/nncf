@@ -341,8 +341,6 @@ class TemplateTestChannelAlignment:
     @pytest.mark.parametrize("one_dim_mm", [False, True])
     @pytest.mark.parametrize("empty_statistics", [False, True])
     @pytest.mark.parametrize("num_biases", [0, 1, 2])
-    # pylint: disable=too-many-statements
-    # pylint: disable=too-many-branches
     def test_transformation_layout(self, one_dim_mm, empty_statistics, num_biases, mocker):
         mocked_transformer = mocker.MagicMock()
         self.mock_model_transformer_factory(mocker, mocked_transformer)
