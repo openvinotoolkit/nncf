@@ -775,6 +775,39 @@ Always use a `.py` filename extension. Never use dashes.
 Python filenames must have a `.py` extension and must not contain dashes (`-`).
 This allows them to be imported and unit tested.
 
+Avoid having `.py` files with names such as `utils`, `helpers` that are a "swiss army knife" containing many unrelated pieces of code used across the code base.
+Instead group your new code in dedicated files/modules that are named explicitly according to the purpose of code.
+
+Bad:
+
+*utils.py*
+
+```python3
+def log_current_time(log_stream: LogStream):
+    ...
+
+def convert_checkpoint(ckpt: CheckpointType) -> AnotherCheckpointType:
+    ...
+```
+
+Good:
+
+*logger.py*
+
+```python3
+def log_current_time(log_stream: LogStream):
+    ...
+```
+
+*checkpointing/converter.py*
+
+```python3
+class CheckpointConverter:
+    # ... 
+    def convert(self, ckpt: CheckpointType) -> AnotherCheckpointType:
+        pass
+```
+
 <a id="s4.8-main"></a>
 <a id="4.8-main"></a>
 <a id="main"></a>
