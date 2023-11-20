@@ -16,4 +16,4 @@ transformers[torch]~=4.30.0
 datasets~=2.14.0
 evaluate==0.3.0
 timm==0.9.2
-openvino-dev==2023.1
+openvino-dev==2023.2

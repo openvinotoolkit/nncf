@@ -97,6 +97,13 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
+    def scaled_dot_product_attention_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific Scaled Dot Product Attention metatypes.
+        """
+
+    @property
+    @abstractmethod
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
         """
         Property for the backend-specific metatypes that produces quantizers that might be unified.

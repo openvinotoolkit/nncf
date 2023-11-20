@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__version__ = "2.6.0"
+__version__ = "2.7.0"
 
 BKC_TORCH_VERSION = "2.1.0"
 BKC_TORCHVISION_VERSION = "0.16.0"
