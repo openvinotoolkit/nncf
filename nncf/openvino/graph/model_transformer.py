@@ -356,7 +356,7 @@ class OVModelTransformer(ModelTransformer):
 
         const_shape = const_node.data.shape
         const_value = np.reshape(const_value, const_shape)
-        new_const_node = opset.constant(const_value, dtype=const_node.get_element_type())
+        new_const_node = opset.constant(const_value, dtype=const_node.get_element_type(), shared_memory=True)
         new_const_node.set_friendly_name(const_node.get_friendly_name())
         const_port.replace_source_output(new_const_node.output(0))
 
