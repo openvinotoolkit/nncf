@@ -70,30 +70,27 @@ class PTNNCFGraph(NNCFGraph):
             raise RuntimeError("Node name {} not found in the node-vs-scope dict!".format(node_name))
         return matches[0]
 
+    def get_disconnected_nodes(self) -> List[NNCFNode]:
+        """
+        Returns a list of NNCFNodes that have at least one expected input edge missed.
+        Requires MultipleInputLayerAttributes for nodes with several inputs and
+        right `input_edges_num_expected` parameter setted for nncf nodes metatypes.
 
-def get_inputs_for_graph_with_several_connected_components(nncf_graph: PTNNCFGraph) -> List[NNCFNode]:
-    """
-    Returns a list of NNCFNodes that are identified as an inputs. Requires MultipleInputLayerAttributes
-    for nodes with several inputs and right `input_edges_num_expected` parameter setted for
-    nncf nodes metatypes.
-
-    :param nncf_graph: NNCFGraph to get input nodes from.
-    :return: List of NNCFNodes that are identified as an inputs.
-    """
-    input_nodes = set()
-    for node in nncf_graph.get_all_nodes():
-        input_edges_num_expected = None
-        if hasattr(node.metatype, "input_edges_num_expected"):
-            input_edges_num_expected = node.metatype.input_edges_num_expected
-        if node.layer_attributes is not None and isinstance(
-            node.layer_attributes.get_backend_agnostic_attributes(), MultipleInputLayerAttributes
-        ):
-            input_edges_num_expected = node.layer_attributes.get_backend_agnostic_attributes().num_inputs
-        if input_edges_num_expected:
-            input_edges = nncf_graph.get_input_edges(node)
-            if len(input_edges) < input_edges_num_expected:
-                # If node has missed input edges we assume this node is an input node
-                # that was disconected from an activation input.
-                input_nodes.add(node)
-    input_nodes.update(nncf_graph.get_input_nodes())
-    return list(input_nodes)
+        :return: List of NNCFNodes that are identified as diconected.
+        """
+        input_nodes = set()
+        for node in self.get_all_nodes():
+            input_edges_num_expected = None
+            if hasattr(node.metatype, "input_edges_num_expected"):
+                input_edges_num_expected = node.metatype.input_edges_num_expected
+            if node.layer_attributes is not None and isinstance(
+                node.layer_attributes.get_backend_agnostic_attributes(), MultipleInputLayerAttributes
+            ):
+                input_edges_num_expected = node.layer_attributes.get_backend_agnostic_attributes().num_inputs
+            if input_edges_num_expected:
+                input_edges = self.get_input_edges(node)
+                if len(input_edges) < input_edges_num_expected:
+                    # If node has missed input edges we assume this node is an input node
+                    # that was disconected from an activation input.
+                    input_nodes.add(node)
+        return list(input_nodes)
