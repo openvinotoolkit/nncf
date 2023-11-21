@@ -235,11 +235,12 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_channel_axis(node: NNCFNode) -> int:
+    def get_weight_channel_axis(node: NNCFNode, port_id: int) -> int:
         """
         Returns axis number of the weight tensor which correspond to it channel.
 
         :param node: NNCFNode instance.
+        :param port_id: Specified input port id.
         :return: Channel axis number.
         """
 

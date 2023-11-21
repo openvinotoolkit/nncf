@@ -11,12 +11,10 @@
 
 import numpy as np
 import pytest
-from openvino.runtime import opset9 as opset
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.graph import NNCFNode
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
-from nncf.openvino.graph.layer_attributes import get_weighted_layer_attributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
@@ -62,10 +60,10 @@ def test_is_node_with_bias(model_to_create, is_with_bias, node_name):
 @pytest.mark.parametrize(
     "weights_port_id, transpose, shape, expected_channel_axes",
     [
-        (0, False, (1,), []),
+        (0, False, (1,), [0]),
         (0, True, (1,), []),
         (1, False, (1,), []),
-        (1, True, (1,), []),
+        (1, True, (1,), [0]),
         (0, False, (1, 1), [0]),
         (0, True, (1, 1), [1]),
         (1, False, (1, 1), [1]),
@@ -77,23 +75,16 @@ def test_is_node_with_bias(model_to_create, is_with_bias, node_name):
     ],
 )
 def test_get_weight_channel_axes_for_matmul(weights_port_id, transpose, shape, expected_channel_axes):
-    input_1 = opset.parameter([1, 1], name="Input", dtype=np.float32)
-    constant_1 = opset.constant(np.ones(shape).astype(np.float32))
-    inputs_ = (input_1, constant_1) if weights_port_id == 1 else (constant_1, input_1)
-    matmul_1 = opset.matmul(*inputs_, transpose_a=transpose, transpose_b=transpose, name="MatMul")
-
-    constant_attrs = {weights_port_id: {"transpose": transpose, "shape": shape}}
     attributes = {
         NNCFNode.ID_NODE_ATTR: 0,
         NNCFNode.NODE_NAME_ATTR: "test",
         NNCFNode.METATYPE_ATTR: OVMatMulMetatype,
         NNCFNode.LAYER_ATTRIBUTES: OVLayerAttributes(
-            layer_attributes=get_weighted_layer_attributes(matmul_1, OVMatMulMetatype, constant_attrs),
-            constant_attributes=constant_attrs,
+            constant_attributes={weights_port_id: {"transpose": transpose, "shape": shape}}
         ),
     }
     node = NNCFNode(attributes)
-    actual_channel_axes = get_weight_channel_axes(node)
+    actual_channel_axes = get_weight_channel_axes(node, weights_port_id)
 
     assert len(actual_channel_axes) == len(expected_channel_axes)
     assert all(a == b for a, b in zip(actual_channel_axes, expected_channel_axes))

@@ -30,9 +30,6 @@ class BaseLayerAttributes(ABC):
     def __eq__(self, __o: object) -> bool:
         return isinstance(__o, self.__class__) and self.__dict__ == __o.__dict__
 
-    def get_backend_agnostic_attributes(self) -> "BaseLayerAttributes":
-        return self
-
 
 class MultipleInputLayerAttributes(BaseLayerAttributes):
     def __init__(self, axis: int, num_inputs: Optional[int] = None):

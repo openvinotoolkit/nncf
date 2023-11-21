@@ -74,22 +74,20 @@ class PTNNCFGraph(NNCFGraph):
         """
         Returns a list of NNCFNodes that have at least one expected input edge missed.
         Requires MultipleInputLayerAttributes for nodes with several inputs and
-        right `input_edges_num_expected` parameter setted for nncf nodes metatypes.
+        right `num_expected_input_edges` parameter setted for nncf nodes metatypes.
 
         :return: List of NNCFNodes that are identified as diconected.
         """
         input_nodes = set()
         for node in self.get_all_nodes():
-            input_edges_num_expected = None
-            if hasattr(node.metatype, "input_edges_num_expected"):
-                input_edges_num_expected = node.metatype.input_edges_num_expected
-            if node.layer_attributes is not None and isinstance(
-                node.layer_attributes.get_backend_agnostic_attributes(), MultipleInputLayerAttributes
-            ):
-                input_edges_num_expected = node.layer_attributes.get_backend_agnostic_attributes().num_inputs
-            if input_edges_num_expected:
+            num_expected_input_edges = None
+            if hasattr(node.metatype, "num_expected_input_edges"):
+                num_expected_input_edges = node.metatype.num_expected_input_edges
+            if node.layer_attributes is not None and isinstance(node.layer_attributes, MultipleInputLayerAttributes):
+                num_expected_input_edges = node.layer_attributes.num_inputs
+            if num_expected_input_edges:
                 input_edges = self.get_input_edges(node)
-                if len(input_edges) < input_edges_num_expected:
+                if len(input_edges) < num_expected_input_edges:
                     # If node has missed input edges we assume this node is an input node
                     # that was disconected from an activation input.
                     input_nodes.add(node)

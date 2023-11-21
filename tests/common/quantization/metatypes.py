@@ -36,13 +36,13 @@ class BatchNormTestMetatype(TestMetatype):
 @METATYPES_FOR_TEST.register()
 class Conv2dTestMetatype(TestMetatype):
     name = "conv2d"
-    input_edges_num_expected = 2
+    num_expected_input_edges = 2
 
 
 @METATYPES_FOR_TEST.register()
 class MatMulTestMetatype(TestMetatype):
     name = "matmul"
-    input_edges_num_expected = 2
+    num_expected_input_edges = 2
 
 
 @METATYPES_FOR_TEST.register()
@@ -78,7 +78,7 @@ class CatTestMetatype(TestMetatype):
 @METATYPES_FOR_TEST.register()
 class LinearTestMetatype(TestMetatype):
     name = "linear"
-    input_edges_num_expected = 2
+    num_expected_input_edges = 2
 
 
 @METATYPES_FOR_TEST.register()
@@ -99,13 +99,13 @@ class IdentityTestMetatype(TestMetatype):
 @METATYPES_FOR_TEST.register()
 class ReshapeTestMetatype(TestMetatype):
     name = "reshape"
-    input_edges_num_expected = 2
+    num_expected_input_edges = 2
 
 
 @METATYPES_FOR_TEST.register()
 class QuantizerTestMetatype(TestMetatype):
     name = "quantizer"
-    input_edges_num_expected = 2
+    num_expected_input_edges = 2
 
 
 @METATYPES_FOR_TEST.register()
@@ -121,7 +121,7 @@ class ReluTestMetatype(TestMetatype):
 @METATYPES_FOR_TEST.register()
 class AddTestMetatype(TestMetatype):
     name = "add"
-    input_edges_num_expected = 2
+    num_expected_input_edges = 2
 
 
 @METATYPES_FOR_TEST.register()
@@ -132,19 +132,19 @@ class ShapeOfTestMetatype(TestMetatype):
 @METATYPES_FOR_TEST.register()
 class PowerTestMetatype(TestMetatype):
     name = "power"
-    input_edges_num_expected = 2
+    num_expected_input_edges = 2
 
 
 @METATYPES_FOR_TEST.register()
 class MultiplyTestMetatype(TestMetatype):
     name = "multiply"
-    input_edges_num_expected = 2
+    num_expected_input_edges = 2
 
 
 @METATYPES_FOR_TEST.register()
 class InterpolateTestMetatype(TestMetatype):
     name = "interpolate"
-    input_edges_num_expected = 3
+    num_expected_input_edges = 3
 
 
 @METATYPES_FOR_TEST.register()

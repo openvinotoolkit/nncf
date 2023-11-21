@@ -11,12 +11,13 @@
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Any, Tuple, TypeVar
+from typing import Any, Optional, Tuple, TypeVar
 
 import numpy as np
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
@@ -109,17 +110,6 @@ class ChannelAlignmentAlgoBackend:
 
     @staticmethod
     @abstractmethod
-    def get_dims_descriptor(node: NNCFNode) -> LayoutDescriptor:
-        """
-        Return weights layout descriptor of the given node if it is possible and None otherwise.
-        Only convolutional and linear nodes are supported.
-
-        :param node: NNCFNode to get layout descriptor from.
-        :return: Weights layout descriptor of the given node if it is possible and None otherwise.
-        """
-
-    @staticmethod
-    @abstractmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         """
         Checks if the node has a bias or not.
@@ -132,6 +122,27 @@ class ChannelAlignmentAlgoBackend:
 
     @staticmethod
     @abstractmethod
+    def get_dims_descriptor(node: NNCFNode) -> LayoutDescriptor:
+        """
+        Return weights layout descriptor of the given node if it is possible and None otherwise.
+        Only convolutional and linear nodes are supported.
+
+        :param node: NNCFNode to get layout descriptor from.
+        :return: Weights layout descriptor of the given node if it is possible and None otherwise.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_conv_layer_attributes(node: NNCFNode) -> Optional[ConvolutionLayerAttributes]:
+        """
+        Returns convolutional layer attributes of given node if they are present and None otherwise.
+
+        :param node: NNCFNode to take convolutional layer attributes from.
+        :return: Convolutional layer attributes of given node if they are present and None otherwise
+        """
+
+    @staticmethod
+    @abstractmethod
     def create_bias_tensor(node: NNCFNode, nncf_graph: NNCFGraph, value: Any) -> np.ndarray:
         """
         Creates bias value constant array filled by given value.
@@ -140,15 +151,4 @@ class ChannelAlignmentAlgoBackend:
         :param nncf_graph: Target NNCFgraph.
         :param value: Value to fill bias constant array.
         :return: Bias value constant array filled by given value.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def get_channel_agnostic_reduction_axes(channel_axis: int, shape: Tuple[int]) -> Tuple[int]:
-        """
-        Returns filtered reduction shape without axes that corresponds channels.
-
-        :param channel_axes: List of the channel axes.
-        :param shape: Shape that need to be filtered.
-        :return: Reduction shape in tuple format.
         """

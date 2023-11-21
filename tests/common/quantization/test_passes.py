@@ -69,11 +69,11 @@ def test_filter_constant_nodes(node_between_const_and_op):
     )
 
     class ConstantMetatype(OperatorMetatype):
-        input_edges_num_expected = 1
+        num_expected_input_edges = 1
         pass
 
     class NodeWithWeightMetatype(OperatorMetatype):
-        input_edges_num_expected = 2
+        num_expected_input_edges = 2
 
     nncf_graph = NNCFGraphToTestConstantFiltering(
         ConstantMetatype,

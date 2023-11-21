@@ -227,7 +227,9 @@ class TemplateTestSQAlgorithm:
 
         assert activation_channel_axis == reference_value
 
-    def test_get_weight_channel_axis(self, node_metatype, layer_attributes, reference_value):
+    def test_get_weight_channel_axis(self, node_metatype, layer_attributes, port_id, reference_value):
+        backend = self.get_backend()
+
         attributes = {
             NNCFNode.METATYPE_ATTR: node_metatype,
             NNCFNode.LAYER_ATTRIBUTES: layer_attributes,
@@ -237,7 +239,7 @@ class TemplateTestSQAlgorithm:
         node = NNCFNode(attributes)
 
         try:
-            activation_channel_axis = self.get_backend().get_weight_channel_axis(node)
+            activation_channel_axis = backend.get_weight_channel_axis(node, port_id)
         except RuntimeError as e:
             if isinstance(e, reference_value):
                 pytest.xfail("Expected exception")

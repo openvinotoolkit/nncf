@@ -14,7 +14,6 @@ import pytest
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.torch.graph.graph import PTNNCFGraph
-from nncf.torch.graph.graph import get_inputs_for_graph_with_several_connected_components
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from tests.post_training.test_templates.models import NNCFGraphToTestConstantFiltering
 
@@ -24,7 +23,7 @@ class DummyConstantMetatype(OperatorMetatype):
 
 
 @pytest.mark.parametrize("node_between_const_and_target", [False, True])
-def test_get_inputs_for_graph_with_several_connected_components(node_between_const_and_target):
+def test_get_disconnected_nodes(node_between_const_and_target):
     nncf_graph = NNCFGraphToTestConstantFiltering(
         DummyConstantMetatype,
         PTModuleConv2dMetatype,
@@ -32,8 +31,8 @@ def test_get_inputs_for_graph_with_several_connected_components(node_between_con
         node_between_const_and_target,
         PTNNCFGraph,
     ).nncf_graph
-    ref_input_nodes_names = ["/Input_2_0", "/ReadVariable_0", "/Conv2_0", "/Input_1_0", "/Concat_with_missed_input_0"]
-    input_nodes = get_inputs_for_graph_with_several_connected_components(nncf_graph)
-    assert len(ref_input_nodes_names) == len(input_nodes)
-    for node in input_nodes:
-        assert node.node_name in ref_input_nodes_names
+    ref_diconnected_nodes = ["/Conv2_0", "/Concat_with_missed_input_0"]
+    disconnected_nodes = nncf_graph.get_disconnected_nodes()
+    assert len(ref_diconnected_nodes) == len(disconnected_nodes)
+    for node in disconnected_nodes:
+        assert node.node_name in ref_diconnected_nodes

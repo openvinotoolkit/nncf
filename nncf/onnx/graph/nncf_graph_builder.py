@@ -19,13 +19,11 @@ from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
-from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.onnx.graph.metatypes.groups import CONSTANT_WEIGHT_LAYER_METATYPES
 from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
 from nncf.onnx.graph.metatypes.groups import OPERATIONS_WITH_BIAS
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConcatMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXGemmMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpWithWeightsMetatype
@@ -57,7 +55,6 @@ class ONNXLayerAttributes(BaseLayerAttributes):
         weight_attrs: Optional[Dict[int, Dict]] = None,
         bias_attrs: Optional[Dict[str, Any]] = None,
         node_attrs: Optional[Dict[str, Any]] = None,
-        layer_attributes: Optional[BaseLayerAttributes] = None,
     ):
         """
         :param weight_attrs: Maps input port id asocciated with weight to a weight description.
@@ -67,7 +64,6 @@ class ONNXLayerAttributes(BaseLayerAttributes):
         self.weight_attrs = weight_attrs if weight_attrs is not None else {}
         self.bias_attrs = bias_attrs if bias_attrs is not None else {}
         self.node_attrs = node_attrs if node_attrs is not None else {}
-        self._layer_attributes = layer_attributes
 
     def has_weight(self) -> bool:
         return bool(self.weight_attrs)
@@ -77,9 +73,6 @@ class ONNXLayerAttributes(BaseLayerAttributes):
 
     def has_node_attrs(self) -> bool:
         return bool(self.node_attrs)
-
-    def get_backend_agnostic_attributes(self) -> BaseLayerAttributes:
-        return self._layer_attributes
 
 
 def get_constant_weight_port_ids(metatype: ONNXOpMetatype) -> List[int]:
@@ -116,21 +109,6 @@ def get_bias_tensor_port_id(metatype: ONNXOpWithWeightsMetatype) -> Optional[int
     """
     if metatype in OPERATIONS_WITH_BIAS:
         return metatype.bias_port_id
-    return None
-
-
-def _get_common_layer_attributes(node, metatype: ONNXOpMetatype) -> Optional[BaseLayerAttributes]:
-    """
-    Returns layer-specific layer attributes for the given node.
-
-    :param node: Target Node to get layer attributes for.
-    :param metatype: Target node metatype.
-    :return: Target node layer attributes or None.
-    """
-    if metatype == ONNXConcatMetatype:
-        axis = [attr.i for attr in node.attribute if attr.name == "axis"][0]
-        num_inputs = len(node.input)
-        return MultipleInputLayerAttributes(axis, num_inputs)
     return None
 
 
@@ -273,11 +251,12 @@ class GraphConverter:
         """
         for i, _input in enumerate(get_model_inputs(model)):
             input_name = _input.name
+            layer_attributes = ONNXLayerAttributes()
             input_node = nncf_graph.add_nncf_node(
                 node_name=MODEL_INPUT_OP_NAME + "_" + str(i),
                 node_type=NNCFGraphNodeType.INPUT_NODE,
                 node_metatype=InputNoopMetatype,
-                layer_attributes=ONNXLayerAttributes(),
+                layer_attributes=layer_attributes,
             )
             to_nodes = children_node_mapping[input_name]
 
@@ -319,11 +298,12 @@ class GraphConverter:
         """
         for i, _output in enumerate(model.graph.output):
             output_name = _output.name
+            layer_attributes = ONNXLayerAttributes()
             output_node = nncf_graph.add_nncf_node(
                 node_name=MODEL_OUTPUT_OP_NAME + "_" + str(i),
                 node_type=NNCFGraphNodeType.OUTPUT_NODE,
                 node_metatype=OutputNoopMetatype,
-                layer_attributes=ONNXLayerAttributes(),
+                layer_attributes=layer_attributes,
             )
             from_node = parents_node_mapping[output_name]
 
@@ -378,7 +358,6 @@ class GraphConverter:
             weight_attrs = {}
             node_attrs = _get_node_attrs(node, onnx_model)
             bias_attrs = _get_bias_attr(node, onnx_model, parents_node_mapping)
-            common_layer_attributes = _get_common_layer_attributes(node, metatype)
             if weight_port_ids:  # If node has weight
                 weight_edge_names = []
                 for weight_port_id in weight_port_ids:
@@ -391,10 +370,7 @@ class GraphConverter:
                         is_shared = True
 
             layer_attributes = ONNXLayerAttributes(
-                weight_attrs=weight_attrs,
-                bias_attrs=bias_attrs,
-                node_attrs=node_attrs,
-                layer_attributes=common_layer_attributes,
+                weight_attrs=weight_attrs, bias_attrs=bias_attrs, node_attrs=node_attrs
             )
             nncf_graph.add_nncf_node(
                 node_name=node.name,
