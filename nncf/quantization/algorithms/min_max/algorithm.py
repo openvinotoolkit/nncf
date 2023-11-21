@@ -729,7 +729,7 @@ class MinMaxQuantization(Algorithm):
                 q_group = QuantizerGroup.ACTIVATIONS
                 narrow_range = get_quantizer_narrow_range(qconfig, q_group)
                 if self._mode == Mode.FP8:
-                    parameters = calculate_convert_parameters(unified_values)
+                    parameters = calculate_convert_parameters(unified_values, is_activation=True)
                 elif self._mode == Mode.FQ:
                     parameters = calculate_quantizer_parameters(unified_values, qconfig, q_group, narrow_range)
                 command = self._backend_entity.create_quantizer_insertion_command(
@@ -760,7 +760,8 @@ class MinMaxQuantization(Algorithm):
                 if statistics.min_values is None or statistics.max_values is None:
                     raise RuntimeError(f"Statistics were not collected for the node {target_node_name}")
                 if self._mode == Mode.FP8:
-                    parameters = calculate_convert_parameters(statistics)
+                    is_activation = quant_group == QuantizerGroup.ACTIVATIONS
+                    parameters = calculate_convert_parameters(statistics, is_activation=is_activation)
                 elif self._mode == Mode.FQ:
                     parameters = calculate_quantizer_parameters(
                         statistics, qconfig, quant_group, narrow_range, half_range

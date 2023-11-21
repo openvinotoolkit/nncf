@@ -259,14 +259,16 @@ def calculate_quantizer_parameters(
     return FakeQuantizeParameters(input_low, input_high, output_low, output_high, levels)
 
 
-def calculate_convert_parameters(statistics: MinMaxTensorStatistic) -> FakeConvertParameters:
+def calculate_convert_parameters(statistics: MinMaxTensorStatistic, is_activation: False) -> FakeConvertParameters:
     """ """
-    min_values = Tensor(statistics.min_values).astype(TensorDataType.float32)
     max_values = Tensor(statistics.max_values).astype(TensorDataType.float32)
+    min_values = Tensor(statistics.min_values).astype(TensorDataType.float32)
 
     max_destination_value = 448
     tensor_dtype = fns.finfo(max_values)
     scale = max_destination_value / fns.maximum(max_values, fns.abs(min_values) + tensor_dtype.eps)
+    if is_activation:
+        scale = 0.5 * scale
     shift = fns.zeros_like(scale)
     return FakeConvertParameters(scale, shift)
 
