@@ -25,6 +25,7 @@ from nncf.quantization.algorithms.weight_compression.openvino_backend import _ge
 from nncf.quantization.algorithms.weight_compression.openvino_backend import _reshape_weights_for_grouped_quantization
 from nncf.scopes import IgnoredScope
 from tests.openvino.native.common import get_openvino_version
+from tests.openvino.native.models import GatherAndMatmulShareData
 from tests.openvino.native.models import GatherWithTwoReductionAxes
 from tests.openvino.native.models import IntegerModel
 from tests.openvino.native.models import SequentialMatmulModel
@@ -75,7 +76,7 @@ def check_int8_node(op: ov.Node):
     }
 
 
-def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int = 3):
+def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int = 7):
     assert op.get_element_type() == ov.Type.u4
     weight_shape = op.shape
     # NOTE: get_const_value doesn't work for 4-bit types
@@ -112,7 +113,7 @@ def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int =
     }
 
 
-def check_nf4_grouped(op: ov.Node, group_size: int = 3):
+def check_nf4_grouped(op: ov.Node, group_size: int = 7):
     assert op.get_element_type() == ov.Type.nf4
     weight_shape = op.shape
     # NOTE: get_const_value doesn't work for 4-bit types
@@ -146,9 +147,8 @@ def check_int4_asym_grouped(op: ov.Node):
 
 def get_mixed_mapping(primary_fn: Callable, list_layers: List[str]):
     mapping = {node_name: check_int8_node for node_name in list_layers}
-
-    for node_name in TEST_MODELS[IntegerModel][1:-1]:
-        mapping[node_name] = primary_fn
+    primary_node_name = TEST_MODELS[IntegerModel][0]
+    mapping[primary_node_name] = primary_fn
     return mapping
 
 
@@ -156,9 +156,9 @@ def get_mixed_mapping(primary_fn: Callable, list_layers: List[str]):
     ("mode", "group_size", "check_fn_per_node_map"),
     (
         (CompressWeightsMode.INT8, -1, {node_name: check_int8_node for node_name in TEST_MODELS[IntegerModel]}),
-        (CompressWeightsMode.INT4_SYM, 3, get_mixed_mapping(check_int4_sym_grouped, TEST_MODELS[IntegerModel])),
-        (CompressWeightsMode.INT4_ASYM, 3, get_mixed_mapping(check_int4_asym_grouped, TEST_MODELS[IntegerModel])),
-        (CompressWeightsMode.NF4, 3, get_mixed_mapping(check_nf4_grouped, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.INT4_SYM, 7, get_mixed_mapping(check_int4_sym_grouped, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.INT4_ASYM, 7, get_mixed_mapping(check_int4_asym_grouped, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.NF4, 7, get_mixed_mapping(check_nf4_grouped, TEST_MODELS[IntegerModel])),
     ),
 )
 def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
@@ -207,8 +207,23 @@ def test_not_quantize_with_multiple_reduction_axes():
     model = GatherWithTwoReductionAxes().ov_model
     compressed_model = compress_weights(model, mode=CompressWeightsMode.INT8)
     for op in compressed_model.get_ordered_ops():
-        if op.get_type_name() == "Constant" and op.get_friendly_name() == "gather_2_data":
+        if op.get_type_name() == "Constant" and op.get_friendly_name() == "gather_1_data":
             assert op.get_element_type() == ov.Type(np.float32)
+
+
+@pytest.mark.parametrize("mode", (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM))
+def test_shared_gather(mode):
+    weight_name_vs_type = {
+        "gather_2_data": ov.Type(np.uint8),
+        "shared_data": ov.Type(np.uint8),
+        "matmul_1_data": ov.Type.u4,
+    }
+    model = GatherAndMatmulShareData().ov_model
+    compressed_model = compress_weights(model, mode, group_size=3)
+    for op in compressed_model.get_ordered_ops():
+        op_name = op.get_friendly_name()
+        if op.get_type_name() == "Constant" and op_name in weight_name_vs_type:
+            assert op.get_element_type() == weight_name_vs_type[op_name]
 
 
 @dataclass
