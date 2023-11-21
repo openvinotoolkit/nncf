@@ -25,6 +25,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
+from nncf.openvino.rt_info import dump_parameters
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
@@ -131,6 +132,16 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
             for target_input in target_inputs:
                 target_input.replace_source_output(last_output)
+
+        dump_parameters(
+            model,
+            parameters={
+                "mode": mode.value,
+                "group_size": group_size,
+                "ratio": ratio,
+            },
+            algo_name="weight_compression",
+        )
         return model
 
 
