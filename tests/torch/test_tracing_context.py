@@ -134,6 +134,6 @@ def test_nested_context():
             assert len(ctx._threading.thread_local.save_context) == 2
             assert len(ctx._threading.thread_local.traced_tensor_weakrefs) > 0
         assert len(ctx._threading.thread_local.save_context) == 1
-        assert ctx._threading.thread_local.save_context[0] == None
+        assert ctx._threading.thread_local.save_context[0] is None
         assert len(ctx._threading.thread_local.traced_tensor_weakrefs) > 0
     assert len(ctx._threading.thread_local.traced_tensor_weakrefs) == 0
