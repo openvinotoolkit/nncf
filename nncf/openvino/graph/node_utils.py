@@ -71,6 +71,16 @@ def get_number_if_op(model: ov.Model) -> int:
     return cnt_if_op(model, 0)
 
 
+def get_const_value(const_node: ov.Node) -> np.ndarray:
+    """
+    Returns the constant tensor for the node.
+
+    :param const_node: OpenVINO node.
+    :return: The constant value.
+    """
+    return const_node.data
+
+
 def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
     """
     Returns the bias tensor for the biased node.
@@ -85,7 +95,7 @@ def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Mo
     add_node = nncf_graph.get_next_nodes(node_with_bias)[0]
     bias_constant = get_node_with_bias_value(add_node, nncf_graph)
     ov_bias_constant = ops_dict[bias_constant.node_name]
-    return ov_bias_constant.data
+    return get_const_value(ov_bias_constant)
 
 
 def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
@@ -101,7 +111,8 @@ def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) 
     const_op_friendly_name = node_with_weight.layer_attributes.constant_attributes[port_id]["name"]
     friendly_name_to_op_map = {op.get_friendly_name(): op for op in model.get_ops()}
     const_op = friendly_name_to_op_map[const_op_friendly_name]
-    return const_op.data
+    weight_tensor = get_const_value(const_op)
+    return weight_tensor
 
 
 def get_node_with_bias_value(add_node: NNCFNode, nncf_graph: NNCFGraph) -> Optional[NNCFNode]:
