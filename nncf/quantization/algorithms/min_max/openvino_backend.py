@@ -100,7 +100,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
 
     @staticmethod
-    def get_input_nodes(nncf_graph: NNCFGraph) -> List[OperatorMetatype]:
+    def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[OperatorMetatype]:
         return get_input_nodes(nncf_graph)
 
     @staticmethod

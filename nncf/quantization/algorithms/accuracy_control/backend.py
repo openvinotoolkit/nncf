@@ -53,12 +53,12 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_graph_inputs(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[NNCFNode]:
         """
-        Returns a list of NNCFNodes that are identified as an inputs.
+        Returns a list of NNCFNodes to use as start nodes for activation path tracing.
 
-        :param nncf_graph: The NNCF graph.
-        :return: List of NNCFNodes that are identified as an inputs.
+        :param nncf_graph: NNCFGraph to get the start nodes.
+        :return: List of NNCFNodes to use as start nodes for activation path tracing.
         """
 
     @staticmethod

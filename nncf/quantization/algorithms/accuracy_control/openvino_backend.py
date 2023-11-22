@@ -60,7 +60,7 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
         return SHAPEOF_OPERATIONS
 
     @staticmethod
-    def get_graph_inputs(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[NNCFNode]:
         return get_input_nodes(nncf_graph)
 
     # Manipulations with bias value and weights

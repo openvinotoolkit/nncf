@@ -51,6 +51,7 @@ class NNCFGraphToTestDepthwiseConv:
         conv_layer_attrs=None,
         input_layer_attrs=None,
         output_layer_attrs=None,
+        nncf_graph_cls=NNCFGraph,
     ):
         #       Original graph
         #          Input_1
@@ -65,7 +66,7 @@ class NNCFGraphToTestDepthwiseConv:
         ]
         node_edges = [("Input_1", "Conv_1"), ("Conv_1", "Output_1")]
         original_mock_graph = create_mock_graph(nodes, node_edges)
-        self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph)
+        self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
 
 
 class NNCFGraphToTestSumAggregation:

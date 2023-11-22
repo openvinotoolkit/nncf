@@ -111,7 +111,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 
     @staticmethod
-    def get_input_nodes(nncf_graph: PTNNCFGraph) -> List[OperatorMetatype]:
+    def get_start_nodes_for_activation_path_tracing(nncf_graph: PTNNCFGraph) -> List[OperatorMetatype]:
         return nncf_graph.get_disconnected_nodes() + nncf_graph.get_input_nodes()
 
     @staticmethod

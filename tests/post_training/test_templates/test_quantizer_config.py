@@ -89,7 +89,7 @@ class TemplateTestQuantizerConfig:
         nncf_graph = single_conv_nncf_graph.nncf_graph
         inference_nncf_graph = transform_to_inference_graph(
             deepcopy(nncf_graph),
-            min_max_algo._backend_entity.get_input_nodes(nncf_graph),
+            min_max_algo._backend_entity.get_start_nodes_for_activation_path_tracing(nncf_graph),
             min_max_algo._backend_entity.shapeof_metatypes,
             min_max_algo._backend_entity.dropout_metatypes,
         )
@@ -143,7 +143,7 @@ class TemplateTestQuantizerConfig:
         nncf_graph = single_conv_nncf_graph.nncf_graph
         inference_nncf_graph = transform_to_inference_graph(
             deepcopy(nncf_graph),
-            min_max_algo._backend_entity.get_input_nodes(nncf_graph),
+            min_max_algo._backend_entity.get_start_nodes_for_activation_path_tracing(nncf_graph),
             min_max_algo._backend_entity.shapeof_metatypes,
             min_max_algo._backend_entity.dropout_metatypes,
         )
@@ -185,7 +185,7 @@ class TemplateTestQuantizerConfig:
         nncf_graph = depthwise_conv_nncf_graph.nncf_graph
         inference_nncf_graph = transform_to_inference_graph(
             deepcopy(nncf_graph),
-            min_max_algo._backend_entity.get_input_nodes(nncf_graph),
+            min_max_algo._backend_entity.get_start_nodes_for_activation_path_tracing(nncf_graph),
             min_max_algo._backend_entity.shapeof_metatypes,
             min_max_algo._backend_entity.dropout_metatypes,
         )
