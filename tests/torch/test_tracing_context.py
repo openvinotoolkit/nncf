@@ -93,16 +93,16 @@ class ModuleForTest(torch.nn.Module):
         return self.conv2d(x)
 
 
-def test_traced_tensors_are_expired_on_context_exit():
+def test_traced_tensors_are_striped_on_context_exit():
     module = ModuleForTest()
     module.train()
     tensor = torch.ones([1, 1, 1, 1])
     with TracingContext():
         result = module(tensor)
-    assert isinstance(module.cached_tensor, TracedTensor)
-    assert module.cached_tensor.nncf_expired
-    assert isinstance(result, TracedTensor)
-    assert result.nncf_expired
+        assert isinstance(module.cached_tensor, TracedTensor)
+        assert isinstance(result, TracedTensor)
+    assert isinstance(module.cached_tensor, torch.Tensor)
+    assert isinstance(result, torch.Tensor)
 
 
 def test_no_cross_forward_run_dependency():
@@ -118,3 +118,22 @@ def test_no_cross_forward_run_dependency():
         ctx.enable_trace_dynamic_graph()
         _ = module(tensor)
         ctx.disable_trace_dynamic_graph()
+
+
+def test_nested_context():
+    ctx = TracingContext()
+    module = ModuleForTest()
+    module.train()
+    tensor = torch.ones([1, 1, 1, 1])
+    with ctx:
+        with ctx:
+            with ctx:
+                module(tensor)
+                assert len(ctx._threading.thread_local.save_context) == 3
+                assert len(ctx._threading.thread_local.traced_tensor_weakrefs) > 0
+            assert len(ctx._threading.thread_local.save_context) == 2
+            assert len(ctx._threading.thread_local.traced_tensor_weakrefs) > 0
+        assert len(ctx._threading.thread_local.save_context) == 1
+        assert ctx._threading.thread_local.save_context[0] == None
+        assert len(ctx._threading.thread_local.traced_tensor_weakrefs) > 0
+    assert len(ctx._threading.thread_local.traced_tensor_weakrefs) == 0

@@ -51,7 +51,7 @@ from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.patch_pytorch import ORIGINAL_CALL
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope_access import get_module_by_scope
-from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
+from nncf.torch.dynamic_graph.trace_tensor import strip_traced_tensors_in_inpputs
 from nncf.torch.dynamic_graph.wrappers import wrap_module_call
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
@@ -245,14 +245,17 @@ class NNCFNetworkInterface(torch.nn.Module):
         self._extra_module_types: List[ExtraCompressionModuleType] = []
         self._insertions_into_original_graph: Dict[PTTargetPoint, List[Tuple[Callable, TransformationPriority]]] = {}
 
-        _orig_graph_build_forward_fn = self._get_dummy_forward_fn_for_graph_building(
-            with_input_tracing=True, with_output_tracing=True
-        )
+        if isinstance(model, NNCFNetwork):
+            self._nncf_replaced_modules = model.nncf._nncf_replaced_modules
+        else:
+            _orig_graph_build_forward_fn = self._get_dummy_forward_fn_for_graph_building(
+                with_input_tracing=True, with_output_tracing=True
+            )
 
-        eval_op_scopes = self._collect_eval_op_scopes(model, _orig_graph_build_forward_fn)
+            eval_op_scopes = self._collect_eval_op_scopes(model, _orig_graph_build_forward_fn)
 
-        # all modules called in eval mode should be replaced prior to graph building
-        self._replace_modules_by_nncf_modules(model, eval_op_scopes)
+            # all modules called in eval mode should be replaced prior to graph building
+            self._replace_modules_by_nncf_modules(model, eval_op_scopes)
 
         _orig_context = TracingContext()
 
@@ -313,23 +316,6 @@ class NNCFNetworkInterface(torch.nn.Module):
     @property
     def input_infos(self) -> ModelInputInfo:
         return deepcopy(self._input_info)
-
-    def _strip_traced_tensors(self, args: Tuple, kwargs: Dict) -> Tuple[Tuple, Dict]:
-        """
-        Required to guard against new forward calls on tensors that have already passed
-        through NNCF's forward once and got turned into TracedTensors by reference access.
-        """
-        is_traced_tensor_predicate = lambda x: isinstance(x, TracedTensor)
-
-        def strip_fn(tensor: TracedTensor) -> torch.Tensor:
-            if hasattr(torch.Tensor, "as_subclass"):
-                return torch.Tensor.as_subclass(tensor, torch.Tensor)
-            # Torch < 1.7.0 fallback
-            return torch.tensor(tensor, device=tensor.device, requires_grad=tensor.requires_grad)
-
-        args = objwalk(args, is_traced_tensor_predicate, strip_fn)
-        kwargs = objwalk(kwargs, is_traced_tensor_predicate, strip_fn)
-        return args, kwargs
 
     def create_knowledge_distillation_loss_handler(
         self, kd_original_model: nn.Module, calculate_fn
@@ -935,7 +921,7 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
             if not self.nncf._in_user_dummy_forward:
                 # If a user supplies own dummy forward, he is responsible for
                 # correctly wrapping inputs inside it as well.
-                args, kwargs = self.nncf._strip_traced_tensors(args, kwargs)
+                args, kwargs = strip_traced_tensors_in_inpputs(args, kwargs)
                 args, kwargs = self.nncf._wrap_inputs_fn(args, kwargs)
 
             # For purposes of scope tracking, need the original forward call to occur as if it were
