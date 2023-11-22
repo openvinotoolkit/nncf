@@ -24,7 +24,6 @@ from nncf.quantization.algorithms.weight_compression.openvino_backend import Wei
 from nncf.quantization.algorithms.weight_compression.openvino_backend import _get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.openvino_backend import _reshape_weights_for_grouped_quantization
 from nncf.scopes import IgnoredScope
-from tests.openvino.native.common import get_openvino_version
 from tests.openvino.native.models import GatherAndMatmulShareData
 from tests.openvino.native.models import GatherWithTwoReductionAxes
 from tests.openvino.native.models import IntegerModel
@@ -162,9 +161,6 @@ def get_mixed_mapping(primary_fn: Callable, list_layers: List[str]):
     ),
 )
 def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
-    ov_version = get_openvino_version()
-    if mode == CompressWeightsMode.NF4 and ov_version != "2023.2":
-        pytest.xfail("NF4 is not supported until 2023.2")
     model = IntegerModel().ov_model
     compressed_model = compress_weights(model, mode=mode, group_size=group_size)
     actual_stats = {}
@@ -189,13 +185,11 @@ def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
     (
         (1, ["weights_1", "weights_2", "weights_3"]),
         (0.8, ["weights_2", "weights_3"]),
-        (0.4, ["weights_3"]),
+        (0.4, ["weights_2"]),
         (0.3, []),
     ),
 )
 def test_mixed_precision(ratio, group_size, ref_nf4_nodes):
-    if ratio > 0.3:
-        pytest.xfail("Waiting for the merge NF4 support in OV - PR 19900")
     model = SequentialMatmulModel().ov_model
     compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4, ratio=ratio, group_size=group_size)
     for op in compressed_model.get_ordered_ops():
