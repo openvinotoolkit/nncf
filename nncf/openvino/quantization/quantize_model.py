@@ -11,7 +11,7 @@
 
 import importlib
 from copy import deepcopy
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
@@ -24,6 +24,7 @@ from nncf.openvino.graph.node_utils import get_number_if_op
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
 from nncf.openvino.quantization.quantize_ifmodel import apply_algorithm_if_bodies
+from nncf.openvino.rt_info import dump_parameters
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -69,27 +70,6 @@ def should_use_pot(advanced_parameters: Optional[AdvancedQuantizationParameters]
         )
 
     return True
-
-
-def dump_parameters(model: ov.Model, parameters: Dict, path: Optional[List] = None) -> None:
-    """
-    Dumps input parameters into Model's meta section.
-
-    :param model: ov.Model instance.
-    :param parameters: Incoming dictionary with parameters to save.
-    :param path: Optional list of the paths.
-    """
-    try:
-        path = path if path else []
-        for key, value in parameters.items():
-            # Special condition for composed fields like IgnoredScope
-            if isinstance(value, IgnoredScope):
-                dump_parameters(model, value.__dict__, [key])
-                continue
-            rt_path = ["nncf", "quantization"] + path + [key]
-            model.set_rt_info(str(value), rt_path)
-    except RuntimeError as e:
-        nncf_logger.debug(f"Unable to dump optimization parameters due to error: {e}")
 
 
 @tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
