@@ -129,7 +129,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_point: PTTargetPoint,
         quantizer_config: QuantizerConfig,
         parameters: Union[FakeQuantizeParameters, FakeConvertParameters],
-        mode: Mode,
+        mode: Mode = Mode.FQ,
     ) -> PTQuantizerInsertionCommand:
         return PTMinMaxAlgoBackend._create_quantizer_insertion_command(
             nncf_graph, target_point, quantizer_config, parameters

@@ -144,7 +144,7 @@ class MinMaxAlgoBackend(ABC):
         target_point: TargetPoint,
         quantizer_config: QuantizerConfig,
         parameters: Union[FakeQuantizeParameters, FakeConvertParameters],
-        mode: Mode,
+        mode: Mode = Mode.FQ,
     ) -> TransformationCommand:
         """
         Returns backend-specific quantizer insertion command.

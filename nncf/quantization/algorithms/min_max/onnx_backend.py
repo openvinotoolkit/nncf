@@ -108,7 +108,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_point: ONNXTargetPoint,
         quantizer_config: QuantizerConfig,
         parameters: Union[FakeQuantizeParameters, FakeConvertParameters],
-        mode: Mode,
+        mode: Mode = Mode.FQ,
     ):
         tensor_type = np.int8 if np.any(parameters.input_low.data < 0) else np.uint8
         if target_point.is_weight_target_point():

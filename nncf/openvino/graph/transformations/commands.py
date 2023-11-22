@@ -90,7 +90,7 @@ class OVQuantizerInsertionCommand(OVInsertionCommand):
         self,
         target_point: OVTargetPoint,
         fake_op_parameters: Union[FakeQuantizeParameters, FakeConvertParameters],
-        mode: Mode,
+        mode: Mode = Mode.FQ,
     ):
         super().__init__(target_point)
         self.fake_op_parameters = fake_op_parameters

@@ -280,7 +280,7 @@ class OVModelTransformer(ModelTransformer):
         op_output: ov.Output, fake_convert_params: FakeConvertParameters, fake_convert_name: str, convert_to_fp16: bool
     ) -> ov.Node:
         """
-        Creates FakeQuantize node.
+        Creates FakeConvert node.
 
         :param op_output: Output of the previous node.
         :param fake_convert_params: FakeConvertParameters instance.
@@ -317,7 +317,6 @@ class OVModelTransformer(ModelTransformer):
         transform_type = transformation.target_point.type
 
         name = "weights" if transform_type == TargetType.OPERATION_WITH_WEIGHTS else "input"
-        fake_op_name = f"{node_name}/{mode}_{name}_{port_id}"
 
         if transform_type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
             inp_node = target_node.input(port_id)
@@ -332,6 +331,7 @@ class OVModelTransformer(ModelTransformer):
                         fake_op = out.get_node()
             if fake_op is None:
                 convert_to_fp16 = data_type == ov.Type(np.float16)
+                fake_op_name = f"{node_name}/{mode}_{name}_{port_id}"
                 if mode == Mode.FQ:
                     fake_op = OVModelTransformer._create_fake_quantize(
                         input_node_output, fake_op_params, fake_op_name, convert_to_fp16
@@ -346,6 +346,7 @@ class OVModelTransformer(ModelTransformer):
             data_type = output.get_element_type()
             target_inputs = output.get_target_inputs()
             convert_to_fp16 = data_type == ov.Type(np.float16)
+            fake_op_name = f"{node_name}/{mode}_output_{port_id}"
             if mode == Mode.FQ:
                 fake_op = OVModelTransformer._create_fake_quantize(
                     output, fake_op_params, fake_op_name, convert_to_fp16
