@@ -794,12 +794,35 @@ class GatherWithTwoReductionAxes(OVReferenceModel):
         input_1 = opset.parameter([2, 3], name="Input")
         convert_1 = opset.convert(input_1, destination_type="i64", name="Convert_1")
 
-        gather_2_data = opset.constant(self._rng.random((3, 2, 1)), dtype=np.float32, name="gather_2_data")
+        gather_1_data = opset.constant(self._rng.random((3, 2, 1)), dtype=np.float32, name="gather_1_data")
+        gather_1 = opset.gather(gather_1_data, convert_1, axis=0, batch_dims=0)
+        gather_1.set_friendly_name("Gather_1")
+
+        result = opset.result(gather_1, name="Result")
+        model = ov.Model([result], [input_1])
+        return model
+
+
+class GatherAndMatmulShareData(OVReferenceModel):
+    def _create_ov_model(self):
+        input_1 = opset.parameter([2, 3], name="Input")
+        convert_1 = opset.convert(input_1, destination_type="i64", name="Convert_1")
+
+        shared_data = opset.constant(self._rng.random((2, 2)), dtype=np.float32, name="shared_data")
+        gather_1 = opset.gather(shared_data, convert_1, axis=0, batch_dims=0)
+        gather_1.set_friendly_name("Gather_1")
+
+        gather_2_data = opset.constant(self._rng.random((2, 1)), dtype=np.float32, name="gather_2_data")
         gather_2 = opset.gather(gather_2_data, convert_1, axis=0, batch_dims=0)
         gather_2.set_friendly_name("Gather_2")
 
-        result = opset.result(gather_2, name="Result")
-        model = ov.Model([result], [input_1])
+        matmul_1_data = opset.constant(self._rng.random((2, 3)), dtype=np.float32, name="matmul_1_data")
+        matmul_1 = opset.matmul(input_1, matmul_1_data, transpose_a=False, transpose_b=True, name="MatMul_1")
+
+        matmul_2 = opset.matmul(matmul_1, shared_data, transpose_a=False, transpose_b=True, name="MatMul_2")
+
+        result = opset.result(matmul_2, name="  Result")
+        model = ov.Model([result, gather_2, gather_1], [input_1])
         return model
 
 
