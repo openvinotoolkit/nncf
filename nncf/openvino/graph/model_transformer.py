@@ -358,55 +358,6 @@ class OVModelTransformer(ModelTransformer):
             raise RuntimeError(f"Incorrect target point type {transform_type}")
 
     @staticmethod
-    def _insert_fake_convert_op(
-        transformation: OVQuantizerInsertionCommand, name_to_node_mapping: Dict[str, ov.Node]
-    ) -> None:
-        """
-        Inserts FakeConvert Operation to a model which name_to_node_mapping is passed.
-
-        :param transformation: FakeConvert insertion command.
-        :param name_to_node_mapping: Mapping from node name to node instance.
-        """
-        fc_params = transformation.fake_op_parameters
-        scale = fc_params.scale.data
-        shift = fc_params.shift.data
-
-        node_name = transformation.target_point.target_node_name
-        target_node = name_to_node_mapping[node_name]
-        port_id = transformation.target_point.port_id
-        transform_type = transformation.target_point.type
-        if transform_type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
-            inp_node = target_node.input(port_id)
-            input_node_output = inp_node.get_source_output()
-            data_type = inp_node.get_element_type()
-            if data_type == ov.Type(np.float16):
-                scale, shift = OVModelTransformer.create_fake_convert(fc_params)
-            name = "fc_weights" if transform_type == TargetType.OPERATION_WITH_WEIGHTS else "fc_input"
-            fc_name = f"{node_name}/{name}_{port_id}"
-
-            fc = None
-            if transform_type == TargetType.OPERATION_WITH_WEIGHTS:
-                # If the nodes share one weight tensor, we should have only one quantizer on that
-                for out in input_node_output.get_target_inputs():
-                    if out.get_node().get_type_name() == "FakeConvert":
-                        fc = out.get_node()
-            if fc is None:
-                fc = opset13.fake_convert(input_node_output, scale, shift, name=fc_name)
-            inp_node.replace_source_output(fc.output(0))
-        elif transform_type == TargetType.POST_LAYER_OPERATION:
-            output = target_node.output(port_id)
-            data_type = output.get_element_type()
-            if data_type == ov.Type(np.float16):
-                scale, shift = OVModelTransformer.create_fake_convert(fc_params)
-            target_inputs = output.get_target_inputs()
-            fc_name = f"{node_name}/fc_output_{port_id}"
-            fc = opset13.fake_convert(output, scale, shift, name=fc_name)
-            for inp_node in target_inputs:
-                inp_node.replace_source_output(fc.output(0))
-        else:
-            raise RuntimeError(f"Incorrect target point type {transform_type}")
-
-    @staticmethod
     def _apply_bias_correction_transformations(model, transformations: List[OVBiasCorrectionCommand]) -> ov.Model:
         """
         Applies bias correction transformations on the model.
