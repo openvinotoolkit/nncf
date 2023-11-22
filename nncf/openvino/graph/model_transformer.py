@@ -16,7 +16,7 @@ from typing import Callable, Dict, List, Tuple
 import numpy as np
 import openvino.runtime as ov
 from openvino._pyopenvino import DescriptorTensor
-from openvino.runtime import opeset13
+from openvino.runtime import opset13
 from openvino.runtime import opset9 as opset
 
 from nncf.common.graph.model_transformer import ModelTransformer
