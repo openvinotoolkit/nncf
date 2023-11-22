@@ -52,6 +52,10 @@ class OVLayerAttributes(BaseLayerAttributes):
         return self._constant_attributes
 
     @property
+    def layer_attributes(self) -> Optional[BaseLayerAttributes]:
+        return self._layer_attributes
+
+    @property
     def input_attributes(self) -> Optional[Dict[Any, Any]]:
         return self._inputs_attributes
 
@@ -64,9 +68,6 @@ class OVLayerAttributes(BaseLayerAttributes):
         if self._constant_attributes is not None:
             return list(self._constant_attributes.keys())
         return []
-
-    def get_backend_agnostic_attributes(self):
-        return self._layer_attributes
 
 
 def get_conv_weights_layout_from_node(node: NNCFNode) -> List[OVLayoutElem]:

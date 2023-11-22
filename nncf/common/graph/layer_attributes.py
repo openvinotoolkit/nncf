@@ -30,9 +30,6 @@ class BaseLayerAttributes(ABC):
     def __eq__(self, __o: object) -> bool:
         return isinstance(__o, self.__class__) and self.__dict__ == __o.__dict__
 
-    def get_backend_agnostic_attributes(self) -> "BaseLayerAttributes":
-        return self
-
 
 class MultipleInputLayerAttributes(BaseLayerAttributes):
     def __init__(self, axis: int):
@@ -112,13 +109,7 @@ class GenericWeightedLayerAttributes(WeightedLayerAttributes):
 
 
 class LinearLayerAttributes(WeightedLayerAttributes):
-    def __init__(
-        self,
-        weight_requires_grad: bool,
-        in_features: int,
-        out_features: int,
-        with_bias: bool = True,
-    ):
+    def __init__(self, weight_requires_grad: bool, in_features: int, out_features: int, with_bias: bool = True):
         """
 
         :param weight_requires_grad: Is True if gradients need to be computed for the corresponding Tensor,

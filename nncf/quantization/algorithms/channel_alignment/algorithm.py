@@ -260,7 +260,7 @@ class ChannelAlignment(Algorithm):
         return updated_conv_in_value, updated_conv_out_value, updated_bias_in_value
 
     def _check_consumer_conv_node(self, conv_node: NNCFNode) -> bool:
-        attrs = conv_node.layer_attributes.get_backend_agnostic_attributes()
+        attrs = self._backend_entity.get_conv_layer_attributes(conv_node)
         if attrs is None:
             return False
         # Check groups amount == 1

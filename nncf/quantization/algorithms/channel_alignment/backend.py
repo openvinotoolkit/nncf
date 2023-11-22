@@ -17,6 +17,7 @@ import numpy as np
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
@@ -105,6 +106,15 @@ class ChannelAlignmentAlgoBackend:
         :param num_samples: Num samples to collect by the tensor collector.
         :param inplace: Should statistic be calculated inplace or out of place.
         :return: Backend-specific tensor collector that collects medians of minimal and maximal quantiles.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_conv_layer_attributes(node: NNCFNode) -> ConvolutionLayerAttributes:
+        """
+        Returns convolutional layer attributes of given node if they are present and None otherwise.
+        :param node: NNCFNode to take convolutional layer attributes from.
+        :return: Convolutional layer attributes of given node if they are present and None otherwise
         """
 
     @staticmethod

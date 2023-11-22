@@ -16,6 +16,7 @@ import openvino.runtime as ov
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
@@ -126,6 +127,10 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
             weights_layout.index(OVLayoutElem.C_IN),
             node.metatype.output_channel_axis,
         )
+
+    @staticmethod
+    def get_conv_layer_attributes(node: NNCFNode) -> ConvolutionLayerAttributes:
+        return node.layer_attributes.layer_attributes
 
     @staticmethod
     def create_bias_tensor(node: NNCFNode, nncf_graph: NNCFGraph, value: Any) -> np.ndarray:
