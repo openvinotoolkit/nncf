@@ -50,8 +50,8 @@ class FakeConvertParameters:
     """
     Class handles FakeConvert layer attributes.
 
-    :param scale:
-    :param shift:
+    :param scale: Tensor with the scale for input value.
+    :param shift: Tensor with the shift for input value.
     """
 
     scale: Tensor
@@ -259,16 +259,32 @@ def calculate_quantizer_parameters(
     return FakeQuantizeParameters(input_low, input_high, output_low, output_high, levels)
 
 
-def calculate_convert_parameters(statistics: MinMaxTensorStatistic, is_activation: False) -> FakeConvertParameters:
-    """ """
+def calculate_convert_parameters(
+    statistics: MinMaxTensorStatistic,
+    is_activation: False,
+    destination_type: str = "HF8",
+    activation_scale: float = 0.5,
+) -> FakeConvertParameters:
+    """
+    Calculates FakeConvert layer attributes for weight/activation quantizer.
+
+    :param statistics: Collected statistics for the quantized insertion.
+    :param is_activation: Whether is for activation or weights.
+    :param destination_type: Destination type that regulates maximum value for the formula.
+    :param activation_scale: Factor for calculated activation scale.
+    :return: Parameters of the FakeConvert layer.
+    """
+
+    destination_type_maximum = {"HF8": 448, "BF8": 57344}
+
     max_values = Tensor(statistics.max_values)
     min_values = Tensor(statistics.min_values)
 
-    max_destination_value = 448
+    max_destination_value = destination_type_maximum[destination_type]
     tensor_dtype = fns.finfo(max_values)
     scale = max_destination_value / fns.maximum(max_values, fns.abs(min_values) + tensor_dtype.eps)
     if is_activation:
-        scale = 0.5 * scale
+        scale = activation_scale * scale
     shift = fns.zeros_like(scale).astype(TensorDataType.float32)
     scale = scale.astype(TensorDataType.float32)
     return FakeConvertParameters(scale, shift)
