@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 import torch
 
@@ -30,6 +30,7 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import Mode
 from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
+from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.torch.graph.graph import PTTargetPoint
@@ -127,7 +128,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         nncf_graph: NNCFGraph,
         target_point: PTTargetPoint,
         quantizer_config: QuantizerConfig,
-        parameters: FakeQuantizeParameters,
+        parameters: Union[FakeQuantizeParameters, FakeConvertParameters],
         mode: Mode,
     ) -> PTQuantizerInsertionCommand:
         return PTMinMaxAlgoBackend._create_quantizer_insertion_command(

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
+from typing import List, Union
 
 import numpy as np
 import openvino.runtime as ov
@@ -21,6 +21,7 @@ from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationType
 from nncf.openvino.graph.node_utils import InplaceInsertionFnType
 from nncf.quantization.advanced_parameters import Mode
+from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
 
@@ -85,9 +86,14 @@ class OVFQNodeRemovingCommand(TransformationCommand):
 
 
 class OVQuantizerInsertionCommand(OVInsertionCommand):
-    def __init__(self, target_point: OVTargetPoint, quantizer_parameters: FakeQuantizeParameters, mode: Mode = Mode.FQ):
+    def __init__(
+        self,
+        target_point: OVTargetPoint,
+        fake_op_parameters: Union[FakeQuantizeParameters, FakeConvertParameters],
+        mode: Mode,
+    ):
         super().__init__(target_point)
-        self.quantizer_parameters = quantizer_parameters
+        self.fake_op_parameters = fake_op_parameters
         self.mode = mode
 
     def union(self, other: "TransformationCommand") -> "TransformationCommand":

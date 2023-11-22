@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
 
@@ -41,6 +41,7 @@ from nncf.quantization.advanced_parameters import Mode
 from nncf.quantization.advanced_parameters import RangeEstimatorParameters
 from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
+from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
 
@@ -112,7 +113,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         nncf_graph: NNCFGraph,
         target_point: OVTargetPoint,
         quantizer_config: QuantizerConfig,
-        parameters: FakeQuantizeParameters,
+        parameters: Union[FakeQuantizeParameters, FakeConvertParameters],
         mode: Mode = Mode.FQ,
     ) -> OVQuantizerInsertionCommand:
         return OVQuantizerInsertionCommand(target_point, parameters, mode)

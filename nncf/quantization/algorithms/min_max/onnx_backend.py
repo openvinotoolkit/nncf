@@ -40,6 +40,7 @@ from nncf.quantization.advanced_parameters import AggregatorType
 from nncf.quantization.advanced_parameters import Mode
 from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
+from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 
@@ -106,7 +107,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         nncf_graph: NNCFGraph,
         target_point: ONNXTargetPoint,
         quantizer_config: QuantizerConfig,
-        parameters: FakeQuantizeParameters,
+        parameters: Union[FakeQuantizeParameters, FakeConvertParameters],
         mode: Mode,
     ):
         tensor_type = np.int8 if np.any(parameters.input_low.data < 0) else np.uint8

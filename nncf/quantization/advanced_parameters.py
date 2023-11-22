@@ -142,8 +142,8 @@ class Mode:
     :type FP8: str
     """
 
-    FQ: str = "FQ"
-    FP8: str = "FP8"
+    FQ: str = "fq"
+    FP8: str = "fc"
 
 
 @api()

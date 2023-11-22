@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, List, Optional, Set, TypeVar
+from typing import Dict, List, Optional, Set, TypeVar, Union
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -26,6 +26,7 @@ from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import Mode
+from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 
@@ -142,7 +143,7 @@ class MinMaxAlgoBackend(ABC):
         nncf_graph: NNCFGraph,
         target_point: TargetPoint,
         quantizer_config: QuantizerConfig,
-        parameters: FakeQuantizeParameters,
+        parameters: Union[FakeQuantizeParameters, FakeConvertParameters],
         mode: Mode,
     ) -> TransformationCommand:
         """
@@ -151,7 +152,7 @@ class MinMaxAlgoBackend(ABC):
         :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
         :param target_point: Target location for the correction.
         :param quantizer_config: QuantizerConfig instance for the current layer.
-        :param parameters: FakeQuantizeParameters to calculate activation quantization parameters.
+        :param parameters: FakeQuantize- or FakeConvertParameters to calculate activation quantization parameters.
         :param mode: Quantization mode: FQ, FP8, etc.
         :return: Backend-specific TransformationCommand for the quantizer insertion operation.
         """
