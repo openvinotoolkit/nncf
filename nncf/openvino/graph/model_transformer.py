@@ -17,7 +17,6 @@ import numpy as np
 import openvino.runtime as ov
 from openvino._pyopenvino import DescriptorTensor
 from openvino.runtime import opset9 as opset
-from openvino.runtime import opset13
 
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.model_transformer import TModel
@@ -359,7 +358,8 @@ class OVModelTransformer(ModelTransformer):
         const_dtype = const_node.data.dtype
         const_value = np.reshape(const_value, const_shape).astype(const_dtype)
 
-        new_const_node = opset13.constant(const_value, dtype=const_dtype, shared_memory=True)
+        # TODO(andrey-churkin): Replace on opset13.constant() in a future release
+        new_const_node = ov.op.Constant(const_value, shared_memory=True)
         new_const_node.set_friendly_name(const_node.get_friendly_name())
         const_port.replace_source_output(new_const_node.output(0))
 
