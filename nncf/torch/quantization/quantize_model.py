@@ -74,7 +74,7 @@ def quantize_impl(
 
 def compress_weights_impl(
     model: torch.nn.Module,
-    mode=CompressWeightsMode.INT8,
+    mode=CompressWeightsMode.INT8_ASYM,
     ratio: Optional[float] = None,
     group_size: Optional[int] = None,
     ignored_scope: Optional[IgnoredScope] = None,
@@ -85,7 +85,9 @@ def compress_weights_impl(
 
     :param model: a Torch model for compression.
     :param mode: Defines a mode for weight compression.
-        INT8 stands for 8-bit integer quantization of all weights.
+        INT8_SYM stands for 8-bit integer symmetric quantization of all weights.
+        INT8_ASYM is the same as INT8_SYM mode, but weights are quantized to a primary precision asymmetrically
+            with a typical non-fixed zero point.
         INT4_SYM stands for a mixed-precision weights quantization with 4-bit integer as a primary precision.
             Weights are quantized to a primary precision symmetrically with a fixed zero point equals to 8.
             All embeddings and the last layer are always compressed to a backup precision, which is 8-bit integer,
@@ -104,8 +106,8 @@ def compress_weights_impl(
     """
     if ignored_scope is not None:
         raise AttributeError("Torch backend does not support ignored scope.")
-    if mode != CompressWeightsMode.INT8:
-        raise AttributeError(f"Torch backend supports only INT8 mode for weight compression, but given {mode} mode.")
+    if mode != CompressWeightsMode.INT8_ASYM:
+        raise AttributeError(f"Torch backend supports only INT8_ASYM mode for weight compression, but given {mode} mode.")
     compressed_model, _ = replace_modules_by_nncf_modules(model)
     insert_pre_compression_operations(model)
 

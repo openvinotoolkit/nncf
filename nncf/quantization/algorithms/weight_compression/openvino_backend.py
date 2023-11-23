@@ -103,7 +103,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 quantized_nodes_ids.add(id(weight_node))
 
         internal_weight_params = all_weight_params
-        if mode != CompressWeightsMode.INT8:
+        if mode not in [CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM]:
             internal_weight_params = list(filter(lambda wp: wp.metatype != OVEmbeddingMetatype, all_weight_params))
             if not is_last_layer_compressed:
                 internal_weight_params = internal_weight_params[:-1]
@@ -172,7 +172,7 @@ class WeightCompressionConfig:
         The value -1 means no grouping. Defaults to -1.
     """
 
-    mode: Optional[CompressWeightsMode] = CompressWeightsMode.INT8
+    mode: Optional[CompressWeightsMode] = CompressWeightsMode.INT8_ASYM
     group_size: Optional[int] = -1
 
     @property
@@ -180,7 +180,7 @@ class WeightCompressionConfig:
         """
         :return: number of bits that is used for storing a single quantized value in the given mode.
         """
-        return 8 if self.mode == CompressWeightsMode.INT8 else 4
+        return 8 if self.mode in [CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM] else 4
 
 
 @dataclass
@@ -239,7 +239,7 @@ def _do_integer_quantization(
         # weights are reshaped from [a1, r, a2] to [a1, r//gs, gs, a2]
         weight, reduction_axis = _reshape_weights_for_grouped_quantization(weight, reduction_axis, group_size)
 
-    if mode in [CompressWeightsMode.INT8, CompressWeightsMode.INT4_ASYM]:
+    if mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]:
         min_values = np.min(weight, axis=reduction_axis, keepdims=True)  # [a1, r, a2] -> [a1, 1, a2]
         max_values = np.max(weight, axis=reduction_axis, keepdims=True)  # [a1, r, a2] -> [a1, 1, a2]
         scale, zero_point = calculate_scale_zero_point(
