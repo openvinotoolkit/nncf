@@ -107,8 +107,8 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             internal_weight_params = list(filter(lambda wp: wp.metatype != OVEmbeddingMetatype, all_weight_params))
             if not is_last_layer_compressed:
                 internal_weight_params = internal_weight_params[:-1]
-            primary_config = WeightCompressionConfig(mode=mode, group_size=group_size)
-            _assign_mixed_precision(internal_weight_params, ratio, primary_config)
+        primary_config = WeightCompressionConfig(mode=mode, group_size=group_size)
+        _assign_mixed_precision(internal_weight_params, ratio, primary_config)
         nncf_logger.info(_get_bitwidth_distribution_str(all_weight_params, internal_weight_params))
 
         for wp in track(all_weight_params, description="Applying Weight Compression"):
@@ -212,7 +212,10 @@ def _do_integer_quantization(
     """
     The method quantizes the given weights to integer data type in accordance with the compression config.
     The config defines a quantization mode:
-        INT8 mode refers to unsigned int8 asymmetric weight compression - quantization to [0, 255] range.
+        INT8_SYM mode refers to unsigned int4 symmetric weight compression with a fixed zero point equals to 128 -
+            quantization to [0, 255] range.
+        INT8_ASYM mode refers to unsigned int8 asymmetric weight compression with a typical non-fixed zero-point -
+            quantization to [0, 255] range.
         INT4_ASYM mode refers to unsigned int4 asymmetric weight compression with a typical non-fixed zero-point -
             quantization to [0, 15] range.
         INT4_SYM mode refers to unsigned int4 symmetric weight compression with a fixed zero point equals to 8 -
