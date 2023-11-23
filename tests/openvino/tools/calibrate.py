@@ -538,8 +538,8 @@ def map_mode(mode):
     ctx = get_algorithm_parameters_context()
     advanced_parameter_name = ctx.param_name_map[ParameterNames.advanced_parameters]
     advanced_parameters = ctx.params.get(advanced_parameter_name, AdvancedQuantizationParameters())
-    if mode in [Mode.FQ, Mode.FP8]:
-        advanced_parameters.mode = mode
+    if hasattr(Mode, mode):
+        advanced_parameters.mode = getattr(Mode, mode)
     else:
         ValueError(f"advanced_parameters.mode = {mode} is not supported")
     return {advanced_parameter_name: advanced_parameters}
