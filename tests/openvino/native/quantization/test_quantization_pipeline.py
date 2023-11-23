@@ -44,7 +44,7 @@ def test_compress_weights(model_creator_func, ref_nodes):
         fast_bias_correction=True,
     )
 
-    fq_nodes = get_nodes_by_type(quantized_model)
+    fq_nodes = get_nodes_by_type(quantized_model, type_name="FakeQuantize")
     assert len(fq_nodes) == len(ref_fqs_names)
     for fq_name in fq_nodes:
         assert fq_name in ref_fqs_names
@@ -72,7 +72,7 @@ def test_overflow_fix_applied(model_creator_func, ref_nodes):
         fast_bias_correction=True,
     )
 
-    fq_nodes = get_nodes_by_type(quantized_model)
+    fq_nodes = get_nodes_by_type(quantized_model, type_name="FakeQuantize")
     assert len(fq_nodes) == len(ref_fqs_names)
     for fq_name in fq_nodes:
         assert fq_name in ref_fqs_names
