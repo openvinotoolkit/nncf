@@ -47,7 +47,7 @@ def get_next_node(node):
     return next_node
 
 
-def check_int8_node(op: ov.Node, mode: CompressWeightsMode=CompressWeightsMode.INT8_ASYM):
+def check_int8_node(op: ov.Node, mode: CompressWeightsMode = CompressWeightsMode.INT8_ASYM):
     assert op.get_element_type() == ov.Type(np.uint8)
     compressed_weight = get_const_value(op)
 

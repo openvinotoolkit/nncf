@@ -74,19 +74,31 @@ def test_compress_shared_weights():
         assert compressed_model.lm_head.get_pre_op(key) is val
 
 
-@pytest.mark.parametrize("mode", [CompressWeightsMode.INT8, CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM])
+@pytest.mark.parametrize(
+    "mode", [CompressWeightsMode.INT8, CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]
+)
 def test_raise_error_with_int8_and_non_default_ratio(mocker, mode):
     with pytest.raises(AttributeError):
         compress_weights(mocker.Mock(), mode=mode, ratio=0.5)
 
 
-@pytest.mark.parametrize("mode", [CompressWeightsMode.INT8, CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM])
+@pytest.mark.parametrize(
+    "mode", [CompressWeightsMode.INT8, CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]
+)
 def test_raise_error_with_int8_and_non_default_group_size(mocker, mode):
     with pytest.raises(AttributeError):
         compress_weights(mocker.Mock(), mode=mode, group_size=64)
 
 
-@pytest.mark.parametrize("mode", [CompressWeightsMode.NF4, CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT8_SYM])
+@pytest.mark.parametrize(
+    "mode",
+    [
+        CompressWeightsMode.NF4,
+        CompressWeightsMode.INT4_ASYM,
+        CompressWeightsMode.INT4_SYM,
+        CompressWeightsMode.INT8_SYM,
+    ],
+)
 def test_raise_error_with_not_int8_asym(mode):
     with pytest.raises(AttributeError):
         dummy_torch_model = torch.nn.Module()

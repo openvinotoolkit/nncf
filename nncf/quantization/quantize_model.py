@@ -273,8 +273,7 @@ def compress_weights(
     """
     if mode == CompressWeightsMode.INT8:
         warning_deprecated(
-            "`CompressWeightsMode.INT8` is deprecated."
-            "Please, use `CompressWeightsMode.INT8_ASYM` as value instead."
+            "`CompressWeightsMode.INT8` is deprecated." "Please, use `CompressWeightsMode.INT8_ASYM` as value instead."
         )
         mode = CompressWeightsMode.INT8_ASYM
 

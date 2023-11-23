@@ -107,7 +107,9 @@ def compress_weights_impl(
     if ignored_scope is not None:
         raise AttributeError("Torch backend does not support ignored scope.")
     if mode != CompressWeightsMode.INT8_ASYM:
-        raise AttributeError(f"Torch backend supports only INT8_ASYM mode for weight compression, but given {mode} mode.")
+        raise AttributeError(
+            f"Torch backend supports only INT8_ASYM mode for weight compression, but given {mode} mode."
+        )
     compressed_model, _ = replace_modules_by_nncf_modules(model)
     insert_pre_compression_operations(model)
 
