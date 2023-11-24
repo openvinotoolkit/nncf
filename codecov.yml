@@ -64,10 +64,10 @@ component_management:
       name: common
       paths:
         - nncf/common
-        - !nncf/**/torch_*.py
-        - !nncf/**/tensorflow_*.py
-        - !nncf/**/onnx_*.py
-        - !nncf/**/openvino_*.py
+        - "!nncf/**/torch_*.py"
+        - "!nncf/**/tensorflow_*.py"
+        - "!nncf/**/onnx_*.py"
+        - "!nncf/**/openvino_*.py"
     - component_id: torch
       name: torch
       paths:
