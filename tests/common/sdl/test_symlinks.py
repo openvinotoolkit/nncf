@@ -23,7 +23,7 @@ class NNCFConfigFromJSON(FileOpeningEntrypointProvider):
         return NNCFConfig.from_json
 
 
-@pytest.mark.parametrize("file_opening_entrypoint", [NNCFConfigFromJSON])
+@pytest.mark.parametrize("file_opening_entrypoint", [NNCFConfigFromJSON()])
 def test_symlinks_are_not_followed(tmp_path: Path, file_opening_entrypoint: FileOpeningEntrypointProvider):
     entrypoint = file_opening_entrypoint.get_entrypoint()
     check_symlinks_are_not_followed(tmp_path, entrypoint)
