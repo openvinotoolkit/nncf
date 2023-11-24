@@ -10,6 +10,7 @@
 # limitations under the License.
 from abc import ABC
 from abc import abstractmethod
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
 from nncf import NNCFConfig
@@ -20,6 +21,7 @@ from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.common.utils.os import fail_if_symlink
 from nncf.common.utils.registry import Registry
 from nncf.config.extractors import BNAdaptDataLoaderNotFoundError
 from nncf.config.extractors import extract_algo_specific_config
@@ -102,6 +104,7 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController, ABC):
                 - (a, b, {}) for positional arguments only.
                 - ({'x': None, 'y': y},) for keyword arguments only.
         """
+        fail_if_symlink(Path(save_path))
         self.prepare_for_export()
         backend = get_backend(self.model)
         if backend is BackendType.TENSORFLOW:
