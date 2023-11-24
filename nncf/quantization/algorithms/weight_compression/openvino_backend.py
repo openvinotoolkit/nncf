@@ -401,7 +401,6 @@ def _assign_mixed_precision(
         return
     errors = []
     num_internal_weights = 0
-    # NOTE: first and last layers are always in 8 bit: no need to calculate error for them
     for weight_param in track(internal_weight_params, description="Searching for Mixed-Precision Configuration"):
         weight = get_const_value(weight_param.weight_node)
         backup_config = weight_param.compression_config
