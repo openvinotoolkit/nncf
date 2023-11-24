@@ -59,7 +59,6 @@ class OVConvolutionMetatype(OVOpMetatype):
     name = "ConvOp"
     op_names = ["Convolution"]
     hw_config_names = [HWConfigOpName.CONVOLUTION]
-    const_channel_axis = [0]
     const_layout = [OVLayoutElem.C_OUT, OVLayoutElem.C_IN]
     output_channel_axis = 1
 
@@ -69,7 +68,6 @@ class OVConvolutionBackpropDataMetatype(OVOpMetatype):
     name = "ConvBackpropDataOp"
     op_names = ["ConvolutionBackpropData"]
     hw_config_names = [HWConfigOpName.CONVOLUTION]
-    const_channel_axis = [1]
     const_layout = [OVLayoutElem.C_IN, OVLayoutElem.C_OUT]
     output_channel_axis = 1
 
@@ -79,7 +77,6 @@ class OVDepthwiseConvolutionMetatype(OVOpMetatype):
     name = "DepthwiseConvolutionOp"
     op_names = ["GroupConvolution"]
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
-    const_channel_axis = [0, 1]
     const_layout = [OVLayoutElem.GROUPS, OVLayoutElem.C_OUT, OVLayoutElem.C_IN]
     output_channel_axis = 1
 
@@ -94,7 +91,6 @@ class OVGroupConvolutionMetatype(OVOpMetatype):
     op_names = ["GroupConvolution"]
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     subtypes = [OVDepthwiseConvolutionMetatype]
-    const_channel_axis = [0, 1]
     const_layout = [OVLayoutElem.GROUPS, OVLayoutElem.C_OUT, OVLayoutElem.C_IN]
     output_channel_axis = 1
 
@@ -104,7 +100,6 @@ class OVGroupConvolutionBackpropDataMetatype(OVOpMetatype):
     name = "GroupConvolutionBackpropDataOp"
     op_names = ["GroupConvolutionBackpropData"]
     hw_config_names = [HWConfigOpName.CONVOLUTION]
-    const_channel_axis = [0, 2]
     const_layout = [OVLayoutElem.GROUPS, OVLayoutElem.C_IN, OVLayoutElem.C_OUT]
     output_channel_axis = 1
 
@@ -114,9 +109,6 @@ class OVMatMulMetatype(OVOpMetatype):
     name = "MatMulOp"
     op_names = ["MatMul"]
     hw_config_names = [HWConfigOpName.MATMUL]
-    const_channel_axis = [
-        -1
-    ]  # const layout: [B, ..., Y, X], where const is the second operand of matrix multiplication
     output_channel_axis = -1
 
 

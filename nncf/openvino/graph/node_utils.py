@@ -18,6 +18,8 @@ import openvino.runtime.opset9 as opset
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.tensor_statistics.collectors import ReductionAxes
+from nncf.openvino.graph.layer_attributes import CONV_OPERATIONS
+from nncf.openvino.graph.layer_attributes import get_conv_weights_layout_from_node
 from nncf.openvino.graph.layer_attributes import get_linear_weights_layout_from_node
 from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_BIAS
@@ -351,10 +353,12 @@ def get_weight_channel_axes(node: NNCFNode) -> List[int]:
     if node.metatype not in OPERATIONS_WITH_WEIGHTS:
         raise ValueError("Channel axis cannot be defined for operation without weights.")
 
-    if node.metatype != OVMatMulMetatype:
-        return node.metatype.const_channel_axis
-
-    return get_matmul_channel_axes(node)
+    if node.metatype in CONV_OPERATIONS:
+        weights_layout = get_conv_weights_layout_from_node(node)
+        return [idx for idx, elem in enumerate(weights_layout) if elem in [OVLayoutElem.GROUPS, OVLayoutElem.C_OUT]]
+    elif node.metatype == OVMatMulMetatype:
+        return get_matmul_channel_axes(node)
+    return node.metatype.const_channel_axis
 
 
 def get_matmul_channel_axes(node: ov.Node) -> List[int]:
