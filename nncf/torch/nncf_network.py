@@ -51,7 +51,7 @@ from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.patch_pytorch import ORIGINAL_CALL
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope_access import get_module_by_scope
-from nncf.torch.dynamic_graph.trace_tensor import strip_traced_tensors_in_inpputs
+from nncf.torch.dynamic_graph.trace_tensor import strip_traced_tensors_in_inputs
 from nncf.torch.dynamic_graph.wrappers import wrap_module_call
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
@@ -920,7 +920,7 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
             if not self.nncf._in_user_dummy_forward:
                 # If a user supplies own dummy forward, he is responsible for
                 # correctly wrapping inputs inside it as well.
-                args, kwargs = strip_traced_tensors_in_inpputs(args, kwargs)
+                args, kwargs = strip_traced_tensors_in_inputs(args, kwargs)
                 args, kwargs = self.nncf._wrap_inputs_fn(args, kwargs)
 
             # For purposes of scope tracking, need the original forward call to occur as if it were

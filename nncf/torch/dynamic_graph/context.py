@@ -72,7 +72,7 @@ class TracingThreadLocals(threading.local):
         self.operator_counters = {}
         self.node_call_tracker = {}
         self.traced_tensor_weakrefs = []
-        self.save_context = []
+        self.nested_contexts_stack = []
 
 
 class CopySafeThreadingVars:
@@ -123,29 +123,29 @@ class TracingContext:
         # all replicas. Otherwise we will have data races on setting and reading the global _CURRENT_CONTEXT
         # variable, which will in turn lead to DP-specific runtime errors such as
         # "'_thread._local' object has no attribute 'scopes'"
-        self._threading.thread_local.save_context.append(get_current_context())
+        self._threading.thread_local.nested_contexts_stack.append(get_current_context())
         set_current_context(self)
 
         return self
 
     def __exit__(self, *args):
-        save_context = self._threading.thread_local.save_context.pop(-1)
+        previous_context = self._threading.thread_local.nested_contexts_stack.pop(-1)
         for traced_tensor_weakref in self._threading.thread_local.traced_tensor_weakrefs:
             tt = traced_tensor_weakref()
             if tt is None or not isinstance(tt, TracedTensor):
                 continue
-            if save_context is None:
+            if previous_context is None:
                 strip_traced_tensor(tt)
-            elif save_context is not self:
-                self._save_context.register_traced_tensor(tt)
+            elif previous_context is not self:
+                previous_context.register_traced_tensor(tt)
 
-        if save_context is not self:
+        if previous_context is not self:
             self._reset_thread_local()
 
             if is_debug():
                 self.reset_node_call_counters()
 
-        set_current_context(save_context)
+        set_current_context(previous_context)
 
     def find_operator_node(
         self, tensor_metas: List[Optional[TensorMeta]], op_address: OperationAddress

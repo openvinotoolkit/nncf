@@ -174,7 +174,7 @@ def strip_traced_tensor(tensor: TracedTensor) -> torch.Tensor:
     return tensor
 
 
-def strip_traced_tensors_in_inpputs(args: Tuple, kwargs: Dict) -> Tuple[Tuple, Dict]:
+def strip_traced_tensors_in_inputs(args: Tuple, kwargs: Dict) -> Tuple[Tuple, Dict]:
     """
     Required to guard against new forward calls on tensors that have already passed
     through NNCF's forward once and got turned into TracedTensors by reference access.
