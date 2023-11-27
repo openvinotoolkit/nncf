@@ -9,11 +9,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Tuple
+
 import pytest
 import timm
 import torch
+from torch import nn
 
 from tests.torch.models_hub_test.common import BaseTestModel
+from tests.torch.models_hub_test.common import ExampleType
 
 
 def filter_timm(timm_list: list) -> list:
@@ -43,7 +47,7 @@ def get_all_models() -> list:
 
 
 class TestTimmModel(BaseTestModel):
-    def load_model(self, model_name: str):
+    def load_model(self, model_name: str) -> Tuple[nn.Module, ExampleType]:
         m = timm.create_model(model_name, pretrained=False)
         cfg = timm.get_pretrained_cfg(model_name)
         shape = [1] + list(cfg.input_size)

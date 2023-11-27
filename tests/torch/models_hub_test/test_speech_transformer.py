@@ -12,24 +12,27 @@
 import os
 import subprocess
 import sys
-import tempfile
+from pathlib import Path
+from typing import Tuple
 
 import torch
+from torch import nn
 
 from tests.torch.models_hub_test.common import BaseTestModel
+from tests.torch.models_hub_test.common import ExampleType
 
 
 class TestSpeechTransformerModel(BaseTestModel):
-    def load_model(self, model_name: str):
-        self.repo_dir = tempfile.TemporaryDirectory()
-        os.system(f"git clone https://github.com/mvafin/Speech-Transformer.git {self.repo_dir.name}")
-        subprocess.check_call(["git", "checkout", "071eebb7549b66bae2cb93e3391fe99749389456"], cwd=self.repo_dir.name)
+    def load_model(self, model_name: str) -> Tuple[nn.Module, ExampleType]:
+        os.system(f"git clone https://github.com/mvafin/Speech-Transformer.git {self.tmp_path}")
+        subprocess.check_call(["git", "checkout", "071eebb7549b66bae2cb93e3391fe99749389456"], cwd=self.tmp_path)
 
-        sys.path.append(self.repo_dir.name)
+        sys.path.append(self.tmp_path.as_posix())
         from transformer.transformer import Transformer
 
         m = Transformer()
 
+        sys.path.remove(self.tmp_path.as_posix())
         example = (
             torch.randn(32, 209, 320),
             torch.stack(sorted(torch.randint(55, 250, [32]), reverse=True)),
@@ -37,5 +40,6 @@ class TestSpeechTransformerModel(BaseTestModel):
         )
         return m, example
 
-    def test_nncf_wrap(self):
+    def test_nncf_wrap(self, tmp_path: Path):
+        self.tmp_path = tmp_path
         self.nncf_wrap("speech-transformer")

@@ -13,31 +13,51 @@ from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import networkx as nx
 import pytest
 import torch
 from _pytest.mark import ParameterSet
+from torch import nn
 
 from nncf.common.graph import NNCFGraph
 from nncf.torch.model_creation import wrap_model
+
+ExampleType = Union[Tuple[torch.Tensor, ...], List[torch.Tensor], Dict[str, torch.Tensor]]
 
 
 @pytest.mark.models_hub
 class BaseTestModel(ABC):
     @abstractmethod
-    def load_model(self, model_name: str):
-        pass
+    def load_model(self, model_name: str) -> Tuple[nn.Module, ExampleType]:
+        """
+        Load model by name and create example of input.
+
+        :param model_name: Name of model.
+        :return: A Tuple
+          - Model instance
+          - Example of input
+        """
 
     @staticmethod
-    def check_graph(graph: NNCFGraph):
+    def check_graph(graph: NNCFGraph) -> None:
+        """
+        Check that the graph contains only one connected component.
+
+        :param graph: The graph.
+        """
         nx_graph = graph._get_graph_for_visualization()
         nx_graph = nx_graph.to_undirected()
         num_connected_components = len(list(nx.connected_components(nx_graph)))
         assert num_connected_components == 1, f"Disconnected graph, {num_connected_components} connected components"
 
-    def nncf_wrap(self, model_name):
+    def nncf_wrap(self, model_name) -> None:
+        """
+        Wrap model and check the graph.
+
+        :param model_name: Model name.
+        """
         torch.manual_seed(0)
 
         fw_model, example = self.load_model(model_name)
@@ -68,9 +88,15 @@ def idfn(val):
     return None
 
 
-def get_models_list(file_name: str) -> List[ModelInfo]:
+def get_models_list(path: Path) -> List[ModelInfo]:
+    """
+    Get list of test model from file.
+
+    :param path: Path to file.
+    :return: List of models.
+    """
     models = []
-    with open(file_name) as f:
+    with path.open() as f:
         for model_info in f:
             model_info = model_info.rstrip()
             # skip comment in model scope file
@@ -97,8 +123,14 @@ def get_models_list(file_name: str) -> List[ModelInfo]:
     return models
 
 
-def get_model_params(file_name: Path) -> List[Union[ModelInfo, ParameterSet]]:
-    model_list = get_models_list(file_name)
+def get_model_params(path: Path) -> List[Union[ModelInfo, ParameterSet]]:
+    """
+    Get test cases from the file.
+
+    :param path: Path to file.
+    :return: Test parameters.
+    """
+    model_list = get_models_list(path)
     params = []
     for mi in model_list:
         if mi.mark == "skip":

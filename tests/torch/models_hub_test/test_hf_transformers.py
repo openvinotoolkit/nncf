@@ -10,13 +10,16 @@
 # limitations under the License.
 
 from pathlib import Path
+from typing import Tuple
 
 import pytest
 import torch
 from huggingface_hub import model_info
+from torch import nn
 from transformers import AutoConfig
 
 from tests.torch.models_hub_test.common import BaseTestModel
+from tests.torch.models_hub_test.common import ExampleType
 from tests.torch.models_hub_test.common import ModelInfo
 from tests.torch.models_hub_test.common import get_model_params
 from tests.torch.models_hub_test.common import idfn
@@ -24,7 +27,14 @@ from tests.torch.models_hub_test.common import idfn
 MODEL_LIST_FILE = Path(__file__).parent / "hf_transformers_models.txt"
 
 
-def filter_example(model, example):
+def filter_example(model: nn.Module, example: ExampleType) -> Tuple[nn.Module, ExampleType]:
+    """
+    Filter example of input by signature of the model.
+
+    :param model: The model.
+    :param example: Example of input.
+    :return: Filtered example of input.
+    """
     try:
         import inspect
 
@@ -50,7 +60,7 @@ def fixture_image(request):
 
 
 class TestTransformersModel(BaseTestModel):
-    def load_model(self, name: str):
+    def load_model(self, name: str) -> Tuple[nn.Module, ExampleType]:
         torch.manual_seed(0)
 
         mi = model_info(name)

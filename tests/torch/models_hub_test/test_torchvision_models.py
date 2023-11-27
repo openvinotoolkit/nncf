@@ -11,24 +11,20 @@
 
 import tempfile
 from pathlib import Path
+from typing import Tuple
 
 import pytest
 import torch
 import torchvision.transforms.functional as F
+from torch import nn
 
 from tests.torch.models_hub_test.common import BaseTestModel
+from tests.torch.models_hub_test.common import ExampleType
 from tests.torch.models_hub_test.common import ModelInfo
 from tests.torch.models_hub_test.common import get_model_params
 from tests.torch.models_hub_test.common import idfn
 
 MODEL_LIST_FILE = Path(__file__).parent / "torchvision_models.txt"
-
-
-def get_all_models() -> list:
-    m_list = torch.hub.list("pytorch/vision", skip_validation=True)
-    m_list.remove("get_model_weights")
-    m_list.remove("get_weight")
-    return m_list
 
 
 def get_video():
@@ -62,7 +58,7 @@ def prepare_frames_for_raft(name, frames1, frames2):
 
 
 class TestTorchHubModel(BaseTestModel):
-    def load_model(self, model_name: str):
+    def load_model(self, model_name: str) -> Tuple[nn.Module, ExampleType]:
         torch.manual_seed(0)
         m = torch.hub.load("pytorch/vision", model_name, weights=None, skip_validation=True)
         m.eval()
