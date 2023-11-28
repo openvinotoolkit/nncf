@@ -31,7 +31,6 @@ from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
-from nncf.torch.dynamic_graph.trace_tensor import strip_traced_tensor
 
 
 class ThreadLocalGlobalContext(threading.local):
@@ -135,7 +134,7 @@ class TracingContext:
             if tt is None or not isinstance(tt, TracedTensor):
                 continue
             if previous_context is None:
-                strip_traced_tensor(tt)
+                tt.strip()
             elif previous_context is not self:
                 previous_context.register_traced_tensor(tt)
 

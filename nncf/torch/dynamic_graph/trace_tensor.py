@@ -59,12 +59,27 @@ class TracedTensor(torch.Tensor):
 
     @staticmethod
     def from_torch_tensor(tensor: torch.Tensor, tensor_meta: TensorMeta) -> "TracedTensor":
+        """
+        Creates a TracedTensor by patching a given torch.Tensor, associating it with the provided tensor_meta.
+
+        :param tensor: The input torch.Tensor.
+        :param tensor_meta: The metadata associated with the tensor.
+        :return: The resulting TracedTensor.
+        """
         tensor.tensor_meta = tensor_meta
         if not isinstance(tensor, TracedTensor):
             tensor.original_class = tensor.__class__
             tensor.__class__ = TracedTensor
 
         return tensor
+
+    def strip(self) -> None:
+        """
+        Reverts the tensor to its original class by removing tracing attributes.
+        """
+        self.__class__ = self.original_class
+        delattr(self, "tensor_meta")
+        delattr(self, "original_class")
 
     def as_subclass(self, cls: "TracedTensor") -> "TracedTensor":
         """
@@ -166,20 +181,13 @@ def make_tensor_metas(inputs: OperatorInput) -> List[Optional[TensorMeta]]:
     return tensor_metas
 
 
-def strip_traced_tensor(tensor: TracedTensor) -> torch.Tensor:
-    """
-    Returns the tensor object with tracing additions removed.
-    """
-    tensor.__class__ = tensor.original_class
-    return tensor
-
-
-def strip_traced_tensors_in_inputs(args: Tuple, kwargs: Dict) -> Tuple[Tuple, Dict]:
+def strip_traced_tensors(args: Tuple, kwargs: Dict) -> Tuple[Tuple, Dict]:
     """
     Required to guard against new forward calls on tensors that have already passed
     through NNCF's forward once and got turned into TracedTensors by reference access.
     """
     is_traced_tensor_predicate = lambda x: isinstance(x, TracedTensor)
+    strip_traced_tensor = lambda x: x.strip()
 
     args = objwalk(args, is_traced_tensor_predicate, strip_traced_tensor)
     kwargs = objwalk(kwargs, is_traced_tensor_predicate, strip_traced_tensor)
