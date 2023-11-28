@@ -406,6 +406,12 @@ def quantile(
 
 @functools.singledispatch
 @tensor_guard
+def power(a: Tensor, pwr: float) -> Tensor:
+    return Tensor(power(a.data, pwr))
+
+
+@functools.singledispatch
+@tensor_guard
 def _binary_op_nowarn(a: Tensor, b: Union[Tensor, float], operator_fn: Callable) -> Tensor:
     """
     Applies a binary operation with disable warnings.
