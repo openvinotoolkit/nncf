@@ -354,7 +354,7 @@ def test_inplace_mean_per_ch_fn_dynamic_shapes(test_params: InplaceOpTestCase, i
         with pytest.raises(RuntimeError):
             fn(input_1, 0)
         return
-    fn(input_1, 0)
+    _ = fn(input_1, 0)
     check_inplace_op(input_1, test_params.ref_types, test_params.ref_values, 1, 0)
 
 
