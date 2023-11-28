@@ -839,3 +839,11 @@ def test_multidevice_model():
     input_info = ExampleInputInfo.from_example_input(example_input)
     nncf_model = NNCFNetwork(model, input_info)
     nncf_model(*example_input)
+
+
+def test_access_to_input_info():
+    model = SimplestModel()
+    example_input = torch.ones(SimplestModel.INPUT_SIZE)
+    input_info = ExampleInputInfo.from_example_input(example_input)
+    nncf_model = NNCFNetwork(model, input_info)
+    nncf_model.nncf.input_infos
