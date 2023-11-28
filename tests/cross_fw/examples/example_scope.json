@@ -110,8 +110,8 @@
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
             "fp32_top1": 0.9864968152866243,
-            "int8_top1": 0.9836942675159236,
-            "accuracy_drop": 0.0035668789808918078
+            "int8_top1": 0.9849681528662421,
+            "accuracy_drop": 0.0015286624203821875
         },
         "performance_metrics": {
             "fp32_fps": 1624.67,
@@ -119,9 +119,9 @@
             "performance_speed_up": 3.681947718613626
         },
         "model_size_metrics": {
-            "fp32_model_size": 8.605537414550781,
-            "int8_model_size": 2.748152732849121,
-            "model_compression_rate": 3.131389792018245
+            "fp32_model_size": 8.610844612121582,
+            "int8_model_size": 2.637709617614746,
+            "model_compression_rate": 3.264515758147889
         }
     },
     "post_training_quantization_torch_ssd300_vgg16": {
