@@ -9,10 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 import numpy as np
-import torch
 
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph import NNCFGraph
@@ -23,6 +22,7 @@ from nncf.common.quantization.quantizer_propagation.structs import QuantizationT
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.tensor import Tensor
 from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
@@ -89,60 +89,18 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return collector
 
     @staticmethod
-    def process_weight_statistics(weights: np.ndarray, channel_axis: int) -> np.ndarray:
-        return torch.amax(torch.abs(weights), dim=channel_axis)
-
-    @staticmethod
-    def get_weight_value(node_with_weight: NNCFNode, model: NNCFNetwork) -> np.ndarray:
+    def get_weight_value(node_with_weight: NNCFNode, model: NNCFNetwork) -> Tensor:
         node_module = model.nncf.get_containing_module(node_with_weight.node_name)
         if node_module.weight is None:
             return None
-        return node_module.weight.data
+        return Tensor(node_module.weight.data)
 
     @staticmethod
     def get_weight_tensor_port_id(node: NNCFNode) -> int:
-        # Should be refactored
         const_ids = node.layer_attributes.get_const_port_ids()
         if len(const_ids) != 1:
             raise RuntimeError(f"Found more than 1 port for {node.node_name} node")
         return const_ids[0]
-
-    @staticmethod
-    def clip_statistics(statistics: torch.Tensor) -> np.ndarray:
-        a_min = 1e-5
-        squeezed = torch.squeeze(statistics)
-        return torch.clip(squeezed, min=a_min, max=None)
-
-    @staticmethod
-    def calculate_scale_and_ratio(
-        activations: np.ndarray, weights: np.ndarray, alpha: float, quantile: Optional[float] = 0.1
-    ) -> np.ndarray:
-        scales = torch.pow(activations, alpha) / (torch.pow(weights, 1 - alpha) + torch.finfo(float).eps)
-
-        a_min = torch.quantile(scales, quantile)
-        a_max = 1e2
-
-        scales = torch.clip(scales, min=a_min, max=a_max)
-        ratio = scales.min() / (scales.max() + torch.finfo(float).eps)
-        return scales, ratio
-
-    @staticmethod
-    def calculate_activation_scale(scale_value: np.ndarray, activations_size: int, channel_axis: int) -> np.ndarray:
-        activation_scale = scale_value ** (-1)
-        if activations_size > 1:
-            reshape_shape = np.ones(activations_size, dtype=np.int64).tolist()
-            reshape_shape[channel_axis] = activation_scale.size()[0]
-            activation_scale = torch.reshape(activation_scale, reshape_shape)
-        return activation_scale
-
-    @staticmethod
-    def calculate_weight_scale(scale_value: np.ndarray, weights_size: int, channel_axis: int) -> np.ndarray:
-        weight_scale = scale_value
-        if weights_size > 1:
-            reshape_shape = np.ones(weights_size, dtype=np.int64).tolist()
-            reshape_shape[channel_axis] = scale_value.size()[0]
-            weight_scale = torch.reshape(scale_value, reshape_shape)
-        return weight_scale
 
     @staticmethod
     def weight_update_command(node_with_weight: NNCFNode, weight_value: np.ndarray) -> OVWeightUpdateCommand:

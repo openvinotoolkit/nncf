@@ -179,6 +179,11 @@ def _(a: Union[np.ndarray, np.generic], decimals: int = 0) -> np.ndarray:
     return np.round(a, decimals=decimals)
 
 
+@register_numpy_types(numeric.power)
+def _(a: Union[np.ndarray, np.generic], pwr: float) -> Union[np.ndarray, np.generic]:
+    return np.power(a, pwr)
+
+
 @register_numpy_types(numeric.quantile)
 def _(
     a: Union[np.ndarray, np.generic],

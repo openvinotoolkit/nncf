@@ -37,6 +37,8 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.experimental.tensor import Tensor
+from nncf.experimental.tensor import functions as fns
 from nncf.quantization.algorithms.algorithm import Algorithm
 
 TModel = TypeVar("TModel")
@@ -124,21 +126,19 @@ class SmoothQuant(Algorithm):
                 activations_value = self._get_statistics_for_node(
                     statistic_points, node_to_smooth.node_name, input_port_id
                 )
-                if any(val is None for val in activations_value):
+                if any(val.data is None for val in activations_value):
                     empty_statistic = True
                     break
                 assert len(activations_value) == 1
-                activations_value = self._backend_entity.clip_statistics(activations_value[0])
+                activations_value = self._clip_statistics(activations_value)
 
                 weight_value = self._backend_entity.get_weight_value(node_to_smooth, model)
                 weight_statistics = self._process_weight_statistics(node_to_smooth, weight_value)
-                weight_statistics = self._backend_entity.clip_statistics(weight_statistics)
+                weight_statistics = self._clip_statistics([weight_statistics])
 
                 alpha = alpha_map[node_to_smooth.metatype]
 
-                scales, ratio = self._backend_entity.calculate_scale_and_ratio(
-                    activations_value, weight_statistics, alpha
-                )
+                scales, ratio = self._calculate_scale_and_ratio(activations_value, weight_statistics, alpha)
 
                 if ratio > best_ratio:
                     best_ratio = ratio
@@ -159,10 +159,8 @@ class SmoothQuant(Algorithm):
             for node_to_smooth in nodes:
                 weight_value = self._backend_entity.get_weight_value(node_to_smooth, model)
                 weights_scale = self._calculate_weight_scale(best_scale, node_to_smooth, weight_value)
-                ### TODO: DO it as NNCFTensor op
                 scaled_weight = weight_value * weights_scale
-                ###
-                weight_update_command = self._backend_entity.weight_update_command(node_to_smooth, scaled_weight)
+                weight_update_command = self._backend_entity.weight_update_command(node_to_smooth, scaled_weight.data)
                 transformation_layout.register(weight_update_command)
 
             activations_shape = graph.get_output_edges(source_node)[source_output_port_id].tensor_shape
@@ -170,12 +168,36 @@ class SmoothQuant(Algorithm):
 
             scale_node_name = self._create_scale_node_name(source_node.node_name, source_output_port_id)
             scale_insertion_command = self._backend_entity.scale_insertion_command(
-                source_node, activation_scale, source_output_port_id, nodes, scale_node_name
+                source_node, activation_scale.data, source_output_port_id, nodes, scale_node_name
             )
             transformation_layout.register(scale_insertion_command)
 
         transformed_model = model_transformer.transform(transformation_layout)
         return transformed_model
+
+    @staticmethod
+    def _calculate_scale_and_ratio(
+        activations: Tensor, weights: Tensor, alpha: float, quantile: Optional[float] = 0.1
+    ) -> Tuple[Tensor, float]:
+        """
+        Calculates base scale value and it's ratio.
+
+        :param activations: Activation statistics value.
+        :param weights: Weights statistics value.
+        :param alpha: Base value for exponentiation.
+        :param quantile: Base quantile value.
+        :return: Calculated base scale value & ratio.
+        """
+
+        eps = fns.finfo(activations).eps
+        scales = fns.power(activations, alpha) / (fns.power(weights, 1 - alpha) + eps)
+
+        a_min = fns.quantile(scales, quantile, keepdims=False)
+        a_max = 1e2
+
+        scales = fns.clip(scales, a_min=a_min, a_max=a_max)
+        ratio = scales.min() / (scales.max() + eps)
+        return scales, ratio
 
     def _group_nodes_by_source(self, nodes_to_smooth: List[Dict], nncf_graph: NNCFGraph) -> Dict[tuple, List]:
         """
@@ -217,7 +239,8 @@ class SmoothQuant(Algorithm):
             self._backend_entity.get_filter_fn_for_statistics(act_port),
             self._algorithm_key,
         ):
-            statistics_for_node.append(tensor_collector.get_statistics()[STATISTIC_BRANCH_KEY])
+            statistic = tensor_collector.get_statistics()[STATISTIC_BRANCH_KEY]
+            statistics_for_node.append(Tensor(statistic))
         return statistics_for_node
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
@@ -309,9 +332,14 @@ class SmoothQuant(Algorithm):
             raise nncf.InternalError(f"Channel axes for nodes {[n.node_name for n in nodes]} are not identical")
 
         activations_size = len(activations_shape)
-        return self._backend_entity.calculate_activation_scale(scale_value, activations_size, channel_axis)
+        activation_scale = scale_value ** (-1)
+        if activations_size > 1:
+            reshape_shape = [1 for _ in range(activations_size)]
+            reshape_shape[channel_axis] = activation_scale.size
+            activation_scale = activation_scale.reshape(reshape_shape)
+        return activation_scale
 
-    def _calculate_weight_scale(self, scale_value: TTensor, node: NNCFNode, weights_value: TTensor) -> TTensor:
+    def _calculate_weight_scale(self, scale_value: Tensor, node: NNCFNode, weights_value: Tensor) -> Tensor:
         """
         Calculates scale for weight tensor.
 
@@ -322,7 +350,12 @@ class SmoothQuant(Algorithm):
         weights_size = len(weights_value.shape)
         if weights_size > 1:
             channel_axis = self._backend_entity.get_weight_channel_axis(node)
-            return self._backend_entity.calculate_weight_scale(scale_value, weights_size, channel_axis)
+            weight_scale = scale_value
+            if weights_size > 1:
+                reshape_shape = [1 for _ in range(weights_size)]
+                reshape_shape[channel_axis] = scale_value.size
+                weight_scale = scale_value.reshape(reshape_shape)
+            return weight_scale
         return scale_value
 
     def _calculate_input_reduction_axes(self, nncf_graph: NNCFGraph, node: NNCFNode, input_port: int) -> Tuple[int]:
@@ -341,7 +374,7 @@ class SmoothQuant(Algorithm):
             reduction_axes = self._backend_entity.get_channel_agnostic_reduction_axes(channel_axis, shape)
         return reduction_axes
 
-    def _process_weight_statistics(self, node: NNCFNode, weights: TTensor) -> TTensor:
+    def _process_weight_statistics(self, node: NNCFNode, weights: Tensor) -> Tensor:
         """
         Returns processed weight statistics for node.
 
@@ -354,7 +387,7 @@ class SmoothQuant(Algorithm):
             channel_axis = self._backend_entity.get_weight_channel_axis(node)
         reduction_shape = [i for i, _ in enumerate(weights.shape)]
         reduction_shape.pop(channel_axis)
-        return self._backend_entity.process_weight_statistics(weights, tuple(reduction_shape))
+        return fns.max(fns.abs(weights), axis=tuple(reduction_shape))
 
     def _create_scale_node_name(self, source_name: str, source_port_id: int) -> str:
         """
@@ -391,3 +424,16 @@ class SmoothQuant(Algorithm):
             for metatype in metatypes:
                 alpha_by_metatype_map[metatype] = alpha_value
         return alpha_by_metatype_map
+
+    @staticmethod
+    def _clip_statistics(statistics: List[Tensor]) -> Tensor:
+        """
+        Clips statistics for further calculation.
+        :param statistics: Input statistics.
+        :return: Clipped statistics.
+        """
+        a_min = 1e-5
+
+        statistics = fns.stack(statistics)
+        squeezed = fns.squeeze(statistics)
+        return fns.clip(squeezed, a_min=a_min, a_max=None)

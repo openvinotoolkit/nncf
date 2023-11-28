@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 import numpy as np
 import openvino.runtime as ov
@@ -22,6 +22,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.tensor import Tensor
 from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.layout import get_linear_weights_layout_from_node
 from nncf.openvino.graph.metatypes.groups import QUANTIZE_AGNOSTIC_OPERATIONS
@@ -91,13 +92,9 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return collector
 
     @staticmethod
-    def process_weight_statistics(weights: np.ndarray, reduction_shape: Tuple[int]) -> np.ndarray:
-        return np.max(np.abs(weights), axis=reduction_shape)
-
-    @staticmethod
-    def get_weight_value(node_with_weight: NNCFNode, model: ov.Model) -> np.ndarray:
+    def get_weight_value(node_with_weight: NNCFNode, model: ov.Model) -> Tensor:
         port_id = OVSmoothQuantAlgoBackend._get_weight_tensor_port_id(node_with_weight)
-        return get_weight_value(node_with_weight, model, port_id)
+        return Tensor(get_weight_value(node_with_weight, model, port_id))
 
     @staticmethod
     def get_weight_tensor_port_id(node: NNCFNode) -> int:
@@ -109,43 +106,6 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         if len(const_ids) != 1:
             raise nncf.InternalError(f"Found more than 1 port for {node.node_name} node")
         return const_ids[0]
-
-    @staticmethod
-    def clip_statistics(statistics: np.ndarray) -> np.ndarray:
-        a_min = 1e-5
-        squeezed = np.squeeze(statistics)
-        return np.clip(squeezed, a_min=a_min, a_max=None)
-
-    @staticmethod
-    def calculate_scale_and_ratio(
-        activations: np.ndarray, weights: np.ndarray, alpha: float, quantile: Optional[float] = 0.1
-    ) -> np.ndarray:
-        scales = np.power(activations, alpha) / (np.power(weights, 1 - alpha) + np.finfo(float).eps)
-
-        a_min = np.quantile(scales, quantile)
-        a_max = 1e2
-
-        scales = np.clip(scales, a_min=a_min, a_max=a_max)
-        ratio = scales.min() / (scales.max() + np.finfo(float).eps)
-        return scales, ratio
-
-    @staticmethod
-    def calculate_activation_scale(scale_value: np.ndarray, activations_size: int, channel_axis: int) -> np.ndarray:
-        activation_scale = scale_value ** (-1)
-        if activations_size > 1:
-            reshape_shape = np.ones(activations_size, dtype=np.int64)
-            reshape_shape[channel_axis] = activation_scale.size
-            activation_scale = np.reshape(activation_scale, reshape_shape)
-        return activation_scale
-
-    @staticmethod
-    def calculate_weight_scale(scale_value: np.ndarray, weights_size: int, channel_axis: int) -> np.ndarray:
-        weight_scale = scale_value
-        if weights_size > 1:
-            reshape_shape = np.ones(weights_size, dtype=np.int64)
-            reshape_shape[channel_axis] = scale_value.size
-            weight_scale = np.reshape(scale_value, reshape_shape)
-        return weight_scale
 
     @staticmethod
     def weight_update_command(node_with_weight: NNCFNode, weight_value: np.ndarray) -> OVWeightUpdateCommand:
