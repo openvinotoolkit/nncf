@@ -19,9 +19,9 @@
     },
     "MatMul_2/fq_output_0": {
         "input_low": 0.0,
-        "input_high": 19.150619506835938,
+        "input_high": 41.4161262512207,
         "output_low": 0.0,
-        "output_high": 19.150619506835938
+        "output_high": 41.4161262512207
     },
     "MatMul_2/fq_weights_1": {
         "input_low": [
@@ -3107,15 +3107,15 @@
     },
     "Add/fq_output_0": {
         "input_low": 0.0,
-        "input_high": 0.9766141176223755,
+        "input_high": 1.9382858276367188,
         "output_low": 0.0,
-        "output_high": 0.9766141176223755
+        "output_high": 1.9382858276367188
     },
     "ReadValue_1/fq_output_0": {
-        "input_low": -0.0008062992128543556,
-        "input_high": 0.0007999999797903001,
-        "output_low": -0.0008062992128543556,
-        "output_high": 0.0007999999797903001
+        "input_low": 0.0,
+        "input_high": 0.9979512095451355,
+        "output_low": 0.0,
+        "output_high": 0.9979512095451355
     },
     "MatMul_1/fq_output_0": {
         "input_low": 0.0,
