@@ -27,9 +27,11 @@ def test_unwrap_wrap_torch_return_type(return_type):
     assert updated_wrapped_tensor == wrapped_tensor
 
 
-def test_wrap_unwrap_do_nothing_to_tensor():
-    for input in [torch.tensor(0), [torch.tensor(0), torch.tensor(1)], (torch.tensor(0), torch.tensor(1))]:
-        wrapped_input = maybe_unwrap_from_torch_return_type(input)
-        assert wrapped_input is input
-        unwrapped_input = maybe_wrap_to_torch_return_type(input, wrapped_input)
-        assert unwrapped_input is input
+@pytest.mark.parametrize(
+    "input_", [torch.tensor(0), [torch.tensor(0), torch.tensor(1)], (torch.tensor(0), torch.tensor(1))]
+)
+def test_wrap_unwrap_do_nothing_to_tensor(input_):
+    wrapped_input = maybe_unwrap_from_torch_return_type(input_)
+    assert wrapped_input is input_
+    unwrapped_input = maybe_wrap_to_torch_return_type(input_, wrapped_input)
+    assert unwrapped_input is input_

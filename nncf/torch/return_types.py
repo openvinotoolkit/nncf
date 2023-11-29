@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import inspect
 from typing import Any, Optional, Tuple, Type, Union
 
 import torch
@@ -21,10 +22,7 @@ def __get_supported_torch_return_types() -> Tuple[Type[tuple], ...]:
 
     :return: List of types from torch.return_type which can be wrapped/unwrapped by NNCF.
     """
-    return_type_names = [t for t in dir(torch.return_types) if not t.startswith("_")]
-    return_types = [getattr(torch.return_types, t_name) for t_name in return_type_names]
-    return_types = [t for t in return_types if hasattr(t, "values")]
-    return tuple(return_types)
+    return tuple(t for _, t in inspect.getmembers(torch.return_types) if inspect.isclass(t) and hasattr(t, "values"))
 
 
 _TORCH_RETURN_TYPES = __get_supported_torch_return_types()
