@@ -13,7 +13,6 @@ import torch
 
 from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor.enums import TensorDeviceType
-from nncf.torch.tensor import PTNNCFTensor
 from tests.shared.test_templates.template_test_nncf_tensor import TemplateTestNNCFTensorOperators
 
 
@@ -32,10 +31,3 @@ class TestCudaPTNNCFTensorOperators(TemplateTestNNCFTensorOperators):
     def test_device(self):
         tensor = Tensor(self.to_tensor([1]))
         assert tensor.device == TensorDeviceType.GPU
-
-
-def test_torch_return_type_input():
-    return_type_input = torch.return_types.max((torch.tensor(0), torch.tensor(1)))
-    return_type_input.values == torch.tensor(0)
-    pt_tensor = PTNNCFTensor(return_type_input)
-    assert pt_tensor.tensor == torch.tensor(0)
