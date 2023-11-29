@@ -216,6 +216,9 @@ TEST_MODELS = [
         "ptq_params": {
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                smooth_quant_alphas=AdvancedSmoothQuantParameters(convolution=-1, matmul=-1)
+            ),
         },
         "backends": ALL_PTQ_BACKENDS,
     },
