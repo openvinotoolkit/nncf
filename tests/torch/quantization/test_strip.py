@@ -325,11 +325,40 @@ def test_nncf_strip_api(strip_type):
     quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
 
     if strip_type == "nncf":
-        strip_model = nncf.strip(quantized_model)
+        strip_model = nncf.strip(quantized_model, False)
     elif strip_type == "torch":
-        strip_model = nncf.torch.strip(quantized_model)
+        strip_model = nncf.torch.strip(quantized_model, False)
     elif strip_type == "nncf_interfere":
-        strip_model = quantized_model.nncf.strip()
+        strip_model = quantized_model.nncf.strip(False)
 
-    fq = strip_model.conv.get_pre_op("0").op
-    assert isinstance(fq, FakeQuantize)
+    assert isinstance(strip_model.conv.get_pre_op("0").op, FakeQuantize)
+    assert isinstance(strip_model.nncf.external_quantizers["/nncf_model_input_0|OUTPUT"], FakeQuantize)
+
+
+@pytest.mark.parametrize("do_copy", (True, False))
+def test_do_copy_ptq(do_copy):
+    model = BasicConvTestModel()
+    compressed_model = nncf.quantize(model, nncf.Dataset([torch.ones(model.INPUT_SIZE)]), subset_size=1)
+
+    inference_model = nncf.strip(compressed_model, do_copy=do_copy)
+
+    if do_copy:
+        assert id(inference_model) != id(compressed_model)
+    else:
+        assert id(inference_model) == id(compressed_model)
+
+
+@pytest.mark.parametrize("strip_type", ("nncf", "torch", "nncf_interfere"))
+def test_nncf_strip_ptq_api(strip_type):
+    model = BasicConvTestModel()
+    quantized_model = nncf.quantize(model, nncf.Dataset([torch.ones(model.INPUT_SIZE)]), subset_size=1)
+
+    if strip_type == "nncf":
+        strip_model = nncf.strip(quantized_model, False)
+    elif strip_type == "torch":
+        strip_model = nncf.torch.strip(quantized_model, False)
+    elif strip_type == "nncf_interfere":
+        strip_model = quantized_model.nncf.strip(False)
+
+    assert isinstance(strip_model.conv.get_pre_op("0").op, FakeQuantize)
+    assert isinstance(strip_model.nncf.external_quantizers["/nncf_model_input_0|OUTPUT"], FakeQuantize)

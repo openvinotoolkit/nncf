@@ -737,7 +737,8 @@ class NNCFNetworkInterface(torch.nn.Module):
             # PTQ algorithm does not set compressed controller
             from nncf.torch.quantization.strip import strip_quantized_model
 
-            return strip_quantized_model(self._model_ref)
+            model = deepcopy(self._model_ref) if do_copy else self._model_ref
+            return strip_quantized_model(model)
         return self.compression_controller.strip(do_copy)
 
 
