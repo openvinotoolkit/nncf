@@ -129,7 +129,14 @@ class SmoothQuant(Algorithm):
                 if any(val.data is None for val in activations_value):
                     empty_statistic = True
                     break
-                assert len(activations_value) == 1
+                if len(activations_value) != 1:
+                    raise RuntimeError(
+                        (
+                            "More than one statistic is collected for one node during"
+                            f"Smooth Quanti algorithm: {node_to_smooth.node_name}"
+                        )
+                    )
+
                 activations_value = self._clip_statistics(activations_value)
 
                 weight_value = self._backend_entity.get_weight_value(node_to_smooth, model)
@@ -254,6 +261,7 @@ class SmoothQuant(Algorithm):
         for node_data in nodes_to_smooth_data:
             node_to_smooth = node_data["node_to_smooth"]
             target_point = self._backend_entity.target_point(
+                target_type=self._backend_entity.pre_layer_target_type(),
                 target_node_name=node_to_smooth.node_name,
                 port_id=node_data["input_act_port"],
             )
@@ -306,7 +314,7 @@ class SmoothQuant(Algorithm):
             nodes_to_smooth_data.append(
                 {
                     "node_to_smooth": node_with_weight,
-                    "input_act_port": self._backend_entity.get_activations_port_id(node_with_weight, nncf_graph),
+                    "input_act_port": activation_port_id,
                 }
             )
         return nodes_to_smooth_data

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Tuple
+from typing import Callable, List, Tuple
 
 import numpy as np
 
@@ -63,8 +63,12 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT[QuantizationTrait.QUANTIZATION_AGNOSTIC]
 
     @staticmethod
-    def target_point(target_node_name: str, port_id: int) -> PTTargetPoint:
-        return PTTargetPoint(TargetType.OPERATOR_PRE_HOOK, target_node_name, input_port_id=port_id)
+    def pre_layer_target_type() -> TargetType:
+        return TargetType.OPERATOR_PRE_HOOK
+
+    @staticmethod
+    def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
+        return PTTargetPoint(target_type, target_node_name, input_port_id=port_id)
 
     @staticmethod
     def is_node_with_weights(node: NNCFNode) -> bool:
@@ -92,7 +96,7 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     def get_weight_value(node_with_weight: NNCFNode, model: NNCFNetwork) -> Tensor:
         node_module = model.nncf.get_containing_module(node_with_weight.node_name)
         if node_module.weight is None:
-            return None
+            raise RuntimeError(f"{node_module} module has no .weight attribute.")
         return Tensor(node_module.weight.data)
 
     @staticmethod
@@ -130,11 +134,11 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return 1
 
     @staticmethod
-    def is_node_with_shared_weight(node: NNCFNode, nncf_graph: NNCFGraph):
+    def is_node_with_shared_weight(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         return node.is_shared()
 
     @staticmethod
-    def get_filter_fn_for_statistics(activation_port_id: int):
+    def get_filter_fn_for_statistics(activation_port_id: int) -> Callable[[StatisticPoint], bool]:
         def filter_func(point: StatisticPoint) -> bool:
             return True
 

@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from copy import deepcopy
 from typing import Dict
 
 import numpy as np
@@ -25,36 +24,6 @@ from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.tensor_statistics.algo import create_register_input_hook
-
-
-class ModelView:
-    def __init__(self, model: NNCFNetwork):
-        self.model = model
-        self.nncf_module_additions = self.model.nncf.save_nncf_module_additions()
-
-    def __enter__(self):
-        # Model ref removed to prevent copying
-        self.model.nncf.update_model_ref(None)
-
-        # nncf_replaced_models removed to prevent copying
-        replaced_modules = self.model.nncf._nncf_replaced_modules
-        self.model.nncf._nncf_replaced_modules = None
-
-        self.nncf_interface = deepcopy(self.model.nncf)
-
-        # Model ref is recovering
-        self.model.nncf.update_model_ref(self.model)
-        self.nncf_interface.update_model_ref(self.model)
-
-        # nncf_replaced_models is recovering
-        self.model.nncf._nncf_replaced_modules = replaced_modules
-        self.nncf_interface._nncf_replaced_modules = replaced_modules
-        return self.model
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.model._nncf = self.nncf_interface
-        self.model.nncf.reset_nncf_modules()
-        self.model.nncf.load_nncf_module_additions(self.nncf_module_additions)
 
 
 class PTStatisticsAggregator(StatisticsAggregator):

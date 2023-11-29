@@ -60,7 +60,7 @@ def wrap_operator(operator, operator_info: PatchedOperatorInfo):
     Wraps the input callable object (`operator`) with the functionality that allows the calls to this object
     to be tracked by the currently set global TracingContext. The wrapped functions can be then intercepted,
     their arguments and return values modified arbitrarily and, for functions that correspond to operations on
-    tensors in a DNN,  their general position and address in the DNN's model control flow graph can be established.
+    tensors in a DNN, their general position and address in the DNN's model control flow graph can be established.
 
     :param: operator: A callable object to be wrapped.
     :param: operator_info (PatchedOperatorInfo): An informational struct containing the specifics of wrapping

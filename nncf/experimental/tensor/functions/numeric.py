@@ -383,6 +383,20 @@ def round(a: Tensor, decimals=0) -> Tensor:
 
 @functools.singledispatch
 @tensor_guard
+def power(a: Tensor, exponent: float) -> Tensor:
+    """
+    Takes the power of each element in input with given power and
+    returns a tensor with the result.
+
+    :param a: Input data.
+    :param exponent: Exponent value.
+    :return: The result of the power of each element in input with given exponent.
+    """
+    return Tensor(power(a.data, exponent))
+
+
+@functools.singledispatch
+@tensor_guard
 def quantile(
     a: Tensor,
     q: Union[float, List[float]],
@@ -402,12 +416,6 @@ def quantile(
         to the quantiles, other axes of the result correspond to the quantiles values.
     """
     return Tensor(quantile(a.data, q, axis, keepdims))
-
-
-@functools.singledispatch
-@tensor_guard
-def power(a: Tensor, pwr: float) -> Tensor:
-    return Tensor(power(a.data, pwr))
 
 
 @functools.singledispatch
