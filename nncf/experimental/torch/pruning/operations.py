@@ -25,6 +25,7 @@ from nncf.experimental.common.pruning.operations import ScatterPruningOp
 from nncf.experimental.common.pruning.operations import SplitPruningOp
 from nncf.experimental.common.pruning.operations import StopMaskForwardPruningOp
 from nncf.experimental.common.pruning.operations import TransposePruningOp
+from nncf.torch.graph.operator_metatypes import PTAdaptiveMaxPool2dMetatype
 from nncf.torch.graph.operator_metatypes import PTAddMetatype
 from nncf.torch.graph.operator_metatypes import PTAvgPool2dMetatype
 from nncf.torch.graph.operator_metatypes import PTBatchNormMetatype
@@ -92,6 +93,7 @@ class PTIdentityMaskForwardPruningOp(IdentityMaskForwardPruningOp):
         PTSigmoidMetatype,
         PTSoftmaxMetatype,
         PTAvgPool2dMetatype,
+        PTAdaptiveMaxPool2dMetatype,
         PTMaxPool2dMetatype,
         PTMeanMetatype,
         PTDropoutMetatype,
