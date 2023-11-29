@@ -18,11 +18,13 @@ import torch
 def __get_supported_torch_return_types() -> Tuple[Type[tuple], ...]:
     """
     Collects types from torch.return_type which can be wrapped/unwrapped by NNCF.
-    NNCF can wrap/unwrap only public return types that have `values` attribute.
+    NNCF can wrap/unwrap only return types that have two attributes, one of them
+    should be the `values` attribute.
 
     :return: List of types from torch.return_type which can be wrapped/unwrapped by NNCF.
     """
-    return tuple(t for _, t in inspect.getmembers(torch.return_types) if inspect.isclass(t) and hasattr(t, "values"))
+    retval = [t for _, t in inspect.getmembers(torch.return_types) if inspect.isclass(t) and hasattr(t, "values")]
+    return tuple(t for t in retval if t.n_fields == 2)
 
 
 _TORCH_RETURN_TYPES = __get_supported_torch_return_types()
