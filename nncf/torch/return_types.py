@@ -14,13 +14,14 @@ from typing import Any, Optional, Tuple, Type, Union
 import torch
 
 
-def __get_supported_torch_return_types() -> Tuple[Type[object]]:
+def __get_supported_torch_return_types() -> Tuple[Type[tuple], ...]:
     """
-    Collects types from torch.return_type which can be wrapped/unwrapped by nncf.
+    Collects types from torch.return_type which can be wrapped/unwrapped by NNCF.
+    NNCF can wrap/unwrap only public return types that have `values` attribute.
 
-    :return: List of types from torch.return_type which can be wrapped/unwrapped by nncf.
+    :return: List of types from torch.return_type which can be wrapped/unwrapped by NNCF.
     """
-    return_type_names = [t for t in dir(torch.return_types) if not t.startswith("_") and not t.startswith("linalg")]
+    return_type_names = [t for t in dir(torch.return_types) if not t.startswith("_")]
     return_types = [getattr(torch.return_types, t_name) for t_name in return_type_names]
     return_types = [t for t in return_types if hasattr(t, "values")]
     return tuple(return_types)
@@ -31,7 +32,7 @@ _TORCH_RETURN_TYPES = __get_supported_torch_return_types()
 
 def maybe_unwrap_from_torch_return_type(tensor: Any) -> torch.Tensor:
     """
-    Attempts to unwrap the tensor value from one of torch.return_types instantces
+    Attempts to unwrap the tensor value from one of torch.return_types instances
     in case torch operation output is wrapped by a torch return_type.
 
     :param tensor: Torch tensor or torch return type instance to unwrap values from.
@@ -52,5 +53,5 @@ def maybe_wrap_to_torch_return_type(tensor: torch.Tensor, wrapped_input: Optiona
     """
 
     if isinstance(wrapped_input, _TORCH_RETURN_TYPES):
-        return wrapped_input.__class__([tensor] + [arg for arg in wrapped_input[1:]])
+        return wrapped_input.__class__([tensor, *wrapped_input[1:]])
     return tensor

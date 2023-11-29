@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import pytest
 import torch
 
 from nncf.torch.return_types import _TORCH_RETURN_TYPES
@@ -15,15 +16,15 @@ from nncf.torch.return_types import maybe_unwrap_from_torch_return_type
 from nncf.torch.return_types import maybe_wrap_to_torch_return_type
 
 
-def test_unwrap_wrap_torch_return_type():
-    for return_type in _TORCH_RETURN_TYPES:
-        wrapped_tensor = return_type((torch.tensor(0), torch.tensor(1)))
-        assert wrapped_tensor.values == torch.tensor(0)
-        unwrapped_tensor = maybe_unwrap_from_torch_return_type(wrapped_tensor)
-        assert unwrapped_tensor == torch.tensor(0)
+@pytest.mark.parametrize("return_type", _TORCH_RETURN_TYPES)
+def test_unwrap_wrap_torch_return_type(return_type):
+    wrapped_tensor = return_type((torch.tensor(0), torch.tensor(1)))
+    assert wrapped_tensor.values == torch.tensor(0)
+    unwrapped_tensor = maybe_unwrap_from_torch_return_type(wrapped_tensor)
+    assert unwrapped_tensor == torch.tensor(0)
 
-        updated_wrapped_tensor = maybe_wrap_to_torch_return_type(unwrapped_tensor, wrapped_tensor)
-        assert updated_wrapped_tensor == wrapped_tensor
+    updated_wrapped_tensor = maybe_wrap_to_torch_return_type(unwrapped_tensor, wrapped_tensor)
+    assert updated_wrapped_tensor == wrapped_tensor
 
 
 def test_wrap_unwrap_do_nothing_to_tensor():
