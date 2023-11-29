@@ -377,7 +377,7 @@ def _get_bitwidth_distribution_str(all_params: List[WeightNodeParams], internal_
 
 
 def _get_internal_weight_params(
-        all_weight_params: List[WeightNodeParams], mode: CompressWeightsMode, is_last_layer_compressed: bool
+    all_weight_params: List[WeightNodeParams], mode: CompressWeightsMode, is_last_layer_compressed: bool
 ) -> List[WeightNodeParams]:
     """
     Returns the internal weight parameters.
@@ -447,5 +447,5 @@ def _set_weight_compression_config(
     if ratio == 1:
         for weight_param in internal_weight_params:
             weight_param.compression_config = primary_config
-        return
-    _assign_mixed_precision(internal_weight_params, ratio, primary_config)
+    else:
+        _assign_mixed_precision(internal_weight_params, ratio, primary_config)
