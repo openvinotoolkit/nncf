@@ -85,9 +85,7 @@ INPUTS_QUANTIZABLE_OPERATIONS = [
 ]
 
 
-FAKE_QUANTIZE_OPERATIONS = [
-    ov_metatypes.OVFakeQuantizeMetatype,
-]
+FAKE_QUANTIZE_OPERATIONS = [ov_metatypes.OVFakeQuantizeMetatype, ov_metatypes.OVFakeConvertMetatype]
 
 
 CONSTANT_OPERATIONS = [
