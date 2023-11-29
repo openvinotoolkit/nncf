@@ -157,6 +157,7 @@ class ChannelAlignmentAlgoBackend:
     def get_channel_agnostic_reduction_axes(channel_axis: int, shape: Tuple[int]) -> Tuple[int]:
         """
         Returns filtered reduction shape without axes that corresponds channels.
+        Example: channel_axis=-2, shape=(1, 3, 2, 4), result=(0, 1, 3).
 
         :param channel_axes: List of the channel axes.
         :param shape: Shape that need to be filtered.
