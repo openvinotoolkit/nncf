@@ -51,5 +51,7 @@ def maybe_wrap_to_torch_return_type(tensor: torch.Tensor, wrapped_input: Optiona
     """
 
     if isinstance(wrapped_input, _TORCH_RETURN_TYPES):
-        return wrapped_input.__class__([tensor, *wrapped_input[1:]])
+        # We assume that return_type has only two attributes, the first one is `value`.
+        # This assumption is checked by `test_unwrap_wrap_torch_return_type`.
+        return wrapped_input.__class__((tensor, wrapped_input[1]))
     return tensor
