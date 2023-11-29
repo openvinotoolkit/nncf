@@ -14,7 +14,6 @@ from nncf.torch.external_hook import ExternalOpCallHook
 from nncf.torch.quantization.debug_interface import QuantizationDebugInterface
 
 EXTERNAL_QUANTIZERS_STORAGE_NAME = "external_quantizers"
-EXTERNAL_OP_STORAGE_NAME = "external_op"
 EXTERNAL_QUANTIZERS_STORAGE_PREFIX = "_nncf." + EXTERNAL_QUANTIZERS_STORAGE_NAME
 
 

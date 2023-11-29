@@ -193,8 +193,8 @@ def _(a: torch.Tensor, decimals=0) -> torch.Tensor:
 
 
 @numeric.power.register(torch.Tensor)
-def _(a: torch.Tensor, pwr: float) -> torch.Tensor:
-    return torch.pow(a, exponent=pwr)
+def _(a: torch.Tensor, exponent: float) -> torch.Tensor:
+    return torch.pow(a, exponent=exponent)
 
 
 @numeric.quantile.register(torch.Tensor)

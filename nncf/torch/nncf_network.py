@@ -372,25 +372,6 @@ class NNCFNetworkInterface(torch.nn.Module):
             module = self.get_module_by_scope(some_scope)
             module.reset()
 
-    def get_shallow_copy(self) -> "NNCFNetwork":
-        from nncf.torch.utils import load_module_state
-        from nncf.torch.utils import save_module_state
-
-        saved_state = save_module_state(self._model_ref)
-        new_interface = NNCFNetworkInterface(
-            self._model_ref,
-            self._input_infos,
-            self._user_dummy_forward_fn,
-            self._wrap_inputs_fn,
-            self._scopes_without_shape_matching,
-            self._ignored_scopes,
-            self._target_scopes,
-            wrap_outputs_fn=self._wrap_outputs_fn,
-        )
-        self._model_ref._nncf = new_interface
-        load_module_state(self._model_ref, saved_state)
-        return self._model_ref
-
     def get_clean_shallow_copy(self) -> "NNCFNetwork":
         # WARNING: Will reset pre- and post-ops of the underlying model. Use save_nncf_module_additions
         # and load_nncf_module_additions to preserve these, or temporary_clean_view().

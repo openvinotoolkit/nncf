@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Tuple
+from typing import Callable, List, Tuple
 
 import numpy as np
 import openvino.runtime as ov
@@ -53,8 +53,12 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return QUANTIZE_AGNOSTIC_OPERATIONS
 
     @staticmethod
-    def target_point(target_node_name: str, port_id: int) -> OVTargetPoint:
-        return OVTargetPoint(TargetType.PRE_LAYER_OPERATION, target_node_name, port_id)
+    def pre_layer_target_type() -> TargetType:
+        return TargetType.PRE_LAYER_OPERATION
+
+    @staticmethod
+    def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:
+        return OVTargetPoint(target_type, target_node_name, port_id)
 
     @staticmethod
     def is_node_with_weights(node: NNCFNode) -> bool:
@@ -93,15 +97,11 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def get_weight_value(node_with_weight: NNCFNode, model: ov.Model) -> Tensor:
-        port_id = OVSmoothQuantAlgoBackend._get_weight_tensor_port_id(node_with_weight)
+        port_id = OVSmoothQuantAlgoBackend.get_weight_tensor_port_id(node_with_weight)
         return Tensor(get_weight_value(node_with_weight, model, port_id))
 
     @staticmethod
     def get_weight_tensor_port_id(node: NNCFNode) -> int:
-        return OVSmoothQuantAlgoBackend._get_weight_tensor_port_id(node)
-
-    @staticmethod
-    def _get_weight_tensor_port_id(node: NNCFNode) -> int:
         const_ids = node.layer_attributes.get_const_port_ids()
         if len(const_ids) != 1:
             raise nncf.InternalError(f"Found more than 1 port for {node.node_name} node")
@@ -109,7 +109,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def weight_update_command(node_with_weight: NNCFNode, weight_value: np.ndarray) -> OVWeightUpdateCommand:
-        weight_port_id = OVSmoothQuantAlgoBackend._get_weight_tensor_port_id(node_with_weight)
+        weight_port_id = OVSmoothQuantAlgoBackend.get_weight_tensor_port_id(node_with_weight)
         return OVCommandCreator.create_command_to_update_weight(node_with_weight, weight_value, weight_port_id)
 
     @staticmethod
@@ -155,13 +155,13 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return -2 + port_id if transpose else -1 - port_id
 
     @staticmethod
-    def is_node_with_shared_weight(node: NNCFNode, nncf_graph: NNCFGraph):
+    def is_node_with_shared_weight(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         weight_port_id = OVSmoothQuantAlgoBackend._get_weight_port_id(node)
         weight_node = nncf_graph.get_input_edges(node)[weight_port_id].from_node
         return len(nncf_graph.get_next_nodes(weight_node)) > 1
 
     @staticmethod
-    def get_filter_fn_for_statistics(activation_port_id: int):
+    def get_filter_fn_for_statistics(activation_port_id: int) -> Callable[[StatisticPoint], bool]:
         def filter_func(point: StatisticPoint) -> bool:
             return point.target_point.port_id == activation_port_id
 

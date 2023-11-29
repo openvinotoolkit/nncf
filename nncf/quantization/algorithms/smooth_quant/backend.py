@@ -11,13 +11,15 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List, Tuple, TypeVar
+from typing import Callable, List, Tuple, TypeVar
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
+from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.tensor import Tensor
 
@@ -55,10 +57,20 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def target_point(target_node_name: str, port_id: int) -> TargetPoint:
+    def pre_layer_target_type() -> TargetType:
+        """
+        Returns backend-specific pre layer target type.
+
+        :returns: Backend-specific pre layer target type.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:
         """
         Returns backend-specific target point.
 
+        :param target_type: Type of the location that should be modified.
         :param target_node_name: Name of the located node.
         :param port_id: Port ID of the tensor for the statistics distribution.
         :return: Backend-specific TargetPoint.
@@ -184,10 +196,20 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def is_node_with_shared_weight(node: NNCFNode, nncf_graph: NNCFGraph):
-        pass
+    def is_node_with_shared_weight(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+        """
+        Returns true if given node shares constant with a different node.
+
+        :param node: NNCFNode instance.
+        :param nncf_graph: NNCFGraph instance.
+        :return: Whether the given node is shares weights with a different node or not.
+        """
 
     @staticmethod
     @abstractmethod
-    def get_filter_fn_for_statistics(activation_port_id: int):
-        pass
+    def get_filter_fn_for_statistics(activation_port_id: int) -> Callable[[StatisticPoint], bool]:
+        """
+        Returns backend-specific callable to filter statistic containers according to its statistic point.
+
+        :param activation_port_id: Activation port id for the statistic collection target node.
+        """
