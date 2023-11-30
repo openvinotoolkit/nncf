@@ -15,7 +15,7 @@ import networkx as nx
 import torch
 
 from nncf.common.graph import NNCFNodeName
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.module_operations import UpdatePaddingValue
 from nncf.torch.nncf_network import NNCFNetwork
@@ -61,7 +61,7 @@ class CalculatePaddingAdjustment:
             not qconfig.per_channel
             and qconfig.num_bits == 4
             and not qconfig.signedness_to_force
-            and qconfig.mode == QuantizationMode.SYMMETRIC
+            and qconfig.mode == QuantizationScheme.SYMMETRIC
         )
 
 

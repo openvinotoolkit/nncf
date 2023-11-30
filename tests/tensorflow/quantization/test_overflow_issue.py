@@ -13,7 +13,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 from nncf.tensorflow.quantization.quantizers import Quantizer
@@ -83,7 +83,7 @@ class TestQuantizedWeightsEqualAfterFixApplied:
         self, per_ch, signedness_to_force, init_w_as_middle_points, narrow_range
     ):
         qconfig = QuantizerConfig(
-            num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=signedness_to_force, per_channel=per_ch
+            num_bits=8, mode=QuantizationScheme.SYMMETRIC, signedness_to_force=signedness_to_force, per_channel=per_ch
         )
         qspec = TFQuantizerSpec.from_config(qconfig, narrow_range=narrow_range, half_range=True)
         op_name = "quantizer"
@@ -128,7 +128,7 @@ class TestQuantizedWeightsEqualAfterFixApplied:
     def test_asymmetric_quantized_weights_equal_after_fix_applied(
         self, low, range_len, per_ch, init_w_as_middle_points, narrow_range
     ):
-        qconfig = QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=per_ch)
+        qconfig = QuantizerConfig(num_bits=8, mode=QuantizationScheme.ASYMMETRIC, per_channel=per_ch)
         qspec = TFQuantizerSpec.from_config(qconfig, narrow_range=narrow_range, half_range=True)
         op_name = "quantizer"
         weight_attr = "kernel"

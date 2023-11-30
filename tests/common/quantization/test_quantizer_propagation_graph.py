@@ -33,7 +33,7 @@ from nncf.common.quantization.quantizer_setup import ActivationQuantizationInser
 from nncf.common.quantization.quantizer_setup import MultiConfigQuantizationPoint
 from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
 from tests.common.quantization.metatypes import WEIGHT_LAYER_METATYPES
@@ -1484,20 +1484,20 @@ class TestOutputQuantAsWeightsSetup:
             "5 F/F_0": QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS,
         }
         quantizable_module_node_names_vs_qconfigs = {
-            "I/I_0": [QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
-            "F/F_0": [QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
+            "I/I_0": [QuantizerConfig(mode=QuantizationScheme.ASYMMETRIC)],
+            "F/F_0": [QuantizerConfig(mode=QuantizationScheme.ASYMMETRIC)],
         }
 
         def ref_quantizer_setup(self) -> MultiConfigQuantizerSetup:
             setup = MultiConfigQuantizerSetup()
             setup.quantization_points[0] = MultiConfigQuantizationPoint(
                 WeightQuantizationInsertionPoint(target_node_name="I/I_0"),
-                possible_qconfigs=[QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
+                possible_qconfigs=[QuantizerConfig(mode=QuantizationScheme.ASYMMETRIC)],
                 directly_quantized_operator_node_names=["I/I_0", "J/J_0"],
             )
             setup.quantization_points[1] = MultiConfigQuantizationPoint(
                 WeightQuantizationInsertionPoint(target_node_name="F/F_0"),
-                possible_qconfigs=[QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
+                possible_qconfigs=[QuantizerConfig(mode=QuantizationScheme.ASYMMETRIC)],
                 directly_quantized_operator_node_names=["F/F_0", "J/J_0"],
             )
             setup.unified_scale_groups = {0: {0, 1}}
@@ -1506,11 +1506,11 @@ class TestOutputQuantAsWeightsSetup:
 
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
             pq_1 = qpsg.add_propagating_quantizer(
-                [QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
+                [QuantizerConfig(mode=QuantizationScheme.ASYMMETRIC)],
                 InsertionPointGraph.get_pre_hook_node_key("9 J/J_0", input_port_id=0),
             )
             pq_2 = qpsg.add_propagating_quantizer(
-                [QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
+                [QuantizerConfig(mode=QuantizationScheme.ASYMMETRIC)],
                 InsertionPointGraph.get_pre_hook_node_key("9 J/J_0", input_port_id=1),
             )
             qpsg.unify_pq_scales(pq_1, pq_2)
@@ -1541,8 +1541,14 @@ class TestOutputQuantAsWeightsSetup:
             "5 F/F_0": QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS,
         }
         quantizable_module_node_names_vs_qconfigs = {
-            "I/I_0": [QuantizerConfig(mode=QuantizationMode.ASYMMETRIC, per_channel=True), QuantizerConfig(num_bits=4)],
-            "F/F_0": [QuantizerConfig(mode=QuantizationMode.ASYMMETRIC, per_channel=True), QuantizerConfig(num_bits=4)],
+            "I/I_0": [
+                QuantizerConfig(mode=QuantizationScheme.ASYMMETRIC, per_channel=True),
+                QuantizerConfig(num_bits=4),
+            ],
+            "F/F_0": [
+                QuantizerConfig(mode=QuantizationScheme.ASYMMETRIC, per_channel=True),
+                QuantizerConfig(num_bits=4),
+            ],
         }
 
         def ref_quantizer_setup(self) -> MultiConfigQuantizerSetup:
@@ -1563,7 +1569,7 @@ class TestOutputQuantAsWeightsSetup:
 
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
             pq_1 = qpsg.add_propagating_quantizer(
-                [QuantizerConfig(mode=QuantizationMode.ASYMMETRIC, per_channel=True), QuantizerConfig(num_bits=4)],
+                [QuantizerConfig(mode=QuantizationScheme.ASYMMETRIC, per_channel=True), QuantizerConfig(num_bits=4)],
                 InsertionPointGraph.get_pre_hook_node_key("9 J/J_0", input_port_id=0),
             )
             pq_2 = qpsg.add_propagating_quantizer(
@@ -1599,12 +1605,12 @@ class TestOutputQuantAsWeightsSetup:
         }
         quantizable_module_node_names_vs_qconfigs = {
             "I/I_0": [
-                QuantizerConfig(mode=QuantizationMode.ASYMMETRIC),
+                QuantizerConfig(mode=QuantizationScheme.ASYMMETRIC),
                 QuantizerConfig(num_bits=6, signedness_to_force=True),
                 QuantizerConfig(num_bits=4, signedness_to_force=True),
             ],
             "F/F_0": [
-                QuantizerConfig(mode=QuantizationMode.ASYMMETRIC, per_channel=True),
+                QuantizerConfig(mode=QuantizationScheme.ASYMMETRIC, per_channel=True),
                 QuantizerConfig(num_bits=4),
                 QuantizerConfig(),
             ],
@@ -1614,13 +1620,13 @@ class TestOutputQuantAsWeightsSetup:
             setup = MultiConfigQuantizerSetup()
             setup.quantization_points[0] = MultiConfigQuantizationPoint(
                 WeightQuantizationInsertionPoint(target_node_name="I/I_0"),
-                possible_qconfigs=[QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
+                possible_qconfigs=[QuantizerConfig(mode=QuantizationScheme.ASYMMETRIC)],
                 directly_quantized_operator_node_names=["I/I_0", "J/J_0"],
             )
             setup.quantization_points[1] = MultiConfigQuantizationPoint(
                 WeightQuantizationInsertionPoint(target_node_name="F/F_0"),
                 possible_qconfigs=[
-                    QuantizerConfig(mode=QuantizationMode.ASYMMETRIC, per_channel=True),
+                    QuantizerConfig(mode=QuantizationScheme.ASYMMETRIC, per_channel=True),
                     QuantizerConfig(num_bits=4),
                     QuantizerConfig(),
                 ],
@@ -1628,7 +1634,7 @@ class TestOutputQuantAsWeightsSetup:
             )
             setup.quantization_points[2] = MultiConfigQuantizationPoint(
                 ActivationQuantizationInsertionPoint(target_node_name="F/F_0"),
-                possible_qconfigs=[QuantizerConfig(mode=QuantizationMode.ASYMMETRIC)],
+                possible_qconfigs=[QuantizerConfig(mode=QuantizationScheme.ASYMMETRIC)],
                 directly_quantized_operator_node_names=["J/J_0"],
             )
             setup.unified_scale_groups = {0: {0, 2}}
@@ -1638,7 +1644,7 @@ class TestOutputQuantAsWeightsSetup:
         def _setup_and_propagate_quantizers(self, qpsg: QPSG) -> QPSG:
             pq_1 = qpsg.add_propagating_quantizer(
                 [
-                    QuantizerConfig(mode=QuantizationMode.ASYMMETRIC),
+                    QuantizerConfig(mode=QuantizationScheme.ASYMMETRIC),
                     QuantizerConfig(num_bits=6, signedness_to_force=False),
                 ],
                 InsertionPointGraph.get_pre_hook_node_key("9 J/J_0", input_port_id=0),
@@ -1647,7 +1653,7 @@ class TestOutputQuantAsWeightsSetup:
                 [
                     QuantizerConfig(num_bits=4, per_channel=True),
                     QuantizerConfig(num_bits=4),
-                    QuantizerConfig(mode=QuantizationMode.ASYMMETRIC),
+                    QuantizerConfig(mode=QuantizationScheme.ASYMMETRIC),
                 ],
                 InsertionPointGraph.get_pre_hook_node_key("9 J/J_0", input_port_id=1),
             )
@@ -1712,20 +1718,20 @@ class TestOutputQuantAsWeightsSetup:
             # Weights #1
             [
                 QuantizerConfig(
-                    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True, per_channel=False
+                    num_bits=8, mode=QuantizationScheme.SYMMETRIC, signedness_to_force=True, per_channel=False
                 ),
                 QuantizerConfig(
-                    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True, per_channel=True
+                    num_bits=8, mode=QuantizationScheme.SYMMETRIC, signedness_to_force=True, per_channel=True
                 ),
             ],
             # Activations #1
             [
-                QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+                QuantizerConfig(num_bits=8, mode=QuantizationScheme.SYMMETRIC, per_channel=False),
             ],
             # Reference #1
             [
                 QuantizerConfig(
-                    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True, per_channel=False
+                    num_bits=8, mode=QuantizationScheme.SYMMETRIC, signedness_to_force=True, per_channel=False
                 ),
             ],
         ),
@@ -1733,23 +1739,23 @@ class TestOutputQuantAsWeightsSetup:
             # Weights #2
             [
                 QuantizerConfig(
-                    num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=True, per_channel=False
+                    num_bits=8, mode=QuantizationScheme.ASYMMETRIC, signedness_to_force=True, per_channel=False
                 ),
                 QuantizerConfig(
-                    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True, per_channel=True
+                    num_bits=8, mode=QuantizationScheme.SYMMETRIC, signedness_to_force=True, per_channel=True
                 ),
             ],
             # Activations #2
             [
-                QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False),
+                QuantizerConfig(num_bits=8, mode=QuantizationScheme.ASYMMETRIC, per_channel=False),
                 QuantizerConfig(
-                    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True, per_channel=False
+                    num_bits=8, mode=QuantizationScheme.SYMMETRIC, signedness_to_force=True, per_channel=False
                 ),
             ],
             # Reference #2
             [
                 QuantizerConfig(
-                    num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=True, per_channel=False
+                    num_bits=8, mode=QuantizationScheme.ASYMMETRIC, signedness_to_force=True, per_channel=False
                 ),
             ],
         ),
@@ -1757,16 +1763,16 @@ class TestOutputQuantAsWeightsSetup:
             # Weights #3
             [
                 QuantizerConfig(
-                    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True, per_channel=False
+                    num_bits=8, mode=QuantizationScheme.SYMMETRIC, signedness_to_force=True, per_channel=False
                 ),
                 QuantizerConfig(
-                    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True, per_channel=True
+                    num_bits=8, mode=QuantizationScheme.SYMMETRIC, signedness_to_force=True, per_channel=True
                 ),
             ],
             # Activations #3
             [
                 QuantizerConfig(
-                    num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=True, per_channel=False
+                    num_bits=8, mode=QuantizationScheme.ASYMMETRIC, signedness_to_force=True, per_channel=False
                 ),
             ],
             # Reference #3
@@ -1776,16 +1782,16 @@ class TestOutputQuantAsWeightsSetup:
             # Weights #4
             [
                 QuantizerConfig(
-                    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True, per_channel=False
+                    num_bits=8, mode=QuantizationScheme.SYMMETRIC, signedness_to_force=True, per_channel=False
                 ),
                 QuantizerConfig(
-                    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=True, per_channel=True
+                    num_bits=8, mode=QuantizationScheme.SYMMETRIC, signedness_to_force=True, per_channel=True
                 ),
             ],
             # Activations #4
             [
                 QuantizerConfig(
-                    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=False, per_channel=False
+                    num_bits=8, mode=QuantizationScheme.SYMMETRIC, signedness_to_force=False, per_channel=False
                 ),
             ],
             # Reference #4
@@ -1795,40 +1801,40 @@ class TestOutputQuantAsWeightsSetup:
             # Weights #5
             [
                 QuantizerConfig(
-                    num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=False, per_channel=False
+                    num_bits=8, mode=QuantizationScheme.ASYMMETRIC, signedness_to_force=False, per_channel=False
                 ),
                 QuantizerConfig(
-                    num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=True, per_channel=True
+                    num_bits=8, mode=QuantizationScheme.ASYMMETRIC, signedness_to_force=True, per_channel=True
                 ),
             ],
             # Activations #5
             [
                 QuantizerConfig(
-                    num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=None, per_channel=False
+                    num_bits=8, mode=QuantizationScheme.ASYMMETRIC, signedness_to_force=None, per_channel=False
                 ),
                 QuantizerConfig(
-                    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=None, per_channel=False
+                    num_bits=8, mode=QuantizationScheme.SYMMETRIC, signedness_to_force=None, per_channel=False
                 ),
             ],
             # Reference #5
             [
                 QuantizerConfig(
-                    num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=False, per_channel=False
+                    num_bits=8, mode=QuantizationScheme.ASYMMETRIC, signedness_to_force=False, per_channel=False
                 ),
             ],
         ),
         (
             # Weights #6
             [
-                QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+                QuantizerConfig(num_bits=8, mode=QuantizationScheme.SYMMETRIC, per_channel=False),
             ],
             # Activations #6
             [
-                QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+                QuantizerConfig(num_bits=8, mode=QuantizationScheme.SYMMETRIC, per_channel=False),
             ],
             # Reference #6
             [
-                QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+                QuantizerConfig(num_bits=8, mode=QuantizationScheme.SYMMETRIC, per_channel=False),
             ],
         ),
     ],

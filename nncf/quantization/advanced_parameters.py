@@ -19,7 +19,7 @@ from dataclasses import is_dataclass
 from enum import Enum
 from typing import Any, Dict, Optional
 
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.utils.api_marker import api
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
@@ -64,8 +64,8 @@ class QuantizationParameters:
 
     :param num_bits: The number of bits to use for quantization.
     :type num_bits: Optional[int]
-    :param mode: The quantization mode to use, such as 'symmetric', 'asymmetric', etc.
-    :type mode: nncf.common.quantization.structs.QuantizationMode
+    :param scheme: The quantization scheme to use, such as 'symmetric', 'asymmetric', etc.
+    :type scheme: nncf.common.quantization.structs.QuantizationScheme
     :param signedness_to_force: Whether to force the weights or activations to be
         signed (True), unsigned (False)
     :type signedness_to_force: Optional[bool]
@@ -87,7 +87,7 @@ class QuantizationParameters:
     """
 
     num_bits: Optional[int] = None
-    mode: Optional[QuantizationMode] = None
+    scheme: Optional[QuantizationScheme] = None
     signedness_to_force: Optional[bool] = None
     per_channel: Optional[bool] = None
     narrow_range: Optional[bool] = None
@@ -128,22 +128,6 @@ class AdvancedSmoothQuantParameters:
 
     convolution: float = -1
     matmul: float = 0.95
-
-
-@api()
-@dataclass
-class Mode:
-    """
-    Contains values corresponding to the available quantization modes.
-
-    :param FQ: Whether to insert FakeQuantize operations.
-    :type FQ: str
-    :param FP8: Whether to insert FakeConvert operations.
-    :type FP8: str
-    """
-
-    FQ: str = "fq"
-    FP8: str = "fc"
 
 
 @api()
@@ -192,7 +176,6 @@ class AdvancedQuantizationParameters:
     inplace_statistics: bool = True
     disable_channel_alignment: bool = True
     disable_bias_correction: bool = False
-    mode: Mode = Mode.FQ
 
     # Advanced Quantization parameters
     activations_quantization_params: QuantizationParameters = field(default_factory=QuantizationParameters)
@@ -296,8 +279,8 @@ def convert_quantization_parameters_to_dict(params: QuantizationParameters) -> D
     result = {}
     if params.num_bits is not None:
         result["bits"] = params.num_bits
-    if params.mode is not None:
-        result["mode"] = params.mode
+    if params.scheme is not None:
+        result["mode"] = params.scheme
     if params.signedness_to_force is not None:
         result["signed"] = params.signedness_to_force
     if params.per_channel is not None:

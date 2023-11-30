@@ -16,7 +16,7 @@ import tensorflow as tf
 
 from nncf.common.quantization.initialization.range import PerLayerRangeInitConfig
 from nncf.common.quantization.initialization.range import RangeInitConfig
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.tensorflow.layers.operation import InputType
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
@@ -32,7 +32,9 @@ class TestPerLayerRangeInitTest:
         "PerLayerRangeInitTestStruct", ("range_init_config", "layer_vs_expected_init_config")
     )
 
-    qconfig = QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=None, per_channel=False)
+    qconfig = QuantizerConfig(
+        num_bits=8, mode=QuantizationScheme.SYMMETRIC, signedness_to_force=None, per_channel=False
+    )
     qspec = TFQuantizerSpec.from_config(qconfig, narrow_range=False, half_range=False)
 
     PER_LAYER_RANGE_INIT_TEST_CASES = [

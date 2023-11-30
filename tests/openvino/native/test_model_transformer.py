@@ -36,7 +36,7 @@ from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionComm
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
-from nncf.quantization.advanced_parameters import Mode
+from nncf.parameters import QuantizationMode
 from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
@@ -475,7 +475,7 @@ def test_fc_insertion_pre_layer(target_layers, ref_fс_names):
         target_layers,
         TargetType.PRE_LAYER_OPERATION,
         OVQuantizerInsertionCommand,
-        command_kwargs={"fake_op_parameters": create_fake_convert_params(), "mode": Mode.FP8},
+        command_kwargs={"fake_op_parameters": create_fake_convert_params(), "mode": QuantizationMode.FP8_E4M3},
     )
     fc_nodes = get_nodes_by_type(transformed_model, type_name="FakeConvert")
 
@@ -514,7 +514,7 @@ def test_fc_insertion_post_layer(target_layers, ref_fс_names):
         target_layers,
         TargetType.POST_LAYER_OPERATION,
         OVQuantizerInsertionCommand,
-        command_kwargs={"fake_op_parameters": create_fake_convert_params(), "mode": Mode.FP8},
+        command_kwargs={"fake_op_parameters": create_fake_convert_params(), "mode": QuantizationMode.FP8_E4M3},
     )
     fc_nodes = get_nodes_by_type(transformed_model, type_name="FakeConvert")
 
@@ -555,7 +555,7 @@ def test_fc_insertion_weights(target_layers, ref_fс_names):
         TargetType.OPERATION_WITH_WEIGHTS,
         OVQuantizerInsertionCommand,
         port_id=1,
-        command_kwargs={"fake_op_parameters": create_fake_convert_params(), "mode": Mode.FP8},
+        command_kwargs={"fake_op_parameters": create_fake_convert_params(), "mode": QuantizationMode.FP8_E4M3},
     )
     fc_nodes = get_nodes_by_type(transformed_model, type_name="FakeConvert")
 

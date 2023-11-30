@@ -19,7 +19,7 @@ from torch import nn
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
-from nncf.torch.quantization.layers import QuantizationMode
+from nncf.torch.quantization.layers import QuantizationScheme
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
@@ -32,12 +32,12 @@ from tests.torch.quantization.test_onnx_export import get_config_for_export_mode
 @pytest.mark.parametrize(
     "num_bits, mode, scale_shape, half_range, assert_vals",
     [
-        (8, QuantizationMode.SYMMETRIC, (1, 2, 3, 4), True, (128, -64, 63)),
-        (8, QuantizationMode.ASYMMETRIC, (1, 2, 3, 4), True, (128, 0, 127)),
-        (7, QuantizationMode.SYMMETRIC, (1, 2, 3, 4), True, (64, -32, 31)),
-        (4, QuantizationMode.SYMMETRIC, (1, 1, 1, 1), True, (8, -4, 3)),
-        (8, QuantizationMode.SYMMETRIC, (1, 1, 1, 1), True, (128, -64, 63)),
-        (8, QuantizationMode.SYMMETRIC, (1, 2, 3, 8), False, (256, -128, 127)),
+        (8, QuantizationScheme.SYMMETRIC, (1, 2, 3, 4), True, (128, -64, 63)),
+        (8, QuantizationScheme.ASYMMETRIC, (1, 2, 3, 4), True, (128, 0, 127)),
+        (7, QuantizationScheme.SYMMETRIC, (1, 2, 3, 4), True, (64, -32, 31)),
+        (4, QuantizationScheme.SYMMETRIC, (1, 1, 1, 1), True, (8, -4, 3)),
+        (8, QuantizationScheme.SYMMETRIC, (1, 1, 1, 1), True, (128, -64, 63)),
+        (8, QuantizationScheme.SYMMETRIC, (1, 2, 3, 8), False, (256, -128, 127)),
     ],
 )
 def test_is_correct_overflow_issue_levels(num_bits, mode, scale_shape, half_range, assert_vals):
@@ -52,7 +52,7 @@ def test_is_correct_overflow_issue_levels(num_bits, mode, scale_shape, half_rang
         is_quantized_on_export=True,
     )
 
-    quantizer = SymmetricQuantizer(qspec) if mode == QuantizationMode.SYMMETRIC else AsymmetricQuantizer(qspec)
+    quantizer = SymmetricQuantizer(qspec) if mode == QuantizationScheme.SYMMETRIC else AsymmetricQuantizer(qspec)
 
     assert quantizer._half_range == half_range
     assert quantizer.levels == assert_vals[0]

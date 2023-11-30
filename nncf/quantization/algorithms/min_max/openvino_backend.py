@@ -18,7 +18,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
@@ -36,8 +36,8 @@ from nncf.openvino.statistics.collectors import OV_REDUCERS_MAP
 from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
 from nncf.parameters import ModelType
+from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
-from nncf.quantization.advanced_parameters import Mode
 from nncf.quantization.advanced_parameters import RangeEstimatorParameters
 from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
@@ -114,7 +114,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_point: OVTargetPoint,
         quantizer_config: QuantizerConfig,
         parameters: Union[FakeQuantizeParameters, FakeConvertParameters],
-        mode: Mode = Mode.FQ,
+        mode: Optional[QuantizationMode] = None,
     ) -> OVQuantizerInsertionCommand:
         return OVQuantizerInsertionCommand(target_point, parameters, mode)
 
@@ -132,7 +132,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     def _get_reduction_axes_and_use_abs_max(
         nncf_graph: NNCFGraph, target_point: OVTargetPoint, quantizer_config: QuantizerConfig
     ) -> Tuple[ReductionAxes, bool]:
-        use_abs_max = quantizer_config.mode == QuantizationMode.SYMMETRIC
+        use_abs_max = quantizer_config.mode == QuantizationScheme.SYMMETRIC
         if not quantizer_config.per_channel:
             return None, use_abs_max
 

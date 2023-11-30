@@ -21,8 +21,8 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
 from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
-from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.tensor_statistics.collectors import ReductionAxes
@@ -98,10 +98,10 @@ class TemplateTestQuantizerConfig:
         )
 
         weight_default_config = QuantizerConfig(
-            mode=QuantizationMode.SYMMETRIC, num_bits=8, signedness_to_force=True, per_channel=True
+            mode=QuantizationScheme.SYMMETRIC, num_bits=8, signedness_to_force=True, per_channel=True
         )
         activation_default_config = QuantizerConfig(
-            mode=QuantizationMode.SYMMETRIC, num_bits=8, signedness_to_force=None, per_channel=False
+            mode=QuantizationScheme.SYMMETRIC, num_bits=8, signedness_to_force=None, per_channel=False
         )
 
         assert len(q_setup.quantization_points) == 2
@@ -194,10 +194,10 @@ class TemplateTestQuantizerConfig:
         )
 
         weight_default_config = QuantizerConfig(
-            mode=QuantizationMode.SYMMETRIC, num_bits=8, signedness_to_force=True, per_channel=True
+            mode=QuantizationScheme.SYMMETRIC, num_bits=8, signedness_to_force=True, per_channel=True
         )
         activation_default_config = QuantizerConfig(
-            mode=QuantizationMode.SYMMETRIC, num_bits=8, signedness_to_force=None, per_channel=True
+            mode=QuantizationScheme.SYMMETRIC, num_bits=8, signedness_to_force=None, per_channel=True
         )
 
         assert len(q_setup.quantization_points) == 2
@@ -211,7 +211,7 @@ class TemplateTestQuantizerConfig:
     @pytest.mark.parametrize(
         "range_estimator_params", [RangeEstimatorParametersSet.MINMAX, RangeEstimatorParametersSet.MEAN_MINMAX]
     )
-    @pytest.mark.parametrize("q_config_mode", [QuantizationMode.SYMMETRIC, QuantizationMode.ASYMMETRIC])
+    @pytest.mark.parametrize("q_config_mode", [QuantizationScheme.SYMMETRIC, QuantizationScheme.ASYMMETRIC])
     @pytest.mark.parametrize("q_config_per_channel", [True, False])
     @pytest.mark.parametrize("num_samples", [5, 12])
     def test_get_stat_collector(
@@ -260,15 +260,15 @@ class TemplateTestQuantizerConfig:
             assert len(reducers) == 2
             # use_abs_max check
             assert any(isinstance(r, MinReducer) for r in reducers)
-            if q_config_mode == QuantizationMode.SYMMETRIC:
+            if q_config_mode == QuantizationScheme.SYMMETRIC:
                 assert any(isinstance(r, AbsMaxReducer) for r in reducers)
-            elif q_config_mode == QuantizationMode.ASYMMETRIC:
+            elif q_config_mode == QuantizationScheme.ASYMMETRIC:
                 assert any(isinstance(r, MaxReducer) for r in reducers)
         else:
             # use_abs_max check
-            if q_config_mode == QuantizationMode.SYMMETRIC:
+            if q_config_mode == QuantizationScheme.SYMMETRIC:
                 assert tensor_collector._use_abs_max
-            elif q_config_mode == QuantizationMode.ASYMMETRIC:
+            elif q_config_mode == QuantizationScheme.ASYMMETRIC:
                 assert not tensor_collector._use_abs_max
             reducers = [tensor_collector]
 

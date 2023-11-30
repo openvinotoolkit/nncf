@@ -27,6 +27,7 @@ from nncf.openvino.quantization.quantize_ifmodel import apply_algorithm_if_bodie
 from nncf.openvino.rt_info import dump_parameters
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
+from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -80,6 +81,7 @@ def native_quantize_if_op_impl(
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
+    mode: Optional[QuantizationMode] = None,
     model_type: Optional[ModelType] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
@@ -96,6 +98,7 @@ def native_quantize_if_op_impl(
         target_device=target_device,
         subset_size=subset_size,
         fast_bias_correction=fast_bias_correction,
+        mode=mode,
         model_type=model_type,
         ignored_scope=ignored_scope,
         advanced_parameters=advanced_parameters,
@@ -138,6 +141,7 @@ def native_quantize_impl(
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
+    mode: Optional[QuantizationMode] = None,
     model_type: Optional[ModelType] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
@@ -150,6 +154,7 @@ def native_quantize_impl(
         target_device=target_device,
         subset_size=subset_size,
         fast_bias_correction=fast_bias_correction,
+        mode=mode,
         model_type=model_type,
         ignored_scope=ignored_scope,
         advanced_parameters=advanced_parameters,
@@ -323,6 +328,7 @@ def quantize_impl(
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
+    mode: Optional[QuantizationMode] = None,
     model_type: Optional[ModelType] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
@@ -340,15 +346,16 @@ def quantize_impl(
             quantize_fn = native_quantize_if_op_impl
 
     return quantize_fn(
-        model,
-        calibration_dataset,
-        preset,
-        target_device,
-        subset_size,
-        fast_bias_correction,
-        model_type,
-        ignored_scope,
-        advanced_parameters,
+        model=model,
+        calibration_dataset=calibration_dataset,
+        preset=preset,
+        target_device=target_device,
+        subset_size=subset_size,
+        fast_bias_correction=fast_bias_correction,
+        mode=mode,
+        model_type=model_type,
+        ignored_scope=ignored_scope,
+        advanced_parameters=advanced_parameters,
     )
 
 

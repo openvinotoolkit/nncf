@@ -18,6 +18,7 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.parameters import ModelType
+from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
@@ -35,6 +36,7 @@ def quantize_impl(
     target_device: TargetDevice,
     subset_size: int,
     fast_bias_correction: bool,
+    mode: Optional[QuantizationMode] = None,
     model_type: Optional[ModelType] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
@@ -44,6 +46,8 @@ def quantize_impl(
     """
     if target_device == TargetDevice.CPU_SPR:
         raise RuntimeError("target_device == CPU_SPR is not supported.")
+    if mode is not None:
+        raise ValueError(f"mode={mode} is not supported")
     if model.opset_import[0].version < 10:
         raise RuntimeError("ONNX models with opset version < 10 do not support quantization.")
     if model.opset_import[0].version < 13:

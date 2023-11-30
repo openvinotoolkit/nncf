@@ -36,8 +36,8 @@ from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoi
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
 from nncf.common.quantization.structs import QuantizationConstraints
-from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
@@ -46,8 +46,8 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.parameters import ModelType
+from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
-from nncf.quantization.advanced_parameters import Mode
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.advanced_parameters import changes_asdict
@@ -64,7 +64,7 @@ from nncf.scopes import get_ignored_node_names_from_ignored_scope
 TModel = TypeVar("TModel")
 
 DEFAULT_QCONFIG = QuantizerConfig(
-    num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=None, per_channel=False
+    num_bits=8, mode=QuantizationScheme.SYMMETRIC, signedness_to_force=None, per_channel=False
 )
 
 
@@ -101,12 +101,12 @@ class MinMaxQuantization(Algorithm):
         preset: Optional[QuantizationPreset] = None,
         target_device: TargetDevice = TargetDevice.ANY,
         subset_size: int = 300,
+        mode: Optional[QuantizationMode] = None,
         model_type: Optional[ModelType] = None,
         ignored_scope: Optional[IgnoredScope] = None,
         overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER,
         quantize_outputs: bool = False,
         inplace_statistics: bool = True,
-        mode: Mode = Mode.FQ,
         activations_quantization_params: Optional[QuantizationParameters] = None,
         weights_quantization_params: Optional[QuantizationParameters] = None,
         activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
@@ -125,6 +125,7 @@ class MinMaxQuantization(Algorithm):
             for this type of device, defaults to TargetDevice.ANY.
         :param subset_size: Size of a subset to calculate activations statistics used
             for quantization, defaults to 300.
+        :param mode: Defines optimization mode for the algorithm. None by default.
         :param model_type: Model type is needed to specify additional patterns
             in the model. Supported only `transformer` now.
         :param ignored_scope: An ignored scope that defined the list of model control
@@ -136,8 +137,6 @@ class MinMaxQuantization(Algorithm):
         :param inplace_statistics: Defines wheather to calculate quantizers statistics
             by backend graph operations or by default Python implementation, defaults
             to True.
-        :param mode: Defines mode for the algorithm: FakeConvert (FP8), FakeQuantize (FQ) and etc.
-            By default - FQ.
         :param activations_quantization_params: Quantization parameters for model
             activations.
         :param weights_quantization_params: Quantization parameters for model weights.
@@ -149,8 +148,8 @@ class MinMaxQuantization(Algorithm):
         """
         self._target_device = target_device
         self._subset_size = subset_size
-        self._model_type = model_type
         self._mode = mode
+        self._model_type = model_type
         self._ignored_scope = IgnoredScope() if ignored_scope is None else ignored_scope
         self._overflow_fix = overflow_fix
         self._quantize_outputs = quantize_outputs
@@ -211,8 +210,8 @@ class MinMaxQuantization(Algorithm):
         if quantization_params is None:
             return QuantizationConstraints(**constraints)
 
-        if quantization_params.mode is not None:
-            constraints["mode"] = quantization_params.mode
+        if quantization_params.scheme is not None:
+            constraints["mode"] = quantization_params.scheme
         if quantization_params.num_bits is not None:
             constraints["num_bits"] = quantization_params.num_bits
         if quantization_params.per_channel is not None:
@@ -728,9 +727,11 @@ class MinMaxQuantization(Algorithm):
                 qconfig = quantization_target_points[quantization_target_point]
                 q_group = QuantizerGroup.ACTIVATIONS
                 narrow_range = get_quantizer_narrow_range(qconfig, q_group)
-                if self._mode == Mode.FP8:
-                    parameters = calculate_convert_parameters(unified_values, is_activation=True)
-                elif self._mode == Mode.FQ:
+                if self._mode is not None:
+                    parameters = calculate_convert_parameters(
+                        unified_values, is_activation=True, destination_type=self._mode
+                    )
+                else:
                     parameters = calculate_quantizer_parameters(unified_values, qconfig, q_group, narrow_range)
                 command = self._backend_entity.create_quantizer_insertion_command(
                     graph, quantization_target_point, qconfig, parameters, self._mode
@@ -759,10 +760,12 @@ class MinMaxQuantization(Algorithm):
                 statistics = tensor_collector.get_statistics()
                 if statistics.min_values is None or statistics.max_values is None:
                     raise RuntimeError(f"Statistics were not collected for the node {target_node_name}")
-                if self._mode == Mode.FP8:
+                if self._mode is not None:
                     is_activation = quant_group == QuantizerGroup.ACTIVATIONS
-                    parameters = calculate_convert_parameters(statistics, is_activation=is_activation)
-                elif self._mode == Mode.FQ:
+                    parameters = calculate_convert_parameters(
+                        statistics, is_activation=is_activation, destination_type=self._mode
+                    )
+                else:
                     parameters = calculate_quantizer_parameters(
                         statistics, qconfig, quant_group, narrow_range, half_range
                     )
@@ -818,10 +821,10 @@ class MinMaxQuantization(Algorithm):
                         if node.metatype not in self._backend_entity.mat_mul_metatypes:
                             continue
                         if (
-                            quantization_point.qconfig.mode != QuantizationMode.SYMMETRIC
+                            quantization_point.qconfig.mode != QuantizationScheme.SYMMETRIC
                             and node.layer_attributes is None
                         ):
-                            quantization_point.qconfig.mode = QuantizationMode.SYMMETRIC
+                            quantization_point.qconfig.mode = QuantizationScheme.SYMMETRIC
                             nncf_logger.debug(
                                 f"Update quantization mode for the node {node_name}"
                                 f" to the symmetric due to ModelType parameter."

@@ -13,7 +13,7 @@ from typing import Dict, List, Optional
 
 import tensorflow as tf
 
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.utils.registry import Registry
 from nncf.tensorflow.layers.operation import InputType
 from nncf.tensorflow.quantization.quantizers import AsymmetricQuantizer
@@ -23,7 +23,7 @@ from nncf.tensorflow.quantization.quantizers import TFQuantizerSpec
 NNCF_QUANTIZATION_OPERATIONS_V2 = Registry("nncf_quantization_operations_v2")
 
 
-@NNCF_QUANTIZATION_OPERATIONS_V2.register(QuantizationMode.SYMMETRIC)
+@NNCF_QUANTIZATION_OPERATIONS_V2.register(QuantizationScheme.SYMMETRIC)
 class SymmetricQuantizerV2(SymmetricQuantizer):
     def set_input_spec(
         self, input_type: str, input_shape: Optional[List[int]] = None, channel_axes: Optional[List[int]] = None
@@ -58,7 +58,7 @@ class SymmetricQuantizerV2(SymmetricQuantizer):
         return self._create_variables(layer, self.input_shape, self.channel_axes, prefix)
 
 
-@NNCF_QUANTIZATION_OPERATIONS_V2.register(QuantizationMode.ASYMMETRIC)
+@NNCF_QUANTIZATION_OPERATIONS_V2.register(QuantizationScheme.ASYMMETRIC)
 class AsymmetricQuantizerV2(AsymmetricQuantizer):
     def set_input_spec(
         self, input_type: str, input_shape: Optional[List[int]] = None, channel_axes: Optional[List[int]] = None

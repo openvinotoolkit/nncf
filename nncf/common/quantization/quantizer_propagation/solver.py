@@ -40,7 +40,7 @@ from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
 from nncf.common.quantization.structs import QuantizationConstraints
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import UnifiedScaleType
@@ -311,7 +311,7 @@ class QuantizerPropagationSolver:
     """
 
     DEFAULT_QUANTIZATION_TYPES = [
-        QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=None, per_channel=False)
+        QuantizerConfig(num_bits=8, mode=QuantizationScheme.SYMMETRIC, signedness_to_force=None, per_channel=False)
     ]
 
     DEFAULT_PROPAGATION_STRATEGY = PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT
@@ -1514,13 +1514,13 @@ class QuantizerPropagationSolver:
                 if self.qconfig.per_channel is True and other.qconfig.per_channel is False:
                     return False
                 if (
-                    self.qconfig.mode is QuantizationMode.SYMMETRIC
-                    and other.qconfig.mode is QuantizationMode.ASYMMETRIC
+                    self.qconfig.mode is QuantizationScheme.SYMMETRIC
+                    and other.qconfig.mode is QuantizationScheme.ASYMMETRIC
                 ):
                     return True
                 if (
-                    self.qconfig.mode is QuantizationMode.ASYMMETRIC
-                    and other.qconfig.mode is QuantizationMode.SYMMETRIC
+                    self.qconfig.mode is QuantizationScheme.ASYMMETRIC
+                    and other.qconfig.mode is QuantizationScheme.SYMMETRIC
                 ):
                     return False
                 return False

@@ -42,7 +42,7 @@ from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import QuantizationInsertionPointBase
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.scopes import should_consider_scope
@@ -1107,7 +1107,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             # Avoid asymmetric quantization if a symmetrically quantized tensor arrived
             is_redundant = is_redundant and (
                 (ds_config.mode == us_config.mode)
-                or (ds_config.mode == QuantizationMode.ASYMMETRIC and us_config.mode == QuantizationMode.SYMMETRIC)
+                or (ds_config.mode == QuantizationScheme.ASYMMETRIC and us_config.mode == QuantizationScheme.SYMMETRIC)
             )
 
             # Avoid per-channel quantization if a per-tensor-quantized tensor arrived

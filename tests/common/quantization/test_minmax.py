@@ -11,8 +11,8 @@
 
 import pytest
 
-from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.parameters import ModelType
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
@@ -21,12 +21,17 @@ from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 @pytest.mark.parametrize(
     "preset,model_type,activation_mode,weights_mode",
     [
-        (None, None, QuantizationMode.SYMMETRIC, QuantizationMode.SYMMETRIC),
-        (QuantizationPreset.PERFORMANCE, None, QuantizationMode.SYMMETRIC, QuantizationMode.SYMMETRIC),
-        (QuantizationPreset.MIXED, None, QuantizationMode.ASYMMETRIC, QuantizationMode.SYMMETRIC),
-        (None, ModelType.TRANSFORMER, QuantizationMode.ASYMMETRIC, QuantizationMode.SYMMETRIC),
-        (QuantizationPreset.PERFORMANCE, ModelType.TRANSFORMER, QuantizationMode.SYMMETRIC, QuantizationMode.SYMMETRIC),
-        (QuantizationPreset.MIXED, ModelType.TRANSFORMER, QuantizationMode.ASYMMETRIC, QuantizationMode.SYMMETRIC),
+        (None, None, QuantizationScheme.SYMMETRIC, QuantizationScheme.SYMMETRIC),
+        (QuantizationPreset.PERFORMANCE, None, QuantizationScheme.SYMMETRIC, QuantizationScheme.SYMMETRIC),
+        (QuantizationPreset.MIXED, None, QuantizationScheme.ASYMMETRIC, QuantizationScheme.SYMMETRIC),
+        (None, ModelType.TRANSFORMER, QuantizationScheme.ASYMMETRIC, QuantizationScheme.SYMMETRIC),
+        (
+            QuantizationPreset.PERFORMANCE,
+            ModelType.TRANSFORMER,
+            QuantizationScheme.SYMMETRIC,
+            QuantizationScheme.SYMMETRIC,
+        ),
+        (QuantizationPreset.MIXED, ModelType.TRANSFORMER, QuantizationScheme.ASYMMETRIC, QuantizationScheme.SYMMETRIC),
     ],
 )
 def test_quantization_preset(preset, model_type, activation_mode, weights_mode):

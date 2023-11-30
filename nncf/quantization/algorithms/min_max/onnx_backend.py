@@ -18,7 +18,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
@@ -35,9 +35,9 @@ from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
 from nncf.parameters import ModelType
+from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AggregatorType
-from nncf.quantization.advanced_parameters import Mode
 from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeConvertParameters
@@ -108,7 +108,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_point: ONNXTargetPoint,
         quantizer_config: QuantizerConfig,
         parameters: Union[FakeQuantizeParameters, FakeConvertParameters],
-        mode: Mode = Mode.FQ,
+        mode: Optional[QuantizationMode] = None,
     ):
         tensor_type = np.int8 if np.any(parameters.input_low.data < 0) else np.uint8
         if target_point.is_weight_target_point():
@@ -144,7 +144,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     ) -> Union[ONNXMinMaxStatisticCollector, ONNXMeanMinMaxStatisticCollector]:
         is_per_channel = quantizer_config.per_channel
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        use_abs_max = quantizer_config.mode == QuantizationMode.SYMMETRIC
+        use_abs_max = quantizer_config.mode == QuantizationScheme.SYMMETRIC
         reduction_shape = None  # Per-Tensor
         quantization_axis = get_quantization_axis(is_per_channel, node, target_point)
         quantized_tensor_shape = get_quantized_tensor_shape(nncf_graph, node, target_point)

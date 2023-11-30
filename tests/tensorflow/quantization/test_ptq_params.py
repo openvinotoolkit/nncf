@@ -17,8 +17,8 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
-from nncf.quantization.advanced_parameters import QuantizationMode
 from nncf.quantization.advanced_parameters import QuantizationParameters
+from nncf.quantization.advanced_parameters import QuantizationScheme
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from nncf.scopes import IgnoredScope
 from nncf.tensorflow.quantization.quantize_model import _create_nncf_config
@@ -63,9 +63,9 @@ from nncf.tensorflow.quantization.quantize_model import _create_nncf_config
                 overflow_fix=OverflowFix.FIRST_LAYER,
                 quantize_outputs=True,
                 disable_bias_correction=False,
-                activations_quantization_params=QuantizationParameters(num_bits=8, mode=QuantizationMode.SYMMETRIC),
+                activations_quantization_params=QuantizationParameters(num_bits=8, scheme=QuantizationScheme.SYMMETRIC),
                 activations_range_estimator_params=RangeEstimatorParametersSet.MEAN_MINMAX,
-                weights_quantization_params=QuantizationParameters(num_bits=8, mode=QuantizationMode.SYMMETRIC),
+                weights_quantization_params=QuantizationParameters(num_bits=8, scheme=QuantizationScheme.SYMMETRIC),
                 weights_range_estimator_params=RangeEstimatorParametersSet.MEAN_MINMAX,
             ),
         },

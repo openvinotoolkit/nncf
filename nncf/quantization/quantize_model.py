@@ -21,6 +21,7 @@ from nncf.data import Dataset
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
+from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -42,6 +43,7 @@ def quantize(
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
+    mode: Optional[QuantizationMode] = None,
     model_type: Optional[ModelType] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
@@ -70,6 +72,8 @@ def quantize(
     :param fast_bias_correction: Setting this option to `False` enables a different
         bias correction method which is more accurate, in general, and takes
         more time but requires less memory.
+    :param mode: Special quantization mode that specify different ways of the optimization.
+    :type mode: Optional[nncf.QuantizationMode]
     :param model_type: Model type is needed to specify additional patterns
         in the model. Supported only `transformer` now.
     :type  model_type: Optional[nncf.ModelType]
@@ -90,60 +94,64 @@ def quantize(
         from nncf.openvino.quantization.quantize_model import quantize_impl
 
         return quantize_impl(
-            model,
-            calibration_dataset,
-            preset,
-            target_device,
-            subset_size,
-            fast_bias_correction,
-            model_type,
-            ignored_scope,
-            advanced_parameters,
+            model=model,
+            calibration_dataset=calibration_dataset,
+            preset=preset,
+            target_device=target_device,
+            subset_size=subset_size,
+            fast_bias_correction=fast_bias_correction,
+            mode=mode,
+            model_type=model_type,
+            ignored_scope=ignored_scope,
+            advanced_parameters=advanced_parameters,
         )
 
     if backend == BackendType.ONNX:
         from nncf.onnx.quantization.quantize_model import quantize_impl
 
         return quantize_impl(
-            model,
-            calibration_dataset,
-            preset,
-            target_device,
-            subset_size,
-            fast_bias_correction,
-            model_type,
-            ignored_scope,
-            advanced_parameters,
+            model=model,
+            calibration_dataset=calibration_dataset,
+            preset=preset,
+            target_device=target_device,
+            subset_size=subset_size,
+            fast_bias_correction=fast_bias_correction,
+            mode=mode,
+            model_type=model_type,
+            ignored_scope=ignored_scope,
+            advanced_parameters=advanced_parameters,
         )
 
     if backend == BackendType.TENSORFLOW:
         from nncf.tensorflow.quantization.quantize_model import quantize_impl
 
         return quantize_impl(
-            model,
-            calibration_dataset,
-            preset,
-            target_device,
-            subset_size,
-            fast_bias_correction,
-            model_type,
-            ignored_scope,
-            advanced_parameters,
+            model=model,
+            calibration_dataset=calibration_dataset,
+            preset=preset,
+            target_device=target_device,
+            subset_size=subset_size,
+            fast_bias_correction=fast_bias_correction,
+            mode=mode,
+            model_type=model_type,
+            ignored_scope=ignored_scope,
+            advanced_parameters=advanced_parameters,
         )
 
     if backend == BackendType.TORCH:
         from nncf.torch.quantization.quantize_model import quantize_impl
 
         return quantize_impl(
-            model,
-            calibration_dataset,
-            preset,
-            target_device,
-            subset_size,
-            fast_bias_correction,
-            model_type,
-            ignored_scope,
-            advanced_parameters,
+            model=model,
+            calibration_dataset=calibration_dataset,
+            preset=preset,
+            target_device=target_device,
+            subset_size=subset_size,
+            fast_bias_correction=fast_bias_correction,
+            mode=mode,
+            model_type=model_type,
+            ignored_scope=ignored_scope,
+            advanced_parameters=advanced_parameters,
         )
 
     raise RuntimeError(f"Unsupported type of backend: {backend}")

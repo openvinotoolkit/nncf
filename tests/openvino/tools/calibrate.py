@@ -37,19 +37,19 @@ from openvino.tools.pot.configs.config import Config
 import nncf
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.logging.logger import set_log_file
-from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.quantization.structs import QuantizationScheme
 from nncf.data.dataset import DataProvider
 from nncf.openvino.pot.quantization.quantize_model import (
     quantize_with_accuracy_control_impl as pot_quantize_with_native_accuracy_control,
 )
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
+from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AggregatorType
-from nncf.quantization.advanced_parameters import Mode
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.scopes import IgnoredScope
@@ -106,7 +106,17 @@ def parse_args():
 class CustomJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(
-            o, (TargetDevice, ModelType, QuantizationPreset, OverflowFix, StatisticsType, AggregatorType, DropType)
+            o,
+            (
+                TargetDevice,
+                ModelType,
+                QuantizationPreset,
+                OverflowFix,
+                StatisticsType,
+                AggregatorType,
+                DropType,
+                QuantizationMode,
+            ),
         ):
             return o.value
         if isinstance(o, (IgnoredScope, AdvancedQuantizationParameters, AdvancedAccuracyRestorerParameters)):
@@ -432,9 +442,9 @@ def update_quantization_parameters(quantization_params, pot_config):
     mode = pot_config.get("mode")
     if mode is not None:
         if mode == "symmetric":
-            quantization_params.mode = QuantizationMode.SYMMETRIC
+            quantization_params.mode = QuantizationScheme.SYMMETRIC
         elif mode == "asymmetric":
-            quantization_params.mode = QuantizationMode.ASYMMETRIC
+            quantization_params.mode = QuantizationScheme.ASYMMETRIC
         else:
             raise ValueError(f"mode = {mode} is not supported")
     granularity = pot_config.get("granularity")
@@ -535,14 +545,9 @@ def map_threshold(threshold):
 
 
 def map_mode(mode):
-    ctx = get_algorithm_parameters_context()
-    advanced_parameter_name = ctx.param_name_map[ParameterNames.advanced_parameters]
-    advanced_parameters = ctx.params.get(advanced_parameter_name, AdvancedQuantizationParameters())
-    if hasattr(Mode, mode):
-        advanced_parameters.mode = getattr(Mode, mode)
-    else:
-        ValueError(f"advanced_parameters.mode = {mode} is not supported")
-    return {advanced_parameter_name: advanced_parameters}
+    if hasattr(QuantizationMode, mode):
+        return {"mode": getattr(QuantizationMode, mode)}
+    raise ValueError(f"advanced_parameters.mode = {mode} is not supported")
 
 
 def map_max_iter_num(max_iter_num):

@@ -17,13 +17,14 @@ import numpy as np
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.quantizers import get_num_levels
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor import TensorDataType
 from nncf.experimental.tensor import functions as fns
+from nncf.parameters import QuantizationMode
 
 
 @dataclass
@@ -209,7 +210,7 @@ def get_quantizer_narrow_range(quantizer_config: QuantizerConfig, quant_group: Q
     :param quant_group: Group of the quantizer.
     :return: narrow_range parameter.
     """
-    if quantizer_config.mode == QuantizationMode.SYMMETRIC:
+    if quantizer_config.mode == QuantizationScheme.SYMMETRIC:
         return quant_group == QuantizerGroup.WEIGHTS
     return False
 
@@ -242,7 +243,7 @@ def calculate_quantizer_parameters(
         )
     else:
         num_bits = quantizer_config.num_bits
-        if quantizer_config.mode == QuantizationMode.SYMMETRIC:
+        if quantizer_config.mode == QuantizationScheme.SYMMETRIC:
             level_low, level_high = calculate_symmetric_level_ranges(num_bits, signed=True, narrow_range=narrow_range)
             levels = get_num_levels(level_low, level_high)
             input_low, input_high = symmetric_range(min_values, max_values, levels, quantizer_config, quant_group)
@@ -262,7 +263,7 @@ def calculate_quantizer_parameters(
 def calculate_convert_parameters(
     statistics: MinMaxTensorStatistic,
     is_activation: False,
-    destination_type: str = "HF8",
+    destination_type: QuantizationMode = QuantizationMode.FP8_E4M3,
     activation_scale: float = 0.5,
 ) -> FakeConvertParameters:
     """
@@ -275,7 +276,7 @@ def calculate_convert_parameters(
     :return: Parameters of the FakeConvert layer.
     """
 
-    destination_type_maximum = {"HF8": 448, "BF8": 57344}
+    destination_type_maximum = {QuantizationMode.FP8_E4M3: 448, QuantizationMode.FP8_E5M2: 57344}
 
     max_values = Tensor(statistics.max_values)
     min_values = Tensor(statistics.min_values)
@@ -312,7 +313,7 @@ def _calculate_scaled_parameters(
         input_high: Tensor with maximum limit for input value.
         levels: Number of quantization levels.
     """
-    if quantizer_config.mode == QuantizationMode.ASYMMETRIC:
+    if quantizer_config.mode == QuantizationScheme.ASYMMETRIC:
         raise RuntimeError("half_range is only applied to symmetric quantization mode.")
     if quant_group != QuantizerGroup.WEIGHTS:
         raise RuntimeError("half_range is only applied to weight quantizers.")

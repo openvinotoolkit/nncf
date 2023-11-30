@@ -25,7 +25,7 @@ from nncf import NNCFConfig
 from nncf.api.compression import CompressionScheduler
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.structs import NonWeightQuantizerId
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.utils.debug import nncf_debug
@@ -84,7 +84,7 @@ def test_quantization_configs__with_defaults():
 
     ref_weight_qspec = PTQuantizerSpec(
         num_bits=8,
-        mode=QuantizationMode.SYMMETRIC,
+        mode=QuantizationScheme.SYMMETRIC,
         signedness_to_force=True,
         narrow_range=True,
         half_range=False,
@@ -96,7 +96,7 @@ def test_quantization_configs__with_defaults():
 
     ref_activation_qspec = PTQuantizerSpec(
         num_bits=8,
-        mode=QuantizationMode.SYMMETRIC,
+        mode=QuantizationScheme.SYMMETRIC,
         signedness_to_force=None,
         narrow_range=False,
         half_range=False,
@@ -131,7 +131,7 @@ def test_quantization_configs__custom():
 
     ref_weight_qspec = PTQuantizerSpec(
         num_bits=4,
-        mode=QuantizationMode.ASYMMETRIC,
+        mode=QuantizationScheme.ASYMMETRIC,
         signedness_to_force=None,
         scale_shape=model.wq_scale_shape_per_channel,
         narrow_range=False,
@@ -143,7 +143,7 @@ def test_quantization_configs__custom():
 
     ref_activation_qspec = PTQuantizerSpec(
         num_bits=4,
-        mode=QuantizationMode.ASYMMETRIC,
+        mode=QuantizationScheme.ASYMMETRIC,
         signedness_to_force=True,
         scale_shape=(1,),
         narrow_range=False,
@@ -442,13 +442,13 @@ def test_quantize_inputs():
         (QuantizerConfig(num_bits=5, per_channel=True), QuantizerConfig(num_bits=6, per_channel=False), True),
         (QuantizerConfig(num_bits=5, per_channel=False), QuantizerConfig(num_bits=6, per_channel=True), True),
         (
-            QuantizerConfig(num_bits=5, mode=QuantizationMode.SYMMETRIC),
-            QuantizerConfig(num_bits=5, mode=QuantizationMode.ASYMMETRIC),
+            QuantizerConfig(num_bits=5, mode=QuantizationScheme.SYMMETRIC),
+            QuantizerConfig(num_bits=5, mode=QuantizationScheme.ASYMMETRIC),
             True,
         ),
         (
-            QuantizerConfig(num_bits=5, mode=QuantizationMode.ASYMMETRIC),
-            QuantizerConfig(num_bits=5, mode=QuantizationMode.SYMMETRIC),
+            QuantizerConfig(num_bits=5, mode=QuantizationScheme.ASYMMETRIC),
+            QuantizerConfig(num_bits=5, mode=QuantizationScheme.SYMMETRIC),
             False,
         ),
         (QuantizerConfig(signedness_to_force=True), QuantizerConfig(), True),
@@ -458,24 +458,24 @@ def test_quantize_inputs():
         (QuantizerConfig(signedness_to_force=True), QuantizerConfig(signedness_to_force=False), False),
         (QuantizerConfig(signedness_to_force=False), QuantizerConfig(signedness_to_force=True), True),
         (
-            QuantizerConfig(num_bits=4, mode=QuantizationMode.SYMMETRIC, per_channel=False),
-            QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=True),
+            QuantizerConfig(num_bits=4, mode=QuantizationScheme.SYMMETRIC, per_channel=False),
+            QuantizerConfig(num_bits=8, mode=QuantizationScheme.SYMMETRIC, per_channel=True),
             True,
         ),
         (
-            QuantizerConfig(num_bits=4, mode=QuantizationMode.SYMMETRIC, per_channel=False),
-            QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False),
+            QuantizerConfig(num_bits=4, mode=QuantizationScheme.SYMMETRIC, per_channel=False),
+            QuantizerConfig(num_bits=8, mode=QuantizationScheme.ASYMMETRIC, per_channel=False),
             True,
         ),
         # Neither of the two configs here can requantize the other
         (
-            QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC),
-            QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC),
+            QuantizerConfig(num_bits=6, mode=QuantizationScheme.ASYMMETRIC),
+            QuantizerConfig(num_bits=8, mode=QuantizationScheme.SYMMETRIC),
             False,
         ),
         (
-            QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC),
-            QuantizerConfig(num_bits=6, mode=QuantizationMode.ASYMMETRIC),
+            QuantizerConfig(num_bits=8, mode=QuantizationScheme.SYMMETRIC),
+            QuantizerConfig(num_bits=6, mode=QuantizationScheme.ASYMMETRIC),
             False,
         ),
     ),
@@ -885,7 +885,7 @@ def test_activation_ignored_scope(update_config_info, should_ignore_quantizers):
 def test_sync_of_level_ranges_and_signed_parameter():
     qspec = PTQuantizerSpec(
         num_bits=4,
-        mode=QuantizationMode.SYMMETRIC,
+        mode=QuantizationScheme.SYMMETRIC,
         signedness_to_force=None,
         scale_shape=(1,),
         narrow_range=False,

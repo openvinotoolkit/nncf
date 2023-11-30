@@ -35,7 +35,7 @@ from nncf.openvino.graph.transformations.commands import OVOutputInsertionComman
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVUpdateIfBodyCommand
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
-from nncf.quantization.advanced_parameters import Mode
+from nncf.parameters import QuantizationMode
 from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
@@ -277,13 +277,18 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def _create_fake_convert(
-        op_output: ov.Output, fake_convert_params: FakeConvertParameters, fake_convert_name: str, convert_to_fp16: bool
+        op_output: ov.Output,
+        fake_convert_params: FakeConvertParameters,
+        destination_type: QuantizationMode,
+        fake_convert_name: str,
+        convert_to_fp16: bool,
     ) -> ov.Node:
         """
         Creates FakeConvert node.
 
         :param op_output: Output of the previous node.
         :param fake_convert_params: FakeConvertParameters instance.
+        :param destination_type: Destination type from the QuantizationMode.FP8_* list.
         :param fake_convert_name: New layer name.
         :param convert_to_fp16: Whether convert parameters to FP16 or not.
         :return: ov.Node instance.
@@ -296,7 +301,10 @@ class OVModelTransformer(ModelTransformer):
             scale = OVModelTransformer._convert_to_fp16(scale)
             shift = OVModelTransformer._convert_to_fp16(shift)
 
-        return opset13.fake_convert(op_output, scale, shift, name=fake_convert_name)
+        fake_convert_destination_type = destination_type.value.replace("_", "").lower()
+        return opset13.fake_convert(
+            op_output, scale, shift, destination_type=fake_convert_destination_type, name=fake_convert_name
+        )
 
     @staticmethod
     def _insert_fake_op(transformation: OVQuantizerInsertionCommand, name_to_node_mapping: Dict[str, ov.Node]) -> None:
@@ -308,8 +316,6 @@ class OVModelTransformer(ModelTransformer):
         """
         fake_op_params = transformation.fake_op_parameters
         mode = transformation.mode
-        if mode not in [Mode.FQ, Mode.FP8]:
-            raise RuntimeError(f"Incorrect Mode {mode}")
 
         node_name = transformation.target_point.target_node_name
         target_node = name_to_node_mapping[node_name]
@@ -331,28 +337,47 @@ class OVModelTransformer(ModelTransformer):
                         fake_op = out.get_node()
             if fake_op is None:
                 convert_to_fp16 = data_type == ov.Type(np.float16)
-                fake_op_name = f"{node_name}/{mode}_{name}_{port_id}"
-                if mode == Mode.FQ:
-                    fake_op = OVModelTransformer._create_fake_quantize(
-                        input_node_output, fake_op_params, fake_op_name, convert_to_fp16
-                    )
-                elif mode == Mode.FP8:
+                if mode is not None and mode in [QuantizationMode.FP8_E4M3, QuantizationMode.FP8_E5M2]:
+                    fake_op_name = f"{node_name}/{mode.value}_{name}_{port_id}"
                     fake_op = OVModelTransformer._create_fake_convert(
-                        input_node_output, fake_op_params, fake_op_name, convert_to_fp16
+                        op_output=input_node_output,
+                        fake_convert_params=fake_op_params,
+                        destination_type=mode,
+                        fake_convert_name=fake_op_name,
+                        convert_to_fp16=convert_to_fp16,
                     )
+                else:
+                    fake_op_name = f"{node_name}/fq_{name}_{port_id}"
+                    fake_op = OVModelTransformer._create_fake_quantize(
+                        op_output=input_node_output,
+                        fake_quantize_params=fake_op_params,
+                        fake_quantize_name=fake_op_name,
+                        convert_to_fp16=convert_to_fp16,
+                    )
+
             inp_node.replace_source_output(fake_op.output(0))
         elif transform_type == TargetType.POST_LAYER_OPERATION:
             output = target_node.output(port_id)
             data_type = output.get_element_type()
             target_inputs = output.get_target_inputs()
             convert_to_fp16 = data_type == ov.Type(np.float16)
-            fake_op_name = f"{node_name}/{mode}_output_{port_id}"
-            if mode == Mode.FQ:
-                fake_op = OVModelTransformer._create_fake_quantize(
-                    output, fake_op_params, fake_op_name, convert_to_fp16
+            if mode is not None and mode in [QuantizationMode.FP8_E4M3, QuantizationMode.FP8_E5M2]:
+                fake_op_name = f"{node_name}/{mode.value}_output_{port_id}"
+                fake_op = OVModelTransformer._create_fake_convert(
+                    op_output=output,
+                    fake_convert_params=fake_op_params,
+                    destination_type=mode,
+                    fake_convert_name=fake_op_name,
+                    convert_to_fp16=convert_to_fp16,
                 )
-            elif mode == Mode.FP8:
-                fake_op = OVModelTransformer._create_fake_convert(output, fake_op_params, fake_op_name, convert_to_fp16)
+            else:
+                fake_op_name = f"{node_name}/fq_{name}_{port_id}"
+                fake_op = OVModelTransformer._create_fake_quantize(
+                    op_output=output,
+                    fake_quantize_params=fake_op_params,
+                    fake_quantize_name=fake_op_name,
+                    convert_to_fp16=convert_to_fp16,
+                )
             for inp_node in target_inputs:
                 inp_node.replace_source_output(fake_op.output(0))
         else:

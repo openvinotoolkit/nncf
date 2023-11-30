@@ -21,8 +21,8 @@ from torch import nn
 from nncf import Dataset
 from nncf import NNCFConfig
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.experimental.tensor import Tensor
@@ -107,7 +107,7 @@ def test_quantizer_params_sym(case_to_test: CaseSymParams):
     per_ch = case_to_test.per_channel
     fq_params = case_to_test.fq_params
     quant_group = case_to_test.quant_group
-    qconfig = QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=per_ch)
+    qconfig = QuantizerConfig(num_bits=8, mode=QuantizationScheme.SYMMETRIC, per_channel=per_ch)
 
     if not per_ch:
         scale_shape = [1]
@@ -197,7 +197,7 @@ def test_quantizer_params_asym(case_to_test: CaseSymParams):
     per_ch = case_to_test.per_channel
     fq_params = case_to_test.fq_params
     quant_group = case_to_test.quant_group
-    qconfig = QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=per_ch)
+    qconfig = QuantizerConfig(num_bits=8, mode=QuantizationScheme.ASYMMETRIC, per_channel=per_ch)
 
     if not per_ch:
         scale_shape = [1]
@@ -264,7 +264,7 @@ def calculate_statistics(data, mode, qgroup, half_range=False):
     per_ch = qgroup == QuantizerGroup.WEIGHTS
     axes = (1, 2, 3) if per_ch else None
     min_values = np.amin(data, axes)
-    if mode == QuantizationMode.SYMMETRIC:
+    if mode == QuantizationScheme.SYMMETRIC:
         max_values = np.amax(np.abs(data), axes)
     else:
         max_values = np.amax(data, axes)
@@ -279,15 +279,15 @@ def calculate_statistics(data, mode, qgroup, half_range=False):
 
 def calculate_fq_params(model, input_data):
     _, relu, bn1, avg_pool = model(input_data)
-    conv1_stats = calculate_statistics(input_data, QuantizationMode.SYMMETRIC, QuantizerGroup.ACTIVATIONS)
-    bn1_stats = calculate_statistics(bn1, QuantizationMode.SYMMETRIC, QuantizerGroup.ACTIVATIONS)
-    conv2_stats = calculate_statistics(avg_pool, QuantizationMode.SYMMETRIC, QuantizerGroup.ACTIVATIONS)
-    avg_pool_stats = calculate_statistics(relu, QuantizationMode.SYMMETRIC, QuantizerGroup.ACTIVATIONS)
+    conv1_stats = calculate_statistics(input_data, QuantizationScheme.SYMMETRIC, QuantizerGroup.ACTIVATIONS)
+    bn1_stats = calculate_statistics(bn1, QuantizationScheme.SYMMETRIC, QuantizerGroup.ACTIVATIONS)
+    conv2_stats = calculate_statistics(avg_pool, QuantizationScheme.SYMMETRIC, QuantizerGroup.ACTIVATIONS)
+    avg_pool_stats = calculate_statistics(relu, QuantizationScheme.SYMMETRIC, QuantizerGroup.ACTIVATIONS)
 
     conv1_w = model.conv1.weight
-    conv1_w_stats = calculate_statistics(conv1_w, QuantizationMode.SYMMETRIC, QuantizerGroup.WEIGHTS, True)
+    conv1_w_stats = calculate_statistics(conv1_w, QuantizationScheme.SYMMETRIC, QuantizerGroup.WEIGHTS, True)
     conv2_w = model.conv2.weight
-    conv2_w_stats = calculate_statistics(conv2_w, QuantizationMode.SYMMETRIC, QuantizerGroup.WEIGHTS)
+    conv2_w_stats = calculate_statistics(conv2_w, QuantizationScheme.SYMMETRIC, QuantizerGroup.WEIGHTS)
     return {
         "//nncf_model_input_0|OUTPUT/FakeQuantize": conv1_stats,
         "/bn1/LinearTestModel/NNCFBatchNorm2d[bn1]/batch_norm_0|INPUT0/FakeQuantize": bn1_stats,

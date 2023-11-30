@@ -19,8 +19,8 @@ from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
@@ -224,7 +224,7 @@ class TemplateTestPTQParams:
                         nncf_graph.get_node_by_name(node_name).metatype
                         == min_max_algo._backend_entity.mat_mul_metatypes
                     ):
-                        assert quantization_point.qconfig.mode == QuantizationMode.ASYMMETRIC
+                        assert quantization_point.qconfig.mode == QuantizationScheme.ASYMMETRIC
         min_max_algo._apply_model_type_pass(model_type, q_setup, nncf_graph)
         for quantization_point in q_setup.quantization_points.values():
             if quantization_point.is_activation_quantization_point():
@@ -234,7 +234,7 @@ class TemplateTestPTQParams:
                         nncf_graph.get_node_by_name(node_name).metatype
                         == min_max_algo._backend_entity.mat_mul_metatypes
                     ):
-                        assert quantization_point.qconfig.mode == QuantizationMode.SYMMETRIC
+                        assert quantization_point.qconfig.mode == QuantizationScheme.SYMMETRIC
 
     @pytest.mark.parametrize(
         "overflow_fix, affected_target_points, ignored_ops",
