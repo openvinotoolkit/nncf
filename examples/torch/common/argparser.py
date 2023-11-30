@@ -104,7 +104,14 @@ def get_common_argument_parser():
     parser.add_argument("--dist-url", default="tcp://127.0.0.1:8899", help="URL used to set up distributed training")
     parser.add_argument("--rank", default=0, type=int, help="Node rank for distributed training")
     parser.add_argument("--dist-backend", default="nccl", type=str, help="Distributed backend")
-    parser.add_argument("--no_strip_on_export", help="Set to export not stripped model.", action="store_true")
+    parser.add_argument("--no-strip-on-export", help="Set to export not stripped model.", action="store_true")
+    parser.add_argument(
+        "--export-to-ir-via-onnx",
+        help="When used with the `exported-model-path` option to export to OpenVINO, will produce the serialized "
+        "OV IR object by first exporting the torch model object to an .onnx file and then converting that .onnx file "
+        "to an OV IR file.",
+        action="store_true",
+    )
 
     # Hyperparameters
     parser.add_argument(
@@ -141,7 +148,7 @@ def get_common_argument_parser():
 
     # Dataset
     parser.add_argument(
-        "--data", dest="dataset_dir", type=str, help="Path to the root directory of the selected dataset. "
+        "--data", dest="dataset_dir", type=str, help="Path to the root directory of the selected dataset."
     )
 
     # Settings
@@ -169,8 +176,13 @@ def get_common_argument_parser():
     )
 
     parser.add_argument("--save-freq", default=5, type=int, help="Checkpoint save frequency (epochs). Default: 5")
-
-    parser.add_argument("--to-onnx", type=str, metavar="PATH", default=None, help="Export to ONNX model by given path")
+    parser.add_argument(
+        "--export-model-path",
+        type=str,
+        metavar="PATH",
+        default=None,
+        help="The path to export the model in OpenVINO or ONNX format by using the .xml or .onnx suffix, respectively.",
+    )
 
     # Display
     parser.add_argument(
@@ -191,6 +203,6 @@ def get_common_argument_parser():
 
 def parse_args(parser, argv):
     args = parser.parse_args(argv)
-    if "export" in args.mode and args.to_onnx is None:
-        raise RuntimeError("--mode export requires --to-onnx argument to be set")
+    if "export" in args.mode and args.export_model_path is None:
+        raise RuntimeError("--mode export requires --export-model-path argument to be set")
     return args

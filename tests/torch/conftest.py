@@ -10,6 +10,7 @@
 # limitations under the License.
 import os
 import random
+from pathlib import Path
 
 import pytest
 
@@ -138,22 +139,17 @@ def mixed_precision(request):
 
 @pytest.fixture(scope="module")
 def sota_checkpoints_dir(request):
-    return request.config.getoption("--sota-checkpoints-dir")
+    return Path(request.config.getoption("--sota-checkpoints-dir"))
 
 
 @pytest.fixture(scope="module")
 def sota_data_dir(request):
-    return request.config.getoption("--sota-data-dir")
-
-
-@pytest.fixture(scope="module")
-def metrics_dump_dir(request):
-    pytest.metrics_dump_path = request.config.getoption("--metrics-dump-path")
+    return Path(request.config.getoption("--sota-data-dir"))
 
 
 @pytest.fixture(scope="module")
 def ov_data_dir(request):
-    return request.config.getoption("--ov-data-dir")
+    return Path(request.config.getoption("--ov-data-dir"))
 
 
 @pytest.fixture(scope="module")
@@ -186,11 +182,6 @@ def torch_with_cuda11(request):
 @pytest.fixture(scope="session")
 def openvino(request):
     return request.config.getoption("--run-openvino-eval")
-
-
-@pytest.fixture(scope="module")
-def onnx_dir(request):
-    return request.config.getoption("--onnx-dir")
 
 
 @pytest.fixture(scope="module")
@@ -253,8 +244,8 @@ def runs_subprocess_in_precommit():
 
 
 @pytest.fixture(scope="module")
-def cuda_ip(request):
-    return request.config.getoption("--cuda-ip")
+def distributed_mode_sync_port(request):
+    return request.config.getoption("--distributed-mode-sync-port")
 
 
 @pytest.fixture
