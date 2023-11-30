@@ -204,7 +204,7 @@ def _do_integer_quantization(
     """
     The method quantizes the given weights to integer data type in accordance with the compression config.
     The config defines a quantization mode:
-        INT8_SYM mode refers to unsigned int4 symmetric weight compression with a fixed zero point equals to 128 -
+        INT8_SYM mode refers to unsigned int8 symmetric weight compression with a fixed zero point equals to 128 -
             quantization to [0, 255] range.
         INT8_ASYM mode refers to unsigned int8 asymmetric weight compression with a typical non-fixed zero-point -
             quantization to [0, 255] range.
