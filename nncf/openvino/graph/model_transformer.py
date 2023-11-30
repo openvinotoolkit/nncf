@@ -301,9 +301,12 @@ class OVModelTransformer(ModelTransformer):
             scale = OVModelTransformer._convert_to_fp16(scale)
             shift = OVModelTransformer._convert_to_fp16(shift)
 
-        fake_convert_destination_type = destination_type.value.replace("_", "").lower()
         return opset13.fake_convert(
-            op_output, scale, shift, destination_type=fake_convert_destination_type, name=fake_convert_name
+            data=op_output,
+            scale=scale,
+            shift=shift,
+            destination_type=destination_type.value,
+            name=fake_convert_name,
         )
 
     @staticmethod
@@ -338,7 +341,7 @@ class OVModelTransformer(ModelTransformer):
             if fake_op is None:
                 convert_to_fp16 = data_type == ov.Type(np.float16)
                 if mode is not None and mode in [QuantizationMode.FP8_E4M3, QuantizationMode.FP8_E5M2]:
-                    fake_op_name = f"{node_name}/{mode.value}_{name}_{port_id}"
+                    fake_op_name = f"{node_name}/fc_{name}_{port_id}"
                     fake_op = OVModelTransformer._create_fake_convert(
                         op_output=input_node_output,
                         fake_convert_params=fake_op_params,
@@ -362,7 +365,7 @@ class OVModelTransformer(ModelTransformer):
             target_inputs = output.get_target_inputs()
             convert_to_fp16 = data_type == ov.Type(np.float16)
             if mode is not None and mode in [QuantizationMode.FP8_E4M3, QuantizationMode.FP8_E5M2]:
-                fake_op_name = f"{node_name}/{mode.value}_output_{port_id}"
+                fake_op_name = f"{node_name}/fc_output_{port_id}"
                 fake_op = OVModelTransformer._create_fake_convert(
                     op_output=output,
                     fake_convert_params=fake_op_params,
