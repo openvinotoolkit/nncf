@@ -22,7 +22,10 @@ from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.metatypes.groups import CONV_OPERATIONS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
 
@@ -68,6 +71,15 @@ class OVLayerAttributes(BaseLayerAttributes):
         if self._constant_attributes is not None:
             return list(self._constant_attributes.keys())
         return []
+
+
+_CONV_BASE_CONST_LAYOUT = {
+    OVConvolutionMetatype: [OVLayoutElem.C_OUT, OVLayoutElem.C_IN],
+    OVConvolutionBackpropDataMetatype: [OVLayoutElem.C_IN, OVLayoutElem.C_OUT],
+    OVDepthwiseConvolutionMetatype: [OVLayoutElem.GROUPS, OVLayoutElem.C_OUT, OVLayoutElem.C_IN],
+    OVGroupConvolutionMetatype: [OVLayoutElem.GROUPS, OVLayoutElem.C_OUT, OVLayoutElem.C_IN],
+    OVGroupConvolutionBackpropDataMetatype: [OVLayoutElem.GROUPS, OVLayoutElem.C_IN, OVLayoutElem.C_OUT],
+}
 
 
 def get_conv_weights_layout_from_node(node: NNCFNode) -> List[OVLayoutElem]:
@@ -121,7 +133,7 @@ def get_conv_weights_layout(ov_metatype: OVOpMetatype, weights_shape: Tuple[int,
     :param weights_shape: Shape of the target convolution node weight.
     :return: Target convolution node weights layout.
     """
-    weights_layout = ov_metatype.const_layout
+    weights_layout = _CONV_BASE_CONST_LAYOUT[ov_metatype]
     kernel_size = weights_shape[len(weights_layout) :]
     weights_layout += [OVLayoutElem.SPATIAL] * len(kernel_size)
     return tuple(weights_layout)
