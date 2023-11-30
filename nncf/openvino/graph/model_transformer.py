@@ -374,7 +374,7 @@ class OVModelTransformer(ModelTransformer):
                     convert_to_fp16=convert_to_fp16,
                 )
             else:
-                fake_op_name = f"{node_name}/fq_{name}_{port_id}"
+                fake_op_name = f"{node_name}/fq_output_{port_id}"
                 fake_op = OVModelTransformer._create_fake_quantize(
                     op_output=output,
                     fake_quantize_params=fake_op_params,
