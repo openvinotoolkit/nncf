@@ -5,8 +5,7 @@ ignore:
 
 codecov:
   notify:
-     after_n_builds: 2
-     wait_for_ci: no
+     wait_for_ci: true
   max_report_age: off
 
 coverage:
@@ -15,6 +14,7 @@ coverage:
       default:
         branches:
           - develop
+        target: 90%
         informational: true
         only_pulls: true
         paths:
@@ -23,15 +23,72 @@ coverage:
       default:
         branches:
           - develop
+        target: 90%
         informational: true
         only_pulls: true
         paths:
-          - "nncf/onnx"
-          - "nncf/common"  # extend this once we collect coverage reports for more than just onnx and common part of precommit
+          - "nncf"
 
 comment:
-  layout: "diff, flags, files"
+  layout: "reach, diff, files, flags, components"
   require_changes: false
 
   require_head: false
   require_base: false
+
+flag_management:
+  # Flag coverage percentage seems to show the "percentage of lines under the flag path covered as reported ONLY
+  # by the upload with the corresponding flag", so e.g. for COMMON the flag coverage percentage will report the
+  # percentage of common code tested ONLY by the common tests, and e.g. not by backend-specific precommit parts
+  # (which also run common code and are therefore indirectly providing coverage). Ideally each flag-specific path
+  # would be described below with the corresponding flag and provide valuable information on whether the test code base
+  # is written efficiently, e.g. that the backend-specific tests predominantly validate backend-specific code and the
+  # common tests completely cover the common code on their own. However, if we set all flags with paths here, then the
+  # total repo coverage percentage will sink, because codecov currently reports the overall coverage based on the union
+  # of the "flag" coverages - not the "component" coverages (see below) - and currently NNCF's precommit tests are
+  # biased toward validating common code via backend-specific tests. In the future the tests will be gradually
+  # refactored to have more "locality" in what each precommit section tests.
+  individual_flags:
+    - name: COMMON
+      paths:
+        - nncf/common
+        - nncf/quantization
+
+component_management:
+  # In contrast to the "flag" coverage above, the "component" display seems to calculate percentage based on the
+  # coverage information from ALL uploads for the code in the specified path. With this, the "component" coverage
+  # percentage is a better representation of what sub-paths in the NNCF code base are covered with at least one test,
+  # without distinction whether the test was run in the
+  individual_components:
+    - component_id: common
+      name: common
+      paths:
+        - nncf/common
+        - "!nncf/**/torch_*.py"
+        - "!nncf/**/tensorflow_*.py"
+        - "!nncf/**/onnx_*.py"
+        - "!nncf/**/openvino_*.py"
+    - component_id: torch
+      name: torch
+      paths:
+        - nncf/torch
+        - nncf/**/torch_*.py
+    - component_id: tensorflow
+      name: tensorflow
+      paths:
+        - nncf/tensorflow
+        - nncf/**/tensorflow_*.py
+    - component_id: onnx
+      name: onnx
+      paths:
+        - nncf/onnx
+        - nncf/**/onnx_*.py
+    - component_id: openvino
+      name: openvino
+      paths:
+        - nncf/openvino
+        - nncf/**/openvino_*.py
+    - component_id: quantization
+      name: ptq
+      paths:
+        - nncf/quantization
