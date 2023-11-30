@@ -354,9 +354,12 @@ class OVModelTransformer(ModelTransformer):
         if const_node is None:
             raise RuntimeError("Constant node was expected but could not find it.")
 
-        const_shape = const_node.get_data().shape
-        const_value = np.reshape(const_value, const_shape)
-        new_const_node = opset.constant(const_value, dtype=const_node.get_element_type())
+        const_shape = const_node.data.shape
+        const_dtype = const_node.data.dtype
+        const_value = np.reshape(const_value, const_shape).astype(const_dtype)
+
+        # TODO(andrey-churkin): Replace on opset13.constant() in a future release
+        new_const_node = ov.op.Constant(const_value, shared_memory=True)
         new_const_node.set_friendly_name(const_node.get_friendly_name())
         const_port.replace_source_output(new_const_node.output(0))
 
@@ -567,5 +570,5 @@ class OVModelTransformer(ModelTransformer):
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         ov_node = name_to_node_mapping[transformation.if_node_name]
         if transformation.if_body_condition:
-            return ov.Model(ov_node.get_function(0))  # ticket: 121115
-        return ov.Model(ov_node.get_function(1))  # ticket: 121115
+            return ov_node.get_function(0)
+        return ov_node.get_function(1)

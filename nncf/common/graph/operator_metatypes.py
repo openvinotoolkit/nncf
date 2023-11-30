@@ -29,6 +29,7 @@ class OperatorMetatype:
     hw_config_names: List[str] = []
     output_channel_axis: Optional[int] = None
     ignored_input_ports: List[int] = []
+    target_input_ports: Optional[List[int]] = None
 
     @classmethod
     def get_all_aliases(cls) -> List[str]:

@@ -23,7 +23,6 @@ import openvino as ov
 import torch
 import torchvision
 from fastdownload import FastDownload
-from openvino.tools import mo
 from PIL import Image
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from torchvision.models.detection.ssd import SSD
@@ -158,11 +157,11 @@ def main():
 
     fp32_onnx_path = f"{ROOT}/ssd300_vgg16_fp32.onnx"
     torch.onnx.export(model.cpu(), dummy_input, fp32_onnx_path)
-    ov_model = mo.convert_model(fp32_onnx_path)
+    ov_model = ov.convert_model(fp32_onnx_path)
 
     int8_onnx_path = f"{ROOT}/ssd300_vgg16_int8.onnx"
     torch.onnx.export(quantized_model.cpu(), dummy_input, int8_onnx_path)
-    ov_quantized_model = mo.convert_model(int8_onnx_path)
+    ov_quantized_model = ov.convert_model(int8_onnx_path)
 
     fp32_ir_path = f"{ROOT}/ssd300_vgg16_fp32.xml"
     ov.save_model(ov_model, fp32_ir_path, compress_to_fp16=False)

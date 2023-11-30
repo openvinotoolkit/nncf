@@ -1154,6 +1154,9 @@ class QuantizerPropagationSolver:
             if input_port_id in metatype.ignored_input_ports:
                 continue
 
+            if metatype.target_input_ports is not None and input_port_id not in metatype.target_input_ports:
+                continue
+
             edge = quant_prop_graph.edges[pred_ip_key, operator_node_key]
             if not edge[QuantizerPropagationStateGraph.IS_INTEGER_PATH_EDGE_ATTR]:
                 pred_ip_key_vs_qconf_dict[pred_ip_key] = qconf_list

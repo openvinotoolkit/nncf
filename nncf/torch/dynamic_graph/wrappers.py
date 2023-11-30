@@ -28,6 +28,8 @@ from nncf.torch.dynamic_graph.trace_tensor import make_tensor_metas
 from nncf.torch.dynamic_graph.trace_tensor import trace_tensors
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.layers import ITERATION_MODULES
+from nncf.torch.return_types import maybe_unwrap_from_torch_return_type
+from nncf.torch.return_types import maybe_wrap_to_torch_return_type
 
 _IGNORED_SCOPES = []
 
@@ -188,8 +190,10 @@ def _execute_op(
         if is_debug() and node is not None:
             ctx.register_node_call(node)
 
-    result = trace_tensors(result, node, ctx)
-    result = ctx.execute_post_hooks(op_address, result)
+    unwrapped_result = maybe_unwrap_from_torch_return_type(result)
+    unwrapped_result = trace_tensors(unwrapped_result, node, ctx)
+    unwrapped_result = ctx.execute_post_hooks(op_address, unwrapped_result)
+    result = maybe_wrap_to_torch_return_type(unwrapped_result, result)
     return result
 
 

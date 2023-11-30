@@ -254,7 +254,7 @@ def compress_weights(
         INT8 stands for 8-bit integer quantization of all weights.
         INT4_SYM stands for a mixed-precision weights quantization with 4-bit integer as a primary precision.
             Weights are quantized to a primary precision symmetrically with a fixed zero point equals to 8.
-            The first and the last layers are always compressed to a backup precision, which is 8-bit integer,
+            All embeddings and the last layer are always compressed to a backup precision, which is 8-bit integer,
             by default. All others are quantized whether to 4-bit integer or to a backup precision depending on
             criteria and the given ratio.
         INT4_ASYM is the same as INT4_SYM mode, but weights are quantized to a primary precision asymmetrically

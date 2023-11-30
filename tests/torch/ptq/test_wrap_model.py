@@ -15,6 +15,7 @@ from torch import nn
 
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.model_creation import wrap_model
+from nncf.torch.nested_objects_traversal import objwalk
 
 
 class ArgumentModel(nn.Module):
@@ -64,9 +65,15 @@ class KeyWordArgumentsModel(nn.Module):
 def test_wrap_model_with_example_input(example_input, model_cls):
     model = model_cls(example_input)
     nncf_network = wrap_model(model, example_input)
+
+    def check_type(x):
+        assert type(x) == torch.Tensor
+        return x
+
+    objwalk(example_input, lambda x: True, check_type)
+
     nncf_graph = nncf_network.nncf.get_original_graph()
     all_nodes = nncf_graph.get_all_nodes()
-
     num_nodes = 2
     if isinstance(example_input, (tuple, dict)):
         num_nodes *= len(example_input)

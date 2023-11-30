@@ -81,6 +81,10 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return []
 
     @property
+    def scaled_dot_product_attention_metatypes(self) -> List[OperatorMetatype]:
+        return []
+
+    @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
         return {om.ONNXConcatMetatype: self.overflow_fix_metatypes}
 

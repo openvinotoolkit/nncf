@@ -16,6 +16,7 @@ import numpy as np
 import openvino.runtime as ov
 from openvino.runtime import opset9 as opset
 from openvino.runtime import opset12
+from openvino.runtime import opset13
 
 from nncf.common.utils.registry import Registry
 
@@ -793,10 +794,47 @@ class GatherWithTwoReductionAxes(OVReferenceModel):
         input_1 = opset.parameter([2, 3], name="Input")
         convert_1 = opset.convert(input_1, destination_type="i64", name="Convert_1")
 
-        gather_2_data = opset.constant(self._rng.random((3, 2, 1)), dtype=np.float32, name="gather_2_data")
+        gather_1_data = opset.constant(self._rng.random((3, 2, 1)), dtype=np.float32, name="gather_1_data")
+        gather_1 = opset.gather(gather_1_data, convert_1, axis=0, batch_dims=0)
+        gather_1.set_friendly_name("Gather_1")
+
+        result = opset.result(gather_1, name="Result")
+        model = ov.Model([result], [input_1])
+        return model
+
+
+class GatherAndMatmulShareData(OVReferenceModel):
+    def _create_ov_model(self):
+        input_1 = opset.parameter([2, 3], name="Input")
+        convert_1 = opset.convert(input_1, destination_type="i64", name="Convert_1")
+
+        shared_data = opset.constant(self._rng.random((2, 2)), dtype=np.float32, name="shared_data")
+        gather_1 = opset.gather(shared_data, convert_1, axis=0, batch_dims=0)
+        gather_1.set_friendly_name("Gather_1")
+
+        gather_2_data = opset.constant(self._rng.random((2, 1)), dtype=np.float32, name="gather_2_data")
         gather_2 = opset.gather(gather_2_data, convert_1, axis=0, batch_dims=0)
         gather_2.set_friendly_name("Gather_2")
 
-        result = opset.result(gather_2, name="Result")
-        model = ov.Model([result], [input_1])
+        matmul_1_data = opset.constant(self._rng.random((2, 3)), dtype=np.float32, name="matmul_1_data")
+        matmul_1 = opset.matmul(input_1, matmul_1_data, transpose_a=False, transpose_b=True, name="MatMul_1")
+
+        matmul_2 = opset.matmul(matmul_1, shared_data, transpose_a=False, transpose_b=True, name="MatMul_2")
+
+        result = opset.result(matmul_2, name="  Result")
+        model = ov.Model([result, gather_2, gather_1], [input_1])
+        return model
+
+
+class ScaledDotProductAttentionModel(OVReferenceModel):
+    def _create_ov_model(self):
+        query = opset.parameter([1, 1, 1, 64], name="Input_1")
+        key = opset.parameter([1, 1, 1, 64], name="Input_2")
+        value = opset.parameter([1, 1, 1, 64], name="Input_3")
+        attn_mask = opset.parameter([1, 1, 1, 1], name="Input_4")
+
+        attn = opset13.scaled_dot_product_attention(query, key, value, attn_mask)
+        result = opset.result(attn, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+        model = ov.Model([result], [query, key, value, attn_mask])
         return model

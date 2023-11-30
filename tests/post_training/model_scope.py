@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import copy
+from typing import Dict
 
 from nncf import ModelType
 from nncf import QuantizationPreset
@@ -56,7 +57,7 @@ TEST_MODELS = [
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=-1.0),
         },
-        "backends": [BackendType.TORCH, BackendType.ONNX, BackendType.OV, BackendType.POT],
+        "backends": ALL_PTQ_BACKENDS,
     },
     {
         "reported_name": "timm/darknet53",
@@ -153,7 +154,7 @@ TEST_MODELS = [
                 smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=0.05)
             ),
         },
-        "backends": [BackendType.TORCH, BackendType.ONNX, BackendType.OV],
+        "backends": NNCF_PTQ_BACKENDS,
     },
     {
         "reported_name": "timm/mobilenetv2_050",
@@ -242,7 +243,7 @@ TEST_MODELS = [
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
         },
-        "backends": [BackendType.TORCH, BackendType.ONNX, BackendType.OV, BackendType.POT],
+        "backends": ALL_PTQ_BACKENDS,
     },
     {
         "reported_name": "timm/wide_resnet50_2",
@@ -256,13 +257,13 @@ TEST_MODELS = [
 ]
 
 
-def generate_tests_scope():
+def generate_tests_scope() -> Dict[str, dict]:
     """
     Generate tests by names "{reported_name}_backend_{backend}"
     """
     tests_scope = {}
     for test_model_param in TEST_MODELS:
-        for backend in test_model_param["backends"]:
+        for backend in test_model_param["backends"] + [BackendType.FP32]:
             model_param = copy.deepcopy(test_model_param)
             reported_name = model_param["reported_name"]
             test_case_name = f"{reported_name}_backend_{backend.value}"

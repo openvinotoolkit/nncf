@@ -182,13 +182,13 @@ def check_inplace_op(target_node, ref_types, ref_vals, inplace_branches_num, out
         if ref_val is not None:
             const = get_prev_node(node, 1)
             if ref_val == []:
-                assert const.get_data().shape == (0,)
+                assert const.data.shape == (0,)
             elif not isinstance(ref_val, tuple):
-                assert const.get_data() == ref_val
+                assert const.data == ref_val
             else:
-                res = np.equal(const.get_data(), np.array(ref_val))
+                res = np.equal(const.data, np.array(ref_val))
                 assert all(res)
-                assert const.get_data().shape == np.array(ref_val).shape
+                assert const.data.shape == np.array(ref_val).shape
 
         nodes = get_next_nodes(node, 0)
         assert len(nodes) == 1
@@ -296,7 +296,7 @@ def test_inplace_reduce_fn_dynamic_shapes(input_shape, raise_error):
     op = fn(input_1, 0)
     # check_const
     ref_const = np.array([0, 1, 2, 3])
-    assert all(np.equal(get_prev_node(op, 1).get_data(), ref_const))
+    assert all(np.equal(get_prev_node(op, 1).data, ref_const))
 
 
 @pytest.mark.parametrize("reduction_axes", [None, np.array([], dtype=np.int64)])
@@ -354,8 +354,10 @@ def test_inplace_mean_per_ch_fn_dynamic_shapes(test_params: InplaceOpTestCase, i
         with pytest.raises(RuntimeError):
             fn(input_1, 0)
         return
-    fn(input_1, 0)
-    check_inplace_op(input_1, test_params.ref_types, test_params.ref_values, 1, 0)
+    last_node = fn(input_1, 0)
+    result = opset.result(last_node)
+    model = ov.Model([result], [input_1])
+    check_inplace_op(model.input().get_node(), test_params.ref_types, test_params.ref_values, 1, 0)
 
 
 @pytest.mark.parametrize(

@@ -57,7 +57,7 @@ class NNCFConfig(dict):
 
         :param path: Path to the .json file containing the NNCF configuration.
         """
-        file_path = Path(path).resolve()
+        file_path = Path(path)
         with safe_open(file_path) as f:
             loaded_json = json.load(f)
         return cls.from_dict(loaded_json)

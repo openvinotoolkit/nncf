@@ -24,7 +24,7 @@ class CausalLMHF(BaseTestPipeline):
     """Pipeline for causal language models from Hugging Face repository"""
 
     def prepare_model(self) -> None:
-        if self.backend in OV_BACKENDS:
+        if self.backend in OV_BACKENDS + [BackendType.FP32]:
             self.model_hf = OVModelForCausalLM.from_pretrained(self.model_id, export=True, compile=False)
             self.model = self.model_hf.model
             ov.serialize(self.model, self.output_model_dir / "model_fp32.xml")
