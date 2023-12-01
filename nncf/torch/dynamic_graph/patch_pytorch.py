@@ -155,7 +155,6 @@ class MagicFunctionsToPatch:
             "__radd__",
             "__rand__",
             "__rdiv__",
-            "__rdivmod__",
             "__rfloordiv__",
             "__rmatmul__",
             "__rmul__",

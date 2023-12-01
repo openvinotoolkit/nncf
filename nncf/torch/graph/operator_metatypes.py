@@ -446,7 +446,14 @@ class PTMulMetatype(PTOperatorMetatype):
 class PTDivMetatype(PTOperatorMetatype):
     name = "DivOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["__div__", "__idiv__", "__truediv__"],
+        NamespaceTarget.TORCH_TENSOR: [
+            "__div__",
+            "__idiv__",
+            "__rdiv__",
+            "__truediv__",
+            "__itruediv__",
+            "__rtruediv__",
+        ],
         NamespaceTarget.TORCH: ["div"],
     }
     hw_config_names = [HWConfigOpName.DIVIDE]
@@ -480,6 +487,7 @@ class PTLogMetatype(PTOperatorMetatype):
 class PTAbsMetatype(PTOperatorMetatype):
     name = "AbsOp"
     module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["__abs__"],
         NamespaceTarget.TORCH: ["abs"],
     }
 
@@ -496,7 +504,7 @@ class PTErfMetatype(PTOperatorMetatype):
 class PTMatMulMetatype(PTOperatorMetatype):
     name = "MatMulOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["matmul", "__matmul__"],
+        NamespaceTarget.TORCH_TENSOR: ["matmul", "__matmul__", "__imatmul__", "__rmatmul__"],
         NamespaceTarget.TORCH: ["matmul", "bmm", "mm"],
     }
     hw_config_names = [HWConfigOpName.MATMUL]
@@ -812,35 +820,44 @@ class PTNotEqualMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTLogicalOrMetatype(PTOperatorMetatype):
     name = "LogicalOrOp"
-    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__or__"]}
+    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__or__", "__ror__", "__ior__"]}
     hw_config_names = [HWConfigOpName.LOGICALOR]
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTLogicalXorMetatype(PTOperatorMetatype):
     name = "LogicalXorOp"
-    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__xor__"]}
+    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__xor__", "__ixor__", "__rxor__"]}
     hw_config_names = [HWConfigOpName.LOGICALXOR]
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTLogicalAndMetatype(PTOperatorMetatype):
     name = "LogicalAndOp"
-    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__and__"]}
+    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__and__", "__iand__", "__rand__"]}
     hw_config_names = [HWConfigOpName.LOGICALAND]
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTLogicalNotMetatype(PTOperatorMetatype):
     name = "LogicalNotOp"
-    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["logical_not_"]}
+    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["logical_not_", "__invert__"]}
     hw_config_names = [HWConfigOpName.LOGICALNOT]
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTNegativeMetatype(PTOperatorMetatype):
+    name = "NegativeOp"
+    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["neg", "__neg__"]}
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTPowerMetatype(PTOperatorMetatype):
     name = "PowerOp"
-    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__pow__", "pow"], NamespaceTarget.TORCH: ["pow"]}
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["pow", "__pow__", "__ipow__", "__rpow__"],
+        NamespaceTarget.TORCH: ["pow"],
+    }
     hw_config_names = [HWConfigOpName.POWER]
 
 
