@@ -91,5 +91,5 @@ class QuantizationMode(Enum):
     :param FP8_E5M2: Mode with 5-bit exponent and 2-bit mantissa.
     """
 
-    FP8_E4M3 = "f8e4m3"
-    FP8_E5M2 = "f8e5m2"
+    FP8_E4M3 = "fp8_e4m3"
+    FP8_E5M2 = "fp8_e5m2"

@@ -24,7 +24,7 @@ from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor import TensorDataType
 from nncf.experimental.tensor import functions as fns
-from nncf.parameters import QuantizationMode
+from nncf.quantization.advanced_parameters import FP8Type
 
 
 @dataclass
@@ -53,10 +53,12 @@ class FakeConvertParameters:
 
     :param scale: Tensor with the scale for input value.
     :param shift: Tensor with the shift for input value.
+    :param destination_type: Destination type.
     """
 
     scale: Tensor
     shift: Tensor
+    destination_type: FP8Type
 
 
 def fix_zero_filters_symmetric(max_values: Tensor, eps: float = 0.01) -> Tensor:
@@ -263,7 +265,7 @@ def calculate_quantizer_parameters(
 def calculate_convert_parameters(
     statistics: MinMaxTensorStatistic,
     is_activation: False,
-    destination_type: QuantizationMode = QuantizationMode.FP8_E4M3,
+    destination_type: FP8Type = FP8Type.E4M3,
     activation_scale: float = 0.5,
 ) -> FakeConvertParameters:
     """
@@ -276,7 +278,7 @@ def calculate_convert_parameters(
     :return: Parameters of the FakeConvert layer.
     """
 
-    destination_type_maximum = {QuantizationMode.FP8_E4M3: 448, QuantizationMode.FP8_E5M2: 57344}
+    destination_type_maximum = {FP8Type.E4M3: 448, FP8Type.E5M2: 57344}
 
     max_values = Tensor(statistics.max_values)
     min_values = Tensor(statistics.min_values)
@@ -289,7 +291,7 @@ def calculate_convert_parameters(
         scale = fns.squeeze(activation_scale * scale)
     shift = fns.zeros_like(scale).astype(TensorDataType.float32)
     scale = scale.astype(TensorDataType.float32)
-    return FakeConvertParameters(scale, shift)
+    return FakeConvertParameters(scale, shift, destination_type)
 
 
 def _calculate_scaled_parameters(

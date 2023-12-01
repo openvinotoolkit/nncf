@@ -24,7 +24,6 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.parameters import ModelType
-from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
@@ -144,7 +143,6 @@ class MinMaxAlgoBackend(ABC):
         target_point: TargetPoint,
         quantizer_config: QuantizerConfig,
         parameters: Union[FakeQuantizeParameters, FakeConvertParameters],
-        mode: Optional[QuantizationMode] = None,
     ) -> TransformationCommand:
         """
         Returns backend-specific quantizer insertion command.
@@ -153,7 +151,6 @@ class MinMaxAlgoBackend(ABC):
         :param target_point: Target location for the correction.
         :param quantizer_config: QuantizerConfig instance for the current layer.
         :param parameters: FakeQuantize- or FakeConvertParameters to calculate activation quantization parameters.
-        :param mode: Quantization mode: FQ, FP8, etc.
         :return: Backend-specific TransformationCommand for the quantizer insertion operation.
         """
 

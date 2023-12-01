@@ -12,7 +12,7 @@
 import collections
 import dataclasses
 from copy import deepcopy
-from typing import Any, Dict, List, Optional, OrderedDict, Set, TypeVar
+from typing import Any, Dict, List, Optional, OrderedDict, Set, TypeVar, Union
 
 import numpy as np
 
@@ -48,6 +48,8 @@ from nncf.common.utils.backend import get_backend
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
+from nncf.quantization.advanced_parameters import ConvertParameters
+from nncf.quantization.advanced_parameters import FP8Type
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.advanced_parameters import changes_asdict
@@ -107,8 +109,8 @@ class MinMaxQuantization(Algorithm):
         overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER,
         quantize_outputs: bool = False,
         inplace_statistics: bool = True,
-        activations_quantization_params: Optional[QuantizationParameters] = None,
-        weights_quantization_params: Optional[QuantizationParameters] = None,
+        activations_quantization_params: Union[QuantizationParameters, ConvertParameters] = None,
+        weights_quantization_params: Union[QuantizationParameters, ConvertParameters] = None,
         activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
         weights_range_estimator_params: Optional[RangeEstimatorParameters] = None,
         backend_params: Optional[Dict[str, Any]] = None,
@@ -119,7 +121,7 @@ class MinMaxQuantization(Algorithm):
             - `performance`: Symmetric quantization of weights and activations.
             - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
             Default value is None. In this case, `mixed` preset is used for `transformer`
-            model type otherwise `performace`.
+            model type otherwise `performance`.
         :param target_device: A target device the specificity of which will be taken
             into account while compressing in order to obtain the best performance
             for this type of device, defaults to TargetDevice.ANY.
@@ -169,19 +171,70 @@ class MinMaxQuantization(Algorithm):
         # preset definition
         if preset is None:
             if model_type == ModelType.TRANSFORMER:
-                preset = QuantizationPreset.MIXED
+                self._preset = QuantizationPreset.MIXED
             else:
-                preset = QuantizationPreset.PERFORMANCE
+                self._preset = QuantizationPreset.PERFORMANCE
 
+        if mode is not None:
+            self._redefine_defaults_based_on_mode()
         # Calculates global quantizer constraints
         self._global_quantizer_constraints = {}
         for quantizer_group in QuantizerGroup:
             self._global_quantizer_constraints[quantizer_group] = self._get_quantizer_constraints(
-                quantizer_group, preset, self._quantization_params[quantizer_group]
+                quantizer_group, self._preset, self._quantization_params[quantizer_group]
             )
 
         self._reset_cache()
         self._algorithm_key = f"MMQ_{hash(self)}"
+
+    def _redefine_defaults_based_on_mode(self):
+        """
+        Redefines default values because mode option doesn't support them.
+        """
+        nncf_logger.warning(
+            f"Experimental option mode was set to: {self._mode}. The parameters below would not take any effect:"
+        )
+
+        self._preset = QuantizationPreset.PERFORMANCE
+        nncf_logger.warning(f"  preset option was set to: {self._preset}")
+
+        self._target_device = TargetDevice.CPU
+        nncf_logger.warning(f"  target_device option was set to: {self._target_device}")
+
+        self._overflow_fix = OverflowFix.DISABLE
+        nncf_logger.warning(f"  overflow_fix option was set to: {self._overflow_fix}")
+
+        self._quantize_outputs = False
+        nncf_logger.warning(f"  quantize_outputs option was set to: {self._quantize_outputs}")
+
+        self._range_estimator_params[QuantizerGroup.WEIGHTS] = None
+        nncf_logger.warning(
+            f"  range_estimator_params options for {QuantizerGroup.WEIGHTS} were set to: "
+            f"{self._range_estimator_params[QuantizerGroup.WEIGHTS]}"
+        )
+
+        self._range_estimator_params[QuantizerGroup.ACTIVATIONS] = None
+        nncf_logger.warning(
+            f"  range_estimator_params options for {QuantizerGroup.ACTIVATIONS} were set to: "
+            f"{self._range_estimator_params[QuantizerGroup.ACTIVATIONS]}"
+        )
+
+        self._backend_params = None
+        nncf_logger.warning(f"  backend_params option was set to: {self._backend_params}")
+
+        if isinstance(self._quantization_params[QuantizerGroup.WEIGHTS], QuantizationParameters):
+            self._quantization_params[QuantizerGroup.WEIGHTS] = ConvertParameters(FP8Type.E4M3)
+            nncf_logger.warning(
+                f"  quantization_params options for {QuantizerGroup.WEIGHTS} were set to: "
+                f"{self._quantization_params[QuantizerGroup.WEIGHTS]}"
+            )
+
+        if isinstance(self._quantization_params[QuantizerGroup.ACTIVATIONS], QuantizationParameters):
+            self._quantization_params[QuantizerGroup.ACTIVATIONS] = ConvertParameters(FP8Type.E4M3)
+            nncf_logger.warning(
+                f"  quantization_params options for {QuantizerGroup.ACTIVATIONS} were set to: "
+                f"{self._quantization_params[QuantizerGroup.ACTIVATIONS]}"
+            )
 
     def _reset_cache(self):
         # It prevents the duplicate weight quantizers from being added.
@@ -196,7 +249,10 @@ class MinMaxQuantization(Algorithm):
         return [BackendType.ONNX, BackendType.OPENVINO, BackendType.TORCH]
 
     def _get_quantizer_constraints(
-        self, group: QuantizerGroup, preset: QuantizationPreset, quantization_params: Optional[QuantizationParameters]
+        self,
+        group: QuantizerGroup,
+        preset: QuantizationPreset,
+        quantization_params: Union[QuantizationParameters, ConvertParameters],
     ) -> QuantizationConstraints:
         """
         Returns QuantizationConstraints for the provided quantizer group.
@@ -208,6 +264,9 @@ class MinMaxQuantization(Algorithm):
         """
         constraints = {"mode": preset.get_params_configured_by_preset(group)["mode"]}
         if quantization_params is None:
+            return QuantizationConstraints(**constraints)
+
+        if isinstance(quantization_params, ConvertParameters):
             return QuantizationConstraints(**constraints)
 
         if quantization_params.scheme is not None:
@@ -728,13 +787,14 @@ class MinMaxQuantization(Algorithm):
                 q_group = QuantizerGroup.ACTIVATIONS
                 narrow_range = get_quantizer_narrow_range(qconfig, q_group)
                 if self._mode is not None:
+                    destination_type = self._quantization_params[q_group].destination_type
                     parameters = calculate_convert_parameters(
-                        unified_values, is_activation=True, destination_type=self._mode
+                        unified_values, is_activation=True, destination_type=destination_type
                     )
                 else:
                     parameters = calculate_quantizer_parameters(unified_values, qconfig, q_group, narrow_range)
                 command = self._backend_entity.create_quantizer_insertion_command(
-                    graph, quantization_target_point, qconfig, parameters, self._mode
+                    graph, quantization_target_point, qconfig, parameters
                 )
                 transformation_layout.register(command)
                 unified_ops_list.add(quantization_target_point)
@@ -762,15 +822,16 @@ class MinMaxQuantization(Algorithm):
                     raise RuntimeError(f"Statistics were not collected for the node {target_node_name}")
                 if self._mode is not None:
                     is_activation = quant_group == QuantizerGroup.ACTIVATIONS
+                    destination_type = self._quantization_params[quant_group].destination_type
                     parameters = calculate_convert_parameters(
-                        statistics, is_activation=is_activation, destination_type=self._mode
+                        statistics, is_activation=is_activation, destination_type=destination_type
                     )
                 else:
                     parameters = calculate_quantizer_parameters(
                         statistics, qconfig, quant_group, narrow_range, half_range
                     )
                 command = self._backend_entity.create_quantizer_insertion_command(
-                    graph, quantization_target_point, qconfig, parameters, self._mode
+                    graph, quantization_target_point, qconfig, parameters
                 )
                 transformation_layout.register(command)
         if not transformation_layout.transformations:

@@ -35,7 +35,6 @@ from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
 from nncf.parameters import ModelType
-from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AggregatorType
 from nncf.quantization.advanced_parameters import StatisticsType
@@ -108,7 +107,6 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_point: ONNXTargetPoint,
         quantizer_config: QuantizerConfig,
         parameters: Union[FakeQuantizeParameters, FakeConvertParameters],
-        mode: Optional[QuantizationMode] = None,
     ):
         tensor_type = np.int8 if np.any(parameters.input_low.data < 0) else np.uint8
         if target_point.is_weight_target_point():

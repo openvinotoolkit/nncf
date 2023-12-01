@@ -36,7 +36,6 @@ from nncf.openvino.statistics.collectors import OV_REDUCERS_MAP
 from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
 from nncf.parameters import ModelType
-from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import RangeEstimatorParameters
 from nncf.quantization.advanced_parameters import StatisticsType
@@ -114,9 +113,8 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_point: OVTargetPoint,
         quantizer_config: QuantizerConfig,
         parameters: Union[FakeQuantizeParameters, FakeConvertParameters],
-        mode: Optional[QuantizationMode] = None,
     ) -> OVQuantizerInsertionCommand:
-        return OVQuantizerInsertionCommand(target_point, parameters, mode)
+        return OVQuantizerInsertionCommand(target_point, parameters)
 
     @staticmethod
     def unify_statistics(statistics: List[OVMinMaxTensorStatistic]) -> OVMinMaxTensorStatistic:
