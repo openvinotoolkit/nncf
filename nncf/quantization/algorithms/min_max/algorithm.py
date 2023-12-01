@@ -157,6 +157,7 @@ class MinMaxQuantization(Algorithm):
         self._quantize_outputs = quantize_outputs
         self._inplace_statistics = inplace_statistics
         self._backend_params = backend_params
+        self._preset = preset
 
         self._quantization_params = {
             QuantizerGroup.WEIGHTS: weights_quantization_params,
@@ -169,13 +170,13 @@ class MinMaxQuantization(Algorithm):
         }
 
         # preset definition
-        if preset is None:
+        if self._preset is None:
             if model_type == ModelType.TRANSFORMER:
                 self._preset = QuantizationPreset.MIXED
             else:
                 self._preset = QuantizationPreset.PERFORMANCE
 
-        if mode is not None:
+        if self._mode is not None:
             self._redefine_defaults_based_on_mode()
         # Calculates global quantizer constraints
         self._global_quantizer_constraints = {}
@@ -267,6 +268,10 @@ class MinMaxQuantization(Algorithm):
             return QuantizationConstraints(**constraints)
 
         if isinstance(quantization_params, ConvertParameters):
+            if self._mode is None:
+                raise RuntimeError(
+                    f"ConvertParameters for {group.value} can not be used without QuantizationMode option!"
+                )
             return QuantizationConstraints(**constraints)
 
         if quantization_params.scheme is not None:
