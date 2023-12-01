@@ -17,6 +17,7 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.quantization.advanced_parameters import BackupMode
 
 TModel = TypeVar("TModel")
 
@@ -87,7 +88,12 @@ def find_quantizer_nodes_to_cut(
 
 
 def revert_operations_to_floating_point_precision(
-    operations: List[NNCFNode], quantizers: List[NNCFNode], quantized_model: TModel, quantized_model_graph: NNCFGraph
+    operations: List[NNCFNode],
+    quantizers: List[NNCFNode],
+    quantized_model: TModel,
+    quantized_model_graph: NNCFGraph,
+    backup_mode: BackupMode,
+    weighted_metatypes: List[OperatorMetatype],
 ) -> TModel:
     """
     Reverts provided operations to floating-point precision by removing
@@ -106,8 +112,24 @@ def revert_operations_to_floating_point_precision(
 
     command_creator = CommandCreatorFactory.create(quantized_model)
 
+    should_remove_fq = {}
+    should_revert_weights_to_fp32 = {}
+    if backup_mode == BackupMode.INT8_WEIGHTS:
+        for node in operations:
+            if (
+                node.metatype in weighted_metatypes
+                and node.layer_attributes
+                and node.layer_attributes.constant_attributes
+            ):
+                input_edges = quantized_model_graph.get_input_edges(node)
+                for port_id in node.layer_attributes.get_const_port_ids():
+                    fq_weight = input_edges[port_id].from_node
+                    should_remove_fq[fq_weight.node_name] = False
+                    should_revert_weights_to_fp32[node.node_name] = False
+
     for node in quantizers:
-        transformation_layout.register(command_creator.create_command_to_remove_quantizer(node))
+        if should_remove_fq.get(node.node_name, True):
+            transformation_layout.register(command_creator.create_command_to_remove_quantizer(node))
 
     for node in operations:
         original_bias = node.attributes.get("original_bias", None)
@@ -115,6 +137,9 @@ def revert_operations_to_floating_point_precision(
             transformation_layout.register(
                 command_creator.create_command_to_update_bias(node, original_bias, quantized_model_graph)
             )
+
+        if not should_revert_weights_to_fp32.get(node.node_name, True):
+            continue
 
         if node.layer_attributes and node.layer_attributes.constant_attributes is not None:
             weight_port_ids = node.layer_attributes.get_const_port_ids()

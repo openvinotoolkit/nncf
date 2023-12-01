@@ -130,6 +130,16 @@ class AdvancedSmoothQuantParameters:
     matmul: float = 0.95
 
 
+class BackupMode(Enum):
+    """
+    :param FP32:
+    :param INT8_WEIGHTS:
+    """
+
+    FP32 = "fp32"
+    INT8_WEIGHTS = "int8_weights"
+
+
 @api()
 @dataclass
 class AdvancedQuantizationParameters:
@@ -222,6 +232,8 @@ class AdvancedAccuracyRestorerParameters:
     :param intermediate_model_dir: Path to the folder where the model, which was fully
         quantized with initial parameters, should be saved.
     :type intermediate_model_dir: Optional[str]
+    :param backup_mode:
+    :type backup_mode: BackupMode
     """
 
     max_num_iterations: int = sys.maxsize
@@ -229,6 +241,7 @@ class AdvancedAccuracyRestorerParameters:
     ranking_subset_size: Optional[int] = None
     num_ranking_workers: Optional[int] = None
     intermediate_model_dir: Optional[str] = None
+    backup_mode: BackupMode = BackupMode.FP32
 
 
 def changes_asdict(params: Any) -> Dict[str, Any]:

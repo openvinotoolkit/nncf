@@ -29,6 +29,7 @@ from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.accuracy_control.rank_functions import create_normalized_mse_func
 from nncf.quantization.algorithms.accuracy_control.subset_selection import select_subset
 from nncf.quantization.passes import remove_shapeof_subgraphs
+from nncf.quantization.advanced_parameters import BackupMode
 
 TModel = TypeVar("TModel")
 TPModel = TypeVar("TPModel")
@@ -62,6 +63,7 @@ class Ranker:
         evaluator: Evaluator,
         num_workers: int = 1,
         ranking_fn: Optional[Callable[[Any, Any], float]] = None,
+        backup_mode: BackupMode = BackupMode.FP32,
     ):
         """
         :param ranking_subset_size: The number of data items that will be selected from
@@ -82,6 +84,7 @@ class Ranker:
         self._evaluator = evaluator
         self._ranking_fn = ranking_fn
         self._num_workers = num_workers
+        self._backup_mode = backup_mode
 
     def find_groups_of_quantizers_to_rank(self, quantized_model_graph: NNCFGraph) -> List[GroupToRank]:
         """
@@ -187,7 +190,12 @@ class Ranker:
         ranking_scores = []  # ranking_scores[i] is the ranking score for groups_to_rank[i]
         for current_group in groups_to_rank:
             modified_model = revert_operations_to_floating_point_precision(
-                current_group.operations, current_group.quantizers, quantized_model, quantized_model_graph
+                current_group.operations,
+                current_group.quantizers,
+                quantized_model,
+                quantized_model_graph,
+                self._backup_mode,
+                self._algo_backend.get_weighted_metatypes(),
             )
 
             prepared_model = self._algo_backend.prepare_for_inference(modified_model)
@@ -211,7 +219,12 @@ class Ranker:
         executor = ThreadPoolExecutor(max_workers=self._num_workers)
         for idx, current_group in enumerate(groups_to_rank):
             modified_model = revert_operations_to_floating_point_precision(
-                current_group.operations, current_group.quantizers, quantized_model, quantized_model_graph
+                current_group.operations,
+                current_group.quantizers,
+                quantized_model,
+                quantized_model_graph,
+                self._backup_mode,
+                self._algo_backend.get_weighted_metatypes(),
             )
 
             prepared_model_queue.append(executor.submit(self._algo_backend.prepare_for_inference, modified_model))

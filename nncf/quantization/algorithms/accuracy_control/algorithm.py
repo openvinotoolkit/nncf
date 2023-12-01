@@ -23,6 +23,7 @@ from nncf.common.utils.backend import get_backend
 from nncf.common.utils.os import get_available_cpu_count
 from nncf.common.utils.os import get_available_memory_amount
 from nncf.data.dataset import Dataset
+from nncf.quantization.advanced_parameters import BackupMode
 from nncf.parameters import DropType
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
@@ -145,6 +146,7 @@ class QuantizationAccuracyRestorer:
         max_drop: float = 0.01,
         drop_type: DropType = DropType.ABSOLUTE,
         num_ranking_workers: Optional[int] = None,
+        backup_mode: BackupMode = BackupMode.FP32,
     ):
         """
         :param ranking_subset_size: The number of data items that will be selected from
@@ -162,6 +164,7 @@ class QuantizationAccuracyRestorer:
         self.max_drop = max_drop
         self.drop_type = drop_type
         self.num_ranking_workers = num_ranking_workers
+        self.backup_mode = backup_mode
 
     def apply(
         self,
@@ -300,7 +303,12 @@ class QuantizationAccuracyRestorer:
             # greedy removal of the FQ node with the highest importance score
             current_group = ranked_groups.pop()
             current_model = revert_operations_to_floating_point_precision(
-                current_group.operations, current_group.quantizers, previous_model, quantized_model_graph
+                current_group.operations,
+                current_group.quantizers,
+                previous_model,
+                quantized_model_graph,
+                self.backup_mode,
+                algo_backend.get_weighted_metatypes(),
             )
             report.removed_groups.append(current_group)
 

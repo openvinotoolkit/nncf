@@ -26,6 +26,11 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
+    def get_weighted_metatypes() -> List[OperatorMetatype]:
+        """ """
+
+    @staticmethod
+    @abstractmethod
     def get_quantizer_metatypes() -> List[OperatorMetatype]:
         """
         Returns a list of quantizer metatypes.

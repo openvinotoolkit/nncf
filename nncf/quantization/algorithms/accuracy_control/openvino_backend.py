@@ -23,6 +23,7 @@ from nncf.openvino.graph.metatypes.groups import INPUTS_QUANTIZABLE_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
 from nncf.openvino.graph.metatypes.groups import QUANTIZE_AGNOSTIC_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import SHAPEOF_OPERATIONS
+from nncf.openvino.graph.metatypes import openvino_metatypes as ov_metatypes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConcatMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.openvino.graph.node_utils import get_bias_value
@@ -37,6 +38,10 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
     """
 
     # Metatypes
+
+    @staticmethod
+    def get_weighted_metatypes() -> List[OVOpMetatype]:
+        return [ov_metatypes.OVMatMulMetatype, ov_metatypes.OVEmbeddingMetatype]
 
     @staticmethod
     def get_quantizer_metatypes() -> List[OVOpMetatype]:
