@@ -24,7 +24,6 @@ class SmallBlock(nn.Module):
             in_channels=channels, out_channels=channels, kernel_size=3, stride=1, padding=1, bias=False
         )
 
-    # pylint: disable=arguments-differ
     def forward(self, x):
         identity_data = x
         output = self.relu(x)
@@ -106,7 +105,6 @@ class SmallModel(nn.Module):
             in_channels=num_of_ch_dec, out_channels=3, kernel_size=3, stride=1, padding=1, bias=True
         )
 
-    # pylint: disable=arguments-differ
     def forward(self, x):
         input_ = x[0]
         cubic = x[1]

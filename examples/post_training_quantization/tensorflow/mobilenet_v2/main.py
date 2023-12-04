@@ -15,11 +15,9 @@ import subprocess
 from pathlib import Path
 from typing import List, Optional
 
-import openvino.runtime as ov
+import openvino as ov
 import tensorflow as tf
 import tensorflow_datasets as tfds
-from keras.utils import data_utils
-from openvino.tools import mo
 from tqdm import tqdm
 
 import nncf
@@ -113,7 +111,7 @@ def preprocess_for_eval(image, label):
 val_dataset = tfds.load("imagenette/320px-v2", split="validation", shuffle_files=False, as_supervised=True)
 val_dataset = val_dataset.map(preprocess_for_eval).batch(128)
 
-weights_path = data_utils.get_file("mobilenet_v2_imagenette_weights.h5", WEIGHTS_URL, cache_subdir="models")
+weights_path = tf.keras.utils.get_file("mobilenet_v2_imagenette_weights.h5", WEIGHTS_URL, cache_subdir="models")
 tf_model = tf.keras.applications.MobileNetV2(weights=weights_path, classes=DATASET_CLASSES)
 
 ###############################################################################
@@ -147,16 +145,16 @@ tf_quantized_model = nncf.quantize(tf_model, calibration_dataset)
 ###############################################################################
 # Benchmark performance, calculate compression rate and validate accuracy
 
-ov_model = mo.convert_model(tf_model)
-ov_quantized_model = mo.convert_model(tf_quantized_model)
+ov_model = ov.convert_model(tf_model, share_weights=False)
+ov_quantized_model = ov.convert_model(tf_quantized_model, share_weights=False)
 
 fp32_ir_path = f"{ROOT}/mobilenet_v2_fp32.xml"
-ov.serialize(ov_model, fp32_ir_path)
+ov.save_model(ov_model, fp32_ir_path, compress_to_fp16=False)
 print(f"[1/7] Save FP32 model: {fp32_ir_path}")
 fp32_model_size = get_model_size(fp32_ir_path, verbose=True)
 
 int8_ir_path = f"{ROOT}/mobilenet_v2_int8.xml"
-ov.serialize(ov_quantized_model, int8_ir_path)
+ov.save_model(ov_quantized_model, int8_ir_path, compress_to_fp16=False)
 print(f"[2/7] Save INT8 model: {int8_ir_path}")
 int8_model_size = get_model_size(int8_ir_path, verbose=True)
 

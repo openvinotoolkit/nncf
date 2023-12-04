@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# pylint: disable=too-many-lines
+
 
 from collections import Counter
 from functools import partial
@@ -27,7 +27,8 @@ from nncf.common.pruning.model_analysis import cluster_special_ops
 from nncf.common.pruning.symbolic_mask import SymbolicMaskProcessor
 from nncf.common.pruning.utils import PruningAnalysisDecision
 from nncf.common.pruning.utils import PruningAnalysisReason
-from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.torch.dynamic_graph.io_handling import FillerInputElement
+from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.layers import NNCF_PRUNING_MODULES_DICT
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.filter_pruning.algo import FilterPruningBuilder
@@ -70,7 +71,6 @@ from tests.torch.pruning.helpers import SplitReshapeModel
 from tests.torch.pruning.helpers import get_basic_pruning_config
 
 
-# pylint: disable=protected-access
 def create_nncf_model_and_pruning_builder(
     model: torch.nn.Module, config_params: Dict
 ) -> Tuple[NNCFNetwork, FilterPruningBuilder]:
@@ -706,7 +706,7 @@ def test_pruning_node_selector(test_input_info_struct_: GroupPruningModulesTestS
     )
     model = model()
     model.eval()
-    nncf_network = NNCFNetwork(model, input_infos=[ModelInputInfo([1, 1, 8, 8])])
+    nncf_network = NNCFNetwork(model, input_info=FillerInputInfo([FillerInputElement([1, 1, 8, 8])]))
     graph = nncf_network.nncf.get_original_graph()
     pruning_groups = pruning_node_selector.create_pruning_groups(graph)
 
@@ -957,7 +957,7 @@ def test_nodes_cluster():
 
     # test clean
     cluster.clean_cluster()
-    assert cluster.elements == []  # pylint: disable=use-implicit-booleaness-not-comparison
+    assert cluster.elements == []
     assert cluster.importance == 0
 
 

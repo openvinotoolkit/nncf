@@ -15,6 +15,7 @@ import torch
 
 import nncf
 from nncf import NNCFConfig
+from nncf.torch.initialization import PTInitializingDataLoader
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
@@ -52,11 +53,11 @@ def get_config_for_logarithm_scale(logarithm_scale: bool, quantization_type: str
 
     data_loader = torch.utils.data.DataLoader(RandDatasetMock(), batch_size=1, shuffle=False, drop_last=True)
 
-    class SquadInitializingDataloader(nncf.torch.initialization.PTInitializingDataLoader):
-        def get_inputs(self, batch):
-            return batch, {}
+    class SquadInitializingDataloader(PTInitializingDataLoader):
+        def get_inputs(self, dataloader_output):
+            return dataloader_output, {}
 
-        def get_target(self, batch):
+        def get_target(self, dataloader_output):
             return None
 
     initializing_data_loader = SquadInitializingDataloader(data_loader)
@@ -93,7 +94,7 @@ def test_logarithm_scale_parameter(logarithm_scale_setting_1, logarithm_scale_se
             sd1 = model1.state_dict()
 
             for k, v0 in sd0.items():
-                v1 = sd1[k]  # pylint: disable=E1136
+                v1 = sd1[k]
                 diff = (v1 - v0).abs().sum().item() / v1.numel()
                 assert diff < 1e-6, "symmetric {} logarithm_scales {} param {} is corrupted mean({}-{})={}".format(
                     symmetric, logarithm_scales, k, v0, v1, diff

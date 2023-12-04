@@ -16,7 +16,7 @@ from typing import List, Optional
 
 import numpy as np
 import onnx
-import openvino.runtime as ov
+import openvino as ov
 import torch
 from fastdownload import FastDownload
 from fastdownload import download_url
@@ -140,11 +140,11 @@ fp32_fps = run_benchmark(fp32_model_path, shape=[1, 3, 224, 224], verbose=True)
 print("[4/7] Benchmark INT8 model:")
 int8_fps = run_benchmark(int8_model_path, shape=[1, 3, 224, 224], verbose=True)
 
-print("[5/7] Validate OpenVINO FP32 model:")
+print("[5/7] Validate ONNX FP32 model in OpenVINO:")
 fp32_top1 = validate(fp32_model_path, val_loader)
 print(f"Accuracy @ top1: {fp32_top1:.3f}")
 
-print("[6/7] Validate OpenVINO INT8 model:")
+print("[6/7] Validate ONNX INT8 model in OpenVINO:")
 int8_top1 = validate(int8_model_path, val_loader)
 print(f"Accuracy @ top1: {int8_top1:.3f}")
 

@@ -6,14 +6,13 @@
 - [1 Introduction](#s1-introduction)
 - [2 Automating Code Formatting](#s2-auto-code-formatting)
 - [3 Python Language Rules](#s3-python-language-rules)
-  - [3.1 PyLint](#s3.1-pylint)
-    - [3.2 3rd party packages](#s3.2-3rd-party-packages)
-    - [3.3 Global variables](#s3.3-global-variables)
-    - [3.4 Nested/Local/Inner Classes and Functions](#s3.4-nested)
-    - [3.5 Default Iterators and Operators](#s3.5-default-iterators-and-operators)
-    - [3.6 Type Annotated Code](#s3.6-type-annotated-code)
-    - [3.7 Files and Sockets](#s3.7-files-and-sockets)
-    - [3.8 Abstract Classes](#s3.8-abstract-classes)
+  - [3.1 3rd party packages](#s3.1-3rd-party-packages)
+  - [3.2 Global variables](#s3.2-global-variables)
+  - [3.3 Nested/Local/Inner Classes and Functions](#s3.3-nested)
+  - [3.4 Default Iterators and Operators](#s3.4-default-iterators-and-operators)
+  - [3.5 Type Annotated Code](#s3.5-type-annotated-code)
+  - [3.6 Files and Sockets](#s3.6-files-and-sockets)
+  - [3.7 Abstract Classes](#s3.7-abstract-classes)
 - [4 Python Style Rules](#s4-python-style-rules)
   - [4.1 Line length](#s4.1-line-length)
     - [4.2 Comments and Docstrings](#s4.2-comments-and-docstrings)
@@ -32,6 +31,12 @@
       - [4.7.4 File Naming](#s4.7.4-file-naming)
     - [4.8 Main](#s4.8-main)
 - [5 API documentation rules](#s5-api-doc-rules)
+- [6 Test suite coding rules](#s6-test-suite-coding-rules)
+  - [6.1 Basic style](#61-basic-style)
+  - [6.2 Parametrization](#62-parametrization)
+  - [6.3 Folder structure](#63-folder-structure)
+  - [6.4 Test runtime considerations](#64-test-runtime-considerations)
+  - [6.5 BKC management](#65-bkc-management)
 
 </details>
 
@@ -102,39 +107,19 @@ arr2 = [
 
 ## 3 Python Language Rules
 
-<a id="s3.1-pylint"></a>
-<a id="31-pylint"></a>
-<a id="pylint"></a>
-
-### 3.1 PyLint
-
-Run [pylint](https://github.com/PyCQA/pylint) over your code using this [pylintrc](../../.pylintrc).
-
-- Every warning reported by [pylint](https://github.com/PyCQA/pylint) must be resolved in one of the following way:
-  - *Preferred solution*: Change the code to fix the warning.
-  - *Exception*: Suppress the warning if they are inappropriate so that other issues are not hidden.
-    To suppress warnings you can set a line-level comment
-
-    ```python
-    dict = "something awful"  # Bad Idea... pylint: disable=redefined-builtin
-    ```
-
-    or update [pylintrc](../../.pylintrc) if applicable for the whole project. If the reason for the suppression
-    is not clear from the symbolic name, add an explanation.
-
-<a id="s3.2-3rd-party-packages"></a>
-<a id="32-3rd-party-packages"></a>
+<a id="s3.1-3rd-party-packages"></a>
+<a id="31-3rd-party-packages"></a>
 <a id="3rd-party-packages"></a>
 
-### 3.2 3rd party packages
+### 3.1 3rd party packages
 
 Do not add new third-party dependencies unless absolutely necessary. All things being equal, give preference to built-in packages.
 
-<a id="s3.3-global-variables"></a>
-<a id="33-global-variables"></a>
+<a id="s3.2-global-variables"></a>
+<a id="32-global-variables"></a>
 <a id="global-variables"></a>
 
-### 3.3 Global variables
+### 3.2 Global variables
 
 Avoid global variables.
 
@@ -143,11 +128,11 @@ Avoid global variables.
 - If needed, globals should be declared at the module level and made internal to the module by prepending an `_` to the
   name. External access must be done through public module-level functions.
 
-<a id="s3.4-nested"></a>
-<a id="34-nested"></a>
+<a id="s3.3-nested"></a>
+<a id="33-nested"></a>
 <a id="nested-classes-functions"></a>
 
-### 3.4 Nested/Local/Inner Classes and Functions
+### 3.3 Nested/Local/Inner Classes and Functions
 
 No need to overuse nested local functions or classes and inner classes.
 
@@ -191,11 +176,11 @@ No need to overuse nested local functions or classes and inner classes.
       return m/3
   ```
 
-<a id="s3.5-default-iterators-and-operators"></a>
-<a id="35-default-iterators-and-operators"></a>
+<a id="s3.4-default-iterators-and-operators"></a>
+<a id="34-default-iterators-and-operators"></a>
 <a id="default-iterators-operators"></a>
 
-### 3.5 Default Iterators and Operators
+### 3.4 Default Iterators and Operators
 
 Use default iterators and operators for types that support them, like lists,
 dictionaries, and files. The built-in types define iterator methods, too. Prefer
@@ -219,11 +204,11 @@ for line in afile.readlines(): ...
 for k, v in dict.iteritems(): ...
 ```
 
-<a id="s3.6-type-annotated-code"></a>
-<a id="36-type-annotated-code"></a>
+<a id="s3.5-type-annotated-code"></a>
+<a id="35-type-annotated-code"></a>
 <a id="type-annotated-code"></a>
 
-### 3.6 Type Annotated Code
+### 3.5 Type Annotated Code
 
 Code should be annotated with type hints according to
 [PEP-484](https://www.python.org/dev/peps/pep-0484/), and type-check the code at
@@ -233,11 +218,11 @@ build time with a type checking tool like [mypy](http://www.mypy-lang.org/).
 def func(a: int) -> List[int]:
 ```
 
-<a id="s3.7-files-and-sockets"></a>
-<a id="37-files-and-sockets"></a>
+<a id="s3.6-files-and-sockets"></a>
+<a id="36-files-and-sockets"></a>
 <a id="files-and-sockets"></a>
 
-### 3.7 Files and Sockets
+### 3.6 Files and Sockets
 
 Explicitly close files and sockets when done with them.
 
@@ -247,11 +232,14 @@ with open("hello.txt") as hello_file:
         print(line)
 ```
 
-<a id="s3.8-abstract-classes"></a>
-<a id="38-abstract-classes"></a>
+Use `pathlib.Path` instead of `os.*` methods for handling paths.
+It is preferrable to have `pathlib.Path` objects instead of `str` to represent file paths in the code logic if performance is not critical, converting these to `str` for external APIs that cannot handle `Path` objects.
+
+<a id="s3.7-abstract-classes"></a>
+<a id="37-abstract-classes"></a>
 <a id="abstract-classes"></a>
 
-### 3.8 Abstract Classes
+### 3.7 Abstract Classes
 
 When defining abstract classes, the following template should be used:
 
@@ -312,7 +300,6 @@ Explicit exceptions to the 120 character limit:
 - URLs, pathnames, or long flags in comments.
 - Long string module level constants not containing whitespace that would be
   inconvenient to split across lines such as URLs or pathnames.
-  - Pylint disable comments. (e.g.: `# pylint: disable=invalid-name`)
 
 <a id="s4.2-comments-and-docstrings"></a>
 <a id="42-comments-and-docstrings"></a>
@@ -788,6 +775,39 @@ Always use a `.py` filename extension. Never use dashes.
 Python filenames must have a `.py` extension and must not contain dashes (`-`).
 This allows them to be imported and unit tested.
 
+Avoid having `.py` files with names such as `utils`, `helpers` that are a "swiss army knife" containing many unrelated pieces of code used across the code base.
+Instead group your new code in dedicated files/modules that are named explicitly according to the purpose of code.
+
+Bad:
+
+*utils.py*
+
+```python3
+def log_current_time(log_stream: LogStream):
+    ...
+
+def convert_checkpoint(ckpt: CheckpointType) -> AnotherCheckpointType:
+    ...
+```
+
+Good:
+
+*logger.py*
+
+```python3
+def log_current_time(log_stream: LogStream):
+    ...
+```
+
+*checkpointing/converter.py*
+
+```python3
+class CheckpointConverter:
+    # ... 
+    def convert(self, ckpt: CheckpointType) -> AnotherCheckpointType:
+        pass
+```
+
 <a id="s4.8-main"></a>
 <a id="4.8-main"></a>
 <a id="main"></a>
@@ -816,3 +836,132 @@ This is required so that the autogenerated API documentation is rendered properl
 
 If the autogenerated API documentation does not show type hints for certain arguments despite the fact that the type hints are present in the object's implementation code,
 or if the type hints do not refer to the API symbol's canonical alias, then the type hint should be explicitly declared in the docstring using the `:type *param_name*:` directive (or `:rtype:` for return types).
+
+<a id="s6-test-suite-coding-rules"></a>
+<a id="6-test-suite-coding-rules"></a>
+<a id="test-suite-coding-rules"></a>
+
+## 6 Test suite coding rules
+
+Unit tests are written and executed using the [pytest](https://pytest.org) framework.
+
+Do not test the functionality of third-party libraries.
+
+<a id="s61-basic-style"></a>
+<a id="61-basic-style"></a>
+<a id="basic-style"></a>
+
+### 6.1 Basic style
+
+Parameters of test cases and fixtures should be type-hinted just like any other function.
+Test cases should ideally all have docstrings, except for the simple ones which are sufficiently described either by their names or by the simplicity of the code.
+
+For purposes of setting up test environment for a given case, or reusing setup/teardown code, or parametrizing complex cases the [fixture](https://docs.pytest.org/en/7.4.x/explanation/fixtures.html#about-fixtures) approach should be used.
+[Fixture scoping](https://docs.pytest.org/en/7.4.x/how-to/fixtures.html#scope-sharing-fixtures-across-classes-modules-packages-or-session) should be leveraged depending on the use case - for instance, a class-scoped fixture can be utilized to provide a storage object for data gathered in individual cases inside the class, and to post-process this data after the test cases in the class have all been executed.
+The fixtures that are meant to be reused in multiple test files should be defined in a corresponding `conftest.py` file, instead of importing these where they are needed from another non-`conftest.py` file where they were defined - otherwise the linters will try to remove it as an unused import and also the import itself may have an effect on how the fixture is executed based on its scope.
+
+The xunit-style setup and teardown functions ([described here](https://docs.pytest.org/en/7.4.x/how-to/xunit_setup.html#xunitsetup)) are disallowed.
+Xunit-style testing seems to be outdated ("old", as stated in pytest docs) since, as it seems, everything that is accomplished using xunit-style methods can be done via fixtures with [associated benefits](https://docs.pytest.org/en/7.4.x/explanation/fixtures.html#improvements-over-xunit-style-setup-teardown-functions).
+
+<a id="s62-parametrization"></a>
+<a id="62-parametrization"></a>
+<a id="parametrization"></a>
+
+### 6.2 Parametrization
+
+Test cases may be parametrized either using a `@pytest.mark.parametrize` decorator (for simple parametrizations), or by using [parametrized fixtures](https://docs.pytest.org/en/7.4.x/how-to/fixtures.html#parametrizing-fixtures) in case the test requires complex parametrization, or in case the parameters have to be preprocessed in a complex fashion before being passed into the test.
+The parameter set ("test structs") for each test case should be represented as a collection of type-hinted class objects (or dataclass objects).
+Do not use tuples, or namedtuples, or dicts to represent an individual parameter - these cannot be typed or refactored effectively, and for complex cases it is hard to visually tell by looking at the definiton of the parameter (test struct) just what each sub-parameter means.
+A set of IDs should be defined manually or by using an `idfn` for each case defined by the structs so that it is easier to distinguish visually between the test cases.
+When instantiating a test struct object, specify init arguments explicitly as keywords for increased visibility.
+
+Bad:
+
+```python3
+@pytest.mark.parametrize("param", [(42, "foo", None), (1337, "bar", RuntimeError)])
+def test_case_parametrized(param):
+    assert function_call() == param[0]
+    assert another_object.attribute != param[1]
+    if param[2] is not None:
+        with pytest.raises(param[2]):
+            should_raise()
+```
+
+Good:
+
+```python3
+@dataclass
+class StructForTest:
+    expected_return_value: int
+    prohibited_attribute_value: str
+    raises: Optional[Type[Exception]]
+
+
+def idfn(x: StructForTest) -> str:
+    return f"{x.expected_return_value}-{x.prohibited_attribute_value}-{x.raises}"
+
+
+@pytest.mark.parametrize(
+    "ts",
+    [
+        StructForTest(
+            expected_return_value=42, prohibited_attribute_value="foo", raises=None
+        ),
+        StructForTest(
+            expected_return_value=1337,
+            prohibited_attribute_value="bar",
+            raises=RuntimeError,
+        ),
+    ],
+    idfn=idfn,
+)
+def test_case_parametrized(ts: StructForTest):
+    assert function_call() == ts.expected_return_value
+    assert another_object.attribute != ts.prohibited_attribute_value
+    if ts.raises is not None:
+        with pytest.raises(ts.raises):
+            should_raise()
+```
+
+<a id="s63-folder-structure"></a>
+<a id="63-folder-structure"></a>
+<a id="folder-structure"></a>
+
+### 6.3 Folder structure
+
+Test files should be grouped into directories based on what is being tested, and in the scope of which backend.
+Framework-specific tests go into framework-specific directories respectively.
+Tests that check only common code functionality without backend-specific dependencies go into the `common` folder.
+Test cases that reuse the same testing code for multiple frameworks or test templates should be located in the `cross_fw` folder.
+Auxiliary code (non-test-case) that could be reused across the tests should be stored in the `shared` folder.
+
+<a id="s64-test-runtime-considerations"></a>
+<a id="64-test-runtime-considerations"></a>
+<a id="test-runtime-considerations"></a>
+
+### 6.4 Test runtime considerations
+
+Test cases should strive to have a low runtime while still testing what they were meant to test.
+Use mocking approach (with `unittest.mock` or `pytest-mock` functionality) to simulate behaviour of heavy/compute-intensive functionality (especially external) to save runtime.
+If a test is templated to be run for many backends, and if the common tested code has a significant runtime, consider passing mocks into backend-specific interfaces instead of actually running the common code, and test common code part separately.
+
+<a id="s65-bkc-management"></a>
+<a id="65-bkc-management"></a>
+<a id="bkc-management"></a>
+
+### 6.5 BKC management
+
+Python-level requirements for test runs are specified in `requirements.txt` files at the top levels of the corresponding test subdirectories.
+The versions for each package requirement must be specified exactly.
+
+Bad (e.g. `tests/example/requirements.txt`):
+
+```bash
+torch
+```
+
+Good:
+
+```bash
+torch==2.1.0
+```

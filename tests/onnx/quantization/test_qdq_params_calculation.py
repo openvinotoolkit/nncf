@@ -15,10 +15,11 @@ import onnx
 import pytest
 
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.onnx.graph.onnx_graph import ONNXGraph
+from nncf.onnx.graph.onnx_helper import get_tensor_value
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from tests.onnx.conftest import ONNX_TEST_ROOT
+from tests.onnx.models import EmbeddingModel
 from tests.onnx.models import GEMMTransposeWeightModel
 from tests.onnx.models import LinearModel
 from tests.onnx.models import MatMulActivationModel
@@ -35,11 +36,10 @@ REFERENCE_SCALES_DIR = ONNX_TEST_ROOT / "data" / "reference_scales"
 
 def get_q_nodes_params(model: onnx.ModelProto) -> Dict[str, np.ndarray]:
     output = {}
-    onnx_graph = ONNXGraph(model)
-    for node in onnx_graph.get_all_nodes():
+    for node in model.graph.node:
         if node.op_type == "QuantizeLinear":
-            scale = onnx_graph.get_tensor_value(node.input[1])
-            zero_point = onnx_graph.get_tensor_value(node.input[2])
+            scale = get_tensor_value(model, node.input[1])
+            zero_point = get_tensor_value(model, node.input[2])
             output[node.name] = {"scale": scale, "zero_point": zero_point}
     return output
 
@@ -66,8 +66,7 @@ def test_overflow_fix_scales(overflow_fix):
     # dump_to_json(ref_stats_path, q_nodes_params)
 
     ref_nodes_params = load_json(ref_stats_path)
-    params = ["scale", "zero_point"]
-    compare_stats(ref_nodes_params, q_nodes_params, params)
+    compare_stats(ref_nodes_params, q_nodes_params)
 
 
 MODELS = [
@@ -78,6 +77,7 @@ MODELS = [
     ReshapeWeightModel,
     LinearModel,
     OneDepthwiseConvolutionalModel,
+    EmbeddingModel,
 ]
 
 
@@ -97,6 +97,7 @@ MODELS = [
         "ReshapeWeightModel",
         "LinearModel",
         "OneDepthwiseConvolutionalModel",
+        "EmbeddingModel",
     ],
 )
 def test_scales(model, preset):
@@ -113,5 +114,4 @@ def test_scales(model, preset):
     # dump_to_json(ref_stats_path, q_nodes_params)
 
     ref_nodes_params = load_json(ref_stats_path)
-    params = ["scale", "zero_point"]
-    compare_stats(ref_nodes_params, q_nodes_params, params)
+    compare_stats(ref_nodes_params, q_nodes_params)

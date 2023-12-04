@@ -11,47 +11,14 @@
 
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.openvino.graph.metatypes import openvino_metatypes as ov_metatypes
-from nncf.openvino.graph.metatypes.common import QUANTIZE_AGNOSTIC_OPERATIONS
+from nncf.openvino.graph.metatypes.groups import INPUTS_QUANTIZABLE_OPERATIONS
+from nncf.openvino.graph.metatypes.groups import QUANTIZE_AGNOSTIC_OPERATIONS
 
 # If a metatype is not in this list, then it is considered to be QuantizationTrait.NON_QUANTIZABLE.
 
 DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT = {
-    QuantizationTrait.INPUTS_QUANTIZABLE: [
-        ov_metatypes.OVConvolutionMetatype,
-        ov_metatypes.OVGroupConvolutionMetatype,
-        ov_metatypes.OVDepthwiseConvolutionMetatype,
-        ov_metatypes.OVConvolutionBackpropDataMetatype,
-        ov_metatypes.OVGroupConvolutionBackpropDataMetatype,
-        ov_metatypes.OVMatMulMetatype,
-        ov_metatypes.OVBatchNormMetatype,
-        ov_metatypes.OVAddMetatype,
-        ov_metatypes.OVSubtractMetatype,
-        ov_metatypes.OVMultiplyMetatype,
-        ov_metatypes.OVDivideMetatype,
-        ov_metatypes.OVMaximumMetatype,
-        ov_metatypes.OVMinimumMetatype,
-        ov_metatypes.OVAvgPoolMetatype,
-        ov_metatypes.OVReduceMeanMetatype,
-        ov_metatypes.OVMVNMetatype,
-        ov_metatypes.OVNormalizeL2Metatype,
-        ov_metatypes.OVInterpolateMetatype,
-        ov_metatypes.OVPowerMetatype,
-        ov_metatypes.OVFloorModMetatype,
-        ov_metatypes.OVLessMetatype,
-        ov_metatypes.OVLessEqualMetatype,
-        ov_metatypes.OVGreaterMetatype,
-        ov_metatypes.OVGreaterEqualMetatype,
-        ov_metatypes.OVEqualMetatype,
-        ov_metatypes.OVNotEqualMetatype,
-        ov_metatypes.OVLogicalNotMetatype,
-        ov_metatypes.OVLogicalAndMetatype,
-        ov_metatypes.OVLogicalOrMetatype,
-        ov_metatypes.OVLogicalXorMetatype,
-        ov_metatypes.OVSquaredDifferenceMetatype,
-        ov_metatypes.OVLSTMSequenceMetatype,
-        ov_metatypes.OVGRUSequenceMetatype,
-    ],
+    QuantizationTrait.INPUTS_QUANTIZABLE: INPUTS_QUANTIZABLE_OPERATIONS,
     QuantizationTrait.QUANTIZATION_AGNOSTIC: QUANTIZE_AGNOSTIC_OPERATIONS,
     QuantizationTrait.CONCAT: [ov_metatypes.OVConcatMetatype],
-    QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [],
+    QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [ov_metatypes.OVEmbeddingMetatype],
 }

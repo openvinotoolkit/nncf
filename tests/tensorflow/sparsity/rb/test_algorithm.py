@@ -126,7 +126,7 @@ def test_can_set_sparse_layers_to_loss():
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     loss = compression_ctrl.loss
     assert isinstance(loss, SparseLoss)
-    # pylint: disable=protected-access
+
     for op, _ in loss._target_ops:
         assert isinstance(op, RBSparsifyingWeight)
 
@@ -142,7 +142,7 @@ def test_loss_has_correct_ops():
     config = get_basic_sparsity_config()
     compress_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     wrappers = collect_wrapped_layers(compress_model)
-    # pylint: disable=protected-access
+
     target_ops = {op[0].name: op for op in compression_ctrl.loss._target_ops}
     for wrapper in wrappers:
         for ops in wrapper.weights_attr_ops.values():
@@ -164,7 +164,7 @@ def test_sparse_algo_does_not_replace_not_conv_layer():
     config = get_basic_sparsity_config()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     assert isinstance(compression_ctrl, RBSparsityController)
-    # pylint: disable=protected-access
+
     target_ops = compression_ctrl.loss._target_ops
     assert len(target_ops) == 1
     assert isinstance(target_ops[0][0], RBSparsifyingWeight)
@@ -197,7 +197,6 @@ def test_sparse_algo_can_collect_sparse_ops():
     config = get_basic_sparsity_config()
     _, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
-    # pylint: disable=protected-access
     assert len(compression_ctrl.loss._target_ops) == 2
 
 
@@ -222,7 +221,6 @@ def test_scheduler_can_do_epoch_step__with_rb_algo():
 
     assert not loss.disabled
 
-    # pylint: disable=protected-access
     for op, op_weights in loss._target_ops:
         assert op.get_trainable_weight(op_weights)
 

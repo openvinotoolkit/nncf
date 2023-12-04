@@ -22,6 +22,7 @@ from nncf.experimental.torch.nas.bootstrapNAS.training.scheduler import NASSched
 from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
+from nncf.torch.compression_method_api import PTCompressionLoss
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.knowledge_distillation.knowledge_distillation_loss import KnowledgeDistillationLoss
 from nncf.torch.model_creation import create_compression_algorithm_builder
@@ -103,6 +104,13 @@ class ProgressiveShrinkingBuilder(PTCompressionAlgorithmBuilder):
         )
 
     def _build_compression_loss_function(self, model: NNCFNetwork) -> "PTCompressionLoss":
+        """
+        Create the compression loss. KnowledgeDistillationLoss is returned when knowledge distillation
+        algorithm is added to the config. By default, ZeroCompressionLoss is returned.
+
+        :param model: The model with additional modifications necessary to enable
+            algorithm-specific compression during fine-tuning.
+        """
         compression_builder = create_compression_algorithm_builder(self._algo_config)
         compressed_model = compression_builder.apply_to(model)
         compression_ctrl = compression_builder.build_controller(compressed_model)

@@ -9,15 +9,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import defaultdict
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, Optional, Set
 
 import torch
 
-from nncf.common.graph import INPUT_NOOP_METATYPES
+from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
+from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
-from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
 from nncf.torch.dynamic_graph.layer_attributes_handlers import set_nodes_attributes_in_nncf_graph
+from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 
@@ -27,22 +28,17 @@ class GraphBuilder:
         self.custom_forward_fn = custom_forward_fn
 
     def build_graph(
-        self,
-        model: torch.nn.Module,
-        context_to_use: Optional["TracingContext"] = None,
-        as_eval: bool = False,
-        input_infos: List[ModelInputInfo] = None,
+        self, model: torch.nn.Module, context_to_use: Optional[TracingContext] = None, as_eval: bool = False
     ) -> PTNNCFGraph:
         tracer = GraphTracer(self.custom_forward_fn)
         dynamic_graph = tracer.trace_graph(model, context_to_use, as_eval)
-        return GraphConverter.convert(dynamic_graph, input_infos)
+        return GraphConverter.convert(dynamic_graph)
 
 
 class GraphConverter:
     @staticmethod
-    def convert(dynamic_graph: DynamicGraph, input_infos: List[ModelInputInfo] = None) -> PTNNCFGraph:
-        # pylint:disable=too-many-branches
-        module_id_vs_known_op_addrs_map = defaultdict(set)  # type: Dict[int, Set[Scope]]
+    def convert(dynamic_graph: DynamicGraph) -> PTNNCFGraph:
+        module_id_vs_known_op_addrs_map: Dict[int, Set[Scope]] = defaultdict(set)
         for dynamic_graph_node in dynamic_graph.get_all_nodes():
             module_id_vs_known_op_addrs_map[dynamic_graph_node.calling_module_id].add(
                 dynamic_graph_node.op_exec_context.op_address
@@ -67,10 +63,8 @@ class GraphConverter:
                 metatype = subtype
 
             is_integer_input = False
-            if metatype in INPUT_NOOP_METATYPES and input_infos is not None:
-                input_id = op_address.call_order
-                if input_infos[input_id].is_integer_input():
-                    is_integer_input = True
+            if metatype in INPUT_NOOP_METATYPES:
+                is_integer_input = dynamic_graph.is_integer_input_node(dynamic_graph_node)
 
             is_shared = len(module_id_vs_sorted_scopes_map[dynamic_graph_node.calling_module_id]) > 1
             canonical_scope = module_id_vs_sorted_scopes_map[dynamic_graph_node.calling_module_id][0]

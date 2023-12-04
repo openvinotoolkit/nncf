@@ -11,13 +11,12 @@
 """
 Base subpackage for NNCF TensorFlow functionality.
 """
+
 import tensorflow
 from packaging import version
 
 from nncf import nncf_logger
 from nncf.common.logging.logger import warn_bkc_version_mismatch
-
-# pylint: skip-file
 from nncf.version import BKC_TF_VERSION
 
 try:
@@ -30,17 +29,21 @@ except:
 tensorflow_version_major, tensorflow_version_minor = tuple(map(int, tensorflow_version.split(".")))[:2]
 if not tensorflow_version.startswith(BKC_TF_VERSION[:-2]):
     warn_bkc_version_mismatch("tensorflow", BKC_TF_VERSION, _tf_version)
-elif not (tensorflow_version_major == 2 and 4 <= tensorflow_version_minor <= 13):
+elif not (tensorflow_version_major == 2 and 8 <= tensorflow_version_minor <= 13):
     raise RuntimeError(
-        f"NNCF only supports 2.4.0 <= tensorflow <= 2.13.*, while current tensorflow version is {_tf_version}"
+        f"NNCF only supports 2.8.4 <= tensorflow <= 2.13.*, while current tensorflow version is {_tf_version}"
     )
 
 
-from nncf.common.accuracy_aware_training.training_loop import AdaptiveCompressionTrainingLoop
-from nncf.common.accuracy_aware_training.training_loop import EarlyExitCompressionTrainingLoop
-from nncf.tensorflow.helpers import create_compressed_model
-from nncf.tensorflow.helpers.callback_creation import create_compression_callbacks
-from nncf.tensorflow.initialization import register_default_init_args
+from nncf.common.accuracy_aware_training.training_loop import (
+    AdaptiveCompressionTrainingLoop as AdaptiveCompressionTrainingLoop,
+)
+from nncf.common.accuracy_aware_training.training_loop import (
+    EarlyExitCompressionTrainingLoop as EarlyExitCompressionTrainingLoop,
+)
+from nncf.tensorflow.helpers import create_compressed_model as create_compressed_model
+from nncf.tensorflow.helpers.callback_creation import create_compression_callbacks as create_compression_callbacks
+from nncf.tensorflow.initialization import register_default_init_args as register_default_init_args
 from nncf.tensorflow.pruning.filter_pruning import algorithm as filter_pruning_algorithm
 
 # Required for correct COMPRESSION_ALGORITHMS registry functioning

@@ -15,7 +15,11 @@ from pathlib import Path
 import psutil
 
 
-# pylint: disable=W1514
+def fail_if_symlink(file: Path):
+    if file.is_symlink():
+        raise RuntimeError("File {} is a symbolic link, aborting.".format(str(file)))
+
+
 @contextmanager
 def safe_open(file: Path, *args, **kwargs):
     """
@@ -27,8 +31,7 @@ def safe_open(file: Path, *args, **kwargs):
     :param file: The path to the file.
     :return: A file object.
     """
-    if file.is_symlink():
-        raise RuntimeError("File {} is a symbolic link, aborting.".format(str(file)))
+    fail_if_symlink(file)
     with open(str(file), *args, **kwargs) as f:
         yield f
 
@@ -52,7 +55,7 @@ def get_available_cpu_count(logical: bool = True) -> int:
     try:
         num_cpu = psutil.cpu_count(logical=logical)
         return num_cpu if num_cpu is not None else 1
-    except Exception:  # pylint: disable=broad-except
+    except Exception:
         return 1
 
 
@@ -62,5 +65,5 @@ def get_available_memory_amount() -> int:
     """
     try:
         return psutil.virtual_memory()[1]
-    except Exception:  # pylint: disable=broad-except
+    except Exception:
         return 0

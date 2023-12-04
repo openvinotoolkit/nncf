@@ -20,7 +20,7 @@ import torch
 import torch.nn
 import torch.nn.functional as F
 import torch.utils.data
-from datasets import Dataset  # pylint: disable=no-name-in-module
+from datasets import Dataset
 from transformers import AutoModelForAudioClassification
 from transformers import AutoModelForImageClassification
 from transformers import AutoModelForSequenceClassification
@@ -36,7 +36,8 @@ from transformers import Wav2Vec2Config
 
 from nncf import NNCFConfig
 from nncf.experimental.torch.sparsity.movement.scheduler import MovementSchedulerParams
-from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.torch.dynamic_graph.io_handling import FillerInputElement
+from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.nncf_network import NNCFNetwork
 from tests.torch.sparsity.movement.helpers.config import MovementAlgoConfig
 
@@ -82,7 +83,7 @@ class BaseMockRunRecipe(ABC):
 
     @property
     @abstractmethod
-    def model_input_info(self) -> List[ModelInputInfo]:
+    def model_input_info(self) -> FillerInputInfo:
         pass
 
     @property
@@ -179,7 +180,7 @@ class BaseMockRunRecipe(ABC):
         g = torch.Generator()
         g.manual_seed(seed)
         input_dict = {}
-        for input_info in self.model_input_info:
+        for input_info in self.model_input_info.elements:
             shape = list(input_info.shape)
             keyword = input_info.keyword
             if input_info.type == torch.float32:
@@ -195,11 +196,11 @@ class BaseMockRunRecipe(ABC):
         )[:num_samples]
         return Dataset.from_dict(input_dict)
 
-    def dumps_model_input_info(self, model_input_info: Optional[List[ModelInputInfo]] = None) -> List[Dict[str, Any]]:
+    def dumps_model_input_info(self, model_input_info: Optional[FillerInputInfo] = None) -> List[Dict[str, Any]]:
         if model_input_info is None:
             model_input_info = self.model_input_info
         result = []
-        for info in model_input_info:
+        for info in model_input_info.elements:
             item = {"sample_size": info.shape, "type": info.torch_type_to_string(info.type)}
             if info.keyword is not None:
                 item["keyword"] = info.keyword
@@ -245,8 +246,8 @@ class Wav2Vec2RunRecipe(BaseMockRunRecipe):
     )
 
     @property
-    def model_input_info(self) -> List[ModelInputInfo]:
-        return [ModelInputInfo(shape=[1, 32], keyword="input_values")]
+    def model_input_info(self) -> FillerInputInfo:
+        return FillerInputInfo([FillerInputElement(shape=[1, 32], keyword="input_values")])
 
     @property
     def transformer_block_info(self) -> List[TransformerBlockInfo]:
@@ -305,14 +306,16 @@ class BertRunRecipe(BaseMockRunRecipe):
     )
 
     @property
-    def model_input_info(self) -> List[ModelInputInfo]:
+    def model_input_info(self) -> FillerInputInfo:
         dim = self.model_config.max_position_embeddings
-        return [
-            ModelInputInfo(shape=[1, dim], type_str="long", keyword="input_ids"),
-            ModelInputInfo(shape=[1, dim], type_str="long", keyword="attention_mask"),
-            ModelInputInfo(shape=[1, dim], type_str="long", keyword="token_type_ids"),
-            ModelInputInfo(shape=[1, dim], type_str="long", keyword="position_ids"),
-        ]
+        return FillerInputInfo(
+            [
+                FillerInputElement(shape=[1, dim], type_str="long", keyword="input_ids"),
+                FillerInputElement(shape=[1, dim], type_str="long", keyword="attention_mask"),
+                FillerInputElement(shape=[1, dim], type_str="long", keyword="token_type_ids"),
+                FillerInputElement(shape=[1, dim], type_str="long", keyword="position_ids"),
+            ]
+        )
 
     @property
     def transformer_block_info(self) -> List[TransformerBlockInfo]:
@@ -371,9 +374,9 @@ class DistilBertRunRecipe(BaseMockRunRecipe):
     default_algo_config = MovementAlgoConfig()
 
     @property
-    def model_input_info(self) -> List[ModelInputInfo]:
+    def model_input_info(self) -> FillerInputInfo:
         dim = self.model_config.max_position_embeddings
-        return [ModelInputInfo(shape=[1, dim], type_str="long")] * 2
+        return FillerInputInfo([FillerInputElement(shape=[1, dim], type_str="long")] * 2)
 
     @staticmethod
     def get_nncf_modules_in_transformer_block_order(compressed_model: NNCFNetwork) -> List[DictInTransformerBlockOrder]:
@@ -404,9 +407,9 @@ class MobileBertRunRecipe(BaseMockRunRecipe):
     default_algo_config = MovementAlgoConfig()
 
     @property
-    def model_input_info(self) -> List[ModelInputInfo]:
+    def model_input_info(self) -> FillerInputInfo:
         dim = self.model_config.max_position_embeddings
-        return [ModelInputInfo(shape=[1, dim], type_str="long")] * 4
+        return FillerInputInfo([FillerInputElement(shape=[1, dim], type_str="long")] * 4)
 
     @staticmethod
     def get_nncf_modules_in_transformer_block_order(compressed_model: NNCFNetwork) -> List[DictInTransformerBlockOrder]:
@@ -436,10 +439,10 @@ class ClipVisionRunRecipe(BaseMockRunRecipe):
     default_algo_config = MovementAlgoConfig()
 
     @property
-    def model_input_info(self) -> List[ModelInputInfo]:
+    def model_input_info(self) -> FillerInputInfo:
         num_channels = self.model_config.num_channels
         image_size = self.model_config.image_size
-        return [ModelInputInfo(shape=[1, num_channels, image_size, image_size], type_str="float")]
+        return FillerInputInfo([FillerInputElement(shape=[1, num_channels, image_size, image_size], type_str="float")])
 
     @staticmethod
     def get_nncf_modules_in_transformer_block_order(compressed_model: NNCFNetwork) -> List[DictInTransformerBlockOrder]:
@@ -478,9 +481,11 @@ class SwinRunRecipe(BaseMockRunRecipe):
     )
 
     @property
-    def model_input_info(self) -> List[ModelInputInfo]:
+    def model_input_info(self) -> FillerInputInfo:
         img_size = self.model_config.image_size
-        return [ModelInputInfo(shape=[1, self.model_config.num_channels, img_size, img_size], keyword="pixel_values")]
+        return FillerInputInfo(
+            [FillerInputElement(shape=[1, self.model_config.num_channels, img_size, img_size], keyword="pixel_values")]
+        )
 
     @property
     def transformer_block_info(self) -> List[TransformerBlockInfo]:
@@ -577,8 +582,8 @@ class LinearRunRecipe(BaseMockRunRecipe):
         )
 
     @property
-    def model_input_info(self) -> List[ModelInputInfo]:
-        return [ModelInputInfo(shape=[1, self.model_config.input_size], keyword="tensor")]
+    def model_input_info(self) -> FillerInputInfo:
+        return FillerInputInfo([FillerInputElement(shape=[1, self.model_config.input_size], keyword="tensor")])
 
     @property
     def transformer_block_info(self) -> List[TransformerBlockInfo]:
@@ -601,9 +606,9 @@ class Conv2dRunRecipe(LinearRunRecipe):
         )
 
     @property
-    def model_input_info(self) -> List[ModelInputInfo]:
+    def model_input_info(self) -> FillerInputInfo:
         input_size = self.model_config.input_size
-        return [ModelInputInfo(shape=[1, 3, input_size, input_size], keyword="tensor")]
+        return FillerInputInfo([FillerInputElement(shape=[1, 3, input_size, input_size], keyword="tensor")])
 
 
 class Conv2dPlusLinearRunRecipe(LinearRunRecipe):
@@ -618,6 +623,6 @@ class Conv2dPlusLinearRunRecipe(LinearRunRecipe):
         )
 
     @property
-    def model_input_info(self) -> List[ModelInputInfo]:
+    def model_input_info(self) -> FillerInputInfo:
         input_size = self.model_config.input_size
-        return [ModelInputInfo(shape=[1, 3, input_size, input_size], keyword="tensor")]
+        return FillerInputInfo([FillerInputElement(shape=[1, 3, input_size, input_size], keyword="tensor")])

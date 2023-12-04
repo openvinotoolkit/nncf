@@ -16,6 +16,8 @@ import tensorflow as tf
 
 from nncf.common.compression import BaseCompressionAlgorithmController
 
+# TODO(achurkin): remove pylint ignore after 120296 ticked is fixed
+
 
 class TFCompressionState(tf.train.experimental.PythonState):
     """

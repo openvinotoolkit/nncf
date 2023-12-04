@@ -62,8 +62,10 @@ class DebugInterface:
 
 
 def debuggable_forward(forward_func):
+    from nncf.torch.nncf_network import NNCFNetwork
+
     @functools.wraps(forward_func)
-    def decorated(self: "NNCFNetwork", *args, **kwargs):
+    def decorated(self: NNCFNetwork, *args, **kwargs):
         if hasattr(self, "nncf") and self.nncf.debug_interface is not None:
             self.nncf.debug_interface.pre_forward_actions(module=self)
         retval = forward_func(self, *args, **kwargs)
@@ -76,12 +78,12 @@ def debuggable_forward(forward_func):
 
 class CombinedDebugInterface(DebugInterface):
     def __init__(self):
-        self._interfaces = []  # type: List[DebugInterface]
+        self._interfaces: List[DebugInterface] = []
 
     def add_interface(self, interface: "DebugInterface"):
         self._interfaces.append(interface)
 
-    def init_actual(self, owner_model: "NNCFNetwork"):
+    def init_actual(self, owner_model: "NNCFNetwork"):  # noqa: F821
         for interface in self._interfaces:
             interface.init_actual(owner_model)
 

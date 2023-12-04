@@ -38,7 +38,16 @@ from nncf.quantization.range_estimator import StatisticsCollectorParameters
 from nncf.quantization.range_estimator import StatisticsType
 
 
-# pylint: disable=too-many-public-methods
+class BiasCorrectionAlgos(Enum):
+    BIAS_CORRECTION = "bias_correction"
+    FAST_BIAS_CORRECTION = "fast_bias_correction"
+
+
+class BCStatsCollectors(Enum):
+    MEAN = "mean"
+    RAW = "raw"
+
+
 class TemplateTestStatisticsAggregator:
     @abstractmethod
     def get_min_max_algo_backend_cls(self) -> Type[MinMaxAlgoBackend]:
@@ -98,7 +107,10 @@ class TemplateTestStatisticsAggregator:
     @abstractmethod
     @pytest.fixture
     def is_backend_support_custom_estimators(self) -> bool:
-        pass
+        """
+        False if backend can initialize only following tensor collectors:
+        MinMax, MeanMinMax.
+        """
 
     @abstractmethod
     def reducers_map(self) -> List[TensorReducerBase]:
@@ -375,6 +387,7 @@ class TemplateTestStatisticsAggregator:
         inplace_statistics,
         is_backend_support_custom_estimators,
     ):
+        inplace_statistics = False
         model = self.get_backend_model(dataset_samples)
         quantizer_config = QuantizerConfig(
             mode=test_parameters.quantization_mode, per_channel=test_parameters.per_channel
@@ -433,19 +446,15 @@ class TemplateTestStatisticsAggregator:
             if isinstance(ref_min_val, np.ndarray):
                 assert stat.min_values.shape == ref_min_val.shape
                 assert stat.max_values.shape == ref_max_val.shape
-
-    class BiasCorrectionAlgos(Enum):
-        BIAS_CORRECTION = "bias_correction"
-        FAST_BIAS_CORRECTION = "fast_bias_correction"
-
-    class BCStatsCollectors(Enum):
-        MEAN = "mean"
-        RAW = "raw"
+            else:
+                ref_shape = (1, 1, 1, 1) if is_stat_in_shape_of_scale else ()
+                assert stat.min_values.shape == ref_shape
+                assert stat.max_values.shape == ref_shape
 
     @dataclass
     class BCTestParameters:
-        algo: "BiasCorrectionAlgos"
-        collector_type: "BCStatsCollectors"
+        algo: BiasCorrectionAlgos
+        collector_type: BCStatsCollectors
         target_type: TargetType
         ref_values: Any = None
         axis: int = 1
@@ -568,15 +577,15 @@ class TemplateTestStatisticsAggregator:
         self, dataset_samples, test_params: BCTestParameters, inplace_statistics, is_stat_in_shape_of_scale
     ):
         name_to_algo_backend_map = {
-            self.BiasCorrectionAlgos.BIAS_CORRECTION: self.get_bias_correction_algo_backend_cls,
-            self.BiasCorrectionAlgos.FAST_BIAS_CORRECTION: self.get_fast_bias_correction_algo_backend_cls,
+            BiasCorrectionAlgos.BIAS_CORRECTION: self.get_bias_correction_algo_backend_cls,
+            BiasCorrectionAlgos.FAST_BIAS_CORRECTION: self.get_fast_bias_correction_algo_backend_cls,
         }
         algo_backend = name_to_algo_backend_map[test_params.algo]()
-        if test_params.collector_type == self.BCStatsCollectors.MEAN:
+        if test_params.collector_type == BCStatsCollectors.MEAN:
             tensor_collector = algo_backend.mean_statistic_collector(
                 test_params.axis, inplace_statistics, len(dataset_samples)
             )
-        elif test_params.collector_type == self.BCStatsCollectors.RAW:
+        elif test_params.collector_type == BCStatsCollectors.RAW:
             tensor_collector = algo_backend.raw_statistic_collector(inplace_statistics, len(dataset_samples))
         else:
             raise RuntimeError()
@@ -607,9 +616,9 @@ class TemplateTestStatisticsAggregator:
 
         for tensor_collector in tensor_collectors:
             stat = tensor_collector.get_statistics()
-            if test_params.collector_type == self.BCStatsCollectors.MEAN:
+            if test_params.collector_type == BCStatsCollectors.MEAN:
                 ret_val = [stat.mean_values, stat.shape]
-            elif test_params.collector_type == self.BCStatsCollectors.RAW:
+            elif test_params.collector_type == BCStatsCollectors.RAW:
                 ret_val = stat.values
                 test_params.ref_values = dataset_samples
                 if not is_stat_in_shape_of_scale:
@@ -773,7 +782,7 @@ class TemplateTestStatisticsAggregator:
 
         dataset = self.get_dataset(dataset_samples)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
-        # pylint: disable=protected-access
+
         merged_statistics = statistics_aggregator._get_merged_statistic_points(statistics_points, model, nncf_graph)
         merged_stats_checkers_map = {
             "split_concat": self._check_split_concat_merged_stats,
@@ -811,10 +820,10 @@ class TemplateTestStatisticsAggregator:
         model = params["model"](dataset_samples)
         params = {}
         if statistics_type in [StatisticsType.MIN, StatisticsType.MAX, StatisticsType.ABS_MAX, StatisticsType.MEAN]:
-            params["reduction_shape"] = [None, (0, 1, 3), (1, 2, 3)]
+            params["reduction_axes"] = [None, (0, 1, 3), (1, 2, 3)]
             params["inplace"] = [False, True]
         elif statistics_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
-            params["reduction_shape"] = [None, (0, 1, 3), (1, 2, 3)]
+            params["reduction_axes"] = [None, (0, 1, 3), (1, 2, 3)]
             params["quantile"] = [[0.01, 0.99], [0.001, 0.999]]
         elif statistics_type == "batch_mean":
             pytest.skip("Inplace statistic woun't work until openvino==2023.0.0 release")
@@ -822,7 +831,7 @@ class TemplateTestStatisticsAggregator:
         elif statistics_type == "mean_per_ch":
             # TODO(dlyakhov) uncoment when nncf will switch to openvino==2023.0.0
             # params["inplace"] = [False, True]
-            params["channel_dim"] = [1, 2]
+            params["channel_axis"] = [1, 2]
 
         def product_dict(**kwargs):
             keys = kwargs.keys()
@@ -844,7 +853,7 @@ class TemplateTestStatisticsAggregator:
         dataset = self.get_dataset(dataset_samples)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
-        # Run statistic collection to check output names matches reduer names
+        # Run statistic collection to check output names matches reducer names
         graph = NNCFGraphFactory.create(model)
         statistics_aggregator.collect_statistics(model, graph)
 
@@ -885,3 +894,31 @@ class TemplateTestStatisticsAggregator:
             else:
                 ref_subset_size = subset_size
         assert statistics_aggregator.stat_subset_size == ref_subset_size
+
+    def test_collect_with_empty_dataset(self, dataset_samples):
+        model = self.get_backend_model(dataset_samples)
+        dataset_samples = []
+        dataset = self.get_dataset(dataset_samples)
+        graph = NNCFGraphFactory.create(model)
+
+        inplace_statistics = False
+        quantizer_config = QuantizerConfig(mode=QuantizationMode.ASYMMETRIC, per_channel=False)
+        target_point = self.get_target_point(TargetType.POST_LAYER_OPERATION)
+        algorithm_name = "TestAlgo"
+        statistic_point = self.create_statistics_point(
+            model,
+            quantizer_config,
+            target_point,
+            len(dataset_samples),
+            algorithm_name,
+            inplace_statistics,
+            RangeEstimatorParametersSet.MEAN_MINMAX,
+        )
+        statistics_points = StatisticPointsContainer()
+        statistics_points.add_statistic_point(statistic_point)
+
+        statistics_aggregator = self.get_statistics_aggregator(dataset)
+        statistics_aggregator.register_statistic_points(statistics_points)
+        with pytest.raises(RuntimeError) as e:
+            statistics_aggregator.collect_statistics(model, graph)
+            assert "Calibration dataset must not be empty" in e.info

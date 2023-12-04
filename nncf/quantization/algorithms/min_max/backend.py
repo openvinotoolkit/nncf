@@ -23,17 +23,14 @@ from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.common.utils.registry import Registry
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 
 TModel = TypeVar("TModel")
-ALGO_BACKENDS = Registry("algo_backends")
 
 
-# pylint:disable=too-many-public-methods
 class MinMaxAlgoBackend(ABC):
     @property
     @abstractmethod
@@ -51,13 +48,6 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def shapeof_metatypes(self) -> List[OperatorMetatype]:
-        """
-        Property for the backend-specific ShapeOf metatypes.
-        """
-
-    @property
-    @abstractmethod
     def conv_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific Convolution metatypes.
@@ -65,9 +55,16 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
+    def shapeof_metatypes(self) -> List[OperatorMetatype]:
         """
-        Property for the backend-specific metatypes for which overflow_fix is applicable.
+        Property for the backend-specific ShapeOf metatypes.
+        """
+
+    @property
+    @abstractmethod
+    def dropout_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific Dropout metatypes.
         """
 
     @property
@@ -75,6 +72,13 @@ class MinMaxAlgoBackend(ABC):
     def read_variable_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific metatypes that also can be interpreted as inputs (ReadValue).
+        """
+
+    @property
+    @abstractmethod
+    def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific metatypes for which overflow_fix is applicable.
         """
 
     @property
@@ -89,6 +93,13 @@ class MinMaxAlgoBackend(ABC):
     def group_conv_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific Grouped Convolution metatypes.
+        """
+
+    @property
+    @abstractmethod
+    def scaled_dot_product_attention_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific Scaled Dot Product Attention metatypes.
         """
 
     @property
@@ -213,6 +224,16 @@ class MinMaxAlgoBackend(ABC):
         :param model_type: Model type parameter.
         :param device: Target device.
         :return: List of ignored metatypes.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_ignored_names_by_layer_attributes(nncf_graph: NNCFGraph) -> List[str]:
+        """
+        Returns names of ignored nodes based on layer_attributes.
+
+        :param nncf_graph: NNCFGraph instance.
+        :return: List of ignored names.
         """
 
     @staticmethod

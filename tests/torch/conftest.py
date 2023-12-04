@@ -10,18 +10,19 @@
 # limitations under the License.
 import os
 import random
+from pathlib import Path
 
 import pytest
 
 try:
     import torch
-except:  # pylint: disable=bare-except
+except:  # noqa: E722
     torch = None
 from nncf.common.quantization.structs import QuantizationMode
 from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
 from tests.shared.case_collection import skip_marked_cases_if_options_not_specified
-from tests.shared.install_fixtures import tmp_venv_with_nncf  # pylint:disable=unused-import
-from tests.shared.logging import nncf_caplog  # pylint:disable=unused-import
+from tests.shared.install_fixtures import tmp_venv_with_nncf  # noqa: F401
+from tests.shared.logging import nncf_caplog  # noqa: F401
 
 pytest.register_assert_rewrite("tests.torch.helpers")
 
@@ -138,22 +139,17 @@ def mixed_precision(request):
 
 @pytest.fixture(scope="module")
 def sota_checkpoints_dir(request):
-    return request.config.getoption("--sota-checkpoints-dir")
+    return Path(request.config.getoption("--sota-checkpoints-dir"))
 
 
 @pytest.fixture(scope="module")
 def sota_data_dir(request):
-    return request.config.getoption("--sota-data-dir")
-
-
-@pytest.fixture(scope="module")
-def metrics_dump_dir(request):
-    pytest.metrics_dump_path = request.config.getoption("--metrics-dump-path")
+    return Path(request.config.getoption("--sota-data-dir"))
 
 
 @pytest.fixture(scope="module")
 def ov_data_dir(request):
-    return request.config.getoption("--ov-data-dir")
+    return Path(request.config.getoption("--ov-data-dir"))
 
 
 @pytest.fixture(scope="module")
@@ -186,11 +182,6 @@ def torch_with_cuda11(request):
 @pytest.fixture(scope="session")
 def openvino(request):
     return request.config.getoption("--run-openvino-eval")
-
-
-@pytest.fixture(scope="module")
-def onnx_dir(request):
-    return request.config.getoption("--onnx-dir")
 
 
 @pytest.fixture(scope="module")
@@ -242,7 +233,7 @@ def runs_subprocess_in_precommit():
     # memory which has not been cached (and thus remains reserved) in the owning pytest process by PyTorch,
     # and the tests below may fail with an OOM. To avoid this, need to call torch.cuda.empty_cache()
     # each time a GPU-powered subprocess is executed during a test.
-    # pylint: disable=W0702,W0621
+
     try:
         import torch
 
@@ -253,8 +244,8 @@ def runs_subprocess_in_precommit():
 
 
 @pytest.fixture(scope="module")
-def cuda_ip(request):
-    return request.config.getoption("--cuda-ip")
+def distributed_mode_sync_port(request):
+    return request.config.getoption("--distributed-mode-sync-port")
 
 
 @pytest.fixture

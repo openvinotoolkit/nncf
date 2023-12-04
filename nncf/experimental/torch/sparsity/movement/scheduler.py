@@ -139,7 +139,7 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
     scheduler will start calculation only after `steps_per_epoch` is calculated.
     """
 
-    def __init__(self, controller: "MovementSparsityController", params: MovementSchedulerParams):
+    def __init__(self, controller: "MovementSparsityController", params: MovementSchedulerParams):  # noqa: F821
         """
         Initializes a movement sparsity scheduler with a polynomial decay schedule.
 

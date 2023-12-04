@@ -1,1 +1,1 @@
-../../../2.5/pruning/filter_pruning/sequential_model.pb
+../../../2.8/pruning/filter_pruning/sequential_model.pb

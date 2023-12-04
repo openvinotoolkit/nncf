@@ -14,12 +14,15 @@ from typing import Callable, Dict
 
 import numpy as np
 import openvino.runtime as ov
+import pytest
 import torch
+from openvino.tools.mo import convert_model
 
+from nncf.openvino.graph.layer_attributes import OVLayerAttributes
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.quantization.algorithms.smooth_quant.openvino_backend import OVSmoothQuantAlgoBackend
 from tests.post_training.test_templates.test_smooth_quant import TemplateTestSQAlgorithm
-from tests.shared.command import Command
 
 
 class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
@@ -41,13 +44,10 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
 
     @staticmethod
     def backend_specific_model(model: torch.nn.Module, tmp_dir: str) -> ov.Model:
+        # TODO(AlexanderDokuchaev): remove onnx export after fix 119625
         onnx_path = Path(f"{tmp_dir}/model.onnx")
         torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
-        ov_path = Path(f"{tmp_dir}/model.xml")
-        runner = Command(f"mo -m {onnx_path} -o {tmp_dir} -n model")
-        runner.run()
-        core = ov.Core()
-        ov_model = core.read_model(ov_path)
+        ov_model = convert_model(onnx_path, input_shape=model.INPUT_SIZE, compress_to_fp16=False)
         return ov_model
 
     @staticmethod
@@ -63,6 +63,34 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
             ref_value = np.array(ref_value)
             assert value.shape == ref_value.shape
             assert np.all(np.isclose(value, ref_value, atol=0.0001)), f"{value} != {ref_value}"
+
+    @pytest.mark.parametrize(
+        "node_metatype, layer_attributes, port_id, reference_value",
+        (
+            (OVMatMulMetatype, OVLayerAttributes({}, inputs_attributes={"transpose": False}), 0, -1),
+            (OVMatMulMetatype, OVLayerAttributes({}, inputs_attributes={"transpose": True}), 0, -2),
+            (OVMatMulMetatype, OVLayerAttributes({}, inputs_attributes={"transpose": False}), 1, -2),
+            (OVMatMulMetatype, OVLayerAttributes({}, inputs_attributes={"transpose": True}), 1, -1),
+            (OVMatMulMetatype, OVLayerAttributes({}, inputs_attributes={"transpose": False}), 2, RuntimeError),
+            (OVConvolutionMetatype, OVLayerAttributes({}, inputs_attributes={}), 0, 1),
+        ),
+    )
+    def test_get_activation_channel_axis(self, node_metatype, layer_attributes, port_id, reference_value):
+        return super().test_get_activation_channel_axis(node_metatype, layer_attributes, port_id, reference_value)
+
+    @pytest.mark.parametrize(
+        "node_metatype, layer_attributes, port_id, reference_value",
+        (
+            (OVMatMulMetatype, OVLayerAttributes({1: {"transpose": False}}), 1, -2),
+            (OVMatMulMetatype, OVLayerAttributes({1: {"transpose": True}}), 1, -1),
+            (OVMatMulMetatype, OVLayerAttributes({0: {"transpose": False}}), 0, -1),
+            (OVMatMulMetatype, OVLayerAttributes({0: {"transpose": True}}), 0, -2),
+            (OVMatMulMetatype, OVLayerAttributes({1: {"transpose": False}}), 2, RuntimeError),
+            (OVConvolutionMetatype, OVLayerAttributes({1: {}}), 1, 1),
+        ),
+    )
+    def test_get_weight_channel_axis(self, node_metatype, layer_attributes, port_id, reference_value):
+        return super().test_get_weight_channel_axis(node_metatype, layer_attributes, port_id, reference_value)
 
     @staticmethod
     def get_matmul_metatype():

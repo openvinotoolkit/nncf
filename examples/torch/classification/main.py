@@ -73,7 +73,7 @@ from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from nncf.config.utils import is_accuracy_aware_training
 from nncf.torch import create_compressed_model
 from nncf.torch.checkpoint_loading import load_state
-from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.initialization import default_criterion_fn
 from nncf.torch.initialization import register_default_init_args
 from nncf.torch.structures import ExecutionParameters
@@ -130,9 +130,7 @@ def main(argv):
     if not is_staged_quantization(config):
         start_worker(main_worker, config)
     else:
-        from examples.torch.classification.staged_quantization_worker import (
-            staged_quantization_main_worker,  # pylint: disable=cyclic-import
-        )
+        from examples.torch.classification.staged_quantization_worker import staged_quantization_main_worker
 
         start_worker(staged_quantization_main_worker, config)
 
@@ -145,7 +143,6 @@ def inception_criterion_fn(model_outputs: Any, target: Any, criterion: _Loss) ->
     return loss1 + 0.4 * loss2
 
 
-# pylint:disable=too-many-branches,too-many-statements
 def main_worker(current_gpu, config: SampleConfig):
     configure_device(current_gpu, config)
     config.mlflow = SafeMLFLow(config)
@@ -238,8 +235,7 @@ def main_worker(current_gpu, config: SampleConfig):
         load_state(model, model_state_dict, is_resume=True)
 
     if is_export_only:
-        export_model(compression_ctrl, config.to_onnx, config.no_strip_on_export)
-        logger.info(f"Saved to {config.to_onnx}")
+        export_model(compression_ctrl, config)
         return
 
     model, _ = prepare_model_for_execution(model, config)
@@ -277,7 +273,7 @@ def main_worker(current_gpu, config: SampleConfig):
     if "train" in config.mode:
         if is_accuracy_aware_training(config):
             # validation function that returns the target metric value
-            # pylint: disable=E1123
+
             def validate_fn(model, epoch):
                 top1, _, _ = validate(val_loader, model, criterion, config, epoch=epoch)
                 return top1
@@ -331,8 +327,7 @@ def main_worker(current_gpu, config: SampleConfig):
     config.mlflow.end_run()
 
     if "export" in config.mode:
-        export_model(compression_ctrl, config.to_onnx, config.no_strip_on_export)
-        logger.info(f"Saved to {config.to_onnx}")
+        export_model(compression_ctrl, config)
 
 
 def train(
@@ -380,13 +375,14 @@ def train(
         is_best = is_best_by_accuracy or compression_stage > best_compression_stage
         if is_best:
             best_acc1 = acc1
-        config.mlflow.safe_call("log_metric", "best_acc1", best_acc1)
         best_compression_stage = max(compression_stage, best_compression_stage)
-        acc = best_acc1 / 100
-        if config.metrics_dump is not None:
-            write_metrics(acc, config.metrics_dump)
         if is_main_process():
             logger.info(statistics.to_str())
+
+            if config.metrics_dump is not None:
+                acc = best_acc1 / 100
+                write_metrics(acc, config.metrics_dump)
+            config.mlflow.safe_call("log_metric", "best_acc1", best_acc1)
 
             checkpoint_path = osp.join(config.checkpoint_save_dir, get_run_name(config) + "_last.pth")
             checkpoint = {
@@ -452,8 +448,8 @@ def create_datasets(config):
     elif dataset_config in ["mock_32x32", "mock_299x299"]:
         normalize = transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
 
-    input_info_list = create_input_infos(config)
-    image_size = input_info_list[0].shape[-1]
+    input_info = FillerInputInfo.from_nncf_config(config)
+    image_size = input_info.elements[0].shape[-1]
     size = int(image_size / 0.875)
     if dataset_config in ["cifar10", "cifar100_224x224", "cifar100"]:
         list_val_transforms = [transforms.ToTensor(), normalize]
@@ -735,12 +731,11 @@ def validate(val_loader, model, criterion, config, epoch=0, log_validation_info=
             config.mlflow.safe_call("log_metric", "val/top1", float(top1.avg), epoch)
             config.mlflow.safe_call("log_metric", "val/top5", float(top5.avg), epoch)
 
-        if log_validation_info:
             logger.info(" * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}\n".format(top1=top1, top5=top5))
 
+        if is_main_process() and config.metrics_dump is not None:
             acc = top1.avg / 100
-            if config.metrics_dump is not None:
-                write_metrics(acc, config.metrics_dump)
+            write_metrics(acc, config.metrics_dump)
 
     return top1.avg, top5.avg, losses.avg
 

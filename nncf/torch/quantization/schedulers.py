@@ -23,7 +23,7 @@ QUANTIZATION_SCHEDULERS = Registry("quantization_schedulers")
 
 @QUANTIZATION_SCHEDULERS.register("staged")
 class StagedQuantizationScheduler(BaseCompressionScheduler):
-    def __init__(self, quantization_ctrl: "QuantizationController", params=None):
+    def __init__(self, quantization_ctrl: "QuantizationController", params=None):  # noqa: F821
         super().__init__()
         if params is None:
             params = {}

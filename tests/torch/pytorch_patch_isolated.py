@@ -34,11 +34,10 @@ def remove_comments_from_source(source):
 
 @pytest.mark.skipif(ISOLATION_RUN_ENV_VAR not in os.environ, reason="Should be run via isolation proxy")
 def test_jit_if_tracing_script_source_equals():
-    # pylint: disable=protected-access
     # Get original torch.jit._script_if_tracing source
     torch_source = remove_comments_from_source(inspect.getsource(torch.jit._script_if_tracing))
 
-    import nncf.torch  # pylint: disable=unused-import
+    import nncf.torch  # noqa: F401
 
     # Get torch.jit._script_if_tracing source after patching was performed
     nncf_source = remove_comments_from_source(inspect.getsource(torch.jit._script_if_tracing))
@@ -48,3 +47,30 @@ def test_jit_if_tracing_script_source_equals():
         "torch.jit.script", "script"
     )
     assert torch_source == nncf_source_corrected
+
+
+class DummyModel(torch.nn.Module):
+    def forward(self, x):
+        return x
+
+
+@pytest.mark.skipif(ISOLATION_RUN_ENV_VAR not in os.environ, reason="Should be run via isolation proxy")
+def test_jit_script_exception_preserves_patching_isolated():
+    from nncf import NNCFConfig
+    from nncf.torch import create_compressed_model
+
+    _, compressed_model = create_compressed_model(
+        DummyModel(),
+        NNCFConfig.from_dict(
+            {"input_info": {"sample_size": [1, 3, 32, 32]}, "compression": {"algorithm": "quantization"}}
+        ),
+    )
+
+    try:
+        torch.jit.script(compressed_model)  # supposed to fail since torch.jit.script does not support NNCF models
+    except:  # noqa: E722
+        pass
+
+    # torch.nn.Module.__call__ is one of the fundamental patched functions, if the code object points to NNCF code,
+    # then it means patching is still present
+    assert "nncf" in torch.nn.Module.__call__.__code__.co_filename

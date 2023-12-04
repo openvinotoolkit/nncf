@@ -227,7 +227,7 @@ def test_adaptive_compression_training_loop_with_no_training(
         validate_fn=partial(mock_validate_fn, init_step=False),
         configure_optimizers_fn=configure_optimizers_fn,
     )
-    assert len(acc_aware_training_loop.runner._best_checkpoints) == 0  # pylint: disable=protected-access
+    assert len(acc_aware_training_loop.runner._best_checkpoints) == 0
 
     possible_checkpoint_compression_rates = (
         acc_aware_training_loop.runner.get_compression_rates_with_positive_acc_budget()
@@ -552,7 +552,7 @@ def test_early_exit_with_mock_validation_and_no_improvement(max_accuracy_degrada
     early_stopping_training_loop = EarlyExitCompressionTrainingLoop(
         config, compression_ctrl, uncompressed_model_accuracy=original_metric, dump_checkpoints=False
     )
-    assert early_stopping_training_loop.runner._best_checkpoint is None  # pylint: disable=protected-access
+    assert early_stopping_training_loop.runner._best_checkpoint is None
 
     model = early_stopping_training_loop.run(
         model,
@@ -560,7 +560,7 @@ def test_early_exit_with_mock_validation_and_no_improvement(max_accuracy_degrada
         validate_fn=partial(mock_validate_fn, init_step=False),
         configure_optimizers_fn=configure_optimizers_fn,
     )
-    assert early_stopping_training_loop.runner._best_checkpoint is not None  # pylint: disable=protected-access
+    assert early_stopping_training_loop.runner._best_checkpoint is not None
 
 
 @pytest.mark.parametrize(

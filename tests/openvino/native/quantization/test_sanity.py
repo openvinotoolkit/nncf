@@ -35,7 +35,7 @@ OMZ_MODELS = [
     (
         "mobilenet-v3-small-1.0-224-tf",
         "imagenette2-320",
-        {"accuracy@top1": 0.744, "accuracy@top5": 0.916},
+        {"accuracy@top1": 0.75, "accuracy@top5": 0.916},
         AdvancedQuantizationParameters(disable_channel_alignment=False),
     ),
     ("googlenet-v3-pytorch", "imagenette2-320", {"accuracy@top1": 0.911, "accuracy@top5": 0.994}, None),
@@ -46,11 +46,11 @@ OMZ_MODELS = [
 @pytest.mark.parametrize(
     "model, dataset, ref_metrics, advanced_params", OMZ_MODELS, ids=[model[0] for model in OMZ_MODELS]
 )
-def test_compression(data_dir, tmp_path, model, dataset, ref_metrics, advanced_params):
+def test_compression(data_dir, tmp_path, model, dataset, ref_metrics, advanced_params, omz_cache_dir):
     extracted_data_dir = os.path.dirname(get_dataset_for_test(dataset, data_dir))
     config_path = AC_CONFIGS_DIR / f"{model}.yml"
 
-    download_model(model, tmp_path)
+    download_model(model, tmp_path, omz_cache_dir)
     convert_model(model, tmp_path)
     model_path = tmp_path / "public" / model / "FP32" / f"{model}.xml"
 

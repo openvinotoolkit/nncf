@@ -32,7 +32,7 @@ class CompressionRatioCalculator:
         weight_qp_id_per_activation_qp_id: Dict[QuantizationPointId, QuantizationPointId],
     ):
         self._weight_qp_id_per_activation_qp_id = weight_qp_id_per_activation_qp_id
-        self._flops_per_weight_qp_id = {}  # type: Dict[QuantizationPointId, float]
+        self._flops_per_weight_qp_id: Dict[QuantizationPointId, float] = {}
         for qp_id, qp in quantizer_setup.quantization_points.items():
             if qp.is_weight_quantization_point():
                 target_node_name = qp.insertion_point.target_node_name

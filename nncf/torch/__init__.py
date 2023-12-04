@@ -9,10 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # isort: off
-# pylint: skip-file
+
 """
 Base subpackage for NNCF PyTorch functionality.
 """
+
 from nncf import nncf_logger
 from nncf.common.logging.logger import warn_bkc_version_mismatch
 
@@ -24,7 +25,7 @@ from packaging import version
 try:
     _torch_version = torch.__version__
     torch_version = version.parse(_torch_version).base_version
-except:
+except:  # noqa: E722
     nncf_logger.debug("Could not parse torch version")
     _torch_version = "0.0.0"
     torch_version = version.parse(_torch_version).base_version
@@ -47,6 +48,7 @@ from nncf.torch.knowledge_distillation import algo as knowledge_distillation_alg
 # listed below for importing convenience
 
 from nncf.torch.model_creation import create_compressed_model
+from nncf.torch.model_creation import wrap_model
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.initialization import register_default_init_args
 from nncf.torch.layers import register_module
@@ -57,7 +59,7 @@ from nncf.torch.dynamic_graph.context import disable_tracing
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.dynamic_graph.context import forward_nncf_trace
 from nncf.torch.strip import strip
-from nncf.torch.quantization.quantize_model import compress_weights
+from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
 
 # NNCF relies on tracing PyTorch operations. Each code that uses NNCF
 # should be executed with PyTorch operators wrapped via a call to "patch_torch_operators",

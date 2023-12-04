@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+import functools
 import json
 import multiprocessing
 import os
@@ -33,6 +35,7 @@ from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator imp
 from openvino.tools.pot.configs.config import Config
 
 import nncf
+from nncf.common.deprecation import warning_deprecated
 from nncf.common.logging.logger import set_log_file
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationPreset
@@ -123,21 +126,42 @@ class ACValidationFunction:
         "ndcg": "sigmoid_recom_loss",
     }
 
-    def __init__(self, model_evaluator: ModelEvaluator, metric_name: str, requests_number: Optional[int] = None):
+    SPECIAL_METRICS = [
+        "cmc",
+        "reid_map",
+        "pairwise_accuracy_subsets",
+        "pairwise_accuracy",
+        "normalized_embedding_accuracy",
+        "face_recognition_tafa_pair_metric",
+        "localization_recall",
+        "coco_orig_keypoints_precision",
+        "coco_orig_segm_precision",
+        "coco_orig_keypoints_precision",
+        "spearman_correlation_coef",
+        "pearson_correlation_coef",
+    ]
+
+    def __init__(
+        self, model_evaluator: ModelEvaluator, metric_name: str, metric_type: str, requests_number: Optional[int] = None
+    ):
         """
         :param model_evaluator: Model Evaluator.
         :param metric_name: Name of a metric.
+        :param metric_type: Type of a metric.
         :param requests_number: A number of infer requests. If it is `None`,
             the count will be selected automatically.
         """
         self._model_evaluator = model_evaluator
         self._metric_name = metric_name
+        self._metric_type = metric_type
         self._persample_metric_name = self.METRIC_TO_PERSAMPLE_METRIC.get(self._metric_name, self._metric_name)
         registered_metrics = model_evaluator.get_metrics_attributes()
         if self._persample_metric_name not in registered_metrics:
             self._model_evaluator.register_metric(self._persample_metric_name)
         self._requests_number = requests_number
         self._values_for_each_item = []
+
+        self._collect_outputs = self._metric_type in self.SPECIAL_METRICS
 
     def __call__(self, compiled_model: ov.CompiledModel, indices: Optional[Iterable[int]] = None) -> float:
         """
@@ -201,6 +225,11 @@ class ACValidationFunction:
             return
 
         for sample_id, results in metrics_result.items():
+            if self._collect_outputs:
+                output = list(raw_predictions.values())[0]
+                self._values_for_each_item.append({"sample_id": sample_id, "metric_value": output})
+                continue
+
             for metric_result in results:
                 if metric_result.metric_name != self._persample_metric_name:
                     continue
@@ -478,6 +507,24 @@ def map_apply_for_all_nodes(apply_for_all_nodes):
     return {advanced_parameter_name: advanced_parameters}
 
 
+def map_smooth_quant_alphas(smooth_quant_alphas):
+    ctx = get_algorithm_parameters_context()
+    advanced_parameter_name = ctx.param_name_map[ParameterNames.advanced_parameters]
+    advanced_parameters = ctx.params.get(advanced_parameter_name, AdvancedQuantizationParameters())
+    for key in ["convolution", "matmul"]:
+        if key in smooth_quant_alphas:
+            advanced_parameters.smooth_quant_alphas.__setattr__(key, smooth_quant_alphas[key])
+    return {advanced_parameter_name: advanced_parameters}
+
+
+def map_smooth_quant_alpha(smooth_quant_alpha):
+    warning_deprecated(
+        "`smooth_quant_alpha` parameter is deprecated."
+        "Please, use `smooth_quant_alphas: {'convolution': .., 'matmul': ..}` instead."
+    )
+    return map_smooth_quant_alphas({"matmul": smooth_quant_alpha, "convolution": -1})
+
+
 def map_threshold(threshold):
     ctx = get_algorithm_parameters_context()
     advanced_parameter_name = ctx.param_name_map[ParameterNames.advanced_parameters]
@@ -504,6 +551,19 @@ def map_tune_hyperparams(tune_hyperparams):
     ctx = get_algorithm_parameters_context()
     advanced_parameters = ctx.params.get("advanced_accuracy_restorer_parameters", AdvancedAccuracyRestorerParameters())
     advanced_parameters.tune_hyperparams = tune_hyperparams
+    return {"advanced_accuracy_restorer_parameters": advanced_parameters}
+
+
+def map_dump_intermediate_model(dump_intermediate_model, output_dir):
+    intermediate_model_dir = None
+
+    if dump_intermediate_model:
+        intermediate_model_dir = os.path.join(output_dir, "intermediate_model")
+        os.makedirs(intermediate_model_dir, exist_ok=True)
+
+    ctx = get_algorithm_parameters_context()
+    advanced_parameters = ctx.params.get("advanced_accuracy_restorer_parameters", AdvancedAccuracyRestorerParameters())
+    advanced_parameters.intermediate_model_dir = intermediate_model_dir
     return {"advanced_accuracy_restorer_parameters": advanced_parameters}
 
 
@@ -543,6 +603,8 @@ def get_pot_quantization_parameters_mapping():
         "saturation_fix": map_saturation_fix,
         "apply_for_all_nodes": map_apply_for_all_nodes,
         "threshold": map_threshold,
+        "smooth_quant_alphas": map_smooth_quant_alphas,
+        "smooth_quant_alpha": map_smooth_quant_alpha,
     }
 
     default_parameters = {"use_layerwise_tuning": False}
@@ -577,8 +639,11 @@ def map_quantization_parameters(pot_parameters):
     return result
 
 
-def map_quantize_with_accuracy_control_parameters(pot_parameters):
+def map_quantize_with_accuracy_control_parameters(pot_parameters, output_dir):
     supported_parameters, default_parameters, ignored_parameters = get_pot_quantization_parameters_mapping()
+
+    ignored_parameters.remove("dump_intermediate_model")
+    map_dump_intermediate_model_fn = functools.partial(map_dump_intermediate_model, output_dir=output_dir)
 
     supported_parameters.update(
         {
@@ -587,6 +652,7 @@ def map_quantize_with_accuracy_control_parameters(pot_parameters):
             "ranking_subset_size": map_ranking_subset_size,
             "tune_hyperparams": map_tune_hyperparams,
             "drop_type": map_drop_type,
+            "dump_intermediate_model": map_dump_intermediate_model_fn,
         }
     )
 
@@ -615,11 +681,11 @@ def map_quantize_with_accuracy_control_parameters(pot_parameters):
     return result
 
 
-def map_paramaters(pot_algo_name, nncf_algo_name, pot_parameters):
+def map_paramaters(pot_algo_name, nncf_algo_name, pot_parameters, output_dir):
     if nncf_algo_name == "quantize":
         return map_quantization_parameters(pot_parameters)
     if nncf_algo_name == "quantize_with_accuracy_control":
-        return map_quantize_with_accuracy_control_parameters(pot_parameters)
+        return map_quantize_with_accuracy_control_parameters(pot_parameters, output_dir)
     raise ValueError(f"Mapping POT {pot_algo_name} parameters to NNCF {nncf_algo_name} parameters is not supported")
 
 
@@ -635,7 +701,7 @@ def get_accuracy_checker_config(engine_config):
     return engine_config
 
 
-def get_nncf_algorithms_config(compression_config):
+def get_nncf_algorithms_config(compression_config, output_dir):
     nncf_algorithms = {}
     override_options = {}
     for pot_algo in compression_config.algorithms:
@@ -655,7 +721,7 @@ def get_nncf_algorithms_config(compression_config):
             override_options[nncf_algo_name]["parameters"].update(parameters)
             continue
 
-        nncf_algo_parameters = map_paramaters(pot_algo_name, nncf_algo_name, pot_algo.params)
+        nncf_algo_parameters = map_paramaters(pot_algo_name, nncf_algo_name, pot_algo.params, output_dir)
 
         if advanced_parameters is not None:
             nncf_algo_parameters["advanced_parameters"] = replace(
@@ -679,7 +745,6 @@ def get_allow_reshape_input(accuracy_checker_config) -> bool:
     return False
 
 
-# pylint:disable=too-many-branches
 def maybe_reshape_model(model, dataset, subset_size, input_to_tensor_name):
     dataset_inputs_shapes = defaultdict(set)
     for input_dict in islice(dataset.get_inference_data(), subset_size):
@@ -747,7 +812,6 @@ def maybe_reshape_model(model, dataset, subset_size, input_to_tensor_name):
     return model, model_inputs_shapes
 
 
-# pylint: disable=protected-access
 def get_transform_fn(model_evaluator: ModelEvaluator, ov_model):
     if model_evaluator.launcher._lstm_inputs:
         compiled_original_model = ov.Core().compile_model(ov_model)
@@ -912,10 +976,11 @@ def quantize_model_with_accuracy_control(
         )
         model_evaluator.load_network([{"model": ov_model}])
 
+    metric_type = accuracy_checker_config["models"][0]["datasets"][0]["metrics"][0]["type"]
     metric_name = accuracy_checker_config["models"][0]["datasets"][0]["metrics"][0].get("name", None)
     if metric_name is None:
-        metric_name = accuracy_checker_config["models"][0]["datasets"][0]["metrics"][0]["type"]
-    validation_fn = ACValidationFunction(model_evaluator, metric_name)
+        metric_name = metric_type
+    validation_fn = ACValidationFunction(model_evaluator, metric_name, metric_type)
 
     name_to_quantization_impl_map = {
         "pot": pot_quantize_with_native_accuracy_control,
@@ -946,14 +1011,42 @@ def quantize_model_with_accuracy_control(
     return quantized_model
 
 
+def filter_configuration(config: Config) -> Config:
+    fields_to_filter = ["smooth_quant_alphas", "smooth_quant_alpha"]
+    algorithms_to_update = defaultdict(dict)
+
+    # Drop params before configure
+    for algorithm_config in config["compression"]["algorithms"]:
+        algo_params = algorithm_config.get("params")
+        if algo_params is None:
+            continue
+        algo_name = algorithm_config.get("name")
+        for field_to_filter in fields_to_filter:
+            field_value = algo_params.get(field_to_filter)
+            if field_value:
+                del algo_params[field_to_filter]
+                algorithms_to_update[algo_name][field_to_filter] = field_value
+
+    config.configure_params()
+
+    # Set dropped params
+    for algorithm_config in config["compression"]["algorithms"]:
+        algo_name = algorithm_config.get("name")
+        if algo_name in algorithms_to_update:
+            for field_name, field_value in algorithms_to_update[algo_name].items():
+                algorithm_config["params"][field_name] = field_value
+
+    return config
+
+
 def main():
     args = parse_args()
     config = Config.read_config(args.config)
-    config.configure_params()
+    config = filter_configuration(config)
 
     xml_path, bin_path = get_model_paths(config.model)
     accuracy_checker_config = get_accuracy_checker_config(config.engine)
-    nncf_algorithms_config = get_nncf_algorithms_config(config.compression)
+    nncf_algorithms_config = get_nncf_algorithms_config(config.compression, args.output_dir)
 
     set_log_file(f"{args.output_dir}/log.txt")
     output_dir = os.path.join(args.output_dir, "optimized")

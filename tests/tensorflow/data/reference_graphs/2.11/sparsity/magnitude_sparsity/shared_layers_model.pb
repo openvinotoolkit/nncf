@@ -1,1 +1,1 @@
-../../../2.5/sparsity/magnitude_sparsity/shared_layers_model.pb
+../../../2.8/sparsity/magnitude_sparsity/shared_layers_model.pb

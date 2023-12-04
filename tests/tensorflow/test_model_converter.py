@@ -17,10 +17,10 @@ from tensorflow.keras import backend
 from tensorflow.keras import layers
 from tensorflow.keras import models
 
-from nncf.common.graph import INPUT_NOOP_METATYPES
-from nncf.common.graph import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.layer_attributes import PermuteLayerAttributes
+from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
+from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.tensorflow.graph.converter import BaseFunctionalSequentialConverter
 from nncf.tensorflow.graph.converter import convert_keras_model_to_nncf_graph
 from nncf.tensorflow.graph.metatypes.common import DIMENSION_PERMUTATION_METATYPES
@@ -94,7 +94,7 @@ def get_model_with_reshapes_and_concats(batch_size=None):
     x = layers.Reshape((16, -1))(x)
     ones = tf.ones_like(x)
     t1 = layers.concatenate([x, ones])
-    # pylint: disable=E1120,E1123
+
     t2 = tf.concat([x, ones], axis=-1)
     y = tf.concat([t1, t2], axis=-1)
     y = tf.transpose(y, [2, 0, 1])

@@ -45,7 +45,6 @@ class L2Norm(nn.Module):
         return L2NormFunction.apply(x, self.weight, self)
 
 
-# pylint:disable=abstract-method
 class L2NormFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x, weight, l2NormParams):

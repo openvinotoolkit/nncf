@@ -8,13 +8,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import Dict, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import numpy as np
 import torch
 
 from nncf import nncf_logger
-from nncf.common.graph import Dtype
+from nncf.common.graph.layer_attributes import Dtype
+from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
+from nncf.torch.nested_objects_traversal import objwalk
 
 
 class TensorMeta:
@@ -56,23 +58,28 @@ class TracedTensor(torch.Tensor):
     """
 
     @staticmethod
-    def from_torch_tensor(tensor, tensor_meta: TensorMeta):
+    def from_torch_tensor(tensor: torch.Tensor, tensor_meta: TensorMeta) -> "TracedTensor":
+        """
+        Creates a TracedTensor by patching a given torch.Tensor, associating it with the provided tensor_meta.
+
+        :param tensor: The input torch.Tensor.
+        :param tensor_meta: The metadata associated with the tensor.
+        :return: The resulting TracedTensor.
+        """
         tensor.tensor_meta = tensor_meta
-        tensor.__class__ = TracedTensor
-        # pylint:disable=protected-access
-        tensor._nncf_expired = False
+        if not isinstance(tensor, TracedTensor):
+            tensor.original_class = tensor.__class__
+            tensor.__class__ = TracedTensor
+
         return tensor
 
-    def nncf_expire(self):
+    def strip(self) -> None:
         """
-        Mark the traced tensor as "expired". The tensor's metainformation should
-        then be considered outdated/invalid.
+        Reverts the tensor to its original class by removing tracing attributes.
         """
-        self._nncf_expired = True
-
-    @property
-    def nncf_expired(self) -> bool:
-        return self._nncf_expired
+        self.__class__ = self.original_class
+        delattr(self, "tensor_meta")
+        delattr(self, "original_class")
 
     def as_subclass(self, cls: "TracedTensor") -> "TracedTensor":
         """
@@ -84,14 +91,14 @@ class TracedTensor(torch.Tensor):
 
     # NOTE: This disables the __torch_function__ API altogether when using NNCF.
     # TODO: make NNCF utilize the __torch_function__ API instead.
-    # pylint:disable=protected-access
+
     if hasattr(torch._C, "_disabled_torch_function_impl"):
         __torch_function__ = torch._C._disabled_torch_function_impl
 
 
 def is_iterable(item):
     non_iterable_types = (str, bytes, bytearray, torch.Tensor, np.ndarray)
-    # pylint:disable=isinstance-second-argument-not-valid-type
+
     return isinstance(item, Iterable) and not isinstance(item, non_iterable_types)
 
 
@@ -119,7 +126,7 @@ TensorOrTupleOrList = TypeVar("TensorOrTupleOrList", List[torch.Tensor], Tuple[t
 
 
 def trace_tensors(
-    operator_output: TensorOrTupleOrList, node: "DynamicGraphNode", ctx: "TracingContext" = None
+    operator_output: TensorOrTupleOrList, node: "DynamicGraphNode", ctx: "TracingContext" = None  # noqa: F821
 ) -> TensorOrTupleOrList:
     """
     Dynamically turn torch.Tensor instances in `operator_output` into TracedTensor instances. `operator_output` is
@@ -154,7 +161,7 @@ def trace_tensors(
     return operator_output
 
 
-def make_tensor_metas(inputs: "OperatorInput") -> List[Optional[TensorMeta]]:
+def make_tensor_metas(inputs: OperatorInput) -> List[Optional[TensorMeta]]:
     """
     Produces TensorMeta data for each torch.Tensor or TracedTensor in `inputs`.
     :param inputs: An OperatorInput representation of input arguments to an operation in the traced model.
@@ -165,14 +172,23 @@ def make_tensor_metas(inputs: "OperatorInput") -> List[Optional[TensorMeta]]:
     for i, node_input_index_entry in enumerate(inputs):
         node_input = node_input_index_entry.getter()
         if isinstance(node_input, TracedTensor):
-            if not node_input.nncf_expired:
-                tensor_metas.append(node_input.tensor_meta)
-            else:
-                meta = TensorMeta(None, i, node_input.shape)
-                tensor_metas.append(meta)
+            tensor_metas.append(node_input.tensor_meta)
         elif isinstance(node_input, torch.Tensor) and not isinstance(node_input, TracedTensor):
             meta = TensorMeta(None, i, node_input.shape)
             tensor_metas.append(meta)
         else:
             tensor_metas.append(None)
     return tensor_metas
+
+
+def strip_traced_tensors(args: Tuple, kwargs: Dict) -> Tuple[Tuple, Dict]:
+    """
+    Required to guard against new forward calls on tensors that have already passed
+    through NNCF's forward once and got turned into TracedTensors by reference access.
+    """
+    is_traced_tensor_predicate = lambda x: isinstance(x, TracedTensor)
+    strip_traced_tensor = lambda x: x.strip()
+
+    args = objwalk(args, is_traced_tensor_predicate, strip_traced_tensor)
+    kwargs = objwalk(kwargs, is_traced_tensor_predicate, strip_traced_tensor)
+    return args, kwargs

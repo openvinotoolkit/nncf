@@ -25,6 +25,7 @@ from nncf.torch.layers import NNCF_MODULES_MAP
 from nncf.torch.layers import NNCF_WRAPPED_USER_MODULES_DICT
 from nncf.torch.layers import UNWRAPPED_USER_MODULES
 from nncf.torch.layers import add_nncf_functionality_to_user_module
+from nncf.torch.utils import get_model_device
 
 
 def is_nncf_module(module: nn.Module) -> bool:
@@ -170,8 +171,8 @@ def replace_modules_by_nncf_modules(
     The dictionary will also include the extended modules that have already been present in the model.
     """
     modules_vs_scopes_dict = collect_all_scopes_for_extendable_and_extended_modules(model, predicate=predicate_fn)
-    inter_dict = {}  # type: Dict[nn.Module, Set[Scope]]
-    ret_dict = {}  # type: Dict[nn.Module, List[Scope]]
+    inter_dict: Dict[nn.Module, Set[Scope]] = {}
+    ret_dict: Dict[nn.Module, List[Scope]] = {}
     for module, scope_set in modules_vs_scopes_dict.items():
         if is_nncf_module(module):
             # The module has already been extended, track it in the return value
@@ -181,11 +182,14 @@ def replace_modules_by_nncf_modules(
             scope_set, ignored_scopes, target_scopes, eval_op_scopes
         ) and not _is_module_only_in_user_module(scope_set)
         if should_process:
+            device = get_model_device(module)
+
             if custom_replacer is not None:
                 replaced_module = custom_replacer(module)
             else:
                 replaced_module = nncf_module_from(module)
 
+            replaced_module.to(device)
             inter_dict[replaced_module] = scope_set
 
             new_scope_set = set()
@@ -246,7 +250,6 @@ def _replace_module_by_scope(base_model: torch.nn.Module, scope: Scope, replaced
     curr_module = base_model
     owning_module = base_model
     for scope_element in scope[1:]:  # omit first scope element which corresponds to base module
-        # pylint: disable=protected-access
         child_module = curr_module._modules.get(scope_element.calling_field_name)
         if child_module is None:
             raise RuntimeError(
@@ -265,7 +268,6 @@ def _replace_module_by_scope(base_model: torch.nn.Module, scope: Scope, replaced
     nncf_logger.debug(f"Extending module at {str(scope)}...")
     last_calling_field_name = scope[-1].calling_field_name
     if isinstance(owning_module, nn.Sequential):
-        # pylint:disable=protected-access
         owning_module._modules[last_calling_field_name] = replaced_module
     else:
         setattr(owning_module, last_calling_field_name, replaced_module)

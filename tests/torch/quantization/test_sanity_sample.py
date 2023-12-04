@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Dict
 
 import pytest
+import torch
 from torch import nn
 
 from nncf import NNCFConfig
@@ -272,6 +273,7 @@ def fixture_precision_desc(request, dataset_dir):
     return desc.finalize(dataset_dir)
 
 
+@pytest.mark.nightly
 def test_precision_init(precision_desc: PrecisionTestCaseDescriptor, tmp_path, mocker):
     validator = precision_desc.get_validator()
     args = validator.get_default_args(tmp_path)
@@ -313,6 +315,7 @@ class ExportSampleValidator(PrecisionSampleValidator):
 
         ctrl_mock = mocker.MagicMock(spec=QuantizationController)
         model_mock = mocker.MagicMock(spec=nn.Module)
+        mocker.patch("examples.torch.common.export.get_export_args", return_value=((torch.Tensor([1, 1]),), {}))
         create_model_location = sample_location + ".create_compressed_model"
         create_model_patch = mocker.patch(create_model_location)
 
@@ -351,6 +354,7 @@ def fixture_export_desc(request):
     return desc.finalize()
 
 
+@pytest.mark.nightly
 @pytest.mark.parametrize(
     ("extra_args", "is_export_called"),
     (({}, False), ({"-m": ["export", "train"]}, True)),

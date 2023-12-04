@@ -122,8 +122,6 @@ class PolyLRDropScheduler:
         return self.__dict__
 
 
-# pylint:disable=too-many-branches
-# pylint:disable=too-many-statements
 def staged_quantization_main_worker(current_gpu, config):
     configure_device(current_gpu, config)
     config.mlflow = SafeMLFLow(config)
@@ -212,7 +210,7 @@ def staged_quantization_main_worker(current_gpu, config):
 
     best_acc1 = 0
     # optionally resume from a checkpoint
-    if resuming_checkpoint is not None and config.to_onnx is None:
+    if resuming_checkpoint is not None and config.export_model_path is None:
         best_acc1 = resuming_checkpoint["best_acc1"]
         if "train" in config.mode:
             kd_loss_calculator.original_model.load_state_dict(resuming_checkpoint["original_model_state_dict"])
@@ -230,8 +228,7 @@ def staged_quantization_main_worker(current_gpu, config):
     log_common_mlflow_params(config)
 
     if is_export_only:
-        export_model(compression_ctrl, config.to_onnx, config.no_strip_on_export)
-        logger.info(f"Saved to {config.to_onnx}")
+        export_model(compression_ctrl, config)
         return
 
     if config.execution_mode != ExecutionMode.CPU_ONLY:
@@ -264,8 +261,7 @@ def staged_quantization_main_worker(current_gpu, config):
         validate(val_loader, model, criterion, config)
 
     if "export" in config.mode:
-        export_model(compression_ctrl, config.to_onnx, config.no_strip_on_export)
-        logger.info(f"Saved to {config.to_onnx}")
+        export_model(compression_ctrl, config)
 
 
 def train_staged(
@@ -313,7 +309,7 @@ def train_staged(
         acc1 = best_acc1
         if epoch % config.test_every_n_epochs == 0:
             # evaluate on validation set
-            # pylint: disable=E1123
+
             acc1, _, _ = validate(val_loader, model, criterion, config, epoch=epoch)
 
         compression_stage = compression_ctrl.compression_stage()

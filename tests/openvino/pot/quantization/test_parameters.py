@@ -14,7 +14,7 @@ from openvino.tools.pot.algorithms.quantization.utils import load_hardware_confi
 from nncf.parameters import TargetDevice
 
 
-@pytest.mark.parametrize("target_device", TargetDevice)
+@pytest.mark.parametrize("target_device", [TargetDevice.ANY, TargetDevice.CPU, TargetDevice.CPU_SPR, TargetDevice.GPU])
 def test_target_device(target_device):
     config = {"target_device": target_device.value}
     assert load_hardware_config(config)

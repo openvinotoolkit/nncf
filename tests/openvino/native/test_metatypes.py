@@ -14,6 +14,7 @@ from collections import Counter
 import pytest
 
 import nncf.openvino.graph.metatypes.openvino_metatypes as ovm
+from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import DepthwiseConv4DModel
@@ -85,7 +86,7 @@ def test_determining_weights_port():
     nncf_graph = GraphConverter.create_nncf_graph(model)
     counter = 0
     for node in nncf_graph.get_all_nodes():
-        if node.metatype not in ovm.GENERAL_WEIGHT_LAYER_METATYPES:
+        if node.metatype not in OPERATIONS_WITH_WEIGHTS:
             continue
         if node.layer_attributes and node.layer_attributes.constant_attributes:
             counter += 1

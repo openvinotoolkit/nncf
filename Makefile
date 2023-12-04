@@ -1,16 +1,22 @@
 JUNITXML_PATH ?= nncf-tests.xml
-COVERAGE ?= --cov=./ --cov-report=xml
+
+ifdef NNCF_COVERAGE
+	COVERAGE_ARGS ?= --cov=./ --cov-report=xml
+else
+	COVERAGE_ARGS :=
+endif
 
 ifdef DATA
 	DATA_ARG := --data $(DATA)
 endif
 
+ifdef WEEKLY_MODELS
+	WEEKLY_MODELS_ARG := --weekly-models $(WEEKLY_MODELS)
+endif
+
 install-pre-commit:
 	pip install pre-commit==3.2.2
 
-install-pylint:
-	pip install pylint==2.13.9
-	pip install pylintfileheader==0.3.2
 
 ###############################################################################
 # ONNX backend
@@ -22,15 +28,12 @@ install-onnx-test:
 	pip install -r tests/cross_fw/examples/requirements.txt
 	pip install -r tests/onnx/benchmarking/requirements.txt
 
-install-onnx-dev: install-onnx-test install-pre-commit install-pylint
+install-onnx-dev: install-onnx-test install-pre-commit
 	pip install -r examples/post_training_quantization/onnx/mobilenet_v2/requirements.txt
 
 test-onnx:
-	pytest ${COVERAGE} tests/onnx $(DATA_ARG) --junitxml ${JUNITXML_PATH}
+	pytest ${COVERAGE_ARGS} tests/onnx $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
-pylint-onnx:
-	pylint --rcfile .pylintrc               \
-		$(shell python3 tools/collect_pylint_input_files_for_backend.py onnx)
 
 test-install-onnx:
 	pytest tests/cross_fw/install -s       \
@@ -47,11 +50,12 @@ test-examples-onnx:
 install-openvino-test:
 	pip install -U pip
 	pip install -e .[openvino]
+	pip install tensorflow==2.12.0
 	pip install -r tests/openvino/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/cross_fw/examples/requirements.txt
 
-install-openvino-dev: install-openvino-test install-pre-commit install-pylint
+install-openvino-dev: install-openvino-test install-pre-commit
 	pip install -r examples/experimental/openvino/bert/requirements.txt
 	pip install -r examples/experimental/openvino/yolo_v5/requirements.txt
 	pip install -r examples/post_training_quantization/openvino/mobilenet_v2/requirements.txt
@@ -60,11 +64,7 @@ install-openvino-dev: install-openvino-test install-pre-commit install-pylint
 	pip install -r examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/requirements.txt
 
 test-openvino:
-	pytest ${COVERAGE} tests/openvino $(DATA_ARG) --junitxml ${JUNITXML_PATH}
-
-pylint-openvino:
-	pylint --rcfile .pylintrc               \
-		$(shell  python3 tools/collect_pylint_input_files_for_backend.py openvino)
+	pytest ${COVERAGE_ARGS} tests/openvino $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
 test-install-openvino:
 	pytest tests/cross_fw/install -s        \
@@ -86,17 +86,13 @@ install-tensorflow-test:
 	pip install -r tests/cross_fw/examples/requirements.txt
 	pip install -r examples/tensorflow/requirements.txt
 
-install-tensorflow-dev: install-tensorflow-test install-pre-commit install-pylint
+install-tensorflow-dev: install-tensorflow-test install-pre-commit
 	pip install -r examples/post_training_quantization/tensorflow/mobilenet_v2/requirements.txt
 
 test-tensorflow:
-	pytest ${COVERAGE} tests/common tests/tensorflow    \
+	pytest ${COVERAGE_ARGS} tests/tensorflow    \
 		--junitxml ${JUNITXML_PATH}         \
 		$(DATA_ARG)
-
-pylint-tensorflow:
-	pylint --rcfile .pylintrc               \
-		$(shell python3 tools/collect_pylint_input_files_for_backend.py tensorflow)
 
 test-install-tensorflow:
 	pytest tests/cross_fw/install -s --backend tf --junitxml ${JUNITXML_PATH}
@@ -108,24 +104,33 @@ test-examples-tensorflow:
 # PyTorch backend
 install-torch-test:
 	pip install -U pip
-	pip install -e .[torch]
-	pip install -r tests/torch/requirements.txt
+	pip install -e .[torch] --index-url https://download.pytorch.org/whl/cu118 --extra-index-url=https://pypi.org/simple  # ticket 119128
+	pip install -r tests/torch/requirements.txt --index-url https://download.pytorch.org/whl/cu118 --extra-index-url=https://pypi.org/simple
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/cross_fw/examples/requirements.txt
-	pip install -r examples/torch/requirements.txt
+	pip install -r examples/torch/requirements.txt --index-url https://download.pytorch.org/whl/cu118 --extra-index-url=https://pypi.org/simple
 
-install-torch-dev: install-torch-test install-pre-commit install-pylint
+install-torch-dev: install-torch-test install-pre-commit
 	pip install -r examples/post_training_quantization/torch/mobilenet_v2/requirements.txt
 	pip install -r examples/post_training_quantization/torch/ssd300_vgg16/requirements.txt
 
-test-torch:
-	pytest ${COVERAGE} tests/common tests/torch --junitxml ${JUNITXML_PATH} $(DATA_ARG)
+install-models-hub-torch:
+	pip install -U pip
+	pip install -e .
+	pip install -r tests/torch/models_hub_test/requirements.txt
+	# Install wheel to run pip with --no-build-isolation
+	pip install wheel
+	pip install --no-build-isolation -r tests/torch/models_hub_test/requirements_secondary.txt
 
-COMMON_PYFILES := $(shell python3 tools/collect_pylint_input_files_for_backend.py common)
-pylint-torch:
-	pylint --rcfile .pylintrc   \
-		$(COMMON_PYFILES)       \
-		$(shell python3 tools/collect_pylint_input_files_for_backend.py torch)
+
+test-torch:
+	pytest ${COVERAGE_ARGS} tests/torch -m "not weekly and not nightly and not models_hub" --junitxml ${JUNITXML_PATH} $(DATA_ARG)
+
+test-torch-nightly:
+	pytest ${COVERAGE_ARGS} tests/torch -m nightly --junitxml ${JUNITXML_PATH} $(DATA_ARG)
+
+test-torch-weekly:
+	pytest ${COVERAGE_ARGS} tests/torch -m weekly --junitxml ${JUNITXML_PATH} $(DATA_ARG) ${WEEKLY_MODELS_ARG}
 
 test-install-torch-cpu:
 	pytest tests/cross_fw/install -s       \
@@ -143,6 +148,9 @@ test-examples-torch:
 		--backend torch                     \
 		--junitxml ${JUNITXML_PATH}
 
+test-models-hub-torch:
+	pytest tests/torch/models_hub_test --junitxml ${JUNITXML_PATH}
+
 ###############################################################################
 # Common part
 install-common-test:
@@ -152,12 +160,8 @@ install-common-test:
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/cross_fw/examples/requirements.txt
 
-pylint-common:
-	pylint --rcfile .pylintrc   \
-		$(COMMON_PYFILES)
-
 test-common:
-	pytest ${COVERAGE} tests/common $(DATA_ARG) --junitxml ${JUNITXML_PATH}
+	pytest ${COVERAGE_ARGS} tests/common $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
 test-examples:
 	pytest tests/cross_fw/examples -s --junitxml ${JUNITXML_PATH}

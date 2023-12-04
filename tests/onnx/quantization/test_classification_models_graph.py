@@ -15,8 +15,6 @@ import torch
 from torchvision import models
 
 from nncf.parameters import TargetDevice
-
-# pylint: disable=no-member
 from tests.onnx.conftest import ONNX_MODEL_DIR
 from tests.onnx.quantization.common import ModelToTest
 from tests.onnx.quantization.common import compare_nncf_graph

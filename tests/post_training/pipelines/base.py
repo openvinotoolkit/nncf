@@ -8,7 +8,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import datetime as dt
 import os
+import re
 import time
 from abc import ABC
 from abc import abstractmethod
@@ -23,12 +25,11 @@ import onnx
 import openvino.runtime as ov
 import torch
 from memory_profiler import memory_usage
+from openvino.tools.mo import convert_model
 from optimum.intel import OVQuantizer
-from torch import nn
 
 import nncf
 from nncf import TargetDevice
-from nncf.experimental.torch.quantization.quantize_model import quantize_impl as pt_impl_experimental
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from tests.shared.command import Command
 
@@ -37,17 +38,20 @@ DEFAULT_VAL_THREADS = 4
 
 class BackendType(Enum):
     FP32 = "FP32"
-    OLD_TORCH = "OLD_TORCH"  # Quantization via create_compressed_model
-    TORCH = "TORCH"  # PTQ implementation
+    TORCH = "TORCH"
+    CUDA_TORCH = "CUDA_TORCH"
     ONNX = "ONNX"
     OV = "OV"
     POT = "POT"
     OPTIMUM = "OPTIMUM"
 
 
-ALL_NNCF_PTQ_BACKENDS = [BackendType.OLD_TORCH, BackendType.TORCH, BackendType.ONNX, BackendType.OV, BackendType.POT]
-PT_BACKENDS = [BackendType.TORCH, BackendType.OLD_TORCH]
+NNCF_PTQ_BACKENDS = [BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.ONNX, BackendType.OV]
+ALL_PTQ_BACKENDS = NNCF_PTQ_BACKENDS + [BackendType.POT]
+PT_BACKENDS = [BackendType.TORCH, BackendType.CUDA_TORCH]
 OV_BACKENDS = [BackendType.OV, BackendType.POT, BackendType.OPTIMUM]
+
+LIMIT_LENGTH_OF_STATUS = 120
 
 
 @dataclass
@@ -66,6 +70,10 @@ class RunInfo:
     time_total: Optional[float] = None
     time_quantization: Optional[float] = None
     status: Optional[str] = None
+    fps: Optional[float] = None
+    time_stat_collection: Optional[str] = None
+    time_bias_correction: Optional[str] = None
+    time_validation: Optional[str] = None
 
     @staticmethod
     def format_time(time_elapsed):
@@ -89,28 +97,13 @@ class RunInfo:
             "Num FQ": self.num_fq_nodes,
             "RAM MiB": self.format_memory_usage(self.quant_memory_usage),
             "Quant. time": self.format_time(self.time_quantization),
+            "Stat. collection time": self.time_stat_collection,
+            "Bias correction time": self.time_bias_correction,
+            "Validation time": self.time_validation,
             "Total time": self.format_time(self.time_total),
-            "Status": self.status,
+            "FPS": self.fps,
+            "Status": self.status[:LIMIT_LENGTH_OF_STATUS] if self.status is not None else None,
         }
-
-
-def export_to_onnx(model: nn.Module, save_path: str, data_sample: torch.Tensor) -> None:
-    """
-    Export Torch model to ONNX format.
-    """
-    torch.onnx.export(model, data_sample, save_path, export_params=True, opset_version=13, do_constant_folding=False)
-
-
-def export_to_ir(model_path: str, save_path: str, model_name: str) -> None:
-    """
-    Export ONNX model to OpenVINO format.
-
-    :param model_path: Path to ONNX model.
-    :param save_path: Path directory to save OpenVINO IR model.
-    :param model_name: Model name.
-    """
-    runner = Command(f"mo -m {model_path} -o {save_path} -n {model_name}")
-    runner.run()
 
 
 class BaseTestPipeline(ABC):
@@ -127,18 +120,21 @@ class BaseTestPipeline(ABC):
         output_dir: Path,
         data_dir: Path,
         reference_data: dict,
+        no_eval: bool,
+        run_benchmark_app: bool,
         params: dict = None,
     ) -> None:
         self.reported_name = reported_name
         self.model_id = model_id
         self.backend = backend
         self.ptq_params = ptq_params
-        self.output_dir = Path(output_dir)
-        self.data_dir = Path(data_dir)
+        self.output_dir = output_dir
+        self.data_dir = data_dir
         self.reference_data = reference_data
         self.params = params or {}
-
-        self.output_model_dir = self.output_dir / self.reported_name / self.backend.value
+        self.no_eval = no_eval
+        self.run_benchmark_app = run_benchmark_app
+        self.output_model_dir: Path = self.output_dir / self.reported_name / self.backend.value
         self.output_model_dir.mkdir(parents=True, exist_ok=True)
         self.model_name = f"{self.reported_name}_{self.backend.value}"
 
@@ -146,6 +142,7 @@ class BaseTestPipeline(ABC):
         self.model_hf = None
         self.calibration_dataset = None
         self.dummy_tensor = None
+        self.input_size = None
 
         self.run_info = RunInfo(model=reported_name, backend=self.backend)
 
@@ -185,23 +182,12 @@ class BaseTestPipeline(ABC):
             quantizer = OVQuantizer.from_pretrained(self.model_hf)
             quantizer.quantize(calibration_dataset=self.calibration_dataset, save_directory=self.output_model_dir)
         else:
-            quantize_fn = nncf.quantize
-            if self.backend == BackendType.TORCH:
-                # Use experimental torch api
-                quantize_fn = pt_impl_experimental
-                if "preset" not in self.ptq_params:
-                    self.ptq_params["preset"] = nncf.QuantizationPreset.PERFORMANCE
-                if "subset_size" not in self.ptq_params:
-                    self.ptq_params["subset_size"] = 300
-                if "fast_bias_correction" not in self.ptq_params:
-                    self.ptq_params["fast_bias_correction"] = True
-
             if self.backend == BackendType.POT:
                 self.ptq_params["advanced_parameters"] = AdvancedQuantizationParameters(
                     backend_params={"use_pot": True}
                 )
 
-            self.quantized_model = quantize_fn(
+            self.quantized_model = nncf.quantize(
                 model=self.model,
                 target_device=TargetDevice.CPU,
                 calibration_dataset=self.calibration_dataset,
@@ -212,9 +198,14 @@ class BaseTestPipeline(ABC):
         """
         Run quantization of the model and collect time and memory usage information.
         """
+        if self.backend == BackendType.FP32:
+            # To validate not quantized model
+            self.path_quantized_ir = self.output_model_dir / "model_fp32.xml"
+            return
+
         print("Quantization...")
 
-        if self.backend in [BackendType.TORCH, BackendType.OLD_TORCH]:
+        if self.backend in PT_BACKENDS:
             cpu_threads_num = os.environ.get("CPU_THREADS_NUM")
             if cpu_threads_num is not None:
                 torch.set_num_threads(int(cpu_threads_num))
@@ -231,15 +222,17 @@ class BaseTestPipeline(ABC):
         if self.backend == BackendType.OPTIMUM:
             self.path_quantized_ir = self.output_model_dir / "openvino_model.xml"
         elif self.backend in PT_BACKENDS:
-            onnx_path = self.output_model_dir / "model.onnx"
-            export_to_onnx(self.quantized_model, str(onnx_path), self.dummy_tensor)
-            export_to_ir(onnx_path, self.output_model_dir, model_name="model")
+            ov_model = convert_model(
+                self.quantized_model.cpu(), example_input=self.dummy_tensor.cpu(), input_shape=self.input_size
+            )
             self.path_quantized_ir = self.output_model_dir / "model.xml"
+            ov.serialize(ov_model, self.path_quantized_ir)
         elif self.backend == BackendType.ONNX:
             onnx_path = self.output_model_dir / "model.onnx"
             onnx.save(self.quantized_model, str(onnx_path))
-            export_to_ir(onnx_path, str(self.output_model_dir), model_name="model")
+            ov_model = convert_model(onnx_path)
             self.path_quantized_ir = self.output_model_dir / "model.xml"
+            ov.serialize(ov_model, self.path_quantized_ir)
         elif self.backend in OV_BACKENDS:
             self.path_quantized_ir = self.output_model_dir / "model.xml"
             ov.serialize(self.quantized_model, str(self.path_quantized_ir))
@@ -260,6 +253,21 @@ class BaseTestPipeline(ABC):
 
         self.run_info.num_fq_nodes = num_fq
 
+    def run_bench(self) -> None:
+        """
+        Run benchmark_app to collect performance statistics.
+        """
+        if not self.run_benchmark_app:
+            return
+        runner = Command(f"benchmark_app -m {self.path_quantized_ir}")
+        runner.run(stdout=False)
+        cmd_output = " ".join(runner.output)
+
+        match = re.search(r"Throughput\: (.+?) FPS", cmd_output)
+        if match is not None:
+            fps = match.group(1)
+            self.run_info.fps = float(fps)
+
     @abstractmethod
     def _validate(self) -> None:
         """Validate IR"""
@@ -268,7 +276,11 @@ class BaseTestPipeline(ABC):
         """
         Validate and compare result with reference
         """
+        if self.no_eval:
+            print("Validation skipped")
+            return
         print("Validation...")
+
         self._validate()
 
         metric_value = self.run_info.metric_value
@@ -297,6 +309,64 @@ class BaseTestPipeline(ABC):
         self.save_quantized_model()
         self.get_num_fq()
         self.validate()
+        self.run_bench()
+        self.cleanup_torchscript_cache()
+
+    @staticmethod
+    def cleanup_torchscript_cache():
+        """
+        Helper for removing cached model representation.
+
+        After run torch.jit.trace in convert_model, PyTorch does not clear the trace cache automatically.
+        """
+
+        torch._C._jit_clear_class_registry()
+        torch.jit._recursive.concrete_type_store = torch.jit._recursive.ConcreteTypeStore()
+        torch.jit._state._clear_class_state()
 
     def get_run_info(self) -> RunInfo:
         return self.run_info
+
+    def collect_data_from_stdout(self, stdout: str):
+        """
+        Parsing stdout of the test and collect additional data:
+         - time of statistic collection
+         - time of bias correction
+         - time of validation
+
+        :param stdout: stdout text
+        """
+        time_validation = None
+        time_bias_correction = None
+        time_stat_collection = None
+
+        for line in stdout.splitlines():
+            print(line)
+            match = re.search(r"Statistics\scollection.*•\s(.*)\s•.*", line)
+            if match:
+                if time_stat_collection is None:
+                    time_stat_collection = dt.datetime.strptime(match.group(1), "%H:%M:%S")
+                else:
+                    time = dt.datetime.strptime(match.group(1), "%H:%M:%S")
+                    time_stat_collection += dt.timedelta(hours=time.hour, minutes=time.minute, seconds=time.second)
+                continue
+
+            match = re.search(r"Applying.*correction.*\/(\d+)\s•\s(.*)\s•.*", line)
+            if match:
+                if time_bias_correction is None:
+                    time_bias_correction = dt.datetime.strptime(match.group(2), "%H:%M:%S")
+                else:
+                    time_bias_correction += dt.datetime.strptime(match.group(2), "%H:%M:%S")
+                continue
+
+            match = re.search(r"Validation.*\/\d+\s•\s(.*)\s•.*", line)
+            if match:
+                time_validation = dt.datetime.strptime(match.group(1), "%H:%M:%S")
+                continue
+
+        if time_stat_collection:
+            self.run_info.time_stat_collection = time_stat_collection.strftime("%H:%M:%S")
+        if time_bias_correction:
+            self.run_info.time_bias_correction = time_bias_correction.strftime("%H:%M:%S")
+        if time_validation:
+            self.run_info.time_validation = time_validation.strftime("%H:%M:%S")

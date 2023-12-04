@@ -12,11 +12,13 @@
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 from nncf.api.compression import TModel
+from nncf.common.factory import NNCFGraphFactory
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
+from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -24,8 +26,9 @@ from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParame
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResults
 from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
-from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_quantization_param_grid
-from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_quantization_param_grids
+from nncf.quantization.algorithms.post_training.pipeline import create_ptq_pipeline
+from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.scopes import IgnoredScope
 
 TTensor = TypeVar("TTensor")
@@ -35,7 +38,7 @@ TTensor = TypeVar("TTensor")
 def quantize(
     model: TModel,
     calibration_dataset: Dataset,
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
@@ -51,18 +54,19 @@ def quantize(
     :param calibration_dataset: A representative dataset for the
         calibration process.
     :type  calibration_dataset: nncf.Dataset
-    :param preset: A preset that controls the quantization mode
-        (symmetric and asymmetric). It can take the following values:
+    :param preset: A preset controls the quantization mode (symmetric and asymmetric).
+        It can take the following values:
         - `performance`: Symmetric quantization of weights and activations.
-        - `mixed`: Symmetric quantization of weights and asymmetric
-          quantization of activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
+        Default value is None. In this case, `mixed` preset is used for `transformer`
+        model type otherwise `performance`.
     :type  preset: nncf.QuantizationPreset
     :param target_device: A target device the specificity of which will be taken
         into account while compressing in order to obtain the best performance
         for this type of device.
     :type  target_device: nncf.TargetDevice
-    :param subset_size: Size of a subset to calculate activations
-        statistics used for quantization.
+    :param subset_size: Size of a subset to calculate activations statistics used for quantization.
+        Must be positive.
     :param fast_bias_correction: Setting this option to `False` enables a different
         bias correction method which is more accurate, in general, and takes
         more time but requires less memory.
@@ -77,6 +81,10 @@ def quantize(
     :return: The quantized model.
     :rtype: TModel
     """
+
+    if subset_size < 1:
+        raise ValueError("Subset size must be positive.")
+
     backend = get_backend(model)
     if backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.quantize_model import quantize_impl
@@ -149,7 +157,7 @@ def quantize_with_accuracy_control(
     validation_fn: Callable[[Any, Iterable[Any]], float],
     max_drop: float = 0.01,
     drop_type: DropType = DropType.ABSOLUTE,
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
@@ -176,7 +184,12 @@ def quantize_with_accuracy_control(
     :param max_drop: The maximum accuracy drop that should be achieved after the quantization.
     :param drop_type: The accuracy drop type, which determines how the maximum accuracy
         drop between the original model and the compressed model is calculated.
-    :param preset: A preset that controls the quantization mode.
+    :param preset: A preset controls the quantization mode (symmetric and asymmetric).
+        It can take the following values:
+        - `performance`: Symmetric quantization of weights and activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
+        Default value is None. In this case, `mixed` preset is used for `transformer`
+        model type otherwise `performance`.
     :type preset: nncf.QuantizationPreset
     :param target_device: A target device the specificity of which will be taken
         into account while compressing in order to obtain the best performance
@@ -226,24 +239,60 @@ def quantize_with_accuracy_control(
 
 
 @api(canonical_alias="nncf.compress_weights")
-def compress_weights(model: TModel, use_fake_quantize: bool = False) -> TModel:
+def compress_weights(
+    model: TModel,
+    mode=CompressWeightsMode.INT8,
+    ratio: Optional[float] = None,
+    group_size: Optional[int] = None,
+    ignored_scope: Optional[IgnoredScope] = None,
+) -> TModel:
     """
     Compress model weights.
 
     :param model: A model to be compressed.
-    :param use_fake_quantize: Disables real compression of weights in Linear and Embedding layers.
-        If True inserts fake quantization operations,
-        else compress weights to int8 and inserts custom dequantization.
-    :return: The model with compressed weight and dequantization or model with original weights and fake quantization.
-        Not trainable.
+    :param mode: Defines a mode for weight compression.
+        INT8 stands for 8-bit integer quantization of all weights.
+        INT4_SYM stands for a mixed-precision weights quantization with 4-bit integer as a primary precision.
+            Weights are quantized to a primary precision symmetrically with a fixed zero point equals to 8.
+            All embeddings and the last layer are always compressed to a backup precision, which is 8-bit integer,
+            by default. All others are quantized whether to 4-bit integer or to a backup precision depending on
+            criteria and the given ratio.
+        INT4_ASYM is the same as INT4_SYM mode, but weights are quantized to a primary precision asymmetrically
+            with a typical non-fixed zero point.
+        NF4 is the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
+    :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
+        and the rest to INT8).
+    :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
+        The value -1 means no grouping.
+    :param ignored_scope: An ignored scope that defined the list of model control
+        flow graph nodes to be ignored during quantization.
+    :return: The non-trainable model with compressed weights.
     """
+    if mode == CompressWeightsMode.INT8:
+        if ratio is None:
+            ratio = 1
+        if group_size is None:
+            group_size = -1
+        if ratio != 1 or group_size != -1:
+            raise AttributeError(
+                "INT8 mode assumes per-channel quantization of all layers in 8 bit. "
+                "Default values of `ratio` (1) and `group_size` (-1) parameters can not be overridden"
+            )
+    else:
+        if ratio is None:
+            ratio = 1
+        if group_size is None:
+            group_size = 128
+
     backend = get_backend(model)
     if backend == BackendType.TORCH:
-        import nncf.torch
+        from nncf.torch.quantization.quantize_model import compress_weights_impl
 
-        return nncf.torch.compress_weights(model, use_fake_quantize)
+        return compress_weights_impl(model, mode, ratio, group_size, ignored_scope)
 
-    raise RuntimeError(f"Unsupported type of backend: {backend}")
+    compression_algorithm = WeightCompression(mode, ratio, group_size, ignored_scope)
+    graph = NNCFGraphFactory.create(model)
+    return compression_algorithm.apply(model, graph)
 
 
 def quantize_with_tune_hyperparams(
@@ -254,7 +303,7 @@ def quantize_with_tune_hyperparams(
     initial_metric_results: MetricResults,
     quantized_metric_results: MetricResults,
     tuner_subset_size: int = 300,
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+    preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
@@ -272,7 +321,12 @@ def quantize_with_tune_hyperparams(
     :param initial_metric_results: Initial metric results.
     :param quantized_metric_results: Quantized metric results.
     :param tuner_subset_size: Tuner subset size.
-    :param preset: A preset that controls the quantization mode.
+    :param preset: A preset controls the quantization mode (symmetric and asymmetric).
+        It can take the following values:
+        - `performance`: Symmetric quantization of weights and activations.
+        - `mixed`: Symmetric quantization of weights and asymmetric quantization of activations.
+        Default value is None. In this case, `mixed` preset is used for `transformer`
+        model type otherwise `performance`.
     :param target_device: A target device the specificity of which will be taken
         into account while compressing in order to obtain the best performance
         for this type of device.
@@ -299,12 +353,12 @@ def quantize_with_tune_hyperparams(
         "advanced_parameters": advanced_quantization_parameters,
     }
 
-    quantization_param_grid = get_quantization_param_grid()
+    param_grids = get_quantization_param_grids(create_ptq_pipeline(**init_quantization_params))
 
     hyperparameter_tuner = HyperparameterTuner(
-        PostTrainingQuantization,
+        create_ptq_pipeline,
         init_quantization_params,
-        quantization_param_grid,
+        param_grids,
         calibration_dataset,
         validation_fn,
         tuner_subset_size,

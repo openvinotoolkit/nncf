@@ -24,7 +24,6 @@ from pymoo.operators.repair.rounding import RoundingRepair
 from pymoo.operators.sampling.rnd import IntegerRandomSampling
 from pymoo.optimize import minimize
 from torch.utils.data.dataloader import DataLoader
-from torch.utils.tensorboard import SummaryWriter
 
 from nncf import NNCFConfig
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
@@ -46,6 +45,16 @@ from nncf.torch.nncf_network import NNCFNetwork
 DataLoaderType = TypeVar("DataLoaderType")
 TModel = TypeVar("TModel")
 ValFnType = Callable[[TModel, DataLoaderType], float]
+
+
+class FixIntegerRandomSampling(IntegerRandomSampling):
+    """
+    Wrapper for the IntegerRandomSampling with the fix for https://github.com/anyoptimization/pymoo/issues/388.
+    """
+
+    def _do(self, problem, n_samples, **kwargs):
+        n, (xl, xu) = problem.n_var, problem.bounds()
+        return np.column_stack([np.random.randint(xl[k], xu[k] + 1, size=(n_samples)) for k in range(n)])
 
 
 class EvolutionaryAlgorithms(Enum):
@@ -164,7 +173,7 @@ class BaseSearchAlgorithm:
         checkpoint_save_dir: str,
         efficiency_evaluator: Optional[BaseEvaluator] = None,
         ref_acc: Optional[float] = 100,
-        tensorboard_writer: Optional[SummaryWriter] = None,
+        tensorboard_writer: Optional["SummaryWriter"] = None,  # noqa: F821
     ) -> Tuple[ElasticityController, SubnetConfig, Tuple[float, ...]]:
         """This method should implement how to run the search algorithm."""
 
@@ -207,7 +216,7 @@ class SearchAlgorithm(BaseSearchAlgorithm):
         if evo_algo == EvolutionaryAlgorithms.NSGA2.value:
             self._algorithm = NSGA2(
                 pop_size=self.search_params.population,
-                sampling=IntegerRandomSampling(),
+                sampling=FixIntegerRandomSampling(),
                 crossover=SBX(
                     prob=self.search_params.crossover_prob,
                     eta=self.search_params.crossover_eta,
@@ -319,7 +328,7 @@ class SearchAlgorithm(BaseSearchAlgorithm):
         checkpoint_save_dir: str,
         efficiency_evaluator: Optional[BaseEvaluator] = None,
         ref_acc: Optional[float] = 100,
-        tensorboard_writer: Optional[SummaryWriter] = None,
+        tensorboard_writer: Optional["SummaryWriter"] = None,  # noqa: F821
         evaluator_checkpoint=None,
     ) -> Tuple[ElasticityController, SubnetConfig, Tuple[float, ...]]:
         """

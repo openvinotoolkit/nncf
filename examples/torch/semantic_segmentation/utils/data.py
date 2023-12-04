@@ -101,7 +101,7 @@ def remap(image, old_values, new_values):
         # equal to 0
         if new != 0:
             # See Pylint issue #2721
-            # pylint: disable=unsupported-assignment-operation
+
             tmp[image == old] = new
 
     return Image.fromarray(tmp)
@@ -303,7 +303,7 @@ def label_to_color(label, class_encoding):
 
 def color_to_label(color_labels: Image, class_encoding: OrderedDict):
     color_labels = np.array(color_labels.convert("RGB"))
-    # pylint: disable=unsubscriptable-object
+
     labels = np.zeros((color_labels.shape[0], color_labels.shape[1]), dtype=np.int64)
 
     red = color_labels[..., 0]

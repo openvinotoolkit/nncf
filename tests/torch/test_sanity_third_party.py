@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint:disable=no-name-in-module
+
 import os
 import subprocess
 import sys
@@ -112,7 +112,6 @@ class TransformersVirtualEnvInstaller:
         pip_runner.run_pip("install -e .", cwd=PROJECT_ROOT)
 
 
-# pylint:disable=redefined-outer-name
 class TestTransformers:
     @pytest.fixture(autouse=True)
     def setup(self, temp_folder):

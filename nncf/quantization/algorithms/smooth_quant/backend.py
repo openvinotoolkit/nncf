@@ -19,20 +19,38 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
-from nncf.common.utils.registry import Registry
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
-ALGO_BACKENDS = Registry("algo_backends")
 
 
 class SmoothQuantAlgoBackend(ABC):
     @property
     @abstractmethod
-    def weighted_metatypes(self) -> List[OperatorMetatype]:
+    def convolution_metatype(self) -> OperatorMetatype:
         """
-        Property for the backend-specific metatypes.
+        Parameter for backend-specific metatype for Convolution.
+
+        :return: OperatorMetatype
+        """
+
+    @property
+    @abstractmethod
+    def matmul_metatype(self) -> OperatorMetatype:
+        """
+        Parameter for backend-specific metatype for MatMul.
+
+        :return: OperatorMetatype
+        """
+
+    @property
+    @abstractmethod
+    def quantize_agnostic_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Parameter for backend-specific quantize agnostic metatypes.
+
+        :return: List of OperatorMetatype.
         """
 
     @staticmethod
@@ -54,7 +72,7 @@ class SmoothQuantAlgoBackend(ABC):
         Checks whether the node with weights or not.
 
         :param node: NNCFNode to check.
-        :return: boolean indicating whether the node has weights or not.
+        :return: Boolean indicating whether the node has weights or not.
         """
 
     @staticmethod
@@ -70,25 +88,24 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def calculate_input_reduction_shape(nncf_graph: NNCFGraph, node: NNCFNode, input_port: int) -> Tuple[int]:
+    def get_channel_agnostic_reduction_axes(channel_axis: int, shape: Tuple[int]) -> Tuple[int]:
         """
-        Returns reduction shape for specified input.
+        Returns filtered reduction axes without axes that corresponds channels.
 
-        :param nncf_graph: NNCFGraph instance.
-        :param node: NNCFNode to check.
-        :param input_port: Specified input port id.
-        :return: Calculated reduction shape.
+        :param channel_axes: List of the channel axes.
+        :param shape: Shape that need to be filtered.
+        :return: Reduction axes in tuple format.
         """
 
     @staticmethod
     @abstractmethod
     def get_abs_max_channel_collector(
-        num_samples: int, stats_reduction_shape: Tuple[int], inplace: bool, branch_key: str
+        num_samples: int, stats_reduction_axes: Tuple[int], inplace: bool, branch_key: str
     ) -> TensorCollector:
         """
         Returns TensorCollector with MaxAggregator and AbsMaxReducer.
 
-        :param stats_reduction_shape: Calculated reduction shape.
+        :param stats_reduction_axes: Calculated reduction axes.
         :param inplace: Whether to calculate statistic inplace or not.
         :param branch_key: Specific string for branch key.
         :return: TensorCollector instance.
@@ -96,14 +113,13 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_statistics(node: NNCFNode, model: TModel, port_id: int) -> TTensor:
+    def process_weight_statistics(weights: TTensor, channel_axis: int) -> TTensor:
         """
         Returns processed weight statistics for node.
 
-        :param node: NNCFNode to check.
-        :param model: Backend-specific model.
-        :param port_id: Weight port id.
-        :return: Weight statistics for node.
+        :param weights: Weights tensor.
+        :param channel_axis: Channel axis for calculation.
+        :return: Weight statistics.
         """
 
     @staticmethod
@@ -155,24 +171,26 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def calculate_activation_scale(scale_value: TTensor, nodes: List[NNCFNode]) -> TTensor:
+    def calculate_activation_scale(scale_value: TTensor, activations_size: int, channel_axis: int) -> TTensor:
         """
         Calculates activation scales for Smooth node.
 
         :param scale_value: Base scale value.
-        :param nodes: List of consumers for Smooth node.
-        :return: Calculated per-channel activation scale.
+        :param activations_size: Size of the activation shape.
+        :param channel_axis: Axis for shape calculation.
+        :return: Calculated activation scale.
         """
 
     @staticmethod
     @abstractmethod
-    def calculate_weight_scale(scale_value: TTensor, nodes: List[NNCFNode]) -> TTensor:
+    def calculate_weight_scale(scale_value: TTensor, weights_size: int, channel_axis: int) -> TTensor:
         """
-        Calculates scales for weight tensor.
+        Calculates scale for weight tensor.
 
         :param scale_value: Base scale value.
-        :param nodes: List of consumers for Smooth node.
-        :return: Calculated per-channel scale for weights.
+        :param weights_size: Size of the weights shape.
+        :param channel_axis: Axis for shape calculation.
+        :return: Calculated scale for weights.
         """
 
     @staticmethod
@@ -202,4 +220,37 @@ class SmoothQuantAlgoBackend(ABC):
         :param port_id: Output port for source node.
         :param nodes: List of consumers for Smooth node.
         :return: TransformationCommand instance.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
+        """
+        Returns axis number of the activation tensor which correspond to it channel.
+
+        :param node: NNCFNode instance.
+        :param port_id: Specified input port id.
+        :return: Channel axis number.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_weight_channel_axis(node: NNCFNode, port_id: int) -> int:
+        """
+        Returns axis number of the weight tensor which correspond to it channel.
+
+        :param node: NNCFNode instance.
+        :param port_id: Specified input port id.
+        :return: Channel axis number.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def calculate_port_based_channel_axis(port_id: int, transpose: bool) -> int:
+        """
+        Returns port-based channel axis.
+
+        :param port_id: Specified input port id.
+        :param transpose: Transpose position.
+        :return: Channel axis.
         """

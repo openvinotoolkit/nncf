@@ -23,7 +23,7 @@ from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.initialization.range import RangeInitParams
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.scopes import should_consider_scope
-from nncf.common.tensor_statistics.collectors import ReductionShape
+from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.config.schemata.defaults import MAX_PERCENTILE
 from nncf.config.schemata.defaults import MIN_PERCENTILE
@@ -63,7 +63,7 @@ class TFRangeInitParams(RangeInitParams):
         return self.get_init_config_for_scope_and_group(node_name, group)
 
     def get_init_config_for_scope_and_group(self, node_name: str, group: QuantizerGroup) -> RangeInitConfig:
-        matches = []  # type: List[RangeInitConfig]
+        matches: List[RangeInitConfig] = []
         for pl_config in self.per_layer_range_init_configs:
             if should_consider_scope(
                 node_name, ignored_scopes=pl_config.ignored_scopes, target_scopes=pl_config.target_scopes
@@ -99,7 +99,7 @@ class RangeInitializer:
 
     @staticmethod
     def generate_stat_collector(
-        reduction_shape: ReductionShape,
+        reduction_shape: ReductionAxes,
         collector_params: RangeInitCollectorParams,
         init_config: RangeInitConfig,
         num_samples_to_collect_override: int = None,

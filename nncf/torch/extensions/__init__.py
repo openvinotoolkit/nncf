@@ -101,7 +101,6 @@ class ExtensionNamespace:
                     async_result = pool.apply_async(self._loader.load)
                     self._loaded_namespace = async_result.get(timeout=timeout)
                 except MPTimeoutError as error:
-                    # pylint: disable=line-too-long
                     msg = textwrap.dedent(
                         f"""\
                         The extension load function failed to execute within {timeout} seconds.
@@ -113,7 +112,7 @@ class ExtensionNamespace:
                         Or disable timeout by set:
                             {EXTENSION_LOAD_TIMEOUT_ENV_VAR}=0
                         For more information, see FAQ entry at: https://github.com/openvinotoolkit/nncf/blob/develop/docs/FAQ.md#importing-anything-from-nncftorch-hangs
-                        """
+                        """  # noqa: E501
                     )
                     raise ExtensionLoaderTimeoutException(msg) from error
 

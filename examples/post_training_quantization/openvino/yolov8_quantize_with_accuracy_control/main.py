@@ -15,17 +15,18 @@ from pathlib import Path
 from typing import Any, Dict, Tuple
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 import torch
 from tqdm import tqdm
-from ultralytics import YOLO
-from ultralytics.yolo.cfg import get_cfg
-from ultralytics.yolo.data.utils import check_det_dataset
-from ultralytics.yolo.engine.validator import BaseValidator as Validator
-from ultralytics.yolo.utils import DATASETS_DIR
-from ultralytics.yolo.utils import DEFAULT_CFG
-from ultralytics.yolo.utils import ops
-from ultralytics.yolo.utils.metrics import ConfusionMatrix
+from ultralytics.cfg import get_cfg
+from ultralytics.data.converter import coco80_to_coco91_class
+from ultralytics.data.utils import check_det_dataset
+from ultralytics.engine.validator import BaseValidator as Validator
+from ultralytics.models.yolo import YOLO
+from ultralytics.utils import DATASETS_DIR
+from ultralytics.utils import DEFAULT_CFG
+from ultralytics.utils import ops
+from ultralytics.utils.metrics import ConfusionMatrix
 
 import nncf
 
@@ -91,17 +92,17 @@ def print_statistics(stats: np.ndarray, total_images: int, total_objects: int) -
 
 
 def prepare_validation(model: YOLO, args: Any) -> Tuple[Validator, torch.utils.data.DataLoader]:
-    validator = model.ValidatorClass(args)
+    validator = model.smart_load("validator")(args)
     validator.data = check_det_dataset(args.data)
     dataset = validator.data["val"]
     print(f"{dataset}")
 
     data_loader = validator.get_dataloader(f"{DATASETS_DIR}/coco128-seg", 1)
 
-    validator = model.ValidatorClass(args)
+    validator = model.smart_load("validator")(args)
 
     validator.is_coco = True
-    validator.class_map = ops.coco80_to_coco91_class()
+    validator.class_map = coco80_to_coco91_class()
     validator.names = model.model.names
     validator.metrics.names = validator.names
     validator.nc = model.model.model[-1].nc
@@ -221,7 +222,7 @@ def main():
     quantized_model = quantize_ac(ov_model, data_loader, validator)
 
     quantized_model_path = Path(f"{ROOT}/{MODEL_NAME}_openvino_model/{MODEL_NAME}_quantized.xml")
-    ov.serialize(quantized_model, str(quantized_model_path))
+    ov.save_model(quantized_model, str(quantized_model_path), compress_to_fp16=False)
 
     # Validate FP32 model
     fp_stats, total_images, total_objects = validate(ov_model, tqdm(data_loader), validator)

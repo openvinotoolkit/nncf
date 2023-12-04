@@ -116,7 +116,6 @@ class SearchGraph:
         self._nx_graph = nx_merged_graph
         old_merged_graph_nodes = deepcopy(self._nx_graph._node)
         for node_key in old_merged_graph_nodes:
-            # pylint: disable=protected-access
             next_nodes = self._nx_graph._succ[node_key]
             if len(list(next_nodes)) > 1:
                 self._insert_dummy_node(node_key)
@@ -183,7 +182,6 @@ class SearchGraph:
         return self._nx_graph.succ[node_key]
 
     def _insert_dummy_node(self, node_key: str):
-        # pylint: disable=protected-access
         next_nodes = deepcopy(self._nx_graph._succ[node_key])
         dummy_node_attr = {SearchGraph.IS_DUMMY_NODE_ATTR: True}
         node_key_attr = deepcopy(self._nx_graph._node[node_key])
@@ -256,7 +254,7 @@ def get_merged_original_graph_with_pattern(orig_graph: nx.DiGraph, hw_fused_ops:
     merged_graph = orig_graph
     if not hw_fused_ops:
         return merged_graph
-    # pylint: disable=protected-access
+
     pattern_fusing_graph = PatternsManager.get_full_hw_pattern_graph(backend=BackendType.TORCH, device=TargetDevice.ANY)
     matches = find_subgraphs_matching_pattern(orig_graph, pattern_fusing_graph)
     nx.set_node_attributes(merged_graph, False, SearchGraph.IS_DUMMY_NODE_ATTR)
@@ -282,7 +280,7 @@ def get_merged_original_graph_with_pattern(orig_graph: nx.DiGraph, hw_fused_ops:
         for node_key in match:
             attrs = orig_graph.nodes[node_key]
             merged_node_key += str(attrs["id"]) + " " + attrs[SearchGraph.TYPE_NODE_ATTR] + "  "
-            # pylint: disable=protected-access
+
             merged_nodes.append(orig_graph.nodes[node_key])
             merged_graph.remove_node(node_key)
             type_list.append(attrs[SearchGraph.TYPE_NODE_ATTR])
@@ -301,7 +299,6 @@ def get_merged_original_graph_with_pattern(orig_graph: nx.DiGraph, hw_fused_ops:
     return merged_graph
 
 
-# pylint:disable=too-many-branches
 def check_graph_has_no_hanging_edges_after_block_removal(
     graph: SearchGraph, first_skipped_node: SearchGraphNode, end_node: SearchGraphNode
 ) -> bool:
@@ -375,7 +372,6 @@ def check_graph_has_no_duplicate_edges_after_block_removal(
     #        \ /             D
     #         D          forbidden
 
-    # pylint: disable=protected-access
     if first_skipped_node.is_dummy:
         next_end_node = sgraph.get_next_nodes(end_node.node_key)
         if len(next_end_node) != 0:

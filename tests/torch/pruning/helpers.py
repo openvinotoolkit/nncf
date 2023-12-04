@@ -24,8 +24,6 @@ from tests.torch.helpers import create_transpose_conv
 from tests.torch.helpers import fill_linear_weight
 from tests.torch.test_models.pnasnet import CellB
 
-# pylint: disable=too-many-lines
-
 
 class PruningTestModel(nn.Module):
     CONV_1_NODE_NAME = "PruningTestModel/NNCFConv2d[conv1]/conv2d_0"

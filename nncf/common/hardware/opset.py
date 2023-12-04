@@ -57,3 +57,5 @@ class HWConfigOpName:
     GELU = "Gelu"
     LSTMSEQUENCE = "LSTMSequence"
     GRUSEQUENCE = "GRUSequence"
+    GROUPNORMALIZATION = "GroupNormalization"
+    SCALED_DOT_PRODUCT_ATTENTION = "ScaledDotProductAttention"

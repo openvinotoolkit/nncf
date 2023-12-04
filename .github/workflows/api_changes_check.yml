@@ -18,7 +18,7 @@ jobs:
       ref: "refs/pull/${{ github.event.number }}/merge"
   compare-api-doc-with-develop:
     needs: call-build-api-doc
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     permissions:
       issues: write
     steps:
@@ -60,4 +60,16 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               labels: ["API"]
+            })
+      - name: Add release label
+        uses: actions/github-script@v6
+        if: ${{ contains(github.event.pull_request.base.ref, 'release_v') }}
+        with:
+          github-token: ${{ secrets.ADD_LABELS_WITH_REST_API }}
+          script: |
+            github.rest.issues.addLabels({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ["release_target"]
             })

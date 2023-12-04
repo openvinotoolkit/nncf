@@ -11,7 +11,7 @@
 import random
 from collections import OrderedDict
 from contextlib import contextmanager
-from typing import Any, Dict, List
+from typing import Any, Dict, Generator, List
 
 import numpy as np
 import torch
@@ -24,8 +24,11 @@ from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
 from nncf.common.scopes import matches_any
+from nncf.torch.dynamic_graph.scope import Scope
+from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.layer_utils import _NNCFModuleMixin
+from nncf.torch.structures import ExecutionParameters
 
 
 def get_node_name(module, module_name, prefix):
@@ -47,14 +50,12 @@ def get_all_modules(model, prefix=None):
 
 def get_all_modules_by_type(
     model, module_types=None, current_scope=None, ignored_scopes=None, target_scopes=None, memo=None
-) -> Dict["Scope", Module]:
+) -> Dict[Scope, Module]:
     if memo is None:
         memo = set()
     if isinstance(module_types, str):
         module_types = [module_types]
     found = OrderedDict()
-    from nncf.torch.dynamic_graph.scope import Scope  # pylint: disable=cyclic-import
-    from nncf.torch.dynamic_graph.scope import ScopeElement  # pylint: disable=cyclic-import
 
     if current_scope is None:
         current_scope = Scope()
@@ -87,7 +88,7 @@ def get_all_modules_by_type(
 
 
 def get_state_dict_names_with_modules(
-    model: "NNCFNetwork", str_types: List[str] = None, prefix=""
+    model: torch.nn.Module, str_types: List[str] = None, prefix=""
 ) -> Dict[str, torch.nn.Module]:
     found = OrderedDict()
     for name, module in model.named_children():
@@ -113,13 +114,11 @@ def manual_seed(seed):
 
 
 def is_tracing_state():
-    # pylint: disable=protected-access
     return torch._C._get_tracing_state() is not None
 
 
 class no_jit_trace:
     def __enter__(self):
-        # pylint: disable=protected-access
         self.state = torch._C._get_tracing_state()
         torch._C._set_tracing_state(None)
 
@@ -214,8 +213,8 @@ def is_traced_tensor(obj):
 
 class _ModuleState:
     def __init__(self, base_module: Module = None):
-        self._training_state = {}  # type: Dict[str, bool]
-        self._requires_grad_state = {}  # type: Dict[str, bool]
+        self._training_state: Dict[str, bool] = {}
+        self._requires_grad_state: Dict[str, bool] = {}
         if base_module is not None:
             for module_name, module in base_module.named_modules():
                 self.training_state[module_name] = module.training
@@ -281,12 +280,12 @@ def compute_FLOPs_hook(module, input_, output, dict_to_save, module_node_name: N
 
 
 def add_domain(name_operator: str) -> str:
-    from nncf.torch.compression_method_api import DOMAIN_CUSTOM_OPS_NAME  # pylint: disable=cyclic-import
+    from nncf.torch.compression_method_api import DOMAIN_CUSTOM_OPS_NAME
 
     return DOMAIN_CUSTOM_OPS_NAME + "::" + name_operator
 
 
-def default_distributed_wrapper(model: nn.Module, execution_parameters: "ExecutionParameters"):
+def default_distributed_wrapper(model: nn.Module, execution_parameters: ExecutionParameters):
     """
     Wrapping model for distributed training with DataParallel or DistributedDataParallel depending on execution mode
     chosen by user.
@@ -334,7 +333,7 @@ def rename_legacy_names_in_state_dict(
 ):
     for name in legacy_names:
         tensor = state_dict_to_load.pop(name)
-        new_key = name.replace(legacy_name, new_name) if not new_name in name else name
+        new_key = name.replace(legacy_name, new_name) if new_name not in name else name
         state_dict_to_load[new_key] = tensor
 
     if legacy_names:
@@ -382,7 +381,7 @@ def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, An
     if not controller_state or "quantization" not in controller_state:
         return
 
-    from nncf.torch.quantization.algo import QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME  # pylint: disable=cyclic-import
+    from nncf.torch.quantization.algo import QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME
 
     if not controller_state["quantization"].get(QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME):
         qips = controller_state["quantization"]["quantizer_setup"]["quantization_points"]
@@ -397,7 +396,7 @@ def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, An
         for point in qips.values():
             name = point["qip"]["target_node_name"]
             for old_name, new_name in LEGACY_VS_NEW_BN_MAP.items():
-                if old_name in name and not new_name in name:
+                if old_name in name and new_name not in name:
                     detected_legacy_names[old_name] = True
                     point["qip"]["target_node_name"] = name.replace(old_name, new_name)
                     break
@@ -419,6 +418,24 @@ def get_model_device(model: torch.nn.Module) -> torch.device:
         # The model had no parameters at all, doesn't matter which device to choose
         device = torch.device("cpu")
     return device
+
+
+def get_all_model_devices_generator(model: torch.nn.Module) -> Generator[torch.device, None, None]:
+    for p in model.parameters():
+        yield p.device
+
+
+def is_multidevice(model: torch.nn.Module) -> bool:
+    device_generator = get_all_model_devices_generator(model)
+    try:
+        curr_device = next(device_generator)
+    except StopIteration:  # no parameters
+        return False
+
+    for d in device_generator:
+        if d != curr_device:
+            return True
+    return False
 
 
 def get_model_dtype(model: torch.nn.Module) -> torch.dtype:

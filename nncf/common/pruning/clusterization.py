@@ -40,8 +40,8 @@ class Clusterization(Generic[T]):
     """
 
     def __init__(self, id_fn: Callable[[T], Hashable] = None):
-        self.clusters = {}  # type: Dict[int, Cluster[T]]
-        self._element_to_cluster = {}  # type: Dict[Hashable, int]
+        self.clusters: Dict[int, Cluster[T]] = {}
+        self._element_to_cluster: Dict[Hashable, int] = {}
         if id_fn is None:
             self._id_fn = lambda x: x.id
         else:

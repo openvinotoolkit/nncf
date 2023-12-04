@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFGraphEdge
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.patterns import GraphPattern
 
@@ -48,3 +49,61 @@ def test_find_matching_subgraphs():
             continue
         assert len(match) == 2
         assert match == nodes[:2]
+
+
+def test_parallel_edges():
+    def _get_default_nncf_graph_edge(from_node, to_node, input_port_id, output_port_id):
+        return NNCFGraphEdge(
+            from_node,
+            to_node,
+            input_port_id=input_port_id,
+            output_port_id=output_port_id,
+            parallel_input_port_ids=[],
+            tensor_shape=(1, 2, 3),
+            dtype="dummy",
+        )
+
+    nncf_graph = NNCFGraph()
+    nodes = []
+    for node in "abc":
+        nodes.append(nncf_graph.add_nncf_node(node, f"type_{node}", f"metatype_{node}"))
+
+    nncf_graph.add_edge_between_nncf_nodes(
+        nodes[0].node_id,
+        nodes[1].node_id,
+        input_port_id=0,
+        output_port_id=0,
+        parallel_input_port_ids=list(range(1, 5)),
+        tensor_shape=(1, 2, 3),
+        dtype="dummy",
+    )
+    nncf_graph.add_edge_between_nncf_nodes(
+        nodes[0].node_id,
+        nodes[2].node_id,
+        input_port_id=10,
+        output_port_id=15,
+        parallel_input_port_ids=[],
+        tensor_shape=(1, 2, 3),
+        dtype="dummy",
+    )
+    output_edges = nncf_graph.get_output_edges(nodes[0])
+    input_edges = nncf_graph.get_input_edges(nodes[1])
+    assert len(input_edges) == 5
+    assert len(output_edges) == 6
+    assert input_edges == output_edges[:-1]
+    for input_port_id, edge in enumerate(input_edges):
+        ref_edge = _get_default_nncf_graph_edge(
+            nodes[0],
+            nodes[1],
+            input_port_id=input_port_id,
+            output_port_id=0,
+        )
+        assert ref_edge == edge
+
+    ordinary_edge = _get_default_nncf_graph_edge(
+        nodes[0],
+        nodes[2],
+        input_port_id=10,
+        output_port_id=15,
+    )
+    assert ordinary_edge == output_edges[-1]

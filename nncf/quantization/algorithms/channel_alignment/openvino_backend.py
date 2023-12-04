@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Tuple
+from typing import Any, Optional, Tuple
 
 import numpy as np
 import openvino.runtime as ov
@@ -19,7 +19,6 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
-from nncf.common.utils.backend import BackendType
 from nncf.experimental.common.tensor_statistics.collectors import MedianAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
@@ -29,6 +28,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolut
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSubtractMetatype
+from nncf.openvino.graph.node_utils import create_bias_tensor
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import get_node_with_bias_value
 from nncf.openvino.graph.node_utils import get_weight_value
@@ -36,12 +36,10 @@ from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.openvino.statistics.collectors import OVQuantileReducer
 from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
-from nncf.quantization.algorithms.channel_alignment.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend
 from nncf.quantization.algorithms.channel_alignment.backend import LayoutDescriptor
 
 
-@ALGO_BACKENDS.register(BackendType.OPENVINO)
 class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:
@@ -77,10 +75,10 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
 
     @staticmethod
     def get_statistic_collector(
-        reduction_shape, q: float, num_samples: int, inplace: bool
+        reduction_axes, q: float, num_samples: int, inplace: bool
     ) -> TensorStatisticCollectorBase:
         tensor_collector = TensorCollector(OVMinMaxTensorStatistic)
-        quantile_reducer = OVQuantileReducer(reduction_shape, (q, 1 - q), inplace)
+        quantile_reducer = OVQuantileReducer(reduction_axes, (q, 1 - q), inplace)
 
         for port_id, container_key in enumerate([OVMinMaxTensorStatistic.MIN_STAT, OVMinMaxTensorStatistic.MAX_STAT]):
             aggregator = MedianAggregator(OVNNCFCollectorTensorProcessor, num_samples=num_samples)
@@ -146,3 +144,7 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         if node.layer_attributes is None:
             return None
         return node.layer_attributes.layer_attributes[1]
+
+    @staticmethod
+    def create_bias_tensor(node: NNCFNode, nncf_graph: NNCFGraph, value: Any) -> np.ndarray:
+        return create_bias_tensor(node, nncf_graph, value)

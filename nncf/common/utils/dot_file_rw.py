@@ -8,17 +8,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import copy
 import pathlib
+from collections import defaultdict
+from typing import Dict
 
 import networkx as nx
 
 
 def write_dot_graph(G: nx.DiGraph, path: pathlib.Path):
     # NOTE: writing dot files with colons even in labels or other node/edge/graph attributes leads to an
-    # error. See https://github.com/networkx/networkx/issues/5962. This limits the networkx version in
-    # NNCF to 2.8.3 unless this is fixed upstream or an inconvenient workaround is made in NNCF.
-    nx.nx_pydot.write_dot(G, str(path))
+    # error. See https://github.com/networkx/networkx/issues/5962. If `relabel` is True in this function,
+    # then the colons (:) will be replaced with (^) symbols.
+    relabeled = relabel_graph_for_dot_visualization(G)
+    nx.nx_pydot.write_dot(relabeled, str(path))
 
 
 def get_graph_without_data(G: nx.DiGraph) -> nx.DiGraph:
@@ -36,4 +39,90 @@ def get_graph_without_data(G: nx.DiGraph) -> nx.DiGraph:
 
 
 def read_dot_graph(path: pathlib.Path) -> nx.DiGraph:
-    return nx.nx_pydot.read_dot(str(path))
+    loaded = nx.DiGraph(nx.nx_pydot.read_dot(str(path)))
+    return relabel_graph_for_dot_visualization(loaded, from_reference=True)
+
+
+RESERVED_CHAR = ":"
+REPLACEMENT_CHAR = "^"
+
+
+def _maybe_escape_colons_in_attrs(data: Dict):
+    for attr_name in data:
+        attr_val = data[attr_name]
+        if RESERVED_CHAR in attr_val and not (attr_val[0] == '"' or attr_val[-1] == '"'):
+            data[attr_name] = '"' + data[attr_name] + '"'  # escaped colons are allowed
+
+
+def _unescape_colons_in_attrs_with_colons(data: Dict):
+    for attr_name in data:
+        attr_val = data[attr_name]
+        if RESERVED_CHAR in attr_val and (attr_val[0] == '"' and attr_val[-1] == '"'):
+            data[attr_name] = data[attr_name][1:-1]
+
+
+def _remove_cosmetic_labels(graph: nx.DiGraph):
+    for node_name, node_data in graph.nodes(data=True):
+        if "label" in node_data:
+            label = node_data["label"]
+            if node_name == label or '"' + node_name + '"' == label:
+                del node_data["label"]
+
+
+def _add_cosmetic_labels(graph: nx.DiGraph, relabeled_node_mapping: Dict[str, str]):
+    for original_name, dot_name in relabeled_node_mapping.items():
+        node_data = graph.nodes[dot_name]
+        if "label" not in node_data:
+            node_data["label"] = '"' + original_name + '"'
+
+
+def relabel_graph_for_dot_visualization(nx_graph: nx.Graph, from_reference: bool = False) -> nx.DiGraph:
+    """
+    Relabels NetworkX graph nodes to exclude reserved symbols in keys.
+        In case replaced names match for two different nodes, integer index is added to its keys.
+        While nodes keys are being updated, visualized nodes names corresponds to the original nodes names.
+
+    :param nx_graph: NetworkX graph to visualize via dot.
+    :return: NetworkX graph with reserved symbols in nodes keys replaced.
+    """
+
+    nx_graph = copy.deepcopy(nx_graph)
+
+    # .dot format reserves ':' character in node names
+    if not from_reference:
+        # dumping to disk
+        __CHARACTER_REPLACE_FROM = RESERVED_CHAR
+        __CHARACTER_REPLACE_TO = REPLACEMENT_CHAR
+    else:
+        # loading from disk
+        __CHARACTER_REPLACE_FROM = REPLACEMENT_CHAR
+        __CHARACTER_REPLACE_TO = RESERVED_CHAR
+
+    hits = defaultdict(lambda: 0)
+    mapping = {}
+    for original_name in nx_graph.nodes():
+        dot_name = original_name.replace(__CHARACTER_REPLACE_FROM, __CHARACTER_REPLACE_TO)
+        hits[dot_name] += 1
+        if hits[dot_name] > 1:
+            dot_name = f"{dot_name}_{hits}"
+        if original_name != dot_name:
+            mapping[original_name] = dot_name
+
+    relabeled_graph = nx.relabel_nodes(nx_graph, mapping)
+
+    if not from_reference:
+        # dumping to disk
+        _add_cosmetic_labels(relabeled_graph, mapping)
+        for _, node_data in relabeled_graph.nodes(data=True):
+            _maybe_escape_colons_in_attrs(node_data)
+        for _, _, edge_data in relabeled_graph.edges(data=True):
+            _maybe_escape_colons_in_attrs(edge_data)
+    else:
+        # loading from disk
+        _remove_cosmetic_labels(relabeled_graph)
+        for _, node_data in relabeled_graph.nodes(data=True):
+            _unescape_colons_in_attrs_with_colons(node_data)
+        for _, _, edge_data in relabeled_graph.edges(data=True):
+            _unescape_colons_in_attrs_with_colons(edge_data)
+
+    return relabeled_graph

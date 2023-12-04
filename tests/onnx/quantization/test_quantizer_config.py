@@ -12,6 +12,8 @@
 import pytest
 
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.tensor_statistics.collectors import ReductionAxes
+from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
@@ -36,6 +38,9 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
 
     def check_is_mean_min_max_statistic_collector(self, tensor_collector):
         assert isinstance(tensor_collector, ONNXMeanMinMaxStatisticCollector)
+
+    def get_reduction_axes(self, reducer: TensorStatisticCollectorBase) -> ReductionAxes:
+        return reducer._reduction_shape
 
     @pytest.fixture(
         params=[

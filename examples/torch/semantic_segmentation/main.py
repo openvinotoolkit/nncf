@@ -291,8 +291,6 @@ def get_params_to_optimize(model_without_dp, aux_lr, config):
     return params_to_optimize
 
 
-# pylint: disable=too-many-branches
-# pylint: disable=too-many-statements
 def train(
     model,
     model_without_dp,
@@ -550,8 +548,7 @@ def main_worker(current_gpu, config):
     log_common_mlflow_params(config)
 
     if is_export_only:
-        export_model(compression_ctrl, config.to_onnx, config.no_strip_on_export)
-        logger.info(f"Saved to {config.to_onnx}")
+        export_model(compression_ctrl, config)
         return
 
     if is_main_process():
@@ -622,8 +619,7 @@ def main_worker(current_gpu, config):
         test(val_model, val_loader, criterion, color_encoding, config)
 
     if "export" in config.mode:
-        export_model(compression_ctrl, config.to_onnx, config.no_strip_on_export)
-        logger.info(f"Saved to {config.to_onnx}")
+        export_model(compression_ctrl, config)
 
 
 def main(argv):

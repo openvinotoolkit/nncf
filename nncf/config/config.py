@@ -37,7 +37,7 @@ class NNCFConfig(dict):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.__nncf_extra_structs = {}  # type: dict[str, NNCFExtraConfigStruct]
+        self.__nncf_extra_structs: Dict[str, NNCFExtraConfigStruct] = {}
 
     @classmethod
     def from_dict(cls, nncf_dict: Dict) -> "NNCFConfig":
@@ -57,7 +57,7 @@ class NNCFConfig(dict):
 
         :param path: Path to the .json file containing the NNCF configuration.
         """
-        file_path = Path(path).resolve()
+        file_path = Path(path)
         with safe_open(file_path) as f:
             loaded_json = json.load(f)
         return cls.from_dict(loaded_json)
@@ -80,7 +80,7 @@ class NNCFConfig(dict):
     def has_extra_struct(self, struct_cls: Type[NNCFExtraConfigStruct]) -> NNCFExtraConfigStruct:
         return struct_cls.get_id() in self.__nncf_extra_structs
 
-    def get_all_extra_structs_for_copy(self) -> List[NNCFExtraConfigStruct]:
+    def get_all_extra_structs(self) -> List[NNCFExtraConfigStruct]:
         return list(self.__nncf_extra_structs.values())
 
     def get_redefinable_global_param_value_for_algo(self, param_name: str, algo_name: str) -> Optional[str]:
@@ -97,7 +97,7 @@ class NNCFConfig(dict):
           the resolution of the redefinable parameter should occur.
         :return: The value of the parameter that should be applied for the algo specified by `algo_name`.
         """
-        from nncf.config.extractors import extract_algo_specific_config  # pylint: disable=cyclic-import
+        from nncf.config.extractors import extract_algo_specific_config
 
         algo_config = extract_algo_specific_config(self, algo_name)
         param = self.get(param_name)

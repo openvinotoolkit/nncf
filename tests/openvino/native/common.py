@@ -10,9 +10,11 @@
 # limitations under the License.
 import json
 from copy import deepcopy
+from typing import Tuple
 
 import numpy as np
 import openvino.runtime as ov
+from packaging import version
 
 from nncf import Dataset
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
@@ -49,8 +51,6 @@ def load_json(stats_path):
 class NumpyEncoder(json.JSONEncoder):
     """Special json encoder for numpy types"""
 
-    # pylint: disable=W0221, E0202
-
     def default(self, o):
         if isinstance(o, np.integer):
             return int(o)
@@ -64,3 +64,19 @@ class NumpyEncoder(json.JSONEncoder):
 def dump_to_json(local_path, data):
     with open(local_path, "w", encoding="utf8") as file:
         json.dump(deepcopy(data), file, indent=4, cls=NumpyEncoder)
+
+
+def get_openvino_major_minor_version() -> Tuple[int]:
+    ov_version = ov.__version__
+    pos = ov_version.find("-")
+    if pos != -1:
+        ov_version = ov_version[:pos]
+
+    ov_version = version.parse(ov_version).base_version
+    return tuple(map(int, ov_version.split(".")[:2]))
+
+
+def get_openvino_version() -> str:
+    major_verison, minor_version = get_openvino_major_minor_version()
+
+    return f"{major_verison}.{minor_version}"

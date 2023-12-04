@@ -49,7 +49,7 @@ class Command:
         except OSError as err:
             print(err)
 
-    def run(self, timeout=3600, assert_returncode_zero=True):
+    def run(self, timeout=3600, assert_returncode_zero=True, stdout=True):
         print(f"Running command: {self.cmd}")
 
         def target():
@@ -72,14 +72,16 @@ class Command:
                     for line in self.process.stdout:
                         line = line.decode("utf-8")
                         self.output.append(line)
-                        sys.stdout.write(line)
+                        if stdout:
+                            sys.stdout.write(line)
 
-                    sys.stdout.flush()
+                    if stdout:
+                        sys.stdout.flush()
                     self.process.stdout.close()
 
                     self.process.wait()
                     self.exec_time = time.time() - start_time
-            except Exception as e:  # pylint:disable=broad-except
+            except Exception as e:
                 self.thread_exc = e
 
         thread = threading.Thread(target=target)

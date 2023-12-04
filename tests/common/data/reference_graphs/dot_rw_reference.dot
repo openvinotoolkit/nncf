@@ -1,0 +1,9 @@
+strict digraph  {
+"Node^^A" [label=":baz"];
+"Node^^B" [label="qux:"];
+"Node^^C" [label="Node::C"];
+D;
+E [label=no_label];
+F [label="has^label"];
+"Node^^A" -> "Node^^B"  [label="foo:bar"];
+}

@@ -9,10 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, List, Optional, Tuple, TypeVar
+from typing import List, Optional, Tuple, TypeVar
 
 import numpy as np
-from tqdm import tqdm
 
 from nncf import Dataset
 from nncf.common.factory import CommandCreatorFactory
@@ -23,12 +22,12 @@ from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.quantization.algorithms.algorithm import Algorithm
-from nncf.quantization.algorithms.channel_alignment.backend import ALGO_BACKENDS
 from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend
 from nncf.quantization.algorithms.channel_alignment.backend import LayoutDescriptor
 
@@ -59,7 +58,6 @@ class ChannelAlignment(Algorithm):
         self,
         subset_size: int = 100,
         inplace_statistics: bool = True,
-        backend_params: Optional[Dict[str, Any]] = None,
     ):
         """
         :param subset_size: Size of a subset for the statistics collection,
@@ -67,19 +65,17 @@ class ChannelAlignment(Algorithm):
         :param inplace_statistics: Defines wheather to calculate quantizers statistics
             by backend graph operations or by default Python implementation, defaults
             to True.
-        :param backend_params: Backend specific parameters.
         """
         super().__init__()
         self.subset_size = subset_size
         self.inplace_statistics = inplace_statistics
-        self.backend_params = backend_params
         self._backend_entity = None
         self._quantile = 1e-4
         self._algorithm_key = f"CA_{hash(self)}"
 
     @property
-    def available_backends(self) -> Dict[str, BackendType]:
-        return ALGO_BACKENDS.registry_dict
+    def available_backends(self) -> List[BackendType]:
+        return [BackendType.OPENVINO]
 
     def _set_backend_entity(self, model: TModel) -> None:
         """
@@ -107,7 +103,7 @@ class ChannelAlignment(Algorithm):
         def filter_func(point: StatisticPoint) -> bool:
             return self._algorithm_key in point.algorithm_to_tensor_collectors and point.target_point == target_point
 
-        for conv_in, add_in, conv_out in tqdm(self._get_node_pairs(graph), desc="Channel alignment"):
+        for conv_in, add_in, conv_out in track(self._get_node_pairs(graph), description="Channel alignment"):
             target_point, node_in = self._get_target_point_and_node_in(conv_in, add_in)
             tensor_collectors = list(
                 statistic_points.get_algo_statistics_for_node(node_in.node_name, filter_func, self._algorithm_key)
@@ -120,15 +116,14 @@ class ChannelAlignment(Algorithm):
             conv_in_cont = ConvParamsContainer(conv_in, model, graph, self._backend_entity)
             conv_out_cont = ConvParamsContainer(conv_out, model, graph, self._backend_entity)
 
-            if conv_in_cont.has_bias() and conv_out_cont.has_bias():
-                amean = (stat.max_values + stat.min_values) * 0.5
-                conv_in_cont.bias, conv_out_cont.bias = self._align_means(
-                    conv_in_cont.bias,
-                    conv_out_cont.bias,
-                    conv_out_cont.weight,
-                    amean,
-                    conv_out_cont.dims,
-                )
+            amean = (stat.max_values + stat.min_values) * 0.5
+            conv_in_cont.bias, conv_out_cont.bias = self._align_means(
+                conv_in_cont.bias,
+                conv_out_cont.bias,
+                conv_out_cont.weight,
+                amean,
+                conv_out_cont.dims,
+            )
 
             ascale = (stat.max_values - stat.min_values).astype(np.float32)
             eps = np.finfo(ascale.dtype).eps
@@ -153,9 +148,11 @@ class ChannelAlignment(Algorithm):
                     )
 
                 if container.stated_bias.is_modified():
-                    transformation_layout.register(
-                        command_creator.create_command_to_update_bias(container.op, container.bias, graph),
-                    )
+                    if container.bias_op_exist():
+                        command = command_creator.create_command_to_update_bias(container.op, container.bias, graph)
+                    else:
+                        command = command_creator.create_command_to_insert_bias(container.op, container.bias)
+                    transformation_layout.register(command)
 
         transformed_model = model_transformer.transform(transformation_layout)
         return transformed_model
@@ -239,10 +236,7 @@ class ChannelAlignment(Algorithm):
         scale_in_shape[conv_in_descr.conv_weight_out_channels_dim] = scale_factor.shape[conv_in_descr.bias_channels_dim]
         updated_conv_in_value = conv_in_value / scale_factor.reshape(scale_in_shape)
 
-        if bias_in_value is not None:
-            updated_bias_in_value = bias_in_value / scale_factor.reshape(bias_in_value.shape)
-        else:
-            updated_bias_in_value = None
+        updated_bias_in_value = bias_in_value / scale_factor.reshape(bias_in_value.shape)
 
         scale_out_shape = np.ones(len(conv_out_value.shape), dtype=int)
         scale_out_shape[conv_out_descr.conv_weight_in_channels_dim] = scale_factor.shape[
@@ -270,7 +264,7 @@ class ChannelAlignment(Algorithm):
         return True
 
     def _check_producer_conv_node(self, conv_node: NNCFNode):
-        return not conv_node.layer_attributes is None
+        return conv_node.layer_attributes is not None
 
     def _get_target_patterns(self) -> GraphPattern:
         input_attrs = {
@@ -379,11 +373,11 @@ class ChannelAlignment(Algorithm):
         for conv_in, add_in, _ in self._get_node_pairs(graph):
             target_point, node_in = self._get_target_point_and_node_in(conv_in, add_in)
             channel_axis = conv_in.metatype.output_channel_axis
-            reduction_shape = list(range(len(graph.get_output_edges(node_in)[0].tensor_shape)))
-            reduction_shape.remove(channel_axis)
+            reduction_axes = list(range(len(graph.get_output_edges(node_in)[0].tensor_shape)))
+            reduction_axes.remove(channel_axis)
 
             statistic_collector = self._backend_entity.get_statistic_collector(
-                tuple(reduction_shape), self._quantile, self.subset_size, self.inplace_statistics
+                tuple(reduction_axes), self._quantile, self.subset_size, self.inplace_statistics
             )
             statistic_container.add_statistic_point(
                 StatisticPoint(
@@ -433,18 +427,23 @@ class ConvParamsContainer:
     Convolution container class which is incapsulating common convolutional parameters collection.
     """
 
-    def __init__(self, conv_op, model, nncf_graph, backend_entity: ChannelAlignmentAlgoBackend):
+    def __init__(
+        self, conv_op: NNCFNode, model: TModel, nncf_graph: NNCFGraph, backend_entity: ChannelAlignmentAlgoBackend
+    ):
         """
-        :param conv_op: Backend-specific conv node.
+        :param conv_op: NNCF conv node.
         :param model: Backend-specific model instance.
         :param nncf_graph: NNCFGraph of given backend-specific model.
         :param backend_entity: Current backend entity to retrieve parameters from given conv node
         """
         _, self._weights_port_id = backend_entity.get_weights_port_ids_for_node(conv_op)
         self.stated_weight = StatedTensor(backend_entity.get_weight_value(conv_op, model, self._weights_port_id))
-        bias = None
+        self._bias_op_exist = False
         if backend_entity.is_node_with_bias(conv_op, nncf_graph):
             bias = backend_entity.get_bias_value(conv_op, model, nncf_graph)
+            self._bias_op_exist = True
+        else:
+            bias = backend_entity.create_bias_tensor(conv_op, nncf_graph, 0)
         self.stated_bias = StatedTensor(bias)
         self._op = conv_op
         self._dims = backend_entity.get_dims_descriptor(conv_op)
@@ -477,5 +476,5 @@ class ConvParamsContainer:
     def dims(self) -> LayoutDescriptor:
         return self._dims
 
-    def has_bias(self) -> bool:
-        return self.bias is not None
+    def bias_op_exist(self) -> bool:
+        return self._bias_op_exist

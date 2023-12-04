@@ -37,6 +37,8 @@ from nncf.common.pruning.operations import TransposeConvolutionPruningOp
 from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
 from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
+from nncf.torch.graph.operator_metatypes import PTAdaptiveMaxPool2dMetatype
+from nncf.torch.graph.operator_metatypes import PTAdaptiveMaxPool3dMetatype
 from nncf.torch.graph.operator_metatypes import PTAddMetatype
 from nncf.torch.graph.operator_metatypes import PTAvgPool2dMetatype
 from nncf.torch.graph.operator_metatypes import PTAvgPool3dMetatype
@@ -167,8 +169,10 @@ class PTIdentityMaskForwardPruningOp(IdentityMaskForwardPruningOp, PTPruner):
         PTGELUMetatype,
         PTSigmoidMetatype,
         PTSoftmaxMetatype,
+        PTAdaptiveMaxPool2dMetatype,
         PTAvgPool2dMetatype,
         PTMaxPool2dMetatype,
+        PTAdaptiveMaxPool3dMetatype,
         PTAvgPool3dMetatype,
         PTMaxPool3dMetatype,
         PTMeanMetatype,

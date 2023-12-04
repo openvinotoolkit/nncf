@@ -10,11 +10,14 @@
 # limitations under the License.
 
 import copy
+from typing import Dict
 
 from nncf import ModelType
 from nncf import QuantizationPreset
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
-from tests.post_training.pipelines.base import ALL_NNCF_PTQ_BACKENDS
+from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
+from tests.post_training.pipelines.base import ALL_PTQ_BACKENDS
+from tests.post_training.pipelines.base import NNCF_PTQ_BACKENDS
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.causal_language_model import CausalLMHF
 from tests.post_training.pipelines.image_classification_timm import ImageClassificationTimm
@@ -31,7 +34,7 @@ TEST_MODELS = [
             "model_type": ModelType.TRANSFORMER,
             "subset_size": 2,
         },
-        "backends": ALL_NNCF_PTQ_BACKENDS + [BackendType.OPTIMUM],
+        "backends": ALL_PTQ_BACKENDS + [BackendType.OPTIMUM],
     },
     {
         "reported_name": "hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM",
@@ -54,7 +57,7 @@ TEST_MODELS = [
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=-1.0),
         },
-        "backends": [BackendType.TORCH, BackendType.ONNX, BackendType.OV, BackendType.POT],
+        "backends": ALL_PTQ_BACKENDS,
     },
     {
         "reported_name": "timm/darknet53",
@@ -63,7 +66,7 @@ TEST_MODELS = [
         "ptq_params": {
             "preset": QuantizationPreset.MIXED,
         },
-        "backends": ALL_NNCF_PTQ_BACKENDS,
+        "backends": ALL_PTQ_BACKENDS,
     },
     {
         "reported_name": "timm/deit3_small_patch16_224",
@@ -72,9 +75,11 @@ TEST_MODELS = [
         "ptq_params": {
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
-            "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=-1.0),
+            "advanced_parameters": AdvancedQuantizationParameters(
+                smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=-1)
+            ),
         },
-        "backends": ALL_NNCF_PTQ_BACKENDS,
+        "backends": ALL_PTQ_BACKENDS,
     },
     {
         "reported_name": "timm/dla34",
@@ -83,7 +88,7 @@ TEST_MODELS = [
         "ptq_params": {
             "preset": QuantizationPreset.MIXED,
         },
-        "backends": ALL_NNCF_PTQ_BACKENDS,
+        "backends": ALL_PTQ_BACKENDS,
     },
     {
         "reported_name": "timm/dpn68",
@@ -92,7 +97,7 @@ TEST_MODELS = [
         "ptq_params": {
             "preset": QuantizationPreset.MIXED,
         },
-        "backends": ALL_NNCF_PTQ_BACKENDS,
+        "backends": ALL_PTQ_BACKENDS,
     },
     {
         "reported_name": "timm/efficientnet_b0",
@@ -101,7 +106,7 @@ TEST_MODELS = [
         "ptq_params": {
             "preset": QuantizationPreset.MIXED,
         },
-        "backends": ALL_NNCF_PTQ_BACKENDS,
+        "backends": ALL_PTQ_BACKENDS,
     },
     {
         "reported_name": "timm/efficientnet_b0_BC",
@@ -120,7 +125,7 @@ TEST_MODELS = [
         "ptq_params": {
             "preset": QuantizationPreset.MIXED,
         },
-        "backends": ALL_NNCF_PTQ_BACKENDS,
+        "backends": ALL_PTQ_BACKENDS,
     },
     {
         "reported_name": "timm/hrnet_w18",
@@ -129,14 +134,14 @@ TEST_MODELS = [
         "ptq_params": {
             "preset": QuantizationPreset.MIXED,
         },
-        "backends": ALL_NNCF_PTQ_BACKENDS,
+        "backends": ALL_PTQ_BACKENDS,
     },
     {
         "reported_name": "timm/inception_resnet_v2",
         "model_id": "inception_resnet_v2",
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {},
-        "backends": ALL_NNCF_PTQ_BACKENDS,
+        "backends": NNCF_PTQ_BACKENDS,
     },
     {
         "reported_name": "timm/levit_128",
@@ -145,9 +150,11 @@ TEST_MODELS = [
         "ptq_params": {
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
-            "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=0.05),
+            "advanced_parameters": AdvancedQuantizationParameters(
+                smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=0.05)
+            ),
         },
-        "backends": [BackendType.TORCH, BackendType.ONNX, BackendType.OV, BackendType.POT],
+        "backends": NNCF_PTQ_BACKENDS,
     },
     {
         "reported_name": "timm/mobilenetv2_050",
@@ -156,7 +163,7 @@ TEST_MODELS = [
         "ptq_params": {
             "preset": QuantizationPreset.MIXED,
         },
-        "backends": ALL_NNCF_PTQ_BACKENDS,
+        "backends": ALL_PTQ_BACKENDS,
     },
     {
         "reported_name": "timm/mobilenetv2_050_BC",
@@ -175,7 +182,7 @@ TEST_MODELS = [
         "ptq_params": {
             "preset": QuantizationPreset.MIXED,
         },
-        "backends": ALL_NNCF_PTQ_BACKENDS,
+        "backends": ALL_PTQ_BACKENDS,
     },
     {
         "reported_name": "timm/regnetx_002",
@@ -184,7 +191,7 @@ TEST_MODELS = [
         "ptq_params": {
             "preset": QuantizationPreset.MIXED,
         },
-        "backends": ALL_NNCF_PTQ_BACKENDS,
+        "backends": ALL_PTQ_BACKENDS,
     },
     {
         "reported_name": "timm/resnest14d",
@@ -193,14 +200,14 @@ TEST_MODELS = [
         "ptq_params": {
             "preset": QuantizationPreset.MIXED,
         },
-        "backends": ALL_NNCF_PTQ_BACKENDS,
+        "backends": ALL_PTQ_BACKENDS,
     },
     {
         "reported_name": "timm/resnet18",
         "model_id": "resnet18",
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {},
-        "backends": ALL_NNCF_PTQ_BACKENDS,
+        "backends": ALL_PTQ_BACKENDS,
     },
     {
         "reported_name": "timm/swin_base_patch4_window7_224",
@@ -210,7 +217,7 @@ TEST_MODELS = [
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
         },
-        "backends": ALL_NNCF_PTQ_BACKENDS,
+        "backends": ALL_PTQ_BACKENDS,
     },
     {
         "reported_name": "timm/tf_inception_v3",
@@ -219,14 +226,14 @@ TEST_MODELS = [
         "ptq_params": {
             "preset": QuantizationPreset.MIXED,
         },
-        "backends": ALL_NNCF_PTQ_BACKENDS,
+        "backends": ALL_PTQ_BACKENDS,
     },
     {
         "reported_name": "timm/vgg11",
         "model_id": "vgg11",
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {},
-        "backends": ALL_NNCF_PTQ_BACKENDS,
+        "backends": NNCF_PTQ_BACKENDS,
     },
     {
         "reported_name": "timm/visformer_small",
@@ -236,7 +243,7 @@ TEST_MODELS = [
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
         },
-        "backends": [BackendType.TORCH, BackendType.ONNX, BackendType.OV, BackendType.POT],
+        "backends": ALL_PTQ_BACKENDS,
     },
     {
         "reported_name": "timm/wide_resnet50_2",
@@ -245,18 +252,18 @@ TEST_MODELS = [
         "ptq_params": {
             "preset": QuantizationPreset.MIXED,
         },
-        "backends": ALL_NNCF_PTQ_BACKENDS,
+        "backends": ALL_PTQ_BACKENDS,
     },
 ]
 
 
-def generate_tests_scope():
+def generate_tests_scope() -> Dict[str, dict]:
     """
     Generate tests by names "{reported_name}_backend_{backend}"
     """
     tests_scope = {}
     for test_model_param in TEST_MODELS:
-        for backend in test_model_param["backends"]:
+        for backend in test_model_param["backends"] + [BackendType.FP32]:
             model_param = copy.deepcopy(test_model_param)
             reported_name = model_param["reported_name"]
             test_case_name = f"{reported_name}_backend_{backend.value}"

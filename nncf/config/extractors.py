@@ -48,7 +48,7 @@ def extract_algo_specific_config(config: NNCFConfig, algo_name_to_match: str) ->
         assert isinstance(compression_section, dict)
         algo_list = [compression_section]
 
-    from nncf.common.compression import NO_COMPRESSION_ALGORITHM_NAME  # pylint: disable=cyclic-import
+    from nncf.common.compression import NO_COMPRESSION_ALGORITHM_NAME
 
     if algo_name_to_match == NO_COMPRESSION_ALGORITHM_NAME:
         if len(algo_list) > 0:
@@ -105,7 +105,7 @@ def extract_range_init_params(config: NNCFConfig, algorithm_name: str = "quantiz
 
     max_num_init_samples = 0
     global_range_init_config = None
-    scope_overrides = []  # type: List[PerLayerRangeInitConfig]
+    scope_overrides: List[PerLayerRangeInitConfig] = []
     if isinstance(init_range_config_dict_or_list, dict):
         global_range_init_config = RangeInitConfig.from_dict(init_range_config_dict_or_list)
         max_num_init_samples = global_range_init_config.num_init_samples
@@ -194,7 +194,7 @@ def extract_accuracy_aware_training_params(config: NNCFConfig) -> Dict[str, obje
         SPARSITY = ["rb_sparsity", "magnitude_sparsity", "const_sparsity"]
 
     def validate_accuracy_aware_schema(config: NNCFConfig, params: Dict[str, object]):
-        from nncf.common.accuracy_aware_training import AccuracyAwareTrainingMode  # pylint: disable=cyclic-import
+        from nncf.common.accuracy_aware_training import AccuracyAwareTrainingMode
 
         if params["mode"] == AccuracyAwareTrainingMode.EARLY_EXIT:
             return
@@ -223,3 +223,7 @@ def extract_accuracy_aware_training_params(config: NNCFConfig) -> Dict[str, obje
     validate_accuracy_aware_schema(config, params)
 
     return params
+
+
+def has_input_info_field(config: NNCFConfig) -> bool:
+    return config.get("input_info") is not None

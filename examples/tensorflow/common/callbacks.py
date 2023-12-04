@@ -42,9 +42,7 @@ def get_callbacks(
     return callbacks
 
 
-def get_progress_bar(stateful_metrics: list = None):
-    # TODO: This is a workaround for tf2.4.0. Remove when fixed
-    stateful_metrics = stateful_metrics or []
+def get_progress_bar(stateful_metrics: list):
     stateful_metrics.extend(["val_" + metric_name for metric_name in stateful_metrics])
     return tf.keras.callbacks.ProgbarLogger(count_mode="steps", stateful_metrics=stateful_metrics)
 
@@ -70,7 +68,6 @@ class CustomTensorBoard(tf.keras.callbacks.TensorBoard):
         self.step = initial_step
         self._track_lr = track_lr
 
-    # pylint: disable=W0237
     def on_train_batch_begin(self, epoch: int, logs: MutableMapping[str, Any] = None) -> None:
         self.step += 1
         logs = logs or {}
@@ -113,6 +110,6 @@ class CustomTensorBoard(tf.keras.callbacks.TensorBoard):
 
         # The optimizer might be wrapped by another class, so unwrap it
         while hasattr(optimizer, "_optimizer"):
-            optimizer = optimizer._optimizer  # pylint:disable=protected-access
+            optimizer = optimizer._optimizer
 
         return optimizer
