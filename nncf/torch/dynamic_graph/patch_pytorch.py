@@ -58,8 +58,6 @@ class FunctionsToPatchWithoutTracing:
         "as_tensor",
         "copysign",
         "copysign_",
-        "detach",
-        "detach_",
         "empty",
         "ones",
         "ones_like",
@@ -112,7 +110,6 @@ class FunctionsToPatchWithoutTracing:
         "storage",
         "storage_offset",
         "stride",
-        "to",
         "get_device",
     ]
 
