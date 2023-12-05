@@ -22,10 +22,10 @@ from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.experimental.common.tensor_statistics.collectors import MedianAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.openvino.graph.layer_attributes import CONV_OPERATIONS
-from nncf.openvino.graph.layer_attributes import get_conv_weights_layout_from_node
-from nncf.openvino.graph.layer_attributes import get_linear_weights_layout_from_node
 from nncf.openvino.graph.layout import OVLayoutElem
+from nncf.openvino.graph.layout import get_conv_weights_layout_from_node
+from nncf.openvino.graph.layout import get_linear_weights_layout_from_node
+from nncf.openvino.graph.metatypes.groups import CONV_OPERATIONS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype

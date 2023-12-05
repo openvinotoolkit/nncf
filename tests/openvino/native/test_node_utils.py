@@ -16,12 +16,12 @@ from openvino.runtime import opset9 as opset
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.graph import NNCFNode
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
-from nncf.openvino.graph.layer_attributes import get_weighted_layer_attributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.node_utils import get_weight_value
+from nncf.openvino.graph.node_utils import get_weighted_layer_attributes
 from nncf.openvino.graph.node_utils import is_node_with_bias
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import ConvNotBiasModel

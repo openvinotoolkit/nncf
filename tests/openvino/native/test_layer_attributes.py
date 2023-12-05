@@ -21,9 +21,9 @@ from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
-from nncf.openvino.graph.layer_attributes import get_conv_weights_layout_from_node
-from nncf.openvino.graph.layer_attributes import get_linear_weights_layout_from_node
 from nncf.openvino.graph.layout import OVLayoutElem
+from nncf.openvino.graph.layout import get_conv_weights_layout_from_node
+from nncf.openvino.graph.layout import get_linear_weights_layout_from_node
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 
 
