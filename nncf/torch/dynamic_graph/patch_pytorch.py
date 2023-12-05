@@ -89,7 +89,6 @@ class FunctionsToPatchWithoutTracing:
         "has_torch_function_unary",
         "has_torch_function_variadic",
         "is_contiguous",
-        "is_floating_point",
         "item",
         "names",
         "numel",

@@ -320,7 +320,7 @@ class PTLinearMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTHardTanhMetatype(PTOperatorMetatype):
     name = "HardTanhOP"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["hardtanh", "hardtanh_"]}
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["hardtanh"]}
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -338,7 +338,7 @@ class PTHardSigmoidMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTTanhMetatype(PTOperatorMetatype):
     name = "TanhOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["tanh"], NamespaceTarget.TORCH: ["tanh", "tanh_"]}
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["tanh"], NamespaceTarget.TORCH: ["tanh"]}
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -356,7 +356,7 @@ class PTPRELUMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTLeakyRELUMetatype(PTOperatorMetatype):
     name = "LeakyReluOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["leaky_relu", "leaky_relu_"]}
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["leaky_relu"]}
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -407,8 +407,8 @@ class PTSigmoidMetatype(PTOperatorMetatype):
     name = "SigmoidOp"
     module_to_function_names = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["sigmoid"],
-        NamespaceTarget.TORCH_TENSOR: ["sigmoid", "sigmoid_"],
-        NamespaceTarget.TORCH: ["sigmoid", "sigmoid_"],
+        NamespaceTarget.TORCH_TENSOR: ["sigmoid"],
+        NamespaceTarget.TORCH: ["sigmoid"],
     }
 
 
@@ -416,7 +416,7 @@ class PTSigmoidMetatype(PTOperatorMetatype):
 class PTAddMetatype(PTOperatorMetatype):
     name = "AddOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["add", "add_", "__add__", "__iadd__", "__radd__"],
+        NamespaceTarget.TORCH_TENSOR: ["add", "__add__", "__iadd__", "__radd__"],
         NamespaceTarget.TORCH: ["add"],
     }
     hw_config_names = [HWConfigOpName.ADD]
@@ -426,7 +426,7 @@ class PTAddMetatype(PTOperatorMetatype):
 class PTSubMetatype(PTOperatorMetatype):
     name = "SubOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["sub", "sub_", "__sub__", "__isub__", "__rsub__"],
+        NamespaceTarget.TORCH_TENSOR: ["sub", "__sub__", "__isub__", "__rsub__"],
         NamespaceTarget.TORCH: ["sub"],
     }
     hw_config_names = [HWConfigOpName.SUBTRACT]
@@ -436,7 +436,7 @@ class PTSubMetatype(PTOperatorMetatype):
 class PTMulMetatype(PTOperatorMetatype):
     name = "MulOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["mul", "mul_", "__mul__", "__imul__", "__rmul__"],
+        NamespaceTarget.TORCH_TENSOR: ["mul", "__mul__", "__imul__", "__rmul__"],
         NamespaceTarget.TORCH: ["mul"],
     }
     hw_config_names = [HWConfigOpName.MULTIPLY]
@@ -448,7 +448,6 @@ class PTDivMetatype(PTOperatorMetatype):
     module_to_function_names = {
         NamespaceTarget.TORCH_TENSOR: [
             "div",
-            "div_",
             "__div__",
             "__idiv__",
             "__rdiv__",
@@ -474,8 +473,8 @@ class PTFloorDivMetatype(PTOperatorMetatype):
 class PTExpMetatype(PTOperatorMetatype):
     name = "ExpOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["exp", "exp_"],
-        NamespaceTarget.TORCH: ["exp", "exp_"],
+        NamespaceTarget.TORCH_TENSOR: ["exp"],
+        NamespaceTarget.TORCH: ["exp"],
     }
 
 
@@ -483,8 +482,8 @@ class PTExpMetatype(PTOperatorMetatype):
 class PTLogMetatype(PTOperatorMetatype):
     name = "LogOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["log", "log_"],
-        NamespaceTarget.TORCH: ["log", "log_"],
+        NamespaceTarget.TORCH_TENSOR: ["log"],
+        NamespaceTarget.TORCH: ["log"],
     }
 
 
@@ -492,8 +491,8 @@ class PTLogMetatype(PTOperatorMetatype):
 class PTAbsMetatype(PTOperatorMetatype):
     name = "AbsOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["abs", "abs_", "__abs__"],
-        NamespaceTarget.TORCH: ["abs", "abs_"],
+        NamespaceTarget.TORCH_TENSOR: ["abs", "__abs__"],
+        NamespaceTarget.TORCH: ["abs"],
     }
 
 
@@ -501,7 +500,7 @@ class PTAbsMetatype(PTOperatorMetatype):
 class PTErfMetatype(PTOperatorMetatype):
     name = "ErfOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH: ["erf", "erf_"],
+        NamespaceTarget.TORCH: ["erf"],
     }
 
 
@@ -536,7 +535,7 @@ class PTMeanMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTRoundMetatype(PTOperatorMetatype):
     name = "RoundOp"
-    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["round", "round_"]}
+    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["round"]}
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -548,7 +547,7 @@ class PTDropoutMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTThresholdMetatype(PTOperatorMetatype):
     name = "ThresholdOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["threshold", "threshold_"]}
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["threshold"]}
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -694,14 +693,14 @@ class PTGatherMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTScatterMetatype(PTOperatorMetatype):
     name = "ScatterOp"
-    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["scatter", "scatter_", "masked_fill", "masked_fill_"]}
+    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["scatter", "masked_fill", "masked_fill_"]}
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTReshapeMetatype(PTOperatorMetatype):
     name = "ReshapeOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["reshape", "view", "flatten", "unsqueeze", "unsqueeze_"],
+        NamespaceTarget.TORCH_TENSOR: ["reshape", "view", "flatten", "unsqueeze"],
         NamespaceTarget.TORCH: ["flatten", "unsqueeze"],
     }
     hw_config_names = [HWConfigOpName.RESHAPE, HWConfigOpName.UNSQUEEZE, HWConfigOpName.FLATTEN]
@@ -711,7 +710,7 @@ class PTReshapeMetatype(PTOperatorMetatype):
 class PTSqueezeMetatype(PTOperatorMetatype):
     name = "SqueezeOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["squeeze", "squeeze_"],
+        NamespaceTarget.TORCH_TENSOR: ["squeeze"],
         NamespaceTarget.TORCH: ["squeeze"],
     }
     hw_config_names = [HWConfigOpName.SQUEEZE]
@@ -829,7 +828,7 @@ class PTNotEqualMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTLogicalOrMetatype(PTOperatorMetatype):
     name = "LogicalOrOp"
-    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__or__", "__ror__", "__ior__"]}
+    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__or__", "__ior__", "__ror__"]}
     hw_config_names = [HWConfigOpName.LOGICALOR]
 
 
@@ -858,8 +857,8 @@ class PTLogicalNotMetatype(PTOperatorMetatype):
 class PTNegativeMetatype(PTOperatorMetatype):
     name = "NegativeOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["neg", "neg_", "__neg__"],
-        NamespaceTarget.TORCH: ["neg", "neg_"],
+        NamespaceTarget.TORCH_TENSOR: ["neg", "__neg__"],
+        NamespaceTarget.TORCH: ["neg"],
     }
 
 
@@ -867,7 +866,7 @@ class PTNegativeMetatype(PTOperatorMetatype):
 class PTPowerMetatype(PTOperatorMetatype):
     name = "PowerOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["pow", "pow_", "__pow__", "__ipow__", "__rpow__"],
+        NamespaceTarget.TORCH_TENSOR: ["pow", "__pow__", "__ipow__", "__rpow__"],
         NamespaceTarget.TORCH: ["pow"],
     }
     hw_config_names = [HWConfigOpName.POWER]
