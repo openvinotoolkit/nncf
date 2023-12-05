@@ -219,4 +219,5 @@ def test_join_pattern_with_special_input_node():
 def test_dump(tmp_path: Path):
     path_dot = tmp_path / "pattern.dot"
     TestPattern.first_pattern.dump_graph(path_dot)
-    assert path_dot.exists()
+    assert path_dot.is_file()
+    path_dot.unlink()
