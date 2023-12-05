@@ -213,3 +213,7 @@ def test_join_pattern_with_special_input_node():
             ref_pattern.add_edge(node, added_node)
 
     assert pattern == ref_pattern
+
+
+def test_dump(tmp_path):
+    TestPattern.first_pattern.dump_graph(tmp_path / "pattern.dot")
