@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, List
 
 import torch
 
@@ -154,8 +154,38 @@ class PTInsertionCommand(PTTransformationCommand):
 
         :return: Boolean flag.
         """
-        # Rebuild graph when adding quantization nodes.
-        return self.priority == TransformationPriority.QUANTIZATION_PRIORITY
+        # Rebuild graph when adding quantization nodes or an op.
+        return self.priority in [
+            TransformationPriority.QUANTIZATION_PRIORITY,
+            TransformationPriority.OP_INSERTION_PRIORITY,
+        ]
+
+
+class PTSharedFnInsertionCommand(PTTransformationCommand):
+    def __init__(
+        self,
+        target_points: List[PTTargetPoint],
+        fn: Callable,
+        op_unique_name: str,
+        priority: TransformationPriority = TransformationPriority.DEFAULT_PRIORITY,
+    ):
+        super().__init__(TransformationType.INSERT, None)
+        self.target_points = target_points
+        self.fn = fn
+        self.op_name = op_unique_name
+        self.priority = priority
+
+    def union(self, other: "PTTransformationCommand") -> "PTTransformationCommand":
+        # TODO: keep all TransformationCommands atomic, refactor TransformationLayout instead
+        raise NotImplementedError()
+
+    def requires_graph_rebuild(self):
+        """
+        Return boolean flag to rebuild graph of model.
+
+        :return: Boolean flag.
+        """
+        return True
 
 
 class PTQuantizerInsertionCommand(PTTransformationCommand):
@@ -206,6 +236,23 @@ class PTBiasCorrectionCommand(PTTransformationCommand):
         """
         super().__init__(TransformationType.CHANGE, target_point)
         self.bias_value = bias_value
+
+    def union(self, other: "PTTransformationCommand") -> "PTTransformationCommand":
+        raise NotImplementedError()
+
+
+class PTWeightUpdateCommand(PTTransformationCommand):
+    """
+    Corrects weight value in the model based on the input value.
+    """
+
+    def __init__(self, target_point: PTTargetPoint, weight_value: torch.Tensor):
+        """
+        :param target_point: The TargetPoint instance for the correction that contains layer's information.
+        :param weight_value: The new weight value that will be used instead of the original weight value.
+        """
+        super().__init__(TransformationType.CHANGE, target_point)
+        self.weight_value = weight_value
 
     def union(self, other: "PTTransformationCommand") -> "PTTransformationCommand":
         raise NotImplementedError()
