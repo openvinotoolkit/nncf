@@ -154,11 +154,8 @@ class PTInsertionCommand(PTTransformationCommand):
 
         :return: Boolean flag.
         """
-        # Rebuild graph when adding quantization nodes or an op.
-        return self.priority in [
-            TransformationPriority.QUANTIZATION_PRIORITY,
-            TransformationPriority.OP_INSERTION_PRIORITY,
-        ]
+        # Rebuild graph when adding quantization nodes.
+        return self.priority == TransformationPriority.QUANTIZATION_PRIORITY
 
 
 class PTSharedFnInsertionCommand(PTTransformationCommand):

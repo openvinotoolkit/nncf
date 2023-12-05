@@ -21,7 +21,7 @@ class ExternalOpCallHook:
     Hook which is calling operation registered in the NNCFInterface
     by given storage name and storage key. Target operation should be
     registered before the ExternalOpCallHook call.
-    Hook module could not registered as a callable hook
+    Hook module could not be registered as a callable hook
     since a thread-local version of the module should be used during
     the base module execution.
     """
