@@ -12,7 +12,11 @@
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns import HWFusedPatternNames
 from nncf.common.utils.registry import Registry
+from nncf.torch.graph.operator_metatypes import PTAddMetatype
+from nncf.torch.graph.operator_metatypes import PTDivMetatype
 from nncf.torch.graph.operator_metatypes import PTInputNoopMetatype
+from nncf.torch.graph.operator_metatypes import PTMulMetatype
+from nncf.torch.graph.operator_metatypes import PTSubMetatype
 from nncf.torch.graph.pattern_operations import ARITHMETIC_OPERATIONS
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
@@ -53,8 +57,8 @@ def create_l2_norm_operations() -> GraphPattern:
 @PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.SHIFT_SCALE)
 def create_shift_scale() -> GraphPattern:
     pattern = GraphPattern()
-    add_node = pattern.add_node(label="ADD, SUB", type=["__add__", "__sub__"])
-    truediv_node = pattern.add_node(label="MUL, DIV", type=["__mul__", "__truediv__"])
+    add_node = pattern.add_node(label="ADD, SUB", type=[PTAddMetatype, PTSubMetatype])
+    truediv_node = pattern.add_node(label="MUL, DIV", type=[PTMulMetatype, PTDivMetatype])
     pattern.add_edge(add_node, truediv_node)
     return pattern
 
@@ -62,7 +66,15 @@ def create_shift_scale() -> GraphPattern:
 @PT_HW_FUSED_PATTERNS.register(HWFusedPatternNames.INPUT_SHIFT_SCALE)
 def create_input_shift_scale() -> GraphPattern:
     pattern = GraphPattern()
-    pattern.add_node(**{GraphPattern.LABEL_ATTR: "MODEL_INPUT", GraphPattern.METATYPE_ATTR: PTInputNoopMetatype})
+
+    # input -> shift_scale
+    pattern.add_node(label="MODEL_INPUT", type=PTInputNoopMetatype)
+
+    # input -> clone -> shift_scale
+    input_node = pattern.add_node(label="MODEL_INPUT", type=PTInputNoopMetatype)
+    noop_node = pattern.add_node(label="CLONE", type=["clone"])
+    pattern.add_edge(input_node, noop_node)
+
     shift_scale = create_shift_scale()
     pattern.join_patterns(shift_scale)
     return pattern

@@ -63,6 +63,7 @@ def test_op_for_patch_magic_functions(name_space):
         all_magic_fns_in_op += [x for x in op_fns if x.startswith("__") and x.endswith("__")]
 
     for patched_fn in patched_magic_fns:
+        assert patched_fn in dir(torch.Tensor), f"Magic function {patched_fn} does not exist in Tensor"
         assert patched_fn in all_magic_fns_in_op, f"No metatype for patched magic function {patched_fn}"
 
 
