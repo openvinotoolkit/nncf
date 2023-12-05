@@ -148,7 +148,7 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[OperatorMetatype]:
+    def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[NNCFNode]:
         """
         Returns a list of NNCFNodes to use as start nodes for activation path tracing.
 

@@ -25,7 +25,7 @@ from nncf.openvino.graph.metatypes.groups import QUANTIZE_AGNOSTIC_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import SHAPEOF_OPERATIONS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConcatMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
-from nncf.openvino.graph.model_utils import get_input_nodes
+from nncf.openvino.graph.model_utils import get_start_nodes_for_activation_path_tracing
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
@@ -61,7 +61,7 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
 
     @staticmethod
     def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[NNCFNode]:
-        return get_input_nodes(nncf_graph)
+        return get_start_nodes_for_activation_path_tracing(nncf_graph)
 
     # Manipulations with bias value and weights
 

@@ -69,7 +69,7 @@ def test_filter_constant_nodes(node_between_const_and_op):
     )
 
     class ConstantMetatype(OperatorMetatype):
-        num_expected_input_edges = 1
+        num_expected_input_edges = 0
         pass
 
     class NodeWithWeightMetatype(OperatorMetatype):

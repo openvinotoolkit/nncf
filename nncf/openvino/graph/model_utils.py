@@ -52,9 +52,9 @@ def remove_fq_from_inputs(model: ov.Model, graph: NNCFGraph) -> ov.Model:
     return model_transformer.transform(transformation_layout)
 
 
-def get_input_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[NNCFNode]:
     """
-    Get all nodes from given nncf_graph that are identified as a input nodes.
+    Get a list of NNCFNodes to use as start nodes for activation path tracing.
 
     :param nncf_graph: NNCFGraph to work with.
     :return: Target NNCFGraph input nodes.
