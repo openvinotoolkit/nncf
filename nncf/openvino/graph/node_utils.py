@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, List, Optional, Tuple, Type
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 import numpy as np
 import openvino.runtime as ov
@@ -17,15 +17,27 @@ import openvino.runtime.opset9 as opset
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
+from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
+from nncf.common.graph.layer_attributes import LinearLayerAttributes
+from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.tensor_statistics.collectors import ReductionAxes
-from nncf.openvino.graph.layer_attributes import OVLayerAttributes
+from nncf.openvino.graph.layout import OVLayoutElem
+from nncf.openvino.graph.layout import get_conv_weights_layout
+from nncf.openvino.graph.layout import get_conv_weights_layout_from_node
+from nncf.openvino.graph.layout import get_linear_weights_layout
+from nncf.openvino.graph.layout import get_linear_weights_layout_from_node
+from nncf.openvino.graph.metatypes.groups import CONV_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_BIAS
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvertMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVIfMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
 
 InplaceInsertionFnType = Callable[[ov.Node, int], ov.Node]
@@ -339,7 +351,7 @@ def get_reducer_output_node_names(
     return [get_result_node_name(target_node_name, port_id)]
 
 
-def get_weight_channel_axes(node: NNCFNode, weights_port_id: int) -> List[int]:
+def get_weight_channel_axes(node: NNCFNode) -> List[int]:
     """
     Returns axes numbers of the weight tensor which correspond to its channels.
 
@@ -350,35 +362,23 @@ def get_weight_channel_axes(node: NNCFNode, weights_port_id: int) -> List[int]:
     if node.metatype not in OPERATIONS_WITH_WEIGHTS:
         raise ValueError("Channel axis cannot be defined for operation without weights.")
 
-    channel_axes = node.metatype.const_channel_axis
-    if node.metatype == OVMatMulMetatype:
-        assert isinstance(node.layer_attributes, OVLayerAttributes)
-        assert len(channel_axes) == 1
-        const_attrs = node.layer_attributes.constant_attributes[weights_port_id]
-        transpose = const_attrs["transpose"]
-        ndims = len(const_attrs["shape"])
-        channel_axes = get_matmul_channel_axes(weights_port_id, ndims, transpose)
-
-    return channel_axes
+    if node.metatype in CONV_OPERATIONS:
+        weights_layout = get_conv_weights_layout_from_node(node)
+        return [idx for idx, elem in enumerate(weights_layout) if elem in [OVLayoutElem.GROUPS, OVLayoutElem.C_OUT]]
+    elif node.metatype == OVMatMulMetatype:
+        return get_matmul_channel_axes(node)
+    return node.metatype.const_channel_axis
 
 
-def get_matmul_channel_axes(weights_port_id: int, ndims: int, transpose: bool) -> List[int]:
+def get_matmul_channel_axes(node: ov.Node) -> List[int]:
     """
     Calculate channel axes for the MatMul operation.
 
-    :param weights_port_id: Weight port id of the target node.
-    :param ndims: The number of MatMul dimensions.
-    :param transpose: Whether the transpose is applied to weights.
+    :param node: The target node.
     :return: List of channel axes for the MatMul operation.
     """
-    matmul_channel_axis = OVMatMulMetatype.const_channel_axis[0]
-    if (weights_port_id == 1) == transpose:
-        matmul_channel_axis -= 1
-    matmul_channel_axis = max(ndims, 2) + matmul_channel_axis
-    channel_axes = list(range(ndims - 2))
-    if matmul_channel_axis < ndims:
-        channel_axes.append(matmul_channel_axis)
-    return channel_axes
+    weights_layout = get_linear_weights_layout_from_node(node)
+    return [idx for idx, elem in enumerate(weights_layout) if elem in [OVLayoutElem.SPATIAL, OVLayoutElem.C_OUT]]
 
 
 def get_channel_agnostic_reduction_axes(channel_axes: List[int], shape: List[int]) -> Optional[ReductionAxes]:
@@ -409,3 +409,62 @@ def create_bias_tensor(node_without_bias: NNCFNode, graph: NNCFGraph, value: Any
     channel_axis = node_without_bias.metatype.output_channel_axis
     bias_shape[channel_axis] = node_shape[1]
     return np.full(bias_shape, value)
+
+
+def get_weighted_layer_attributes(
+    ov_node: ov.Node, ov_metatype: OVOpMetatype, constant_attributes: Dict[int, Any]
+) -> WeightedLayerAttributes:
+    """
+    Funciton retrieves common layer attributes from the given node.
+
+    :param ov_node: TargetOpenvino graph node instance.
+    :param ov_metatype: NNCF Openvino metatype of the given node.
+    :param constant_attributes: Constant attributes collected for the given node.
+    :return: Weighted layer attributes for the given node.
+    """
+    if len(constant_attributes) != 1:
+        return None
+
+    port_id, attrs = constant_attributes.copy().popitem()
+    if ov_metatype in CONV_OPERATIONS:
+        node_attrs = ov_node.get_attributes()
+        kwargs = {
+            "weight_requires_grad": False,
+            "stride": tuple(node_attrs["strides"]),
+            "dilations": node_attrs["dilations"],
+            "transpose": ov_metatype in [OVConvolutionBackpropDataMetatype, OVGroupConvolutionBackpropDataMetatype],
+            # TODO: ticket 114378: unify pad attribute
+            "padding_values": tuple(node_attrs["pads_begin"] + node_attrs["pads_end"]),
+        }
+        weights_shape = attrs["shape"]
+        weights_layout = get_conv_weights_layout(ov_metatype=ov_metatype, weights_shape=weights_shape)
+        kwargs.update(
+            {
+                "in_channels": weights_shape[weights_layout.index(OVLayoutElem.C_IN)],
+                "out_channels": weights_shape[weights_layout.index(OVLayoutElem.C_OUT)],
+                "kernel_size": tuple(
+                    dim for dim, elem in zip(weights_shape, weights_layout) if elem == OVLayoutElem.SPATIAL
+                ),
+                "groups": weights_shape[weights_layout.index(OVLayoutElem.GROUPS)]
+                if OVLayoutElem.GROUPS in weights_layout
+                else 1,
+            }
+        )
+
+        return ConvolutionLayerAttributes(**kwargs)
+    if ov_metatype == OVMatMulMetatype:
+        weights_shape = attrs["shape"]
+        weights_layout = get_linear_weights_layout(
+            weights_shape=weights_shape, transpose=attrs["transpose"], port_id=port_id
+        )
+
+        kwargs = {
+            "weight_requires_grad": False,
+            "in_features": weights_shape[weights_layout.index(OVLayoutElem.C_IN)],
+            "out_features": weights_shape[weights_layout.index(OVLayoutElem.C_OUT)]
+            if OVLayoutElem.C_OUT in weights_layout
+            else None,
+            "with_bias": False,
+        }
+        return LinearLayerAttributes(**kwargs)
+    return GenericWeightedLayerAttributes(weight_requires_grad=False, weight_shape=attrs.get("shape", None))
