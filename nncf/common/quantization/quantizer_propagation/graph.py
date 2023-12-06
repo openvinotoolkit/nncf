@@ -1107,7 +1107,10 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
             # Avoid asymmetric quantization if a symmetrically quantized tensor arrived
             is_redundant = is_redundant and (
                 (ds_config.scheme == us_config.scheme)
-                or (ds_config.scheme == QuantizationScheme.ASYMMETRIC and us_config.scheme == QuantizationScheme.SYMMETRIC)
+                or (
+                    ds_config.scheme == QuantizationScheme.ASYMMETRIC
+                    and us_config.scheme == QuantizationScheme.SYMMETRIC
+                )
             )
 
             # Avoid per-channel quantization if a per-tensor-quantized tensor arrived

@@ -330,35 +330,44 @@ class TestQuantizerPropagationSolver:
         # 2
         MergeQConfigTestStruct(
             branch_qconfig_lists_before_merge=[
-                [QuantizerConfig(num_bits=6, scheme=QuantizationScheme.ASYMMETRIC), QuantizerConfig(num_bits=8)],
-                [QuantizerConfig(num_bits=6, scheme=QuantizationScheme.ASYMMETRIC), QuantizerConfig(num_bits=8)],
-                [QuantizerConfig(num_bits=6, scheme=QuantizationScheme.ASYMMETRIC), QuantizerConfig(num_bits=8)],
+                [QuantizerConfig(num_bits=6, scheme=QuantizationScheme.ASYMMETRIC), 
+                 QuantizerConfig(num_bits=8)],
+                [QuantizerConfig(num_bits=6, scheme=QuantizationScheme.ASYMMETRIC), 
+                 QuantizerConfig(num_bits=8)],
+                [QuantizerConfig(num_bits=6, scheme=QuantizationScheme.ASYMMETRIC), 
+                 QuantizerConfig(num_bits=8)],
             ],
 
             strategy_vs_solution_dict={
                 PropagationStrategy.DO_NOT_MERGE_BRANCH_FQS: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
-                        [QuantizerConfig(num_bits=6, scheme=QuantizationScheme.ASYMMETRIC), QuantizerConfig(num_bits=8)],
-                        [QuantizerConfig(num_bits=6, scheme=QuantizationScheme.ASYMMETRIC), QuantizerConfig(num_bits=8)],
-                        [QuantizerConfig(num_bits=6, scheme=QuantizationScheme.ASYMMETRIC), QuantizerConfig(num_bits=8)],
+                        [QuantizerConfig(num_bits=6, scheme=QuantizationScheme.ASYMMETRIC), 
+                         QuantizerConfig(num_bits=8)],
+                        [QuantizerConfig(num_bits=6, scheme=QuantizationScheme.ASYMMETRIC), 
+                         QuantizerConfig(num_bits=8)],
+                        [QuantizerConfig(num_bits=6, scheme=QuantizationScheme.ASYMMETRIC), 
+                         QuantizerConfig(num_bits=8)],
                     ]),
                 PropagationStrategy.MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME: MergeQConfigSolution(
-                    merge_qconfig_list=[QuantizerConfig(num_bits=6, scheme=QuantizationScheme.ASYMMETRIC),
+                    merge_qconfig_list=[QuantizerConfig(num_bits=6, 
+                                                        scheme=QuantizationScheme.ASYMMETRIC),
                                         QuantizerConfig(num_bits=8)],
                     branch_qconfig_lists_after_merge=[None,
                                                       None,
                                                       None]
                 ),
                 PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
-                    merge_qconfig_list=[QuantizerConfig(num_bits=6, scheme=QuantizationScheme.ASYMMETRIC),
+                    merge_qconfig_list=[QuantizerConfig(num_bits=6, 
+                                                        scheme=QuantizationScheme.ASYMMETRIC),
                                         QuantizerConfig(num_bits=8)],
                     branch_qconfig_lists_after_merge=[None,
                                                       None,
                                                       None]),
 
                 PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT: MergeQConfigSolution(
-                    merge_qconfig_list=[QuantizerConfig(num_bits=6, scheme=QuantizationScheme.ASYMMETRIC),
+                    merge_qconfig_list=[QuantizerConfig(num_bits=6, 
+                                                        scheme=QuantizationScheme.ASYMMETRIC),
                                         QuantizerConfig(num_bits=8)],
                     branch_qconfig_lists_after_merge=[None,
                                                       None,
@@ -476,7 +485,8 @@ class TestQuantizerPropagationSolver:
         # 6
         MergeQConfigTestStruct(
             branch_qconfig_lists_before_merge=[
-                [QuantizerConfig(num_bits=7), QuantizerConfig(num_bits=7, scheme=QuantizationScheme.ASYMMETRIC)],
+                [QuantizerConfig(num_bits=7), QuantizerConfig(num_bits=7, 
+                                                              scheme=QuantizationScheme.ASYMMETRIC)],
                 [QuantizerConfig(num_bits=7, scheme=QuantizationScheme.ASYMMETRIC)],
                 [QuantizerConfig(num_bits=7, scheme=QuantizationScheme.ASYMMETRIC)]
             ],
@@ -484,19 +494,22 @@ class TestQuantizerPropagationSolver:
                 PropagationStrategy.DO_NOT_MERGE_BRANCH_FQS: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
-                        [QuantizerConfig(num_bits=7), QuantizerConfig(num_bits=7, scheme=QuantizationScheme.ASYMMETRIC)],
+                        [QuantizerConfig(num_bits=7), QuantizerConfig(num_bits=7, 
+                                                                      scheme=QuantizationScheme.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=7, scheme=QuantizationScheme.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=7, scheme=QuantizationScheme.ASYMMETRIC)]]),
                 PropagationStrategy.MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
-                        [QuantizerConfig(num_bits=7), QuantizerConfig(num_bits=7, scheme=QuantizationScheme.ASYMMETRIC)],
+                        [QuantizerConfig(num_bits=7), QuantizerConfig(num_bits=7, 
+                                                                      scheme=QuantizationScheme.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=7, scheme=QuantizationScheme.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=7, scheme=QuantizationScheme.ASYMMETRIC)]]),
                 PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
                     merge_qconfig_list=[QuantizerConfig(num_bits=7, scheme=QuantizationScheme.ASYMMETRIC)],
                     branch_qconfig_lists_after_merge=[
-                        [QuantizerConfig(num_bits=7), QuantizerConfig(num_bits=7, scheme=QuantizationScheme.ASYMMETRIC)],
+                        [QuantizerConfig(num_bits=7), QuantizerConfig(num_bits=7, 
+                                                                      scheme=QuantizationScheme.ASYMMETRIC)],
                         None,
                         None
                     ]),
@@ -644,7 +657,8 @@ class TestQuantizerPropagationSolver:
         # 10
         MergeQConfigTestStruct(
             branch_qconfig_lists_before_merge=[
-                [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=4, scheme=QuantizationScheme.ASYMMETRIC)],
+                [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=4, 
+                                                              scheme=QuantizationScheme.ASYMMETRIC)],
                 [QuantizerConfig(num_bits=7, scheme=QuantizationScheme.ASYMMETRIC),
                  QuantizerConfig(num_bits=6, scheme=QuantizationScheme.ASYMMETRIC)],
                 [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=5)]
@@ -653,21 +667,24 @@ class TestQuantizerPropagationSolver:
                 PropagationStrategy.DO_NOT_MERGE_BRANCH_FQS: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
-                        [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=4, scheme=QuantizationScheme.ASYMMETRIC)],
+                        [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=4, 
+                                                                      scheme=QuantizationScheme.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=7, scheme=QuantizationScheme.ASYMMETRIC),
                          QuantizerConfig(num_bits=6, scheme=QuantizationScheme.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=5)]]),
                 PropagationStrategy.MERGE_IF_ALL_BRANCH_FQ_OPTIONS_SAME: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
-                        [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=4, scheme=QuantizationScheme.ASYMMETRIC)],
+                        [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=4, 
+                                                                      scheme=QuantizationScheme.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=7, scheme=QuantizationScheme.ASYMMETRIC),
                          QuantizerConfig(num_bits=6, scheme=QuantizationScheme.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=5)]]),
                 PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
-                        [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=4, scheme=QuantizationScheme.ASYMMETRIC)],
+                        [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=4, 
+                                                                      scheme=QuantizationScheme.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=7, scheme=QuantizationScheme.ASYMMETRIC),
                          QuantizerConfig(num_bits=6, scheme=QuantizationScheme.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=5)]
@@ -675,7 +692,8 @@ class TestQuantizerPropagationSolver:
                 PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT: MergeQConfigSolution(
                     merge_qconfig_list=None,
                     branch_qconfig_lists_after_merge=[
-                        [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=4, scheme=QuantizationScheme.ASYMMETRIC)],
+                        [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=4, 
+                                                                      scheme=QuantizationScheme.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=7, scheme=QuantizationScheme.ASYMMETRIC),
                          QuantizerConfig(num_bits=6, scheme=QuantizationScheme.ASYMMETRIC)],
                         [QuantizerConfig(num_bits=8), QuantizerConfig(num_bits=5)]

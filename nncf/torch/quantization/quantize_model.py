@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 

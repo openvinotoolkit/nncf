@@ -192,6 +192,10 @@ class MinMaxQuantization(Algorithm):
         """
         Redefines default values because mode option doesn't support them.
         """
+        mode_default_option_map = {
+            QuantizationMode.FP8_E4M3: ConvertParameters(destination_type=FP8Type.E4M3),
+            QuantizationMode.FP8_E5M2: ConvertParameters(destination_type=FP8Type.E5M2),
+        }
         nncf_logger.warning(
             f"Experimental option mode was set to: {self._mode}. The parameters below would not take any effect:"
         )
@@ -223,15 +227,17 @@ class MinMaxQuantization(Algorithm):
         self._backend_params = None
         nncf_logger.warning(f"  backend_params option was set to: {self._backend_params}")
 
-        if isinstance(self._quantization_params[QuantizerGroup.WEIGHTS], QuantizationParameters):
-            self._quantization_params[QuantizerGroup.WEIGHTS] = ConvertParameters(FP8Type.E4M3)
+        weights_params = self._quantization_params[QuantizerGroup.WEIGHTS]
+        if isinstance(weights_params, QuantizationParameters) or weights_params is None:
+            self._quantization_params[QuantizerGroup.WEIGHTS] = mode_default_option_map[self._mode]
             nncf_logger.warning(
                 f"  quantization_params options for {QuantizerGroup.WEIGHTS} were set to: "
                 f"{self._quantization_params[QuantizerGroup.WEIGHTS]}"
             )
 
-        if isinstance(self._quantization_params[QuantizerGroup.ACTIVATIONS], QuantizationParameters):
-            self._quantization_params[QuantizerGroup.ACTIVATIONS] = ConvertParameters(FP8Type.E4M3)
+        activations_params = self._quantization_params[QuantizerGroup.ACTIVATIONS]
+        if isinstance(activations_params, QuantizationParameters) or activations_params is None:
+            self._quantization_params[QuantizerGroup.ACTIVATIONS] = mode_default_option_map[self._mode]
             nncf_logger.warning(
                 f"  quantization_params options for {QuantizerGroup.ACTIVATIONS} were set to: "
                 f"{self._quantization_params[QuantizerGroup.ACTIVATIONS]}"

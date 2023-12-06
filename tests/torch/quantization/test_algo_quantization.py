@@ -779,7 +779,10 @@ class TestHalfPrecisionModels:
 
         # Make sure that both symmetric and asymmetric quantizers appear in the model
         config["compression"]["scope_overrides"] = {
-            "activations": {"{re}.*conv_first.*": {"scheme": "asymmetric"}, "{re}.*conv_second.*": {"scheme": "symmetric"}},
+            "activations": {
+                "{re}.*conv_first.*": {"scheme": "asymmetric"},
+                "{re}.*conv_second.*": {"scheme": "symmetric"},
+            },
             "weights": {"{re}.*conv_first.*": {"scheme": "asymmetric"}, "{re}.*conv_second.*": {"scheme": "symmetric"}},
         }
         config["compression"]["initializer"] = {
