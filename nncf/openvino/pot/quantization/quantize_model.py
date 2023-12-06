@@ -326,11 +326,11 @@ def _create_engine_config(
 def quantize_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
+    mode: Optional[QuantizationMode] = None,
     preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
-    mode: Optional[QuantizationMode] = None,
     model_type: Optional[ModelType] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     advanced_parameters: Optional[AdvancedQuantizationParameters] = None,

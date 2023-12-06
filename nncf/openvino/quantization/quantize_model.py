@@ -77,11 +77,11 @@ def should_use_pot(advanced_parameters: Optional[AdvancedQuantizationParameters]
 def native_quantize_if_op_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
+    mode: Optional[QuantizationMode] = None,
     preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
-    mode: Optional[QuantizationMode] = None,
     model_type: Optional[ModelType] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
@@ -137,11 +137,11 @@ def native_quantize_if_op_impl(
 def native_quantize_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
+    mode: Optional[QuantizationMode] = None,
     preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
-    mode: Optional[QuantizationMode] = None,
     model_type: Optional[ModelType] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
@@ -216,15 +216,15 @@ def native_quantize_with_accuracy_control_impl(
     copied_parameters.backend_params[BackendParameters.COMPRESS_WEIGHTS] = False
 
     quantized_model = quantize_impl(
-        model,
-        calibration_dataset,
-        preset,
-        target_device,
-        subset_size,
-        fast_bias_correction,
-        model_type,
-        ignored_scope,
-        copied_parameters,
+        model=model,
+        calibration_dataset=calibration_dataset,
+        preset=preset,
+        target_device=target_device,
+        subset_size=subset_size,
+        fast_bias_correction=fast_bias_correction,
+        model_type=model_type,
+        ignored_scope=ignored_scope,
+        advanced_parameters=copied_parameters,
     )
 
     if advanced_accuracy_restorer_parameters.intermediate_model_dir:
@@ -324,11 +324,11 @@ def native_quantize_with_accuracy_control_impl(
 def quantize_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
+    mode: Optional[QuantizationMode] = None,
     preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
-    mode: Optional[QuantizationMode] = None,
     model_type: Optional[ModelType] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
@@ -348,11 +348,11 @@ def quantize_impl(
     return quantize_fn(
         model=model,
         calibration_dataset=calibration_dataset,
+        mode=mode,
         preset=preset,
         target_device=target_device,
         subset_size=subset_size,
         fast_bias_correction=fast_bias_correction,
-        mode=mode,
         model_type=model_type,
         ignored_scope=ignored_scope,
         advanced_parameters=advanced_parameters,
