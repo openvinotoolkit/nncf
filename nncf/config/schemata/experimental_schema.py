@@ -303,21 +303,15 @@ BOOTSTRAP_NAS_SEARCH_SCHEMA = {
             NUMBER,
             description="Defines the number of evaluations that will be used by the search algorithm.",
         ),
-        "num_constraints":
-        with_attributes(NUMBER,
-                        description="Number of constraints in search problem."),
+        "num_constraints": with_attributes(NUMBER, description="Number of constraints in search problem."),
         "population": with_attributes(
             NUMBER,
             description="Defines the population size when using an evolutionary search algorithm.",
         ),
-        "crossover_prob": with_attributes(NUMBER,
-                        description="Crossover probability used by a genetic algorithm."),
-        "crossover_eta": with_attributes(NUMBER,
-                        description="Crossover eta."),
-        "mutation_eta": with_attributes(NUMBER,
-                        description="Mutation eta for genetic algorithm."),
-        "mutation_prob": with_attributes(NUMBER,
-                        description="Mutation probability for genetic algorithm."),
+        "crossover_prob": with_attributes(NUMBER, description="Crossover probability used by a genetic algorithm."),
+        "crossover_eta": with_attributes(NUMBER, description="Crossover eta."),
+        "mutation_eta": with_attributes(NUMBER, description="Mutation eta for genetic algorithm."),
+        "mutation_prob": with_attributes(NUMBER, description="Mutation probability for genetic algorithm."),
         "acc_delta": with_attributes(
             NUMBER,
             description="Defines the absolute difference in accuracy that is tolerated "
@@ -328,17 +322,14 @@ BOOTSTRAP_NAS_SEARCH_SCHEMA = {
             description="Defines the reference accuracy from the pre-trained model used "
             "to generate the super-network.",
         ),
-        "aspiration_points":
-        with_attributes(ARRAY_OF_NUMBERS,
-                        description="Information to indicate the preferred parts of the Pareto front"),
-        "epsilon":
-        with_attributes(NUMBER,
-                        description="epsilon distance of surviving solutions for RNSGA-II."),
-        "weights":
-        with_attributes(NUMBER,
-                        description="weights used by RNSGA-II."),
-        "extreme_points_as_ref_points": with_attributes(BOOLEAN,
-                                               description="Find extreme points and use them as aspiration points."),
+        "aspiration_points": with_attributes(
+            ARRAY_OF_NUMBERS, description="Information to indicate the preferred parts of the Pareto front"
+        ),
+        "epsilon": with_attributes(NUMBER, description="epsilon distance of surviving solutions for RNSGA-II."),
+        "weights": with_attributes(NUMBER, description="weights used by RNSGA-II."),
+        "extreme_points_as_ref_points": with_attributes(
+            BOOLEAN, description="Find extreme points and use them as aspiration points."
+        ),
         "compression": make_object_or_array_of_objects_schema(
             {"oneOf": [{"$ref": f"#/$defs/{KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG}"}]}
         ),
