@@ -15,7 +15,7 @@ import pytest
 
 from nncf import NNCFConfig
 from nncf.config.structures import BNAdaptationInitArgs
-from nncf.experimental.torch.nas.bootstrapNAS import SearchAlgorithm
+from nncf.experimental.torch.nas.bootstrapNAS import BaseSearchAlgorithm
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.experimental.torch.nas.bootstrapNAS.search.search import DataLoaderType
 from tests.torch.helpers import create_ones_mock_dataloader
@@ -26,9 +26,17 @@ from tests.torch.nas.creators import create_bootstrap_training_model_and_ctrl
 from tests.torch.nas.models.synthetic import ThreeConvModel
 from tests.torch.nas.test_all_elasticity import fixture_nas_model_name  # noqa: F401
 
+SEARCH_ALGORITHMS = ["NSGA2", "RNSGA2"]
+
+
+@pytest.fixture(name="search_algo_name", scope="function", params=SEARCH_ALGORITHMS)
+def fixture_search_algo_name(request):
+    return request.param
+
 
 class SearchTestDesc(NamedTuple):
     model_creator: Any
+    # ref_model_stats: RefModelStats = None
     blocks_to_skip: List[List[str]] = None
     input_sizes: List[int] = [1, 3, 32, 32]
     algo_params: Dict = {}
@@ -45,7 +53,7 @@ class SearchTestDesc(NamedTuple):
         return name
 
 
-def prepare_test_model(search_desc):
+def prepare_test_model(search_desc, search_algo_name):
     model, ctrl = create_bnas_model_and_ctrl_by_test_desc(search_desc)
     elasticity_ctrl = ctrl.elasticity_controller
     config = {
@@ -53,7 +61,7 @@ def prepare_test_model(search_desc):
         "bootstrapNAS": {
             "training": {"elasticity": {"available_elasticity_dims": ["depth", "width"]}},
             "search": {
-                "algorithm": "NSGA2",
+                "algorithm": search_algo_name,
                 "num_evals": 2,
                 "population": 1,
                 "batchnorm_adaptation": {"num_bn_adaptation_samples": 2},
@@ -66,7 +74,7 @@ def prepare_test_model(search_desc):
     return model, elasticity_ctrl, nncf_config
 
 
-def prepare_search_algorithm(nas_model_name: str):
+def prepare_search_algorithm(nas_model_name, search_algo_name):
     if "inception_v3" in nas_model_name:
         pytest.skip(
             f"Skip test for {nas_model_name} as it fails because of 2 issues: "
@@ -80,12 +88,12 @@ def prepare_search_algorithm(nas_model_name: str):
     nncf_config = get_empty_config(input_sample_sizes=NAS_MODEL_DESCS[nas_model_name][1])
     nncf_config["bootstrapNAS"] = {"training": {"algorithm": "progressive_shrinking"}}
     nncf_config["input_info"][0].update({"filler": "random"})
-    nncf_config["bootstrapNAS"]["search"] = {"algorithm": "NSGA2", "num_evals": 2, "population": 1}
+    nncf_config["bootstrapNAS"]["search"] = {"algorithm": search_algo_name, "num_evals": 2, "population": 1}
     nncf_config = NNCFConfig.from_dict(nncf_config)
     model, ctrl = create_bootstrap_training_model_and_ctrl(model, nncf_config)
     elasticity_ctrl = ctrl.elasticity_controller
     elasticity_ctrl.multi_elasticity_handler.enable_all()
-    return SearchAlgorithm.from_config(model, elasticity_ctrl, nncf_config)
+    return BaseSearchAlgorithm.from_config(model, elasticity_ctrl, nncf_config)
 
 
 def update_search_bn_adapt_section(nncf_config, bn_adapt_section_is_called):
@@ -139,21 +147,21 @@ NAS_MODELS_SEARCH_ENCODING = {
 
 
 class TestSearchAlgorithm:
-    def test_activate_maximum_subnet_at_init(self):
+    def test_activate_maximum_subnet_at_init(self, search_algo_name):
         search_desc = SearchTestDesc(
             model_creator=ThreeConvModel,
             algo_params={"width": {"min_width": 1, "width_step": 1}},
             input_sizes=ThreeConvModel.INPUT_SIZE,
         )
-        model, elasticity_ctrl, nncf_config = prepare_test_model(search_desc)
+        model, elasticity_ctrl, nncf_config = prepare_test_model(search_desc, search_algo_name)
         elasticity_ctrl.multi_elasticity_handler.enable_elasticity(ElasticityDim.WIDTH)
-        SearchAlgorithm(model, elasticity_ctrl, nncf_config)
+        BaseSearchAlgorithm.from_config(model, elasticity_ctrl, nncf_config)
         config_init = elasticity_ctrl.multi_elasticity_handler.get_active_config()
         elasticity_ctrl.multi_elasticity_handler.activate_maximum_subnet()
         assert config_init == elasticity_ctrl.multi_elasticity_handler.get_active_config()
 
-    def test_design_upper_bounds(self, nas_model_name):
-        search = prepare_search_algorithm(nas_model_name)
+    def test_design_upper_bounds(self, nas_model_name, search_algo_name):
+        search = prepare_search_algorithm(nas_model_name, search_algo_name)
         assert search.vars_upper == NAS_MODELS_SEARCH_ENCODING[nas_model_name]
         assert search.num_vars == len(NAS_MODELS_SEARCH_ENCODING[nas_model_name])
 
@@ -162,19 +170,19 @@ class TestSearchAlgorithm:
         [False, True],
         ids=["section_with_zero_num_samples", "section_with_non_zero_num_samples"],
     )
-    def test_bn_adapt(self, mocker, bn_adapt_section_is_called, tmp_path):
+    def test_bn_adapt(self, mocker, bn_adapt_section_is_called, tmp_path, search_algo_name):
         search_desc = SearchTestDesc(
             model_creator=ThreeConvModel,
             algo_params={"width": {"min_width": 1, "width_step": 1}},
             input_sizes=ThreeConvModel.INPUT_SIZE,
         )
-        nncf_network, ctrl, nncf_config = prepare_test_model(search_desc)
+        nncf_network, ctrl, nncf_config = prepare_test_model(search_desc, search_algo_name)
         update_search_bn_adapt_section(nncf_config, bn_adapt_section_is_called)
         bn_adapt_run_patch = mocker.patch(
             "nncf.common.initialization.batchnorm_adaptation.BatchnormAdaptationAlgorithm.run"
         )
         ctrl.multi_elasticity_handler.enable_all()
-        search_algo = SearchAlgorithm(nncf_network, ctrl, nncf_config)
+        search_algo = BaseSearchAlgorithm.from_config(nncf_network, ctrl, nncf_config)
 
         def fake_acc_eval(*unused):
             return 0
@@ -187,10 +195,10 @@ class TestSearchAlgorithm:
 
 
 class TestSearchEvaluators:
-    def test_create_default_evaluators(self, nas_model_name, tmp_path):
+    def test_create_default_evaluators(self, nas_model_name, search_algo_name, tmp_path):
         if nas_model_name in ["squeezenet1_0", "pnasnetb"]:
             pytest.skip(f"Skip test for {nas_model_name} as it fails.")
-        search = prepare_search_algorithm(nas_model_name)
+        search = prepare_search_algorithm(nas_model_name, search_algo_name)
         search.run(lambda model, val_loader: 0, None, tmp_path)
         evaluators = search.evaluator_handlers
         assert len(evaluators) == 2

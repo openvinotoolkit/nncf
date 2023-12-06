@@ -38,7 +38,7 @@ from examples.torch.common.utils import get_run_name
 from examples.torch.common.utils import is_pretrained_model_requested
 from examples.torch.common.utils import print_args
 from nncf.config.structures import BNAdaptationInitArgs
-from nncf.experimental.torch.nas.bootstrapNAS import SearchAlgorithm
+from nncf.experimental.torch.nas.bootstrapNAS import BaseSearchAlgorithm
 from nncf.experimental.torch.nas.bootstrapNAS.training.model_creator_helpers import resume_compression_from_state
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.initialization import wrap_dataloader_for_init
@@ -151,7 +151,7 @@ def main_worker(current_gpu, config: SampleConfig):
         top1_acc = validate_model_fn_top1(model, val_loader)
         logger.info("SuperNetwork Top 1: {top1_acc}".format(top1_acc=top1_acc))
 
-        search_algo = SearchAlgorithm.from_config(model, elasticity_ctrl, nncf_config)
+        search_algo = BaseSearchAlgorithm.from_config(model, elasticity_ctrl, nncf_config)
 
         elasticity_ctrl, best_config, performance_metrics = search_algo.run(
             validate_model_fn_top1, val_loader, config.checkpoint_save_dir, tensorboard_writer=config.tb
