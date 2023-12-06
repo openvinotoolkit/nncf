@@ -17,6 +17,7 @@ import pytest
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
+from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationType
@@ -45,6 +46,43 @@ VALID_CONV_LAYER_ATTR = ConvolutionLayerAttributes(
     transpose=False,
     padding_values=(0, 0, 0, 0),
 )
+
+
+DEPTHWISE_CONV_LAYER_ATTR = ConvolutionLayerAttributes(
+    weight_requires_grad=False,
+    in_channels=5,
+    out_channels=1,
+    kernel_size=(5, 5),
+    stride=(1, 1),
+    dilations=(1, 1),
+    groups=5,
+    transpose=False,
+    padding_values=(0, 0, 0, 0),
+)
+
+MATMUL_LAYER_METATYPES = [
+    # 2D
+    LinearLayerAttributes(
+        weight_requires_grad=False,
+        in_features=5,
+        out_features=10,
+        with_bias=False,
+    ),
+    # 1D
+    LinearLayerAttributes(
+        weight_requires_grad=False,
+        in_features=5,
+        out_features=None,
+        with_bias=False,
+    ),
+    # 5D
+    LinearLayerAttributes(
+        weight_requires_grad=False,
+        in_features=5,
+        out_features=None,
+        with_bias=False,
+    ),
+]
 
 
 INVALID_CONSUMER_CONV_LAYER_ATTRS = [
@@ -230,9 +268,8 @@ class TemplateTestChannelAlignment:
             (INVALID_CONV_LAYER_ATTR, INVALID_CONV_LAYER_ATTR, False),
         ]
     )
-    GET_NODES_TEST_CASES.extend(
-        [(VALID_CONV_LAYER_ATTR, None, False), (None, VALID_CONV_LAYER_ATTR, False), (None, None, False)]
-    )
+    GET_NODES_TEST_CASES.extend([(attr, VALID_CONV_LAYER_ATTR, True) for attr in MATMUL_LAYER_METATYPES])
+    GET_NODES_TEST_CASES.append((None, VALID_CONV_LAYER_ATTR, False))
 
     @pytest.mark.parametrize("first_conv_attrs,second_conv_attrs,ref_match", GET_NODES_TEST_CASES)
     def test_get_node_pairs(self, first_conv_attrs, second_conv_attrs, ref_match):
@@ -258,16 +295,21 @@ class TemplateTestChannelAlignment:
         else:
             assert len(pairs) == 0
 
-    def _get_nncf_graph(self, num_biases: int) -> NNCFGraph:
-        cla = self.convert_conv_layer_attrs(VALID_CONV_LAYER_ATTR)
+    def _get_nncf_graph(
+        self, num_biases: int, conv_layer_attrs=DEPTHWISE_CONV_LAYER_ATTR, conv_layer_attrs_1=VALID_CONV_LAYER_ATTR
+    ) -> NNCFGraph:
+        cla = self.convert_conv_layer_attrs(conv_layer_attrs)
+        cla_1 = self.convert_conv_layer_attrs(conv_layer_attrs_1)
+
         if num_biases == 0:
-            return NNCFGraphCA(self.get_conv_metatype(), cla).nncf_graph
+            return NNCFGraphCA(self.get_conv_metatype(), cla, cla_1).nncf_graph
         bla = self.get_add_layer_attrs()
         if num_biases == 1:
             return NNCFGraphCAWithBias(
                 self.get_conv_metatype(),
                 self.get_add_metatype(),
                 cla,
+                cla_1,
                 both_biases=False,
                 constant_metatype=self.get_constant_metatype(),
                 add_layer_attrs=bla,
@@ -276,22 +318,43 @@ class TemplateTestChannelAlignment:
             self.get_conv_metatype(),
             self.get_add_metatype(),
             cla,
+            cla_1,
             both_biases=True,
             add_layer_attrs=bla,
             constant_metatype=self.get_constant_metatype(),
         ).nncf_graph
 
+    @staticmethod
+    def _get_constant_lambda(value, counter=False):
+        if counter:
+            _state = 0
+
+        def f(*args, **kwargs):
+            if not counter:
+                return value
+            nonlocal _state
+            _state += 1
+            return value + str(_state)
+
+        return f
+
+    @pytest.mark.parametrize("one_dim_mm", [False, True])
     @pytest.mark.parametrize("empty_statistics", [False, True])
     @pytest.mark.parametrize("num_biases", [0, 1, 2])
-    def test_transformation_layout(self, empty_statistics, num_biases, mocker):
+    # pylint: disable=too-many-statements
+    # pylint: disable=too-many-branches
+    def test_transformation_layout(self, one_dim_mm, empty_statistics, num_biases, mocker):
         mocked_transformer = mocker.MagicMock()
         self.mock_model_transformer_factory(mocker, mocked_transformer)
 
-        nncf_graph = self._get_nncf_graph(num_biases)
+        # NNCFGraph building
+        first_conv_layer_attrs = DEPTHWISE_CONV_LAYER_ATTR if not one_dim_mm else MATMUL_LAYER_METATYPES[1]
+        nncf_graph = self._get_nncf_graph(num_biases, first_conv_layer_attrs)
         self.mock_nncf_graph_factory(mocker, nncf_graph)
 
         self.mock_command_creation_factory(mocker)
 
+        # Statistic points setup
         statistic_points = StatisticPointsContainer()
         target_node_name = "/Add_1_0" if num_biases else "/Conv_1_0"
         target_node = nncf_graph.get_node_by_name(target_node_name)
@@ -304,19 +367,6 @@ class TemplateTestChannelAlignment:
             def tensor_eq(*args, **kwargs):
                 return True
 
-        def get_constant_lambda(value, counter=False):
-            if counter:
-                _state = 0
-
-            def f(*args, **kwargs):
-                if not counter:
-                    return value
-                nonlocal _state
-                _state += 1
-                return value + str(_state)
-
-            return f
-
         algorithm = ChannelAlignment()
         tensor_collector = TensorCollector()
         if empty_statistics:
@@ -324,19 +374,31 @@ class TemplateTestChannelAlignment:
         else:
             stat_value = (np.array([-1], dtype=np.int32), np.array([2], dtype=np.int32))
 
-        tensor_collector.get_statistics = get_constant_lambda(TestTensorStats(*stat_value))
+        tensor_collector.get_statistics = self._get_constant_lambda(TestTensorStats(*stat_value))
         statistic_points.add_statistic_point(StatisticPoint(target_point, tensor_collector, algorithm._algorithm_key))
 
+        # Backend setup
         class MockBackend(backend_cls):
             pass
 
         ref_weights_val = "ref_weights_val"
-        MockBackend.get_weight_value = get_constant_lambda(ref_weights_val, True)
+        MockBackend.get_weight_value = self._get_constant_lambda(ref_weights_val, True)
         ref_bias_val = "ref_bias_val"
-        MockBackend.get_bias_value = get_constant_lambda(ref_bias_val, True)
-        ref_dims_descr = "ref_dims_descr"
-        MockBackend.get_dims_descriptor = get_constant_lambda(ref_dims_descr, True)
+        MockBackend.get_bias_value = self._get_constant_lambda(ref_bias_val, True)
 
+        # ConvParams setup
+        ref_dims_in = LayoutDescriptor(0, 1, -1)
+        ref_dims_out = LayoutDescriptor(0, 2, 1)
+        if one_dim_mm:
+            ref_dims_in = LayoutDescriptor(None, 1, -1)
+        iter_ = (dims for dims in (ref_dims_in, ref_dims_out))
+
+        def dims_iter(*args, **kwargs):
+            return next(iter_)
+
+        MockBackend.get_dims_descriptor = dims_iter
+
+        # Algorithm fucntions mocking
         algorithm._backend_entity = MockBackend
         algorithm._set_backend_entity = mocker.MagicMock()
         ref_bias_in_after_align = "ref_bias_in_after_align"
@@ -354,7 +416,7 @@ class TemplateTestChannelAlignment:
         )
         algorithm.apply(None, nncf_graph, statistic_points)
 
-        if empty_statistics:
+        if empty_statistics or one_dim_mm:
             assert algorithm._align_means.call_count == 0
             assert algorithm._align_scales.call_count == 0
             mocked_transformer.transform.assert_called_once()
@@ -362,13 +424,12 @@ class TemplateTestChannelAlignment:
             assert len(arg.transformations) == 0
             return
 
-        assert algorithm._align_means.call_count == 1
         args = [
             np.zeros((1, 1, 1, 1)),
             np.zeros((1, 1, 1, 1)),
             ref_weights_val + "2",
             np.array(0.5, dtype=np.float32),
-            ref_dims_descr + "2",
+            ref_dims_out,
         ]
         for i in range(num_biases):
             args[i] = f"ref_bias_val{i + 1}"
@@ -381,8 +442,8 @@ class TemplateTestChannelAlignment:
         assert args[1] == ref_weights_val + "2"
         assert args[2] == ref_bias_in_after_align
         assert ((args[3] - 3) < EPS).all()
-        assert args[4] == ref_dims_descr + "1"
-        assert args[5] == ref_dims_descr + "2"
+        assert args[4] == ref_dims_in
+        assert args[5] == ref_dims_out
         assert args[6] < EPS
 
         mocked_transformer.transform.assert_called_once()

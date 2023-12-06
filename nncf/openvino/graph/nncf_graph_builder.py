@@ -18,7 +18,6 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
-from nncf.openvino.graph.layer_attributes import get_weighted_layer_attributes
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_CONST_PORT_ID
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
@@ -27,6 +26,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVLSTMSequenceMetat
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import get_operation_const_op
+from nncf.openvino.graph.node_utils import get_weighted_layer_attributes
 
 
 class GraphConverter:
