@@ -76,12 +76,12 @@ class MultiBranchesModelDesc(GeneralModelDesc):
         self._config_update["target_device"] = "TRIAL"
         trial_config = {
             "activations": {
-                "mode": "symmetric",
+                "scheme": "symmetric",
                 "bits": num_bits_for_activations,
                 "per_channel": False,
             },
             "weights": {
-                "mode": "symmetric",
+                "scheme": "symmetric",
                 "bits": num_bits_for_weights,
                 "per_channel": False,
             },
@@ -98,7 +98,7 @@ class MultiBranchesModelDesc(GeneralModelDesc):
             "target_device": "VPU",
             "config": {
                 "quantization": {
-                    "q4": {"bits": 4, "mode": "symmetric", "granularity": "pertensor"},
+                    "q4": {"bits": 4, "scheme": "symmetric", "granularity": "pertensor"},
                 }
             },
             "operations": [

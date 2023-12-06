@@ -27,7 +27,7 @@ from nncf.common.stateful_classes_registry import CommonStatefulClassesRegistry
 QuantizationPointId = int
 
 DEFAULT_QUANTIZER_CONFIG = QuantizerConfig(
-    num_bits=8, mode=QuantizationScheme.SYMMETRIC, signedness_to_force=None, per_channel=False
+    num_bits=8, scheme=QuantizationScheme.SYMMETRIC, signedness_to_force=None, per_channel=False
 )
 
 

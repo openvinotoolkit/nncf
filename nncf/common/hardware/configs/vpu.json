@@ -4,19 +4,19 @@
         "quantization": {
             "q8_tn": {
                 "bits": 8,
-                "mode": ["asymmetric", "symmetric"],
+                "scheme": ["asymmetric", "symmetric"],
                 "granularity": "pertensor"
             },
 
             "q8_ch": {
                 "bits": 8,
-                "mode": "symmetric",
+                "scheme": "symmetric",
                 "granularity": "perchannel"
             },
 
             "q8_w": {
                 "bits": 8,
-                "mode": "symmetric",
+                "scheme": "symmetric",
                 "granularity": [
                     "perchannel",
                     "pertensor"
@@ -24,18 +24,18 @@
             },
             "q4_tn": {
                 "bits": 4,
-                "mode": "symmetric",
+                "scheme": "symmetric",
                 "granularity": "pertensor"
             },
             "q4_ch": {
                 "bits": 4,
-                "mode": "symmetric",
+                "scheme": "symmetric",
                 "granularity": "perchannel"
             },
 
             "q4_w": {
                 "bits": 4,
-                "mode": "symmetric",
+                "scheme": "symmetric",
                 "granularity": [
                     "perchannel",
                     "pertensor"
@@ -43,13 +43,13 @@
             },
             "q2_ch": {
                 "bits": 2,
-                "mode": "symmetric",
+                "scheme": "symmetric",
                 "granularity": "perchannel"
             },
 
             "q2_w": {
                 "bits": 2,
-                "mode": "symmetric",
+                "scheme": "symmetric",
                 "granularity": [
                     "perchannel",
                     "pertensor"

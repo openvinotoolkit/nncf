@@ -450,7 +450,7 @@ def apply_insert_after(model):
     converter = TFModelConverterFactory.create(model)
     transformations = TFTransformationLayout()
     qconfig = QuantizerConfig(
-        num_bits=8, mode=QuantizationScheme.SYMMETRIC, signedness_to_force=None, per_channel=False
+        num_bits=8, scheme=QuantizationScheme.SYMMETRIC, signedness_to_force=None, per_channel=False
     )
 
     functional_model = is_functional_model(model)
@@ -486,7 +486,7 @@ def apply_insert_before(model):
 
     transformations = TFTransformationLayout()
     qconfig = QuantizerConfig(
-        num_bits=8, mode=QuantizationScheme.SYMMETRIC, signedness_to_force=None, per_channel=False
+        num_bits=8, scheme=QuantizationScheme.SYMMETRIC, signedness_to_force=None, per_channel=False
     )
 
     functional_model = is_functional_model(model)

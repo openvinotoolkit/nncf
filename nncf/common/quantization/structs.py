@@ -43,20 +43,20 @@ class QuantizerConfig:
     def __init__(
         self,
         num_bits: int = QUANTIZATION_BITS,
-        mode: QuantizationScheme = QuantizationScheme.SYMMETRIC,
+        scheme: QuantizationScheme = QuantizationScheme.SYMMETRIC,
         signedness_to_force: Optional[bool] = None,
         per_channel: bool = QUANTIZATION_PER_CHANNEL,
     ):
         """
         :param num_bits: Bitwidth of the quantization.
-        :param mode: The mode of quantization (symmetric or asymmetric).
+        :param scheme: The scheme of quantization (symmetric or asymmetric).
         :param signedness_to_force: True if the quantizer *must* be signed, False if *must* be unsigned,
             None if the signed/unsigned attribute should be determined based on the incoming activation
             statistics during range initialization.
         :param per_channel: True for per-channel quantization, False for per-tensor.
         """
         self.num_bits = num_bits
-        self.mode = mode
+        self.scheme = scheme
         self.signedness_to_force = signedness_to_force
         self.per_channel = per_channel
 
@@ -64,9 +64,9 @@ class QuantizerConfig:
         return self.__dict__ == other.__dict__
 
     def __str__(self):
-        return "B:{bits} M:{mode} SGN:{signedness} PC:{per_channel}".format(
+        return "B:{bits} M:{scheme} SGN:{signedness} PC:{per_channel}".format(
             bits=self.num_bits,
-            mode="S" if self.mode == QuantizationScheme.SYMMETRIC else "A",
+            scheme="S" if self.scheme == QuantizationScheme.SYMMETRIC else "A",
             signedness="ANY" if self.signedness_to_force is None else ("S" if self.signedness_to_force else "U"),
             per_channel="Y" if self.per_channel else "N",
         )
@@ -86,7 +86,7 @@ class QuantizerConfig:
         """
         fail_conditions = [
             self.num_bits > other.num_bits,
-            self.mode is QuantizationScheme.ASYMMETRIC and other.mode is QuantizationScheme.SYMMETRIC,
+            self.scheme is QuantizationScheme.ASYMMETRIC and other.scheme is QuantizationScheme.SYMMETRIC,
             self.signedness_to_force is None and other.signedness_to_force is not None,
             self.signedness_to_force is True and other.signedness_to_force is False,
         ]
@@ -105,7 +105,7 @@ class QuantizerConfig:
         """
         return (
             self.num_bits == linked_qconfig.num_bits
-            and self.mode == linked_qconfig.mode
+            and self.scheme == linked_qconfig.scheme
             and self.signedness_to_force == linked_qconfig.signedness_to_force
             and self.per_channel == linked_qconfig.per_channel
         )
@@ -119,7 +119,7 @@ class QuantizerConfig:
         return (
             self.per_channel == other_qconfig.per_channel
             and self.signedness_to_force == other_qconfig.signedness_to_force
-            and self.mode == other_qconfig.mode
+            and self.scheme == other_qconfig.scheme
         )
 
     def get_state(self) -> Dict[str, Any]:
@@ -131,7 +131,7 @@ class QuantizerConfig:
         """
         return {
             "num_bits": self.num_bits,
-            "mode": self.mode,
+            "scheme": self.scheme,
             "signedness_to_force": self.signedness_to_force,
             "per_channel": self.per_channel,
         }
@@ -153,11 +153,11 @@ class QuantizerSpec:
     """
 
     def __init__(
-        self, num_bits: int, mode: QuantizationScheme, signedness_to_force: bool, narrow_range: bool, half_range: bool
+        self, num_bits: int, scheme: QuantizationScheme, signedness_to_force: bool, narrow_range: bool, half_range: bool
     ):
         """
         :param num_bits: Bitwidth of the quantization.
-        :param mode: The mode of quantization (symmetric or asymmetric).
+        :param scheme: The scheme of quantization (symmetric or asymmetric).
         :param signedness_to_force: True if the quantizer *must* be signed, False if *must* be unsigned,
             None if the signed/unsigned attribute should be determined based on the incoming activation
             statistics during range initialization.
@@ -167,7 +167,7 @@ class QuantizerSpec:
             False - the full range are used.
         """
         self.num_bits = num_bits
-        self.mode = mode
+        self.scheme = scheme
         self.signedness_to_force = signedness_to_force
         self.narrow_range = narrow_range
         self.half_range = half_range
@@ -177,7 +177,7 @@ class QuantizerSpec:
 
     @classmethod
     def from_config(cls, qconfig: QuantizerConfig, narrow_range: bool, half_range: bool) -> "QuantizerSpec":
-        return cls(qconfig.num_bits, qconfig.mode, qconfig.signedness_to_force, narrow_range, half_range)
+        return cls(qconfig.num_bits, qconfig.scheme, qconfig.signedness_to_force, narrow_range, half_range)
 
 
 class QuantizationConstraints:
@@ -220,7 +220,7 @@ class QuantizationConstraints:
     def from_config_dict(cls, config_dict: Dict) -> "QuantizationConstraints":
         return cls(
             num_bits=config_dict.get("bits"),
-            mode=config_dict.get("mode"),
+            scheme=config_dict.get("scheme"),
             per_channel=config_dict.get("per_channel"),
             signedness_to_force=config_dict.get("signed"),
         )
@@ -334,5 +334,5 @@ class QuantizationPreset(Enum):
 
     def get_params_configured_by_preset(self, quant_group: QuantizerGroup) -> Dict:
         if quant_group == QuantizerGroup.ACTIVATIONS and self == QuantizationPreset.MIXED:
-            return {"mode": QuantizationScheme.ASYMMETRIC}
-        return {"mode": QuantizationScheme.SYMMETRIC}
+            return {"scheme": QuantizationScheme.ASYMMETRIC}
+        return {"scheme": QuantizationScheme.SYMMETRIC}

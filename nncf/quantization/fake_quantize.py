@@ -212,7 +212,7 @@ def get_quantizer_narrow_range(quantizer_config: QuantizerConfig, quant_group: Q
     :param quant_group: Group of the quantizer.
     :return: narrow_range parameter.
     """
-    if quantizer_config.mode == QuantizationScheme.SYMMETRIC:
+    if quantizer_config.scheme == QuantizationScheme.SYMMETRIC:
         return quant_group == QuantizerGroup.WEIGHTS
     return False
 
@@ -245,7 +245,7 @@ def calculate_quantizer_parameters(
         )
     else:
         num_bits = quantizer_config.num_bits
-        if quantizer_config.mode == QuantizationScheme.SYMMETRIC:
+        if quantizer_config.scheme == QuantizationScheme.SYMMETRIC:
             level_low, level_high = calculate_symmetric_level_ranges(num_bits, signed=True, narrow_range=narrow_range)
             levels = get_num_levels(level_low, level_high)
             input_low, input_high = symmetric_range(min_values, max_values, levels, quantizer_config, quant_group)
@@ -315,7 +315,7 @@ def _calculate_scaled_parameters(
         input_high: Tensor with maximum limit for input value.
         levels: Number of quantization levels.
     """
-    if quantizer_config.mode == QuantizationScheme.ASYMMETRIC:
+    if quantizer_config.scheme == QuantizationScheme.ASYMMETRIC:
         raise RuntimeError("half_range is only applied to symmetric quantization mode.")
     if quant_group != QuantizerGroup.WEIGHTS:
         raise RuntimeError("half_range is only applied to weight quantizers.")

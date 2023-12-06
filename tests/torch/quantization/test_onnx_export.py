@@ -102,13 +102,13 @@ PER_CHANNEL_AQ_SCALE_SHAPE = (1, INPUT_TENSOR_SHAPE[1], 1, 1)
     "export_mode", (QuantizerExportMode.FAKE_QUANTIZE, QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS)
 )
 def test_onnx_export_to_quantize_dequantize_per_channel(
-    is_per_channel: bool, quantization_mode: QuantizationScheme, export_mode: QuantizerExportMode
+    is_per_channel: bool, quantization_scheme: QuantizationScheme, export_mode: QuantizerExportMode
 ):
     scale_shape = PER_CHANNEL_AQ_SCALE_SHAPE if is_per_channel else (1,)
     qspec = PTQuantizerSpec(
         scale_shape=scale_shape,
         num_bits=8,
-        mode=quantization_mode,
+        scheme=quantization_scheme,
         signedness_to_force=None,
         logarithm_scale=False,
         narrow_range=False,
@@ -116,9 +116,9 @@ def test_onnx_export_to_quantize_dequantize_per_channel(
         is_quantized_on_export=False,
     )
 
-    q_cls = QUANTIZATION_MODULES.get(quantization_mode)
+    q_cls = QUANTIZATION_MODULES.get(quantization_scheme)
     quantizer = q_cls(qspec)
-    if quantization_mode is QuantizationScheme.SYMMETRIC:
+    if quantization_scheme is QuantizationScheme.SYMMETRIC:
         quantizer.scale = torch.nn.Parameter(torch.rand_like(quantizer.scale))
     else:
         quantizer.input_low = torch.nn.Parameter(torch.rand_like(quantizer.input_low))
@@ -289,14 +289,14 @@ def generate_middle_quants(
 
 
 @pytest.mark.parametrize(
-    "quantization_mode, parameters_to_set",
+    "quantization_scheme, parameters_to_set",
     [("symmetric", {"scale": 1.0}), ("asymmetric", {"input_low": -1.0, "input_range": 3.0})],
 )
-def test_export_quantized_weights_with_middle_quants(tmp_path, is_half_range, quantization_mode, parameters_to_set):
+def test_export_quantized_weights_with_middle_quants(tmp_path, is_half_range, quantization_scheme, parameters_to_set):
     model = TwoConvTestModel()
     sample_size = [1, 1, 20, 20]
     config = get_config_for_export_mode(False)
-    config["compression"]["weights"] = {"mode": quantization_mode}
+    config["compression"]["weights"] = {"scheme": quantization_scheme}
     if not is_half_range:
         config["compression"]["overflow_fix"] = "disable"
     config["input_info"]["sample_size"] = sample_size

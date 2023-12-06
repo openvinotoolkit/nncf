@@ -107,7 +107,7 @@ def test_quantizer_params_sym(case_to_test: CaseSymParams):
     per_ch = case_to_test.per_channel
     fq_params = case_to_test.fq_params
     quant_group = case_to_test.quant_group
-    qconfig = QuantizerConfig(num_bits=8, mode=QuantizationScheme.SYMMETRIC, per_channel=per_ch)
+    qconfig = QuantizerConfig(num_bits=8, scheme=QuantizationScheme.SYMMETRIC, per_channel=per_ch)
 
     if not per_ch:
         scale_shape = [1]
@@ -197,7 +197,7 @@ def test_quantizer_params_asym(case_to_test: CaseSymParams):
     per_ch = case_to_test.per_channel
     fq_params = case_to_test.fq_params
     quant_group = case_to_test.quant_group
-    qconfig = QuantizerConfig(num_bits=8, mode=QuantizationScheme.ASYMMETRIC, per_channel=per_ch)
+    qconfig = QuantizerConfig(num_bits=8, scheme=QuantizationScheme.ASYMMETRIC, per_channel=per_ch)
 
     if not per_ch:
         scale_shape = [1]
@@ -259,19 +259,19 @@ class SyntheticDataset(torch.utils.data.Dataset):
         return self._length
 
 
-def calculate_statistics(data, mode, qgroup, half_range=False):
+def calculate_statistics(data, scheme, qgroup, half_range=False):
     data = data.detach().numpy()
     per_ch = qgroup == QuantizerGroup.WEIGHTS
     axes = (1, 2, 3) if per_ch else None
     min_values = np.amin(data, axes)
-    if mode == QuantizationScheme.SYMMETRIC:
+    if scheme == QuantizationScheme.SYMMETRIC:
         max_values = np.amax(np.abs(data), axes)
     else:
         max_values = np.amax(data, axes)
 
     statistics = PTMinMaxTensorStatistic(min_values=torch.tensor(min_values), max_values=torch.tensor(max_values))
     signedness_to_force = True if qgroup == QuantizerGroup.WEIGHTS else None
-    qconfig = QuantizerConfig(num_bits=8, mode=mode, per_channel=per_ch, signedness_to_force=signedness_to_force)
+    qconfig = QuantizerConfig(num_bits=8, scheme=scheme, per_channel=per_ch, signedness_to_force=signedness_to_force)
     narrow_range = get_quantizer_narrow_range(qconfig, qgroup)
     fq_params = calculate_quantizer_parameters(statistics, qconfig, qgroup, narrow_range, half_range)
     return {"input_low": fq_params.input_low, "input_high": fq_params.input_high}

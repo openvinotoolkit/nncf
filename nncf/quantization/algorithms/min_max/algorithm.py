@@ -66,7 +66,7 @@ from nncf.scopes import get_ignored_node_names_from_ignored_scope
 TModel = TypeVar("TModel")
 
 DEFAULT_QCONFIG = QuantizerConfig(
-    num_bits=8, mode=QuantizationScheme.SYMMETRIC, signedness_to_force=None, per_channel=False
+    num_bits=8, scheme=QuantizationScheme.SYMMETRIC, signedness_to_force=None, per_channel=False
 )
 
 
@@ -100,10 +100,10 @@ class MinMaxQuantization(Algorithm):
 
     def __init__(
         self,
+        mode: Optional[QuantizationMode] = None,
         preset: Optional[QuantizationPreset] = None,
         target_device: TargetDevice = TargetDevice.ANY,
         subset_size: int = 300,
-        mode: Optional[QuantizationMode] = None,
         model_type: Optional[ModelType] = None,
         ignored_scope: Optional[IgnoredScope] = None,
         overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER,
@@ -116,6 +116,7 @@ class MinMaxQuantization(Algorithm):
         backend_params: Optional[Dict[str, Any]] = None,
     ):
         """
+        :param mode: Defines optimization mode for the algorithm. None by default.
         :param preset: A preset controls the quantization mode (symmetric and asymmetric).
             It can take the following values:
             - `performance`: Symmetric quantization of weights and activations.
@@ -127,7 +128,6 @@ class MinMaxQuantization(Algorithm):
             for this type of device, defaults to TargetDevice.ANY.
         :param subset_size: Size of a subset to calculate activations statistics used
             for quantization, defaults to 300.
-        :param mode: Defines optimization mode for the algorithm. None by default.
         :param model_type: Model type is needed to specify additional patterns
             in the model. Supported only `transformer` now.
         :param ignored_scope: An ignored scope that defined the list of model control
@@ -263,7 +263,7 @@ class MinMaxQuantization(Algorithm):
         :param quantization_params: Quantization parameters.
         :return: QuantizationConstraints.
         """
-        constraints = {"mode": preset.get_params_configured_by_preset(group)["mode"]}
+        constraints = {"scheme": preset.get_params_configured_by_preset(group)["scheme"]}
         if quantization_params is None:
             return QuantizationConstraints(**constraints)
 
@@ -275,7 +275,7 @@ class MinMaxQuantization(Algorithm):
             return QuantizationConstraints(**constraints)
 
         if quantization_params.scheme is not None:
-            constraints["mode"] = quantization_params.scheme
+            constraints["scheme"] = quantization_params.scheme
         if quantization_params.num_bits is not None:
             constraints["num_bits"] = quantization_params.num_bits
         if quantization_params.per_channel is not None:
@@ -467,7 +467,7 @@ class MinMaxQuantization(Algorithm):
 
         scope_overrides_activations = {}
         for node_name in scaled_dot_product_attention_node_names:
-            scope_overrides_activations[node_name] = {"mode": "symmetric"}
+            scope_overrides_activations[node_name] = {"scheme": "symmetric"}
         return {"activations": scope_overrides_activations}
 
     def _get_quantizer_setup(
@@ -887,10 +887,10 @@ class MinMaxQuantization(Algorithm):
                         if node.metatype not in self._backend_entity.mat_mul_metatypes:
                             continue
                         if (
-                            quantization_point.qconfig.mode != QuantizationScheme.SYMMETRIC
+                            quantization_point.qconfig.scheme != QuantizationScheme.SYMMETRIC
                             and node.layer_attributes is None
                         ):
-                            quantization_point.qconfig.mode = QuantizationScheme.SYMMETRIC
+                            quantization_point.qconfig.scheme = QuantizationScheme.SYMMETRIC
                             nncf_logger.debug(
                                 f"Update quantization mode for the node {node_name}"
                                 f" to the symmetric due to ModelType parameter."

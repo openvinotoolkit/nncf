@@ -351,8 +351,8 @@ The complete config [example](../../examples/torch/classification/configs/mixed_
     "input_info": { "sample_size": [1, 3, 32, 32] }, // the input shape of your model may vary
     "compression": {
        "algorithm": "quantization",
-       "weights": {"mode": "symmetric"},
-       "activations": {"mode": "asymmetric"}
+       "weights": {"scheme": "symmetric"},
+       "activations": {"scheme": "asymmetric"}
     },
    "target_device": "CPU"
 }
@@ -365,7 +365,7 @@ The complete config [example](../../examples/torch/classification/configs/mixed_
     "input_info": { "sample_size": [1, 3, 224, 224] }, // the input shape of your model may vary
     "compression": {
        "algorithm": "quantization",
-       "mode": "symmetric",
+       "scheme": "symmetric",
        "initializer": {
          "range": { "num_init_samples": 5000 }
        }

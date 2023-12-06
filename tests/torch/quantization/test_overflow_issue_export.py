@@ -30,7 +30,7 @@ from tests.torch.quantization.test_onnx_export import get_config_for_export_mode
 
 
 @pytest.mark.parametrize(
-    "num_bits, mode, scale_shape, half_range, assert_vals",
+    "num_bits, scheme, scale_shape, half_range, assert_vals",
     [
         (8, QuantizationScheme.SYMMETRIC, (1, 2, 3, 4), True, (128, -64, 63)),
         (8, QuantizationScheme.ASYMMETRIC, (1, 2, 3, 4), True, (128, 0, 127)),
@@ -40,10 +40,10 @@ from tests.torch.quantization.test_onnx_export import get_config_for_export_mode
         (8, QuantizationScheme.SYMMETRIC, (1, 2, 3, 8), False, (256, -128, 127)),
     ],
 )
-def test_is_correct_overflow_issue_levels(num_bits, mode, scale_shape, half_range, assert_vals):
+def test_is_correct_overflow_issue_levels(num_bits, scheme, scale_shape, half_range, assert_vals):
     qspec = PTQuantizerSpec(
         num_bits=num_bits,
-        mode=mode,
+        scheme=scheme,
         signedness_to_force=True,
         narrow_range=False,
         scale_shape=scale_shape,
@@ -52,7 +52,7 @@ def test_is_correct_overflow_issue_levels(num_bits, mode, scale_shape, half_rang
         is_quantized_on_export=True,
     )
 
-    quantizer = SymmetricQuantizer(qspec) if mode == QuantizationScheme.SYMMETRIC else AsymmetricQuantizer(qspec)
+    quantizer = SymmetricQuantizer(qspec) if scheme == QuantizationScheme.SYMMETRIC else AsymmetricQuantizer(qspec)
 
     assert quantizer._half_range == half_range
     assert quantizer.levels == assert_vals[0]
@@ -282,7 +282,7 @@ def test_are_asymmetric_fq_exported_depthwise_per_channel_weights_tensors_clippe
             "compression": {
                 "algorithm": "quantization",
                 "export_to_onnx_standard_ops": False,
-                "weights": {"mode": "asymmetric"},
+                "weights": {"scheme": "asymmetric"},
             }
         }
     )
@@ -309,7 +309,7 @@ def test_are_assymetric_fq_exported_per_channel_weights_tensors_clipped(tmp_path
             "compression": {
                 "algorithm": "quantization",
                 "export_to_onnx_standard_ops": False,
-                "weights": {"mode": "asymmetric"},
+                "weights": {"scheme": "asymmetric"},
             }
         }
     )

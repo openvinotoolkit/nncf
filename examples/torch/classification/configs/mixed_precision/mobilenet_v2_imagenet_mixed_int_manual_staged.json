@@ -18,12 +18,12 @@
     "compression": {
         "algorithm": "quantization",
         "weights": {
-            "mode": "asymmetric",
+            "scheme": "asymmetric",
             "per_channel": true,
             "bits": 4
         },
         "activations": {
-            "mode": "asymmetric"
+            "scheme": "asymmetric"
         },
         "quantize_inputs": true,
         "initializer": {

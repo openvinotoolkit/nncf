@@ -64,7 +64,7 @@ def get_const_sparsity_config():
 
 def get_basic_asym_quantization_config(model_size=4):
     config = get_quantization_config_without_range_init(model_size)
-    config["compression"]["activations"] = {"mode": "asymmetric"}
+    config["compression"]["activations"] = {"scheme": "asymmetric"}
     config["compression"]["initializer"]["range"] = {"num_init_samples": 0}
     return config
 

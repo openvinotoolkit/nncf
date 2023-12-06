@@ -19,7 +19,7 @@ from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 
 
 @pytest.mark.parametrize(
-    "preset,model_type,activation_mode,weights_mode",
+    "preset,model_type,activation_scheme,weights_scheme",
     [
         (None, None, QuantizationScheme.SYMMETRIC, QuantizationScheme.SYMMETRIC),
         (QuantizationPreset.PERFORMANCE, None, QuantizationScheme.SYMMETRIC, QuantizationScheme.SYMMETRIC),
@@ -34,12 +34,12 @@ from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
         (QuantizationPreset.MIXED, ModelType.TRANSFORMER, QuantizationScheme.ASYMMETRIC, QuantizationScheme.SYMMETRIC),
     ],
 )
-def test_quantization_preset(preset, model_type, activation_mode, weights_mode):
+def test_quantization_preset(preset, model_type, activation_scheme, weights_scheme):
     minmax = MinMaxQuantization(preset=preset, model_type=model_type)
 
     global_quantizer_constraints = getattr(minmax, "_global_quantizer_constraints")
     assert (
-        global_quantizer_constraints[QuantizerGroup.ACTIVATIONS].qconf_attr_vs_constraint_dict["mode"]
-        == activation_mode
+        global_quantizer_constraints[QuantizerGroup.ACTIVATIONS].qconf_attr_vs_constraint_dict["scheme"]
+        == activation_scheme
     )
-    assert global_quantizer_constraints[QuantizerGroup.WEIGHTS].qconf_attr_vs_constraint_dict["mode"] == weights_mode
+    assert global_quantizer_constraints[QuantizerGroup.WEIGHTS].qconf_attr_vs_constraint_dict["scheme"] == weights_scheme

@@ -600,7 +600,7 @@ class TestParametrizedLong(BaseParametrized):
 
 
 @pytest.mark.parametrize("device", ["cuda", "cpu"])
-def test_mapping_to_zero(quantization_mode, device):
+def test_mapping_to_zero(quantization_scheme, device):
     torch.manual_seed(42)
 
     if not torch.cuda.is_available() and device == "cuda":
@@ -610,7 +610,7 @@ def test_mapping_to_zero(quantization_mode, device):
     eps = 1e-6
     number_of_samples = 100
 
-    if quantization_mode == QuantizationScheme.SYMMETRIC:
+    if quantization_scheme == QuantizationScheme.SYMMETRIC:
         level_low = -128
         level_high = 127
 

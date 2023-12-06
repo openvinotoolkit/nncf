@@ -144,7 +144,7 @@ class RangeInitializer:
         init_config = self.range_init_params.get_init_config_for_quantization_point(layer, InputType.INPUTS)
 
         is_weights = False
-        collector_params = RangeInitCollectorParams(is_weights, layer.mode, layer.per_channel)
+        collector_params = RangeInitCollectorParams(is_weights, layer.scheme, layer.per_channel)
         per_sample_stats = init_config.init_type in ["mixed_min_max", "mean_min_max"]
 
         reduction_shape = get_reduction_shape_activations(
@@ -170,7 +170,7 @@ class RangeInitializer:
                     )
 
                     is_weights = True
-                    collector_params = RangeInitCollectorParams(is_weights, op.mode, op.per_channel)
+                    collector_params = RangeInitCollectorParams(is_weights, op.scheme, op.per_channel)
 
                     reduction_shape = get_reduction_shape_weights(layer, weight_attr, channel_axes, op.per_channel)
 

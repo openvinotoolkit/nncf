@@ -269,7 +269,7 @@ class TestRangeInit:
             "weights": {
                 r"{re}NNCFConv2d\[[0-9]*\]/conv2d_0": {
                     "bits": 7,
-                    "mode": "asymmetric",
+                    "scheme": "asymmetric",
                 },
             },
             "activations": {
@@ -466,7 +466,7 @@ class TestRangeInit:
     @pytest.mark.parametrize("quant_type", ("symmetric", "asymmetric"))
     def test_ad_hoc_range_init_does_not_replace_parameter_tensors(self, wrap_dataloader, quant_type):
         config = create_config()
-        config["compression"].update({"activations": {"mode": quant_type}, "weights": {"mode": quant_type}})
+        config["compression"].update({"activations": {"scheme": quant_type}, "weights": {"scheme": quant_type}})
 
         data_loader = self.create_dataloader(wrap_dataloader, config)
         config.register_extra_structs([QuantizationRangeInitArgs(data_loader)])
@@ -728,7 +728,7 @@ class RangeInitTestCase:
     ids=init_idfn,
 )
 def test_init_ranges_are_set(
-    quantization_mode: str,
+    quantization_scheme: str,
     is_per_channel: bool,
     range_init_test_case: RangeInitTestCase,
 ):
@@ -756,8 +756,8 @@ def test_init_ranges_are_set(
             "target_device": "TRIAL",
             "compression": {
                 "algorithm": "quantization",
-                "activations": {"mode": quantization_mode, "per_channel": is_per_channel},
-                "weights": {"mode": quantization_mode, "per_channel": is_per_channel},
+                "activations": {"scheme": quantization_scheme, "per_channel": is_per_channel},
+                "weights": {"scheme": quantization_scheme, "per_channel": is_per_channel},
                 "initializer": {"range": {"num_init_samples": 2, "type": range_init_type}},
             },
         }
@@ -788,7 +788,7 @@ def test_init_ranges_are_set(
 
     def check_scales(quantizer: BaseQuantizer, per_channel: bool):
         # Absolute tolerance is 1.0 due to percentile value interpolation
-        if quantization_mode == "symmetric":
+        if quantization_scheme == "symmetric":
             assert torch.allclose(quantizer.scale, torch.tensor(ref_scale), atol=1.0)
             if per_channel:
                 assert quantizer.scale.numel() == 3
@@ -986,17 +986,17 @@ def quantizer_range_init_test_struct(request):
 def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test_struct: Tuple[QRISSTS, str]):
     test_struct = quantizer_range_init_test_struct[0]
     initializer_type = quantizer_range_init_test_struct[1]
-    for quantization_mode in [QuantizationScheme.SYMMETRIC, QuantizationScheme.ASYMMETRIC]:
+    for quantization_scheme in [QuantizationScheme.SYMMETRIC, QuantizationScheme.ASYMMETRIC]:
         qconfig = PTQuantizerSpec(
             num_bits=8,
-            mode=quantization_mode,
+            scheme=quantization_scheme,
             signedness_to_force=None,
             scale_shape=tuple(test_struct.ref_scale_shape),
             narrow_range=test_struct.is_weights,
             half_range=False,
             logarithm_scale=False,
         )
-        q_cls = QUANTIZATION_MODULES.get(quantization_mode)
+        q_cls = QUANTIZATION_MODULES.get(quantization_scheme)
         quantizer: BaseQuantizer = q_cls(qconfig)
         range_init_config = RangeInitConfig(init_type=initializer_type, num_init_samples=1)
 
@@ -1007,7 +1007,7 @@ def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test
 
         collector_params = PTRangeInitCollectorParams(
             test_struct.is_weights,
-            quantization_mode,
+            quantization_scheme,
             test_struct.per_channel,
             tuple(test_struct.input_shape),
             channel_idx,
@@ -1022,9 +1022,9 @@ def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test
         quantizer.apply_minmax_init(min_values=minmax_values.min_values, max_values=minmax_values.max_values)
 
         assert quantizer.scale_shape == test_struct.ref_scale_shape
-        if quantization_mode == QuantizationScheme.SYMMETRIC:
+        if quantization_scheme == QuantizationScheme.SYMMETRIC:
             assert tuple(quantizer.scale.shape) == test_struct.ref_scale_shape
-        elif quantization_mode == QuantizationScheme.ASYMMETRIC:
+        elif quantization_scheme == QuantizationScheme.ASYMMETRIC:
             assert tuple(quantizer.input_low.shape) == test_struct.ref_scale_shape
             assert tuple(quantizer.input_range.shape) == test_struct.ref_scale_shape
         else:

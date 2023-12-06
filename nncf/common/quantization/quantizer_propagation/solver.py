@@ -172,7 +172,7 @@ class QuantizationProposal:
                     def is_final_qconfig_compatible_to_initial(initial_qconfig: QuantizerConfig):
                         return (
                             final_qconfig.per_channel == initial_qconfig.per_channel
-                            and final_qconfig.mode == initial_qconfig.mode
+                            and final_qconfig.scheme == initial_qconfig.scheme
                             and final_qconfig.num_bits == initial_qconfig.num_bits
                             and (
                                 final_qconfig.signedness_to_force == initial_qconfig.signedness_to_force
@@ -311,7 +311,7 @@ class QuantizerPropagationSolver:
     """
 
     DEFAULT_QUANTIZATION_TYPES = [
-        QuantizerConfig(num_bits=8, mode=QuantizationScheme.SYMMETRIC, signedness_to_force=None, per_channel=False)
+        QuantizerConfig(num_bits=8, scheme=QuantizationScheme.SYMMETRIC, signedness_to_force=None, per_channel=False)
     ]
 
     DEFAULT_PROPAGATION_STRATEGY = PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT
@@ -1514,13 +1514,13 @@ class QuantizerPropagationSolver:
                 if self.qconfig.per_channel is True and other.qconfig.per_channel is False:
                     return False
                 if (
-                    self.qconfig.mode is QuantizationScheme.SYMMETRIC
-                    and other.qconfig.mode is QuantizationScheme.ASYMMETRIC
+                    self.qconfig.scheme is QuantizationScheme.SYMMETRIC
+                    and other.qconfig.scheme is QuantizationScheme.ASYMMETRIC
                 ):
                     return True
                 if (
-                    self.qconfig.mode is QuantizationScheme.ASYMMETRIC
-                    and other.qconfig.mode is QuantizationScheme.SYMMETRIC
+                    self.qconfig.scheme is QuantizationScheme.ASYMMETRIC
+                    and other.qconfig.scheme is QuantizationScheme.SYMMETRIC
                 ):
                     return False
                 return False

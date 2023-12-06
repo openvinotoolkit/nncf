@@ -118,7 +118,7 @@ def create_quantizer(
     :return: The instance of the `SymmetricQuantizerV2` or
         `AsymmetricQuantizerV2` class.
     """
-    quantizer_cls = NNCF_QUANTIZATION_OPERATIONS_V2.get(qspec.mode)
+    quantizer_cls = NNCF_QUANTIZATION_OPERATIONS_V2.get(qspec.scheme)
     input_type = InputType.WEIGHTS if is_weight_quantization else InputType.INPUTS
     quantizer = quantizer_cls(name, qspec)
     quantizer.set_input_spec(input_type, input_shape, channel_axes)

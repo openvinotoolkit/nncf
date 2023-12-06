@@ -68,7 +68,7 @@ class TestHWConfigRules:
             is_ok &= quantizer.signed == default_qconfig.signedness_to_force
         is_ok &= isinstance(
             quantizer,
-            SymmetricQuantizer if default_qconfig.mode == QuantizationScheme.SYMMETRIC else AsymmetricQuantizer,
+            SymmetricQuantizer if default_qconfig.scheme == QuantizationScheme.SYMMETRIC else AsymmetricQuantizer,
         )
         return is_ok
 
@@ -89,7 +89,7 @@ class TestHWConfigRules:
             "target_device": "test",
             "config": {
                 "quantization": {
-                    "q8_a": {"bits": 8, "mode": ["symmetric", "asymmetric"], "granularity": "pertensor"},
+                    "q8_a": {"bits": 8, "scheme": ["symmetric", "asymmetric"], "granularity": "pertensor"},
                 }
             },
             "operations": [
@@ -112,7 +112,7 @@ class TestHWConfigRules:
             "target_device": "test",
             "config": {
                 "quantization": {
-                    "q4_a": {"bits": 4, "mode": ["symmetric", "asymmetric"], "granularity": "pertensor"},
+                    "q4_a": {"bits": 4, "scheme": ["symmetric", "asymmetric"], "granularity": "pertensor"},
                 }
             },
             "operations": [
@@ -138,7 +138,7 @@ class TestHWConfigRules:
             "target_device": "test",
             "config": {
                 "quantization": {
-                    "q4_a": {"bits": 4, "mode": ["symmetric", "asymmetric"], "granularity": "pertensor"},
+                    "q4_a": {"bits": 4, "scheme": ["symmetric", "asymmetric"], "granularity": "pertensor"},
                 }
             },
             "operations": [
@@ -181,7 +181,7 @@ class TestHWConfigRules:
             "target_device": "test",
             "config": {
                 "quantization": {
-                    "q4_a": {"bits": 4, "mode": ["symmetric", "asymmetric"], "granularity": "pertensor"},
+                    "q4_a": {"bits": 4, "scheme": ["symmetric", "asymmetric"], "granularity": "pertensor"},
                 }
             },
             "operations": [

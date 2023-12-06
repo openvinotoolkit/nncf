@@ -21,6 +21,7 @@ from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
@@ -57,8 +58,8 @@ def quantize_impl(
         )
         if advanced_parameters is None:
             advanced_parameters = AdvancedQuantizationParameters()
-        advanced_parameters.weights_quantization_params.per_channel = False
-        advanced_parameters.activations_quantization_params.per_channel = False
+        advanced_parameters.weights_quantization_params = QuantizationParameters(per_channel=False)
+        advanced_parameters.activations_quantization_params = QuantizationParameters(per_channel=False)
 
     quantization_algorithm = PostTrainingQuantization(
         preset=preset,

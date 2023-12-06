@@ -38,8 +38,8 @@ def get_config_for_logarithm_scale(logarithm_scale: bool, quantization_type: str
                         "params": {"min_percentile": 0.001, "max_percentile": 99.999},
                     }
                 },
-                "activations": {"mode": quantization_type, "logarithm_scale": logarithm_scale},
-                "weights": {"mode": quantization_type, "signed": True, "logarithm_scale": logarithm_scale},
+                "activations": {"scheme": quantization_type, "logarithm_scale": logarithm_scale},
+                "weights": {"scheme": quantization_type, "signed": True, "logarithm_scale": logarithm_scale},
             },
         }
     )

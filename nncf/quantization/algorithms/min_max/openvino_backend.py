@@ -130,7 +130,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     def _get_reduction_axes_and_use_abs_max(
         nncf_graph: NNCFGraph, target_point: OVTargetPoint, quantizer_config: QuantizerConfig
     ) -> Tuple[ReductionAxes, bool]:
-        use_abs_max = quantizer_config.mode == QuantizationScheme.SYMMETRIC
+        use_abs_max = quantizer_config.scheme == QuantizationScheme.SYMMETRIC
         if not quantizer_config.per_channel:
             return None, use_abs_max
 

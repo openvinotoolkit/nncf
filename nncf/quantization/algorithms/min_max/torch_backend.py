@@ -242,7 +242,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         )
         return PTRangeInitCollectorParams(
             is_weights=target_point.is_weight_target_point(),
-            mode=quantizer_config.mode,
+            scheme=quantizer_config.scheme,
             per_channel=quantizer_config.per_channel,
             input_shape=input_shape,
             channel_idx=channel_idx,
@@ -255,7 +255,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         parameters: FakeQuantizeParameters,
         target_type: TargetType,
     ) -> BaseQuantizer:
-        mode = quantizer_config.mode
+        mode = quantizer_config.scheme
         quantizer_cls = QUANTIZATION_MODULES.get(mode)
         narrow_range = target_type == TargetType.OPERATION_WITH_WEIGHTS and mode == QuantizationScheme.SYMMETRIC
         quantizer_spec = PTQuantizerSpec.from_config(

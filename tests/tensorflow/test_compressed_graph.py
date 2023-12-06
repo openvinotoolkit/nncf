@@ -46,8 +46,8 @@ def get_basic_quantization_config(
     config = get_empty_config(input_sample_sizes=input_sample_sizes)
     config["compression"] = {
         "algorithm": "quantization",
-        "activations": {"mode": quantization_case.a_mode, "per_channel": quantization_case.a_per_channel},
-        "weights": {"mode": quantization_case.w_mode, "per_channel": quantization_case.w_per_channel},
+        "activations": {"scheme": quantization_case.a_mode, "per_channel": quantization_case.a_per_channel},
+        "weights": {"scheme": quantization_case.w_mode, "per_channel": quantization_case.w_per_channel},
     }
     return config
 

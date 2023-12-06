@@ -28,11 +28,11 @@
     "compression": {
         "algorithm": "quantization",
         "weights": {
-            "mode": "asymmetric",
+            "scheme": "asymmetric",
             "bits": 4
         },
         "activations": {
-            "mode": "asymmetric",
+            "scheme": "asymmetric",
             "bits": 4
         },
         "quantize_inputs": true,

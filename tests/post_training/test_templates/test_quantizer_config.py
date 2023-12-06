@@ -98,10 +98,10 @@ class TemplateTestQuantizerConfig:
         )
 
         weight_default_config = QuantizerConfig(
-            mode=QuantizationScheme.SYMMETRIC, num_bits=8, signedness_to_force=True, per_channel=True
+            scheme=QuantizationScheme.SYMMETRIC, num_bits=8, signedness_to_force=True, per_channel=True
         )
         activation_default_config = QuantizerConfig(
-            mode=QuantizationScheme.SYMMETRIC, num_bits=8, signedness_to_force=None, per_channel=False
+            scheme=QuantizationScheme.SYMMETRIC, num_bits=8, signedness_to_force=None, per_channel=False
         )
 
         assert len(q_setup.quantization_points) == 2
@@ -159,15 +159,15 @@ class TemplateTestQuantizerConfig:
             q_setup = min_max_algo._get_quantizer_setup(
                 nncf_graph, inference_nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
             )
-            q_g_to_quantization_mode = {}
+            q_g_to_quantization_scheme = {}
             for q_g in QuantizerGroup:
-                q_g_to_quantization_mode[q_g] = preset.get_params_configured_by_preset(q_g)["mode"]
+                q_g_to_quantization_scheme[q_g] = preset.get_params_configured_by_preset(q_g)["scheme"]
 
             assert len(q_setup.quantization_points) == 2
 
             for quantization_point in q_setup.quantization_points.values():
                 if quantization_point.is_weight_quantization_point():
-                    assert quantization_point.qconfig.mode == q_g_to_quantization_mode[QuantizerGroup.WEIGHTS]
+                    assert quantization_point.qconfig.scheme == q_g_to_quantization_scheme[QuantizerGroup.WEIGHTS]
                     assert quantization_point.qconfig.per_channel == weight_per_channel
                     assert quantization_point.qconfig.num_bits == weight_bits
                     if signed_weights is not None:
@@ -175,7 +175,7 @@ class TemplateTestQuantizerConfig:
                 if quantization_point.is_activation_quantization_point():
                     assert quantization_point.qconfig.per_channel == activation_per_channel
                     assert quantization_point.qconfig.num_bits == activation_bits
-                    assert quantization_point.qconfig.mode == q_g_to_quantization_mode[QuantizerGroup.ACTIVATIONS]
+                    assert quantization_point.qconfig.scheme == q_g_to_quantization_scheme[QuantizerGroup.ACTIVATIONS]
                     if signed_activations is not None:
                         assert quantization_point.qconfig.signedness_to_force == signed_activations
 
@@ -194,10 +194,10 @@ class TemplateTestQuantizerConfig:
         )
 
         weight_default_config = QuantizerConfig(
-            mode=QuantizationScheme.SYMMETRIC, num_bits=8, signedness_to_force=True, per_channel=True
+            scheme=QuantizationScheme.SYMMETRIC, num_bits=8, signedness_to_force=True, per_channel=True
         )
         activation_default_config = QuantizerConfig(
-            mode=QuantizationScheme.SYMMETRIC, num_bits=8, signedness_to_force=None, per_channel=True
+            scheme=QuantizationScheme.SYMMETRIC, num_bits=8, signedness_to_force=None, per_channel=True
         )
 
         assert len(q_setup.quantization_points) == 2
@@ -211,13 +211,13 @@ class TemplateTestQuantizerConfig:
     @pytest.mark.parametrize(
         "range_estimator_params", [RangeEstimatorParametersSet.MINMAX, RangeEstimatorParametersSet.MEAN_MINMAX]
     )
-    @pytest.mark.parametrize("q_config_mode", [QuantizationScheme.SYMMETRIC, QuantizationScheme.ASYMMETRIC])
+    @pytest.mark.parametrize("q_config_scheme", [QuantizationScheme.SYMMETRIC, QuantizationScheme.ASYMMETRIC])
     @pytest.mark.parametrize("q_config_per_channel", [True, False])
     @pytest.mark.parametrize("num_samples", [5, 12])
     def test_get_stat_collector(
         self,
         range_estimator_params,
-        q_config_mode,
+        q_config_scheme,
         q_config_per_channel,
         num_samples,
         conv_sum_aggregation_nncf_graph,
@@ -226,7 +226,7 @@ class TemplateTestQuantizerConfig:
         params = statistic_collector_parameters
         min_max_algo = MinMaxQuantization(activations_range_estimator_params=range_estimator_params)
         min_max_algo._backend_entity = self.get_algo_backend()
-        q_config = QuantizerConfig(num_bits=8, mode=q_config_mode, per_channel=q_config_per_channel)
+        q_config = QuantizerConfig(num_bits=8, scheme=q_config_scheme, per_channel=q_config_per_channel)
 
         if params.target_type in [TargetType.PRE_LAYER_OPERATION, TargetType.POST_LAYER_OPERATION]:
             port_id = None if TargetType.POST_LAYER_OPERATION else 0
@@ -260,15 +260,15 @@ class TemplateTestQuantizerConfig:
             assert len(reducers) == 2
             # use_abs_max check
             assert any(isinstance(r, MinReducer) for r in reducers)
-            if q_config_mode == QuantizationScheme.SYMMETRIC:
+            if q_config_scheme == QuantizationScheme.SYMMETRIC:
                 assert any(isinstance(r, AbsMaxReducer) for r in reducers)
-            elif q_config_mode == QuantizationScheme.ASYMMETRIC:
+            elif q_config_scheme == QuantizationScheme.ASYMMETRIC:
                 assert any(isinstance(r, MaxReducer) for r in reducers)
         else:
             # use_abs_max check
-            if q_config_mode == QuantizationScheme.SYMMETRIC:
+            if q_config_scheme == QuantizationScheme.SYMMETRIC:
                 assert tensor_collector._use_abs_max
-            elif q_config_mode == QuantizationScheme.ASYMMETRIC:
+            elif q_config_scheme == QuantizationScheme.ASYMMETRIC:
                 assert not tensor_collector._use_abs_max
             reducers = [tensor_collector]
 

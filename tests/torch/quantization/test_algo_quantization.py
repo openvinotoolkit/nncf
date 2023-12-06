@@ -65,7 +65,7 @@ from tests.torch.quantization.quantization_helpers import get_squeezenet_quantiz
 def compare_qspecs(qspec: PTQuantizerSpec, quantizer: BaseQuantizer):
     assert qspec.narrow_range == quantizer.narrow_range
     assert qspec.num_bits == quantizer.num_bits
-    assert isinstance(quantizer, QUANTIZATION_MODULES.get(qspec.mode))
+    assert isinstance(quantizer, QUANTIZATION_MODULES.get(qspec.scheme))
     assert qspec.scale_shape == quantizer.scale_shape
 
     assert qspec.signedness_to_force == quantizer._signedness_to_force
@@ -84,7 +84,7 @@ def test_quantization_configs__with_defaults():
 
     ref_weight_qspec = PTQuantizerSpec(
         num_bits=8,
-        mode=QuantizationScheme.SYMMETRIC,
+        scheme=QuantizationScheme.SYMMETRIC,
         signedness_to_force=True,
         narrow_range=True,
         half_range=False,
@@ -96,7 +96,7 @@ def test_quantization_configs__with_defaults():
 
     ref_activation_qspec = PTQuantizerSpec(
         num_bits=8,
-        mode=QuantizationScheme.SYMMETRIC,
+        scheme=QuantizationScheme.SYMMETRIC,
         signedness_to_force=None,
         narrow_range=False,
         half_range=False,
@@ -113,9 +113,9 @@ def test_quantization_configs__custom():
     config = get_quantization_config_without_range_init()
     config["compression"].update(
         {
-            "weights": {"mode": "asymmetric", "per_channel": True, "bits": 4},
+            "weights": {"scheme": "asymmetric", "per_channel": True, "bits": 4},
             "activations": {
-                "mode": "asymmetric",
+                "scheme": "asymmetric",
                 "bits": 4,
                 "signed": True,
             },
@@ -131,7 +131,7 @@ def test_quantization_configs__custom():
 
     ref_weight_qspec = PTQuantizerSpec(
         num_bits=4,
-        mode=QuantizationScheme.ASYMMETRIC,
+        scheme=QuantizationScheme.ASYMMETRIC,
         signedness_to_force=None,
         scale_shape=model.wq_scale_shape_per_channel,
         narrow_range=False,
@@ -143,7 +143,7 @@ def test_quantization_configs__custom():
 
     ref_activation_qspec = PTQuantizerSpec(
         num_bits=4,
-        mode=QuantizationScheme.ASYMMETRIC,
+        scheme=QuantizationScheme.ASYMMETRIC,
         signedness_to_force=True,
         scale_shape=(1,),
         narrow_range=False,
@@ -442,13 +442,13 @@ def test_quantize_inputs():
         (QuantizerConfig(num_bits=5, per_channel=True), QuantizerConfig(num_bits=6, per_channel=False), True),
         (QuantizerConfig(num_bits=5, per_channel=False), QuantizerConfig(num_bits=6, per_channel=True), True),
         (
-            QuantizerConfig(num_bits=5, mode=QuantizationScheme.SYMMETRIC),
-            QuantizerConfig(num_bits=5, mode=QuantizationScheme.ASYMMETRIC),
+            QuantizerConfig(num_bits=5, scheme=QuantizationScheme.SYMMETRIC),
+            QuantizerConfig(num_bits=5, scheme=QuantizationScheme.ASYMMETRIC),
             True,
         ),
         (
-            QuantizerConfig(num_bits=5, mode=QuantizationScheme.ASYMMETRIC),
-            QuantizerConfig(num_bits=5, mode=QuantizationScheme.SYMMETRIC),
+            QuantizerConfig(num_bits=5, scheme=QuantizationScheme.ASYMMETRIC),
+            QuantizerConfig(num_bits=5, scheme=QuantizationScheme.SYMMETRIC),
             False,
         ),
         (QuantizerConfig(signedness_to_force=True), QuantizerConfig(), True),
@@ -458,24 +458,24 @@ def test_quantize_inputs():
         (QuantizerConfig(signedness_to_force=True), QuantizerConfig(signedness_to_force=False), False),
         (QuantizerConfig(signedness_to_force=False), QuantizerConfig(signedness_to_force=True), True),
         (
-            QuantizerConfig(num_bits=4, mode=QuantizationScheme.SYMMETRIC, per_channel=False),
-            QuantizerConfig(num_bits=8, mode=QuantizationScheme.SYMMETRIC, per_channel=True),
+            QuantizerConfig(num_bits=4, scheme=QuantizationScheme.SYMMETRIC, per_channel=False),
+            QuantizerConfig(num_bits=8, scheme=QuantizationScheme.SYMMETRIC, per_channel=True),
             True,
         ),
         (
-            QuantizerConfig(num_bits=4, mode=QuantizationScheme.SYMMETRIC, per_channel=False),
-            QuantizerConfig(num_bits=8, mode=QuantizationScheme.ASYMMETRIC, per_channel=False),
+            QuantizerConfig(num_bits=4, scheme=QuantizationScheme.SYMMETRIC, per_channel=False),
+            QuantizerConfig(num_bits=8, scheme=QuantizationScheme.ASYMMETRIC, per_channel=False),
             True,
         ),
         # Neither of the two configs here can requantize the other
         (
-            QuantizerConfig(num_bits=6, mode=QuantizationScheme.ASYMMETRIC),
-            QuantizerConfig(num_bits=8, mode=QuantizationScheme.SYMMETRIC),
+            QuantizerConfig(num_bits=6, scheme=QuantizationScheme.ASYMMETRIC),
+            QuantizerConfig(num_bits=8, scheme=QuantizationScheme.SYMMETRIC),
             False,
         ),
         (
-            QuantizerConfig(num_bits=8, mode=QuantizationScheme.SYMMETRIC),
-            QuantizerConfig(num_bits=6, mode=QuantizationScheme.ASYMMETRIC),
+            QuantizerConfig(num_bits=8, scheme=QuantizationScheme.SYMMETRIC),
+            QuantizerConfig(num_bits=6, scheme=QuantizationScheme.ASYMMETRIC),
             False,
         ),
     ),
@@ -549,7 +549,7 @@ def test_quantize_outputs_with_scope_overrides():
         "activations": {
             "/nncf_model_output_0": {
                 "bits": 4,
-                "mode": "asymmetric",
+                "scheme": "asymmetric",
             }
         }
     }
@@ -664,7 +664,7 @@ TEST_QUANTIZATION_PRESET_STRUCT = [
     {
         "preset": "performance",
         "target_device": "CPU",
-        "overrided_param": {"weights": {"mode": "asymmetric"}},
+        "overrided_param": {"weights": {"scheme": "asymmetric"}},
         "expected_weights_q": AsymmetricQuantizer,
         "expected_activations_q": SymmetricQuantizer,
     },
@@ -698,7 +698,7 @@ def test_quantization_preset_with_scope_overrides():
         "scope_overrides": {
             "weights": {
                 "QuantizeOutputsTestModel/NNCFConv2d[conv5]/conv2d_0": {
-                    "mode": "asymmetric",
+                    "scheme": "asymmetric",
                 }
             }
         },
@@ -779,8 +779,8 @@ class TestHalfPrecisionModels:
 
         # Make sure that both symmetric and asymmetric quantizers appear in the model
         config["compression"]["scope_overrides"] = {
-            "activations": {"{re}.*conv_first.*": {"mode": "asymmetric"}, "{re}.*conv_second.*": {"mode": "symmetric"}},
-            "weights": {"{re}.*conv_first.*": {"mode": "asymmetric"}, "{re}.*conv_second.*": {"mode": "symmetric"}},
+            "activations": {"{re}.*conv_first.*": {"scheme": "asymmetric"}, "{re}.*conv_second.*": {"scheme": "symmetric"}},
+            "weights": {"{re}.*conv_first.*": {"scheme": "asymmetric"}, "{re}.*conv_second.*": {"scheme": "symmetric"}},
         }
         config["compression"]["initializer"] = {
             "range": {"num_init_samples": 2},
@@ -885,7 +885,7 @@ def test_activation_ignored_scope(update_config_info, should_ignore_quantizers):
 def test_sync_of_level_ranges_and_signed_parameter():
     qspec = PTQuantizerSpec(
         num_bits=4,
-        mode=QuantizationScheme.SYMMETRIC,
+        scheme=QuantizationScheme.SYMMETRIC,
         signedness_to_force=None,
         scale_shape=(1,),
         narrow_range=False,
