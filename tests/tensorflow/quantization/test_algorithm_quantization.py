@@ -695,7 +695,7 @@ def test_quantization_preset(data):
     for aq in activation_quantizers:
         assert aq.scheme == data["expected_activations_q"]
     for wq in weight_quantizers:
-        assert wq.mode == data["expected_weights_q"]
+        assert wq.scheme == data["expected_weights_q"]
 
 
 def test_quantization_preset_with_scope_overrides():
