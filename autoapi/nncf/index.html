@@ -638,22 +638,28 @@ the transformation function was applied.</p>
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">CompressWeightsMode</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.CompressWeightsMode" title="Permalink to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
 <p>Defines a mode for weight compression.
-:param INT8: Stands for 8-bit integer quantization of all weights.
-:param INT4_SYM: Stands for a mixed-precision weights quantization with 4-bit integer as a primary precision.</p>
+:param INT8_SYM: Stands for 8-bit integer symmetric quantization of all weights.</p>
 <blockquote>
-<div><p>Weights are quantized to a primary precision symmetrically with a fixed zero point equals to 8.
-All embeddings and the last layer are always compressed to a backup precision, which is 8-bit integer,
-by default. All others are quantized whether to 4-bit integer or to a backup precision depending on
-criteria and the given ratio.
+<div><p>Weights are quantized symmetrically with a fixed zero point equals to 128.
 <a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#symmetric-quantization">https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#symmetric-quantization</a></p>
 </div></blockquote>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
+<li><p><strong>INT8_ASYM</strong> – The same as INT8_SYM mode, but weights are quantized to a primary precision asymmetrically
+with a typical non-fixed zero point.
+<a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#asymmetric-quantization">https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#asymmetric-quantization</a></p></li>
+<li><p><strong>INT4_SYM</strong> – Stands for a mixed-precision weights quantization with 4-bit integer as a primary precision.
+Weights are quantized to a primary precision symmetrically with a fixed zero point equals to 8.
+All embeddings and the last layer are always compressed to a backup precision, which is INT8_ASYM,
+by default. All others are quantized whether to 4-bit integer or to a backup precision depending on
+criteria and the given ratio.
+<a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#symmetric-quantization">https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#symmetric-quantization</a></p></li>
 <li><p><strong>INT4_ASYM</strong> – The same as INT4_SYM mode, but weights are quantized to a primary precision asymmetrically
 with a typical non-fixed zero point.
 <a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#asymmetric-quantization">https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#asymmetric-quantization</a></p></li>
 <li><p><strong>NF4</strong> – The the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.</p></li>
+<li><p><strong>INT8</strong> – Mode is deprecated and will be removed in future releases. Please use <cite>INT8_ASYM</cite> instead.</p></li>
 </ul>
 </dd>
 </dl>
@@ -708,29 +714,31 @@ for this type of device.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nncf.compress_weights">
-<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">compress_weights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">CompressWeightsMode.INT8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignored_scope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/quantization/quantize_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.compress_weights" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">compress_weights</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">CompressWeightsMode.INT8_ASYM</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignored_scope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/quantization/quantize_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.compress_weights" title="Permalink to this definition">#</a></dt>
 <dd><p>Compress model weights.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>model</strong> (<em>nncf.api.compression.TModel</em>) – A model to be compressed.</p></li>
 <li><p><strong>mode</strong> – <p>Defines a mode for weight compression.
-INT8 stands for 8-bit integer quantization of all weights.
-INT4_SYM stands for a mixed-precision weights quantization with 4-bit integer as a primary precision.</p>
+INT8_SYM stands for 8-bit integer symmetric quantization of all weights.
+INT8_ASYM is the same as INT8_SYM mode, but weights are quantized to a primary precision asymmetrically</p>
 <blockquote>
-<div><p>Weights are quantized to a primary precision symmetrically with a fixed zero point equals to 8.
-All embeddings and the last layer are always compressed to a backup precision, which is 8-bit integer,
-by default. All others are quantized whether to 4-bit integer or to a backup precision depending on
-criteria and the given ratio.</p>
+<div><p>with a typical non-fixed zero point.</p>
 </div></blockquote>
 <dl class="simple">
+<dt>INT4_SYM stands for a mixed-precision weights quantization with 4-bit integer as a primary precision.</dt><dd><p>Weights are quantized to a primary precision symmetrically with a fixed zero point equals to 8.
+All embeddings and the last layer are always compressed to a backup precision, which is INT8_ASYM,
+by default. All others are quantized whether to 4-bit integer or to a backup precision depending on
+criteria and the given ratio.</p>
+</dd>
 <dt>INT4_ASYM is the same as INT4_SYM mode, but weights are quantized to a primary precision asymmetrically</dt><dd><p>with a typical non-fixed zero point.</p>
 </dd>
 </dl>
 <p>NF4 is the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.</p>
 </p></li>
 <li><p><strong>ratio</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
-and the rest to INT8).</p></li>
+and the rest to INT8_ASYM).</p></li>
 <li><p><strong>group_size</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
 The value -1 means no grouping.</p></li>
 <li><p><strong>ignored_scope</strong> (<em>Optional</em><em>[</em><em>nncf.scopes.IgnoredScope</em><em>]</em>) – An ignored scope that defined the list of model control
