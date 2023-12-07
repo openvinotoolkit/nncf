@@ -35,7 +35,7 @@ class OVCompiledModelEngine(Engine):
             self.input_tensor_names.update(model_input.get_names())
 
     def _check_input_data_format(
-        self, input_data: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray], Dict[str, np.ndarray]]
+        self, input_data: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray], Dict[str, np.ndarray], ov.Tensor]
     ) -> None:
         """
         Checks correspondence of the model input names and the passed data.
@@ -44,7 +44,7 @@ class OVCompiledModelEngine(Engine):
 
         :param input_data: Provided inputs to infer the model.
         """
-        actual_num_inputs = 1 if isinstance(input_data, np.ndarray) else len(input_data)
+        actual_num_inputs = 1 if isinstance(input_data, (np.ndarray, ov.Tensor)) else len(input_data)
         if actual_num_inputs != self.number_of_inputs:
             raise RuntimeError(f"Model expects {self.number_of_inputs} inputs, but {actual_num_inputs} are provided.")
         if isinstance(input_data, dict):
@@ -53,8 +53,8 @@ class OVCompiledModelEngine(Engine):
                     raise RuntimeError(f"Missing a required input: {name} to run the model.")
 
     def infer(
-        self, input_data: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray], Dict[str, np.ndarray]]
-    ) -> Dict[str, np.ndarray]:
+        self, input_data: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray], Dict[str, np.ndarray], ov.Tensor]
+    ) -> Union[Dict[str, np.ndarray], ov.Tensor]:
         """
         Runs model on the provided input via OpenVINO Runtime.
         Returns the dictionary of model outputs by node names.
@@ -90,8 +90,8 @@ class OVNativeEngine(Engine):
         self.engine = OVCompiledModelEngine(compiled_model)
 
     def infer(
-        self, input_data: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray], Dict[str, np.ndarray]]
-    ) -> Dict[str, np.ndarray]:
+        self, input_data: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray], Dict[str, np.ndarray], ov.Tensor]
+    ) -> Union[Dict[str, np.ndarray], ov.Tensor]:
         """
         Runs model on the provided input via OpenVINO Runtime.
         Returns the dictionary of model outputs by node names.
