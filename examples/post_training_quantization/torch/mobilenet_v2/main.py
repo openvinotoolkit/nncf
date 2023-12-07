@@ -12,6 +12,7 @@
 import os
 import re
 import subprocess
+from functools import partial
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -19,7 +20,6 @@ import numpy as np
 import openvino as ov
 import torch
 from fastdownload import FastDownload
-from openvino.tools import mo
 from sklearn.metrics import accuracy_score
 from torchvision import datasets
 from torchvision import models
@@ -107,11 +107,13 @@ val_dataset = datasets.ImageFolder(
         ]
     ),
 )
-val_data_loader = torch.utils.data.DataLoader(val_dataset, batch_size=128, num_workers=4, shuffle=False)
+val_data_loader = torch.utils.data.DataLoader(val_dataset)
 
 torch_model = models.mobilenet_v2(num_classes=DATASET_CLASSES)
-torch_model.eval()
 torch_model = load_checkpoint(torch_model)
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+torch_model.to(device)
+torch_model.eval()
 
 ###############################################################################
 # Quantize a PyTorch model
@@ -120,12 +122,12 @@ torch_model = load_checkpoint(torch_model)
 #
 # To validate the transform function use the following code:
 # >> for data_item in val_loader:
-# >>    model(transform_fn(data_item))
+# >>    model(transform_fn(data_item, device))
 
 
-def transform_fn(data_item: Tuple[torch.Tensor, int]) -> torch.Tensor:
+def transform_fn(data_item: Tuple[torch.Tensor, int], device: torch.device) -> torch.Tensor:
     images, _ = data_item
-    return images
+    return images.to(device)
 
 
 # The calibration dataset is a small, no label, representative dataset
@@ -138,22 +140,15 @@ def transform_fn(data_item: Tuple[torch.Tensor, int]) -> torch.Tensor:
 # item and prepare model input data. The quantize method uses a small subset
 # (default: 300 samples) of the calibration dataset.
 
-calibration_dataset = nncf.Dataset(val_data_loader, transform_fn)
-torch_quantized_model = nncf.quantize(
-    torch_model,
-    calibration_dataset,
-    advanced_parameters=nncf.AdvancedQuantizationParameters(disable_bias_correction=True),
-)
+calibration_dataset = nncf.Dataset(val_data_loader, partial(transform_fn, device=device))
+torch_quantized_model = nncf.quantize(torch_model, calibration_dataset)
 
 ###############################################################################
 # Benchmark performance, calculate compression rate and validate accuracy
 
 dummy_input = torch.randn(1, 3, 224, 224)
-ov_input_shape = (-1, 3, 224, 224)
-ov_model = mo.convert_model(torch_model.cpu(), example_input=dummy_input, input_shape=ov_input_shape)
-ov_quantized_model = mo.convert_model(
-    torch_quantized_model.cpu(), example_input=dummy_input, input_shape=ov_input_shape
-)
+ov_model = ov.convert_model(torch_model.cpu(), example_input=dummy_input)
+ov_quantized_model = ov.convert_model(torch_quantized_model.cpu(), example_input=dummy_input)
 
 fp32_ir_path = f"{ROOT}/mobilenet_v2_fp32.xml"
 ov.save_model(ov_model, fp32_ir_path, compress_to_fp16=False)

@@ -1,0 +1,21 @@
+name: Model Hub
+
+on:
+  workflow_dispatch:
+
+jobs:
+  torch:
+    runs-on: ubuntu-20.04-16-cores
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+        with:
+          python-version: 3.8.10
+      - name: Install NNCF and test requirements
+        run: make install-models-hub-torch
+
+      - name: Run models-hub-torch test scope
+        run: make test-models-hub-torch

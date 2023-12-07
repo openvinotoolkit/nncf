@@ -173,5 +173,6 @@
             "disable_wd_start_epoch": 20
         }
     },
-    "no_strip_on_export": true
+    "no_strip_on_export": true,
+    "export_to_ir_via_onnx": true
 }

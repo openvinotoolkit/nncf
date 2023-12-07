@@ -839,3 +839,38 @@ def test_multidevice_model():
     input_info = ExampleInputInfo.from_example_input(example_input)
     nncf_model = NNCFNetwork(model, input_info)
     nncf_model(*example_input)
+
+
+def test_access_to_input_info():
+    model = SimplestModel()
+    example_input = torch.ones(SimplestModel.INPUT_SIZE)
+    input_info = ExampleInputInfo.from_example_input(example_input)
+    nncf_model = NNCFNetwork(model, input_info)
+    nncf_model.nncf.input_infos
+
+
+class ModelWithMax(torch.nn.Module):
+    INPUT_SIZE = [1, 1, 32, 32]
+
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        x = torch.max(x, dim=-1, keepdim=True)
+        assert isinstance(x, torch.return_types.max)
+        return x.values
+
+
+def test_torch_return_types_unwrapped_for_post_hook():
+    model = ModelWithMax()
+    nncf_model = NNCFNetwork(model, FillerInputInfo([FillerInputElement(SimplestModel.INPUT_SIZE)]))
+    node_to_op_address_mapping = nncf_model.nncf.get_node_to_op_address_mapping()
+    insertion_point = PTInsertionPoint(
+        TargetType.OPERATOR_POST_HOOK, node_to_op_address_mapping["ModelWithMax/max_0"], 0
+    )
+
+    def fn_to_check_input_type(input):
+        assert isinstance(input, torch.Tensor)
+
+    nncf_model.nncf.insert_at_point(insertion_point, [fn_to_check_input_type])
+    nncf_model.nncf.rebuild_graph()

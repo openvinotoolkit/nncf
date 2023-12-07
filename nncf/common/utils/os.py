@@ -15,6 +15,11 @@ from pathlib import Path
 import psutil
 
 
+def fail_if_symlink(file: Path):
+    if file.is_symlink():
+        raise RuntimeError("File {} is a symbolic link, aborting.".format(str(file)))
+
+
 @contextmanager
 def safe_open(file: Path, *args, **kwargs):
     """
@@ -26,8 +31,7 @@ def safe_open(file: Path, *args, **kwargs):
     :param file: The path to the file.
     :return: A file object.
     """
-    if file.is_symlink():
-        raise RuntimeError("File {} is a symbolic link, aborting.".format(str(file)))
+    fail_if_symlink(file)
     with open(str(file), *args, **kwargs) as f:
         yield f
 

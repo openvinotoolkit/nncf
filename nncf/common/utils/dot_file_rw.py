@@ -101,6 +101,8 @@ def relabel_graph_for_dot_visualization(nx_graph: nx.Graph, from_reference: bool
     hits = defaultdict(lambda: 0)
     mapping = {}
     for original_name in nx_graph.nodes():
+        if not isinstance(original_name, str):
+            continue
         dot_name = original_name.replace(__CHARACTER_REPLACE_FROM, __CHARACTER_REPLACE_TO)
         hits[dot_name] += 1
         if hits[dot_name] > 1:

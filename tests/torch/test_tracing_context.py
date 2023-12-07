@@ -93,16 +93,16 @@ class ModuleForTest(torch.nn.Module):
         return self.conv2d(x)
 
 
-def test_traced_tensors_are_expired_on_context_exit():
+def test_traced_tensors_are_stripped_on_context_exit():
     module = ModuleForTest()
     module.train()
     tensor = torch.ones([1, 1, 1, 1])
     with TracingContext():
         result = module(tensor)
-    assert isinstance(module.cached_tensor, TracedTensor)
-    assert module.cached_tensor.nncf_expired
-    assert isinstance(result, TracedTensor)
-    assert result.nncf_expired
+        assert isinstance(module.cached_tensor, TracedTensor)
+        assert isinstance(result, TracedTensor)
+    assert isinstance(module.cached_tensor, torch.Tensor)
+    assert isinstance(result, torch.Tensor)
 
 
 def test_no_cross_forward_run_dependency():
@@ -118,3 +118,31 @@ def test_no_cross_forward_run_dependency():
         ctx.enable_trace_dynamic_graph()
         _ = module(tensor)
         ctx.disable_trace_dynamic_graph()
+
+
+@pytest.mark.parametrize(
+    "contexts",
+    [3 * [TracingContext()], [TracingContext(), TracingContext(), TracingContext()]],
+    ids=["same", "different"],
+)
+def test_nested_contexts(contexts):
+    module = ModuleForTest()
+    module.train()
+    tensor = torch.ones([1, 1, 1, 1])
+    nesting_count = [1]
+    with contexts[0]:
+        with contexts[1]:
+            count = contexts[:2].count(contexts[1])
+            nesting_count.append(count)
+            with contexts[2]:
+                count = contexts.count(contexts[2])
+                nesting_count.append(count)
+                module(tensor)
+                assert len(contexts[2]._threading.thread_local.nested_contexts_stack) == nesting_count[2]
+                assert len(contexts[2]._threading.thread_local.traced_tensor_weakrefs) > 0
+            assert len(contexts[1]._threading.thread_local.nested_contexts_stack) == nesting_count[1]
+            assert len(contexts[1]._threading.thread_local.traced_tensor_weakrefs) > 0
+        assert len(contexts[0]._threading.thread_local.nested_contexts_stack) == nesting_count[0]
+        assert contexts[0]._threading.thread_local.nested_contexts_stack[0] is None
+        assert len(contexts[0]._threading.thread_local.traced_tensor_weakrefs) > 0
+    assert len(contexts[0]._threading.thread_local.traced_tensor_weakrefs) == 0

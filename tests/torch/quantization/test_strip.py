@@ -300,36 +300,27 @@ def test_strip_quantization(mode, overflow_fix, tmp_path):
     torch.onnx.export(inference_model, input_tensor, f"{tmp_path}/model.onnx")
 
 
-@pytest.mark.parametrize("do_copy", (True, False))
-def test_do_copy(do_copy):
-    model = BasicConvTestModel()
-    config = _get_config_for_algo(model.INPUT_SIZE)
-    register_bn_adaptation_init_args(config)
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-
-    inference_model = compression_ctrl.strip(do_copy=do_copy)
-
-    if do_copy:
-        assert id(inference_model) != id(compressed_model)
-    else:
-        assert id(inference_model) == id(compressed_model)
-
-    assert id(compressed_model) == id(compression_ctrl.model)
-
-
 @pytest.mark.parametrize("strip_type", ("nncf", "torch", "nncf_interfere"))
-def test_nncf_strip_api(strip_type):
+@pytest.mark.parametrize("do_copy", (True, False), ids=["copy", "inplace"])
+def test_nncf_strip_api(strip_type, do_copy):
     model = BasicConvTestModel()
     config = _get_config_for_algo(model.INPUT_SIZE)
 
-    quantized_model, _ = create_compressed_model_and_algo_for_test(model, config)
+    quantized_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     if strip_type == "nncf":
-        strip_model = nncf.strip(quantized_model)
+        strip_model = nncf.strip(quantized_model, do_copy)
     elif strip_type == "torch":
-        strip_model = nncf.torch.strip(quantized_model)
+        strip_model = nncf.torch.strip(quantized_model, do_copy)
     elif strip_type == "nncf_interfere":
-        strip_model = quantized_model.nncf.strip()
+        strip_model = quantized_model.nncf.strip(do_copy)
 
-    fq = strip_model.conv.get_pre_op("0").op
-    assert isinstance(fq, FakeQuantize)
+    if do_copy:
+        assert id(strip_model) != id(quantized_model)
+    else:
+        assert id(strip_model) == id(quantized_model)
+
+    assert id(quantized_model) == id(compression_ctrl.model)
+
+    assert isinstance(strip_model.conv.get_pre_op("0").op, FakeQuantize)
+    assert isinstance(strip_model.nncf.external_quantizers["/nncf_model_input_0|OUTPUT"], FakeQuantize)

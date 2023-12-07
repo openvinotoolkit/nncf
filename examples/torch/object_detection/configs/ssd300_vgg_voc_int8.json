@@ -41,5 +41,6 @@
                 "num_init_samples": 1280
             }
         }
-  }
+  },
+  "export_to_ir_via_onnx": true
 }

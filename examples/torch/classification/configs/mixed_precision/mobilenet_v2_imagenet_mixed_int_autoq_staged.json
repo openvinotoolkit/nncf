@@ -40,5 +40,6 @@
             "lr_poly_drop_duration_epochs": 10
         }
     },
-    "no_strip_on_export": true
+    "no_strip_on_export": true,
+    "export_to_ir_via_onnx": true
 }

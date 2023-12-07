@@ -8,22 +8,30 @@ The Weights Compression algorithm is aimed at compressing the weights of the mod
 
 #### Supported modes
 
-By default, weights are compressed to 8-bit integer data type - "INT8" mode.
+By default, weights are compressed asymmetrically to 8-bit integer data type - "INT8_ASYM" mode.
 OpenVINO backend also supports 3 modes of mixed precision weight quantization with a 4-bit data type as a primary precision - INT4_SYM, INT4_ASYM and NF4. The primary precision in case of INT4_SYM mode is unsigned 4-bit integer and weights are quantized to it [symmetrically](https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#symmetric-quantization) with a fixed zero point equals to 8. In case of INT4_ASYM mode - also unsigned 4-bit integer, but weight are quantized to it [asymmetrically](https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#asymmetric-quantization) with a typical non-fixed zero point. In case of NF4 mode - [nf4](https://arxiv.org/pdf/2305.14314v1.pdf) data type without zero point.
 All 4-bit modes have a grouped quantization support, when small group of weights (e.g. 128) in the channel dimension share quantization parameters (scale).
-First embedding and last linear layers are always compressed to 8-bit integer data type.
-Percent of the rest layers compressed to 4-bit can be configured by "ratio" parameter. E.g. ratio=0.9 means 90% of layers compressed to the corresponding 4-bit data type and the rest to 8-bit integer data type.
+All embeddings and last linear layers are always compressed to 8-bit integer data type.
+Percent of the rest layers compressed to 4-bit can be configured by "ratio" parameter. E.g. ratio=0.9 means 90% of layers compressed to the corresponding 4-bit data type and the rest to 8-bit asymmetric integer data type.
 
 #### User guide
 
-- Compress weights to 8-bit integer data type.
+- Compress weights asymmetrically to 8-bit integer data type.
 
 ```python
 from nncf import compress_weights
 compressed_model = compress_weights(model)
 ```
 
-- Compress weights symmetrically to 4-bit integer data type with group size = 128, except first embedding and last linear layers - they are compressed to 8-bit integer data type.
+- Compress weights symmetrically to 8-bit integer data type.
+
+```python
+from nncf import compress_weights
+from nncf import CompressWeightsMode
+compressed_model = compress_weights(model, mode=CompressWeightsMode.INT8_SYM)
+```
+
+- Compress weights symmetrically to 4-bit integer data type with group size = 128, except embeddings and last linear layers - they are compressed asymmetrically to 8-bit integer data type.
 
 ```python
 from nncf import compress_weights
@@ -36,7 +44,7 @@ compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_SYM)
   If the accuracy or perplexity is still not satisfying, there are 2 more hyper-parameters to tune: `group_size` and `ratio`.
   Lower group size and less ratio of 4-bit layers usually improve accuracy at the sacrifice of inference speed.
   Below is the example how to compress weights of 90% of layers to 4-bit integer asymmetrically with the group size 64, and
-  the rest of layers to 8-bit integer data type. The same parametrization is applicable for `INT4_SYM` mode.
+  the rest of layers to 8-bit asymmetric integer data type. The same parametrization is applicable for `INT4_SYM` mode.
 
 ```python
 from nncf import compress_weights
@@ -45,7 +53,7 @@ compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_ASYM, g
 ```
 
 - `NF4` mode can be considered for improving accuracy, but currently models quantized to nf4 should not be faster models
-  quantized to 8-bit integer. Here's the example how to compress weights to nf4 data type with group size = 128.
+  quantized to 8-bit asymmetric integer. Here's the example how to compress weights to nf4 data type with group size = 128.
   Different `group_size` and `ratio` are also supported.
 
 ```python
@@ -79,7 +87,7 @@ Here is the perplexity and model size before and after weight compression for di
   </tr>
   <tr>
     <td class="tg-0pky">databricks/dolly-v2-3b</td>
-    <td class="tg-0pky">int8</td>
+    <td class="tg-0pky">int8_asym</td>
     <td class="tg-0pky">5.07</td>
     <td class="tg-0pky">0.05</td>
     <td class="tg-0pky">2.6</td>
@@ -107,7 +115,7 @@ Here is the perplexity and model size before and after weight compression for di
   </tr>
   <tr>
     <td class="tg-0pky">facebook/opt-6.7b</td>
-    <td class="tg-0pky">int8</td>
+    <td class="tg-0pky">int8_asym</td>
     <td class="tg-0pky">4.27</td>
     <td class="tg-0pky">0.01</td>
     <td class="tg-0pky">6.2</td>
@@ -135,7 +143,7 @@ Here is the perplexity and model size before and after weight compression for di
   </tr>
   <tr>
     <td class="tg-0pky">meta-llama/Llama-2-7b-chat-hf</td>
-    <td class="tg-0pky">int8</td>
+    <td class="tg-0pky">int8_asym</td>
     <td class="tg-0pky">3.29</td>
     <td class="tg-0pky">0.01</td>
     <td class="tg-0pky">6.3</td>
@@ -163,7 +171,7 @@ Here is the perplexity and model size before and after weight compression for di
   </tr>
   <tr>
     <td class="tg-0pky">togethercomputer/RedPajama-INCITE-7B-Instruct</td>
-    <td class="tg-0pky">int8</td>
+    <td class="tg-0pky">int8_asym</td>
     <td class="tg-0pky">4.17</td>
     <td class="tg-0pky">0.02</td>
     <td class="tg-0pky">6.4</td>
@@ -191,7 +199,7 @@ Here is the perplexity and model size before and after weight compression for di
   </tr>
   <tr>
     <td class="tg-0pky">meta-llama/Llama-2-13b-chat-hf</td>
-    <td class="tg-0pky">int8</td>
+    <td class="tg-0pky">int8_asym</td>
     <td class="tg-0pky">2.91</td>
     <td class="tg-0pky">0</td>
     <td class="tg-0pky">12.1</td>
@@ -218,7 +226,7 @@ Here is the perplexity and model size before and after weight compression for di
 - The algorithm is supported for OpenVINO and PyTorch models.
 - The compression applies in-place.
 - The compressed model is not trainable.
-- INT4_SYM, INT4_ASYM and NF4 modes, grouped quantization and mixed precision selection is available for OpenVINO backend only.
+- INT8_SYM, INT4_SYM, INT4_ASYM and NF4 modes, grouped quantization and mixed precision selection is available for OpenVINO backend only.
 - NF4 support is experimental - models quantized to nf4 should not be faster models quantized to 8-bit integer.
 
 #### Additional resources
