@@ -114,7 +114,7 @@ class LinearPruningOp(BasePruningOp):
     ) -> None:
         input_masks = get_input_masks(node, graph)
         assert len(input_masks) in [1, 2]
-        is_input_mask_empty_map = map(not_, input_masks)
+        is_input_mask_empty_map = list(map(not_, input_masks))
         output_mask = node.attributes.get("output_mask", None)
         input_tensors_shapes = [x.tensor_shape for x in graph.get_input_edges(node)]
         node_id = node.node_id
