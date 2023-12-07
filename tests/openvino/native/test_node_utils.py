@@ -31,7 +31,7 @@ from tests.openvino.native.models import MatMul2DModel
 from tests.openvino.native.models import MatMul2DNotBiasModel
 
 
-@pytest.mark.parametrize("precision", [ov.Type.f16])
+@pytest.mark.parametrize("precision", [ov.Type.f16, ov.Type.bf16])
 def test_get_weight_value_const_with_convert(precision):
     model = FPModel(const_dtype=precision).ov_model
     nncf_graph = NNCFGraphFactory.create(model)
