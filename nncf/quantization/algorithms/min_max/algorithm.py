@@ -193,8 +193,8 @@ class MinMaxQuantization(Algorithm):
         Redefines default values because mode option doesn't support them.
         """
         mode_default_option_map = {
-            QuantizationMode.FP8_E4M3: ConvertParameters(destination_type=FP8Type.E4M3),
-            QuantizationMode.FP8_E5M2: ConvertParameters(destination_type=FP8Type.E5M2),
+            Mode.FP8_E4M3: ConvertParameters(destination_type=FP8Type.E4M3),
+            Mode.FP8_E5M2: ConvertParameters(destination_type=FP8Type.E5M2),
         }
         nncf_logger.warning(
             f"Experimental option mode was set to: {self._mode}. The parameters below would not take any effect:"

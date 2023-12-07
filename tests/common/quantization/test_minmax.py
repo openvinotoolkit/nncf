@@ -30,12 +30,7 @@ from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
         (QuantizationPreset.PERFORMANCE, None, QuantizationMode.SYMMETRIC, QuantizationMode.SYMMETRIC),
         (QuantizationPreset.MIXED, None, QuantizationMode.ASYMMETRIC, QuantizationMode.SYMMETRIC),
         (None, ModelType.TRANSFORMER, QuantizationMode.ASYMMETRIC, QuantizationMode.SYMMETRIC),
-        (
-            QuantizationPreset.PERFORMANCE,
-            ModelType.TRANSFORMER,
-            QuantizationMode.SYMMETRIC,
-            QuantizationMode.SYMMETRIC,
-        ),
+        (QuantizationPreset.PERFORMANCE, ModelType.TRANSFORMER, QuantizationMode.SYMMETRIC, QuantizationMode.SYMMETRIC),
         (QuantizationPreset.MIXED, ModelType.TRANSFORMER, QuantizationMode.ASYMMETRIC, QuantizationMode.SYMMETRIC),
     ],
 )
