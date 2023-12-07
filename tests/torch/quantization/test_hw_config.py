@@ -12,7 +12,7 @@
 import torch
 
 from nncf.common.quantization.quantizer_setup import DEFAULT_QUANTIZER_CONFIG
-from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.torch.dynamic_graph.io_handling import FillerInputElement
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.hardware.config import PTHWConfig
@@ -68,7 +68,7 @@ class TestHWConfigRules:
             is_ok &= quantizer.signed == default_qconfig.signedness_to_force
         is_ok &= isinstance(
             quantizer,
-            SymmetricQuantizer if default_qconfig.mode == QuantizationScheme.SYMMETRIC else AsymmetricQuantizer,
+            SymmetricQuantizer if default_qconfig.mode == QuantizationMode.SYMMETRIC else AsymmetricQuantizer,
         )
         return is_ok
 

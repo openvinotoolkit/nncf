@@ -20,7 +20,7 @@ import jstyleson as json
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization import quantizers as quant
-from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.utils.helpers import product_dict
 from nncf.common.utils.os import safe_open
@@ -137,9 +137,9 @@ class HWConfig(list, ABC):
     @staticmethod
     def get_quantization_mode_from_config_value(str_val: str):
         if str_val == "symmetric":
-            return QuantizationScheme.SYMMETRIC
+            return QuantizationMode.SYMMETRIC
         if str_val == "asymmetric":
-            return QuantizationScheme.ASYMMETRIC
+            return QuantizationMode.ASYMMETRIC
         raise RuntimeError("Invalid quantization type specified in HW config")
 
     @staticmethod
@@ -158,7 +158,7 @@ class HWConfig(list, ABC):
         signedness_to_force = None
         if "level_low" in quantization_subdict and "level_high" in quantization_subdict:
             signedness_to_force = False
-            if mode == QuantizationScheme.SYMMETRIC:
+            if mode == QuantizationMode.SYMMETRIC:
                 if quantization_subdict["level_low"] < 0 < quantization_subdict["level_high"]:
                     signedness_to_force = True
                 true_level_low, true_level_high = quant.calculate_symmetric_level_ranges(bits, signed=True)

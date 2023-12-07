@@ -17,7 +17,7 @@ from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationA
 
 # TODO(nlyalyus): WA for the bug 58886, QuantizationScheme should be imported after nncf.tensorflow.
 #  Otherwise test_quantize_inputs and test_quantize_outputs_removal will fail, because of invalid inputs quantization
-from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.layers.data_layout import get_channel_axis
@@ -41,7 +41,7 @@ def compare_qspecs(qspec: TFQuantizerSpec, quantizer):
     assert qspec.narrow_range == quantizer.narrow_range
     assert qspec.half_range == quantizer.half_range
     assert isinstance(quantizer, NNCF_QUANTIZATION_OPERATIONS.get(qspec.mode))
-    if qspec.mode == QuantizationScheme.SYMMETRIC:
+    if qspec.mode == QuantizationMode.SYMMETRIC:
         assert qspec.signedness_to_force == quantizer.signedness_to_force
 
 
@@ -60,7 +60,7 @@ def get_quantizers(model):
 def check_default_qspecs(compression_model):
     activation_quantizers, weight_quantizers = get_quantizers(compression_model)
     ref_weight_qspec = TFQuantizerSpec(
-        mode=QuantizationScheme.SYMMETRIC,
+        mode=QuantizationMode.SYMMETRIC,
         num_bits=8,
         signedness_to_force=True,
         per_channel=True,
@@ -70,7 +70,7 @@ def check_default_qspecs(compression_model):
     for wq in weight_quantizers:
         compare_qspecs(ref_weight_qspec, wq)
     ref_activation_qspec = TFQuantizerSpec(
-        mode=QuantizationScheme.SYMMETRIC,
+        mode=QuantizationMode.SYMMETRIC,
         num_bits=8,
         signedness_to_force=None,
         per_channel=False,
@@ -112,7 +112,7 @@ def test_quantization_configs__custom():
     activation_quantizers, weight_quantizers = get_quantizers(compression_model)
 
     ref_weight_qspec = TFQuantizerSpec(
-        mode=QuantizationScheme.ASYMMETRIC,
+        mode=QuantizationMode.ASYMMETRIC,
         num_bits=4,
         signedness_to_force=None,
         per_channel=True,
@@ -123,7 +123,7 @@ def test_quantization_configs__custom():
         compare_qspecs(ref_weight_qspec, wq)
 
     ref_activation_qspec = TFQuantizerSpec(
-        mode=QuantizationScheme.ASYMMETRIC,
+        mode=QuantizationMode.ASYMMETRIC,
         num_bits=4,
         signedness_to_force=True,
         per_channel=False,
@@ -137,7 +137,7 @@ def test_quantization_configs__custom():
 def check_specs_for_disabled_overflow_fix(compression_model):
     activation_quantizers, weight_quantizers = get_quantizers(compression_model)
     ref_weight_qspec = TFQuantizerSpec(
-        mode=QuantizationScheme.SYMMETRIC,
+        mode=QuantizationMode.SYMMETRIC,
         num_bits=8,
         signedness_to_force=True,
         per_channel=True,
@@ -147,7 +147,7 @@ def check_specs_for_disabled_overflow_fix(compression_model):
     for wq in weight_quantizers:
         compare_qspecs(ref_weight_qspec, wq)
     ref_activation_qspec = TFQuantizerSpec(
-        mode=QuantizationScheme.SYMMETRIC,
+        mode=QuantizationMode.SYMMETRIC,
         num_bits=8,
         signedness_to_force=None,
         per_channel=False,
@@ -185,7 +185,7 @@ def test_export_overflow_fix(sf_mode):
         if sf_mode == "first_layer_only" and idx > 0:
             enabled = False
         ref_weight_qspec = TFQuantizerSpec(
-            mode=QuantizationScheme.SYMMETRIC,
+            mode=QuantizationMode.SYMMETRIC,
             num_bits=8,
             signedness_to_force=True,
             per_channel=True,
@@ -195,7 +195,7 @@ def test_export_overflow_fix(sf_mode):
         compare_qspecs(ref_weight_qspec, wq)
 
     ref_activation_qspec = TFQuantizerSpec(
-        mode=QuantizationScheme.SYMMETRIC,
+        mode=QuantizationMode.SYMMETRIC,
         num_bits=8,
         signedness_to_force=None,
         per_channel=False,
@@ -213,7 +213,7 @@ def test_export_overflow_fix(sf_mode):
         if sf_mode == "first_layer_only" and idx > 0:
             enabled = False
         ref_weight_qspec = TFQuantizerSpec(
-            mode=QuantizationScheme.SYMMETRIC,
+            mode=QuantizationMode.SYMMETRIC,
             num_bits=8,
             signedness_to_force=True,
             per_channel=True,

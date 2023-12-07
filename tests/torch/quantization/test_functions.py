@@ -16,7 +16,7 @@ import torch
 from torch.autograd import Variable
 from torch.distributions.uniform import Uniform
 
-from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.torch.quantization.quantize_functions import asymmetric_quantize
 from nncf.torch.quantization.quantize_functions import get_scale_zp_from_input_low_input_high
 from nncf.torch.quantization.quantize_functions import symmetric_quantize
@@ -610,7 +610,7 @@ def test_mapping_to_zero(quantization_mode, device):
     eps = 1e-6
     number_of_samples = 100
 
-    if quantization_mode == QuantizationScheme.SYMMETRIC:
+    if quantization_mode == QuantizationMode.SYMMETRIC:
         level_low = -128
         level_high = 127
 

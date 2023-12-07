@@ -11,7 +11,7 @@
 import torch
 from torch import nn
 
-from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SymmetricQuantizer
@@ -53,7 +53,7 @@ def test_trace_asymmetric_quantizer(is_per_channel):
 
     qspec = PTQuantizerSpec(
         num_bits=8,
-        mode=QuantizationScheme.ASYMMETRIC,
+        mode=QuantizationMode.ASYMMETRIC,
         signedness_to_force=False,
         narrow_range=False,
         scale_shape=tuple(input_low.shape),
@@ -78,7 +78,7 @@ def test_trace_symmetric_quantizer(is_per_channel, is_signed):
 
     qspec = PTQuantizerSpec(
         num_bits=8,
-        mode=QuantizationScheme.SYMMETRIC,
+        mode=QuantizationMode.SYMMETRIC,
         signedness_to_force=False,
         narrow_range=False,
         scale_shape=tuple(scale.shape),

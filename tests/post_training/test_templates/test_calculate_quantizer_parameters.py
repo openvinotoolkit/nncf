@@ -16,7 +16,7 @@ from dataclasses import dataclass
 import numpy as np
 import pytest
 
-from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.experimental.tensor import functions as fns
@@ -88,42 +88,42 @@ class CaseFQParams:
 TO_TEST = [
     # WEIGHT QUANTIZER CONFIGURATIONS
     CaseFQParams(
-        q_config=QuantizerConfig(num_bits=8, mode=QuantizationScheme.SYMMETRIC),
+        q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC),
         q_group=QuantizerGroup.WEIGHTS,
         narrow_range=True,
         half_range=True,
         should_fail=False,
     ),
     CaseFQParams(
-        q_config=QuantizerConfig(num_bits=8, mode=QuantizationScheme.SYMMETRIC),
+        q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC),
         q_group=QuantizerGroup.WEIGHTS,
         narrow_range=True,
         half_range=False,
         should_fail=False,
     ),
     CaseFQParams(
-        q_config=QuantizerConfig(num_bits=8, mode=QuantizationScheme.SYMMETRIC),
+        q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC),
         q_group=QuantizerGroup.WEIGHTS,
         narrow_range=False,
         half_range=True,
         should_fail=False,
     ),
     CaseFQParams(
-        q_config=QuantizerConfig(num_bits=8, mode=QuantizationScheme.SYMMETRIC),
+        q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC),
         q_group=QuantizerGroup.WEIGHTS,
         narrow_range=False,
         half_range=False,
         should_fail=False,
     ),
     CaseFQParams(
-        q_config=QuantizerConfig(num_bits=8, mode=QuantizationScheme.ASYMMETRIC),
+        q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC),
         q_group=QuantizerGroup.WEIGHTS,
         narrow_range=False,
         half_range=True,
         should_fail=True,
     ),
     CaseFQParams(
-        q_config=QuantizerConfig(num_bits=8, mode=QuantizationScheme.ASYMMETRIC),
+        q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC),
         q_group=QuantizerGroup.WEIGHTS,
         narrow_range=False,
         half_range=False,
@@ -131,28 +131,28 @@ TO_TEST = [
     ),
     # ACTIVATION QUANTIZER CONFIGURATIONS
     CaseFQParams(
-        q_config=QuantizerConfig(num_bits=8, mode=QuantizationScheme.SYMMETRIC, per_channel=False),
+        q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
         q_group=QuantizerGroup.ACTIVATIONS,
         narrow_range=False,
         half_range=False,
         should_fail=False,
     ),
     CaseFQParams(
-        q_config=QuantizerConfig(num_bits=8, mode=QuantizationScheme.SYMMETRIC, per_channel=True),
+        q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=True),
         q_group=QuantizerGroup.ACTIVATIONS,
         narrow_range=False,
         half_range=False,
         should_fail=False,
     ),
     CaseFQParams(
-        q_config=QuantizerConfig(num_bits=8, mode=QuantizationScheme.ASYMMETRIC, per_channel=False),
+        q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False),
         q_group=QuantizerGroup.ACTIVATIONS,
         narrow_range=False,
         half_range=False,
         should_fail=False,
     ),
     CaseFQParams(
-        q_config=QuantizerConfig(num_bits=8, mode=QuantizationScheme.ASYMMETRIC, per_channel=True),
+        q_config=QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=True),
         q_group=QuantizerGroup.ACTIVATIONS,
         narrow_range=False,
         half_range=False,
@@ -160,7 +160,7 @@ TO_TEST = [
     ),
     CaseFQParams(
         q_config=QuantizerConfig(
-            num_bits=8, mode=QuantizationScheme.ASYMMETRIC, signedness_to_force=True, per_channel=False
+            num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=True, per_channel=False
         ),
         q_group=QuantizerGroup.ACTIVATIONS,
         narrow_range=False,
@@ -169,7 +169,7 @@ TO_TEST = [
     ),
     CaseFQParams(
         q_config=QuantizerConfig(
-            num_bits=8, mode=QuantizationScheme.ASYMMETRIC, signedness_to_force=True, per_channel=True
+            num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=True, per_channel=True
         ),
         q_group=QuantizerGroup.ACTIVATIONS,
         narrow_range=False,
@@ -178,7 +178,7 @@ TO_TEST = [
     ),
     CaseFQParams(
         q_config=QuantizerConfig(
-            num_bits=8, mode=QuantizationScheme.ASYMMETRIC, signedness_to_force=True, per_channel=True
+            num_bits=8, mode=QuantizationMode.ASYMMETRIC, signedness_to_force=True, per_channel=True
         ),
         q_group=QuantizerGroup.ACTIVATIONS,
         narrow_range=False,
@@ -209,7 +209,7 @@ class TemplateTestFQParams(ABC):
         else:
             axes = None
         min_values = np.amin(data, axis=axes, keepdims=q_config.per_channel)
-        if q_config.mode == QuantizationScheme.SYMMETRIC:
+        if q_config.mode == QuantizationMode.SYMMETRIC:
             max_values = np.amax(np.abs(data), axis=axes, keepdims=q_config.per_channel)
         else:
             max_values = np.amax(data, axis=axes, keepdims=q_config.per_channel)

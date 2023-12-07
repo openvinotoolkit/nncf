@@ -40,8 +40,8 @@ from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
 from nncf.common.quantization.structs import QuantizationConstraints
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.schedulers import BaseCompressionScheduler
@@ -243,7 +243,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
     _state_names = QBuilderStateNames
 
     DEFAULT_QCONFIG = QuantizerConfig(
-        num_bits=8, mode=QuantizationScheme.SYMMETRIC, signedness_to_force=None, per_channel=False
+        num_bits=8, mode=QuantizationMode.SYMMETRIC, signedness_to_force=None, per_channel=False
     )
 
     def __init__(self, config: NNCFConfig, should_init: bool = True):

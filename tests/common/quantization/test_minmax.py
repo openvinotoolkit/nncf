@@ -11,11 +11,11 @@
 
 import pytest
 
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationPreset
-from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.parameters import ModelType
-from nncf.parameters import QuantizationMode
+from nncf.parameters import QuantizationMode as Mode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import ConvertParameters
 from nncf.quantization.advanced_parameters import FP8Type
@@ -26,17 +26,17 @@ from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 @pytest.mark.parametrize(
     "preset,model_type,activation_mode,weights_mode",
     [
-        (None, None, QuantizationScheme.SYMMETRIC, QuantizationScheme.SYMMETRIC),
-        (QuantizationPreset.PERFORMANCE, None, QuantizationScheme.SYMMETRIC, QuantizationScheme.SYMMETRIC),
-        (QuantizationPreset.MIXED, None, QuantizationScheme.ASYMMETRIC, QuantizationScheme.SYMMETRIC),
-        (None, ModelType.TRANSFORMER, QuantizationScheme.ASYMMETRIC, QuantizationScheme.SYMMETRIC),
+        (None, None, QuantizationMode.SYMMETRIC, QuantizationMode.SYMMETRIC),
+        (QuantizationPreset.PERFORMANCE, None, QuantizationMode.SYMMETRIC, QuantizationMode.SYMMETRIC),
+        (QuantizationPreset.MIXED, None, QuantizationMode.ASYMMETRIC, QuantizationMode.SYMMETRIC),
+        (None, ModelType.TRANSFORMER, QuantizationMode.ASYMMETRIC, QuantizationMode.SYMMETRIC),
         (
             QuantizationPreset.PERFORMANCE,
             ModelType.TRANSFORMER,
-            QuantizationScheme.SYMMETRIC,
-            QuantizationScheme.SYMMETRIC,
+            QuantizationMode.SYMMETRIC,
+            QuantizationMode.SYMMETRIC,
         ),
-        (QuantizationPreset.MIXED, ModelType.TRANSFORMER, QuantizationScheme.ASYMMETRIC, QuantizationScheme.SYMMETRIC),
+        (QuantizationPreset.MIXED, ModelType.TRANSFORMER, QuantizationMode.ASYMMETRIC, QuantizationMode.SYMMETRIC),
     ],
 )
 def test_quantization_preset(preset, model_type, activation_mode, weights_mode):
@@ -53,9 +53,9 @@ def test_quantization_preset(preset, model_type, activation_mode, weights_mode):
 @pytest.mark.parametrize(
     "algo_params",
     [
-        {"mode": QuantizationMode.FP8_E4M3},
+        {"mode": Mode.FP8_E4M3},
         {
-            "mode": QuantizationMode.FP8_E4M3,
+            "mode": Mode.FP8_E4M3,
             "preset": QuantizationPreset.PERFORMANCE,
             "target_device": TargetDevice.CPU,
             "overflow_fix": OverflowFix.DISABLE,
@@ -63,14 +63,14 @@ def test_quantization_preset(preset, model_type, activation_mode, weights_mode):
             "backend_params": None,
         },
         {
-            "mode": QuantizationMode.FP8_E4M3,
+            "mode": Mode.FP8_E4M3,
             "preset": QuantizationPreset.MIXED,
             "target_device": TargetDevice.GPU,
             "overflow_fix": OverflowFix.FIRST_LAYER,
             "quantize_outputs": True,
         },
         {
-            "mode": QuantizationMode.FP8_E4M3,
+            "mode": Mode.FP8_E4M3,
             "target_device": TargetDevice.CPU_SPR,
             "overflow_fix": OverflowFix.ENABLE,
         },
@@ -85,7 +85,7 @@ def test_mode_against_default_map(algo_params):
         "_backend_params": None,
     }
 
-    qconf_attr_vs_constraint_dict_to_compare = {"mode": QuantizationScheme.SYMMETRIC}
+    qconf_attr_vs_constraint_dict_to_compare = {"mode": QuantizationMode.SYMMETRIC}
 
     minmax = MinMaxQuantization(**algo_params)
     for ref_parameter_name, ref_parameter_value in default_values_to_compare.items():
@@ -107,28 +107,28 @@ def test_mode_against_default_map(algo_params):
     "mode, activations_quantization_params, weights_quantization_params",
     [
         (
-            QuantizationMode.FP8_E4M3,
+            Mode.FP8_E4M3,
             None,
             None,
         ),
         (
-            QuantizationMode.FP8_E5M2,
+            Mode.FP8_E5M2,
             None,
             None,
         ),
         (
-            QuantizationMode.FP8_E4M3,
+            Mode.FP8_E4M3,
             ConvertParameters(destination_type=FP8Type.E4M3),
             ConvertParameters(destination_type=FP8Type.E4M3),
         ),
-        (QuantizationMode.FP8_E4M3, ConvertParameters(destination_type=FP8Type.E5M2), None),
+        (Mode.FP8_E4M3, ConvertParameters(destination_type=FP8Type.E5M2), None),
         (
-            QuantizationMode.FP8_E5M2,
+            Mode.FP8_E5M2,
             None,
             ConvertParameters(destination_type=FP8Type.E4M3),
         ),
         (
-            QuantizationMode.FP8_E5M2,
+            Mode.FP8_E5M2,
             ConvertParameters(destination_type=FP8Type.E4M3),
             ConvertParameters(destination_type=FP8Type.E4M3),
         ),
@@ -141,8 +141,8 @@ def test_mode_with_quantization_params(mode, activations_quantization_params, we
         weights_quantization_params=weights_quantization_params,
     )
     default_configuration_map = {
-        QuantizationMode.FP8_E4M3: ConvertParameters(destination_type=FP8Type.E4M3),
-        QuantizationMode.FP8_E5M2: ConvertParameters(destination_type=FP8Type.E5M2),
+        Mode.FP8_E4M3: ConvertParameters(destination_type=FP8Type.E4M3),
+        Mode.FP8_E5M2: ConvertParameters(destination_type=FP8Type.E5M2),
     }
 
     quantization_params = getattr(minmax, "_quantization_params")

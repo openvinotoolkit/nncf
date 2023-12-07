@@ -30,7 +30,7 @@ from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
-from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.dot_file_rw import get_graph_without_data
 from nncf.common.utils.dot_file_rw import read_dot_graph
@@ -495,7 +495,7 @@ def test_rebuild_graph_after_insert_transformation():
         PTTargetPoint(
             TargetType.OPERATION_WITH_WEIGHTS, target_node_name="InsertionPointTestModel/NNCFConv2d[conv1]/conv2d_0"
         ),
-        AsymmetricQuantizer(PTQuantizerSpec(8, QuantizationScheme.ASYMMETRIC, None, False, False, (1, 1, 1, 1), False)),
+        AsymmetricQuantizer(PTQuantizerSpec(8, QuantizationMode.ASYMMETRIC, None, False, False, (1, 1, 1, 1), False)),
         TransformationPriority.QUANTIZATION_PRIORITY,
     )
     transformation_layout = PTTransformationLayout()

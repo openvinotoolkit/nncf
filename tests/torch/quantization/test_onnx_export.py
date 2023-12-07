@@ -17,7 +17,7 @@ import torch
 from torch import nn
 
 from nncf import NNCFConfig
-from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
@@ -102,7 +102,7 @@ PER_CHANNEL_AQ_SCALE_SHAPE = (1, INPUT_TENSOR_SHAPE[1], 1, 1)
     "export_mode", (QuantizerExportMode.FAKE_QUANTIZE, QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS)
 )
 def test_onnx_export_to_quantize_dequantize_per_channel(
-    is_per_channel: bool, quantization_mode: QuantizationScheme, export_mode: QuantizerExportMode
+    is_per_channel: bool, quantization_mode: QuantizationMode, export_mode: QuantizerExportMode
 ):
     scale_shape = PER_CHANNEL_AQ_SCALE_SHAPE if is_per_channel else (1,)
     qspec = PTQuantizerSpec(
@@ -118,7 +118,7 @@ def test_onnx_export_to_quantize_dequantize_per_channel(
 
     q_cls = QUANTIZATION_MODULES.get(quantization_mode)
     quantizer = q_cls(qspec)
-    if quantization_mode is QuantizationScheme.SYMMETRIC:
+    if quantization_mode is QuantizationMode.SYMMETRIC:
         quantizer.scale = torch.nn.Parameter(torch.rand_like(quantizer.scale))
     else:
         quantizer.input_low = torch.nn.Parameter(torch.rand_like(quantizer.input_low))

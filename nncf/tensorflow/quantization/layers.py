@@ -11,7 +11,7 @@
 
 import tensorflow as tf
 
-from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
 from nncf.tensorflow.layers.custom_objects import NNCF_QUANTIZATION_OPERATIONS
 from nncf.tensorflow.layers.operation import InputType
@@ -52,7 +52,7 @@ class FakeQuantize(tf.keras.layers.Layer):
 
         :return: `True` for signed quantization, `False` for unsigned.
         """
-        if self._quantizer.mode == QuantizationScheme.SYMMETRIC:
+        if self._quantizer.mode == QuantizationMode.SYMMETRIC:
             return self._quantizer.signed(self._quantizer_weights)
         return True
 

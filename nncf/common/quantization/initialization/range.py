@@ -12,7 +12,7 @@
 from typing import Dict, List, Optional
 
 from nncf.common.initialization.dataloader import NNCFDataLoader
-from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.config.schemata.defaults import NUM_INIT_SAMPLES
 
@@ -148,7 +148,7 @@ class RangeInitCollectorParams:
     Defines low-level parameters that are used to instantiate statistic collectors.
     """
 
-    def __init__(self, is_weights: bool, mode: QuantizationScheme, per_channel: bool):
+    def __init__(self, is_weights: bool, mode: QuantizationMode, per_channel: bool):
         """
         Initializes Range Initialization Collector Parameters.
 
@@ -173,7 +173,7 @@ class RangeInitCollectorParams:
     @property
     def use_abs_max(self) -> bool:
         """Applies abs(max) for symmetric quantization."""
-        return self._mode == QuantizationScheme.SYMMETRIC
+        return self._mode == QuantizationMode.SYMMETRIC
 
     @property
     def use_means_of_mins(self) -> bool:

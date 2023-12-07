@@ -29,7 +29,7 @@ from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
-from nncf.parameters import QuantizationMode
+from nncf.parameters import QuantizationMode as Mode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -325,7 +325,7 @@ def _create_engine_config(
 def quantize_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
-    mode: Optional[QuantizationMode] = None,
+    mode: Optional[Mode] = None,
     preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,

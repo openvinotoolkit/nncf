@@ -21,7 +21,7 @@ import torch
 import torch.multiprocessing as mp
 from tqdm import tqdm
 
-from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
@@ -159,7 +159,7 @@ class DefaultedPTQuantizerSpec(PTQuantizerSpec):
         self,
         scale_shape: Tuple[int, ...],
         num_bits: int = 8,
-        mode: QuantizationScheme = QuantizationScheme.SYMMETRIC,
+        mode: QuantizationMode = QuantizationMode.SYMMETRIC,
         signedness_to_force: Optional[bool] = None,
         narrow_range: bool = False,
         half_range: bool = False,

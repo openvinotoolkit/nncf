@@ -23,7 +23,7 @@ from nncf.common.quantization.initialization.range import RangeInitParams
 from nncf.common.quantization.quantizer_setup import QuantizationPointBase
 from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
 from nncf.common.quantization.structs import NonWeightQuantizerId
-from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
@@ -94,7 +94,7 @@ class PTRangeInitParams(RangeInitParams):
 
 class PTRangeInitCollectorParams(RangeInitCollectorParams):
     def __init__(
-        self, is_weights: bool, mode: QuantizationScheme, per_channel: bool, input_shape: tuple, channel_idx: int
+        self, is_weights: bool, mode: QuantizationMode, per_channel: bool, input_shape: tuple, channel_idx: int
     ):
         """
 
@@ -307,9 +307,9 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
                 num_samples_override = num_batches
 
             if isinstance(quantizer_module, SymmetricQuantizer):
-                mode = QuantizationScheme.SYMMETRIC
+                mode = QuantizationMode.SYMMETRIC
             else:
-                mode = QuantizationScheme.ASYMMETRIC
+                mode = QuantizationMode.ASYMMETRIC
 
             shape = quantizer_module.scale_shape
             if shape == (1,):  # Per-tensor

@@ -21,7 +21,7 @@ import pytest
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -124,7 +124,7 @@ class TemplateTestStatisticsAggregator:
     class MinMaxTestParameters:
         range_estimator_params: RangeEstimatorParameters
         target_type: TargetType
-        quantization_mode: QuantizationScheme
+        quantization_mode: QuantizationMode
         per_channel: bool
         ref_max_val: Union[np.ndarray, float]
         ref_min_val: Union[np.ndarray, float]
@@ -148,7 +148,7 @@ class TemplateTestStatisticsAggregator:
                 MinMaxTestParameters(
                     RangeEstimatorParametersSet.MEAN_MINMAX,
                     TargetType.POST_LAYER_OPERATION,
-                    QuantizationScheme.ASYMMETRIC,
+                    QuantizationMode.ASYMMETRIC,
                     False,
                     64.5,
                     -63.5,
@@ -158,7 +158,7 @@ class TemplateTestStatisticsAggregator:
                 MinMaxTestParameters(
                     RangeEstimatorParametersSet.MEAN_MINMAX,
                     TargetType.POST_LAYER_OPERATION,
-                    QuantizationScheme.ASYMMETRIC,
+                    QuantizationMode.ASYMMETRIC,
                     True,
                     np.array((1, 0.55, 64.5)),
                     np.array((-4.5, 0, -63.5)),
@@ -168,7 +168,7 @@ class TemplateTestStatisticsAggregator:
                 MinMaxTestParameters(
                     RangeEstimatorParametersSet.MEAN_MINMAX,
                     TargetType.POST_LAYER_OPERATION,
-                    QuantizationScheme.SYMMETRIC,
+                    QuantizationMode.SYMMETRIC,
                     True,
                     np.array((5.5, 1, 64.5)),
                     np.array((-4.5, 0, -63.5)),
@@ -178,7 +178,7 @@ class TemplateTestStatisticsAggregator:
                 MinMaxTestParameters(
                     RangeEstimatorParametersSet.MINMAX,
                     TargetType.POST_LAYER_OPERATION,
-                    QuantizationScheme.ASYMMETRIC,
+                    QuantizationMode.ASYMMETRIC,
                     False,
                     128,
                     -128,
@@ -188,7 +188,7 @@ class TemplateTestStatisticsAggregator:
                 MinMaxTestParameters(
                     RangeEstimatorParametersSet.MINMAX,
                     TargetType.POST_LAYER_OPERATION,
-                    QuantizationScheme.SYMMETRIC,
+                    QuantizationMode.SYMMETRIC,
                     False,
                     128,
                     -128,
@@ -198,7 +198,7 @@ class TemplateTestStatisticsAggregator:
                 MinMaxTestParameters(
                     RangeEstimatorParametersSet.MINMAX,
                     TargetType.POST_LAYER_OPERATION,
-                    QuantizationScheme.ASYMMETRIC,
+                    QuantizationMode.ASYMMETRIC,
                     True,
                     np.array((1, 1, 128)),
                     np.array((-10, -1, -128)),
@@ -208,7 +208,7 @@ class TemplateTestStatisticsAggregator:
                 MinMaxTestParameters(
                     RangeEstimatorParametersSet.MINMAX,
                     TargetType.POST_LAYER_OPERATION,
-                    QuantizationScheme.SYMMETRIC,
+                    QuantizationMode.SYMMETRIC,
                     True,
                     np.array((10, 1, 128)),
                     np.array((-10, -1, -128)),
@@ -218,7 +218,7 @@ class TemplateTestStatisticsAggregator:
                 MinMaxTestParameters(
                     RangeEstimatorParametersSet.MEDIAN_MINMAX,
                     TargetType.POST_LAYER_OPERATION,
-                    QuantizationScheme.ASYMMETRIC,
+                    QuantizationMode.ASYMMETRIC,
                     False,
                     64.5,
                     -63.5,
@@ -228,7 +228,7 @@ class TemplateTestStatisticsAggregator:
                 MinMaxTestParameters(
                     RangeEstimatorParametersSet.MEDIAN_MINMAX,
                     TargetType.POST_LAYER_OPERATION,
-                    QuantizationScheme.SYMMETRIC,
+                    QuantizationMode.SYMMETRIC,
                     False,
                     64.5,
                     -63.5,
@@ -238,7 +238,7 @@ class TemplateTestStatisticsAggregator:
                 MinMaxTestParameters(
                     RangeEstimatorParametersSet.MEDIAN_MINMAX,
                     TargetType.POST_LAYER_OPERATION,
-                    QuantizationScheme.ASYMMETRIC,
+                    QuantizationMode.ASYMMETRIC,
                     True,
                     np.array((1, 0.55, 64.5)),
                     np.array((-4.5, 0.0, -63.5)),
@@ -248,7 +248,7 @@ class TemplateTestStatisticsAggregator:
                 MinMaxTestParameters(
                     RangeEstimatorParametersSet.MEDIAN_MINMAX,
                     TargetType.POST_LAYER_OPERATION,
-                    QuantizationScheme.SYMMETRIC,
+                    QuantizationMode.SYMMETRIC,
                     True,
                     np.array((5.5, 1.0, 64.5)),
                     np.array((-4.5, 0.0, -63.5)),
@@ -258,7 +258,7 @@ class TemplateTestStatisticsAggregator:
                 MinMaxTestParameters(
                     RangeEstimatorParametersSet.MEAN_NO_OUTLIERS_MINMAX,
                     TargetType.POST_LAYER_OPERATION,
-                    QuantizationScheme.ASYMMETRIC,
+                    QuantizationMode.ASYMMETRIC,
                     False,
                     0,
                     0,
@@ -268,7 +268,7 @@ class TemplateTestStatisticsAggregator:
                 MinMaxTestParameters(
                     RangeEstimatorParametersSet.MEAN_NO_OUTLIERS_MINMAX,
                     TargetType.POST_LAYER_OPERATION,
-                    QuantizationScheme.SYMMETRIC,
+                    QuantizationMode.SYMMETRIC,
                     False,
                     0,
                     0,
@@ -278,7 +278,7 @@ class TemplateTestStatisticsAggregator:
                 MinMaxTestParameters(
                     RangeEstimatorParametersSet.MEAN_NO_OUTLIERS_MINMAX,
                     TargetType.POST_LAYER_OPERATION,
-                    QuantizationScheme.ASYMMETRIC,
+                    QuantizationMode.ASYMMETRIC,
                     True,
                     np.array((1, 0, 0)),
                     np.array((0, 0, 0)),
@@ -288,7 +288,7 @@ class TemplateTestStatisticsAggregator:
                 MinMaxTestParameters(
                     RangeEstimatorParametersSet.MEAN_NO_OUTLIERS_MINMAX,
                     TargetType.POST_LAYER_OPERATION,
-                    QuantizationScheme.SYMMETRIC,
+                    QuantizationMode.SYMMETRIC,
                     True,
                     np.array((0, 1, 0)),
                     np.array((0, 0, 0)),
@@ -298,7 +298,7 @@ class TemplateTestStatisticsAggregator:
                 MinMaxTestParameters(
                     TEST_MEAN_QUANTILE,
                     TargetType.POST_LAYER_OPERATION,
-                    QuantizationScheme.ASYMMETRIC,
+                    QuantizationMode.ASYMMETRIC,
                     False,
                     47.9899999999999,
                     -48.15999999999998,
@@ -308,7 +308,7 @@ class TemplateTestStatisticsAggregator:
                 MinMaxTestParameters(
                     TEST_MEAN_QUANTILE,
                     TargetType.POST_LAYER_OPERATION,
-                    QuantizationScheme.SYMMETRIC,
+                    QuantizationMode.SYMMETRIC,
                     False,
                     47.9899999999999,
                     -48.15999999999998,
@@ -318,7 +318,7 @@ class TemplateTestStatisticsAggregator:
                 MinMaxTestParameters(
                     TEST_MEAN_QUANTILE,
                     TargetType.POST_LAYER_OPERATION,
-                    QuantizationScheme.ASYMMETRIC,
+                    QuantizationMode.ASYMMETRIC,
                     True,
                     np.array((0.96, 0.546, 59.38)),
                     np.array((-4.100e00, 4.000e-02, -5.838e01)),
@@ -328,7 +328,7 @@ class TemplateTestStatisticsAggregator:
                 MinMaxTestParameters(
                     TEST_MEAN_QUANTILE,
                     TargetType.POST_LAYER_OPERATION,
-                    QuantizationScheme.SYMMETRIC,
+                    QuantizationMode.SYMMETRIC,
                     True,
                     np.array((0.96, 0.546, 59.38)),
                     np.array((-4.100e00, 4.000e-02, -5.838e01)),
@@ -340,7 +340,7 @@ class TemplateTestStatisticsAggregator:
                     MinMaxTestParameters(
                         RangeEstimatorParametersSet.MINMAX,
                         TargetType.OPERATION_WITH_WEIGHTS,
-                        QuantizationScheme.SYMMETRIC,
+                        QuantizationMode.SYMMETRIC,
                         False,
                         128,
                         -128,
@@ -351,7 +351,7 @@ class TemplateTestStatisticsAggregator:
                 MinMaxTestParameters(
                     RangeEstimatorParametersSet.MINMAX,
                     TargetType.OPERATION_WITH_WEIGHTS,
-                    QuantizationScheme.ASYMMETRIC,
+                    QuantizationMode.ASYMMETRIC,
                     False,
                     128,
                     -128,
@@ -361,7 +361,7 @@ class TemplateTestStatisticsAggregator:
                 MinMaxTestParameters(
                     RangeEstimatorParametersSet.MINMAX,
                     TargetType.OPERATION_WITH_WEIGHTS,
-                    QuantizationScheme.SYMMETRIC,
+                    QuantizationMode.SYMMETRIC,
                     True,
                     np.array((10, 1, 128)),
                     np.array((-10, -1, -128)),
@@ -371,7 +371,7 @@ class TemplateTestStatisticsAggregator:
                 MinMaxTestParameters(
                     RangeEstimatorParametersSet.MINMAX,
                     TargetType.OPERATION_WITH_WEIGHTS,
-                    QuantizationScheme.ASYMMETRIC,
+                    QuantizationMode.ASYMMETRIC,
                     True,
                     np.array((1, 0.1, 128)),
                     np.array((-10, -1, -128)),
@@ -658,7 +658,7 @@ class TemplateTestStatisticsAggregator:
     )
     def test_statistics_merging_simple(self, dataset_samples, inplace_statistics, statistic_point_params):
         model = self.get_backend_model(dataset_samples)
-        quantizer_config = QuantizerConfig(mode=QuantizationScheme.SYMMETRIC, per_channel=False)
+        quantizer_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC, per_channel=False)
         subset_size = len(dataset_samples)
 
         statistics_points = StatisticPointsContainer()
@@ -750,7 +750,7 @@ class TemplateTestStatisticsAggregator:
         model = params["model"](dataset_samples)
         nncf_graph = NNCFGraphFactory.create(model)
 
-        quantizer_config = QuantizerConfig(mode=QuantizationScheme.SYMMETRIC, per_channel=False)
+        quantizer_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC, per_channel=False)
         statistics_points = StatisticPointsContainer()
         collectors_and_refs = []
         algo_backend = self.get_min_max_algo_backend_cls()
@@ -870,7 +870,7 @@ class TemplateTestStatisticsAggregator:
     )
     def test_register_statistics(self, dataset_samples, statistic_point_params):
         model = self.get_backend_model(dataset_samples)
-        quantizer_config = QuantizerConfig(mode=QuantizationScheme.SYMMETRIC, per_channel=False)
+        quantizer_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC, per_channel=False)
         statistics_points = StatisticPointsContainer()
         ref_val = {}
 
@@ -902,7 +902,7 @@ class TemplateTestStatisticsAggregator:
         graph = NNCFGraphFactory.create(model)
 
         inplace_statistics = False
-        quantizer_config = QuantizerConfig(mode=QuantizationScheme.ASYMMETRIC, per_channel=False)
+        quantizer_config = QuantizerConfig(mode=QuantizationMode.ASYMMETRIC, per_channel=False)
         target_point = self.get_target_point(TargetType.POST_LAYER_OPERATION)
         algorithm_name = "TestAlgo"
         statistic_point = self.create_statistics_point(

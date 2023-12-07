@@ -18,7 +18,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
-from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
@@ -142,7 +142,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     ) -> Union[ONNXMinMaxStatisticCollector, ONNXMeanMinMaxStatisticCollector]:
         is_per_channel = quantizer_config.per_channel
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        use_abs_max = quantizer_config.mode == QuantizationScheme.SYMMETRIC
+        use_abs_max = quantizer_config.mode == QuantizationMode.SYMMETRIC
         reduction_shape = None  # Per-Tensor
         quantization_axis = get_quantization_axis(is_per_channel, node, target_point)
         quantized_tensor_shape = get_quantized_tensor_shape(nncf_graph, node, target_point)

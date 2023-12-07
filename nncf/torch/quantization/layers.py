@@ -28,7 +28,7 @@ from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.quantizers import get_num_levels
-from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerSpec
 from nncf.common.utils.debug import is_debug
@@ -78,7 +78,7 @@ class PTQuantizerSpec(QuantizerSpec):
     def __init__(
         self,
         num_bits: int,
-        mode: QuantizationScheme,
+        mode: QuantizationMode,
         signedness_to_force: Optional[bool],
         narrow_range: bool,
         half_range: bool,
@@ -611,7 +611,7 @@ class StorageRedirectingStateDictHook:
 
 
 @COMPRESSION_MODULES.register()
-@QUANTIZATION_MODULES.register(QuantizationScheme.SYMMETRIC)
+@QUANTIZATION_MODULES.register(QuantizationMode.SYMMETRIC)
 class SymmetricQuantizer(BaseQuantizer):
     SCALE_PARAM_NAME = "scale"
     _SCALE_PARAM_STORAGE_ATTR = "_scale_param_storage"
@@ -800,14 +800,14 @@ class SymmetricQuantizer(BaseQuantizer):
     def get_quantizer_config(self) -> QuantizerConfig:
         return QuantizerConfig(
             num_bits=self.num_bits,
-            mode=QuantizationScheme.SYMMETRIC,
+            mode=QuantizationMode.SYMMETRIC,
             signedness_to_force=self.signed,
             per_channel=self.per_channel,
         )
 
 
 @COMPRESSION_MODULES.register()
-@QUANTIZATION_MODULES.register(QuantizationScheme.ASYMMETRIC)
+@QUANTIZATION_MODULES.register(QuantizationMode.ASYMMETRIC)
 class AsymmetricQuantizer(BaseQuantizer):
     INPUT_LOW_PARAM_NAME = "input_low"
     INPUT_RANGE_PARAM_NAME = "input_range"
@@ -987,7 +987,7 @@ class AsymmetricQuantizer(BaseQuantizer):
     def get_quantizer_config(self) -> QuantizerConfig:
         return QuantizerConfig(
             num_bits=self.num_bits,
-            mode=QuantizationScheme.ASYMMETRIC,
+            mode=QuantizationMode.ASYMMETRIC,
             signedness_to_force=self.signed,
             per_channel=self.per_channel,
         )

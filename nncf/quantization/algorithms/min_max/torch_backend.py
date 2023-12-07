@@ -21,7 +21,7 @@ from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
-from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
@@ -257,7 +257,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     ) -> BaseQuantizer:
         mode = quantizer_config.mode
         quantizer_cls = QUANTIZATION_MODULES.get(mode)
-        narrow_range = target_type == TargetType.OPERATION_WITH_WEIGHTS and mode == QuantizationScheme.SYMMETRIC
+        narrow_range = target_type == TargetType.OPERATION_WITH_WEIGHTS and mode == QuantizationMode.SYMMETRIC
         quantizer_spec = PTQuantizerSpec.from_config(
             quantizer_config,
             narrow_range=narrow_range,

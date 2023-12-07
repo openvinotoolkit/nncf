@@ -17,7 +17,7 @@ import numpy as np
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.quantizers import get_num_levels
-from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
@@ -212,7 +212,7 @@ def get_quantizer_narrow_range(quantizer_config: QuantizerConfig, quant_group: Q
     :param quant_group: Group of the quantizer.
     :return: narrow_range parameter.
     """
-    if quantizer_config.mode == QuantizationScheme.SYMMETRIC:
+    if quantizer_config.mode == QuantizationMode.SYMMETRIC:
         return quant_group == QuantizerGroup.WEIGHTS
     return False
 
@@ -245,7 +245,7 @@ def calculate_quantizer_parameters(
         )
     else:
         num_bits = quantizer_config.num_bits
-        if quantizer_config.mode == QuantizationScheme.SYMMETRIC:
+        if quantizer_config.mode == QuantizationMode.SYMMETRIC:
             level_low, level_high = calculate_symmetric_level_ranges(num_bits, signed=True, narrow_range=narrow_range)
             levels = get_num_levels(level_low, level_high)
             input_low, input_high = symmetric_range(min_values, max_values, levels, quantizer_config, quant_group)
@@ -315,7 +315,7 @@ def _calculate_scaled_parameters(
         input_high: Tensor with maximum limit for input value.
         levels: Number of quantization levels.
     """
-    if quantizer_config.mode == QuantizationScheme.ASYMMETRIC:
+    if quantizer_config.mode == QuantizationMode.ASYMMETRIC:
         raise RuntimeError("half_range is only applied to symmetric quantization mode.")
     if quant_group != QuantizerGroup.WEIGHTS:
         raise RuntimeError("half_range is only applied to weight quantizers.")

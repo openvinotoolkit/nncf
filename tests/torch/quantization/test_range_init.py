@@ -30,7 +30,7 @@ from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
 from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
-from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.config import NNCFConfig
@@ -986,7 +986,7 @@ def quantizer_range_init_test_struct(request):
 def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test_struct: Tuple[QRISSTS, str]):
     test_struct = quantizer_range_init_test_struct[0]
     initializer_type = quantizer_range_init_test_struct[1]
-    for quantization_mode in [QuantizationScheme.SYMMETRIC, QuantizationScheme.ASYMMETRIC]:
+    for quantization_mode in [QuantizationMode.SYMMETRIC, QuantizationMode.ASYMMETRIC]:
         qconfig = PTQuantizerSpec(
             num_bits=8,
             mode=quantization_mode,
@@ -1022,9 +1022,9 @@ def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test
         quantizer.apply_minmax_init(min_values=minmax_values.min_values, max_values=minmax_values.max_values)
 
         assert quantizer.scale_shape == test_struct.ref_scale_shape
-        if quantization_mode == QuantizationScheme.SYMMETRIC:
+        if quantization_mode == QuantizationMode.SYMMETRIC:
             assert tuple(quantizer.scale.shape) == test_struct.ref_scale_shape
-        elif quantization_mode == QuantizationScheme.ASYMMETRIC:
+        elif quantization_mode == QuantizationMode.ASYMMETRIC:
             assert tuple(quantizer.input_low.shape) == test_struct.ref_scale_shape
             assert tuple(quantizer.input_range.shape) == test_struct.ref_scale_shape
         else:

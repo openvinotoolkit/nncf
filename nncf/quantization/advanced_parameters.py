@@ -19,7 +19,7 @@ from dataclasses import is_dataclass
 from enum import Enum
 from typing import Any, Dict, Optional, Union
 
-from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.utils.api_marker import api
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
@@ -101,7 +101,7 @@ class QuantizationParameters:
     """
 
     num_bits: Optional[int] = None
-    scheme: Optional[QuantizationScheme] = None
+    scheme: Optional[QuantizationMode] = None
     signedness_to_force: Optional[bool] = None
     per_channel: Optional[bool] = None
     narrow_range: Optional[bool] = None

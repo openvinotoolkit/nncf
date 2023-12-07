@@ -20,7 +20,7 @@ import nncf
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.quantizers import get_num_levels
-from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.config import NNCFConfig
 from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.quantization.layers import AsymmetricQuantizer
@@ -145,7 +145,7 @@ def test_converting_symmetric_quantizer(input_size, is_per_channel, is_weights, 
 
     qspec = PTQuantizerSpec(
         num_bits=num_bits,
-        mode=QuantizationScheme.SYMMETRIC,
+        mode=QuantizationMode.SYMMETRIC,
         signedness_to_force=is_signed,
         narrow_range=narrow_range,
         scale_shape=tuple(tensor_scale.shape),
@@ -225,7 +225,7 @@ def test_converting_asymmetric_quantizer(input_size, is_per_channel, is_weights,
 
     qspec = PTQuantizerSpec(
         num_bits=num_bits,
-        mode=QuantizationScheme.ASYMMETRIC,
+        mode=QuantizationMode.ASYMMETRIC,
         signedness_to_force=False,
         narrow_range=False,
         scale_shape=tensor_input_low.shape,

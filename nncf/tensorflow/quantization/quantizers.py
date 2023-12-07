@@ -14,7 +14,7 @@ from typing import Any, Dict, Optional
 
 import tensorflow as tf
 
-from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerSpec
 from nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
@@ -30,7 +30,7 @@ class TFQuantizerSpec(QuantizerSpec):
     def __init__(
         self,
         num_bits: int,
-        mode: QuantizationScheme,
+        mode: QuantizationMode,
         signedness_to_force: Optional[bool],
         narrow_range: bool,
         half_range: bool,
@@ -275,7 +275,7 @@ class Quantizer(NNCFOperation):
 
 
 @NNCF_CUSTOM_OBJECTS.register()
-@NNCF_QUANTIZATION_OPERATIONS.register(QuantizationScheme.SYMMETRIC)
+@NNCF_QUANTIZATION_OPERATIONS.register(QuantizationMode.SYMMETRIC)
 class SymmetricQuantizer(Quantizer):
     def __init__(self, name: str, qspec: TFQuantizerSpec):
         super().__init__(name)
@@ -291,7 +291,7 @@ class SymmetricQuantizer(Quantizer):
 
     @property
     def mode(self) -> str:
-        return QuantizationScheme.SYMMETRIC
+        return QuantizationMode.SYMMETRIC
 
     def signed(self, op_weights) -> bool:
         """
@@ -375,7 +375,7 @@ class SymmetricQuantizer(Quantizer):
     def get_quantizer_config(self) -> QuantizerConfig:
         return QuantizerConfig(
             num_bits=self.num_bits,
-            mode=QuantizationScheme.SYMMETRIC,
+            mode=QuantizationMode.SYMMETRIC,
             signedness_to_force=self.signedness_to_force,
             per_channel=self.per_channel,
         )
@@ -383,7 +383,7 @@ class SymmetricQuantizer(Quantizer):
     def get_config(self):
         qspec_dict = {
             "num_bits": self.num_bits,
-            "mode": QuantizationScheme.SYMMETRIC,
+            "mode": QuantizationMode.SYMMETRIC,
             "signedness_to_force": self.signedness_to_force,
             "narrow_range": self.narrow_range,
             "half_range": self._half_range,
@@ -400,7 +400,7 @@ class SymmetricQuantizer(Quantizer):
         qspec_dict = config["quantizer_spec"]
         qspec = TFQuantizerSpec(
             num_bits=qspec_dict["num_bits"],
-            mode=QuantizationScheme.SYMMETRIC,
+            mode=QuantizationMode.SYMMETRIC,
             signedness_to_force=qspec_dict["signedness_to_force"],
             narrow_range=qspec_dict["narrow_range"],
             half_range=qspec_dict["half_range"],
@@ -411,7 +411,7 @@ class SymmetricQuantizer(Quantizer):
 
 
 @NNCF_CUSTOM_OBJECTS.register()
-@NNCF_QUANTIZATION_OPERATIONS.register(QuantizationScheme.ASYMMETRIC)
+@NNCF_QUANTIZATION_OPERATIONS.register(QuantizationMode.ASYMMETRIC)
 class AsymmetricQuantizer(Quantizer):
     def __init__(self, name: str, qspec: TFQuantizerSpec):
         super().__init__(name)
@@ -426,7 +426,7 @@ class AsymmetricQuantizer(Quantizer):
 
     @property
     def mode(self) -> str:
-        return QuantizationScheme.ASYMMETRIC
+        return QuantizationMode.ASYMMETRIC
 
     def build(self, input_shape, input_type, name, layer):
         channel_axes = None
@@ -506,7 +506,7 @@ class AsymmetricQuantizer(Quantizer):
     def get_quantizer_config(self) -> QuantizerConfig:
         return QuantizerConfig(
             num_bits=self.num_bits,
-            mode=QuantizationScheme.ASYMMETRIC,
+            mode=QuantizationMode.ASYMMETRIC,
             signedness_to_force=None,
             per_channel=self.per_channel,
         )
@@ -514,7 +514,7 @@ class AsymmetricQuantizer(Quantizer):
     def get_config(self):
         qspec_dict = {
             "num_bits": self.num_bits,
-            "mode": QuantizationScheme.ASYMMETRIC,
+            "mode": QuantizationMode.ASYMMETRIC,
             "signedness_to_force": None,
             "narrow_range": self.narrow_range,
             "half_range": self._half_range,
@@ -531,7 +531,7 @@ class AsymmetricQuantizer(Quantizer):
         qspec_dict = config["quantizer_spec"]
         qspec = TFQuantizerSpec(
             num_bits=qspec_dict["num_bits"],
-            mode=QuantizationScheme.ASYMMETRIC,
+            mode=QuantizationMode.ASYMMETRIC,
             signedness_to_force=None,
             narrow_range=qspec_dict["narrow_range"],
             half_range=qspec_dict["half_range"],

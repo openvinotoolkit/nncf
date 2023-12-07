@@ -18,7 +18,7 @@ try:
     import torch
 except:  # noqa: E722
     torch = None
-from nncf.common.quantization.structs import QuantizationScheme
+from nncf.common.quantization.structs import QuantizationMode
 from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
 from tests.shared.case_collection import skip_marked_cases_if_options_not_specified
 from tests.shared.install_fixtures import tmp_venv_with_nncf  # noqa: F401
@@ -219,7 +219,7 @@ def is_half_range(request):
     return request.param
 
 
-@pytest.fixture(params=[QuantizationScheme.SYMMETRIC, QuantizationScheme.ASYMMETRIC])
+@pytest.fixture(params=[QuantizationMode.SYMMETRIC, QuantizationMode.ASYMMETRIC])
 def quantization_mode(request):
     return request.param
 
