@@ -236,8 +236,7 @@ class OVModelTransformer(ModelTransformer):
 
     @staticmethod
     def convert_params_to_operations(
-        fq_params: FakeQuantizeParameters,
-        dtype: ov.Type
+        fq_params: FakeQuantizeParameters, dtype: ov.Type
     ) -> Tuple[ov.Node, ov.Node, ov.Node, ov.Node]:
         """
         Converts FakeQuantize parameters to operations with provided dtype.
@@ -278,7 +277,9 @@ class OVModelTransformer(ModelTransformer):
             inp_node = target_node.input(port_id)
             input_node_output = inp_node.get_source_output()
             data_type = inp_node.get_element_type()
-            input_low, input_high, output_low, output_high = OVModelTransformer.convert_params_to_operations(fq_params, data_type)
+            input_low, input_high, output_low, output_high = OVModelTransformer.convert_params_to_operations(
+                fq_params, data_type
+            )
             name = "fq_weights" if transform_type == TargetType.OPERATION_WITH_WEIGHTS else "fq_input"
             fq_name = f"{node_name}/{name}_{port_id}"
 
@@ -296,7 +297,9 @@ class OVModelTransformer(ModelTransformer):
         elif transform_type == TargetType.POST_LAYER_OPERATION:
             output = target_node.output(port_id)
             data_type = output.get_element_type()
-            input_low, input_high, output_low, output_high = OVModelTransformer.convert_params_to_operations(fq_params, data_type)
+            input_low, input_high, output_low, output_high = OVModelTransformer.convert_params_to_operations(
+                fq_params, data_type
+            )
             target_inputs = output.get_target_inputs()
             fq_name = f"{node_name}/fq_output_{port_id}"
             fq = opset.fake_quantize(output, input_low, input_high, output_low, output_high, levels, name=fq_name)
