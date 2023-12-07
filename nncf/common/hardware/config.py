@@ -135,7 +135,7 @@ class HWConfig(list, ABC):
             return cls.from_dict(json_config)
 
     @staticmethod
-    def get_quantization_scheme_from_config_value(str_val: str):
+    def get_quantization_mode_from_config_value(str_val: str):
         if str_val == "symmetric":
             return QuantizationScheme.SYMMETRIC
         if str_val == "asymmetric":
@@ -153,12 +153,12 @@ class HWConfig(list, ABC):
     @staticmethod
     def get_qconf_from_hw_config_subdict(quantization_subdict: Dict):
         bits = quantization_subdict["bits"]
-        scheme = HWConfig.get_quantization_scheme_from_config_value(quantization_subdict["scheme"])
+        mode = HWConfig.get_quantization_mode_from_config_value(quantization_subdict["mode"])
         is_per_channel = HWConfig.get_is_per_channel_from_config_value(quantization_subdict["granularity"])
         signedness_to_force = None
         if "level_low" in quantization_subdict and "level_high" in quantization_subdict:
             signedness_to_force = False
-            if scheme == QuantizationScheme.SYMMETRIC:
+            if mode == QuantizationScheme.SYMMETRIC:
                 if quantization_subdict["level_low"] < 0 < quantization_subdict["level_high"]:
                     signedness_to_force = True
                 true_level_low, true_level_high = quant.calculate_symmetric_level_ranges(bits, signed=True)
@@ -176,7 +176,7 @@ class HWConfig(list, ABC):
                          The parameter must be consistent with other parameters!"
 
         return QuantizerConfig(
-            num_bits=bits, scheme=scheme, per_channel=is_per_channel, signedness_to_force=signedness_to_force
+            num_bits=bits, mode=mode, per_channel=is_per_channel, signedness_to_force=signedness_to_force
         )
 
     @staticmethod

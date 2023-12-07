@@ -31,5 +31,5 @@ def get_basic_quantization_config(model_size=4):
 
 def get_basic_asym_quantization_config(model_size=4):
     config = get_basic_quantization_config(model_size)
-    config["compression"]["activations"] = {"scheme": "asymmetric"}
+    config["compression"]["activations"] = {"mode": "asymmetric"}
     return config

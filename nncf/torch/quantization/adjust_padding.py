@@ -61,7 +61,7 @@ class CalculatePaddingAdjustment:
             not qconfig.per_channel
             and qconfig.num_bits == 4
             and not qconfig.signedness_to_force
-            and qconfig.scheme == QuantizationScheme.SYMMETRIC
+            and qconfig.mode == QuantizationScheme.SYMMETRIC
         )
 
 

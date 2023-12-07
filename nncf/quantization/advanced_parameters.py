@@ -205,8 +205,12 @@ class AdvancedQuantizationParameters:
     disable_bias_correction: bool = False
 
     # Advanced Quantization parameters
-    activations_quantization_params: Union[QuantizationParameters, ConvertParameters] = None
-    weights_quantization_params: Union[QuantizationParameters, ConvertParameters] = None
+    activations_quantization_params: Union[QuantizationParameters, ConvertParameters] = field(
+        default_factory=QuantizationParameters
+    )
+    weights_quantization_params: Union[QuantizationParameters, ConvertParameters] = field(
+        default_factory=QuantizationParameters
+    )
 
     # Range estimator parameters
     activations_range_estimator_params: RangeEstimatorParameters = field(default_factory=RangeEstimatorParameters)
@@ -304,17 +308,16 @@ def convert_quantization_parameters_to_dict(params: QuantizationParameters) -> D
     :return: Quantization parameters as dict in the legacy format
     """
     result = {}
-    if params is not None:
-        if params.num_bits is not None:
-            result["bits"] = params.num_bits
-        if params.scheme is not None:
-            result["scheme"] = params.scheme
-        if params.signedness_to_force is not None:
-            result["signed"] = params.signedness_to_force
-        if params.per_channel is not None:
-            result["per_channel"] = params.per_channel
-        if params.narrow_range is not None:
-            raise RuntimeError("narrow_range parameter is not supported in the legacy format")
+    if params.num_bits is not None:
+        result["bits"] = params.num_bits
+    if params.scheme is not None:
+        result["mode"] = params.scheme
+    if params.signedness_to_force is not None:
+        result["signed"] = params.signedness_to_force
+    if params.per_channel is not None:
+        result["per_channel"] = params.per_channel
+    if params.narrow_range is not None:
+        raise RuntimeError("narrow_range parameter is not supported in the legacy format")
     return result
 
 

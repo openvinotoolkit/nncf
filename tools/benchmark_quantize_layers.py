@@ -159,13 +159,13 @@ class DefaultedPTQuantizerSpec(PTQuantizerSpec):
         self,
         scale_shape: Tuple[int, ...],
         num_bits: int = 8,
-        scheme: QuantizationScheme = QuantizationScheme.SYMMETRIC,
+        mode: QuantizationScheme = QuantizationScheme.SYMMETRIC,
         signedness_to_force: Optional[bool] = None,
         narrow_range: bool = False,
         half_range: bool = False,
         logarithm_scale: bool = None,
     ):
-        super().__init__(num_bits, scheme, signedness_to_force, narrow_range, half_range, scale_shape, logarithm_scale)
+        super().__init__(num_bits, mode, signedness_to_force, narrow_range, half_range, scale_shape, logarithm_scale)
 
 
 RQ = ReferenceQuantize(backend_type=ReferenceBackendType.TORCH)

@@ -229,7 +229,7 @@ def is_half_range(request):
 
 
 @pytest.fixture(params=[QuantizationScheme.SYMMETRIC, QuantizationScheme.ASYMMETRIC])
-def quantization_scheme(request):
+def quantization_mode(request):
     return request.param
 
 

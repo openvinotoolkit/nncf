@@ -224,7 +224,7 @@ class TemplateTestPTQParams:
                         nncf_graph.get_node_by_name(node_name).metatype
                         == min_max_algo._backend_entity.mat_mul_metatypes
                     ):
-                        assert quantization_point.qconfig.scheme == QuantizationScheme.ASYMMETRIC
+                        assert quantization_point.qconfig.mode == QuantizationScheme.ASYMMETRIC
         min_max_algo._apply_model_type_pass(model_type, q_setup, nncf_graph)
         for quantization_point in q_setup.quantization_points.values():
             if quantization_point.is_activation_quantization_point():
@@ -234,7 +234,7 @@ class TemplateTestPTQParams:
                         nncf_graph.get_node_by_name(node_name).metatype
                         == min_max_algo._backend_entity.mat_mul_metatypes
                     ):
-                        assert quantization_point.qconfig.scheme == QuantizationScheme.SYMMETRIC
+                        assert quantization_point.qconfig.mode == QuantizationScheme.SYMMETRIC
 
     @pytest.mark.parametrize(
         "overflow_fix, affected_target_points, ignored_ops",

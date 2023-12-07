@@ -62,7 +62,7 @@ class QuantizerExportMode(Enum):
 
 class PTQSpecStateNames:
     NUM_BITS = "num_bits"
-    SCHEME = "scheme"
+    MODE = "mode"
     SIGNED_TO_FORCE = "signedness_to_force"
     NARROW_RANGE = "narrow_range"
     HALF_RANGE = "half_range"
@@ -78,7 +78,7 @@ class PTQuantizerSpec(QuantizerSpec):
     def __init__(
         self,
         num_bits: int,
-        scheme: QuantizationScheme,
+        mode: QuantizationScheme,
         signedness_to_force: Optional[bool],
         narrow_range: bool,
         half_range: bool,
@@ -94,7 +94,7 @@ class PTQuantizerSpec(QuantizerSpec):
         :param is_quantized_on_export: Export to onnx weights quantized or non quantized. Should not be True for
             activation quantizers.
         """
-        super().__init__(num_bits, scheme, signedness_to_force, narrow_range, half_range)
+        super().__init__(num_bits, mode, signedness_to_force, narrow_range, half_range)
         self.per_channel = scale_shape != (1,)
         self.scale_shape = scale_shape
         self.logarithm_scale = logarithm_scale
@@ -114,7 +114,7 @@ class PTQuantizerSpec(QuantizerSpec):
     ) -> "PTQuantizerSpec":
         return cls(
             qconfig.num_bits,
-            qconfig.scheme,
+            qconfig.mode,
             qconfig.signedness_to_force,
             narrow_range,
             half_range,
@@ -136,7 +136,7 @@ class PTQuantizerSpec(QuantizerSpec):
         """
         kwargs = {
             cls._state_names.NUM_BITS: state["num_bits"],
-            cls._state_names.SCHEME: state["scheme"],
+            cls._state_names.MODE: state["mode"],
             cls._state_names.SIGNED_TO_FORCE: state["signedness_to_force"],
             cls._state_names.NARROW_RANGE: state["narrow_range"],
             cls._state_names.HALF_RANGE: state["half_range"],
@@ -150,7 +150,7 @@ class PTQuantizerSpec(QuantizerSpec):
     def get_state(self):
         return {
             self._state_names.NUM_BITS: self.num_bits,
-            self._state_names.SCHEME: self.scheme,
+            self._state_names.MODE: self.mode,
             self._state_names.SIGNED_TO_FORCE: self.signedness_to_force,
             self._state_names.NARROW_RANGE: self.narrow_range,
             self._state_names.HALF_RANGE: self.half_range,
@@ -800,7 +800,7 @@ class SymmetricQuantizer(BaseQuantizer):
     def get_quantizer_config(self) -> QuantizerConfig:
         return QuantizerConfig(
             num_bits=self.num_bits,
-            scheme=QuantizationScheme.SYMMETRIC,
+            mode=QuantizationScheme.SYMMETRIC,
             signedness_to_force=self.signed,
             per_channel=self.per_channel,
         )
@@ -987,7 +987,7 @@ class AsymmetricQuantizer(BaseQuantizer):
     def get_quantizer_config(self) -> QuantizerConfig:
         return QuantizerConfig(
             num_bits=self.num_bits,
-            scheme=QuantizationScheme.ASYMMETRIC,
+            mode=QuantizationScheme.ASYMMETRIC,
             signedness_to_force=self.signed,
             per_channel=self.per_channel,
         )

@@ -45,7 +45,7 @@ class TFQuantizationStatisticsCollector(QuantizationStatisticsCollector):
         quantizers_descriptions = []
 
         for wrapped_layer, _, op in get_nncf_operations(self._model, self._operation_names):
-            is_symmetric = op.scheme == QuantizationScheme.SYMMETRIC
+            is_symmetric = op.mode == QuantizationScheme.SYMMETRIC
 
             is_signed = True
             if is_symmetric:
@@ -57,7 +57,7 @@ class TFQuantizationStatisticsCollector(QuantizationStatisticsCollector):
             )
 
         for fq_layer in collect_fake_quantize_layers(self._model):
-            is_symmetric = fq_layer.scheme == QuantizationScheme.SYMMETRIC
+            is_symmetric = fq_layer.mode == QuantizationScheme.SYMMETRIC
 
             quantizers_descriptions.append(
                 QuantizerDescription(

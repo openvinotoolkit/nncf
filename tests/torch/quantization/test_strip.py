@@ -47,8 +47,8 @@ def _get_config_for_algo(input_size, quant_mode="symmetric", overflow_fix="enabl
         {
             "algorithm": "quantization",
             "initializer": {"range": {"num_init_samples": 0}},
-            "weights": {"scheme": quant_mode, "bits": bits},
-            "activations": {"scheme": quant_mode, "bits": bits},
+            "weights": {"mode": quant_mode, "bits": bits},
+            "activations": {"mode": quant_mode, "bits": bits},
             "overflow_fix": overflow_fix,
         }
     )
@@ -145,7 +145,7 @@ def test_converting_symmetric_quantizer(input_size, is_per_channel, is_weights, 
 
     qspec = PTQuantizerSpec(
         num_bits=num_bits,
-        scheme=QuantizationScheme.SYMMETRIC,
+        mode=QuantizationScheme.SYMMETRIC,
         signedness_to_force=is_signed,
         narrow_range=narrow_range,
         scale_shape=tuple(tensor_scale.shape),
@@ -225,7 +225,7 @@ def test_converting_asymmetric_quantizer(input_size, is_per_channel, is_weights,
 
     qspec = PTQuantizerSpec(
         num_bits=num_bits,
-        scheme=QuantizationScheme.ASYMMETRIC,
+        mode=QuantizationScheme.ASYMMETRIC,
         signedness_to_force=False,
         narrow_range=False,
         scale_shape=tensor_input_low.shape,
@@ -278,13 +278,13 @@ def test_converting_asymmetric_quantizer(input_size, is_per_channel, is_weights,
     check_outputs(x_nncf.detach().numpy(), x_torch.detach().numpy(), np_is_near_mid_point, quant_lens)
 
 
-@pytest.mark.parametrize("scheme", ("asymmetric", "symmetric"))
+@pytest.mark.parametrize("mode", ("asymmetric", "symmetric"))
 @pytest.mark.parametrize("overflow_fix", ("disable", "enable"), ids=("overflow_fix_disable", "overflow_fix_enable"))
-def test_strip_quantization(scheme, overflow_fix, tmp_path):
+def test_strip_quantization(mode, overflow_fix, tmp_path):
     num_bits = 8
     model = BasicConvTestModel()
 
-    config = _get_config_for_algo(model.INPUT_SIZE, scheme, overflow_fix, bits=num_bits)
+    config = _get_config_for_algo(model.INPUT_SIZE, mode, overflow_fix, bits=num_bits)
     register_bn_adaptation_init_args(config)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 

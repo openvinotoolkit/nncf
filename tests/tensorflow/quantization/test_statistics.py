@@ -20,18 +20,18 @@ from tests.tensorflow.helpers import create_compressed_model_and_algo_for_test
 from tests.tensorflow.helpers import get_empty_config
 
 
-def _get_basic_quantization_config(scheme: str, granularity: str, input_sample_sizes: Optional[List[int]] = None):
+def _get_basic_quantization_config(mode: str, granularity: str, input_sample_sizes: Optional[List[int]] = None):
     config = get_empty_config(input_sample_sizes)
     per_channel = granularity == "per_channel"
 
     compression_section = {
         "algorithm": "quantization",
         "activations": {
-            "scheme": scheme,
+            "mode": mode,
             "per_channel": per_channel,
         },
         "weights": {
-            "scheme": scheme,
+            "mode": mode,
             "per_channel": per_channel,
         },
     }
@@ -47,14 +47,14 @@ class Case:
         model_name: str,
         model_builder,
         input_sample_sizes: List[int],
-        scheme: str,
+        mode: str,
         granularity: str,
         expected: QuantizationStatistics,
     ):
         self._model_name = model_name
         self._model_builder = model_builder
         self._input_sample_sizes = input_sample_sizes
-        self._scheme = scheme
+        self._mode = mode
         self._granularity = granularity
         self._expected = expected
 
@@ -64,14 +64,14 @@ class Case:
 
     @property
     def config(self):
-        return _get_basic_quantization_config(self._scheme, self._granularity, self._input_sample_sizes)
+        return _get_basic_quantization_config(self._mode, self._granularity, self._input_sample_sizes)
 
     @property
     def expected(self):
         return self._expected
 
     def get_id(self) -> str:
-        return f"{self._model_name}-{self._scheme}-{self._granularity}"
+        return f"{self._model_name}-{self._mode}-{self._granularity}"
 
 
 TEST_CASES = [
@@ -79,7 +79,7 @@ TEST_CASES = [
         model_name="mobilenet_v2",
         model_builder=test_models.MobileNetV2,
         input_sample_sizes=[1, 96, 96, 3],
-        scheme="symmetric",
+        mode="symmetric",
         granularity="per_tensor",
         expected=QuantizationStatistics(
             wq_counter=QuantizersCounter(53, 0, 53, 0, 53, 0, 53),
@@ -93,7 +93,7 @@ TEST_CASES = [
         model_name="mobilenet_v2",
         model_builder=test_models.MobileNetV2,
         input_sample_sizes=[1, 96, 96, 3],
-        scheme="asymmetric",
+        mode="asymmetric",
         granularity="per_channel",
         expected=QuantizationStatistics(
             wq_counter=QuantizersCounter(0, 53, 53, 0, 0, 53, 53),

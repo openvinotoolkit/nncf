@@ -18,11 +18,11 @@
     "compression": {
         "algorithm": "quantization",
         "weights": {
-            "scheme": "asymmetric",
+            "mode": "asymmetric",
             "bits": 4
         },
         "activations": {
-            "scheme": "asymmetric",
+            "mode": "asymmetric",
             "bits": 4
         },
         "initializer": {

@@ -4,7 +4,7 @@
         "quantization": {
             "q8_a": {
                 "bits": 8,
-                "scheme": [
+                "mode": [
                     "symmetric",
                     "asymmetric"
                 ],
@@ -12,7 +12,7 @@
             },
             "q8_a_ch": {
                 "bits": 8,
-                "scheme": [
+                "mode": [
                     "symmetric",
                     "asymmetric"
                 ],
@@ -23,7 +23,7 @@
             },
             "q8_w_sym": {
                 "bits": 8,
-                "scheme": "symmetric",
+                "mode": "symmetric",
                 "level_low": -128,
                 "level_high": 127,
                 "granularity":  [
@@ -33,7 +33,7 @@
             },
             "q8_w_asym": {
                 "bits": 8,
-                "scheme": "asymmetric",
+                "mode": "asymmetric",
                 "granularity":  [
                     "perchannel",
                     "pertensor"

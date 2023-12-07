@@ -53,7 +53,7 @@ def test_trace_asymmetric_quantizer(is_per_channel):
 
     qspec = PTQuantizerSpec(
         num_bits=8,
-        scheme=QuantizationScheme.ASYMMETRIC,
+        mode=QuantizationScheme.ASYMMETRIC,
         signedness_to_force=False,
         narrow_range=False,
         scale_shape=tuple(input_low.shape),
@@ -78,7 +78,7 @@ def test_trace_symmetric_quantizer(is_per_channel, is_signed):
 
     qspec = PTQuantizerSpec(
         num_bits=8,
-        scheme=QuantizationScheme.SYMMETRIC,
+        mode=QuantizationScheme.SYMMETRIC,
         signedness_to_force=False,
         narrow_range=False,
         scale_shape=tuple(scale.shape),

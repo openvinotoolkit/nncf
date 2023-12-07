@@ -94,14 +94,14 @@ class PTRangeInitParams(RangeInitParams):
 
 class PTRangeInitCollectorParams(RangeInitCollectorParams):
     def __init__(
-        self, is_weights: bool, scheme: QuantizationScheme, per_channel: bool, input_shape: tuple, channel_idx: int
+        self, is_weights: bool, mode: QuantizationScheme, per_channel: bool, input_shape: tuple, channel_idx: int
     ):
         """
 
         :param input_shape: Shape of the input tensor.
         :param channel_idx: Channel dimension.
         """
-        super().__init__(is_weights, scheme, per_channel)
+        super().__init__(is_weights, mode, per_channel)
         self._input_shape = input_shape
         self._channel_idx = channel_idx
 
@@ -265,7 +265,7 @@ class StatCollectorGenerator:
 
             if scale_shape not in retval:
                 retval[scale_shape] = PTRangeInitCollectorParams(
-                    is_weights, qconfig.scheme, qconfig.per_channel, input_shape, channel_idx
+                    is_weights, qconfig.mode, qconfig.per_channel, input_shape, channel_idx
                 )
         return retval
 
@@ -307,9 +307,9 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
                 num_samples_override = num_batches
 
             if isinstance(quantizer_module, SymmetricQuantizer):
-                scheme = QuantizationScheme.SYMMETRIC
+                mode = QuantizationScheme.SYMMETRIC
             else:
-                scheme = QuantizationScheme.ASYMMETRIC
+                mode = QuantizationScheme.ASYMMETRIC
 
             shape = quantizer_module.scale_shape
             if shape == (1,):  # Per-tensor
@@ -323,7 +323,7 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
                     channel_idx = [i for i, val in enumerate(shape) if val != 1][0]
 
             collector_params = PTRangeInitCollectorParams(
-                is_weights, scheme, quantizer_module.per_channel, input_shape, channel_idx
+                is_weights, mode, quantizer_module.per_channel, input_shape, channel_idx
             )
 
             collector = StatCollectorGenerator.generate_stat_collector_for_range_init_config(

@@ -807,7 +807,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         )
 
     def __create_quantize_module(self, quantizer_spec: PTQuantizerSpec):
-        quantizer_cls = QUANTIZATION_MODULES.get(quantizer_spec.scheme)
+        quantizer_cls = QUANTIZATION_MODULES.get(quantizer_spec.mode)
         return quantizer_cls(quantizer_spec)
 
     @staticmethod
@@ -1624,7 +1624,7 @@ class ExperimentalQuantizationController(QuantizationController):
                     new_qconfig.signedness_to_force is not None
                     and current_qconfig.signedness_to_force != new_qconfig.signedness_to_force
                 )
-                or current_qconfig.scheme != new_qconfig.scheme
+                or current_qconfig.mode != new_qconfig.mode
                 or need_padding_regeneration
             ):
                 return True

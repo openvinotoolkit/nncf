@@ -5,7 +5,7 @@
         "quantization": {
             "q8": { // Alias name for set of hyperparameters
                 "bits": 8, // Number of quantization bits
-                "scheme": [  // Quantization mode in order of priority, the first mode has higher priority
+                "mode": [  // Quantization mode in order of priority, the first mode has higher priority
                     "symmetric",
                     "asymmetric"
                 ],
@@ -20,7 +20,7 @@
             },
             "q8_sym_tnr_-128_127": { // Alias name for set of hyperparameters
                 "bits": 8, // Number of quantization bits
-                "scheme": "symmetric", // Quantization mode
+                "mode": "symmetric", // Quantization mode
                 "granularity": "pertensor", // Granularity: one scale for output tensor
                 "level_low": -128, // Low quantization level
                 "level_high": 127  // High quantization level
@@ -37,17 +37,17 @@
                  * for activations in order of priority, the first configuration has higher priority.
                  */
                 "activations": [
-                    {"bits": 2, "scheme": ["symmetric"], "granularity":["pertensor"]},
-                    {"bits": 4, "scheme": ["symmetric"], "granularity":["pertensor"]},
-                    {"bits": 8, "scheme": ["symmetric", "asymmetric"], "granularity":["pertensor", "perchannel"]}
+                    {"bits": 2, "mode": ["symmetric"], "granularity":["pertensor"]},
+                    {"bits": 4, "mode": ["symmetric"], "granularity":["pertensor"]},
+                    {"bits": 8, "mode": ["symmetric", "asymmetric"], "granularity":["pertensor", "perchannel"]}
                 ],
                 /*
                  * List of supported configurations of quantization algorithms
                  * for weights in order of priority, the first configuration has higher priority.
                  */
                 "weights":[
-                    {"bits": 4 ,"scheme": ["symmetric"], "granularity":["pertensor"]},
-                    {"bits": 8, "scheme": ["symmetric", "asymmetric"], "granularity":["pertensor", "perchannel"]}
+                    {"bits": 4 ,"mode": ["symmetric"], "granularity":["pertensor"]},
+                    {"bits": 8, "mode": ["symmetric", "asymmetric"], "granularity":["pertensor", "perchannel"]}
                 ]
             }
         },

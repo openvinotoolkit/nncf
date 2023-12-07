@@ -124,7 +124,7 @@ class TemplateTestStatisticsAggregator:
     class MinMaxTestParameters:
         range_estimator_params: RangeEstimatorParameters
         target_type: TargetType
-        quantization_scheme: QuantizationScheme
+        quantization_mode: QuantizationScheme
         per_channel: bool
         ref_max_val: Union[np.ndarray, float]
         ref_min_val: Union[np.ndarray, float]
@@ -390,7 +390,7 @@ class TemplateTestStatisticsAggregator:
         inplace_statistics = False
         model = self.get_backend_model(dataset_samples)
         quantizer_config = QuantizerConfig(
-            scheme=test_parameters.quantization_scheme, per_channel=test_parameters.per_channel
+            mode=test_parameters.quantization_mode, per_channel=test_parameters.per_channel
         )
 
         is_standard_estimator = test_parameters.range_estimator_params in [
@@ -658,7 +658,7 @@ class TemplateTestStatisticsAggregator:
     )
     def test_statistics_merging_simple(self, dataset_samples, inplace_statistics, statistic_point_params):
         model = self.get_backend_model(dataset_samples)
-        quantizer_config = QuantizerConfig(scheme=QuantizationScheme.SYMMETRIC, per_channel=False)
+        quantizer_config = QuantizerConfig(mode=QuantizationScheme.SYMMETRIC, per_channel=False)
         subset_size = len(dataset_samples)
 
         statistics_points = StatisticPointsContainer()
@@ -750,7 +750,7 @@ class TemplateTestStatisticsAggregator:
         model = params["model"](dataset_samples)
         nncf_graph = NNCFGraphFactory.create(model)
 
-        quantizer_config = QuantizerConfig(scheme=QuantizationScheme.SYMMETRIC, per_channel=False)
+        quantizer_config = QuantizerConfig(mode=QuantizationScheme.SYMMETRIC, per_channel=False)
         statistics_points = StatisticPointsContainer()
         collectors_and_refs = []
         algo_backend = self.get_min_max_algo_backend_cls()
@@ -870,7 +870,7 @@ class TemplateTestStatisticsAggregator:
     )
     def test_register_statistics(self, dataset_samples, statistic_point_params):
         model = self.get_backend_model(dataset_samples)
-        quantizer_config = QuantizerConfig(scheme=QuantizationScheme.SYMMETRIC, per_channel=False)
+        quantizer_config = QuantizerConfig(mode=QuantizationScheme.SYMMETRIC, per_channel=False)
         statistics_points = StatisticPointsContainer()
         ref_val = {}
 
@@ -902,7 +902,7 @@ class TemplateTestStatisticsAggregator:
         graph = NNCFGraphFactory.create(model)
 
         inplace_statistics = False
-        quantizer_config = QuantizerConfig(scheme=QuantizationScheme.ASYMMETRIC, per_channel=False)
+        quantizer_config = QuantizerConfig(mode=QuantizationScheme.ASYMMETRIC, per_channel=False)
         target_point = self.get_target_point(TargetType.POST_LAYER_OPERATION)
         algorithm_name = "TestAlgo"
         statistic_point = self.create_statistics_point(

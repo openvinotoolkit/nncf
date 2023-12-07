@@ -243,7 +243,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
     _state_names = QBuilderStateNames
 
     DEFAULT_QCONFIG = QuantizerConfig(
-        num_bits=8, scheme=QuantizationScheme.SYMMETRIC, signedness_to_force=None, per_channel=False
+        num_bits=8, mode=QuantizationScheme.SYMMETRIC, signedness_to_force=None, per_channel=False
     )
 
     def __init__(self, config: NNCFConfig, should_init: bool = True):
@@ -347,7 +347,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         return False
 
     def _create_quantizer(self, name: str, qspec: TFQuantizerSpec) -> Quantizer:
-        quantizer_cls = NNCF_QUANTIZATION_OPERATIONS.get(qspec.scheme)
+        quantizer_cls = NNCF_QUANTIZATION_OPERATIONS.get(qspec.mode)
         return quantizer_cls(name, qspec)
 
     def _build_insertion_commands_for_quantizer_setup(

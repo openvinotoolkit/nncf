@@ -162,29 +162,28 @@ def _create_quantization_group_config(
     :return: A POT quantization group configuration as dict.
     """
     config = {}
-    if quantization_params is not None:
-        if quantization_params.num_bits is not None:
-            config["bits"] = quantization_params.num_bits
+    if quantization_params.num_bits is not None:
+        config["bits"] = quantization_params.num_bits
 
-        if quantization_params.scheme is not None:
-            config["mode"] = str(quantization_params.scheme)
-        if quantization_params.per_channel is not None:
-            config["perchannel"] = quantization_params.per_channel
+    if quantization_params.scheme is not None:
+        config["mode"] = str(quantization_params.scheme)
+    if quantization_params.per_channel is not None:
+        config["perchannel"] = quantization_params.per_channel
 
-        not_supported_params = {
-            "narrow_range": quantization_params.narrow_range,
-            "signedness_to_force": quantization_params.signedness_to_force,
-        }
-        for name, value in not_supported_params.items():
-            if value is not None:
-                raise RuntimeError(
-                    "Quantization algorithm from the OpenVINO backend does not support "
-                    f"{name} directly, please, use backend specific parameters level_low "
-                    "and level_high to specify the quantization levels for activations "
-                    "and weights quantization groups to specify the quantization levels."
-                    'Example:\n {"activations" : {"level_low": 0, "level_high": 255}}\n'
-                    '{"weights" : {"level_low": -127, "level_high": 127}}'
-                )
+    not_supported_params = {
+        "narrow_range": quantization_params.narrow_range,
+        "signedness_to_force": quantization_params.signedness_to_force,
+    }
+    for name, value in not_supported_params.items():
+        if value is not None:
+            raise RuntimeError(
+                "Quantization algorithm from the OpenVINO backend does not support "
+                f"{name} directly, please, use backend specific parameters level_low "
+                "and level_high to specify the quantization levels for activations "
+                "and weights quantization groups to specify the quantization levels."
+                'Example:\n {"activations" : {"level_low": 0, "level_high": 255}}\n'
+                '{"weights" : {"level_low": -127, "level_high": 127}}'
+            )
     if BackendParameters.LEVEL_LOW in backend_params:
         config["level_low"] = backend_params[BackendParameters.LEVEL_LOW]
     if BackendParameters.LEVEL_HIGH in backend_params:

@@ -41,8 +41,8 @@ def get_scoped_quantizer_config(
             config_overrides = scope_overrides[overridden_scope]
             if config_overrides.get("bits") is not None:
                 qconfig.num_bits = config_overrides["bits"]
-            if config_overrides.get("scheme") is not None:
-                qconfig.scheme = config_overrides["scheme"]
+            if config_overrides.get("mode") is not None:
+                qconfig.mode = config_overrides["mode"]
             if config_overrides.get("per_channel") is not None:
                 qconfig.per_channel = config_overrides["per_channel"]
             if config_overrides.get("signed") is not None:

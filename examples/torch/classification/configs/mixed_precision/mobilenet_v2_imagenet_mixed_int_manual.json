@@ -28,12 +28,12 @@
     "compression": {
         "algorithm": "quantization",
         "weights": {
-            "scheme": "asymmetric",
+            "mode": "asymmetric",
             "per_channel": true,
             "bits": 4
         },
         "activations": {
-            "scheme": "asymmetric"
+            "mode": "asymmetric"
         },
         "initializer": {
             "precision": {

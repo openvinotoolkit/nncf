@@ -142,7 +142,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     ) -> Union[ONNXMinMaxStatisticCollector, ONNXMeanMinMaxStatisticCollector]:
         is_per_channel = quantizer_config.per_channel
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        use_abs_max = quantizer_config.scheme == QuantizationScheme.SYMMETRIC
+        use_abs_max = quantizer_config.mode == QuantizationScheme.SYMMETRIC
         reduction_shape = None  # Per-Tensor
         quantization_axis = get_quantization_axis(is_per_channel, node, target_point)
         quantized_tensor_shape = get_quantized_tensor_shape(nncf_graph, node, target_point)

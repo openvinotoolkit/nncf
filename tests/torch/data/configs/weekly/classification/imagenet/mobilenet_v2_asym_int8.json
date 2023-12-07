@@ -22,10 +22,10 @@
             }
         },
         "activations": {
-            "scheme": "asymmetric"
+            "mode": "asymmetric"
         },
         "weights": {
-            "scheme": "asymmetric"
+            "mode": "asymmetric"
         }
     }
 }

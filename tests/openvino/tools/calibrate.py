@@ -439,19 +439,19 @@ def update_quantization_parameters(quantization_params, pot_config):
     num_bits = pot_config.get("bits")
     if num_bits is not None:
         quantization_params.num_bits = num_bits
-    scheme = pot_config.get("mode")
-    if scheme is not None:
-        if scheme == "symmetric":
-            quantization_params.scheme = QuantizationScheme.SYMMETRIC
-        elif scheme == "asymmetric":
-            quantization_params.scheme = QuantizationScheme.ASYMMETRIC
+    mode = pot_config.get("mode")
+    if mode is not None:
+        if mode == "symmetric":
+            quantization_params.mode = QuantizationScheme.SYMMETRIC
+        elif mode == "asymmetric":
+            quantization_params.mode = QuantizationScheme.ASYMMETRIC
         else:
-            raise ValueError(f"mode = {scheme} is not supported")
+            raise ValueError(f"mode = {mode} is not supported")
     granularity = pot_config.get("granularity")
     if granularity is not None:
         if granularity == "perchannel":
             quantization_params.per_channel = True
-        elif granularity == "pertensor":
+        elif mode == "pertensor":
             quantization_params.per_channel = False
         else:
             raise ValueError(f"granularity = {granularity} is not supported")

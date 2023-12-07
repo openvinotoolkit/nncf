@@ -109,10 +109,10 @@ def create_ptq_pipeline(
     pipeline_steps.append(
         [
             MinMaxQuantization(
-                mode=mode,
                 preset=preset,
                 target_device=target_device,
                 subset_size=subset_size,
+                mode=mode,
                 model_type=model_type,
                 ignored_scope=ignored_scope,
                 overflow_fix=advanced_parameters.overflow_fix,

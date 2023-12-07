@@ -12,10 +12,10 @@
     "compression": {
         "algorithm": "quantization",
         "activations": {
-            "scheme": "asymmetric"
+            "mode": "asymmetric"
         },
         "weights": {
-            "scheme": "asymmetric"
+            "mode": "asymmetric"
         }
     },
     "epochs": 1,

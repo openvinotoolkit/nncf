@@ -26,7 +26,7 @@ class FakeQuantize(tf.keras.layers.Layer):
         Create a FakeQuantize layer.
         """
         super().__init__(**kwargs)
-        self._scheme = config.scheme
+        self._mode = config.mode
         self.data_format = data_format
 
         self._op_name = f"{self.name}_quantizer"
@@ -52,18 +52,18 @@ class FakeQuantize(tf.keras.layers.Layer):
 
         :return: `True` for signed quantization, `False` for unsigned.
         """
-        if self._quantizer.scheme == QuantizationScheme.SYMMETRIC:
+        if self._quantizer.mode == QuantizationScheme.SYMMETRIC:
             return self._quantizer.signed(self._quantizer_weights)
         return True
 
     @property
-    def scheme(self) -> str:
+    def mode(self) -> str:
         """
-        Returns scheme of the quantization (symmetric or asymmetric).
+        Returns mode of the quantization (symmetric or asymmetric).
 
-        :return: The scheme of the quantization.
+        :return: The mode of the quantization.
         """
-        return self._scheme
+        return self._mode
 
     @property
     def op_name(self):
@@ -91,7 +91,7 @@ class FakeQuantize(tf.keras.layers.Layer):
         self._quantizer.apply_range_initialization(self._quantizer_weights, min_values, max_values, min_range, eps)
 
     def _create_quantizer(self, qspec: TFQuantizerSpec, op_name: str) -> Quantizer:
-        quantizer_cls = NNCF_QUANTIZATION_OPERATIONS.get(qspec.scheme)
+        quantizer_cls = NNCF_QUANTIZATION_OPERATIONS.get(qspec.mode)
         return quantizer_cls(op_name, qspec)
 
     @staticmethod

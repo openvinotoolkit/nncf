@@ -80,8 +80,8 @@ def get_basic_quantization_config(
     config = get_empty_config(input_sample_sizes=input_sample_sizes, input_info=input_info)
     config["compression"] = {
         "algorithm": "quantization",
-        "activations": {"scheme": quantization_type},
-        "weights": {"scheme": quantization_type},
+        "activations": {"mode": quantization_type},
+        "weights": {"mode": quantization_type},
     }
     return config
 

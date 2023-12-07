@@ -225,7 +225,7 @@ compression_state_without_bn_wrapping = {
                         "qip_class": "ActivationQuantizationInsertionPoint",
                         "qconfig": {
                             "num_bits": 8,
-                            "scheme": "symmetric",
+                            "mode": "symmetric",
                             "signedness_to_force": None,
                             "per_channel": False,
                         },
@@ -237,7 +237,7 @@ compression_state_without_bn_wrapping = {
                         "qip_class": "ActivationQuantizationInsertionPoint",
                         "qconfig": {
                             "num_bits": 8,
-                            "scheme": "symmetric",
+                            "mode": "symmetric",
                             "signedness_to_force": None,
                             "per_channel": False,
                         },
@@ -248,7 +248,7 @@ compression_state_without_bn_wrapping = {
                         "qip_class": "WeightQuantizationInsertionPoint",
                         "qconfig": {
                             "num_bits": 8,
-                            "scheme": "symmetric",
+                            "mode": "symmetric",
                             "signedness_to_force": True,
                             "per_channel": True,
                         },
@@ -259,7 +259,7 @@ compression_state_without_bn_wrapping = {
                         "qip_class": "WeightQuantizationInsertionPoint",
                         "qconfig": {
                             "num_bits": 8,
-                            "scheme": "symmetric",
+                            "mode": "symmetric",
                             "signedness_to_force": True,
                             "per_channel": True,
                         },
@@ -311,7 +311,7 @@ old_comp_state = {
                         "qip_class": "ActivationQuantizationInsertionPoint",
                         "qconfig": {
                             "num_bits": 8,
-                            "scheme": "symmetric",
+                            "mode": "symmetric",
                             "signedness_to_force": None,
                             "per_channel": False,
                         },
@@ -325,7 +325,7 @@ old_comp_state = {
                         "qip_class": "ActivationQuantizationInsertionPoint",
                         "qconfig": {
                             "num_bits": 8,
-                            "scheme": "symmetric",
+                            "mode": "symmetric",
                             "signedness_to_force": None,
                             "per_channel": False,
                         },
@@ -336,7 +336,7 @@ old_comp_state = {
                         "qip_class": "WeightQuantizationInsertionPoint",
                         "qconfig": {
                             "num_bits": 8,
-                            "scheme": "symmetric",
+                            "mode": "symmetric",
                             "signedness_to_force": True,
                             "per_channel": True,
                         },
@@ -347,7 +347,7 @@ old_comp_state = {
                         "qip_class": "WeightQuantizationInsertionPoint",
                         "qconfig": {
                             "num_bits": 8,
-                            "scheme": "symmetric",
+                            "mode": "symmetric",
                             "signedness_to_force": True,
                             "per_channel": True,
                         },
@@ -374,7 +374,7 @@ reference_new_builder_state = {
                     },
                     "qspec": {
                         "num_bits": 8,
-                        "scheme": "symmetric",
+                        "mode": "symmetric",
                         "signedness_to_force": None,
                         "narrow_range": False,
                         "half_range": False,
@@ -393,7 +393,7 @@ reference_new_builder_state = {
                     },
                     "qspec": {
                         "num_bits": 8,
-                        "scheme": "symmetric",
+                        "mode": "symmetric",
                         "signedness_to_force": None,
                         "narrow_range": False,
                         "half_range": False,
@@ -412,7 +412,7 @@ reference_new_builder_state = {
                     },
                     "qspec": {
                         "num_bits": 8,
-                        "scheme": "symmetric",
+                        "mode": "symmetric",
                         "signedness_to_force": True,
                         "narrow_range": True,
                         "half_range": False,
@@ -431,7 +431,7 @@ reference_new_builder_state = {
                     },
                     "qspec": {
                         "num_bits": 8,
-                        "scheme": "symmetric",
+                        "mode": "symmetric",
                         "signedness_to_force": True,
                         "narrow_range": True,
                         "half_range": False,

@@ -191,7 +191,7 @@ GROUND_TRUTH_STATE = {
             "op_name": "dummy_str",
             "quantizer_spec": {
                 "half_range": True,
-                "scheme": "symmetric",
+                "mode": "symmetric",
                 "narrow_range": True,
                 "num_bits": 8,
                 "per_channel": True,
@@ -204,7 +204,7 @@ GROUND_TRUTH_STATE = {
             "op_name": "dummy_str",
             "quantizer_spec": {
                 "half_range": True,
-                "scheme": "symmetric",
+                "mode": "symmetric",
                 "narrow_range": True,
                 "num_bits": 8,
                 "per_channel": True,
@@ -217,7 +217,7 @@ GROUND_TRUTH_STATE = {
             "op_name": "dummy_str",
             "quantizer_spec": {
                 "half_range": True,
-                "scheme": "symmetric",
+                "mode": "symmetric",
                 "narrow_range": True,
                 "num_bits": 8,
                 "per_channel": True,
@@ -230,7 +230,7 @@ GROUND_TRUTH_STATE = {
             "op_name": "dummy_str",
             "quantizer_spec": {
                 "half_range": True,
-                "scheme": "symmetric",
+                "mode": "symmetric",
                 "narrow_range": True,
                 "num_bits": 8,
                 "per_channel": True,
@@ -243,7 +243,7 @@ GROUND_TRUTH_STATE = {
             "op_name": "dummy_str",
             "quantizer_spec": {
                 "half_range": True,
-                "scheme": "symmetric",
+                "mode": "symmetric",
                 "narrow_range": True,
                 "num_bits": 8,
                 "per_channel": True,
@@ -256,7 +256,7 @@ GROUND_TRUTH_STATE = {
             "op_name": "dummy_str",
             "quantizer_spec": {
                 "half_range": True,
-                "scheme": "symmetric",
+                "mode": "symmetric",
                 "narrow_range": True,
                 "num_bits": 8,
                 "per_channel": True,
@@ -269,7 +269,7 @@ GROUND_TRUTH_STATE = {
             "op_name": "dummy_str",
             "quantizer_spec": {
                 "half_range": True,
-                "scheme": "symmetric",
+                "mode": "symmetric",
                 "narrow_range": True,
                 "num_bits": 8,
                 "per_channel": True,
@@ -292,7 +292,7 @@ def test_quantizer_setup_serialization():
 
     quantizer_spec = TFQuantizerSpec(
         num_bits=8,
-        scheme=QuantizationScheme.SYMMETRIC,
+        mode=QuantizationScheme.SYMMETRIC,
         signedness_to_force=None,
         narrow_range=True,
         half_range=True,

@@ -45,17 +45,17 @@ from nncf.config.schemata.defaults import STAGED_QUANTIZATION_BASE_LR
 from nncf.config.schemata.defaults import STAGED_QUANTIZATION_BASE_WD
 from nncf.config.schemata.defaults import WEIGHTS_QUANT_START_EPOCH
 
-QUANTIZER_SCHEMES = ["symmetric", "asymmetric"]
+QUANTIZER_MODES = ["symmetric", "asymmetric"]
 
 QUANTIZER_CONFIG_PROPERTIES = {
-    "scheme": with_attributes(
+    "mode": with_attributes(
         STRING,
-        description=f"Scheme of quantization. "
+        description=f"Mode of quantization. "
         f"See [Quantization.md]"
         f"({ONLINE_DOCS_ROOT}"
         f"/docs/compression_algorithms/Quantization.md#symmetric-quantization) for "
         f"more details.",
-        enum=QUANTIZER_SCHEMES,
+        enum=QUANTIZER_MODES,
     ),
     "bits": with_attributes(
         NUMBER,
@@ -485,11 +485,11 @@ QUANTIZATION_SCHEMA = {
                 {
                     "weights": {
                         "QuantizeOutputsTestModel/NNCFConv2d[conv5]/conv2d_0": {
-                            "scheme": "asymmetric",
+                            "mode": "asymmetric",
                         },
                         "activations": {
-                            "{re}.*conv_first.*": {"scheme": "asymmetric"},
-                            "{re}.*conv_second.*": {"scheme": "symmetric"},
+                            "{re}.*conv_first.*": {"mode": "asymmetric"},
+                            "{re}.*conv_second.*": {"mode": "symmetric"},
                         },
                     }
                 }

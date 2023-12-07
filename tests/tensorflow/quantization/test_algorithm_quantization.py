@@ -40,8 +40,8 @@ def compare_qspecs(qspec: TFQuantizerSpec, quantizer):
     assert qspec.per_channel == quantizer.per_channel
     assert qspec.narrow_range == quantizer.narrow_range
     assert qspec.half_range == quantizer.half_range
-    assert isinstance(quantizer, NNCF_QUANTIZATION_OPERATIONS.get(qspec.scheme))
-    if qspec.scheme == QuantizationScheme.SYMMETRIC:
+    assert isinstance(quantizer, NNCF_QUANTIZATION_OPERATIONS.get(qspec.mode))
+    if qspec.mode == QuantizationScheme.SYMMETRIC:
         assert qspec.signedness_to_force == quantizer.signedness_to_force
 
 
@@ -60,7 +60,7 @@ def get_quantizers(model):
 def check_default_qspecs(compression_model):
     activation_quantizers, weight_quantizers = get_quantizers(compression_model)
     ref_weight_qspec = TFQuantizerSpec(
-        scheme=QuantizationScheme.SYMMETRIC,
+        mode=QuantizationScheme.SYMMETRIC,
         num_bits=8,
         signedness_to_force=True,
         per_channel=True,
@@ -70,7 +70,7 @@ def check_default_qspecs(compression_model):
     for wq in weight_quantizers:
         compare_qspecs(ref_weight_qspec, wq)
     ref_activation_qspec = TFQuantizerSpec(
-        scheme=QuantizationScheme.SYMMETRIC,
+        mode=QuantizationScheme.SYMMETRIC,
         num_bits=8,
         signedness_to_force=None,
         per_channel=False,
@@ -98,9 +98,9 @@ def test_quantization_configs__custom():
     config["target_device"] = "TRIAL"
     config["compression"].update(
         {
-            "weights": {"scheme": "asymmetric", "per_channel": True, "bits": 4},
+            "weights": {"mode": "asymmetric", "per_channel": True, "bits": 4},
             "activations": {
-                "scheme": "asymmetric",
+                "mode": "asymmetric",
                 "bits": 4,
                 "signed": True,
             },
@@ -112,7 +112,7 @@ def test_quantization_configs__custom():
     activation_quantizers, weight_quantizers = get_quantizers(compression_model)
 
     ref_weight_qspec = TFQuantizerSpec(
-        scheme=QuantizationScheme.ASYMMETRIC,
+        mode=QuantizationScheme.ASYMMETRIC,
         num_bits=4,
         signedness_to_force=None,
         per_channel=True,
@@ -123,7 +123,7 @@ def test_quantization_configs__custom():
         compare_qspecs(ref_weight_qspec, wq)
 
     ref_activation_qspec = TFQuantizerSpec(
-        scheme=QuantizationScheme.ASYMMETRIC,
+        mode=QuantizationScheme.ASYMMETRIC,
         num_bits=4,
         signedness_to_force=True,
         per_channel=False,
@@ -137,7 +137,7 @@ def test_quantization_configs__custom():
 def check_specs_for_disabled_overflow_fix(compression_model):
     activation_quantizers, weight_quantizers = get_quantizers(compression_model)
     ref_weight_qspec = TFQuantizerSpec(
-        scheme=QuantizationScheme.SYMMETRIC,
+        mode=QuantizationScheme.SYMMETRIC,
         num_bits=8,
         signedness_to_force=True,
         per_channel=True,
@@ -147,7 +147,7 @@ def check_specs_for_disabled_overflow_fix(compression_model):
     for wq in weight_quantizers:
         compare_qspecs(ref_weight_qspec, wq)
     ref_activation_qspec = TFQuantizerSpec(
-        scheme=QuantizationScheme.SYMMETRIC,
+        mode=QuantizationScheme.SYMMETRIC,
         num_bits=8,
         signedness_to_force=None,
         per_channel=False,
@@ -185,7 +185,7 @@ def test_export_overflow_fix(sf_mode):
         if sf_mode == "first_layer_only" and idx > 0:
             enabled = False
         ref_weight_qspec = TFQuantizerSpec(
-            scheme=QuantizationScheme.SYMMETRIC,
+            mode=QuantizationScheme.SYMMETRIC,
             num_bits=8,
             signedness_to_force=True,
             per_channel=True,
@@ -195,7 +195,7 @@ def test_export_overflow_fix(sf_mode):
         compare_qspecs(ref_weight_qspec, wq)
 
     ref_activation_qspec = TFQuantizerSpec(
-        scheme=QuantizationScheme.SYMMETRIC,
+        mode=QuantizationScheme.SYMMETRIC,
         num_bits=8,
         signedness_to_force=None,
         per_channel=False,
@@ -213,7 +213,7 @@ def test_export_overflow_fix(sf_mode):
         if sf_mode == "first_layer_only" and idx > 0:
             enabled = False
         ref_weight_qspec = TFQuantizerSpec(
-            scheme=QuantizationScheme.SYMMETRIC,
+            mode=QuantizationScheme.SYMMETRIC,
             num_bits=8,
             signedness_to_force=True,
             per_channel=True,
@@ -674,7 +674,7 @@ TEST_QUANTIZATION_PRESET_STRUCT = [
     {
         "preset": "performance",
         "target_device": "CPU",
-        "overrided_param": {"weights": {"scheme": "asymmetric"}},
+        "overrided_param": {"weights": {"mode": "asymmetric"}},
         "expected_weights_q": "asymmetric",
         "expected_activations_q": "symmetric",
     },
@@ -693,7 +693,7 @@ def test_quantization_preset(data):
 
     activation_quantizers, weight_quantizers = get_quantizers(compression_model)
     for aq in activation_quantizers:
-        assert aq.scheme == data["expected_activations_q"]
+        assert aq.mode == data["expected_activations_q"]
     for wq in weight_quantizers:
         assert wq.scheme == data["expected_weights_q"]
 
@@ -708,7 +708,7 @@ def test_quantization_preset_with_scope_overrides():
         "scope_overrides": {
             "weights": {
                 "conv2d": {
-                    "scheme": "asymmetric",
+                    "mode": "asymmetric",
                 }
             }
         },
@@ -717,12 +717,12 @@ def test_quantization_preset_with_scope_overrides():
 
     activation_quantizers, weight_quantizers = get_quantizers(compression_model)
     for aq in activation_quantizers:
-        assert aq.scheme == "asymmetric"
+        assert aq.mode == "asymmetric"
     for wq in weight_quantizers:
         if wq.name == "conv2d_kernel_quantizer":
-            assert wq.scheme == "asymmetric"
+            assert wq.mode == "asymmetric"
         else:
-            assert wq.scheme == "symmetric"
+            assert wq.mode == "symmetric"
 
 
 def test_quantization_with_bn_adaptation_disable(mocker):
