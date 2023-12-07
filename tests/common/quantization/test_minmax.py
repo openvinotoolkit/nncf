@@ -20,7 +20,6 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import ConvertParameters
 from nncf.quantization.advanced_parameters import FP8Type
 from nncf.quantization.advanced_parameters import OverflowFix
-from nncf.quantization.advanced_parameters import RangeEstimatorParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 
 
@@ -48,9 +47,7 @@ def test_quantization_preset(preset, model_type, activation_mode, weights_mode):
         global_quantizer_constraints[QuantizerGroup.ACTIVATIONS].qconf_attr_vs_constraint_dict["mode"]
         == activation_mode
     )
-    assert (
-        global_quantizer_constraints[QuantizerGroup.WEIGHTS].qconf_attr_vs_constraint_dict["mode"] == weights_mode
-    )
+    assert global_quantizer_constraints[QuantizerGroup.WEIGHTS].qconf_attr_vs_constraint_dict["mode"] == weights_mode
 
 
 @pytest.mark.parametrize(
@@ -63,8 +60,6 @@ def test_quantization_preset(preset, model_type, activation_mode, weights_mode):
             "target_device": TargetDevice.CPU,
             "overflow_fix": OverflowFix.DISABLE,
             "quantize_outputs": False,
-            "activations_range_estimator_params": None,
-            "weights_range_estimator_params": None,
             "backend_params": None,
         },
         {
@@ -73,14 +68,11 @@ def test_quantization_preset(preset, model_type, activation_mode, weights_mode):
             "target_device": TargetDevice.GPU,
             "overflow_fix": OverflowFix.FIRST_LAYER,
             "quantize_outputs": True,
-            "activations_range_estimator_params": RangeEstimatorParameters(),
-            "weights_range_estimator_params": RangeEstimatorParameters(),
         },
         {
             "mode": QuantizationMode.FP8_E4M3,
             "target_device": TargetDevice.CPU_SPR,
             "overflow_fix": OverflowFix.ENABLE,
-            "activations_range_estimator_params": RangeEstimatorParameters(),
         },
     ],
 )
@@ -90,7 +82,6 @@ def test_mode_against_default_map(algo_params):
         "_target_device": TargetDevice.CPU,
         "_overflow_fix": OverflowFix.DISABLE,
         "_quantize_outputs": False,
-        "_range_estimator_params": {QuantizerGroup.WEIGHTS: None, QuantizerGroup.ACTIVATIONS: None},
         "_backend_params": None,
     }
 
@@ -143,7 +134,7 @@ def test_mode_against_default_map(algo_params):
         ),
     ],
 )
-def test_mode_with_params(mode, activations_quantization_params, weights_quantization_params):
+def test_mode_with_quantization_params(mode, activations_quantization_params, weights_quantization_params):
     minmax = MinMaxQuantization(
         mode=mode,
         activations_quantization_params=activations_quantization_params,

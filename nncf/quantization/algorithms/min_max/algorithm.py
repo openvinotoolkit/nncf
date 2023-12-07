@@ -212,18 +212,6 @@ class MinMaxQuantization(Algorithm):
         self._quantize_outputs = False
         nncf_logger.warning(f"  quantize_outputs option was set to: {self._quantize_outputs}")
 
-        self._range_estimator_params[QuantizerGroup.WEIGHTS] = None
-        nncf_logger.warning(
-            f"  range_estimator_params options for {QuantizerGroup.WEIGHTS} were set to: "
-            f"{self._range_estimator_params[QuantizerGroup.WEIGHTS]}"
-        )
-
-        self._range_estimator_params[QuantizerGroup.ACTIVATIONS] = None
-        nncf_logger.warning(
-            f"  range_estimator_params options for {QuantizerGroup.ACTIVATIONS} were set to: "
-            f"{self._range_estimator_params[QuantizerGroup.ACTIVATIONS]}"
-        )
-
         self._backend_params = None
         nncf_logger.warning(f"  backend_params option was set to: {self._backend_params}")
 
