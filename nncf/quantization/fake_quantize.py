@@ -287,7 +287,7 @@ def calculate_convert_parameters(
     tensor_dtype = fns.finfo(max_values)
     scale = max_destination_value / fns.maximum(max_values, fns.abs(min_values) + tensor_dtype.eps)
     if is_activation:
-        # Activations - per-tensor, weights - per-channel?
+        # Activations - per-tensor, weights - per-channel
         scale = fns.squeeze(activation_scale * scale)
     shift = fns.zeros_like(scale).astype(TensorDataType.float32)
     scale = scale.astype(TensorDataType.float32)

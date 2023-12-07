@@ -49,6 +49,7 @@ class PostTrainingQuantization(Algorithm):
         advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
     ):
         """
+        :param mode: Special quantization mode that specify different ways of the optimization.
         :param preset: A preset controls the quantization mode (symmetric and asymmetric).
             It can take the following values:
             - `performance`: Symmetric quantization of weights and activations.
@@ -63,7 +64,6 @@ class PostTrainingQuantization(Algorithm):
         :param fast_bias_correction: Setting this option to `False` enables a different
             bias correction method which is more accurate, in general, and takes
             more time but requires less memory.
-        :param mode: Special quantization mode that specify different ways of the optimization.
         :param model_type: Model type is needed to specify additional patterns
             in the model. Supported only `transformer` now.
         :param ignored_scope: An ignored scope that defined the list of model control
@@ -72,11 +72,11 @@ class PostTrainingQuantization(Algorithm):
             fine-tuning the quantization algorithm
         """
         self._pipeline = create_ptq_pipeline(
+            mode=mode,
             preset=preset,
             target_device=target_device,
             subset_size=subset_size,
             fast_bias_correction=fast_bias_correction,
-            mode=mode,
             model_type=model_type,
             ignored_scope=ignored_scope,
             advanced_parameters=advanced_parameters,

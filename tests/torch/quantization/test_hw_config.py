@@ -67,8 +67,7 @@ class TestHWConfigRules:
         if default_qconfig.signedness_to_force is not None:
             is_ok &= quantizer.signed == default_qconfig.signedness_to_force
         is_ok &= isinstance(
-            quantizer,
-            SymmetricQuantizer if default_qconfig.mode == QuantizationMode.SYMMETRIC else AsymmetricQuantizer,
+            quantizer, SymmetricQuantizer if default_qconfig.mode == QuantizationMode.SYMMETRIC else AsymmetricQuantizer
         )
         return is_ok
 

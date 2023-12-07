@@ -165,8 +165,8 @@ def _create_quantization_group_config(
     if quantization_params.num_bits is not None:
         config["bits"] = quantization_params.num_bits
 
-    if quantization_params.scheme is not None:
-        config["mode"] = str(quantization_params.scheme)
+    if quantization_params.mode is not None:
+        config["mode"] = str(quantization_params.mode)
     if quantization_params.per_channel is not None:
         config["perchannel"] = quantization_params.per_channel
 

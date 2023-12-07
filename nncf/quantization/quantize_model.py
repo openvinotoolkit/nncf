@@ -57,6 +57,8 @@ def quantize(
     :param calibration_dataset: A representative dataset for the
         calibration process.
     :type  calibration_dataset: nncf.Dataset
+    :param mode: Special quantization mode that specify different ways of the optimization.
+    :type mode: Optional[nncf.QuantizationMode]
     :param preset: A preset controls the quantization mode (symmetric and asymmetric).
         It can take the following values:
         - `performance`: Symmetric quantization of weights and activations.
@@ -73,8 +75,6 @@ def quantize(
     :param fast_bias_correction: Setting this option to `False` enables a different
         bias correction method which is more accurate, in general, and takes
         more time but requires less memory.
-    :param mode: Special quantization mode that specify different ways of the optimization.
-    :type mode: Optional[nncf.QuantizationMode]
     :param model_type: Model type is needed to specify additional patterns
         in the model. Supported only `transformer` now.
     :type  model_type: Optional[nncf.ModelType]

@@ -13,7 +13,6 @@ import copy
 from typing import Dict
 
 from nncf import ModelType
-from nncf import QuantizationMode
 from nncf import QuantizationPreset
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
@@ -151,7 +150,6 @@ TEST_MODELS = [
         "ptq_params": {
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
-            "mode": QuantizationMode.FP8_E4M3,
             "advanced_parameters": AdvancedQuantizationParameters(
                 smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=0.05)
             ),

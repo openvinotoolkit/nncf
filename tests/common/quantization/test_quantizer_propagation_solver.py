@@ -726,9 +726,8 @@ class TestQuantizerPropagationSolver:
                          QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False)]
                     ]),
                 PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT: MergeQConfigSolution(
-                    merge_qconfig_list=[
-                        QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
-                        QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False)],
+                    merge_qconfig_list=[QuantizerConfig(num_bits=8, mode=QuantizationMode.SYMMETRIC, per_channel=False),
+                         QuantizerConfig(num_bits=8, mode=QuantizationMode.ASYMMETRIC, per_channel=False)],
                     branch_qconfig_lists_after_merge=[
                         None,
                         None])

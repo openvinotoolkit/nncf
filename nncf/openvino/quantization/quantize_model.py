@@ -94,11 +94,11 @@ def native_quantize_if_op_impl(
             "The BiasCorrection algorithm is not supported for OpenVINO models with If operation."
         )
     quantization_algorithm = PostTrainingQuantization(
+        mode=mode,
         preset=preset,
         target_device=target_device,
         subset_size=subset_size,
         fast_bias_correction=fast_bias_correction,
-        mode=mode,
         model_type=model_type,
         ignored_scope=ignored_scope,
         advanced_parameters=advanced_parameters,
@@ -150,11 +150,11 @@ def native_quantize_impl(
     Implementation of the `quantize()` method for the OpenVINO backend via the OpenVINO Runtime API.
     """
     quantization_algorithm = PostTrainingQuantization(
+        mode=mode,
         preset=preset,
         target_device=target_device,
         subset_size=subset_size,
         fast_bias_correction=fast_bias_correction,
-        mode=mode,
         model_type=model_type,
         ignored_scope=ignored_scope,
         advanced_parameters=advanced_parameters,

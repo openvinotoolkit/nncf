@@ -78,8 +78,8 @@ class QuantizationParameters:
 
     :param num_bits: The number of bits to use for quantization.
     :type num_bits: Optional[int]
-    :param scheme: The quantization scheme to use, such as 'symmetric', 'asymmetric', etc.
-    :type scheme: nncf.common.quantization.structs.QuantizationScheme
+    :param mode: The quantization mode to use, such as 'symmetric', 'asymmetric', etc.
+    :type mode: nncf.common.quantization.structs.QuantizationMode
     :param signedness_to_force: Whether to force the weights or activations to be
         signed (True), unsigned (False)
     :type signedness_to_force: Optional[bool]
@@ -101,7 +101,7 @@ class QuantizationParameters:
     """
 
     num_bits: Optional[int] = None
-    scheme: Optional[QuantizationMode] = None
+    mode: Optional[QuantizationMode] = None
     signedness_to_force: Optional[bool] = None
     per_channel: Optional[bool] = None
     narrow_range: Optional[bool] = None
@@ -205,12 +205,8 @@ class AdvancedQuantizationParameters:
     disable_bias_correction: bool = False
 
     # Advanced Quantization parameters
-    activations_quantization_params: Union[QuantizationParameters, ConvertParameters] = field(
-        default_factory=QuantizationParameters
-    )
-    weights_quantization_params: Union[QuantizationParameters, ConvertParameters] = field(
-        default_factory=QuantizationParameters
-    )
+    activations_quantization_params: Union[QuantizationParameters, ConvertParameters] = None
+    weights_quantization_params: Union[QuantizationParameters, ConvertParameters] = None
 
     # Range estimator parameters
     activations_range_estimator_params: RangeEstimatorParameters = field(default_factory=RangeEstimatorParameters)
@@ -310,8 +306,8 @@ def convert_quantization_parameters_to_dict(params: QuantizationParameters) -> D
     result = {}
     if params.num_bits is not None:
         result["bits"] = params.num_bits
-    if params.scheme is not None:
-        result["mode"] = params.scheme
+    if params.mode is not None:
+        result["mode"] = params.mode
     if params.signedness_to_force is not None:
         result["signed"] = params.signedness_to_force
     if params.per_channel is not None:

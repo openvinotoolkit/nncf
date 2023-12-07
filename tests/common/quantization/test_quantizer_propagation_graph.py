@@ -1541,14 +1541,8 @@ class TestOutputQuantAsWeightsSetup:
             "5 F/F_0": QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS,
         }
         quantizable_module_node_names_vs_qconfigs = {
-            "I/I_0": [
-                QuantizerConfig(mode=QuantizationMode.ASYMMETRIC, per_channel=True),
-                QuantizerConfig(num_bits=4),
-            ],
-            "F/F_0": [
-                QuantizerConfig(mode=QuantizationMode.ASYMMETRIC, per_channel=True),
-                QuantizerConfig(num_bits=4),
-            ],
+            "I/I_0": [QuantizerConfig(mode=QuantizationMode.ASYMMETRIC, per_channel=True), QuantizerConfig(num_bits=4)],
+            "F/F_0": [QuantizerConfig(mode=QuantizationMode.ASYMMETRIC, per_channel=True), QuantizerConfig(num_bits=4)],
         }
 
         def ref_quantizer_setup(self) -> MultiConfigQuantizerSetup:

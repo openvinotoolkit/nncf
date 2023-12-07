@@ -24,7 +24,7 @@ from nncf.parameters import TargetDevice
 @api()
 class QuantizationMode:
     """
-    Basic enumeration for quantization scheme specification.
+    Basic enumeration for quantization mode specification.
 
     :param SYMMETRIC:
     :param ASYMMETRIC:

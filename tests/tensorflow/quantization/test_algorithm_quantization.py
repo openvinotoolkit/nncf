@@ -15,7 +15,7 @@ from tensorflow.keras import layers
 
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 
-# TODO(nlyalyus): WA for the bug 58886, QuantizationScheme should be imported after nncf.tensorflow.
+# TODO(nlyalyus): WA for the bug 58886, QuantizationMode should be imported after nncf.tensorflow.
 #  Otherwise test_quantize_inputs and test_quantize_outputs_removal will fail, because of invalid inputs quantization
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.tensorflow.graph.metatypes.matcher import get_keras_layer_metatype
@@ -695,7 +695,7 @@ def test_quantization_preset(data):
     for aq in activation_quantizers:
         assert aq.mode == data["expected_activations_q"]
     for wq in weight_quantizers:
-        assert wq.scheme == data["expected_weights_q"]
+        assert wq.mode == data["expected_weights_q"]
 
 
 def test_quantization_preset_with_scope_overrides():

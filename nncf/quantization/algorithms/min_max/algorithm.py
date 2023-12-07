@@ -100,10 +100,10 @@ class MinMaxQuantization(Algorithm):
 
     def __init__(
         self,
+        mode: Optional[Mode] = None,
         preset: Optional[QuantizationPreset] = None,
         target_device: TargetDevice = TargetDevice.ANY,
         subset_size: int = 300,
-        mode: Optional[Mode] = None,
         model_type: Optional[ModelType] = None,
         ignored_scope: Optional[IgnoredScope] = None,
         overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER,
@@ -116,6 +116,7 @@ class MinMaxQuantization(Algorithm):
         backend_params: Optional[Dict[str, Any]] = None,
     ):
         """
+        :param mode: Defines optimization mode for the algorithm. None by default.
         :param preset: A preset controls the quantization mode (symmetric and asymmetric).
             It can take the following values:
             - `performance`: Symmetric quantization of weights and activations.
@@ -127,7 +128,6 @@ class MinMaxQuantization(Algorithm):
             for this type of device, defaults to TargetDevice.ANY.
         :param subset_size: Size of a subset to calculate activations statistics used
             for quantization, defaults to 300.
-        :param mode: Defines optimization mode for the algorithm. None by default.
         :param model_type: Model type is needed to specify additional patterns
             in the model. Supported only `transformer` now.
         :param ignored_scope: An ignored scope that defined the list of model control
@@ -268,8 +268,8 @@ class MinMaxQuantization(Algorithm):
                 )
             return QuantizationConstraints(**constraints)
 
-        if quantization_params.scheme is not None:
-            constraints["mode"] = quantization_params.scheme
+        if quantization_params.mode is not None:
+            constraints["mode"] = quantization_params.mode
         if quantization_params.num_bits is not None:
             constraints["num_bits"] = quantization_params.num_bits
         if quantization_params.per_channel is not None:
