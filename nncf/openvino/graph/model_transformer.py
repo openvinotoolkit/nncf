@@ -235,24 +235,22 @@ class OVModelTransformer(ModelTransformer):
         return model
 
     @staticmethod
-    def convert_params_to_fp16(
+    def convert_params_to_operations(
         fq_params: FakeQuantizeParameters,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        dtype: ov.Type
+    ) -> Tuple[ov.Node, ov.Node, ov.Node, ov.Node]:
         """
-        Converts FakeQuantize parameters to FP16 precision.
+        Converts FakeQuantize parameters to operations with provided dtype.
 
         :param fq_params: FakeQuantize node attributes.
+        :param dtype: Data type for operations.
         :return: FakeQuantize parameters in FP16 precision.
         """
 
-        def _convert_to_fp16(data):
-            clip_data = np.clip(data, np.finfo(np.float16).min, np.finfo(np.float16).max)
-            return clip_data.astype(np.float16)
-
-        input_low = _convert_to_fp16(fq_params.input_low.data)
-        input_high = _convert_to_fp16(fq_params.input_high.data)
-        output_low = _convert_to_fp16(fq_params.output_low.data)
-        output_high = _convert_to_fp16(fq_params.output_high.data)
+        input_low = opset.constant(value=fq_params.input_low.data, dtype=dtype)
+        input_high = opset.constant(value=fq_params.input_high.data, dtype=dtype)
+        output_low = opset.constant(value=fq_params.output_low.data, dtype=dtype)
+        output_high = opset.constant(value=fq_params.output_high.data, dtype=dtype)
         return input_low, input_high, output_low, output_high
 
     @staticmethod
@@ -280,8 +278,7 @@ class OVModelTransformer(ModelTransformer):
             inp_node = target_node.input(port_id)
             input_node_output = inp_node.get_source_output()
             data_type = inp_node.get_element_type()
-            if data_type == ov.Type(np.float16):
-                input_low, input_high, output_low, output_high = OVModelTransformer.convert_params_to_fp16(fq_params)
+            input_low, input_high, output_low, output_high = OVModelTransformer.convert_params_to_operations(fq_params, data_type)
             name = "fq_weights" if transform_type == TargetType.OPERATION_WITH_WEIGHTS else "fq_input"
             fq_name = f"{node_name}/{name}_{port_id}"
 
@@ -299,8 +296,7 @@ class OVModelTransformer(ModelTransformer):
         elif transform_type == TargetType.POST_LAYER_OPERATION:
             output = target_node.output(port_id)
             data_type = output.get_element_type()
-            if data_type == ov.Type(np.float16):
-                input_low, input_high, output_low, output_high = OVModelTransformer.convert_params_to_fp16(fq_params)
+            input_low, input_high, output_low, output_high = OVModelTransformer.convert_params_to_operations(fq_params, data_type)
             target_inputs = output.get_target_inputs()
             fq_name = f"{node_name}/fq_output_{port_id}"
             fq = opset.fake_quantize(output, input_low, input_high, output_low, output_high, levels, name=fq_name)
