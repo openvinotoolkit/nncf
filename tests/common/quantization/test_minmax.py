@@ -85,7 +85,7 @@ def test_mode_against_default_map(algo_params):
         "_backend_params": None,
     }
 
-    qconf_attr_vs_constraint_dict_to_compare = {"scheme": QuantizationScheme.SYMMETRIC}
+    qconf_attr_vs_constraint_dict_to_compare = {"mode": QuantizationScheme.SYMMETRIC}
 
     minmax = MinMaxQuantization(**algo_params)
     for ref_parameter_name, ref_parameter_value in default_values_to_compare.items():

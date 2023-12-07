@@ -101,4 +101,3 @@ class QuantizationMode(Enum):
 
     FP8_E4M3 = "fp8_e4m3"
     FP8_E5M2 = "fp8_e5m2"
-
