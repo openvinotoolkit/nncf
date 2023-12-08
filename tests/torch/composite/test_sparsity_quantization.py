@@ -11,8 +11,8 @@
 
 from nncf.config import NNCFConfig
 from nncf.torch.composite_compression import CompositeCompressionAlgorithmController
+from nncf.torch.external_hooks import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.torch.module_operations import UpdateWeight
-from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from nncf.torch.sparsity.rb.layers import RBSparsifyingWeight
 from nncf.torch.utils import get_all_modules

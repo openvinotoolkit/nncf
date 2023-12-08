@@ -53,7 +53,8 @@ from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope_access import get_module_by_scope
 from nncf.torch.dynamic_graph.trace_tensor import strip_traced_tensors
 from nncf.torch.dynamic_graph.wrappers import wrap_module_call
-from nncf.torch.external_hook import EXTERNAL_OP_STORAGE_NAME
+from nncf.torch.external_hooks import EXTERNAL_OP_STORAGE_NAME
+from nncf.torch.external_hooks import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.graph_builder import GraphConverter
@@ -63,7 +64,6 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.knowledge_distillation.knowledge_distillation_handler import KnowledgeDistillationLossHandler
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
-from nncf.torch.quantization.external_quantizer import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.torch.utils import compute_FLOPs_hook
 from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.utils import get_model_device

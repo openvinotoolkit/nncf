@@ -25,9 +25,9 @@ from nncf.common.logging.logger import NNCFDeprecationWarning
 from nncf.config import NNCFConfig
 from nncf.torch import register_default_init_args
 from nncf.torch.checkpoint_loading import load_state
+from nncf.torch.external_hooks import EXTERNAL_QUANTIZERS_STORAGE_PREFIX
 from nncf.torch.quantization.algo import QUANTIZER_BUILDER_STATE_VERSION_SAVE_NAME
 from nncf.torch.quantization.algo import QuantizerBuilderStateVersion
-from nncf.torch.quantization.external_quantizer import EXTERNAL_QUANTIZERS_STORAGE_PREFIX
 from tests.shared.helpers import get_cli_dict_args
 from tests.shared.paths import ROOT_PYTHONPATH_ENV
 from tests.shared.paths import TEST_ROOT

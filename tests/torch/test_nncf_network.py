@@ -32,6 +32,7 @@ from nncf.torch.dynamic_graph.io_handling import FillerInputElement
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
+from nncf.torch.external_hooks import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
@@ -39,7 +40,6 @@ from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
-from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint

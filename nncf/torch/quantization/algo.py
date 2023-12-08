@@ -77,6 +77,7 @@ from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
+from nncf.torch.external_hooks import ExternalQuantizerCallHook
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import UNIFICATION_PRODUCING_METATYPES
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
@@ -98,7 +99,6 @@ from nncf.torch.quantization.base_ctrl import QuantizationControllerBase
 from nncf.torch.quantization.debug_interface import QuantizationDebugInterface
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.default_quantization import QUANTIZATION_LAYER_METATYPES
-from nncf.torch.quantization.external_quantizer import ExternalQuantizerCallHook
 from nncf.torch.quantization.init_precision import PrecisionInitializerFactory
 from nncf.torch.quantization.init_range import DataLoaderRangeInitializeRunner
 from nncf.torch.quantization.init_range import PTRangeInitParams
