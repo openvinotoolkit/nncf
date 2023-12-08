@@ -70,7 +70,7 @@ class PTNNCFGraph(NNCFGraph):
             raise RuntimeError("Node name {} not found in the node-vs-scope dict!".format(node_name))
         return matches[0]
 
-    def get_disconnected_nodes(self) -> List[NNCFNode]:
+    def get_nodes_with_missed_input_edges(self) -> List[NNCFNode]:
         """
         Returns a list of NNCFNodes that have at least one expected input edge missed.
         Requires MultipleInputLayerAttributes for nodes with several inputs and
@@ -80,9 +80,7 @@ class PTNNCFGraph(NNCFGraph):
         """
         input_nodes = set()
         for node in self.get_all_nodes():
-            num_expected_input_edges = None
-            if hasattr(node.metatype, "num_expected_input_edges"):
-                num_expected_input_edges = node.metatype.num_expected_input_edges
+            num_expected_input_edges = node.metatype.num_expected_input_edges
             if node.layer_attributes is not None and isinstance(node.layer_attributes, MultipleInputLayerAttributes):
                 num_expected_input_edges = node.layer_attributes.num_inputs
             if num_expected_input_edges:

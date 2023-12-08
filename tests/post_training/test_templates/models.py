@@ -171,8 +171,8 @@ class NNCFGraphCAWithBias:
         self,
         conv_metatype,
         add_metatype,
-        conv_layer_attrs=None,
-        conv_layer_attrs_1=None,
+        conv_1_layer_attrs=None,
+        conv_2_layer_attrs=None,
         both_biases=True,
         add_layer_attrs=None,
         constant_metatype=ConstantTestMetatype,
@@ -189,16 +189,16 @@ class NNCFGraphCAWithBias:
         #             |
         #           Add_2
         #           Output_1
-        if conv_layer_attrs_1 is None:
-            conv_layer_attrs_1 = conv_layer_attrs
+        if conv_2_layer_attrs is None:
+            conv_2_layer_attrs = conv_1_layer_attrs
         nodes = [
             NodeWithType("Input_1", InputNoopMetatype),
             NodeWithType("Conv_1_W", constant_metatype),
-            NodeWithType("Conv_1", conv_metatype, layer_attributes=conv_layer_attrs),
+            NodeWithType("Conv_1", conv_metatype, layer_attributes=conv_1_layer_attrs),
             NodeWithType("Add_1_W", constant_metatype),
             NodeWithType("Add_1", add_metatype, layer_attributes=add_layer_attrs),
             NodeWithType("Conv_2_W", constant_metatype),
-            NodeWithType("Conv_2", conv_metatype, layer_attributes=conv_layer_attrs_1),
+            NodeWithType("Conv_2", conv_metatype, layer_attributes=conv_2_layer_attrs),
             NodeWithType("Output_1", OutputNoopMetatype),
         ]
         if both_biases:

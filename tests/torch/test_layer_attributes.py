@@ -328,7 +328,10 @@ def test_concat_attributes_saved_during_graph_building(input_shape):
     )
     graph = graph_builder.build_graph(model)
     cat_nodes_with_attributes = {
-        "ModelForGraphBuildingTestWithConcat/stack_0": None,
+        "ModelForGraphBuildingTestWithConcat/stack_0": MultipleInputLayerAttributes(axis=0, num_inputs=2),
+        "ModelForGraphBuildingTestWithConcat/stack_1": MultipleInputLayerAttributes(axis=0, num_inputs=3),
+        "ModelForGraphBuildingTestWithConcat/stack_2": MultipleInputLayerAttributes(axis=3, num_inputs=4),
+        "ModelForGraphBuildingTestWithConcat/stack_3": MultipleInputLayerAttributes(axis=2, num_inputs=5),
         "ModelForGraphBuildingTestWithConcat/cat_0": MultipleInputLayerAttributes(axis=0, num_inputs=2),
         "ModelForGraphBuildingTestWithConcat/cat_1": MultipleInputLayerAttributes(axis=0, num_inputs=3),
         "ModelForGraphBuildingTestWithConcat/cat_2": MultipleInputLayerAttributes(axis=3, num_inputs=4),

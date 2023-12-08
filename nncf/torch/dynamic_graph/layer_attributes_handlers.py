@@ -32,6 +32,7 @@ from nncf.common.graph.layer_attributes import PermuteLayerAttributes
 from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 from nncf.common.graph.layer_attributes import TransposeLayerAttributes
 from nncf.common.graph.utils import get_split_axis
+from nncf.torch.graph.operator_metatypes import PTCatMetatype
 from nncf.torch.graph.operator_metatypes import PTGroupNormMetatype
 from nncf.torch.graph.operator_metatypes import PTPadMetatype
 from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
@@ -47,7 +48,7 @@ TRANSPOSE_OP_NAMES = ["transpose", "transpose_"]
 PERMUTE_OP_NAMES = ["permute"]
 GETITEM_OP_NAMES = ["__getitem__"]
 PAD_OP_NAMES = PTPadMetatype.get_all_aliases()
-CONCAT_OP_NAMES = ["cat"]
+CONCAT_OP_NAMES = PTCatMetatype.get_all_aliases()
 OP_NAMES_REQUIRING_ATTRS_FROM_ARGS_KWARGS = list(
     TRANSPOSE_OP_NAMES + PERMUTE_OP_NAMES + GETITEM_OP_NAMES + PAD_OP_NAMES + CONCAT_OP_NAMES
 )
@@ -165,7 +166,7 @@ def _get_pad_attrs_from_args_kwargs(args, kwargs) -> PadLayerAttributes:
     return PadLayerAttributes(mode, value)
 
 
-def _get_concat_attrs_from_args_kwargs(args, kwargs) -> PadLayerAttributes:
+def _get_concat_attrs_from_args_kwargs(args, kwargs) -> MultipleInputLayerAttributes:
     if "tensors" in kwargs:
         tensors = kwargs["tensors"]
     else:

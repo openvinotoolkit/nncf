@@ -23,8 +23,8 @@ class DummyConstantMetatype(OperatorMetatype):
 
 
 @pytest.mark.parametrize("node_between_const_and_target", [False, True])
-def test_get_disconnected_nodes(node_between_const_and_target):
-    nncf_graph = NNCFGraphToTestConstantFiltering(
+def test_get_nodes_with_missed_input_edges(node_between_const_and_target):
+    nncf_graph: PTNNCFGraph = NNCFGraphToTestConstantFiltering(
         DummyConstantMetatype,
         PTModuleConv2dMetatype,
         MultipleInputLayerAttributes(2, 3),
@@ -32,7 +32,7 @@ def test_get_disconnected_nodes(node_between_const_and_target):
         PTNNCFGraph,
     ).nncf_graph
     ref_diconnected_nodes = ["/Conv2_0", "/Concat_with_missed_input_0"]
-    disconnected_nodes = nncf_graph.get_disconnected_nodes()
+    disconnected_nodes = nncf_graph.get_nodes_with_missed_input_edges()
     assert len(ref_diconnected_nodes) == len(disconnected_nodes)
     for node in disconnected_nodes:
         assert node.node_name in ref_diconnected_nodes

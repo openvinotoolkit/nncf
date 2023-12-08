@@ -426,6 +426,9 @@ class ModelForGraphBuildingTestWithConcat(nn.Module):
     def forward(self, x):
         outputs = []
         outputs.append(torch.stack([x, x]))
+        outputs.append(torch.stack(tensors=[x, x, x]))
+        outputs.append(torch.stack([x, x, x, x], dim=3))
+        outputs.append(torch.stack(tensors=[x, x, x, x, x], dim=2))
         outputs.append(torch.cat([x, x]))
         outputs.append(torch.cat(tensors=[x, x, x]))
         outputs.append(torch.cat([x, x, x, x], dim=3))
