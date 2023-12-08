@@ -1,4 +1,4 @@
-## NNCF Demos, Tutorials and Samples
+## Demos, Tutorials and Samples
 
 Where to locate the below subsections?
 - Either keep all subsections in the main readme
