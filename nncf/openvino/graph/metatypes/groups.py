@@ -190,3 +190,12 @@ OPERATIONS_WITH_BIAS = [
     # TODO: add all metatypes with bias
     ov_metatypes.OVMatMulMetatype,
 ]
+
+
+CONV_OPERATIONS = [
+    ov_metatypes.OVConvolutionMetatype,
+    ov_metatypes.OVDepthwiseConvolutionMetatype,
+    ov_metatypes.OVGroupConvolutionMetatype,
+    ov_metatypes.OVConvolutionBackpropDataMetatype,
+    ov_metatypes.OVGroupConvolutionBackpropDataMetatype,
+]

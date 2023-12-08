@@ -11,7 +11,7 @@
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Any, Optional, Tuple, TypeVar
+from typing import Any, Tuple, TypeVar
 
 import numpy as np
 
@@ -110,14 +110,11 @@ class ChannelAlignmentAlgoBackend:
 
     @staticmethod
     @abstractmethod
-    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+    def get_conv_layer_attributes(node: NNCFNode) -> ConvolutionLayerAttributes:
         """
-        Checks if the node has a bias or not.
-
-        :param node: The node to check.
-        :param nncf_graph: The NNCF graph.
-        :return: True` if `node` corresponds to the operation with bias
-            (bias is added to the output tensor of that operation), `False` otherwise.
+        Returns convolutional layer attributes of given node if they are present and None otherwise.
+        :param node: NNCFNode to take convolutional layer attributes from.
+        :return: Convolutional layer attributes of given node if they are present and None otherwise
         """
 
     @staticmethod
@@ -133,12 +130,14 @@ class ChannelAlignmentAlgoBackend:
 
     @staticmethod
     @abstractmethod
-    def get_conv_layer_attributes(node: NNCFNode) -> Optional[ConvolutionLayerAttributes]:
+    def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         """
-        Returns convolutional layer attributes of given node if they are present and None otherwise.
+        Checks if the node has a bias or not.
 
-        :param node: NNCFNode to take convolutional layer attributes from.
-        :return: Convolutional layer attributes of given node if they are present and None otherwise
+        :param node: The node to check.
+        :param nncf_graph: The NNCF graph.
+        :return: True` if `node` corresponds to the operation with bias
+            (bias is added to the output tensor of that operation), `False` otherwise.
         """
 
     @staticmethod
@@ -151,4 +150,16 @@ class ChannelAlignmentAlgoBackend:
         :param nncf_graph: Target NNCFgraph.
         :param value: Value to fill bias constant array.
         :return: Bias value constant array filled by given value.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_channel_agnostic_reduction_axes(channel_axis: int, shape: Tuple[int]) -> Tuple[int]:
+        """
+        Returns filtered reduction shape without axes that corresponds channels.
+        Example: channel_axis=-2, shape=(1, 3, 2, 4), result=(0, 1, 3).
+
+        :param channel_axes: List of the channel axes.
+        :param shape: Shape that need to be filtered.
+        :return: Reduction shape in tuple format.
         """

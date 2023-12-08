@@ -22,6 +22,7 @@ from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -111,10 +112,23 @@ class ChannelAlignment(Algorithm):
             assert len(tensor_collectors) == 1
             stat = tensor_collectors[0].get_statistics()
             if stat.min_values is None or stat.max_values is None:
+                nncf_logger.debug(
+                    f"Skipping channel alignment for pairs {conv_in.node_name}, {conv_out.node_name} "
+                    "because statistics were not collected for this pair."
+                )
                 continue
 
             conv_in_cont = ConvParamsContainer(conv_in, model, graph, self._backend_entity)
             conv_out_cont = ConvParamsContainer(conv_out, model, graph, self._backend_entity)
+            if (
+                conv_in_cont.dims.conv_weight_out_channels_dim is None
+                or conv_out_cont.dims.conv_weight_out_channels_dim is None
+            ):
+                nncf_logger.debug(
+                    f"Skipping channel alignment for pairs {conv_in.node_name}, {conv_out.node_name} "
+                    " because one of the node is 1D MatMul, 1D Matmuls are not supported by CA algortihm yet."
+                )
+                continue
 
             amean = (stat.max_values + stat.min_values) * 0.5
             conv_in_cont.bias, conv_out_cont.bias = self._align_means(
@@ -372,12 +386,13 @@ class ChannelAlignment(Algorithm):
         statistic_container = StatisticPointsContainer()
         for conv_in, add_in, _ in self._get_node_pairs(graph):
             target_point, node_in = self._get_target_point_and_node_in(conv_in, add_in)
+
             channel_axis = conv_in.metatype.output_channel_axis
-            reduction_axes = list(range(len(graph.get_output_edges(node_in)[0].tensor_shape)))
-            reduction_axes.remove(channel_axis)
+            activation_shape = list(range(len(graph.get_output_edges(node_in)[0].tensor_shape)))
+            reduction_axes = self._backend_entity.get_channel_agnostic_reduction_axes([channel_axis], activation_shape)
 
             statistic_collector = self._backend_entity.get_statistic_collector(
-                tuple(reduction_axes), self._quantile, self.subset_size, self.inplace_statistics
+                reduction_axes, self._quantile, self.subset_size, self.inplace_statistics
             )
             statistic_container.add_statistic_point(
                 StatisticPoint(

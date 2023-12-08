@@ -11,6 +11,7 @@
 
 import copy
 import itertools
+from pathlib import Path
 
 import networkx as nx
 
@@ -213,3 +214,10 @@ def test_join_pattern_with_special_input_node():
             ref_pattern.add_edge(node, added_node)
 
     assert pattern == ref_pattern
+
+
+def test_dump(tmp_path: Path):
+    path_dot = tmp_path / "pattern.dot"
+    TestPattern.first_pattern.dump_graph(path_dot)
+    assert path_dot.is_file()
+    path_dot.unlink()

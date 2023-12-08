@@ -77,7 +77,7 @@ class PatternsManager:
         patterns_to_filter: Dict[PatternNames, Callable[[], GraphPattern]], device: TargetDevice, model_type: ModelType
     ) -> Dict[PatternNames, Callable[[], GraphPattern]]:
         """
-        Returns all patterns from patterns_to_filter that are satisfited device and model_type parameters.
+        Returns all patterns from patterns_to_filter that are satisfied device and model_type parameters.
 
         :param patterns_to_filter: Dictionary with the PatternNames instance as keys and creator function as a value.
         :param device: TargetDevice instance.

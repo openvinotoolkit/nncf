@@ -80,7 +80,9 @@ class PTNNCFGraph(NNCFGraph):
         """
         input_nodes = set()
         for node in self.get_all_nodes():
-            num_expected_input_edges = node.metatype.num_expected_input_edges
+            num_expected_input_edges = None
+            if hasattr(node.metatype, "num_expected_input_edges"):
+                num_expected_input_edges = node.metatype.num_expected_input_edges
             if node.layer_attributes is not None and isinstance(node.layer_attributes, MultipleInputLayerAttributes):
                 num_expected_input_edges = node.layer_attributes.num_inputs
             if num_expected_input_edges:

@@ -20,6 +20,8 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.openvino.graph.layout import OVLayoutElem
+from nncf.openvino.graph.layout import get_linear_weights_layout_from_node
 from nncf.openvino.graph.metatypes.groups import QUANTIZE_AGNOSTIC_OPERATIONS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
@@ -164,21 +166,12 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return channel_axis
 
     @staticmethod
-    def get_weight_channel_axis(node: NNCFNode, port_id: int) -> int:
-        channel_axis = 1
+    def get_weight_channel_axis(node: NNCFNode) -> int:
+        if node.metatype != OVMatMulMetatype:
+            return 1
 
-        if port_id > 1:
-            raise RuntimeError(f"{node.metatype.name} can not take more than 2 input tensors.")
-
-        if port_id not in node.layer_attributes.constant_attributes:
-            raise RuntimeError(f"{node.node_name} should contain {port_id} in the attributes map.")
-
-        if node.metatype == OVMatMulMetatype:
-            if "transpose" in node.layer_attributes.constant_attributes[port_id]:
-                transpose = node.layer_attributes.constant_attributes[port_id]["transpose"]
-                channel_axis = OVSmoothQuantAlgoBackend.calculate_port_based_channel_axis(port_id, transpose)
-
-        return channel_axis
+        weights_layout = get_linear_weights_layout_from_node(node)
+        return weights_layout.index(OVLayoutElem.C_IN)
 
     @staticmethod
     def calculate_port_based_channel_axis(port_id: int, transpose: bool) -> int:

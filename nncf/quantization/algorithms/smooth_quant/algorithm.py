@@ -127,7 +127,7 @@ class SmoothQuant(Algorithm):
 
                 weight_port = self._backend_entity.get_weight_tensor_port_id(node_to_smooth)
                 weight_value = self._backend_entity.get_weight_value(node_to_smooth, model, weight_port)
-                weight_statistics = self._process_weight_statistics(node_to_smooth, weight_value, weight_port)
+                weight_statistics = self._process_weight_statistics(node_to_smooth, weight_value)
                 weight_statistics = self._backend_entity.clip_statistics(weight_statistics)
 
                 alpha = alpha_map[node_to_smooth.metatype]
@@ -328,7 +328,7 @@ class SmoothQuant(Algorithm):
         port_id = self._backend_entity.get_weight_tensor_port_id(node)
         weights_size = len(node.layer_attributes.constant_attributes[port_id]["shape"])
         if weights_size > 1:
-            channel_axis = self._backend_entity.get_weight_channel_axis(node, port_id)
+            channel_axis = self._backend_entity.get_weight_channel_axis(node)
             return self._backend_entity.calculate_weight_scale(scale_value, weights_size, channel_axis)
         return scale_value
 
@@ -348,18 +348,17 @@ class SmoothQuant(Algorithm):
             reduction_axes = self._backend_entity.get_channel_agnostic_reduction_axes(channel_axis, shape)
         return reduction_axes
 
-    def _process_weight_statistics(self, node: NNCFNode, weights: TTensor, port_id: int) -> TTensor:
+    def _process_weight_statistics(self, node: NNCFNode, weights: TTensor) -> TTensor:
         """
         Returns processed weight statistics for node.
 
         :param node: NNCFNode to check.
         :param weights: Backend-specific weights.
-        :param port_id: Weight port id.
         :return: Weight statistic for node.
         """
         channel_axis = 0
         if len(weights.shape) > 1:
-            channel_axis = self._backend_entity.get_weight_channel_axis(node, port_id)
+            channel_axis = self._backend_entity.get_weight_channel_axis(node)
         reduction_shape = [i for i, _ in enumerate(weights.shape)]
         reduction_shape.pop(channel_axis)
         return self._backend_entity.process_weight_statistics(weights, tuple(reduction_shape))

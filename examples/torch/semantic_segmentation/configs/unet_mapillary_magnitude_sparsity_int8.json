@@ -32,7 +32,7 @@
     },
 
     "model_params": {
-         "input_size_hw": [512, 1024]
+        "input_size_hw": [512, 1024]
     },
     "compression": [
         {
@@ -59,6 +59,7 @@
         },
         {
             "algorithm": "quantization"
-    }
-    ]
+        }
+    ],
+    "export_to_ir_via_onnx": true
 }
