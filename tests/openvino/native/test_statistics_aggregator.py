@@ -50,7 +50,8 @@ def get_StatisticAgregatorTestModel(input_shape, kernel):
 
 
 class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
-    def get_min_max_algo_backend_cls(self) -> Type[OVMinMaxAlgoBackend]:
+    @classmethod
+    def get_min_max_algo_backend_cls(cls) -> Type[OVMinMaxAlgoBackend]:
         return OVMinMaxAlgoBackend
 
     def get_bias_correction_algo_backend_cls(self) -> Type[OVBiasCorrectionAlgoBackend]:
@@ -82,7 +83,8 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     def get_dataset(self, samples):
         return Dataset(samples, lambda data: {INPUT_NAME: data})
 
-    def get_target_point(self, target_type: TargetType) -> TargetPoint:
+    @staticmethod
+    def get_target_point(target_type: TargetType) -> TargetPoint:
         target_node_name = INPUT_NAME
         port_id = 0
         if target_type == TargetType.OPERATION_WITH_WEIGHTS:

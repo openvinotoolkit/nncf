@@ -11,6 +11,7 @@
 import itertools
 import os
 from collections import Counter
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List
 
@@ -39,6 +40,7 @@ from nncf.torch.dynamic_graph.context import PreHookId
 from nncf.torch.dynamic_graph.io_handling import FillerInputElement
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
+from nncf.torch.dynamic_graph.patch_pytorch import register_operator
 from nncf.torch.external_hook import EXTERNAL_OP_STORAGE_NAME
 from nncf.torch.external_hook import ExternalOpCallHook
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
@@ -55,6 +57,7 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTWeightUpdateCommand
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.layers import NNCFConv2d
+from nncf.torch.layers import register_module
 from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.module_operations import BaseOp
 from nncf.torch.module_operations import UpdateWeight
@@ -71,6 +74,7 @@ from tests.common.quantization.mock_graphs import get_mock_model_graph_with_no_m
 from tests.common.quantization.mock_graphs import get_nncf_graph_from_mock_nx_graph
 from tests.common.quantization.mock_graphs import get_two_branch_mock_model_graph
 from tests.shared.paths import TEST_ROOT
+from tests.torch.helpers import HookChecker
 
 
 class InsertionPointTestModel(nn.Module):
@@ -649,3 +653,237 @@ def test_shared_fn_insertion_point(priority, compression_module_registered, mock
     del transformed_model
     transformed_model = _insert_external_op_mocked()
     transformed_model.load_state_dict(state_dict)
+
+
+INSERTION_POINT_TEST_MODEL_TARGET_POINTS = (
+    (
+        TargetType.OPERATOR_POST_HOOK,
+        "/nncf_model_input_0",
+        None,
+    ),
+    (
+        TargetType.OPERATOR_PRE_HOOK,
+        "InsertionPointTestModel/linear_0",
+        0,
+    ),
+    (
+        TargetType.OPERATION_WITH_WEIGHTS,
+        "InsertionPointTestModel/NNCFConv2d[conv1]/conv2d_0",
+        None,
+    ),
+)
+
+
+@pytest.mark.parametrize("target_type, node_name, input_port_id", INSERTION_POINT_TEST_MODEL_TARGET_POINTS)
+def test_successive_insertion_transformation(target_type, node_name, input_port_id):
+    model = NNCFNetwork(InsertionPointTestModel(), FillerInputInfo([FillerInputElement([1, 1, 10, 10])]))
+
+    target_point = PTTargetPoint(target_type, node_name, input_port_id=input_port_id)
+    transformed_model = model
+    ops = [BaseOp(lambda x: x), BaseOp(lambda x: x)]
+    for op in ops:
+        command = PTInsertionCommand(target_point, op)
+
+        model_transformer = PTModelTransformer(transformed_model)
+        transformation_layout = PTTransformationLayout()
+        transformation_layout.register(command)
+        transformed_model = model_transformer.transform(transformation_layout)
+        transformed_model.nncf.rebuild_graph()
+
+    checker = HookChecker(transformed_model, "conv1")
+    checker.add_ref(
+        ref_hooks=ops,
+        target_type=target_type,
+        target_node_name=node_name,
+        input_port_id=input_port_id,
+    )
+    checker.check_with_reference()
+
+
+GLOBAL_LIST = []
+
+
+def get_dummy_op(op_id):
+    @register_operator()
+    def dummy_op(x):
+        GLOBAL_LIST.append(op_id)
+        return x
+
+    return dummy_op
+
+
+@register_module()
+class DummyModule(torch.nn.Module):
+    def __init__(self, module_id):
+        super().__init__()
+        self.weight = torch.nn.Parameter(torch.zeros((1,)))
+        self._op = get_dummy_op(module_id)
+
+    def forward(self, x):
+        return self._op(x)
+
+
+def get_model_to_test_nested_modules():
+    class TestModel(torch.nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.op1 = get_dummy_op("op1")
+            self.m = DummyModule("DummyModule")
+            self.op2 = get_dummy_op("op2")
+
+        def forward(self, x):
+            x = self.op1(x)
+            x = self.m(x)
+            x = self.op2(x)
+
+    return TestModel()
+
+
+@dataclass
+class NestedHooksTestCase:
+    target_type: TargetType
+    target_node_name: str
+    input_port_id: int
+
+
+NESTED_HOOKS_TEST_CASES = [
+    NestedHooksTestCase(
+        TargetType.OPERATOR_POST_HOOK,
+        "/nncf_model_input_0",
+        None,
+    ),
+    NestedHooksTestCase(
+        TargetType.OPERATOR_PRE_HOOK,
+        "TestModel/dummy_op_1",
+        0,
+    ),
+    NestedHooksTestCase(
+        TargetType.OPERATION_WITH_WEIGHTS,
+        "TestModel/NNCFUserDummyModule[m]/dummy_op_0",
+        None,
+    ),
+]
+
+REFS_DEPTH_0 = ["op1", "DummyModule", "op2"]
+
+
+REFS_DEPTH_1 = [
+    ["pre_hook_1", "op1", "DummyModule", "op2"],
+    ["op1", "DummyModule", "pre_hook_1", "op2"],
+    ["op1", "pre_hook_1", "DummyModule", "op2"],
+]
+
+
+REFS_DEPTH_2 = [
+    ["pre_hook_0", "pre_hook_1", "pre_hook_2", "op1", "DummyModule", "op2"],
+    ["op1", "DummyModule", "pre_hook_0", "pre_hook_1", "pre_hook_2", "op2"],
+    ["op1", "pre_hook_0", "pre_hook_1", "pre_hook_2", "DummyModule", "op2"],
+]
+
+
+def _add_and_test_hook_depth_one(test_params: NestedHooksTestCase, pre_hook_op, ref):
+    model = NNCFNetwork(get_model_to_test_nested_modules(), FillerInputInfo([FillerInputElement([10])]))
+
+    # Check test model is working as expected
+    GLOBAL_LIST.clear()
+    model.nncf.rebuild_graph()
+    assert GLOBAL_LIST == REFS_DEPTH_0
+
+    target_point = PTTargetPoint(
+        test_params.target_type, test_params.target_node_name, input_port_id=test_params.input_port_id
+    )
+    transformed_model = model
+
+    pre_hook_1 = pre_hook_op("pre_hook_1")
+    command = PTInsertionCommand(target_point, pre_hook_1)
+
+    model_transformer = PTModelTransformer(transformed_model)
+    transformation_layout = PTTransformationLayout()
+    transformation_layout.register(command)
+    transformed_model = model_transformer.transform(transformation_layout)
+
+    # Check order of calls
+    GLOBAL_LIST.clear()
+    transformed_model.nncf.rebuild_graph()
+    assert GLOBAL_LIST == ref
+
+    # Check hooks are kept correctly
+    checker = HookChecker(transformed_model, "m")
+    checker.add_ref(
+        ref_hooks=[pre_hook_1],
+        target_type=test_params.target_type,
+        target_node_name=test_params.target_node_name,
+        input_port_id=test_params.input_port_id,
+    )
+    checker.check_with_reference()
+
+    graph = transformed_model.nncf.get_graph()
+    target_node = graph.get_node_by_name(test_params.target_node_name)
+    if test_params.target_type == TargetType.OPERATOR_POST_HOOK:
+        target_node = graph.get_next_nodes(target_node)[0]
+    elif test_params.target_type == TargetType.OPERATOR_PRE_HOOK:
+        target_node = graph.get_previous_nodes(target_node)[0]
+    else:
+        target_node = graph.get_node_by_id(2)
+
+    return transformed_model, target_node, pre_hook_1
+
+
+@pytest.mark.parametrize(
+    "test_params, ref_depth_one, ref_depth_two", zip(NESTED_HOOKS_TEST_CASES, REFS_DEPTH_1, REFS_DEPTH_2)
+)
+@pytest.mark.parametrize("pre_hook_op", [get_dummy_op, DummyModule], ids=["op_hook", "module_hook"])
+def test_nested_pre_post_hooks(test_params: NestedHooksTestCase, ref_depth_one, ref_depth_two, pre_hook_op):
+    transformed_model, target_node, pre_hook_1 = _add_and_test_hook_depth_one(test_params, pre_hook_op, ref_depth_one)
+
+    transformation_layout = PTTransformationLayout()
+    nested_pre_hooks = []
+    for i, target_type_ in enumerate([TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATOR_POST_HOOK]):
+        target_point_on_hook = PTTargetPoint(target_type_, target_node.node_name, input_port_id=0)
+        nested_pre_hooks.append(pre_hook_op(f"pre_hook_{i * 2}"))
+        transformation_layout.register(PTInsertionCommand(target_point_on_hook, nested_pre_hooks[-1]))
+    model_transformer = PTModelTransformer(transformed_model)
+    model_with_nested_hooks = model_transformer.transform(transformation_layout)
+
+    # Check order of calls
+    GLOBAL_LIST.clear()
+    model_with_nested_hooks.nncf.rebuild_graph()
+    assert GLOBAL_LIST == ref_depth_two
+
+    # Check hooks are kept correctly
+    checker = HookChecker(model_with_nested_hooks, "m")
+    checker.add_ref(
+        ref_hooks=[pre_hook_1],
+        target_type=test_params.target_type,
+        target_node_name=test_params.target_node_name,
+        input_port_id=test_params.input_port_id,
+    )
+    checker.add_ref(
+        ref_hooks=[nested_pre_hooks[0]],
+        target_type=TargetType.OPERATOR_PRE_HOOK,
+        target_node_name=target_node.node_name,
+        input_port_id=0,
+    )
+    checker.add_ref(
+        ref_hooks=[nested_pre_hooks[1]],
+        target_type=TargetType.OPERATOR_POST_HOOK,
+        target_node_name=target_node.node_name,
+        input_port_id=0,
+    )
+    checker.check_with_reference()
+
+
+@pytest.mark.skip("Nested weight hooks are not supported yet.")
+@pytest.mark.parametrize("test_params, ref_depth_one", zip(NESTED_HOOKS_TEST_CASES, REFS_DEPTH_1))
+def test_nested_weight_hooks(test_params: NestedHooksTestCase, ref_depth_one):
+    transformed_model, target_node, _ = _add_and_test_hook_depth_one(test_params, DummyModule, ref_depth_one)
+
+    transformation_layout = PTTransformationLayout()
+    target_point_on_hook = PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS, target_node.node_name, input_port_id=0)
+    transformation_layout.register(PTInsertionCommand(target_point_on_hook, DummyModule("pre_hook_3")))
+    model_transformer = PTModelTransformer(transformed_model)
+    model_with_nested_hooks = model_transformer.transform(transformation_layout)
+    GLOBAL_LIST.clear()
+    model_with_nested_hooks.nncf.rebuild_graph()
+    # TODO: Add refeference check when nested weight hooks will be supported
+    # assert GLOBAL_LIST == ref_depth_two
