@@ -266,62 +266,38 @@ compression_ctrl.export_model("compressed_model.pb", save_format="frozen_graph")
 
 For a more detailed description of NNCF usage in your training code, see [this tutorial](docs/Usage.md).
 
-## Model Compression Tutorials and Samples
+## NNCF Demos, Tutorials and Samples
 
-For a quicker start with NNCF-powered compression, try sample notebooks and scripts presented below.
+<Where to locate the below subsections?
+- Either keep all subsections in the main readme
+- Or move all subsections to a separate docs file, e.g. `docs/Demos.md`
+- Or keep only a single subsection, e.g. Jupyter Tutorials and move the rest to a separate file/>
 
-### Model Compression Tutorials
+### Jupyter Notebook Tutorials
+<Here we present basic jupyter notebooks which contain compression methods. These are simple and short, notebooks IDs are generally in range 1** and 3**, hence we refer to them as tutorials\>
 
-A collection of ready-to-run Jupyter* notebooks are available to demonstrate how to use NNCF compression algorithms to optimize models for inference with the OpenVINO Toolkit:
+<div style="text-align: center;">
 
-- [Accelerate Inference of NLP models with Post-Training Quantization API of NNCF](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/105-language-quantize-bert)
-- [Convert and Optimize YOLOv8 with OpenVINO](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/230-yolov8-optimization)
-- [Convert and Optimize YOLOv7 with OpenVINO](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/226-yolov7-optimization)
-- [NNCF Post-Training Optimization of Segment Anything Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/237-segment-anything)
-- [NNCF Post-Training Optimization of CLIP Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/228-clip-zero-shot-image-classification)
-- [NNCF Post-Training Optimization of ImageBind Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/239-image-bind)
-- [NNCF Post-Training Optimization of Whisper Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/227-whisper-subtitles-generation)
-- [NNCF Post-Training Optimization of BLIP Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/233-blip-visual-language-processing)
-- [NNCF Post-Training Optimization of DeepFloyd IF Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/238-deepfloyd-if)
-- [NNCF Post-Training Optimization of Grammatical Error Correction Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/214-grammar-correction)
-- [NNCF Post-Training Optimization of Dolly 2.0 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/240-dolly-2-instruction-following)
-- [NNCF Post-Training Optimization of Massively Multilingual Speech Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/255-mms-massively-multilingual-speech)
-- [NNCF Post-Training Optimization of OneFormer Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/249-oneformer-segmentation)
-- [NNCF Post-Training Optimization of InstructPix2Pix Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/231-instruct-pix2pix-image-editing)
-- [Quantize a Segmentation Model and Show Live Inference](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/110-ct-segmentation-quantize)
-- [Training to Deployment with TensorFlow and OpenVINO](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/301-tensorflow-training-openvino)
-- [Migrate quantization from POT API to NNCF API](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/111-yolov5-quantization-migration)
-- [Post-Training Quantization of Pytorch model with NNCF](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/112-pytorch-post-training-quantization-nncf)
-- [Optimizing PyTorch models with NNCF of OpenVINO by 8-bit quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/302-pytorch-quantization-aware-training)
-- [Optimizing TensorFlow models with NNCF of OpenVINO by 8-bit quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/305-tensorflow-quantization-aware-training)
-- [Accelerate Inference of Sparse Transformer Models with OpenVINO and 4th Gen Intel Xeon Scalable Processors](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/116-sparsity-optimization)
-- [Quantization with accuracy control using NNCF](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/122-quantizing-model-with-accuracy-control)
+| Tutorial                                                                                                                                                                                                                                                                                                                                                                                                 | Compression Algorithm                            | Backend    | Domain                             |
+|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------|------------|------------------------------------|
+| [BERT Quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/105-language-quantize-bert)<br>[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/openvinotoolkit/openvino_notebooks/blob/main/notebooks/105-language-quantize-bert/105-language-quantize-bert.ipynb)                                           | Post-Training Quantization                       | OpenVINO   | NLP                                |
+| [MONAI Segmentation Model Quantization](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/110-ct-segmentation-quantize)<br>[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openvinotoolkit/openvino_notebooks/HEAD?filepath=notebooks%2F110-ct-segmentation-quantize%2F110-ct-scan-live-inference.ipynb)                                             | Post-Training Quantization                       | OpenVINO   | Segmentation                       |
+| [PyTorch Model Quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/112-pytorch-post-training-quantization-nncf)                                                                                                                                                                                                                                                      | Post-Training Quantization                       | PyTorch    | Image Classification               |
+| [TensorFlow Model Quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/301-tensorflow-training-openvino)                                                                                                                                                                                                                                                              | Post-Training Quantization                       | Tensorflow | Image Classification               |
+| [Migrating from POT to NNCF Quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/111-yolov5-quantization-migration)<br>[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/openvinotoolkit/openvino_notebooks/blob/main/notebooks/111-yolov5-quantization-migration/111-yolov5-quantization-migration.ipynb) | Post-Training Quantization                       | OpenVINO   | Object detection                   |
+| [Quantization with Accuracy Control](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/122-quantizing-model-with-accuracy-control)                                                                                                                                                                                                                                               | Post-Training Quantization with Accuracy Control | OpenVINO   | Speech-to-Text<br>Object Detection |
+| [TensorFlow Training-Time Compression](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/301-tensorflow-training-openvino)                                                                                                                                                                                                                                                       | Training-Time Compression                        | Tensorflow | Image Classification               |
+</div>
+
+
+### Jupyter Notebook Demos
+<Here we present jupyter notebooks with real-life models which contain some kind of NNCF compression as a part of them. These are generally more complex and education is not the sole purpose, more of showing-off. Hence they are referred to as Demos here. \>
 
 ### Post-Training Quantization Samples
-
-Compact scripts demonstrating quantization and corresponding inference speed boost:
-
-- [Post-Training Quantization of MobileNet v2 OpenVINO Model](examples/post_training_quantization/openvino/mobilenet_v2/README.md)
-- [Post-Training Quantization of YOLOv8 OpenVINO Model](examples/post_training_quantization/openvino/yolov8/README.md)
-- [Post-Training Quantization of Anomaly Classification OpenVINO model with control of accuracy metric](examples/post_training_quantization/openvino/quantize_with_accuracy_control/README.md)
-- [Post-Training Quantization of YOLOv8 OpenVINO Model with control of accuracy metric](examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/README.md)
-- [Post-Training Quantization of MobileNet v2 PyTorch Model](examples/post_training_quantization/torch/mobilenet_v2/README.md)
-- [Post-Training Quantization of SSD PyTorch Model](examples/post_training_quantization/torch/ssd300_vgg16/README.md)
-- [Post-Training Quantization of MobileNet v2 ONNX Model](examples/post_training_quantization/onnx/mobilenet_v2/README.md)
-- [Post-Training Quantization of MobileNet v2 TensorFlow Model](examples/post_training_quantization/tensorflow/mobilenet_v2/README.md)
+<Here will be the PTQ examples from `examples/post_training_quantization`\>
 
 ### Training-Time Compression Samples
-
-These examples provide full pipelines including compression, training and inference for classification, object detection and segmentation tasks.
-
-- PyTorch samples:
-  - [Image Classification sample](examples/torch/classification/README.md)
-  - [Object Detection sample](examples/torch/object_detection/README.md)
-  - [Semantic Segmentation sample](examples/torch/semantic_segmentation/README.md)
-- TensorFlow samples:
-  - [Image Classification sample](examples/tensorflow/classification/README.md)
-  - [Object Detection sample](examples/tensorflow/object_detection/README.md)
-  - [Instance Segmentation sample](examples/tensorflow/segmentation/README.md)
+<Here will be the TTC examples from `examples/torch` and `examples/tensorflow`\>
 
 ## Third-party repository integration
 
