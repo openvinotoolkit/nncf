@@ -19,7 +19,7 @@ from dataclasses import is_dataclass
 from enum import Enum
 from typing import Any, Dict, Optional, Union
 
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.utils.api_marker import api
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
@@ -109,7 +109,7 @@ class QuantizationParameters:
 
 @api()
 @dataclass
-class ConvertParameters:
+class FP8QuantizationParameters:
     """
     Contains convert parameters for weights or activations.
 
@@ -205,8 +205,8 @@ class AdvancedQuantizationParameters:
     disable_bias_correction: bool = False
 
     # Advanced Quantization parameters
-    activations_quantization_params: Union[QuantizationParameters, ConvertParameters] = None
-    weights_quantization_params: Union[QuantizationParameters, ConvertParameters] = None
+    activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None
+    weights_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None
 
     # Range estimator parameters
     activations_range_estimator_params: RangeEstimatorParameters = field(default_factory=RangeEstimatorParameters)

@@ -13,8 +13,8 @@
 import pytest
 
 from nncf import NNCFConfig
-from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix

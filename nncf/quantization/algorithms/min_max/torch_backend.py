@@ -21,7 +21,7 @@ from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector

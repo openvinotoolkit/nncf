@@ -27,7 +27,7 @@ from nncf.openvino.quantization.quantize_ifmodel import apply_algorithm_if_bodie
 from nncf.openvino.rt_info import dump_parameters
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
-from nncf.parameters import QuantizationMode as Mode
+from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -77,7 +77,7 @@ def should_use_pot(advanced_parameters: Optional[AdvancedQuantizationParameters]
 def native_quantize_if_op_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
-    mode: Optional[Mode] = None,
+    mode: Optional[QuantizationMode] = None,
     preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
@@ -137,7 +137,7 @@ def native_quantize_if_op_impl(
 def native_quantize_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
-    mode: Optional[Mode] = None,
+    mode: Optional[QuantizationMode] = None,
     preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
@@ -324,7 +324,7 @@ def native_quantize_with_accuracy_control_impl(
 def quantize_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
-    mode: Optional[Mode] = None,
+    mode: Optional[QuantizationMode] = None,
     preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,

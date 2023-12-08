@@ -30,7 +30,7 @@ from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
 from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.config import NNCFConfig

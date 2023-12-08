@@ -18,7 +18,7 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.parameters import ModelType
-from nncf.parameters import QuantizationMode as Mode
+from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.algorithm import Algorithm
@@ -39,7 +39,7 @@ class PostTrainingQuantization(Algorithm):
 
     def __init__(
         self,
-        mode: Optional[Mode] = None,
+        mode: Optional[QuantizationMode] = None,
         preset: Optional[QuantizationPreset] = None,
         target_device: TargetDevice = TargetDevice.ANY,
         subset_size: int = 300,

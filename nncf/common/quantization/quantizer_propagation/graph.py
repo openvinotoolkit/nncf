@@ -42,7 +42,7 @@ from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import QuantizationInsertionPointBase
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.scopes import should_consider_scope

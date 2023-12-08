@@ -37,15 +37,15 @@ from openvino.tools.pot.configs.config import Config
 import nncf
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.logging.logger import set_log_file
-from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.quantization.structs import QuantizationScheme
 from nncf.data.dataset import DataProvider
 from nncf.openvino.pot.quantization.quantize_model import (
     quantize_with_accuracy_control_impl as pot_quantize_with_native_accuracy_control,
 )
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
-from nncf.parameters import QuantizationMode as Mode
+from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -115,7 +115,7 @@ class CustomJSONEncoder(json.JSONEncoder):
                 StatisticsType,
                 AggregatorType,
                 DropType,
-                Mode,
+                QuantizationMode,
             ),
         ):
             return o.value
@@ -442,9 +442,9 @@ def update_quantization_parameters(quantization_params, pot_config):
     mode = pot_config.get("mode")
     if mode is not None:
         if mode == "symmetric":
-            quantization_params.mode = QuantizationMode.SYMMETRIC
+            quantization_params.mode = QuantizationScheme.SYMMETRIC
         elif mode == "asymmetric":
-            quantization_params.mode = QuantizationMode.ASYMMETRIC
+            quantization_params.mode = QuantizationScheme.ASYMMETRIC
         else:
             raise ValueError(f"mode = {mode} is not supported")
     granularity = pot_config.get("granularity")

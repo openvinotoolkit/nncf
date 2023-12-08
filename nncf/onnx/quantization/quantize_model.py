@@ -18,7 +18,7 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.parameters import ModelType
-from nncf.parameters import QuantizationMode as Mode
+from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import QuantizationParameters
@@ -33,7 +33,7 @@ from nncf.telemetry.events import NNCF_ONNX_CATEGORY
 def quantize_impl(
     model: onnx.ModelProto,
     calibration_dataset: Dataset,
-    mode: Optional[Mode] = None,
+    mode: Optional[QuantizationMode] = None,
     preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
