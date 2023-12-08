@@ -243,7 +243,7 @@ class OVModelTransformer(ModelTransformer):
 
         :param fq_params: FakeQuantize node attributes.
         :param dtype: Data type for operations.
-        :return: FakeQuantize parameters in FP16 precision.
+        :return: FakeQuantize parameters as operations.
         """
 
         input_low = opset.constant(value=fq_params.input_low.data, dtype=dtype)
@@ -354,11 +354,11 @@ class OVModelTransformer(ModelTransformer):
             raise RuntimeError("Constant node was expected but could not find it.")
 
         const_shape = const_node.data.shape
-        const_dtype = const_node.data.dtype
-        const_value = np.reshape(const_value, const_shape).astype(const_dtype)
+        const_dtype = const_node.get_element_type()
+        const_tensor = ov.Tensor(const_value, const_shape, const_dtype)
 
         # TODO(andrey-churkin): Replace on opset13.constant() in a future release
-        new_const_node = ov.op.Constant(const_value, shared_memory=True)
+        new_const_node = ov.op.Constant(const_tensor, shared_memory=True)
         new_const_node.set_friendly_name(const_node.get_friendly_name())
         const_port.replace_source_output(new_const_node.output(0))
 
