@@ -149,11 +149,6 @@ class PTInsertionCommand(PTTransformationCommand):
         raise NotImplementedError()
 
     def requires_graph_rebuild(self):
-        """
-        Return boolean flag to rebuild graph of model.
-
-        :return: Boolean flag.
-        """
         # Rebuild graph when adding quantization nodes.
         return self.priority == TransformationPriority.QUANTIZATION_PRIORITY
 
@@ -177,11 +172,6 @@ class PTSharedFnInsertionCommand(PTTransformationCommand):
         raise NotImplementedError()
 
     def requires_graph_rebuild(self):
-        """
-        Return boolean flag to rebuild graph of model.
-
-        :return: Boolean flag.
-        """
         return True
 
 

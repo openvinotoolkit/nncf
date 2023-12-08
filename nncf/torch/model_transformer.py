@@ -13,9 +13,9 @@ import copy
 from collections import defaultdict
 from typing import Callable, Dict, List, Tuple
 
-import torch
 from torch import Tensor
 from torch import nn
+from torch.nn.parameter import Parameter
 
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
@@ -247,7 +247,7 @@ def update_parameter(target_node_name: str, parameter_name: str, new_value: Tens
     :param model: The model.
     """
     module = model.nncf.get_containing_module(target_node_name)
-    parameter: torch.nn.parameter.Parameter = getattr(module, parameter_name)
+    parameter: Parameter = getattr(module, parameter_name)
     parameter.data = new_value
 
 
