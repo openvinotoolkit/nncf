@@ -266,6 +266,8 @@ compression_ctrl.export_model("compressed_model.pb", save_format="frozen_graph")
 
 For a more detailed description of NNCF usage in your training code, see [this tutorial](docs/Usage.md).
 
+
+# -----PART TO BE CHANGED START-----
 ## Demos, Tutorials and Samples
 
 <Where to locate the below subsections?
@@ -297,6 +299,8 @@ For a more detailed description of NNCF usage in your training code, see [this t
 
 ### Training-Time Compression Samples
 <Here will be the TTC examples from `examples/torch` and `examples/tensorflow`\>
+
+# -----PART TO BE CHANGED END-----
 
 ## Third-party repository integration
 
