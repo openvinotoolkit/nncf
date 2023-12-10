@@ -249,12 +249,16 @@ class ElementwisePruningOp(BasePruningOp):
                 "node_name={node.node_name}"
             )
             output_mask = input_masks[0]
-        elif any(not m for m in input_masks) and any(m is not None for m in input_masks):
+        elif any(m is None for m in input_masks) and any(m is not None for m in input_masks):
             # In case of one from input_masks is None
             if cls.can_propagate_mask(input_masks, input_shapes):
                 output_mask = input_masks[1] if input_masks[0] is None else input_masks[0]
             else:
                 cls.invalidate_masks(input_masks)
+        elif any(not m for m in input_masks):
+            # Need non-empty masks on all branches in order to properly propagate pruning mask,
+            # otherwise - invalidate masks
+            cls.invalidate_masks(input_masks)
         elif all(m is not None for m in input_masks):
             # Each branch/mask should have a single group along the same dimension. These groups are joined, all others
             # are invalidated.
