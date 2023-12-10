@@ -230,10 +230,13 @@ class ElementwisePruningOp(BasePruningOp):
         cls, node: NNCFNode, graph: NNCFGraph, tensor_processor: Type[NNCFPruningBaseTensorProcessor]
     ) -> None:
         input_masks = get_input_masks(node, graph)
-        node.attributes["output_mask"] = cls._get_output_mask(input_masks)
+        input_shapes = [x.tensor_shape for x in graph.get_input_edges(node)]
+        node.attributes["output_mask"] = cls._get_output_mask(input_masks, input_shapes)
 
     @classmethod
-    def _get_output_mask(cls, input_masks: List[Optional[PropagationMask]]) -> Optional[PropagationMask]:
+    def _get_output_mask(
+        cls, input_masks: List[Optional[PropagationMask]], input_shapes: List[Tuple[int, ...]]
+    ) -> Optional[PropagationMask]:
         if not input_masks:
             return None
         output_mask = None
@@ -246,11 +249,13 @@ class ElementwisePruningOp(BasePruningOp):
                 "node_name={node.node_name}"
             )
             output_mask = input_masks[0]
-        elif any(not m for m in input_masks):
-            # Need non-empty masks on all branches in order to properly propagate pruning mask,
-            # otherwise - invalidate masks
-            cls.invalidate_masks(input_masks)
-        else:
+        elif any(not m for m in input_masks) and any(m is not None for m in input_masks):
+            # In case of one from input_masks is None
+            if cls.can_propagate_mask(input_masks, input_shapes):
+                output_mask = input_masks[1] if input_masks[0] is None else input_masks[0]
+            else:
+                cls.invalidate_masks(input_masks)
+        elif all(m is not None for m in input_masks):
             # Each branch/mask should have a single group along the same dimension. These groups are joined, all others
             # are invalidated.
             output_mask = PropagationMask()
@@ -274,6 +279,26 @@ class ElementwisePruningOp(BasePruningOp):
                         for group in m.dim_groups_map[dim]:
                             group.invalidate()
         return output_mask
+
+    @staticmethod
+    def can_propagate_mask(input_masks: List[Optional[PropagationMask]], input_shapes: List[Tuple[int, ...]]) -> bool:
+        """
+        Check that input without a mask does not affect input with a mask.
+
+        :param input_masks: Input masks.
+        :param input_shapes: Input shapes.
+        """
+        none_mask_ind = input_masks.index(None)
+        mask_ind = 0 if none_mask_ind else 1
+        if len(input_shapes[none_mask_ind]) > len(input_shapes[mask_ind]):
+            return False
+        dims_diff = len(input_shapes[mask_ind]) - len(input_shapes[none_mask_ind])
+        padded_none_mask_shape = (1,) * dims_diff + input_shapes[none_mask_ind]
+
+        for dim in input_masks[mask_ind].dim_groups_map.keys():
+            if padded_none_mask_shape[dim] != 1:
+                return False
+        return True
 
 
 class GatherPruningOp(BasePruningOp):
