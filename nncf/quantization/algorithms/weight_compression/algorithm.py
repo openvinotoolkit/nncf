@@ -112,7 +112,7 @@ class WeightCompression(Algorithm):
         self._backend_entity.validate_params(self._mode, self._ignored_scope)
         nodes_to_compress = self._get_nodes_to_compress(graph)
         transformed_model = self._backend_entity.do_compression(
-            model, nodes_to_compress, self._mode, self._ratio, self._group_size
+            model, nodes_to_compress, self._mode, self._ratio, self._group_size, graph=graph, dataset=dataset
         )
         return transformed_model
 
