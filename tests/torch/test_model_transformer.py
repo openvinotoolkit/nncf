@@ -39,8 +39,8 @@ from nncf.torch.dynamic_graph.context import PreHookId
 from nncf.torch.dynamic_graph.io_handling import FillerInputElement
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
-from nncf.torch.external_hooks import EXTERNAL_OP_STORAGE_NAME
-from nncf.torch.external_hooks import ExternalOpCallHook
+from nncf.torch.external_hook import EXTERNAL_OP_STORAGE_NAME
+from nncf.torch.external_hook import ExternalOpCallHook
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTInputNoopMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype

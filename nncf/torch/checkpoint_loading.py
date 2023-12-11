@@ -256,7 +256,7 @@ class NormalizedKeys:
         Returns original key if there's no ';' and operation doesn't start with EXTERNAL_QUANTIZERS_STORAGE_NAME
         """
         result = [new_key]
-        from nncf.torch.external_hooks import EXTERNAL_QUANTIZERS_STORAGE_PREFIX
+        from nncf.torch.quantization.external_quantizer import EXTERNAL_QUANTIZERS_STORAGE_PREFIX
 
         if ";" in new_key and new_key.startswith(EXTERNAL_QUANTIZERS_STORAGE_PREFIX):
             group_of_keys = new_key.split(";")
