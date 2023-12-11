@@ -11,6 +11,7 @@
 
 import copy
 from collections import defaultdict
+from functools import partial
 from typing import Callable, Dict, List, Tuple
 
 from torch import Tensor
@@ -25,6 +26,7 @@ from nncf.torch.external_hook import EXTERNAL_OP_STORAGE_NAME
 from nncf.torch.external_hook import ExternalOpCallHook
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
+from nncf.torch.graph.transformations.commands import PTInsertionTemporaryCommand
 from nncf.torch.graph.transformations.commands import PTModelExtractionWithFusedBiasCommand
 from nncf.torch.graph.transformations.commands import PTQuantizerInsertionCommand
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
@@ -34,6 +36,7 @@ from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.model_analyzer import get_potential_fused_node
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nncf_network import ExtraCompressionModuleType
+from nncf.torch.nncf_network import HookGroups
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint
 from nncf.torch.quantization.external_quantizer import ExternalQuantizerCallHook
@@ -52,6 +55,10 @@ class PTModelTransformer(ModelTransformer):
         self._command_transformation_ordered_pairs = [
             (PTModelExtractionWithFusedBiasCommand, self._apply_extraction_with_fused_bias_transformations),
             (PTInsertionCommand, self._apply_insertion_transformations),
+            (
+                PTInsertionTemporaryCommand,
+                partial(self._apply_insertion_transformations, hooks_group=HookGroups.TEMPORARY),
+            ),
             (PTQuantizerInsertionCommand, self._apply_quantizer_insertion_transformations),
             (PTBiasCorrectionCommand, self._apply_bias_correction_transformations),
             (PTSharedFnInsertionCommand, self._apply_shared_nodes_insertion),
@@ -78,7 +85,9 @@ class PTModelTransformer(ModelTransformer):
         return model
 
     @staticmethod
-    def _apply_insertion_transformations(model: NNCFNetwork, transformations: List[PTInsertionCommand]) -> NNCFNetwork:
+    def _apply_insertion_transformations(
+        model: NNCFNetwork, transformations: List[PTInsertionCommand], hooks_group: HookGroups = HookGroups.PERMANENT
+    ) -> NNCFNetwork:
         """
         Applies insertion transformations to the model.
 
@@ -107,7 +116,8 @@ class PTModelTransformer(ModelTransformer):
 
         for pt_ip, fn_list_with_priority in fns_grouped_by_points.items():
             fn_list_with_priority = sorted(fn_list_with_priority, key=lambda x: x[1])
-            model.nncf.insert_at_point(pt_ip, [x[0] for x in fn_list_with_priority])
+            model.nncf.insert_at_point(pt_ip, [x[0] for x in fn_list_with_priority], group=hooks_group)
+
         return model
 
     @staticmethod

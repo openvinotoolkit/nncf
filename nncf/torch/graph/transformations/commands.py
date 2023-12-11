@@ -128,7 +128,7 @@ class PTTransformationCommand(TransformationCommand):
 
 class PTInsertionCommand(PTTransformationCommand):
     """
-    Insertion operation to the models.
+    Insertion operation to the models. Given fn is kept in HookGroups.PERMANENT group of hooks.
     """
 
     def __init__(
@@ -162,6 +162,25 @@ class PTSharedFnInsertionCommand(PTTransformationCommand):
 
     def requires_graph_rebuild(self):
         return True
+
+
+class PTInsertionTemporaryCommand(PTTransformationCommand):
+    """
+    Insertion operation to the models. Given fn is kept in HookGroups.TEMPORARY group of hooks.
+    """
+
+    def __init__(
+        self,
+        point: PTTargetPoint,
+        fn: Callable,
+        priority: TransformationPriority = TransformationPriority.DEFAULT_PRIORITY,
+    ):
+        super().__init__(TransformationType.INSERT, point)
+        self.fn: Callable = fn
+        self.priority: TransformationPriority = priority
+
+    def requires_graph_rebuild(self):
+        return False
 
 
 class PTQuantizerInsertionCommand(PTTransformationCommand):

@@ -10,6 +10,17 @@
 # limitations under the License.
 
 import weakref
+from enum import Enum
+from typing import Any, Dict
+
+
+class HookHandleIdType(Enum):
+    """
+    Enum of possible types for the `HookHandle.id`.
+    """
+
+    INT = 0
+    STR = 1
 
 
 class HookHandle:
@@ -19,9 +30,16 @@ class HookHandle:
 
     id = 0
 
-    def __init__(self, hooks_registry):
+    def __init__(self, hooks_registry: Dict[Any, Any], mode: HookHandleIdType = HookHandleIdType.INT):
+        """
+        :param hooks_registry: A dictionary of hooks, indexed by hook `id`.
+        :param mode: An datatype to use for the `hook_id` parameter. Default int.
+        """
         self.hooks_registry_ref = weakref.ref(hooks_registry)
-        self.hook_id = HookHandle.id
+        if mode == HookHandleIdType.INT:
+            self.hook_id = HookHandle.id
+        else:
+            self.hook_id = str(HookHandle.id)
         HookHandle.id = HookHandle.id + 1
 
     def remove(self):

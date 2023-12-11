@@ -50,6 +50,7 @@ from nncf.torch.graph.operator_metatypes import PTOutputNoopMetatype
 from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
+from nncf.torch.graph.transformations.commands import PTInsertionTemporaryCommand
 from nncf.torch.graph.transformations.commands import PTModelExtractionWithFusedBiasCommand
 from nncf.torch.graph.transformations.commands import PTQuantizerInsertionCommand
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
@@ -62,6 +63,8 @@ from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.module_operations import BaseOp
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nncf_network import ExtraCompressionModuleType
+from nncf.torch.nncf_network import HookGroups
+from nncf.torch.nncf_network import HookHandle
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint
 from nncf.torch.nncf_network import PTInsertionType
@@ -149,8 +152,12 @@ class TestInsertionCommands:
         point_for_relu_inputs,
     ]
 
+    @pytest.mark.parametrize("hooks_group", [HookGroups.PERMANENT, HookGroups.TEMPORARY])
     @pytest.mark.parametrize("target_point", available_points)
-    def test_single_insertions(self, setup, target_point: PTTargetPoint):
+    def test_single_insertions(self, setup, target_point: PTTargetPoint, hooks_group: HookGroups):
+        # Handle id is reset to align keys with references
+        HookHandle.id = 0
+
         insertion_point = PTInsertionPoint(
             target_point.target_type,
             OperationAddress.from_str(target_point.target_node_name),
@@ -161,7 +168,7 @@ class TestInsertionCommands:
         else:
             hook = BaseOp(lambda x: x)
 
-        self.compressed_model.nncf.insert_at_point(insertion_point, [hook])
+        self.compressed_model.nncf.insert_at_point(insertion_point, [hook], group=hooks_group)
 
         if insertion_point.insertion_type == PTInsertionType.OPERATOR_PRE_HOOK:
             ctx = self.compressed_model.nncf.get_tracing_context()
@@ -178,6 +185,8 @@ class TestInsertionCommands:
             module = self.compressed_model.nncf.get_module_by_scope(insertion_point.module_scope)
             assert module.post_ops["0"] is hook
 
+        assert len(self.compressed_model.nncf._groups_vs_hooks_handlers[hooks_group]) == 1
+
     priority_types = ["same", "different"]
     insertion_types = TargetType
     priority_test_cases = list(itertools.product(priority_types, insertion_types))
@@ -187,8 +196,9 @@ class TestInsertionCommands:
         for idx, order in enumerate(ordering):
             assert iterable1[idx] is iterable2[order]
 
+    @pytest.mark.parametrize("command_cls", [PTInsertionCommand, PTInsertionTemporaryCommand])
     @pytest.mark.parametrize("case", priority_test_cases, ids=[x[1].name + "-" + x[0] for x in priority_test_cases])
-    def test_priority(self, case, setup):
+    def test_priority(self, case, command_cls, setup):
         priority_type = case[0]
         insertion_type = case[1]
 
@@ -218,14 +228,14 @@ class TestInsertionCommands:
 
         if priority_type == "same":
             # Same-priority commands will be executed in registration order
-            command1 = PTInsertionCommand(point, hook1, TransformationPriority.DEFAULT_PRIORITY)
-            command2 = PTInsertionCommand(point, hook2, TransformationPriority.DEFAULT_PRIORITY)
-            command3 = PTInsertionCommand(point, hook3, TransformationPriority.DEFAULT_PRIORITY)
+            command1 = command_cls(point, hook1, TransformationPriority.DEFAULT_PRIORITY)
+            command2 = command_cls(point, hook2, TransformationPriority.DEFAULT_PRIORITY)
+            command3 = command_cls(point, hook3, TransformationPriority.DEFAULT_PRIORITY)
         else:
             # Prioritized commands will be executed in ascending priority order
-            command1 = PTInsertionCommand(point, hook1, TransformationPriority.SPARSIFICATION_PRIORITY)
-            command2 = PTInsertionCommand(point, hook2, TransformationPriority.QUANTIZATION_PRIORITY)
-            command3 = PTInsertionCommand(point, hook3, TransformationPriority.DEFAULT_PRIORITY)
+            command1 = command_cls(point, hook1, TransformationPriority.SPARSIFICATION_PRIORITY)
+            command2 = command_cls(point, hook2, TransformationPriority.QUANTIZATION_PRIORITY)
+            command3 = command_cls(point, hook3, TransformationPriority.DEFAULT_PRIORITY)
 
         layout = PTTransformationLayout()
         layout.register(command1)
@@ -245,10 +255,12 @@ class TestInsertionCommands:
             pre_hook_id = PreHookId(
                 OperationAddress.from_str(point.target_node_name), input_port_id=point.input_port_id
             )
-            self.check_order(ctx._pre_hooks[pre_hook_id], hook_list, order)
+            actual_pre_hooks = list(ctx._pre_hooks[pre_hook_id].values())
+            self.check_order(actual_pre_hooks, hook_list, order)
         if insertion_type == TargetType.OPERATOR_POST_HOOK:
             ctx = self.compressed_model.nncf.get_tracing_context()
-            self.check_order(ctx._post_hooks[OperationAddress.from_str(point.target_node_name)], hook_list, order)
+            actual_post_hooks = list(ctx._post_hooks[OperationAddress.from_str(point.target_node_name)].values())
+            self.check_order(actual_post_hooks, hook_list, order)
 
         if insertion_type == TargetType.OPERATION_WITH_WEIGHTS:
             module = self.compressed_model.nncf.get_containing_module(point.target_node_name)
@@ -544,6 +556,8 @@ def test_quantizer_insertion_transformations(target_type, node_name, input_port_
     hook = Hook()
 
     def _insert_quantizer_to_model():
+        # Handle id is reset to align keys with references
+        HookHandle.id = 0
         model = NNCFNetwork(InsertionPointTestModel(), FillerInputInfo([FillerInputElement([1, 1, 10, 10])]))
         model_transformer = PTModelTransformer(model)
 

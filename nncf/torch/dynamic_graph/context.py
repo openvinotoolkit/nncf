@@ -11,14 +11,16 @@
 
 import threading
 import weakref
+from collections import OrderedDict
 from collections import defaultdict
 from collections import deque
 from contextlib import contextmanager
-from typing import Callable, DefaultDict, List, Optional, Union
+from typing import Callable, DefaultDict, Dict, List, Optional, Union
 
 import torch
 
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
+from nncf.common.hook_handle import HookHandle
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.patcher import PATCHER
@@ -94,8 +96,8 @@ class TracingContext:
     def __init__(self):
         self.graph = DynamicGraph()
 
-        self._post_hooks: DefaultDict[OperationAddress, List[Callable]] = defaultdict(list)
-        self._pre_hooks: DefaultDict[PreHookId, List[Callable]] = defaultdict(list)
+        self._post_hooks: DefaultDict[OperationAddress, Dict[int, Callable]] = defaultdict(OrderedDict)
+        self._pre_hooks: DefaultDict[PreHookId, Dict[int, Callable]] = defaultdict(OrderedDict)
         self._num_nested_hooks = 0
         self.reused_parameters = []
 
@@ -282,9 +284,16 @@ class TracingContext:
         self.relative_scopes_stack.pop()
         self.module_call_stack.pop()
 
-    def register_pre_hooks(self, fn_list: List[Callable], op_address: OperationAddress, input_port_id: int):
+    def register_pre_hooks(
+        self, fn_list: List[Callable], op_address: OperationAddress, input_port_id: int
+    ) -> List[HookHandle]:
         pre_hook_id = PreHookId(op_address, input_port_id)
-        self._pre_hooks[pre_hook_id].extend(fn_list)
+        handles = []
+        for fn in fn_list:
+            handle = HookHandle(self._pre_hooks[pre_hook_id])
+            self._pre_hooks[pre_hook_id][handle.hook_id] = fn
+            handles.append(handle)
+        return handles
 
     def execute_pre_hooks(self, op_address: OperationAddress, op_inputs: OperatorInput) -> OperatorInput:
         in_op = getattr(self, "in_operator", False)
@@ -294,7 +303,7 @@ class TracingContext:
         pre_hook_ids_for_curr_op = [x for x in self._pre_hooks if x.op_address == op_address]
         pre_hook_ids_for_curr_op = sorted(pre_hook_ids_for_curr_op, key=lambda x: x.input_port_id)
         for pre_hook_id in pre_hook_ids_for_curr_op:
-            hook_list_for_current_input_port = self._pre_hooks[pre_hook_id]
+            hook_list_for_current_input_port = self._pre_hooks[pre_hook_id].values()
             input_arg_to_process = pre_hook_id.input_port_id
             for hook in hook_list_for_current_input_port:
                 op_inputs[input_arg_to_process] = hook(op_inputs[input_arg_to_process])
@@ -302,15 +311,20 @@ class TracingContext:
         self.in_operator = in_op
         return op_inputs
 
-    def register_post_hooks(self, fn_list: List[Callable], op_address: OperationAddress):
-        self._post_hooks[op_address].extend(fn_list)
+    def register_post_hooks(self, fn_list: List[Callable], op_address: OperationAddress) -> List[HookHandle]:
+        handles = []
+        for fn in fn_list:
+            handle = HookHandle(self._post_hooks[op_address])
+            self._post_hooks[op_address][handle.hook_id] = fn
+            handles.append(handle)
+        return handles
 
     def execute_post_hooks(self, op_address: OperationAddress, outputs):
         in_op = getattr(self, "in_operator", False)
         self.in_operator = False
         self._threading.thread_local.num_nested_hooks += 1
         if op_address in self._post_hooks:
-            for hook in self._post_hooks[op_address]:
+            for hook in self._post_hooks[op_address].values():
                 outputs = hook(outputs)
         self._threading.thread_local.num_nested_hooks -= 1
         self.in_operator = in_op

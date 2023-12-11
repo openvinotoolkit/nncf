@@ -13,6 +13,7 @@ import functools
 import inspect
 import types
 from collections import OrderedDict
+from collections import defaultdict
 from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass
@@ -33,6 +34,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.hook_handle import HookHandle
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
@@ -135,6 +137,11 @@ class PTGraphPair:
 
     dynamic_graph: DynamicGraph
     nncf_graph: NNCFGraph
+
+
+class HookGroups(Enum):
+    PERMANENT = 0
+    TEMPORARY = 1
 
 
 class NNCFNetworkInterface(torch.nn.Module):
@@ -244,6 +251,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         self._target_scopes = target_scopes
         self._user_dummy_forward_fn = dummy_forward_fn
         self._kd_loss_handler = None
+        self._groups_vs_hooks_handlers: Dict[str, List[HookHandle]] = defaultdict(list)
 
         if wrap_inputs_fn is not None:
             self._wrap_inputs_fn = wrap_inputs_fn
@@ -398,11 +406,14 @@ class NNCFNetworkInterface(torch.nn.Module):
                 retval[nncf_module_scope + relative_scope] = target_module
         return retval
 
-    def insert_at_point(self, point: PTInsertionPoint, fn_list: List[Callable]):
+    def insert_at_point(
+        self, point: PTInsertionPoint, fn_list: List[Callable], group: HookGroups = HookGroups.PERMANENT
+    ):
+        handles = []
         if point.insertion_type == PTInsertionType.OPERATOR_PRE_HOOK:
-            self._compressed_context.register_pre_hooks(fn_list, point.op_address, point.input_port_id)
+            handles = self._compressed_context.register_pre_hooks(fn_list, point.op_address, point.input_port_id)
         elif point.insertion_type == PTInsertionType.OPERATOR_POST_HOOK:
-            self._compressed_context.register_post_hooks(fn_list, point.op_address)
+            handles = self._compressed_context.register_post_hooks(fn_list, point.op_address)
         elif point.insertion_type in [PTInsertionType.NNCF_MODULE_PRE_OP, PTInsertionType.NNCF_MODULE_POST_OP]:
             nncf_module = self.get_module_by_scope(point.module_scope)
             if not isinstance(nncf_module, _NNCFModuleMixin):
@@ -422,12 +433,22 @@ class NNCFNetworkInterface(torch.nn.Module):
             assert norm_target_scope in norm_nncf_scopes  # Required for proper Recurrent/VariableRecurrent addressing
             if point.insertion_type == PTInsertionType.NNCF_MODULE_PRE_OP:
                 for fn in fn_list:
-                    nncf_module.register_pre_forward_operation(fn)
+                    handles.append(nncf_module.register_pre_forward_operation(fn))
             elif point.insertion_type == PTInsertionType.NNCF_MODULE_POST_OP:
                 for fn in fn_list:
-                    nncf_module.register_post_forward_operation(fn)
+                    handles.append(nncf_module.register_post_forward_operation(fn))
         else:
             raise RuntimeError("Unsupported insertion type: {}".format(point.insertion_type))
+        self._groups_vs_hooks_handlers[group].extend(handles)
+
+    def remove_hooks_group(self, group: HookGroups) -> None:
+        """
+        Removes all hooks of given group from the nncf interface.
+
+        :param group: Target hook group to remove all hooks from.
+        """
+        for handle in self._groups_vs_hooks_handlers[group]:
+            handle.remove()
 
     def get_graph(self) -> PTNNCFGraph:
         if self._compressed_context.graph.get_nodes_count() == 0 or self._compressed_graphs_pair.nncf_graph is None:

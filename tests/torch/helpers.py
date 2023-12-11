@@ -567,7 +567,7 @@ class HookChecker:
     def _check_pre_post_hooks(hooks, ref_hooks):
         assert len(hooks) == len(ref_hooks)
         for op_address, ref_hooks in ref_hooks.items():
-            actual_hooks = hooks[op_address]
+            actual_hooks = hooks[op_address].values()
             assert len(actual_hooks) == len(ref_hooks)
             for actual_hook, ref_hook in zip(actual_hooks, ref_hooks):
                 assert actual_hook is ref_hook
