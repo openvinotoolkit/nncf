@@ -514,6 +514,15 @@ def test_rebuild_graph_after_insert_transformation():
     assert len(new_graph.get_all_nodes()) == len(graph.get_all_nodes()) + 1
 
 
+class Hook(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self._param = torch.nn.Parameter(torch.zeros((1,)))
+
+    def forward(self, x):
+        return x + self._param
+
+
 @pytest.mark.parametrize(
     "target_type, node_name, input_port_id, ref_name",
     (
@@ -528,28 +537,45 @@ def test_rebuild_graph_after_insert_transformation():
     ),
 )
 def test_quantizer_insertion_transformations(target_type, node_name, input_port_id, ref_name):
-    model = NNCFNetwork(InsertionPointTestModel(), FillerInputInfo([FillerInputElement([1, 1, 10, 10])]))
-    model_transformer = PTModelTransformer(model)
+    hook = Hook()
 
-    target_point = PTTargetPoint(target_type, node_name, input_port_id=input_port_id)
-    command = PTQuantizerInsertionCommand(target_point, BaseOp(lambda x: x))
+    def _insert_quantizer_to_model():
+        model = NNCFNetwork(InsertionPointTestModel(), FillerInputInfo([FillerInputElement([1, 1, 10, 10])]))
+        model_transformer = PTModelTransformer(model)
 
-    transformation_layout = PTTransformationLayout()
-    transformation_layout.register(command)
-    transformed_model = model_transformer.transform(transformation_layout)
+        target_point = PTTargetPoint(target_type, node_name, input_port_id=input_port_id)
+        command = PTQuantizerInsertionCommand(target_point, hook)
+
+        transformation_layout = PTTransformationLayout()
+        transformation_layout.register(command)
+        return model_transformer.transform(transformation_layout)
+
+    transformed_model = _insert_quantizer_to_model()
 
     compression_module_type = ExtraCompressionModuleType.EXTERNAL_QUANTIZER
     assert transformed_model.nncf.is_compression_module_registered(compression_module_type)
+    assert hook in transformed_model.modules()
 
     if target_type == TargetType.OPERATION_WITH_WEIGHTS:
         op = transformed_model.conv1.pre_ops._modules["0"]
         assert isinstance(op, UpdateWeight)
-        assert isinstance(op.op, BaseOp)
+        assert isinstance(op.op, Hook)
     else:
         external_quantizers = transformed_model.nncf.get_compression_modules_by_type(compression_module_type)
         assert hasattr(external_quantizers, ref_name)
         op = getattr(external_quantizers, ref_name)
-        assert isinstance(op, BaseOp)
+        assert isinstance(op, Hook)
+
+    # Check torch can correctly save and load model state dict with an external quantizer
+    state_dict = transformed_model.state_dict()
+    if target_type == TargetType.OPERATION_WITH_WEIGHTS:
+        state_dict_hook_key = "conv1.pre_ops.0.op._param"
+    else:
+        state_dict_hook_key = f"_nncf.external_quantizers.{ref_name}._param"
+    assert state_dict_hook_key in state_dict
+    del transformed_model
+    transformed_model = _insert_quantizer_to_model()
+    transformed_model.load_state_dict(state_dict)
 
 
 @pytest.mark.parametrize(
@@ -557,12 +583,6 @@ def test_quantizer_insertion_transformations(target_type, node_name, input_port_
 )
 @pytest.mark.parametrize("compression_module_registered", [False, True])
 def test_shared_fn_insertion_point(priority, compression_module_registered, mocker):
-    model = NNCFNetwork(InsertionPointTestModel(), FillerInputInfo([FillerInputElement([1, 1, 10, 10])]))
-
-    class Hook(torch.nn.Module):
-        def forward(self, x):
-            return x
-
     tps = [
         PTTargetPoint(
             TargetType.OPERATOR_POST_HOOK,
@@ -579,30 +599,37 @@ def test_shared_fn_insertion_point(priority, compression_module_registered, mock
         ),
     ]
     OP_UNIQUE_NAME = "UNIQUE_NAME"
-    if compression_module_registered:
-        model.nncf.register_compression_module_type(ExtraCompressionModuleType.EXTERNAL_OP)
     hook_instance = Hook()
-    command = PTSharedFnInsertionCommand(tps, hook_instance, OP_UNIQUE_NAME, priority)
-    transformation_layout = PTTransformationLayout()
-    transformation_layout.register(command)
 
-    mocker.MagicMock()
-    mocker.patch(
-        "nncf.torch.model_transformer.PTModelTransformer._apply_insertion_transformations",
-        return_value=mocker.MagicMock(),
-    )
-    model_transformer = PTModelTransformer(model)
-    _ = model_transformer.transform(transformation_layout=transformation_layout)
+    def _insert_external_op_mocked():
+        model = NNCFNetwork(InsertionPointTestModel(), FillerInputInfo([FillerInputElement([1, 1, 10, 10])]))
+        if compression_module_registered:
+            model.nncf.register_compression_module_type(ExtraCompressionModuleType.EXTERNAL_OP)
+        command = PTSharedFnInsertionCommand(tps, hook_instance, OP_UNIQUE_NAME, priority)
+        transformation_layout = PTTransformationLayout()
+        transformation_layout.register(command)
 
-    assert model.nncf.is_compression_module_registered(ExtraCompressionModuleType.EXTERNAL_OP)
+        mocker.MagicMock()
+        mocker.patch(
+            "nncf.torch.model_transformer.PTModelTransformer._apply_insertion_transformations",
+            return_value=mocker.MagicMock(),
+        )
+        model_transformer = PTModelTransformer(model)
+        model_transformer.transform(transformation_layout=transformation_layout)
+        return model
+
+    transformed_model = _insert_external_op_mocked()
+
+    assert transformed_model.nncf.is_compression_module_registered(ExtraCompressionModuleType.EXTERNAL_OP)
 
     REF_STORAGE_KEY = (
         "UNIQUE_NAME[/nncf_model_input_0;InsertionPointTestModel/linear_0;"
         "InsertionPointTestModel/NNCFConv2d[conv1]/conv2d_0]"
     )
 
-    storage = getattr(model.nncf, EXTERNAL_OP_STORAGE_NAME)
+    storage = getattr(transformed_model.nncf, EXTERNAL_OP_STORAGE_NAME)
     assert storage[REF_STORAGE_KEY] is hook_instance
+    assert hook_instance in transformed_model.modules()
 
     mock = PTModelTransformer._apply_insertion_transformations
     mock.assert_called_once()
@@ -615,3 +642,10 @@ def test_shared_fn_insertion_point(priority, compression_module_registered, mock
         assert isinstance(fn, ExternalOpCallHook)
         assert fn._storage_name == EXTERNAL_OP_STORAGE_NAME
         assert fn._storage_key == REF_STORAGE_KEY
+
+    # Check torch can correctly save and load model state dict with an external quantizer
+    state_dict = transformed_model.state_dict()
+    assert f"_nncf.{EXTERNAL_OP_STORAGE_NAME}.{REF_STORAGE_KEY}._param" in state_dict
+    del transformed_model
+    transformed_model = _insert_external_op_mocked()
+    transformed_model.load_state_dict(state_dict)

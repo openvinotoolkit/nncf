@@ -15,6 +15,8 @@ from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.quantization.debug_interface import QuantizationDebugInterface
 
 EXTERNAL_OP_STORAGE_NAME = "external_op"
+EXTERNAL_QUANTIZERS_STORAGE_NAME = "external_quantizers"
+EXTERNAL_QUANTIZERS_STORAGE_PREFIX = "_nncf." + EXTERNAL_QUANTIZERS_STORAGE_NAME
 
 
 class ExternalOpCallHook:
@@ -41,10 +43,6 @@ class ExternalOpCallHook:
         replica = self._compressed_context.base_module_thread_local_replica
         storage = getattr(replica.nncf, self._storage_name)
         return storage[self._storage_key](*args, **kwargs)
-
-
-EXTERNAL_QUANTIZERS_STORAGE_NAME = "external_quantizers"
-EXTERNAL_QUANTIZERS_STORAGE_PREFIX = "_nncf." + EXTERNAL_QUANTIZERS_STORAGE_NAME
 
 
 class ExternalQuantizerCallHook(ExternalOpCallHook):
