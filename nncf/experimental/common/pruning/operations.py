@@ -251,7 +251,7 @@ class ElementwisePruningOp(BasePruningOp):
             output_mask = input_masks[0]
         elif any(m is None for m in input_masks) and any(m is not None for m in input_masks):
             # In case of one from input_masks is None
-            if cls.can_propagate_mask(input_masks, input_shapes):
+            if cls.can_propagate_mask(input_masks, input_shapes) and len(input_masks) == 2:
                 output_mask = input_masks[1] if input_masks[0] is None else input_masks[0]
             else:
                 cls.invalidate_masks(input_masks)
@@ -289,8 +289,8 @@ class ElementwisePruningOp(BasePruningOp):
         """
         Check that input without a mask does not affect input with a mask.
 
-        :param input_masks: Input masks.
-        :param input_shapes: Input shapes.
+        :param input_masks: List of propagation masks for each input of the element-wise operation
+        :param input_shapes: List of tensor shapes for each input.
         """
         none_mask_ind = input_masks.index(None)
         mask_ind = 0 if none_mask_ind else 1
