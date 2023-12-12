@@ -36,6 +36,7 @@ from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.awq_patterns import get_awq_patterns
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
+from nncf.quantization.passes import transform_to_inference_graph
 from nncf.scopes import IgnoredScope
 
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer, StatisticPoint
@@ -509,10 +510,14 @@ def _apply_AWQ(model: ov.Model,
                 alpha_max=1.0,
                 steps=100):
     matches = []
-    nx_graph = graph.get_nx_graph_copy()
+
+    inference_nncf_graph = transform_to_inference_graph(
+        deepcopy(graph), [], []
+    )
+    nx_graph = inference_nncf_graph.get_nx_graph_copy()
     for _, pattern_graph in get_awq_patterns().items():
         matches.extend(find_subgraphs_matching_pattern(nx_graph, pattern_graph()))
-    #graph.find_matching_subgraphs(get_awq_patterns())
+
 
     if len(matches) == 0:
         return
