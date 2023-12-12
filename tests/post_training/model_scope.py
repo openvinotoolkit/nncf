@@ -13,9 +13,11 @@ import copy
 from typing import Dict
 
 from nncf import ModelType
+from nncf import QuantizationMode
 from nncf import QuantizationPreset
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
+from nncf.quantization.advanced_parameters import OverflowFix
 from tests.post_training.pipelines.base import ALL_PTQ_BACKENDS
 from tests.post_training.pipelines.base import NNCF_PTQ_BACKENDS
 from tests.post_training.pipelines.base import BackendType
@@ -30,9 +32,13 @@ TEST_MODELS = [
         "model_id": "bert-base-uncased",
         "pipeline_cls": MaskedLanguageModelingHF,
         "ptq_params": {
-            "preset": QuantizationPreset.MIXED,
+            "preset": QuantizationPreset.PERFORMANCE,
             "model_type": ModelType.TRANSFORMER,
             "subset_size": 2,
+            "mode": QuantizationMode.FP8_E4M3,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                backend_params=None, overflow_fix=OverflowFix.DISABLE
+            ),
         },
         "backends": ALL_PTQ_BACKENDS + [BackendType.OPTIMUM],
     },
@@ -41,7 +47,7 @@ TEST_MODELS = [
         "model_id": "hf-internal-testing/tiny-random-GPTNeoXForCausalLM",
         "pipeline_cls": CausalLMHF,
         "ptq_params": {
-            "preset": QuantizationPreset.MIXED,
+            "preset": QuantizationPreset.PERFORMANCE,
             "model_type": ModelType.TRANSFORMER,
             "subset_size": 2,
         },
@@ -53,9 +59,12 @@ TEST_MODELS = [
         "model_id": "crossvit_9_240",
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {
-            "preset": QuantizationPreset.MIXED,
+            "preset": QuantizationPreset.PERFORMANCE,
             "model_type": ModelType.TRANSFORMER,
-            "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=-1.0),
+            "advanced_parameters": AdvancedQuantizationParameters(
+                backend_params=None, smooth_quant_alpha=-1.0, overflow_fix=OverflowFix.DISABLE
+            ),
+            "mode": QuantizationMode.FP8_E4M3,
         },
         "backends": ALL_PTQ_BACKENDS,
     },
@@ -64,7 +73,11 @@ TEST_MODELS = [
         "model_id": "darknet53",
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {
-            "preset": QuantizationPreset.MIXED,
+            "preset": QuantizationPreset.PERFORMANCE,
+            "mode": QuantizationMode.FP8_E4M3,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                backend_params=None, overflow_fix=OverflowFix.DISABLE
+            ),
         },
         "backends": ALL_PTQ_BACKENDS,
     },
@@ -73,11 +86,14 @@ TEST_MODELS = [
         "model_id": "deit3_small_patch16_224",
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {
-            "preset": QuantizationPreset.MIXED,
+            "preset": QuantizationPreset.PERFORMANCE,
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(
-                smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=-1)
+                backend_params=None,
+                smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=-1),
+                overflow_fix=OverflowFix.DISABLE,
             ),
+            "mode": QuantizationMode.FP8_E4M3,
         },
         "backends": ALL_PTQ_BACKENDS,
     },
@@ -86,7 +102,11 @@ TEST_MODELS = [
         "model_id": "dla34",
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {
-            "preset": QuantizationPreset.MIXED,
+            "preset": QuantizationPreset.PERFORMANCE,
+            "mode": QuantizationMode.FP8_E4M3,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                backend_params=None, overflow_fix=OverflowFix.DISABLE
+            ),
         },
         "backends": ALL_PTQ_BACKENDS,
     },
@@ -95,7 +115,11 @@ TEST_MODELS = [
         "model_id": "dpn68",
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {
-            "preset": QuantizationPreset.MIXED,
+            "preset": QuantizationPreset.PERFORMANCE,
+            "mode": QuantizationMode.FP8_E4M3,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                backend_params=None, overflow_fix=OverflowFix.DISABLE
+            ),
         },
         "backends": ALL_PTQ_BACKENDS,
     },
@@ -104,7 +128,11 @@ TEST_MODELS = [
         "model_id": "efficientnet_b0",
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {
-            "preset": QuantizationPreset.MIXED,
+            "preset": QuantizationPreset.PERFORMANCE,
+            "mode": QuantizationMode.FP8_E4M3,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                backend_params=None, overflow_fix=OverflowFix.DISABLE
+            ),
         },
         "backends": ALL_PTQ_BACKENDS,
     },
@@ -113,8 +141,12 @@ TEST_MODELS = [
         "model_id": "efficientnet_b0",
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {
-            "preset": QuantizationPreset.MIXED,
+            "preset": QuantizationPreset.PERFORMANCE,
             "fast_bias_correction": False,
+            "mode": QuantizationMode.FP8_E4M3,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                backend_params=None, overflow_fix=OverflowFix.DISABLE
+            ),
         },
         "backends": [BackendType.ONNX, BackendType.OV, BackendType.POT],
     },
@@ -123,7 +155,11 @@ TEST_MODELS = [
         "model_id": "efficientnet_lite0",
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {
-            "preset": QuantizationPreset.MIXED,
+            "preset": QuantizationPreset.PERFORMANCE,
+            "mode": QuantizationMode.FP8_E4M3,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                backend_params=None, overflow_fix=OverflowFix.DISABLE
+            ),
         },
         "backends": ALL_PTQ_BACKENDS,
     },
@@ -132,7 +168,11 @@ TEST_MODELS = [
         "model_id": "hrnet_w18",
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {
-            "preset": QuantizationPreset.MIXED,
+            "preset": QuantizationPreset.PERFORMANCE,
+            "mode": QuantizationMode.FP8_E4M3,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                backend_params=None, overflow_fix=OverflowFix.DISABLE
+            ),
         },
         "backends": ALL_PTQ_BACKENDS,
     },
@@ -140,7 +180,12 @@ TEST_MODELS = [
         "reported_name": "timm/inception_resnet_v2",
         "model_id": "inception_resnet_v2",
         "pipeline_cls": ImageClassificationTimm,
-        "ptq_params": {},
+        "ptq_params": {
+            "mode": QuantizationMode.FP8_E4M3,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                backend_params=None, overflow_fix=OverflowFix.DISABLE
+            ),
+        },
         "backends": NNCF_PTQ_BACKENDS,
     },
     {
@@ -148,11 +193,14 @@ TEST_MODELS = [
         "model_id": "levit_128",
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {
-            "preset": QuantizationPreset.MIXED,
+            "preset": QuantizationPreset.PERFORMANCE,
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(
-                smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=0.05)
+                backend_params=None,
+                smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=0.05),
+                overflow_fix=OverflowFix.DISABLE,
             ),
+            "mode": QuantizationMode.FP8_E4M3,
         },
         "backends": NNCF_PTQ_BACKENDS,
     },
@@ -161,7 +209,11 @@ TEST_MODELS = [
         "model_id": "mobilenetv2_050",
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {
-            "preset": QuantizationPreset.MIXED,
+            "preset": QuantizationPreset.PERFORMANCE,
+            "mode": QuantizationMode.FP8_E4M3,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                backend_params=None, overflow_fix=OverflowFix.DISABLE
+            ),
         },
         "backends": ALL_PTQ_BACKENDS,
     },
@@ -170,8 +222,12 @@ TEST_MODELS = [
         "model_id": "mobilenetv2_050",
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {
-            "preset": QuantizationPreset.MIXED,
+            "preset": QuantizationPreset.PERFORMANCE,
             "fast_bias_correction": False,
+            "mode": QuantizationMode.FP8_E4M3,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                backend_params=None, overflow_fix=OverflowFix.DISABLE
+            ),
         },
         "backends": [BackendType.ONNX, BackendType.OV, BackendType.POT],
     },
@@ -180,7 +236,11 @@ TEST_MODELS = [
         "model_id": "mobilenetv3_small_050",
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {
-            "preset": QuantizationPreset.MIXED,
+            "preset": QuantizationPreset.PERFORMANCE,
+            "mode": QuantizationMode.FP8_E4M3,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                backend_params=None, overflow_fix=OverflowFix.DISABLE
+            ),
         },
         "backends": ALL_PTQ_BACKENDS,
     },
@@ -189,7 +249,11 @@ TEST_MODELS = [
         "model_id": "regnetx_002",
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {
-            "preset": QuantizationPreset.MIXED,
+            "preset": QuantizationPreset.PERFORMANCE,
+            "mode": QuantizationMode.FP8_E4M3,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                backend_params=None, overflow_fix=OverflowFix.DISABLE
+            ),
         },
         "backends": ALL_PTQ_BACKENDS,
     },
@@ -198,7 +262,11 @@ TEST_MODELS = [
         "model_id": "resnest14d",
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {
-            "preset": QuantizationPreset.MIXED,
+            "preset": QuantizationPreset.PERFORMANCE,
+            "mode": QuantizationMode.FP8_E4M3,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                backend_params=None, overflow_fix=OverflowFix.DISABLE
+            ),
         },
         "backends": ALL_PTQ_BACKENDS,
     },
@@ -206,7 +274,12 @@ TEST_MODELS = [
         "reported_name": "timm/resnet18",
         "model_id": "resnet18",
         "pipeline_cls": ImageClassificationTimm,
-        "ptq_params": {},
+        "ptq_params": {
+            "mode": QuantizationMode.FP8_E4M3,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                backend_params=None, overflow_fix=OverflowFix.DISABLE
+            ),
+        },
         "backends": ALL_PTQ_BACKENDS,
     },
     {
@@ -214,8 +287,12 @@ TEST_MODELS = [
         "model_id": "swin_base_patch4_window7_224",
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {
-            "preset": QuantizationPreset.MIXED,
+            "preset": QuantizationPreset.PERFORMANCE,
             "model_type": ModelType.TRANSFORMER,
+            "mode": QuantizationMode.FP8_E4M3,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                backend_params=None, overflow_fix=OverflowFix.DISABLE
+            ),
         },
         "backends": ALL_PTQ_BACKENDS,
     },
@@ -224,7 +301,11 @@ TEST_MODELS = [
         "model_id": "tf_inception_v3",
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {
-            "preset": QuantizationPreset.MIXED,
+            "preset": QuantizationPreset.PERFORMANCE,
+            "mode": QuantizationMode.FP8_E4M3,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                backend_params=None, overflow_fix=OverflowFix.DISABLE
+            ),
         },
         "backends": ALL_PTQ_BACKENDS,
     },
@@ -232,7 +313,12 @@ TEST_MODELS = [
         "reported_name": "timm/vgg11",
         "model_id": "vgg11",
         "pipeline_cls": ImageClassificationTimm,
-        "ptq_params": {},
+        "ptq_params": {
+            "mode": QuantizationMode.FP8_E4M3,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                backend_params=None, overflow_fix=OverflowFix.DISABLE
+            ),
+        },
         "backends": NNCF_PTQ_BACKENDS,
     },
     {
@@ -240,8 +326,12 @@ TEST_MODELS = [
         "model_id": "visformer_small",
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {
-            "preset": QuantizationPreset.MIXED,
+            "preset": QuantizationPreset.PERFORMANCE,
             "model_type": ModelType.TRANSFORMER,
+            "mode": QuantizationMode.FP8_E4M3,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                backend_params=None, overflow_fix=OverflowFix.DISABLE
+            ),
         },
         "backends": ALL_PTQ_BACKENDS,
     },
@@ -250,7 +340,11 @@ TEST_MODELS = [
         "model_id": "wide_resnet50_2",
         "pipeline_cls": ImageClassificationTimm,
         "ptq_params": {
-            "preset": QuantizationPreset.MIXED,
+            "preset": QuantizationPreset.PERFORMANCE,
+            "mode": QuantizationMode.FP8_E4M3,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                backend_params=None, overflow_fix=OverflowFix.DISABLE
+            ),
         },
         "backends": ALL_PTQ_BACKENDS,
     },
