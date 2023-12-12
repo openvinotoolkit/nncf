@@ -56,7 +56,7 @@ def should_use_pot(advanced_parameters: Optional[AdvancedQuantizationParameters]
     :raises ImportError if POT is not found in the Python environment.
     """
     use_pot = USE_POT_AS_DEFAULT
-    if advanced_parameters is not None:
+    if advanced_parameters is not None and advanced_parameters.backend_params is not None:
         use_pot = advanced_parameters.backend_params.get(BackendParameters.USE_POT, USE_POT_AS_DEFAULT)
 
     if not use_pot:
