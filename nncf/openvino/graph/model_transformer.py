@@ -16,6 +16,7 @@ from typing import Callable, Dict, List, Tuple
 import numpy as np
 import openvino.runtime as ov
 from openvino._pyopenvino import DescriptorTensor
+from openvino.preprocess import PrePostProcessor
 from openvino.runtime import opset9 as opset
 
 from nncf.common.graph.model_transformer import ModelTransformer
@@ -192,9 +193,15 @@ class OVModelTransformer(ModelTransformer):
             OVModelTransformer._update_tensor_name([result.get_output_tensor(0)], result_name)
             extra_model_outputs.append(result)
 
-        return ov.Model(
+        model_with_outputs = ov.Model(
             results=results + extra_model_outputs, sinks=assign_ops, parameters=params, name=model.friendly_name
         )
+        pre_post_processor = PrePostProcessor(model_with_outputs)
+        for output_id, _ in enumerate(model_with_outputs.outputs):
+            # We set output precision for statistics as FP32 to prevent overflows
+            pre_post_processor.output(output_id).tensor().set_element_type(ov.Type.f32)
+        model_with_outputs = pre_post_processor.build()
+        return model_with_outputs
 
     @staticmethod
     def _apply_fq_nodes_removing_transformation(
@@ -423,7 +430,13 @@ class OVModelTransformer(ModelTransformer):
         if not results:
             results = model.get_results()
 
-        return ov.Model(results, params)
+        exctracted_model = ov.Model(results, params)
+        pre_post_processor = PrePostProcessor(exctracted_model)
+        for output_id, _ in enumerate(exctracted_model.outputs):
+            # We set output precision for statistics as FP32 to prevent overflows
+            pre_post_processor.output(output_id).tensor().set_element_type(ov.Type.f32)
+        exctracted_model = pre_post_processor.build()
+        return exctracted_model
 
     @staticmethod
     def _apply_insert_operation(model: ov.Model, transformations: OVInplaceFnInsertionCommand) -> ov.Model:
