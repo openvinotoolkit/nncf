@@ -120,7 +120,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         nncf_logger.info(_get_bitwidth_distribution_str(all_weight_params, internal_weight_params))
         
         if dataset is not None:
-            _apply_AWQ(model, graph, all_weight_params, dataset)
+            _apply_AWQ(model, graph, all_weight_params, nodes_to_compress, dataset)
 
         for wp in track(all_weight_params, description="Applying Weight Compression"):
             weight_node = wp.weight_node
@@ -503,6 +503,7 @@ def _decompress(compressed_weights, scale, zero_point):
 def _apply_AWQ(model: ov.Model,
                 graph: NNCFGraph,
                 all_weight_params: List[WeightNodeParams],
+                nodes_to_compress: List[NNCFNode],
                 dataset: Dataset,
                 subset_size: int = 32,
                 percent_to_apply=0.002,
@@ -522,15 +523,20 @@ def _apply_AWQ(model: ov.Model,
     if len(matches) == 0:
         return
     nodes_for_stats = []
-    node_names = []
+    target_node_names = []
     idxs = {}
     for match in matches:
-        node_names.append(match[-1])#graph.get_node_by_key(match[-1]))
+        nncf_node = graph.get_node_by_key(match[-1])
+        weight_port_ids = nncf_node.layer_attributes.get_const_port_ids()
+        for weight_port_id in weight_port_ids:
+            weight_op_friendly_name = nncf_node.layer_attributes.constant_attributes[weight_port_id]["name"]
+            target_node_names.append(weight_op_friendly_name)
 
-    for idx, wp in enumerate(all_weight_params):
+    for idx, (wp, node) in enumerate(zip(all_weight_params, nodes_to_compress)):
         if wp.compression_config.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT4_SYM] and \
-           wp.weight_node in nodes_for_stats:
-            idxs[wp.weight_node.node_name] = idx
+           wp.weight_node.get_friendly_name() in target_node_names:
+            idxs[node.node_name] = idx
+            nodes_for_stats.append(node)
 
     statistic_points = _get_statistic_points(nodes_for_stats, subset_size)
     
@@ -542,8 +548,10 @@ def _apply_AWQ(model: ov.Model,
     alpha_step = (alpha_max - alpha_min) / steps
     for k, v in track(statistics_aggregator.statistic_points.items(), description="Applying AWQ"):
         stats = list(v[0].algorithm_to_tensor_collectors["AWQ"][0].aggregators.values())[0]._container
+        stats = [stat.squeeze() for stat in stats]
         idx = idxs[k]
         wp = all_weight_params[idx]
+        node = nodes_to_compress[idx]
         config = wp.compression_config
 
         X = np.vstack(stats).transpose()
@@ -608,7 +616,7 @@ def _apply_AWQ(model: ov.Model,
         a_scale = scale
         a_scale = np.expand_dims(1.0 / a_scale, 0)
 
-        a_node = graph.get_input_edges(wp.weight_node)[0].from_node
+        a_node = graph.get_input_edges(node)[0].from_node
         o_node = friendly_name_to_op_map[a_node.node_name]
 
         output_port_id = 0
@@ -618,7 +626,7 @@ def _apply_AWQ(model: ov.Model,
 
         for target_input_port in node_output_port.get_target_inputs():
             target_node = target_input_port.get_node()
-            if target_node.get_friendly_name() == wp.weight_node.node_name:
+            if target_node.get_friendly_name() == node.node_name:
                 destination_ports.append(target_input_port)
 
         if len(destination_ports):
@@ -641,4 +649,4 @@ def _apply_AWQ(model: ov.Model,
                 w_scale = np.expand_dims(w_scale, 0)
 
             weight = weight * w_scale
-            wp.weight_node.data = weight
+            np.copyto(wp.weight_node.data, weight)
