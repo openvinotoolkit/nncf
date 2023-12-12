@@ -13,7 +13,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 import numpy as np
 import openvino.runtime as ov
-import openvino.runtime.opset9 as opset
+import openvino.runtime.opset13 as opset
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode

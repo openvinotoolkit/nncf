@@ -14,7 +14,7 @@ from typing import List, Optional, Tuple, TypeVar
 
 import numpy as np
 import openvino.runtime as ov
-from openvino.runtime import opset9 as opset
+from openvino.runtime import opset13 as opset
 
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
