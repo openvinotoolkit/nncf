@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Dict, List, Optional, Set, Tuple
 
 import torch
 
@@ -20,6 +20,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
@@ -127,11 +128,18 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         nncf_graph: NNCFGraph,
         target_point: PTTargetPoint,
         quantizer_config: QuantizerConfig,
-        parameters: Union[FakeQuantizeParameters, FakeConvertParameters],
+        parameters: FakeQuantizeParameters,
     ) -> PTQuantizerInsertionCommand:
         return PTMinMaxAlgoBackend._create_quantizer_insertion_command(
             nncf_graph, target_point, quantizer_config, parameters
         )
+
+    @staticmethod
+    def create_convert_insertion_command(
+        target_point: PTTargetPoint,
+        parameters: FakeConvertParameters,
+    ) -> TransformationCommand:
+        raise RuntimeError("FakeConvert insertion not implemented in PyTorch backend!")
 
     @staticmethod
     def unify_statistics(statistics: List[PTMinMaxTensorStatistic]) -> PTMinMaxTensorStatistic:

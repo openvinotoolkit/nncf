@@ -17,6 +17,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
@@ -106,7 +107,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         nncf_graph: NNCFGraph,
         target_point: ONNXTargetPoint,
         quantizer_config: QuantizerConfig,
-        parameters: Union[FakeQuantizeParameters, FakeConvertParameters],
+        parameters: FakeQuantizeParameters,
     ):
         tensor_type = np.int8 if np.any(parameters.input_low.data < 0) else np.uint8
         if target_point.is_weight_target_point():
@@ -116,6 +117,13 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         axis = get_quantization_axis(quantizer_config.per_channel, node, target_point)
         onnx_parameters = convert_fq_params_to_onnx_params(parameters, quantizer_config.num_bits, tensor_type, axis)
         return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, onnx_parameters)
+
+    @staticmethod
+    def create_convert_insertion_command(
+        target_point: ONNXTargetPoint,
+        parameters: FakeConvertParameters,
+    ) -> TransformationCommand:
+        raise RuntimeError("FakeConvert insertion not implemented in ONNX backend!")
 
     @staticmethod
     def unify_statistics(statistics: List[ONNXMinMaxTensorStatistic]) -> ONNXMinMaxTensorStatistic:

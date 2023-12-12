@@ -177,7 +177,8 @@ class MinMaxQuantization(Algorithm):
                 self._preset = QuantizationPreset.PERFORMANCE
 
         if self._mode is not None:
-            self._redefine_defaults_based_on_mode()
+            self._review_defaults_based_on_mode()
+            self._set_quantization_params_based_on_mode()
         # Calculates global quantizer constraints
         self._global_quantizer_constraints = {}
         for quantizer_group in QuantizerGroup:
@@ -188,48 +189,58 @@ class MinMaxQuantization(Algorithm):
         self._reset_cache()
         self._algorithm_key = f"MMQ_{hash(self)}"
 
-    def _redefine_defaults_based_on_mode(self):
+    def _review_defaults_based_on_mode(self):
         """
-        Redefines default values because mode option doesn't support them.
+        Reviews default values because mode option doesn't support them.
+        """
+        nncf_logger.warning(f"You're using experimental option mode with {self._mode} value.")
+
+        if self._preset != QuantizationPreset.PERFORMANCE:
+            raise RuntimeError(f"preset option with {self._preset} value is not supported with the mode option!")
+
+        if self._target_device not in [TargetDevice.CPU, TargetDevice.ANY]:
+            raise RuntimeError(
+                f"target_device option with {self._target_device} value is not supported with the mode option!"
+            )
+
+        if self._overflow_fix != OverflowFix.DISABLE:
+            raise RuntimeError(
+                f"overflow_fix option with {self._overflow_fix} value is not supported with the mode option!"
+            )
+
+        if self._quantize_outputs:
+            raise RuntimeError("quantize_outputs option is not supported with the mode option!")
+
+        if self._backend_params is not None:
+            raise RuntimeError("backend_params option is not supported with the mode option!")
+
+        if isinstance(self._quantization_params[QuantizerGroup.WEIGHTS], QuantizationParameters):
+            raise RuntimeError(
+                "quantization_params option for weights with "
+                f"{self._quantization_params[QuantizerGroup.WEIGHTS]} "
+                "value is not supported with the mode option!"
+            )
+
+        if isinstance(self._quantization_params[QuantizerGroup.ACTIVATIONS], QuantizationParameters):
+            raise RuntimeError(
+                "quantization_params option for activations with "
+                f"{self._quantization_params[QuantizerGroup.ACTIVATIONS]} "
+                "value is not supported with the mode option!"
+            )
+
+    def _set_quantization_params_based_on_mode(self):
+        """
+        Sets default quantization params based on the self._mode value.
         """
         mode_default_option_map = {
             QuantizationMode.FP8_E4M3: FP8QuantizationParameters(destination_type=FP8Type.E4M3),
             QuantizationMode.FP8_E5M2: FP8QuantizationParameters(destination_type=FP8Type.E5M2),
         }
-        nncf_logger.warning(
-            f"Experimental option mode was set to: {self._mode}. The parameters below would not take any effect:"
-        )
-
-        self._preset = QuantizationPreset.PERFORMANCE
-        nncf_logger.warning(f"  preset option was set to: {self._preset}")
-
-        self._target_device = TargetDevice.CPU
-        nncf_logger.warning(f"  target_device option was set to: {self._target_device}")
-
-        self._overflow_fix = OverflowFix.DISABLE
-        nncf_logger.warning(f"  overflow_fix option was set to: {self._overflow_fix}")
-
-        self._quantize_outputs = False
-        nncf_logger.warning(f"  quantize_outputs option was set to: {self._quantize_outputs}")
-
-        self._backend_params = None
-        nncf_logger.warning(f"  backend_params option was set to: {self._backend_params}")
-
-        weights_params = self._quantization_params[QuantizerGroup.WEIGHTS]
-        if isinstance(weights_params, QuantizationParameters) or weights_params is None:
+        if self._quantization_params[QuantizerGroup.WEIGHTS] is None:
             self._quantization_params[QuantizerGroup.WEIGHTS] = mode_default_option_map[self._mode]
-            nncf_logger.warning(
-                f"  quantization_params options for {QuantizerGroup.WEIGHTS} were set to: "
-                f"{self._quantization_params[QuantizerGroup.WEIGHTS]}"
-            )
 
-        activations_params = self._quantization_params[QuantizerGroup.ACTIVATIONS]
-        if isinstance(activations_params, QuantizationParameters) or activations_params is None:
+        if self._quantization_params[QuantizerGroup.ACTIVATIONS] is None:
             self._quantization_params[QuantizerGroup.ACTIVATIONS] = mode_default_option_map[self._mode]
-            nncf_logger.warning(
-                f"  quantization_params options for {QuantizerGroup.ACTIVATIONS} were set to: "
-                f"{self._quantization_params[QuantizerGroup.ACTIVATIONS]}"
-            )
 
     def _reset_cache(self):
         # It prevents the duplicate weight quantizers from being added.
@@ -790,11 +801,14 @@ class MinMaxQuantization(Algorithm):
                     parameters = calculate_convert_parameters(
                         unified_values, is_activation=True, destination_type=destination_type
                     )
+                    command = self._backend_entity.create_convert_insertion_command(
+                        quantization_target_point, parameters
+                    )
                 else:
                     parameters = calculate_quantizer_parameters(unified_values, qconfig, q_group, narrow_range)
-                command = self._backend_entity.create_quantizer_insertion_command(
-                    graph, quantization_target_point, qconfig, parameters
-                )
+                    command = self._backend_entity.create_quantizer_insertion_command(
+                        graph, quantization_target_point, qconfig, parameters
+                    )
                 transformation_layout.register(command)
                 unified_ops_list.add(quantization_target_point)
 
@@ -825,13 +839,16 @@ class MinMaxQuantization(Algorithm):
                     parameters = calculate_convert_parameters(
                         statistics, is_activation=is_activation, destination_type=destination_type
                     )
+                    command = self._backend_entity.create_convert_insertion_command(
+                        quantization_target_point, parameters
+                    )
                 else:
                     parameters = calculate_quantizer_parameters(
                         statistics, qconfig, quant_group, narrow_range, half_range
                     )
-                command = self._backend_entity.create_quantizer_insertion_command(
-                    graph, quantization_target_point, qconfig, parameters
-                )
+                    command = self._backend_entity.create_quantizer_insertion_command(
+                        graph, quantization_target_point, qconfig, parameters
+                    )
                 transformation_layout.register(command)
         if not transformation_layout.transformations:
             nncf_logger.info("The model has no operations to apply quantization.")

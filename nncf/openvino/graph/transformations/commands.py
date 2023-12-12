@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Union
+from typing import List
 
 import numpy as np
 import openvino.runtime as ov
@@ -85,11 +85,19 @@ class OVFQNodeRemovingCommand(TransformationCommand):
 
 
 class OVQuantizerInsertionCommand(OVInsertionCommand):
-    def __init__(
-        self, target_point: OVTargetPoint, fake_op_parameters: Union[FakeQuantizeParameters, FakeConvertParameters]
-    ):
+    def __init__(self, target_point: OVTargetPoint, quantizer_parameters: FakeQuantizeParameters):
         super().__init__(target_point)
-        self.fake_op_parameters = fake_op_parameters
+        self.quantizer_parameters = quantizer_parameters
+
+    def union(self, other: "TransformationCommand") -> "TransformationCommand":
+        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
+        raise NotImplementedError()
+
+
+class OVConvertInsertionCommand(OVInsertionCommand):
+    def __init__(self, target_point: OVTargetPoint, convert_parameters: FakeConvertParameters):
+        super().__init__(target_point)
+        self.convert_parameters = convert_parameters
 
     def union(self, other: "TransformationCommand") -> "TransformationCommand":
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand

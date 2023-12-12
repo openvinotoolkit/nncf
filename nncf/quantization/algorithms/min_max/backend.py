@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, List, Optional, Set, TypeVar, Union
+from typing import Dict, List, Optional, Set, TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -142,7 +142,7 @@ class MinMaxAlgoBackend(ABC):
         nncf_graph: NNCFGraph,
         target_point: TargetPoint,
         quantizer_config: QuantizerConfig,
-        parameters: Union[FakeQuantizeParameters, FakeConvertParameters],
+        parameters: FakeQuantizeParameters,
     ) -> TransformationCommand:
         """
         Returns backend-specific quantizer insertion command.
@@ -150,7 +150,21 @@ class MinMaxAlgoBackend(ABC):
         :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
         :param target_point: Target location for the correction.
         :param quantizer_config: QuantizerConfig instance for the current layer.
-        :param parameters: FakeQuantize- or FakeConvertParameters to calculate activation quantization parameters.
+        :param parameters: FakeQuantizeParameters to calculate activation quantization parameters.
+        :return: Backend-specific TransformationCommand for the quantizer insertion operation.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def create_convert_insertion_command(
+        target_point: TargetPoint,
+        parameters: FakeConvertParameters,
+    ) -> TransformationCommand:
+        """
+        Returns backend-specific convert insertion command.
+
+        :param target_point: Target location for the correction.
+        :param parameters: FakeConvertParameters to calculate activation quantization parameters.
         :return: Backend-specific TransformationCommand for the quantizer insertion operation.
         """
 

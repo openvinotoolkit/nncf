@@ -19,6 +19,7 @@ from openvino.runtime import opset9 as opset
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.experimental.tensor import Tensor
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_inplace_batch_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_max_op
@@ -29,6 +30,7 @@ from nncf.openvino.graph.node_utils import get_ov_model_reduce_node_name
 from nncf.openvino.graph.node_utils import get_result_node_name
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVBiasInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVConvertInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
@@ -36,7 +38,7 @@ from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionComm
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
-from nncf.parameters import QuantizationMode
+from nncf.quantization.advanced_parameters import FP8Type
 from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
@@ -100,15 +102,15 @@ def get_nodes_by_type(model: ov.Model, type_name: str) -> List[ov.Node]:
 
 
 def create_fake_quantize_params() -> FakeQuantizeParameters:
-    min_values = np.zeros((1, 1, 1, 1)).astype(np.float32)
-    max_values = np.ones((1, 1, 1, 1)).astype(np.float32)
+    min_values = Tensor(np.zeros((1, 1, 1, 1)).astype(np.float32))
+    max_values = Tensor(np.ones((1, 1, 1, 1)).astype(np.float32))
     return FakeQuantizeParameters(min_values, max_values, min_values, max_values, levels=256)
 
 
-def create_fake_convert_params() -> FakeConvertParameters:
-    scale = np.ones((1, 1, 1, 1)).astype(np.float32)
-    shift = np.zeros((1, 1, 1, 1)).astype(np.float32)
-    return FakeConvertParameters(scale, shift)
+def create_fake_convert_params(destination_type: FP8Type) -> FakeConvertParameters:
+    scale = Tensor(np.ones((1)).astype(np.float32))
+    shift = Tensor(np.zeros((1)).astype(np.float32))
+    return FakeConvertParameters(scale, shift, destination_type)
 
 
 @dataclass
@@ -456,7 +458,7 @@ def test_fq_insertion_pre_layer(target_layers, ref_fq_names):
         target_layers,
         TargetType.PRE_LAYER_OPERATION,
         OVQuantizerInsertionCommand,
-        command_kwargs={"fake_op_parameters": create_fake_quantize_params()},
+        command_kwargs={"quantizer_parameters": create_fake_quantize_params()},
     )
     fq_nodes = get_nodes_by_type(transformed_model, type_name="FakeQuantize")
 
@@ -476,8 +478,8 @@ def test_fc_insertion_pre_layer(target_layers, ref_fс_names):
         model,
         target_layers,
         TargetType.PRE_LAYER_OPERATION,
-        OVQuantizerInsertionCommand,
-        command_kwargs={"fake_op_parameters": create_fake_convert_params(), "mode": QuantizationMode.FP8_E4M3},
+        OVConvertInsertionCommand,
+        command_kwargs={"convert_parameters": create_fake_convert_params(destination_type=FP8Type.E4M3)},
     )
     fc_nodes = get_nodes_by_type(transformed_model, type_name="FakeConvert")
 
@@ -495,7 +497,7 @@ def test_fq_insertion_post_layer(target_layers, ref_fq_names):
         target_layers,
         TargetType.POST_LAYER_OPERATION,
         OVQuantizerInsertionCommand,
-        command_kwargs={"fake_op_parameters": create_fake_quantize_params()},
+        command_kwargs={"quantizer_parameters": create_fake_quantize_params()},
     )
     fq_nodes = get_nodes_by_type(transformed_model, type_name="FakeQuantize")
 
@@ -515,8 +517,8 @@ def test_fc_insertion_post_layer(target_layers, ref_fс_names):
         model,
         target_layers,
         TargetType.POST_LAYER_OPERATION,
-        OVQuantizerInsertionCommand,
-        command_kwargs={"fake_op_parameters": create_fake_convert_params(), "mode": QuantizationMode.FP8_E4M3},
+        OVConvertInsertionCommand,
+        command_kwargs={"convert_parameters": create_fake_convert_params(destination_type=FP8Type.E4M3)},
     )
     fc_nodes = get_nodes_by_type(transformed_model, type_name="FakeConvert")
 
@@ -535,7 +537,7 @@ def test_fq_insertion_weights(target_layers, ref_fq_names):
         TargetType.OPERATION_WITH_WEIGHTS,
         OVQuantizerInsertionCommand,
         port_id=1,
-        command_kwargs={"fake_op_parameters": create_fake_quantize_params()},
+        command_kwargs={"quantizer_parameters": create_fake_quantize_params()},
     )
     fq_nodes = get_nodes_by_type(transformed_model, type_name="FakeQuantize")
 
@@ -555,9 +557,9 @@ def test_fc_insertion_weights(target_layers, ref_fс_names):
         model,
         target_layers,
         TargetType.OPERATION_WITH_WEIGHTS,
-        OVQuantizerInsertionCommand,
+        OVConvertInsertionCommand,
         port_id=1,
-        command_kwargs={"fake_op_parameters": create_fake_convert_params(), "mode": QuantizationMode.FP8_E4M3},
+        command_kwargs={"convert_parameters": create_fake_convert_params(destination_type=FP8Type.E4M3)},
     )
     fc_nodes = get_nodes_by_type(transformed_model, type_name="FakeConvert")
 

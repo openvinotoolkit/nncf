@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Dict, List, Optional, Set, Tuple
 
 import numpy as np
 
@@ -28,6 +28,7 @@ from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
 from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
+from nncf.openvino.graph.transformations.commands import OVConvertInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.hardware.config import OVHWConfig
@@ -112,9 +113,16 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         nncf_graph: NNCFGraph,
         target_point: OVTargetPoint,
         quantizer_config: QuantizerConfig,
-        parameters: Union[FakeQuantizeParameters, FakeConvertParameters],
+        parameters: FakeQuantizeParameters,
     ) -> OVQuantizerInsertionCommand:
         return OVQuantizerInsertionCommand(target_point, parameters)
+
+    @staticmethod
+    def create_convert_insertion_command(
+        target_point: OVTargetPoint,
+        parameters: FakeConvertParameters,
+    ) -> OVQuantizerInsertionCommand:
+        return OVConvertInsertionCommand(target_point, parameters)
 
     @staticmethod
     def unify_statistics(statistics: List[OVMinMaxTensorStatistic]) -> OVMinMaxTensorStatistic:

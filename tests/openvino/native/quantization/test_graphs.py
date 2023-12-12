@@ -24,6 +24,7 @@ from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
+from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.native.common import compare_nncf_graphs
@@ -233,7 +234,12 @@ def test_synthetic_models_fc_placement(model_creator_func):
     model = model_creator_func()
     quantized_model = quantize_model(
         model.ov_model,
-        {"preset": QuantizationPreset.PERFORMANCE, "inplace_statistics": True, "mode": QuantizationMode.FP8_E4M3},
+        {
+            "preset": QuantizationPreset.PERFORMANCE,
+            "inplace_statistics": True,
+            "mode": QuantizationMode.FP8_E4M3,
+            "overflow_fix": OverflowFix.DISABLE,
+        },
     )
 
     path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / f"{model.ref_model_name}_FC.dot"
