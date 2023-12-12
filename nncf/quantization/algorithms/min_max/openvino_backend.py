@@ -26,6 +26,7 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
+from nncf.openvino.graph.model_utils import get_start_nodes_for_activation_path_tracing
 from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
@@ -101,6 +102,10 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def quant_trait_op_dict(self) -> Dict[int, OperatorMetatype]:
         return DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
+
+    @staticmethod
+    def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+        return get_start_nodes_for_activation_path_tracing(nncf_graph)
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:

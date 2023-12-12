@@ -31,6 +31,7 @@ from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
+from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTQuantizerInsertionCommand
 from nncf.torch.hardware.config import PTHWConfig
@@ -112,6 +113,10 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def quant_trait_op_dict(self) -> Dict[int, OperatorMetatype]:
         return DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
+
+    @staticmethod
+    def get_start_nodes_for_activation_path_tracing(nncf_graph: PTNNCFGraph) -> List[NNCFNode]:
+        return nncf_graph.get_nodes_with_missed_input_edges() + nncf_graph.get_input_nodes()
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:

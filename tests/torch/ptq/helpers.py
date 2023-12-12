@@ -54,7 +54,7 @@ def get_depthwise_conv_nncf_graph() -> NNCFGraphToTestDepthwiseConv:
         transpose=False,
         padding_values=(1, 1),
     )
-    return NNCFGraphToTestDepthwiseConv(PTDepthwiseConv2dSubtype, conv_layer_attrs)
+    return NNCFGraphToTestDepthwiseConv(PTDepthwiseConv2dSubtype, conv_layer_attrs, nncf_graph_cls=PTNNCFGraph)
 
 
 def get_single_no_weight_matmul_nncf_graph() -> NNCFGraphToTest:

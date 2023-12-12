@@ -69,13 +69,6 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def read_variable_metatypes(self) -> List[OperatorMetatype]:
-        """
-        Property for the backend-specific metatypes that also can be interpreted as inputs (ReadValue).
-        """
-
-    @property
-    @abstractmethod
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific metatypes for which overflow_fix is applicable.
@@ -151,6 +144,16 @@ class MinMaxAlgoBackend(ABC):
         :param quantizer_config: QuantizerConfig instance for the current layer.
         :param parameters: FakeQuantizeParameters to calculate activation quantization parameters.
         :return: Backend-specific TransformationCommand for the quantizer insertion operation.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+        """
+        Returns a list of NNCFNodes to use as start nodes for activation path tracing.
+
+        :param nncf_graph: NNCFGraph to get the start nodes.
+        :return: List of NNCFNodes to use as start nodes for activation path tracing.
         """
 
     @staticmethod
