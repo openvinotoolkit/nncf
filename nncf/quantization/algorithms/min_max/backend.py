@@ -159,6 +159,7 @@ class MinMaxAlgoBackend(ABC):
         :param target_point: Target location for the correction.
         :param parameters: FakeConvertParameters to calculate activation quantization parameters.
         :return: Backend-specific TransformationCommand for the quantizer insertion operation.
+        """
 
     @staticmethod
     @abstractmethod
