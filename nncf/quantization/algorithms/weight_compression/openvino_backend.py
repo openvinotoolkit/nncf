@@ -522,9 +522,10 @@ def _apply_AWQ(model: ov.Model,
     if len(matches) == 0:
         return
     nodes_for_stats = []
+    node_names = []
     idxs = {}
     for match in matches:
-        nodes_for_stats.append(graph.get_node_by_key(match[-1]))
+        node_names.append(match[-1])#graph.get_node_by_key(match[-1]))
 
     for idx, wp in enumerate(all_weight_params):
         if wp.compression_config.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT4_SYM] and \
