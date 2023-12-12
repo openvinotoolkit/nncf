@@ -413,7 +413,7 @@ def get_potential_building_blocks(orig_graph: NNCFGraph, hw_fused_ops: bool, min
     for shape, first_skipped_nodes in act_input_shape.items():
         for first_skipped_node in first_skipped_nodes:
             previous_nodes = sgraph.get_prev_nodes(first_skipped_node.node_key)
-            if first_skipped_node.node_type == IgnoredNameOperators or len(previous_nodes) != 1:
+            if first_skipped_node.node_type in IgnoredNameOperators or len(previous_nodes) != 1:
                 continue
             for end_node in act_output_shape[shape]:
                 if end_node.main_id <= first_skipped_node.main_id:

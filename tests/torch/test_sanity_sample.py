@@ -397,7 +397,7 @@ class TestSanitySample:
             "--mode": "export",
             "--config": config_factory.serialize(),
             "--resume": ckpt_path,
-            "--to-onnx": onnx_path,
+            "--export-model-path": onnx_path,
         }
 
         if not torch.cuda.is_available():
@@ -422,7 +422,12 @@ class TestSanitySample:
         config_factory = ConfigFactory(config, tmp_path / "config.json")
 
         onnx_path = os.path.join(str(tmp_path), "model.onnx")
-        args = {"--mode": "export", "--config": config_factory.serialize(), "--pretrained": "", "--to-onnx": onnx_path}
+        args = {
+            "--mode": "export",
+            "--config": config_factory.serialize(),
+            "--pretrained": "",
+            "--export-model-path": onnx_path,
+        }
 
         if not torch.cuda.is_available():
             args["--cpu-only"] = True

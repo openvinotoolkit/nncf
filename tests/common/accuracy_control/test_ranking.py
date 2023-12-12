@@ -9,13 +9,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 from typing import List
 
 import numpy as np
 import pytest
 
+from nncf.common.graph.graph import NNCFGraph
 from nncf.quantization.algorithms.accuracy_control.rank_functions import normalized_mse
+from nncf.quantization.algorithms.accuracy_control.ranker import GroupToRank
+from nncf.quantization.algorithms.accuracy_control.ranker import Ranker
 from nncf.quantization.algorithms.accuracy_control.subset_selection import get_subset_indices
+from tests.common.accuracy_control.backend import AABackendForTests
+from tests.common.quantization.test_quantizer_removal import GRAPHS as AA_GRAPHS_DESCR
+from tests.common.quantization.test_quantizer_removal import create_nncf_graph as aa_create_nncf_graph
 
 
 def create_fp32_tensor_1d(items):
@@ -77,3 +84,41 @@ def test_normalized_mse(x_ref: np.ndarray, x_approx: np.ndarray, expected_nmse: 
 def test_get_subset_indices(errors: List[float], subset_size: int, expected_indices: List[int]):
     actual_indices = get_subset_indices(errors, subset_size)
     assert expected_indices == actual_indices
+
+
+@pytest.mark.parametrize(
+    "nncf_graph_name,ref_groups",
+    [
+        (
+            "simple_graph",
+            [
+                GroupToRank(["quantizer_139", "quantizer_162", "quantizer_119"], ["add_117", "conv2d_161"]),
+                GroupToRank(["quantizer_153", "quantizer_147"], ["conv2d_146"]),
+                GroupToRank(["quantizer_134", "quantizer_128"], ["conv2d_127"]),
+            ],
+        ),
+        (
+            "graph_with_shapeof",
+            [
+                GroupToRank(["quantizer_105"], ["interpolate_115"]),
+                GroupToRank(["quantizer_710", "quantizer_93"], ["multiply_99"]),
+                GroupToRank(["quantizer_82"], ["power_87"]),
+            ],
+        ),
+    ],
+)
+def test_find_groups_of_quantizers_to_rank(nncf_graph_name: NNCFGraph, ref_groups: List[GroupToRank]):
+    ranker = Ranker(1, tuple(), AABackendForTests, None)
+    nncf_graph = aa_create_nncf_graph(AA_GRAPHS_DESCR[nncf_graph_name])
+    ret_val = ranker.find_groups_of_quantizers_to_rank(nncf_graph)
+    assert len(ret_val) == len(ref_groups)
+    # Can zip as qauantizers are topologically sorted
+    for actual_group, ref_group in zip(ret_val, ref_groups):
+        for attr in ["quantizers", "operations"]:
+            acutal_attr_value = getattr(actual_group, attr)
+            ref_attr_value = getattr(ref_group, attr)
+
+            assert len(acutal_attr_value) == len(ref_attr_value)
+            actual_node_names = [n.node_name for n in acutal_attr_value]
+            for ref_node_name in ref_attr_value:
+                assert ref_node_name in actual_node_names

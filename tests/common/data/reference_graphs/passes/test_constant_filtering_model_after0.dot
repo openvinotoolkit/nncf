@@ -1,0 +1,16 @@
+strict digraph  {
+"8 /Concat_with_missed_input_0" [id=8, type=Concat_with_missed_input];
+"9 /Input_1_0" [id=9, type=Input_1];
+"10 /Input_2_0" [id=10, type=Input_2];
+"11 /Concat_with_input_0" [id=11, type=Concat_with_input];
+"12 /ReadVariable_0" [id=12, type=ReadVariable];
+"14 /Conv_0" [id=14, type=Conv];
+"16 /Conv2_0" [id=16, type=Conv2];
+"17 /Add_0" [id=17, type=Add];
+"18 /Final_node_0" [id=18, type=Final_node];
+"9 /Input_1_0" -> "14 /Conv_0";
+"10 /Input_2_0" -> "11 /Concat_with_input_0";
+"12 /ReadVariable_0" -> "17 /Add_0";
+"16 /Conv2_0" -> "17 /Add_0";
+"17 /Add_0" -> "18 /Final_node_0";
+}

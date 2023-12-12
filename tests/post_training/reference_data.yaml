@@ -171,7 +171,7 @@ timm/mobilenetv3_small_050_backend_OV:
 timm/mobilenetv3_small_050_backend_POT:
   metric_value: 0.54104
 timm/mobilenetv3_small_050_backend_TORCH:
-  metric_value: 0.39514
+  metric_value: 0.41842
 timm/regnetx_002_backend_CUDA_TORCH:
   metric_value: 0.67452
 timm/regnetx_002_backend_FP32:
