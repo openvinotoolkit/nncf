@@ -516,7 +516,7 @@ def _apply_AWQ(model: ov.Model,
     )
     nx_graph = inference_nncf_graph.get_nx_graph_copy()
     for _, pattern_graph in get_awq_patterns().items():
-        matches.extend(find_subgraphs_matching_pattern(nx_graph, pattern_graph()))
+        matches.extend(find_subgraphs_matching_pattern(nx_graph, pattern_graph(), strict=False))
 
 
     if len(matches) == 0:
@@ -524,7 +524,7 @@ def _apply_AWQ(model: ov.Model,
     nodes_for_stats = []
     idxs = {}
     for match in matches:
-        nodes_for_stats.append(match[-1])
+        nodes_for_stats.append(graph.get_node_by_key(match[-1]))
 
     for idx, wp in enumerate(all_weight_params):
         if wp.compression_config.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT4_SYM] and \
