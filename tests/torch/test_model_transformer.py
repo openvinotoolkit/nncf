@@ -64,7 +64,6 @@ from nncf.torch.module_operations import BaseOp
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.nncf_network import HookGroups
-from nncf.torch.nncf_network import HookHandle
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint
 from nncf.torch.nncf_network import PTInsertionType
@@ -155,9 +154,6 @@ class TestInsertionCommands:
     @pytest.mark.parametrize("hooks_group", [HookGroups.PERMANENT, HookGroups.TEMPORARY])
     @pytest.mark.parametrize("target_point", available_points)
     def test_single_insertions(self, setup, target_point: PTTargetPoint, hooks_group: HookGroups):
-        # Handle id is reset to align keys with references
-        HookHandle.id = 0
-
         insertion_point = PTInsertionPoint(
             target_point.target_type,
             OperationAddress.from_str(target_point.target_node_name),
@@ -556,8 +552,6 @@ def test_quantizer_insertion_transformations(target_type, node_name, input_port_
     hook = Hook()
 
     def _insert_quantizer_to_model():
-        # Handle id is reset to align keys with references
-        HookHandle.id = 0
         model = NNCFNetwork(InsertionPointTestModel(), FillerInputInfo([FillerInputElement([1, 1, 10, 10])]))
         model_transformer = PTModelTransformer(model)
 

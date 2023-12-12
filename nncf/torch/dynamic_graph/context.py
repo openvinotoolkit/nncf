@@ -21,6 +21,7 @@ import torch
 
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.hook_handle import HookHandle
+from nncf.common.hook_handle import HookHandleManager
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.patcher import PATCHER
@@ -100,6 +101,7 @@ class TracingContext:
         self._pre_hooks: DefaultDict[PreHookId, Dict[int, Callable]] = defaultdict(OrderedDict)
         self._num_nested_hooks = 0
         self.reused_parameters = []
+        self._hook_handler_manager = HookHandleManager()
 
         self._threading = CopySafeThreadingVars()
 
@@ -290,7 +292,7 @@ class TracingContext:
         pre_hook_id = PreHookId(op_address, input_port_id)
         handles = []
         for fn in fn_list:
-            handle = HookHandle(self._pre_hooks[pre_hook_id])
+            handle = self._hook_handler_manager.create_handle(self._pre_hooks[pre_hook_id])
             self._pre_hooks[pre_hook_id][handle.hook_id] = fn
             handles.append(handle)
         return handles
@@ -314,7 +316,7 @@ class TracingContext:
     def register_post_hooks(self, fn_list: List[Callable], op_address: OperationAddress) -> List[HookHandle]:
         handles = []
         for fn in fn_list:
-            handle = HookHandle(self._post_hooks[op_address])
+            handle = self._hook_handler_manager.create_handle(self._post_hooks[op_address])
             self._post_hooks[op_address][handle.hook_id] = fn
             handles.append(handle)
         return handles

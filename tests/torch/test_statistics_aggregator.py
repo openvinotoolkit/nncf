@@ -21,7 +21,6 @@ from nncf.common import factory
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.hook_handle import HookHandle
 from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -257,9 +256,6 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         inplace_statistics,
         is_backend_support_custom_estimators,
     ):
-        # Handle id is reset to align keys with references
-        HookHandle.id = 0
-
         model = self.get_backend_model(dataset_samples)
         quantizer_config = QuantizerConfig(
             mode=test_parameters.quantization_mode, per_channel=test_parameters.per_channel
