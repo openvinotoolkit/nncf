@@ -11,7 +11,6 @@
 
 import copy
 from collections import defaultdict
-from copy import deepcopy
 from enum import Enum
 from enum import auto
 from functools import reduce
@@ -252,7 +251,7 @@ class ElementwisePruningOp(BasePruningOp):
             output_mask = input_masks[0]
         elif any(m is None for m in input_masks) and any(m is not None for m in input_masks):
             # In case of one from input_masks is None
-            output_mask = cls.try_propagate_mask(input_masks, input_shapes)
+            output_mask = cls._propagate_mask_single(input_masks, input_shapes)
             if output_mask is None:
                 cls.invalidate_masks(input_masks)
         elif any(not m for m in input_masks):
@@ -285,7 +284,7 @@ class ElementwisePruningOp(BasePruningOp):
         return output_mask
 
     @staticmethod
-    def try_propagate_mask(
+    def _propagate_mask_single(
         input_masks: List[Optional[PropagationMask]], input_shapes: List[Tuple[int, ...]]
     ) -> Optional[PropagationMask]:
         """
@@ -308,7 +307,7 @@ class ElementwisePruningOp(BasePruningOp):
         output_mask = PropagationMask()
         dims_shift = min(dims_diff, 0)
         for dim, groups in input_masks[mask_ind].dim_groups_map.items():
-            output_mask.dim_groups_map[dim - dims_shift] = deepcopy(groups)
+            output_mask.dim_groups_map[dim - dims_shift] = groups
 
         return output_mask
 
