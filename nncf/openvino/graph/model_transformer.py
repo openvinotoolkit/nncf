@@ -246,10 +246,13 @@ class OVModelTransformer(ModelTransformer):
         :return: FakeQuantize parameters as operations.
         """
 
-        input_low = opset.constant(value=fq_params.input_low.data, dtype=dtype)
-        input_high = opset.constant(value=fq_params.input_high.data, dtype=dtype)
-        output_low = opset.constant(value=fq_params.output_low.data, dtype=dtype)
-        output_high = opset.constant(value=fq_params.output_high.data, dtype=dtype)
+        def clip_data(data: np.ndarray, dtype: ov.Type) -> np.ndarray:
+            return np.clip(data, np.finfo(dtype.to_dtype()).min, np.finfo(dtype.to_dtype()).max)
+
+        input_low = opset.constant(value=clip_data(fq_params.input_low.data, dtype), dtype=dtype)
+        input_high = opset.constant(value=clip_data(fq_params.input_high.data, dtype), dtype=dtype)
+        output_low = opset.constant(value=clip_data(fq_params.output_low.data, dtype), dtype=dtype)
+        output_high = opset.constant(value=clip_data(fq_params.output_high.data, dtype), dtype=dtype)
         return input_low, input_high, output_low, output_high
 
     @staticmethod
@@ -263,10 +266,6 @@ class OVModelTransformer(ModelTransformer):
         :param name_to_node_mapping: Mapping from node name to node instance.
         """
         fq_params = transformation.quantizer_parameters
-        input_low = fq_params.input_low.data
-        input_high = fq_params.input_high.data
-        output_low = fq_params.output_low.data
-        output_high = fq_params.output_high.data
         levels = fq_params.levels
 
         node_name = transformation.target_point.target_node_name
@@ -354,11 +353,11 @@ class OVModelTransformer(ModelTransformer):
             raise RuntimeError("Constant node was expected but could not find it.")
 
         const_shape = const_node.data.shape
-        const_dtype = const_node.get_element_type()
-        const_tensor = ov.Tensor(const_value, const_shape, const_dtype)
+        const_dtype = const_node.data.dtype
+        const_value = np.reshape(const_value, const_shape).astype(const_dtype)
 
         # TODO(andrey-churkin): Replace on opset13.constant() in a future release
-        new_const_node = ov.op.Constant(const_tensor, shared_memory=True)
+        new_const_node = ov.op.Constant(const_value, shared_memory=True)
         new_const_node.set_friendly_name(const_node.get_friendly_name())
         const_port.replace_source_output(new_const_node.output(0))
 
