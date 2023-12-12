@@ -11,6 +11,7 @@
 
 import copy
 from collections import defaultdict
+from copy import deepcopy
 from enum import Enum
 from enum import auto
 from functools import reduce
@@ -251,9 +252,8 @@ class ElementwisePruningOp(BasePruningOp):
             output_mask = input_masks[0]
         elif any(m is None for m in input_masks) and any(m is not None for m in input_masks):
             # In case of one from input_masks is None
-            if cls.can_propagate_mask(input_masks, input_shapes) and len(input_masks) == 2:
-                output_mask = input_masks[1] if input_masks[0] is None else input_masks[0]
-            else:
+            output_mask = cls.try_propagate_mask(input_masks, input_shapes)
+            if output_mask is None:
                 cls.invalidate_masks(input_masks)
         elif any(not m for m in input_masks):
             # Need non-empty masks on all branches in order to properly propagate pruning mask,
@@ -285,24 +285,32 @@ class ElementwisePruningOp(BasePruningOp):
         return output_mask
 
     @staticmethod
-    def can_propagate_mask(input_masks: List[Optional[PropagationMask]], input_shapes: List[Tuple[int, ...]]) -> bool:
+    def try_propagate_mask(
+        input_masks: List[Optional[PropagationMask]], input_shapes: List[Tuple[int, ...]]
+    ) -> Optional[PropagationMask]:
         """
-        Check that input without a mask does not affect input with a mask.
+        Attempts to propagate a mask in case of one input mask In case one of the masks is None.
 
         :param input_masks: List of propagation masks for each input of the element-wise operation
         :param input_shapes: List of tensor shapes for each input.
+        :return: A instance of PropagationMask or None.
         """
         none_mask_ind = input_masks.index(None)
         mask_ind = 0 if none_mask_ind else 1
-        if len(input_shapes[none_mask_ind]) > len(input_shapes[mask_ind]):
-            return False
+
         dims_diff = len(input_shapes[mask_ind]) - len(input_shapes[none_mask_ind])
         padded_none_mask_shape = (1,) * dims_diff + input_shapes[none_mask_ind]
 
         for dim in input_masks[mask_ind].dim_groups_map.keys():
             if padded_none_mask_shape[dim] != 1:
-                return False
-        return True
+                return None
+
+        output_mask = PropagationMask()
+        dims_shift = min(dims_diff, 0)
+        for dim, groups in input_masks[mask_ind].dim_groups_map.items():
+            output_mask.dim_groups_map[dim - dims_shift] = deepcopy(groups)
+
+        return output_mask
 
 
 class GatherPruningOp(BasePruningOp):

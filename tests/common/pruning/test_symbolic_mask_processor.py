@@ -136,21 +136,21 @@ def idfn(val):
 
 
 @pytest.mark.parametrize(
-    "shape_1, shape_2, is_propagate",
+    "shape_1, shape_2, ref_dim",
     (
-        ((10,), (1, 2, 10, 10), True),
-        ((10, 10), (1, 2, 10, 10), True),
-        ((1, 1, 1, 10), (1, 2, 10, 10), True),
-        ((1, 1, 10, 10), (1, 2, 10, 10), True),
-        ((1, 2, 10, 10), (1, 2, 10, 10), False),
-        ((1, 1, 1, 10), (1, 2), False),
-        ((1, 10), (10, 1), False),
-        ((1, 1, 1, 1, 10), (1, 2, 10, 10), False),
+        ((10,), (1, 2, 10, 10), 1),
+        ((10, 10), (1, 2, 10, 10), 1),
+        ((1, 1, 1, 10), (1, 2, 10, 10), 1),
+        ((1, 1, 10, 10), (1, 2, 10, 10), 1),
+        ((1, 2, 10, 10), (1, 2, 10, 10), None),
+        ((1, 10), (10, 1), None),
+        ((1, 1, 1, 1, 10), (1, 2, 10, 10), 2),
+        ((1, 2, 1, 1, 10), (1, 2, 10, 10), None),
     ),
     ids=idfn,
 )
 @pytest.mark.parametrize("in_port_1, in_port_2", ((1, 0), (0, 1)), ids=("direct", "revers"))
-def test_elementwise_mask_propagation_with_one_none_mask(shape_1, shape_2, is_propagate, in_port_1, in_port_2):
+def test_elementwise_mask_propagation_with_one_none_mask(shape_1, shape_2, ref_dim, in_port_1, in_port_2):
     graph = NNCFGraph()
     node_1 = graph.add_nncf_node("node_1", "", node_metatype=None)
     node_2 = graph.add_nncf_node("node_2", "", node_metatype=None)
@@ -162,10 +162,10 @@ def test_elementwise_mask_propagation_with_one_none_mask(shape_1, shape_2, is_pr
 
     ElementwisePruningOp.mask_propagation(node_3, graph, None)
 
-    if is_propagate:
-        assert node_3.attributes["output_mask"] is not None
-    else:
+    if ref_dim is None:
         assert node_3.attributes["output_mask"] is None
+    else:
+        assert ref_dim in node_3.attributes["output_mask"].dim_groups_map
 
 
 @pytest.mark.parametrize("consistent,out_shapes", [(True, [2, 2, 3]), (False, [2, 2, 4]), (False, [2, 2, 3, 0])])
