@@ -53,6 +53,7 @@ from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope_access import get_module_by_scope
 from nncf.torch.dynamic_graph.trace_tensor import strip_traced_tensors
 from nncf.torch.dynamic_graph.wrappers import wrap_module_call
+from nncf.torch.external_hook import EXTERNAL_OP_STORAGE_NAME
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.graph_builder import GraphConverter
@@ -118,6 +119,7 @@ class PTInsertionPoint:
 
 class ExtraCompressionModuleType(Enum):
     EXTERNAL_QUANTIZER = 0
+    EXTERNAL_OP = 1
 
 
 class NNCFNetworkInterface(torch.nn.Module):
@@ -534,6 +536,8 @@ class NNCFNetworkInterface(torch.nn.Module):
         """
         if compression_module_type == ExtraCompressionModuleType.EXTERNAL_QUANTIZER:
             return EXTERNAL_QUANTIZERS_STORAGE_NAME
+        if compression_module_type == ExtraCompressionModuleType.EXTERNAL_OP:
+            return EXTERNAL_OP_STORAGE_NAME
         raise RuntimeError("Unknown extra module type")
 
     def sort_compression_modules(self, compression_module_type: ExtraCompressionModuleType):
