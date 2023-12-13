@@ -288,12 +288,12 @@ class TestRangeInit:
         group_1 = [
             quantizer_str_dict[
                 "TwoConvTestModel/Sequential[features]/"
-                "Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/"
+                "Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[1]/"
                 "AsymmetricQuantizer[op]"
             ],
             quantizer_str_dict[
                 "TwoConvTestModel/Sequential[features]/"
-                "Sequential[1]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/"
+                "Sequential[1]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[1]/"
                 "AsymmetricQuantizer[op]"
             ],
         ]

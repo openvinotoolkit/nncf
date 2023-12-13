@@ -21,7 +21,7 @@ from nncf.common import factory
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase

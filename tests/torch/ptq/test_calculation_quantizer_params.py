@@ -295,8 +295,8 @@ def calculate_fq_params(model, input_data):
             avg_pool_stats
         ),
         "/conv2/LinearTestModel/NNCFConv2d[conv2]/conv2d_0|INPUT0/FakeQuantize": conv2_stats,
-        "/conv1/pre_ops.0/op/FakeQuantize": conv1_w_stats,
-        "/conv2/pre_ops.0/op/FakeQuantize": conv2_w_stats,
+        "/conv1/pre_ops.1/op/FakeQuantize": conv1_w_stats,
+        "/conv2/pre_ops.1/op/FakeQuantize": conv2_w_stats,
     }
 
 

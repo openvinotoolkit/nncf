@@ -1,5 +1,5 @@
 {
-    "TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]": {
+    "TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]": {
         "input_low": [
             [
                 [
@@ -33,7 +33,7 @@
             ]
         ]
     },
-    "TwoConvTestModel/Sequential[features]/Sequential[1]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]": {
+    "TwoConvTestModel/Sequential[features]/Sequential[1]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]": {
         "input_low": [
             [
                 [
