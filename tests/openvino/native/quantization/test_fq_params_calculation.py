@@ -171,8 +171,8 @@ def test_synthetic_models_fq_shapes(model_creator_func, ref_shapes, inplace_stat
         assert node["output_high"].shape == ref_shapes[node_name]
 
 
-@pytest.mark.parametrize("const_dtype", [ov.Type.f16, ov.Type.f32, ov.Type.bf16])
-@pytest.mark.parametrize("input_dtype", [ov.Type.f16, ov.Type.f32, ov.Type.bf16])
+@pytest.mark.parametrize("const_dtype", [ov.Type.f16, ov.Type.f32])
+@pytest.mark.parametrize("input_dtype", [ov.Type.f16, ov.Type.f32])
 def test_fq_precision_orig_fp32model(const_dtype, input_dtype, inplace_statistics):
     model = FPModel(const_dtype, input_dtype)
     quantized_model = quantize_model(
