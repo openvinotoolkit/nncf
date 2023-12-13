@@ -300,7 +300,7 @@ class ElementwisePruningOp(BasePruningOp):
         dims_diff = len(input_shapes[mask_ind]) - len(input_shapes[none_mask_ind])
         padded_none_mask_shape = (1,) * dims_diff + input_shapes[none_mask_ind]
 
-        for dim in input_masks[mask_ind].dim_groups_map.keys():
+        for dim in input_masks[mask_ind].dim_groups_map:
             if padded_none_mask_shape[dim] != 1:
                 return None
 
