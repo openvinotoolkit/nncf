@@ -798,7 +798,7 @@ class MinMaxQuantization(Algorithm):
                 if self._mode is not None:
                     destination_type = self._quantization_params[q_group].destination_type
                     parameters = calculate_convert_parameters(
-                        unified_values, is_activation=True, destination_type=destination_type
+                        unified_values, is_per_channel=qconfig.per_channel, destination_type=destination_type
                     )
                     command = self._backend_entity.create_convert_insertion_command(
                         quantization_target_point, parameters
@@ -833,10 +833,9 @@ class MinMaxQuantization(Algorithm):
                 if statistics.min_values is None or statistics.max_values is None:
                     raise RuntimeError(f"Statistics were not collected for the node {target_node_name}")
                 if self._mode is not None:
-                    is_activation = quant_group == QuantizerGroup.ACTIVATIONS
                     destination_type = self._quantization_params[quant_group].destination_type
                     parameters = calculate_convert_parameters(
-                        statistics, is_activation=is_activation, destination_type=destination_type
+                        statistics, is_per_channel=qconfig.per_channel, destination_type=destination_type
                     )
                     command = self._backend_entity.create_convert_insertion_command(
                         quantization_target_point, parameters

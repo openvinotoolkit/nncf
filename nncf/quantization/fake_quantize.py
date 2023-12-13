@@ -264,7 +264,7 @@ def calculate_quantizer_parameters(
 
 def calculate_convert_parameters(
     statistics: MinMaxTensorStatistic,
-    is_activation: False,
+    is_per_channel: False,
     destination_type: FP8Type = FP8Type.E4M3,
     activation_scale: float = 0.5,
 ) -> FakeConvertParameters:
@@ -286,8 +286,7 @@ def calculate_convert_parameters(
     max_destination_value = destination_type_maximum[destination_type]
     tensor_dtype = fns.finfo(max_values)
     scale = max_destination_value / fns.maximum(max_values, fns.abs(min_values) + tensor_dtype.eps)
-    if is_activation:
-        # Activations - per-tensor, weights - per-channel
+    if not is_per_channel:
         scale = fns.squeeze(activation_scale * scale)
     shift = fns.zeros_like(scale).astype(TensorDataType.float32)
     scale = scale.astype(TensorDataType.float32)
