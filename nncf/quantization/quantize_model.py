@@ -246,7 +246,7 @@ def compress_weights(
     ratio: Optional[float] = None,
     group_size: Optional[int] = None,
     ignored_scope: Optional[IgnoredScope] = None,
-    first_and_last: bool = False,
+    all_layers: bool = False,
 ) -> TModel:
     """
     Compress model weights.
@@ -270,8 +270,8 @@ def compress_weights(
         The value -1 means no grouping.
     :param ignored_scope: An ignored scope that defined the list of model control
         flow graph nodes to be ignored during quantization.
-    :param first_and_last: Indicates whether the first and last layers should be compressed to a primary
-        precision. By default, the backup precision is assigned for the first and last layers.
+    :param all_layers: Indicates whether embeddings and last layers should be compressed to a primary
+        precision. By default, the backup precision is assigned for the embeddings and last layers.
     :return: The non-trainable model with compressed weights.
     """
     if mode == CompressWeightsMode.INT8:
@@ -299,10 +299,11 @@ def compress_weights(
     backend = get_backend(model)
     if backend == BackendType.TORCH:
         from nncf.torch.quantization.quantize_model import compress_weights_impl
-
+        if all_layers:
+            raise AttributeError("Torch backend does not support `all_layers=` option. ")
         return compress_weights_impl(model, mode, ratio, group_size, ignored_scope)
 
-    compression_algorithm = WeightCompression(mode, ratio, group_size, ignored_scope, first_and_last)
+    compression_algorithm = WeightCompression(mode, ratio, group_size, ignored_scope, all_layers)
     graph = NNCFGraphFactory.create(model)
     return compression_algorithm.apply(model, graph)
 

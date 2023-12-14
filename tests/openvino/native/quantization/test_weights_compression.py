@@ -209,9 +209,9 @@ def test_mixed_precision(ratio, group_size, ref_nf4_nodes):
     assert ref_nf4_nodes == names
 
 
-def test_compress_first_and_last():
+def test_compress_all_layers():
     model = SequentialMatmulModel().ov_model
-    compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4, ratio=1, group_size=1, first_and_last=True)
+    compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4, ratio=1, group_size=1, all_layers=True)
     num_int4 = sum(1 for op in compressed_model.get_ordered_ops() if op.get_element_type() == ov.Type.nf4)
     assert num_int4 == 5
 
