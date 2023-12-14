@@ -358,7 +358,8 @@ class OVModelTransformer(ModelTransformer):
         const_dtype = const_node.data.dtype
         const_value = np.reshape(const_value, const_shape).astype(const_dtype)
 
-        new_const_node = opset.constant(const_value, shared_memory=True)
+        # TODO(andrey-churkin): Replace on opset13.constant() in 2023.3 release
+        new_const_node = ov.op.Constant(const_value, shared_memory=True)
         new_const_node.set_friendly_name(const_node.get_friendly_name())
         const_port.replace_source_output(new_const_node.output(0))
 
