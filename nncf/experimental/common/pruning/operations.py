@@ -251,7 +251,7 @@ class ElementwisePruningOp(BasePruningOp):
             output_mask = input_masks[0]
         elif any(m is None for m in input_masks) and any(m is not None for m in input_masks):
             # In case of one from input_masks is None
-            output_mask = cls._propagate_mask_single(input_masks, input_shapes)
+            output_mask = cls._propagate_single_mask(input_masks, input_shapes)
             if output_mask is None:
                 cls.invalidate_masks(input_masks)
         elif any(not m for m in input_masks):
@@ -283,9 +283,9 @@ class ElementwisePruningOp(BasePruningOp):
                             group.invalidate()
         return output_mask
 
-    @staticmethod
-    def _propagate_mask_single(
-        input_masks: List[Optional[PropagationMask]], input_shapes: List[Tuple[int, ...]]
+    @classmethod
+    def _propagate_single_mask(
+        cls, input_masks: List[Optional[PropagationMask]], input_shapes: List[Tuple[int, ...]]
     ) -> Optional[PropagationMask]:
         """
         Attempts to propagate a mask in case of one input mask is None.
@@ -294,22 +294,61 @@ class ElementwisePruningOp(BasePruningOp):
         :param input_shapes: List of tensor shapes for each input.
         :return: An instance of PropagationMask or None.
         """
+        if cls._are_broadcast_dims_in_both_shapes(input_shapes):
+            return None
+
         none_mask_ind = input_masks.index(None)
         mask_ind = 0 if none_mask_ind else 1
 
         dims_diff = len(input_shapes[mask_ind]) - len(input_shapes[none_mask_ind])
         padded_none_mask_shape = (1,) * dims_diff + input_shapes[none_mask_ind]
 
+        dims_shift = min(dims_diff, 0)
         for dim in input_masks[mask_ind].dim_groups_map:
-            if padded_none_mask_shape[dim] != 1:
+            if padded_none_mask_shape[dim - dims_shift] != 1:
                 return None
 
         output_mask = PropagationMask()
-        dims_shift = min(dims_diff, 0)
         for dim, groups in input_masks[mask_ind].dim_groups_map.items():
             output_mask.dim_groups_map[dim - dims_shift] = groups
 
         return output_mask
+
+    @staticmethod
+    def _are_broadcast_dims_in_both_shapes(shapes) -> bool:
+        """
+        Propagation mask is not supported if both shapes will broadcasting by elementwise operation.
+        True, if both shapes have broadcasted dimensions, otherwise False.
+
+        Example:
+            (1, 10), (10, 1) -> True
+            (1,10), (10,) -> False
+
+        :param shapes: Shapes of tensors.
+        :return: True, if both shapes have broadcasted dimensions, otherwise False.
+        """
+        shape_a = shapes[0]
+        shape_b = shapes[1]
+        shape_a_size_diff = len(shape_a) - len(shape_b)
+        shape_b_size_diff = -shape_a_size_diff
+        broadcasted_dims_1 = set()
+        broadcasted_dims_2 = set()
+
+        for i in range(len(shape_a)):
+            shifted_elem = i + shape_b_size_diff
+            if shifted_elem >= 0 and shape_a[i] == 1 and shape_b[shifted_elem] != 1:
+                broadcasted_dims_1.add(i)
+            if shifted_elem < 0 and shape_a[i] != 1:
+                broadcasted_dims_2.add(shifted_elem)
+
+        for i in range(len(shape_b)):
+            shifted_elem = i + shape_a_size_diff
+            if shifted_elem >= 0 and shape_b[i] == 1 and shape_a[shifted_elem] != 1:
+                broadcasted_dims_2.add(i)
+            if shifted_elem < 0 and shape_b[i] != 1:
+                broadcasted_dims_1.add(shifted_elem)
+
+        return bool(broadcasted_dims_1) and bool(broadcasted_dims_2)
 
 
 class GatherPruningOp(BasePruningOp):
