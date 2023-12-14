@@ -15,6 +15,7 @@ import types
 from collections import OrderedDict
 from contextlib import contextmanager
 from copy import deepcopy
+from dataclasses import dataclass
 from enum import Enum
 from enum import IntEnum
 from typing import Callable, Dict, Iterator, List, Optional, Tuple, TypeVar
@@ -28,6 +29,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.insertion_point_graph import InsertionPointGraph
@@ -120,6 +122,17 @@ class PTInsertionPoint:
 class ExtraCompressionModuleType(Enum):
     EXTERNAL_QUANTIZER = 0
     EXTERNAL_OP = 1
+
+
+@dataclass
+class PTGraphPair:
+    """
+    Container for two dependent graph representation:
+    DynamicGraph and NNCFGraph built out of DynamicGraph.
+    """
+
+    dynamic_graph: DynamicGraph
+    nncf_graph: NNCFGraph
 
 
 class NNCFNetworkInterface(torch.nn.Module):
@@ -266,15 +279,14 @@ class NNCFNetworkInterface(torch.nn.Module):
             _orig_context.add_node_comparators(scopes_without_shape_matching, ShapeIgnoringTensorMetaComparator())
 
         if isinstance(model, NNCFNetwork):
-            self._original_dynamic_graph = model.nncf._original_dynamic_graph
-            self._original_graph = model.nncf._original_graph
+            self._original_graphs_pair = model.nncf._original_graphs_pair
         else:
-            self._original_dynamic_graph = GraphTracer(_orig_graph_build_forward_fn).trace_graph(
+            original_dynamic_graph = GraphTracer(_orig_graph_build_forward_fn).trace_graph(
                 model, _orig_context, as_eval=True
             )
-            self._original_graph = GraphConverter.convert(self._original_dynamic_graph)
-        self._compressed_graph: PTNNCFGraph = None
-        self._compressed_traced_graph: DynamicGraph = None
+            original_graph = GraphConverter.convert(original_dynamic_graph)
+            self._original_graphs_pair = PTGraphPair(dynamic_graph=original_dynamic_graph, nncf_graph=original_graph)
+        self._compressed_graphs_pair: PTGraphPair = None
 
         self._compressed_context = TracingContext()
 
@@ -407,15 +419,15 @@ class NNCFNetworkInterface(torch.nn.Module):
             raise RuntimeError("Unsupported insertion type: {}".format(point.insertion_type))
 
     def get_graph(self) -> PTNNCFGraph:
-        if self._compressed_context.graph.get_nodes_count() == 0 or self._compressed_graph is None:
+        if self._compressed_context.graph.get_nodes_count() == 0 or self._compressed_graphs_pair.nncf_graph is None:
             self.rebuild_graph()
-        return self._compressed_graph
+        return self._compressed_graphs_pair.nncf_graph
 
     def get_dynamic_graph(self) -> DynamicGraph:
         return self._compressed_context.graph
 
     def get_original_graph(self) -> PTNNCFGraph:
-        return self._original_graph
+        return self._original_graphs_pair.nncf_graph
 
     def get_tracing_context(self) -> TracingContext:
         return self._compressed_context
@@ -468,7 +480,8 @@ class NNCFNetworkInterface(torch.nn.Module):
                     module_name = nncf_module_scope[-1].calling_module_class_name
                     if module_name not in nncf_module_names:
                         continue
-                nodes_in_scope = self._original_graph.get_op_nodes_in_scope(nncf_module_scope)
+                nncf_graph: PTNNCFGraph = self._original_graphs_pair.nncf_graph
+                nodes_in_scope = nncf_graph.get_op_nodes_in_scope(nncf_module_scope)
                 for node in nodes_in_scope:
                     if node.metatype in OPERATORS_WITH_WEIGHTS_METATYPES:
                         retval.add(node)
@@ -483,8 +496,11 @@ class NNCFNetworkInterface(torch.nn.Module):
         builder = GraphBuilder(dummy_forward_fn)
 
         with training_mode_switcher(self._model_ref, is_training=False):
-            self._compressed_traced_graph = builder.build_dynamic_graph(self._model_ref, self._compressed_context)
-            self._compressed_graph = GraphConverter.convert(self._compressed_traced_graph)
+            compressed_traced_graph = builder.build_dynamic_graph(self._model_ref, self._compressed_context)
+            compressed_graph = GraphConverter.convert(compressed_traced_graph)
+            self._compressed_graphs_pair = PTGraphPair(
+                dynamic_graph=compressed_traced_graph, nncf_graph=compressed_graph
+            )
 
     def is_scope_in_nncf_module_scope(self, scope: Scope) -> bool:
         norm_nncf_scopes = []
@@ -583,7 +599,7 @@ class NNCFNetworkInterface(torch.nn.Module):
             if train_mode:
                 self._model_ref.train()
 
-    def get_insertion_point_graph(self) -> InsertionPointGraph:
+    def get_original_insertion_point_graph(self) -> InsertionPointGraph:
         # Set up a pre- and post-hooks on almost every op in PyTorch
         nncf_graph = self.get_original_graph()
         pre_hooks: List[PreHookInsertionPoint] = []
@@ -615,7 +631,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         weighted_node_names = [weighted_node.node_name for weighted_node in weighted_nodes]
 
         ip_graph = InsertionPointGraph(
-            self._original_graph,
+            self._original_graphs_pair.nncf_graph,
             weight_modifiable_node_names=weighted_node_names,
             allowed_pre_hook_insertion_points=pre_hooks,
             allowed_post_hook_insertion_points=post_hooks,
@@ -627,18 +643,18 @@ class NNCFNetworkInterface(torch.nn.Module):
         return get_module_by_scope(curr_module, scope)
 
     def get_containing_module(self, node_name: NNCFNodeName) -> torch.nn.Module:
-        if self._compressed_graph is not None:
+        if self._compressed_graphs_pair is not None:
             try:
-                scope = self._compressed_graph.get_scope_by_node_name(node_name)
+                scope = self._compressed_graphs_pair.nncf_graph.get_scope_by_node_name(node_name)
             except RuntimeError:
                 nncf_logger.debug(
                     f"Node {node_name} not found in compressed graph when trying to determine "
                     f"the containing module, trying the original graph to see if the node was "
                     f"present there during graph building"
                 )
-                scope = self._original_graph.get_scope_by_node_name(node_name)
+                scope = self._original_graphs_pair.nncf_graph.get_scope_by_node_name(node_name)
         else:
-            scope = self._original_graph.get_scope_by_node_name(node_name)
+            scope = self._original_graphs_pair.nncf_graph.get_scope_by_node_name(node_name)
         return self.get_module_by_scope(scope)
 
     def get_flops_per_module(self) -> Dict[NNCFNodeName, int]:
@@ -652,7 +668,7 @@ class NNCFNetworkInterface(torch.nn.Module):
             return functools.partial(compute_FLOPs_hook, dict_to_save=flops_count_dict, module_node_name=name)
 
         hook_list = []
-        for nncf_node in self._original_graph.get_all_nodes():
+        for nncf_node in self._original_graphs_pair.nncf_graph.get_all_nodes():
             node_module = self.get_containing_module(nncf_node.node_name)
             hook_list.append(node_module.register_forward_hook(get_hook(nncf_node.node_name)))
         model.nncf.do_dummy_forward(force_eval=True)
@@ -723,15 +739,15 @@ class NNCFNetworkInterface(torch.nn.Module):
 
         :return: NNCFGraph node names vs DynamicGraph operation addresses map.
         """
+        graph_pair = self._compressed_graphs_pair
+        if graph_pair is None:
+            graph_pair = self._original_graphs_pair
+
         retval = {}
-        dynamic_graph = (
-            self._original_dynamic_graph if self._compressed_traced_graph is None else self._compressed_traced_graph
-        )
-        nncf_graph = self._original_graph if self._compressed_graph is None else self._compressed_graph
-        for node in dynamic_graph.get_all_nodes():
+        for node in graph_pair.dynamic_graph.get_all_nodes():
             node_id = node.node_id
             op_address = node.op_exec_context.op_address
-            nncf_node = nncf_graph.get_node_by_id(node_id)
+            nncf_node = graph_pair.nncf_graph.get_node_by_id(node_id)
             retval[nncf_node.node_name] = op_address
         return retval
 

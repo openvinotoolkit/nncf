@@ -344,7 +344,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
     def generate_setup(self) -> SingleConfigQuantizerSetup:
         quantizable_module_nodes = self.get_quantizable_module_nodes()
 
-        insertion_point_graph = self._target_model.nncf.get_insertion_point_graph()
+        insertion_point_graph = self._target_model.nncf.get_original_insertion_point_graph()
         if self._debug_interface:
             self._debug_interface.visualize_insertion_point_graph(insertion_point_graph)
         from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
