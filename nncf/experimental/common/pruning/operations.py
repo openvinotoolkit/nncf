@@ -292,7 +292,7 @@ class ElementwisePruningOp(BasePruningOp):
 
         :param input_masks: List of propagation masks for each input of the element-wise operation
         :param input_shapes: List of tensor shapes for each input.
-        :return: A instance of PropagationMask or None.
+        :return: An instance of PropagationMask or None.
         """
         none_mask_ind = input_masks.index(None)
         mask_ind = 0 if none_mask_ind else 1
