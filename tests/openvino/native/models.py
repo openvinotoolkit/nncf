@@ -838,3 +838,40 @@ class ScaledDotProductAttentionModel(OVReferenceModel):
         result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [query, key, value, attn_mask])
         return model
+
+
+class LinearQuantizedModel(OVReferenceModel):
+    @staticmethod
+    def _create_fq_node(parent_node, name):
+        return opset.fake_quantize(
+            parent_node, np.float32(-1), np.float32(1), np.float32(-1), np.float32(1), 256, name=name
+        )
+
+    def _create_ov_model(self):
+        inputs = opset.parameter((1, 3, 4, 2), name="Input")
+
+        w = self._rng.random((2, 5), dtype=np.float32)
+        x = opset.matmul(
+            self._create_fq_node(inputs, "FQ_Inputs"),
+            self._create_fq_node(w, "FQ_Weights_0"),
+            transpose_a=False,
+            transpose_b=False,
+            name="MatMul_0",
+        )
+        x = opset.relu(x, name="ReLu_0")
+
+        w = self._rng.random((5, 2), dtype=np.float32)
+        x = opset.matmul(
+            self._create_fq_node(x, "FQ_ReLu_0"),
+            self._create_fq_node(w, "FQ_Weights_1"),
+            transpose_a=False,
+            transpose_b=False,
+            name="MatMul_1",
+        )
+        x = opset.relu(x, name="ReLu_1")
+
+        x = opset.result(x, name="Result")
+        x.get_output_tensor(0).set_names(set(["Result"]))
+
+        model = ov.Model([x], [inputs])
+        return model
