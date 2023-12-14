@@ -194,18 +194,26 @@ def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
 @pytest.mark.parametrize(
     ("ratio", "ref_nf4_nodes"),
     (
-        (1, ["weights_1", "weights_2", "weights_3"]),
-        (0.8, ["weights_2", "weights_3"]),
-        (0.4, ["weights_2"]),
-        (0.3, []),
+        (1, {"weights_0", "weights_1", "weights_2", "weights_3"}),
+        (0.8, {"weights_1", "weights_2", "weights_3"}),
+        (0.4, {"weights_2"}),
+        (0.2, set()),
     ),
 )
 def test_mixed_precision(ratio, group_size, ref_nf4_nodes):
     model = SequentialMatmulModel().ov_model
     compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4, ratio=ratio, group_size=group_size)
-    for op in compressed_model.get_ordered_ops():
-        if op.get_type_name() == "Constant" and op.get_friendly_name() in ref_nf4_nodes:
-            assert op.get_element_type() == ov.Type.nf4
+    names = {
+        op.get_friendly_name() for op in compressed_model.get_ordered_ops() if op.get_element_type() == ov.Type.nf4
+    }
+    assert ref_nf4_nodes == names
+
+
+def test_compress_first_and_last():
+    model = SequentialMatmulModel().ov_model
+    compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4, ratio=1, group_size=1, first_and_last=True)
+    num_int4 = sum(1 for op in compressed_model.get_ordered_ops() if op.get_element_type() == ov.Type.nf4)
+    assert num_int4 == 5
 
 
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))

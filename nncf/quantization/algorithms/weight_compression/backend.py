@@ -71,6 +71,7 @@ class WeightCompressionAlgoBackend(ABC):
         mode: CompressWeightsMode,
         ratio: float = None,
         group_size: int = None,
+        first_and_last: bool = False,
     ) -> TModel:
         """
         Compress weights of Linear and Embedding layers to 8-bit integer or to nf4
@@ -96,5 +97,7 @@ class WeightCompressionAlgoBackend(ABC):
             and the rest to INT8_ASYM).
         :param group_size: Number of weights (e.g. 128) in the channel dimension
             that share quantization parameters (scale). The value -1 means no grouping.
+        :param first_and_last: Indicates whether the first and last layers should be compressed to a primary
+            precision. By default, the backup precision is assigned for the first and last layers.
         :return: A resulting model with compressed weights.
         """

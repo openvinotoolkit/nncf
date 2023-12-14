@@ -53,13 +53,14 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         mode: CompressWeightsMode,
         ratio: float = None,
         group_size: int = None,
+        first_and_last: bool = False,
     ) -> ov.Model:
         all_weight_params: List[WeightNodeParams] = []
         quantized_nodes_ids = set()
 
         friendly_name_to_op_map = {op.get_friendly_name(): op for op in model.get_ops()}
 
-        is_last_layer_compressed = False
+        is_last_layer_shared = False
         n = len(nodes_to_compress)
         for i, nncf_node in enumerate(nodes_to_compress):
             weight_port_ids = nncf_node.layer_attributes.get_const_port_ids()
@@ -70,7 +71,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                     continue
                 if id(weight_node) in quantized_nodes_ids:
                     if i == n - 1:
-                        is_last_layer_compressed = True
+                        is_last_layer_shared = True
                     continue
                 weight_output = weight_node.output(0)
 
@@ -102,7 +103,9 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 all_weight_params.append(weight_params)
                 quantized_nodes_ids.add(id(weight_node))
 
-        internal_weight_params = _get_internal_weight_params(all_weight_params, mode, is_last_layer_compressed)
+        internal_weight_params = _get_internal_weight_params(
+            all_weight_params, mode, is_last_layer_shared, first_and_last
+        )
         _set_weight_compression_config(internal_weight_params, mode, ratio, group_size)
         nncf_logger.info(_get_bitwidth_distribution_str(all_weight_params, internal_weight_params))
 
@@ -377,20 +380,25 @@ def _get_bitwidth_distribution_str(all_params: List[WeightNodeParams], internal_
 
 
 def _get_internal_weight_params(
-    all_weight_params: List[WeightNodeParams], mode: CompressWeightsMode, is_last_layer_compressed: bool
+    all_weight_params: List[WeightNodeParams],
+    mode: CompressWeightsMode,
+    is_last_layer_shared: bool,
+    first_and_last: bool,
 ) -> List[WeightNodeParams]:
     """
     Returns the internal weight parameters.
 
     :param all_weight_params: List of all weight parameters.
     :param mode: Weight compression mode.
-    :param is_last_layer_compressed: Indicates whether the last layer is compressed.
+    :param is_last_layer_shared: Indicates whether the last layer shares the weight to be quantized.
+    :param first_and_last: Indicates whether the first and last layers should be compressed to a primary
+        precision. By default, the backup precision is assigned for the first and last layers.
     :return: List of information about weight nodes that are considered for mixed precision.
     """
     internal_weight_params = all_weight_params
-    if mode not in [CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM]:
+    if mode not in [CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM] and not first_and_last:
         internal_weight_params = list(filter(lambda wp: wp.metatype != OVEmbeddingMetatype, internal_weight_params))
-        if not is_last_layer_compressed:
+        if not is_last_layer_shared:
             internal_weight_params = internal_weight_params[:-1]
     return internal_weight_params
 
