@@ -23,8 +23,8 @@ from nncf.common.utils.backend import get_backend
 from nncf.common.utils.os import get_available_cpu_count
 from nncf.common.utils.os import get_available_memory_amount
 from nncf.data.dataset import Dataset
-from nncf.quantization.advanced_parameters import BackupMode
 from nncf.parameters import DropType
+from nncf.quantization.advanced_parameters import BackupMode
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResults
@@ -158,6 +158,7 @@ class QuantizationAccuracyRestorer:
             calculated.
         :param num_ranking_workers: The number of parallel workers that are used to rank
             quantization operations.
+        :param backup_mode: Backup mode.
         """
         self.ranking_subset_size = ranking_subset_size
         self.max_num_iterations = max_num_iterations

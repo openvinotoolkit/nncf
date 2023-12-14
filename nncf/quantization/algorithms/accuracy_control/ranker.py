@@ -24,12 +24,12 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.timer import timer
 from nncf.data.dataset import Dataset
+from nncf.quantization.advanced_parameters import BackupMode
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.accuracy_control.rank_functions import create_normalized_mse_func
 from nncf.quantization.algorithms.accuracy_control.subset_selection import select_subset
 from nncf.quantization.passes import remove_shapeof_subgraphs
-from nncf.quantization.advanced_parameters import BackupMode
 
 TModel = TypeVar("TModel")
 TPModel = TypeVar("TPModel")

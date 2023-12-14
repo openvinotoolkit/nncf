@@ -132,8 +132,12 @@ class AdvancedSmoothQuantParameters:
 
 class BackupMode(Enum):
     """
-    :param FP32:
-    :param INT8_WEIGHTS:
+    Specifies how to revert operations to their original precision.
+
+    :param FP32: Operations will be reverted to floating-point precision.
+    :param INT8_WEIGHTS: Certain operations (such as MatMul and Embedding) will
+        be reverted to representation with int8 weights, while all other operations
+        will revert to floating-point precision.
     """
 
     FP32 = "fp32"
@@ -232,7 +236,7 @@ class AdvancedAccuracyRestorerParameters:
     :param intermediate_model_dir: Path to the folder where the model, which was fully
         quantized with initial parameters, should be saved.
     :type intermediate_model_dir: Optional[str]
-    :param backup_mode:
+    :param backup_mode: Specifies how to revert operations to their original precision.
     :type backup_mode: BackupMode
     """
 

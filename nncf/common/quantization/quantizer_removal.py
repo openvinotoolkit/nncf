@@ -106,6 +106,9 @@ def revert_operations_to_floating_point_precision(
     :param quantized_model: Quantized model in which provided operations
         should be reverted to floating-point precision.
     :param quantized_model_graph: The graph which was built for `quantized_model`.
+    :param backup_mode: Backup mode.
+    :param weighted_metatypes: List of operation metatypes that can be reverted to representation
+        with int8 weights.
     :return: The model where `operations` were reverted to floating-point precision.
     """
     transformation_layout = TransformationLayout()

@@ -17,13 +17,13 @@ import openvino.runtime as ov
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
+from nncf.openvino.graph.metatypes import openvino_metatypes as ov_metatypes
 from nncf.openvino.graph.metatypes.groups import CONSTANT_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import FAKE_QUANTIZE_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import INPUTS_QUANTIZABLE_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
 from nncf.openvino.graph.metatypes.groups import QUANTIZE_AGNOSTIC_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import SHAPEOF_OPERATIONS
-from nncf.openvino.graph.metatypes import openvino_metatypes as ov_metatypes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConcatMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.openvino.graph.node_utils import get_bias_value
