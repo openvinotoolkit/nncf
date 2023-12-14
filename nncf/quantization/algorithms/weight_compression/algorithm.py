@@ -51,7 +51,7 @@ class WeightCompression(Algorithm):
         ratio: float = None,
         group_size: int = None,
         ignored_scope: Optional[IgnoredScope] = None,
-        all_layers: bool = False,
+        all_layers: Optional[bool] = False,
     ):
         """
         :param mode: Defines a mode for weight compression.

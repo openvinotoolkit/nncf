@@ -71,7 +71,7 @@ class WeightCompressionAlgoBackend(ABC):
         mode: CompressWeightsMode,
         ratio: float = None,
         group_size: int = None,
-        all_layers: bool = False,
+        all_layers: Optional[bool] = False,
     ) -> TModel:
         """
         Compress weights of Linear and Embedding layers to 8-bit integer or to nf4

@@ -53,7 +53,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         mode: CompressWeightsMode,
         ratio: float = None,
         group_size: int = None,
-        all_layers: bool = False,
+        all_layers: Optional[bool] = False,
     ) -> ov.Model:
         all_weight_params: List[WeightNodeParams] = []
         quantized_nodes_ids = set()
@@ -103,9 +103,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 all_weight_params.append(weight_params)
                 quantized_nodes_ids.add(id(weight_node))
 
-        internal_weight_params = _get_internal_weight_params(
-            all_weight_params, mode, is_last_layer_shared, all_layers
-        )
+        internal_weight_params = _get_internal_weight_params(all_weight_params, mode, is_last_layer_shared, all_layers)
         _set_weight_compression_config(internal_weight_params, mode, ratio, group_size)
         nncf_logger.info(_get_bitwidth_distribution_str(all_weight_params, internal_weight_params))
 
