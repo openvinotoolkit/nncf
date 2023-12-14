@@ -288,7 +288,7 @@ class ElementwisePruningOp(BasePruningOp):
         input_masks: List[Optional[PropagationMask]], input_shapes: List[Tuple[int, ...]]
     ) -> Optional[PropagationMask]:
         """
-        Attempts to propagate a mask in case of one input mask In case one of the masks is None.
+        Attempts to propagate a mask in case of one input mask is None.
 
         :param input_masks: List of propagation masks for each input of the element-wise operation
         :param input_shapes: List of tensor shapes for each input.
