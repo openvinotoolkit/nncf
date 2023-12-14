@@ -21,6 +21,7 @@ from nncf.common.graph import NNCFNode
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.utils.helpers import create_table
@@ -31,6 +32,8 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
+from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
+from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.openvino.rt_info import dump_parameters
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
@@ -39,6 +42,7 @@ from nncf.quantization.fake_quantize import calculate_scale_zero_point
 from nncf.quantization.passes import transform_to_inference_graph
 from nncf.scopes import IgnoredScope
 
+from nncf.quantization.algorithms.smooth_quant.openvino_backend import OVSmoothQuantAlgoBackend
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer, StatisticPoint
 from nncf.openvino.graph.transformations.commands import OVTargetPoint, TargetType
 from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
@@ -546,6 +550,9 @@ def _apply_AWQ(model: ov.Model,
 
     friendly_name_to_op_map = {op.get_friendly_name(): op for op in model.get_ops()}
     alpha_step = (alpha_max - alpha_min) / steps
+
+    transformation_layout = TransformationLayout()
+    
     for k, v in track(statistics_aggregator.statistic_points.items(), description="Applying AWQ"):
         stats = list(v[0].algorithm_to_tensor_collectors["AWQ"][0].aggregators.values())[0]._container
         stats = [stat.squeeze() for stat in stats]
@@ -648,5 +655,13 @@ def _apply_AWQ(model: ov.Model,
             else:
                 w_scale = np.expand_dims(w_scale, 0)
 
-            weight = weight * w_scale
-            np.copyto(wp.weight_node.data, weight)
+            # weight = weight * w_scale
+            # np.copyto(wp.weight_node.data, weight)
+
+            weight_port = OVSmoothQuantAlgoBackend.get_weight_tensor_port_id(node)
+            weight_value = OVSmoothQuantAlgoBackend.get_weight_value(node, model, weight_port)
+            scaled_weight = weight_value * w_scale
+            weight_update_command = OVSmoothQuantAlgoBackend(
+                node, scaled_weight, weight_port
+            )
+            transformation_layout.register(weight_update_command)
