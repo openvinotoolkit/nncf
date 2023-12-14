@@ -718,6 +718,11 @@ class NNCFNetworkInterface(torch.nn.Module):
         return result
 
     def get_node_to_op_address_mapping(self) -> Dict[NNCFNodeName, OperationAddress]:
+        """
+        Returns map of NNCFGraph node names vs DynamicGraph operation addresses.
+
+        :return: NNCFGraph node names vs DynamicGraph operation addresses map.
+        """
         retval = {}
         dynamic_graph = (
             self._original_dynamic_graph if self._compressed_traced_graph is None else self._compressed_traced_graph

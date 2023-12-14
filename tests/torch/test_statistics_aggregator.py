@@ -46,8 +46,8 @@ class PTIdentityConvModel(nn.Module, ToNNCFNetworkInterface):
 
 
 class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
-    @classmethod
-    def get_min_max_algo_backend_cls(cls) -> Type[PTMinMaxAlgoBackend]:
+    @staticmethod
+    def get_min_max_algo_backend_cls() -> Type[PTMinMaxAlgoBackend]:
         return PTMinMaxAlgoBackend
 
     def get_bias_correction_algo_backend_cls(self) -> None:

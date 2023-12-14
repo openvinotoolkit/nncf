@@ -50,8 +50,8 @@ def get_StatisticAgregatorTestModel(input_shape, kernel):
 
 
 class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
-    @classmethod
-    def get_min_max_algo_backend_cls(cls) -> Type[OVMinMaxAlgoBackend]:
+    @staticmethod
+    def get_min_max_algo_backend_cls() -> Type[OVMinMaxAlgoBackend]:
         return OVMinMaxAlgoBackend
 
     def get_bias_correction_algo_backend_cls(self) -> Type[OVBiasCorrectionAlgoBackend]:

@@ -32,8 +32,8 @@ INPUT_SHAPE = [3, 3, 3]
 
 
 class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
-    @classmethod
-    def get_min_max_algo_backend_cls(cls) -> Type[ONNXMinMaxAlgoBackend]:
+    @staticmethod
+    def get_min_max_algo_backend_cls() -> Type[ONNXMinMaxAlgoBackend]:
         return ONNXMinMaxAlgoBackend
 
     def get_bias_correction_algo_backend_cls(self) -> Type[ONNXBiasCorrectionAlgoBackend]:

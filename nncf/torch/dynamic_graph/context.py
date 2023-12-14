@@ -14,7 +14,7 @@ import weakref
 from collections import defaultdict
 from collections import deque
 from contextlib import contextmanager
-from typing import Callable, Dict, List, Optional
+from typing import Callable, DefaultDict, List, Optional
 
 import torch
 
@@ -92,8 +92,8 @@ class TracingContext:
     def __init__(self):
         self.graph = DynamicGraph()
 
-        self._post_hooks = defaultdict(list)
-        self._pre_hooks: Dict[PreHookId, List[Callable]] = defaultdict(list)
+        self._post_hooks: DefaultDict[OperationAddress, List[Callable]] = defaultdict(list)
+        self._pre_hooks: DefaultDict[PreHookId, List[Callable]] = defaultdict(list)
         self._num_nested_hooks = 0
 
         self._threading = CopySafeThreadingVars()

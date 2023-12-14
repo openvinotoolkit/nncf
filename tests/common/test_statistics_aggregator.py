@@ -49,9 +49,9 @@ class BCStatsCollectors(Enum):
 
 
 class TemplateTestStatisticsAggregator:
-    @classmethod
+    @staticmethod
     @abstractmethod
-    def get_min_max_algo_backend_cls(cls) -> Type[MinMaxAlgoBackend]:
+    def get_min_max_algo_backend_cls() -> Type[MinMaxAlgoBackend]:
         pass
 
     @abstractmethod
@@ -76,7 +76,7 @@ class TemplateTestStatisticsAggregator:
 
     @staticmethod
     @abstractmethod
-    def get_target_point(self, target_type: TargetType) -> TargetPoint:
+    def get_target_point(target_type: TargetType) -> TargetPoint:
         pass
 
     @abstractmethod
