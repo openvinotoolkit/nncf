@@ -17,6 +17,7 @@ import numpy as np
 import openvino.runtime as ov
 from openvino.runtime import opset9 as opset
 
+from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
@@ -122,9 +123,9 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         internal_weight_params = _get_internal_weight_params(all_weight_params, mode, is_last_layer_compressed)
         _set_weight_compression_config(internal_weight_params, mode, ratio, group_size)
         nncf_logger.info(_get_bitwidth_distribution_str(all_weight_params, internal_weight_params))
-        
+
         if dataset is not None:
-            _apply_AWQ(model, graph, all_weight_params, nodes_to_compress, dataset)
+            model = _apply_AWQ(model, graph, all_weight_params, nodes_to_compress, dataset)
 
         for wp in track(all_weight_params, description="Applying Weight Compression"):
             weight_node = wp.weight_node
@@ -523,12 +524,29 @@ def _apply_AWQ(model: ov.Model,
     for _, pattern_graph in get_awq_patterns().items():
         matches.extend(find_subgraphs_matching_pattern(nx_graph, pattern_graph(), strict=False))
 
-
     if len(matches) == 0:
         return
-    nodes_for_stats = []
-    target_node_names = []
+
+    @dataclass
+    class AWQTriplet:
+        """
+        Information on how to compress (quantize) a specific weight.
+
+        :param mode: Defines a mode for weight compression. Defaults to INT8_ASYM mode.
+        :param group_size: Number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
+            The value -1 means no grouping. Defaults to -1.
+        """
+
+        weight_params: WeightNodeParams = None
+        target_node: NNCFNode = None
+        merge_node: NNCFNode = None
+
     idxs = {}
+    target_node_names = []
+    merge_node_names = []
+    awq_data = {}
+    name_mapping = {wp.weight_node.get_friendly_name(): idx for idx, wp in enumerate(all_weight_params)}
+
     for match in matches:
         nncf_node = graph.get_node_by_key(match[-1])
         weight_port_ids = nncf_node.layer_attributes.get_const_port_ids()
@@ -536,29 +554,40 @@ def _apply_AWQ(model: ov.Model,
             weight_op_friendly_name = nncf_node.layer_attributes.constant_attributes[weight_port_id]["name"]
             target_node_names.append(weight_op_friendly_name)
 
-    for idx, (wp, node) in enumerate(zip(all_weight_params, nodes_to_compress)):
-        if wp.compression_config.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT4_SYM] and \
-           wp.weight_node.get_friendly_name() in target_node_names:
-            idxs[node.node_name] = idx
-            nodes_for_stats.append(node)
+        nncf_node = graph.get_node_by_key(match[0])
+        weight_port_ids = nncf_node.layer_attributes.get_const_port_ids()
+        for weight_port_id in weight_port_ids:
+            weight_op_friendly_name = nncf_node.layer_attributes.constant_attributes[weight_port_id]["name"]
+            merge_node_names.append(weight_op_friendly_name)
+        
+        assert len(target_node_names) == len(merge_node_names)
+        weight_params = all_weight_params[name_mapping[target_node_names[-1]]]
+        target_node = nodes_to_compress[name_mapping[target_node_names[-1]]]
+        merge_node = nodes_to_compress[name_mapping[merge_node_names[-1]]]
 
+        awq_data[target_node_names[-1]] = AWQTriplet(weight_params, target_node, merge_node)
+
+    nodes_for_stats = [v.target_node for k, v in awq_data.items()]
     statistic_points = _get_statistic_points(nodes_for_stats, subset_size)
-    
+
     statistics_aggregator = OVStatisticsAggregator(dataset)
     statistics_aggregator.register_statistic_points(statistic_points)
     statistics_aggregator.collect_statistics(model, graph)
 
-    friendly_name_to_op_map = {op.get_friendly_name(): op for op in model.get_ops()}
     alpha_step = (alpha_max - alpha_min) / steps
 
+    model_transformer = ModelTransformerFactory.create(model)
     transformation_layout = TransformationLayout()
     
     for k, v in track(statistics_aggregator.statistic_points.items(), description="Applying AWQ"):
         stats = list(v[0].algorithm_to_tensor_collectors["AWQ"][0].aggregators.values())[0]._container
         stats = [stat.squeeze() for stat in stats]
-        idx = idxs[k]
-        wp = all_weight_params[idx]
-        node = nodes_to_compress[idx]
+
+        awq_data_item = awq_data[k]
+        wp = awq_data_item.weight_params
+        target_node = awq_data_item.target_node
+        merge_node = awq_data_item.merge_node
+
         config = wp.compression_config
 
         X = np.vstack(stats).transpose()
@@ -623,45 +652,26 @@ def _apply_AWQ(model: ov.Model,
         a_scale = scale
         a_scale = np.expand_dims(1.0 / a_scale, 0)
 
-        a_node = graph.get_input_edges(node)[0].from_node
-        o_node = friendly_name_to_op_map[a_node.node_name]
+        w_scale = scale
+        if wp.reduction_axis == 0:
+            w_scale = np.expand_dims(w_scale, 1)
+        else:
+            w_scale = np.expand_dims(w_scale, 0)
 
-        output_port_id = 0
-        node_output_port = o_node.output(output_port_id)
+        weight_port = OVSmoothQuantAlgoBackend.get_weight_tensor_port_id(target_node)
+        weight_value = OVSmoothQuantAlgoBackend.get_weight_value(target_node, model, weight_port)
+        scaled_weight = weight_value * w_scale
+        weight_update_command = OVSmoothQuantAlgoBackend(
+            target_node, scaled_weight, weight_port
+        )
+        
+        weight_port = OVSmoothQuantAlgoBackend.get_weight_tensor_port_id(merge_node)
+        weight_value = OVSmoothQuantAlgoBackend.get_weight_value(merge_node, model, weight_port)
+        scaled_weight = weight_value * abs_scale
+        weight_update_command = OVSmoothQuantAlgoBackend(
+            merge_node, scaled_weight, weight_port
+        )
 
-        destination_ports = []
+        transformation_layout.register(weight_update_command)
 
-        for target_input_port in node_output_port.get_target_inputs():
-            target_node = target_input_port.get_node()
-            if target_node.get_friendly_name() == node.node_name:
-                destination_ports.append(target_input_port)
-
-        if len(destination_ports):
-            scale_dtype = ov.Type(np.float32)
-            fp16_dtype = ov.Type(np.float16)
-            if all(p.get_element_type() == fp16_dtype for p in destination_ports):
-                scale_dtype = fp16_dtype
-
-            scale_constant = opset.constant(a_scale, dtype=scale_dtype)
-            multiply_node = opset.multiply(node_output_port, scale_constant, name=wp.fq_name + "_awq_scale")
-
-            for destination_port in destination_ports:
-                destination_port.replace_source_output(multiply_node.output(0))
-
-            w_scale = scale
-            if wp.reduction_axis == 0:
-                weight = weight.transpose()
-                w_scale = np.expand_dims(w_scale, 1)
-            else:
-                w_scale = np.expand_dims(w_scale, 0)
-
-            # weight = weight * w_scale
-            # np.copyto(wp.weight_node.data, weight)
-
-            weight_port = OVSmoothQuantAlgoBackend.get_weight_tensor_port_id(node)
-            weight_value = OVSmoothQuantAlgoBackend.get_weight_value(node, model, weight_port)
-            scaled_weight = weight_value * w_scale
-            weight_update_command = OVSmoothQuantAlgoBackend(
-                node, scaled_weight, weight_port
-            )
-            transformation_layout.register(weight_update_command)
+    return model_transformer.transform(transformation_layout)
