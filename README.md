@@ -6,7 +6,7 @@
 [Installation](#installation-guide) •
 [Documentation](#documentation) •
 [Usage](#usage) •
-[Tutorials and Samples](#model-compression-tutorials-and-samples) •
+[Tutorials and Samples](#demos-tutorials-and-samples) •
 [Third-party integration](#third-party-repository-integration) •
 [Model Zoo](./docs/ModelZoo.md)
 
@@ -21,7 +21,7 @@ Neural Network Compression Framework (NNCF) provides a suite of post-training an
 
 NNCF is designed to work with models from [PyTorch](https://pytorch.org/), [TensorFlow](https://www.tensorflow.org/), [ONNX](https://onnx.ai/) and [OpenVINO&trade;](https://docs.openvino.ai/latest/home.html).
 
-NNCF provides [samples](#model-compression-tutorials-and-samples) that demonstrate the usage of compression algorithms for different use cases and models. See compression results achievable with the NNCF-powered samples at [Model Zoo page](./docs/ModelZoo.md).
+NNCF provides [samples](#demos-tutorials-and-samples) that demonstrate the usage of compression algorithms for different use cases and models. See compression results achievable with the NNCF-powered samples at [Model Zoo page](./docs/ModelZoo.md).
 
 The framework is organized as a Python\* package that can be built and used in a standalone mode. The framework
 architecture is unified to make it easy to add different compression algorithms for both PyTorch and TensorFlow deep
@@ -266,11 +266,12 @@ compression_ctrl.export_model("compressed_model.pb", save_format="frozen_graph")
 
 For a more detailed description of NNCF usage in your training code, see [this tutorial](docs/Usage.md).
 
-
 ## Demos, Tutorials and Samples
+
 For a quicker start with NNCF-powered compression, try sample notebooks and scripts presented below.
 
-### Jupyter* Notebook Tutorials and Demos 
+### Jupyter* Notebook Tutorials and Demos
+
 A collection of ready-to-run Jupyter* notebooks tutorials and demos are available to explain and display how to use NNCF compression algorithms to optimize models for inference with the OpenVINO Toolkit.
 
 | Notebook Tutorial Name                                                                                                                                                                                                                                                                                                                                                                                    |                                  Compression Algorithm                                  |  Backend   |               Domain               |
@@ -307,6 +308,7 @@ Please expand the table below to see the list of notebooks demonstrating OpenVIN
 </details>
 
 ### Post-Training Quantization Examples
+
 Compact scripts demonstrating quantization and corresponding inference speed boost:
 
 | Example Name                                                                                                                             |              Compression Algorithm               |  Backend   |         Domain         |
@@ -321,6 +323,7 @@ Compact scripts demonstrating quantization and corresponding inference speed boo
 | [ONNX MobileNetV2](./examples/post_training_quantization/onnx/mobilenet_v2/README.md)                                                    |            Post-Training Quantization            |    ONNX    |  Image Classification  |
 
 ### Training-Time Compression Examples
+
 These examples provide full pipelines including compression, training and inference for classification, detection and segmentation tasks.
 
 | Example Name                                                                                               |   Compression Algorithm   |  Backend   |        Domain         |
@@ -376,7 +379,7 @@ NNCF is also available via [conda](https://anaconda.org/conda-forge/nncf):
 conda install -c conda-forge nncf
 ```
 
-You may also use one of the Dockerfiles in the [docker](./docker) directory to build an image with an environment already set up and ready for running NNCF [sample scripts](#model-compression-tutorials-and-samples).
+You may also use one of the Dockerfiles in the [docker](./docker) directory to build an image with an environment already set up and ready for running NNCF [sample scripts](#demos-tutorials-and-samples).
 
 ### System requirements
 
