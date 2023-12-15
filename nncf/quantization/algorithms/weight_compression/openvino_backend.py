@@ -541,7 +541,6 @@ def _apply_AWQ(model: ov.Model,
         target_node: NNCFNode = None
         merge_node: NNCFNode = None
 
-    idxs = {}
     target_node_names = []
     merge_node_names = []
     awq_data = {}
@@ -565,9 +564,9 @@ def _apply_AWQ(model: ov.Model,
         target_node = nodes_to_compress[name_mapping[target_node_names[-1]]]
         merge_node = nodes_to_compress[name_mapping[merge_node_names[-1]]]
 
-        awq_data[target_node_names[-1]] = AWQTriplet(weight_params, target_node, merge_node)
+        awq_data[target_node.node_name] = AWQTriplet(weight_params, target_node, merge_node)
 
-    nodes_for_stats = [v.target_node for k, v in awq_data.items()]
+    nodes_for_stats = [v.target_node for _, v in awq_data.items()]
     statistic_points = _get_statistic_points(nodes_for_stats, subset_size)
 
     statistics_aggregator = OVStatisticsAggregator(dataset)
@@ -650,25 +649,25 @@ def _apply_AWQ(model: ov.Model,
                 scale[offset:offset+config.group_size] = best_scale
 
         a_scale = scale
-        a_scale = np.expand_dims(1.0 / a_scale, 0)
-
         w_scale = scale
         if wp.reduction_axis == 0:
             w_scale = np.expand_dims(w_scale, 1)
+            a_scale = np.expand_dims(1.0 / a_scale, 0)
         else:
             w_scale = np.expand_dims(w_scale, 0)
+            a_scale = np.expand_dims(1.0 / a_scale, 1)
 
         weight_port = OVSmoothQuantAlgoBackend.get_weight_tensor_port_id(target_node)
         weight_value = OVSmoothQuantAlgoBackend.get_weight_value(target_node, model, weight_port)
         scaled_weight = weight_value * w_scale
-        weight_update_command = OVSmoothQuantAlgoBackend(
+        weight_update_command = OVSmoothQuantAlgoBackend.weight_update_command(
             target_node, scaled_weight, weight_port
         )
-        
+
         weight_port = OVSmoothQuantAlgoBackend.get_weight_tensor_port_id(merge_node)
         weight_value = OVSmoothQuantAlgoBackend.get_weight_value(merge_node, model, weight_port)
-        scaled_weight = weight_value * abs_scale
-        weight_update_command = OVSmoothQuantAlgoBackend(
+        scaled_weight = weight_value * a_scale
+        weight_update_command = OVSmoothQuantAlgoBackend.weight_update_command(
             merge_node, scaled_weight, weight_port
         )
 
