@@ -20,7 +20,7 @@ import jstyleson as json
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization import quantizers as quant
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.utils.helpers import product_dict
 from nncf.common.utils.os import safe_open

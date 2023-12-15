@@ -20,7 +20,7 @@ import nncf
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.quantizers import get_num_levels
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.config import NNCFConfig
 from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.quantization.layers import AsymmetricQuantizer

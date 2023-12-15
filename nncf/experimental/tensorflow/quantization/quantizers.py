@@ -13,7 +13,7 @@ from typing import Dict, List, Optional
 
 import tensorflow as tf
 
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.utils.registry import Registry
 from nncf.tensorflow.layers.operation import InputType
 from nncf.tensorflow.quantization.quantizers import AsymmetricQuantizer

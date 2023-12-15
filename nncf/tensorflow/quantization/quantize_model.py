@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
 import tensorflow as tf
 
@@ -21,6 +21,7 @@ from nncf.config.structures import QuantizationRangeInitArgs
 from nncf.data import Dataset
 from nncf.data.dataset import DataProvider
 from nncf.parameters import ModelType
+from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import apply_advanced_parameters_to_config
@@ -133,10 +134,11 @@ def _create_nncf_config(
 def quantize_impl(
     model: tf.Module,
     calibration_dataset: Dataset,
-    preset: Union[QuantizationPreset, None],
-    target_device: TargetDevice,
-    subset_size: int,
-    fast_bias_correction: bool,
+    mode: Optional[QuantizationMode] = None,
+    preset: Optional[QuantizationPreset] = None,
+    target_device: TargetDevice = TargetDevice.ANY,
+    subset_size: int = 300,
+    fast_bias_correction: bool = True,
     model_type: Optional[ModelType] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
@@ -156,6 +158,9 @@ def quantize_impl(
         )
     if target_device == TargetDevice.CPU_SPR:
         raise RuntimeError("target_device == CPU_SPR is not supported.")
+
+    if mode is not None:
+        raise ValueError(f"mode={mode} is not supported")
 
     if preset is None:
         preset = QuantizationPreset.PERFORMANCE

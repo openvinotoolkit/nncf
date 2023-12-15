@@ -33,6 +33,6 @@ def is_weight_compression_needed(advanced_parameters: Optional[AdvancedQuantizat
     :param advanced_parameters: Advanced quantization parameters.
     :return: True if weight compression is needed, False otherwise.
     """
-    if advanced_parameters is None:
-        return True
-    return advanced_parameters.backend_params.get(BackendParameters.COMPRESS_WEIGHTS, True)
+    if advanced_parameters is not None and advanced_parameters.backend_params is not None:
+        return advanced_parameters.backend_params.get(BackendParameters.COMPRESS_WEIGHTS, True)
+    return True
