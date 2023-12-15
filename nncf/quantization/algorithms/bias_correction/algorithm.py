@@ -22,6 +22,7 @@ from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFGraphEdge
 from nncf.common.graph import NNCFNode
+from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -284,7 +285,9 @@ class BiasCorrection(Algorithm):
 
         if not subgraph_output_ids:
             for edge in nncf_graph.get_output_edges(node):
-                subgraph_output_ids.append((edge.to_node.node_name, OUTPUT_PORT_OF_NODE))
+                next_node_name = edge.to_node.node_name
+                if NNCFGraphNodeType.OUTPUT_NODE not in next_node_name:
+                    subgraph_output_ids.append((edge.to_node.node_name, OUTPUT_PORT_OF_NODE))
 
         # In case the outputs were not found during the collection of statistics nodes,
         # we use the latter as the outputs of the subgraph.

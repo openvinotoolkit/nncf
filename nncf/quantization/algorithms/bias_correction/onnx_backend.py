@@ -103,7 +103,7 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return node_mapping[node_name].input[input_port_id]
 
     @staticmethod
-    def get_output_name(model: onnx.ModelProto, node_name: str, output_port_id: int) -> List[str]:
+    def get_output_name(model: onnx.ModelProto, node_name: str, output_port_id: int) -> str:
         node_mapping = get_name_to_node_map(model)
         return node_mapping[node_name].output[output_port_id]
 
