@@ -14,6 +14,8 @@ from typing import List, Optional, Tuple, TypeVar
 
 import numpy as np
 import openvino.runtime as ov
+import openvino.runtime.opset12 as opset12
+from openvino.helpers import pack_data
 from openvino.runtime import opset13 as opset
 
 from nncf.common.graph import NNCFNode
@@ -119,15 +121,15 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             original_shape = weight.shape
             if config.mode == CompressWeightsMode.NF4:
                 norm_weight, scale = _get_norm_weight_and_nf4_scale(weight, wp.reduction_axis, group_size)
-                compressed_const = opset.constant(norm_weight, dtype=ov.Type.nf4, name=weight_name)
+                compressed_const = create_constant_node(norm_weight, dtype=ov.Type.nf4, name=weight_name)
                 convert = opset.convert(compressed_const, original_weight_dtype)
                 mul = opset.multiply(convert, scale.astype(original_weight_dtype), name=wp.fq_name)
             else:
                 compressed_weights, scale, zero_point = _do_integer_quantization(weight, wp.reduction_axis, config)
                 compression_type = ov.Type.u8 if config.num_bits == 8 else ov.Type.u4
-                compressed_weights_node = opset.constant(compressed_weights, dtype=compression_type, name=weight_name)
-                convert_weights_node = opset.convert(compressed_weights_node, original_weight_dtype)
-                zero_point_node = opset.constant(zero_point, dtype=compression_type, name=f"{weight_name}/ZP")
+                compressed_const = create_constant_node(compressed_weights, dtype=compression_type, name=weight_name)
+                convert_weights_node = opset.convert(compressed_const, original_weight_dtype)
+                zero_point_node = create_constant_node(zero_point, dtype=compression_type, name=f"{weight_name}/ZP")
                 convert_zp_node = opset.convert(zero_point_node, original_weight_dtype)
                 sub = opset.subtract(convert_weights_node, convert_zp_node)
                 mul = opset.multiply(sub, scale.astype(original_weight_dtype), name=wp.fq_name)
@@ -449,3 +451,26 @@ def _set_weight_compression_config(
             weight_param.compression_config = primary_config
     else:
         _assign_mixed_precision(internal_weight_params, ratio, primary_config)
+
+
+def create_constant_node(data: np.ndarray, dtype: ov.Type, name: str) -> ov.op.Constant:
+    """
+    Creates a constant node with the given constant value, data type, and name.
+
+    :param data: The constant value.
+    :param dtype: The data type of the constant node.
+    :param name: The name to be assigned to the constant node.
+    :return: The OpenVINO constant node.
+    """
+    if dtype in [ov.Type.i4, ov.Type.u4]:
+        # Allocate memory
+        zero_init = np.zeros_like(data)
+        const_node = opset.constant(zero_init, dtype=dtype, name=name)
+        # Fill data with packed values
+        packed_data = pack_data(data, dtype)
+        const_node.data[:] = packed_data
+    elif dtype == ov.Type.nf4:
+        const_node = opset12.constant(data, dtype=dtype, name=name)
+    else:
+        const_node = opset.constant(data, dtype=dtype, name=name)
+    return const_node
