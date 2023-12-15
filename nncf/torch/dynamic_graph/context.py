@@ -14,7 +14,7 @@ import weakref
 from collections import defaultdict
 from collections import deque
 from contextlib import contextmanager
-from typing import Callable, DefaultDict, List, Optional
+from typing import Callable, DefaultDict, List, Optional, Union
 
 import torch
 
