@@ -291,7 +291,7 @@ def compress_weights(
                 "Default values of `ratio` (1) and `group_size` (-1) parameters can not be overridden"
             )
         if all_layers is not None:
-            raise AttributeError("INT8 modes does not support `all_layers` option, set it to None.")
+            raise AttributeError("INT8 modes do not support `all_layers` option, set it to None.")
     else:
         if ratio is None:
             ratio = 1
