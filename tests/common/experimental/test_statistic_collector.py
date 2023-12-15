@@ -329,7 +329,7 @@ def test_wrong_statistic_container_class():
 
 class TemplateTestStatisticCollector:
     @abstractmethod
-    def get_nncf_tensor_cls(self):
+    def get_nncf_tensor(self, value: np.ndarray) -> NNCFTensor:
         pass
 
     @abstractmethod
@@ -366,10 +366,10 @@ class TemplateTestStatisticCollector:
         collector.register_statistic_branch("A", reducer, aggregator)
         input_name = "input_name"
         full_inputs = TensorCollector.get_tensor_collector_inputs(
-            {input_name: self.get_nncf_tensor_cls()(np.array([100]))}, [(hash(reducer), [input_name])]
+            {input_name: self.get_nncf_tensor(np.array([100]))}, [(hash(reducer), [input_name])]
         )
         empty_inputs = TensorCollector.get_tensor_collector_inputs(
-            {input_name: self.get_nncf_tensor_cls()(np.array([]))}, [(hash(reducer), [input_name])]
+            {input_name: self.get_nncf_tensor(np.array([]))}, [(hash(reducer), [input_name])]
         )
 
         stats = collector.get_statistics()
@@ -385,7 +385,7 @@ class TemplateTestStatisticCollector:
             assert aggregator._collected_samples == 2
             stats = collector.get_statistics()
             assert len(stats) == 1
-            assert stats["A"] == self.get_nncf_tensor_cls()([100])
+            assert stats["A"] == self.get_nncf_tensor([100])
             return
 
         assert len(aggregator._container) == 0

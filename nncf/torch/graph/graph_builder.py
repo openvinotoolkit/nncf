@@ -27,11 +27,19 @@ class GraphBuilder:
     def __init__(self, custom_forward_fn: Callable[[torch.nn.Module], Any]):
         self.custom_forward_fn = custom_forward_fn
 
+    def build_dynamic_graph(
+        self,
+        model: torch.nn.Module,
+        context_to_use: Optional[TracingContext] = None,
+        as_eval: bool = False,
+    ) -> DynamicGraph:
+        tracer = GraphTracer(self.custom_forward_fn)
+        return tracer.trace_graph(model, context_to_use, as_eval)
+
     def build_graph(
         self, model: torch.nn.Module, context_to_use: Optional[TracingContext] = None, as_eval: bool = False
     ) -> PTNNCFGraph:
-        tracer = GraphTracer(self.custom_forward_fn)
-        dynamic_graph = tracer.trace_graph(model, context_to_use, as_eval)
+        dynamic_graph = self.build_dynamic_graph(model, context_to_use, as_eval)
         return GraphConverter.convert(dynamic_graph)
 
 

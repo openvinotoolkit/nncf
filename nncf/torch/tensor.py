@@ -32,4 +32,4 @@ class PTNNCFTensor(NNCFTensor):
         return self._tensor.device
 
     def is_empty(self) -> bool:
-        return self.tensor.size == 0
+        return self.tensor.numel() == 0

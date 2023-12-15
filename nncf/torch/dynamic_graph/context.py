@@ -11,9 +11,10 @@
 
 import threading
 import weakref
+from collections import defaultdict
 from collections import deque
 from contextlib import contextmanager
-from typing import Callable, Dict, List, Optional
+from typing import Callable, DefaultDict, List, Optional
 
 import torch
 
@@ -91,8 +92,8 @@ class TracingContext:
     def __init__(self):
         self.graph = DynamicGraph()
 
-        self._post_hooks = {}
-        self._pre_hooks: Dict[PreHookId, List[Callable]] = {}
+        self._post_hooks: DefaultDict[OperationAddress, List[Callable]] = defaultdict(list)
+        self._pre_hooks: DefaultDict[PreHookId, List[Callable]] = defaultdict(list)
         self._num_nested_hooks = 0
 
         self._threading = CopySafeThreadingVars()
@@ -261,9 +262,7 @@ class TracingContext:
 
     def register_pre_hooks(self, fn_list: List[Callable], op_address: OperationAddress, input_port_id: int):
         pre_hook_id = PreHookId(op_address, input_port_id)
-        if pre_hook_id in self._pre_hooks:
-            raise KeyError("Pre hook for context {} is already registered".format(str(pre_hook_id)))
-        self._pre_hooks[pre_hook_id] = fn_list
+        self._pre_hooks[pre_hook_id].extend(fn_list)
 
     def execute_pre_hooks(self, op_address: OperationAddress, op_inputs: OperatorInput) -> OperatorInput:
         in_op = getattr(self, "in_operator", False)
@@ -282,9 +281,7 @@ class TracingContext:
         return op_inputs
 
     def register_post_hooks(self, fn_list: List[Callable], op_address: OperationAddress):
-        if op_address in self._post_hooks:
-            raise KeyError("Post hook for context {} is already registered".format(str(op_address)))
-        self._post_hooks[op_address] = fn_list
+        self._post_hooks[op_address].extend(fn_list)
 
     def execute_post_hooks(self, op_address: OperationAddress, outputs):
         in_op = getattr(self, "in_operator", False)
