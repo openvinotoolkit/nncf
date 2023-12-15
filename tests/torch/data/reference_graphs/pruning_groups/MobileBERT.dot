@@ -1,99 +1,99 @@
 strict digraph  {
 0 [color=red, label="Block: S:1__O:0
-Producers: 11
+Producers: 7
 Consumers: ", style=filled];
 1 [color=grey, label="Block: S:1__O:0
-Producers: 19
+Producers: 15
 Consumers: ", style=filled];
 2 [color=grey, label="Block: S:1__O:0
-Producers: 19,44
-Consumers: 48", style=filled];
+Producers: 15,40
+Consumers: 44", style=filled];
 3 [color=grey, label="Block: S:1__O:0
-Producers: 19,44,50
-Consumers: 48,54", style=filled];
+Producers: 15,40,46
+Consumers: 44,50", style=filled];
 4 [color=grey, label="Block: S:1__O:0
-Producers: 19,44,50,56
-Consumers: 48,54,60", style=filled];
+Producers: 15,40,46,52
+Consumers: 44,50,56", style=filled];
 5 [color=grey, label="Block: S:1__O:0
-Producers: 19,44,50,56,62
-Consumers: 48,54,60,66", style=filled];
+Producers: 15,40,46,52,58
+Consumers: 44,50,56,62", style=filled];
 6 [color=green, label="Block: S:1__O:0
-Producers: 19,44,50,56,62,68
-Consumers: 48,54,60,66,72", style=filled];
+Producers: 15,40,46,52,58,64
+Consumers: 44,50,56,62,68", style=filled];
 7 [color=green, label="Block: S:1__O:0
-Producers: 22
-Consumers: 25,26", style=filled];
+Producers: 18
+Consumers: 21,22", style=filled];
 8 [color=grey, label="Block: S:1__O:0
-Producers: 25
+Producers: 21
 Consumers: ", style=filled];
 9 [color=grey, label="Block: S:64__O:0
-Producers: 25
+Producers: 21
 Consumers: ", style=filled];
 10 [color=grey, label="Block: S:64__O:0
-Producers: 25,26
+Producers: 21,22
 Consumers: ", style=filled];
 11 [color=green, label="Block: S:64__O:0
-Producers: 25,26,27
-Consumers: 44", style=filled];
+Producers: 21,22,23
+Consumers: 40", style=filled];
 12 [color=grey, label="Block: S:1__O:64
-Producers: 25
+Producers: 21
 Consumers: ", style=filled];
 13 [color=green, label="Block: S:1__O:64
-Producers: 25,26
-Consumers: 35", style=filled];
+Producers: 21,22
+Consumers: 31", style=filled];
 14 [color=grey, label="Block: S:1__O:0
-Producers: 26
+Producers: 22
 Consumers: ", style=filled];
 15 [color=grey, label="Block: S:64__O:0
-Producers: 26
+Producers: 22
 Consumers: ", style=filled];
 16 [color=grey, label="Block: S:1__O:64
-Producers: 26
+Producers: 22
 Consumers: ", style=filled];
 17 [color=grey, label="Block: S:1__O:0
-Producers: 27
+Producers: 23
 Consumers: ", style=filled];
 18 [color=grey, label="Block: S:64__O:0
-Producers: 27
+Producers: 23
 Consumers: ", style=filled];
 19 [color=green, label="Block: S:1__O:64
-Producers: 27
-Consumers: 44", style=filled];
+Producers: 23
+Consumers: 40", style=filled];
 20 [color=grey, label="Block: S:1__O:0
-Producers: 44
+Producers: 40
 Consumers: ", style=filled];
 21 [color=green, label="Block: S:1__O:0
-Producers: 48
-Consumers: 50", style=filled];
+Producers: 44
+Consumers: 46", style=filled];
 22 [color=grey, label="Block: S:1__O:0
-Producers: 50
+Producers: 46
 Consumers: ", style=filled];
 23 [color=green, label="Block: S:1__O:0
-Producers: 54
-Consumers: 56", style=filled];
+Producers: 50
+Consumers: 52", style=filled];
 24 [color=grey, label="Block: S:1__O:0
-Producers: 56
+Producers: 52
 Consumers: ", style=filled];
 25 [color=green, label="Block: S:1__O:0
-Producers: 60
-Consumers: 62", style=filled];
+Producers: 56
+Consumers: 58", style=filled];
 26 [color=grey, label="Block: S:1__O:0
-Producers: 62
+Producers: 58
 Consumers: ", style=filled];
 27 [color=green, label="Block: S:1__O:0
-Producers: 66
-Consumers: 68", style=filled];
+Producers: 62
+Consumers: 64", style=filled];
 28 [color=grey, label="Block: S:1__O:0
-Producers: 68
+Producers: 64
 Consumers: ", style=filled];
 29 [color=red, label="Block: S:1__O:0
-Producers: 72
+Producers: 68
 Consumers: ", style=filled];
 30 [color=green, label="Block: S:1__O:0
-Producers: 78
-Consumers: 81", style=filled];
+Producers: 74
+Consumers: 77", style=filled];
 31 [color=red, label="Block: S:1__O:0
-Producers: 81
+Producers: 77
 Consumers: ", style=filled];
 1 -> 2;
 2 -> 3;

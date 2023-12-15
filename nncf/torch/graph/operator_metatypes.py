@@ -154,8 +154,8 @@ class PTNoopMetatype(PTOperatorMetatype):
     external_op_names = [name]
     module_to_function_names = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: [],
-        NamespaceTarget.TORCH_TENSOR: ["contiguous"],
-        NamespaceTarget.TORCH: ["clone"],
+        NamespaceTarget.TORCH_TENSOR: ["contiguous", "clone", "detach", "detach_", "to"],
+        NamespaceTarget.TORCH: ["clone", "detach", "detach_"],
     }
 
 

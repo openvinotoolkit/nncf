@@ -230,10 +230,13 @@ class ElementwisePruningOp(BasePruningOp):
         cls, node: NNCFNode, graph: NNCFGraph, tensor_processor: Type[NNCFPruningBaseTensorProcessor]
     ) -> None:
         input_masks = get_input_masks(node, graph)
-        node.attributes["output_mask"] = cls._get_output_mask(input_masks)
+        input_shapes = [x.tensor_shape for x in graph.get_input_edges(node)]
+        node.attributes["output_mask"] = cls._get_output_mask(input_masks, input_shapes)
 
     @classmethod
-    def _get_output_mask(cls, input_masks: List[Optional[PropagationMask]]) -> Optional[PropagationMask]:
+    def _get_output_mask(
+        cls, input_masks: List[Optional[PropagationMask]], input_shapes: List[Tuple[int, ...]]
+    ) -> Optional[PropagationMask]:
         if not input_masks:
             return None
         output_mask = None
@@ -246,11 +249,16 @@ class ElementwisePruningOp(BasePruningOp):
                 "node_name={node.node_name}"
             )
             output_mask = input_masks[0]
+        elif any(m is None for m in input_masks) and any(m is not None for m in input_masks):
+            # In case of one from input_masks is None
+            output_mask = cls._propagate_single_mask(input_masks, input_shapes)
+            if output_mask is None:
+                cls.invalidate_masks(input_masks)
         elif any(not m for m in input_masks):
             # Need non-empty masks on all branches in order to properly propagate pruning mask,
             # otherwise - invalidate masks
             cls.invalidate_masks(input_masks)
-        else:
+        elif all(m is not None for m in input_masks):
             # Each branch/mask should have a single group along the same dimension. These groups are joined, all others
             # are invalidated.
             output_mask = PropagationMask()
@@ -274,6 +282,73 @@ class ElementwisePruningOp(BasePruningOp):
                         for group in m.dim_groups_map[dim]:
                             group.invalidate()
         return output_mask
+
+    @classmethod
+    def _propagate_single_mask(
+        cls, input_masks: List[Optional[PropagationMask]], input_shapes: List[Tuple[int, ...]]
+    ) -> Optional[PropagationMask]:
+        """
+        Attempts to propagate a mask in case of one input mask is None.
+
+        :param input_masks: List of propagation masks for each input of the element-wise operation
+        :param input_shapes: List of tensor shapes for each input.
+        :return: An instance of PropagationMask or None.
+        """
+        if cls._are_broadcast_dims_in_both_shapes(input_shapes):
+            return None
+
+        none_mask_ind = input_masks.index(None)
+        mask_ind = 0 if none_mask_ind else 1
+
+        dims_diff = len(input_shapes[mask_ind]) - len(input_shapes[none_mask_ind])
+        padded_none_mask_shape = (1,) * dims_diff + input_shapes[none_mask_ind]
+
+        dims_shift = min(dims_diff, 0)
+        for dim in input_masks[mask_ind].dim_groups_map:
+            if padded_none_mask_shape[dim - dims_shift] != 1:
+                return None
+
+        output_mask = PropagationMask()
+        for dim, groups in input_masks[mask_ind].dim_groups_map.items():
+            output_mask.dim_groups_map[dim - dims_shift] = groups
+
+        return output_mask
+
+    @staticmethod
+    def _are_broadcast_dims_in_both_shapes(shapes) -> bool:
+        """
+        Propagation mask is not supported if both shapes will broadcasting by elementwise operation.
+        True, if both shapes have broadcasted dimensions, otherwise False.
+
+        Example:
+            (1, 10), (10, 1) -> True
+            (1,10), (10,) -> False
+
+        :param shapes: Shapes of tensors.
+        :return: True, if both shapes have broadcasted dimensions, otherwise False.
+        """
+        shape_a = shapes[0]
+        shape_b = shapes[1]
+        shape_a_size_diff = len(shape_a) - len(shape_b)
+        shape_b_size_diff = -shape_a_size_diff
+        broadcasted_dims_1 = set()
+        broadcasted_dims_2 = set()
+
+        for i in range(len(shape_a)):
+            shifted_elem = i + shape_b_size_diff
+            if shifted_elem >= 0 and shape_a[i] == 1 and shape_b[shifted_elem] != 1:
+                broadcasted_dims_1.add(i)
+            if shifted_elem < 0 and shape_a[i] != 1:
+                broadcasted_dims_2.add(shifted_elem)
+
+        for i in range(len(shape_b)):
+            shifted_elem = i + shape_a_size_diff
+            if shifted_elem >= 0 and shape_b[i] == 1 and shape_a[shifted_elem] != 1:
+                broadcasted_dims_2.add(i)
+            if shifted_elem < 0 and shape_b[i] != 1:
+                broadcasted_dims_1.add(shifted_elem)
+
+        return bool(broadcasted_dims_1) and bool(broadcasted_dims_2)
 
 
 class GatherPruningOp(BasePruningOp):

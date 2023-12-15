@@ -179,22 +179,22 @@ NLP_DESCS = [
     GroupTestDesc(
         model_desc=GeneralModelDesc(
             model_name="1_layer_BERT",
-            input_info=[dict(sample_size=[1, 10], type="long")] * 3,
+            input_info=[dict(sample_size=[1, 10], type="long")],
             model_builder=partial(AutoModelForQuestionAnswering.from_config, BertConfig(num_hidden_layers=1)),
         ),
         ref_groups=[
             PruningGroup(
                 block=PruningBlock(size=64, offset=0),
-                producers={ProducerInfo(12), ProducerInfo(15), ProducerInfo(11)},
-                consumers={ConsumerInfo(30)},
+                producers={ProducerInfo(9), ProducerInfo(12), ProducerInfo(8)},
+                consumers={ConsumerInfo(27)},
             ),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(34)}, consumers={ConsumerInfo(36)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(31)}, consumers={ConsumerInfo(33)}),
         ],
     ),
     GroupTestDesc(
         model_desc=GeneralModelDesc(
             model_name="larger_BERT",
-            input_info=[dict(sample_size=[1, 128], type="long")] * 4,
+            input_info=[dict(sample_size=[1, 128], type="long")],
             model_builder=partial(
                 AutoModelForSequenceClassification.from_config,
                 BertConfig(
@@ -214,26 +214,26 @@ NLP_DESCS = [
         ref_groups=[
             PruningGroup(
                 block=PruningBlock(size=2, offset=0),
-                producers={ProducerInfo(12), ProducerInfo(13), ProducerInfo(16)},
-                consumers={ConsumerInfo(31)},
+                producers={ProducerInfo(8), ProducerInfo(9), ProducerInfo(12)},
+                consumers={ConsumerInfo(27)},
             ),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(35)}, consumers={ConsumerInfo(37)}),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(42)}, consumers={ConsumerInfo(45)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(31)}, consumers={ConsumerInfo(33)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(38)}, consumers={ConsumerInfo(41)}),
         ],
     ),
     GroupTestDesc(
         model_desc=GeneralModelDesc(
             model_name="RoBERTa",
-            input_info=[dict(sample_size=[1, 10], type="long")] * 3,
+            input_info=[dict(sample_size=[1, 10], type="long")],
             model_builder=partial(AutoModelForQuestionAnswering.from_config, RobertaConfig(num_hidden_layers=1)),
         ),
         ref_groups=[
             PruningGroup(
                 block=PruningBlock(size=64, offset=0),
-                producers={ProducerInfo(20), ProducerInfo(23), ProducerInfo(19)},
-                consumers={ConsumerInfo(38)},
+                producers={ProducerInfo(17), ProducerInfo(20), ProducerInfo(16)},
+                consumers={ConsumerInfo(35)},
             ),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(42)}, consumers={ConsumerInfo(44)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(39)}, consumers={ConsumerInfo(41)}),
         ],
     ),
     GroupTestDesc(
@@ -264,7 +264,7 @@ NLP_DESCS = [
     GroupTestDesc(
         model_desc=GeneralModelDesc(
             model_name="MobileBERT",
-            input_info=[dict(sample_size=[1, 128], type="long")] * 4,
+            input_info=[dict(sample_size=[1, 128], type="long")],
             model_builder=partial(
                 AutoModelForSequenceClassification.from_config,
                 MobileBertConfig(
@@ -285,28 +285,28 @@ NLP_DESCS = [
             PruningGroup(
                 block=PruningBlock(),
                 producers={
-                    ProducerInfo(19),
-                    ProducerInfo(44),
-                    ProducerInfo(50),
-                    ProducerInfo(56),
-                    ProducerInfo(62),
-                    ProducerInfo(68),
+                    ProducerInfo(15),
+                    ProducerInfo(40),
+                    ProducerInfo(46),
+                    ProducerInfo(52),
+                    ProducerInfo(58),
+                    ProducerInfo(64),
                 },
-                consumers={ConsumerInfo(66), ConsumerInfo(48), ConsumerInfo(60), ConsumerInfo(72), ConsumerInfo(54)},
+                consumers={ConsumerInfo(62), ConsumerInfo(44), ConsumerInfo(56), ConsumerInfo(68), ConsumerInfo(50)},
             ),
             PruningGroup(
                 block=PruningBlock(size=64, offset=0),
-                producers={ProducerInfo(25), ProducerInfo(26), ProducerInfo(27)},
-                consumers={ConsumerInfo(44)},
+                producers={ProducerInfo(21), ProducerInfo(22), ProducerInfo(23)},
+                consumers={ConsumerInfo(40)},
             ),
             PruningGroup(
-                block=PruningBlock(), producers={ProducerInfo(22)}, consumers={ConsumerInfo(25), ConsumerInfo(26)}
+                block=PruningBlock(), producers={ProducerInfo(18)}, consumers={ConsumerInfo(21), ConsumerInfo(22)}
             ),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(48)}, consumers={ConsumerInfo(50)}),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(54)}, consumers={ConsumerInfo(56)}),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(60)}, consumers={ConsumerInfo(62)}),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(66)}, consumers={ConsumerInfo(68)}),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(78)}, consumers={ConsumerInfo(81)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(44)}, consumers={ConsumerInfo(46)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(50)}, consumers={ConsumerInfo(52)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(56)}, consumers={ConsumerInfo(58)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(62)}, consumers={ConsumerInfo(64)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(74)}, consumers={ConsumerInfo(77)}),
         ],
     ),
 ]
