@@ -287,8 +287,6 @@ A collection of ready-to-run Jupyter* notebooks tutorials and demos are availabl
 
 Please expand the table below to see the list of notebooks demonstrating OpenVINO conversion and inference together with NNCF compression for models from various domains.
 
-<details><summary><b>Demo Notebooks</b></summary>
-
 | Demo Model                                                                                                                                                                                                                                                                                                                                                |               Compression Algorithm               | Backend  |                              Domain                               |
 |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:-------------------------------------------------:|:--------:|:-----------------------------------------------------------------:|
 | [YOLOv8](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/230-yolov8-optimization)<br>[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/openvinotoolkit/openvino_notebooks/blob/main/notebooks/230-yolov8-optimization/230-yolov8-object-detection.ipynb)            |            Post-Training Quantization             | OpenVINO | Object Detection,<br>KeyPoint Detection,<br>Instance Segmentation |
@@ -310,7 +308,6 @@ Please expand the table below to see the list of notebooks demonstrating OpenVIN
 | [Grammar Error Correction](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/214-grammar-correction)                                                                                                                                                                                                                              |            Post-Training Quantization             | OpenVINO |                      NLP, Grammar Correction                      |
 | [Dolly 2.0](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/240-dolly-2-instruction-following)                                                                                                                                                                                                                                  |                Weight Compression                 | OpenVINO |                    NLP, Instruction Following                     |
 | [LLM Chat Bots](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/254-llm-chatbot)                                                                                                                                                                                                                                                |                Weight Compression                 | OpenVINO |                           NLP, Chat Bot                           |
-</details>
 
 ### Post-Training Quantization Examples
 
