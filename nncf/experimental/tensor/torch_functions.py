@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import torch
 
@@ -54,22 +54,16 @@ def _(a: torch.Tensor) -> torch.Tensor:
 
 @fns.max.register(torch.Tensor)
 def _(
-    a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: Optional[bool] = False
+    a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = False
 ) -> torch.Tensor:
-    # Analog of numpy.max is torch.amax
-    if axis is None:
-        return torch.amax(a)
-    return torch.amax(a, dim=axis, keepdim=keepdim)
+    return torch.amax(a, dim=axis, keepdim=keepdims)
 
 
 @fns.min.register(torch.Tensor)
 def _(
-    a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: Optional[bool] = False
+    a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = False
 ) -> torch.Tensor:
-    # Analog of numpy.min is torch.amin
-    if axis is None:
-        return torch.amin(a)
-    return torch.amin(a, dim=axis, keepdim=keepdim)
+    return torch.amin(a, dim=axis, keepdim=keepdims)
 
 
 @fns.abs.register(torch.Tensor)
@@ -190,13 +184,3 @@ def _(a: torch.Tensor, axis: Union[int, Tuple[int, ...]] = None, keepdims: bool 
 @fns.round.register(torch.Tensor)
 def _(a: torch.Tensor, decimals=0) -> torch.Tensor:
     return torch.round(a, decimals=decimals)
-
-
-@fns._binary_op_nowarn.register(torch.Tensor)
-def _(a: torch.Tensor, b: Union[torch.Tensor, float], operator_fn: Callable) -> torch.Tensor:
-    return operator_fn(a, b)
-
-
-@fns._binary_reverse_op_nowarn.register(torch.Tensor)
-def _(a: torch.Tensor, b: Union[torch.Tensor, float], operator_fn: Callable) -> torch.Tensor:
-    return operator_fn(b, a)
