@@ -16,7 +16,9 @@ Classes
 .. autoapisummary::
 
    nncf.quantization.advanced_parameters.OverflowFix
+   nncf.quantization.advanced_parameters.FP8Type
    nncf.quantization.advanced_parameters.QuantizationParameters
+   nncf.quantization.advanced_parameters.FP8QuantizationParameters
    nncf.quantization.advanced_parameters.AdvancedBiasCorrectionParameters
    nncf.quantization.advanced_parameters.AdvancedSmoothQuantParameters
    nncf.quantization.advanced_parameters.AdvancedQuantizationParameters
@@ -51,6 +53,17 @@ Classes
    :param DISABLE: All weights are quantized using the full 8-bit quantization range.
 
 
+.. py:class:: FP8Type
+
+   Bases: :py:obj:`enum.Enum`
+
+   Defines FP8 special types (https://arxiv.org/pdf/2209.05433.pdf).
+
+   :param E4M3: Mode with 4-bit exponent and 3-bit mantissa.
+   :param E5M2: Mode with 5-bit exponent and 2-bit mantissa.
+
+
+
 .. py:class:: QuantizationParameters
 
    Contains quantization parameters for weights or activations.
@@ -77,6 +90,14 @@ Classes
        * [0; 2^num_bits - 2] for unsigned quantization and
        * [-2^(num_bits - 1) + 1; 2^(num_bits - 1) - 1] for signed quantization
    :type narrow_range: Optional[bool]
+
+
+.. py:class:: FP8QuantizationParameters
+
+   Contains convert parameters for weights or activations.
+
+   :param destination_type: Currently contains E4M3 or E5M2 for FP8 precision.
+   :type destination_type: FP8Type
 
 
 .. py:class:: AdvancedBiasCorrectionParameters

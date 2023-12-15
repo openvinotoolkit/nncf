@@ -410,13 +410,16 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="#nncf.ModelType" title="nncf.ModelType"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ModelType</span></code></a></p></td>
 <td><p>Describes the model type the specificity of which will be taken into account during compression.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.TargetDevice" title="nncf.TargetDevice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TargetDevice</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.QuantizationMode" title="nncf.QuantizationMode"><code class="xref py py-obj docutils literal notranslate"><span class="pre">QuantizationMode</span></code></a></p></td>
+<td><p>Defines special modes.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.TargetDevice" title="nncf.TargetDevice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TargetDevice</span></code></a></p></td>
 <td><p>Target device architecture for compression.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.QuantizationPreset" title="nncf.QuantizationPreset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">QuantizationPreset</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.QuantizationPreset" title="nncf.QuantizationPreset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">QuantizationPreset</span></code></a></p></td>
 <td><p>An enum with values corresponding to the available quantization presets.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></p></td>
 <td><p>Provides an option to specify portions of model to be excluded from compression.</p></td>
 </tr>
 </tbody>
@@ -434,7 +437,7 @@
 <tr class="row-even"><td><p><a class="reference internal" href="#nncf.compress_weights" title="nncf.compress_weights"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compress_weights</span></code></a>(model[, mode, ratio, group_size, ...])</p></td>
 <td><p>Compress model weights.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantize" title="nncf.quantize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">quantize</span></code></a>(model, calibration_dataset[, preset, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantize" title="nncf.quantize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">quantize</span></code></a>(model, calibration_dataset[, mode, preset, ...])</p></td>
 <td><p>Applies post-training quantization to the provided model.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantize_with_accuracy_control" title="nncf.quantize_with_accuracy_control"><code class="xref py py-obj docutils literal notranslate"><span class="pre">quantize_with_accuracy_control</span></code></a>(model, ...[, max_drop, ...])</p></td>
@@ -697,6 +700,22 @@ the original model.</p></li>
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="nncf.QuantizationMode">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">QuantizationMode</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.QuantizationMode" title="Permalink to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
+<p>Defines special modes.
+Currently contains only FP8-related modes (<a class="reference external" href="https://arxiv.org/pdf/2209.05433.pdf">https://arxiv.org/pdf/2209.05433.pdf</a>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>FP8_E4M3</strong> – Mode with 4-bit exponent and 3-bit mantissa.</p></li>
+<li><p><strong>FP8_E5M2</strong> – Mode with 5-bit exponent and 2-bit mantissa.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="nncf.TargetDevice">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">TargetDevice</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.TargetDevice" title="Permalink to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
@@ -756,7 +775,7 @@ flow graph nodes to be ignored during quantization.</p></li>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="nncf.quantize">
-<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">quantize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calibration_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">TargetDevice.ANY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fast_bias_correction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignored_scope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">advanced_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/quantization/quantize_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.quantize" title="Permalink to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">quantize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calibration_dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">TargetDevice.ANY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fast_bias_correction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ignored_scope</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">advanced_parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/quantization/quantize_model.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.quantize" title="Permalink to this definition">#</a></dt>
 <dd><p>Applies post-training quantization to the provided model.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -764,6 +783,7 @@ flow graph nodes to be ignored during quantization.</p></li>
 <li><p><strong>model</strong> (<em>TModel</em>) – A model to be quantized.</p></li>
 <li><p><strong>calibration_dataset</strong> (<a class="reference internal" href="#nncf.Dataset" title="nncf.Dataset"><em>nncf.Dataset</em></a>) – A representative dataset for the
 calibration process.</p></li>
+<li><p><strong>mode</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#nncf.QuantizationMode" title="nncf.QuantizationMode"><em>nncf.QuantizationMode</em></a><em>]</em>) – Special quantization mode that specify different ways of the optimization.</p></li>
 <li><p><strong>preset</strong> (<a class="reference internal" href="#nncf.QuantizationPreset" title="nncf.QuantizationPreset"><em>nncf.QuantizationPreset</em></a>) – A preset controls the quantization mode (symmetric and asymmetric).
 It can take the following values:
 - <cite>performance</cite>: Symmetric quantization of weights and activations.
@@ -972,6 +992,7 @@ in the model graph.</p></li>
 <li><a class="reference internal" href="#nncf.CompressWeightsMode"><code class="docutils literal notranslate"><span class="pre">CompressWeightsMode</span></code></a></li>
 <li><a class="reference internal" href="#nncf.DropType"><code class="docutils literal notranslate"><span class="pre">DropType</span></code></a></li>
 <li><a class="reference internal" href="#nncf.ModelType"><code class="docutils literal notranslate"><span class="pre">ModelType</span></code></a></li>
+<li><a class="reference internal" href="#nncf.QuantizationMode"><code class="docutils literal notranslate"><span class="pre">QuantizationMode</span></code></a></li>
 <li><a class="reference internal" href="#nncf.TargetDevice"><code class="docutils literal notranslate"><span class="pre">TargetDevice</span></code></a></li>
 <li><a class="reference internal" href="#nncf.QuantizationPreset"><code class="docutils literal notranslate"><span class="pre">QuantizationPreset</span></code></a></li>
 <li><a class="reference internal" href="#nncf.compress_weights"><code class="docutils literal notranslate"><span class="pre">compress_weights()</span></code></a></li>

@@ -34,6 +34,7 @@ Classes
    nncf.CompressWeightsMode
    nncf.DropType
    nncf.ModelType
+   nncf.QuantizationMode
    nncf.TargetDevice
    nncf.QuantizationPreset
    nncf.IgnoredScope
@@ -220,6 +221,17 @@ Functions
        (https://arxiv.org/pdf/1706.03762.pdf)
 
 
+.. py:class:: QuantizationMode
+
+   Bases: :py:obj:`enum.Enum`
+
+   Defines special modes.
+   Currently contains only FP8-related modes (https://arxiv.org/pdf/2209.05433.pdf).
+
+   :param FP8_E4M3: Mode with 4-bit exponent and 3-bit mantissa.
+   :param FP8_E5M2: Mode with 5-bit exponent and 2-bit mantissa.
+
+
 .. py:class:: TargetDevice
 
    Bases: :py:obj:`enum.Enum`
@@ -263,7 +275,7 @@ Functions
    :return: The non-trainable model with compressed weights.
 
 
-.. py:function:: quantize(model, calibration_dataset, preset = None, target_device = TargetDevice.ANY, subset_size = 300, fast_bias_correction = True, model_type = None, ignored_scope = None, advanced_parameters = None)
+.. py:function:: quantize(model, calibration_dataset, mode = None, preset = None, target_device = TargetDevice.ANY, subset_size = 300, fast_bias_correction = True, model_type = None, ignored_scope = None, advanced_parameters = None)
 
    Applies post-training quantization to the provided model.
 
@@ -272,6 +284,8 @@ Functions
    :param calibration_dataset: A representative dataset for the
        calibration process.
    :type  calibration_dataset: nncf.Dataset
+   :param mode: Special quantization mode that specify different ways of the optimization.
+   :type mode: Optional[nncf.QuantizationMode]
    :param preset: A preset controls the quantization mode (symmetric and asymmetric).
        It can take the following values:
        - `performance`: Symmetric quantization of weights and activations.

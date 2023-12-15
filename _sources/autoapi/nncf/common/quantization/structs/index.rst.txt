@@ -10,14 +10,14 @@ Classes
 
 .. autoapisummary::
 
-   nncf.common.quantization.structs.QuantizationMode
+   nncf.common.quantization.structs.QuantizationScheme
 
 
 
 
-.. py:class:: QuantizationMode
+.. py:class:: QuantizationScheme
 
-   Basic enumeration for quantization mode specification.
+   Basic enumeration for quantization scheme specification.
 
    :param SYMMETRIC:
    :param ASYMMETRIC:
