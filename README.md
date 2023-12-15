@@ -267,12 +267,11 @@ compression_ctrl.export_model("compressed_model.pb", save_format="frozen_graph")
 For a more detailed description of NNCF usage in your training code, see [this tutorial](docs/Usage.md).
 
 
-# -----PART TO BE CHANGED START-----
 ## Demos, Tutorials and Samples
 For a quicker start with NNCF-powered compression, try sample notebooks and scripts presented below.
 
 ### Jupyter* Notebook Tutorials and Demos 
-A collection of ready-to-run Jupyter* notebooks are available to demonstrate how to use NNCF compression algorithms to optimize models for inference with the OpenVINO Toolkit.
+A collection of ready-to-run Jupyter* notebooks tutorials and demos are available to explain and display how to use NNCF compression algorithms to optimize models for inference with the OpenVINO Toolkit.
 
 | Notebook Tutorial Name                                                                                                                                                                                                                                                                                                                                                                                    |                                  Compression Algorithm                                  |  Backend   |               Domain               |
 |:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:---------------------------------------------------------------------------------------:|:----------:|:----------------------------------:|
@@ -310,29 +309,28 @@ Please expand the table below to see the list of notebooks demonstrating OpenVIN
 ### Post-Training Quantization Examples
 Compact scripts demonstrating quantization and corresponding inference speed boost:
 
-| Example Name                                                                                                               |   Compression Algorithm    |  Backend   |         Domain         |
-|:---------------------------------------------------------------------------------------------------------------------------|:--------------------------:|:----------:|:----------------------:|
-| [OpenVINO MobileNetV2 Quantization](./examples/post_training_quantization/openvino/mobilenet_v2/README.md)                 | Post-Training Quantization |  OpenVINO  |  Image Classification  |
-| [OpenVINO YOLOv8 Quantization](./examples/post_training_quantization/openvino/yolov8/README.md)                            | Post-Training Quantization |  OpenVINO  |    Object Detection    |
-| [OpenVINO Anomaly Classification](./examples/post_training_quantization/openvino/quantize_with_accuracy_control/README.md) | Post-Training Quantization |  OpenVINO  | Anomaly Classification |
-| [PyTorch MobileNetV2 Quantization](./examples/post_training_quantization/torch/mobilenet_v2/README.md)                     | Post-Training Quantization |  PyTorch   |  Image Classification  |
-| [PyTorch SSD Quantization](./examples/post_training_quantization/torch/ssd300_vgg16/README.md)                             | Post-Training Quantization |  PyTorch   |    Object Detection    |
-| [TensorFlow MobileNetV2 Quantization](./examples/post_training_quantization/tensorflow/mobilenet_v2/README.md)             | Post-Training Quantization | TensorFlow |  Image Classification  |
-| [ONNX MobileNetV2 Quantization](./examples/post_training_quantization/onnx/mobilenet_v2/README.md)                         | Post-Training Quantization |    ONNX    |  Image Classification  |
+| Example Name                                                                                                                             |              Compression Algorithm               |  Backend   |         Domain         |
+|:-----------------------------------------------------------------------------------------------------------------------------------------|:------------------------------------------------:|:----------:|:----------------------:|
+| [OpenVINO MobileNetV2](./examples/post_training_quantization/openvino/mobilenet_v2/README.md)                                            |            Post-Training Quantization            |  OpenVINO  |  Image Classification  |
+| [OpenVINO YOLOv8](./examples/post_training_quantization/openvino/yolov8/README.md)                                                       |            Post-Training Quantization            |  OpenVINO  |    Object Detection    |
+| [OpenVINO YOLOv8 QwAС](./examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/README.md)                   | Post-Training Quantization with Accuracy Control |  OpenVINO  |    Object Detection    |
+| [OpenVINO Anomaly Classification](./examples/post_training_quantization/openvino/anomaly_stfpm_quantize_with_accuracy_control/README.md) | Post-Training Quantization with Accuracy Control |  OpenVINO  | Anomaly Classification |
+| [PyTorch MobileNetV2](./examples/post_training_quantization/torch/mobilenet_v2/README.md)                                                |            Post-Training Quantization            |  PyTorch   |  Image Classification  |
+| [PyTorch SSD](./examples/post_training_quantization/torch/ssd300_vgg16/README.md)                                                        |            Post-Training Quantization            |  PyTorch   |    Object Detection    |
+| [TensorFlow MobileNetV2](./examples/post_training_quantization/tensorflow/mobilenet_v2/README.md)                                        |            Post-Training Quantization            | TensorFlow |  Image Classification  |
+| [ONNX MobileNetV2](./examples/post_training_quantization/onnx/mobilenet_v2/README.md)                                                    |            Post-Training Quantization            |    ONNX    |  Image Classification  |
 
 ### Training-Time Compression Examples
 These examples provide full pipelines including compression, training and inference for classification, detection and segmentation tasks.
 
-| Example Name                                                                                                |   Compression Algorithm   |  Backend   |        Domain         |
-|:------------------------------------------------------------------------------------------------------------|:-------------------------:|:----------:|:---------------------:|
-| [PyTorch Image Classification Training Time Compression](./examples/torch/classification/README.md)         | Training-Time Compression |  PyTorch   | Image Classification  |
-| [PyTorch Object Detection Trainine Time Compression](./examples/torch/object_detection/README.md)           | Training-Time Compression |  PyTorch   |   Object Detection    |
-| [PyTorch Semantic Segmentation Training Time Compression](./examples/torch/semantic_segmentation/README.md) | Training-Time Compression |  PyTorch   | Semantic Segmentation |
-| [TensorFlow Image Classification Training Time Compression](./examples/tensorflow/classification/README.md) | Training-Time Compression | TensorFlow | Image Classification  |
-| [TensorFlow Object Detection Training Time Compression](./examples/tensorflow/object_detection/README.md)   | Training-Time Compression | TensorFlow |   Object Detection    |
-| [TensorFlow Instance Segmentation Training Time Compression](./examples/tensorflow/segmentation/README.md)  | Training-Time Compression | TensorFlow | Instance Segmentation |
-
-# -----PART TO BE CHANGED END-----
+| Example Name                                                                                               |   Compression Algorithm   |  Backend   |        Domain         |
+|:-----------------------------------------------------------------------------------------------------------|:-------------------------:|:----------:|:---------------------:|
+| [PyTorch Image Classification](./examples/torch/classification/README.md)                                  | Training-Time Compression |  PyTorch   | Image Classification  |
+| [PyTorch Object Detection](./examples/torch/object_detection/README.md)                                    | Training-Time Compression |  PyTorch   |   Object Detection    |
+| [PyTorch Semantic Segmentation](./examples/torch/semantic_segmentation/README.md)                          | Training-Time Compression |  PyTorch   | Semantic Segmentation |
+| [TensorFlow Image Classification](./examples/tensorflow/classification/README.md)                          | Training-Time Compression | TensorFlow | Image Classification  |
+| [TensorFlow Object Detection](./examples/tensorflow/object_detection/README.md)                            | Training-Time Compression | TensorFlow |   Object Detection    |
+| [TensorFlow Instance Segmentation](./examples/tensorflow/segmentation/README.md)                           | Training-Time Compression | TensorFlow | Instance Segmentation |
 
 ## Third-party repository integration
 
