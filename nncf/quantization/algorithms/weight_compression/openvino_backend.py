@@ -27,15 +27,14 @@ from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.utils.helpers import create_table
 from nncf.data import Dataset
-from nncf.experimental.common.compression.activations_analisys import get_noop_statistic_collector
+from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVEmbeddingMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
-from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
-from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.openvino.rt_info import dump_parameters
+from nncf.openvino.statistics.collectors import OVMeanPerChanelReducer, TensorCollector, OVMeanTensorStatistic, OVRawTensorStatistic
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.awq_patterns import get_awq_patterns
@@ -266,7 +265,7 @@ def _do_integer_quantization(
         level_low_sym = -(2 ** (num_bits - 1))
         level_high_sym = 2 ** (num_bits - 1) - 1
         scale = scale / level_high_sym
-        zero_point = np.array([-level_low_sym])
+        zero_point = np.array([-level_low_sym]).astype(np.int8)
 
     eps = np.finfo(weight.dtype).eps
     # NOTE: adding machine epsilon to avoid division by zero
@@ -471,6 +470,28 @@ def _set_weight_compression_config(
     else:
         _assign_mixed_precision(internal_weight_params, ratio, primary_config)
 
+def _get_mean_statistic_collector(
+    num_samples: int, channel_axis: int, window_size: Optional[int] = None, inplace: bool = True
+):
+    """
+    Raw statistic collector builder.
+
+    :param num_samples: Maximum number of samples to collect.
+    :param channel_axis: Channel axis to use during reduction phase.
+    :param window_size: Number of samples from the end of the list of collected samples to aggregate.
+        Aggregates all available collected statistics in case parameter is None.
+    :param inplace: Whether the mean reducer should be calculated inplace or out of place.
+    :return: Mean statistic collector.
+    """
+    inplace = False
+    reducer = OVMeanPerChanelReducer(channel_axis=channel_axis, inplace=inplace)
+
+    aggregate_mean = NoopAggregator(num_samples)
+    
+    collector = TensorCollector(OVRawTensorStatistic)
+    collector.register_statistic_branch(OVMeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
+    return collector
+
 
 def _get_statistic_points(nodes_to_compress, num_samples=32, algorithm="AWQ") -> StatisticPointsContainer:
     """
@@ -489,7 +510,7 @@ def _get_statistic_points(nodes_to_compress, num_samples=32, algorithm="AWQ") ->
         if channel_axis is None:
             channel_axis = -1
 
-        stat_collector_in = get_noop_statistic_collector(
+        stat_collector_in = _get_mean_statistic_collector(
             channel_axis=channel_axis, num_samples=num_samples, inplace=False
         )
 
@@ -623,8 +644,8 @@ def _apply_AWQ(model: ov.Model,
             a_max = 1e2
             gscale = np.clip(gscale, a_min=a_min, a_max=a_max)
 
-            gweight = weight[:, offset: offset + config.group_size]
-            gacts = X[offset: offset + config.group_size, :]
+            gweight = weight[:, offset: offset + config.group_size].copy()
+            gacts = X[offset: offset + config.group_size, :].copy()
             
             fp32_out = np.matmul(gweight, gacts)
             min_diff = np.max(fp32_out)
