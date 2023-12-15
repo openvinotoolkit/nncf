@@ -12,6 +12,7 @@
 from typing import Any, Dict, List, NamedTuple
 
 import pytest
+import torch
 
 from nncf import NNCFConfig
 from nncf.config.structures import BNAdaptationInitArgs
@@ -24,6 +25,7 @@ from tests.torch.nas.creators import NAS_MODEL_DESCS
 from tests.torch.nas.creators import create_bnas_model_and_ctrl_by_test_desc
 from tests.torch.nas.creators import create_bootstrap_training_model_and_ctrl
 from tests.torch.nas.models.synthetic import ThreeConvModel
+from tests.torch.nas.models.synthetic import TwoConvAddConvTestModel
 from tests.torch.nas.test_all_elasticity import fixture_nas_model_name  # noqa: F401
 
 SEARCH_ALGORITHMS = ["NSGA2", "RNSGA2"]
@@ -192,6 +194,91 @@ class TestSearchAlgorithm:
             bn_adapt_run_patch.assert_called()
         else:
             bn_adapt_run_patch.assert_not_called()
+
+
+class SearchTestResultDesc(NamedTuple):
+    model_creator: Any
+    expected_accuracy: float
+    subnet_expected_accuracy: Dict
+    input_sizes: List[int]
+    search_spaces: Dict
+    eval_datasets: List
+
+
+SEARCH_RESULT_DESCRIPTORS = [
+    SearchTestResultDesc(
+        model_creator=TwoConvAddConvTestModel,
+        expected_accuracy=0.238,
+        subnet_expected_accuracy={
+            SEARCH_ALGORITHMS[0]: 0.476,
+            SEARCH_ALGORITHMS[1]: 0.476,
+        },
+        input_sizes=TwoConvAddConvTestModel.INPUT_SIZE,
+        search_spaces={
+            (
+                "TwoConvAddConvTestModel/NNCFConv2d[conv1]/conv2d_0",
+                "TwoConvAddConvTestModel/NNCFConv2d[conv2]/conv2d_0",
+            ): [3, 2, 1],
+        },
+        eval_datasets=[
+            (torch.Tensor([item / 10.0]).reshape(TwoConvAddConvTestModel.INPUT_SIZE), int(item > 0))
+            for item in range(-10, 11)
+        ],  # (input, label)
+    )
+]
+
+
+@pytest.mark.parametrize(
+    "search_result_descriptors", SEARCH_RESULT_DESCRIPTORS, ids=map(str, SEARCH_RESULT_DESCRIPTORS)
+)
+def test_search_results(search_result_descriptors, search_algo_name, tmp_path):
+    config = {
+        "input_info": {"sample_size": search_result_descriptors.input_sizes},
+        "bootstrapNAS": {
+            "training": {
+                "elasticity": {
+                    "available_elasticity_dims": ["width"],
+                    "width": {"overwrite_groups": [], "overwrite_groups_widths": []},
+                }
+            },
+            "search": {"algorithm": search_algo_name, "num_evals": 10, "population": 2},
+        },
+    }
+    for group, width in search_result_descriptors.search_spaces.items():
+        config["bootstrapNAS"]["training"]["elasticity"]["width"]["overwrite_groups"].append(list(group))
+        config["bootstrapNAS"]["training"]["elasticity"]["width"]["overwrite_groups_widths"].append(width)
+    nncf_config = NNCFConfig.from_dict(config)
+    model, ctrl = create_bootstrap_training_model_and_ctrl(search_result_descriptors.model_creator(), nncf_config)
+    model.eval()
+    device = next(model.parameters()).device
+    elasticity_ctrl = ctrl.elasticity_controller
+    elasticity_ctrl.multi_elasticity_handler.enable_all()
+    search = BaseSearchAlgorithm.from_config(model, elasticity_ctrl, nncf_config)
+
+    # (input, label)
+    eval_datasets = [(item[0].to(device), item[1]) for item in search_result_descriptors.eval_datasets]
+
+    def validate_model_fn(model, eval_datasets):
+        count = 0
+        with torch.no_grad():
+            for input, label in eval_datasets:
+                output = model(input)
+                pred = int((output < 40.0).item())  # binary classification
+                count += pred == label
+        return round(count / len(eval_datasets), 3)
+
+    elasticity_ctrl.multi_elasticity_handler.activate_supernet()
+    max_subnetwork_macs = (
+        elasticity_ctrl.multi_elasticity_handler.count_flops_and_weights_for_active_subnet()[0] / 2000000
+    )
+    max_subnetwork_acc = validate_model_fn(model, eval_datasets)
+
+    _, best_config, performance_metrics = search.run(validate_model_fn, eval_datasets, tmp_path)
+
+    assert max_subnetwork_acc == search_result_descriptors.expected_accuracy
+    assert performance_metrics[1] == search_result_descriptors.subnet_expected_accuracy[search_algo_name]
+    assert performance_metrics[0] < max_subnetwork_macs
+    assert performance_metrics[1] > max_subnetwork_acc
 
 
 class TestSearchEvaluators:
