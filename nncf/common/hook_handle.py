@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import weakref
+from collections import defaultdict
 from enum import Enum
 from typing import Any, Dict
 
@@ -28,7 +29,7 @@ class HookHandle:
     A handle to remove a hook.
     """
 
-    id = 0
+    _registered_ids = defaultdict(set)
 
     def __init__(self, hooks_registry: Dict[Any, Any], mode: HookHandleIdType = HookHandleIdType.INT):
         """
@@ -36,13 +37,26 @@ class HookHandle:
         :param mode: An datatype to use for the `hook_id` parameter. Default int.
         """
         self.hooks_registry_ref = weakref.ref(hooks_registry)
-        self.hook_id = self.__class__.id
-        if mode == HookHandleIdType.STR:
-            self.hook_id = str(self.hook_id)
-        self.__class__.id += 1
+
+        if hooks_registry:
+            hook_id = max(hooks_registry.keys())
+            if mode == HookHandleIdType.STR:
+                hook_id = str(int(hook_id) + 1)
+            else:
+                hook_id += 1
+        else:
+            hook_id = 0 if mode == HookHandleIdType.INT else "0"
+
+        if hook_id in self.__class__._registered_ids[id(hooks_registry)]:
+            raise RuntimeError("HookHandle generates non unique key")
+        self.__class__._registered_ids[id(hooks_registry)].add(hook_id)
+        self.hook_id = hook_id
 
     def remove(self):
         hooks_registry = self.hooks_registry_ref()
+        if self.hook_id in self.__class__._registered_ids[id(hooks_registry)]:
+            self.__class__._registered_ids[id(hooks_registry)].remove(self.hook_id)
+
         if hooks_registry is not None and self.hook_id in hooks_registry:
             del hooks_registry[self.hook_id]
 
@@ -58,7 +72,7 @@ class HookHandleManager:
 
     def __init__(self) -> None:
         class LocalHookHandle(HookHandle):
-            id = 0
+            _registered_ids = defaultdict(set)
 
         self._hook_handle = LocalHookHandle
 
