@@ -249,7 +249,7 @@ Functions
    An enum with values corresponding to the available quantization presets.
 
 
-.. py:function:: compress_weights(model, mode=CompressWeightsMode.INT8_ASYM, ratio = None, group_size = None, ignored_scope = None)
+.. py:function:: compress_weights(model, mode=CompressWeightsMode.INT8_ASYM, ratio = None, group_size = None, ignored_scope = None, all_layers = None)
 
    Compress model weights.
 
@@ -272,6 +272,8 @@ Functions
        The value -1 means no grouping.
    :param ignored_scope: An ignored scope that defined the list of model control
        flow graph nodes to be ignored during quantization.
+   :param all_layers: Indicates whether embeddings and last layers should be compressed to a primary
+       precision. By default, the backup precision is assigned for the embeddings and last layers.
    :return: The non-trainable model with compressed weights.
 
 
