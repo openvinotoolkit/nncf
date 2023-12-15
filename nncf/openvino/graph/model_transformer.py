@@ -16,8 +16,7 @@ from typing import Callable, Dict, List, Tuple
 import numpy as np
 import openvino.runtime as ov
 from openvino._pyopenvino import DescriptorTensor
-from openvino.runtime import opset9 as opset
-from openvino.runtime import opset13
+from openvino.runtime import opset13 as opset
 
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.model_transformer import TModel
@@ -317,7 +316,7 @@ class OVModelTransformer(ModelTransformer):
             shift = OVModelTransformer._convert_to_fp16(shift)
 
         destination_type = fake_convert_params.destination_type.value
-        return opset13.fake_convert(
+        return opset.fake_convert(
             data=op_output,
             scale=scale,
             shift=shift,
@@ -483,7 +482,7 @@ class OVModelTransformer(ModelTransformer):
         const_dtype = const_node.data.dtype
         const_value = np.reshape(const_value, const_shape).astype(const_dtype)
 
-        # TODO(andrey-churkin): Replace on opset13.constant() in a future release
+        # TODO(andrey-churkin): Replace on opset13.constant() in 2023.3 release
         new_const_node = ov.op.Constant(const_value, shared_memory=True)
         new_const_node.set_friendly_name(const_node.get_friendly_name())
         const_port.replace_source_output(new_const_node.output(0))

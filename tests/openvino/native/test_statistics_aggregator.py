@@ -14,7 +14,7 @@ from typing import List, Type
 import numpy as np
 import openvino.runtime as ov
 import pytest
-from openvino.runtime import opset9 as opset
+from openvino.runtime import opset13 as opset
 
 from nncf import Dataset
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -50,7 +50,8 @@ def get_StatisticAgregatorTestModel(input_shape, kernel):
 
 
 class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
-    def get_min_max_algo_backend_cls(self) -> Type[OVMinMaxAlgoBackend]:
+    @staticmethod
+    def get_min_max_algo_backend_cls() -> Type[OVMinMaxAlgoBackend]:
         return OVMinMaxAlgoBackend
 
     def get_bias_correction_algo_backend_cls(self) -> Type[OVBiasCorrectionAlgoBackend]:
@@ -82,7 +83,8 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     def get_dataset(self, samples):
         return Dataset(samples, lambda data: {INPUT_NAME: data})
 
-    def get_target_point(self, target_type: TargetType) -> TargetPoint:
+    @staticmethod
+    def get_target_point(target_type: TargetType) -> TargetPoint:
         target_node_name = INPUT_NAME
         port_id = 0
         if target_type == TargetType.OPERATION_WITH_WEIGHTS:

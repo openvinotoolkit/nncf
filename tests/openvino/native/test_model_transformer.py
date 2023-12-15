@@ -15,7 +15,7 @@ from typing import Callable, List, Tuple
 import numpy as np
 import openvino.runtime as ov
 import pytest
-from openvino.runtime import opset9 as opset
+from openvino.runtime import opset13 as opset
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
