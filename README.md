@@ -285,7 +285,7 @@ A collection of ready-to-run Jupyter* notebooks tutorials and demos are availabl
 | [TensorFlow Training-Time Compression](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/301-tensorflow-training-openvino)                                                                                                                                                                                                                                                       |                                Training-Time Compression                                | Tensorflow |        Image Classification         |
 | [Joint Pruning, Quantization and Distillation for BERT](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/116-sparsity-optimization)                                                                                                                                                                                                                                             |                      Joint Pruning, Quantization and Distillation                       |  OpenVINO  |                 NLP                 |
 
-Please expand the table below to see the list of notebooks demonstrating OpenVINO conversion and NNCF compression for models from various domains.
+Please expand the table below to see the list of notebooks demonstrating OpenVINO conversion and inference together with NNCF compression for models from various domains.
 
 <details><summary><b>Demo Notebooks</b></summary>
 
