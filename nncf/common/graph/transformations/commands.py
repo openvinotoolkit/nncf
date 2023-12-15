@@ -214,16 +214,3 @@ class TransformationCommand(Command):
     @property
     def target_point(self) -> TargetPoint:
         return self._target_point
-
-    def check_command_compatibility(self, command: "TransformationCommand") -> bool:
-        return (
-            isinstance(command, TransformationCommand)
-            and self.type == command.type
-            and self.target_point == command.target_point
-        )
-
-    def union(self, other: "TransformationCommand") -> "TransformationCommand":
-        raise NotImplementedError()
-
-    def __add__(self, other: "TransformationCommand") -> "TransformationCommand":
-        return self.union(other)

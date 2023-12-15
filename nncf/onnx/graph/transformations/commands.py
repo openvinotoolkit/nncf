@@ -56,10 +56,6 @@ class ONNXInsertionCommand(TransformationCommand):
         # need to keep the mapping NNCF input nodes to the following ONNX nodes.
         self.input_edges_mapping = input_edges_mapping
 
-    def union(self, other: "TransformationCommand") -> "TransformationCommand":
-        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
-        raise NotImplementedError()
-
 
 class ONNXQuantizerInsertionCommand(ONNXInsertionCommand):
     def __init__(
@@ -71,15 +67,9 @@ class ONNXQuantizerInsertionCommand(ONNXInsertionCommand):
         super().__init__(target_point, nncf_input_node_next_onnx_nodes)
         self.quantizer_parameters = quantizer_parameters
 
-    def union(self, other: "TransformationCommand") -> "TransformationCommand":
-        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
-        raise NotImplementedError()
-
 
 class ONNXOutputInsertionCommand(ONNXInsertionCommand):
-    def union(self, other: "TransformationCommand") -> "TransformationCommand":
-        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
-        raise NotImplementedError()
+    pass
 
 
 class ONNXBiasCorrectionCommand(TransformationCommand):
@@ -94,10 +84,6 @@ class ONNXBiasCorrectionCommand(TransformationCommand):
         """
         super().__init__(TransformationType.CHANGE, target_point)
         self.bias_value = bias_value
-
-    def union(self, other: "TransformationCommand") -> "TransformationCommand":
-        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
-        raise NotImplementedError()
 
 
 class ONNXModelExtractionCommand(Command):
@@ -116,10 +102,6 @@ class ONNXModelExtractionCommand(Command):
         self.input_ids = input_ids
         self.output_ids = output_ids
 
-    def union(self, other: "Command") -> "Command":
-        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
-        raise NotImplementedError()
-
 
 class ONNXQDQNodeRemovingCommand(TransformationCommand):
     """
@@ -132,10 +114,6 @@ class ONNXQDQNodeRemovingCommand(TransformationCommand):
         """
         super().__init__(TransformationType.REMOVE, target_point)
 
-    def union(self, other: "TransformationCommand") -> "TransformationCommand":
-        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
-        raise NotImplementedError()
-
 
 class ONNXNullBiasInsertionCommand(TransformationCommand):
     """
@@ -147,7 +125,3 @@ class ONNXNullBiasInsertionCommand(TransformationCommand):
         :param target_point: The TargetPoint instance for the insertion that contains layer's information.
         """
         super().__init__(TransformationType.INSERT, target_point)
-
-    def union(self, other: "TransformationCommand") -> "TransformationCommand":
-        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
-        raise NotImplementedError()

@@ -313,9 +313,20 @@ def compress_weights(
 
     backend = get_backend(model)
     if backend == BackendType.TORCH:
-        from nncf.torch.quantization.quantize_model import compress_weights_impl
+        from nncf.torch.model_creation import is_wrapped_model
 
-        return compress_weights_impl(model, mode, ratio, group_size, ignored_scope)
+        if not is_wrapped_model(model) or (is_wrapped_model(model) and not model.nncf.trace_parameters):
+            raise ValueError(
+                "Tracing capabilities with tracing parameters are required in the PyTorch model "
+                "for nncf.compress_weights(). Please wrap the model using "
+                "nncf.torch.wrap_model(model, example_input, trace_parameters=True) before calling "
+                "nncf.compress_weights()."
+            )
+        if mode not in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
+            raise AttributeError(
+                "Torch backend supports only INT8_ASYM, INT8_SYM modes for weight compression, "
+                f"but given {mode.value} mode."
+            )
 
     if ratio is None:
         ratio = 1
