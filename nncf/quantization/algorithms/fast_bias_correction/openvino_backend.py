@@ -42,8 +42,10 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return OVCommandCreator.create_command_to_update_bias(node, bias_value.data, nncf_graph)
 
     @staticmethod
-    def model_extraction_command(inputs: List[str], outputs: List[str]) -> OVModelExtractionCommand:
-        return OVModelExtractionCommand(inputs, outputs)
+    def model_extraction_command(
+        input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]
+    ) -> OVModelExtractionCommand:
+        return OVModelExtractionCommand(input_ids, output_ids)
 
     @staticmethod
     def mean_statistic_collector(

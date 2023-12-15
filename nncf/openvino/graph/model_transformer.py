@@ -22,6 +22,7 @@ from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.model_transformer import TModel
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.openvino.graph.node_utils import get_parameter_node_name
 from nncf.openvino.graph.node_utils import get_result_node_name
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVBiasInsertionCommand
@@ -546,35 +547,35 @@ class OVModelTransformer(ModelTransformer):
         """
         transformation = transformations[-1]
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
-        activation_node_names = OVModelTransformer._get_activation_node_names(model)
+
         params, results = [], []
-        for input_name in transformation.inputs:
+        for input_name, input_port_id in transformation.input_ids:
             input_node = name_to_node_mapping[input_name]
             if input_name in [tensor.node.get_friendly_name() for tensor in model.inputs]:
                 params.append(input_node)
                 continue
-            for input_port in input_node.inputs():
-                if input_port.get_source_output().get_node().name not in activation_node_names:
-                    continue
-                input_node_output = input_port.get_source_output()
-                parameter_name = f"Parameter_{input_name}"
-                new_param = opset.parameter(
-                    shape=input_node_output.partial_shape,
-                    dtype=input_node_output.get_element_type(),
-                    name=parameter_name,
-                )
-                input_port.replace_source_output(new_param.output(0))
-                new_param_tensors = [o.get_tensor() for o in new_param.outputs()]
-                OVModelTransformer._update_tensor_name(new_param_tensors, parameter_name)
-                params.append(new_param)
 
-        for output_name in transformation.outputs:
+            input_port = input_node.input(input_port_id)
+            input_node_output = input_port.get_source_output()
+            parameter_name = get_parameter_node_name(input_name, input_port_id)
+            new_param = opset.parameter(
+                shape=input_node_output.partial_shape,
+                dtype=input_node_output.get_element_type(),
+                name=parameter_name,
+            )
+            input_port.replace_source_output(new_param.output(0))
+            new_param_tensors = [o.get_tensor() for o in new_param.outputs()]
+            OVModelTransformer._update_tensor_name(new_param_tensors, parameter_name)
+            params.append(new_param)
+
+        for output_name, output_port_id in transformation.output_ids:
             output_node = name_to_node_mapping[output_name]
-            for node_out in output_node.outputs():
-                result_name = get_result_node_name(output_name, 0)
-                new_result = opset.result(node_out, name=result_name)
-                OVModelTransformer._update_tensor_name([new_result.get_output_tensor(0)], result_name)
-                results.append(new_result)
+
+            output_port = output_node.output(output_port_id)
+            result_name = get_result_node_name(output_name, output_port_id)
+            new_result = opset.result(output_port, name=result_name)
+            OVModelTransformer._update_tensor_name([new_result.get_output_tensor(0)], result_name)
+            results.append(new_result)
 
         if not results:
             results = model.get_results()

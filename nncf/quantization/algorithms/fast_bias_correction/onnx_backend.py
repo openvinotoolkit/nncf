@@ -50,8 +50,10 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return create_bias_correction_command(node, bias_value.data)
 
     @staticmethod
-    def model_extraction_command(inputs: List[str], outputs: List[str]) -> ONNXModelExtractionCommand:
-        return ONNXModelExtractionCommand(inputs, outputs)
+    def model_extraction_command(
+        input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]
+    ) -> ONNXModelExtractionCommand:
+        return ONNXModelExtractionCommand(input_ids, output_ids)
 
     @staticmethod
     def mean_statistic_collector(
