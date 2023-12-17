@@ -32,7 +32,7 @@ from nncf.torch.dynamic_graph.wrappers import wrap_module_call
 from nncf.torch.dynamic_graph.wrappers import wrap_operator
 
 
-def get_namespaces_to_patch(namespace_target: NamespaceTarget) -> Tuple[object]:
+def get_namespaces_to_patch(namespace_target: NamespaceTarget) -> Tuple[object, ...]:
     if namespace_target == NamespaceTarget.TORCH_NN_FUNCTIONAL:
         return (torch.nn.functional,)
     if namespace_target == NamespaceTarget.TORCH_TENSOR:
