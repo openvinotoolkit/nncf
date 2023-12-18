@@ -84,7 +84,7 @@ class NNCFOperation:
                  the NNCF operation by calling handle.remove()
         """
         handle = HookHandle(self._call_pre_hooks)
-        self._call_pre_hooks[handle.hook_id] = hook
+        handle.add(hook)
         return handle
 
     def __call__(self, *args, **kwargs):

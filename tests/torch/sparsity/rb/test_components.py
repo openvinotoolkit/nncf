@@ -31,11 +31,11 @@ class SingleLayerModel(nn.Module):
             sparsifier = RBSparsifyingWeight(weight_shape=size)
         else:
             sparsifier = RBSparsifyingWeight(frozen=frozen, weight_shape=size)
-        self.op_key: HookHandle = self.layer.register_pre_forward_operation(UpdateWeight(sparsifier))
+        self.hook_handle: HookHandle = self.layer.register_pre_forward_operation(UpdateWeight(sparsifier))
 
     @property
     def sparsifier(self):
-        return self.layer.get_pre_op(self.op_key.hook_id).operand
+        return self.layer.get_pre_op(self.hook_handle.hook_id).operand
 
     def forward(self, x):
         return self.layer(x)
