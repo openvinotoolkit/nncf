@@ -471,7 +471,7 @@ def _set_weight_compression_config(
         _assign_mixed_precision(internal_weight_params, ratio, primary_config)
 
 def _get_mean_statistic_collector(
-    num_samples: int, channel_axis: int, window_size: Optional[int] = None, inplace: bool = True
+    num_samples: int, channel_axis: int, inplace: bool = True
 ):
     """
     Raw statistic collector builder.
@@ -483,7 +483,6 @@ def _get_mean_statistic_collector(
     :param inplace: Whether the mean reducer should be calculated inplace or out of place.
     :return: Mean statistic collector.
     """
-    inplace = False
     reducer = OVMeanPerChanelReducer(channel_axis=channel_axis, inplace=inplace)
 
     aggregate_mean = NoopAggregator(num_samples)
@@ -531,7 +530,7 @@ def _apply_AWQ(model: ov.Model,
                 all_weight_params: List[WeightNodeParams],
                 nodes_to_compress: List[NNCFNode],
                 dataset: Dataset,
-                subset_size: int = 32,
+                subset_size: int=32,
                 percent_to_apply=0.002,
                 alpha_min=0.01,
                 alpha_max=1.0,
@@ -596,9 +595,9 @@ def _apply_AWQ(model: ov.Model,
 
     alpha_step = (alpha_max - alpha_min) / steps
 
-    model_transformer = ModelTransformerFactory.create(model)
+    model_transformer = ModelTransformerFactory.create(model, True)
     transformation_layout = TransformationLayout()
-    
+    n_layer = 0
     for k, v in track(statistics_aggregator.statistic_points.items(), description="Applying AWQ"):
         stats = list(v[0].algorithm_to_tensor_collectors["AWQ"][0].aggregators.values())[0]._container
         stats = [stat.squeeze() for stat in stats]
@@ -685,6 +684,8 @@ def _apply_AWQ(model: ov.Model,
             target_node, scaled_weight, weight_port
         )
 
+        transformation_layout.register(weight_update_command)
+
         weight_port = OVSmoothQuantAlgoBackend.get_weight_tensor_port_id(merge_node)
         weight_value = OVSmoothQuantAlgoBackend.get_weight_value(merge_node, model, weight_port)
         scaled_weight = weight_value * a_scale
@@ -694,4 +695,14 @@ def _apply_AWQ(model: ov.Model,
 
         transformation_layout.register(weight_update_command)
 
-    return model_transformer.transform(transformation_layout)
+    model = model_transformer.transform(transformation_layout)
+
+    friendly_name_to_op_map = {op.get_friendly_name(): op for op in model.get_ops()}
+    for wp in all_weight_params:
+        name = wp.fq_name
+        idx = name.find('fq_weights_')
+        name = name[:idx - 1]
+        wp.weight_node = friendly_name_to_op_map[name]
+
+    return model
+
