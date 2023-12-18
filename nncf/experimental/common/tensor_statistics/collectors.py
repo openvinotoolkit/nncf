@@ -37,19 +37,15 @@ class TensorReducerBase(ABC):
     the specified rule. Could handle tensors inplace or out of place.
     """
 
-    def __init__(
-        self, reduction_axes: Optional[ReductionAxes] = None, inplace: bool = False, keep_empty_stats: bool = False
-    ):
+    def __init__(self, reduction_axes: Optional[ReductionAxes] = None, inplace: bool = False):
         """
         :param reduction_axes: Reduction axes for reduction calculation. Equal to list(range(len(input.shape)))
             if empty.
         :param inplace: Whether should be calculated inplace or out of place.
-        :param keep_empty_stats: Whether should be keep empty statistics or not.
         """
         self._reduction_axes = reduction_axes
         self._tensor_processor: NNCFCollectorTensorProcessor = self._get_processor()
         self._inplace = inplace
-        self._keep_empty_stats = keep_empty_stats
         self._keepdims = True
 
     @property
@@ -97,9 +93,6 @@ class TensorReducerBase(ABC):
         """
 
     def __call__(self, x: List[NNCFTensor]):
-        if any(t.is_empty() for t in x) and not self._keep_empty_stats:
-            return None
-
         if self.inplace:
             return x
 
@@ -306,9 +299,9 @@ class TensorCollector:
         for reducer in self._reducers:
             reducer_hash = hash(reducer)
             input_ = inputs[reducer_hash]
-            reduced_input = reducer(input_)
-            if reduced_input is not None:
-                reduced_inputs[reducer_hash] = reduced_input
+            if any(tensor.is_empty() for tensor in input_):
+                continue
+            reduced_inputs[reducer_hash] = reducer(input_)
 
         for (
             (reducer_hash, reducer_port_id, _),
@@ -475,8 +468,8 @@ class MergedTensorCollector(TensorCollector):
 
 
 class NoopReducer(TensorReducerBase):
-    def __init__(self, keep_empty_stats=False):
-        super().__init__(inplace=False, keep_empty_stats=keep_empty_stats)
+    def __init__(self):
+        super().__init__(inplace=False)
 
     @staticmethod
     def _get_processor() -> NNCFCollectorTensorProcessor:
