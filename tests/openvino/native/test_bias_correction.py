@@ -100,7 +100,10 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
             (
                 "/conv_1/Conv/WithoutBiases",
                 {
-                    "collected_inputs": {("/conv_1/Conv/WithoutBiases", 0): ("input.1", 0)},
+                    "collected_inputs": {
+                        ("/Concat", 1): ("input.1", 0),
+                        ("/conv_1/Conv/WithoutBiases", 0): ("/Concat", 0),
+                    },
                     "subgraph_data": {
                         "subgraph_input_ids": {("/conv_1/Conv/WithoutBiases", 0)},
                         "subgraph_output_ids": {("/Split", 0), ("/maxpool_1/MaxPool", 0), ("/Split", 1)},
@@ -111,7 +114,7 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
                 "/conv_2/Conv/WithoutBiases",
                 {
                     "collected_inputs": {
-                        ("/conv_1/Conv/WithoutBiases", 0): ("input.1", 0),
+                        ("/conv_1/Conv/WithoutBiases", 0): ("/Concat", 0),
                         ("/conv_2/Conv/WithoutBiases", 0): ("/maxpool_1/MaxPool", 0),
                         ("/conv_4/Conv/WithoutBiases", 0): ("/Split", 0),
                         ("/conv_6/Conv/WithoutBiases", 0): ("/Split", 1),
@@ -126,7 +129,7 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
                 "/conv_3/Conv/WithoutBiases",
                 {
                     "collected_inputs": {
-                        ("/conv_1/Conv/WithoutBiases", 0): ("input.1", 0),
+                        ("/conv_1/Conv/WithoutBiases", 0): ("/Concat", 0),
                         ("/conv_2/Conv/WithoutBiases", 0): ("/maxpool_1/MaxPool", 0),
                         ("/conv_3/Conv/WithoutBiases", 0): ("/Relu_1", 0),
                         ("/conv_4/Conv/WithoutBiases", 0): ("/Split", 0),
@@ -160,7 +163,7 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
                     },
                     "subgraph_data": {
                         "subgraph_input_ids": {("/conv_5/Conv/WithoutBiases", 0), ("/conv_6/Conv/WithoutBiases", 0)},
-                        "subgraph_output_ids": {("/Add_3", 0), ("/Concat", 0)},
+                        "subgraph_output_ids": {("/Add_3", 0), ("/Concat_1", 0)},
                     },
                 },
             ),
@@ -178,7 +181,7 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
                             ("/conv_9/Conv/WithoutBiases", 0),
                             ("/conv_10/Conv/WithoutBiases", 0),
                         },
-                        "subgraph_output_ids": {("/Concat_1", 0)},
+                        "subgraph_output_ids": {("/Concat_2", 0)},
                     },
                 },
             ),

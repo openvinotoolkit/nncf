@@ -178,3 +178,33 @@ class TemplateTestBCAlgorithm:
         ref_subgraph_data = ref_data["subgraph_data"]
 
         assert subgraph_data == ref_subgraph_data
+
+    @pytest.mark.parametrize(
+        "model_cls, ref_stat_inputs_map",
+        (
+            (
+                SplittedModel,
+                {
+                    ("/conv_1/Conv/WithoutBiases", 0): ("/Concat", 0),
+                    ("/Concat", 1): ("input.1", 0),
+                },
+            ),
+            (
+                MultipleConvTestModel,
+                {
+                    ("/conv_1/Conv/WithoutBiases", 0): ("input.1", 0),
+                    ("/conv_3/Conv/WithoutBiases", 0): ("input.1", 0),
+                },
+            ),
+            (ConvTestModel, {("/conv/Conv/WithoutBiases", 0): ("input.1", 0)}),
+        ),
+    )
+    def test_verify_collected_stat_inputs_map(self, model_cls, ref_stat_inputs_map, tmpdir):
+        model = self.backend_specific_model(model_cls(), tmpdir)
+        graph = NNCFGraphFactory.create(model)
+
+        bc_algo = self.get_bias_correction_algorithm()
+        bc_algo.get_statistic_points(model, graph)
+
+        collected_stat_inputs_map = getattr(bc_algo, "_collected_stat_inputs_map")
+        assert collected_stat_inputs_map == ref_stat_inputs_map
