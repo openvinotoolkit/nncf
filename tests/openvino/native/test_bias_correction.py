@@ -25,6 +25,9 @@ from nncf.quantization.algorithms.bias_correction.openvino_backend import OVBias
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.common import get_openvino_version
+from tests.post_training.test_templates.helpers import ConvTestModel
+from tests.post_training.test_templates.helpers import MultipleConvTestModel
+from tests.post_training.test_templates.helpers import SplittedModel
 from tests.post_training.test_templates.test_bias_correction import TemplateTestBCAlgorithm
 
 OV_VERSION = get_openvino_version()
@@ -201,3 +204,26 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
     )
     def test__get_subgraph_data_for_node(self, quantized_test_model, layer_name, ref_data):
         return super().test__get_subgraph_data_for_node(quantized_test_model, layer_name, ref_data)
+
+    @pytest.mark.parametrize(
+        "model_cls, ref_stat_inputs_map",
+        (
+            (
+                SplittedModel,
+                {
+                    ("/conv_1/Conv/WithoutBiases", 0): ("/Concat", 0),
+                    ("/Concat", 1): ("input.1", 0),
+                },
+            ),
+            (
+                MultipleConvTestModel,
+                {
+                    ("/conv_1/Conv/WithoutBiases", 0): ("input.1", 0),
+                    ("/conv_3/Conv/WithoutBiases", 0): ("input.1", 0),
+                },
+            ),
+            (ConvTestModel, {("/conv/Conv/WithoutBiases", 0): ("input.1", 0)}),
+        ),
+    )
+    def test_verify_collected_stat_inputs_map(self, model_cls, ref_stat_inputs_map, tmpdir):
+        return super().test_verify_collected_stat_inputs_map(model_cls, ref_stat_inputs_map, tmpdir)

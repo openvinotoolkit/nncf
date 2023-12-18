@@ -22,6 +22,9 @@ from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.node_utils import get_bias_value
 from nncf.quantization.algorithms.bias_correction.onnx_backend import ONNXBiasCorrectionAlgoBackend
 from tests.onnx.quantization.common import compare_nncf_graph
+from tests.post_training.test_templates.helpers import ConvTestModel
+from tests.post_training.test_templates.helpers import MultipleConvTestModel
+from tests.post_training.test_templates.helpers import SplittedModel
 from tests.post_training.test_templates.test_bias_correction import TemplateTestBCAlgorithm
 from tests.shared.paths import TEST_ROOT
 
@@ -90,7 +93,10 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
             (
                 "/conv_1/Conv",
                 {
-                    "collected_inputs": {("/conv_1/Conv", 0): ("input.1", 0)},
+                    "collected_inputs": {
+                        ("/Concat", 1): ("nncf_model_input_0", 0),
+                        ("/conv_1/Conv", 0): ("nncf_model_input_0", 0),
+                    },
                     "subgraph_data": {
                         "subgraph_input_ids": {("/conv_1/Conv", 0)},
                         "subgraph_output_ids": {("/Split", 0), ("/maxpool_1/MaxPool", 0), ("/Split", 1)},
@@ -101,7 +107,7 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
                 "/conv_2/Conv",
                 {
                     "collected_inputs": {
-                        ("/conv_1/Conv", 0): ("input.1", 0),
+                        ("/conv_1/Conv", 0): ("nncf_model_input_0", 0),
                         ("/conv_2/Conv", 0): ("/maxpool_1/MaxPool", 0),
                         ("/conv_4/Conv", 0): ("/Split", 0),
                         ("/conv_6/Conv", 0): ("/Split", 1),
@@ -116,7 +122,7 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
                 "/conv_3/Conv",
                 {
                     "collected_inputs": {
-                        ("/conv_1/Conv", 0): ("input.1", 0),
+                        ("/conv_1/Conv", 0): ("nncf_model_input_0", 0),
                         ("/conv_2/Conv", 0): ("/maxpool_1/MaxPool", 0),
                         ("/conv_3/Conv", 0): ("/Relu_1", 0),
                         ("/conv_4/Conv", 0): ("/Split", 0),
@@ -150,7 +156,7 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
                     },
                     "subgraph_data": {
                         "subgraph_input_ids": {("/conv_5/Conv", 0), ("/conv_6/Conv", 0)},
-                        "subgraph_output_ids": {("/Add_3", 0), ("/Concat", 0)},
+                        "subgraph_output_ids": {("/Add_3", 0), ("/Concat_1", 0)},
                     },
                 },
             ),
@@ -160,7 +166,7 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
                     "collected_inputs": {
                         ("/conv_8/Conv", 0): ("/conv_7/Conv", 0),
                         ("/conv_9/Conv", 0): ("/Add_3", 0),
-                        ("/conv_10/Conv", 0): ("/Concat", 0),
+                        ("/conv_10/Conv", 0): ("/Concat_1", 0),
                     },
                     "subgraph_data": {
                         "subgraph_input_ids": {
@@ -168,7 +174,7 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
                             ("/conv_9/Conv", 0),
                             ("/conv_10/Conv", 0),
                         },
-                        "subgraph_output_ids": {("/Concat_1", 0)},
+                        "subgraph_output_ids": {("/Concat_2", 0)},
                     },
                 },
             ),
@@ -191,3 +197,26 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
     )
     def test__get_subgraph_data_for_node(self, quantized_test_model, layer_name, ref_data):
         return super().test__get_subgraph_data_for_node(quantized_test_model, layer_name, ref_data)
+
+    @pytest.mark.parametrize(
+        "model_cls, ref_stat_inputs_map",
+        (
+            (
+                SplittedModel,
+                {
+                    ("/conv_1/Conv", 0): ("/Concat", 0),
+                    ("/Concat", 1): ("nncf_model_input_0", 0),
+                },
+            ),
+            (
+                MultipleConvTestModel,
+                {
+                    ("/conv_1/Conv", 0): ("nncf_model_input_0", 0),
+                    ("/conv_3/Conv", 0): ("nncf_model_input_0", 1),
+                },
+            ),
+            (ConvTestModel, {("/conv/Conv", 0): ("nncf_model_input_0", 0)}),
+        ),
+    )
+    def test_verify_collected_stat_inputs_map(self, model_cls, ref_stat_inputs_map, tmpdir):
+        return super().test_verify_collected_stat_inputs_map(model_cls, ref_stat_inputs_map, tmpdir)

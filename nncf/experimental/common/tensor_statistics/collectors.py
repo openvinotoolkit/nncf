@@ -307,7 +307,7 @@ class TensorCollector:
             reducer_hash = hash(reducer)
             input_ = inputs[reducer_hash]
             reduced_input = reducer(input_)
-            if reduced_input:
+            if reduced_input is not None:
                 reduced_inputs[reducer_hash] = reduced_input
 
         for (
