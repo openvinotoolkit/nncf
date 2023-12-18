@@ -18,14 +18,18 @@ import pytest
 from attr import dataclass
 
 from nncf import CompressWeightsMode
+from nncf.data.dataset import Dataset
 from nncf.openvino.graph.node_utils import get_const_value
+from nncf.parameters import MixedPrecisionMode
 from nncf.quantization import compress_weights
-from nncf.quantization.algorithms.weight_compression.openvino_backend import WeightCompressionConfig
-from nncf.quantization.algorithms.weight_compression.openvino_backend import _get_integer_quantization_error
-from nncf.quantization.algorithms.weight_compression.openvino_backend import _reshape_weights_for_grouped_quantization
+from nncf.quantization.algorithms.weight_compression.compression_info import WeightCompressionConfig
+from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
+from nncf.quantization.algorithms.weight_compression.quantize import _get_integer_quantization_error
+from nncf.quantization.algorithms.weight_compression.quantize import _reshape_weights_for_grouped_quantization
 from nncf.scopes import IgnoredScope
 from tests.openvino.native.models import GatherAndMatmulShareData
 from tests.openvino.native.models import GatherWithTwoReductionAxes
+from tests.openvino.native.models import IdentityMatmul
 from tests.openvino.native.models import IntegerModel
 from tests.openvino.native.models import SequentialMatmulModel
 from tests.openvino.native.models import WeightsModel
@@ -190,30 +194,84 @@ def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
     compare_stats(ref_stats, actual_stats)
 
 
-@pytest.mark.parametrize("group_size", (1, 3))
 @pytest.mark.parametrize(
-    ("ratio", "ref_nf4_nodes"),
+    ("mode", "all_layers", "ratio", "ref_ids"),
     (
-        (1, {"weights_0", "weights_1", "weights_2", "weights_3"}),
-        (0.8, {"weights_1", "weights_2", "weights_3"}),
-        (0.4, {"weights_2"}),
-        (0.2, set()),
+        (MixedPrecisionMode.INT8_ERROR, True, 1, [0, 1, 2, 3, 4]),
+        (MixedPrecisionMode.INT8_ERROR, True, 0.8, [0, 3, 4]),
+        (MixedPrecisionMode.INT8_ERROR, True, 0.4, [0]),
+        (MixedPrecisionMode.INT8_ERROR, True, 0.2, []),
+        (MixedPrecisionMode.INT8_ERROR, False, 1, [0, 1, 2, 3]),
+        (MixedPrecisionMode.INT8_ERROR, False, 0.8, [0, 1, 3]),
+        (MixedPrecisionMode.INT8_ERROR, False, 0.4, [0]),
+        (MixedPrecisionMode.INT8_ERROR, False, 0.2, []),
+        (MixedPrecisionMode.HAWQ_IN, True, 0.8, [0, 1, 2]),
+        (MixedPrecisionMode.HAWQ_IN, False, 0.8, [0, 1, 2]),
+        (MixedPrecisionMode.MEAN_VAR, True, 0.8, [0, 1, 2]),
+        (MixedPrecisionMode.MEAN_VAR, False, 0.8, [0, 1, 2]),
+        (MixedPrecisionMode.MAX_VAR, True, 0.8, [0, 1, 2]),
+        (MixedPrecisionMode.MAX_VAR, False, 0.8, [0, 1, 2]),
+        (MixedPrecisionMode.MEAN_MAX, True, 0.8, [0, 1, 2]),
+        (MixedPrecisionMode.MEAN_MAX, False, 0.8, [0, 1, 2]),
     ),
 )
-def test_mixed_precision(ratio, group_size, ref_nf4_nodes):
+def test_mixed_precision(mode, all_layers, ratio, ref_ids, mocker):
     model = SequentialMatmulModel().ov_model
-    compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4, ratio=ratio, group_size=group_size)
+    dataset = Dataset([np.ones([3, 3]), np.arange(9).reshape(3, 3)])
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.NF4,
+        ratio=ratio,
+        group_size=1,
+        all_layers=all_layers,
+        mixed_precision_mode=mode,
+        dataset=dataset,
+    )
     names = {
         op.get_friendly_name() for op in compressed_model.get_ordered_ops() if op.get_element_type() == ov.Type.nf4
     }
+    ref_nf4_nodes = {f"weights_{i}" for i in ref_ids}
     assert ref_nf4_nodes == names
 
 
-def test_compress_all_layers():
-    model = SequentialMatmulModel().ov_model
-    compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4, ratio=1, group_size=1, all_layers=True)
-    num_int4 = sum(1 for op in compressed_model.get_ordered_ops() if op.get_element_type() == ov.Type.nf4)
-    assert num_int4 == 5
+MAX_BASELINE_SCORE = 1 / np.finfo(np.float32).eps
+NON_ZERO_ROW = [0, 1, 2]
+ACTIVATION = np.array([NON_ZERO_ROW, [0, 0, 0], [0, 0, 0]])
+MAX_VAR = 0.8888888  # np.max(np.var(ACTIVATION, 0))
+MEAN_VAR = 0.3703703  # np.mean(np.var(ACTIVATION, 0))
+MEAN_MAX = 1  # np.mean(np.max(ACTIVATION, 0))
+HESSIAN_TRACE = 10 / 9  # sum(i*i for i in NON_ZERO_ROW) * 2 / ACTIVATION.size
+
+
+@pytest.mark.parametrize(
+    ("mode", "ref_act_scores", "ref_scores"),
+    (
+        (MixedPrecisionMode.HAWQ_IN, HESSIAN_TRACE, 0),
+        (MixedPrecisionMode.MEAN_MAX, MEAN_MAX, MEAN_MAX * MAX_BASELINE_SCORE),
+        (MixedPrecisionMode.MEAN_VAR, MEAN_VAR, MEAN_VAR * MAX_BASELINE_SCORE),
+        (MixedPrecisionMode.MAX_VAR, MAX_VAR, MAX_VAR * MAX_BASELINE_SCORE),
+    ),
+)
+def test_data_based_criterion(mode, ref_scores, ref_act_scores, mocker):
+    model = IdentityMatmul().ov_model
+    dataset = Dataset([ACTIVATION])
+    criterion_cls = MIXED_PRECISION_CRITERIA.get(mode)
+    scores_spy = mocker.spy(criterion_cls, "_calc_scores")
+    act_scores_spy = mocker.spy(criterion_cls, "_calc_activation_score")
+
+    compress_weights(
+        model,
+        mode=CompressWeightsMode.NF4,
+        ratio=0.5,
+        group_size=1,
+        dataset=dataset,
+        mixed_precision_mode=mode,
+        all_layers=True,
+    )
+    scores = scores_spy.spy_return
+    act_scores = act_scores_spy.spy_return
+    assert np.allclose(scores, ref_scores)
+    assert np.allclose(act_scores, ref_act_scores)
 
 
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
@@ -437,4 +495,5 @@ def test_raise_error_with_int8_and_non_default_ratio(mocker, mode):
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
 def test_raise_error_with_int8_and_non_default_group_size(mocker, mode):
     with pytest.raises(AttributeError):
+        compress_weights(mocker.Mock(), mode=mode, group_size=64)
         compress_weights(mocker.Mock(), mode=mode, group_size=64)

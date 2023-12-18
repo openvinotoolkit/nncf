@@ -21,6 +21,7 @@ from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
+from nncf.parameters import MixedPrecisionMode
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
@@ -254,7 +255,9 @@ def compress_weights(
     ratio: Optional[float] = None,
     group_size: Optional[int] = None,
     ignored_scope: Optional[IgnoredScope] = None,
+    dataset: Dataset = None,
     all_layers: Optional[bool] = None,
+    mixed_precision_mode: Optional[MixedPrecisionMode] = MixedPrecisionMode.INT8_ERROR,
 ) -> TModel:
     """
     Compress model weights.
@@ -280,8 +283,13 @@ def compress_weights(
         flow graph nodes to be ignored during quantization.
     :param all_layers: Indicates whether embeddings and last layers should be compressed to a primary
         precision. By default, the backup precision is assigned for the embeddings and last layers.
+    # TODO:
     :return: The non-trainable model with compressed weights.
     """
+    if not dataset and mixed_precision_mode != MixedPrecisionMode.INT8_ERROR:
+        # TODO: correct
+        raise AttributeError("mixed precision mode except INT8_ERROR requires dataset, but it's not provided")
+
     if mode == CompressWeightsMode.INT8:
         warning_deprecated(
             "`CompressWeightsMode.INT8` is deprecated." "Please, use `CompressWeightsMode.INT8_ASYM` as value instead."
@@ -316,9 +324,9 @@ def compress_weights(
 
     if all_layers is None:
         all_layers = False
-    compression_algorithm = WeightCompression(mode, ratio, group_size, ignored_scope, all_layers)
+    compression_algorithm = WeightCompression(mode, ratio, group_size, ignored_scope, all_layers, mixed_precision_mode)
     graph = NNCFGraphFactory.create(model)
-    return compression_algorithm.apply(model, graph)
+    return compression_algorithm.apply(model, graph, dataset=dataset)
 
 
 def quantize_with_tune_hyperparams(

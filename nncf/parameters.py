@@ -89,6 +89,19 @@ class CompressWeightsMode(Enum):
     INT8 = "int8"  # Deprecated mode
 
 
+class MixedPrecisionMode(Enum):
+    """
+    Defines a mode for selecting quantization precision.
+    :param : TODO:
+    """
+
+    INT8_ERROR = "int8_error"
+    HAWQ_IN = "hawq_in"
+    MEAN_VAR = "mean_var"
+    MAX_VAR = "max_var"
+    MEAN_MAX = "mean_max"
+
+
 @api(canonical_alias="nncf.QuantizationMode")
 class QuantizationMode(Enum):
     """

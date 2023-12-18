@@ -19,16 +19,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional, TypeVar
+from collections import defaultdict
+from typing import Dict, List, Optional, Tuple, TypeVar
+
+import numpy as np
 
 from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.scopes import should_consider_scope
+from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.openvino.graph.transformations.commands import TargetType
+from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from nncf.parameters import CompressWeightsMode
+from nncf.parameters import MixedPrecisionMode
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
@@ -52,6 +59,7 @@ class WeightCompression(Algorithm):
         group_size: int = None,
         ignored_scope: Optional[IgnoredScope] = None,
         all_layers: Optional[bool] = False,
+        mixed_precision_mode: Optional[MixedPrecisionMode] = MixedPrecisionMode.INT8_ERROR,
     ):
         """
         :param mode: Defines a mode for weight compression.
@@ -75,6 +83,7 @@ class WeightCompression(Algorithm):
             flow graph nodes to be ignored during quantization.
         :param all_layers: Indicates whether embeddings and last layers should be compressed to a primary
             precision. By default, the backup precision is assigned for the embeddings and last layers.
+        # TODO:
         """
         super().__init__()
         self._mode = mode
@@ -83,11 +92,45 @@ class WeightCompression(Algorithm):
         self._ignored_scope = IgnoredScope() if ignored_scope is None else ignored_scope
         self._backend_entity = None
         self._algorithm_key = f"CW_{hash(self)}"
+        self._fp_inputs = defaultdict(list)
         self._all_layers = all_layers
+        self._mixed_precision_mode = mixed_precision_mode
 
     @property
     def available_backends(self) -> List[BackendType]:
         return [BackendType.OPENVINO]
+
+    def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str, port_id: int) -> np.ndarray:
+        """
+        Makes out pre-layer needed data from the floating-point collected statistics.
+
+        :param statistic_points: Filled StatisticPointsContainer.
+        :param node_name: Name of the current layer.
+        :param port_id: Port id for statistics collection.
+        :return: Collected mean tensor data and shape for the further bias calculation.
+        """
+
+        def input_filter_func(point):
+            # For the floating-point statistics collected in POST_LAYER style,
+            # we also need to determine the output port id.
+            # For the cases when the layer has more than one (0) output port.
+            return (
+                self._algorithm_key in point.algorithm_to_tensor_collectors
+                and point.target_point.type == TargetType.POST_LAYER_OPERATION
+                and point.target_point.port_id == port_id
+            )
+
+        input_id = (node_name, port_id)
+        if input_id in self._fp_inputs:
+            return self._fp_inputs[input_id]
+
+        input_fp = []
+        for tensor_collector in statistic_points.get_algo_statistics_for_node(
+            node_name, input_filter_func, self._algorithm_key
+        ):
+            input_fp.extend(tensor_collector.get_statistics().values)
+        self._fp_inputs[input_id] = input_fp
+        return self._fp_inputs[input_id]
 
     def _set_backend_entity(self, model: TModel) -> None:
         """
@@ -105,6 +148,19 @@ class WeightCompression(Algorithm):
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
             )
 
+    def _get_activation_node_and_port(self, node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[NNCFNode, int]:
+        """
+        This method returns the activation layer and corresponding port id for the node.
+
+        :param node: NNCFGraph node for which the activation is sought.
+        :param nncf_graph: NNCFGraph instance with the node.
+        :return: Tuple with the activation node and port id.
+        """
+        activation_port = self._backend_entity.get_activation_port_id(node, nncf_graph)
+        activation_node = nncf_graph.get_input_edges(node)[activation_port].from_node
+        port_id = nncf_graph.get_edge(activation_node, node).output_port_id
+        return activation_node, port_id
+
     def apply(
         self,
         model: TModel,
@@ -115,8 +171,20 @@ class WeightCompression(Algorithm):
         self._set_backend_entity(model)
         self._backend_entity.validate_params(self._mode, self._ignored_scope)
         nodes_to_compress = self._get_nodes_to_compress(graph)
+
+        activations = {}
+        if dataset is not None and self._mixed_precision_mode != MixedPrecisionMode.INT8_ERROR:
+            activations = self.get_activations(dataset, nodes_to_compress, graph, model)
+
         transformed_model = self._backend_entity.do_compression(
-            model, nodes_to_compress, self._mode, self._ratio, self._group_size, self._all_layers
+            model,
+            nodes_to_compress,
+            self._mode,
+            self._ratio,
+            self._group_size,
+            self._all_layers,
+            activations,
+            self._mixed_precision_mode,
         )
         return transformed_model
 
@@ -149,3 +217,52 @@ class WeightCompression(Algorithm):
         :param graph: Model graph.
         :return: Statistic points, for which StatisticsCollector should collect statistics.
         """
+
+    def get_activations(self, dataset, nodes_to_compress, graph, model) -> Dict[str, np.ndarray]:
+        # TODO: proper params and docstrings
+        subset_size = 128
+
+        activations = {}
+        _collected_stat_inputs_map = {}
+        statistic_container = StatisticPointsContainer()
+        all_act_nodes = []
+        act_vs_shared_node_names_mapping = {}
+        for node in nodes_to_compress:
+            act_node, output_port_id = self._get_activation_node_and_port(node, graph)
+            act_node_name = act_node.node_name
+            if act_node_name in all_act_nodes:
+                shared_node_names = act_vs_shared_node_names_mapping.get(act_node_name, [])
+                shared_node_names.append(node.node_name)
+                act_vs_shared_node_names_mapping[act_node_name] = shared_node_names
+                continue
+            all_act_nodes.append(act_node_name)
+            output_id = (act_node_name, output_port_id)
+            _collected_stat_inputs_map[node.node_name] = output_id
+
+            statistic_point = self._backend_entity.target_point(
+                TargetType.POST_LAYER_OPERATION, act_node_name, port_id=output_port_id
+            )
+            inplace_statistics = False
+
+            stat_collector = self._backend_entity.raw_statistic_collector(
+                num_samples=subset_size, inplace=inplace_statistics
+            )
+            statistic_container.add_statistic_point(
+                StatisticPoint(
+                    target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key
+                )
+            )
+        statistics_aggregator = OVStatisticsAggregator(dataset)
+        statistics_aggregator.register_statistic_points(statistic_container)
+        statistics_aggregator.collect_statistics(model, graph)
+
+        for node_name, output_id in _collected_stat_inputs_map.items():
+            act_node_name, output_port_id = output_id
+            x_fp = self._get_fp_inputs(statistic_container, node_name=act_node_name, port_id=output_port_id)
+            x_fp = [i.squeeze() for i in x_fp]  # List[tensor(seq_length, hidden_dim)]
+            activations[node_name] = x_fp
+
+            for shared_node_name in act_vs_shared_node_names_mapping.get(act_node_name, []):
+                activations[shared_node_name] = x_fp
+
+        return activations
