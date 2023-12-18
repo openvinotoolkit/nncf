@@ -21,7 +21,7 @@ class OperatorMetatype:
 
     :param name: The name of the operator.
     :param hw_config_names: The names of the hardware configurations.
-    :param output_channel_axis: The axis along which the output channels of the operator are arranged.
+    :param output_channel_axis: The axis, along which the output channels of the operator are arranged.
     :param ignored_input_ports: Input ports of the operations that should not be considered for purposes of compression.
     """
 
@@ -29,6 +29,7 @@ class OperatorMetatype:
     hw_config_names: List[str] = []
     output_channel_axis: Optional[int] = None
     ignored_input_ports: List[int] = []
+    target_input_ports: Optional[List[int]] = None
 
     @classmethod
     def get_all_aliases(cls) -> List[str]:

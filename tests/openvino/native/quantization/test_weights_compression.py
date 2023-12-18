@@ -24,7 +24,8 @@ from nncf.quantization.algorithms.weight_compression.openvino_backend import Wei
 from nncf.quantization.algorithms.weight_compression.openvino_backend import _get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.openvino_backend import _reshape_weights_for_grouped_quantization
 from nncf.scopes import IgnoredScope
-from tests.openvino.native.common import get_openvino_version
+from tests.openvino.native.models import GatherAndMatmulShareData
+from tests.openvino.native.models import GatherWithTwoReductionAxes
 from tests.openvino.native.models import IntegerModel
 from tests.openvino.native.models import SequentialMatmulModel
 from tests.openvino.native.models import WeightsModel
@@ -46,7 +47,7 @@ def get_next_node(node):
     return next_node
 
 
-def check_int8_node(op: ov.Node):
+def check_int8_node(op: ov.Node, mode: CompressWeightsMode = CompressWeightsMode.INT8_ASYM):
     assert op.get_element_type() == ov.Type(np.uint8)
     compressed_weight = get_const_value(op)
 
@@ -61,6 +62,12 @@ def check_int8_node(op: ov.Node):
 
     zero_point_node = convert_node.input_value(0).get_node()
     zero_point = get_const_value(zero_point_node)
+    if mode == CompressWeightsMode.INT8_SYM:
+        assert list(zero_point_node.shape) == [1]
+    else:
+        reduced_weight_shape = list(op.shape)
+        reduced_weight_shape[-1] = 1
+        assert list(zero_point_node.shape) == reduced_weight_shape
 
     mul_node = get_next_node(sub_node)
     assert mul_node.get_type_name() == "Multiply"
@@ -74,7 +81,7 @@ def check_int8_node(op: ov.Node):
     }
 
 
-def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int = 3):
+def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int = 7):
     assert op.get_element_type() == ov.Type.u4
     weight_shape = op.shape
     # NOTE: get_const_value doesn't work for 4-bit types
@@ -111,7 +118,7 @@ def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int =
     }
 
 
-def check_nf4_grouped(op: ov.Node, group_size: int = 3):
+def check_nf4_grouped(op: ov.Node, group_size: int = 7):
     assert op.get_element_type() == ov.Type.nf4
     weight_shape = op.shape
     # NOTE: get_const_value doesn't work for 4-bit types
@@ -143,27 +150,28 @@ def check_int4_asym_grouped(op: ov.Node):
     return check_int4_grouped(op, mode=CompressWeightsMode.INT4_ASYM)
 
 
+def check_int8_sym(op: ov.Node):
+    return check_int8_node(op, mode=CompressWeightsMode.INT8_SYM)
+
+
 def get_mixed_mapping(primary_fn: Callable, list_layers: List[str]):
     mapping = {node_name: check_int8_node for node_name in list_layers}
-
-    for node_name in TEST_MODELS[IntegerModel][1:-1]:
-        mapping[node_name] = primary_fn
+    primary_node_name = TEST_MODELS[IntegerModel][0]
+    mapping[primary_node_name] = primary_fn
     return mapping
 
 
 @pytest.mark.parametrize(
     ("mode", "group_size", "check_fn_per_node_map"),
     (
-        (CompressWeightsMode.INT8, -1, {node_name: check_int8_node for node_name in TEST_MODELS[IntegerModel]}),
-        (CompressWeightsMode.INT4_SYM, 3, get_mixed_mapping(check_int4_sym_grouped, TEST_MODELS[IntegerModel])),
-        (CompressWeightsMode.INT4_ASYM, 3, get_mixed_mapping(check_int4_asym_grouped, TEST_MODELS[IntegerModel])),
-        (CompressWeightsMode.NF4, 3, get_mixed_mapping(check_nf4_grouped, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.INT8_ASYM, -1, {node_name: check_int8_node for node_name in TEST_MODELS[IntegerModel]}),
+        (CompressWeightsMode.INT8_SYM, -1, {node_name: check_int8_sym for node_name in TEST_MODELS[IntegerModel]}),
+        (CompressWeightsMode.INT4_SYM, 7, get_mixed_mapping(check_int4_sym_grouped, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.INT4_ASYM, 7, get_mixed_mapping(check_int4_asym_grouped, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.NF4, 7, get_mixed_mapping(check_nf4_grouped, TEST_MODELS[IntegerModel])),
     ),
 )
 def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
-    ov_version = get_openvino_version()
-    if mode == CompressWeightsMode.NF4 and ov_version != "2023.2":
-        pytest.xfail("NF4 is not supported until 2023.2")
     model = IntegerModel().ov_model
     compressed_model = compress_weights(model, mode=mode, group_size=group_size)
     actual_stats = {}
@@ -188,18 +196,40 @@ def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
     (
         (1, ["weights_1", "weights_2", "weights_3"]),
         (0.8, ["weights_2", "weights_3"]),
-        (0.4, ["weights_3"]),
+        (0.4, ["weights_2"]),
         (0.3, []),
     ),
 )
 def test_mixed_precision(ratio, group_size, ref_nf4_nodes):
-    if ratio > 0.3:
-        pytest.xfail("Waiting for the merge NF4 support in OV - PR 19900")
     model = SequentialMatmulModel().ov_model
     compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4, ratio=ratio, group_size=group_size)
     for op in compressed_model.get_ordered_ops():
         if op.get_type_name() == "Constant" and op.get_friendly_name() in ref_nf4_nodes:
             assert op.get_element_type() == ov.Type.nf4
+
+
+@pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
+def test_not_quantize_with_multiple_reduction_axes(mode):
+    model = GatherWithTwoReductionAxes().ov_model
+    compressed_model = compress_weights(model, mode=mode)
+    for op in compressed_model.get_ordered_ops():
+        if op.get_type_name() == "Constant" and op.get_friendly_name() == "gather_1_data":
+            assert op.get_element_type() == ov.Type(np.float32)
+
+
+@pytest.mark.parametrize("mode", (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM))
+def test_shared_gather(mode):
+    weight_name_vs_type = {
+        "gather_2_data": ov.Type(np.uint8),
+        "shared_data": ov.Type(np.uint8),
+        "matmul_1_data": ov.Type.u4,
+    }
+    model = GatherAndMatmulShareData().ov_model
+    compressed_model = compress_weights(model, mode, group_size=3)
+    for op in compressed_model.get_ordered_ops():
+        op_name = op.get_friendly_name()
+        if op.get_type_name() == "Constant" and op_name in weight_name_vs_type:
+            assert op.get_element_type() == weight_name_vs_type[op_name]
 
 
 @dataclass
@@ -298,7 +328,7 @@ LIST_DESCS = [
 @pytest.mark.parametrize("desc", LIST_DESCS, ids=map(str, LIST_DESCS))
 def test_quantization_error_calculation(desc: QuantErrorDesc):
     weight = desc.weight
-    axis = (1,)
+    axis = 1
     actual_error = _get_integer_quantization_error(weight, axis, desc.config)
     ref_error = desc.ref_error
     atol = desc.atol if desc.atol is not None else 1e-8
@@ -374,27 +404,29 @@ def test_weight_compress_with_ignored_scope(ignored_scope, num_compressed):
 @pytest.mark.parametrize("desc", CALCULATE_SCALE_DESCS)
 def test_calculate_scale_per_group(desc: CalculateScaleDesc):
     reshaped_weight, reduction_axis = _reshape_weights_for_grouped_quantization(
-        desc.weight, reduction_axes=desc.axis, group_size=desc.group_size
+        desc.weight, reduction_axis=desc.axis, group_size=desc.group_size
     )
     act_scale = np.max(np.abs(reshaped_weight), axis=reduction_axis, keepdims=True)  # [a1, r//gs, 1, a2]
     assert np.allclose(act_scale, desc.ref_scale)
 
 
 def test_raise_error_for_many_axes():
-    with pytest.raises(RuntimeError):
-        _reshape_weights_for_grouped_quantization(WEIGHTS_2x4, reduction_axes=(0, 1), group_size=1)
+    with pytest.raises(AssertionError):
+        _reshape_weights_for_grouped_quantization(WEIGHTS_2x4, reduction_axis=(0, 1), group_size=1)
 
 
-def test_raise_error_with_incorrect_group_size():
-    with pytest.raises(RuntimeError):
-        _reshape_weights_for_grouped_quantization(WEIGHTS_2x4, reduction_axes=(0,), group_size=3)
+def test_raise_error_with_tuple():
+    with pytest.raises(AssertionError):
+        _reshape_weights_for_grouped_quantization(WEIGHTS_2x4, reduction_axis=(0,), group_size=3)
 
 
-def test_raise_error_with_int8_and_non_default_ratio(mocker):
+@pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
+def test_raise_error_with_int8_and_non_default_ratio(mocker, mode):
     with pytest.raises(AttributeError):
-        compress_weights(mocker.Mock(), mode=CompressWeightsMode.INT8, ratio=0.5)
+        compress_weights(mocker.Mock(), mode=mode, ratio=0.5)
 
 
-def test_raise_error_with_int8_and_non_default_group_size(mocker):
+@pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
+def test_raise_error_with_int8_and_non_default_group_size(mocker, mode):
     with pytest.raises(AttributeError):
-        compress_weights(mocker.Mock(), mode=CompressWeightsMode.INT8, group_size=64)
+        compress_weights(mocker.Mock(), mode=mode, group_size=64)

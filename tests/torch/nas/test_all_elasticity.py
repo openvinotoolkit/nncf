@@ -262,6 +262,7 @@ REF_COMPRESSION_STATE_FOR_TWO_CONV = {
                             "elasticity_params": {
                                 "add_dynamic_inputs": None,
                                 "filter_importance": "L1",
+                                "external_importance_path": None,
                                 "max_num_widths": -1,
                                 "min_width": 1,
                                 "overwrite_groups": None,

@@ -54,17 +54,20 @@ class WeightCompression(Algorithm):
     ):
         """
         :param mode: Defines a mode for weight compression.
-            INT8 stands for 8-bit integer quantization of all weights.
+            INT8_SYM stands for 8-bit integer symmetric quantization of all weights.
+                Weights are quantized symmetrically with a fixed zero point equals to 128.
+            INT8_ASYM is the same as INT8_SYM mode, but weights are quantized to a primary precision asymmetrically
+                with a typical non-fixed zero point.
             INT4_SYM stands for a mixed-precision weights quantization with 4-bit integer as a primary precision.
                 Weights are quantized to a primary precision symmetrically with a fixed zero point equals to 8.
-                The first and the last layers are always compressed to a backup precision, which is 8-bit integer,
+                All embeddings and the last layer are always compressed to a backup precision, which is INT8_ASYM,
                 by default. All others are quantized whether to 4-bit integer or to a backup precision depending on
                 criteria and the given ratio.
             INT4_ASYM is the same as INT4_SYM mode, but weights are quantized to a primary precision asymmetrically
                 with a typical non-fixed zero point.
             NF4 is the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
         :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
-            and the rest to INT8).
+            and the rest to INT8_ASYM).
         :param group_size: number of weights (e.g. 128) in the channel dimension
             that share quantization parameters (scale). The value -1 means no grouping.
         :param ignored_scope: An ignored scope that defined the list of model control

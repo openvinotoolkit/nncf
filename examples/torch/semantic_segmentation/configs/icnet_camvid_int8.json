@@ -42,5 +42,6 @@
     "compression": {
             "algorithm": "quantization",
             "ignored_scopes": ["ICNet/interpolate_0"]
-    }
+    },
+    "export_to_ir_via_onnx": true
 }

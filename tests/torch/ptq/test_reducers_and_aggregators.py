@@ -106,6 +106,8 @@ class TestCudaReducersAggregators(BaseTestReducersAggregators):
 @pytest.mark.parametrize("device", ["cuda", "cpu"])
 @pytest.mark.parametrize("size,ref", [(16_000_000, 1_600_000.8750), (17_000_000, 1_700_000.7500)])
 def test_quantile_percentile_function(device, size, ref):
+    if not torch.cuda.is_available() and device == "cuda":
+        pytest.skip("Cuda is not available in current environment")
     tensor = PTNNCFTensor(torch.arange(1, size, 1).float().to(device))
     res_quantile = PTNNCFCollectorTensorProcessor.quantile(tensor, [0.1], axis=0)
     res_percentile = PTNNCFCollectorTensorProcessor.percentile(tensor, [10], axis=0)
@@ -118,6 +120,8 @@ def test_quantile_percentile_function(device, size, ref):
 @pytest.mark.parametrize("device", ["cuda", "cpu"])
 @pytest.mark.parametrize("size,ref", [(16_000_000, 8_000_000), (17_000_000, 8_500_000)])
 def test_median_function(device, size, ref):
+    if not torch.cuda.is_available() and device == "cuda":
+        pytest.skip("Cuda is not available in current environment")
     tensor = PTNNCFTensor(torch.arange(1, size, 1).float().to(device))
     res = PTNNCFCollectorTensorProcessor.median(tensor, axis=0)
     assert res.tensor == ref

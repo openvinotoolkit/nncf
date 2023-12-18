@@ -64,7 +64,9 @@ python main.py \
 - Use the `--resume` flag with the path to a previously saved model to resume training.
 - For Torchvision-supported image classification models, set `"pretrained": true` inside the NNCF config JSON file supplied via `--config` to initialize the model to be compressed with Torchvision-supplied pretrained weights, or, alternatively:
 - Use the `--weights` flag with the path to a compatible PyTorch checkpoint in order to load all matching weights from the checkpoint into the model - useful if you need to start compression-aware training from a previously trained uncompressed (FP32) checkpoint instead of performing compression-aware training from scratch.
-- Use the `--no_strip_on_export` to export not stripped model.
+- Use `--export-model-path` to specify the path to export the model in OpenVINO or ONNX format by using the .xml or .onnx suffix, respectively.
+- Use the `--no-strip-on-export` to export not stripped model.
+- Use the `--export-to-ir-via-onnx` to to export to OpenVINO, will produce the serialized OV IR object by first exporting the torch model object to an .onnx file and then converting that .onnx file to an OV IR file.
 
 ### Validate Your Model Checkpoint
 
@@ -86,7 +88,7 @@ To export trained model to the ONNX format, use the following command:
 python main.py -m export \
 --config=configs/quantization/mobilenet_v2_imagenet_int8.json \
 --resume=../../results/quantization/mobilenet_v2_int8/6/checkpoints/epoch_1.pth \
---to-onnx=../../results/mobilenet_v2_int8.onnx
+--to-ir=../../results
 ```
 
 ### Export to OpenVINO™ Intermediate Representation (IR)

@@ -62,10 +62,15 @@ class DropType(Enum):
 class CompressWeightsMode(Enum):
     """
     Defines a mode for weight compression.
-    :param INT8: Stands for 8-bit integer quantization of all weights.
+    :param INT8_SYM: Stands for 8-bit integer symmetric quantization of all weights.
+        Weights are quantized symmetrically with a fixed zero point equals to 128.
+        https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#symmetric-quantization
+    :param INT8_ASYM: The same as INT8_SYM mode, but weights are quantized to a primary precision asymmetrically
+        with a typical non-fixed zero point.
+        https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#asymmetric-quantization
     :param INT4_SYM: Stands for a mixed-precision weights quantization with 4-bit integer as a primary precision.
         Weights are quantized to a primary precision symmetrically with a fixed zero point equals to 8.
-        The first and the last layers are always compressed to a backup precision, which is 8-bit integer,
+        All embeddings and the last layer are always compressed to a backup precision, which is INT8_ASYM,
         by default. All others are quantized whether to 4-bit integer or to a backup precision depending on
         criteria and the given ratio.
         https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#symmetric-quantization
@@ -73,9 +78,12 @@ class CompressWeightsMode(Enum):
         with a typical non-fixed zero point.
         https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#asymmetric-quantization
     :param NF4: The the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
+    :param INT8: Mode is deprecated and will be removed in future releases. Please use `INT8_ASYM` instead.
     """
 
-    INT8 = "int8"
+    INT8_SYM = "int8_sym"
+    INT8_ASYM = "int8_asym"
     INT4_SYM = "int4_sym"
     INT4_ASYM = "int4_asym"
     NF4 = "nf4"
+    INT8 = "int8"  # Deprecated mode

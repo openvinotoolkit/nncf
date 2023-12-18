@@ -18,7 +18,9 @@ models:
             dst_width: 960
             use_pillow: True
             interpolation: BILINEAR
-          - type: bgr_to_rgb
+          - type: normalization
+            mean: 99.603, 103.329, 105.6567
+            std: 75.643, 77.821, 76.746
 
         postprocessing:
           - type: resize_segmentation_mask

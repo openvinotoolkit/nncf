@@ -9,5 +9,6 @@
     "target_device": "TRIAL",
     "compression": {
         "algorithm": "quantization"
-    }
+    },
+    "no_strip_on_export": true
 }

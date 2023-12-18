@@ -9,681 +9,669 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import csv
 import datetime
 import json
 import os
-import re
-import shlex
-import subprocess
 import sys
 from collections import OrderedDict
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+import pandas as pd
 import pytest
-from prettytable import PrettyTable
-from yattag import Doc
 
-from nncf.common.utils.os import is_linux
-from nncf.common.utils.os import is_windows
-from nncf.config import NNCFConfig
 from tests.shared.metric_thresholds import DIFF_FP32_MAX_GLOBAL
 from tests.shared.metric_thresholds import DIFF_FP32_MIN_GLOBAL
-from tests.shared.metric_thresholds import DIFF_TARGET_MAX_GLOBAL
-from tests.shared.metric_thresholds import DIFF_TARGET_MIN_GLOBAL
 from tests.shared.paths import DATASET_DEFINITIONS_PATH
 from tests.shared.paths import PROJECT_ROOT
 from tests.shared.paths import TEST_ROOT
+from tests.torch.helpers import Command
 
-BG_COLOR_GREEN_HEX = "ccffcc"
-BG_COLOR_YELLOW_HEX = "ffffcc"
-BG_COLOR_RED_HEX = "ffcccc"
+DIFF_TARGET_PT_MIN = -0.1
+DIFF_TARGET_PT_MAX = 0.1
+DIFF_TARGET_OV_MIN = -0.01
+DIFF_TARGET_OV_MAX = 0.01
+PYTORCH = "PT"
+OPENVINO = "OV"
+TRAIN = "TRAIN"
 
 
+@dataclass
 class EvalRunParamsStruct:
-    def __init__(
-        self,
-        config_name_: str,
-        reference_: Optional[str],
-        expected_: float,
-        metric_type_: str,
-        dataset_name_: str,
-        sample_type_: str,
-        resume_file_: str,
-        batch_: int,
-        mean_val_: Optional[str],
-        scale_val_: Optional[str],
-        diff_fp32_min_: float,
-        diff_fp32_max_: float,
-        model_name_: str,
-        diff_target_min_: float,
-        diff_target_max_: float,
-        multiprocessing_distributed: bool,
-    ):
-        self.config_name_ = config_name_
-        self.reference_ = reference_
-        self.expected_ = expected_
-        self.metric_type_ = metric_type_
-        self.dataset_name_ = dataset_name_
-        self.sample_type_ = sample_type_
-        self.resume_file_ = resume_file_
-        self.batch_ = batch_
-        self.mean_val_ = mean_val_
-        self.scale_val_ = scale_val_
-        self.diff_fp32_min_ = diff_fp32_min_
-        self.diff_fp32_max_ = diff_fp32_max_
-        self.model_name_ = model_name_
-        self.diff_target_min_ = diff_target_min_
-        self.diff_target_max_ = diff_target_max_
-        self.multiprocessing_distributed = multiprocessing_distributed
+    """
+    Contain data about quantization of the model.
+    """
+
+    config_name: str
+    reference: Optional[str]
+    target_ov: float
+    target_pt: float
+    metric_type: str
+    dataset_name: str
+    sample_type: str
+    resume_file: str
+    batch: int
+    diff_fp32_min: float
+    diff_fp32_max: float
+    model_name: str
+    diff_target_ov_min: float
+    diff_target_ov_max: float
+    diff_target_pt_min: float
+    diff_target_pt_max: float
+    multiprocessing_distributed: bool
+    skip_ov: Optional[str]
+    xfail_ov: Optional[str]
+
+
+@dataclass
+class ResultInfo:
+    """
+    Contain data about result of test.
+    """
+
+    model_name: str
+    backend: str
+    metric_type: Optional[str] = None
+    measured: Optional[float] = None
+    expected: Optional[float] = None
+    diff_fp32: Optional[float] = None
+    target_fp32: Optional[float] = None
+    diff_target: Optional[float] = None
+    status: Optional[str] = None
+
+    def to_dict(self):
+        return {
+            "Model": self.model_name,
+            "Backend": self.backend,
+            "Metrics type": self.metric_type,
+            "Measured": self.measured,
+            "Expected": self.expected,
+            "Diff expected": self.diff_target,
+            "Target FP32": self.target_fp32,
+            "Diff FP32": self.diff_fp32,
+            "Status": self.status,
+            "Build url": os.environ.get("BUILD_URL", ""),
+        }
+
+
+def read_reference_file(ref_path: Path) -> List[EvalRunParamsStruct]:
+    """
+    Reads the reference file to get a list of `EvalRunParamsStruct` objects.
+
+    :param ref_path: The path to the JSON reference file.
+    :return: A list of `EvalRunParamsStruct` objects.
+    """
+
+    with ref_path.open(encoding="UTF-8") as source:
+        sota_eval_config = json.load(source, object_pairs_hook=OrderedDict)
+
+    param_list = []
+    model_names = []
+    for sample_type_ in sota_eval_config:
+        datasets = sota_eval_config[sample_type_]
+        for dataset_name in datasets:
+            model_dict = datasets[dataset_name]
+            for model_name, sample_dict in model_dict.items():
+                if model_name in model_names:
+                    raise RuntimeError(f"Model name {model_name} is not unique.")
+                model_names.append(model_name)
+                param_list.append(
+                    EvalRunParamsStruct(
+                        model_name=model_name,
+                        config_name=sample_dict["config"],
+                        reference=sample_dict.get("reference", None),
+                        target_pt=sample_dict["target_pt"],
+                        target_ov=sample_dict["target_ov"],
+                        metric_type=sample_dict["metric_type"],
+                        dataset_name=dataset_name,
+                        sample_type=sample_type_,
+                        resume_file=sample_dict.get("resume", None),
+                        batch=sample_dict.get("batch", None),
+                        diff_fp32_min=sample_dict.get("diff_fp32_min", DIFF_FP32_MIN_GLOBAL),
+                        diff_fp32_max=sample_dict.get("diff_fp32_max", DIFF_FP32_MAX_GLOBAL),
+                        diff_target_ov_min=sample_dict.get("diff_target_ov_min", DIFF_TARGET_OV_MIN),
+                        diff_target_ov_max=sample_dict.get("diff_target_ov_max", DIFF_TARGET_OV_MAX),
+                        diff_target_pt_min=sample_dict.get("diff_target_pt_min", DIFF_TARGET_PT_MIN),
+                        diff_target_pt_max=sample_dict.get("diff_target_pt_max", DIFF_TARGET_PT_MAX),
+                        multiprocessing_distributed=sample_dict.get("multiprocessing_distributed", False),
+                        skip_ov=sample_dict.get("skip_ov", None),
+                        xfail_ov=sample_dict.get("xfail_ov", None),
+                    )
+                )
+    return param_list
+
+
+EVAL_TEST_STRUCT = read_reference_file(TEST_ROOT / "torch" / "sota_checkpoints_eval.json")
+REF_PT_FP32_METRIC = {p.model_name: p.target_pt for p in EVAL_TEST_STRUCT if p.reference is None}
+REF_OV_FP32_METRIC = {p.model_name: p.target_ov for p in EVAL_TEST_STRUCT if p.reference is None}
+
+
+def idfn(val):
+    if isinstance(val, EvalRunParamsStruct):
+        return val.model_name
+
+
+def generate_run_examples_command(
+    sample_type: str,
+    mode: str,
+    config: str,
+    dataset_path: Optional[Path] = None,
+    log_dir: Optional[Path] = None,
+    metrics_dump_file_path: Optional[Path] = None,
+    multiprocessing_distributed: bool = False,
+    resume_file_path: Optional[Path] = None,
+    weights_path: Optional[Path] = None,
+    export_model_path: Optional[Path] = None,
+    batch: Optional[int] = None,
+    cpu_only: bool = False,
+    checkpoint_dir: Optional[Path] = None,
+    distributed_mode_sync_port: Optional[str] = None,
+) -> str:
+    """
+    Generates a command line to run script `tests/torch/run_examples_for_test_sota.py`.
+
+    :param sample_type: The type of sample to run.
+    :param mode: The mode to run the example in (e.g., train, eval, export).
+    :param config: The path to the configuration file.
+    :param dataset_path: The path to the dataset directory.
+    :param log_dir: The path to the log directory.
+    :param metrics_dump_file_path: The path to the metrics dump file.
+    :param multiprocessing_distributed: Whether to use multiprocessing distributed training.
+    :param resume_file_path: The path to the resume file.
+    :param weights_path: The path to the weights file.
+    :param export_model_path: The path to the export model directory.
+    :param batch: The batch size.
+    :param cpu_only: Whether to use the CPU only.
+    :param checkpoint_dir: The path to the checkpoint directory.
+    :param distributed_mode_sync_port: The port to use for distributed mode synchronization.
+    :return: A command line to run the run_examples_for_test_sota.py script.
+    """
+    cmd = [
+            sys.executable,
+            "tests/torch/run_examples_for_test_sota.py",
+            sample_type,
+            "-m", mode,
+            "--config", config,
+        ]  # fmt: skip
+    if dataset_path is not None:
+        cmd += ["--data", dataset_path.as_posix()]
+    if resume_file_path is not None:
+        cmd += ["--resume", resume_file_path.as_posix()]
+    else:
+        cmd += ["--pretrained"]
+    if weights_path is not None and weights_path.exists():
+        cmd += ["--weights", weights_path.as_posix()]
+    if export_model_path is not None:
+        cmd += ["--export-model-path", export_model_path.as_posix()]
+    if metrics_dump_file_path is not None:
+        cmd += ["--metrics-dump", metrics_dump_file_path.as_posix()]
+    if log_dir is not None:
+        cmd += ["--log-dir", log_dir.as_posix()]
+    if batch is not None:
+        cmd += ["-b", str(batch)]
+    if multiprocessing_distributed:
+        cmd += ["--multiprocessing-distributed"]
+    if cpu_only:
+        cmd += ["--cpu-only"]
+    if checkpoint_dir:
+        cmd += ["--checkpoint-save-dir", checkpoint_dir.as_posix()]
+    if distributed_mode_sync_port is not None:
+        print(f"Setting distributed mode synchronization URL to tcp://127.0.0.1:{distributed_mode_sync_port}")
+        cmd += [f"--dist-url=tcp://127.0.0.1:{distributed_mode_sync_port}"]
+    return " ".join(cmd)
+
+
+@pytest.fixture(scope="module")
+def metrics_dump_dir(request):
+    """
+    Path to collect metrics from the tests.
+    To set this by pytest argument use '--metrics-dump-path'.
+    By default metrics_dump_dir is `PROJECT_ROOT/test_results/metrics_dump_YYYY_MM_DD_HH_MM_SS`.
+    """
+    dump_path = request.config.getoption("--metrics-dump-path")
+
+    if dump_path is None:
+        data = datetime.datetime.now()
+        dump_path = (
+            PROJECT_ROOT / "test_results" / "metrics_dump_"
+            f"{'_'.join([str(getattr(data, atr)) for atr in ['year', 'month', 'day', 'hour', 'minute', 'second']])}"
+        )
+    else:
+        dump_path = Path(dump_path)
+    dump_path.mkdir(exist_ok=True, parents=True)
+    assert not dump_path.is_dir() or not next(
+        dump_path.iterdir(), None
+    ), f"metrics_dump_path dir should be empty: {dump_path}"
+    print(f"metrics_dump_path: {dump_path}")
+    return dump_path
 
 
 @pytest.mark.nightly
 class TestSotaCheckpoints:
-    param_list = []
-    train_param_list = []
-    ids_list = []
-    train_ids_list = []
-    row_dict = OrderedDict()
-    color_dict = OrderedDict()
-    ref_fp32_dict = OrderedDict()
-    test = None
+    """
+    Test examples for PyTorch compression and checkpoints that provided
+    in https://github.com/openvinotoolkit/nncf/blob/develop/docs/ModelZoo.md#pytorch
+    """
+
+    @pytest.fixture(scope="class")
+    def collected_data(self, metrics_dump_dir):
+        """
+        Fixture to collect information about tests in `ResultInfo` struct
+        and dump it to `metrics_dump_dir / results.csv`.
+        """
+        data: List[ResultInfo] = []
+        yield data
+        if metrics_dump_dir and data:
+            path = metrics_dump_dir / "results.csv"
+            data_frame = pd.DataFrame.from_records([x.to_dict() for x in data])
+            data_frame = data_frame.sort_values("Model").reset_index(drop=True)
+            data_frame.to_csv(path, index=False)
+            print(f"Result file: {path}")
+
+    @pytest.fixture(params=EVAL_TEST_STRUCT, ids=idfn)
+    def eval_run_param(self, request) -> EvalRunParamsStruct:
+        """
+        Returns the test cases that were built from the `tests/torch/sota_checkpoints_eval.json` file.
+        """
+        return request.param
 
     @staticmethod
-    def get_metric_file_name(model_name: str):
-        return "{}.metrics.json".format(model_name)
+    def get_metric_file_name(metrics_dump_path: Path, model_name: str) -> Path:
+        """
+        Returns the path to the file that contains the metrics for the target model.
 
-    CMD_FORMAT_STRING = "{} tests/torch/run_examples_for_test_sota.py {sample_type} -m {} --config {conf} \
-         --data {dataset}/{data_name}/ --log-dir={log_dir} --metrics-dump \
-          {metrics_dump_file_path}"
-
-    @staticmethod
-    def q_dq_config(config):
-        nncf_config = NNCFConfig.from_json(config)
-        if "compression" in nncf_config:
-            compression_config = nncf_config["compression"]
-            quantization_config = None
-            if isinstance(compression_config, list):
-                matches = []
-                for subconfig in compression_config:
-                    if subconfig["algorithm"] == "quantization":
-                        matches.append(subconfig)
-                if matches:
-                    assert len(matches) == 1
-                    quantization_config = matches[0]
-            else:
-                if compression_config["algorithm"] == "quantization":
-                    quantization_config = compression_config
-            if quantization_config is not None:
-                quantization_config["export_to_onnx_standard_ops"] = True
-        return nncf_config
+        :param metrics_dump_path: The directory that contains the metrics from the test evaluation.
+        :param model_name: The name of the target model.
+        :return: The path to the file that contains the metrics for the target model.
+        """
+        return metrics_dump_path / f"{model_name}.metrics.json"
 
     @staticmethod
-    def run_cmd(comm: str, cwd: str) -> Tuple[int, str]:
-        print()
-        print(comm)
-        print()
+    def read_metric(metric_file_name: str) -> float:
+        """
+        Reads the metric value from the given metric file.
 
-        if is_linux():
-            com_line = shlex.split(comm)
-        elif is_windows():
-            com_line = comm
+        :param metric_file_name: Path to the metric file.
+        :return: The metric value.
+        """
+        with open(metric_file_name, encoding="utf8") as metric_file:
+            metrics = json.load(metric_file)
+        return metrics["Accuracy"]
 
+    @staticmethod
+    def generate_accuracy_check_cmd(
+        config_path: Path, ov_data_dir: Path, model_folder: Path, report_csv_path: Path
+    ) -> str:
+        """
+        Generates a command line to run the accuracy_check tool.
+
+        :param config_path: Path to the config file for the accuracy checker.
+        :param ov_data_dir: Path to the dataset directory.
+        :param model_folder: Directory that contains the target model in OpenVINO format.
+        :param report_csv_path: Path to the report file.
+        :return: A command line to run the accuracy_check tool.
+        """
+        cmd = [
+            "accuracy_check",
+            "--config", config_path.as_posix(),
+            "--source", ov_data_dir.as_posix(),
+            "--definitions", DATASET_DEFINITIONS_PATH.as_posix(),
+            "--models", model_folder.as_posix(),
+            "--csv_result", report_csv_path.as_posix(),
+        ]  # fmt: skip
+        return " ".join(cmd)
+
+    def get_reference_fp32_metric(self, metrics_dump_path: Path, reference_name: str) -> Tuple[Optional[float], bool]:
+        """
+        Get reference metric to not compressed model.
+        In case of exists reference data will get reference metric from it others reference data gets
+        from `tests/torch/sota_checkpoints_eval.json`.
+
+        :param metrics_dump_path: Directory that collect in metric data.
+        :param reference_name: Name of the target model.
+        :return: Reference metric.
+        """
+        fp32_metric = None
+        if reference_name is not None:
+            fp32_metric = REF_PT_FP32_METRIC[reference_name]
+            reference_metric_file_path = self.get_metric_file_name(metrics_dump_path, reference_name)
+            if reference_metric_file_path.exists():
+                acc = self.read_metric(reference_metric_file_path)
+                if acc:
+                    fp32_metric = acc
+
+        return fp32_metric
+
+    @staticmethod
+    def threshold_check(
+        diff_target: float,
+        diff_target_min: float,
+        diff_target_max: float,
+        diff_fp32: Optional[float] = None,
+        diff_fp32_min: Optional[float] = None,
+        diff_fp32_max: Optional[float] = None,
+    ) -> Optional[str]:
+        """
+        Checks whether the difference meets the target thresholds.
+        If the difference is not within the target thresholds, the method returns an error message.
+        Otherwise, the method returns `None`.
+        """
+        err_msgs = []
+        if diff_target < diff_target_min or diff_target > diff_target_max:
+            err_msgs.append(
+                "Target diff is not within thresholds: " + f"{diff_target_min} < {diff_target} < {diff_target_max}"
+            )
+        if diff_fp32 is not None:
+            if diff_fp32 < diff_fp32_min or diff_fp32 > diff_fp32_max:
+                err_msgs.append(f"FP32 diff is not within thresholds: {diff_fp32_min} < {diff_fp32} < {diff_fp32_max}")
+        if err_msgs:
+            return ";".join(err_msgs)
+        return None
+
+    @staticmethod
+    def get_env():
+        """
+        Returns a copy of the current environment with the `PYTHONPATH` variable updated
+        to include the project root directory
+        """
         env = os.environ.copy()
         if "PYTHONPATH" in env:
             env["PYTHONPATH"] += ":" + str(PROJECT_ROOT)
         else:
             env["PYTHONPATH"] = str(PROJECT_ROOT)
-
-        with subprocess.Popen(com_line, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=cwd, env=env) as result:
-            exit_code = result.poll()
-
-            def process_line(decoded_line: str, error_lines: List):
-                if re.search("Error|(No module named)", decoded_line):
-                    # WA for tensorboardX multiprocessing bug (https://github.com/lanpa/tensorboardX/issues/598)
-                    if not re.search("EOFError", decoded_line):
-                        error_lines.append(decoded_line)
-                if decoded_line != "":
-                    print(decoded_line)
-
-            error_lines = []
-            while exit_code is None:
-                decoded_line = result.stdout.readline().decode("utf-8").strip()
-                process_line(decoded_line, error_lines)
-                exit_code = result.poll()
-
-            # The process may exit before the first process_line is executed, handling this case here
-            outs, _ = result.communicate()
-            remaining_lines = outs.decode("utf-8").strip().split("\n")
-            for output_line in remaining_lines:
-                process_line(output_line, error_lines)
-
-            err_string = "\n".join(error_lines) if error_lines else None
-            return exit_code, err_string
-
-    @staticmethod
-    def get_onnx_model_file_path(name):
-        onnx_name = str(name + ".onnx")
-        path_to_model = None
-        for root, dirs, files in os.walk("/"):
-            if onnx_name in files:
-                path_to_model = os.path.join(root, onnx_name)
-                print("Found ", onnx_name)
-                break
-        return path_to_model
-
-    @staticmethod
-    def make_table_row(
-        test,
-        expected_,
-        metrics_type_,
-        key,
-        error_message,
-        metric,
-        diff_target,
-        fp32_metric_=None,
-        diff_fp32=None,
-        metric_type_from_json=None,
-    ):
-        TestSotaCheckpoints.test = test
-        if fp32_metric_ is None:
-            fp32_metric_ = "-"
-            diff_fp32 = "-"
-        if metric_type_from_json and fp32_metric_ != "-":
-            fp32_metric_ = str("({})".format(fp32_metric_))
-        if metric is not None:
-            if test == "eval":
-                row = [
-                    str(key),
-                    str(metrics_type_),
-                    str(expected_),
-                    str(metric),
-                    str(fp32_metric_),
-                    str(diff_fp32),
-                    str(diff_target),
-                    str("-"),
-                ]
-            else:
-                row = [str(key), str(metrics_type_), str(expected_), str(metric), str(diff_target), str("-")]
-        else:
-            if test == "eval":
-                row = [
-                    str(key),
-                    str(metrics_type_),
-                    str(expected_),
-                    str("Not executed"),
-                    str(fp32_metric_),
-                    str("-"),
-                    str("-"),
-                    str(error_message),
-                ]
-            else:
-                row = [str(key), str(metrics_type_), str(expected_), str("Not executed"), str("-"), str(error_message)]
-        return row
-
-    @staticmethod
-    def write_error_in_csv(error_message, filename):
-        with open(f"{filename}.csv", "w", newline="", encoding="utf8") as csvfile:
-            fieldnames = [
-                "model",
-                "launcher",
-                "device",
-                "dataset",
-                "tags",
-                "metric_name",
-                "metric_type",
-                "metric_value",
-            ]
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerow(
-                {
-                    "model": filename,
-                    "launcher": "-",
-                    "device": "-",
-                    "dataset": "-",
-                    "tags": "-",
-                    "metric_name": "-",
-                    "metric_type": "-",
-                    "metric_value": error_message,
-                }
-            )
-
-    def write_results_table(self, init_table_string, path):
-        result_table = PrettyTable()
-        result_table.field_names = init_table_string
-        for key in self.row_dict:
-            result_table.add_row(self.row_dict[key])
-        print()
-        print(result_table)
-
-        doc, tag, text = Doc().tagtext()
-        doc.asis("<!DOCTYPE html>")
-        with tag("p"):
-            text("legend: ")
-        with tag("p"):
-            with tag("span", style="Background-color: #{}".format(BG_COLOR_GREEN_HEX)):
-                text("Thresholds for FP32 and Expected are passed")
-        with tag("p"):
-            with tag("span", style="Background-color: #{}".format(BG_COLOR_YELLOW_HEX)):
-                text("Thresholds for Expected is failed, but for FP32 passed")
-        with tag("p"):
-            with tag("span", style="Background-color: #{}".format(BG_COLOR_RED_HEX)):
-                text("Thresholds for FP32 and Expected are failed")
-        with tag("p"):
-            text('If Reference FP32 value in parentheses, it takes from "target" field of .json file')
-        with tag("table", border="1", cellpadding="5", style="border-collapse: collapse; border: 1px solid;"):
-            with tag("tr"):
-                for i in init_table_string:
-                    with tag("td"):
-                        text(i)
-            for key in self.row_dict:
-                with tag("tr", bgcolor="{}".format(self.color_dict[key])):
-                    for i in self.row_dict[key]:
-                        if i is None:
-                            i = "-"
-                        with tag("td"):
-                            text(i)
-        with open(path / "results.html", "w", encoding="utf8") as f:
-            f.write(doc.getvalue())
-
-    @staticmethod
-    def threshold_check(
-        is_ok,
-        diff_target,
-        diff_fp32_min_=None,
-        diff_fp32_max_=None,
-        fp32_metric=None,
-        diff_fp32=None,
-        diff_target_min=None,
-        diff_target_max=None,
-    ):
-        color = BG_COLOR_RED_HEX
-        within_thresholds = False
-        if not diff_target_min:
-            diff_target_min = DIFF_TARGET_MIN_GLOBAL
-        if not diff_target_max:
-            diff_target_max = DIFF_TARGET_MAX_GLOBAL
-        if not diff_fp32_min_:
-            diff_fp32_min_ = DIFF_FP32_MIN_GLOBAL
-        if not diff_fp32_max_:
-            diff_fp32_max_ = DIFF_FP32_MAX_GLOBAL
-        if is_ok:
-            if fp32_metric is not None:
-                if diff_fp32_min_ < diff_fp32 < diff_fp32_max_ and diff_target_min < diff_target < diff_target_max:
-                    color = BG_COLOR_GREEN_HEX
-                    within_thresholds = True
-                elif diff_fp32_min_ < diff_fp32 < diff_fp32_max_:
-                    color = BG_COLOR_YELLOW_HEX
-            elif diff_target_min < diff_target < diff_target_max:
-                color = BG_COLOR_GREEN_HEX
-                within_thresholds = True
-        return color, within_thresholds
-
-    @staticmethod
-    def write_common_metrics_file(per_model_metric_file_dump_path: Path):
-        metric_value = OrderedDict()
-        for root, dirs, files in os.walk(per_model_metric_file_dump_path):
-            for file in files:
-                metric_file_path = per_model_metric_file_dump_path / file
-                with open(str(metric_file_path), encoding="utf8") as metric_file:
-                    metrics = json.load(metric_file)
-                model_name = str(file).split(".", maxsplit=1)[0]
-                metric_value[model_name] = metrics["Accuracy"]
-                common_metrics_file_path = per_model_metric_file_dump_path / "metrics.json"
-                if common_metrics_file_path.is_file():
-                    data = json.loads(common_metrics_file_path.read_text(encoding="utf-8"))
-                    data.update(metric_value)
-                    common_metrics_file_path.write_text(json.dumps(data, indent=4), encoding="utf-8")
-                else:
-                    with open(str(common_metrics_file_path), "w", encoding="utf8") as outfile:
-                        json.dump(metric_value, outfile)
-                dirs.clear()
-
-    @staticmethod
-    def read_metric(metric_file_name: str):
-        with open(metric_file_name, encoding="utf8") as metric_file:
-            metrics = json.load(metric_file)
-        return metrics["Accuracy"]
-
-    with open("{}/sota_checkpoints_eval.json".format(os.path.join(TEST_ROOT, "torch")), encoding="utf8") as f:
-        sota_eval_config = json.load(f, object_pairs_hook=OrderedDict)
-    for sample_type_ in sota_eval_config:
-        datasets = sota_eval_config[sample_type_]
-        for dataset_name in datasets:
-            model_dict = datasets[dataset_name]
-            for model_name in model_dict:
-                config_name = model_dict[model_name].get("config", {})
-                reference = None
-                if model_dict[model_name].get("reference", {}):
-                    reference = model_dict[model_name].get("reference", {})
-                else:
-                    ref_fp32_dict[model_name] = model_dict[model_name].get("target", {})
-                expected = model_dict[model_name].get("target", {})
-                metric_type = model_dict[model_name].get("metric_type", {})
-                if model_dict[model_name].get("resume", {}):
-                    resume_file = model_dict[model_name].get("resume", {})
-                else:
-                    resume_file = None
-                if model_dict[model_name].get("batch", {}):
-                    batch = model_dict[model_name].get("batch", {})
-                else:
-                    batch = None
-                if model_dict[model_name].get("mean_value", {}):
-                    mean_val = model_dict[model_name].get("mean_value", {})
-                else:
-                    mean_val = "[123.675,116.28,103.53]"
-                if model_dict[model_name].get("scale_value", {}):
-                    scale_val = model_dict[model_name].get("scale_value", {})
-                else:
-                    scale_val = "[58.4795,57.1429,57.4713]"
-                diff_fp32_min = model_dict[model_name].get("diff_fp32_min")
-                diff_fp32_max = model_dict[model_name].get("diff_fp32_max")
-                diff_target_min = model_dict[model_name].get("diff_target_min")
-                diff_target_max = model_dict[model_name].get("diff_target_max")
-                multiprocessing_distributed = model_dict[model_name].get("multiprocessing_distributed", False)
-
-                param_list.append(
-                    EvalRunParamsStruct(
-                        config_name,
-                        reference,
-                        expected,
-                        metric_type,
-                        dataset_name,
-                        sample_type_,
-                        resume_file,
-                        batch,
-                        mean_val,
-                        scale_val,
-                        diff_fp32_min,
-                        diff_fp32_max,
-                        model_name,
-                        diff_target_min,
-                        diff_target_max,
-                        multiprocessing_distributed,
-                    )
-                )
-                ids_list.append(model_name)
-                if model_dict[model_name].get("compression_description", {}):
-                    train_param_list.append(
-                        (config_name, expected, metric_type, dataset_name, sample_type_, model_name)
-                    )
-                    train_ids_list.append(model_name)
+        return env
 
     @pytest.mark.eval
-    @pytest.mark.parametrize("eval_test_struct", param_list, ids=ids_list)
-    def test_eval(self, sota_checkpoints_dir, sota_data_dir, eval_test_struct: EvalRunParamsStruct):
+    def test_eval(
+        self,
+        sota_checkpoints_dir: str,
+        sota_data_dir: str,
+        eval_run_param: EvalRunParamsStruct,
+        collected_data: List[ResultInfo],
+        metrics_dump_dir: Path,
+    ):
+        """
+        Runs a test example to validate the target models on the PyTorch backend.
+        """
         if sota_data_dir is None:
             pytest.skip("Path to datasets is not set")
-        test = "eval"
-        metric_file_name = self.get_metric_file_name(model_name=eval_test_struct.model_name_)
-        metrics_dump_file_path = pytest.metrics_dump_path / metric_file_name
-        log_dir = pytest.metrics_dump_path / "logs"
-        cmd = self.CMD_FORMAT_STRING.format(
-            sys.executable,
-            "test",
-            conf=eval_test_struct.config_name_,
-            dataset=sota_data_dir,
-            data_name=eval_test_struct.dataset_name_,
-            sample_type=eval_test_struct.sample_type_,
-            metrics_dump_file_path=metrics_dump_file_path,
+
+        metrics_dump_file_path = self.get_metric_file_name(metrics_dump_dir, model_name=eval_run_param.model_name)
+        log_dir = metrics_dump_dir / "logs"
+
+        resume_file_path = None
+        if eval_run_param.resume_file:
+            assert sota_checkpoints_dir is not None, "sota_checkpoints_dir is not set"
+            resume_file_path = Path(sota_checkpoints_dir) / eval_run_param.resume_file
+            assert resume_file_path.exists(), f"{resume_file_path} does not exists"
+
+        cmd = generate_run_examples_command(
+            sample_type=eval_run_param.sample_type,
+            mode="test",
+            config=eval_run_param.config_name,
+            dataset_path=Path(sota_data_dir) / eval_run_param.dataset_name,
             log_dir=log_dir,
+            metrics_dump_file_path=metrics_dump_file_path,
+            multiprocessing_distributed=eval_run_param.multiprocessing_distributed,
+            resume_file_path=resume_file_path,
+            batch=eval_run_param.batch,
         )
-        if eval_test_struct.resume_file_:
-            resume_file_path = sota_checkpoints_dir + "/" + eval_test_struct.resume_file_
-            cmd += " --resume {}".format(resume_file_path)
-        else:
-            cmd += " --pretrained"
-        if eval_test_struct.batch_:
-            cmd += " -b {}".format(eval_test_struct.batch_)
-        if eval_test_struct.multiprocessing_distributed:
-            cmd += " --multiprocessing-distributed"
-        exit_code, err_str = self.run_cmd(cmd, cwd=PROJECT_ROOT)
+
+        runner = Command(cmd, cwd=PROJECT_ROOT, env=self.get_env())
+        exit_code = runner.run(assert_returncode_zero=False)
 
         is_ok = exit_code == 0 and metrics_dump_file_path.exists()
-        if is_ok:
-            metric_value = self.read_metric(str(metrics_dump_file_path))
-        else:
-            metric_value = None
 
-        fp32_metric = None
-        metric_type_from_json = False
-        if eval_test_struct.reference_ is not None:
-            fp32_metric = self.ref_fp32_dict[str(eval_test_struct.reference_)]
-            metric_type_from_json = True
-            reference_metric_file_path = pytest.metrics_dump_path / self.get_metric_file_name(
-                eval_test_struct.reference_
+        metric_value = None
+        diff_target = None
+        diff_fp32 = None
+        if not is_ok:
+            status = f"exit_code: {exit_code}"
+            result_info = ResultInfo(
+                model_name=eval_run_param.model_name,
+                backend=PYTORCH,
+                status=status,
             )
-            if os.path.exists(reference_metric_file_path):
-                with open(str(reference_metric_file_path), encoding="utf8") as ref_metric:
-                    metrics = json.load(ref_metric)
-                if metrics["Accuracy"] != 0:
-                    fp32_metric = metrics["Accuracy"]
-                    metric_type_from_json = False
-            else:
-                metric_type_from_json = True
+            collected_data.append(result_info)
+            pytest.fail(status)
 
-        if is_ok:
-            diff_target = round((metric_value - eval_test_struct.expected_), 2)
-            diff_fp32 = round((metric_value - fp32_metric), 2) if fp32_metric is not None else None
-        else:
-            diff_target = None
-            diff_fp32 = None
+        metric_value = self.read_metric(metrics_dump_file_path)
+        fp32_metric = self.get_reference_fp32_metric(metrics_dump_dir, eval_run_param.reference)
 
-        self.row_dict[eval_test_struct.model_name_] = self.make_table_row(
-            test,
-            eval_test_struct.expected_,
-            eval_test_struct.metric_type_,
-            eval_test_struct.model_name_,
-            err_str,
-            metric_value,
-            diff_target,
-            fp32_metric,
-            diff_fp32,
-            metric_type_from_json,
-        )
-        retval = self.threshold_check(
-            is_ok,
-            diff_target,
-            eval_test_struct.diff_fp32_min_,
-            eval_test_struct.diff_fp32_max_,
-            fp32_metric,
-            diff_fp32,
-            eval_test_struct.diff_target_min_,
-            eval_test_struct.diff_target_max_,
+        diff_target = round((metric_value - eval_run_param.target_pt), 2)
+        if fp32_metric:
+            diff_fp32 = round((metric_value - fp32_metric), 2)
+
+        threshold_errors = self.threshold_check(
+            diff_target=diff_target,
+            diff_target_min=eval_run_param.diff_target_pt_min,
+            diff_target_max=eval_run_param.diff_target_pt_max,
+            diff_fp32=diff_fp32,
+            diff_fp32_min=eval_run_param.diff_fp32_min,
+            diff_fp32_max=eval_run_param.diff_fp32_max,
         )
 
-        self.color_dict[eval_test_struct.model_name_], is_accuracy_within_thresholds = retval
-        assert is_accuracy_within_thresholds
+        result_info = ResultInfo(
+            model_name=eval_run_param.model_name,
+            backend=PYTORCH,
+            metric_type=eval_run_param.metric_type,
+            measured=metric_value,
+            expected=eval_run_param.target_pt,
+            diff_target=diff_target,
+            target_fp32=fp32_metric,
+            diff_fp32=diff_fp32,
+            status=threshold_errors,
+        )
+        collected_data.append(result_info)
+        if threshold_errors is not None:
+            pytest.fail(threshold_errors)
+
+    @staticmethod
+    def get_ir_model_path(model_name: str):
+        """
+        Get path to OpenVINO model by model name.
+        """
+        return PROJECT_ROOT / "ir_models" / model_name / f"{model_name}.xml"
 
     @pytest.mark.convert
-    @pytest.mark.parametrize("eval_test_struct", param_list, ids=ids_list)
-    @pytest.mark.parametrize("onnx_type", ["fq", "q_dq"])
-    def test_convert_to_onnx(
-        self, tmpdir, openvino, sota_checkpoints_dir, sota_data_dir, eval_test_struct: EvalRunParamsStruct, onnx_type
-    ):
+    def test_convert(self, eval_run_param: EvalRunParamsStruct, openvino: bool, sota_checkpoints_dir: str):
+        """
+        Runs a test example to convert target models to OpenVINO format.
+        """
         if not openvino:
-            pytest.skip()
+            pytest.skip("Skip if not --run-openvino-eval")
+        if eval_run_param.skip_ov:
+            pytest.skip("Skipped by 'skip_ov' in sota_checkpoints_eval.json")
         os.chdir(PROJECT_ROOT)
-        onnx_path = PROJECT_ROOT / "onnx"
-        q_dq_config_path = tmpdir / os.path.basename(eval_test_struct.config_name_)
+        ir_model_path = self.get_ir_model_path(eval_run_param.model_name)
+        resume_file_path = None
+        if eval_run_param.resume_file:
+            assert sota_checkpoints_dir is not None, "sota_checkpoints_dir is not set"
+            resume_file_path = Path(sota_checkpoints_dir) / eval_run_param.resume_file
+            assert resume_file_path.exists(), f"{resume_file_path} does not exists"
 
-        with open(str(q_dq_config_path), "w", encoding="utf8") as outfile:
-            json.dump(self.q_dq_config(eval_test_struct.config_name_), outfile)
-        if not os.path.exists(onnx_path):
-            os.mkdir(onnx_path)
-        CMD_FORMAT_STRING = "{} examples/torch/{sample_type}/main.py -m export --cpu-only --config {conf} \
-             --data {dataset}/{data_name} --to-onnx={onnx_path}"
-        self.test = "openvino_eval"
-        if onnx_type == "q_dq":
-            if not os.path.exists(onnx_path / "q_dq"):
-                os.mkdir(onnx_path / "q_dq")
-            onnx_name = str("q_dq/" + eval_test_struct.model_name_ + ".onnx")
-            with open(str(q_dq_config_path), "w", encoding="utf8") as outfile:
-                json.dump(self.q_dq_config(eval_test_struct.config_name_), outfile)
-            nncf_config_path = q_dq_config_path
-        else:
-            onnx_name = str(eval_test_struct.model_name_ + ".onnx")
-            nncf_config_path = eval_test_struct.config_name_
-        onnx_cmd = CMD_FORMAT_STRING.format(
-            sys.executable,
-            conf=nncf_config_path,
-            dataset=sota_data_dir,
-            data_name=eval_test_struct.dataset_name_,
-            sample_type=eval_test_struct.sample_type_,
-            onnx_path=(onnx_path / onnx_name),
+        cmd = generate_run_examples_command(
+            sample_type=eval_run_param.sample_type,
+            mode="export",
+            config=eval_run_param.config_name,
+            cpu_only=True,
+            export_model_path=ir_model_path,
+            resume_file_path=resume_file_path,
         )
-        if eval_test_struct.resume_file_:
-            resume_file_path = sota_checkpoints_dir + "/" + eval_test_struct.resume_file_
-            onnx_cmd += " --resume {}".format(resume_file_path)
-        else:
-            onnx_cmd += " --pretrained"
+        runner = Command(cmd, cwd=PROJECT_ROOT, env=self.get_env())
+        runner.run()
 
-        if onnx_type == "fq":
-            # By default use torch.export and ctrl.strip(), that export to ONNX via torch native FQ.
-            onnx_cmd += " --no_strip_on_export"
+    @staticmethod
+    def get_metric_from_ac_csv(path: Path):
+        """
+        Get metric value from the report of accuracy_checker.
 
-        exit_code, err_str = self.run_cmd(onnx_cmd, cwd=PROJECT_ROOT)
-        if exit_code != 0 and err_str is not None:
-            pytest.fail(err_str)
+        :param path: Path ot report file of accuracy_checker.
+        :return: Metric value.
+        """
+        data = pd.read_csv(path)
+        return round(data["metric_value"].iloc[0] * 100, 2)
 
     @pytest.mark.oveval
-    @pytest.mark.parametrize("eval_test_struct", param_list, ids=ids_list)
-    @pytest.mark.parametrize("onnx_type", ["fq", "q_dq"])
     def test_openvino_eval(
-        self, eval_test_struct: EvalRunParamsStruct, ov_data_dir, onnx_type, openvino, onnx_dir, ov_config_dir
+        self,
+        eval_run_param: EvalRunParamsStruct,
+        ov_data_dir: Path,
+        openvino: bool,
+        ov_config_dir: str,
+        collected_data: List[ResultInfo],
+        metrics_dump_dir: Path,
     ):
-        if not openvino or not onnx_dir:
-            pytest.skip()
-        if ov_config_dir:
-            config_folder = ov_config_dir
-        else:
-            config_folder = PROJECT_ROOT / "tests" / "torch" / "data" / "ac_configs"
-        ir_model_folder = PROJECT_ROOT / "ir_models" / eval_test_struct.model_name_
-        q_dq_ir_model_folder = PROJECT_ROOT / "q_dq_ir_models" / eval_test_struct.model_name_
-        mean_val = eval_test_struct.mean_val_
-        scale_val = eval_test_struct.scale_val_
-        mo_cmd_tail_template = (
-            "--framework=onnx --reverse_input_channels  --mean_values={} --scale_values={} --output_dir {}"
-        )
-        if onnx_type == "q_dq":
-            model_folder = q_dq_ir_model_folder
-            mo_cmd_tail = mo_cmd_tail_template.format(mean_val, scale_val, model_folder)
-            onnx_model = str(onnx_dir + "q_dq/" + eval_test_struct.model_name_ + ".onnx")
-            mo_cmd = "mo --input_model {} {}".format(onnx_model, mo_cmd_tail)
-        else:
-            model_folder = ir_model_folder
-            onnx_model = str(onnx_dir + eval_test_struct.model_name_ + ".onnx")
-            mo_cmd_tail = mo_cmd_tail_template.format(mean_val, scale_val, model_folder)
-            mo_cmd = "mo --input_model {} {}".format(onnx_model, mo_cmd_tail)
-
-        exit_code, err_str = self.run_cmd(mo_cmd, cwd=PROJECT_ROOT)
-        if exit_code == 0 and err_str is None:
-            ac_yml_path = f"{config_folder}/{eval_test_struct.model_name_}.yml"
-            if onnx_type == "q_dq":
-                report_csv_path = f"{PROJECT_ROOT}/{eval_test_struct.model_name_}_q_dq.csv"
-            else:
-                report_csv_path = f"{PROJECT_ROOT}/{eval_test_struct.model_name_}.csv"
-            ac_cmd = (
-                f"accuracy_check -c {ac_yml_path} -s {ov_data_dir} -d {DATASET_DEFINITIONS_PATH} "
-                f"-m {model_folder} --csv_result {report_csv_path}"
+        """
+        Runs a test example to validate the target models on the PyTorch backend.
+        """
+        if not openvino:
+            pytest.skip("Skip if not --run-openvino-eval")
+        if ov_data_dir is None:
+            pytest.fail("--ov-data-dir is not set")
+        if eval_run_param.skip_ov:
+            status = f"Skip by: {eval_run_param.skip_ov}"
+            collected_data.append(
+                ResultInfo(
+                    model_name=eval_run_param.model_name,
+                    backend=OPENVINO,
+                    status=status,
+                )
             )
-            exit_code, err_str = self.run_cmd(ac_cmd, cwd=PROJECT_ROOT)
-            if exit_code != 0 or err_str is not None:
-                pytest.fail(err_str)
-        else:
-            pytest.fail(err_str)
+            pytest.skip(status)
+
+        config_folder = ov_config_dir or PROJECT_ROOT / "tests" / "torch" / "data" / "ac_configs"
+        ir_model_path = self.get_ir_model_path(eval_run_param.model_name)
+
+        if not ir_model_path.exists():
+            collected_data.append(
+                ResultInfo(
+                    model_name=eval_run_param.model_name,
+                    backend=OPENVINO,
+                    status="IR does not exists",
+                )
+            )
+            pytest.fail("IR does not exists")
+
+        ac_yml_path = config_folder / f"{eval_run_param.model_name}.yml"
+        report_csv_path = metrics_dump_dir / f"{eval_run_param.model_name}.csv"
+
+        # Ensure that report file does not exists
+        report_csv_path.unlink(missing_ok=True)
+
+        cmd = self.generate_accuracy_check_cmd(ac_yml_path, ov_data_dir, ir_model_path.parent, report_csv_path)
+        runner = Command(cmd, cwd=PROJECT_ROOT, env=self.get_env())
+        exit_code = runner.run(assert_returncode_zero=False)
+
+        if exit_code:
+            status = f"Accuracy checker return code: {exit_code}"
+            collected_data.append(
+                ResultInfo(
+                    model_name=eval_run_param.model_name,
+                    backend=OPENVINO,
+                    status=status,
+                )
+            )
+            pytest.fail(status)
+
+        metric_value = self.get_metric_from_ac_csv(report_csv_path)
+        fp32_metric = REF_OV_FP32_METRIC.get(eval_run_param.reference, None)
+
+        diff_target = round((metric_value - eval_run_param.target_ov), 2)
+        diff_fp32 = None
+        if fp32_metric:
+            diff_fp32 = round((metric_value - fp32_metric), 2)
+
+        threshold_errors = self.threshold_check(
+            diff_target=diff_target,
+            diff_target_min=eval_run_param.diff_target_ov_min,
+            diff_target_max=eval_run_param.diff_target_ov_max,
+            diff_fp32=diff_fp32,
+            diff_fp32_min=eval_run_param.diff_fp32_min,
+            diff_fp32_max=eval_run_param.diff_fp32_max,
+        )
+        status = threshold_errors
+        if eval_run_param.xfail_ov is not None and threshold_errors is not None:
+            status = f"XFAIL: {eval_run_param.xfail_ov} {threshold_errors}"
+
+        result_info = ResultInfo(
+            model_name=eval_run_param.model_name,
+            backend=OPENVINO,
+            metric_type=eval_run_param.metric_type,
+            measured=metric_value,
+            expected=eval_run_param.target_ov,
+            diff_target=diff_target,
+            target_fp32=fp32_metric,
+            diff_fp32=diff_fp32,
+            status=status,
+        )
+
+        collected_data.append(result_info)
+        if status is not None:
+            if eval_run_param.xfail_ov is not None:
+                pytest.xfail(status)
+            else:
+                pytest.fail(status)
 
     @pytest.mark.train
-    @pytest.mark.parametrize("eval_test_struct", param_list, ids=ids_list)
-    def test_train(self, cuda_ip, sota_data_dir, sota_checkpoints_dir, eval_test_struct: EvalRunParamsStruct):
+    def test_train(
+        self,
+        eval_run_param: EvalRunParamsStruct,
+        distributed_mode_sync_port: str,
+        sota_data_dir: Path,
+        sota_checkpoints_dir: Path,
+        collected_data: List[ResultInfo],
+        metrics_dump_dir: Path,
+    ):
+        """
+        Runs a test example to train target metric metric is within the 1% threshold.
+        """
         if sota_data_dir is None:
             pytest.skip("Path to datasets is not set")
-        test = "train"
-        self.color_dict[eval_test_struct.model_name_] = BG_COLOR_RED_HEX
-        metric_file_name = self.get_metric_file_name(model_name=eval_test_struct.model_name_)
-        metrics_dump_file_path = pytest.metrics_dump_path / metric_file_name
-        log_dir = pytest.metrics_dump_path / "logs"
-        checkpoint_dir = pytest.metrics_dump_path / "checkpoints"
-        cmd = self.CMD_FORMAT_STRING.format(
-            sys.executable,
-            "train",
-            conf=eval_test_struct.config_name_,
-            dataset=sota_data_dir,
-            data_name=eval_test_struct.dataset_name_,
-            sample_type=eval_test_struct.sample_type_,
-            metrics_dump_file_path=metrics_dump_file_path,
-            log_dir=log_dir,
-        )
-        cmd += f" --checkpoint-save-dir {checkpoint_dir}"
-        if cuda_ip is not None:
-            print(f"Setting distributed mode synchronization URL to tcp://127.0.0.1:{cuda_ip}")
-            cmd += f" --dist-url=tcp://127.0.0.1:{cuda_ip}"
-        if eval_test_struct.reference_ is not None:
-            fp32_metric = self.ref_fp32_dict[str(eval_test_struct.reference_)]
-            weights_path = Path(sota_checkpoints_dir) / Path(str(eval_test_struct.reference_ + ".pth"))
-            if os.path.isfile(weights_path):
-                cmd += f" --weights {weights_path}"
-            exit_code, err_str = self.run_cmd(cmd, cwd=PROJECT_ROOT)
-            is_ok = exit_code == 0 and metrics_dump_file_path.exists()
-            if is_ok:
-                metric_value = self.read_metric(str(metrics_dump_file_path))
-                diff_fp32 = round((metric_value - fp32_metric), 2)
-                if -1 < diff_fp32:
-                    self.color_dict[eval_test_struct.model_name_] = BG_COLOR_GREEN_HEX
-            else:
-                metric_value = None
-                diff_fp32 = None
-            self.row_dict[eval_test_struct.model_name_] = self.make_table_row(
-                test,
-                fp32_metric,
-                eval_test_struct.metric_type_,
-                eval_test_struct.model_name_,
-                err_str,
-                metric_value,
-                diff_fp32,
-            )
-            assert self.color_dict[eval_test_struct.model_name_] == BG_COLOR_GREEN_HEX
-        else:
+
+        if eval_run_param.reference is None:
             pytest.skip("Only compressed models must be trained")
 
+        metric_file_name = self.get_metric_file_name(metrics_dump_dir, eval_run_param.model_name)
+        metrics_dump_file_path = metrics_dump_dir / metric_file_name
+        log_dir = metrics_dump_dir / "logs"
+        checkpoint_dir = metrics_dump_dir / "checkpoints"
+        weights_path = sota_checkpoints_dir / f"{eval_run_param.reference}.pth"
 
-Tsc = TestSotaCheckpoints
-
-
-@pytest.fixture(autouse=True, scope="class")
-def make_metrics_dump_path(metrics_dump_dir):
-    if pytest.metrics_dump_path is None:
-        data = datetime.datetime.now()
-        pytest.metrics_dump_path = (
-            PROJECT_ROOT / "test_results" / "metrics_dump_"
-            f"{'_'.join([str(getattr(data, atr)) for atr in ['year', 'month', 'day', 'hour', 'minute', 'second']])}"
+        cmd = generate_run_examples_command(
+            sample_type=eval_run_param.sample_type,
+            mode="train",
+            config=eval_run_param.config_name,
+            dataset_path=sota_data_dir / eval_run_param.dataset_name,
+            metrics_dump_file_path=metrics_dump_file_path,
+            log_dir=log_dir,
+            checkpoint_dir=checkpoint_dir,
+            distributed_mode_sync_port=distributed_mode_sync_port,
+            weights_path=weights_path,
         )
-    else:
-        pytest.metrics_dump_path = Path(pytest.metrics_dump_path)
-    assert not os.path.isdir(pytest.metrics_dump_path) or not os.listdir(
-        pytest.metrics_dump_path
-    ), f"metrics_dump_path dir should be empty: {pytest.metrics_dump_path}"
-    print(f"metrics_dump_path: {pytest.metrics_dump_path}")
+        runner = Command(cmd, cwd=PROJECT_ROOT, env=self.get_env())
+        exit_code = runner.run(assert_returncode_zero=False)
 
+        is_ok = exit_code == 0 and metrics_dump_file_path.exists()
+        err_msg = None
+        if is_ok:
+            fp32_metric = REF_PT_FP32_METRIC[eval_run_param.reference, None]
+            metric_value = self.read_metric(str(metrics_dump_file_path))
+            diff_fp32 = round((metric_value - fp32_metric), 2)
+            if -1 < diff_fp32:
+                err_msg = f"FP32 diff is not within thresholds: -1 < {diff_fp32}"
 
-@pytest.fixture(autouse=True, scope="class")
-def results(sota_data_dir):
-    yield
-    if sota_data_dir:
-        Tsc.write_common_metrics_file(per_model_metric_file_dump_path=pytest.metrics_dump_path)
-        if Tsc.test == "eval":
-            header = [
-                "Model",
-                "Metrics type",
-                "Expected",
-                "Measured",
-                "Reference FP32",
-                "Diff FP32",
-                "Diff Expected",
-                "Error",
-            ]
-        else:
-            header = ["Model", "Metrics type", "Reference FP32", "Measured", "Diff FP32", "Error"]
-        Tsc().write_results_table(header, pytest.metrics_dump_path)
+        collected_data.append(
+            ResultInfo(
+                model_name=eval_run_param.model_name,
+                backend=TRAIN,
+                metric_type=eval_run_param.metric_type,
+                measured=metric_value,
+                target_fp32=fp32_metric,
+                diff_fp32=diff_fp32,
+                status=err_msg,
+            )
+        )
+        if err_msg:
+            pytest.fail(err_msg)

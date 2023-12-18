@@ -22,8 +22,9 @@ models:
           - type: crop
             size: 224
             use_pillow: true
-          # Image channels must be swapped, because "pillow_imread" reads in RGB, but converted model expect BGR
-          - type: rgb_to_bgr
+          - type: normalization
+            mean: 123.675, 116.28, 103.53
+            std: 58.4795, 57.1429, 57.4713
 
             # Using accuracy metric, achieved result of public model - 77.45% and 93.56% (top 1 and top 5 respectively)
         metrics:

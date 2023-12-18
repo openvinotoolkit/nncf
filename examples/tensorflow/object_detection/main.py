@@ -323,8 +323,7 @@ def run(config):
 
     # Training parameters
     epochs = config.epochs
-    steps_per_epoch = train_builder.steps_per_epoch
-    num_test_batches = test_builder.steps_per_epoch
+    steps_per_epoch, num_test_batches = train_builder.steps_per_epoch, test_builder.steps_per_epoch
 
     # Create model builder
     model_builder = get_model_builder(config)
@@ -336,10 +335,7 @@ def run(config):
     )
 
     resume_training = config.ckpt_path is not None
-
-    compression_state = None
-    if resume_training:
-        compression_state = load_compression_state(config.ckpt_path)
+    compression_state = load_compression_state(config.ckpt_path) if resume_training else None
 
     with TFModelManager(model_builder.build_model, config.nncf_config, weights=config.get("weights", None)) as model:
         with strategy.scope():
@@ -384,6 +380,8 @@ def run(config):
     test_step = create_test_step_fn(strategy, compress_model, predict_post_process_fn)
 
     if "train" in config.mode:
+        if config.weights is None and not resume_training:
+            logger.warning("Pretrained checkpoint is not provided. This may lead to poor training results!")
         if is_accuracy_aware_training(config):
             train_summary_writer = SummaryWriter(config.log_dir, "train")
             timer = Timer()

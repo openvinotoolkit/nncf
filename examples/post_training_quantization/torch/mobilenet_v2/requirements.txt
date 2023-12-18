@@ -1,6 +1,5 @@
-torchvision>=0.10.1,<0.16
-tqdm
+fastdownload==0.0.7
+openvino-dev==2023.2
 scikit-learn
-fastdownload
-openvino-dev==2023.1
-onnx
+torch==2.1.0
+torchvision==0.16.0

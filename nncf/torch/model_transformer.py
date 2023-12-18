@@ -32,6 +32,8 @@ from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint
 from nncf.torch.quantization.external_quantizer import ExternalQuantizerCallHook
+from nncf.torch.utils import get_model_device
+from nncf.torch.utils import is_multidevice
 
 
 class PTModelTransformer(ModelTransformer):
@@ -119,15 +121,21 @@ class PTModelTransformer(ModelTransformer):
             model.nncf.register_compression_module_type(compression_model_type)
 
         insertion_commands: List[PTInsertionCommand] = []
+        device = None
+        if not is_multidevice(model):
+            device = get_model_device(model)
 
         for transformation_command in transformations:
             target_point: PTTargetPoint = transformation_command.target_point
-            fn = transformation_command.quantizer
+            quantizer_module = transformation_command.quantizer
+            if device is not None:
+                quantizer_module = quantizer_module.to(device)
+            fn = quantizer_module
 
             if target_point.type is not TargetType.OPERATION_WITH_WEIGHTS:
                 quantizer_id = NonWeightQuantizerId(target_point.target_node_name, target_point.input_port_id)
                 storage_key = str(quantizer_id)
-                model.nncf.add_compression_module(storage_key, transformation_command.quantizer, compression_model_type)
+                model.nncf.add_compression_module(storage_key, quantizer_module, compression_model_type)
                 fn = ExternalQuantizerCallHook(model.nncf.get_tracing_context(), storage_key)
 
             insertion_commands.append(

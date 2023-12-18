@@ -10,6 +10,7 @@
 # limitations under the License.
 import json
 from copy import deepcopy
+from typing import Tuple
 
 import numpy as np
 import openvino.runtime as ov
@@ -65,13 +66,17 @@ def dump_to_json(local_path, data):
         json.dump(deepcopy(data), file, indent=4, cls=NumpyEncoder)
 
 
-def get_openvino_version() -> str:
+def get_openvino_major_minor_version() -> Tuple[int]:
     ov_version = ov.__version__
     pos = ov_version.find("-")
     if pos != -1:
         ov_version = ov_version[:pos]
 
     ov_version = version.parse(ov_version).base_version
-    version_major, version_minor = ov_version.split(".")[:2]
+    return tuple(map(int, ov_version.split(".")[:2]))
 
-    return f"{version_major}.{version_minor}"
+
+def get_openvino_version() -> str:
+    major_verison, minor_version = get_openvino_major_minor_version()
+
+    return f"{major_verison}.{minor_version}"

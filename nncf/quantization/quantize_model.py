@@ -12,6 +12,7 @@
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 from nncf.api.compression import TModel
+from nncf.common.deprecation import warning_deprecated
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.api_marker import api
@@ -241,7 +242,7 @@ def quantize_with_accuracy_control(
 @api(canonical_alias="nncf.compress_weights")
 def compress_weights(
     model: TModel,
-    mode=CompressWeightsMode.INT8,
+    mode=CompressWeightsMode.INT8_ASYM,
     ratio: Optional[float] = None,
     group_size: Optional[int] = None,
     ignored_scope: Optional[IgnoredScope] = None,
@@ -251,17 +252,19 @@ def compress_weights(
 
     :param model: A model to be compressed.
     :param mode: Defines a mode for weight compression.
-        INT8 stands for 8-bit integer quantization of all weights.
+        INT8_SYM stands for 8-bit integer symmetric quantization of all weights.
+        INT8_ASYM is the same as INT8_SYM mode, but weights are quantized to a primary precision asymmetrically
+            with a typical non-fixed zero point.
         INT4_SYM stands for a mixed-precision weights quantization with 4-bit integer as a primary precision.
             Weights are quantized to a primary precision symmetrically with a fixed zero point equals to 8.
-            The first and the last layers are always compressed to a backup precision, which is 8-bit integer,
+            All embeddings and the last layer are always compressed to a backup precision, which is INT8_ASYM,
             by default. All others are quantized whether to 4-bit integer or to a backup precision depending on
             criteria and the given ratio.
         INT4_ASYM is the same as INT4_SYM mode, but weights are quantized to a primary precision asymmetrically
             with a typical non-fixed zero point.
         NF4 is the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
     :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
-        and the rest to INT8).
+        and the rest to INT8_ASYM).
     :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
         The value -1 means no grouping.
     :param ignored_scope: An ignored scope that defined the list of model control
@@ -269,6 +272,12 @@ def compress_weights(
     :return: The non-trainable model with compressed weights.
     """
     if mode == CompressWeightsMode.INT8:
+        warning_deprecated(
+            "`CompressWeightsMode.INT8` is deprecated." "Please, use `CompressWeightsMode.INT8_ASYM` as value instead."
+        )
+        mode = CompressWeightsMode.INT8_ASYM
+
+    if mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
         if ratio is None:
             ratio = 1
         if group_size is None:

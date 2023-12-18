@@ -153,8 +153,8 @@ class PTNoopMetatype(PTOperatorMetatype):
     external_op_names = [name]
     module_to_function_names = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: [],
-        NamespaceTarget.TORCH_TENSOR: [],
-        NamespaceTarget.TORCH: ["contiguous", "clone"],
+        NamespaceTarget.TORCH_TENSOR: ["contiguous"],
+        NamespaceTarget.TORCH: ["clone"],
     }
 
 
@@ -446,7 +446,15 @@ class PTMulMetatype(PTOperatorMetatype):
 class PTDivMetatype(PTOperatorMetatype):
     name = "DivOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["__div__", "__idiv__", "__truediv__"],
+        NamespaceTarget.TORCH_TENSOR: [
+            "div",
+            "__div__",
+            "__idiv__",
+            "__rdiv__",
+            "__truediv__",
+            "__itruediv__",
+            "__rtruediv__",
+        ],
         NamespaceTarget.TORCH: ["div"],
     }
     hw_config_names = [HWConfigOpName.DIVIDE]
@@ -457,6 +465,7 @@ class PTFloorDivMetatype(PTOperatorMetatype):
     name = "FloordivOp"
     module_to_function_names = {
         NamespaceTarget.TORCH_TENSOR: ["__floordiv__", "__ifloordiv__", "__rfloordiv__"],
+        NamespaceTarget.TORCH: ["floor_divide"],
     }
 
 
@@ -464,6 +473,7 @@ class PTFloorDivMetatype(PTOperatorMetatype):
 class PTExpMetatype(PTOperatorMetatype):
     name = "ExpOp"
     module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["exp"],
         NamespaceTarget.TORCH: ["exp"],
     }
 
@@ -472,6 +482,7 @@ class PTExpMetatype(PTOperatorMetatype):
 class PTLogMetatype(PTOperatorMetatype):
     name = "LogOp"
     module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["log"],
         NamespaceTarget.TORCH: ["log"],
     }
 
@@ -480,6 +491,7 @@ class PTLogMetatype(PTOperatorMetatype):
 class PTAbsMetatype(PTOperatorMetatype):
     name = "AbsOp"
     module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["abs", "__abs__"],
         NamespaceTarget.TORCH: ["abs"],
     }
 
@@ -496,7 +508,7 @@ class PTErfMetatype(PTOperatorMetatype):
 class PTMatMulMetatype(PTOperatorMetatype):
     name = "MatMulOp"
     module_to_function_names = {
-        NamespaceTarget.TORCH_TENSOR: ["matmul", "__matmul__"],
+        NamespaceTarget.TORCH_TENSOR: ["matmul", "__matmul__", "__rmatmul__"],
         NamespaceTarget.TORCH: ["matmul", "bmm", "mm"],
     }
     hw_config_names = [HWConfigOpName.MATMUL]
@@ -565,23 +577,40 @@ class PTAvgPool3dMetatype(PTOperatorMetatype):
     hw_config_names = [HWConfigOpName.AVGPOOL]
 
 
+class PTAdaptiveMaxPool1dMetatype(PTOperatorMetatype):
+    name = "AdaptiveMaxPool1DOp"
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["adaptive_max_pool1d"]}
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTAdaptiveMaxPool2dMetatype(PTOperatorMetatype):
+    name = "AdaptiveMaxPool2DOp"
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["adaptive_max_pool2d"]}
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTAdaptiveMaxPool3dMetatype(PTOperatorMetatype):
+    name = "AdaptiveMaxPool3DOp"
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["adaptive_max_pool3d"]}
+
+
 class PTMaxPool1dMetatype(PTOperatorMetatype):
     name = "MaxPool1DOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_pool1d", "adaptive_max_pool1d"]}
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_pool1d"]}
     hw_config_names = [HWConfigOpName.MAXPOOL]
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTMaxPool2dMetatype(PTOperatorMetatype):
     name = "MaxPool2DOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_pool2d", "adaptive_max_pool2d"]}
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_pool2d"]}
     hw_config_names = [HWConfigOpName.MAXPOOL]
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTMaxPool3dMetatype(PTOperatorMetatype):
     name = "MaxPool3DOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_pool3d", "adaptive_max_pool3d"]}
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["max_pool3d"]}
     hw_config_names = [HWConfigOpName.MAXPOOL]
 
 
@@ -690,7 +719,11 @@ class PTSqueezeMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTSplitMetatype(PTOperatorMetatype):
     name = "SplitOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["split", "chunk", "unbind"]}
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: [],
+        NamespaceTarget.TORCH_TENSOR: ["split", "chunk", "unbind"],
+        NamespaceTarget.TORCH: ["split", "chunk", "unbind"],
+    }
     hw_config_names = [HWConfigOpName.SPLIT, HWConfigOpName.CHUNK]
 
 
@@ -795,35 +828,47 @@ class PTNotEqualMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTLogicalOrMetatype(PTOperatorMetatype):
     name = "LogicalOrOp"
-    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__or__"]}
+    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__or__", "__ior__", "__ror__"]}
     hw_config_names = [HWConfigOpName.LOGICALOR]
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTLogicalXorMetatype(PTOperatorMetatype):
     name = "LogicalXorOp"
-    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__xor__"]}
+    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__xor__", "__ixor__", "__rxor__"]}
     hw_config_names = [HWConfigOpName.LOGICALXOR]
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTLogicalAndMetatype(PTOperatorMetatype):
     name = "LogicalAndOp"
-    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__and__"]}
+    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__and__", "__iand__", "__rand__"]}
     hw_config_names = [HWConfigOpName.LOGICALAND]
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTLogicalNotMetatype(PTOperatorMetatype):
     name = "LogicalNotOp"
-    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["logical_not_"]}
+    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["logical_not_", "__invert__"]}
     hw_config_names = [HWConfigOpName.LOGICALNOT]
+
+
+@PT_OPERATOR_METATYPES.register()
+class PTNegativeMetatype(PTOperatorMetatype):
+    name = "NegativeOp"
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["neg", "__neg__"],
+        NamespaceTarget.TORCH: ["neg"],
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTPowerMetatype(PTOperatorMetatype):
     name = "PowerOp"
-    module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["__pow__", "pow"], NamespaceTarget.TORCH: ["pow"]}
+    module_to_function_names = {
+        NamespaceTarget.TORCH_TENSOR: ["pow", "__pow__", "__ipow__", "__rpow__"],
+        NamespaceTarget.TORCH: ["pow"],
+    }
     hw_config_names = [HWConfigOpName.POWER]
 
 
