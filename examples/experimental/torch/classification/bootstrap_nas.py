@@ -42,8 +42,8 @@ from examples.torch.common.utils import get_run_name
 from examples.torch.common.utils import is_pretrained_model_requested
 from examples.torch.common.utils import print_args
 from nncf.config.structures import BNAdaptationInitArgs
+from nncf.experimental.torch.nas.bootstrapNAS import BaseSearchAlgorithm
 from nncf.experimental.torch.nas.bootstrapNAS import EpochBasedTrainingAlgorithm
-from nncf.experimental.torch.nas.bootstrapNAS import SearchAlgorithm
 from nncf.torch.initialization import default_criterion_fn
 from nncf.torch.initialization import wrap_dataloader_for_init
 from nncf.torch.model_creation import create_nncf_network
@@ -196,9 +196,9 @@ def main_worker(current_gpu, config: SampleConfig):
         )
 
         if resuming_checkpoint_path is None:
-            search_algo = SearchAlgorithm.from_config(nncf_network, elasticity_ctrl, nncf_config)
+            search_algo = BaseSearchAlgorithm.from_config(nncf_network, elasticity_ctrl, nncf_config)
         else:
-            search_algo = SearchAlgorithm.from_checkpoint(
+            search_algo = BaseSearchAlgorithm.from_checkpoint(
                 nncf_network, elasticity_ctrl, bn_adapt_args, resuming_checkpoint_path
             )
 
