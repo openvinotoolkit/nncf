@@ -120,7 +120,7 @@ def test_overflow_fix_scales(overflow_fix):
 OMZ_MODELS = [
     "mobilenet-v2-pytorch",
     "resnet-18-pytorch",
-    "yolo-v4-tiny-tf",
+    "yolo-v3-tiny-onnx",
 ]
 
 
