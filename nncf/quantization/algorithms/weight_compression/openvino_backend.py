@@ -546,7 +546,7 @@ def _apply_AWQ(
 ):
     matches = []
 
-    inference_nncf_graph = transform_to_inference_graph(deepcopy(graph), [], [])
+    inference_nncf_graph = transform_to_inference_graph(deepcopy(graph), [], [], [])
     nx_graph = inference_nncf_graph.get_nx_graph_copy()
     for _, pattern_graph in get_awq_patterns().items():
         matches.extend(find_subgraphs_matching_pattern(nx_graph, pattern_graph(), strict=False))
@@ -560,7 +560,8 @@ def _apply_AWQ(
         Information on how to compress (quantize) a specific weight.
 
         :param mode: Defines a mode for weight compression. Defaults to INT8_ASYM mode.
-        :param group_size: Number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
+        :param group_size: Number of weights (e.g. 128) in the channel dimension,
+                           that share quantization parameters (scale).
             The value -1 means no grouping. Defaults to -1.
         """
 
