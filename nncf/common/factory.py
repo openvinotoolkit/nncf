@@ -52,7 +52,7 @@ class NNCFGraphFactory:
 
 class ModelTransformerFactory:
     @staticmethod
-    def create(model: TModel, inplace: bool=False) -> ModelTransformer:
+    def create(model: TModel, inplace: bool = False) -> ModelTransformer:
         """
         Factory method to create backend-specific ModelTransformer instance based on the input model.
 

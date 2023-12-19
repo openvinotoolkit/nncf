@@ -9,9 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import OrderedDict
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, TypeVar
-from copy import deepcopy
 
 import numpy as np
 import openvino.runtime as ov
@@ -25,6 +25,8 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
+from nncf.common.tensor_statistics.statistic_point import StatisticPoint
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.helpers import create_table
 from nncf.data import Dataset
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
@@ -33,19 +35,21 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
+from nncf.openvino.graph.transformations.commands import OVTargetPoint
+from nncf.openvino.graph.transformations.commands import TargetType
 from nncf.openvino.rt_info import dump_parameters
-from nncf.openvino.statistics.collectors import OVMeanPerChanelReducer, TensorCollector, OVMeanTensorStatistic, OVRawTensorStatistic
+from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
+from nncf.openvino.statistics.collectors import OVMeanPerChanelReducer
+from nncf.openvino.statistics.collectors import OVMeanTensorStatistic
+from nncf.openvino.statistics.collectors import OVRawTensorStatistic
+from nncf.openvino.statistics.collectors import TensorCollector
 from nncf.parameters import CompressWeightsMode
-from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
+from nncf.quantization.algorithms.smooth_quant.openvino_backend import OVSmoothQuantAlgoBackend
 from nncf.quantization.algorithms.weight_compression.awq_patterns import get_awq_patterns
+from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
 from nncf.quantization.passes import transform_to_inference_graph
 from nncf.scopes import IgnoredScope
-
-from nncf.quantization.algorithms.smooth_quant.openvino_backend import OVSmoothQuantAlgoBackend
-from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer, StatisticPoint
-from nncf.openvino.graph.transformations.commands import OVTargetPoint, TargetType
-from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 
 
 class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
@@ -476,9 +480,8 @@ def _set_weight_compression_config(
     else:
         _assign_mixed_precision(internal_weight_params, ratio, primary_config)
 
-def _get_mean_statistic_collector(
-    num_samples: int, channel_axis: int, inplace: bool = True
-):
+
+def _get_mean_statistic_collector(num_samples: int, channel_axis: int, inplace: bool = True):
     """
     Raw statistic collector builder.
 
@@ -492,7 +495,7 @@ def _get_mean_statistic_collector(
     reducer = OVMeanPerChanelReducer(channel_axis=channel_axis, inplace=inplace)
 
     aggregate_mean = NoopAggregator(num_samples)
-    
+
     collector = TensorCollector(OVRawTensorStatistic)
     collector.register_statistic_branch(OVMeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
     return collector
@@ -507,9 +510,7 @@ def _get_statistic_points(nodes_to_compress, num_samples=32, algorithm="AWQ") ->
     INPUT_PORT_OF_NODE = 0
 
     for node in nodes_to_compress:
-        statistic_point_in = OVTargetPoint(
-            TargetType.PRE_LAYER_OPERATION, node.node_name, port_id=INPUT_PORT_OF_NODE
-        )
+        statistic_point_in = OVTargetPoint(TargetType.PRE_LAYER_OPERATION, node.node_name, port_id=INPUT_PORT_OF_NODE)
 
         channel_axis = node.metatype.output_channel_axis
         if channel_axis is None:
@@ -520,32 +521,32 @@ def _get_statistic_points(nodes_to_compress, num_samples=32, algorithm="AWQ") ->
         )
 
         statistic_container.add_statistic_point(
-            StatisticPoint(
-                target_point=statistic_point_in, tensor_collector=stat_collector_in, algorithm=algorithm
-            )
+            StatisticPoint(target_point=statistic_point_in, tensor_collector=stat_collector_in, algorithm=algorithm)
         )
 
     return statistic_container
+
 
 def _decompress(compressed_weights, scale, zero_point):
     decompressed_weights = (compressed_weights - zero_point) * scale
     return decompressed_weights
 
-def _apply_AWQ(model: ov.Model,
-                graph: NNCFGraph,
-                all_weight_params: List[WeightNodeParams],
-                nodes_to_compress: List[NNCFNode],
-                dataset: Dataset,
-                subset_size: int=32,
-                percent_to_apply=0.002,
-                alpha_min=0.01,
-                alpha_max=1.0,
-                steps=100):
+
+def _apply_AWQ(
+    model: ov.Model,
+    graph: NNCFGraph,
+    all_weight_params: List[WeightNodeParams],
+    nodes_to_compress: List[NNCFNode],
+    dataset: Dataset,
+    subset_size: int = 32,
+    percent_to_apply=0.002,
+    alpha_min=0.01,
+    alpha_max=1.0,
+    steps=100,
+):
     matches = []
 
-    inference_nncf_graph = transform_to_inference_graph(
-        deepcopy(graph), [], []
-    )
+    inference_nncf_graph = transform_to_inference_graph(deepcopy(graph), [], [])
     nx_graph = inference_nncf_graph.get_nx_graph_copy()
     for _, pattern_graph in get_awq_patterns().items():
         matches.extend(find_subgraphs_matching_pattern(nx_graph, pattern_graph(), strict=False))
@@ -584,7 +585,7 @@ def _apply_AWQ(model: ov.Model,
         for weight_port_id in weight_port_ids:
             weight_op_friendly_name = nncf_node.layer_attributes.constant_attributes[weight_port_id]["name"]
             merge_node_names.append(weight_op_friendly_name)
-        
+
         assert len(target_node_names) == len(merge_node_names)
         weight_params = all_weight_params[name_mapping[target_node_names[-1]]]
         target_node = nodes_to_compress[name_mapping[target_node_names[-1]]]
@@ -643,24 +644,26 @@ def _apply_AWQ(model: ov.Model,
 
         for gi in groups_to_correct:
             offset = gi * config.group_size
-            gscale = s[offset: offset + config.group_size]
+            gscale = s[offset : offset + config.group_size]
 
             a_min = np.quantile(gscale, 0.1)
             a_max = 1e2
             gscale = np.clip(gscale, a_min=a_min, a_max=a_max)
 
-            gweight = weight[:, offset: offset + config.group_size].copy()
-            gacts = X[offset: offset + config.group_size, :].copy()
-            
+            gweight = weight[:, offset : offset + config.group_size].copy()
+            gacts = X[offset : offset + config.group_size, :].copy()
+
             fp32_out = np.matmul(gweight, gacts)
             min_diff = np.max(fp32_out)
             best_scale = None
-            
+
             alpha = alpha_min
             for _ in range(steps):
                 cur_scale = gscale**alpha
 
-                g_compressed_weighs, g_c_scale, g_c_zp = _do_integer_quantization(gweight * cur_scale, reduction_axis, awq_config)
+                g_compressed_weighs, g_c_scale, g_c_zp = _do_integer_quantization(
+                    gweight * cur_scale, reduction_axis, awq_config
+                )
                 g_decompressed_weighs = _decompress(g_compressed_weighs, g_c_scale, g_c_zp)
                 sacts = gacts / np.expand_dims(cur_scale, 1)
 
@@ -672,7 +675,7 @@ def _apply_AWQ(model: ov.Model,
                 alpha += alpha_step
 
             if best_scale is not None:
-                scale[offset:offset+config.group_size] = best_scale
+                scale[offset : offset + config.group_size] = best_scale
 
         a_scale = scale
         w_scale = scale
@@ -686,18 +689,14 @@ def _apply_AWQ(model: ov.Model,
         weight_port = OVSmoothQuantAlgoBackend.get_weight_tensor_port_id(target_node)
         weight_value = OVSmoothQuantAlgoBackend.get_weight_value(target_node, model, weight_port)
         scaled_weight = weight_value * w_scale
-        weight_update_command = OVSmoothQuantAlgoBackend.weight_update_command(
-            target_node, scaled_weight, weight_port
-        )
+        weight_update_command = OVSmoothQuantAlgoBackend.weight_update_command(target_node, scaled_weight, weight_port)
 
         transformation_layout.register(weight_update_command)
 
         weight_port = OVSmoothQuantAlgoBackend.get_weight_tensor_port_id(merge_node)
         weight_value = OVSmoothQuantAlgoBackend.get_weight_value(merge_node, model, weight_port)
         scaled_weight = weight_value * a_scale
-        weight_update_command = OVSmoothQuantAlgoBackend.weight_update_command(
-            merge_node, scaled_weight, weight_port
-        )
+        weight_update_command = OVSmoothQuantAlgoBackend.weight_update_command(merge_node, scaled_weight, weight_port)
 
         transformation_layout.register(weight_update_command)
 
@@ -706,9 +705,8 @@ def _apply_AWQ(model: ov.Model,
     friendly_name_to_op_map = {op.get_friendly_name(): op for op in model.get_ops()}
     for wp in all_weight_params:
         name = wp.fq_name
-        idx = name.find('fq_weights_')
-        name = name[:idx - 1]
+        idx = name.find("fq_weights_")
+        name = name[: idx - 1]
         wp.weight_node = friendly_name_to_op_map[name]
 
     return model
-

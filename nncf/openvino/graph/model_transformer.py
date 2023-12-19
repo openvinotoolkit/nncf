@@ -44,7 +44,7 @@ class OVModelTransformer(ModelTransformer):
     Applies transformations to an OpenVINO model.
     """
 
-    def __init__(self, model: TModel, inplace: bool=False):
+    def __init__(self, model: TModel, inplace: bool = False):
         super().__init__(model)
         self._inplace = inplace
         self._command_transformation_ordered_pairs = [
@@ -126,7 +126,7 @@ class OVModelTransformer(ModelTransformer):
             aggregated_transformations[transformation.__class__].append(transformation)
 
         if self._inplace:
-            model  = self._model
+            model = self._model
         else:
             model = self._model.clone()
         # Inplace transformations; Using deepcopy of model
