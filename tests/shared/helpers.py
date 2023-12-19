@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
+import os
 import subprocess
 import sys
 from abc import ABC
@@ -216,3 +217,11 @@ def get_pip_executable_with_venv(venv_path: Path) -> str:
 
 def remove_line_breaks(s: str) -> str:
     return s.replace("\r\n", "").replace("\n", "")
+
+
+def get_env_instruction_set() -> bool:
+    instruction_set = "VNNI"
+    onednn_max_cpu_isa = os.getenv("ONEDNN_MAX_CPU_ISA")
+    if onednn_max_cpu_isa is not None:
+        instruction_set = onednn_max_cpu_isa
+    return instruction_set

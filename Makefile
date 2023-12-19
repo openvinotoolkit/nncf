@@ -66,6 +66,11 @@ install-openvino-dev: install-openvino-test install-pre-commit
 test-openvino:
 	pytest ${COVERAGE_ARGS} tests/openvino $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
+test-openvino-avx2:
+	export ONEDNN_MAX_CPU_ISA=AVX2
+	make test-openvino
+	unset ONEDNN_MAX_CPU_ISA
+
 test-install-openvino:
 	pytest tests/cross_fw/install -s        \
 		--backend openvino                  \

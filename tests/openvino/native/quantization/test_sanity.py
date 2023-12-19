@@ -24,22 +24,42 @@ from tests.openvino.datasets_helpers import get_nncf_dataset_from_ac_config
 from tests.openvino.omz_helpers import calculate_metrics
 from tests.openvino.omz_helpers import convert_model
 from tests.openvino.omz_helpers import download_model
+from tests.shared.helpers import get_env_instruction_set
 
 OMZ_MODELS = [
     (
         "resnet-18-pytorch",
         "imagenette2-320",
-        {"accuracy@top1": 0.777, "accuracy@top5": 0.948},
+        {
+            "VNNI": {"accuracy@top1": 0.777, "accuracy@top5": 0.948},
+            "AVX2": {"accuracy@top1": 0.777, "accuracy@top5": 0.948},
+        },
         None,
     ),
     (
         "mobilenet-v3-small-1.0-224-tf",
         "imagenette2-320",
-        {"accuracy@top1": 0.75, "accuracy@top5": 0.916},
+        {
+            "VNNI": {"accuracy@top1": 0.75, "accuracy@top5": 0.916},
+            "AVX2": {"accuracy@top1": 0.735, "accuracy@top5": 0.925},
+        },
         AdvancedQuantizationParameters(disable_channel_alignment=False),
     ),
-    ("googlenet-v3-pytorch", "imagenette2-320", {"accuracy@top1": 0.911, "accuracy@top5": 0.994}, None),
-    ("retinaface-resnet50-pytorch", "wider", {"map": 0.917961898320335}, None),
+    (
+        "googlenet-v3-pytorch",
+        "imagenette2-320",
+        {
+            "VNNI": {"accuracy@top1": 0.911, "accuracy@top5": 0.994},
+            "AVX2": {"accuracy@top1": 0.911, "accuracy@top5": 0.994},
+        },
+        None,
+    ),
+    (
+        "retinaface-resnet50-pytorch",
+        "wider",
+        {"VNNI": {"map": 0.917961898320335}, "AVX2": {"map": 0.917961898320335}},
+        None,
+    ),
 ]
 
 
@@ -76,5 +96,6 @@ def test_compression(data_dir, tmp_path, model, dataset, ref_metrics, advanced_p
 
     report_path = tmp_path / f"{model}.csv"
     metrics = calculate_metrics(int8_ir_path, config_path, extracted_data_dir, report_path, eval_size=1000)
-    for metric_name, metric_val in ref_metrics.items():
+    reference = ref_metrics[get_env_instruction_set()]
+    for metric_name, metric_val in reference.items():
         assert metrics[metric_name] == pytest.approx(metric_val, abs=0.006)
