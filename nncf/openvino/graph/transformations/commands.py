@@ -147,8 +147,10 @@ class OVModelExtractionCommand(Command):
 
     def __init__(self, input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]):
         """
-        :param input_ids: List of the input IDs that denote the sub-graph beginning.
-        :param output_ids: List of the output IDs that denote the sub-graph ending.
+        :param input_ids: List of the input IDs: pairs of node names and correspondent input port ids.
+            Each pair denotes the sub-graph beginning.
+        :param output_ids: List of the output IDs: pairs of node names and correspondent output port ids.
+            Each pair denotes the sub-graph ending.
         """
         super().__init__(TransformationType.EXTRACT)
         self.input_ids = input_ids
