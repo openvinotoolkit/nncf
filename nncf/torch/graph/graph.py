@@ -14,6 +14,7 @@ from typing import Dict, List, Tuple
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
+from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 
@@ -68,3 +69,26 @@ class PTNNCFGraph(NNCFGraph):
         if not matches:
             raise RuntimeError("Node name {} not found in the node-vs-scope dict!".format(node_name))
         return matches[0]
+
+    def get_nodes_with_missed_input_edges(self) -> List[NNCFNode]:
+        """
+        Returns a list of NNCFNodes that have at least one expected input edge missed.
+        Requires MultipleInputLayerAttributes for nodes with several inputs and
+        right `num_expected_input_edges` parameter setted for nncf nodes metatypes.
+
+        :return: List of NNCFNodes that are identified as diconected.
+        """
+        input_nodes = set()
+        for node in self.get_all_nodes():
+            num_expected_input_edges = None
+            if hasattr(node.metatype, "num_expected_input_edges"):
+                num_expected_input_edges = node.metatype.num_expected_input_edges
+            if node.layer_attributes is not None and isinstance(node.layer_attributes, MultipleInputLayerAttributes):
+                num_expected_input_edges = node.layer_attributes.num_inputs
+            if num_expected_input_edges:
+                input_edges = self.get_input_edges(node)
+                if len(input_edges) < num_expected_input_edges:
+                    # If node has missed input edges we assume this node is an input node
+                    # that was disconected from an activation input.
+                    input_nodes.add(node)
+        return list(input_nodes)

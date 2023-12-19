@@ -66,8 +66,8 @@ def test_compression(data_dir, tmp_path, model, dataset, ref_metrics, advanced_p
     quantized_model = nncf.quantize(
         ov_model,
         calibration_dataset,
-        QuantizationPreset.PERFORMANCE,
-        TargetDevice.ANY,
+        preset=QuantizationPreset.PERFORMANCE,
+        target_device=TargetDevice.ANY,
         subset_size=300,
         fast_bias_correction=True,
         advanced_parameters=advanced_params,

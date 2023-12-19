@@ -363,7 +363,7 @@ def fixture_export_desc(request):
 def test_export_behavior(export_desc: PrecisionTestCaseDescriptor, tmp_path, mocker, extra_args, is_export_called):
     validator = export_desc.get_validator()
     args = validator.get_default_args(tmp_path)
-    args["--to-onnx"] = tmp_path / "model.onnx"
+    args["--export-model-path"] = tmp_path / "model.onnx"
     if extra_args is not None:
         args.update(extra_args)
     validator.is_export_called = is_export_called

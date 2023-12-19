@@ -20,6 +20,7 @@ from typing import List, Optional, Tuple
 
 import pandas as pd
 import pytest
+from pytest import FixtureRequest
 
 from tests.shared.metric_thresholds import DIFF_FP32_MAX_GLOBAL
 from tests.shared.metric_thresholds import DIFF_FP32_MIN_GLOBAL
@@ -223,7 +224,7 @@ def generate_run_examples_command(
 
 
 @pytest.fixture(scope="module")
-def metrics_dump_dir(request):
+def metrics_dump_dir(request: FixtureRequest):
     """
     Path to collect metrics from the tests.
     To set this by pytest argument use '--metrics-dump-path'.
@@ -237,8 +238,7 @@ def metrics_dump_dir(request):
             PROJECT_ROOT / "test_results" / "metrics_dump_"
             f"{'_'.join([str(getattr(data, atr)) for atr in ['year', 'month', 'day', 'hour', 'minute', 'second']])}"
         )
-    else:
-        dump_path = Path(dump_path)
+
     dump_path.mkdir(exist_ok=True, parents=True)
     assert not dump_path.is_dir() or not next(
         dump_path.iterdir(), None
@@ -270,7 +270,7 @@ class TestSotaCheckpoints:
             print(f"Result file: {path}")
 
     @pytest.fixture(params=EVAL_TEST_STRUCT, ids=idfn)
-    def eval_run_param(self, request) -> EvalRunParamsStruct:
+    def eval_run_param(self, request: FixtureRequest) -> EvalRunParamsStruct:
         """
         Returns the test cases that were built from the `tests/torch/sota_checkpoints_eval.json` file.
         """

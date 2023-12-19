@@ -206,3 +206,8 @@ def _(
     # Run operator with disabled warning
     with np.errstate(invalid="ignore", divide="ignore"):
         return operator_fn(b, a)
+
+
+@_register_numpy_types(fns.finfo)
+def _(a: np.ndarray) -> np.finfo:
+    return np.finfo(a.dtype)

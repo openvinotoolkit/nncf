@@ -51,6 +51,7 @@ class WeightCompression(Algorithm):
         ratio: float = None,
         group_size: int = None,
         ignored_scope: Optional[IgnoredScope] = None,
+        all_layers: Optional[bool] = False,
     ):
         """
         :param mode: Defines a mode for weight compression.
@@ -72,6 +73,8 @@ class WeightCompression(Algorithm):
             that share quantization parameters (scale). The value -1 means no grouping.
         :param ignored_scope: An ignored scope that defined the list of model control
             flow graph nodes to be ignored during quantization.
+        :param all_layers: Indicates whether embeddings and last layers should be compressed to a primary
+            precision. By default, the backup precision is assigned for the embeddings and last layers.
         """
         super().__init__()
         self._mode = mode
@@ -80,6 +83,7 @@ class WeightCompression(Algorithm):
         self._ignored_scope = IgnoredScope() if ignored_scope is None else ignored_scope
         self._backend_entity = None
         self._algorithm_key = f"CW_{hash(self)}"
+        self._all_layers = all_layers
 
     @property
     def available_backends(self) -> List[BackendType]:
@@ -112,7 +116,7 @@ class WeightCompression(Algorithm):
         self._backend_entity.validate_params(self._mode, self._ignored_scope)
         nodes_to_compress = self._get_nodes_to_compress(graph)
         transformed_model = self._backend_entity.do_compression(
-            model, nodes_to_compress, self._mode, self._ratio, self._group_size, graph=graph, dataset=dataset
+            model, nodes_to_compress, self._mode, self._ratio, self._group_size, self._all_layers, graph=graph, dataset=dataset
         )
         return transformed_model
 

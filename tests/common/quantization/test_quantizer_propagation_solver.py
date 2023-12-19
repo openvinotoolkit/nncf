@@ -39,7 +39,7 @@ from nncf.common.quantization.quantizer_setup import ActivationQuantizationInser
 from nncf.common.quantization.quantizer_setup import MultiConfigQuantizationPoint
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from tests.common.quantization.metatypes import DEFAULT_TEST_QUANT_TRAIT_MAP
 from tests.common.quantization.metatypes import BatchNormTestMetatype

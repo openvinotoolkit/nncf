@@ -17,13 +17,14 @@ import numpy as np
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.quantizers import get_num_levels
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor import TensorDataType
 from nncf.experimental.tensor import functions as fns
+from nncf.quantization.advanced_parameters import FP8Type
 
 
 @dataclass
@@ -43,6 +44,21 @@ class FakeQuantizeParameters:
     output_low: Tensor
     output_high: Tensor
     levels: int
+
+
+@dataclass
+class FakeConvertParameters:
+    """
+    Class handles FakeConvert layer attributes.
+
+    :param scale: Tensor with the scale for input value.
+    :param shift: Tensor with the shift for input value.
+    :param destination_type: Destination type.
+    """
+
+    scale: Tensor
+    shift: Tensor
+    destination_type: FP8Type
 
 
 def fix_zero_filters_symmetric(max_values: Tensor, eps: float = 0.01) -> Tensor:
@@ -244,6 +260,37 @@ def calculate_quantizer_parameters(
 
     output_low, output_high = input_low, input_high
     return FakeQuantizeParameters(input_low, input_high, output_low, output_high, levels)
+
+
+def calculate_convert_parameters(
+    statistics: MinMaxTensorStatistic,
+    is_per_channel: False,
+    destination_type: FP8Type = FP8Type.E4M3,
+    activation_scale: float = 0.5,
+) -> FakeConvertParameters:
+    """
+    Calculates FakeConvert layer attributes for weight/activation quantizer.
+
+    :param statistics: Collected statistics for the quantized insertion.
+    :param is_activation: Whether is for activation or weights.
+    :param destination_type: Destination type that regulates maximum value for the formula.
+    :param activation_scale: Factor for calculated activation scale.
+    :return: Parameters of the FakeConvert layer.
+    """
+
+    destination_type_maximum = {FP8Type.E4M3: 448, FP8Type.E5M2: 57344}
+
+    max_values = Tensor(statistics.max_values)
+    min_values = Tensor(statistics.min_values)
+
+    max_destination_value = destination_type_maximum[destination_type]
+    tensor_dtype = fns.finfo(max_values)
+    scale = max_destination_value / fns.maximum(max_values, fns.abs(min_values) + tensor_dtype.eps)
+    if not is_per_channel:
+        scale = fns.squeeze(activation_scale * scale)
+    shift = fns.zeros_like(scale).astype(TensorDataType.float32)
+    scale = scale.astype(TensorDataType.float32)
+    return FakeConvertParameters(scale, shift, destination_type)
 
 
 def _calculate_scaled_parameters(

@@ -21,7 +21,7 @@ import pytest
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -49,8 +49,9 @@ class BCStatsCollectors(Enum):
 
 
 class TemplateTestStatisticsAggregator:
+    @staticmethod
     @abstractmethod
-    def get_min_max_algo_backend_cls(self) -> Type[MinMaxAlgoBackend]:
+    def get_min_max_algo_backend_cls() -> Type[MinMaxAlgoBackend]:
         pass
 
     @abstractmethod
@@ -73,8 +74,9 @@ class TemplateTestStatisticsAggregator:
     def get_dataset(self, samples):
         pass
 
+    @staticmethod
     @abstractmethod
-    def get_target_point(self, target_type: TargetType) -> TargetPoint:
+    def get_target_point(target_type: TargetType) -> TargetPoint:
         pass
 
     @abstractmethod
@@ -387,7 +389,6 @@ class TemplateTestStatisticsAggregator:
         inplace_statistics,
         is_backend_support_custom_estimators,
     ):
-        inplace_statistics = False
         model = self.get_backend_model(dataset_samples)
         quantizer_config = QuantizerConfig(
             mode=test_parameters.quantization_mode, per_channel=test_parameters.per_channel
@@ -631,10 +632,11 @@ class TemplateTestStatisticsAggregator:
                     assert ref.shape == val.shape
                 assert np.allclose(val, ref)
 
+    @classmethod
     def create_statistics_point(
-        self, model, q_config, target_point, subset_size, algorithm_name, inplace_statistics, range_estimator
+        cls, model, q_config, target_point, subset_size, algorithm_name, inplace_statistics, range_estimator
     ):
-        algo_backend = self.get_min_max_algo_backend_cls()
+        algo_backend = cls.get_min_max_algo_backend_cls()
         nncf_graph = NNCFGraphFactory.create(model)
         tensor_collector = algo_backend.get_statistic_collector(
             range_estimator,

@@ -14,9 +14,7 @@ from abc import abstractmethod
 
 import numpy as np
 import openvino.runtime as ov
-from openvino.runtime import opset9 as opset
-from openvino.runtime import opset12
-from openvino.runtime import opset13
+from openvino.runtime import opset13 as opset
 
 from nncf.common.utils.registry import Registry
 
@@ -705,7 +703,7 @@ class GroupNormalizationModel(OVReferenceModel):
 
         scale = self._rng.random(channels).astype(np.float32)
         bias = self._rng.random(channels).astype(np.float32)
-        group_norm = opset12.group_normalization(conv_add, scale, bias, num_groups=channels, epsilon=1e-5)
+        group_norm = opset.group_normalization(conv_add, scale, bias, num_groups=channels, epsilon=1e-5)
 
         relu = opset.relu(group_norm, name="Relu")
 
@@ -833,7 +831,7 @@ class ScaledDotProductAttentionModel(OVReferenceModel):
         value = opset.parameter([1, 1, 1, 64], name="Input_3")
         attn_mask = opset.parameter([1, 1, 1, 1], name="Input_4")
 
-        attn = opset13.scaled_dot_product_attention(query, key, value, attn_mask)
+        attn = opset.scaled_dot_product_attention(query, key, value, attn_mask)
         result = opset.result(attn, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [query, key, value, attn_mask])

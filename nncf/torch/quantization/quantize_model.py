@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from copy import deepcopy
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 
@@ -18,6 +18,7 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import ModelType
+from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
@@ -32,10 +33,11 @@ DEFAULT_RANGE_TYPE = "mean_min_max"
 def quantize_impl(
     model: torch.nn.Module,
     calibration_dataset: Dataset,
-    preset: Union[QuantizationPreset, None],
-    target_device: TargetDevice,
-    subset_size: int,
-    fast_bias_correction: bool,
+    mode: Optional[QuantizationMode] = None,
+    preset: Optional[QuantizationPreset] = None,
+    target_device: TargetDevice = TargetDevice.ANY,
+    subset_size: int = 300,
+    fast_bias_correction: bool = True,
     model_type: Optional[ModelType] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
@@ -47,6 +49,8 @@ def quantize_impl(
         raise ValueError(f"fast_bias_correction={fast_bias_correction} is not supported")
     if target_device == TargetDevice.CPU_SPR:
         raise RuntimeError("target_device == CPU_SPR is not supported")
+    if mode is not None:
+        raise ValueError(f"mode={mode} is not supported")
 
     copied_model = deepcopy(model)
 

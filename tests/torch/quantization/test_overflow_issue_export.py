@@ -16,10 +16,10 @@ import pytest
 import torch
 from torch import nn
 
+from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
-from nncf.torch.quantization.layers import QuantizationMode
 from nncf.torch.quantization.layers import SymmetricQuantizer
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test

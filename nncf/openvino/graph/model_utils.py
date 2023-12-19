@@ -9,13 +9,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import deque
+from typing import List
 
 import openvino.runtime as ov
 
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.openvino.graph.metatypes.groups import FAKE_QUANTIZE_OPERATIONS
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVReadValueMetatype
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
 
 
@@ -47,3 +50,13 @@ def remove_fq_from_inputs(model: ov.Model, graph: NNCFGraph) -> ov.Model:
         nodes_queue.extend(graph.get_next_nodes(current_node))
 
     return model_transformer.transform(transformation_layout)
+
+
+def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    """
+    Get a list of NNCFNodes to use as start nodes for activation path tracing.
+
+    :param nncf_graph: NNCFGraph to work with.
+    :return: Target NNCFGraph input nodes.
+    """
+    return nncf_graph.get_input_nodes() + nncf_graph.get_nodes_by_metatypes([OVReadValueMetatype])

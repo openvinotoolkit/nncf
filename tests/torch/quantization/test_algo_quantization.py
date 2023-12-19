@@ -25,7 +25,7 @@ from nncf import NNCFConfig
 from nncf.api.compression import CompressionScheduler
 from nncf.common.hardware.config import HWConfigType
 from nncf.common.quantization.structs import NonWeightQuantizerId
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.utils.debug import nncf_debug
