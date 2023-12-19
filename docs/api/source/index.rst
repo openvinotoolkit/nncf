@@ -8,6 +8,6 @@ Neural Network Compression Framework (NNCF) provides a suite of advanced algorit
    :maxdepth: 3
 
    API Reference<autoapi/nncf/index>
-   JSON configuration file schema<./schema#http://>
+   JSON configuration file schema<schema/index>
    Github<https://github.com/openvinotoolkit/nncf>
 
