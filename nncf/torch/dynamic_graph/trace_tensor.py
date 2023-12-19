@@ -79,7 +79,7 @@ class TracedTensorMixin:
     @classmethod
     def patch(cls, tensor: torch.Tensor, tensor_meta: Optional[TensorMeta] = None) -> "TracedTensorMixin":
         """
-        Patch a tensor with the TracedTensorMixin interface and associate it with the provided tensor_meta.
+        Patches a tensor with the TracedTensorMixin interface and associates it with the provided tensor_meta.
 
         :param tensor: The input tensor.
         :param tensor_meta: The metadata associated with the tensor.

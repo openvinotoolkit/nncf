@@ -35,6 +35,17 @@ class GraphBuilder:
         as_eval: bool = False,
         trace_parameters: bool = False,
     ) -> DynamicGraph:
+        """
+        Builds DynamicGraph from the given Torch model.
+
+        :param model: Model to build DynamicGraph from.
+        :param context_to_use: Tracing context to use during the DynamicGraph building. Creates new tracing context
+            if context to use is not specified.
+        :param as_eval: Should given model be switched to eval mode before the graph tracing or not. Default is False.
+        :param trace_parameters: Whether trace model parameters during the DynamicGraph building or not.
+            Default is False.
+        :return: DynamicGraph constructed from given model.
+        """
         tracer = GraphTracer(self.custom_forward_fn)
         return tracer.trace_graph(model, context_to_use, as_eval, trace_parameters)
 
@@ -45,6 +56,17 @@ class GraphBuilder:
         as_eval: bool = False,
         trace_parameters: bool = False,
     ) -> PTNNCFGraph:
+        """
+        Builds PTNNCFGraph representation from the given Torch model.
+
+        :param model: Model to build PTNNCFGraph from.
+        :param context_to_use: Tracing context to use during the PTNNCFGraph building. Creates new tracing context
+            if context to use is not specified.
+        :param as_eval: Should given model be switched to eval mode before the graph tracing or not. Default is False.
+        :param trace_parameters: Whether trace model parameters during the PTNNCFGraph building or not.
+            Default is False.
+        :return: PTNNCFGraph constructed from given model.
+        """
         dynamic_graph = self.build_dynamic_graph(model, context_to_use, as_eval, trace_parameters)
         return GraphConverter.convert(dynamic_graph)
 

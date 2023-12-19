@@ -176,7 +176,7 @@ class TracingContext:
         wr = weakref.ref(tt)
         self._threading.thread_local.traced_tensor_weakrefs.append(wr)
 
-    def register_processed_parameter(self, param_name: str, tensor: torch.Tensor):
+    def register_processed_parameter(self, param_name: str, tensor: torch.Tensor) -> None:
         """
         Registers the processed parameter in the context to avoid double calculation of hooks
         for the same parameters.
@@ -191,7 +191,7 @@ class TracingContext:
         Rerturn the processed parameter by name.
 
         :param param_name: The parameter name.
-
+        :return: The processed parameter by name if found, otherwise None.
         """
         return self._threading.thread_local.processed_parameters.get(param_name, None)
 
