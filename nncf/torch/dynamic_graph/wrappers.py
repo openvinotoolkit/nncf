@@ -223,7 +223,15 @@ def _collect_module_attrs_and_ignored_algorithms(
     return layer_attrs, ignored_algos
 
 
-process_parameter_fn = wrap_operator(lambda x: x, PatchedOperatorInfo(MODEL_CONST_OP_NAME, NamespaceTarget.EXTERNAL))
+@functools.partial(wrap_operator, operator_info=PatchedOperatorInfo(MODEL_CONST_OP_NAME, NamespaceTarget.EXTERNAL))
+def process_parameter_fn(x: torch.nn.Parameter) -> torch.nn.Parameter:
+    """
+    The identity binding function to trace and apply hooks to parameters.
+
+    :param x: A parameter.
+    :return: A parameter.
+    """
+    return x
 
 
 def _process_parameters(operator_inputs: OperatorInput, ctx: TracingContext) -> OperatorInput:
