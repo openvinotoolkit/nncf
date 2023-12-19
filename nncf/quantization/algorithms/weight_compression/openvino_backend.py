@@ -545,7 +545,7 @@ def _apply_AWQ(model: ov.Model,
         matches.extend(find_subgraphs_matching_pattern(nx_graph, pattern_graph(), strict=False))
 
     if len(matches) == 0:
-        return
+        return model
 
     @dataclass
     class AWQTriplet:
@@ -597,7 +597,7 @@ def _apply_AWQ(model: ov.Model,
 
     model_transformer = ModelTransformerFactory.create(model, True)
     transformation_layout = TransformationLayout()
-    n_layer = 0
+
     for k, v in track(statistics_aggregator.statistic_points.items(), description="Applying AWQ"):
         stats = list(v[0].algorithm_to_tensor_collectors["AWQ"][0].aggregators.values())[0]._container
         stats = [stat.squeeze() for stat in stats]
