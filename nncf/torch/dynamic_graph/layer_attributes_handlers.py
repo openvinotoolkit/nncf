@@ -28,9 +28,11 @@ from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
 from nncf.common.graph.layer_attributes import PadLayerAttributes
+from nncf.common.graph.layer_attributes import ParameterLayerAttributes
 from nncf.common.graph.layer_attributes import PermuteLayerAttributes
 from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 from nncf.common.graph.layer_attributes import TransposeLayerAttributes
+from nncf.common.graph.operator_metatypes import ConstNoopMetatype
 from nncf.common.graph.utils import get_split_axis
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
 from nncf.torch.graph.operator_metatypes import PTGroupNormMetatype
@@ -49,8 +51,9 @@ PERMUTE_OP_NAMES = ["permute"]
 GETITEM_OP_NAMES = ["__getitem__"]
 PAD_OP_NAMES = PTPadMetatype.get_all_aliases()
 CONCAT_OP_NAMES = PTCatMetatype.get_all_aliases()
+CONST_OP_NAMES = ConstNoopMetatype.get_all_aliases()
 OP_NAMES_REQUIRING_ATTRS_FROM_ARGS_KWARGS = list(
-    TRANSPOSE_OP_NAMES + PERMUTE_OP_NAMES + GETITEM_OP_NAMES + PAD_OP_NAMES + CONCAT_OP_NAMES
+    TRANSPOSE_OP_NAMES + PERMUTE_OP_NAMES + GETITEM_OP_NAMES + PAD_OP_NAMES + CONCAT_OP_NAMES + CONST_OP_NAMES
 )
 
 
@@ -121,6 +124,8 @@ def get_layer_attributes_from_args_and_kwargs(op_name: str, args, kwargs) -> Bas
         layer_attrs = _get_pad_attrs_from_args_kwargs(args, kwargs)
     elif op_name in CONCAT_OP_NAMES:
         layer_attrs = _get_concat_attrs_from_args_kwargs(args, kwargs)
+    elif op_name in CONST_OP_NAMES:
+        layer_attrs = _get_const_attrs_from_args_kwargs(args, kwargs)
     return layer_attrs
 
 
@@ -180,3 +185,8 @@ def _get_kwargs_shifted(args_names, args, kwargs, shift=1):
     for idx, arg_name in enumerate(args_names):
         res_kwargs[arg_name] = kwargs[arg_name] if arg_name in kwargs else args[idx + shift]
     return res_kwargs
+
+
+def _get_const_attrs_from_args_kwargs(args, _) -> ParameterLayerAttributes:
+    name = getattr(args[0], "name", "Unknown")
+    return ParameterLayerAttributes(name)

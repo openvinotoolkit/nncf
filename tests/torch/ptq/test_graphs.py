@@ -102,4 +102,4 @@ def test_min_max_classification_quantized_graphs(desc: ModelDesc, quantization_p
 
     quantized_model = quantization_algorithm.apply(nncf_network, nncf_network.nncf.get_graph(), dataset=None)
 
-    check_graph(quantized_model.nncf.get_graph(), desc.dot_filename, graph_dir)
+    check_graph(quantized_model.nncf.get_graph(), desc.dot_filename(), graph_dir)

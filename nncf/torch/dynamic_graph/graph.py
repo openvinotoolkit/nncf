@@ -23,6 +23,7 @@ from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
+from nncf.torch.dynamic_graph.trace_tensor import TracedParameter
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 
 
@@ -401,7 +402,7 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
         It finds and saves "starting" points of iteration for further matching with them on next iteration,
         instead of adding new nodes for each iteration. "Starting" points of iteration are nodes
             * that have at least one input node, which is outside of iteration scope
-            * or whose all inputs are not TracedTensor
+            * or whose all inputs are not tensors with TracedTensorMixin tracing capabilities.
         """
         op_exec_context = node.op_exec_context
         name = str(node)
@@ -414,16 +415,23 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
                 has_input_outside_iteration = False
                 untraced_tensor_inputs = []
                 traced_tensor_inputs = []
+                traced_parameter_inputs = []
                 non_tensor_inputs = []
                 for i in inputs:
                     input_obj = i.getter()
                     if isinstance(input_obj, Tensor):
-                        if not isinstance(input_obj, TracedTensor):
-                            untraced_tensor_inputs.append(input_obj)
-                        else:
+                        if isinstance(input_obj, TracedTensor):
                             traced_tensor_inputs.append(input_obj)
+                        elif isinstance(input_obj, TracedParameter):
+                            traced_parameter_inputs.append(input_obj)
+                        else:
+                            untraced_tensor_inputs.append(input_obj)
                     else:
                         non_tensor_inputs.append(input_obj)
+
+                for i in traced_parameter_inputs:
+                    if i.tensor_meta is not None:
+                        traced_tensor_inputs.append(i)
 
                 for i in traced_tensor_inputs:
                     creator_id = i.tensor_meta.creator_id

@@ -26,7 +26,7 @@ from nncf.common.logging import nncf_logger
 from nncf.common.scopes import matches_any
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope import ScopeElement
-from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
+from nncf.torch.dynamic_graph.trace_tensor import TracedTensorMixin
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.structures import ExecutionParameters
 
@@ -208,7 +208,7 @@ def is_tensor(obj):
 
 
 def is_traced_tensor(obj):
-    return isinstance(obj, TracedTensor)
+    return isinstance(obj, TracedTensorMixin)
 
 
 class _ModuleState:
