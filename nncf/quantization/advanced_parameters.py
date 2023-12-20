@@ -130,18 +130,18 @@ class AdvancedSmoothQuantParameters:
     matmul: float = 0.95
 
 
-class BackupMode(Enum):
+class RestoreMode(Enum):
     """
     Specifies how to revert operations to their original precision.
 
-    :param FP32: Operations will be reverted to floating-point precision.
-    :param INT8_WEIGHTS: Certain operations (such as MatMul and Embedding) will
+    :param ACTIVATIONS_AND_WEIGHTS: Operations will be reverted to floating-point precision.
+    :param ONLY_ACTIVATIONS: Certain operations (such as MatMul and Embedding) will
         be reverted to representation with int8 weights, while all other operations
         will revert to floating-point precision.
     """
 
-    FP32 = "fp32"
-    INT8_WEIGHTS = "int8_weights"
+    ACTIVATIONS_AND_WEIGHTS = "activations_and_weights"
+    ONLY_ACTIVATIONS = "only_activations"
 
 
 @api()
@@ -236,8 +236,8 @@ class AdvancedAccuracyRestorerParameters:
     :param intermediate_model_dir: Path to the folder where the model, which was fully
         quantized with initial parameters, should be saved.
     :type intermediate_model_dir: Optional[str]
-    :param backup_mode: Specifies how to revert operations to their original precision.
-    :type backup_mode: BackupMode
+    :param restore_mode: Specifies how to revert operations to their original precision.
+    :type restore_mode: RestoreMode
     """
 
     max_num_iterations: int = sys.maxsize
@@ -245,7 +245,7 @@ class AdvancedAccuracyRestorerParameters:
     ranking_subset_size: Optional[int] = None
     num_ranking_workers: Optional[int] = None
     intermediate_model_dir: Optional[str] = None
-    backup_mode: BackupMode = BackupMode.FP32
+    restore_mode: RestoreMode = RestoreMode.ACTIVATIONS_AND_WEIGHTS
 
 
 def changes_asdict(params: Any) -> Dict[str, Any]:

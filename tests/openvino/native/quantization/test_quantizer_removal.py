@@ -18,7 +18,7 @@ import pytest
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.quantization.quantizer_removal import revert_operations_to_floating_point_precision
 from nncf.openvino.graph.metatypes import openvino_metatypes as ov_metatypes
-from nncf.quantization.advanced_parameters import BackupMode
+from nncf.quantization.advanced_parameters import RestoreMode
 from tests.openvino.native.models import LinearQuantizedModel
 
 
@@ -30,14 +30,14 @@ class InputTestData:
     :param operations: List of operation names to revert to floating-point precision.
     :param quantizers: List of quantizer names that need to be removed in order to revert
         operations to floating-point precision.
-    :param backup_mode: Backup mode.
+    :param restore_mode: Restore mode.
     :param expected_remaining_quantizers: List of remaining quantizer names.
     """
 
     quantized_model: ov.Model
     operations: List[str]
     quantizers: List[str]
-    backup_mode: BackupMode
+    restore_mode: RestoreMode
     expected_remaining_quantizers: List[str]
 
 
@@ -51,7 +51,7 @@ TEST_CASES = [
             "FQ_ReLu_0",
             "FQ_Weights_1",
         ],
-        backup_mode=BackupMode.FP32,
+        restore_mode=RestoreMode.ACTIVATIONS_AND_WEIGHTS,
         expected_remaining_quantizers=[
             "FQ_Inputs",
             "FQ_Weights_0",
@@ -66,7 +66,7 @@ TEST_CASES = [
             "FQ_ReLu_0",
             "FQ_Weights_1",
         ],
-        backup_mode=BackupMode.INT8_WEIGHTS,
+        restore_mode=RestoreMode.ONLY_ACTIVATIONS,
         expected_remaining_quantizers=[
             "FQ_Weights_0",
             "FQ_Weights_1",
@@ -86,7 +86,7 @@ def test_revert_operations_to_floating_point_precision(test_case: InputTestData)
         quantizers,
         test_case.quantized_model,
         quantized_model_graph,
-        test_case.backup_mode,
+        test_case.restore_mode,
         [ov_metatypes.OVMatMulMetatype, ov_metatypes.OVEmbeddingMetatype],
     )
 

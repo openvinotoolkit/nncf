@@ -17,7 +17,7 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.quantization.advanced_parameters import BackupMode
+from nncf.quantization.advanced_parameters import RestoreMode
 
 TModel = TypeVar("TModel")
 
@@ -92,7 +92,7 @@ def revert_operations_to_floating_point_precision(
     quantizers: List[NNCFNode],
     quantized_model: TModel,
     quantized_model_graph: NNCFGraph,
-    backup_mode: BackupMode,
+    restore_mode: RestoreMode,
     weighted_metatypes: List[OperatorMetatype],
 ) -> TModel:
     """
@@ -106,7 +106,7 @@ def revert_operations_to_floating_point_precision(
     :param quantized_model: Quantized model in which provided operations
         should be reverted to floating-point precision.
     :param quantized_model_graph: The graph which was built for `quantized_model`.
-    :param backup_mode: Backup mode.
+    :param restore_mode: Restore mode.
     :param weighted_metatypes: List of operation metatypes that can be reverted to representation
         with int8 weights.
     :return: The model where `operations` were reverted to floating-point precision.
@@ -117,7 +117,7 @@ def revert_operations_to_floating_point_precision(
 
     should_remove_fq = {}
     should_revert_weights_to_fp32 = {}
-    if backup_mode == BackupMode.INT8_WEIGHTS:
+    if restore_mode == RestoreMode.ONLY_ACTIVATIONS:
         for node in operations:
             if (
                 node.metatype in weighted_metatypes

@@ -24,7 +24,7 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.timer import timer
 from nncf.data.dataset import Dataset
-from nncf.quantization.advanced_parameters import BackupMode
+from nncf.quantization.advanced_parameters import RestoreMode
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.accuracy_control.rank_functions import create_normalized_mse_func
@@ -63,7 +63,7 @@ class Ranker:
         evaluator: Evaluator,
         num_workers: int = 1,
         ranking_fn: Optional[Callable[[Any, Any], float]] = None,
-        backup_mode: BackupMode = BackupMode.FP32,
+        restore_mode: RestoreMode = RestoreMode.ACTIVATIONS_AND_WEIGHTS,
     ):
         """
         :param ranking_subset_size: The number of data items that will be selected from
@@ -84,7 +84,7 @@ class Ranker:
         self._evaluator = evaluator
         self._ranking_fn = ranking_fn
         self._num_workers = num_workers
-        self._backup_mode = backup_mode
+        self._restore_mode = restore_mode
 
     def find_groups_of_quantizers_to_rank(self, quantized_model_graph: NNCFGraph) -> List[GroupToRank]:
         """
@@ -194,7 +194,7 @@ class Ranker:
                 current_group.quantizers,
                 quantized_model,
                 quantized_model_graph,
-                self._backup_mode,
+                self._restore_mode,
                 self._algo_backend.get_weighted_metatypes(),
             )
 
@@ -223,7 +223,7 @@ class Ranker:
                 current_group.quantizers,
                 quantized_model,
                 quantized_model_graph,
-                self._backup_mode,
+                self._restore_mode,
                 self._algo_backend.get_weighted_metatypes(),
             )
 
