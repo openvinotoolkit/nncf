@@ -15,7 +15,6 @@ def create_register_input_hook(collector: TensorCollector) -> Callable[[torch.Te
     :return: Register inputs hook function.
     """
 
-
     def register_inputs_hook(x: torch.Tensor) -> torch.Tensor:
         """
         Register inputs hook function.
@@ -26,6 +25,5 @@ def create_register_input_hook(collector: TensorCollector) -> Callable[[torch.Te
         with no_nncf_trace():
             collector.register_input_for_all_reducers(Tensor(x))
         return x
-
 
     return register_inputs_hook

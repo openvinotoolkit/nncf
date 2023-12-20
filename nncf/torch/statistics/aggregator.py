@@ -23,7 +23,6 @@ from nncf.experimental.tensor import Tensor
 from nncf.experimental.torch.tensor_statistics.algo import create_register_input_hook
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.tensor_statistics.algo import get_collection_hook
 
 
 class PTStatisticsAggregator(StatisticsAggregator):

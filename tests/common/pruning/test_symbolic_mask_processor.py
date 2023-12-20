@@ -20,6 +20,7 @@ from nncf.experimental.common.pruning.operations import ElementwisePruningOp
 from nncf.experimental.common.pruning.propagation_data import PropagationGroup
 from nncf.experimental.common.pruning.propagation_data import PropagationMask
 from nncf.experimental.common.pruning.propagation_data import PruningBlock
+from nncf.experimental.tensor import TensorDeviceType
 
 
 @pytest.mark.parametrize("shape,raise_runtime_error", [(5, False), ([6], False), ([1, 2], True)])
@@ -33,7 +34,7 @@ def test_ones(shape, raise_runtime_error):
         assert tensor.mask_producers == []
         assert len(tensor.shape) == 1
         assert tensor.shape[0] == shape[0] if isinstance(shape, list) else shape
-        assert tensor.device == "CPU"
+        assert tensor.device == TensorDeviceType.CPU
 
 
 def test_repeat():

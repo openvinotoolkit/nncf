@@ -41,7 +41,7 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
         assert isinstance(tensor_collector, MeanMinMaxStatisticCollector)
 
     def get_reduction_axes(self, reducer: TensorStatisticCollectorBase) -> ReductionAxes:
-        return reducer._reduction_shape
+        return reducer._reduction_axes
 
     @pytest.fixture(
         params=[

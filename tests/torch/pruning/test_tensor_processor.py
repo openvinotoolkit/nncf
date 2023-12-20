@@ -24,7 +24,7 @@ def test_ones(device):
     shape = [1, 3, 10, 100]
     tensor = PTNNCFPruningTensorProcessor.ones(shape, device)
     assert torch.is_tensor(tensor.data)
-    assert tensor.data.device == device.type
+    assert tensor.data.device == device
     assert list(tensor.data.shape) == shape
 
 

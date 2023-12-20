@@ -54,22 +54,26 @@ def _(a: torch.Tensor) -> torch.Tensor:
 
 @fns.max.register(torch.Tensor)
 def _(
-    a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: Optional[bool] = False
+    a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: Optional[bool] = None
 ) -> torch.Tensor:
     # Analog of numpy.max is torch.amax
+    if keepdim is None:
+        keepdim = False
     if axis is None:
-        return torch.amax(a)
-    return torch.amax(a, dim=axis)
+        return torch.amax(a, keepdim=keepdim)
+    return torch.amax(a, dim=axis, keepdim=keepdim)
 
 
 @fns.min.register(torch.Tensor)
 def _(
-    a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: Optional[bool] = False
+    a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: Optional[bool] = None
 ) -> torch.Tensor:
     # Analog of numpy.min is torch.amin
+    if keepdim is None:
+        keepdim = False
     if axis is None:
-        return torch.amin(a)
-    return torch.amin(a, dim=axis)
+        return torch.amin(a, keepdim=keepdim)
+    return torch.amin(a, dim=axis, keepdim=keepdim)
 
 
 @fns.abs.register(torch.Tensor)
@@ -280,7 +284,7 @@ def _(a: torch.Tensor, dtype: TensorDataType) -> float:
 def _(a: torch.Tensor, axis: Union[int, Tuple[int]] = None, keepdims: Optional[bool] = None) -> torch.Tensor:
     if keepdims is None:
         keepdims = False
-    return torch.quantile(a, q=0.5, dim=axis, keepdim=keepdims)
+    return fns.quantile(a, q=0.5, axis=axis, keepdims=keepdims)
 
 
 @fns.power.register(torch.Tensor)
@@ -305,7 +309,9 @@ def _(
 ) -> Union[float, torch.Tensor]:
     if keepdims is None:
         keepdims = False
-    if not isinstance(axis, list):
+    if isinstance(q, list):
+        q = torch.Tensor(q).to(a.device)
+    if not isinstance(axis, (list, tuple)):
         return torch.quantile(a, q=q, dim=axis, keepdim=keepdims)
     if len(axis) == 1:
         return torch.quantile(a, q=q, dim=axis[0], keepdim=keepdims)

@@ -28,7 +28,7 @@ from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.operations import BasePruningOp
 from nncf.common.pruning.symbolic_mask import SymbolicMask
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
-from nncf.experimental.tensor import Tensor
+from nncf.experimental.tensor import Tensor, TensorDeviceType
 from tests.common.pruning import dummy_types
 from tests.common.pruning.tensor import NPNNCFTensorProcessor
 
@@ -369,7 +369,7 @@ def test_concat_output_tensor_device():
         )
 
     # Set mask to last dummy node
-    ref_device = TargetDevice.CPU.value
+    ref_device = TensorDeviceType.CPU
     for op in dummy_ops[:-1]:
         op = graph.get_node_by_id(op.node_id)
         op.attributes["output_mask"] = None

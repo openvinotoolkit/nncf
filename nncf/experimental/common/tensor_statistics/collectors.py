@@ -209,8 +209,7 @@ class AggregatorBase(Aggregator, abc.ABC):
 
 class OnlineTensorAggregator(AggregatorBase, abc.ABC):
     def __init__(self, aggregation_axes: AggregationAxes, num_samples: Optional[int] = None):
-        super().__init__(aggregation_axes=aggregation_axes,
-                         num_samples=num_samples)
+        super().__init__(aggregation_axes=aggregation_axes, num_samples=num_samples)
         self._current_aggregate = None
 
     def _reset_sample_container(self):
