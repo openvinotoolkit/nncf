@@ -64,7 +64,9 @@ install-openvino-dev: install-openvino-test install-pre-commit
 	pip install -r examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/requirements.txt
 
 test-openvino:
+	export ONEDNN_MAX_CPU_ISA=AVX2
 	pytest ${COVERAGE_ARGS} tests/openvino $(DATA_ARG) --junitxml ${JUNITXML_PATH}
+	unset ONEDNN_MAX_CPU_ISA
 
 test-install-openvino:
 	pytest tests/cross_fw/install -s        \
