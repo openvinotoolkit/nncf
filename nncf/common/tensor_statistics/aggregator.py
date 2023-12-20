@@ -33,7 +33,7 @@ class StatisticsAggregator(ABC):
     def __init__(self, dataset: Dataset):
         self.dataset = dataset
         self.stat_subset_size = None
-        self.batch_size = 1 if self.dataset.get_batch_size() is None else self.dataset.get_batch_size()
+        self.batch_size = self.dataset.get_batch_size() or 1
         self.dataset_size = self.dataset.get_length()
         self.dataset_size = self.dataset_size * self.batch_size if self.dataset_size is not None else self.dataset_size
         self.statistic_points = StatisticPointsContainer()
