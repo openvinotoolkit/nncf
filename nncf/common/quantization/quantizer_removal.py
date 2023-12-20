@@ -93,7 +93,7 @@ def revert_operations_to_floating_point_precision(
     quantized_model: TModel,
     quantized_model_graph: NNCFGraph,
     restore_mode: RestoreMode,
-    weighted_metatypes: List[OperatorMetatype],
+    op_with_weights_metatypes: List[OperatorMetatype],
 ) -> TModel:
     """
     Reverts provided operations to floating-point precision by removing
@@ -107,7 +107,7 @@ def revert_operations_to_floating_point_precision(
         should be reverted to floating-point precision.
     :param quantized_model_graph: The graph which was built for `quantized_model`.
     :param restore_mode: Restore mode.
-    :param weighted_metatypes: List of operation metatypes that can be reverted to representation
+    :param op_with_weights_metatypes: List of operation metatypes that can be reverted to representation
         with int8 weights.
     :return: The model where `operations` were reverted to floating-point precision.
     """
@@ -120,7 +120,7 @@ def revert_operations_to_floating_point_precision(
     if restore_mode == RestoreMode.ONLY_ACTIVATIONS:
         for node in operations:
             if (
-                node.metatype in weighted_metatypes
+                node.metatype in op_with_weights_metatypes
                 and node.layer_attributes
                 and node.layer_attributes.constant_attributes
             ):

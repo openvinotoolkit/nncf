@@ -195,7 +195,7 @@ class Ranker:
                 quantized_model,
                 quantized_model_graph,
                 self._restore_mode,
-                self._algo_backend.get_weighted_metatypes(),
+                self._algo_backend.get_op_with_weights_metatypes(),
             )
 
             prepared_model = self._algo_backend.prepare_for_inference(modified_model)
@@ -224,7 +224,7 @@ class Ranker:
                 quantized_model,
                 quantized_model_graph,
                 self._restore_mode,
-                self._algo_backend.get_weighted_metatypes(),
+                self._algo_backend.get_op_with_weights_metatypes(),
             )
 
             prepared_model_queue.append(executor.submit(self._algo_backend.prepare_for_inference, modified_model))

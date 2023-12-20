@@ -309,7 +309,7 @@ class QuantizationAccuracyRestorer:
                 previous_model,
                 quantized_model_graph,
                 self.restore_mode,
-                algo_backend.get_weighted_metatypes(),
+                algo_backend.get_op_with_weights_metatypes(),
             )
             report.removed_groups.append(current_group)
 

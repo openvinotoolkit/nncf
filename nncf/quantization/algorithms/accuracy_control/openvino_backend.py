@@ -17,7 +17,6 @@ import openvino.runtime as ov
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
-from nncf.openvino.graph.metatypes import openvino_metatypes as ov_metatypes
 from nncf.openvino.graph.metatypes.groups import CONSTANT_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import FAKE_QUANTIZE_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import INPUTS_QUANTIZABLE_OPERATIONS
@@ -40,8 +39,8 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
     # Metatypes
 
     @staticmethod
-    def get_weighted_metatypes() -> List[OVOpMetatype]:
-        return [ov_metatypes.OVMatMulMetatype, ov_metatypes.OVEmbeddingMetatype]
+    def get_op_with_weights_metatypes() -> List[OVOpMetatype]:
+        return OPERATIONS_WITH_WEIGHTS
 
     @staticmethod
     def get_quantizer_metatypes() -> List[OVOpMetatype]:
