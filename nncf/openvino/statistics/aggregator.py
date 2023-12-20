@@ -111,7 +111,3 @@ class OVStatisticsAggregator(StatisticsAggregator):
     @staticmethod
     def _process_outputs(outputs: Dict[str, np.ndarray]) -> Dict[str, OVNNCFTensor]:
         return {n: OVNNCFTensor(v) for n, v in outputs.items()}
-
-    @staticmethod
-    def _get_sliced_data(inputs: Dict[str, np.ndarray], end: int) -> Dict[str, OVNNCFTensor]:
-        return inputs

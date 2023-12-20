@@ -33,6 +33,9 @@ class StatisticsAggregator(ABC):
     def __init__(self, dataset: Dataset):
         self.dataset = dataset
         self.stat_subset_size = None
+        self.batch_size = 1 if self.dataset.get_batch_size() is None else self.dataset.get_batch_size()
+        self.dataset_size = self.dataset.get_length()
+        self.dataset_size = self.dataset_size * self.batch_size if self.dataset_size is not None else self.dataset_size
         self.statistic_points = StatisticPointsContainer()
 
     def collect_statistics(self, model: TModel, graph: NNCFGraph) -> None:
@@ -45,36 +48,31 @@ class StatisticsAggregator(ABC):
         """
         if not self.statistic_points:
             return
-        collected_statistics_num = 0
         model_transformer = factory.ModelTransformerFactory.create(model)
-
         merged_statistics = self._get_merged_statistic_points(self.statistic_points, model, graph)
         transformation_layout = self._get_transformation_layout_extra_outputs(merged_statistics)
         model_with_outputs = model_transformer.transform(transformation_layout)
         engine = factory.EngineFactory.create(model_with_outputs)
 
-        batch_size = self.dataset.get_batch_size()
-        batch_size = 1 if batch_size is None else batch_size
-        dataset_length = self.dataset.get_length()
-        dataset_length = dataset_length * batch_size if dataset_length is not None else dataset_length
-        total = (
-            min(dataset_length or self.stat_subset_size, self.stat_subset_size)
+        calibration_samples_num = (
+            min(self.dataset_size or self.stat_subset_size, self.stat_subset_size)
             if self.stat_subset_size is not None
             else None
-        )
-
-        with track(total=total, description="Statistics collection") as pbar:
+        )  # Maybe subsample should be in terms of a tensor with arbitary batch_size
+        collected_statistics_num = 0
+        with track(total=calibration_samples_num, description="Statistics collection") as pbar:
             for input_data in islice(self.dataset.get_inference_data(), self.stat_subset_size):
                 batch_size_to_collect = (
-                    min(total - collected_statistics_num, batch_size) if total is not None else batch_size
+                    min(calibration_samples_num - collected_statistics_num, self.batch_size)
+                    if calibration_samples_num is not None
+                    else self.batch_size
                 )
-                sliced_iput = self._get_sliced_data(input_data, batch_size_to_collect)
-                outputs = engine.infer(sliced_iput)
+                outputs = engine.infer(input_data)
                 processed_outputs = self._process_outputs(outputs)
                 self._register_statistics(processed_outputs, merged_statistics)
                 collected_statistics_num += batch_size_to_collect
                 pbar.progress.update(pbar.task, advance=batch_size_to_collect)
-                if total and collected_statistics_num == total:
+                if calibration_samples_num and collected_statistics_num == calibration_samples_num:
                     break
         if collected_statistics_num == 0:
             raise RuntimeError(
@@ -147,8 +145,3 @@ class StatisticsAggregator(ABC):
         :param outputs: raw model outputs
         :return: processed model outputs in Dict[str, NNCFTensor] format
         """
-
-    @staticmethod
-    @abstractmethod
-    def _get_sliced_data(inputs: Any, end: int) -> Any:
-        """ """

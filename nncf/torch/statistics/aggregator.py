@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict
+from typing import Dict
 
 import numpy as np
 import torch
@@ -70,7 +70,3 @@ class PTStatisticsAggregator(StatisticsAggregator):
     @staticmethod
     def _process_outputs(outputs: Dict[str, np.ndarray]) -> Dict[str, PTNNCFTensor]:
         return outputs
-
-    @staticmethod
-    def _get_sliced_data(inputs: Any, end: int) -> Any:
-        return inputs[:end]
