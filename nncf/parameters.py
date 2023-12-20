@@ -87,3 +87,17 @@ class CompressWeightsMode(Enum):
     INT4_ASYM = "int4_asym"
     NF4 = "nf4"
     INT8 = "int8"  # Deprecated mode
+
+
+@api(canonical_alias="nncf.QuantizationMode")
+class QuantizationMode(Enum):
+    """
+    Defines special modes.
+    Currently contains only FP8-related modes (https://arxiv.org/pdf/2209.05433.pdf).
+
+    :param FP8_E4M3: Mode with 4-bit exponent and 3-bit mantissa.
+    :param FP8_E5M2: Mode with 5-bit exponent and 2-bit mantissa.
+    """
+
+    FP8_E4M3 = "fp8_e4m3"
+    FP8_E5M2 = "fp8_e5m2"

@@ -312,22 +312,32 @@ def create_compression_algorithm_builder_from_algo_names(
     return builder
 
 
-def wrap_model(model: torch.nn.Module, example_input: Any) -> NNCFNetwork:
+def wrap_model(
+    model: torch.nn.Module,
+    example_input: Any,
+    replace_modules: bool = True,
+    trace_parameters: bool = False,
+) -> NNCFNetwork:
     """
     Wraps a PyTorch model to the NNCFNetwork class.
 
     This function dynamically extends the instance of PyTorch model with NNCF-enabling functionality.
 
     :param model: PyTorch model.
-    :example_input: An example input that will be used for model tracing. A tuple is interpreted as an example input
-        of a set of non keyword arguments, and a dict as an example input of a set of keywords arguments.
+    :param example_input: An example input that will be used for model tracing. A tuple is interpreted
+        as an example input of a set of non keyword arguments, and a dict as an example input of a set
+        of keywords arguments.
+    :param replace_modules: Whether to replace model modules with NNCF modules. Default is True.
+    :param trace_parameters: Whether to trace model parameters. Default is False.
     :return: A model wrapped by NNCFNetwork.
     """
 
     input_info = ExampleInputInfo.from_example_input(example_input)
 
     with training_mode_switcher(model, is_training=False):
-        nncf_network = NNCFNetwork(model, input_info=input_info)
+        nncf_network = NNCFNetwork(
+            model, input_info=input_info, replace_modules=replace_modules, trace_parameters=trace_parameters
+        )
         nncf_network.nncf.get_tracing_context().disable_trace_dynamic_graph()
 
     return nncf_network

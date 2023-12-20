@@ -90,7 +90,7 @@ class SelfAttention(nn.Module):
 LIST_CASES = [
     TransformerSearchBBlockParamsCase(
         name="BERT",
-        input_info=[dict(sample_size=[1, 10], type="long")] * 3,
+        input_info=[dict(sample_size=[1, 10], type="long")],
         model_creator=partial(AutoModelForQuestionAnswering.from_config, BertConfig()),
     ),
     TransformerSearchBBlockParamsCase(

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Union
+from typing import Optional
 
 import onnx
 
@@ -18,8 +18,10 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.parameters import ModelType
+from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
@@ -31,10 +33,11 @@ from nncf.telemetry.events import NNCF_ONNX_CATEGORY
 def quantize_impl(
     model: onnx.ModelProto,
     calibration_dataset: Dataset,
-    preset: Union[QuantizationPreset, None],
-    target_device: TargetDevice,
-    subset_size: int,
-    fast_bias_correction: bool,
+    mode: Optional[QuantizationMode] = None,
+    preset: Optional[QuantizationPreset] = None,
+    target_device: TargetDevice = TargetDevice.ANY,
+    subset_size: int = 300,
+    fast_bias_correction: bool = True,
     model_type: Optional[ModelType] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
@@ -44,6 +47,8 @@ def quantize_impl(
     """
     if target_device == TargetDevice.CPU_SPR:
         raise RuntimeError("target_device == CPU_SPR is not supported.")
+    if mode is not None:
+        raise ValueError(f"mode={mode} is not supported")
     if model.opset_import[0].version < 10:
         raise RuntimeError("ONNX models with opset version < 10 do not support quantization.")
     if model.opset_import[0].version < 13:
@@ -53,8 +58,8 @@ def quantize_impl(
         )
         if advanced_parameters is None:
             advanced_parameters = AdvancedQuantizationParameters()
-        advanced_parameters.weights_quantization_params.per_channel = False
-        advanced_parameters.activations_quantization_params.per_channel = False
+        advanced_parameters.weights_quantization_params = QuantizationParameters(per_channel=False)
+        advanced_parameters.activations_quantization_params = QuantizationParameters(per_channel=False)
 
     quantization_algorithm = PostTrainingQuantization(
         preset=preset,

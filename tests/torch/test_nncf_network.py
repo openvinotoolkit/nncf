@@ -38,12 +38,13 @@ from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.layers import NNCFConv2d
+from nncf.torch.model_creation import wrap_model
 from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
-from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint
 from nncf.torch.nncf_network import PTInsertionType
+from nncf.torch.quantization.external_quantizer import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from tests.torch.composite.test_sparsity_quantization import get_basic_sparsity_plus_quantization_config
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import TwoConvTestModel
@@ -874,3 +875,41 @@ def test_torch_return_types_unwrapped_for_post_hook():
 
     nncf_model.nncf.insert_at_point(insertion_point, [fn_to_check_input_type])
     nncf_model.nncf.rebuild_graph()
+
+
+class TestWhisperDecoderModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.embedding = torch.nn.Embedding(10, 3)
+
+    def forward(self, idx):
+        x = self.embedding(idx)
+        x = x @ torch.transpose(self.embedding.weight, 0, 1)
+        return x
+
+
+class ZeroHook(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.forward_calls_counter = 0
+
+    def forward(self, x):
+        self.forward_calls_counter += 1
+        return x * 0
+
+
+def test_insert_hook_after_parameter():
+    model = TestWhisperDecoderModel()
+    example_input = torch.randint(0, 9, (2,))
+    nncf_model = wrap_model(model, example_input, trace_parameters=True)
+    result = nncf_model(example_input)
+
+    hook = ZeroHook()
+    node_to_op_address_mapping = nncf_model.nncf.get_node_to_op_address_mapping()
+    insertion_point = PTInsertionPoint(TargetType.OPERATOR_POST_HOOK, node_to_op_address_mapping["embedding.weight"], 0)
+    nncf_model.nncf.insert_at_point(insertion_point, [hook])
+    result_with_hook = nncf_model(example_input)
+
+    assert hook.forward_calls_counter == 1
+    assert torch.sum(result.nonzero()) > 0
+    assert torch.sum(result_with_hook.nonzero()) == 0

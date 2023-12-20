@@ -19,6 +19,7 @@ from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.io_handling import LoaderInputInfo
 from nncf.torch.dynamic_graph.io_handling import ModelInputInfo
+from nncf.torch.dynamic_graph.wrappers import wrap_parameters
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import is_multidevice
 
@@ -28,7 +29,11 @@ class GraphTracer:
         self.custom_forward_fn = custom_forward_fn
 
     def trace_graph(
-        self, model: torch.nn.Module, context_to_use: Optional[TracingContext] = None, as_eval: bool = False
+        self,
+        model: torch.nn.Module,
+        context_to_use: Optional[TracingContext] = None,
+        as_eval: bool = False,
+        trace_parameters: bool = False,
     ) -> DynamicGraph:
         sd = deepcopy(model.state_dict())
 
@@ -41,6 +46,9 @@ class GraphTracer:
         with context_to_use as _ctx:
             _ctx.base_module_thread_local_replica = model
             with torch.no_grad():
+                if trace_parameters:
+                    wrap_parameters(model)
+
                 if as_eval:
                     with training_mode_switcher(model, is_training=False):
                         self.custom_forward_fn(model)

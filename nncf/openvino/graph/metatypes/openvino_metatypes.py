@@ -334,6 +334,12 @@ class OVFakeQuantizeMetatype(OVOpMetatype):
 
 
 @OV_OPERATOR_METATYPES.register()
+class OVFakeConvertMetatype(OVOpMetatype):
+    name = "FakeConvertOp"
+    op_names = ["FakeConvert"]
+
+
+@OV_OPERATOR_METATYPES.register()
 class OVLessMetatype(OVOpMetatype):
     name = "LessOp"
     op_names = ["Less"]
@@ -713,13 +719,13 @@ def get_operation_const_op(operation: ov.Node, const_port_id: int) -> Optional[o
     # There are several cases here
     # (Constant) -> (Operation)
     # (Constant) -> (Convert) -> (Operation)
-    # (Constant) -> (Convert) -> (FakeQuantize) -> (Operation)
-    # (Constant) -> (Convert) -> (FakeQuantize) -> (Reshape) -> (Operation)
+    # (Constant) -> (Convert) -> (FakeQuantize, FakeConvert) -> (Operation)
+    # (Constant) -> (Convert) -> (FakeQuantize, FakeConvert) -> (Reshape) -> (Operation)
     #  and etc. We need properly find the constant node. So we start with
     # `node` and traverse up until the constant node is not found.
     queue = deque([node])
     constant_node = None
-    allowed_propagation_types_list = ["Convert", "FakeQuantize", "Reshape"]
+    allowed_propagation_types_list = ["Convert", "FakeQuantize", "FakeConvert", "Reshape"]
 
     while len(queue) != 0:
         curr_node = queue.popleft()

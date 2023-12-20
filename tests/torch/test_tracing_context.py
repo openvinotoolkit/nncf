@@ -13,7 +13,9 @@ import torch
 from packaging import version
 
 from nncf.torch.dynamic_graph.context import TracingContext
+from nncf.torch.dynamic_graph.trace_tensor import TracedParameter
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
+from nncf.torch.dynamic_graph.wrappers import wrap_parameters
 
 
 @pytest.mark.skipif(
@@ -82,6 +84,7 @@ class ModuleForTest(torch.nn.Module):
         super().__init__()
         self.conv2d = torch.nn.Conv2d(1, 1, 1)
         self.cached_tensor = None
+        self.weight = torch.nn.Parameter(torch.zeros([1, 2]))
 
     def forward(self, x):
         if self.cached_tensor is not None:
@@ -98,11 +101,16 @@ def test_traced_tensors_are_stripped_on_context_exit():
     module.train()
     tensor = torch.ones([1, 1, 1, 1])
     with TracingContext():
+        wrap_parameters(module)
         result = module(tensor)
         assert isinstance(module.cached_tensor, TracedTensor)
+        assert isinstance(module.weight, TracedParameter)
+        assert isinstance(module.conv2d.weight, TracedParameter)
         assert isinstance(result, TracedTensor)
-    assert isinstance(module.cached_tensor, torch.Tensor)
-    assert isinstance(result, torch.Tensor)
+    assert type(module.cached_tensor) == torch.Tensor
+    assert type(result) == torch.Tensor
+    assert type(module.weight) == torch.nn.Parameter
+    assert type(module.conv2d.weight) == torch.nn.Parameter
 
 
 def test_no_cross_forward_run_dependency():

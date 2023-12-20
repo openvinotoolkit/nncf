@@ -12,7 +12,7 @@
 import functools
 import inspect
 from contextlib import contextmanager
-from typing import List
+from typing import List, Tuple
 
 import torch
 import torch.utils.cpp_extension
@@ -25,19 +25,20 @@ from nncf import nncf_logger
 from nncf.common.utils.api_marker import api
 from nncf.torch.dynamic_graph.structs import NamespaceTarget
 from nncf.torch.dynamic_graph.structs import PatchedOperatorInfo
+from nncf.torch.dynamic_graph.trace_tensor import TracedParameter
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.wrappers import ignore_scope
 from nncf.torch.dynamic_graph.wrappers import wrap_module_call
 from nncf.torch.dynamic_graph.wrappers import wrap_operator
 
 
-def get_namespace_to_patch(namespace_target: NamespaceTarget) -> object:
+def get_namespaces_to_patch(namespace_target: NamespaceTarget) -> Tuple[object, ...]:
     if namespace_target == NamespaceTarget.TORCH_NN_FUNCTIONAL:
-        return torch.nn.functional
+        return (torch.nn.functional,)
     if namespace_target == NamespaceTarget.TORCH_TENSOR:
-        return TracedTensor
+        return (TracedTensor, TracedParameter)
     if namespace_target == NamespaceTarget.TORCH:
-        return torch
+        return (torch,)
     raise RuntimeError("{} namespace wasn't found in {}".format(namespace_target, NamespaceTarget))
 
 
@@ -58,8 +59,6 @@ class FunctionsToPatchWithoutTracing:
         "as_tensor",
         "copysign",
         "copysign_",
-        "detach",
-        "detach_",
         "empty",
         "ones",
         "ones_like",
@@ -112,7 +111,6 @@ class FunctionsToPatchWithoutTracing:
         "storage",
         "storage_offset",
         "stride",
-        "to",
         "get_device",
     ]
 
@@ -369,8 +367,8 @@ def patch_torch_operators():
     for namespace, function_names in functions_to_patch.items():
         for function_name in function_names:
             op_info = PatchedOperatorInfo(function_name, namespace)
-            patched_namespace = get_namespace_to_patch(namespace)
-            patch_namespace_opname(patched_namespace, op_info)
+            for patched_namespace in get_namespaces_to_patch(namespace):
+                patch_namespace_opname(patched_namespace, op_info)
 
     # Patch operators without tracing so that
     # both they and any internal calls to otherwise traced functions do not appear into the model graph.
@@ -378,8 +376,8 @@ def patch_torch_operators():
     for namespace, function_names in functions_to_patch_without_tracing.items():
         for function_name in function_names:
             op_info = PatchedOperatorInfo(function_name, namespace, skip_trace=True)
-            patched_namespace = get_namespace_to_patch(namespace)
-            patch_namespace_opname(patched_namespace, op_info)
+            for patched_namespace in get_namespaces_to_patch(namespace):
+                patch_namespace_opname(patched_namespace, op_info)
 
     # Patch __repr__ twice in 'torch.Tensor' and 'TracedTensor'.
     # This is done to not add operations behind print() operator for the both TracedTensor and torch.Tensor.
