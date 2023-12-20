@@ -449,6 +449,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         """
         for handle in self._groups_vs_hooks_handlers[group]:
             handle.remove()
+        del self._groups_vs_hooks_handlers[group]
 
     def get_graph(self) -> PTNNCFGraph:
         if self._compressed_context.graph.get_nodes_count() == 0 or self._compressed_graphs_pair.nncf_graph is None:

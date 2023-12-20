@@ -940,8 +940,12 @@ def test_insert_hook_after_parameter():
 )
 def test_temporary_insert_at_point(target_type, target_node_name, input_port_id):
     class Hook(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self._p = torch.nn.Parameter(torch.zeros((1,)))
+
         def forward(self, x):
-            return x
+            return x + self._p
 
     model = SimplestModel()
     example_input = torch.ones(SimplestModel.INPUT_SIZE)
@@ -979,3 +983,4 @@ def test_temporary_insert_at_point(target_type, target_node_name, input_port_id)
         nncf_model.nncf.remove_hooks_group(HookGroups.TEMPORARY)
         del ref_hooks[-2]
         _check(ref_hooks)
+        assert not nncf_model.nncf._groups_vs_hooks_handlers[HookGroups.TEMPORARY]

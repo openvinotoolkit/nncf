@@ -15,23 +15,21 @@ from collections import OrderedDict
 import pytest
 
 from nncf.common.hook_handle import HookHandle
-from nncf.common.hook_handle import HookHandleIdType
 
 
-@pytest.mark.parametrize("id_type, cls_", [(HookHandleIdType.INT, int), (HookHandleIdType.STR, str)])
-def test_hook_handle_adds_removes_unique_keys(id_type: HookHandleIdType, cls_):
+def test_hook_handle_adds_removes_unique_keys():
     num_hooks = 3
     hook_registry = OrderedDict()
-    handles = [HookHandle(hook_registry, id_type) for _ in range(num_hooks)]
+    handles = [HookHandle(hook_registry) for _ in range(num_hooks)]
     for idx, handle in enumerate(handles):
         handle.add(idx)
     assert len(hook_registry) == num_hooks
 
-    assert list(hook_registry.keys()) == list(map(cls_, range(num_hooks)))
-    assert [h.hook_id for h in handles] == list(map(cls_, range(num_hooks)))
+    assert list(hook_registry.keys()) == list(map(str, range(num_hooks)))
+    assert [h.hook_id for h in handles] == list(map(str, range(num_hooks)))
 
     handles[0].remove()
-    assert list(hook_registry.keys()) == list(map(cls_, range(1, num_hooks)))
+    assert list(hook_registry.keys()) == list(map(str, range(1, num_hooks)))
 
 
 def test_two_hooks_one_handle_error():

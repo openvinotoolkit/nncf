@@ -169,10 +169,10 @@ class TestInsertionCommands:
         if insertion_point.insertion_type == PTInsertionType.OPERATOR_PRE_HOOK:
             ctx = self.compressed_model.nncf.get_tracing_context()
             pre_hook_id = PreHookId(insertion_point.op_address, input_port_id=insertion_point.input_port_id)
-            assert ctx._pre_hooks[pre_hook_id][0] is hook
+            assert ctx._pre_hooks[pre_hook_id]["0"] is hook
         if insertion_point.insertion_type == PTInsertionType.OPERATOR_POST_HOOK:
             ctx = self.compressed_model.nncf.get_tracing_context()
-            assert ctx._post_hooks[insertion_point.op_address][0] is hook
+            assert ctx._post_hooks[insertion_point.op_address]["0"] is hook
         if insertion_point.insertion_type == PTInsertionType.NNCF_MODULE_PRE_OP:
             module = self.compressed_model.nncf.get_module_by_scope(insertion_point.module_scope)
             assert module.pre_ops["0"] is hook
