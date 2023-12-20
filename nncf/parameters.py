@@ -89,17 +89,17 @@ class CompressWeightsMode(Enum):
     INT8 = "int8"  # Deprecated mode
 
 
-class MixedPrecisionMode(Enum):
+class SensitivityMetric(Enum):
     """
     Defines a mode for selecting quantization precision.
     :param : TODO:
     """
 
-    INT8_ERROR = "int8_error"
-    HAWQ_IN = "hawq_in"
-    MEAN_VAR = "mean_var"
-    MAX_VAR = "max_var"
-    MEAN_MAX = "mean_max"
+    WEIGHT_QUANTIZATION_ERROR = "int8_error"
+    HESSIAN_INPUT_ACTIVATION = "hawq_in"
+    MEAN_ACTIVATION_VARIANCE = "mean_var"
+    MAX_ACTIVATION_VARIANCE = "max_var"
+    MEAN_ACTIVATION_MAGNITUDE = "mean_max"
 
 
 @api(canonical_alias="nncf.QuantizationMode")

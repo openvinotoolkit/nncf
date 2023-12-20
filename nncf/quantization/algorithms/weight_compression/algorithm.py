@@ -35,7 +35,7 @@ from nncf.common.utils.backend import get_backend
 from nncf.openvino.graph.transformations.commands import TargetType
 from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from nncf.parameters import CompressWeightsMode
-from nncf.parameters import MixedPrecisionMode
+from nncf.parameters import SensitivityMetric
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
@@ -59,7 +59,7 @@ class WeightCompression(Algorithm):
         group_size: int = None,
         ignored_scope: Optional[IgnoredScope] = None,
         all_layers: Optional[bool] = False,
-        mixed_precision_mode: Optional[MixedPrecisionMode] = MixedPrecisionMode.INT8_ERROR,
+        sensitivity_metric: Optional[SensitivityMetric] = SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
     ):
         """
         :param mode: Defines a mode for weight compression.
@@ -94,7 +94,7 @@ class WeightCompression(Algorithm):
         self._algorithm_key = f"CW_{hash(self)}"
         self._fp_inputs = defaultdict(list)
         self._all_layers = all_layers
-        self._mixed_precision_mode = mixed_precision_mode
+        self._sensitivity_metric = sensitivity_metric
 
     @property
     def available_backends(self) -> List[BackendType]:
@@ -173,7 +173,7 @@ class WeightCompression(Algorithm):
         nodes_to_compress = self._get_nodes_to_compress(graph)
 
         activations = {}
-        if dataset is not None and self._mixed_precision_mode != MixedPrecisionMode.INT8_ERROR:
+        if dataset is not None and self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR:
             activations = self.get_activations(dataset, nodes_to_compress, graph, model)
 
         transformed_model = self._backend_entity.do_compression(
@@ -184,7 +184,7 @@ class WeightCompression(Algorithm):
             self._group_size,
             self._all_layers,
             activations,
-            self._mixed_precision_mode,
+            self._sensitivity_metric,
         )
         return transformed_model
 

@@ -32,7 +32,7 @@ from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.rt_info import dump_parameters
 from nncf.openvino.statistics.collectors import get_raw_stat_collector
 from nncf.parameters import CompressWeightsMode
-from nncf.parameters import MixedPrecisionMode
+from nncf.parameters import SensitivityMetric
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.compression_info import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.compression_info import WeightNodeParams
@@ -81,7 +81,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         group_size: int = None,
         all_layers: Optional[bool] = False,
         activations: Optional[Dict[str, np.ndarray]] = None,
-        mixed_precision_mode: Optional[MixedPrecisionMode] = MixedPrecisionMode.INT8_ERROR,
+        sensitivity_metric: Optional[SensitivityMetric] = SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
     ) -> ov.Model:
         all_weight_params: List[WeightNodeParams] = []
         quantized_nodes_ids = set()
@@ -132,9 +132,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 quantized_nodes_ids.add(id(weight_node))
 
         internal_weight_params = _get_internal_weight_params(all_weight_params, mode, is_last_layer_shared, all_layers)
-        _set_weight_compression_config(
-            internal_weight_params, mode, ratio, group_size, activations, mixed_precision_mode
-        )
+        _set_weight_compression_config(internal_weight_params, mode, ratio, group_size, activations, sensitivity_metric)
         nncf_logger.info(_get_bitwidth_distribution_str(all_weight_params, internal_weight_params))
 
         for wp in all_weight_params:
@@ -260,7 +258,7 @@ def _set_weight_compression_config(
     ratio: float,
     group_size: int,
     activations: Optional[Dict[str, np.ndarray]] = None,
-    mixed_precision_mode: Optional[MixedPrecisionMode] = MixedPrecisionMode.INT8_ERROR,
+    sensitivity_metric: Optional[SensitivityMetric] = SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
 ) -> None:
     """
     Set the appropriate compression configuration for weights based on some criteria.
@@ -276,6 +274,6 @@ def _set_weight_compression_config(
         for weight_param in internal_weight_params:
             weight_param.compression_config = primary_config
     else:
-        criterion_cls = MIXED_PRECISION_CRITERIA.get(mixed_precision_mode)
+        criterion_cls = MIXED_PRECISION_CRITERIA.get(sensitivity_metric)
         criterion = criterion_cls(internal_weight_params, primary_config, ratio, activations)
         criterion.assign_mixed_precision()

@@ -18,7 +18,7 @@ from numpy import linalg
 from nncf.common.logging.track_progress import track
 from nncf.common.utils.registry import Registry
 from nncf.openvino.graph.node_utils import get_const_value
-from nncf.parameters import MixedPrecisionMode
+from nncf.parameters import SensitivityMetric
 from nncf.quantization.algorithms.weight_compression.compression_info import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.compression_info import WeightNodeParams
 from nncf.quantization.algorithms.weight_compression.quantize import _do_integer_quantization
@@ -75,7 +75,7 @@ class MixedPrecisionCriterion:
             num_weights_in_4bit += weight_param.num_weights
 
 
-@MIXED_PRECISION_CRITERIA.register(MixedPrecisionMode.INT8_ERROR)
+@MIXED_PRECISION_CRITERIA.register(SensitivityMetric.WEIGHT_QUANTIZATION_ERROR)
 class DataFreeCriterion(MixedPrecisionCriterion):
     @staticmethod
     def _calc_weight_score(weight_param: WeightNodeParams):
@@ -112,7 +112,7 @@ class DataBasedCriterion(DataFreeCriterion):
         return weight_score * activation_score
 
 
-@MIXED_PRECISION_CRITERIA.register(MixedPrecisionMode.HAWQ_IN)
+@MIXED_PRECISION_CRITERIA.register(SensitivityMetric.HESSIAN_INPUT_ACTIVATION)
 class HAWQCriterion(DataBasedCriterion):
     @staticmethod
     def _calc_activation_score(activations: np.ndarray):
@@ -141,22 +141,22 @@ class HAWQCriterion(DataBasedCriterion):
         return linalg.norm(decompressed_weight - weight, ord="fro")
 
 
-@MIXED_PRECISION_CRITERIA.register(MixedPrecisionMode.MEAN_VAR)
+@MIXED_PRECISION_CRITERIA.register(SensitivityMetric.MEAN_ACTIVATION_VARIANCE)
 class MeanVarianceCriterion(DataBasedCriterion):
     @staticmethod
     def _calc_activation_score(activations: np.ndarray):
         return float(np.mean([np.mean(np.var(inp, axis=0)) for inp in activations]))
 
 
-@MIXED_PRECISION_CRITERIA.register(MixedPrecisionMode.MAX_VAR)
+@MIXED_PRECISION_CRITERIA.register(SensitivityMetric.MAX_ACTIVATION_VARIANCE)
 class MaxVarianceCriterion(DataBasedCriterion):
     @staticmethod
     def _calc_activation_score(activations: np.ndarray):
         return float(np.mean([np.max(np.var(inp, axis=0)) for inp in activations]))
 
 
-@MIXED_PRECISION_CRITERIA.register(MixedPrecisionMode.MEAN_MAX)
+@MIXED_PRECISION_CRITERIA.register(SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE)
 class MeanMaxCriterion(DataBasedCriterion):
     @staticmethod
     def _calc_activation_score(activations: np.ndarray):
-        return float(np.mean([np.mean(np.max(inp, axis=0)) for inp in activations]))
+        return float(np.mean([np.mean(np.max(np.abs(inp), axis=0)) for inp in activations]))

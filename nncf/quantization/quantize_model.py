@@ -21,9 +21,9 @@ from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
-from nncf.parameters import MixedPrecisionMode
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
+from nncf.parameters import SensitivityMetric
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -257,7 +257,7 @@ def compress_weights(
     ignored_scope: Optional[IgnoredScope] = None,
     dataset: Dataset = None,
     all_layers: Optional[bool] = None,
-    mixed_precision_mode: Optional[MixedPrecisionMode] = MixedPrecisionMode.INT8_ERROR,
+    sensitivity_metric: Optional[SensitivityMetric] = SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
 ) -> TModel:
     """
     Compress model weights.
@@ -286,9 +286,11 @@ def compress_weights(
     # TODO:
     :return: The non-trainable model with compressed weights.
     """
-    if not dataset and mixed_precision_mode != MixedPrecisionMode.INT8_ERROR:
+    if not dataset and sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR:
         # TODO: correct
-        raise AttributeError("mixed precision mode except INT8_ERROR requires dataset, but it's not provided")
+        raise AttributeError(
+            "mixed precision mode except WEIGHT_QUANTIZATION_ERROR requires dataset, but it's not provided"
+        )
 
     if mode == CompressWeightsMode.INT8:
         warning_deprecated(
@@ -324,7 +326,7 @@ def compress_weights(
 
     if all_layers is None:
         all_layers = False
-    compression_algorithm = WeightCompression(mode, ratio, group_size, ignored_scope, all_layers, mixed_precision_mode)
+    compression_algorithm = WeightCompression(mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric)
     graph = NNCFGraphFactory.create(model)
     return compression_algorithm.apply(model, graph, dataset=dataset)
 

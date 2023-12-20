@@ -20,7 +20,7 @@ from attr import dataclass
 from nncf import CompressWeightsMode
 from nncf.data.dataset import Dataset
 from nncf.openvino.graph.node_utils import get_const_value
-from nncf.parameters import MixedPrecisionMode
+from nncf.parameters import SensitivityMetric
 from nncf.quantization import compress_weights
 from nncf.quantization.algorithms.weight_compression.compression_info import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
@@ -197,22 +197,22 @@ def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
 @pytest.mark.parametrize(
     ("mode", "all_layers", "ratio", "ref_ids"),
     (
-        (MixedPrecisionMode.INT8_ERROR, True, 1, [0, 1, 2, 3, 4]),
-        (MixedPrecisionMode.INT8_ERROR, True, 0.8, [0, 3, 4]),
-        (MixedPrecisionMode.INT8_ERROR, True, 0.4, [0]),
-        (MixedPrecisionMode.INT8_ERROR, True, 0.2, []),
-        (MixedPrecisionMode.INT8_ERROR, False, 1, [0, 1, 2, 3]),
-        (MixedPrecisionMode.INT8_ERROR, False, 0.8, [0, 1, 3]),
-        (MixedPrecisionMode.INT8_ERROR, False, 0.4, [0]),
-        (MixedPrecisionMode.INT8_ERROR, False, 0.2, []),
-        (MixedPrecisionMode.HAWQ_IN, True, 0.8, [0, 1, 2]),
-        (MixedPrecisionMode.HAWQ_IN, False, 0.8, [0, 1, 2]),
-        (MixedPrecisionMode.MEAN_VAR, True, 0.8, [0, 1, 2]),
-        (MixedPrecisionMode.MEAN_VAR, False, 0.8, [0, 1, 2]),
-        (MixedPrecisionMode.MAX_VAR, True, 0.8, [0, 1, 2]),
-        (MixedPrecisionMode.MAX_VAR, False, 0.8, [0, 1, 2]),
-        (MixedPrecisionMode.MEAN_MAX, True, 0.8, [0, 1, 2]),
-        (MixedPrecisionMode.MEAN_MAX, False, 0.8, [0, 1, 2]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, [0, 1, 2, 3, 4]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 3, 4]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [0]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.2, []),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 1, [0, 1, 2, 3]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 3]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [0]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.2, []),
+        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, True, 0.8, [0, 1, 2]),
+        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, False, 0.8, [0, 1, 2]),
+        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2]),
+        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2]),
+        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2]),
+        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2]),
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, True, 0.8, [0, 1, 2]),
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2]),
     ),
 )
 def test_mixed_precision(mode, all_layers, ratio, ref_ids, mocker):
@@ -224,7 +224,7 @@ def test_mixed_precision(mode, all_layers, ratio, ref_ids, mocker):
         ratio=ratio,
         group_size=1,
         all_layers=all_layers,
-        mixed_precision_mode=mode,
+        sensitivity_metric=mode,
         dataset=dataset,
     )
     names = {
@@ -235,21 +235,21 @@ def test_mixed_precision(mode, all_layers, ratio, ref_ids, mocker):
 
 
 MAX_BASELINE_SCORE = 1 / np.finfo(np.float32).eps
-NON_ZERO_ROW = [0, 1, 2]
+NON_ZERO_ROW = [-4, 1, 2]
 ACTIVATION = np.array([NON_ZERO_ROW, [0, 0, 0], [0, 0, 0]])
-MAX_VAR = 0.8888888  # np.max(np.var(ACTIVATION, 0))
-MEAN_VAR = 0.3703703  # np.mean(np.var(ACTIVATION, 0))
-MEAN_MAX = 1  # np.mean(np.max(ACTIVATION, 0))
-HESSIAN_TRACE = 10 / 9  # sum(i*i for i in NON_ZERO_ROW) * 2 / ACTIVATION.size
+MAX_VAR = 3.555555  # np.max(np.var(ACTIVATION, 0))
+MEAN_VAR = 1.555555  # np.mean(np.var(ACTIVATION, 0))
+MEAN_MAX = 2.333333  # np.mean(np.max(np.abs(ACTIVATION), 0))
+HESSIAN_TRACE = (16 + 1 + 4) * 2 / 9  # sum(i*i for i in NON_ZERO_ROW) * 2 / ACTIVATION.size
 
 
 @pytest.mark.parametrize(
     ("mode", "ref_act_scores", "ref_scores"),
     (
-        (MixedPrecisionMode.HAWQ_IN, HESSIAN_TRACE, 0),
-        (MixedPrecisionMode.MEAN_MAX, MEAN_MAX, MEAN_MAX * MAX_BASELINE_SCORE),
-        (MixedPrecisionMode.MEAN_VAR, MEAN_VAR, MEAN_VAR * MAX_BASELINE_SCORE),
-        (MixedPrecisionMode.MAX_VAR, MAX_VAR, MAX_VAR * MAX_BASELINE_SCORE),
+        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, HESSIAN_TRACE, 0),
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, MEAN_MAX, MEAN_MAX * MAX_BASELINE_SCORE),
+        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, MEAN_VAR, MEAN_VAR * MAX_BASELINE_SCORE),
+        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, MAX_VAR, MAX_VAR * MAX_BASELINE_SCORE),
     ),
 )
 def test_data_based_criterion(mode, ref_scores, ref_act_scores, mocker):
@@ -265,7 +265,7 @@ def test_data_based_criterion(mode, ref_scores, ref_act_scores, mocker):
         ratio=0.5,
         group_size=1,
         dataset=dataset,
-        mixed_precision_mode=mode,
+        sensitivity_metric=mode,
         all_layers=True,
     )
     scores = scores_spy.spy_return
