@@ -15,6 +15,7 @@ import numpy as np
 import pytest
 
 from nncf.common.graph.layer_attributes import Dtype
+from nncf.experimental.tensor import Tensor
 from nncf.openvino.statistics.collectors import OVAbsMaxReducer
 from nncf.openvino.statistics.collectors import OVAbsQuantileReducer
 from nncf.openvino.statistics.collectors import OVBatchMeanReducer
@@ -22,24 +23,18 @@ from nncf.openvino.statistics.collectors import OVMaxReducer
 from nncf.openvino.statistics.collectors import OVMeanPerChanelReducer
 from nncf.openvino.statistics.collectors import OVMeanReducer
 from nncf.openvino.statistics.collectors import OVMinReducer
-from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.openvino.statistics.collectors import OVNoopReducer
 from nncf.openvino.statistics.collectors import OVQuantileReducer
-from nncf.openvino.tensor import OVNNCFTensor
 from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggreagtors
 
 
 class TestReducersAggregators(TemplateTestReducersAggreagtors):
-    @pytest.fixture
-    def tensor_processor(self):
-        return OVNNCFCollectorTensorProcessor
-
     def get_nncf_tensor(self, x: np.array, dtype: Optional[Dtype] = None):
         if dtype is Dtype.INTEGER:
             x = x.astype(np.int64)
         if dtype is Dtype.FLOAT:
             x = x.astype(np.float32)
-        return OVNNCFTensor(x)
+        return Tensor(x)
 
     @pytest.fixture(scope="module")
     def reducers(self):

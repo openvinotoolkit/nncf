@@ -19,7 +19,6 @@ from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.tensor import Tensor
-from nncf.experimental.torch.tensor_statistics.collectors import get_mean_statistic_collector
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.torch.graph.transformations.command_creation import create_bias_correction_command
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
@@ -30,6 +29,7 @@ from nncf.torch.model_analyzer import get_potential_fused_node
 from nncf.torch.model_analyzer import is_node_with_fused_bias
 from nncf.torch.model_analyzer import is_quantized_weights
 from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.tensor_statistics.collectors import get_mean_statistic_collector
 
 
 class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):

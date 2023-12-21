@@ -131,7 +131,7 @@ def test_elementwise_prune_ops(valid_masks):
                     graph, dummy_types.DUMMY_PRUNING_OPERATOR_METATYPES, NPNNCFTensorProcessor
                 ).mask_propagation()
 
-        masks[0][0] = 0
+        masks[0].data[0] = 0
         check_wrong_masks(masks)
         from nncf.experimental.tensor import functions as fns
 

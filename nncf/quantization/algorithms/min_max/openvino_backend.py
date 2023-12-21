@@ -200,8 +200,8 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 statistic_type = StatisticsType.ABS_MAX
             reducer = OV_REDUCERS_MAP[statistic_type](**kwargs)
 
-            kwargs = {"num_samples": num_samples}
-            aggregator = AGGREGATORS_MAP[params.aggregator_type](**kwargs)
+            aggregator = AGGREGATORS_MAP[params.aggregator_type](num_samples=num_samples,
+                                                                 aggregation_axes=(0, ))
 
             collector.register_statistic_branch(container_key, reducer, aggregator)
         return collector

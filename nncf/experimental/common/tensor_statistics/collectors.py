@@ -674,7 +674,8 @@ class OfflineAggregatorBase(AggregatorBase, ABC):
 
     def _aggregate_impl(self) -> Tensor:
         stacked_val = fns.stack(list(self._samples))
-        return self._aggregate_stacked_samples(stacked_val)
+        aggregated = self._aggregate_stacked_samples(stacked_val)
+        return aggregated.squeeze(0)
 
     def _reset_sample_container(self):
         self._samples.clear()
@@ -686,12 +687,12 @@ class OfflineAggregatorBase(AggregatorBase, ABC):
 
 class MeanAggregator(OfflineAggregatorBase):
     def _aggregate_stacked_samples(self, stacked_samples: Tensor) -> Tensor:
-        return stacked_samples.mean(axis=self._aggregation_axes, keepdims=False)
+        return stacked_samples.mean(axis=self._aggregation_axes, keepdims=self._keepdims)
 
 
 class MedianAggregator(OfflineAggregatorBase):
     def _aggregate_stacked_samples(self, stacked_samples: Tensor) -> Tensor:
-        return stacked_samples.median(axis=self._aggregation_axes, keepdims=False)
+        return stacked_samples.median(axis=self._aggregation_axes, keepdims=self._keepdims)
 
 
 class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
@@ -816,7 +817,7 @@ class PercentileAggregator(OfflineAggregatorBase):
             value = percentiles[idx]
             if self._keepdims:
                 value = fns.reshape(value, shape_after_aggregation)
-            retval[percentile] = value.tensor
+            retval[percentile] = value
         return retval
 
 
