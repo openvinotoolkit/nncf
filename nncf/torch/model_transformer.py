@@ -93,6 +93,8 @@ class PTModelTransformer(ModelTransformer):
 
         :param model: Model to apply transformations.
         :param transformations: List of the bias correction transformations.
+        :param hooks_group: Target hooks group to pass to the NNCFNetwork.
+        :return: A modified NNCFNetwork.
         """
         node_to_op_address_mapping = model.nncf.get_node_to_op_address_mapping()
         fns_grouped_by_points: Dict[PTInsertionPoint, List[Tuple[Callable, TransformationPriority]]] = {}
@@ -266,7 +268,6 @@ def extraction_potential_fused_modules(node_name: str, model: NNCFNetwork) -> nn
 
     :param node_name: The node name.
     :param model: The model.
-
     :return nn.Sequential: Copy of the modules.
     """
     extracted_node_names = [node_name]

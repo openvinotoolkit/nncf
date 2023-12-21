@@ -140,6 +140,13 @@ class PTGraphPair:
 
 
 class HookGroups(Enum):
+    """
+    Hook groups ids.
+        PERMANENT: Default hooks group id.
+        TEMPORARY: Id for hooks that are suppossed to be removed from a NNCFNetwork
+        at some point of an algorithm progress.
+    """
+
     PERMANENT = 0
     TEMPORARY = 1
 

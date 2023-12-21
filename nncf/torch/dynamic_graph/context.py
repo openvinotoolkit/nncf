@@ -96,8 +96,8 @@ class TracingContext:
     def __init__(self):
         self.graph = DynamicGraph()
 
-        self._post_hooks: DefaultDict[OperationAddress, Dict[int, Callable]] = defaultdict(OrderedDict)
-        self._pre_hooks: DefaultDict[PreHookId, Dict[int, Callable]] = defaultdict(OrderedDict)
+        self._post_hooks: DefaultDict[OperationAddress, Dict[str, Callable]] = defaultdict(OrderedDict)
+        self._pre_hooks: DefaultDict[PreHookId, Dict[str, Callable]] = defaultdict(OrderedDict)
         self._num_nested_hooks = 0
         self.reused_parameters = []
 
