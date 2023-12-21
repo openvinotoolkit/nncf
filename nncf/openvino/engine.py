@@ -45,7 +45,7 @@ class OVCompiledModelEngine(Engine):
 
         :param input_data: Provided inputs to infer the model.
         """
-        actual_num_inputs = 1 if isinstance(input_data, (np.ndarray, torch.tensor)) else len(input_data)
+        actual_num_inputs = 1 if isinstance(input_data, (np.ndarray, torch.Tensor)) else len(input_data)
         if actual_num_inputs != self.number_of_inputs:
             raise RuntimeError(f"Model expects {self.number_of_inputs} inputs, but {actual_num_inputs} are provided.")
         if isinstance(input_data, dict):
