@@ -309,27 +309,22 @@ def _(
 ) -> Union[float, torch.Tensor]:
     if keepdims is None:
         keepdims = False
-    if isinstance(q, (list, tuple)):
-        q = torch.Tensor(q).to(a.device)
-    if not isinstance(axis, (list, tuple)):
-        return torch.quantile(a, q=q, dim=axis, keepdim=keepdims)
-    if len(axis) == 1:
-        return torch.quantile(a, q=q, dim=axis[0], keepdim=keepdims)
-    # As of 2.0.1, torch does not support multidim quantile directly.
-    t = a
-    orig_ndims = len(t.shape)
-    sorted_axes = sorted(axis)
-    for ax in reversed(sorted_axes):
-        t = t.moveaxis(source=ax, destination=-1)
-    t = t.flatten(start_dim=-(len(sorted_axes)), end_dim=-1)
-    t = torch.quantile(t, q=q, dim=-1, keepdim=keepdims)
-    if len(sorted_axes) == orig_ndims:
-        # the flattened tensor is 1D, not 0D in this case
-        t = t.reshape([1 for _ in range(orig_ndims)])
+
+    # See https://github.com/pytorch/pytorch/issues/61582
+    # https://github.com/pytorch/pytorch/issues/64947
+    if len(a) <= 16_000_000 and isinstance(axis, int):
+        result = torch.quantile(
+            a,
+            torch.tensor(q, dtype=a.dtype, device=a.device),
+            axis,
+            keepdims,
+        )
     else:
-        for ax in sorted_axes:
-            t = t.unsqueeze(ax)
-    return t
+        result = torch.tensor(
+            np.quantile(a.detach().cpu().numpy(), q=q, axis=axis, keepdims=keepdims)
+        )
+    result = result.type(a.dtype).to(a.device)
+    return result
 
 
 @fns.logical_or.register(torch.Tensor)

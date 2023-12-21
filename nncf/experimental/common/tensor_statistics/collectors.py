@@ -207,18 +207,6 @@ class AggregatorBase(Aggregator, abc.ABC):
         return None
 
 
-class OnlineTensorAggregator(AggregatorBase, abc.ABC):
-    def __init__(self, aggregation_axes: AggregationAxes, num_samples: Optional[int] = None):
-        super().__init__(aggregation_axes=aggregation_axes, num_samples=num_samples)
-        self._current_aggregate = None
-
-    def _reset_sample_container(self):
-        self._current_aggregate = None
-
-    def _online_aggregation_axes(self) -> AggregationAxes:
-        return tuple(dim - 1 for dim in self._aggregation_axes if dim != 0)
-
-
 AggregatorKey = Tuple[int, int]
 
 
@@ -631,26 +619,53 @@ class ShapeAggregator(AggregatorBase):
         self._shape = None
 
 
-class MinAggregator(OnlineTensorAggregator):
+class OnlineAggregatorBase(AggregatorBase, ABC):
+    """
+    Base class for aggregators which are using aggregation function fn with following property:
+    fn([x1, x2, x3]) == fn([fn([x1, x2]), x3]) where x1, x2, x3 are samples to aggregate.
+    Online aggregation fn([fn([x1, x2]), x3]) allows to keep memory stamp low as only
+    one sample is stored during statistic collection.
+    """
+    def __init__(self, aggregation_axes: Optional[AggregationAxes] = None, num_samples: Optional[int] = None):
+        super().__init__(aggregation_axes, num_samples)
+        self._container = deque()
+
+    def _reset_sample_container(self):
+        self._container.clear()
+
     def _register_reduced_input_impl(self, x: Tensor) -> None:
-        if self._current_aggregate is None:
-            self._current_aggregate = x
+        online_aggregation_axes = tuple(dim - 1 for dim in self._aggregation_axes if dim != 0)
+        if online_aggregation_axes:
+            reduced = self._aggregation_fn(x, axis=online_aggregation_axes, keepdims=self._keepdims)
         else:
-            self._current_aggregate = fns.minimum(x, self._current_aggregate)
+            reduced = x
+        if 0 in self._aggregation_axes:
+            stacked_tensors = fns.stack([reduced, *self._container], axis=0)
+            aggregated = self._aggregation_fn(stacked_tensors, axis=0, keepdims=self._keepdims)
+            aggregated = aggregated.squeeze(0)
+            self._container = [aggregated]
+        else:
+            self._container.append(reduced)
 
     def _aggregate_impl(self) -> Tensor:
-        return self._current_aggregate
+        if 0 in self._aggregation_axes:
+            if self._keepdims:
+                return self._container[0]
+        return fns.stack(list(self._container))
+
+    @abstractmethod
+    def _aggregation_fn(self, stacked_value: Tensor, axis: AggregationAxes, keepdims: bool) -> Tensor:
+        pass
 
 
-class MaxAggregator(OnlineTensorAggregator):
-    def _register_reduced_input_impl(self, x: Tensor) -> None:
-        if self._current_aggregate is None:
-            self._current_aggregate = x
-        else:
-            self._current_aggregate = fns.maximum(x, self._current_aggregate)
+class MinAggregator(OnlineAggregatorBase):
+    def _aggregation_fn(self, stacked_value: Tensor, axis: AggregationAxes, keepdims: bool) -> Tensor:
+        return stacked_value.min(axis=axis, keepdims=keepdims)
 
-    def _aggregate_impl(self) -> Tensor:
-        return self._current_aggregate
+
+class MaxAggregator(OnlineAggregatorBase):
+    def _aggregation_fn(self, stacked_value: Tensor, axis: AggregationAxes, keepdims: bool) -> Tensor:
+        return stacked_value.max(axis=axis, keepdims=keepdims)
 
 
 class OfflineAggregatorBase(AggregatorBase, ABC):

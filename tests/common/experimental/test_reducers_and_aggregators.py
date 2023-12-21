@@ -235,11 +235,13 @@ class TemplateTestReducersAggreagtors:
 
         min_ref = offline_aggregators_test_desc.min_ref
         max_ref = offline_aggregators_test_desc.max_ref
+        min_test = min_aggregator.aggregate().data
+        max_test = max_aggregator.aggregate().data
         assert self.all_close(
-            min_aggregator.aggregate().data,
+            min_test,
             min_ref,
         )
-        assert self.all_close(max_aggregator.aggregate().data, max_ref)
+        assert self.all_close(max_test, max_ref)
 
     NO_OUTLIERS_TEST_PARAMS = [
         (MeanAggregator, True, 1, [1404.5138888888905]),
