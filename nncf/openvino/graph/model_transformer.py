@@ -259,6 +259,18 @@ class OVModelTransformer(ModelTransformer):
         return model
 
     @staticmethod
+    def _create_constant(value: np.ndarray, dtype: ov.Type, name: str) -> ov.Node:
+        """
+        Creates constant using opset.
+
+        :param value: Numpy value.
+        :param type: Constant type.
+        :param name: Name for the constant.
+        :return: ov.Node instance.
+        """
+        return opset.constant(value, dtype=dtype, name=name)
+
+    @staticmethod
     def _create_fake_quantize(
         op_output: ov.Output,
         fake_quantize_params: FakeQuantizeParameters,
@@ -280,12 +292,25 @@ class OVModelTransformer(ModelTransformer):
         output_low = fake_quantize_params.output_low.data
         output_high = fake_quantize_params.output_high.data
         levels = fake_quantize_params.levels
+        dtype = ov.Type.f32
 
         if convert_to_fp16:
             input_low = OVModelTransformer._convert_to_fp16(input_low)
             input_high = OVModelTransformer._convert_to_fp16(input_high)
             output_low = OVModelTransformer._convert_to_fp16(output_low)
             output_high = OVModelTransformer._convert_to_fp16(output_high)
+            dtype = ov.Type.f16
+
+        input_low = OVModelTransformer._create_constant(input_low, dtype=dtype, name=f"{fake_quantize_name}/input_low")
+        input_high = OVModelTransformer._create_constant(
+            input_high, dtype=dtype, name=f"{fake_quantize_name}/input_high"
+        )
+        output_low = OVModelTransformer._create_constant(
+            output_low, dtype=dtype, name=f"{fake_quantize_name}/output_low"
+        )
+        output_high = OVModelTransformer._create_constant(
+            output_low, dtype=dtype, name=f"{fake_quantize_name}/output_high"
+        )
 
         return opset.fake_quantize(
             op_output, input_low, input_high, output_low, output_high, levels, name=fake_quantize_name
@@ -310,12 +335,17 @@ class OVModelTransformer(ModelTransformer):
 
         scale = fake_convert_params.scale.data
         shift = fake_convert_params.shift.data
+        dtype = ov.Type.f32
 
         if convert_to_fp16:
             scale = OVModelTransformer._convert_to_fp16(scale)
             shift = OVModelTransformer._convert_to_fp16(shift)
+            dtype = ov.Type.f16
 
         destination_type = fake_convert_params.destination_type.value
+        scale = OVModelTransformer._create_constant(scale, dtype=dtype, name=f"{fake_convert_name}/scale")
+        shift = OVModelTransformer._create_constant(shift, dtype=dtype, name=f"{fake_convert_name}/shift")
+
         return opset.fake_convert(
             data=op_output,
             scale=scale,
@@ -610,7 +640,9 @@ class OVModelTransformer(ModelTransformer):
             node_output_port = node.output(transformation.target_point.port_id)
             node_output_source_ports = node_output_port.get_target_inputs()
 
-            bias_const_node = opset.constant(transformation.bias_value, dtype=node.get_element_type().to_dtype())
+            bias_const_node = OVModelTransformer._create_constant(
+                transformation.bias_value, dtype=node.get_element_type().to_dtype(), name=f"{node_name}/bias"
+            )
             bias_const_output_port = bias_const_node.output(0)
 
             add_node = opset.add(node_output_port, bias_const_output_port, name=f"{node_name}/nncf_null_bias_")
@@ -650,7 +682,9 @@ class OVModelTransformer(ModelTransformer):
             if all(p.get_element_type() == fp16_dtype for p in destination_ports):
                 scale_dtype = fp16_dtype
 
-            scale_constant = opset.constant(transformation.scale_value, dtype=scale_dtype)
+            scale_constant = OVModelTransformer._create_constant(
+                transformation.scale_value, dtype=scale_dtype, name=f"{transformation.multiply_node_name}/scale"
+            )
             multiply_node = opset.multiply(node_output_port, scale_constant, name=transformation.multiply_node_name)
 
             for destination_port in destination_ports:
