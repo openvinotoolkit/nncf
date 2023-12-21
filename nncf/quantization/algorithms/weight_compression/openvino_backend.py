@@ -41,7 +41,6 @@ from nncf.openvino.rt_info import dump_parameters
 from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from nncf.openvino.statistics.collectors import OVMeanPerChanelReducer
 from nncf.openvino.statistics.collectors import OVMeanTensorStatistic
-from nncf.openvino.statistics.collectors import OVRawTensorStatistic
 from nncf.openvino.statistics.collectors import TensorCollector
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.smooth_quant.openvino_backend import OVSmoothQuantAlgoBackend
@@ -496,7 +495,7 @@ def _get_mean_statistic_collector(num_samples: int, channel_axis: int, inplace: 
 
     aggregate_mean = NoopAggregator(num_samples)
 
-    collector = TensorCollector(OVRawTensorStatistic)
+    collector = TensorCollector()
     collector.register_statistic_branch(OVMeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
     return collector
 
@@ -575,6 +574,15 @@ def _apply_AWQ(
     name_mapping = {wp.weight_node.get_friendly_name(): idx for idx, wp in enumerate(all_weight_params)}
 
     for match in matches:
+        skip = False
+        for m in match[:-1]:
+            node = graph.get_node_by_key(m)
+            n_outupts = len(graph.get_output_edges(node))
+            if n_outupts > 1:
+                skip = True
+        if skip:
+            continue
+
         nncf_node = graph.get_node_by_key(match[-1])
         weight_port_ids = nncf_node.layer_attributes.get_const_port_ids()
         for weight_port_id in weight_port_ids:
@@ -595,6 +603,9 @@ def _apply_AWQ(
         awq_data[target_node.node_name] = AWQTriplet(weight_params, target_node, merge_node)
 
     nodes_for_stats = [v.target_node for _, v in awq_data.items()]
+    if len(nodes_for_stats) == 0:
+        return model
+
     statistic_points = _get_statistic_points(nodes_for_stats, subset_size)
 
     statistics_aggregator = OVStatisticsAggregator(dataset)
@@ -607,7 +618,7 @@ def _apply_AWQ(
     transformation_layout = TransformationLayout()
 
     for k, v in track(statistics_aggregator.statistic_points.items(), description="Applying AWQ"):
-        stats = list(v[0].algorithm_to_tensor_collectors["AWQ"][0].aggregators.values())[0]._container
+        stats = list(v[0].algorithm_to_tensor_collectors["AWQ"][0].get_statistics()[OVMeanTensorStatistic.MEAN_STAT])
         stats = [stat.squeeze() for stat in stats]
 
         awq_data_item = awq_data[k]
