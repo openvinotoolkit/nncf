@@ -268,7 +268,7 @@ class OVModelTransformer(ModelTransformer):
         :param name: Name for the constant.
         :return: ov.Node instance.
         """
-        return opset.constant(value, dtype=dtype, name=name, shared_memory=True)
+        return opset.constant(value, dtype=dtype, name=name)
 
     @staticmethod
     def _create_fake_quantize(
@@ -512,9 +512,9 @@ class OVModelTransformer(ModelTransformer):
         const_dtype = const_node.data.dtype
         const_value = np.reshape(const_value, const_shape).astype(const_dtype)
 
-        new_const_node = OVModelTransformer._create_constant(
-            const_value, dtype=const_dtype, name=const_node.get_friendly_name()
-        )
+        # TODO(andrey-churkin): Replace on opset13.constant() in 2023.3 release
+        new_const_node = ov.op.Constant(const_value, shared_memory=True)
+        new_const_node.set_friendly_name(const_node.get_friendly_name())
         const_port.replace_source_output(new_const_node.output(0))
 
     @staticmethod
