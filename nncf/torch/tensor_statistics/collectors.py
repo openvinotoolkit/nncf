@@ -10,12 +10,15 @@
 # limitations under the License.
 
 from functools import partial
-from typing import List, Optional, Tuple, Type
+from typing import Deque, List, Optional, Tuple, Type, Union
 
 import numpy as np
 import torch
 
-from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
+
+from nncf.common.quantization.structs import QuantizerScaleShape
+from nncf.common.tensor_statistics.reduction import ReductionAxes
+from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer, AggregationAxes
 from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
 from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
@@ -32,11 +35,11 @@ from nncf.experimental.common.tensor_statistics.collectors import PercentileAggr
 from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.torch.tensor_statistics.statistics import PTMeanTensorStatistic
-from nncf.experimental.torch.tensor_statistics.statistics import PTMedianMADTensorStatistic
-from nncf.experimental.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
-from nncf.experimental.torch.tensor_statistics.statistics import PTPercentileTensorStatistic
 from nncf.quantization.advanced_parameters import StatisticsType
+from nncf.torch.tensor_statistics.statistics import PTMeanTensorStatistic
+from nncf.torch.tensor_statistics.statistics import PTMedianMADTensorStatistic
+from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
+from nncf.torch.tensor_statistics.statistics import PTPercentileTensorStatistic
 
 
 class PTReducerMixIn:
@@ -87,7 +90,7 @@ def _reshape_all(targets: Tuple[torch.Tensor, ...], target_shape: Tuple[int, ...
     return map(lambda stat: torch.reshape(stat, target_shape), targets)
 
 
-def _get_wrapped_min_max_tensor_statistic(target_shape: Tuple[int, ...]) -> Type[PTMinMaxTensorStatistic]:
+def _get_wrapped_min_max_tensor_statistic(target_shape: QuantizerScaleShape) -> Type[PTMinMaxTensorStatistic]:
     """
     Returns PTMinMaxTensorStatistic type but all statistics are reshaped to target_shape.
 
@@ -97,7 +100,7 @@ def _get_wrapped_min_max_tensor_statistic(target_shape: Tuple[int, ...]) -> Type
 
     class WrappedPTMinMaxTensorStatistic(PTMinMaxTensorStatistic):
         def __init__(self, min_values, max_values):
-            min_values, max_values = _reshape_all((min_values, max_values), target_shape)
+            min_values, max_values = _reshape_all((min_values, max_values), target_shape.shape)
             super().__init__(min_values, max_values)
 
     return WrappedPTMinMaxTensorStatistic
@@ -123,8 +126,8 @@ def _get_wrapped_percentile_tensor_statistic(target_shape: Tuple[int, ...]) -> T
 
 def get_min_max_statistic_collector(
     use_abs_max: bool,
-    reduction_axes: Tuple[int, ...],
-    aggregation_axes: Tuple[int, ...],
+    reduction_axes: ReductionAxes,
+    aggregation_axes: AggregationAxes,
     scale_shape: Tuple[int, ...],
     num_samples: int,
 ) -> TensorCollector:
@@ -158,8 +161,8 @@ def get_min_max_statistic_collector(
 
 def get_mixed_min_max_statistic_collector(
     use_abs_max: bool,
-    reduction_axes: Tuple[int, ...],
-    aggregation_axes: Tuple[int, ...],
+    reduction_axes: ReductionAxes,
+    aggregation_axes: AggregationAxes,
     scale_shape: Tuple[int, ...],
     use_means_of_mins: bool,
     use_means_of_maxs: bool,
@@ -202,8 +205,8 @@ def get_mixed_min_max_statistic_collector(
 
 
 def get_median_mad_statistic_collector(
-    reduction_axes: Tuple[int, ...],
-    aggregation_axes: Tuple[int, ...],
+    reduction_axes: ReductionAxes,
+    aggregation_axes: AggregationAxes,
     scale_shape: Tuple[int, ...],
     num_samples: int,
     window_size: Optional[int] = None,
@@ -238,8 +241,8 @@ def get_median_mad_statistic_collector(
 
 def get_percentile_tensor_collector(
     percentiles_to_collect: Tuple[int, ...],
-    reduction_axes: Tuple[int, ...],
-    aggregation_axes: Tuple[int, ...],
+    reduction_axes: ReductionAxes,
+    aggregation_axes: AggregationAxes,
     scale_shape: Tuple[int, ...],
     num_samples: int,
     window_size: Optional[int] = None,
@@ -269,8 +272,8 @@ def get_percentile_tensor_collector(
 def _get_collection_without_reduction(
     aggregator_cls: AggregatorBase,
     statistic_cls: AggregatorBase,
-    reduction_axes: Tuple[int, ...],
-    aggregation_axes: Tuple[int, ...],
+    reduction_axes: ReductionAxes,
+    aggregation_axes: AggregationAxes,
     num_samples: int,
     window_size: Optional[int] = None,
 ) -> TensorCollector:
@@ -303,8 +306,8 @@ def _get_collection_without_reduction(
 
 def get_mean_percentile_statistic_collector(
     percentiles_to_collect: Tuple[int, ...],
-    reduction_axes: Tuple[int, ...],
-    aggregation_axes: Tuple[int, ...],
+    reduction_axes: ReductionAxes,
+    aggregation_axes: AggregationAxes,
     scale_shape: Tuple[int, ...],
     num_samples: int,
     window_size: Optional[int] = None,

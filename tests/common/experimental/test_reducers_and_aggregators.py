@@ -105,17 +105,15 @@ OFFLINE_AGGREGATORS_TEST_CASES = [
 ]
 
 
-def default_test_mean_no_outlier(tensor_processor, aggregation_axes):
+def default_test_mean_no_outlier(aggregation_axes):
     return MeanNoOutliersAggregator(
-        tensor_processor=tensor_processor,
         aggregation_axes=aggregation_axes,
         quantile=default_test_quantile,
     )
 
 
-def default_test_median_no_outlier(tensor_processor, aggregation_axes):
+def default_test_median_no_outlier(aggregation_axes):
     return MedianNoOutliersAggregator(
-        tensor_processor=tensor_processor,
         aggregation_axes=aggregation_axes,
         quantile=default_test_quantile,
     )
@@ -124,11 +122,6 @@ def default_test_median_no_outlier(tensor_processor, aggregation_axes):
 class TemplateTestReducersAggreagtors:
     @abstractmethod
     def get_nncf_tensor(self, x: np.array, dtype: Optional[Dtype] = None):
-        pass
-
-    @pytest.fixture
-    @abstractmethod
-    def tensor_processor(self):
         pass
 
     @pytest.fixture(scope="module")
@@ -157,7 +150,7 @@ class TemplateTestReducersAggreagtors:
         input_ = np.arange(24).reshape((1, 2, 3, 4))
         reduced_input = reducer([self.get_nncf_tensor(input_)])
         assert len(reduced_input) == 1
-        assert self.all_close(reduced_input[0].tensor, input_)
+        assert self.all_close(reduced_input[0].data, input_)
 
     @pytest.mark.parametrize(
         "reducer_name,ref",
@@ -171,11 +164,11 @@ class TemplateTestReducersAggreagtors:
     def test_min_max_mean_reducers(self, reducer_name, ref, reducers):
         reduction_axes = (1, 2)
         input_ = np.arange(-26, 10).reshape((4, 3, 3))
-        for i, reduction_axes_ in enumerate([reduction_axes, None]):
+        for i, reduction_axes_ in enumerate([reduction_axes, tuple(range(len(input_.shape)))]):
             reducer = reducers[reducer_name](reduction_axes=reduction_axes_, inplace=False)
             val = reducer([self.get_nncf_tensor(input_, Dtype.FLOAT)])
             assert len(val) == 1
-            assert self.all_close(val[0].tensor, self.cast_tensor(ref[i], Dtype.FLOAT))
+            assert self.all_close(val[0].data, self.cast_tensor(ref[i], Dtype.FLOAT))
 
     @pytest.mark.parametrize(
         "reducer_name,ref", [("quantile", ([[[[-20000]]]], [[[[10000]]]])), ("abs_quantile", ([[[[20000]]]],))]
@@ -189,7 +182,7 @@ class TemplateTestReducersAggreagtors:
         val = reducer([self.get_nncf_tensor(input_, dtype=Dtype.FLOAT)])
         assert len(val) == len(ref)
         for i, ref_ in enumerate(ref):
-            assert self.all_close(val[i].tensor, self.cast_tensor(ref_, Dtype.FLOAT))
+            assert self.all_close(val[i].data, self.cast_tensor(ref_, Dtype.FLOAT))
 
     @pytest.mark.parametrize(
         "reducer_name,ref",
@@ -200,7 +193,7 @@ class TemplateTestReducersAggreagtors:
         reducer = reducers[reducer_name](inplace=False)
         val = reducer([self.get_nncf_tensor(input_, Dtype.FLOAT)])
         assert len(val) == 1
-        assert self.all_close(val[0].tensor, self.cast_tensor(ref, Dtype.FLOAT))
+        assert self.all_close(val[0].data, self.cast_tensor(ref, Dtype.FLOAT))
 
     def test_noop_aggregator(self):
         aggregator = NoopAggregator(None)
@@ -214,7 +207,7 @@ class TemplateTestReducersAggreagtors:
         aggregated = aggregator.aggregate()
         assert len(aggregated) == 3
         for val in aggregated:
-            assert self.all_close(val, input_)
+            assert self.all_close(val.data, input_)
 
     def test_shape_aggregator(self):
         aggregator = ShapeAggregator()
@@ -243,10 +236,10 @@ class TemplateTestReducersAggreagtors:
         min_ref = offline_aggregators_test_desc.min_ref
         max_ref = offline_aggregators_test_desc.max_ref
         assert self.all_close(
-            min_aggregator.aggregate(),
+            min_aggregator.aggregate().data,
             min_ref,
         )
-        assert self.all_close(max_aggregator.aggregate(), max_ref)
+        assert self.all_close(max_aggregator.aggregate().data, max_ref)
 
     NO_OUTLIERS_TEST_PARAMS = [
         (MeanAggregator, True, 1, [1404.5138888888905]),
@@ -286,7 +279,7 @@ class TemplateTestReducersAggreagtors:
     ]
 
     @pytest.mark.parametrize("aggregator_cls,use_per_sample_stats,dims,refs", NO_OUTLIERS_TEST_PARAMS)
-    def test_mean_median_agggregators(self, aggregator_cls, refs, tensor_processor, dims, use_per_sample_stats):
+    def test_mean_median_agggregators(self, aggregator_cls, refs, dims, use_per_sample_stats):
         input_ = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9])
         input_with_outliers = np.array(
             [100_000, -100_000, 200_000, -200_000, 300_000, -300_000, 400_000, -400_000, 500_000]
@@ -299,7 +292,7 @@ class TemplateTestReducersAggreagtors:
             input_with_outliers = input_with_outliers.reshape((1, 3, 3))
 
         aggregation_axes = (0, 1) if use_per_sample_stats else (0,)
-        aggregator = aggregator_cls(tensor_processor=tensor_processor, aggregation_axes=aggregation_axes)
+        aggregator = aggregator_cls(aggregation_axes=aggregation_axes)
         for i in range(1, 6):
             aggregator.register_reduced_input(self.get_nncf_tensor(input_ * i, Dtype.FLOAT))
         # this registration is to make diff between mean and median bigger
@@ -317,7 +310,7 @@ class TemplateTestReducersAggreagtors:
                 )
         ret_val = aggregator.aggregate()
 
-        assert self.all_close(ret_val, self.cast_tensor(refs, Dtype.FLOAT))
+        assert self.all_close(ret_val.data, self.cast_tensor(refs, Dtype.FLOAT))
 
     @pytest.fixture(
         name="MAD_precentile_aggregator_cls",
@@ -370,8 +363,8 @@ class TemplateTestReducersAggreagtors:
     }
 
     @pytest.mark.parametrize("aggregation_axes", [None, (0,), (0, 1)])
-    def test_mad_percentile_aggregators(self, MAD_precentile_aggregator_cls, tensor_processor, aggregation_axes):
-        aggregator = MAD_precentile_aggregator_cls(tensor_processor=tensor_processor, aggregation_axes=aggregation_axes)
+    def test_mad_percentile_aggregators(self, MAD_precentile_aggregator_cls, aggregation_axes):
+        aggregator = MAD_precentile_aggregator_cls(aggregation_axes=aggregation_axes)
         input_ = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9])
         for i in range(9):
             aggregator.register_reduced_input(self.get_nncf_tensor(input_ * i, Dtype.FLOAT))
@@ -380,7 +373,7 @@ class TemplateTestReducersAggreagtors:
         ref_values = self.REF_MAD_PERCENTILE_REF_VALUES[aggregator.__class__][aggregation_axes]
         assert len(ret_val) == len(ref_values)
         for k, v in ref_values.items():
-            assert self.all_close(ret_val[k], self.cast_tensor(v, Dtype.FLOAT))
+            assert self.all_close(ret_val[k].data, self.cast_tensor(v, Dtype.FLOAT))
 
     REF_MAD_PERCENTILE_REF_VALUES_DYNAMIC_TENSORS = {
         MedianAbsoluteDeviationAggregator: {
@@ -395,8 +388,8 @@ class TemplateTestReducersAggreagtors:
         },
     }
 
-    def test_mad_percentile_aggregators_different_sizes(self, MAD_precentile_aggregator_cls, tensor_processor):
-        aggregator = MAD_precentile_aggregator_cls(tensor_processor=tensor_processor, aggregation_axes=(0, 1, 3))
+    def test_mad_percentile_aggregators_different_sizes(self, MAD_precentile_aggregator_cls):
+        aggregator = MAD_precentile_aggregator_cls(aggregation_axes=(0, 1, 3))
         for shape in ((2, 3, 4), (4, 3, 8)):
             aggregator.register_reduced_input(
                 self.get_nncf_tensor(np.arange(np.prod(shape)).reshape(shape), Dtype.FLOAT)
@@ -406,13 +399,13 @@ class TemplateTestReducersAggreagtors:
         ref_values = self.REF_MAD_PERCENTILE_REF_VALUES_DYNAMIC_TENSORS[aggregator.__class__]
         assert len(ret_val) == len(ref_values)
         for k, v in ref_values.items():
-            assert self.all_close(ret_val[k], self.cast_tensor(v, Dtype.FLOAT))
+            assert self.all_close(ret_val[k].data, self.cast_tensor(v, Dtype.FLOAT))
 
     def test_mad_percentile_aggregators_not_implemented_aggregation_axes(
-        self, MAD_precentile_aggregator_cls, tensor_processor
+        self, MAD_precentile_aggregator_cls
     ):
         with pytest.raises(NotImplementedError):
-            MAD_precentile_aggregator_cls(tensor_processor=tensor_processor, aggregation_axes=(1, 2, 3))
+            MAD_precentile_aggregator_cls(aggregation_axes=(1, 2, 3))
 
     @pytest.mark.parametrize(
         "reducer_name",

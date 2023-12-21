@@ -740,6 +740,9 @@ class MedianNoOutliersAggregator(NoOutliersAggregatorBase):
 
 
 class MedianAbsoluteDeviationAggregator(OfflineAggregatorBase):
+    def _aggregate_stacked_samples(self, stacked_samples: Tensor) -> Tensor:
+        pass
+
     def __init__(
         self,
         aggregation_axes: Optional[AggregationAxes] = None,
@@ -758,6 +761,8 @@ class MedianAbsoluteDeviationAggregator(OfflineAggregatorBase):
 
     def _register_reduced_input_impl(self, x: Tensor) -> None:
         return self._samples.append(x)
+
+
 
     def _aggregate_impl(self) -> Dict[str, Tensor]:
         stacked_val, shape_after_aggregation = _moveaxes_flatten_cat(

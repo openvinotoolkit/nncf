@@ -309,7 +309,7 @@ def _(
 ) -> Union[float, torch.Tensor]:
     if keepdims is None:
         keepdims = False
-    if isinstance(q, list):
+    if isinstance(q, (list, tuple)):
         q = torch.Tensor(q).to(a.device)
     if not isinstance(axis, (list, tuple)):
         return torch.quantile(a, q=q, dim=axis, keepdim=keepdims)

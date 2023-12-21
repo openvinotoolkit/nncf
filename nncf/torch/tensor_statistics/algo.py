@@ -19,6 +19,7 @@ from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBas
 from nncf.common.tensor_statistics.reduction import ReductionAxes
 from nncf.common.tensor_statistics.reduction import ReductionShape
 from nncf.config import NNCFConfig
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.tensor import Tensor
 from nncf.torch.algo_selector import ZeroCompressionLoss
 from nncf.torch.compression_method_api import PTCompressionAlgorithmBuilder
@@ -43,15 +44,15 @@ class TensorStatisticObservationPoint:
         return self.target_point == other.target_point
 
 
-def get_collection_hook(collector: TensorStatisticCollectorBase) -> Callable[[torch.Tensor], torch.Tensor]:
+def create_register_input_hook(collector: TensorCollector) -> Callable[[torch.Tensor], torch.Tensor]:
     """
-    Function to create the hook function for collecting statistics.
+    Function to create regiter inputs hook function.
 
     :param collector: Collector to use in resulting hook.
     :return: Register inputs hook function.
     """
 
-    def hook(x: torch.Tensor) -> torch.Tensor:
+    def register_inputs_hook(x: torch.Tensor) -> torch.Tensor:
         """
         Register inputs hook function.
 
@@ -59,10 +60,10 @@ def get_collection_hook(collector: TensorStatisticCollectorBase) -> Callable[[to
         :return: tensor to register in hook.
         """
         with no_nncf_trace():
-            collector.register_input(Tensor(x))
+            collector.register_input_for_all_reducers(Tensor(x))
         return x
 
-    return hook
+    return register_inputs_hook
 
 
 class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
@@ -85,7 +86,7 @@ class TensorStatisticsCollectionBuilder(PTCompressionAlgorithmBuilder):
             for collector in rs_vs_collector.values():
                 command = PTInsertionCommand(
                     op.target_point,
-                    get_collection_hook(collector=collector),
+                    create_register_input_hook(collector=collector),
                     TransformationPriority.FP32_TENSOR_STATISTICS_OBSERVATION,
                 )
                 layout.register(command)
