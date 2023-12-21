@@ -59,15 +59,15 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
             (
                 TargetType.POST_LAYER_OPERATION,
                 "/Conv_1_0",
-                (0, 2, 3),
+                (2, 3),
                 (1, 2, 3),
-            ),  # per-tensor: all tensor tensor except batch index is reduced
+            ),
             (
                 TargetType.OPERATION_WITH_WEIGHTS,
                 "/Conv_1_0",
                 (1, 2, 3),
                 (0, 1, 2, 3),
-            ),  # per-tensor: all weight tensor is reduced
+            ),
         ]
     )
     def statistic_collector_parameters(self, request) -> ParamsCls:
