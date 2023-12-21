@@ -42,7 +42,7 @@ jobs:
         python -m build -C--global-option=--release
 
         # Disallow uploading dev packages
-        for file in dist; do
+        for file in dist/*; do
           if [[ $file == *"dev"* ]]; then
              exit 42
           fi
