@@ -334,12 +334,14 @@ def _(tensor1: torch.Tensor, tensor2: torch.Tensor) -> torch.Tensor:
 
 @fns.masked_mean.register(torch.Tensor)
 def _(a: torch.Tensor, mask: torch.Tensor, axis: int = None, keepdims: Optional[bool] = None) -> torch.Tensor:
-    return torch.masked.mean(torch.masked.masked_tensor(a, mask), dim=axis, keepdim=keepdims)
+    # Torch mask semantics are inverse to its numpy counterpart
+    return torch.masked.mean(a, mask=~mask, dim=axis, keepdim=keepdims)
 
 
 @fns.masked_median.register(torch.Tensor)
-def _(a: torch.Tensor, mask: torch.Tensor, axis: int = None, keepdims: Optional[bool] = None) -> torch.Tensor:
-    return torch.masked.median(torch.masked.masked_tensor(a, mask), dim=axis, keepdim=keepdims)
+def _(a: torch.Tensor, mask: torch.Tensor, axis: int = None, keepdims: Optional[bool] = None) -> torch.Tensor:    # Torch mask semantics are inverse to its numpy counterpart
+    # Torch mask semantics are inverse to its numpy counterpart
+    return torch.masked.median(a, mask=~mask, dim=axis, keepdim=keepdims)
 
 
 @fns.size.register(torch.Tensor)

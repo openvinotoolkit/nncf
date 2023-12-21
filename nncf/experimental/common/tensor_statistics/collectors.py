@@ -24,7 +24,7 @@ from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.tensor_statistics.statistics import PercentileTensorStatistic
 from nncf.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.common.tensor_statistics.statistics import TensorStatistic
-from nncf.experimental.tensor import functions as fns
+from nncf.experimental.tensor import functions as fns, TensorDataType
 from nncf.quantization.advanced_parameters import AggregatorType
 
 InplaceInsertionFNType = TypeVar("InplaceInsertionFNType")
@@ -534,7 +534,7 @@ class QuantileReducerBase(TensorReducerBase):
         inplace: bool = False,
     ):
         super().__init__(reduction_axes=reduction_axes, channel_axis=channel_axis, inplace=False)
-        self._quantile = (0.01, 0.99) if quantile is None else quantile
+        self._quantile = (0.01, 0.99,) if quantile is None else quantile
 
     def __eq__(self, __o: object) -> bool:
         return super().__eq__(__o) and self._quantile == __o._quantile
@@ -548,16 +548,28 @@ class QuantileReducer(QuantileReducerBase):
         x = x[0]
         axis = self._get_axis(x)
 
-        return list(fns.quantile(x, self._quantile, axis=axis, keepdims=self._keepdims))
+        result = fns.quantile(x, self._quantile, axis=axis, keepdims=self._keepdims)
+        if isinstance(self._quantile, (tuple, list)):
+            return [qt for qt in result]
+        return [result]
 
 
 class AbsQuantileReducer(QuantileReducerBase):
+    def __init__(self, reduction_axes: Optional[ReductionAxes] = None,
+                 quantile: Optional[Union[float, List[float]]] = None,
+                 inplace: bool = False):
+        quantile = (0.99,) if quantile is None else quantile
+        super().__init__(reduction_axes=reduction_axes, quantile=quantile, inplace=False)
+
     def _reduce_out_of_place(self, x: List[Tensor]) -> List[Tensor]:
         x = x[0]
 
         x = fns.abs(x)
         axis = self._get_axis(x)
-        return [fns.quantile(x, self._quantile, axis=axis, keepdims=self._keepdims)]
+        result = fns.quantile(x, self._quantile, axis=axis, keepdims=self._keepdims)
+        if isinstance(self._quantile, (tuple, list)):
+            return [qt for qt in result]
+        return [result]
 
 
 class BatchMeanReducer(TensorReducerBase):
@@ -578,7 +590,7 @@ class MeanPerChReducer(TensorReducerBase):
         x = x[0]
 
         axis = self._get_axis(x)
-        retval = fns.mean(x, axis=axis, keepdims=True)
+        retval = fns.mean(x, axis=axis, keepdims=False)
         return [retval]
 
 
@@ -730,7 +742,7 @@ class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
     def _aggregate_stacked_samples(self, stacked_samples: Tensor) -> Tensor:
         alpha = self._quantile
 
-        low_values, high_values = fns.quantile(stacked_samples, [alpha, 1 - alpha], 0)
+        low_values, high_values = fns.quantile(stacked_samples, [alpha, 1 - alpha], axis=self._aggregation_axes)
         outliers_mask = fns.logical_or(stacked_samples < low_values, high_values < stacked_samples)
         return self._aggregate_stacked_samples_with_no_outliers(stacked_samples, outliers_mask)
 
@@ -747,12 +759,12 @@ class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
 
 class MeanNoOutliersAggregator(NoOutliersAggregatorBase):
     def _aggregate_stacked_samples_with_no_outliers(self, stacked_val: Tensor, outliers_mask: Tensor) -> Tensor:
-        return fns.masked_mean(stacked_val, mask=outliers_mask, axis=self._aggregation_axes)
+        return fns.masked_mean(stacked_val, mask=outliers_mask, axis=self._aggregation_axes, keepdims=self._keepdims)
 
 
 class MedianNoOutliersAggregator(NoOutliersAggregatorBase):
     def _aggregate_stacked_samples_with_no_outliers(self, stacked_val: Tensor, outliers_mask: Tensor) -> Tensor:
-        return fns.masked_median(stacked_val, mask=outliers_mask, axis=self._aggregation_axes)
+        return fns.masked_median(stacked_val, mask=outliers_mask, axis=self._aggregation_axes, keepdims=self._keepdims)
 
 
 class MedianAbsoluteDeviationAggregator(OfflineAggregatorBase):
@@ -785,7 +797,7 @@ class MedianAbsoluteDeviationAggregator(OfflineAggregatorBase):
             list(self._samples), [x - 1 for x in self._aggregation_axes if x > 0]
         )
 
-        mask = fns.abs(stacked_val) < fns.eps(stacked_val)  # zeros mask
+        mask = fns.abs(stacked_val) < fns.eps(stacked_val, dtype=TensorDataType.float32)  # zeros mask
 
         median_per_ch = fns.masked_median(stacked_val, mask=mask, axis=0, keepdims=True)
 
