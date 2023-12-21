@@ -135,9 +135,8 @@ class RestoreMode(Enum):
     Specifies how to revert operations to their original precision.
 
     :param ACTIVATIONS_AND_WEIGHTS: Operations will be reverted to floating-point precision.
-    :param ONLY_ACTIVATIONS: Certain operations (such as MatMul and Embedding) will
-        be reverted to representation with int8 weights, while all other operations
-        will revert to floating-point precision.
+    :param ONLY_ACTIVATIONS: Operations with weights will be reverted to representation with int8 weights,
+        while all other operations will revert to floating-point precision.
     """
 
     ACTIVATIONS_AND_WEIGHTS = "activations_and_weights"
