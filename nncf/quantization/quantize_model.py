@@ -255,8 +255,8 @@ def compress_weights(
     ratio: Optional[float] = None,
     group_size: Optional[int] = None,
     ignored_scope: Optional[IgnoredScope] = None,
-    dataset: Dataset = None,
     all_layers: Optional[bool] = None,
+    dataset: Optional[Dataset] = None,
     sensitivity_metric: Optional[SensitivityMetric] = None,
 ) -> TModel:
     """
@@ -283,6 +283,7 @@ def compress_weights(
         flow graph nodes to be ignored during quantization.
     :param all_layers: Indicates whether embeddings and last layers should be compressed to a primary
         precision. By default, the backup precision is assigned for the embeddings and last layers.
+    :param dataset: Dataset used for assigning different quantization precision by finding outliers in activations.
     :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
         preserve the accuracy of the model, the more sensitive layers receives a higher precision.
     :return: The non-trainable model with compressed weights.

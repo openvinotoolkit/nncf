@@ -108,11 +108,11 @@ class SensitivityMetric(Enum):
         multiplied by inverted 8-bit quantization noise.
     """
 
-    WEIGHT_QUANTIZATION_ERROR = "int8_error"
-    HESSIAN_INPUT_ACTIVATION = "hawq_in"
-    MEAN_ACTIVATION_VARIANCE = "mean_var"
-    MAX_ACTIVATION_VARIANCE = "max_var"
-    MEAN_ACTIVATION_MAGNITUDE = "mean_max"
+    WEIGHT_QUANTIZATION_ERROR = "weight_quantization_error"
+    HESSIAN_INPUT_ACTIVATION = "hessian_input_activation"
+    MEAN_ACTIVATION_VARIANCE = "mean_activation_variance"
+    MAX_ACTIVATION_VARIANCE = "max_activation_variance"
+    MEAN_ACTIVATION_MAGNITUDE = "mean_activation_magnitude"
 
 
 @api(canonical_alias="nncf.QuantizationMode")
