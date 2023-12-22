@@ -139,9 +139,6 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         _set_weight_compression_config(ratio_defining_params, mode, ratio, group_size, activations, sensitivity_metric)
         nncf_logger.info(_get_bitwidth_distribution_str(all_weight_params, ratio_defining_params))
 
-        for wp in all_weight_params:
-            print(f"mode={wp.compression_config.mode.value} g{wp.compression_config.group_size} {wp.fq_name}")
-
         for wp in track(all_weight_params, description="Applying Weight Compression"):
             weight_node = wp.weight_node
             original_weight_dtype = wp.original_weight_dtype
