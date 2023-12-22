@@ -55,11 +55,11 @@ class WeightCompression(Algorithm):
     def __init__(
         self,
         mode: CompressWeightsMode,
-        ratio: float = None,
-        group_size: int = None,
-        ignored_scope: Optional[IgnoredScope] = None,
-        all_layers: Optional[bool] = False,
-        sensitivity_metric: Optional[SensitivityMetric] = SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
+        ratio: float,
+        group_size: int,
+        ignored_scope: IgnoredScope,
+        all_layers: bool,
+        sensitivity_metric: SensitivityMetric,
     ):
         """
         :param mode: Defines a mode for weight compression.
@@ -89,7 +89,7 @@ class WeightCompression(Algorithm):
         self._mode = mode
         self._group_size = group_size
         self._ratio = ratio
-        self._ignored_scope = IgnoredScope() if ignored_scope is None else ignored_scope
+        self._ignored_scope = ignored_scope
         self._backend_entity = None
         self._algorithm_key = f"CW_{hash(self)}"
         self._fp_inputs = defaultdict(list)
@@ -227,7 +227,10 @@ class WeightCompression(Algorithm):
         statistic_container = StatisticPointsContainer()
         all_act_nodes = []
         act_vs_shared_node_names_mapping = {}
-        for node in nodes_to_compress:
+        from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+
+        filtered_nodes = filter(lambda node: node.metatype == OVMatMulMetatype, nodes_to_compress)
+        for node in filtered_nodes:
             act_node, output_port_id = self._get_activation_node_and_port(node, graph)
             act_node_name = act_node.node_name
             if act_node_name in all_act_nodes:

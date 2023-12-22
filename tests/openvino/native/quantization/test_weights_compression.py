@@ -43,6 +43,18 @@ TEST_MODELS = {
     WeightsModel: ["weights_0", "weights_1"],
 }
 
+DATA_BASED_SENSITIVITY_METRICS = (
+    SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
+    SensitivityMetric.MEAN_ACTIVATION_VARIANCE,
+    SensitivityMetric.MAX_ACTIVATION_VARIANCE,
+    SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE,
+)
+
+ALL_SENSITIVITY_METRICS = DATA_BASED_SENSITIVITY_METRICS + (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,)
+
+INT8_MODES = (CompressWeightsMode.INT8, CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM)
+INT4_NF4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM, CompressWeightsMode.NF4)
+
 
 def get_next_node(node):
     target_inputs = node.output(0).get_target_inputs()
@@ -232,6 +244,70 @@ def test_mixed_precision(mode, all_layers, ratio, ref_ids, mocker):
     }
     ref_nf4_nodes = {f"weights_{i}" for i in ref_ids}
     assert ref_nf4_nodes == names
+
+
+@pytest.mark.parametrize("metric", DATA_BASED_SENSITIVITY_METRICS)
+def test_gather_in_4_bit_if_all_layers_with_data(metric):
+    model = IntegerModel().ov_model
+    dataset = Dataset([np.arange(7).reshape(1, 7, 1)])
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_SYM,
+        ratio=0.5,
+        group_size=1,
+        all_layers=True,
+        sensitivity_metric=metric,
+        dataset=dataset,
+    )
+    for op in compressed_model.get_ordered_ops():
+        if op.get_type_name() == "Constant" and "gather" in op.get_friendly_name():
+            assert op.get_element_type() == ov.Type.u4
+
+
+def test_gather_can_be_8_bit_if_all_layers_without_data():
+    model = IntegerModel().ov_model
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_SYM,
+        ratio=0.5,
+        group_size=1,
+        all_layers=True,
+    )
+    for op in compressed_model.get_ordered_ops():
+        if op.get_type_name() == "Constant" and "gather" in op.get_friendly_name():
+            assert ov.Type(np.uint8) == op.get_element_type()
+
+
+def test_gather_can_be_4_bit_if_all_layers_without_data():
+    model = IntegerModel().ov_model
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_SYM,
+        ratio=1,
+        group_size=1,
+        all_layers=True,
+    )
+    for op in compressed_model.get_ordered_ops():
+        if op.get_type_name() == "Constant" and "gather" in op.get_friendly_name():
+            assert ov.Type.u4 == op.get_element_type()
+
+
+@pytest.mark.parametrize("metric", ALL_SENSITIVITY_METRICS)
+def test_gather_in_8_bit_if_not_all_layers(metric):
+    model = IntegerModel().ov_model
+    dataset = Dataset([np.ones([1, 7, 1])])
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_SYM,
+        ratio=0.5,
+        group_size=1,
+        all_layers=False,
+        sensitivity_metric=metric,
+        dataset=dataset,
+    )
+    for op in compressed_model.get_ordered_ops():
+        if op.get_type_name() == "Constant" and "gather" in op.get_friendly_name():
+            assert op.get_element_type() == ov.Type(np.uint8)
 
 
 MAX_BASELINE_SCORE = 1 / np.finfo(np.float32).eps
@@ -486,14 +562,38 @@ def test_raise_error_with_tuple():
         _reshape_weights_for_grouped_quantization(WEIGHTS_2x4, reduction_axis=(0,), group_size=3)
 
 
-@pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
-def test_raise_error_with_int8_and_non_default_ratio(mocker, mode):
+@pytest.mark.parametrize("mode", INT8_MODES)
+@pytest.mark.parametrize(
+    "params",
+    (
+        {"ratio": 0.5},
+        {"group_size": 64},
+        {"all_layers": True},
+        {"all_layers": False},
+        *({"sensitivity_metric": metric} for metric in ALL_SENSITIVITY_METRICS),
+        {"dataset": "anything"},
+    ),
+)
+def test_raise_error_with_unsupported_params_for_int8(mocker, mode, params):
     with pytest.raises(AttributeError):
-        compress_weights(mocker.Mock(), mode=mode, ratio=0.5)
+        compress_weights(mocker.Mock(), mode=mode, **params)
 
 
-@pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
-def test_raise_error_with_int8_and_non_default_group_size(mocker, mode):
+@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+@pytest.mark.parametrize("metric", DATA_BASED_SENSITIVITY_METRICS)
+def test_raise_error_with_data_metric_and_without_dataset(mode, metric):
+    model = IntegerModel().ov_model
     with pytest.raises(AttributeError):
-        compress_weights(mocker.Mock(), mode=mode, group_size=64)
-        compress_weights(mocker.Mock(), mode=mode, group_size=64)
+        compress_weights(model, mode=mode, sensitivity_metric=metric, group_size=-1, ratio=0.8)
+
+
+@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+def test_call_max_var_criterion_with_dataset_by_default(mocker, mode):
+    model = IntegerModel().ov_model
+    dataset = Dataset([np.ones([1, 7, 1])])
+    criterion_cls = MIXED_PRECISION_CRITERIA.get(SensitivityMetric.MAX_ACTIVATION_VARIANCE)
+    scores_spy = mocker.spy(criterion_cls, "_calc_scores")
+
+    compress_weights(model, mode=mode, ratio=0.8, group_size=-1, dataset=dataset)
+
+    scores_spy.assert_called()

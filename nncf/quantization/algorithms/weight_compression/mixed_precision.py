@@ -17,6 +17,7 @@ from numpy import linalg
 
 from nncf.common.logging.track_progress import track
 from nncf.common.utils.registry import Registry
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVEmbeddingMetatype
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.algorithms.weight_compression.compression_info import WeightCompressionConfig
@@ -107,6 +108,10 @@ class DataBasedCriterion(DataFreeCriterion):
         pass
 
     def _calc_score_per_node(self, weight_param: WeightNodeParams):
+        # NOTE: TODO: data-based metrics are valid for Matmul operations only. If gathers also considered for mixed
+        # precision, define a minimal metric value to be select 4-bit precision for gathers in the first order.
+        if weight_param.metatype == OVEmbeddingMetatype:
+            return 0
         weight_score = self._calc_weight_score(weight_param)
         activation_score = self._calc_activation_score(self._activations[weight_param.node_name])
         return weight_score * activation_score

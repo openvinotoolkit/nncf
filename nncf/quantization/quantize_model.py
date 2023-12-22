@@ -257,7 +257,7 @@ def compress_weights(
     ignored_scope: Optional[IgnoredScope] = None,
     dataset: Dataset = None,
     all_layers: Optional[bool] = None,
-    sensitivity_metric: Optional[SensitivityMetric] = SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
+    sensitivity_metric: Optional[SensitivityMetric] = None,
 ) -> TModel:
     """
     Compress model weights.
@@ -286,12 +286,6 @@ def compress_weights(
     # TODO:
     :return: The non-trainable model with compressed weights.
     """
-    if not dataset and sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR:
-        # TODO: correct
-        raise AttributeError(
-            "mixed precision mode except WEIGHT_QUANTIZATION_ERROR requires dataset, but it's not provided"
-        )
-
     if mode == CompressWeightsMode.INT8:
         warning_deprecated(
             "`CompressWeightsMode.INT8` is deprecated." "Please, use `CompressWeightsMode.INT8_ASYM` as value instead."
@@ -308,24 +302,39 @@ def compress_weights(
                 "INT8 mode assumes per-channel quantization of all layers in 8 bit. "
                 "Default values of `ratio` (1) and `group_size` (-1) parameters can not be overridden"
             )
-        if all_layers is not None:
-            raise AttributeError("INT8 modes do not support `all_layers` option, set it to None.")
-    else:
-        if ratio is None:
-            ratio = 1
-        if group_size is None:
-            group_size = 128
+        options = [all_layers, sensitivity_metric, dataset]
+        if any(option is not None for option in options):
+            # TODO: warning or better error?
+            raise AttributeError(
+                "INT8 modes do not support `all_layers`, `sensitivity_metric` and `dataset` options."
+                "Set them to None."
+            )
 
     backend = get_backend(model)
     if backend == BackendType.TORCH:
         from nncf.torch.quantization.quantize_model import compress_weights_impl
 
-        if all_layers is not None:
-            raise AttributeError("Torch backend does not support `all_layers` option, set it to None")
         return compress_weights_impl(model, mode, ratio, group_size, ignored_scope)
 
+    if ratio is None:
+        ratio = 1
+    if group_size is None:
+        group_size = 128
     if all_layers is None:
         all_layers = False
+    if ignored_scope is None:
+        ignored_scope = IgnoredScope()
+    if sensitivity_metric is None:
+        sensitivity_metric = (
+            SensitivityMetric.WEIGHT_QUANTIZATION_ERROR
+            if dataset is None
+            else SensitivityMetric.MAX_ACTIVATION_VARIANCE
+        )
+    if ratio != 1 and dataset is None and sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR:
+        raise AttributeError(
+            # TODO: correct message
+            "mixed precision mode except WEIGHT_QUANTIZATION_ERROR requires dataset, but it's not provided"
+        )
     compression_algorithm = WeightCompression(mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric)
     graph = NNCFGraphFactory.create(model)
     return compression_algorithm.apply(model, graph, dataset=dataset)

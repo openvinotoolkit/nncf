@@ -228,6 +228,10 @@ def _get_bitwidth_distribution_str(all_params: List[WeightNodeParams], internal_
     return pretty_string
 
 
+# TODO: rename to mixed precision params
+# ratio considered params
+# non-fixed precision
+# params for mixed precision
 def _get_internal_weight_params(
     all_weight_params: List[WeightNodeParams],
     mode: CompressWeightsMode,
