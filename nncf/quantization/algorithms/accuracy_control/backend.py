@@ -26,6 +26,17 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
+    def get_op_with_weights_metatypes() -> List[OperatorMetatype]:
+        """
+        Returns a list of operation metatypes that can be reverted to representation
+        with int8 weights.
+
+        :return: The list of operation metatypes that can be reverted to representation
+            with int8 weights.
+        """
+
+    @staticmethod
+    @abstractmethod
     def get_quantizer_metatypes() -> List[OperatorMetatype]:
         """
         Returns a list of quantizer metatypes.

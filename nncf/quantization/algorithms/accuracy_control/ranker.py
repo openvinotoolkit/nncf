@@ -24,6 +24,7 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.timer import timer
 from nncf.data.dataset import Dataset
+from nncf.quantization.advanced_parameters import RestoreMode
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.accuracy_control.rank_functions import create_normalized_mse_func
@@ -62,6 +63,7 @@ class Ranker:
         evaluator: Evaluator,
         num_workers: int = 1,
         ranking_fn: Optional[Callable[[Any, Any], float]] = None,
+        restore_mode: RestoreMode = RestoreMode.ACTIVATIONS_AND_WEIGHTS,
     ):
         """
         :param ranking_subset_size: The number of data items that will be selected from
@@ -82,6 +84,7 @@ class Ranker:
         self._evaluator = evaluator
         self._ranking_fn = ranking_fn
         self._num_workers = num_workers
+        self._restore_mode = restore_mode
 
     def find_groups_of_quantizers_to_rank(self, quantized_model_graph: NNCFGraph) -> List[GroupToRank]:
         """
@@ -189,7 +192,12 @@ class Ranker:
         ranking_scores = []  # ranking_scores[i] is the ranking score for groups_to_rank[i]
         for current_group in groups_to_rank:
             modified_model = revert_operations_to_floating_point_precision(
-                current_group.operations, current_group.quantizers, quantized_model, quantized_model_graph
+                current_group.operations,
+                current_group.quantizers,
+                quantized_model,
+                quantized_model_graph,
+                self._restore_mode,
+                self._algo_backend.get_op_with_weights_metatypes(),
             )
 
             prepared_model = self._algo_backend.prepare_for_inference(modified_model)
@@ -213,7 +221,12 @@ class Ranker:
         executor = ThreadPoolExecutor(max_workers=self._num_workers)
         for idx, current_group in enumerate(groups_to_rank):
             modified_model = revert_operations_to_floating_point_precision(
-                current_group.operations, current_group.quantizers, quantized_model, quantized_model_graph
+                current_group.operations,
+                current_group.quantizers,
+                quantized_model,
+                quantized_model_graph,
+                self._restore_mode,
+                self._algo_backend.get_op_with_weights_metatypes(),
             )
 
             prepared_model_queue.append(executor.submit(self._algo_backend.prepare_for_inference, modified_model))
