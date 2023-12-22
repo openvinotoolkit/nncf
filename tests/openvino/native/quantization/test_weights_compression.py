@@ -18,14 +18,18 @@ import pytest
 from attr import dataclass
 
 from nncf import CompressWeightsMode
+from nncf.data.dataset import Dataset
 from nncf.openvino.graph.node_utils import get_const_value
+from nncf.parameters import SensitivityMetric
 from nncf.quantization import compress_weights
-from nncf.quantization.algorithms.weight_compression.openvino_backend import WeightCompressionConfig
-from nncf.quantization.algorithms.weight_compression.openvino_backend import _get_integer_quantization_error
-from nncf.quantization.algorithms.weight_compression.openvino_backend import _reshape_weights_for_grouped_quantization
+from nncf.quantization.algorithms.weight_compression.compression_info import WeightCompressionConfig
+from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
+from nncf.quantization.algorithms.weight_compression.quantize import get_integer_quantization_error
+from nncf.quantization.algorithms.weight_compression.quantize import reshape_weights_for_grouped_quantization
 from nncf.scopes import IgnoredScope
 from tests.openvino.native.models import GatherAndMatmulShareData
 from tests.openvino.native.models import GatherWithTwoReductionAxes
+from tests.openvino.native.models import IdentityMatmul
 from tests.openvino.native.models import IntegerModel
 from tests.openvino.native.models import SequentialMatmulModel
 from tests.openvino.native.models import WeightsModel
@@ -38,6 +42,18 @@ TEST_MODELS = {
     IntegerModel: ["matmul_2_data", "gather_2_data", "matmul_1_data"],
     WeightsModel: ["weights_0", "weights_1"],
 }
+
+DATA_BASED_SENSITIVITY_METRICS = (
+    SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
+    SensitivityMetric.MEAN_ACTIVATION_VARIANCE,
+    SensitivityMetric.MAX_ACTIVATION_VARIANCE,
+    SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE,
+)
+
+ALL_SENSITIVITY_METRICS = DATA_BASED_SENSITIVITY_METRICS + (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,)
+
+INT8_MODES = (CompressWeightsMode.INT8, CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM)
+INT4_NF4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM, CompressWeightsMode.NF4)
 
 
 def get_next_node(node):
@@ -190,30 +206,148 @@ def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
     compare_stats(ref_stats, actual_stats)
 
 
-@pytest.mark.parametrize("group_size", (1, 3))
 @pytest.mark.parametrize(
-    ("ratio", "ref_nf4_nodes"),
+    ("mode", "all_layers", "ratio", "ref_ids"),
     (
-        (1, {"weights_0", "weights_1", "weights_2", "weights_3"}),
-        (0.8, {"weights_1", "weights_2", "weights_3"}),
-        (0.4, {"weights_2"}),
-        (0.2, set()),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 1, [0, 1, 2, 3, 4]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.8, [0, 3, 4]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.4, [0]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, True, 0.2, []),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 1, [0, 1, 2, 3]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.8, [0, 1, 3]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.4, [0]),
+        (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR, False, 0.2, []),
+        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, True, 0.8, [0, 1, 2]),
+        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, False, 0.8, [0, 1, 2]),
+        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2]),
+        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2]),
+        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, True, 0.8, [0, 1, 2]),
+        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, False, 0.8, [0, 1, 2]),
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, True, 0.8, [0, 1, 2]),
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, False, 0.8, [0, 1, 2]),
     ),
 )
-def test_mixed_precision(ratio, group_size, ref_nf4_nodes):
+def test_mixed_precision(mode, all_layers, ratio, ref_ids, mocker):
     model = SequentialMatmulModel().ov_model
-    compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4, ratio=ratio, group_size=group_size)
+    dataset = Dataset([np.ones([3, 3]), np.arange(9).reshape(3, 3)])
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.NF4,
+        ratio=ratio,
+        group_size=1,
+        all_layers=all_layers,
+        sensitivity_metric=mode,
+        dataset=dataset,
+    )
     names = {
         op.get_friendly_name() for op in compressed_model.get_ordered_ops() if op.get_element_type() == ov.Type.nf4
     }
+    ref_nf4_nodes = {f"weights_{i}" for i in ref_ids}
     assert ref_nf4_nodes == names
 
 
-def test_compress_all_layers():
-    model = SequentialMatmulModel().ov_model
-    compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4, ratio=1, group_size=1, all_layers=True)
-    num_int4 = sum(1 for op in compressed_model.get_ordered_ops() if op.get_element_type() == ov.Type.nf4)
-    assert num_int4 == 5
+@pytest.mark.parametrize("metric", DATA_BASED_SENSITIVITY_METRICS)
+def test_gather_in_4_bit_if_all_layers_with_data(metric):
+    model = IntegerModel().ov_model
+    dataset = Dataset([np.arange(7).reshape(1, 7, 1)])
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_SYM,
+        ratio=0.5,
+        group_size=1,
+        all_layers=True,
+        sensitivity_metric=metric,
+        dataset=dataset,
+    )
+    for op in compressed_model.get_ordered_ops():
+        if op.get_type_name() == "Constant" and "gather" in op.get_friendly_name():
+            assert op.get_element_type() == ov.Type.u4
+
+
+def test_gather_can_be_8_bit_if_all_layers_without_data():
+    model = IntegerModel().ov_model
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_SYM,
+        ratio=0.5,
+        group_size=1,
+        all_layers=True,
+    )
+    for op in compressed_model.get_ordered_ops():
+        if op.get_type_name() == "Constant" and "gather" in op.get_friendly_name():
+            assert ov.Type(np.uint8) == op.get_element_type()
+
+
+def test_gather_can_be_4_bit_if_all_layers_without_data():
+    model = IntegerModel().ov_model
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_SYM,
+        ratio=1,
+        group_size=1,
+        all_layers=True,
+    )
+    for op in compressed_model.get_ordered_ops():
+        if op.get_type_name() == "Constant" and "gather" in op.get_friendly_name():
+            assert ov.Type.u4 == op.get_element_type()
+
+
+@pytest.mark.parametrize("metric", ALL_SENSITIVITY_METRICS)
+def test_gather_in_8_bit_if_not_all_layers(metric):
+    model = IntegerModel().ov_model
+    dataset = Dataset([np.ones([1, 7, 1])])
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_SYM,
+        ratio=0.5,
+        group_size=1,
+        all_layers=False,
+        sensitivity_metric=metric,
+        dataset=dataset,
+    )
+    for op in compressed_model.get_ordered_ops():
+        if op.get_type_name() == "Constant" and "gather" in op.get_friendly_name():
+            assert op.get_element_type() == ov.Type(np.uint8)
+
+
+MAX_BASELINE_SCORE = 1 / np.finfo(np.float32).eps
+NON_ZERO_ROW = [-4, 1, 2]
+ACTIVATION = np.array([NON_ZERO_ROW, [0, 0, 0], [0, 0, 0]])
+MAX_VAR = 3.555555  # np.max(np.var(ACTIVATION, 0))
+MEAN_VAR = 1.555555  # np.mean(np.var(ACTIVATION, 0))
+MEAN_MAX = 2.333333  # np.mean(np.max(np.abs(ACTIVATION), 0))
+HESSIAN_TRACE = (16 + 1 + 4) * 2 / 9  # sum(i*i for i in NON_ZERO_ROW) * 2 / ACTIVATION.size
+
+
+@pytest.mark.parametrize(
+    ("mode", "ref_act_scores", "ref_scores"),
+    (
+        (SensitivityMetric.HESSIAN_INPUT_ACTIVATION, HESSIAN_TRACE, 0),
+        (SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE, MEAN_MAX, MEAN_MAX * MAX_BASELINE_SCORE),
+        (SensitivityMetric.MEAN_ACTIVATION_VARIANCE, MEAN_VAR, MEAN_VAR * MAX_BASELINE_SCORE),
+        (SensitivityMetric.MAX_ACTIVATION_VARIANCE, MAX_VAR, MAX_VAR * MAX_BASELINE_SCORE),
+    ),
+)
+def test_data_based_criterion(mode, ref_scores, ref_act_scores, mocker):
+    model = IdentityMatmul().ov_model
+    dataset = Dataset([ACTIVATION])
+    criterion_cls = MIXED_PRECISION_CRITERIA.get(mode)
+    scores_spy = mocker.spy(criterion_cls, "_calc_sensitivity")
+    act_scores_spy = mocker.spy(criterion_cls, "_calc_activation_sensitivity")
+
+    compress_weights(
+        model,
+        mode=CompressWeightsMode.NF4,
+        ratio=0.5,
+        group_size=1,
+        dataset=dataset,
+        sensitivity_metric=mode,
+        all_layers=True,
+    )
+    scores = scores_spy.spy_return
+    act_scores = act_scores_spy.spy_return
+    assert np.allclose(scores, ref_scores)
+    assert np.allclose(act_scores, ref_act_scores)
 
 
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
@@ -337,7 +471,7 @@ LIST_DESCS = [
 def test_quantization_error_calculation(desc: QuantErrorDesc):
     weight = desc.weight
     axis = 1
-    actual_error = _get_integer_quantization_error(weight, axis, desc.config)
+    actual_error = get_integer_quantization_error(weight, axis, desc.config)
     ref_error = desc.ref_error
     atol = desc.atol if desc.atol is not None else 1e-8
     assert np.allclose(actual_error, ref_error, atol=atol)
@@ -411,7 +545,7 @@ def test_weight_compress_with_ignored_scope(ignored_scope, num_compressed):
 
 @pytest.mark.parametrize("desc", CALCULATE_SCALE_DESCS)
 def test_calculate_scale_per_group(desc: CalculateScaleDesc):
-    reshaped_weight, reduction_axis = _reshape_weights_for_grouped_quantization(
+    reshaped_weight, reduction_axis = reshape_weights_for_grouped_quantization(
         desc.weight, reduction_axis=desc.axis, group_size=desc.group_size
     )
     act_scale = np.max(np.abs(reshaped_weight), axis=reduction_axis, keepdims=True)  # [a1, r//gs, 1, a2]
@@ -420,21 +554,46 @@ def test_calculate_scale_per_group(desc: CalculateScaleDesc):
 
 def test_raise_error_for_many_axes():
     with pytest.raises(AssertionError):
-        _reshape_weights_for_grouped_quantization(WEIGHTS_2x4, reduction_axis=(0, 1), group_size=1)
+        reshape_weights_for_grouped_quantization(WEIGHTS_2x4, reduction_axis=(0, 1), group_size=1)
 
 
 def test_raise_error_with_tuple():
     with pytest.raises(AssertionError):
-        _reshape_weights_for_grouped_quantization(WEIGHTS_2x4, reduction_axis=(0,), group_size=3)
+        reshape_weights_for_grouped_quantization(WEIGHTS_2x4, reduction_axis=(0,), group_size=3)
 
 
-@pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
-def test_raise_error_with_int8_and_non_default_ratio(mocker, mode):
+@pytest.mark.parametrize("mode", INT8_MODES)
+@pytest.mark.parametrize(
+    "params",
+    (
+        {"ratio": 0.5},
+        {"group_size": 64},
+        {"all_layers": True},
+        {"all_layers": False},
+        *({"sensitivity_metric": metric} for metric in ALL_SENSITIVITY_METRICS),
+        {"dataset": "anything"},
+    ),
+)
+def test_raise_error_with_unsupported_params_for_int8(mocker, mode, params):
     with pytest.raises(AttributeError):
-        compress_weights(mocker.Mock(), mode=mode, ratio=0.5)
+        compress_weights(mocker.Mock(), mode=mode, **params)
 
 
-@pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
-def test_raise_error_with_int8_and_non_default_group_size(mocker, mode):
+@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+@pytest.mark.parametrize("metric", DATA_BASED_SENSITIVITY_METRICS)
+def test_raise_error_with_data_metric_and_without_dataset(mode, metric):
+    model = IntegerModel().ov_model
     with pytest.raises(AttributeError):
-        compress_weights(mocker.Mock(), mode=mode, group_size=64)
+        compress_weights(model, mode=mode, sensitivity_metric=metric, group_size=-1, ratio=0.8)
+
+
+@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+def test_call_max_var_criterion_with_dataset_by_default(mocker, mode):
+    model = IntegerModel().ov_model
+    dataset = Dataset([np.ones([1, 7, 1])])
+    criterion_cls = MIXED_PRECISION_CRITERIA.get(SensitivityMetric.MAX_ACTIVATION_VARIANCE)
+    scores_spy = mocker.spy(criterion_cls, "_calc_sensitivity")
+
+    compress_weights(model, mode=mode, ratio=0.8, group_size=-1, dataset=dataset)
+
+    scores_spy.assert_called()

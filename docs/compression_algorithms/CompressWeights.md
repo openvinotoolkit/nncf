@@ -26,16 +26,14 @@ compressed_model = compress_weights(model)
 - Compress weights symmetrically to 8-bit integer data type.
 
 ```python
-from nncf import compress_weights
-from nncf import CompressWeightsMode
+from nncf import compress_weights, CompressWeightsMode
 compressed_model = compress_weights(model, mode=CompressWeightsMode.INT8_SYM)
 ```
 
 - Compress weights symmetrically to 4-bit integer data type with group size = 128, except embeddings and last linear layers - they are compressed asymmetrically to 8-bit integer data type.
 
 ```python
-from nncf import compress_weights
-from nncf import CompressWeightsMode
+from nncf import compress_weights, CompressWeightsMode
 compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_SYM)
 ```
 
@@ -47,9 +45,19 @@ compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_SYM)
   the rest of layers to 8-bit asymmetric integer data type. The same parametrization is applicable for `INT4_SYM` mode.
 
 ```python
-from nncf import compress_weights
-from nncf import CompressWeightsMode
+from nncf import compress_weights, CompressWeightsMode
 compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_ASYM, group_size=64, ratio=0.9)
+```
+
+- Accuracy of the 4-bit compressed models can be improved by using data-based mixed-precision algorithm. It is capable to find outliers in the input activations and assign different quantization precision to minimize accuracy degradation.
+Below is the example how to compress 80% of layers to 4-bit integer with a default data-based mixed precision algorithm.
+It requires just one extra parameter - a NNCF wrapper of the dataset. If dataset is not specified, data-free mixed precision algorithm works based on weights only.
+Please refer to the second table below for evaluation of data-free and data-based method on the wikitext dataset.
+
+```python
+from nncf import compress_weights, CompressWeightsMode, Dataset
+nncf_dataset = nncf.Dataset(data_source, transform_fn)
+compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_SYM, ratio=0.8, dataset=nncf_dataset)
 ```
 
 - `NF4` mode can be considered for improving accuracy, but currently models quantized to nf4 should not be faster models
@@ -57,8 +65,7 @@ compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_ASYM, g
   Different `group_size` and `ratio` are also supported.
 
 ```python
-from nncf import compress_weights
-from nncf import CompressWeightsMode
+from nncf import compress_weights, CompressWeightsMode
 compressed_model = compress_weights(model, mode=CompressWeightsMode.NF4)
 ```
 
@@ -72,8 +79,8 @@ Here is the perplexity and model size before and after weight compression for di
   <tr>
     <th class="tg-0pky">Model</th>
     <th class="tg-0pky">Mode</th>
-    <th class="tg-0pky">Perplexity</th>
-    <th class="tg-0pky">Perplexity <br>Increase</th>
+    <th class="tg-0pky">Perplexity (↓)</th>
+    <th class="tg-0pky">Perplexity <br>Increase (↓)</th>
     <th class="tg-0pky">Model Size <br>(Gb)</th>
   </tr>
 </thead>
@@ -219,6 +226,57 @@ Here is the perplexity and model size before and after weight compression for di
     <td class="tg-0pky">6.6</td>
   </tr>
 </tbody>
+</table>
+
+Here is the word perplexity with data-free and data-based mixed-precision INT4-INT8 weight compression for different language models on the [wikitext dataset](https://arxiv.org/pdf/1609.07843.pdf).
+`data` suffix refers to the data-based mixed-precision.
+
+<table>
+    <tr>
+        <td>Model</td>
+        <td>Mode</td>
+        <td>Word Perplexity (↓)</td>
+    </tr>
+    <tr>
+        <td>meta-llama/llama-7b-chat-hf</td>
+        <td>int4_sym_g128_r80_data</td>
+        <td>11.87</td>
+    </tr>
+    <tr>
+        <td>meta-llama/llama-7b-chat-hf</td>
+        <td>int4_sym_g128_r80</td>
+        <td>11.92</td>
+    </tr>
+    <tr>
+        <td>stabilityai_stablelm-3b-4e1t</td>
+        <td>int4_sym_g64_r80_data</td>
+        <td>10.67</td>
+    </tr>
+    <tr>
+        <td>stabilityai_stablelm-3b-4e1t</td>
+        <td>int4_sym_g64_r80</td>
+        <td>10.83</td>
+    </tr>
+    <tr>
+        <td>stable-zephyr-3b-dpo</td>
+        <td>int4_sym_g64_r80_data</td>
+        <td>21.74</td>
+    </tr>
+    <tr>
+        <td>stable-zephyr-3b-dpo</td>
+        <td>int4_sym_g64_r80</td>
+        <td>23.10</td>
+    </tr>
+    <tr>
+        <td>HuggingFaceH4/zephyr-7b-beta</td>
+        <td>int4_sym_g128_r80_data</td>
+        <td>10.13</td>
+    </tr>
+    <tr>
+        <td>HuggingFaceH4/zephyr-7b-beta</td>
+        <td>int4_sym_g128</td>
+        <td>10.22</td>
+    </tr>
 </table>
 
 #### Limitations
