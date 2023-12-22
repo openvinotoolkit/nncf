@@ -640,12 +640,16 @@ class OVModelTransformer(ModelTransformer):
             node_output_port = node.output(transformation.target_point.port_id)
             node_output_source_ports = node_output_port.get_target_inputs()
 
+            bias_node_name = f"{node_name}/nncf_null_bias_"
+
             bias_const_node = OVModelTransformer._create_constant(
-                transformation.bias_value, dtype=node_output_port.get_element_type(), name=f"{node_name}/bias"
+                transformation.bias_value,
+                dtype=node_output_port.get_element_type(),
+                name=f"{bias_node_name}/bias_value",
             )
             bias_const_output_port = bias_const_node.output(0)
 
-            add_node = opset.add(node_output_port, bias_const_output_port, name=f"{node_name}/nncf_null_bias_")
+            add_node = opset.add(node_output_port, bias_const_output_port, name=bias_node_name)
 
             for node_output_source_port in node_output_source_ports:
                 node_output_source_port.replace_source_output(add_node.output(0))
