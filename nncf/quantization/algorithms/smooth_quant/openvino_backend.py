@@ -80,7 +80,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     ) -> TensorCollector:
         collector = TensorCollector()
         reducer = OVAbsMaxReducer(reduction_axes=stats_reduction_axes, inplace=inplace)
-        aggregator = MaxAggregator(num_samples)
+        aggregator = MaxAggregator(aggregation_axes=(0,), num_samples=num_samples)
         collector.register_statistic_branch(branch_key, reducer, aggregator)
         return collector
 

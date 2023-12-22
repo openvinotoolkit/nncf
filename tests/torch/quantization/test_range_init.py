@@ -23,6 +23,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 from torchvision.models import squeezenet1_1
 
+import nncf.torch.tensor_statistics.collectors as pt_collectors
 from nncf.common.graph import NNCFNodeName
 from nncf.common.quantization.initialization.range import PerLayerRangeInitConfig
 from nncf.common.quantization.initialization.range import RangeInitConfig
@@ -54,6 +55,7 @@ from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SymmetricQuantizer
+from nncf.torch.tensor_statistics.statistics import pt_convert_stat_to_min_max_tensor_stat
 from nncf.torch.utils import get_all_modules_by_type
 from nncf.torch.utils import safe_thread_call
 from tests.torch.helpers import TwoConvTestModel
@@ -901,23 +903,21 @@ class CustomSpy:
 def test_per_layer_range_init_collectors_are_called_the_required_number_of_times(
     range_init_call_count_test_struct, mocker
 ):
-    range_minmax_init_create_spy = CustomSpy(MinMaxStatisticCollector)
-    mocker.patch("nncf.torch.quantization.init_range.MinMaxStatisticCollector", new=range_minmax_init_create_spy)
-    range_meanminmax_init_create_spy = CustomSpy(MeanMinMaxStatisticCollector)
+    range_minmax_init_create_spy = CustomSpy(pt_collectors.get_min_max_statistic_collector)
+    mocker.patch("nncf.torch.quantization.init_range.get_min_max_statistic_collector", new=range_minmax_init_create_spy)
+    range_meanminmax_init_create_spy = CustomSpy(pt_collectors.get_mixed_min_max_statistic_collector)
     mocker.patch(
-        "nncf.torch.quantization.init_range.MeanMinMaxStatisticCollector", new=range_meanminmax_init_create_spy
+        "nncf.torch.quantization.init_range.get_mixed_min_max_statistic_collector", new=range_meanminmax_init_create_spy
     )
-    range_threesigma_init_create_spy = CustomSpy(MedianMADStatisticCollector)
-    mocker.patch("nncf.torch.quantization.init_range.MedianMADStatisticCollector", new=range_threesigma_init_create_spy)
+    range_threesigma_init_create_spy = CustomSpy(pt_collectors.get_median_mad_statistic_collector)
+    mocker.patch(
+        "nncf.torch.quantization.init_range.get_median_mad_statistic_collector", new=range_threesigma_init_create_spy
+    )
 
     config = create_config()
     config["compression"]["initializer"]["range"] = range_init_call_count_test_struct.range_init_config
     data_loader = TestRangeInit.create_dataloader(True, config, 10)
     config.register_extra_structs([QuantizationRangeInitArgs(data_loader)])
-
-    range_minmax_init_create_spy = mocker.spy(MinMaxStatisticCollector, "__init__")
-    range_meanminmax_init_create_spy = mocker.spy(MeanMinMaxStatisticCollector, "__init__")
-    range_threesigma_init_create_spy = mocker.spy(MedianMADStatisticCollector, "__init__")
 
     TestRangeInit.create_algo_and_compressed_model(config)
 
@@ -1024,13 +1024,12 @@ def test_quantize_range_init_sets_correct_scale_shapes(quantizer_range_init_test
             get_reduction_axes_from_scale_shape(QuantizerScaleShape(quantizer.scale_shape)),
             collector_params,
         )
-        collector.register_input(Tensor(torch.ones(test_struct.input_shape)))
+        collector.register_input_for_all_reducers(Tensor(torch.ones(test_struct.input_shape)))
         stat = collector.get_statistics()
-        minmax_values = MinMaxTensorStatistic.from_stat(stat)
+        minmax_values = pt_convert_stat_to_min_max_tensor_stat(stat)
         quantizer.apply_minmax_init(
             min_values=minmax_values.min_values.data.reshape(quantizer.scale_shape),
-            max_values=minmax_values.max_values.data.reshape(quantizer.scale_shape),
-        )
+            max_values=minmax_values.max_values.data.reshape(quantizer.scale_shape))
 
         assert quantizer.scale_shape == test_struct.ref_scale_shape
         if quantization_mode == QuantizationMode.SYMMETRIC:

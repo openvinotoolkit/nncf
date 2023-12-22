@@ -154,10 +154,10 @@ class StatCollectorGenerator:
             tp = PTTargetPointTranslator.translate(qp.insertion_point)
             scale_shapes_vs_params = StatCollectorGenerator.get_all_scale_shapes_with_params(qp, target_model_graph)
 
-            obs_p = TensorStatisticObservationPoint(tp, reduction_shapes=set(scale_shapes_vs_params.keys()))
+            obs_p = TensorStatisticObservationPoint(tp, reduction_axes_set=set(scale_shapes_vs_params.keys()))
 
             retval[obs_p] = {}
-            for scale_shape in obs_p.reduction_shapes:
+            for scale_shape in obs_p.reduction_axes_set:
                 collector_params = scale_shapes_vs_params[scale_shape]
                 collector = StatCollectorGenerator.generate_stat_collector_for_range_init_config(
                     init_config, scale_shape, collector_params, num_samples_to_collect_override=num_batches

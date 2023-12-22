@@ -104,11 +104,12 @@ class TensorReducerBase(ABC):
         return (
             isinstance(__o, self.__class__)
             and self._reduction_axes == __o._reduction_axes
+            and self._channel_axis == __o._channel_axis
             and self._inplace == __o.inplace
         )
 
     def __hash__(self) -> int:
-        return hash((self.__class__.__name__, self.inplace, self._reduction_axes))
+        return hash((self.__class__.__name__, self.inplace, self._reduction_axes, self._channel_axis))
 
     def _get_axis(self, tensor: Tensor) -> Optional[ReductionAxes]:
         if self._reduction_axes is not None:
@@ -829,6 +830,7 @@ class PercentileAggregator(OfflineAggregatorBase):
         if 0 not in self._aggregation_axes:
             raise NotImplementedError("Aggregation without 0 dim is not supported yet for PercentileAggregator")
         self._quantiles_to_collect = [x / 100 for x in percentiles_to_collect]
+        self._percentiles_to_collect = percentiles_to_collect
 
     def _register_reduced_input_impl(self, x: Tensor) -> None:
         return self._samples.append(x)
@@ -840,13 +842,15 @@ class PercentileAggregator(OfflineAggregatorBase):
 
         percentiles = fns.quantile(stacked_val, self._quantiles_to_collect, axis=0, keepdims=False)
         retval = {}
-        for idx, percentile in enumerate(self._quantiles_to_collect):
+        for idx, percentile in enumerate(self._percentiles_to_collect):
             value = percentiles[idx]
             if self._keepdims:
                 value = fns.reshape(value, shape_after_aggregation)
             retval[percentile] = value
         return retval
 
+    def _aggregate_stacked_samples(self, stacked_samples: Tensor) -> Tensor:
+        pass
 
 def _moveaxes_flatten_cat(
     tensor_list: List[Tensor], aggregation_axes: AggregationAxes

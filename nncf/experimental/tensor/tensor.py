@@ -65,6 +65,9 @@ class Tensor:
     def __getitem__(self, index: Union[Tensor, int]) -> Tensor:
         return Tensor(self.data[unwrap_tensor_data(index)])
 
+    def __setitem__(self, index: Union[Tensor, int], val):
+        self.data[unwrap_tensor_data(index)] = val
+
     def __str__(self) -> str:
         return f"nncf.Tensor({str(self.data)})"
 

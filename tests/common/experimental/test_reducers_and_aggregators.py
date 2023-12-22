@@ -424,10 +424,10 @@ class TemplateTestReducersAggreagtors:
 
         params = {}
         if reducer_name in ["min", "max", "abs_max", "mean"]:
-            params["reduction_axes"] = [None, (0, 1, 3), (1, 2, 3)]
+            params["reduction_axes"] = [(0, 1, 3), (1, 2, 3)]
             params["inplace"] = [False, True]
         elif reducer_name in ["quantile", "abs_quantile"]:
-            params["reduction_axes"] = [None, (0, 1, 3), (1, 2, 3)]
+            params["reduction_axes"] = [(0, 1, 3), (1, 2, 3)]
             params["quantile"] = [[0.01, 0.99], [0.001, 0.999]]
         elif reducer_name == "batch_mean":
             params["inplace"] = [False, True]

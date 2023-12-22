@@ -310,7 +310,7 @@ class FastBiasCorrection(Algorithm):
         q_outputs = self._mean_per_channel(q_outputs, channel_axis)
         from nncf.experimental.tensor import functions as fns
 
-        bias_shift = fns.stack(output_fp).mean(axis=0) - q_outputs
+        bias_shift = fns.stack(output_fp).mean(axis=0).reshape(q_outputs.shape) - q_outputs
         return bias_shift
 
     @staticmethod

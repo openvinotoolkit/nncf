@@ -35,6 +35,7 @@ from nncf.experimental.common.tensor_statistics.collectors import PercentileAggr
 from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.tensor import Tensor
 from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.torch.tensor_statistics.statistics import PTMeanTensorStatistic
 from nncf.torch.tensor_statistics.statistics import PTMedianMADTensorStatistic
@@ -86,11 +87,11 @@ class PTMeanPerChanelReducer(PTReducerMixIn, MeanPerChReducer):
     pass
 
 
-def _reshape_all(targets: Tuple[torch.Tensor, ...], target_shape: Tuple[int, ...]):
-    return map(lambda stat: torch.reshape(stat, target_shape), targets)
+def _reshape_all(targets: Tuple[Tensor, ...], target_shape: Tuple[int, ...]):
+    return map(lambda stat: stat.reshape(target_shape), targets)
 
 
-def _get_wrapped_min_max_tensor_statistic(target_shape: QuantizerScaleShape) -> Type[PTMinMaxTensorStatistic]:
+def _get_wrapped_min_max_tensor_statistic(target_shape: Tuple[int, ...]) -> Type[PTMinMaxTensorStatistic]:
     """
     Returns PTMinMaxTensorStatistic type but all statistics are reshaped to target_shape.
 
@@ -100,7 +101,7 @@ def _get_wrapped_min_max_tensor_statistic(target_shape: QuantizerScaleShape) -> 
 
     class WrappedPTMinMaxTensorStatistic(PTMinMaxTensorStatistic):
         def __init__(self, min_values, max_values):
-            min_values, max_values = _reshape_all((min_values, max_values), target_shape.shape)
+            min_values, max_values = _reshape_all((min_values, max_values), target_shape)
             super().__init__(min_values, max_values)
 
     return WrappedPTMinMaxTensorStatistic
@@ -118,7 +119,7 @@ def _get_wrapped_percentile_tensor_statistic(target_shape: Tuple[int, ...]) -> T
         def __init__(self, percentile_vs_values_dict):
             reshaped_percentiles = {}
             for k, v in percentile_vs_values_dict.items():
-                reshaped_percentiles[k] = torch.reshape(v, target_shape)
+                reshaped_percentiles[k] = v.reshape(target_shape)
             super().__init__(reshaped_percentiles)
 
     return WrappedPTPercentileTensorStatistic
@@ -188,9 +189,10 @@ def get_mixed_min_max_statistic_collector(
 
     kwargs = {
         "num_samples": num_samples,
-        "aggregation_axes": aggregation_axes,
-        "window_size": window_size,
+        "aggregation_axes": aggregation_axes
     }
+    if use_means_of_mins:
+        kwargs["window_size"] = window_size
     min_aggregator_cls = MeanAggregator if use_means_of_mins else MinAggregator
     min_aggregator = min_aggregator_cls(**kwargs)
     tensor_collector.register_statistic_branch(PTMinMaxTensorStatistic.MIN_STAT, min_reducer, min_aggregator)

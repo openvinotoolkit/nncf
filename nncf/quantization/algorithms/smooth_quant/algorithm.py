@@ -388,7 +388,7 @@ class SmoothQuant(Algorithm):
             reduction_axes = self._backend_entity.get_channel_agnostic_reduction_axes(channel_axis, shape)
         return reduction_axes
 
-    def _process_weight_statistics(self, node: NNCFNode, weights: Tensor, port_id: int) -> Tensor:
+    def _process_weight_statistics(self, node: NNCFNode, weights: Tensor) -> Tensor:
         """
         Returns processed weight statistics for node.
 

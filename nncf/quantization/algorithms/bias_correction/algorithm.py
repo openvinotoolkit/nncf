@@ -367,8 +367,8 @@ class BiasCorrection(Algorithm):
 
         # Here we get the per-sample average, so the axis is 0.
         cated = fns.concatenate(q_outputs)
-        q_output = fns.mean(cated, axis=0)
-        return output_fp - q_output
+        q_output = fns.mean(cated, axis=0, keepdims=True)
+        return output_fp.reshape(q_output.shape) - q_output
 
     def _mean_per_channel(self, x: Tensor, channel_axis: int) -> Tensor:
         from nncf.experimental.tensor import functions as fns
