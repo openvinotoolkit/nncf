@@ -131,9 +131,9 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 all_weight_params.append(weight_params)
                 quantized_nodes_ids.add(id(weight_node))
 
-        internal_weight_params = _get_internal_weight_params(all_weight_params, mode, is_last_layer_shared, all_layers)
-        _set_weight_compression_config(internal_weight_params, mode, ratio, group_size, activations, sensitivity_metric)
-        nncf_logger.info(_get_bitwidth_distribution_str(all_weight_params, internal_weight_params))
+        ratio_defining_params = _get_ratio_defining_params(all_weight_params, mode, is_last_layer_shared, all_layers)
+        _set_weight_compression_config(ratio_defining_params, mode, ratio, group_size, activations, sensitivity_metric)
+        nncf_logger.info(_get_bitwidth_distribution_str(all_weight_params, ratio_defining_params))
 
         for wp in all_weight_params:
             print(f"mode={wp.compression_config.mode.value} g{wp.compression_config.group_size} {wp.fq_name}")
@@ -188,38 +188,41 @@ def _proportion_str(num_weights_list: List[int], total_num_weights: int, total_n
     return f"{percentage:.0f}% ({len(num_weights_list)} / {total_num_params})"
 
 
-def _get_bitwidth_distribution_str(all_params: List[WeightNodeParams], internal_params: List[WeightNodeParams]) -> str:
+def _get_bitwidth_distribution_str(
+    all_params: List[WeightNodeParams], ratio_defining_params: List[WeightNodeParams]
+) -> str:
     """
     Generates a table that shows the ratio of weights quantized to different number of bits.
 
-    :param all_params: List of information about each weight node.
-    :param internal_params: List of information about weight nodes that are considered for mixed precision.
+    :param all_params: Information about each weight node.
+    :param ratio_defining_params: Information about weights that are used for calculating ratio between primary and
+        backup precisions.
     :return: A string containing the table.
     """
     num_bits_vs_num_weights_map = {}
-    internal_fq_names = set(wp.fq_name for wp in internal_params)
+    ratio_defining_fq_names = set(wp.fq_name for wp in ratio_defining_params)
     for data in all_params:
         num_bits = data.compression_config.num_bits
-        n_total, n_internal = num_bits_vs_num_weights_map.get(num_bits, ([], []))
-        if data.fq_name in internal_fq_names:
-            n_internal.append(data.num_weights)
+        n_total, n_ratio_defining = num_bits_vs_num_weights_map.get(num_bits, ([], []))
+        if data.fq_name in ratio_defining_fq_names:
+            n_ratio_defining.append(data.num_weights)
         n_total.append(data.num_weights)
-        num_bits_vs_num_weights_map[num_bits] = (n_total, n_internal)
+        num_bits_vs_num_weights_map[num_bits] = (n_total, n_ratio_defining)
 
-    num_internal_weights = sum(ws.num_weights for ws in internal_params)
-    num_internal_params = len(internal_params)
+    num_ratio_defining_weights = sum(ws.num_weights for ws in ratio_defining_params)
+    num_ratio_defining_params = len(ratio_defining_params)
     num_total_weights = sum(ws.num_weights for ws in all_params)
     num_params = len(all_params)
     num_bits_vs_num_weights_map = OrderedDict(sorted(num_bits_vs_num_weights_map.items(), reverse=True))
     # Table creation
-    header = ["Num bits (N)", "% all parameters (layers)", "% internal parameters (layers)"]
+    header = ["Num bits (N)", "% all parameters (layers)", "% ratio-defining parameters (layers)"]
     rows = []
-    for bitwidth, (n_total, n_internal) in num_bits_vs_num_weights_map.items():
+    for bitwidth, (n_total, n_ratio_defining) in num_bits_vs_num_weights_map.items():
         rows.append(
             [
                 bitwidth,
                 _proportion_str(n_total, num_total_weights, num_params),
-                _proportion_str(n_internal, num_internal_weights, num_internal_params),
+                _proportion_str(n_ratio_defining, num_ratio_defining_weights, num_ratio_defining_params),
             ]
         )
 
@@ -228,18 +231,14 @@ def _get_bitwidth_distribution_str(all_params: List[WeightNodeParams], internal_
     return pretty_string
 
 
-# TODO: rename to mixed precision params. Everywhere!! or just put a comment!
-# ratio considered params
-# non-fixed precision
-# params for mixed precision
-def _get_internal_weight_params(
+def _get_ratio_defining_params(
     all_weight_params: List[WeightNodeParams],
     mode: CompressWeightsMode,
     is_last_layer_shared: bool,
     all_layers: bool,
 ) -> List[WeightNodeParams]:
     """
-    Returns the internal weight parameters.
+    Returns the information about weights that are used for calculating ratio between primary and backup precisions.
 
     :param all_weight_params: List of all weight parameters.
     :param mode: Weight compression mode.
@@ -248,16 +247,16 @@ def _get_internal_weight_params(
         precision. By default, the backup precision is assigned for the embeddings and last layers.
     :return: List of information about weight nodes that are considered for mixed precision.
     """
-    internal_weight_params = all_weight_params
+    ratio_defining_params = all_weight_params
     if mode not in [CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM] and not all_layers:
-        internal_weight_params = list(filter(lambda wp: wp.metatype != OVEmbeddingMetatype, internal_weight_params))
+        ratio_defining_params = list(filter(lambda wp: wp.metatype != OVEmbeddingMetatype, ratio_defining_params))
         if not is_last_layer_shared:
-            internal_weight_params = internal_weight_params[:-1]
-    return internal_weight_params
+            ratio_defining_params = ratio_defining_params[:-1]
+    return ratio_defining_params
 
 
 def _set_weight_compression_config(
-    internal_weight_params: List[WeightNodeParams],
+    ratio_defining_params: List[WeightNodeParams],
     mode: CompressWeightsMode,
     ratio: float,
     group_size: int,
@@ -267,7 +266,8 @@ def _set_weight_compression_config(
     """
     Set the appropriate compression configuration for weights based on some criteria.
 
-    :param internal_weight_params: List of information about internal weight nodes.
+    :param ratio_defining_params: Information about weights that are used for calculating ratio between primary and
+        backup precisions.
     :param mode: Weight compression mode.
     :param ratio: The ratio between primary and backup precisions.
     :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
@@ -275,9 +275,9 @@ def _set_weight_compression_config(
     """
     primary_config = WeightCompressionConfig(mode=mode, group_size=group_size)
     if ratio == 1:
-        for weight_param in internal_weight_params:
+        for weight_param in ratio_defining_params:
             weight_param.compression_config = primary_config
     else:
         criterion_cls = MIXED_PRECISION_CRITERIA.get(sensitivity_metric)
-        criterion = criterion_cls(internal_weight_params, primary_config, ratio, activations)
+        criterion = criterion_cls(ratio_defining_params, primary_config, ratio, activations)
         criterion.assign_mixed_precision()

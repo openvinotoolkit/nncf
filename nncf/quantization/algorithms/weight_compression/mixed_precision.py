@@ -41,8 +41,8 @@ class MixedPrecisionCriterion:
         activations: Optional[Dict[str, np.ndarray]] = None,
     ):
         """
-        :param weight_params: List of information about internal weight nodes. Only internal nodes are considered
-            for mixed precision. The quantization scheme is added to this info.
+        :param weight_params: Information about weights that are used for calculating ratio between primary and backup
+            precisions. The quantization scheme is added to this info.
         :param ratio: The ratio between primary and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
             and the rest to INT8_ASYM).
         :param primary_config: Information on how to compress (quantize) weights to primary precision.
@@ -60,7 +60,7 @@ class MixedPrecisionCriterion:
 
     def assign_mixed_precision(self) -> None:
         scores = self._calc_scores()
-        num_internal_weights = sum(wp.num_weights for wp in self._weight_params)
+        num_all_weights = sum(wp.num_weights for wp in self._weight_params)
 
         indexes_of_layers_in_ascending_order_of_scores = [
             i[0] for i in sorted(enumerate(scores), reverse=False, key=lambda x: x[1])
@@ -68,7 +68,7 @@ class MixedPrecisionCriterion:
         num_weights_in_4bit = 0
         for index in indexes_of_layers_in_ascending_order_of_scores:
             weight_param = self._weight_params[index]
-            current_ratio = (num_weights_in_4bit + weight_param.num_weights) / num_internal_weights
+            current_ratio = (num_weights_in_4bit + weight_param.num_weights) / num_all_weights
             if current_ratio >= self._ratio:
                 break
             weight_param.compression_config = self._primary_config
