@@ -52,7 +52,7 @@ class WeightNodeParams:
     :param original_weight_dtype: Type of elements in the weight array.
     :param compression_config: Configuration of weight compression for the weight node.
     :param metatype: Metatype of the corresponding operation with weight.
-    :param node_name: Unique string representation of the node in the NNCFGraph. It is intended for accessing collected
+    :param node_name: String representation of the node in the NNCFGraph. It is intended for accessing collected
         activations.
     """
 

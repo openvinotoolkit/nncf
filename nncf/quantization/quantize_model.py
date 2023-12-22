@@ -283,7 +283,8 @@ def compress_weights(
         flow graph nodes to be ignored during quantization.
     :param all_layers: Indicates whether embeddings and last layers should be compressed to a primary
         precision. By default, the backup precision is assigned for the embeddings and last layers.
-    # TODO:
+    :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
+        preserve the accuracy of the model, the more sensitive layers receives a higher precision.
     :return: The non-trainable model with compressed weights.
     """
     if mode == CompressWeightsMode.INT8:
@@ -304,7 +305,6 @@ def compress_weights(
             )
         options = [all_layers, sensitivity_metric, dataset]
         if any(option is not None for option in options):
-            # TODO: warning or better error?
             raise AttributeError(
                 "INT8 modes do not support `all_layers`, `sensitivity_metric` and `dataset` options."
                 "Set them to None."
@@ -332,8 +332,8 @@ def compress_weights(
         )
     if ratio != 1 and dataset is None and sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR:
         raise AttributeError(
-            # TODO: correct message
-            "mixed precision mode except WEIGHT_QUANTIZATION_ERROR requires dataset, but it's not provided"
+            f"Mixed precision selection based on the given sensitivity metric={sensitivity_metric.value} requires "
+            "a dataset, but it's not provided."
         )
     compression_algorithm = WeightCompression(mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric)
     graph = NNCFGraphFactory.create(model)

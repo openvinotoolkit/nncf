@@ -91,8 +91,21 @@ class CompressWeightsMode(Enum):
 
 class SensitivityMetric(Enum):
     """
-    Defines a mode for selecting quantization precision.
-    :param : TODO:
+    Defines a sensitivity metric for assigning quantization precision to layers. In order to
+        preserve the accuracy of the model, the more sensitive layers receives a higher precision.
+
+    :param WEIGHT_QUANTIZATION_ERROR: The inverted 8-bit quantization noise. Weights with highest value
+        of this metric can be accurately quantized channel-wise to 8-bit. The idea is to leave these weights in 8bit,
+        and quantize the rest of layers to 4-bit group-wise. Since group-wise is more accurate than per-channel,
+        accuracy should not degrade.
+    :param HESSIAN_INPUT_ACTIVATION: The average Hessian trace of weights with respect to the layer-wise quantization
+        error multiplied by L2 norm of 8-bit quantization noise.
+    :param MEAN_ACTIVATION_VARIANCE: The mean variance of the layers' inputs
+        multiplied by inverted 8-bit quantization noise.
+    :param MAX_ACTIVATION_VARIANCE: The maximum variance of the layers' inputs
+        multiplied by inverted 8-bit quantization noise.
+    :param MEAN_ACTIVATION_MAGNITUDE: The mean magnitude of the layers' inputs
+        multiplied by inverted 8-bit quantization noise.
     """
 
     WEIGHT_QUANTIZATION_ERROR = "int8_error"

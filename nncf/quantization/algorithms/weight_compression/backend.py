@@ -106,6 +106,9 @@ class WeightCompressionAlgoBackend(ABC):
             that share quantization parameters (scale). The value -1 means no grouping.
         :param all_layers: Indicates whether embeddings and last layers should be compressed to a primary
             precision. By default, the backup precision is assigned for the embeddings and last layers.
+        :param activations: The input activations of the layers considered for compression.
+        :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
+            preserve the accuracy of the model, the more sensitive layers receives a higher precision.
         :return: A resulting model with compressed weights.
         """
 
@@ -117,7 +120,7 @@ class WeightCompressionAlgoBackend(ABC):
 
         :param target_type: Type of the location that should be modified.
         :param target_node_name: Name of the located node.
-        :param port_id: id of the port for the statistics disctribution.
+        :param port_id: id of the port for the statistics distribution.
         :return: Backend-specific TargetPoint.
         """
 

@@ -27,6 +27,8 @@ from nncf.quantization.algorithms.weight_compression.quantize import get_integer
 
 MIXED_PRECISION_CRITERIA = Registry("mixed_precision_criteria")
 
+THE_LOWEST_SENSITIVITY = 0
+
 
 class MixedPrecisionCriterion:
     """
@@ -43,9 +45,10 @@ class MixedPrecisionCriterion:
         """
         :param weight_params: Information about weights that are used for calculating ratio between primary and backup
             precisions. The quantization scheme is added to this info.
+        :param primary_config: Information on how to compress (quantize) weights to primary precision.
         :param ratio: The ratio between primary and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
             and the rest to INT8_ASYM).
-        :param primary_config: Information on how to compress (quantize) weights to primary precision.
+        :param activations: The input activations of the nodes to be quantized.
         """
         self._weight_params = weight_params
         self._activations = activations
@@ -53,13 +56,18 @@ class MixedPrecisionCriterion:
         self._ratio = ratio
 
     @abstractmethod
-    def _calc_scores(self):
-        """TODO:_summary_
-        smallest values are chosen to 4-bit first
+    def _calc_sensitivity(self) -> List[float]:
+        """
+        Calculates sensitivity of each layer according to a criterion.
+
+        :return: List of values per node to be quantized.
         """
 
     def assign_mixed_precision(self) -> None:
-        scores = self._calc_scores()
+        """
+        Assigns quantization precision based on computed layers' sensitivities, ratio of parameters.
+        """
+        scores = self._calc_sensitivity()
         num_all_weights = sum(wp.num_weights for wp in self._weight_params)
 
         indexes_of_layers_in_ascending_order_of_scores = [
@@ -77,8 +85,12 @@ class MixedPrecisionCriterion:
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.WEIGHT_QUANTIZATION_ERROR)
 class DataFreeCriterion(MixedPrecisionCriterion):
+    """
+    A baseline mixed precision criterion that is based on quantization noise of weights only.
+    """
+
     @staticmethod
-    def _calc_weight_score(weight_param: WeightNodeParams):
+    def _calc_weight_sensitivity(weight_param: WeightNodeParams) -> float:
         weight = get_const_value(weight_param.weight_node)
         backup_config = weight_param.compression_config
         reduction_axis = weight_param.reduction_axis
@@ -86,11 +98,11 @@ class DataFreeCriterion(MixedPrecisionCriterion):
         eps = np.finfo(weight.dtype).eps
         return 1 / (int_error + eps)
 
-    def _calc_score_per_node(self, weight_param: WeightNodeParams):
-        weight_score = self._calc_weight_score(weight_param)
+    def _calc_score_per_node(self, weight_param: WeightNodeParams) -> float:
+        weight_score = self._calc_weight_sensitivity(weight_param)
         return weight_score
 
-    def _calc_scores(self):
+    def _calc_sensitivity(self) -> List[float]:
         scores = []
         for weight_param in track(self._weight_params, description="Searching for Mixed-Precision Configuration"):
             scores.append(self._calc_score_per_node(weight_param))
@@ -98,28 +110,39 @@ class DataFreeCriterion(MixedPrecisionCriterion):
 
 
 class DataBasedCriterion(DataFreeCriterion):
+    """
+    Data-based mixed precision criterion that takes into account outliers in the input activations.
+    Expecting activations of the following shape: [seq_length, hidden_dim]
+    """
+
     @staticmethod
     @abstractmethod
-    def _calc_activation_score(activations: np.ndarray):
-        """
-        activation shape = [seq_length, hidden_dim]
-        """
+    def _calc_activation_sensitivity(activations: np.ndarray):
         pass
 
     def _calc_score_per_node(self, weight_param: WeightNodeParams):
-        # NOTE: TODO: data-based metrics are valid for Matmul operations only. If gathers also considered for mixed
-        # precision, define a minimal metric value to be select 4-bit precision for gathers in the first order.
+        """
+        NOTE: Data-based criteria for assigning 4-bit/8-bit precisions are valid for Matmul operations only.
+        However, in some cases it can be beneficial to quantize Gather layers to 4-bit.
+        Since there's no data-based estimation of sensitivity in these layers, they receive the lowest sensitivity.
+        It allows assigning Gather operation 4-bit in the first place.
+        """
         if weight_param.metatype == OVEmbeddingMetatype:
-            return 0
-        weight_score = self._calc_weight_score(weight_param)
-        activation_score = self._calc_activation_score(self._activations[weight_param.node_name])
+            return THE_LOWEST_SENSITIVITY
+        weight_score = self._calc_weight_sensitivity(weight_param)
+        activation_score = self._calc_activation_sensitivity(self._activations[weight_param.node_name])
         return weight_score * activation_score
 
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.HESSIAN_INPUT_ACTIVATION)
 class HAWQCriterion(DataBasedCriterion):
+    """
+    Calculates the average Hessian trace of weights with respect to the layer-wise quantization error
+    multiplied by L2 norm of 8-bit quantization noise.
+    """
+
     @staticmethod
-    def _calc_activation_score(activations: np.ndarray):
+    def _calc_activation_sensitivity(activations: np.ndarray):
         htrace = 0
         nsamples = len(activations)
         for inp in activations:
@@ -132,7 +155,7 @@ class HAWQCriterion(DataBasedCriterion):
         return htrace
 
     @staticmethod
-    def _calc_weight_score(weight_param: WeightNodeParams):
+    def _calc_weight_sensitivity(weight_param: WeightNodeParams):
         weight = get_const_value(weight_param.weight_node)
         backup_config = weight_param.compression_config
         reduction_axis = weight_param.reduction_axis
@@ -147,20 +170,32 @@ class HAWQCriterion(DataBasedCriterion):
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.MEAN_ACTIVATION_VARIANCE)
 class MeanVarianceCriterion(DataBasedCriterion):
+    """
+    The mean variance of the layers' inputs multiplied by inverted 8-bit quantization noise.
+    """
+
     @staticmethod
-    def _calc_activation_score(activations: np.ndarray):
+    def _calc_activation_sensitivity(activations: np.ndarray):
         return float(np.mean([np.mean(np.var(inp, axis=0)) for inp in activations]))
 
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.MAX_ACTIVATION_VARIANCE)
 class MaxVarianceCriterion(DataBasedCriterion):
+    """
+    The maximum variance of the layers' inputs multiplied by inverted 8-bit quantization noise.
+    """
+
     @staticmethod
-    def _calc_activation_score(activations: np.ndarray):
+    def _calc_activation_sensitivity(activations: np.ndarray):
         return float(np.mean([np.max(np.var(inp, axis=0)) for inp in activations]))
 
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE)
 class MeanMaxCriterion(DataBasedCriterion):
+    """
+    The mean magnitude of the layers' inputs multiplied by inverted 8-bit quantization noise.
+    """
+
     @staticmethod
-    def _calc_activation_score(activations: np.ndarray):
+    def _calc_activation_sensitivity(activations: np.ndarray):
         return float(np.mean([np.mean(np.max(np.abs(inp), axis=0)) for inp in activations]))

@@ -332,8 +332,8 @@ def test_data_based_criterion(mode, ref_scores, ref_act_scores, mocker):
     model = IdentityMatmul().ov_model
     dataset = Dataset([ACTIVATION])
     criterion_cls = MIXED_PRECISION_CRITERIA.get(mode)
-    scores_spy = mocker.spy(criterion_cls, "_calc_scores")
-    act_scores_spy = mocker.spy(criterion_cls, "_calc_activation_score")
+    scores_spy = mocker.spy(criterion_cls, "_calc_sensitivity")
+    act_scores_spy = mocker.spy(criterion_cls, "_calc_activation_sensitivity")
 
     compress_weights(
         model,
@@ -592,7 +592,7 @@ def test_call_max_var_criterion_with_dataset_by_default(mocker, mode):
     model = IntegerModel().ov_model
     dataset = Dataset([np.ones([1, 7, 1])])
     criterion_cls = MIXED_PRECISION_CRITERIA.get(SensitivityMetric.MAX_ACTIVATION_VARIANCE)
-    scores_spy = mocker.spy(criterion_cls, "_calc_scores")
+    scores_spy = mocker.spy(criterion_cls, "_calc_sensitivity")
 
     compress_weights(model, mode=mode, ratio=0.8, group_size=-1, dataset=dataset)
 

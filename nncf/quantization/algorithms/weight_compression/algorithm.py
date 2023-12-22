@@ -83,7 +83,8 @@ class WeightCompression(Algorithm):
             flow graph nodes to be ignored during quantization.
         :param all_layers: Indicates whether embeddings and last layers should be compressed to a primary
             precision. By default, the backup precision is assigned for the embeddings and last layers.
-        # TODO:
+        :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
+            preserve the accuracy of the model, the more sensitive layers receives a higher precision.
         """
         super().__init__()
         self._mode = mode
@@ -100,15 +101,16 @@ class WeightCompression(Algorithm):
     def available_backends(self) -> List[BackendType]:
         return [BackendType.OPENVINO]
 
-    def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str, port_id: int) -> np.ndarray:
+    def _get_fp_inputs(
+        self, statistic_points: StatisticPointsContainer, node_name: str, port_id: int
+    ) -> List[np.ndarray]:
         """
-        #TODO:
-        Makes out pre-layer needed data from the floating-point collected statistics.
+        Collects floating-point statistics for the given node and port id.
 
         :param statistic_points: Filled StatisticPointsContainer.
         :param node_name: Name of the current layer.
         :param port_id: Port id for statistics collection.
-        :return: Collected mean tensor data and shape for the further bias calculation.
+        :return: Collected list of tensor data.
         """
 
         def input_filter_func(point):
@@ -176,7 +178,7 @@ class WeightCompression(Algorithm):
 
         activations = {}
         if dataset is not None and self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR:
-            activations = self.get_activations(dataset, nodes_to_compress, graph, model)
+            activations = self._get_activations(dataset, nodes_to_compress, graph, model)
 
         transformed_model = self._backend_entity.do_compression(
             model,
@@ -220,8 +222,18 @@ class WeightCompression(Algorithm):
         :return: Statistic points, for which StatisticsCollector should collect statistics.
         """
 
-    def get_activations(self, dataset, nodes_to_compress, graph, model) -> Dict[str, np.ndarray]:
-        # TODO: proper params and docstrings
+    def _get_activations(
+        self, dataset: Dataset, nodes_to_compress: List[NNCFNode], graph: NNCFGraph, model: TModel
+    ) -> Dict[str, List[np.ndarray]]:
+        """
+        Collects input activations for the given nodes on the dataset.
+
+        :param dataset: Dataset to collect values.
+        :param nodes_to_compress: List of nodes, whose inputs are collected.
+        :param model: Model for statistics collection.
+        :param graph: Model graph.
+        :return: statistics values itself per node name.
+        """
         subset_size = 128
 
         activations = {}
