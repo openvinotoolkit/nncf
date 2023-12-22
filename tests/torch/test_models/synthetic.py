@@ -491,3 +491,21 @@ class ModelForGraphBuildingTestWithSplit(ModelForGraphBuildingTest):
         unbinded_processed[0] = self.conv4(y_unbinded[0])
         y = torch.cat(unbinded_processed, axis=0)
         return y
+
+
+class ModelWithReturType(nn.Module):
+    INPUT_SIZE = [1, 1, 32, 32]
+
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        x = torch.matmul(x, torch.ones((32,)))
+
+        x = torch.max(x, dim=-1, keepdim=True).values
+
+        v = torch.matmul(x, torch.ones((1,)))
+        # v = torch.matmul(x.values, torch.ones((1,)))
+        return v
+        # i = torch.matmul(x.indices.to(torch.float), torch.ones((1,)))
+        # return v, i

@@ -859,7 +859,9 @@ class ModelWithMax(torch.nn.Module):
     def forward(self, x):
         x = torch.max(x, dim=-1, keepdim=True)
         assert isinstance(x, torch.return_types.max)
-        return x.values
+        v = x.values + 1
+        i = x.indices + 1
+        return v, i
 
 
 def test_torch_return_types_unwrapped_for_post_hook():
@@ -874,6 +876,23 @@ def test_torch_return_types_unwrapped_for_post_hook():
         assert isinstance(input, torch.Tensor)
 
     nncf_model.nncf.insert_at_point(insertion_point, [fn_to_check_input_type])
+    nncf_model.nncf.rebuild_graph()
+
+
+def test_torch_return_type_traced():
+    model = ModelWithMax()
+    nncf_model = NNCFNetwork(model, FillerInputInfo([FillerInputElement(SimplestModel.INPUT_SIZE)]))
+
+    node_to_op_address_mapping = nncf_model.nncf.get_node_to_op_address_mapping()
+    for i in range(2):
+        insertion_point = PTInsertionPoint(
+            TargetType.OPERATOR_POST_HOOK, node_to_op_address_mapping["ModelWithMax/max_0"], i
+        )
+
+        def fn_to_check_input_type(input):
+            assert isinstance(input, torch.Tensor)
+
+        nncf_model.nncf.insert_at_point(insertion_point, [fn_to_check_input_type])
     nncf_model.nncf.rebuild_graph()
 
 

@@ -24,7 +24,6 @@ from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensorMixin
 from nncf.torch.nested_objects_traversal import objwalk
-from nncf.torch.return_types import TORCH_RETURN_TYPES
 
 TensorOrTupleOrList = TypeVar("TensorOrTupleOrList", List[torch.Tensor], Tuple[torch.Tensor], torch.Tensor)
 
@@ -154,7 +153,7 @@ def trace_tensors(
         with tracing capabilities instance using TracedTensorMixin.
     """
 
-    if isinstance(operator_output, (list, tuple) + TORCH_RETURN_TYPES):
+    if isinstance(operator_output, (list, tuple)):
         output_ = []
         for i, x in enumerate(operator_output):
             tt = trace_tensor(x, i, node, ctx)

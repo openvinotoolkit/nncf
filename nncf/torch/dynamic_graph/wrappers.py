@@ -34,8 +34,6 @@ from nncf.torch.dynamic_graph.trace_functions import trace_tensors
 from nncf.torch.dynamic_graph.trace_tensor import TracedParameter
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.layers import ITERATION_MODULES
-from nncf.torch.return_types import maybe_get_values_from_torch_return_type
-from nncf.torch.return_types import maybe_wrap_to_torch_return_type
 
 _IGNORED_SCOPES = []
 
@@ -196,9 +194,7 @@ def _execute_op(
             ctx.register_node_call(node)
 
     result = trace_tensors(result, node, ctx)
-    unwrapped_result = maybe_get_values_from_torch_return_type(result)
-    unwrapped_result = ctx.execute_post_hooks(op_address, unwrapped_result)
-    result = maybe_wrap_to_torch_return_type(unwrapped_result, result)
+    result = ctx.execute_post_hooks(op_address, result)
     return result
 
 
