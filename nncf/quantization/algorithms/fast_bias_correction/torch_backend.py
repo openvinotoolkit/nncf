@@ -54,8 +54,10 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return create_bias_correction_command(node, bias_value.data)
 
     @staticmethod
-    def model_extraction_command(inputs: List[str], outputs: List[str]) -> PTModelExtractionWithFusedBiasCommand:
-        return PTModelExtractionWithFusedBiasCommand(inputs[0])
+    def model_extraction_command(
+        input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]
+    ) -> PTModelExtractionWithFusedBiasCommand:
+        return PTModelExtractionWithFusedBiasCommand(input_ids[0][0])
 
     @staticmethod
     def mean_statistic_collector(

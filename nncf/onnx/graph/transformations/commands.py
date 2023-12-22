@@ -105,14 +105,16 @@ class ONNXModelExtractionCommand(Command):
     Extracts sub-graph based on the sub-model input and output names.
     """
 
-    def __init__(self, inputs: List[str], outputs: List[str]):
+    def __init__(self, input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]):
         """
-        :param inputs: List of the input names that denote the sub-graph beginning.
-        :param outputs: List of the output names that denote the sub-graph ending.
+        :param input_ids: List of the input IDs: pairs of node names and correspondent input port ids.
+            Each pair denotes the sub-graph beginning.
+        :param output_ids: List of the output IDs: pairs of node names and correspondent output port ids.
+            Each pair denotes the sub-graph ending.
         """
         super().__init__(TransformationType.EXTRACT)
-        self.inputs = inputs
-        self.outputs = outputs
+        self.input_ids = input_ids
+        self.output_ids = output_ids
 
     def union(self, other: "Command") -> "Command":
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand

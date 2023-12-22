@@ -386,14 +386,14 @@ class ONNXModelTransformer(ModelTransformer):
         """
         input_tensor_names = []
         node_mapping = get_name_to_node_map(self._model)
-        for input_node_name in transformation.inputs:
-            input_onnx_node = node_mapping[input_node_name]
-            input_tensor_names.append(input_onnx_node.input[0])
+        for input_name, input_port_id in transformation.input_ids:
+            input_onnx_node = node_mapping[input_name]
+            input_tensor_names.append(input_onnx_node.input[input_port_id])
 
         output_tensor_names = []
-        for output_node_name in transformation.outputs:
-            output_onnx_node = node_mapping[output_node_name]
-            output_tensor_names.append(output_onnx_node.output[0])
+        for output_name, output_port_id in transformation.output_ids:
+            output_onnx_node = node_mapping[output_name]
+            output_tensor_names.append(output_onnx_node.output[output_port_id])
 
         if not output_tensor_names:
             output_tensor_names = [n.name for n in self._model.graph.output]

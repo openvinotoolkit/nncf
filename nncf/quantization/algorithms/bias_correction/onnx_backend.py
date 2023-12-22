@@ -55,8 +55,10 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return create_bias_correction_command(node, bias_value)
 
     @staticmethod
-    def model_extraction_command(inputs: List[str], outputs: List[str]) -> ONNXModelExtractionCommand:
-        return ONNXModelExtractionCommand(inputs, outputs)
+    def model_extraction_command(
+        input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]
+    ) -> ONNXModelExtractionCommand:
+        return ONNXModelExtractionCommand(input_ids, output_ids)
 
     @staticmethod
     def create_bias_insertion_command(node: NNCFNode) -> ONNXNullBiasInsertionCommand:
@@ -96,14 +98,14 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return get_bias_value(node, model)
 
     @staticmethod
-    def get_input_name(model: onnx.ModelProto, node_name: str) -> str:
+    def get_input_name(model: onnx.ModelProto, node_name: str, input_port_id: int) -> str:
         node_mapping = get_name_to_node_map(model)
-        return node_mapping[node_name].input[0]
+        return node_mapping[node_name].input[input_port_id]
 
     @staticmethod
-    def get_output_name(model: onnx.ModelProto, node_name: str, output_id: int) -> List[str]:
+    def get_output_name(model: onnx.ModelProto, node_name: str, output_port_id: int) -> str:
         node_mapping = get_name_to_node_map(model)
-        return node_mapping[node_name].output[output_id]
+        return node_mapping[node_name].output[output_port_id]
 
     @staticmethod
     def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
