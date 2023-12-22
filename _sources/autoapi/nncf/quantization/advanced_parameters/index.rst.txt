@@ -186,5 +186,7 @@ Classes
    :param intermediate_model_dir: Path to the folder where the model, which was fully
        quantized with initial parameters, should be saved.
    :type intermediate_model_dir: Optional[str]
+   :param restore_mode: Specifies how to revert operations to their original precision.
+   :type restore_mode: RestoreMode
 
 
