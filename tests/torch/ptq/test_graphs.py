@@ -20,14 +20,12 @@ from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQua
 from nncf.torch.layers import NNCF_RNN
 from nncf.torch.layers import LSTMCellNNCF
 from tests.post_training.test_templates.helpers import EmbeddingModel
-from tests.post_training.test_templates.helpers import LinearMultiShapeModel
 from tests.torch import test_models
 from tests.torch.ptq.helpers import get_nncf_network
 from tests.torch.ptq.helpers import mock_collect_statistics
 from tests.torch.quantization.test_algo_quantization import SharedLayersModel
 from tests.torch.test_compressed_graph import ModelDesc
 from tests.torch.test_compressed_graph import check_graph
-from tests.torch.test_models import synthetic
 
 # Use the same graphs for min_max quantization as for symmetric quantization
 ALGOS = ["symmetric"]
@@ -88,9 +86,7 @@ TEST_MODELS_DESC = [
         {},
         marks=SKIP_MARK,
     ),
-    (ModelDesc("return_type_model", synthetic.ModelWithReturType, synthetic.ModelWithReturType.INPUT_SIZE), {}),
-    (ModelDesc("sq_model", LinearMultiShapeModel, LinearMultiShapeModel.INPUT_SIZE), {}),
-][-1:]
+]
 
 
 @pytest.mark.parametrize(

@@ -66,7 +66,6 @@ from tests.torch.test_models.synthetic import MatMulDivConv
 from tests.torch.test_models.synthetic import MHA_single_input
 from tests.torch.test_models.synthetic import MMDivConv
 from tests.torch.test_models.synthetic import ModelWithDummyParameter
-from tests.torch.test_models.synthetic import ModelWithReturType
 from tests.torch.test_models.synthetic import MultiOutputSameTensorModel
 from tests.torch.test_models.synthetic import OrdinaryModelWithRecurrentInName
 from tests.torch.test_models.synthetic import PoolUnPool
@@ -805,8 +804,7 @@ SYNTHETIC_MODEL_DESC_LIST = [
         input_sample_sizes=([1, 1, 2, 2]),
     ),
     *shift_scale_models,
-    GeneralModelDesc(model_builder=ModelWithReturType, input_sample_sizes=ModelWithReturType.INPUT_SIZE),
-][-1:]
+]
 
 
 @pytest.mark.parametrize(

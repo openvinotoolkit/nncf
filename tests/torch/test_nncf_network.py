@@ -32,6 +32,7 @@ from nncf.torch.dynamic_graph.io_handling import FillerInputElement
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
+from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
@@ -864,36 +865,28 @@ class ModelWithMax(torch.nn.Module):
         return v, i
 
 
-def test_torch_return_types_unwrapped_for_post_hook():
-    model = ModelWithMax()
-    nncf_model = NNCFNetwork(model, FillerInputInfo([FillerInputElement(SimplestModel.INPUT_SIZE)]))
-    node_to_op_address_mapping = nncf_model.nncf.get_node_to_op_address_mapping()
-    insertion_point = PTInsertionPoint(
-        TargetType.OPERATOR_POST_HOOK, node_to_op_address_mapping["ModelWithMax/max_0"], 0
-    )
-
-    def fn_to_check_input_type(input):
-        assert isinstance(input, torch.Tensor)
-
-    nncf_model.nncf.insert_at_point(insertion_point, [fn_to_check_input_type])
-    nncf_model.nncf.rebuild_graph()
-
-
 def test_torch_return_type_traced():
     model = ModelWithMax()
     nncf_model = NNCFNetwork(model, FillerInputInfo([FillerInputElement(SimplestModel.INPUT_SIZE)]))
 
     node_to_op_address_mapping = nncf_model.nncf.get_node_to_op_address_mapping()
-    for i in range(2):
-        insertion_point = PTInsertionPoint(
-            TargetType.OPERATOR_POST_HOOK, node_to_op_address_mapping["ModelWithMax/max_0"], i
-        )
+    insertion_point = PTInsertionPoint(
+        TargetType.OPERATOR_POST_HOOK, node_to_op_address_mapping["ModelWithMax/max_0"], 0
+    )
 
-        def fn_to_check_input_type(input):
-            assert isinstance(input, torch.Tensor)
+    visited_times = 0
 
-        nncf_model.nncf.insert_at_point(insertion_point, [fn_to_check_input_type])
+    def fn_to_check_input_type(input_):
+        assert isinstance(input_, torch.return_types.max)
+        for val in input_:
+            assert isinstance(val, TracedTensor)
+        nonlocal visited_times
+        visited_times += 1
+        return input_
+
+    nncf_model.nncf.insert_at_point(insertion_point, [fn_to_check_input_type])
     nncf_model.nncf.rebuild_graph()
+    assert visited_times == 1
 
 
 class TestWhisperDecoderModel(torch.nn.Module):

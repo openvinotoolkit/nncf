@@ -27,7 +27,7 @@ def __get_supported_torch_return_types() -> Tuple[Type[tuple], ...]:
     return tuple(t for t in retval if t.n_fields == 2)
 
 
-TORCH_RETURN_TYPES = __get_supported_torch_return_types()
+_TORCH_RETURN_TYPES = __get_supported_torch_return_types()
 
 
 def maybe_get_values_from_torch_return_type(tensor: Any) -> torch.Tensor:
@@ -38,7 +38,7 @@ def maybe_get_values_from_torch_return_type(tensor: Any) -> torch.Tensor:
     :param tensor: Torch tensor or torch return type instance to unwrap values from.
     :return: Unwrapped torch tensor.
     """
-    if isinstance(tensor, TORCH_RETURN_TYPES):
+    if isinstance(tensor, _TORCH_RETURN_TYPES):
         return tensor.values
     return tensor
 
@@ -54,7 +54,7 @@ def maybe_wrap_to_torch_return_type(
     :return: Wrapped tensor in case wrapped_input is wrapped by a torch.return_value container else the tensor.
     """
 
-    if isinstance(wrapped_input, TORCH_RETURN_TYPES):
+    if isinstance(wrapped_input, _TORCH_RETURN_TYPES):
         # We assume that return_type has only two attributes, the first one is `value`.
         # This assumption is checked by `test_unwrap_wrap_torch_return_type`.
         return wrapped_input.__class__((tensor, wrapped_input[1]))

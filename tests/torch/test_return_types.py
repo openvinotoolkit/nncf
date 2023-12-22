@@ -11,12 +11,12 @@
 import pytest
 import torch
 
-from nncf.torch.return_types import TORCH_RETURN_TYPES
+from nncf.torch.return_types import _TORCH_RETURN_TYPES
 from nncf.torch.return_types import maybe_get_values_from_torch_return_type
 from nncf.torch.return_types import maybe_wrap_to_torch_return_type
 
 
-@pytest.mark.parametrize("return_type", TORCH_RETURN_TYPES)
+@pytest.mark.parametrize("return_type", _TORCH_RETURN_TYPES)
 def test_unwrap_wrap_torch_return_type(return_type):
     wrapped_tensor = return_type((torch.tensor(0), torch.tensor(1)))
     assert wrapped_tensor.values == torch.tensor(0)
