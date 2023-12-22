@@ -37,8 +37,8 @@ from nncf.quantization.algorithms.weight_compression.backend import WeightCompre
 from nncf.quantization.algorithms.weight_compression.compression_info import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.compression_info import WeightNodeParams
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
-from nncf.quantization.algorithms.weight_compression.quantize import _do_integer_quantization
-from nncf.quantization.algorithms.weight_compression.quantize import _get_norm_weight_and_nf4_scale
+from nncf.quantization.algorithms.weight_compression.quantize import do_integer_quantization
+from nncf.quantization.algorithms.weight_compression.quantize import get_norm_weight_and_nf4_scale
 from nncf.scopes import IgnoredScope
 
 
@@ -150,12 +150,12 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             config = wp.compression_config
             original_shape = weight.shape
             if config.mode == CompressWeightsMode.NF4:
-                norm_weight, scale = _get_norm_weight_and_nf4_scale(weight, wp.reduction_axis, group_size)
+                norm_weight, scale = get_norm_weight_and_nf4_scale(weight, wp.reduction_axis, group_size)
                 compressed_const = opset.constant(norm_weight, dtype=ov.Type.nf4, name=weight_name)
                 convert = opset.convert(compressed_const, original_weight_dtype)
                 mul = opset.multiply(convert, scale.astype(original_weight_dtype), name=wp.fq_name)
             else:
-                compressed_weights, scale, zero_point = _do_integer_quantization(weight, wp.reduction_axis, config)
+                compressed_weights, scale, zero_point = do_integer_quantization(weight, wp.reduction_axis, config)
                 compression_type = ov.Type.u8 if config.num_bits == 8 else ov.Type.u4
                 compressed_weights_node = opset.constant(compressed_weights, dtype=compression_type, name=weight_name)
                 convert_weights_node = opset.convert(compressed_weights_node, original_weight_dtype)
@@ -228,7 +228,7 @@ def _get_bitwidth_distribution_str(all_params: List[WeightNodeParams], internal_
     return pretty_string
 
 
-# TODO: rename to mixed precision params
+# TODO: rename to mixed precision params. Everywhere!! or just put a comment!
 # ratio considered params
 # non-fixed precision
 # params for mixed precision

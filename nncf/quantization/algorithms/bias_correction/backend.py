@@ -103,7 +103,7 @@ class BiasCorrectionAlgoBackend(ABC):
     def raw_statistic_collector(inplace: bool, num_samples: int = None) -> TensorStatisticCollectorBase:
         """
         Returns backend-specific raw statistic collector.
-        This statistic collector uses for raw data calculation, without aggregating.
+        This statistic collector is used for raw data calculation, without aggregating.
 
         :param inplace: Whether to calculate statistic inplace or not.
         :param num_samples: Maximum number of samples to collect.
@@ -131,7 +131,7 @@ class BiasCorrectionAlgoBackend(ABC):
 
         :param node: Node of NNCFGraph with bias value.
         :param nncf_graph: NNCFGraph instance with the node.
-        :return: boolean port id.
+        :return: target input port id.
         """
 
     @staticmethod

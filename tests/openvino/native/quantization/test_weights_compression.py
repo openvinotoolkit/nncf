@@ -24,8 +24,8 @@ from nncf.parameters import SensitivityMetric
 from nncf.quantization import compress_weights
 from nncf.quantization.algorithms.weight_compression.compression_info import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
-from nncf.quantization.algorithms.weight_compression.quantize import _get_integer_quantization_error
-from nncf.quantization.algorithms.weight_compression.quantize import _reshape_weights_for_grouped_quantization
+from nncf.quantization.algorithms.weight_compression.quantize import get_integer_quantization_error
+from nncf.quantization.algorithms.weight_compression.quantize import reshape_weights_for_grouped_quantization
 from nncf.scopes import IgnoredScope
 from tests.openvino.native.models import GatherAndMatmulShareData
 from tests.openvino.native.models import GatherWithTwoReductionAxes
@@ -471,7 +471,7 @@ LIST_DESCS = [
 def test_quantization_error_calculation(desc: QuantErrorDesc):
     weight = desc.weight
     axis = 1
-    actual_error = _get_integer_quantization_error(weight, axis, desc.config)
+    actual_error = get_integer_quantization_error(weight, axis, desc.config)
     ref_error = desc.ref_error
     atol = desc.atol if desc.atol is not None else 1e-8
     assert np.allclose(actual_error, ref_error, atol=atol)
@@ -545,7 +545,7 @@ def test_weight_compress_with_ignored_scope(ignored_scope, num_compressed):
 
 @pytest.mark.parametrize("desc", CALCULATE_SCALE_DESCS)
 def test_calculate_scale_per_group(desc: CalculateScaleDesc):
-    reshaped_weight, reduction_axis = _reshape_weights_for_grouped_quantization(
+    reshaped_weight, reduction_axis = reshape_weights_for_grouped_quantization(
         desc.weight, reduction_axis=desc.axis, group_size=desc.group_size
     )
     act_scale = np.max(np.abs(reshaped_weight), axis=reduction_axis, keepdims=True)  # [a1, r//gs, 1, a2]
@@ -554,12 +554,12 @@ def test_calculate_scale_per_group(desc: CalculateScaleDesc):
 
 def test_raise_error_for_many_axes():
     with pytest.raises(AssertionError):
-        _reshape_weights_for_grouped_quantization(WEIGHTS_2x4, reduction_axis=(0, 1), group_size=1)
+        reshape_weights_for_grouped_quantization(WEIGHTS_2x4, reduction_axis=(0, 1), group_size=1)
 
 
 def test_raise_error_with_tuple():
     with pytest.raises(AssertionError):
-        _reshape_weights_for_grouped_quantization(WEIGHTS_2x4, reduction_axis=(0,), group_size=3)
+        reshape_weights_for_grouped_quantization(WEIGHTS_2x4, reduction_axis=(0,), group_size=3)
 
 
 @pytest.mark.parametrize("mode", INT8_MODES)

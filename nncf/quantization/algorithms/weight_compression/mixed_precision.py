@@ -22,8 +22,8 @@ from nncf.openvino.graph.node_utils import get_const_value
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.algorithms.weight_compression.compression_info import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.compression_info import WeightNodeParams
-from nncf.quantization.algorithms.weight_compression.quantize import _do_integer_quantization
-from nncf.quantization.algorithms.weight_compression.quantize import _get_integer_quantization_error
+from nncf.quantization.algorithms.weight_compression.quantize import do_integer_quantization
+from nncf.quantization.algorithms.weight_compression.quantize import get_integer_quantization_error
 
 MIXED_PRECISION_CRITERIA = Registry("mixed_precision_criteria")
 
@@ -31,7 +31,6 @@ MIXED_PRECISION_CRITERIA = Registry("mixed_precision_criteria")
 class MixedPrecisionCriterion:
     """
     Assigns mixed quantization scheme (e.g. uniform int8 or non-uniform nf4) for weights based on some criteria.
-
     """
 
     def __init__(
@@ -83,7 +82,7 @@ class DataFreeCriterion(MixedPrecisionCriterion):
         weight = get_const_value(weight_param.weight_node)
         backup_config = weight_param.compression_config
         reduction_axis = weight_param.reduction_axis
-        int_error = _get_integer_quantization_error(weight, reduction_axis, backup_config)
+        int_error = get_integer_quantization_error(weight, reduction_axis, backup_config)
         eps = np.finfo(weight.dtype).eps
         return 1 / (int_error + eps)
 
@@ -139,7 +138,7 @@ class HAWQCriterion(DataBasedCriterion):
         reduction_axis = weight_param.reduction_axis
 
         orig_shape = weight.shape
-        compressed_weights, scale, zero_point = _do_integer_quantization(weight, reduction_axis, backup_config)
+        compressed_weights, scale, zero_point = do_integer_quantization(weight, reduction_axis, backup_config)
         decompressed_weight = compressed_weights.astype(dtype=scale.dtype)
         decompressed_weight = (compressed_weights - zero_point) * scale
         decompressed_weight = decompressed_weight.reshape(orig_shape)

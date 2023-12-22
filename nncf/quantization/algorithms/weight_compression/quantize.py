@@ -17,7 +17,7 @@ from nncf.quantization.algorithms.weight_compression.compression_info import Wei
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
 
 
-def _do_integer_quantization(
+def do_integer_quantization(
     weight: np.ndarray, reduction_axis: int, config: WeightCompressionConfig
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -51,7 +51,7 @@ def _do_integer_quantization(
 
     if group_size != -1:
         # weights are reshaped from [a1, r, a2] to [a1, r//gs, gs, a2]
-        weight, reduction_axis = _reshape_weights_for_grouped_quantization(weight, reduction_axis, group_size)
+        weight, reduction_axis = reshape_weights_for_grouped_quantization(weight, reduction_axis, group_size)
 
     if mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]:
         min_values = np.min(weight, axis=reduction_axis, keepdims=True)  # [a1, r, a2] -> [a1, 1, a2]
@@ -74,7 +74,7 @@ def _do_integer_quantization(
     return compressed_weights, scale, zero_point
 
 
-def _get_integer_quantization_error(weight: np.ndarray, reduction_axis: int, config: WeightCompressionConfig) -> float:
+def get_integer_quantization_error(weight: np.ndarray, reduction_axis: int, config: WeightCompressionConfig) -> float:
     """
     Calculates a quantity characterizing the difference between floating point weights and fake quantized
     (compressed and decompressed) to integer ones.
@@ -85,7 +85,7 @@ def _get_integer_quantization_error(weight: np.ndarray, reduction_axis: int, con
     :return: The quantity characterizing the error of integer quantization.
     """
     orig_shape = weight.shape
-    compressed_weights, scale, zero_point = _do_integer_quantization(weight, reduction_axis, config)
+    compressed_weights, scale, zero_point = do_integer_quantization(weight, reduction_axis, config)
 
     decompressed_weight = compressed_weights.astype(dtype=scale.dtype)
     decompressed_weight = (compressed_weights - zero_point) * scale
@@ -97,7 +97,7 @@ def _get_integer_quantization_error(weight: np.ndarray, reduction_axis: int, con
     return val
 
 
-def _reshape_weights_for_grouped_quantization(
+def reshape_weights_for_grouped_quantization(
     weight: np.ndarray, reduction_axis: int, group_size: int
 ) -> Tuple[np.ndarray, int]:
     """
@@ -124,7 +124,7 @@ def _reshape_weights_for_grouped_quantization(
     return reshaped_weight, reduction_axis
 
 
-def _get_norm_weight_and_nf4_scale(
+def get_norm_weight_and_nf4_scale(
     weight: np.ndarray, reduction_axis: int, group_size: int = -1
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
@@ -139,7 +139,7 @@ def _get_norm_weight_and_nf4_scale(
     """
     if group_size != -1:
         # weights are reshaped: [a1, r, a2] -> [a1, r//gs, gs, a2]
-        weight, reduction_axis = _reshape_weights_for_grouped_quantization(weight, reduction_axis, group_size)
+        weight, reduction_axis = reshape_weights_for_grouped_quantization(weight, reduction_axis, group_size)
         scale = np.max(np.abs(weight), axis=reduction_axis, keepdims=True)  # [a1, r//gs, 1, a2]
     else:
         scale = np.max(np.abs(weight), axis=reduction_axis, keepdims=True)  # [a1, 1, a2]

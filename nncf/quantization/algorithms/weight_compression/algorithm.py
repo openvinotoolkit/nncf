@@ -25,6 +25,7 @@ from typing import Dict, List, Optional, Tuple, TypeVar
 import numpy as np
 
 from nncf import Dataset
+from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.scopes import should_consider_scope
@@ -33,7 +34,6 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.openvino.graph.transformations.commands import TargetType
-from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.algorithms.algorithm import Algorithm
@@ -102,6 +102,7 @@ class WeightCompression(Algorithm):
 
     def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str, port_id: int) -> np.ndarray:
         """
+        #TODO:
         Makes out pre-layer needed data from the floating-point collected statistics.
 
         :param statistic_points: Filled StatisticPointsContainer.
@@ -157,8 +158,9 @@ class WeightCompression(Algorithm):
         :return: Tuple with the activation node and port id.
         """
         activation_port = self._backend_entity.get_activation_port_id(node, nncf_graph)
-        activation_node = nncf_graph.get_input_edges(node)[activation_port].from_node
-        port_id = nncf_graph.get_edge(activation_node, node).output_port_id
+        activation_edge = nncf_graph.get_input_edges(node)[activation_port]
+        activation_node = activation_edge.from_node
+        port_id = activation_edge.output_port_id
         return activation_node, port_id
 
     def apply(
@@ -226,7 +228,7 @@ class WeightCompression(Algorithm):
         _collected_stat_inputs_map = {}
         statistic_container = StatisticPointsContainer()
         all_act_nodes = []
-        act_vs_shared_node_names_mapping = {}
+        act_vs_shared_node_names_mapping = defaultdict(list)
         from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 
         filtered_nodes = filter(lambda node: node.metatype == OVMatMulMetatype, nodes_to_compress)
@@ -234,9 +236,7 @@ class WeightCompression(Algorithm):
             act_node, output_port_id = self._get_activation_node_and_port(node, graph)
             act_node_name = act_node.node_name
             if act_node_name in all_act_nodes:
-                shared_node_names = act_vs_shared_node_names_mapping.get(act_node_name, [])
-                shared_node_names.append(node.node_name)
-                act_vs_shared_node_names_mapping[act_node_name] = shared_node_names
+                act_vs_shared_node_names_mapping[act_node_name].append(node.node_name)
                 continue
             all_act_nodes.append(act_node_name)
             output_id = (act_node_name, output_port_id)
@@ -255,7 +255,8 @@ class WeightCompression(Algorithm):
                     target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key
                 )
             )
-        statistics_aggregator = OVStatisticsAggregator(dataset)
+
+        statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
         statistics_aggregator.register_statistic_points(statistic_container)
         statistics_aggregator.collect_statistics(model, graph)
 
@@ -265,7 +266,7 @@ class WeightCompression(Algorithm):
             x_fp = [i.squeeze() for i in x_fp]  # List[tensor(seq_length, hidden_dim)]
             activations[node_name] = x_fp
 
-            for shared_node_name in act_vs_shared_node_names_mapping.get(act_node_name, []):
+            for shared_node_name in act_vs_shared_node_names_mapping[act_node_name]:
                 activations[shared_node_name] = x_fp
 
         return activations

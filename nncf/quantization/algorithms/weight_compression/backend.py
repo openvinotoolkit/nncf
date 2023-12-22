@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List, Optional, TypeVar
+from typing import Any, Dict, List, Optional, TypeVar
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -20,6 +20,7 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.parameters import CompressWeightsMode
+from nncf.parameters import SensitivityMetric
 from nncf.scopes import IgnoredScope
 
 TModel = TypeVar("TModel")
@@ -75,8 +76,9 @@ class WeightCompressionAlgoBackend(ABC):
         mode: CompressWeightsMode,
         ratio: float = None,
         group_size: int = None,
-        activations=None,
         all_layers: Optional[bool] = False,
+        activations: Optional[Dict[str, Any]] = None,
+        sensitivity_metric: Optional[SensitivityMetric] = SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
     ) -> TModel:
         """
         Compress weights of Linear and Embedding layers to 8-bit integer or to nf4
@@ -124,7 +126,7 @@ class WeightCompressionAlgoBackend(ABC):
     def raw_statistic_collector(inplace: bool, num_samples: int = None) -> TensorStatisticCollectorBase:
         """
         Returns backend-specific raw statistic collector.
-        This statistic collector uses for raw data calculation, without aggregating.
+        This statistic collector is used for raw data calculation, without aggregating.
 
         :param inplace: Whether to calculate statistic inplace or not.
         :param num_samples: Maximum number of samples to collect.
@@ -141,5 +143,5 @@ class WeightCompressionAlgoBackend(ABC):
 
         :param node: Node of NNCFGraph with bias value.
         :param nncf_graph: NNCFGraph instance with the node.
-        :return: boolean port id.
+        :return: target input port id.
         """
