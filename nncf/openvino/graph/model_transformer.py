@@ -641,7 +641,7 @@ class OVModelTransformer(ModelTransformer):
             node_output_source_ports = node_output_port.get_target_inputs()
 
             bias_const_node = OVModelTransformer._create_constant(
-                transformation.bias_value, dtype=node.get_element_type().to_dtype(), name=f"{node_name}/bias"
+                transformation.bias_value, dtype=node_output_port.get_element_type(), name=f"{node_name}/bias"
             )
             bias_const_output_port = bias_const_node.output(0)
 
