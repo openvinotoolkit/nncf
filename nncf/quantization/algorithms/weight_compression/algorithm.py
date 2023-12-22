@@ -199,7 +199,7 @@ class WeightCompression(Algorithm):
         :param nncf_graph: NNCFGraph instance.
         :return: List with the data for each layer.
         """
-        weighted_metatypes = self._backend_entity.weighted_metatypes
+        weighted_metatypes = self._backend_entity.matmul_metatypes + self._backend_entity.embedding_metatypes
         ordered_nodes_to_compress = []
         ignored_names = list(
             get_ignored_node_names_from_ignored_scope(
@@ -239,18 +239,17 @@ class WeightCompression(Algorithm):
         activations = {}
         _collected_stat_inputs_map = {}
         statistic_container = StatisticPointsContainer()
-        all_act_nodes = []
+        all_act_nodes = set()
         act_vs_shared_node_names_mapping = defaultdict(list)
-        from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
-
-        filtered_nodes = filter(lambda node: node.metatype == OVMatMulMetatype, nodes_to_compress)
+        matmul_metatypes = self._backend_entity.matmul_metatypes
+        filtered_nodes = filter(lambda node: node.metatype in matmul_metatypes, nodes_to_compress)
         for node in filtered_nodes:
             act_node, output_port_id = self._get_activation_node_and_port(node, graph)
             act_node_name = act_node.node_name
             if act_node_name in all_act_nodes:
                 act_vs_shared_node_names_mapping[act_node_name].append(node.node_name)
                 continue
-            all_act_nodes.append(act_node_name)
+            all_act_nodes.add(act_node_name)
             output_id = (act_node_name, output_port_id)
             _collected_stat_inputs_map[node.node_name] = output_id
 

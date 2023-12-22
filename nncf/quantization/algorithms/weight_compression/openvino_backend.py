@@ -44,8 +44,12 @@ from nncf.scopes import IgnoredScope
 
 class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     @property
-    def weighted_metatypes(self) -> List[OperatorMetatype]:
-        return [OVMatMulMetatype, OVEmbeddingMetatype]
+    def matmul_metatypes(self) -> List[OperatorMetatype]:
+        return [OVMatMulMetatype]
+
+    @property
+    def embedding_metatypes(self) -> List[OperatorMetatype]:
+        return [OVEmbeddingMetatype]
 
     @staticmethod
     def is_node_with_weights(node: NNCFNode) -> bool:
@@ -170,13 +174,14 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
             for target_input in target_inputs:
                 target_input.replace_source_output(last_output)
-
         dump_parameters(
             model,
             parameters={
                 "mode": mode.value,
                 "group_size": group_size,
                 "ratio": ratio,
+                "all_layers": all_layers,
+                "sensitivity_metric": sensitivity_metric.value,
             },
             algo_name="weight_compression",
         )

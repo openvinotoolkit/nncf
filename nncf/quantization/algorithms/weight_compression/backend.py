@@ -29,9 +29,16 @@ TModel = TypeVar("TModel")
 class WeightCompressionAlgoBackend(ABC):
     @property
     @abstractmethod
-    def weighted_metatypes(self) -> List[OperatorMetatype]:
+    def matmul_metatypes(self) -> List[OperatorMetatype]:
         """
-        Property for the backend-specific metatypes.
+        Property for the backend-specific metatypes for matmul layers.
+        """
+
+    @property
+    @abstractmethod
+    def embedding_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific metatypes for embedding layers.
         """
 
     @staticmethod

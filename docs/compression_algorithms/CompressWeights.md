@@ -236,55 +236,46 @@ Here is the word perplexity with data-free and data-based mixed-precision INT4-I
         <td>Model</td>
         <td>Mode</td>
         <td>Word Perplexity (↓)</td>
-        <td></td>
     </tr>
     <tr>
         <td>meta-llama/llama-7b-chat-hf</td>
         <td>int4_sym_g128_r80_data</td>
         <td>11.87</td>
-        <td></td>
     </tr>
     <tr>
         <td>meta-llama/llama-7b-chat-hf</td>
         <td>int4_sym_g128_r80</td>
         <td>11.92</td>
-        <td></td>
     </tr>
     <tr>
         <td>stabilityai_stablelm-3b-4e1t</td>
         <td>int4_sym_g64_r80_data</td>
         <td>10.67</td>
-        <td></td>
     </tr>
     <tr>
         <td>stabilityai_stablelm-3b-4e1t</td>
         <td>int4_sym_g64_r80</td>
         <td>10.83</td>
-        <td></td>
     </tr>
     <tr>
         <td>stable-zephyr-3b-dpo</td>
         <td>int4_sym_g64_r80_data</td>
         <td>21.74</td>
-        <td></td>
     </tr>
     <tr>
         <td>stable-zephyr-3b-dpo</td>
         <td>int4_sym_g64_r80</td>
         <td>23.10</td>
-        <td></td>
     </tr>
     <tr>
         <td>HuggingFaceH4/zephyr-7b-beta</td>
         <td>int4_sym_g128_r80_data</td>
         <td>10.13</td>
-        <td></td>
     </tr>
     <tr>
         <td>HuggingFaceH4/zephyr-7b-beta</td>
         <td>int4_sym_g128</td>
         <td>10.22</td>
-        <td></td>
     </tr>
 </table>
 
