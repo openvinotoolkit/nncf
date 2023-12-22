@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.quantization.algorithms.weight_compression.quantize`
+==================================================================
+
+.. py:module:: nncf.quantization.algorithms.weight_compression.quantize
+
+
