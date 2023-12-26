@@ -70,10 +70,17 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
 
     @staticmethod
     def mean(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
+        if x.tensor.dtype in [np.float32, np.float16]:
+            res = np.mean(x.tensor, axis=axis, keepdims=keepdims, dtype=np.float64).astype(dtype=x.tensor.dtype)
+            return OVNNCFTensor(res)
         return OVNNCFTensor(np.mean(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
     def median(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
+        if x.tensor.dtype in [np.float32, np.float16]:
+            t = x.tensor.astype(dtype=np.float64)
+            res = np.median(t, axis=axis, keepdims=keepdims).astype(dtype=x.tensor.dtype)
+            return OVNNCFTensor(res)
         return OVNNCFTensor(np.median(x.tensor, axis=axis, keepdims=keepdims))
 
     @classmethod
@@ -87,10 +94,16 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         if mask is None:
             return cls.mean(x, axis=axis, keepdims=keepdims)
         masked_x = np.ma.array(x.tensor, mask=mask.tensor)
-        result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims)
-        if isinstance(result, np.ma.MaskedArray):
-            return OVNNCFTensor(result.data)
-        return OVNNCFTensor(result)
+        if x.tensor.dtype in [np.float32, np.float16]:
+            result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims, dtype=np.float64)
+            if isinstance(result, np.ma.MaskedArray):
+                result = result.data
+            return OVNNCFTensor(result.astype(dtype=x.tensor.dtype))
+        else:
+            result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims)
+            if isinstance(result, np.ma.MaskedArray):
+                result = result.data
+            return OVNNCFTensor(result)
 
     @classmethod
     def masked_median(
@@ -103,18 +116,26 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         if mask is None:
             return cls.median(x, axis=axis, keepdims=keepdims)
         masked_x = np.ma.array(x.tensor, mask=mask.tensor)
-        result = np.ma.median(masked_x, axis=axis, keepdims=keepdims)
-        if isinstance(result, np.ma.MaskedArray):
-            return OVNNCFTensor(result.data)
-        return OVNNCFTensor(result)
+
+        if x.tensor.dtype in [np.float32, np.float16]:
+            masked_x = masked_x.astype(dtype=np.float64)
+            result = np.ma.median(masked_x, axis=axis, keepdims=keepdims)
+            if isinstance(result, np.ma.MaskedArray):
+                result = result.data
+            return OVNNCFTensor(result.astype(dtype=x.tensor.dtype))
+        else:
+            result = np.ma.median(masked_x, axis=axis, keepdims=keepdims)
+            if isinstance(result, np.ma.MaskedArray):
+                result = result.data
+            return OVNNCFTensor(result)
 
     @staticmethod
     def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
         if len(x.shape) < 3:
-            return OVNNCFTensor(np.mean(x.tensor, axis=0))
+            return OVNNCFCollectorTensorProcessor.mean(x, axis=0)
         x = np.moveaxis(x.tensor, axis, 1)
         t = x.reshape(x.shape[0], x.shape[1], -1)
-        return OVNNCFTensor(np.mean(t, axis=(0, 2)))
+        return OVNNCFCollectorTensorProcessor.mean(OVNNCFTensor(t), axis=(0, 2))
 
     @staticmethod
     def transpose(x: NNCFTensor, axes: Tuple[int, ...]) -> NNCFTensor:

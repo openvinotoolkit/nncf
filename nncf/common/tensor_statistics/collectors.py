@@ -174,7 +174,7 @@ class NNCFCollectorTensorProcessor(ABC):
 
     @staticmethod
     @abstractmethod
-    def mean(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> NNCFTensor:
+    def mean(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
         """
         Computes the mean of elements across given dimensions of NNCFTensor.
 

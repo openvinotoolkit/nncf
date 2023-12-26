@@ -52,11 +52,18 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return ONNXNNCFTensor(np.maximum(x1.tensor, x2.tensor))
 
     @staticmethod
-    def mean(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> NNCFTensor:
+    def mean(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
+        if x.tensor.dtype in [np.float32, np.float16]:
+            res = np.mean(x.tensor, axis=axis, keepdims=keepdims, dtype=np.float64).astype(dtype=x.tensor.dtype)
+            return ONNXNNCFTensor(res)
         return ONNXNNCFTensor(np.mean(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
-    def median(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> NNCFTensor:
+    def median(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
+        if x.tensor.dtype in [np.float32, np.float16]:
+            t = x.tensor.astype(dtype=np.float64)
+            res = np.median(t, axis=axis, keepdims=keepdims).astype(dtype=x.tensor.dtype)
+            return ONNXNNCFTensor(res)
         return ONNXNNCFTensor(np.median(x.tensor, axis=axis, keepdims=keepdims))
 
     @classmethod
@@ -70,7 +77,16 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         if mask is None:
             return cls.mean(x, axis=axis, keepdims=keepdims)
         masked_x = np.ma.array(x.tensor, mask=mask.tensor)
-        return ONNXNNCFTensor(np.ma.mean(masked_x, axis=axis, keepdims=False).data)
+        if x.tensor.dtype in [np.float32, np.float16]:
+            result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims, dtype=np.float64)
+            if isinstance(result, np.ma.MaskedArray):
+                result = result.data
+            return ONNXNNCFTensor(result.astype(dtype=x.tensor.dtype))
+        else:
+            result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims)
+            if isinstance(result, np.ma.MaskedArray):
+                result = result.data
+            return ONNXNNCFTensor(result)
 
     @classmethod
     def masked_median(
@@ -83,7 +99,26 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         if mask is None:
             return cls.median(x, axis=axis, keepdims=keepdims)
         masked_x = np.ma.array(x.tensor, mask=mask.tensor)
-        return ONNXNNCFTensor(np.ma.median(masked_x, axis=axis, keepdims=keepdims).data)
+
+        if x.tensor.dtype in [np.float32, np.float16]:
+            masked_x = masked_x.astype(dtype=np.float64)
+            result = np.ma.median(masked_x, axis=axis, keepdims=keepdims)
+            if isinstance(result, np.ma.MaskedArray):
+                result = result.data
+            return ONNXNNCFTensor(result.astype(dtype=x.tensor.dtype))
+        else:
+            result = np.ma.median(masked_x, axis=axis, keepdims=keepdims)
+            if isinstance(result, np.ma.MaskedArray):
+                result = result.data
+            return ONNXNNCFTensor(result)
+
+    @staticmethod
+    def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
+        if len(x.shape) < 3:
+            return ONNXNNCFTensor.mean(x, axis=0)
+        x = np.moveaxis(x.tensor, axis, 1)
+        t = x.reshape(x.shape[0], x.shape[1], -1)
+        return ONNXNNCFCollectorTensorProcessor.mean(ONNXNNCFTensor(t), axis=(0, 2))
 
     @staticmethod
     def logical_or(input_: NNCFTensor, other: NNCFTensor) -> NNCFTensor:
@@ -129,14 +164,6 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         keepdims: bool = False,
     ) -> List[TensorElementsType]:
         raise NotImplementedError()
-
-    @staticmethod
-    def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
-        if len(x.shape) < 3:
-            return ONNXNNCFTensor(np.mean(x.tensor, axis=0))
-        x = np.moveaxis(x.tensor, axis, 1)
-        t = x.reshape(x.shape[0], x.shape[1], -1)
-        return ONNXNNCFTensor(np.mean(t, axis=(0, 2)))
 
     @staticmethod
     def transpose(x: NNCFTensor, axes: Tuple[int, ...]) -> NNCFTensor:
