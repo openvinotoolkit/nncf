@@ -290,7 +290,11 @@ class TestTransformersModel(BaseTestModel):
                         encoded_input = tokenizer(text, return_tensors="pt")
                     example = dict(encoded_input)
                     # Input does not used by config parameter config.type_vocab_size=0
-                    if name == "regisss/bridgetower-newyorker-a100-8x":
+                    if name in [
+                        "regisss/bridgetower-newyorker-a100-8x",
+                        "facebook/mask2former-swin-base-coco-panoptic",
+                        "facebook/maskformer-swin-base-coco",
+                    ]:
                         example.pop("pixel_mask")
                     elif name in ["MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli", "microsoft/deberta-base"]:
                         example.pop("token_type_ids")
