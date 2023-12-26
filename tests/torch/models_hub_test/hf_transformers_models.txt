@@ -332,8 +332,8 @@ sheonhan/ict-imagenet-256,ict,skip,Load problem
 shibing624/text2vec-base-chinese-paraphrase,ernie
 shikhartuli/flexibert-mini,flexibert,skip,Load problem
 shikras/shikra-7b-delta-v1-0708,shikra,skip,Load problem
-shi-labs/dinat-mini-in1k-224,dinat
-shi-labs/nat-mini-in1k-224,nat
+shi-labs/dinat-mini-in1k-224,dinat,xfail,Use NATTEN
+shi-labs/nat-mini-in1k-224,nat,xfail,Use NATTEN
 shi-labs/oneformer_ade20k_swin_large,oneformer,skip,Load problem
 shuqi/seed-encoder,seed_encoder,skip,Load problem
 sijunhe/nezha-cn-base,nezha
