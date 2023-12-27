@@ -258,6 +258,7 @@ def compress_weights(
     all_layers: Optional[bool] = None,
     dataset: Optional[Dataset] = None,
     sensitivity_metric: Optional[SensitivityMetric] = None,
+    use_awq: Optional[bool] = None,
 ) -> TModel:
     """
     Compress model weights.
@@ -286,6 +287,7 @@ def compress_weights(
     :param dataset: Dataset used for assigning different quantization precision by finding outliers in activations.
     :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
         preserve the accuracy of the model, the more sensitive layers receives a higher precision.
+    :param use_awq: Indicates whether use AWQ weights correction.
     :return: The non-trainable model with compressed weights.
     """
     if mode == CompressWeightsMode.INT8:
@@ -304,7 +306,7 @@ def compress_weights(
                 "INT8 mode assumes per-channel quantization of all layers in 8 bit. "
                 "Default values of `ratio` (1) and `group_size` (-1) parameters can not be overridden"
             )
-        options = [all_layers, sensitivity_metric, dataset]
+        options = [all_layers, sensitivity_metric, dataset, use_awq]
         if any(option is not None for option in options):
             raise AttributeError(
                 "INT8 modes do not support `all_layers`, `sensitivity_metric` and `dataset` options."
@@ -323,6 +325,8 @@ def compress_weights(
         group_size = 128
     if all_layers is None:
         all_layers = False
+    if use_awq is None:
+        use_awq = False
     if ignored_scope is None:
         ignored_scope = IgnoredScope()
     if sensitivity_metric is None:
@@ -336,7 +340,9 @@ def compress_weights(
             f"Mixed precision selection based on the given sensitivity metric={sensitivity_metric.value} requires "
             "a dataset, but it's not provided."
         )
-    compression_algorithm = WeightCompression(mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric)
+    compression_algorithm = WeightCompression(
+        mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric, use_awq
+    )
     graph = NNCFGraphFactory.create(model)
     return compression_algorithm.apply(model, graph, dataset=dataset)
 

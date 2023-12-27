@@ -148,3 +148,17 @@ def get_norm_weight_and_nf4_scale(
     scale[np.abs(scale) < eps] = eps
     norm_weight = weight / scale
     return norm_weight, scale
+
+
+def do_dequantization(compressed_weights: np.ndarray, scale: np.ndarray, zero_point: np.ndarray) -> np.ndarray:
+    """
+    The method dequantizes the given weights to float point data type in accordance with the scale and
+    zero_point data type.
+
+    :param compressed_weights (np.ndarray): compressed weights.
+    :param scale (np.ndarray): scale in compression/quantization.
+    :param zero_point (np.ndarray): zero point in compression/quantization.
+    :return: dequantized/decompressed weights.
+    """
+    decompressed_weights = (compressed_weights - zero_point) * scale
+    return decompressed_weights
