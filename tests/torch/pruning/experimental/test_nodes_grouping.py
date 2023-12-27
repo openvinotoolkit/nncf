@@ -185,10 +185,10 @@ NLP_DESCS = [
         ref_groups=[
             PruningGroup(
                 block=PruningBlock(size=64, offset=0),
-                producers={ProducerInfo(9), ProducerInfo(12), ProducerInfo(8)},
-                consumers={ConsumerInfo(27)},
+                producers={ProducerInfo(11), ProducerInfo(14), ProducerInfo(10)},
+                consumers={ConsumerInfo(29)},
             ),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(31)}, consumers={ConsumerInfo(33)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(33)}, consumers={ConsumerInfo(35)}),
         ],
     ),
     GroupTestDesc(
@@ -214,11 +214,11 @@ NLP_DESCS = [
         ref_groups=[
             PruningGroup(
                 block=PruningBlock(size=2, offset=0),
-                producers={ProducerInfo(8), ProducerInfo(9), ProducerInfo(12)},
-                consumers={ConsumerInfo(27)},
+                producers={ProducerInfo(10), ProducerInfo(11), ProducerInfo(14)},
+                consumers={ConsumerInfo(29)},
             ),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(31)}, consumers={ConsumerInfo(33)}),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(38)}, consumers={ConsumerInfo(41)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(33)}, consumers={ConsumerInfo(35)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(40)}, consumers={ConsumerInfo(43)}),
         ],
     ),
     GroupTestDesc(
@@ -230,10 +230,10 @@ NLP_DESCS = [
         ref_groups=[
             PruningGroup(
                 block=PruningBlock(size=64, offset=0),
-                producers={ProducerInfo(17), ProducerInfo(20), ProducerInfo(16)},
-                consumers={ConsumerInfo(35)},
+                producers={ProducerInfo(19), ProducerInfo(22), ProducerInfo(18)},
+                consumers={ConsumerInfo(37)},
             ),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(39)}, consumers={ConsumerInfo(41)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(41)}, consumers={ConsumerInfo(43)}),
         ],
     ),
     GroupTestDesc(
@@ -285,28 +285,28 @@ NLP_DESCS = [
             PruningGroup(
                 block=PruningBlock(),
                 producers={
-                    ProducerInfo(15),
-                    ProducerInfo(40),
-                    ProducerInfo(46),
-                    ProducerInfo(52),
-                    ProducerInfo(58),
-                    ProducerInfo(64),
+                    ProducerInfo(17),
+                    ProducerInfo(42),
+                    ProducerInfo(48),
+                    ProducerInfo(54),
+                    ProducerInfo(60),
+                    ProducerInfo(66),
                 },
-                consumers={ConsumerInfo(62), ConsumerInfo(44), ConsumerInfo(56), ConsumerInfo(68), ConsumerInfo(50)},
+                consumers={ConsumerInfo(64), ConsumerInfo(46), ConsumerInfo(58), ConsumerInfo(70), ConsumerInfo(52)},
             ),
             PruningGroup(
                 block=PruningBlock(size=64, offset=0),
-                producers={ProducerInfo(21), ProducerInfo(22), ProducerInfo(23)},
-                consumers={ConsumerInfo(40)},
+                producers={ProducerInfo(23), ProducerInfo(24), ProducerInfo(25)},
+                consumers={ConsumerInfo(42)},
             ),
             PruningGroup(
-                block=PruningBlock(), producers={ProducerInfo(18)}, consumers={ConsumerInfo(21), ConsumerInfo(22)}
+                block=PruningBlock(), producers={ProducerInfo(20)}, consumers={ConsumerInfo(23), ConsumerInfo(24)}
             ),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(44)}, consumers={ConsumerInfo(46)}),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(50)}, consumers={ConsumerInfo(52)}),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(56)}, consumers={ConsumerInfo(58)}),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(62)}, consumers={ConsumerInfo(64)}),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(74)}, consumers={ConsumerInfo(77)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(46)}, consumers={ConsumerInfo(48)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(52)}, consumers={ConsumerInfo(54)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(58)}, consumers={ConsumerInfo(60)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(64)}, consumers={ConsumerInfo(66)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(76)}, consumers={ConsumerInfo(79)}),
         ],
     ),
 ]
@@ -409,10 +409,10 @@ CV_DESCS = [
         ref_groups=[
             PruningGroup(
                 block=PruningBlock(size=2, offset=0),
-                producers={ProducerInfo(9), ProducerInfo(15), ProducerInfo(11)},
-                consumers={ConsumerInfo(33)},
+                producers={ProducerInfo(10), ProducerInfo(16), ProducerInfo(12)},
+                consumers={ConsumerInfo(34)},
             ),
-            PruningGroup(block=PruningBlock(), producers={ProducerInfo(36)}, consumers={ConsumerInfo(40)}),
+            PruningGroup(block=PruningBlock(), producers={ProducerInfo(37)}, consumers={ConsumerInfo(41)}),
         ],
     ),
     GroupTestDesc(
@@ -482,6 +482,11 @@ def test_groups(desc: GroupTestDesc, mocker, tmp_path):
     compare_nx_graph_with_reference(nx_graph, path_to_dot, sort_dot_graph=False)
 
     filtered_groups = select_largest_groups(not_filtered_groups)
+    print(filtered_groups)
+
+    for x in filtered_groups:
+        print(x)
+    # print(desc.ref_groups)
     assert filtered_groups == desc.ref_groups
 
 
