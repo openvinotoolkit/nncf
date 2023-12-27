@@ -170,10 +170,7 @@ def has_tensor(model: onnx.ModelProto, tensor_name: str) -> bool:
     :param tensor_name: Name of the tensor.
     :return: True if the model has such tensor, False - otherwise.
     """
-    for tensor in _get_all_tensors(model):
-        if tensor.name == tensor_name:
-            return True
-    return False
+    return any(tensor.name == tensor_name for tensor in _get_all_tensors(model))
 
 
 def get_tensor(model: onnx.ModelProto, tensor_name: str) -> onnx.TensorProto:

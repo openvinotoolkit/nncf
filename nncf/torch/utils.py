@@ -432,10 +432,7 @@ def is_multidevice(model: torch.nn.Module) -> bool:
     except StopIteration:  # no parameters
         return False
 
-    for d in device_generator:
-        if d != curr_device:
-            return True
-    return False
+    return any(d != curr_device for d in device_generator)
 
 
 def get_model_dtype(model: torch.nn.Module) -> torch.dtype:

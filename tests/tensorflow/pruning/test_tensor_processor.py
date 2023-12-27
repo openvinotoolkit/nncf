@@ -18,9 +18,8 @@ from nncf.tensorflow.tensor import TFNNCFTensor
 
 @pytest.mark.parametrize("device", ("CPU", "GPU"))
 def test_create_tensor(device):
-    if not tf.config.list_physical_devices("GPU"):
-        if device == "GPU":
-            pytest.skip("There are no available CUDA devices")
+    if not tf.config.list_physical_devices("GPU") and device == "GPU":
+        pytest.skip("There are no available CUDA devices")
     shape = [1, 3, 10, 100]
     tensor = TFNNCFPruningTensorProcessor.ones(shape, device)
     assert tf.is_tensor(tensor.tensor)

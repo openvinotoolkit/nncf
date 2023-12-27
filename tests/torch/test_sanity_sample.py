@@ -185,7 +185,7 @@ class TestSanitySample:
         with config_path.open() as f:
             jconfig = json.load(f)
 
-        if "checkpoint_save_dir" in jconfig.keys():
+        if "checkpoint_save_dir" in jconfig:
             del jconfig["checkpoint_save_dir"]
 
         # Use a reduced number of BN adaptation samples for speed

@@ -94,7 +94,7 @@ class BaseEvaluator:
         :param subnet_config_repr: tuple representing the values for the associated design variables.
         :return: (True if the information is in cache, and corresponding value stored in cache, 0 otherwise)
         """
-        if subnet_config_repr in self.cache.keys():
+        if subnet_config_repr in self.cache:
             return True, self.cache[subnet_config_repr]
         return False, 0
 

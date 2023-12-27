@@ -224,10 +224,7 @@ class PostprocessingNodeLocator:
         if not self._is_node_operator(node_key):
             return False
         underlying_nncf_nodes = self._quant_prop_graph.op_node_keys_to_underlying_nodes_mapping[node_key]
-        for node in underlying_nncf_nodes:
-            if node.node_key in self._quantizable_layer_node_keys:
-                return True
-        return False
+        return any(node.node_key in self._quantizable_layer_node_keys for node in underlying_nncf_nodes)
 
     def _get_node_metatype(self, node_key: str) -> OperatorMetatype:
         node = self._quant_prop_graph.nodes[node_key]
@@ -429,9 +426,11 @@ class QuantizerPropagationSolver:
         if default_qconfig_list is not None:
             for op_meta, qconf_list in self._operator_allowed_qconfigs_map.items():
                 trait = self._operator_quantization_trait_map.get(op_meta, QuantizationTrait.NON_QUANTIZABLE)
-                if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
-                    if HWConfig.is_qconf_list_corresponding_to_unspecified_op(qconf_list):
-                        self._operator_allowed_qconfigs_map[op_meta] = default_qconfig_list
+                if (
+                    trait == QuantizationTrait.INPUTS_QUANTIZABLE
+                    and HWConfig.is_qconf_list_corresponding_to_unspecified_op(qconf_list)
+                ):
+                    self._operator_allowed_qconfigs_map[op_meta] = default_qconfig_list
         self._active_propagating_quantizers_queue = deque()
         self._finished_propagating_quantizers: List[PropagatingQuantizer] = []
         self._quantizers_waiting_for_branch_merge = QuantizersWaitingForMergeManager()
@@ -728,7 +727,7 @@ class QuantizerPropagationSolver:
             )
         )
 
-        unified_scale_path_groups_vs_pqs = {k: [] for k in unified_scale_grouped_paths.keys() if k is not None}
+        unified_scale_path_groups_vs_pqs = {k: [] for k in unified_scale_grouped_paths if k is not None}
         existing_pq_assigned = False
         for gid, path_group in unified_scale_grouped_paths.items():
             for _ in path_group:
@@ -1413,10 +1412,7 @@ class QuantizerPropagationSolver:
         def compatible_with_requant(qconf: QuantizerConfig, other_qconf_list: List[QuantizerConfig]) -> bool:
             if qconf in other_qconf_list:
                 return True
-            for other_qconf in other_qconf_list:
-                if not other_qconf.is_valid_requantization_for(qconf):
-                    return False
-            return True
+            return all(other_qconf.is_valid_requantization_for(qconf) for other_qconf in other_qconf_list)
 
         def compatible_wo_requant(qconf: QuantizerConfig, other_qconf_list: List[QuantizerConfig]) -> bool:
             if qconf in other_qconf_list:

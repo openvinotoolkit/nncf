@@ -453,14 +453,13 @@ class TracingContext:
                 self.end_node_name_of_skipped_block.append(self.skipped_blocks[block_index].end_node_name)
 
     def set_elastic_blocks(self, blocks: List["BuildingBlock"] = None):  # noqa: F821
-        if blocks is not None:
-            if isinstance(blocks, list):
-                if len(blocks) == 0:
-                    self.skipped_blocks = []
-                elif isinstance(blocks[0], str):
-                    self.skipped_blocks = [blocks]
-                else:
-                    self.skipped_blocks = blocks
+        if blocks is not None and isinstance(blocks, list):
+            if len(blocks) == 0:
+                self.skipped_blocks = []
+            elif isinstance(blocks[0], str):
+                self.skipped_blocks = [blocks]
+            else:
+                self.skipped_blocks = blocks
 
 
 def set_current_context(c: TracingContext):

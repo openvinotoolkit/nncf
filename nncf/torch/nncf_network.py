@@ -516,10 +516,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         for scope_list_for_module in self.get_nncf_module_scopes():
             norm_nncf_scopes.extend([self._normalize_variable_recurrent_scope(x) for x in scope_list_for_module])
         norm_op_scope = self._normalize_variable_recurrent_scope(scope)
-        for nncf_scope in norm_nncf_scopes:
-            if norm_op_scope in nncf_scope:
-                return True
-        return False
+        return any(norm_op_scope in nncf_scope for nncf_scope in norm_nncf_scopes)
 
     def register_compression_module_type(self, compression_module_type: ExtraCompressionModuleType):
         attr_name = self._compression_module_type_to_attr_name(compression_module_type)
@@ -604,9 +601,8 @@ class NNCFNetworkInterface(torch.nn.Module):
             with self._compressed_context as ctx:
                 ctx.base_module_thread_local_replica = self._model_ref
                 self._dummy_forward_fn(self._model_ref)
-        if force_eval:
-            if train_mode:
-                self._model_ref.train()
+        if force_eval and train_mode:
+            self._model_ref.train()
 
     def get_original_insertion_point_graph(self) -> InsertionPointGraph:
         # Set up a pre- and post-hooks on almost every op in PyTorch

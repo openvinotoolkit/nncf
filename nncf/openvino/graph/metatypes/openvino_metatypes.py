@@ -787,9 +787,8 @@ def get_node_metatype(node: ov.Node) -> Type[OperatorMetatype]:
     """
     node_type = node.get_type_name()
     metatype = OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
-    if metatype is not UnknownMetatype:
-        if metatype.get_subtypes():
-            subtype = metatype.determine_subtype(node)
-            if subtype is not None:
-                metatype = subtype
+    if metatype is not UnknownMetatype and metatype.get_subtypes():
+        subtype = metatype.determine_subtype(node)
+        if subtype is not None:
+            metatype = subtype
     return metatype

@@ -318,7 +318,7 @@ class BaseQuantizer(nn.Module, ABC):
             def hook_fn(
                 self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs, module
             ):
-                for module_key in module.state_dict().keys():
+                for module_key in module.state_dict():
                     candidate = prefix + module_key
                     if candidate in state_dict:
                         module.initialized = True

@@ -290,15 +290,18 @@ class BaseTestPipeline(ABC):
         if metric_value is not None and metric_value_fp32 is not None:
             self.run_info.metric_diff = self.run_info.metric_value - self.reference_data["metric_value_fp32"]
 
-        if metric_value is not None and metric_reference is not None:
-            if not np.isclose(metric_value, metric_reference, atol=self.reference_data.get("atol", 0.001)):
-                if metric_value < metric_reference:
-                    status_msg = f"Regression: Metric value is less than reference {metric_value} < {metric_reference}"
-                    raise ValueError(status_msg)
-                if metric_value > metric_reference:
-                    self.run_info.status = (
-                        f"Improvement: Metric value is better than reference {metric_value} > {metric_reference}"
-                    )
+        if (
+            metric_value is not None
+            and metric_reference is not None
+            and not np.isclose(metric_value, metric_reference, atol=self.reference_data.get("atol", 0.001))
+        ):
+            if metric_value < metric_reference:
+                status_msg = f"Regression: Metric value is less than reference {metric_value} < {metric_reference}"
+                raise ValueError(status_msg)
+            if metric_value > metric_reference:
+                self.run_info.status = (
+                    f"Improvement: Metric value is better than reference {metric_value} > {metric_reference}"
+                )
 
     def run(self) -> None:
         """

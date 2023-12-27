@@ -18,10 +18,7 @@ import nncf
 
 
 def excluded_module(name, excluded_modules_patterns):
-    for pattern in excluded_modules_patterns:
-        if re.fullmatch(pattern, name):
-            return True
-    return False
+    return any(re.fullmatch(pattern, name) for pattern in excluded_modules_patterns)
 
 
 def onerror(name, excluded_modules_patterns):

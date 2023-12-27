@@ -139,7 +139,7 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
         """
         producers = SymbolicMaskProducer.merge_producers(input_masks)
         for input_mask in input_masks[1:]:
-            if not input_masks[0].shape == input_mask.shape:
+            if input_masks[0].shape != input_mask.shape:
                 return AmbiguousSymbolicMask(producers)
 
         return SymbolicMask(input_masks[0].shape[0], producers)

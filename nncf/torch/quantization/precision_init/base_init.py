@@ -99,7 +99,7 @@ class WeightQuantizersHandler:
         weight_quantizers: Dict[WeightQuantizerId, WeightQuantizerInfo],
         constraints: HardwareQuantizationConstraints,
     ):
-        self._wq_affected_module_node_name_vs_qid_dict = {k.target_node_name: k for k in weight_quantizers.keys()}
+        self._wq_affected_module_node_name_vs_qid_dict = {k.target_node_name: k for k in weight_quantizers}
         self._quantizer_module_scope_vs_qid_dict: Dict[Scope, WeightQuantizerId] = {}
         self._skipped_quantized_weight_node_names = []
         self._skipped_weight_quantizers: Dict[WeightQuantizerId, BaseQuantizer] = {}
