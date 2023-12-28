@@ -4,6 +4,8 @@ https://github.com/huggingface/transformers
 
 This folder contains a git patch to enable NNCF-based quantization for XNLI, SQuAD and GLUE training pipelines of the huggingface transformers repository.
 
+**NOTE**: this patch is deprecated and will be removed from NNCF repository in future releases.
+
 Instructions:
 
 1. Apply the `0001-Modifications-for-NNCF-usage.patch` file to the huggingface transformers repository checked out at commit id: `bd469c40659ce76c81f69c7726759d249b4aef49`
