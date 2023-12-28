@@ -29,6 +29,7 @@ from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
+from nncf.openvino.quantization.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.openvino.rt_info import dump_parameters
 from nncf.openvino.statistics.collectors import get_raw_stat_collector
 from nncf.parameters import CompressWeightsMode
@@ -36,7 +37,6 @@ from nncf.parameters import SensitivityMetric
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.compression_info import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.compression_info import WeightNodeParams
-from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.quantize import do_integer_quantization
 from nncf.quantization.algorithms.weight_compression.quantize import get_norm_weight_and_nf4_scale
 from nncf.scopes import IgnoredScope
