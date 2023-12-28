@@ -482,11 +482,6 @@ def test_groups(desc: GroupTestDesc, mocker, tmp_path):
     compare_nx_graph_with_reference(nx_graph, path_to_dot, sort_dot_graph=False)
 
     filtered_groups = select_largest_groups(not_filtered_groups)
-    print(filtered_groups)
-
-    for x in filtered_groups:
-        print(x)
-    # print(desc.ref_groups)
     assert filtered_groups == desc.ref_groups
 
 
