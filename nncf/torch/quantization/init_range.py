@@ -71,8 +71,8 @@ class PTRangeInitParams(RangeInitParams):
     def get_init_config_for_scope_and_group(self, qid: QuantizerId, group: QuantizerGroup) -> RangeInitConfig:
         matches: List[RangeInitConfig] = []
         for pl_config in self.per_layer_range_init_configs:
-            is_should_consider_scope = should_consider_scope(qid, pl_config.ignored_scopes, pl_config.target_scopes)
-            if is_should_consider_scope and (group == pl_config.target_group or pl_config.target_group is None):
+            should_be_considered = should_consider_scope(qid, pl_config.ignored_scopes, pl_config.target_scopes)
+            if should_be_considered and (group == pl_config.target_group or pl_config.target_group is None):
                 matches.append(
                     RangeInitConfig(
                         pl_config.init_type, pl_config.num_init_samples, pl_config.init_type_specific_params
