@@ -339,7 +339,7 @@ NNCF may be straightforwardly integrated into training/evaluation pipelines of t
 
 ### Git patches for third-party repository
 
-**NOTE (PyTorch)**: this patch is deprecated and will be removed from NNCF repository in future releases.
+**NOTE**: this patch is deprecated and will be removed from NNCF repository in future releases.
 
 See [third_party_integration](./third_party_integration) for examples of code modifications (Git patches and base commit IDs are provided) that are necessary to integrate NNCF into the following repositories:
 
