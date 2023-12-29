@@ -305,7 +305,7 @@ def apply_AWQ(
     all_weight_params: List[WeightNodeParams],
     nodes_to_compress: List[NNCFNode],
     activations: Optional[Dict[str, np.ndarray]] = None,
-    subset_size: int = 32,
+    subset_size: int = 64,
     percent_to_apply=0.002,
     alpha_min=0.01,
     alpha_max=1.0,
