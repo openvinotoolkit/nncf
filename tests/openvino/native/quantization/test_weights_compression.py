@@ -27,6 +27,7 @@ from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXE
 from nncf.quantization.algorithms.weight_compression.quantize import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.quantize import reshape_weights_for_grouped_quantization
 from nncf.scopes import IgnoredScope
+from tests.openvino.native.models import AWQMatmulModel
 from tests.openvino.native.models import GatherAndMatmulShareData
 from tests.openvino.native.models import GatherWithTwoReductionAxes
 from tests.openvino.native.models import IdentityMatmul
@@ -597,3 +598,11 @@ def test_call_max_var_criterion_with_dataset_by_default(mocker, mode):
     compress_weights(model, mode=mode, ratio=0.8, group_size=-1, dataset=dataset)
 
     scores_spy.assert_called()
+
+
+@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+def test_call_max_var_criterion_with_dataset_by_default_awq(mode):
+    model = AWQMatmulModel().ov_model
+    dataset = Dataset([np.ones([8, 8])])
+
+    compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)

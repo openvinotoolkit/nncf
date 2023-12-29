@@ -96,7 +96,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         all_layers: Optional[bool] = False,
         activations: Optional[Dict[str, np.ndarray]] = None,
         sensitivity_metric: Optional[SensitivityMetric] = SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
-        use_awq: Optional[bool] = False,
+        awq: Optional[bool] = False,
     ) -> ov.Model:
         all_weight_params: List[WeightNodeParams] = []
         quantized_nodes_ids = set()
@@ -150,7 +150,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         _set_weight_compression_config(ratio_defining_params, mode, ratio, group_size, activations, sensitivity_metric)
         nncf_logger.info(_get_bitwidth_distribution_str(all_weight_params, ratio_defining_params))
 
-        if use_awq and activations is not None:
+        if awq and mode is not CompressWeightsMode.NF4 and activations is not None:
             apply_AWQ(model, graph, all_weight_params, nodes_to_compress, activations)
 
         for wp in track(all_weight_params, description="Applying Weight Compression"):

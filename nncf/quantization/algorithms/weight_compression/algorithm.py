@@ -60,7 +60,7 @@ class WeightCompression(Algorithm):
         ignored_scope: IgnoredScope,
         all_layers: bool,
         sensitivity_metric: SensitivityMetric,
-        use_awq: bool,
+        awq: bool,
     ):
         """
         :param mode: Defines a mode for weight compression.
@@ -97,7 +97,7 @@ class WeightCompression(Algorithm):
         self._fp_inputs = defaultdict(list)
         self._all_layers = all_layers
         self._sensitivity_metric = sensitivity_metric
-        self._use_awq = use_awq
+        self._awq = awq
 
     @property
     def available_backends(self) -> List[BackendType]:
@@ -192,7 +192,7 @@ class WeightCompression(Algorithm):
             self._all_layers,
             activations,
             self._sensitivity_metric,
-            self._use_awq,
+            self._awq,
         )
         return transformed_model
 

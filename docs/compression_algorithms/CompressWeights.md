@@ -63,12 +63,12 @@ compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_SYM, ra
 - Accuracy of the 4-bit compressed models also can be improved by using AWQ algorithm over data-based mixed-precision algorithm. It is capable to equalize some subset of weights to minimize difference between
 original precision and 4-bit.
 Below is the example how to compress 80% of layers to 4-bit integer with a default data-based mixed precision algorithm and AWQ.
-It requires to set `use_awq` to `True` additionally to data-based mixed-precision algorithm.
+It requires to set `awq` to `True` additionally to data-based mixed-precision algorithm.
 
 ```python
 from nncf import compress_weights, CompressWeightsMode, Dataset
 nncf_dataset = nncf.Dataset(data_source, transform_fn)
-compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_SYM, ratio=0.8, dataset=nncf_dataset, use_awq=True)
+compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_SYM, ratio=0.8, dataset=nncf_dataset, awq=True)
 ```
 
 - `NF4` mode can be considered for improving accuracy, but currently models quantized to nf4 should not be faster models
