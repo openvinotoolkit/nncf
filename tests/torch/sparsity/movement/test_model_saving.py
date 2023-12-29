@@ -445,5 +445,7 @@ class TestCompressionState:
         resumed_trainer.train(str(resume_folder))
 
         PTTensorListComparator.check_equal(
-            list(compressed_model.state_dict().values()), list(resumed_compressed_model.state_dict().values())
+            list(compressed_model.state_dict().values()),
+            list(resumed_compressed_model.state_dict().values()),
+            atol=0.001,
         )

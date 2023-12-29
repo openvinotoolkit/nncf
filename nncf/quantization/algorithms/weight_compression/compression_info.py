@@ -9,9 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from dataclasses import dataclass
-from typing import Optional, TypeVar
-
-import openvino.runtime as ov
+from typing import Any, Optional, TypeVar
 
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.parameters import CompressWeightsMode
@@ -59,7 +57,8 @@ class WeightNodeParams:
     reduction_axis: int
     num_weights: int
     fq_name: str
-    weight_node: ov.Node
+    # TODO(nlyalyus): Should be NNCFNode
+    weight_node: Any  # ov.Node
     original_weight_dtype: TWeightType
     compression_config = WeightCompressionConfig()
     metatype: OperatorMetatype = None
