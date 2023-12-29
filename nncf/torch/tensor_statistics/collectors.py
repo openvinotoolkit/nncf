@@ -72,10 +72,10 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
 
     @staticmethod
     def mean(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
-        if x.tensor.dtype in [torch.float32, torch.float16]:
-            res = torch.mean(x.tensor, dim=axis, keepdim=keepdims, dtype=torch.float64).to(dtype=x.tensor.dtype)
-            return PTNNCFTensor(res)
-        return PTNNCFTensor(torch.mean(x.tensor, dim=axis, keepdim=keepdims))
+        comp_dtype, out_dtype = _get_computing_dtype(x.tensor.dtype)
+        return PTNNCFTensor(
+            torch.mean(x.tensor, axis=axis, keepdims=keepdims, dtype=comp_dtype).to(dtype=out_dtype, copy=False)
+        )
 
     @staticmethod
     def median(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
@@ -93,16 +93,13 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         if mask is None:
             return cls.mean(x, axis=axis, keepdims=keepdims)
         device = x.tensor.device
-        dtype = x.tensor.dtype
-        np_tensor = x.tensor.detach().cpu().numpy()
-        if np_tensor.dtype in [np.float32, np.float16]:
-            np_tensor = np_tensor.astype(dtype=np.float64)
-
+        comp_dtype, out_dtype = _get_computing_dtype(x.tensor.dtype)
+        np_tensor = x.tensor.detach().cpu().to(dtype=comp_dtype, copy=False).numpy()
         masked_x = np.ma.array(np_tensor, mask=mask.tensor.detach().cpu().numpy())
-        result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims).astype(masked_x.dtype)
+        result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims)
         if isinstance(result, np.ma.MaskedArray):
             result = result.data
-        return PTNNCFTensor(torch.tensor(result).to(device=device, dtype=dtype))
+        return PTNNCFTensor(torch.tensor(result).to(device=device, dtype=out_dtype))
 
     @classmethod
     def masked_median(
@@ -568,3 +565,20 @@ PT_REDUCERS_MAP = {
     StatisticsType.QUANTILE: PTQuantileReducer,
     StatisticsType.ABS_QUANTILE: PTAbsQuantileReducer,
 }
+
+
+def _get_computing_dtype(dtype: torch.dtype) -> Tuple[Optional[torch.dtype], Optional[torch.dtype]]:
+    """
+    Determines the appropriate dtypes for intermediate computations and the final output,
+    aiming to prevent overflow while maintaining precision.
+
+    :param dtype: The dtype of the processed tensor.
+    :return:
+        - comp_dtype: The recommended dtype for intermediate computations to avoid overflow.
+            If None, no dtype change is necessary for intermediate computations.
+        - out_dtype: The recommended dtype for the final output, balancing precision and memory usage.
+            If None, the input dtype is preserved for the output.
+    """
+    if dtype in [torch.float32, torch.float16]:
+        return (torch.float64, dtype)
+    return (None, None)
