@@ -13,13 +13,14 @@ from typing import Any, Iterable, List, Tuple
 
 import numpy as np
 import openvino.runtime as ov
-from openvino.tools import pot
+import pytest
 
 from nncf.data.dataset import Dataset
-from nncf.openvino.pot.engine import OVEngine
-from nncf.openvino.pot.engine import calc_per_sample_metrics
 from tests.openvino.native.models import LinearModel
 from tests.openvino.pot.utils import convert_openvino_model_to_compressed_model
+
+pot = pytest.importorskip("openvino.tools.pot")
+engine_module = pytest.importorskip("nncf.openvino.pot.engine")
 
 
 class DummySampler:
@@ -71,7 +72,7 @@ def test_predict_original_metric():
     expected_per_sample, expected_metric = get_expected(ov_model, dataset.get_data(subset_indices), use_output=False)
 
     pot_model = convert_openvino_model_to_compressed_model(ov_model, target_device="CPU")
-    engine = OVEngine({"device": "CPU"}, dataset, dataset, val_func, use_original_metric=True)
+    engine = engine_module.OVEngine({"device": "CPU"}, dataset, dataset, val_func, use_original_metric=True)
     engine.set_model(pot_model)
 
     (actual_per_sample, actual_metric), _ = engine.predict(sampler=DummySampler(subset_indices), metric_per_sample=True)
@@ -88,7 +89,7 @@ def test_predict_output():
     ov_model = LinearModel().ov_model
     expected_per_sample, expected_metric = get_expected(ov_model, dataset.get_data(), use_output=True)
     pot_model = convert_openvino_model_to_compressed_model(ov_model, target_device="CPU")
-    engine = OVEngine({"device": "CPU"}, dataset, dataset, val_func, use_original_metric=False)
+    engine = engine_module.OVEngine({"device": "CPU"}, dataset, dataset, val_func, use_original_metric=False)
     engine.set_model(pot_model)
 
     stats_layout = {}
@@ -113,4 +114,4 @@ def test_calc_per_sample():
 
     # Check that we iterate through dataset only once during
     # per-sample metrics calculation.
-    _ = calc_per_sample_metrics(compiled_model, val_func, dataset, [0, 2, 4])
+    _ = engine_module.calc_per_sample_metrics(compiled_model, val_func, dataset, [0, 2, 4])
