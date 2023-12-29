@@ -1,6 +1,6 @@
-From 71c900090006c02e94aa46b10da1eb6d16485a07 Mon Sep 17 00:00:00 2001
-From: Nikolay Lyalyushkin <nikolay.lyalyushkin@intel.com>
-Date: Tue, 18 Oct 2022 22:08:16 +0200
+From 76c14db1e3501d03f548d9e9ebc58661443d64e1 Mon Sep 17 00:00:00 2001
+From: Alexander Dokuchaev <alexander.dokuchaev@intel.com>
+Date: Mon, 25 Dec 2023 21:36:16 +0200
 Subject: [PATCH] Modifications for NNCF usage
 
 ---
@@ -17,13 +17,13 @@ Subject: [PATCH] Modifications for NNCF usage
  nncf_distilbert_config_sst2.json              |  33 ++++++
  nncf_gpt2_config_wikitext_hw_config.json      |  49 ++++++++
  nncf_mobilebert_config_squad_int8.json        |  49 ++++++++
- nncf_roberta_config_mnli.json                 |  35 ++++++
+ nncf_roberta_config_mnli.json                 |  29 +++++
  src/transformers/modeling_utils.py            |  24 ++++
  src/transformers/pytorch_utils.py             |   3 +-
  src/transformers/trainer.py                   |  51 +++++++-
  src/transformers/training_args.py             |   6 +
  src/transformers/utils/__init__.py            |   1 +
- 19 files changed, 811 insertions(+), 68 deletions(-)
+ 19 files changed, 805 insertions(+), 68 deletions(-)
  create mode 100644 nncf_bert_config_conll.json
  create mode 100644 nncf_bert_config_mrpc.json
  create mode 100644 nncf_bert_config_squad.json
@@ -40,30 +40,30 @@ index fe03cde7c..3f8cd6d37 100755
 +++ b/examples/pytorch/language-modeling/run_clm.py
 @@ -30,6 +30,8 @@ from itertools import chain
  from typing import Optional
- 
+
  import datasets
 +import onnx
 +import torch
  from datasets import load_dataset
- 
+
  import evaluate
 @@ -51,7 +53,12 @@ from transformers.testing_utils import CaptureLogger
  from transformers.trainer_utils import get_last_checkpoint
  from transformers.utils import check_min_version, send_example_telemetry
  from transformers.utils.versions import require_version
 +from transformers.trainer import get_train_dataloader_for_init
- 
+
 +from nncf import NNCFConfig
 +from nncf.config.structures import QuantizationRangeInitArgs
 +from nncf.config.structures import BNAdaptationInitArgs
 +from nncf.torch.initialization import PTInitializingDataLoader
- 
+
  # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
  check_min_version("4.23.0")
 @@ -373,22 +380,6 @@ def main():
              "You can do it from another script, save it, and load it from here, using --tokenizer_name."
          )
- 
+
 -    if model_args.model_name_or_path:
 -        model = AutoModelForCausalLM.from_pretrained(
 -            model_args.model_name_or_path,
@@ -86,7 +86,7 @@ index fe03cde7c..3f8cd6d37 100755
 @@ -503,6 +494,59 @@ def main():
              preds = preds[:, :-1].reshape(-1)
              return metric.compute(predictions=preds, references=labels)
- 
+
 +    nncf_config = None
 +    if training_args.nncf_config is not None:
 +        nncf_config = NNCFConfig.from_json(training_args.nncf_config)
@@ -149,7 +149,7 @@ index fe03cde7c..3f8cd6d37 100755
          else None,
 +        compression_ctrl=compression_ctrl
      )
- 
+
      # Training
 diff --git a/examples/pytorch/question-answering/run_qa.py b/examples/pytorch/question-answering/run_qa.py
 index 1240623b5..b6136d6e3 100755
@@ -157,11 +157,11 @@ index 1240623b5..b6136d6e3 100755
 +++ b/examples/pytorch/question-answering/run_qa.py
 @@ -25,6 +25,7 @@ from dataclasses import dataclass, field
  from typing import Optional
- 
+
  import datasets
 +import torch
  from datasets import load_dataset
- 
+
  import evaluate
 @@ -42,11 +43,19 @@ from transformers import (
      default_data_collator,
@@ -172,7 +172,7 @@ index 1240623b5..b6136d6e3 100755
  from transformers.utils import check_min_version, send_example_telemetry
  from transformers.utils.versions import require_version
  from utils_qa import postprocess_qa_predictions
- 
+
 +from torch import onnx
 +
 +from nncf import NNCFConfig
@@ -180,7 +180,7 @@ index 1240623b5..b6136d6e3 100755
 +from nncf.config.structures import BNAdaptationInitArgs
 +from nncf.config.structures import QuantizationRangeInitArgs
 +from nncf.common.utils.tensorboard import prepare_for_tensorboard
- 
+
  # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
  check_min_version("4.23.0")
 @@ -327,14 +336,6 @@ def main():
@@ -195,13 +195,13 @@ index 1240623b5..b6136d6e3 100755
 -        revision=model_args.model_revision,
 -        use_auth_token=True if model_args.use_auth_token else None,
 -    )
- 
+
      # Tokenizer check: this script requires a fast tokenizer.
      if not isinstance(tokenizer, PreTrainedTokenizerFast):
 @@ -599,6 +600,51 @@ def main():
      def compute_metrics(p: EvalPrediction):
          return metric.compute(predictions=p.predictions, references=p.label_ids)
- 
+
 +    nncf_config = None
 +    if training_args.nncf_config is not None:
 +        nncf_config = NNCFConfig.from_json(training_args.nncf_config)
@@ -256,14 +256,14 @@ index 1240623b5..b6136d6e3 100755
          compute_metrics=compute_metrics,
 +        compression_ctrl=compression_ctrl
      )
- 
+
      # Training
 diff --git a/examples/pytorch/text-classification/run_glue.py b/examples/pytorch/text-classification/run_glue.py
 index 3eb423f08..f675e7ab4 100755
 --- a/examples/pytorch/text-classification/run_glue.py
 +++ b/examples/pytorch/text-classification/run_glue.py
 @@ -29,6 +29,10 @@ from datasets import load_dataset
- 
+
  import evaluate
  import transformers
 +from nncf import NNCFConfig
@@ -294,7 +294,7 @@ index 3eb423f08..f675e7ab4 100755
 -        use_auth_token=True if model_args.use_auth_token else None,
 -        ignore_mismatched_sizes=model_args.ignore_mismatched_sizes,
 -    )
- 
+
      # Preprocessing the raw_datasets
      if data_args.task_name is not None:
 @@ -400,12 +396,12 @@ def main():
@@ -314,7 +314,7 @@ index 3eb423f08..f675e7ab4 100755
          else:
 @@ -418,11 +414,11 @@ def main():
          label_to_id = {v: i for i, v in enumerate(label_list)}
- 
+
      if label_to_id is not None:
 -        model.config.label2id = label_to_id
 -        model.config.id2label = {id: label for label, id in config.label2id.items()}
@@ -325,13 +325,13 @@ index 3eb423f08..f675e7ab4 100755
 -        model.config.id2label = {id: label for label, id in config.label2id.items()}
 +        config.label2id = {l: i for i, l in enumerate(label_list)}
 +        config.id2label = {id: label for label, id in config.label2id.items()}
- 
+
      if data_args.max_seq_length > tokenizer.model_max_length:
          logger.warning(
 @@ -458,6 +454,87 @@ def main():
              max_train_samples = min(len(train_dataset), data_args.max_train_samples)
              train_dataset = train_dataset.select(range(max_train_samples))
- 
+
 +    nncf_config = None
 +    if training_args.nncf_config is not None:
 +        nncf_config = NNCFConfig.from_json(training_args.nncf_config)
@@ -422,7 +422,7 @@ index 3eb423f08..f675e7ab4 100755
          data_collator=data_collator,
 +        compression_ctrl=compression_ctrl
      )
- 
+
 +    if nncf_config is not None:
 +        if not (training_args.local_rank == -1 or training_args.no_cuda):
 +            compression_ctrl.distributed()
@@ -435,12 +435,12 @@ index 55523edfc..68a3ebe41 100755
 --- a/examples/pytorch/text-classification/run_xnli.py
 +++ b/examples/pytorch/text-classification/run_xnli.py
 @@ -26,10 +26,16 @@ from typing import Optional
- 
+
  import datasets
  import numpy as np
 +import torch
  from datasets import load_dataset
- 
+
  import evaluate
  import transformers
 +from nncf import NNCFConfig
@@ -472,13 +472,13 @@ index 55523edfc..68a3ebe41 100755
 -        use_auth_token=True if model_args.use_auth_token else None,
 -        ignore_mismatched_sizes=model_args.ignore_mismatched_sizes,
 -    )
- 
+
      # Preprocessing the datasets
      # Padding strategy
 @@ -367,6 +365,56 @@ def main():
      else:
          data_collator = None
- 
+
 +    nncf_config = None
 +    if training_args.nncf_config is not None:
 +        nncf_config = NNCFConfig.from_json(training_args.nncf_config)
@@ -538,7 +538,7 @@ index 55523edfc..68a3ebe41 100755
          data_collator=data_collator,
 +        compression_ctrl=compression_ctrl
      )
- 
+
 +    if nncf_config is not None:
 +        if not (training_args.local_rank == -1 or training_args.no_cuda):
 +            compression_ctrl.distributed()
@@ -558,11 +558,11 @@ index 52cbbb87b..30f150580 100755
  from dataclasses import dataclass, field
  from typing import Optional
 +from typing import List
- 
+
  import datasets
  import numpy as np
  from datasets import ClassLabel, load_dataset
- 
+
  import evaluate
 +import torch
  import transformers
@@ -585,8 +585,8 @@ index 52cbbb87b..30f150580 100755
  from transformers.utils.versions import require_version
 @@ -204,6 +214,16 @@ class DataTrainingArguments:
          self.task_name = self.task_name.lower()
- 
- 
+
+
 +def filter_columns(dataset, keep_columns: List[str], remove_columns: List[str]):
 +    if version.parse(datasets.__version__) < version.parse("1.4.0"):
 +        dataset.set_format(
@@ -603,7 +603,7 @@ index 52cbbb87b..30f150580 100755
 @@ -366,16 +386,6 @@ def main():
              use_auth_token=True if model_args.use_auth_token else None,
          )
- 
+
 -    model = AutoModelForTokenClassification.from_pretrained(
 -        model_args.model_name_or_path,
 -        from_tf=bool(".ckpt" in model_args.model_name_or_path),
@@ -619,7 +619,7 @@ index 52cbbb87b..30f150580 100755
          raise ValueError(
 @@ -385,25 +395,25 @@ def main():
          )
- 
+
      # Model has labels -> use them.
 -    if model.config.label2id != PretrainedConfig(num_labels=num_labels).label2id:
 -        if list(sorted(model.config.label2id.keys())) == list(sorted(label_list)):
@@ -642,19 +642,19 @@ index 52cbbb87b..30f150580 100755
 +                f"model labels: {list(sorted(config.label2id.keys()))}, dataset labels:"
                  f" {list(sorted(label_list))}.\nIgnoring the model labels as a result.",
              )
- 
+
      # Set the correspondences label/ID inside the model config
 -    model.config.label2id = {l: i for i, l in enumerate(label_list)}
 -    model.config.id2label = {i: l for i, l in enumerate(label_list)}
 +    config.label2id = {l: i for i, l in enumerate(label_list)}
 +    config.id2label = {i: l for i, l in enumerate(label_list)}
- 
+
      # Map that sends B-Xxx label to its I-Xxx counterpart
      b_to_i_label = []
 @@ -504,6 +514,65 @@ def main():
      # Data collator
      data_collator = DataCollatorForTokenClassification(tokenizer, pad_to_multiple_of=8 if training_args.fp16 else None)
- 
+
 +    nncf_config = None
 +    if training_args.nncf_config is not None:
 +        nncf_config = NNCFConfig.from_json(training_args.nncf_config)
@@ -716,14 +716,14 @@ index 52cbbb87b..30f150580 100755
 +
      # Metrics
      metric = evaluate.load("seqeval")
- 
+
 @@ -549,6 +618,7 @@ def main():
          tokenizer=tokenizer,
          data_collator=data_collator,
          compute_metrics=compute_metrics,
 +        compression_ctrl=compression_ctrl
      )
- 
+
      # Training
 diff --git a/nncf_bert_config_conll.json b/nncf_bert_config_conll.json
 new file mode 100644
@@ -1105,20 +1105,14 @@ index 000000000..4d0e84edf
 +}
 diff --git a/nncf_roberta_config_mnli.json b/nncf_roberta_config_mnli.json
 new file mode 100644
-index 000000000..ff2d462f6
+index 000000000..46f819bca
 --- /dev/null
 +++ b/nncf_roberta_config_mnli.json
-@@ -0,0 +1,35 @@
+@@ -0,0 +1,29 @@
 +{
 +    "input_info": [
 +        {
 +            "keyword": "input_ids",
-+            "sample_size": [1, 128],
-+            "type": "long",
-+            "filler": "ones"
-+        },
-+        {
-+            "keyword": "attention_mask",
 +            "sample_size": [1, 128],
 +            "type": "long",
 +            "filler": "ones"
@@ -1150,17 +1144,17 @@ index 5f4fccd33..7f4cdb3d8 100644
 +++ b/src/transformers/modeling_utils.py
 @@ -27,10 +27,12 @@ from functools import partial
  from typing import Any, Callable, Dict, List, Optional, Tuple, Union
- 
+
  import torch
 +from nncf.torch import create_compressed_model
  from packaging import version
  from torch import Tensor, device, nn
  from torch.nn import CrossEntropyLoss
- 
+
 +from transformers.utils import NNCF_PT_STATE_NAME
  from transformers.utils.hub import convert_file_size_to_int, get_checkpoint_shard_files
  from transformers.utils.import_utils import is_sagemaker_mp_enabled
- 
+
 @@ -1497,6 +1499,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
          push_to_hub: bool = False,
          max_shard_size: Union[int, str] = "10GB",
@@ -1172,7 +1166,7 @@ index 5f4fccd33..7f4cdb3d8 100644
 @@ -1620,6 +1623,10 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
              else:
                  save_function(shard, os.path.join(save_directory, shard_file))
- 
+
 +        if nncf_compression_state is not None:
 +            nncf_state_output_file = os.path.join(save_directory, NNCF_PT_STATE_NAME)
 +            save_function(nncf_compression_state, nncf_state_output_file)
@@ -1186,13 +1180,13 @@ index 5f4fccd33..7f4cdb3d8 100644
          commit_hash = kwargs.pop("_commit_hash", None)
 +        nncf_config = kwargs.pop("nncf_config", None)
 +        nncf_eval = kwargs.pop("nncf_eval", False)
- 
+
          if trust_remote_code is True:
              logger.warning(
 @@ -2321,6 +2330,11 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
              if dtype_orig is not None:
                  torch.set_default_dtype(dtype_orig)
- 
+
 +            if nncf_config is not None and nncf_eval:
 +                compression_algo_controller, model = create_compressed_model(model, nncf_config,
 +                                                                             compression_state=state_dict)
@@ -1204,7 +1198,7 @@ index 5f4fccd33..7f4cdb3d8 100644
 @@ -2344,6 +2358,16 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
          # Set model in evaluation mode to deactivate DropOut modules by default
          model.eval()
- 
+
 +        if nncf_config is not None:
 +            compression_state = None
 +            compression_state_file = os.path.join(pretrained_model_name_or_path, NNCF_PT_STATE_NAME)
@@ -1225,7 +1219,7 @@ index d94e049b5..09c99d4dd 100644
 @@ -87,7 +87,8 @@ def prune_linear_layer(layer: nn.Linear, index: torch.LongTensor, dim: int = 0)
          new_layer.bias.requires_grad = True
      return new_layer
- 
+
 -
 +import nncf
 +@nncf.torch.register_module()
@@ -1238,11 +1232,11 @@ index 214e7a978..12a5787cd 100755
 +++ b/src/transformers/trainer.py
 @@ -33,7 +33,7 @@ from pathlib import Path
  from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
- 
+
  from tqdm.auto import tqdm
 -
 +from nncf.torch.nncf_network import NNCFNetwork
- 
+
  # Integrations must be imported before ML frameworks:
  from .integrations import (  # isort: split
 @@ -55,6 +55,8 @@ import numpy as np
@@ -1256,8 +1250,8 @@ index 214e7a978..12a5787cd 100755
  from torch.utils.data.distributed import DistributedSampler
 @@ -206,6 +208,30 @@ SCHEDULER_NAME = "scheduler.pt"
  SCALER_NAME = "scaler.pt"
- 
- 
+
+
 +def get_train_dataloader_for_init(args, train_dataset, data_collator=None):
 +    from torch.utils.data import RandomSampler
 +    from torch.utils.data import DistributedSampler
@@ -1302,7 +1296,7 @@ index 214e7a978..12a5787cd 100755
          enable_full_determinism(self.args.seed) if self.args.full_determinism else set_seed(self.args.seed)
          self.hp_name = None
 @@ -1409,6 +1438,8 @@ class Trainer:
- 
+
              if self.args.ddp_bucket_cap_mb is not None:
                  kwargs["bucket_cap_mb"] = self.args.ddp_bucket_cap_mb
 +            if self.compression_ctrl is not None:
@@ -1312,7 +1306,7 @@ index 214e7a978..12a5787cd 100755
                  device_ids=[self.args.local_rank] if self.args._n_gpu != 0 else None,
 @@ -1687,6 +1718,9 @@ class Trainer:
                      _ = list(train_dataloader.sampler)
- 
+
          for epoch in range(epochs_trained, num_train_epochs):
 +            if self.compression_ctrl is not None:
 +                self.compression_ctrl.scheduler.epoch_step()
@@ -1322,7 +1316,7 @@ index 214e7a978..12a5787cd 100755
              elif hasattr(train_dataloader, "dataset") and isinstance(train_dataloader.dataset, IterableDatasetShard):
 @@ -1790,6 +1824,8 @@ class Trainer:
                              )
- 
+
                      # Optimizer step
 +                    if self.compression_ctrl is not None:
 +                        self.compression_ctrl.scheduler.step()
@@ -1335,12 +1329,12 @@ index 214e7a978..12a5787cd 100755
                      self.state.epoch = epoch + (step + 1) / steps_in_epoch
 +                    self.state.curr_loss = tr_loss_step.cpu().detach().item()
                      self.control = self.callback_handler.on_step_end(args, self.state, self.control)
- 
+
                      self._maybe_log_save_evaluate(tr_loss, model, trial, epoch, ignore_keys_for_eval)
 @@ -2033,6 +2070,14 @@ class Trainer:
              logs["loss"] = round(tr_loss_scalar / (self.state.global_step - self._globalstep_last_logged), 4)
              logs["learning_rate"] = self._get_learning_rate()
- 
+
 +            if self.compression_ctrl is not None:
 +                logs["compression_loss"] = self.compression_ctrl.loss().item()
 +                compression_stats = self.compression_ctrl.statistics()
@@ -1355,7 +1349,7 @@ index 214e7a978..12a5787cd 100755
 @@ -2492,6 +2537,10 @@ class Trainer:
              # deepspeed handles loss scaling by gradient_accumulation_steps in its `backward`
              loss = loss / self.args.gradient_accumulation_steps
- 
+
 +        if self.compression_ctrl is not None:
 +            compression_loss = self.compression_ctrl.loss()
 +            loss += compression_loss
@@ -1370,7 +1364,7 @@ index 170315fe2..daa497c02 100644
 @@ -993,6 +993,12 @@ class TrainingArguments:
          },
      )
- 
+
 +    nncf_config: str = field(default=None,
 +                             metadata={"help": "NNCF configuration .json file for compression-enabled training"})
 +
@@ -1385,13 +1379,12 @@ index 2269f2254..2f3082293 100644
 --- a/src/transformers/utils/__init__.py
 +++ b/src/transformers/utils/__init__.py
 @@ -154,6 +154,7 @@ from .import_utils import (
- 
- 
+
+
  WEIGHTS_NAME = "pytorch_model.bin"
 +NNCF_PT_STATE_NAME = "nncf_state.bin"
  WEIGHTS_INDEX_NAME = "pytorch_model.bin.index.json"
  TF2_WEIGHTS_NAME = "tf_model.h5"
  TF2_WEIGHTS_INDEX_NAME = "tf_model.h5.index.json"
--- 
-2.25.1
-
+--
+2.34.1
