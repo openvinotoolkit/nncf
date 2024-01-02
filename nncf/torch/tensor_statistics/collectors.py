@@ -82,8 +82,10 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         # See https://github.com/pytorch/pytorch/issues/61582
         if not isinstance(axis, int):
             device = x.tensor.device
-            result = torch.tensor(np.median(x.tensor.detach().cpu().numpy(), axis=axis, keepdims=keepdims))
-            return PTNNCFTensor(result.type(x.tensor.dtype).to(device))
+            comp_dtype, out_dtype = _get_computing_dtype(x.tensor.dtype)
+            np_tensor = x.tensor.detach().cpu().to(dtype=comp_dtype, copy=False).numpy()
+            result = torch.tensor(np.median(np_tensor, axis=axis, keepdims=keepdims))
+            return PTNNCFTensor(result.type(out_dtype).to(device))
         return PTNNCFCollectorTensorProcessor.quantile(x, quantile=[0.5], axis=axis, keepdims=keepdims)[0]
 
     @classmethod
@@ -110,16 +112,13 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
             return cls.median(x, axis=axis, keepdims=keepdims)
 
         device = x.tensor.device
-        dtype = x.tensor.dtype
-        np_tensor = x.tensor.detach().cpu().numpy()
-        if np_tensor.dtype in [np.float32, np.float16]:
-            np_tensor = np_tensor.astype(dtype=np.float64)
-
+        comp_dtype, out_dtype = _get_computing_dtype(x.tensor.dtype)
+        np_tensor = x.tensor.detach().cpu().to(dtype=comp_dtype, copy=False).numpy()
         masked_x = np.ma.array(np_tensor, mask=mask.tensor.detach().cpu().numpy())
         result = np.ma.median(masked_x, axis=axis, keepdims=keepdims).astype(masked_x.dtype)
         if isinstance(result, np.ma.MaskedArray):
             result = result.data
-        return PTNNCFTensor(torch.tensor(result).to(device=device, dtype=dtype))
+        return PTNNCFTensor(torch.tensor(result).to(device=device, dtype=out_dtype))
 
     @staticmethod
     def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
