@@ -1,5 +1,36 @@
 # Release Notes
 
+## New in Release 2.8.0
+
+Post-training Quantization:
+
+- Breaking changes:
+  - `nncf.quantize` signature has been changed to add `mode: Optional[nncf.QuantizationMode] = None` as its 3-rd argument, between the original `calibration_dataset` and `preset` arguments.
+  - (Common) `nncf.common.quantization.structs.QuantizationMode` has been renamed to `nncf.common.quantization.structs.QuantizationScheme`
+- General:
+  - (OpenVINO) Changed default OpenVINO opset from 9 to 13.
+- Features:
+  - (OpenVINO) Added support for quantizing the ScaledDotProductAttention operation from OpenVINO opset 13.
+  - (Common) Split the `nncf.CompressWeights.INT8` into `nncf.CompressWeights.INT8_SYM` and `nncf.CompressWeights.INT8_ASYM`, which specify [symmetric](https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#symmetric-quantization) and [asymmetric](https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#asymmetric-quantization) for weight compression respectively.
+  The original `nncf.CompressWeights.INT8` enum value is now deprecated.
+  - (OpenVINO) Added FP8 quantization support via `nncf.QuantizationMode.FP8_E4M3` and `nncf.QuantizationMode.FP8_E5M2` enum values, invoked via passing one of these values as an optional `mode` argument to `nncf.quantize`.
+  - (Common) Added an `all_layers: Optional[bool] = None` argument to `nncf.compress_weights` to indicate whether embeddings and last layers of the model should be compressed to a primary precision.
+  - (Common) Added a `sensitivity_metric: Optional[nncf.parameters.SensitivityMetric] = None` argument to `nncf.compress_weights` for finer control over the sensitivity metric for assigning quantization precision to layers.
+  Defaults to weight quantization error if a dataset is not provided for weight compression and to maximum variance of the layers' inputs multiplied by inverted 8-bit quantization noise if a dataset is provided.
+  By default, the backup precision is assigned for the embeddings and last layers.
+- Fixes:
+  - (OpenVINO) Models with embeddings (e.g. `gpt-2`, `stable-diffusion-v1-5`, `stable-diffusion-v2-1`, `opt-6.7b`, `falcon-7b`, `bloomz-7b1`) are now more accurately quantized.
+  - (PyTorch) `nncf.strip(..., do_copy=True)` now actually returns a deepcopy (stripped) of the model object.
+  - (PyTorch) Post-hooks can now be set up on operations that return `torch.return_type` (such as `torch.max`).
+  - (PyTorch) Improved dynamic graph tracing for various tensor operations from `torch` namespace.
+  - (PyTorch) More robust handling of models with disjoint traced graphs when applying PTQ.
+  Developers are advised to use [optimum-intel](https://github.com/huggingface/optimum-intel) instead.
+- Improvements:
+  - Reformatted the tutorials section in the top-level `README.md` for better readability.
+- Deprecations/Removals:
+  - (Common) Removed legacy external quantizer storage names.
+  - (PyTorch) The Git patch for integration with HuggingFace `transformers` repository is marked as deprecated and will be removed in a future release.
+
 ## New in Release 2.7.0
 
 Post-training Quantization:
