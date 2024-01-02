@@ -69,7 +69,7 @@ class BaseTestModel(ABC):
             example_input = {k: torch.tensor(v) for k, v in example.items()}
         assert example_input is not None
 
-        nncf_model = wrap_model(fw_model, example_input)
+        nncf_model = wrap_model(fw_model, example_input, trace_parameters=True)
 
         self.check_graph(nncf_model.nncf.get_original_graph())
 
