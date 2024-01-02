@@ -332,7 +332,7 @@ class TestMovementTraining:
 
     @staticmethod
     def _validate_model_is_saved(desc: MovementTrainingTestDescriptor):
-        assert Path(desc.output_dir, "pytorch_model.bin").is_file()
+        assert Path(desc.output_dir, "model.safetensors").is_file()
 
     @staticmethod
     def _validate_train_metric(desc: MovementTrainingTestDescriptor):
