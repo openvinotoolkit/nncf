@@ -14,5 +14,3 @@ virtualenv
 # TODO: remove after upgrade to TF 2.13
 filelock<3.12.3
 
-# Ticket 69520
-pyparsing<3.0
