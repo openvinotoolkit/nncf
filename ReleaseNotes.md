@@ -11,7 +11,7 @@ Post-training Quantization:
   - (OpenVINO) Changed default OpenVINO opset from 9 to 13.
 - Features:
   - (OpenVINO) Added support for quantizing the ScaledDotProductAttention operation from OpenVINO opset 13.
-  - (Common) Split the `nncf.CompressWeights.INT8` into `nncf.CompressWeights.INT8_SYM` and `nncf.CompressWeights.INT8_ASYM`, which specify [symmetric](https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#symmetric-quantization) and [asymmetric](https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#asymmetric-quantization) for weight compression respectively.
+  - (Common) Renamed the `nncf.CompressWeights.INT8` to `nncf.CompressWeights.INT8_ASYM` and introduce `nncf.CompressWeights.INT8_SYM` that can be efficiently used with dynamic 8-bit quantization of activations.
   The original `nncf.CompressWeights.INT8` enum value is now deprecated.
   - (OpenVINO) Added FP8 quantization support via `nncf.QuantizationMode.FP8_E4M3` and `nncf.QuantizationMode.FP8_E5M2` enum values, invoked via passing one of these values as an optional `mode` argument to `nncf.quantize`.
   - (Common) Added an `all_layers: Optional[bool] = None` argument to `nncf.compress_weights` to indicate whether embeddings and last layers of the model should be compressed to a primary precision.
