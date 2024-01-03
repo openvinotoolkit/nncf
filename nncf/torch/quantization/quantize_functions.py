@@ -224,7 +224,7 @@ class TuneRange(torch.autograd.Function):
         input_high[input_high < 0] = 0
         n = levels - 1
         # Need a cast here because fp16 division yields fp32 results sometimes
-        scale = (levels / (input_high - input_low_copy)).to(dtype=input_high.dtype)
+        scale = (n / (input_high - input_low_copy)).to(dtype=input_high.dtype)
         zp = torch.round(-input_low_copy * scale)
 
         new_input_low = torch.where(zp < n, zp / (zp - n) * input_high, input_low_copy)
