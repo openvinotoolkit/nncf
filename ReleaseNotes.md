@@ -14,7 +14,7 @@ Post-training Quantization:
   - (Common) Renamed the `nncf.CompressWeights.INT8` to `nncf.CompressWeights.INT8_ASYM` and introduce `nncf.CompressWeights.INT8_SYM` that can be efficiently used with dynamic 8-bit quantization of activations.
   The original `nncf.CompressWeights.INT8` enum value is now deprecated.
   - (OpenVINO) Added FP8 quantization support via `nncf.QuantizationMode.FP8_E4M3` and `nncf.QuantizationMode.FP8_E5M2` enum values, invoked via passing one of these values as an optional `mode` argument to `nncf.quantize`.
-  - (Common) Added an `all_layers: Optional[bool] = None` argument to `nncf.compress_weights` to indicate whether embeddings and last layers of the model should be compressed to a primary precision.
+  - (Common) Added an `all_layers: Optional[bool] = None` argument to `nncf.compress_weights` to indicate whether embeddings and last layers of the model should be compressed to a primary precision. This is relevant to 4-bit quantization only.
   - (Common) Added a `sensitivity_metric: Optional[nncf.parameters.SensitivityMetric] = None` argument to `nncf.compress_weights` for finer control over the sensitivity metric for assigning quantization precision to layers.
   Defaults to weight quantization error if a dataset is not provided for weight compression and to maximum variance of the layers' inputs multiplied by inverted 8-bit quantization noise if a dataset is provided.
   By default, the backup precision is assigned for the embeddings and last layers.
