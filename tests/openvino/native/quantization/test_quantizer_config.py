@@ -53,8 +53,7 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
     @pytest.fixture(
         params=[
             pytest.param(
-                (TargetType.PRE_LAYER_OPERATION, "/Sum_1_0", (0, 2), (0, 1, 2)),
-                marks=pytest.mark.skip("Ticket 102414: remove hardcoded axes for activations"),
+                (TargetType.PRE_LAYER_OPERATION, "/Sum_1_0", (2,), (1, 2)),
             ),
             (
                 TargetType.POST_LAYER_OPERATION,

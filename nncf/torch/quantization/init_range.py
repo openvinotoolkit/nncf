@@ -130,7 +130,7 @@ class PTRangeInitCollectorParams(RangeInitCollectorParams):
         :param per_sample_stats: Boolean flag that indicated whether statistics are collected per-sample or per-batch.
         :return: Shape to aggregate to.
         """
-        return (0, 1) if self.use_per_sample_stats(per_sample_stats) else (0,)
+        return (0, 1) if self.use_per_sample_stats(per_sample_stats) else None
 
 
 class StatCollectorGenerator:

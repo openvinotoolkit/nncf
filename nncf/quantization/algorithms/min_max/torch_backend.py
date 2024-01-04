@@ -166,8 +166,11 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         num_samples: int = None,
     ) -> TensorCollector:
         collector_params = PTMinMaxAlgoBackend._default_collector_params(nncf_graph, target_point, quantizer_config)
-        reduction_axes = collector_params.get_reduction_axes(per_sample_stats=False)
-        aggregation_axes = collector_params.get_aggregation_axes(per_sample_stats=False)
+        reduction_axes = collector_params.get_reduction_axes(per_sample_stats=True)
+        aggregation_axes = collector_params.get_aggregation_axes(per_sample_stats=True)
+        if target_point.is_weight_target_point():
+            reduction_axes = collector_params.get_reduction_axes(per_sample_stats=False)
+            aggregation_axes = collector_params.get_aggregation_axes(per_sample_stats=False)
 
         collector = TensorCollector(PTMinMaxTensorStatistic)
         for params, container_key in zip(

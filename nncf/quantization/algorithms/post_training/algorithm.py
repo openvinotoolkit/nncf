@@ -105,8 +105,9 @@ class PostTrainingQuantization(Algorithm):
                 "A dataset is required for the post-training quantization "
                 "algorithm to collect statistics for intermediate models."
             )
-        batch_size = dataset.get_batch_size() or 1
-        if batch_size > 1:
+        if dataset is not None:
+            batch_size = dataset.get_batch_size() or 1
+        if dataset is not None and batch_size > 1:
             nncf_logger.warn("Statistics for batch_size > 1 does not match to the recomended batch_size=1")
         step_index_to_statistics = None
         if statistic_points:
