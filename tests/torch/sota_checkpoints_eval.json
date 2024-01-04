@@ -256,7 +256,9 @@
                 "model_description": "ResNet-18",
                 "compression_description": "XNOR (weights), scale/threshold (activations)",
                 "diff_fp32_min": -8.5,
-                "diff_fp32_max": 0.1
+                "diff_fp32_max": 0.1,
+                "diff_target_pt_min": -0.3,
+                "diff_target_pt_max": 0.3
             },
             "resnet18_imagenet_binarization_dorefa": {
                 "config": "examples/torch/classification/configs/binarization/resnet18_imagenet_binarization_dorefa.json",
