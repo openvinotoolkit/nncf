@@ -250,7 +250,7 @@
                 "config": "examples/torch/classification/configs/binarization/resnet18_imagenet_binarization_xnor.json",
                 "reference": "resnet18_imagenet",
                 "target_ov": 61.82,
-                "target_pt": 61.74,
+                "target_pt": 61.88,
                 "metric_type": "Acc@1",
                 "resume": "resnet18_imagenet_binarization_xnor.pth",
                 "model_description": "ResNet-18",
