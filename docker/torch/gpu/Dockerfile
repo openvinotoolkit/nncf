@@ -1,9 +1,9 @@
 FROM nvidia/cuda:11.1.1-cudnn8-devel-ubuntu20.04
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        apt-transport-https \
-        git && \
-rm -rf /var/lib/apt/lists/*
+        apt-transport-https=2.0 \
+        git=2.25 && \
+    rm -rf /var/lib/apt/lists/*
 
 # Required for nvidia-docker v1
 RUN echo "/usr/local/nvidia/lib" >> /etc/ld.so.conf.d/nvidia.conf && \
@@ -13,20 +13,23 @@ RUN echo "/usr/local/nvidia/lib" >> /etc/ld.so.conf.d/nvidia.conf && \
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive \
     apt-get install -y --no-install-recommends \
-        wget \
-        curl \
-        zip \
-        unzip \
-        nano \
-        openssh-server \
-        openssh-client \
-        sudo \
-        python3 \
-        python3-dev \
-        python3-pip && \
-    cd /usr/bin && \
-    ln -s python3.8 python && \
-    rm -rf /var/lib/apt/lists/*
+        wget=1.20 \
+        curl=7.68 \
+        zip=3.0 \
+        unzip=6.0 \
+        nano=4.8 \
+        openssh-server=1:8.2 \
+        openssh-client=1:8.2 \
+        sudo=1.8 \
+        python3=3.8 \
+        python3-dev=3.8 \
+        python3-pip=20.0 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /usr/bin
+RUN ln -s python3.8 python
+
 
 ENV PATH /usr/local/nvidia/bin:/usr/local/cuda/bin:${PATH}
 ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64
@@ -35,7 +38,7 @@ ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
 
-ENTRYPOINT cd /home/nncf \
+ENTRYPOINT ["cd /home/nncf \
                && python setup.py install --torch \
                && pip3 install -r examples/torch/requirements.txt \
-               && bash
+               && bash"]
