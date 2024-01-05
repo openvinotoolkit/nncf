@@ -1,35 +1,48 @@
+# Copyright (c) 2023 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import time
 from functools import partial
 
-import openvino as ov
+import datasets
 import numpy as np
+import openvino as ov
+from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoTokenizer
 
-import datasets
-from optimum.intel.openvino import OVModelForCausalLM
 import nncf
-
 
 MODEL_ID = "PY007/TinyLlama-1.1B-Chat-v0.3"
 OUTPUT_DIR = "tinyllama_compressed"
 tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
 model = OVModelForCausalLM.from_pretrained(MODEL_ID, export=True, use_cache=True, compile=False)
 
-dataset = datasets.load_dataset("allenai/c4", "allenai--c4", 
-                data_files={"validation": "en/c4-validation.00000-of-00008.json.gz"},
-                split="validation")
+dataset = datasets.load_dataset(
+    "allenai/c4",
+    "allenai--c4",
+    data_files={"validation": "en/c4-validation.00000-of-00008.json.gz"},
+    split="validation",
+)
+
 
 def transform_fn(data, model):
     tokenized_text = tokenizer(data["text"], return_tensors="np")
     input_ids = tokenized_text["input_ids"]
     attention_mask = tokenized_text["attention_mask"]
-    
+
     inputs = {}
     inputs["input_ids"] = input_ids
     inputs["attention_mask"] = tokenized_text["attention_mask"]
     position_ids = np.cumsum(attention_mask, axis=1) - 1
     position_ids[attention_mask == 0] = 1
-    
+
     # The magic forms KV cache as model inputs
     batch_size = input_ids.shape[0]
     for input_name in model.key_value_input_names:
@@ -41,13 +54,19 @@ def transform_fn(data, model):
         else:
             shape[1] = 0
         inputs[input_name] = ov.Tensor(model_inputs.get_element_type(), shape.get_shape())
-        
+
     inputs["position_ids"] = position_ids
     return inputs
 
+
 quantization_dataset = nncf.Dataset(dataset, partial(transform_fn, model=model))
 
-model.model = nncf.compress_weights(model.model, dataset=quantization_dataset, mode=nncf.CompressWeightsMode.INT4_SYM, sensitivity_metric=nncf.parameters.SensitivityMetric.HESSIAN_INPUT_ACTIVATION)
+model.model = nncf.compress_weights(
+    model.model,
+    dataset=quantization_dataset,
+    mode=nncf.CompressWeightsMode.INT4_SYM,
+    sensitivity_metric=nncf.parameters.SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
+)
 model.save_pretrained(OUTPUT_DIR)
 
 model = OVModelForCausalLM.from_pretrained(OUTPUT_DIR)
