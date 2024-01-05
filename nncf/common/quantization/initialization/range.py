@@ -160,6 +160,28 @@ class RangeInitCollectorParams:
         self._mode = mode
         self._per_channel = per_channel
 
+    @property
+    def is_weights(self) -> bool:
+        """
+        Returns boolean that defines tensor type.
+        True for Weights, False for Activations.
+        """
+        return self._is_weights
+
+    @property
+    def mode(self) -> QuantizationMode:
+        """
+        Returns quantization mode: symmetric or asymmetric.
+        """
+        return self._mode
+
+    @property
+    def per_channel(self) -> bool:
+        """
+        Returns quantization granularity.
+        """
+        return self._per_channel
+
     def use_per_sample_stats(self, per_sample_stats) -> bool:
         """
         For activations, if per_sample_stats is True, statistics will be collected per-sample.
