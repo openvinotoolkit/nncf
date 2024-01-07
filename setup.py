@@ -109,7 +109,7 @@ INSTALL_REQUIRES = [
     "numpy>=1.19.1, <1.27",
     "openvino-telemetry>=2023.2.0",
     "packaging>=20.0",
-    "pandas>=1.1.5,<2.1",
+    "pandas>=1.1.5,<2.2",
     "psutil",
     "pydot>=1.4.1",
     "pymoo>=0.6.0.1",

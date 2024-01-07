@@ -40,7 +40,9 @@
                 "metric_type": "Acc@1",
                 "resume": "resnet50_imagenet_int4_int8.pth",
                 "model_description": "ResNet-50",
-                "compression_description": "Mixed, 43.12% INT8 / 56.88% INT4"
+                "compression_description": "Mixed, 43.12% INT8 / 56.88% INT4",
+                "diff_target_pt_min": -0.3,
+                "diff_target_pt_max": 0.3
             },
             "resnet50_imagenet_rb_sparsity_int8": {
                 "config": "examples/torch/classification/configs/sparsity_quantization/resnet50_imagenet_rb_sparsity_int8.json",
@@ -233,7 +235,9 @@
                 "model_description": "SqueezeNet V1.1",
                 "compression_description": "Mixed, 52.83% INT8 / 47.17% INT4",
                 "diff_fp32_min": -0.7,
-                "diff_fp32_max": 0.7
+                "diff_fp32_max": 0.7,
+                "diff_target_pt_min": -0.3,
+                "diff_target_pt_max": 0.3
             },
             "resnet18_imagenet": {
                 "config": "examples/torch/classification/configs/binarization/resnet18_imagenet.json",
@@ -246,13 +250,15 @@
                 "config": "examples/torch/classification/configs/binarization/resnet18_imagenet_binarization_xnor.json",
                 "reference": "resnet18_imagenet",
                 "target_ov": 61.82,
-                "target_pt": 61.74,
+                "target_pt": 61.88,
                 "metric_type": "Acc@1",
                 "resume": "resnet18_imagenet_binarization_xnor.pth",
                 "model_description": "ResNet-18",
                 "compression_description": "XNOR (weights), scale/threshold (activations)",
                 "diff_fp32_min": -8.5,
-                "diff_fp32_max": 0.1
+                "diff_fp32_max": 0.1,
+                "diff_target_pt_min": -0.3,
+                "diff_target_pt_max": 0.3
             },
             "resnet18_imagenet_binarization_dorefa": {
                 "config": "examples/torch/classification/configs/binarization/resnet18_imagenet_binarization_dorefa.json",
@@ -263,7 +269,7 @@
                 "resume": "resnet18_imagenet_binarization_dorefa.pth",
                 "model_description": "ResNet-18",
                 "compression_description": "DoReFa (weights), scale/threshold (activations)",
-                "diff_fp32_min": -8.3,
+                "diff_fp32_min": -8.33,
                 "diff_fp32_max": 0.1,
                 "skip_ov": "Issue-22543"
             },

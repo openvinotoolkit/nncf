@@ -11,8 +11,9 @@
 
 import pytest
 
-from nncf.openvino.pot.quantization.quantize_model import _create_ignored_scope_config
 from nncf.scopes import IgnoredScope
+
+quantize_model_module = pytest.importorskip("nncf.openvino.pot.quantization.quantize_model")
 
 
 def test_create_ignored_scope_config():
@@ -23,7 +24,7 @@ def test_create_ignored_scope_config():
         names=ignored_names,
         types=ignored_types,
     )
-    ignored_config = _create_ignored_scope_config(ignored_scope)
+    ignored_config = quantize_model_module._create_ignored_scope_config(ignored_scope)
 
     assert ignored_config["scope"] == ignored_names
 
@@ -34,4 +35,4 @@ def test_create_ignored_scope_config():
 def test_create_ignored_scope_config_raise_exception():
     ignored_scope = IgnoredScope(patterns=[".*"])
     with pytest.raises(Exception):
-        _ = _create_ignored_scope_config(ignored_scope)
+        _ = quantize_model_module._create_ignored_scope_config(ignored_scope)

@@ -19,10 +19,9 @@ import timm
 import torch
 from openvino.tools.mo import convert_model
 from sklearn.metrics import accuracy_score
+from timm.data.transforms_factory import transforms_imagenet_eval
 from timm.layers.config import set_fused_attn
 from torchvision import datasets
-from torchvision import transforms
-from torchvision.transforms import InterpolationMode
 
 import nncf
 from nncf.common.logging.track_progress import track
@@ -44,6 +43,7 @@ class ImageClassificationTimm(BaseTestPipeline):
 
     def prepare_model(self) -> None:
         timm_model = timm.create_model(self.model_id, num_classes=1000, in_chans=3, pretrained=True, checkpoint_path="")
+        timm_model.eval()
         timm_model = replace_timm_custom_modules_with_torch_native(timm_model)
         self.model_cfg = timm_model.default_cfg
         self.input_size = [1] + list(timm_model.default_cfg["input_size"])
@@ -85,23 +85,15 @@ class ImageClassificationTimm(BaseTestPipeline):
 
     def prepare_preprocessor(self) -> None:
         config = self.model_cfg
-        transformations_list = []
-        normalize = transforms.Normalize(mean=config["mean"], std=config["std"])
-        input_size = config["input_size"]
-
-        RESIZE_MODE_MAP = {
-            "bilinear": InterpolationMode.BILINEAR,
-            "bicubic": InterpolationMode.BICUBIC,
-            "nearest": InterpolationMode.NEAREST,
-        }
-
-        if "fixed_input_size" in config and not config["fixed_input_size"]:
-            resize_size = tuple(int(x / config["crop_pct"]) for x in input_size[-2:])
-            resize = transforms.Resize(resize_size, interpolation=RESIZE_MODE_MAP[config["interpolation"]])
-            transformations_list.append(resize)
-        transformations_list.extend([transforms.CenterCrop(input_size[-2:]), transforms.ToTensor(), normalize])
-
-        self.transform = transforms.Compose(transformations_list)
+        self.transform = transforms_imagenet_eval(
+            img_size=config["input_size"][-2:],
+            crop_pct=config["crop_pct"],
+            crop_mode=config["crop_mode"],
+            interpolation=config["interpolation"],
+            use_prefetcher=False,
+            mean=config["mean"],
+            std=config["std"],
+        )
 
     def get_transform_calibration_fn(self):
         if self.backend in PT_BACKENDS:
