@@ -27,6 +27,7 @@ from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.onnx.graph.transformations.commands import ONNXNullBiasInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.statistics.collectors import ONNXMeanStatisticCollector
+from nncf.onnx.statistics.collectors import get_mean_statistic_collector
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 
 
@@ -62,7 +63,7 @@ class ONNXFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         num_samples: Optional[int] = None,
         window_size: Optional[int] = None,
     ) -> ONNXMeanStatisticCollector:
-        return ONNXMeanStatisticCollector(channel_axis, num_samples, window_size)
+        return get_mean_statistic_collector(num_samples, channel_axis, window_size, inplace)
 
     @staticmethod
     def get_sub_input_output_names(subgraph: onnx.ModelProto) -> Tuple[str, str]:

@@ -30,7 +30,8 @@ from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.statistics.collectors import ONNXMeanStatisticCollector
 from nncf.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
-from nncf.onnx.statistics.collectors import ONNXRawStatisticCollector
+from nncf.onnx.statistics.collectors import get_mean_statistic_collector
+from nncf.onnx.statistics.collectors import get_raw_stat_collector
 from nncf.onnx.tensor import ONNXNNCFTensor
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 
@@ -79,11 +80,11 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         num_samples: Optional[int] = None,
         window_size: Optional[int] = None,
     ) -> ONNXMeanStatisticCollector:
-        return ONNXMeanStatisticCollector(channel_axis, num_samples, window_size)
+        return get_mean_statistic_collector(num_samples, channel_axis, window_size, inplace)
 
     @staticmethod
     def raw_statistic_collector(inplace: bool, num_samples: int = None) -> ONNXMeanStatisticCollector:
-        return ONNXRawStatisticCollector(num_samples)
+        return get_raw_stat_collector(num_samples, inplace)
 
     @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> ONNXNNCFTensor:
