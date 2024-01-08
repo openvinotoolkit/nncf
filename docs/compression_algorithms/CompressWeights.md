@@ -66,9 +66,56 @@ Below is the example how to compress 80% of layers to 4-bit integer with a defau
 It requires to set `awq` to `True` additionally to data-based mixed-precision algorithm.
 
 ```python
+from datasets import load_dataset
+from functools import partial
 from nncf import compress_weights, CompressWeightsMode, Dataset
-nncf_dataset = nncf.Dataset(data_source, transform_fn)
-compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_SYM, ratio=0.8, dataset=nncf_dataset, awq=True)
+from optimum.intel.openvino import OVModelForCausalLM
+from transformers import AutoTokenizer
+
+def transform_func(item, tokenizer, input_shapes):
+    text = item['text']
+    tokens = tokenizer(text)
+
+    res = {'input_ids': np.expand_dims(np.array(tokens['input_ids']), 0),
+           'attention_mask': np.expand_dims(np.array(tokens['attention_mask']), 0)}
+
+    if 'position_ids' in input_shapes:
+        position_ids = np.cumsum(res['attention_mask'], axis=1) - 1
+        position_ids[res['attention_mask'] == 0] = 1
+        res['position_ids'] = position_ids
+
+    for name, shape in input_shapes.items():
+        if name in res:
+            continue
+        res[name] = np.zeros(shape)
+
+    return res
+
+def get_input_shapes(model, batch_size = 1):
+    inputs = {}
+
+    for val in model.model.inputs:
+        name = val.any_name
+        shape = list(val.partial_shape.get_min_shape())
+        shape[0] = batch_size
+        inputs[name] = shape
+
+    return inputs
+
+# load your model and tokenizer
+model = OVModelForCausalLM.from_pretrained(...)
+tokenizer = AutoTokenizer.from_pretrained(...)
+
+# prepare dataset for compression
+dataset = load_dataset('wikitext', 'wikitext-2-v1', split='train')
+dataset = dataset.filter(lambda example: len(example["text"]) > 80)
+input_shapes = get_input_shapes(model)
+nncf_dataset = Dataset(dataset, partial(transform_func, tokenizer=tokenizer,
+                                                        input_shapes=input_shapes))
+
+model.model = compress_weights(model.model, mode=CompressWeightsMode.INT4_SYM, ratio=0.8, dataset=nncf_dataset, awq=True)
+
+model.save_pretrained(...)
 ```
 
 - `NF4` mode can be considered for improving accuracy, but currently models quantized to nf4 should not be faster models
