@@ -12,7 +12,7 @@ import pytest
 import torch
 
 from nncf.torch.return_types import _TORCH_RETURN_TYPES
-from nncf.torch.return_types import maybe_unwrap_from_torch_return_type
+from nncf.torch.return_types import maybe_get_values_from_torch_return_type
 from nncf.torch.return_types import maybe_wrap_to_torch_return_type
 
 
@@ -20,7 +20,7 @@ from nncf.torch.return_types import maybe_wrap_to_torch_return_type
 def test_unwrap_wrap_torch_return_type(return_type):
     wrapped_tensor = return_type((torch.tensor(0), torch.tensor(1)))
     assert wrapped_tensor.values == torch.tensor(0)
-    unwrapped_tensor = maybe_unwrap_from_torch_return_type(wrapped_tensor)
+    unwrapped_tensor = maybe_get_values_from_torch_return_type(wrapped_tensor)
     assert unwrapped_tensor == torch.tensor(0)
 
     updated_wrapped_tensor = maybe_wrap_to_torch_return_type(unwrapped_tensor, wrapped_tensor)
@@ -31,7 +31,7 @@ def test_unwrap_wrap_torch_return_type(return_type):
     "input_", [torch.tensor(0), [torch.tensor(0), torch.tensor(1)], (torch.tensor(0), torch.tensor(1))]
 )
 def test_wrap_unwrap_do_nothing_to_tensor(input_):
-    wrapped_input = maybe_unwrap_from_torch_return_type(input_)
+    wrapped_input = maybe_get_values_from_torch_return_type(input_)
     assert wrapped_input is input_
     unwrapped_input = maybe_wrap_to_torch_return_type(input_, wrapped_input)
     assert unwrapped_input is input_
