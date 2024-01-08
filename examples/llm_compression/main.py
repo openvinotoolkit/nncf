@@ -22,7 +22,7 @@ import nncf
 MODEL_ID = "PY007/TinyLlama-1.1B-Chat-v0.3"
 OUTPUT_DIR = "tinyllama_compressed"
 tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-model = OVModelForCausalLM.from_pretrained(MODEL_ID, export=True, use_cache=True, compile=False)
+model = OVModelForCausalLM.from_pretrained(MODEL_ID, export=True, load_in_8bit=False, compile=False, stateful=False)
 
 dataset = datasets.load_dataset(
     "allenai/c4",
@@ -61,11 +61,12 @@ def transform_fn(data, model):
 
 quantization_dataset = nncf.Dataset(dataset, partial(transform_fn, model=model))
 
+# Comment this text to turn off model optimization and measure performance of baseline model
 model.model = nncf.compress_weights(
     model.model,
     dataset=quantization_dataset,
     mode=nncf.CompressWeightsMode.INT4_SYM,
-    sensitivity_metric=nncf.parameters.SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
+    sensitivity_metric=nncf.SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
 )
 model.save_pretrained(OUTPUT_DIR)
 
@@ -76,4 +77,5 @@ start_t = time.time()
 output = model.generate(**input_ids, max_new_tokens=100)
 print("Elapsed time: ", time.time() - start_t)
 
-print(tokenizer.decode(output[0]))
+output_text = tokenizer.decode(output[0])
+print(output_text)

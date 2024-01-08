@@ -12,7 +12,7 @@ To use this example:
 ```bash
 pip install -U pip
 pip install ../../../../
-pip install optuimum-intel[openvino]
+pip install optimum-intel[openvino]
 ```
 
 ## Run Example
