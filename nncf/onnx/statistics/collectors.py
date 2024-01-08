@@ -15,11 +15,7 @@ import numpy as np
 
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorElementsType
-from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
-from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
-from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
-from nncf.common.tensor_statistics.collectors import RawStatisticCollector
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
@@ -33,7 +29,6 @@ from nncf.experimental.common.tensor_statistics.collectors import QuantileReduce
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.onnx.statistics.statistics import ONNXMeanTensorStatistic
-from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
 from nncf.onnx.statistics.statistics import ONNXRawTensorStatistic
 from nncf.onnx.tensor import ONNXNNCFTensor
 from nncf.quantization.advanced_parameters import StatisticsType
@@ -175,63 +170,6 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @staticmethod
     def zero_elements(x: NNCFTensor) -> NNCFTensor:
         raise NotImplementedError()
-
-
-class ONNXMinMaxStatisticCollector(MinMaxStatisticCollector):
-    @staticmethod
-    def _get_processor() -> NNCFCollectorTensorProcessor:
-        return ONNXNNCFCollectorTensorProcessor
-
-    def _register_input(self, x: ONNXNNCFTensor):
-        self._register_input_common(x)
-
-    def _get_statistics(self) -> ONNXMinMaxTensorStatistic:
-        return ONNXMinMaxTensorStatistic(
-            min_values=self._min_values.tensor,
-            max_values=self._max_values.tensor,
-        )
-
-
-class ONNXMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
-    @staticmethod
-    def _get_processor() -> NNCFCollectorTensorProcessor:
-        return ONNXNNCFCollectorTensorProcessor
-
-    def _register_input(self, x: ONNXNNCFTensor):
-        self._register_input_common(x)
-
-    def _get_statistics(self) -> ONNXMinMaxTensorStatistic:
-        return ONNXMinMaxTensorStatistic(
-            min_values=self._min_aggregate().tensor,
-            max_values=self._max_aggregate().tensor,
-        )
-
-
-class ONNXMeanStatisticCollector(MeanStatisticCollector):
-    @staticmethod
-    def _get_processor() -> NNCFCollectorTensorProcessor:
-        return ONNXNNCFCollectorTensorProcessor
-
-    def _register_input(self, x: ONNXNNCFTensor):
-        self._register_input_common(x)
-
-    def _get_statistics(self) -> ONNXMeanTensorStatistic:
-        return ONNXMeanTensorStatistic(
-            mean_values=self._mean_aggregate().tensor,
-            shape=self._shape(),
-        )
-
-
-class ONNXRawStatisticCollector(RawStatisticCollector):
-    @staticmethod
-    def _get_processor() -> NNCFCollectorTensorProcessor:
-        return ONNXNNCFCollectorTensorProcessor
-
-    def _register_input(self, x: ONNXNNCFTensor):
-        self._register_input_common(x)
-
-    def _get_statistics(self) -> ONNXRawTensorStatistic:
-        return ONNXRawTensorStatistic(self._all_values)
 
 
 class ONNXNoopReducer(NoopReducer):
