@@ -19,7 +19,6 @@ from tests.onnx.conftest import ONNX_MODEL_DIR
 from tests.onnx.quantization.common import ModelToTest
 from tests.onnx.quantization.common import compare_nncf_graph
 from tests.onnx.quantization.common import min_max_quantize_model
-from tests.onnx.quantization.common import mock_collect_statistics
 from tests.onnx.weightless_model import load_model_topology_with_zeros_weights
 
 TORCHVISION_TEST_DATA = [
@@ -46,8 +45,7 @@ TORCHVISION_TEST_DATA = [
     TORCHVISION_TEST_DATA,
     ids=[model_to_test[0].model_name for model_to_test in TORCHVISION_TEST_DATA],
 )
-def test_min_max_quantization_graph_torchvision_models(tmp_path, mocker, model_to_test, model, quantization_parameters):
-    mock_collect_statistics(mocker)
+def test_min_max_quantization_graph_torchvision_models(tmp_path, model_to_test, model, quantization_parameters):
     onnx_model_path = tmp_path / (model_to_test.model_name + ".onnx")
     x = torch.randn(model_to_test.input_shape, requires_grad=False)
     torch.onnx.export(model, x, onnx_model_path, opset_version=13)
@@ -63,8 +61,7 @@ ONNX_TEST_DATA = [ModelToTest("densenet-12", [1, 3, 224, 224])]
 @pytest.mark.parametrize(
     ("model_to_test"), ONNX_TEST_DATA, ids=[model_to_test.model_name for model_to_test in ONNX_TEST_DATA]
 )
-def test_min_max_quantization_graph_onnx_model(tmp_path, mocker, model_to_test):
-    mock_collect_statistics(mocker)
+def test_min_max_quantization_graph_onnx_model(tmp_path, model_to_test):
     onnx_model_path = ONNX_MODEL_DIR / (model_to_test.model_name + ".onnx")
     original_model = load_model_topology_with_zeros_weights(onnx_model_path)
 
