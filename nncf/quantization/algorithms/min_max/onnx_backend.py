@@ -165,7 +165,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         :param channel_axis: Axis of quantization in per-channel case.
         :return: Reduction shape of reducers.
         """
-        if not per_channel and not per_sample_stats:
+        if not per_channel and not per_sample_stats or input_shape is None:
             return None
 
         ndims = len(input_shape)
