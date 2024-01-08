@@ -64,6 +64,23 @@ def test_handle_does_not_fail_if_hook_does_not_exist():
     handle.remove()
 
 
+def test_handle_does_not_remove_op_twice():
+    hook_registry = OrderedDict()
+    handle = HookHandle(hook_registry)
+    handle.add(0)
+    handle.remove()
+    assert not hook_registry
+
+    second_handle = HookHandle(hook_registry)
+    second_handle.add(1)
+    assert handle.hook_id == second_handle.hook_id
+    assert "0" in hook_registry
+
+    handle.remove()
+    assert "0" in hook_registry
+    assert hook_registry["0"] == 1
+
+
 def test_hook_handle_weak_ref():
     def _local_scope_fn():
         hook_registry = OrderedDict()
