@@ -59,7 +59,7 @@ try:
 
     POT_AVAILABLE = True
 except ImportError:
-    from tests.openvino.tools.config import Config
+    from config import Config
 
     POT_AVAILABLE = False
 
