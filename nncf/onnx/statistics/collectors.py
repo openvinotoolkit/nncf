@@ -29,6 +29,7 @@ from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
 from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.onnx.statistics.statistics import ONNXMeanTensorStatistic
 from nncf.onnx.statistics.statistics import ONNXRawTensorStatistic
 from nncf.onnx.tensor import ONNXNNCFTensor
@@ -173,97 +174,51 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         raise NotImplementedError()
 
 
-class ONNXNoopReducer(NoopReducer):
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return []
-
-
-class ONNXMinReducer(MinReducer):
+class ONNXBasicReducer(TensorReducerBase):
     def _get_processor(self):
         return ONNXNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return None  # TODO raise Error?
+        raise RuntimeError("ONNX backend has no support of inplace statistics.")
 
     def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return []
+        raise NotImplementedError("The method is not implemented.")
 
 
-class ONNXMaxReducer(MaxReducer):
-    def _get_processor(self):
-        return ONNXNNCFCollectorTensorProcessor
-
-    def get_inplace_fn(self):
-        return None  # TODO raise Error?
-
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return []
+class ONNXNoopReducer(ONNXBasicReducer, NoopReducer):
+    pass
 
 
-class ONNXAbsMaxReducer(AbsMaxReducer):
-    def _get_processor(self):
-        return ONNXNNCFCollectorTensorProcessor
-
-    def get_inplace_fn(self):
-        return None  # TODO raise Error?
-
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return []
+class ONNXMinReducer(ONNXBasicReducer, MinReducer):
+    pass
 
 
-class ONNXMeanReducer(MeanReducer):
-    def _get_processor(self):
-        return ONNXNNCFCollectorTensorProcessor
-
-    def get_inplace_fn(self):
-        return None  # TODO raise Error?
-
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return []
+class ONNXMaxReducer(ONNXBasicReducer, MaxReducer):
+    pass
 
 
-class ONNXQuantileReducer(QuantileReducer):
-    def _get_processor(self):
-        return ONNXNNCFCollectorTensorProcessor
-
-    def get_inplace_fn(self):
-        return None  # TODO raise Error?
-
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return []
+class ONNXAbsMaxReducer(ONNXBasicReducer, AbsMaxReducer):
+    pass
 
 
-class ONNXAbsQuantileReducer(AbsQuantileReducer):
-    def _get_processor(self):
-        return ONNXNNCFCollectorTensorProcessor
-
-    def get_inplace_fn(self):
-        return None  # TODO raise Error?
-
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return []
+class ONNXMeanReducer(ONNXBasicReducer, MeanReducer):
+    pass
 
 
-class ONNXBatchMeanReducer(BatchMeanReducer):
-    def _get_processor(self):
-        return ONNXNNCFCollectorTensorProcessor
-
-    def get_inplace_fn(self):
-        return None  # TODO raise Error?
-
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return []
+class ONNXQuantileReducer(ONNXBasicReducer, QuantileReducer):
+    pass
 
 
-class ONNXMeanPerChanelReducer(MeanPerChReducer):
-    def _get_processor(self):
-        return ONNXNNCFCollectorTensorProcessor
+class ONNXAbsQuantileReducer(ONNXBasicReducer, AbsQuantileReducer):
+    pass
 
-    def get_inplace_fn(self):
-        return None  # TODO raise Error?
 
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return []
+class ONNXBatchMeanReducer(ONNXBasicReducer, BatchMeanReducer):
+    pass
+
+
+class ONNXMeanPerChanelReducer(ONNXBasicReducer, MeanPerChReducer):
+    pass
 
 
 def get_mean_statistic_collector(
@@ -301,7 +256,7 @@ def get_mean_statistic_collector(
     return collector
 
 
-def get_raw_stat_collector(num_samples, inplace=False):
+def get_raw_stat_collector(num_samples: int) -> TensorCollector:
     reducer = ONNXNoopReducer()
     aggregator = NoopAggregator(num_samples)
 
