@@ -257,6 +257,12 @@ def get_mean_statistic_collector(
 
 
 def get_raw_stat_collector(num_samples: int) -> TensorCollector:
+    """
+    Raw statistic collector builder.
+
+    :param num_samples: Maximum number of samples to collect.
+    :return: Raw statistic collector.
+    """
     reducer = ONNXNoopReducer()
     aggregator = NoopAggregator(num_samples)
 

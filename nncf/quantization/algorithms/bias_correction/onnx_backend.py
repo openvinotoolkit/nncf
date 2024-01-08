@@ -84,7 +84,7 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @staticmethod
     def raw_statistic_collector(inplace: bool, num_samples: int = None) -> TensorCollector:
-        return get_raw_stat_collector(num_samples, inplace)
+        return get_raw_stat_collector(num_samples)
 
     @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> ONNXNNCFTensor:
