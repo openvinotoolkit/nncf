@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 from typing import Deque, List, Optional, Tuple, Union
 
 import numpy as np
@@ -27,6 +28,7 @@ from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
 from nncf.experimental.common.tensor_statistics.collectors import MinReducer
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
+from nncf.experimental.common.tensor_statistics.collectors import OutputMetadata
 from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
@@ -198,9 +200,15 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return NNCFTensor(np.abs(np_tensor) < eps)
 
 
+@dataclass
+class OVOutputMetadata(OutputMetadata):
+    target_node_name: str
+    port_id: int
+
+
 class OVNoopReducer(NoopReducer):
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return [get_result_node_name(target_node_name, port_id)]
+    def get_output_names(self, output_metadata: OVOutputMetadata) -> List[str]:
+        return [get_result_node_name(output_metadata.target_node_name, output_metadata.port_id)]
 
 
 class OVMinReducer(MinReducer):
@@ -210,8 +218,10 @@ class OVMinReducer(MinReducer):
     def get_inplace_fn(self):
         return get_inplace_min_op(self.name, self._reduction_axes)
 
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
+    def get_output_names(self, output_metadata: OVOutputMetadata) -> List[str]:
+        return get_reducer_output_node_names(
+            self.name, output_metadata.target_node_name, output_metadata.port_id, self.output_port_id, self.inplace
+        )
 
 
 class OVMaxReducer(MaxReducer):
@@ -221,8 +231,10 @@ class OVMaxReducer(MaxReducer):
     def get_inplace_fn(self):
         return get_inplace_max_op(self.name, self._reduction_axes, False)
 
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
+    def get_output_names(self, output_metadata: OVOutputMetadata) -> List[str]:
+        return get_reducer_output_node_names(
+            self.name, output_metadata.target_node_name, output_metadata.port_id, self.output_port_id, self.inplace
+        )
 
 
 class OVAbsMaxReducer(AbsMaxReducer):
@@ -232,8 +244,10 @@ class OVAbsMaxReducer(AbsMaxReducer):
     def get_inplace_fn(self):
         return get_inplace_max_op(self.name, self._reduction_axes, True)
 
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
+    def get_output_names(self, output_metadata: OVOutputMetadata) -> List[str]:
+        return get_reducer_output_node_names(
+            self.name, output_metadata.target_node_name, output_metadata.port_id, self.output_port_id, self.inplace
+        )
 
 
 class OVMeanReducer(MeanReducer):
@@ -243,8 +257,10 @@ class OVMeanReducer(MeanReducer):
     def get_inplace_fn(self):
         return get_inplace_mean_op(self.name, self._reduction_axes)
 
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
+    def get_output_names(self, output_metadata: OVOutputMetadata) -> List[str]:
+        return get_reducer_output_node_names(
+            self.name, output_metadata.target_node_name, output_metadata.port_id, self.output_port_id, self.inplace
+        )
 
 
 class OVBatchMeanReducer(BatchMeanReducer):
@@ -254,8 +270,10 @@ class OVBatchMeanReducer(BatchMeanReducer):
     def get_inplace_fn(self):
         return get_inplace_batch_mean_op(self.name)
 
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
+    def get_output_names(self, output_metadata: OVOutputMetadata) -> List[str]:
+        return get_reducer_output_node_names(
+            self.name, output_metadata.target_node_name, output_metadata.port_id, self.output_port_id, self.inplace
+        )
 
 
 class OVMeanPerChanelReducer(MeanPerChReducer):
@@ -265,8 +283,10 @@ class OVMeanPerChanelReducer(MeanPerChReducer):
     def get_inplace_fn(self):
         return get_inplace_mean_per_ch(self.name, self._reduction_axes)
 
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
+    def get_output_names(self, output_metadata: OVOutputMetadata) -> List[str]:
+        return get_reducer_output_node_names(
+            self.name, output_metadata.target_node_name, output_metadata.port_id, self.output_port_id, self.inplace
+        )
 
 
 class OVQuantileReducer(QuantileReducer):
@@ -276,8 +296,10 @@ class OVQuantileReducer(QuantileReducer):
     def _get_processor(self):
         return OVNNCFCollectorTensorProcessor
 
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
+    def get_output_names(self, output_metadata: OVOutputMetadata) -> List[str]:
+        return get_reducer_output_node_names(
+            self.name, output_metadata.target_node_name, output_metadata.port_id, self.output_port_id, self.inplace
+        )
 
 
 class OVAbsQuantileReducer(AbsQuantileReducer):
@@ -287,8 +309,10 @@ class OVAbsQuantileReducer(AbsQuantileReducer):
     def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
         return None
 
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
+    def get_output_names(self, output_metadata: OVOutputMetadata) -> List[str]:
+        return get_reducer_output_node_names(
+            self.name, output_metadata.target_node_name, output_metadata.port_id, self.output_port_id, self.inplace
+        )
 
 
 def get_mean_statistic_collector(

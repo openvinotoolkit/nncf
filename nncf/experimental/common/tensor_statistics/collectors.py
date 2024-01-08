@@ -31,6 +31,13 @@ InplaceInsertionFNType = TypeVar("InplaceInsertionFNType")
 AggregationAxes = Tuple[int, ...]
 
 
+class OutputMetadata:
+    """
+    Class that specifies backend-specific metadata
+    to locate an output in a model.
+    """
+
+
 class TensorReducerBase(ABC):
     """
     Tensor reducer is a callable object that reduces tensors according to
@@ -74,13 +81,12 @@ class TensorReducerBase(ABC):
         """
 
     @abstractmethod
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
+    def get_output_names(self, output_metadata: OutputMetadata) -> List[str]:
         """
         Returns target output names from target model that is
             modified for statistic collection.
 
-        :param target_node_name: Target node name for reducer.
-        :param port_id: Target port id for target node name for reducer.
+        :param output_metadata: Target output metadata.
         :return: Target output names for reducer.
         """
 
@@ -272,17 +278,17 @@ class TensorCollector:
             self._aggregators[key] = aggregator
         self._stat_container_kwargs_map[container_key] = key
 
-    def get_output_info(self, target_node_name: str, port_id: int) -> List[Tuple[int, List[str]]]:
+    def get_target_inputs_metadata(self, output_metadata: OutputMetadata) -> List[Tuple[int, List[str]]]:
         """
-        Returns list of pairs of reducers names and correspondent output names.
+        Returns target inputs metadata:
+        list of pairs of reducers names and correspondent output names.
 
-        :param target_node_name: Target node name to assemble output name.
-        :param port_id: Target node specific port id to assemble output name.
+        :param output_metadata: Target output metadata to assemble output names.
         :returns: List of pairs of reducers hashes and correspondent output names.
         """
         retval = []
         for reducer in self._reducers:
-            retval.append((hash(reducer), reducer.get_output_names(target_node_name, port_id)))
+            retval.append((hash(reducer), reducer.get_output_names(output_metadata)))
         return retval
 
     def register_inputs(self, inputs: Dict[int, List[NNCFTensor]]) -> None:
@@ -385,7 +391,7 @@ class TensorCollector:
 
     @staticmethod
     def get_tensor_collector_inputs(
-        outputs: Dict[str, NNCFTensor], output_info: List[Tuple[int, List[str]]]
+        outputs: Dict[str, NNCFTensor], target_inputs_metadata: List[Tuple[int, List[str]]]
     ) -> Dict[int, List[NNCFTensor]]:
         """
         Static method that converts all model outputs and collected output_info
@@ -393,11 +399,12 @@ class TensorCollector:
         `register_inputs` to avoid all inputs passing to `TensorCollector.register_inputs` method.
 
         :param outputs: Target model outputs.
-        :param output_info: Output info collected by a `TensorCollector.get_output_info` method.
+        :param target_input_metadata: target inputs metadata collected by a
+            `TensorCollector.get_target_inputs_metadata` method.
         :returns: Model outputs in a format required by `TensorCollector.register_inputs` method.
         """
         target_inputs = {}
-        for reducer, names in output_info:
+        for reducer, names in target_inputs_metadata:
             target_inputs[reducer] = [outputs[name] for name in names]
         return target_inputs
 

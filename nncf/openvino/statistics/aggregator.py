@@ -25,6 +25,7 @@ from nncf.experimental.common.tensor_statistics.collectors import MergedTensorCo
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
+from nncf.openvino.statistics.collectors import OVOutputMetadata
 from nncf.openvino.tensor import OVNNCFTensor
 
 
@@ -50,8 +51,10 @@ class OVStatisticsAggregator(StatisticsAggregator):
             else:
                 RuntimeError(f"Unsupported target point type for statistic aggregator: {target_point.type}")
 
-            input_info = tensor_collector.get_output_info(stat_node_name, port_id)
-            target_inputs = TensorCollector.get_tensor_collector_inputs(outputs, input_info)
+            target_inputs_metadata = tensor_collector.get_target_inputs_metadata(
+                OVOutputMetadata(stat_node_name, port_id)
+            )
+            target_inputs = TensorCollector.get_tensor_collector_inputs(outputs, target_inputs_metadata)
             tensor_collector.register_inputs(target_inputs)
 
     def _get_transformation_layout_extra_outputs(
