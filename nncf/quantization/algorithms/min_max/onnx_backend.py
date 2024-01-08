@@ -154,12 +154,12 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_reduction_axes(
-        input_shape: List[int], per_sample_stats: bool, per_channel: bool, channel_axis: int
+        input_shape: Optional[List[int]], per_sample_stats: bool, per_channel: bool, channel_axis: int
     ) -> Optional[ReductionAxes]:
         """
         Calculates the reduction axes for reducers of a tensor.
 
-        :param input_shape: Shape of a tensor.
+        :param input_shape: Shape of a tensor. If None, returns None.
         :param per_sample_stats: Boolean flag that indicated whether statistics are collected per-sample or per-batch.
         :param per_channel: Whether quantize to per-channel.
         :param channel_axis: Axis of quantization in per-channel case.
