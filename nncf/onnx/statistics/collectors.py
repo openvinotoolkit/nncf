@@ -19,6 +19,7 @@ from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcesso
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
+from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanPerChReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
@@ -188,7 +189,7 @@ class ONNXMinReducer(MinReducer):
         return []
 
 
-class ONNXMaxReducer(MinReducer):
+class ONNXMaxReducer(MaxReducer):
     def _get_processor(self):
         return ONNXNNCFCollectorTensorProcessor
 

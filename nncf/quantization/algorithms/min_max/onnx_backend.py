@@ -159,6 +159,8 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         :param per_sample_stats: Boolean flag that indicated whether statistics are collected per-sample or per-batch.
         :return: Shape to reduce to.
         """
+        if not per_channel and not per_sample_stats:
+            return None
         ndims = len(input_shape)
         reduction_axes: List[int] = list(range(ndims))
         if per_channel:
@@ -203,17 +205,17 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 )
 
             statistic_type = params.statistics_type
+            kwargs = {"reduction_axes": reduction_axes, "inplace": inplace}
             if statistic_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
                 # TODO(dlyakhov): merge two quantile aggregators in one
                 if container_key == ONNXMinMaxTensorStatistic.MIN_STAT:
                     quantile = params.quantile_outlier_prob
                 else:
                     quantile = 1 - params.quantile_outlier_prob
-                reducer = ONNX_REDUCERS_MAP[statistic_type](reduction_axes=reduction_axes, quantile=[quantile])
-            else:
-                if use_abs_max and statistic_type == StatisticsType.MAX:
-                    statistic_type = StatisticsType.ABS_MAX
-                reducer = ONNX_REDUCERS_MAP[statistic_type](reduction_axes=reduction_axes)
+                kwargs.update({"quantile": [quantile]})
+            if use_abs_max and statistic_type == StatisticsType.MAX:
+                statistic_type = StatisticsType.ABS_MAX
+            reducer = ONNX_REDUCERS_MAP[statistic_type](reduction_axes=reduction_axes)
 
             aggregation_axes = (0,)
             aggregator = AGGREGATORS_MAP[params.aggregator_type](
