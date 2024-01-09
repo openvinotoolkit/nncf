@@ -160,7 +160,8 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         axis: Union[int, Tuple[int, ...], List[int]],
         keepdims: bool = False,
     ) -> List[TensorElementsType]:
-        raise NotImplementedError()
+        quantile = np.true_divide(percentile, 100)
+        return cls.quantile(tensor, quantile=quantile, axis=axis, keepdims=keepdims)
 
     @staticmethod
     def transpose(x: NNCFTensor, axes: Tuple[int, ...]) -> NNCFTensor:
@@ -181,11 +182,13 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
 
     @staticmethod
     def sub(a: NNCFTensor, b: NNCFTensor) -> NNCFTensor:
-        raise NotImplementedError()
+        return NNCFTensor(a.tensor - b.tensor)
 
     @staticmethod
     def zero_elements(x: NNCFTensor) -> NNCFTensor:
-        raise NotImplementedError()
+        np_tensor = x.tensor
+        eps = np.finfo(np_tensor.dtype).eps
+        return NNCFTensor(np.abs(np_tensor) < eps)
 
 
 class ONNXBasicReducer(TensorReducerBase):
