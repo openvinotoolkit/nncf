@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 from typing import Deque, List, Optional, Tuple, Union
 
 import numpy as np
@@ -26,6 +27,7 @@ from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
 from nncf.experimental.common.tensor_statistics.collectors import MinReducer
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
+from nncf.experimental.common.tensor_statistics.collectors import OutputMetadata
 from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
@@ -191,15 +193,20 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return NNCFTensor(np.abs(np_tensor) < eps)
 
 
+@dataclass
+class ONNXOutputMetadata(OutputMetadata):
+    edge_name: str
+
+
 class ONNXBasicReducer(TensorReducerBase):
     def _get_processor(self):
         return ONNXNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        raise RuntimeError("ONNX backend has no support of inplace statistics.")
+        raise RuntimeError("ONNX backend has no support of inplace statistics yet.")
 
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        raise NotImplementedError("The method is not implemented.")
+    def get_output_names(self, output_metadata: ONNXOutputMetadata) -> List[str]:
+        return [output_metadata.edge_name]
 
 
 class ONNXNoopReducer(ONNXBasicReducer, NoopReducer):
