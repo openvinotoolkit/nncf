@@ -14,10 +14,12 @@ import pytest
 from tests.onnx.models import ALL_SYNTHETIC_MODELS
 from tests.onnx.quantization.common import compare_nncf_graph
 from tests.onnx.quantization.common import min_max_quantize_model
+from tests.onnx.quantization.common import mock_collect_statistics
 
 
 @pytest.mark.parametrize("model_cls_to_test", ALL_SYNTHETIC_MODELS.values())
-def test_synthetic_models_graph(model_cls_to_test):
+def test_synthetic_models_graph(model_cls_to_test, mocker):
+    mock_collect_statistics(mocker)
     model_to_test = model_cls_to_test()
     quantized_model = min_max_quantize_model(model_to_test.onnx_model)
     compare_nncf_graph(quantized_model, "synthetic/" + model_to_test.path_ref_graph)

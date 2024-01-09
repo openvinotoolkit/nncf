@@ -17,6 +17,7 @@ from tests.onnx.conftest import ONNX_MODEL_DIR
 from tests.onnx.quantization.common import ModelToTest
 from tests.onnx.quantization.common import compare_nncf_graph
 from tests.onnx.quantization.common import min_max_quantize_model
+from tests.onnx.quantization.common import mock_collect_statistics
 from tests.onnx.weightless_model import load_model_topology_with_zeros_weights
 
 TEST_DATA = [
@@ -30,7 +31,9 @@ TEST_DATA = [
 
 
 @pytest.mark.parametrize(("model_to_test"), TEST_DATA, ids=[model_to_test.model_name for model_to_test in TEST_DATA])
-def test_min_max_quantization_graph(tmp_path, model_to_test):
+def test_min_max_quantization_graph(tmp_path, mocker, model_to_test):
+    mock_collect_statistics(mocker)
+
     if model_to_test.model_name == "ssd_mobilenet_v1_12":
         pytest.skip("Ticket 96156")
     convert_opset_version = True

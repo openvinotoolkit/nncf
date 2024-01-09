@@ -93,11 +93,6 @@ class TemplateTestStatisticsAggregator:
 
     @abstractmethod
     @pytest.fixture
-    def is_stat_in_shape_of_scale(self) -> bool:
-        pass
-
-    @abstractmethod
-    @pytest.fixture
     def dataset_samples(self):
         pass
 
@@ -338,15 +333,13 @@ class TemplateTestStatisticsAggregator:
             ),
             # Weight collectors
             (
-                (
-                    MinMaxTestParameters(
-                        RangeEstimatorParametersSet.MINMAX,
-                        TargetType.OPERATION_WITH_WEIGHTS,
-                        QuantizationMode.SYMMETRIC,
-                        False,
-                        128,
-                        -128,
-                    )
+                MinMaxTestParameters(
+                    RangeEstimatorParametersSet.MINMAX,
+                    TargetType.OPERATION_WITH_WEIGHTS,
+                    QuantizationMode.SYMMETRIC,
+                    False,
+                    128,
+                    -128,
                 )
             ),
             (
@@ -385,7 +378,6 @@ class TemplateTestStatisticsAggregator:
         self,
         test_parameters: MinMaxTestParameters,
         dataset_samples,
-        is_stat_in_shape_of_scale,
         inplace_statistics,
         is_backend_support_custom_estimators,
     ):
@@ -436,7 +428,7 @@ class TemplateTestStatisticsAggregator:
             # Torch and Openvino backends tensor collectors return values in shape of scale
             # in comparison to ONNX backends.
             ref_min_val, ref_max_val = test_parameters.ref_min_val, test_parameters.ref_max_val
-            if isinstance(ref_min_val, np.ndarray) and is_stat_in_shape_of_scale:
+            if isinstance(ref_min_val, np.ndarray):
                 shape = (1, 3, 1, 1)
                 if test_parameters.target_type == TargetType.OPERATION_WITH_WEIGHTS:
                     shape = (3, 1, 1, 1)
@@ -448,7 +440,7 @@ class TemplateTestStatisticsAggregator:
                 assert stat.min_values.shape == ref_min_val.shape
                 assert stat.max_values.shape == ref_max_val.shape
             else:
-                ref_shape = (1, 1, 1, 1) if is_stat_in_shape_of_scale else ()
+                ref_shape = (1, 1, 1, 1)
                 assert stat.min_values.shape == ref_shape
                 assert stat.max_values.shape == ref_shape
 
@@ -575,7 +567,7 @@ class TemplateTestStatisticsAggregator:
         ],
     )
     def test_statistics_aggregator_bias_correction(
-        self, dataset_samples, test_params: BCTestParameters, inplace_statistics, is_stat_in_shape_of_scale
+        self, dataset_samples, test_params: BCTestParameters, inplace_statistics
     ):
         name_to_algo_backend_map = {
             BiasCorrectionAlgos.BIAS_CORRECTION: self.get_bias_correction_algo_backend_cls,
@@ -622,8 +614,7 @@ class TemplateTestStatisticsAggregator:
             elif test_params.collector_type == BCStatsCollectors.RAW:
                 ret_val = stat.values
                 test_params.ref_values = dataset_samples
-                if not is_stat_in_shape_of_scale:
-                    ret_val = [np.squeeze(x) for x in ret_val]
+                ret_val = [np.squeeze(x) for x in ret_val]
             else:
                 raise RuntimeError()
 
