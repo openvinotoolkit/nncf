@@ -21,7 +21,6 @@ from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
@@ -29,6 +28,7 @@ from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
 from nncf.onnx.graph.node_utils import get_quantization_axis
 from nncf.onnx.graph.node_utils import get_quantized_tensor_shape
+from nncf.onnx.graph.node_utils import get_reduction_shape
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.hardware.config import ONNXHWConfig
@@ -153,33 +153,6 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return get_input_edges_mapping(nncf_graph)
 
     @staticmethod
-    def get_reduction_axes(
-        input_shape: Optional[List[int]], per_sample_stats: bool, per_channel: bool, channel_axis: int
-    ) -> Optional[ReductionAxes]:
-        """
-        Calculates the reduction axes for reducers of a tensor.
-
-        :param input_shape: Shape of a tensor. If None, returns None.
-        :param per_sample_stats: Boolean flag that indicated whether statistics are collected per-sample or per-batch.
-        :param per_channel: Whether quantize to per-channel.
-        :param channel_axis: Axis of quantization in per-channel case.
-        :return: Reduction shape of reducers.
-        """
-        if not per_channel and not per_sample_stats or input_shape is None:
-            return None
-
-        ndims = len(input_shape)
-        reduction_axes: List[int] = list(range(ndims))
-        if per_channel:
-            val = (ndims + channel_axis) % ndims
-            reduction_axes.remove(val)
-            if not val and per_sample_stats:
-                raise RuntimeError("Batch dimension should be equal to zero")
-        if per_sample_stats:
-            reduction_axes = reduction_axes[1:]  # Assumes batch is the first dimension
-        return tuple(reduction_axes)
-
-    @staticmethod
     def get_statistic_collector(
         range_estimator_params: RangeEstimatorParameters,
         nncf_graph: NNCFGraph,
@@ -193,9 +166,9 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         use_abs_max = quantizer_config.mode == QuantizationMode.SYMMETRIC
         quantization_axis = get_quantization_axis(is_per_channel, node, target_point)
         quantized_tensor_shape = get_quantized_tensor_shape(nncf_graph, node, target_point)
-        reduction_axes = ONNXMinMaxAlgoBackend.get_reduction_axes(
-            quantized_tensor_shape, False, is_per_channel, quantization_axis
-        )
+        reduction_axes = None  # Per-Tensor
+        if quantization_axis is not None and quantized_tensor_shape is not None:  # Per-Channel
+            reduction_axes = get_reduction_shape(quantized_tensor_shape, quantization_axis)
         collector = TensorCollector(ONNXMinMaxTensorStatistic)
         for params, container_key in zip(
             [range_estimator_params.min, range_estimator_params.max],
