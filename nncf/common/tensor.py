@@ -44,6 +44,4 @@ class NNCFTensor:
         pass
 
     def is_empty(self) -> bool:
-        if 0 in self.shape:
-            return True
-        return False
+        return 0 in self.shape
