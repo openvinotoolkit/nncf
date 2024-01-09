@@ -614,7 +614,6 @@ class TemplateTestStatisticsAggregator:
             elif test_params.collector_type == BCStatsCollectors.RAW:
                 ret_val = stat.values
                 test_params.ref_values = dataset_samples
-                ret_val = [np.squeeze(x) for x in ret_val]
             else:
                 raise RuntimeError()
 
