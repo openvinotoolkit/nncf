@@ -130,6 +130,14 @@ def post_training_quantization_torch_ssd300_vgg16() -> Dict[str, float]:
     }
 
 
+def llm_compression() -> Dict[str, float]:
+    from examples.llm_compression.openvino.main import main as llm_compression_main
+
+    result = llm_compression_main()
+
+    return {"word_count": len(result.split())}
+
+
 def main(argv):
     parser = ArgumentParser()
     parser.add_argument("--name", help="Example name", required=True)
