@@ -46,6 +46,7 @@ from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParame
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AggregatorType
 from nncf.quantization.advanced_parameters import OverflowFix
+from nncf.quantization.advanced_parameters import RestoreMode
 from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.scopes import IgnoredScope
 
@@ -126,6 +127,7 @@ class CustomJSONEncoder(json.JSONEncoder):
                 AggregatorType,
                 DropType,
                 QuantizationMode,
+                RestoreMode,
             ),
         ):
             return o.value
