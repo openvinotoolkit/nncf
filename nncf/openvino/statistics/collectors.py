@@ -70,16 +70,26 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
 
     @staticmethod
     def mean(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
-        comp_dtype, out_dtype = _get_computing_dtype(x.tensor.dtype)
-        return OVNNCFTensor(
-            np.mean(x.tensor, axis=axis, keepdims=keepdims, dtype=comp_dtype).astype(dtype=out_dtype, copy=False)
-        )
+        try:
+            with np.errstate(over="raise"):
+                ret = np.mean(x.tensor, axis=axis, keepdims=keepdims)
+        except FloatingPointError:
+            comp_dtype, out_dtype = _get_computing_dtype(x.tensor.dtype)
+            ret = np.mean(x.tensor, axis=axis, keepdims=keepdims, dtype=comp_dtype)
+            ret = ret.astype(dtype=out_dtype, copy=False)
+        return OVNNCFTensor(ret)
 
     @staticmethod
     def median(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
-        comp_dtype, out_dtype = _get_computing_dtype(x.tensor.dtype)
-        t = x.tensor.astype(dtype=comp_dtype, copy=False)
-        return OVNNCFTensor(np.median(t, axis=axis, keepdims=keepdims).astype(dtype=out_dtype, copy=False))
+        try:
+            with np.errstate(over="raise"):
+                ret = np.median(x.tensor, axis=axis, keepdims=keepdims)
+        except FloatingPointError:
+            comp_dtype, out_dtype = _get_computing_dtype(x.tensor.dtype)
+            t = x.tensor.astype(dtype=comp_dtype, copy=False)
+            ret = np.median(t, axis=axis, keepdims=keepdims)
+            ret = ret.astype(dtype=out_dtype, copy=False)
+        return OVNNCFTensor(ret)
 
     @classmethod
     def masked_mean(
@@ -91,12 +101,17 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     ) -> NNCFTensor:
         if mask is None:
             return cls.mean(x, axis=axis, keepdims=keepdims)
-        comp_dtype, out_dtype = _get_computing_dtype(x.tensor.dtype)
         masked_x = np.ma.array(x.tensor, mask=mask.tensor)
-        result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims, dtype=comp_dtype)
+        try:
+            with np.errstate(over="raise"):
+                result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims)
+        except FloatingPointError:
+            comp_dtype, out_dtype = _get_computing_dtype(x.tensor.dtype)
+            result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims, dtype=comp_dtype)
+            result = result.astype(dtype=out_dtype, copy=False)
         if isinstance(result, np.ma.MaskedArray):
             result = result.data
-        return OVNNCFTensor(result.astype(dtype=out_dtype, copy=False))
+        return OVNNCFTensor(result)
 
     @classmethod
     def masked_median(
@@ -108,13 +123,18 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     ) -> NNCFTensor:
         if mask is None:
             return cls.median(x, axis=axis, keepdims=keepdims)
-        comp_dtype, out_dtype = _get_computing_dtype(x.tensor.dtype)
-        t = x.tensor.astype(dtype=comp_dtype, copy=False)
-        masked_x = np.ma.array(t, mask=mask.tensor)
-        result = np.ma.median(masked_x, axis=axis, keepdims=keepdims)
+        masked_x = np.ma.array(x.tensor, mask=mask.tensor)
+        try:
+            with np.errstate(over="raise"):
+                result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims)
+        except FloatingPointError:
+            comp_dtype, out_dtype = _get_computing_dtype(x.tensor.dtype)
+            masked_x = masked_x.astype(dtype=comp_dtype, copy=False)
+            result = np.ma.median(masked_x, axis=axis, keepdims=keepdims)
+            result = result.astype(dtype=out_dtype, copy=False)
         if isinstance(result, np.ma.MaskedArray):
             result = result.data
-        return OVNNCFTensor(result.astype(dtype=out_dtype, copy=False))
+        return OVNNCFTensor(result)
 
     @staticmethod
     def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
