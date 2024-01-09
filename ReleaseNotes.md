@@ -34,6 +34,7 @@ Post-training Quantization:
   - (Common) The original `nncf.CompressWeightsMode.INT8` enum value is now deprecated.
   - (PyTorch) The Git patch for integration with HuggingFace `transformers` repository is marked as deprecated and will be removed in a future release.
   Developers are advised to use [optimum-intel](https://github.com/huggingface/optimum-intel) instead.
+  - Dockerfiles in the NNCF Git repository are deprecated and will be removed in a future release.
 
 ## New in Release 2.7.0
 
