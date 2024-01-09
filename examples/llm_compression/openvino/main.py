@@ -19,13 +19,10 @@ from transformers import AutoTokenizer
 
 import nncf
 
-MODEL_ID = "PY007/TinyLlama-1.1B-Chat-v0.3"
-OUTPUT_DIR = "tinyllama_compressed"
-
 
 def main():
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-    model = OVModelForCausalLM.from_pretrained(MODEL_ID, export=True, load_in_8bit=False, compile=False, stateful=False)
+    MODEL_ID = "PY007/TinyLlama-1.1B-Chat-v0.3"
+    OUTPUT_DIR = "tinyllama_compressed"
 
     dataset = datasets.load_dataset(
         "allenai/c4",
@@ -33,6 +30,9 @@ def main():
         data_files={"validation": "en/c4-validation.00000-of-00008.json.gz"},
         split="validation",
     )
+
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+    model = OVModelForCausalLM.from_pretrained(MODEL_ID, export=True, load_in_8bit=False, compile=False, stateful=False)
 
     def transform_fn(data, model, tokenizer):
         tokenized_text = tokenizer(data["text"], return_tensors="np")
