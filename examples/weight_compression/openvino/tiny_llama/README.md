@@ -12,7 +12,6 @@ The example includes the following steps:
 
 ## Install requirements
 
-
 To run the example you should install the corresponding Python dependencies:
 
 - Install NNCF from source:
