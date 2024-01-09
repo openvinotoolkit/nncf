@@ -352,13 +352,6 @@ NNCF may be straightforwardly integrated into training/evaluation pipelines of t
 
   NNCF is used as a compression backend within the renowned `transformers` repository in HuggingFace Optimum Intel.
 
-### Git patches for third-party repository
-
-See [third_party_integration](./third_party_integration) for examples of code modifications (Git patches and base commit IDs are provided) that are necessary to integrate NNCF into the following repositories:
-
-- [huggingface-transformers](third_party_integration/huggingface_transformers/README.md)
-**NOTE**: this patch is deprecated and will be removed from NNCF repository in future releases.
-
 ## Installation Guide
 
 For detailed installation instructions please refer to the [Installation](./docs/Installation.md) page.
@@ -382,8 +375,6 @@ NNCF is also available via [conda](https://anaconda.org/conda-forge/nncf):
 ```bash
 conda install -c conda-forge nncf
 ```
-
-You may also use one of the Dockerfiles in the [docker](./docker) directory to build an image with an environment already set up and ready for running NNCF [sample scripts](#demos-tutorials-and-samples).
 
 ### System requirements
 
