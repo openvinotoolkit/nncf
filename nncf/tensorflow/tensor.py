@@ -32,4 +32,4 @@ class TFNNCFTensor(NNCFTensor):
         return self._tensor.device
 
     def is_empty(self) -> bool:
-        tf.equal(tf.size(self._tensor), 0)
+        return tf.equal(tf.size(self._tensor), 0)

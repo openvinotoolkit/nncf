@@ -27,4 +27,4 @@ class ONNXNNCFTensor(NNCFTensor):
         return "CPU"
 
     def is_empty(self) -> bool:
-        return self._tensor.ndim and self._tensor.size
+        return self.tensor.size == 0
