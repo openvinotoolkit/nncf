@@ -22,6 +22,7 @@ MODEL_PATH = ROOT / "compressed_model.xml"
 
 COMPRESSION_MODE = nncf.parameters.CompressWeightsMode.INT4_SYM
 MAX_DROP = 0.2
+# We consider the following range of parameters: group_size - [64, 128], ratio - [0.5,...,1.0]
 MIN_GROUP_SIZE = 64
 MAX_GROUP_SIZE = 128
 MIN_RATIO = 0.5
@@ -110,7 +111,7 @@ def print_results(optimized_model: ov.Model, ratio: float, group_size: int, simi
     print(f"Similarity: {similarity:.2f}")
 
 
-def find_optimal_parameters(evaluator: Evaluator, model: OVModelForCausalLM, nncf_dataset: nncf.Dataset) -> None:
+def find_parameters(evaluator: Evaluator, model: OVModelForCausalLM, nncf_dataset: nncf.Dataset) -> None:
     """
     Find the optimal `ratio` and `group_size` for weight compression algorithm.
 
@@ -204,7 +205,7 @@ transform_func = partial(tiny_llama_transform_func, tokenizer=tokenizer)
 start = datetime.datetime.now()
 evaluator = Evaluator(model, tokenizer=tokenizer, metrics=("similarity",))
 nncf_dataset = get_nncf_dataset(dataset, transform_func)
-find_optimal_parameters(evaluator, model, nncf_dataset)
+find_parameters(evaluator, model, nncf_dataset)
 end = datetime.datetime.now()
 delta = end - start
 delta -= datetime.timedelta(microseconds=delta.microseconds)
