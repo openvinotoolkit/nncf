@@ -17,7 +17,6 @@ from typing import Any, List, Optional, Tuple, Union
 
 
 class Dtype(Enum):
-    BOOL = "bool"
     FLOAT = "float"
     INTEGER = "int"
 
