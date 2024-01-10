@@ -40,6 +40,7 @@ from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.init_range import PTRangeInitCollectorParams
+from nncf.torch.quantization.init_range import get_input_shape_and_channel_idx
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
@@ -227,20 +228,13 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def _get_input_scale_shape(
         nncf_graph: NNCFGraph, target_point: PTTargetPoint, quantization_config: QuantizerConfig
     ) -> Tuple[Tuple[int, ...], Tuple[int, ...], int]:
-        is_weights = target_point.is_weight_target_point()
-        if is_weights:
-            module_node = nncf_graph.get_node_by_name(target_point.target_node_name)
-            layer_attributes = module_node.layer_attributes
-            assert isinstance(layer_attributes, WeightedLayerAttributes)
-            input_shape = layer_attributes.get_weight_shape()
-            channel_idx = layer_attributes.get_target_dim_for_compression()
-        else:
-            input_shape = nncf_graph.get_input_shape_for_insertion_point(target_point)
-            channel_idx = 1  # channel dim for activations
-
+        input_shape, channel_idx = get_input_shape_and_channel_idx(nncf_graph, target_point)
         scale_shape = tuple(
             get_scale_shape(
-                input_shape, is_weights=is_weights, per_channel=quantization_config.per_channel, channel_idx=channel_idx
+                input_shape,
+                is_weights=target_point.is_weight_target_point(),
+                per_channel=quantization_config.per_channel,
+                channel_idx=channel_idx,
             )
         )
 

@@ -173,14 +173,6 @@ class DataLoaderBaseRunner:
         raise NotImplementedError
 
 
-class SimpleDataLoaderRunner(DataLoaderBaseRunner):
-    def _prepare_initialization(self):
-        pass
-
-    def _apply_initializers(self):
-        pass
-
-
 class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
     def __init__(self, model, init_device: str):
         super().__init__(model, init_device)

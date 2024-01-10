@@ -17,11 +17,13 @@ from collections import Counter
 from collections import OrderedDict
 from copy import deepcopy
 from enum import IntEnum
+from functools import partial
 from string import Template
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import torch
 
+from nncf import Dataset
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
@@ -30,7 +32,6 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
-from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.patterns.manager import TargetDevice
 from nncf.common.graph.transformations.commands import TargetType
@@ -58,6 +59,8 @@ from nncf.common.quantization.structs import WeightQuantizerId
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.tensor_statistics.collectors import ReductionAxes
+from nncf.common.tensor_statistics.statistic_point import StatisticPoint
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import copy_model
@@ -87,7 +90,6 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.hardware.config import PTHWConfig
-from nncf.torch.initialization import SimpleDataLoaderRunner
 from nncf.torch.module_operations import UpdatePaddingValue
 from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.nncf_network import LoadStateListener
@@ -103,6 +105,7 @@ from nncf.torch.quantization.init_precision import PrecisionInitializerFactory
 from nncf.torch.quantization.init_range import DataLoaderRangeInitializeRunner
 from nncf.torch.quantization.init_range import PTRangeInitParams
 from nncf.torch.quantization.init_range import StatCollectorGenerator
+from nncf.torch.quantization.init_range import get_input_shape_and_channel_idx
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizationPoint
@@ -129,9 +132,9 @@ from nncf.torch.quantization.strip import strip_quantized_model
 from nncf.torch.quantization.structs import NonWeightQuantizerInfo
 from nncf.torch.quantization.structs import WeightQuantizerInfo
 from nncf.torch.quantization.translator import PTTargetPointTranslator
+from nncf.torch.statistics.aggregator import PTStatisticsAggregator
 from nncf.torch.structures import AutoQPrecisionInitArgs
 from nncf.torch.structures import QuantizationPrecisionInitArgs
-from nncf.torch.tensor_statistics.algo import TensorStatisticsCollectionBuilder
 from nncf.torch.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.torch.tensor_statistics.statistics import TensorStatistic
 from nncf.torch.tensor_statistics.statistics import pt_convert_stat_to_min_max_tensor_stat
@@ -592,15 +595,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 nncf_logger.debug(f"TP {tp} not found in tensor statistics")
                 retval[qp_id] = None
             else:
-                target_node = target_model_graph.get_node_by_name(tp.target_node_name)
-                if qp.is_weight_quantization_point():
-                    layer_attrs = target_node.layer_attributes
-                    assert isinstance(layer_attrs, WeightedLayerAttributes)
-                    input_shape = layer_attrs.get_weight_shape()
-                    channel_idx = layer_attrs.get_target_dim_for_compression()
-                else:
-                    input_shape = target_model_graph.get_input_shape_for_insertion_point(qp.insertion_point)
-                    channel_idx = 1  # channel dim for activations
+                input_shape, channel_idx = get_input_shape_and_channel_idx(target_model_graph, tp)
                 scale_shape = tuple(
                     get_scale_shape(input_shape, qp.is_weight_quantization_point(), qp.qconfig.per_channel, channel_idx)
                 )
@@ -664,25 +659,35 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
     ) -> Dict[PTTargetPoint, Dict[ReductionAxes, TensorStatistic]]:
         if range_init_params is None:
             return {}
-        observation_points_vs_collectors_dict = (
+
+        original_nncf_graph = target_model.nncf.get_original_graph()
+        target_points_vs_collectors_dict = (
             StatCollectorGenerator.generate_collectors_for_range_init_statistics_collection(
-                target_model.nncf.get_original_graph(), quantizer_setup, range_init_params
+                original_nncf_graph, quantizer_setup, range_init_params
             )
         )
 
-        with target_model.nncf.temporary_clean_view() as intermediate_model:
-            stat_builder = TensorStatisticsCollectionBuilder(NNCFConfig(), observation_points_vs_collectors_dict)
-            stat_builder.apply_to(intermediate_model)
-            stat_ctrl = stat_builder.build_controller(intermediate_model)
-            runner = SimpleDataLoaderRunner(intermediate_model, range_init_params.device)
-            runner.progressbar_description = "Collecting tensor statistics"
-            with training_mode_switcher(intermediate_model, is_training=False):
-                # Run statistics collection in eval mode, otherwise it may fail because graph was built in eval mode
-                runner.run(range_init_params.init_range_data_loader, range_init_params.get_max_num_init_steps())
+        def transform_fn(input_: Tuple[torch.Tensor, torch.Tensor], device: str) -> torch.Tensor:
+            return input_[0].to(device)
+
+        dataset = Dataset(
+            range_init_params.init_range_data_loader,
+            transform_func=partial(transform_fn, device=range_init_params.device),
+        )
+
+        aggregator = PTStatisticsAggregator(dataset)
+        stat_points_container = StatisticPointsContainer()
+        for target_point, scale_shape_vs_collector in target_points_vs_collectors_dict.items():
+            for collector in scale_shape_vs_collector.values():
+                stat_points_container.add_statistic_point(StatisticPoint(target_point, collector, "QAT"))
+        aggregator.register_statistic_points(stat_points_container)
+        aggregator.collect_statistics(target_model, original_nncf_graph)
 
         retval = {}
-        for ip, rs_vs_collector in stat_ctrl.ip_vs_collector_dict.items():
-            retval[ip] = {rs: collector.get_statistics() for rs, collector in rs_vs_collector.items()}
+        for target_point, scale_shape_vs_collector in target_points_vs_collectors_dict.items():
+            retval[target_point] = {
+                scale_shape: collector.get_statistics() for scale_shape, collector in scale_shape_vs_collector.items()
+            }
         return retval
 
     def _get_statistics_for_final_range_init(
@@ -763,19 +768,11 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 use_logarithm_scale = self._use_logarithm_scale_per_group[QuantizerGroup.ACTIVATIONS]
                 narrow_range = False
 
-            if qp.is_weight_quantization_point():
-                target_node = target_model_graph.get_node_by_name(insertion_point.target_node_name)
-                layer_attributes = target_node.layer_attributes
-                assert isinstance(layer_attributes, WeightedLayerAttributes)
-                scale_shape = get_scale_shape(
-                    layer_attributes.get_weight_shape(),
-                    is_weights=True,
-                    per_channel=qconfig.per_channel,
-                    channel_idx=layer_attributes.get_target_dim_for_compression(),
-                )
-            else:
-                input_shape = target_model_graph.get_input_shape_for_insertion_point(insertion_point)
-                scale_shape = get_scale_shape(list(input_shape), is_weights=False, per_channel=qconfig.per_channel)
+            tp = PTTargetPointTranslator.translate(insertion_point)
+            input_shape, channel_idx = get_input_shape_and_channel_idx(target_model_graph, tp)
+            scale_shape = tuple(
+                get_scale_shape(input_shape, qp.is_weight_quantization_point(), qp.qconfig.per_channel, channel_idx)
+            )
 
             qspec = PTQuantizerSpec.from_config(
                 qconfig,

@@ -17,8 +17,7 @@ from nncf import NNCFConfig
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch import create_compressed_model
 from nncf.torch import register_default_init_args
-from nncf.torch.tensor_statistics.algo import TensorStatisticsCollectionBuilder
-from nncf.torch.tensor_statistics.algo import TensorStatisticsCollectionController
+from nncf.torch.statistics.aggregator import PTStatisticsAggregator
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import OnesDatasetMock
 from tests.torch.helpers import TwoConvTestModel
@@ -82,16 +81,10 @@ def test_range_init_is_called(
     config = nncf_config_with_default_init_args
     model = BasicConvTestModel()
 
-    _ = mocker.patch("nncf.torch.initialization.SimpleDataLoaderRunner.run")
-    stat_builder_apply_to_spy = mocker.spy(TensorStatisticsCollectionBuilder, "apply_to")
-    stat_builder_build_controller_mm = mocker.patch(
-        "nncf.torch.tensor_statistics.algo.TensorStatisticsCollectionBuilder.build_controller"
-    )
-    stat_builder_build_controller_mm.return_value = TensorStatisticsCollectionController(None, {})
-
     precision_init_spy = mocker.patch(
         "nncf.torch.quantization.precision_init.hawq_init.HAWQPrecisionInitializer.apply_init", autospec=True
     )  # autospec=True will patch the function as an instance method
+    aggregator_collect_statistics_spy = mocker.spy(PTStatisticsAggregator, "collect_statistics")
     bn_adaptation_spy = mocker.patch("nncf.torch.initialization.DataLoaderBNAdaptationRunner.run")
 
     def fn(self) -> SingleConfigQuantizerSetup:
@@ -102,7 +95,7 @@ def test_range_init_is_called(
     config_cutter(config["compression"])
     create_compressed_model_and_algo_for_test(model, config)
 
-    assert stat_builder_apply_to_spy.call_count == tensor_statistics_collection_count
+    assert aggregator_collect_statistics_spy.call_count == tensor_statistics_collection_count
     assert precision_init_spy.call_count == precision_init_call_count
     assert bn_adaptation_spy.call_count == bn_adaptation_call_count
 
