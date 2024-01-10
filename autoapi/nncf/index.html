@@ -413,13 +413,16 @@
 <tr class="row-even"><td><p><a class="reference internal" href="#nncf.QuantizationMode" title="nncf.QuantizationMode"><code class="xref py py-obj docutils literal notranslate"><span class="pre">QuantizationMode</span></code></a></p></td>
 <td><p>Defines special modes.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.TargetDevice" title="nncf.TargetDevice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TargetDevice</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.SensitivityMetric" title="nncf.SensitivityMetric"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SensitivityMetric</span></code></a></p></td>
+<td><p>Defines a sensitivity metric for assigning quantization precision to layers. In order to</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.TargetDevice" title="nncf.TargetDevice"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TargetDevice</span></code></a></p></td>
 <td><p>Target device architecture for compression.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.QuantizationPreset" title="nncf.QuantizationPreset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">QuantizationPreset</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.QuantizationPreset" title="nncf.QuantizationPreset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">QuantizationPreset</span></code></a></p></td>
 <td><p>An enum with values corresponding to the available quantization presets.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></p></td>
 <td><p>Provides an option to specify portions of model to be excluded from compression.</p></td>
 </tr>
 </tbody>
@@ -716,6 +719,34 @@ Currently contains only FP8-related modes (<a class="reference external" href="h
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="nncf.SensitivityMetric">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">SensitivityMetric</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.SensitivityMetric" title="Permalink to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
+<dl class="simple">
+<dt>Defines a sensitivity metric for assigning quantization precision to layers. In order to</dt><dd><p>preserve the accuracy of the model, the more sensitive layers receives a higher precision.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>WEIGHT_QUANTIZATION_ERROR</strong> – The inverted 8-bit quantization noise. Weights with highest value
+of this metric can be accurately quantized channel-wise to 8-bit. The idea is to leave these weights in 8bit,
+and quantize the rest of layers to 4-bit group-wise. Since group-wise is more accurate than per-channel,
+accuracy should not degrade.</p></li>
+<li><p><strong>HESSIAN_INPUT_ACTIVATION</strong> – The average Hessian trace of weights with respect to the layer-wise quantization
+error multiplied by L2 norm of 8-bit quantization noise.</p></li>
+<li><p><strong>MEAN_ACTIVATION_VARIANCE</strong> – The mean variance of the layers’ inputs
+multiplied by inverted 8-bit quantization noise.</p></li>
+<li><p><strong>MAX_ACTIVATION_VARIANCE</strong> – The maximum variance of the layers’ inputs
+multiplied by inverted 8-bit quantization noise.</p></li>
+<li><p><strong>MEAN_ACTIVATION_MAGNITUDE</strong> – The mean magnitude of the layers’ inputs
+multiplied by inverted 8-bit quantization noise.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="nncf.TargetDevice">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">TargetDevice</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.TargetDevice" title="Permalink to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
@@ -998,6 +1029,7 @@ in the model graph.</p></li>
 <li><a class="reference internal" href="#nncf.DropType"><code class="docutils literal notranslate"><span class="pre">DropType</span></code></a></li>
 <li><a class="reference internal" href="#nncf.ModelType"><code class="docutils literal notranslate"><span class="pre">ModelType</span></code></a></li>
 <li><a class="reference internal" href="#nncf.QuantizationMode"><code class="docutils literal notranslate"><span class="pre">QuantizationMode</span></code></a></li>
+<li><a class="reference internal" href="#nncf.SensitivityMetric"><code class="docutils literal notranslate"><span class="pre">SensitivityMetric</span></code></a></li>
 <li><a class="reference internal" href="#nncf.TargetDevice"><code class="docutils literal notranslate"><span class="pre">TargetDevice</span></code></a></li>
 <li><a class="reference internal" href="#nncf.QuantizationPreset"><code class="docutils literal notranslate"><span class="pre">QuantizationPreset</span></code></a></li>
 <li><a class="reference internal" href="#nncf.compress_weights"><code class="docutils literal notranslate"><span class="pre">compress_weights()</span></code></a></li>

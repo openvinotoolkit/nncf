@@ -35,6 +35,7 @@ Classes
    nncf.DropType
    nncf.ModelType
    nncf.QuantizationMode
+   nncf.SensitivityMetric
    nncf.TargetDevice
    nncf.QuantizationPreset
    nncf.IgnoredScope
@@ -230,6 +231,27 @@ Functions
 
    :param FP8_E4M3: Mode with 4-bit exponent and 3-bit mantissa.
    :param FP8_E5M2: Mode with 5-bit exponent and 2-bit mantissa.
+
+
+.. py:class:: SensitivityMetric
+
+   Bases: :py:obj:`enum.Enum`
+
+   Defines a sensitivity metric for assigning quantization precision to layers. In order to
+       preserve the accuracy of the model, the more sensitive layers receives a higher precision.
+
+   :param WEIGHT_QUANTIZATION_ERROR: The inverted 8-bit quantization noise. Weights with highest value
+       of this metric can be accurately quantized channel-wise to 8-bit. The idea is to leave these weights in 8bit,
+       and quantize the rest of layers to 4-bit group-wise. Since group-wise is more accurate than per-channel,
+       accuracy should not degrade.
+   :param HESSIAN_INPUT_ACTIVATION: The average Hessian trace of weights with respect to the layer-wise quantization
+       error multiplied by L2 norm of 8-bit quantization noise.
+   :param MEAN_ACTIVATION_VARIANCE: The mean variance of the layers' inputs
+       multiplied by inverted 8-bit quantization noise.
+   :param MAX_ACTIVATION_VARIANCE: The maximum variance of the layers' inputs
+       multiplied by inverted 8-bit quantization noise.
+   :param MEAN_ACTIVATION_MAGNITUDE: The mean magnitude of the layers' inputs
+       multiplied by inverted 8-bit quantization noise.
 
 
 .. py:class:: TargetDevice
