@@ -32,10 +32,10 @@ from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import PercentileAggregator
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 
-DEFAULT_3D_MEAN_VALUE = [[2503.125, -2493.75, 5009.375], [-4987.5, 7515.625, -7481.25], [10021.875, -9975.0, 12528.125]]
+DEFALUT_3D_MEAN_VALUE = [[2503.125, -2493.75, 5009.375], [-4987.5, 7515.625, -7481.25], [10021.875, -9975.0, 12528.125]]
 
 
-DEFAULT_3D_MEDIAN_VALUE = [[4.5, 5.0, 13.5], [10.0, 22.5, 15.0], [31.5, 20.0, 40.5]]
+DEFALUT_3D_MEDIAN_VALUE = [[4.5, 5.0, 13.5], [10.0, 22.5, 15.0], [31.5, 20.0, 40.5]]
 
 
 NO_OUTLIERS_DEFAULT_3D_MEAN_VALUE = [
@@ -122,7 +122,7 @@ def default_test_median_no_outlier(tensor_processor, aggregation_axes):
     )
 
 
-class TemplateTestReducersAggregators:
+class TemplateTestReducersAggreagtors:
     @abstractmethod
     def get_nncf_tensor(self, x: np.array, dtype: Optional[Dtype] = None):
         pass
@@ -263,12 +263,12 @@ class TemplateTestReducersAggregators:
         (MedianAggregator, False, 1, [4.5, 5.0, 13.5, 10.0, 22.5, 15.0, 31.5, 20.0, 40.5]),
         (MeanAggregator, True, 2, [[2512.5, -1651.04166667, 3352.08333333]]),
         (MedianAggregator, True, 2, [[13.0, 12.5, 21.0]]),
-        (MeanAggregator, False, 2, DEFAULT_3D_MEAN_VALUE),
-        (MedianAggregator, False, 2, DEFAULT_3D_MEDIAN_VALUE),
-        (MeanAggregator, True, 3, [DEFAULT_3D_MEAN_VALUE]),
-        (MedianAggregator, True, 3, [DEFAULT_3D_MEDIAN_VALUE]),
-        (MeanAggregator, False, 3, [DEFAULT_3D_MEAN_VALUE]),
-        (MedianAggregator, False, 3, [DEFAULT_3D_MEDIAN_VALUE]),
+        (MeanAggregator, False, 2, DEFALUT_3D_MEAN_VALUE),
+        (MedianAggregator, False, 2, DEFALUT_3D_MEDIAN_VALUE),
+        (MeanAggregator, True, 3, [DEFALUT_3D_MEAN_VALUE]),
+        (MedianAggregator, True, 3, [DEFALUT_3D_MEDIAN_VALUE]),
+        (MeanAggregator, False, 3, [DEFALUT_3D_MEAN_VALUE]),
+        (MedianAggregator, False, 3, [DEFALUT_3D_MEDIAN_VALUE]),
         (default_test_mean_no_outlier, True, 1, [20.0893]),
         (default_test_median_no_outlier, True, 1, [30.0]),
         (
@@ -289,7 +289,7 @@ class TemplateTestReducersAggregators:
     ]
 
     @pytest.mark.parametrize("aggregator_cls,use_per_sample_stats,dims,refs", NO_OUTLIERS_TEST_PARAMS)
-    def test_mean_median_aggregators(self, aggregator_cls, refs, tensor_processor, dims, use_per_sample_stats):
+    def test_mean_median_agggregators(self, aggregator_cls, refs, tensor_processor, dims, use_per_sample_stats):
         input_ = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9])
         input_with_outliers = np.array(
             [100_000, -100_000, 200_000, -200_000, 300_000, -300_000, 400_000, -400_000, 500_000]
@@ -310,7 +310,7 @@ class TemplateTestReducersAggregators:
         is_median = isinstance(aggregator, (MedianAggregator, MedianNoOutliersAggregator))
         # Outliers registration
         for i in range(2):
-            # mult is needed to make outlier and no outlier aggregators differs
+            # mult is needed to make outlier and no outlier aggreagators differs
             mult = 2.2 * i - 1 if not is_median else 1
             aggregator.register_reduced_input(self.get_nncf_tensor(input_with_outliers * mult, Dtype.FLOAT))
             if is_median and dims == 1 and use_per_sample_stats:
@@ -323,7 +323,7 @@ class TemplateTestReducersAggregators:
         assert self.all_close(ret_val, self.cast_tensor(refs, Dtype.FLOAT))
 
     @pytest.fixture(
-        name="MAD_percentile_aggregator_cls",
+        name="MAD_precentile_aggregator_cls",
         params=[
             MedianAbsoluteDeviationAggregator,
             partial(
@@ -373,8 +373,8 @@ class TemplateTestReducersAggregators:
     }
 
     @pytest.mark.parametrize("aggregation_axes", [None, (0,), (0, 1)])
-    def test_mad_percentile_aggregators(self, MAD_percentile_aggregator_cls, tensor_processor, aggregation_axes):
-        aggregator = MAD_percentile_aggregator_cls(tensor_processor=tensor_processor, aggregation_axes=aggregation_axes)
+    def test_mad_percentile_aggregators(self, MAD_precentile_aggregator_cls, tensor_processor, aggregation_axes):
+        aggregator = MAD_precentile_aggregator_cls(tensor_processor=tensor_processor, aggregation_axes=aggregation_axes)
         input_ = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9])
         for i in range(9):
             aggregator.register_reduced_input(self.get_nncf_tensor(input_ * i, Dtype.FLOAT))
@@ -398,8 +398,8 @@ class TemplateTestReducersAggregators:
         },
     }
 
-    def test_mad_percentile_aggregators_different_sizes(self, MAD_percentile_aggregator_cls, tensor_processor):
-        aggregator = MAD_percentile_aggregator_cls(tensor_processor=tensor_processor, aggregation_axes=(0, 1, 3))
+    def test_mad_percentile_aggregators_different_sizes(self, MAD_precentile_aggregator_cls, tensor_processor):
+        aggregator = MAD_precentile_aggregator_cls(tensor_processor=tensor_processor, aggregation_axes=(0, 1, 3))
         for shape in ((2, 3, 4), (4, 3, 8)):
             aggregator.register_reduced_input(
                 self.get_nncf_tensor(np.arange(np.prod(shape)).reshape(shape), Dtype.FLOAT)
@@ -412,10 +412,10 @@ class TemplateTestReducersAggregators:
             assert self.all_close(ret_val[k], self.cast_tensor(v, Dtype.FLOAT))
 
     def test_mad_percentile_aggregators_not_implemented_aggregation_axes(
-        self, MAD_percentile_aggregator_cls, tensor_processor
+        self, MAD_precentile_aggregator_cls, tensor_processor
     ):
         with pytest.raises(NotImplementedError):
-            MAD_percentile_aggregator_cls(tensor_processor=tensor_processor, aggregation_axes=(1, 2, 3))
+            MAD_precentile_aggregator_cls(tensor_processor=tensor_processor, aggregation_axes=(1, 2, 3))
 
     @pytest.mark.parametrize(
         "reducer_name",
@@ -467,14 +467,3 @@ class TemplateTestReducersAggregators:
         for reducer, init_hash in zip(reducers_instances, hashes):
             reducer(test_input)
             assert hash(reducer) == init_hash
-
-    @pytest.mark.parametrize("fn_name", ("mean", "median", "masked_mean", "masked_median"))
-    def test_overflow(self, fn_name, tensor_processor):
-        max_val = np.finfo(np.float32).max
-        x = self.get_nncf_tensor(np.array([max_val, max_val]), Dtype.FLOAT)
-        kwarg = {"x": x, "axis": 0}
-        if "masked" in fn_name:
-            kwarg["mask"] = self.get_nncf_tensor(self.cast_tensor(np.array([False, False]), Dtype.BOOL))
-        val = getattr(tensor_processor, fn_name)(**kwarg)
-        assert self.all_close(val.tensor, self.cast_tensor(np.array(max_val), Dtype.FLOAT))
-        assert val.tensor.dtype == x.tensor.dtype

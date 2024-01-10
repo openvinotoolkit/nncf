@@ -71,66 +71,56 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return cls.reduce_max(stacked, axis=0, keepdims=False)
 
     @staticmethod
-    def mean(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
-        comp_dtype, out_dtype = _get_computing_dtype(x.tensor.dtype)
-        return PTNNCFTensor(
-            torch.mean(x.tensor, axis=axis, keepdims=keepdims, dtype=comp_dtype).to(dtype=out_dtype, copy=False)
-        )
+    def mean(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> NNCFTensor:
+        return PTNNCFTensor(x.tensor.mean(dim=axis, keepdim=keepdims))
 
     @staticmethod
-    def median(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
+    def median(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> NNCFTensor:
         # See https://github.com/pytorch/pytorch/issues/61582
         if not isinstance(axis, int):
             device = x.tensor.device
-            comp_dtype, out_dtype = _get_computing_dtype(x.tensor.dtype)
-            np_tensor = x.tensor.detach().cpu().to(dtype=comp_dtype, copy=False).numpy()
-            result = torch.tensor(np.median(np_tensor, axis=axis, keepdims=keepdims))
-            return PTNNCFTensor(result.type(out_dtype).to(device))
+            result = torch.tensor(np.median(x.tensor.detach().cpu().numpy(), axis=axis, keepdims=keepdims))
+            return PTNNCFTensor(result.type(x.tensor.dtype).to(device))
         return PTNNCFCollectorTensorProcessor.quantile(x, quantile=[0.5], axis=axis, keepdims=keepdims)[0]
 
     @classmethod
     def masked_mean(
-        cls, x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], mask: NNCFTensor, keepdims: bool = False
+        cls, x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], mask: NNCFTensor, keepdims=False
     ) -> NNCFTensor:
         if mask is None:
             return cls.mean(x, axis=axis, keepdims=keepdims)
         device = x.tensor.device
-        comp_dtype, out_dtype = _get_computing_dtype(x.tensor.dtype)
-        np_tensor = x.tensor.detach().cpu().to(dtype=comp_dtype, copy=False).numpy()
-        masked_x = np.ma.array(np_tensor, mask=mask.tensor.detach().cpu().numpy())
-        result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims)
+        masked_x = np.ma.array(x.tensor.detach().cpu().numpy(), mask=mask.tensor.detach().cpu().numpy())
+        result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims).astype(masked_x.dtype)
         if isinstance(result, np.ma.MaskedArray):
             result = result.data
-        return PTNNCFTensor(torch.tensor(result).to(device=device, dtype=out_dtype))
+        return PTNNCFTensor(torch.tensor(result).to(device=device))
 
     @classmethod
     def masked_median(
-        cls, x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], mask: NNCFTensor, keepdims: bool = False
+        cls, x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], mask: NNCFTensor, keepdims=False
     ) -> NNCFTensor:
-        # Implemented in numpy as torch.masked.median is not implemented yet
+        # Implemented in numy as torch.masked.median is not implemented yet
         if mask is None:
             return cls.median(x, axis=axis, keepdims=keepdims)
-
         device = x.tensor.device
-        comp_dtype, out_dtype = _get_computing_dtype(x.tensor.dtype)
-        np_tensor = x.tensor.detach().cpu().to(dtype=comp_dtype, copy=False).numpy()
-        masked_x = np.ma.array(np_tensor, mask=mask.tensor.detach().cpu().numpy())
+        masked_x = np.ma.array(x.tensor.detach().cpu().numpy(), mask=mask.tensor.detach().cpu().numpy())
         result = np.ma.median(masked_x, axis=axis, keepdims=keepdims).astype(masked_x.dtype)
         if isinstance(result, np.ma.MaskedArray):
             result = result.data
-        return PTNNCFTensor(torch.tensor(result).to(device=device, dtype=out_dtype))
+        return PTNNCFTensor(torch.tensor(result).to(device=device))
 
     @staticmethod
     def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
         if len(x.shape) < 3:
-            return PTNNCFCollectorTensorProcessor.mean(x, axis=0)
+            return PTNNCFTensor(torch.mean(x.tensor, axis=0))
         x = torch.moveaxis(x.tensor, axis, 1)
         t = x.reshape(x.shape[0], x.shape[1], -1)
-        return PTNNCFCollectorTensorProcessor.mean(PTNNCFTensor(t), axis=(0, 2))
+        return PTNNCFTensor(torch.mean(t, axis=(0, 2)))
 
     @staticmethod
     def batch_mean(x: NNCFTensor) -> NNCFTensor:
-        return PTNNCFCollectorTensorProcessor.mean(x, axis=0, keepdims=True)
+        return PTNNCFTensor(torch.mean(x.tensor, axis=0, keepdims=True))
 
     @staticmethod
     def transpose(x: NNCFTensor, axes: Tuple[int, ...]) -> NNCFTensor:
@@ -564,20 +554,3 @@ PT_REDUCERS_MAP = {
     StatisticsType.QUANTILE: PTQuantileReducer,
     StatisticsType.ABS_QUANTILE: PTAbsQuantileReducer,
 }
-
-
-def _get_computing_dtype(dtype: torch.dtype) -> Tuple[Optional[torch.dtype], Optional[torch.dtype]]:
-    """
-    Determines the appropriate dtypes for intermediate computations and the final output,
-    aiming to prevent overflow while maintaining precision.
-
-    :param dtype: The dtype of the processed tensor.
-    :return:
-        - comp_dtype: The recommended dtype for intermediate computations to avoid overflow.
-            If None, no dtype change is necessary for intermediate computations.
-        - out_dtype: The recommended dtype for the final output, balancing precision and memory usage.
-            If None, the input dtype is preserved for the output.
-    """
-    if dtype in [torch.float32, torch.float16]:
-        return (torch.float64, dtype)
-    return (None, None)

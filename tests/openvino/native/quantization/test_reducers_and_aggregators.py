@@ -26,10 +26,10 @@ from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.openvino.statistics.collectors import OVNoopReducer
 from nncf.openvino.statistics.collectors import OVQuantileReducer
 from nncf.openvino.tensor import OVNNCFTensor
-from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggregators
+from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggreagtors
 
 
-class TestReducersAggregators(TemplateTestReducersAggregators):
+class TestReducersAggregators(TemplateTestReducersAggreagtors):
     @pytest.fixture
     def tensor_processor(self):
         return OVNNCFCollectorTensorProcessor
@@ -64,14 +64,7 @@ class TestReducersAggregators(TemplateTestReducersAggregators):
         return np.squeeze(np.array(ref_tensor), axes)
 
     def cast_tensor(self, tensor, dtype: Dtype):
-        fw_dtype = {
-            Dtype.FLOAT: np.float32,
-            Dtype.INTEGER: np.int64,
-            Dtype.BOOL: bool,
-        }.get(dtype)
-        if fw_dtype is None:
-            raise RuntimeError()
-        return np.array(tensor, dtype=fw_dtype)
+        return tensor
 
     def expand_dims(self, tensor, dims: Tuple[int, ...]):
         return np.expand_dims(np.array(tensor), dims)
