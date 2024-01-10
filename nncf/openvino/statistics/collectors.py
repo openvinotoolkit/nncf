@@ -70,16 +70,11 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
 
     @staticmethod
     def mean(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
-        comp_dtype, out_dtype = _get_computing_dtype(x.tensor.dtype)
-        return OVNNCFTensor(
-            np.mean(x.tensor, axis=axis, keepdims=keepdims, dtype=comp_dtype).astype(dtype=out_dtype, copy=False)
-        )
+        return OVNNCFTensor(np.mean(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
     def median(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
-        comp_dtype, out_dtype = _get_computing_dtype(x.tensor.dtype)
-        t = x.tensor.astype(dtype=comp_dtype, copy=False)
-        return OVNNCFTensor(np.median(t, axis=axis, keepdims=keepdims).astype(dtype=out_dtype, copy=False))
+        return OVNNCFTensor(np.median(x.tensor, axis=axis, keepdims=keepdims))
 
     @classmethod
     def masked_mean(
@@ -91,12 +86,11 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     ) -> NNCFTensor:
         if mask is None:
             return cls.mean(x, axis=axis, keepdims=keepdims)
-        comp_dtype, out_dtype = _get_computing_dtype(x.tensor.dtype)
         masked_x = np.ma.array(x.tensor, mask=mask.tensor)
-        result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims, dtype=comp_dtype)
+        result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims)
         if isinstance(result, np.ma.MaskedArray):
-            result = result.data
-        return OVNNCFTensor(result.astype(dtype=out_dtype, copy=False))
+            return OVNNCFTensor(result.data)
+        return OVNNCFTensor(result)
 
     @classmethod
     def masked_median(
@@ -108,21 +102,19 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     ) -> NNCFTensor:
         if mask is None:
             return cls.median(x, axis=axis, keepdims=keepdims)
-        comp_dtype, out_dtype = _get_computing_dtype(x.tensor.dtype)
-        t = x.tensor.astype(dtype=comp_dtype, copy=False)
-        masked_x = np.ma.array(t, mask=mask.tensor)
+        masked_x = np.ma.array(x.tensor, mask=mask.tensor)
         result = np.ma.median(masked_x, axis=axis, keepdims=keepdims)
         if isinstance(result, np.ma.MaskedArray):
-            result = result.data
-        return OVNNCFTensor(result.astype(dtype=out_dtype, copy=False))
+            return OVNNCFTensor(result.data)
+        return OVNNCFTensor(result)
 
     @staticmethod
     def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
         if len(x.shape) < 3:
-            return OVNNCFCollectorTensorProcessor.mean(x, axis=0)
+            return OVNNCFTensor(np.mean(x.tensor, axis=0))
         x = np.moveaxis(x.tensor, axis, 1)
         t = x.reshape(x.shape[0], x.shape[1], -1)
-        return OVNNCFCollectorTensorProcessor.mean(OVNNCFTensor(t), axis=(0, 2))
+        return OVNNCFTensor(np.mean(t, axis=(0, 2)))
 
     @staticmethod
     def transpose(x: NNCFTensor, axes: Tuple[int, ...]) -> NNCFTensor:
@@ -344,20 +336,3 @@ OV_REDUCERS_MAP = {
     StatisticsType.QUANTILE: OVQuantileReducer,
     StatisticsType.ABS_QUANTILE: OVAbsQuantileReducer,
 }
-
-
-def _get_computing_dtype(dtype: np.dtype) -> Tuple[Optional[np.dtype], Optional[np.dtype]]:
-    """
-    Determines the appropriate dtypes for intermediate computations and the final output,
-    aiming to prevent overflow while maintaining precision.
-
-    :param dtype: The dtype of the processed tensor.
-    :return:
-        - comp_dtype: The recommended dtype for intermediate computations to avoid overflow.
-            If None, no dtype change is necessary for intermediate computations.
-        - out_dtype: The recommended dtype for the final output, balancing precision and memory usage.
-            If None, the input dtype is preserved for the output.
-    """
-    if dtype in [np.float32, np.float16]:
-        return (np.float64, dtype)
-    return (None, None)
