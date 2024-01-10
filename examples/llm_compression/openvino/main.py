@@ -24,12 +24,7 @@ def main():
     MODEL_ID = "PY007/TinyLlama-1.1B-Chat-v0.3"
     OUTPUT_DIR = "tinyllama_compressed"
 
-    dataset = datasets.load_dataset(
-        "allenai/c4",
-        "allenai--c4",
-        data_files={"validation": "en/c4-validation.00000-of-00008.json.gz"},
-        split="validation",
-    )
+    dataset = datasets.load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
     model = OVModelForCausalLM.from_pretrained(MODEL_ID, export=True, load_in_8bit=False, compile=False, stateful=False)
@@ -67,6 +62,7 @@ def main():
         model.model,
         dataset=quantization_dataset,
         mode=nncf.CompressWeightsMode.INT4_SYM,
+        ratio=0.8,
         sensitivity_metric=nncf.SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
     )
     model.save_pretrained(OUTPUT_DIR)
