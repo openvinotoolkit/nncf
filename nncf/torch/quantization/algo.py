@@ -783,9 +783,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 is_quantized_on_export=qp.is_weight_quantization_point(),
                 compression_lr_multiplier=compression_lr_multiplier,
             )
-            pt_qp = PTQuantizationPoint(
-                qspec, PTTargetPointTranslator.translate(insertion_point), qp.directly_quantized_operator_node_names
-            )
+            pt_qp = PTQuantizationPoint(qspec, tp, qp.directly_quantized_operator_node_names)
             setup.add_quantization_point(qp_id, pt_qp)
 
         return setup
