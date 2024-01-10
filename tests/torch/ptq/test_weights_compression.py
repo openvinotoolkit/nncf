@@ -13,7 +13,7 @@ import pytest
 import torch
 
 from nncf import CompressWeightsMode
-from nncf.parameters import SensitivityMetric
+from nncf import SensitivityMetric
 from nncf.quantization import compress_weights
 
 DATA_BASED_SENSITIVITY_METRICS = (
