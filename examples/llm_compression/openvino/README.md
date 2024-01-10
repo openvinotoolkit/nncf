@@ -11,8 +11,8 @@ To use this example:
 
 ```bash
 pip install -U pip
+pip install -r requirements.txt
 pip install ../../../../
-pip install optimum-intel[openvino]
 ```
 
 ## Run Example
