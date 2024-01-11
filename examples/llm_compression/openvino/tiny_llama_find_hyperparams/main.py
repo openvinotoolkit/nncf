@@ -52,7 +52,7 @@ def compress_model(ov_model: ov.Model, nncf_dataset: nncf.Dataset, ratio: float,
     :return: The OpenVINO model with compressed weights.
     """
     optimized_ov_model = nncf.compress_weights(
-        ov_model.clone(), # we should clone the model because `compress_weights` works in place
+        ov_model.clone(),  # we should clone the model because `compress_weights` works in place
         dataset=nncf_dataset,
         mode=COMPRESSION_MODE,
         ratio=ratio,
@@ -80,8 +80,8 @@ def evaluate_model(
     hf_model.model = original_ov_model.clone()
     hf_model.request = None
     similarity = all_metrics["similarity"][0]
-    group_size = optimized_model.get_rt_info()['nncf']['weight_compression']['group_size'].value
-    ratio = optimized_model.get_rt_info()['nncf']['weight_compression']['ratio'].value
+    group_size = optimized_model.get_rt_info()["nncf"]["weight_compression"]["group_size"].value
+    ratio = optimized_model.get_rt_info()["nncf"]["weight_compression"]["ratio"].value
     nncf_logger.info(
         f"The similarity of model compressed with group_size={group_size}, ratio={ratio} is {similarity:.3f}"
     )
@@ -161,7 +161,7 @@ def find_parameters(evaluator: Evaluator, model: OVModelForCausalLM, nncf_datase
         nncf_logger.info(
             "The model was compressed with the minimum ratio and group_size, ",
             "but it could not achieve the required accuracy drop. ",
-            "We recommend choosing a different mode for weight compression."
+            "We recommend choosing a different mode for weight compression.",
         )
         print_results(optimized_model, ratio, group_size, similarity)
         return
@@ -187,7 +187,7 @@ def tiny_llama_transform_func(item, tokenizer, ov_model):
     res = {
         "input_ids": ov.Tensor(input_ids, input_ids.shape, input_dtypes["input_ids"]),
         "attention_mask": ov.Tensor(attention_mask, attention_mask.shape, input_dtypes["attention_mask"]),
-        "position_ids": position_ids.reshape(*attention_mask.shape)
+        "position_ids": position_ids.reshape(*attention_mask.shape),
     }
 
     def gen_pkv(num_heads, head_dim, num_layers):
