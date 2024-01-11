@@ -670,9 +670,10 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         def transform_fn(input_: Tuple[torch.Tensor, torch.Tensor], device: str) -> torch.Tensor:
             return input_[0].to(device)
 
+        target_device = range_init_params.device or get_model_device(target_model)
         dataset = Dataset(
             range_init_params.init_range_data_loader,
-            transform_func=partial(transform_fn, device=range_init_params.device),
+            transform_func=partial(transform_fn, device=target_device),
         )
 
         aggregator = PTStatisticsAggregator(dataset)
