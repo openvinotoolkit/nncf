@@ -44,6 +44,9 @@ class NumpyNNCFTensor(NNCFTensor):
     def device(self) -> Optional[str]:
         return self.dummy_device
 
+    def is_empty(self) -> bool:
+        return self.tensor.size == 0
+
 
 class DummyTensorReducer(TensorReducerBase):
     def __init__(self, output_name: str, inplace: bool = False, inplace_mock=None):
