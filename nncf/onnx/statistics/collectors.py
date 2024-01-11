@@ -14,7 +14,6 @@ from typing import Deque, List, Optional, Tuple, Union
 
 import numpy as np
 
-from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorElementsType
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
@@ -44,41 +43,45 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     """
 
     @staticmethod
-    def reduce_min(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
+    def reduce_min(
+        x: ONNXNNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False
+    ) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.amin(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
-    def reduce_max(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
+    def reduce_max(
+        x: ONNXNNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False
+    ) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.amax(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
-    def abs(x: NNCFTensor) -> NNCFTensor:
+    def abs(x: ONNXNNCFTensor) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.abs(x.tensor))
 
     @staticmethod
-    def min(x1: NNCFTensor, x2: NNCFTensor) -> NNCFTensor:
+    def min(x1: ONNXNNCFTensor, x2: ONNXNNCFTensor) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.minimum(x1.tensor, x2.tensor))
 
     @staticmethod
-    def max(x1: NNCFTensor, x2: NNCFTensor) -> NNCFTensor:
+    def max(x1: ONNXNNCFTensor, x2: ONNXNNCFTensor) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.maximum(x1.tensor, x2.tensor))
 
     @staticmethod
-    def mean(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> NNCFTensor:
+    def mean(x: ONNXNNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.mean(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
-    def median(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> NNCFTensor:
+    def median(x: ONNXNNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.median(x.tensor, axis=axis, keepdims=keepdims))
 
     @classmethod
     def masked_mean(
         cls,
-        x: NNCFTensor,
+        x: ONNXNNCFTensor,
         axis: Optional[Union[int, Tuple[int, ...], List[int]]],
-        mask: Optional[NNCFTensor],
+        mask: Optional[ONNXNNCFTensor],
         keepdims: bool = False,
-    ) -> NNCFTensor:
+    ) -> ONNXNNCFTensor:
         if mask is None:
             return cls.mean(x, axis=axis, keepdims=keepdims)
         masked_x = np.ma.array(x.tensor, mask=mask.tensor)
@@ -87,44 +90,44 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @classmethod
     def masked_median(
         cls,
-        x: NNCFTensor,
+        x: ONNXNNCFTensor,
         axis: Optional[Union[int, Tuple[int, ...], List[int]]],
-        mask: Optional[NNCFTensor],
+        mask: Optional[ONNXNNCFTensor],
         keepdims: bool = False,
-    ) -> NNCFTensor:
+    ) -> ONNXNNCFTensor:
         if mask is None:
             return cls.median(x, axis=axis, keepdims=keepdims)
         masked_x = np.ma.array(x.tensor, mask=mask.tensor)
         return ONNXNNCFTensor(np.ma.median(masked_x, axis=axis, keepdims=keepdims).data)
 
     @staticmethod
-    def logical_or(input_: NNCFTensor, other: NNCFTensor) -> NNCFTensor:
+    def logical_or(input_: ONNXNNCFTensor, other: ONNXNNCFTensor) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.logical_or(input_.tensor, other.tensor))
 
     @staticmethod
-    def less(input_: NNCFTensor, other: NNCFTensor) -> NNCFTensor:
+    def less(input_: ONNXNNCFTensor, other: ONNXNNCFTensor) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(input_.tensor < other.tensor)
 
     @staticmethod
-    def stack(x: Union[List[NNCFTensor], Deque[NNCFTensor]], axis: int = 0) -> NNCFTensor:
+    def stack(x: Union[List[ONNXNNCFTensor], Deque[ONNXNNCFTensor]], axis: int = 0) -> ONNXNNCFTensor:
         x = [t.tensor for t in x]
         return ONNXNNCFTensor(np.stack(x, axis=axis))
 
     @staticmethod
-    def unstack(x: NNCFTensor, axis: int = 0) -> List[NNCFTensor]:
+    def unstack(x: ONNXNNCFTensor, axis: int = 0) -> List[ONNXNNCFTensor]:
         return [ONNXNNCFTensor(np.squeeze(e, axis)) for e in np.split(x.tensor, x.tensor.shape[axis], axis=axis)]
 
     @staticmethod
-    def squeeze(x: NNCFTensor, dim: Optional[Union[int, Tuple[int, ...]]] = None) -> NNCFTensor:
+    def squeeze(x: ONNXNNCFTensor, dim: Optional[Union[int, Tuple[int, ...]]] = None) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.squeeze(x.tensor, axis=dim))
 
     @staticmethod
-    def sum(tensor: NNCFTensor) -> TensorElementsType:
-        return np.sum(tensor.tensor)
+    def sum(tensor: ONNXNNCFTensor) -> TensorElementsType:
+        return ONNXNNCFTensor(np.sum(tensor.tensor))
 
     @staticmethod
     def quantile(
-        tensor: NNCFTensor,
+        tensor: ONNXNNCFTensor,
         quantile: Union[float, List[float]],
         axis: Union[int, Tuple[int, ...], List[int]],
         keepdims: bool = False,
@@ -135,7 +138,7 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @classmethod
     def percentile(
         cls,
-        tensor: NNCFTensor,
+        tensor: ONNXNNCFTensor,
         percentile: Union[float, List[float]],
         axis: Union[int, Tuple[int, ...], List[int]],
         keepdims: bool = False,
@@ -144,7 +147,7 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return cls.quantile(tensor, quantile=quantile, axis=axis, keepdims=keepdims)
 
     @staticmethod
-    def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
+    def mean_per_channel(x: ONNXNNCFTensor, axis: int) -> ONNXNNCFTensor:
         if len(x.shape) < 3:
             return ONNXNNCFTensor(np.mean(x.tensor, axis=0))
         x = np.moveaxis(x.tensor, axis, 1)
@@ -152,31 +155,31 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return ONNXNNCFTensor(np.mean(t, axis=(0, 2)))
 
     @staticmethod
-    def transpose(x: NNCFTensor, axes: Tuple[int, ...]) -> NNCFTensor:
+    def transpose(x: ONNXNNCFTensor, axes: Tuple[int, ...]) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.transpose(x.tensor, axes))
 
     @staticmethod
-    def reshape(x: NNCFTensor, shape: Tuple[int, ...]) -> NNCFTensor:
+    def reshape(x: ONNXNNCFTensor, shape: Tuple[int, ...]) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.reshape(x.tensor, shape))
 
     @staticmethod
-    def cat(x: List[NNCFTensor], axis: int) -> NNCFTensor:
+    def cat(x: List[ONNXNNCFTensor], axis: int) -> ONNXNNCFTensor:
         x = [t.tensor for t in x]
         return ONNXNNCFTensor(np.concatenate(x, axis))
 
     @staticmethod
-    def batch_mean(x: NNCFTensor) -> NNCFTensor:
+    def batch_mean(x: ONNXNNCFTensor) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.mean(x.tensor, axis=0, keepdims=True))
 
     @staticmethod
-    def sub(a: NNCFTensor, b: NNCFTensor) -> NNCFTensor:
-        return NNCFTensor(a.tensor - b.tensor)
+    def sub(a: ONNXNNCFTensor, b: ONNXNNCFTensor) -> ONNXNNCFTensor:
+        return ONNXNNCFTensor(a.tensor - b.tensor)
 
     @staticmethod
-    def zero_elements(x: NNCFTensor) -> NNCFTensor:
+    def zero_elements(x: ONNXNNCFTensor) -> ONNXNNCFTensor:
         np_tensor = x.tensor
         eps = np.finfo(np_tensor.dtype).eps
-        return NNCFTensor(np.abs(np_tensor) < eps)
+        return ONNXNNCFTensor(np.abs(np_tensor) < eps)
 
 
 @dataclass
