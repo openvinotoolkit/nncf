@@ -250,12 +250,12 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         nncf_graph: NNCFGraph, target_point: PTTargetPoint, collector_params: RangeInitCollectorParams
     ) -> PTRangeInitCollectorParams:
         input_shape, _, channel_idx = PTMinMaxAlgoBackend._get_input_scale_shape(
-            nncf_graph, target_point, collector_params.per_channel
+            nncf_graph, target_point, collector_params.is_per_channel
         )
         return PTRangeInitCollectorParams(
             is_weights=collector_params.is_weights,
             mode=collector_params.mode,
-            per_channel=collector_params.per_channel,
+            per_channel=collector_params.is_per_channel,
             input_shape=input_shape,
             channel_idx=channel_idx,
         )

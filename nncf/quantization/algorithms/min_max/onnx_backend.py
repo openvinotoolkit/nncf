@@ -152,7 +152,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         inplace: bool,
         num_samples: int = None,
     ) -> Union[ONNXMinMaxStatisticCollector, ONNXMeanMinMaxStatisticCollector]:
-        is_per_channel = collector_params.per_channel
+        is_per_channel = collector_params.is_per_channel
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
         use_abs_max = collector_params.use_abs_max
         reduction_shape = None  # Per-Tensor

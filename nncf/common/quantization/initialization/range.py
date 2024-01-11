@@ -158,7 +158,7 @@ class RangeInitCollectorParams:
         """
         self._is_weights = is_weights
         self._mode = mode
-        self._per_channel = per_channel
+        self._is_per_channel = per_channel
 
     @property
     def is_weights(self) -> bool:
@@ -176,11 +176,11 @@ class RangeInitCollectorParams:
         return self._mode
 
     @property
-    def per_channel(self) -> bool:
+    def is_per_channel(self) -> bool:
         """
         Returns quantization granularity.
         """
-        return self._per_channel
+        return self._is_per_channel
 
     def use_per_sample_stats(self, per_sample_stats) -> bool:
         """
@@ -199,8 +199,8 @@ class RangeInitCollectorParams:
 
     @property
     def use_means_of_mins(self) -> bool:
-        return not self._is_weights and not self._per_channel and self._mode == "asymmetric"
+        return not self._is_weights and not self._is_per_channel and self._mode == "asymmetric"
 
     @property
     def use_means_of_maxs(self) -> bool:
-        return not self._is_weights and not self._per_channel
+        return not self._is_weights and not self._is_per_channel

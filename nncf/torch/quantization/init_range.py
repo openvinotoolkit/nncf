@@ -114,7 +114,7 @@ class PTRangeInitCollectorParams(RangeInitCollectorParams):
         """
         ndims = len(self._input_shape)
         reduction_axes: List[int] = list(range(ndims))
-        if self._per_channel:
+        if self.is_per_channel:
             val = (ndims + self._channel_idx) % ndims
             reduction_axes.remove(val)
             if not val and self.use_per_sample_stats(per_sample_stats):

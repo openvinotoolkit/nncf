@@ -143,7 +143,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     def _get_reduction_axes(
         nncf_graph: NNCFGraph, target_point: OVTargetPoint, collector_params: RangeInitCollectorParams
     ) -> Tuple[ReductionAxes, bool]:
-        if not collector_params.per_channel:
+        if not collector_params.is_per_channel:
             return None
 
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
@@ -163,7 +163,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         assert isinstance(node.layer_attributes, OVLayerAttributes)
         const_shape = node.layer_attributes.constant_attributes[target_point.port_id]["shape"]
 
-        if collector_params.per_channel:
+        if collector_params.is_per_channel:
             channel_axes = get_weight_channel_axes(node)
             axes = get_channel_agnostic_reduction_axes(channel_axes, const_shape)
         else:
