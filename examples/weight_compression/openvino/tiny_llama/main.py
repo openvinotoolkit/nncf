@@ -148,6 +148,7 @@ def find_parameters(evaluator: Evaluator, model: OVModelForCausalLM, nncf_datase
         )
         all_layers_similarity = evaluate_fn(optimized_model=full_optimized_model)
         if all_layers_similarity >= 1 - MAX_DROP:
+            print("Compressed embeddings and last layers to a primary precision.")
             print_results(full_optimized_model, ratio, group_size, all_layers_similarity)
         else:
             print_results(optimized_model, ratio, group_size, similarity)
@@ -176,23 +177,27 @@ def find_parameters(evaluator: Evaluator, model: OVModelForCausalLM, nncf_datase
     print_results(optimized_model, MIN_RATIO, MIN_GROUP_SIZE, similarity)
 
 
-def tiny_llama_transform_func(item, tokenizer):
+def tiny_llama_transform_func(item, tokenizer, ov_model):
+    input_dtypes = {inp.get_any_name(): inp.get_element_type() for inp in ov_model.inputs}
     tokens = tokenizer(item["text"])
+    input_ids = np.expand_dims(np.array(tokens["input_ids"]), 0)
     attention_mask = np.expand_dims(np.array(tokens["attention_mask"]), 0)
-    position_ids = attention_mask.cumsum(-1) - 1
-    position_ids = np.ma.array(position_ids, mask=attention_mask == 0)
-    position_ids.filled(fill_value=1)
+    position_ids = np.cumsum(attention_mask, axis=1) - 1
+    position_ids[attention_mask == 0] = 1
     res = {
-        "input_ids": np.expand_dims(np.array(tokens["input_ids"]), 0),
-        "attention_mask": attention_mask,
-        "position_ids": position_ids,
+        "input_ids": ov.Tensor(input_ids, input_ids.shape, input_dtypes["input_ids"]),
+        "attention_mask": ov.Tensor(attention_mask, attention_mask.shape, input_dtypes["attention_mask"]),
+        "position_ids": position_ids.reshape(*attention_mask.shape)
     }
 
     def gen_pkv(num_heads, head_dim, num_layers):
         res = {}
+        shape = (1, num_heads, 0, head_dim)
         for i in range(num_layers):
-            res[f"past_key_values.{i}.key"] = np.zeros((1, num_heads, 0, head_dim))
-            res[f"past_key_values.{i}.value"] = np.zeros((1, num_heads, 0, head_dim))
+            key_name = f"past_key_values.{i}.key"
+            val_name = f"past_key_values.{i}.value"
+            res[key_name] = ov.Tensor(shape=shape, type=input_dtypes[key_name])
+            res[val_name] = ov.Tensor(shape=shape, type=input_dtypes[val_name])
         return res
 
     res.update(gen_pkv(4, 64, 22))
@@ -207,11 +212,12 @@ model = OVModelForCausalLM.from_pretrained(
     trust_remote_code=True,
     use_cache=True,
     ov_config=ov_config,
+    stateful=False,
 )
-tokenizer = AutoTokenizer.from_pretrained(model_id)
+tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
 dataset = load_dataset("wikitext", "wikitext-2-v1", split="train[:1000]")
 dataset = dataset.filter(lambda example: len(example["text"]) > 128)
-transform_func = partial(tiny_llama_transform_func, tokenizer=tokenizer)
+transform_func = partial(tiny_llama_transform_func, tokenizer=tokenizer, ov_model=model.model)
 
 start = datetime.datetime.now()
 evaluator = Evaluator(model, tokenizer=tokenizer, metrics=("similarity",))
