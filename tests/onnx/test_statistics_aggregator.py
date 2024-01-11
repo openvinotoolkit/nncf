@@ -85,7 +85,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     @pytest.fixture
     def dataset_samples(self, dataset_values):
         input_shape = INPUT_SHAPE
-        dataset_samples = [np.zeros(input_shape).astype(np.float32), np.ones(input_shape).astype(np.float32)]
+        dataset_samples = [np.zeros(input_shape, dtype=np.float32), np.ones(input_shape, dtype=np.float32)]
 
         for i, value in enumerate(dataset_values):
             dataset_samples[0][0, i, 0, 0] = value["max"]

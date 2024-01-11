@@ -200,7 +200,7 @@ class ONNXBasicReducer(TensorReducerBase):
         return ONNXNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        raise RuntimeError("ONNX backend has no support of inplace statistics yet.")
+        raise NotImplementedError("ONNX backend has no support of inplace statistics yet.")
 
     def get_output_names(self, output_metadata: ONNXOutputMetadata) -> List[str]:
         return [output_metadata.edge_name]
