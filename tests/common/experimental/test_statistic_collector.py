@@ -10,7 +10,6 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from dataclasses import dataclass
 from typing import List, Optional, Type
 
 import numpy as np
@@ -24,7 +23,6 @@ from nncf.common.tensor_statistics.statistics import PercentileTensorStatistic
 from nncf.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
 from nncf.experimental.common.tensor_statistics.collectors import MergedTensorCollector
-from nncf.experimental.common.tensor_statistics.collectors import OutputMetadata
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.experimental.common.tensor_statistics.collectors import TensorType
@@ -60,7 +58,7 @@ class DummyTensorReducer(TensorReducerBase):
     def get_inplace_fn(self):
         return self._inplace_mock
 
-    def get_output_names(self, output_metadata: OutputMetadata) -> str:
+    def get_output_names(self, target_node_name: str, port_id: int) -> str:
         return [self._output_name]
 
     def _get_processor(self):
@@ -143,9 +141,9 @@ def test_duplicated_statistics_are_merged():
     assert len(collector._aggregators) == 4
     assert collector.num_samples == 100
 
-    target_inputs_metadata = collector.get_target_inputs_metadata(None)
-    # Check target_inputs_metadata
-    assert sorted(target_inputs_metadata) == sorted(
+    output_info = collector.get_output_info(None, None)
+    # Check output info
+    assert sorted(output_info) == sorted(
         [(hash(reducer_inplace), ["Dummy_inplace"]), (hash(reducer_a), ["A"]), (hash(reducer), ["Dummy"])]
     )
 
@@ -154,7 +152,7 @@ def test_duplicated_statistics_are_merged():
         "A": NumpyNNCFTensor(np.array(0)),
         "Dummy_inplace": NumpyNNCFTensor(np.array(6)),
     }
-    target_inputs = TensorCollector.get_tensor_collector_inputs(outputs, target_inputs_metadata)
+    target_inputs = TensorCollector.get_tensor_collector_inputs(outputs, output_info)
     collector.register_inputs(target_inputs)
 
     # Check aggregators recieved inputs as expected
@@ -219,10 +217,10 @@ def test_merged_tensor_collector():
     for collector in collectors[:-1]:
         assert collector.aggregators[common_branch_key] is common_aggregator
 
-    target_inputs_metadata = merged_collector.get_target_inputs_metadata(None)
+    output_info = merged_collector.get_output_info(None, None)
     outputs = {"common_input": NumpyNNCFTensor(np.array(0))}
     outputs.update({f"input_{idx + 1}": NumpyNNCFTensor(np.array(idx + 1)) for idx, _ in enumerate(collectors[:-1])})
-    target_inputs = TensorCollector.get_tensor_collector_inputs(outputs, target_inputs_metadata)
+    target_inputs = TensorCollector.get_tensor_collector_inputs(outputs, output_info)
     merged_collector.register_inputs(target_inputs)
 
     # Check statistics are collected in a correct way
@@ -254,12 +252,6 @@ def test_ambiguous_branches():
         collector.register_statistic_branch("B", reducer, aggregator)
 
 
-@dataclass
-class DummyOutputMetadata(OutputMetadata):
-    target_node_name: str
-    port_id: int
-
-
 class DummyMultipleInpOutTensorReducer(DummyTensorReducer):
     NUM_INPUTS = 3
     NUM_OUTPUTS = 2
@@ -267,11 +259,8 @@ class DummyMultipleInpOutTensorReducer(DummyTensorReducer):
     def _reduce_out_of_place(self, x: List[TensorType]):
         return x[: self.NUM_OUTPUTS]
 
-    def get_output_names(self, output_metadata: DummyOutputMetadata) -> List[str]:
-        return [
-            f"{output_metadata.target_node_name}_{output_metadata.port_id}_{self._output_name}_{i}"
-            for i in range(self.NUM_INPUTS)
-        ]
+    def get_output_names(self, target_node_name: str, port_id: int) -> str:
+        return [f"{target_node_name}_{port_id}_{self._output_name}_{i}" for i in range(self.NUM_INPUTS)]
 
 
 def test_multiple_branch_reducer():
@@ -296,10 +285,10 @@ def test_multiple_branch_reducer():
     ]
     inputs = {name: NumpyNNCFTensor(np.array(i)) for i, name in enumerate(ref_output_info[0][1])}
 
-    target_inputs_metadata = collector.get_target_inputs_metadata(DummyOutputMetadata(target_node_name, 0))
-    assert target_inputs_metadata == ref_output_info
+    output_info = collector.get_output_info(target_node_name, 0)
+    assert output_info == ref_output_info
 
-    target_inputs = collector.get_tensor_collector_inputs(inputs, target_inputs_metadata)
+    target_inputs = collector.get_tensor_collector_inputs(inputs, output_info)
     collector.register_inputs(target_inputs)
 
     ref_stats = {"0": NumpyNNCFTensor(np.array(0)), "1": NumpyNNCFTensor(np.array(1))}

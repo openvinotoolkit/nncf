@@ -25,7 +25,6 @@ from nncf.onnx.graph.node_utils import get_input_edge
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
 from nncf.onnx.graph.onnx_helper import get_name_to_node_map
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
-from nncf.onnx.statistics.collectors import ONNXOutputMetadata
 from nncf.onnx.tensor import ONNXNNCFTensor
 
 
@@ -58,8 +57,11 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
             else:
                 RuntimeError(f"Unsupported target point type for statistic aggregator: {target_point.type}")
 
-            target_inputs_metadata = tensor_collector.get_target_inputs_metadata(ONNXOutputMetadata(edge_name))
-            target_inputs = TensorCollector.get_tensor_collector_inputs(outputs, target_inputs_metadata)
+            input_info = []
+            for reducer in tensor_collector.reducers:
+                input_info.append((hash(reducer), [edge_name]))
+
+            target_inputs = TensorCollector.get_tensor_collector_inputs(outputs, input_info)
             tensor_collector.register_inputs(target_inputs)
 
     def _get_transformation_layout_extra_outputs(
