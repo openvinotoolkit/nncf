@@ -204,26 +204,31 @@ def tiny_llama_transform_func(item, tokenizer, ov_model):
     return res
 
 
-model_id = "PY007/TinyLlama-1.1B-step-50K-105b"
-ov_config = {"PERFORMANCE_HINT": "LATENCY", "NUM_STREAMS": "1", "CACHE_DIR": ""}
-model = OVModelForCausalLM.from_pretrained(
-    model_id,
-    export=True,
-    trust_remote_code=True,
-    use_cache=True,
-    ov_config=ov_config,
-    stateful=False,
-)
-tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
-dataset = load_dataset("wikitext", "wikitext-2-v1", split="train[:1000]")
-dataset = dataset.filter(lambda example: len(example["text"]) > 128)
-transform_func = partial(tiny_llama_transform_func, tokenizer=tokenizer, ov_model=model.model)
+def main():
+    model_id = "TinyLlama/TinyLlama-1.1B-step-50K-105b"
+    ov_config = {"PERFORMANCE_HINT": "LATENCY", "NUM_STREAMS": "1", "CACHE_DIR": ""}
+    model = OVModelForCausalLM.from_pretrained(
+        model_id,
+        export=True,
+        trust_remote_code=True,
+        use_cache=True,
+        ov_config=ov_config,
+        stateful=False,
+    )
+    tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
+    dataset = load_dataset("wikitext", "wikitext-2-v1", split="train[:1000]")
+    dataset = dataset.filter(lambda example: len(example["text"]) > 128)
+    transform_func = partial(tiny_llama_transform_func, tokenizer=tokenizer, ov_model=model.model)
 
-start = datetime.datetime.now()
-evaluator = Evaluator(model, tokenizer=tokenizer, metrics=("similarity",))
-nncf_dataset = get_nncf_dataset(dataset, transform_func)
-find_parameters(evaluator, model, nncf_dataset)
-end = datetime.datetime.now()
-delta = end - start
-delta -= datetime.timedelta(microseconds=delta.microseconds)
-print(f"Elapsed time: {delta}")
+    start = datetime.datetime.now()
+    evaluator = Evaluator(model, tokenizer=tokenizer, metrics=("similarity",))
+    nncf_dataset = get_nncf_dataset(dataset, transform_func)
+    find_parameters(evaluator, model, nncf_dataset)
+    end = datetime.datetime.now()
+    delta = end - start
+    delta -= datetime.timedelta(microseconds=delta.microseconds)
+    print(f"Elapsed time: {delta}")
+
+
+if __name__ == "__main__":
+    main()

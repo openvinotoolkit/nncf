@@ -1,11 +1,11 @@
-# Weight compression of TinyLLama OpenVINO Model
+# Find the appropriate hyperparameters to compress the TinyLLama model
 
 This example demonstrates how to find the appropriate `ratio` and `group_size` parameters to compress the weights of the TinyLLama model from the HuggingFace Transformers. OpenVINO backend supports inference of mixed-precision models with weights compressed to a 4-bit data type as a primary precision. The fastest mixed-precision mode is `INT4_SYM`, but it may lead to a significant accuracy degradation, especially for models of moderate size. In this example, the allowed maximum deviation from the original model is `0.2` points of the similarity metric. If the similarity of the compressed model is not satisfying, there are 2 hyper-parameters to tune: `group_size` and `ratio`. Smaller `group_size` and `ratio` of 4-bit layers usually improve accuracy at the sacrifice of model size and inference latency.
 
 The example includes the following steps:
 
 - Prepare `wikitext` dataset.
-- Prepare `PY007/TinyLlama-1.1B-step-50K-105b` text-generation model in OpenVINO representation using Optimum-Intel.
+- Prepare `TinyLlama/TinyLlama-1.1B-step-50K-105b` text-generation model in OpenVINO representation using Optimum-Intel.
 - Compress weights of the model with NNCF Weight compression algorithm.
 - Find appropriate `ratio` and `group_size` if acceptable similarity is not achieved.
 - Measure the similarity and footprint of the final model.
@@ -14,15 +14,12 @@ The example includes the following steps:
 
 To run the example you should install the corresponding Python dependencies:
 
-- Install NNCF from source:
+- Create a separate Python* environment and activate it: `python3 -m venv nncf_env && source nncf_env/bin/activate`
+- Install dependencies:
 
 ```bash
+pip install -U pip
 pip install ../../../../
-```
-
-- Install 3rd party dependencies:
-
-```bash
 pip install -r requirements.txt
 ```
 
