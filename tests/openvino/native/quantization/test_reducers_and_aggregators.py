@@ -65,6 +65,3 @@ class TestReducersAggregators(TemplateTestReducersAggreagtors):
 
     def cast_tensor(self, tensor, dtype: Dtype):
         return tensor
-
-    def expand_dims(self, tensor, dims: Tuple[int, ...]):
-        return np.expand_dims(np.array(tensor), dims)

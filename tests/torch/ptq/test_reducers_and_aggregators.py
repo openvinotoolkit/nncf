@@ -78,13 +78,6 @@ class BaseTestReducersAggregators(TemplateTestReducersAggreagtors, ABC):
             return tensor.int()
         raise RuntimeError()
 
-    def expand_dims(self, tensor, dims: Tuple[int, ...]):
-        tensor_ = torch.tensor(tensor)
-        shape = list(tensor_.shape)
-        for dim in dims:
-            shape.insert(dim, 1)
-        return tensor_.view(shape)
-
 
 class TestCPUReducersAggregators(BaseTestReducersAggregators):
     def get_nncf_tensor(self, x: np.array, dtype: Optional[Dtype] = None):

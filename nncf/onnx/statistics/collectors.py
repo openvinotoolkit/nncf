@@ -67,11 +67,13 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return ONNXNNCFTensor(np.maximum(x1.tensor, x2.tensor))
 
     @staticmethod
-    def mean(x: ONNXNNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> ONNXNNCFTensor:
+    def mean(x: ONNXNNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.mean(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
-    def median(x: ONNXNNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> ONNXNNCFTensor:
+    def median(
+        x: ONNXNNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False
+    ) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.median(x.tensor, axis=axis, keepdims=keepdims))
 
     @classmethod
@@ -85,7 +87,10 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         if mask is None:
             return cls.mean(x, axis=axis, keepdims=keepdims)
         masked_x = np.ma.array(x.tensor, mask=mask.tensor)
-        return ONNXNNCFTensor(np.ma.mean(masked_x, axis=axis, keepdims=False).data)
+        result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims)
+        if isinstance(result, np.ma.MaskedArray):
+            return ONNXNNCFTensor(result.data)
+        return ONNXNNCFTensor(result)
 
     @classmethod
     def masked_median(
@@ -98,7 +103,10 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         if mask is None:
             return cls.median(x, axis=axis, keepdims=keepdims)
         masked_x = np.ma.array(x.tensor, mask=mask.tensor)
-        return ONNXNNCFTensor(np.ma.median(masked_x, axis=axis, keepdims=keepdims).data)
+        result = np.ma.median(masked_x, axis=axis, keepdims=keepdims)
+        if isinstance(result, np.ma.MaskedArray):
+            return ONNXNNCFTensor(result.data)
+        return ONNXNNCFTensor(result)
 
     @staticmethod
     def logical_or(input_: ONNXNNCFTensor, other: ONNXNNCFTensor) -> ONNXNNCFTensor:
@@ -122,7 +130,7 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return ONNXNNCFTensor(np.squeeze(x.tensor, axis=dim))
 
     @staticmethod
-    def sum(tensor: ONNXNNCFTensor) -> TensorElementsType:
+    def sum(tensor: ONNXNNCFTensor) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.sum(tensor.tensor))
 
     @staticmethod
@@ -131,7 +139,7 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         quantile: Union[float, List[float]],
         axis: Union[int, Tuple[int, ...], List[int]],
         keepdims: bool = False,
-    ) -> List[TensorElementsType]:
+    ) -> List[ONNXNNCFTensor]:
         result = np.quantile(tensor.tensor, quantile, axis, keepdims=keepdims)
         return [ONNXNNCFTensor(x) for x in result]
 

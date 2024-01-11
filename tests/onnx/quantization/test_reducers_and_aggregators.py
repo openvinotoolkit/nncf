@@ -26,10 +26,10 @@ from nncf.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
 from nncf.onnx.statistics.collectors import ONNXNoopReducer
 from nncf.onnx.statistics.collectors import ONNXQuantileReducer
 from nncf.onnx.tensor import ONNXNNCFTensor
-from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggregators
+from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggreagtors
 
 
-class TestReducersAggregators(TemplateTestReducersAggregators):
+class TestReducersAggregators(TemplateTestReducersAggreagtors):
     @pytest.fixture
     def tensor_processor(self):
         return ONNXNNCFCollectorTensorProcessor
@@ -64,14 +64,4 @@ class TestReducersAggregators(TemplateTestReducersAggregators):
         return np.squeeze(np.array(ref_tensor), axes)
 
     def cast_tensor(self, tensor, dtype: Dtype):
-        fw_dtype = {
-            Dtype.FLOAT: np.float32,
-            Dtype.INTEGER: np.int64,
-            Dtype.BOOL: bool,
-        }.get(dtype)
-        if fw_dtype is None:
-            raise RuntimeError()
-        return np.array(tensor, dtype=fw_dtype)
-
-    def expand_dims(self, tensor, dims: Tuple[int, ...]):
-        return np.expand_dims(np.array(tensor), dims)
+        return tensor
