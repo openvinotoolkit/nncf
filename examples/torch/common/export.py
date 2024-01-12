@@ -53,15 +53,14 @@ def export_model(ctrl: CompressionAlgorithmController, config: SampleConfig) -> 
             torch.onnx.export(model, input_tensor_list, model_path, input_names=input_names)
     elif extension == ".xml":
         import openvino as ov
-        from openvino.tools.mo import convert_model
 
         if config.export_to_ir_via_onnx:
             model_onnx_path = model_path.with_suffix(".onnx")
             with torch.no_grad():
                 torch.onnx.export(model, input_tensor_list, model_onnx_path, input_names=input_names)
-            ov_model = convert_model(model_onnx_path)
+            ov_model = ov.convert_model(model_onnx_path)
         else:
-            ov_model = convert_model(model, example_input=input_tensor_list, input_shape=input_shape_list)
+            ov_model = ov.convert_model(model, example_input=input_tensor_list, input=tuple(input_shape_list))
             # Rename input nodes
             for input_node, input_name in zip(ov_model.inputs, input_names):
                 input_node.node.set_friendly_name(input_name)

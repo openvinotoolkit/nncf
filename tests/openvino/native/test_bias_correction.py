@@ -12,10 +12,9 @@
 from typing import Dict, List
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 import pytest
 import torch
-from openvino.tools.mo import convert_model
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.openvino.graph.model_utils import remove_fq_from_inputs
@@ -46,7 +45,7 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
     def backend_specific_model(model: torch.nn.Module, tmp_dir: str):
         onnx_path = f"{tmp_dir}/model.onnx"
         torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
-        ov_model = convert_model(onnx_path, input_shape=model.INPUT_SIZE, compress_to_fp16=False)
+        ov_model = ov.convert_model(onnx_path)
         return ov_model
 
     @staticmethod
