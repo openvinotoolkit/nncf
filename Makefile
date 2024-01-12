@@ -56,8 +56,6 @@ install-openvino-test:
 	pip install -r tests/cross_fw/examples/requirements.txt
 
 install-openvino-dev: install-openvino-test install-pre-commit
-	pip install -r examples/experimental/openvino/bert/requirements.txt
-	pip install -r examples/experimental/openvino/yolo_v5/requirements.txt
 	pip install -r examples/post_training_quantization/openvino/mobilenet_v2/requirements.txt
 	pip install -r examples/post_training_quantization/openvino/anomaly_stfpm_quantize_with_accuracy_control/requirements.txt
 	pip install -r examples/post_training_quantization/openvino/yolov8/requirements.txt
