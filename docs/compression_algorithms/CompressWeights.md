@@ -293,3 +293,9 @@ Here is the word perplexity with data-free and data-aware mixed-precision INT4-I
 - [LLM Weight Compression](https://docs.openvino.ai/nightly/weight_compression.html)
 - [Optimize and Deploy Generative AI Models using Hugging Face Optimum Intel](https://docs.openvino.ai/nightly/gen_ai_guide.html)
 - [Optimum Intel documentation](https://huggingface.co/docs/optimum/intel/inference)
+
+List of notebooks demonstrating OpenVINO conversion and inference together with NNCF weight compression for models from various domains:
+- [LLM Instruction Following](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/275-llm-question-answering)
+- [Dolly 2.0](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/240-dolly-2-instruction-following)
+- [Stable-Zephyr-3b](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/273-stable-zephyr-3b-chatbot)
+- [LLM Chat Bots](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/254-llm-chatbot)
