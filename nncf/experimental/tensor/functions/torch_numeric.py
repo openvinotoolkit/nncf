@@ -23,8 +23,9 @@ DTYPE_MAP = {
     TensorDataType.float32: torch.float32,
     TensorDataType.float64: torch.float64,
     TensorDataType.int8: torch.int8,
-    TensorDataType.uint8: torch.uint8,
     TensorDataType.int32: torch.int32,
+    TensorDataType.int64: torch.int64,
+    TensorDataType.uint8: torch.uint8,
 }
 
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}

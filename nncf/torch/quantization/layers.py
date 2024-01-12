@@ -1038,7 +1038,7 @@ class WeightsDecompressor(nn.Module):
     Applies decompression of compressed weights in the forward pass
     """
 
-    def __init__(self, scale: torch.TensorType, zero_point: torch.Tensor):
+    def __init__(self, scale: torch.Tensor, zero_point: torch.Tensor):
         """
         :param scale: A scale in quantization scheme
         :param zero_point: A zero point in quantization scheme

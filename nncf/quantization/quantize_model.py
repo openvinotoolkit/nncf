@@ -347,6 +347,10 @@ def compress_weights(
             f"Mixed precision selection based on the given sensitivity metric={sensitivity_metric.value} requires "
             "a dataset, but it's not provided."
         )
+
+    if ratio < 0 or ratio > 1:
+        raise ValueError(f"The ratio should be between 0 and 1, but ration={ratio} is specified.")
+
     compression_algorithm = WeightCompression(mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric)
     graph = NNCFGraphFactory.create(model)
     return compression_algorithm.apply(model, graph, dataset=dataset)

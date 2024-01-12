@@ -48,7 +48,6 @@ from nncf.scopes import get_ignored_node_names_from_ignored_scope
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
-TWeightType = TypeVar("TWeightType")
 
 
 class WeightCompression(Algorithm):
@@ -137,10 +136,8 @@ class WeightCompression(Algorithm):
         """
         weighted_metatypes = self._backend_entity.matmul_metatypes + self._backend_entity.embedding_metatypes
         ordered_nodes_to_compress = []
-        ignored_names = list(
-            get_ignored_node_names_from_ignored_scope(
-                self._ignored_scope, nncf_graph, strict=self._ignored_scope.validate
-            )
+        ignored_names = get_ignored_node_names_from_ignored_scope(
+            self._ignored_scope, nncf_graph, strict=self._ignored_scope.validate
         )
         for node in nncf_graph.topological_sort():
             is_node_with_weights = self._backend_entity.is_node_with_weights(node, nncf_graph)
@@ -201,7 +198,16 @@ class WeightCompression(Algorithm):
             )
             criterion.assign_mixed_precision()
 
-    def _proportion_str(self, num_weights_list: List[int], total_num_weights: int, total_num_params: int) -> str:
+    @staticmethod
+    def _proportion_str(num_weights_list: List[int], total_num_weights: int, total_num_params: int) -> str:
+        """
+        Generates a string with proportion between target parameters and all model parameters by number of weights.
+
+        :param num_weights_list: List of number of weights of target model parameters.
+        :param total_num_weights: The total number of weights.
+        :param total_num_params: The total number of model parameters.
+        :return: The string with proportion between target parameters and all model parameters by number of weights.
+        """
         percentage = sum(num_weights_list) / max(total_num_weights, 1) * 100
         return f"{percentage:.0f}% ({len(num_weights_list)} / {total_num_params})"
 
@@ -325,13 +331,7 @@ class WeightCompression(Algorithm):
         return transformed_model
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
-        """
-        Returns statistic points, for which StatisticsCollector should collect statistics.
-
-        :param model: Model for statistics collection.
-        :param graph: Model graph.
-        :return: Statistic points, for which StatisticsCollector should collect statistics.
-        """
+        pass
 
     def _get_activation_node_and_port(self, node: NNCFNode, nncf_graph: NNCFGraph) -> Tuple[NNCFNode, int]:
         """

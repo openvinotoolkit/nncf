@@ -24,8 +24,9 @@ DTYPE_MAP = {
     TensorDataType.float32: np.dtype(np.float32),
     TensorDataType.float64: np.dtype(np.float64),
     TensorDataType.int8: np.dtype(np.int8),
-    TensorDataType.uint8: np.dtype(np.uint8),
     TensorDataType.int32: np.dtype(np.int32),
+    TensorDataType.int64: np.dtype(np.int64),
+    TensorDataType.uint8: np.dtype(np.uint8),
 }
 
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
