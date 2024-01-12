@@ -153,22 +153,25 @@ class WeightCompression(Algorithm):
         self, all_weight_params: List[WeightCompressionParameters], is_last_layer_shared: bool
     ) -> List[WeightCompressionParameters]:
         """
-        Returns the information about weights that are used for calculating ratio between primary and backup precisions.
+        Returns the information about weights that are used for ratio calculation between primary
+        and backup precisions.
 
         :param all_weight_params: List of all weight parameters.
-        :param is_last_layer_shared: Indicates whether the last layer shares the weight to be quantized.
-        :return: List of information about weight nodes that are considered for mixed precision.
+        :param is_last_layer_shared: Indicates whether the last layer which shares the weight
+            should be quantized or not.
+        :return: Information about each weight node that is considered for mixed precision.
         """
-        ratio_defining_params = all_weight_params
-        if self._mode not in [CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM] and not self._all_layers:
-            ratio_defining_params = list(
-                filter(
-                    lambda wp: wp.node_with_weight.metatype not in self._backend_entity.embedding_metatypes,
-                    ratio_defining_params,
-                )
+        if self._mode in [CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM] or self._all_layers:
+            return all_weight_params
+
+        ratio_defining_params = list(
+            filter(
+                lambda wp: wp.node_with_weight.metatype not in self._backend_entity.embedding_metatypes,
+                all_weight_params,
             )
-            if not is_last_layer_shared:
-                ratio_defining_params = ratio_defining_params[:-1]
+        )
+        if not is_last_layer_shared:
+            ratio_defining_params = ratio_defining_params[:-1]
         return ratio_defining_params
 
     def _set_weight_compression_config(
@@ -179,14 +182,13 @@ class WeightCompression(Algorithm):
         activations: Optional[Dict[str, List[Tensor]]] = None,
     ) -> None:
         """
-        Set the appropriate compression configuration for weights based on some criteria.
+        Sets the appropriate compression configuration for weights based on some criteria.
 
         :param ratio_defining_params: Information about weights that are used for calculating ratio between primary and
             backup precisions.
         :param model: The model.
         :param graph: The model graph associated with the model.
         :param activations: The input activations of the layers considered for compression.
-        :return: None.
         """
         primary_config = WeightCompressionConfig(mode=self._mode, group_size=self._group_size)
         if self._ratio == 1:
@@ -286,7 +288,7 @@ class WeightCompression(Algorithm):
                 reduction_axes = self._backend_entity.get_channel_agnostic_reduction_axes(node, weight_port_id, graph)
                 if isinstance(reduction_axes, tuple) and len(reduction_axes) != 1:
                     nncf_logger.warning(
-                        f"Weight compression expects a single reduction axes, but given {len(reduction_axes)}. "
+                        f"Weight compression expects a single reduction axis, but {len(reduction_axes)} given. "
                         f"Weight shape: {weight.shape}, reduction axes: {reduction_axes}, "
                         f"node name: {node.node_name}. The node won't be quantized."
                     )
@@ -304,7 +306,7 @@ class WeightCompression(Algorithm):
         nncf_logger.info(self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params))
 
         # Compress model using weight compression parameters
-        transformed_model = self._backend_entity.transorm_model(
+        transformed_model = self._backend_entity.transform_model(
             model, graph, track(all_weight_params, description="Applying Weight Compression")
         )
 
@@ -314,6 +316,9 @@ class WeightCompression(Algorithm):
                 "mode": self._mode.value,
                 "group_size": self._group_size,
                 "ratio": self._ratio,
+                "all_layers": self._all_layers,
+                "ignored_scope": self._ignored_scope,
+                "sensitivity_metric": self._sensitivity_metric.value,
             },
             algo_name="weight_compression",
         )

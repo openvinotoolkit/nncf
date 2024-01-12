@@ -57,7 +57,7 @@ class WeightCompressionAlgoBackend(ABC):
         node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph
     ) -> Optional[Tuple[int]]:
         """
-        Returns reduction axes without axes that corresponds weight channels in node with weight.
+        Returns reduction axes without axes that corresponds to weight channels of the node with weight.
 
         :param node_with_weight: The node with weight.
         :param weight_port_id: The input port ID that corresponds to weight.
@@ -89,13 +89,13 @@ class WeightCompressionAlgoBackend(ABC):
         """
 
     @abstractmethod
-    def transorm_model(
+    def transform_model(
         self, model: TModel, graph: NNCFGraph, weight_compression_parameters: Iterable[WeightCompressionParameters]
     ) -> TModel:
         """
         Applies weight compression transformations to the model.
 
-        :param model: Model in which the weights will be compressed according to weight compression description.
+        :param model: Model in which the weights will be compressed according to the weight compression description.
         :param graph: The graph ssociated with the model.
         :param weight_compression_parameters: List of weight compression parameters.
         :return: The transformed model.
@@ -110,7 +110,7 @@ class WeightCompressionAlgoBackend(ABC):
         Dumps the given parameters into Model's meta section.
 
         :param model: ov.Model instance.
-        :param algo_name: Name of the algorithm, to which the parameters refer.
+        :param algo_name: Name of the algorithm to which the parameters refer.
         :param parameters: Incoming dictionary with parameters to save.
         :param path: Optional list of the paths.
         """

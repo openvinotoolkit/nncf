@@ -89,7 +89,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         weight_tensor = get_const_value(weight_node)
         return Tensor(weight_tensor)
 
-    def transorm_model(
+    def transform_model(
         self, model: ov.Model, graph: NNCFGraph, weight_compression_parameters: Iterable[WeightCompressionParameters]
     ) -> ov.Model:
         for wc_params in weight_compression_parameters:
@@ -108,7 +108,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 else:
                     compression_dtype = ov.Type.u8
             else:
-                raise ValueError(f"{compression_config.mode.value} is not suported.")
+                raise ValueError(f"{compression_config.mode.value} is not supported.")
 
             const_attributes = wc_params.node_with_weight.layer_attributes.constant_attributes[wc_params.weight_port_id]
             const_node_name = const_attributes["name"]

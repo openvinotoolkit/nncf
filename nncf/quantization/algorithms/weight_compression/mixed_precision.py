@@ -47,8 +47,8 @@ class MixedPrecisionCriterion:
         """
         :param model: The model.
         :param graph: The model graph associated with the model.
-        :param backend_entity: The instrance of the WeightCompressionAlgoBackend.
-        :param weight_params: Weight compression parameters determine how and what weight should be compressed.
+        :param backend_entity: The instance of the WeightCompressionAlgoBackend.
+        :param weight_params: Weight compression parameters which determines how and what weight should be compressed.
         :param primary_config: Configuration on how to compress (quantize) weights to primary precision.
         :param ratio: The ratio between primary and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
             and the rest to INT8_ASYM).

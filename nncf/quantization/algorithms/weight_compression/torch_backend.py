@@ -44,7 +44,7 @@ def split_weight_name(weight_name: str) -> Tuple[str, str]:
     return module_name, weight_attr_name
 
 
-def get_moodule_by_name(module_name: str, model: torch.nn.Module) -> torch.nn.Module:
+def get_module_by_name(module_name: str, model: torch.nn.Module) -> torch.nn.Module:
     curr_module = model
     for name in module_name.split("."):
         for child_name, child_module in curr_module.named_children():
@@ -67,7 +67,7 @@ def find_weight_node_in_constant_subgraph(node: NNCFNode, graph: NNCFGraph) -> U
     return None
 
 
-def get_weight_node(node_with_weight, weight_port_id, graph: NNCFGraph) -> NNCFNode:
+def get_weight_node(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> NNCFNode:
     for prev_node in graph.get_previous_nodes(node_with_weight):
         edge = graph.get_edge(prev_node, node_with_weight)
         if edge.input_port_id == weight_port_id:
@@ -176,14 +176,14 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         weight_node = get_weight_node(node_with_weight, weight_port_id, graph)
         weight_name = weight_node.layer_attributes.name
         module_name, weight_attr_name = split_weight_name(weight_name)
-        module = get_moodule_by_name(module_name, model)
+        module = get_module_by_name(module_name, model)
         weight = getattr(module, weight_attr_name)
         if weight is None or not isinstance(weight, torch.nn.Parameter):
             raise RuntimeError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
 
         return Tensor(weight)
 
-    def transorm_model(
+    def transform_model(
         self, model: NNCFNetwork, graph: NNCFGraph, weight_compression_parameters: Iterable[WeightCompressionParameters]
     ) -> NNCFNetwork:
         # register storage for compression modules
@@ -198,12 +198,12 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 CompressWeightsMode.INT8_SYM,
                 CompressWeightsMode.INT8,
             ]:
-                raise ValueError(f"{compression_config.mode.value} is not suported.")
+                raise ValueError(f"{compression_config.mode.value} is not supported.")
 
             weight_node = get_weight_node(wc_params.node_with_weight, wc_params.weight_port_id, graph)
             weight_name = weight_node.layer_attributes.name
             module_name, weight_attr_name = split_weight_name(weight_name)
-            module = get_moodule_by_name(module_name, model)
+            module = get_module_by_name(module_name, model)
             weight = getattr(module, weight_attr_name)
             if weight is None or not isinstance(weight, torch.nn.Parameter):
                 raise RuntimeError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")

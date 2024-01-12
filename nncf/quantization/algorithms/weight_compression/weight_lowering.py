@@ -25,9 +25,8 @@ class CompressedWeight:
     """
     Compressed weight and decompression parameters.
 
-
     :param tensor: The tensor with compressed weight.
-    :param scale: The decompression scale, in practice for the INT quantization is dequantization scale.
+    :param scale: The decompression scale, in practice it is dequantization scale for the INT quantization.
     :param zero_point: The zero-point, it is the value of the compression type corresponding to the value 0
         in the non-compression realm. Applicable for INT quantization.
     """
@@ -161,7 +160,7 @@ def get_integer_quantization_error(weight: Tensor, reduction_axis: int, config: 
     orig_shape = weight.shape
     compressed_weights, scale, zero_point = do_integer_quantization(weight, reduction_axis, config)
 
-    decompressed_weight = compressed_weights.astype(dtype=scale.dtype)
+    compressed_weights = compressed_weights.astype(dtype=weight.dtype)
     decompressed_weight = (compressed_weights - zero_point) * scale
 
     decompressed_weight = decompressed_weight.reshape(orig_shape)
