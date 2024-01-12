@@ -9,9 +9,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict
-import os
 import json
+import os
+from typing import Dict
+
 import cv2
 import numpy as np
 
@@ -28,32 +29,38 @@ class COCOLoader:
     def prepare_annotation(self):
         with open(self.annotation_path) as f:
             file = json.load(f)
-        self.labels = [i['id'] for i in file['categories']]
+        self.labels = [i["id"] for i in file["categories"]]
         data = {}
-        for idx, image in enumerate(file['images']):
-            data[idx] = {'file_name': image['file_name'], 'image_id': image['id'],
-                         'height': image['height'], 'width': image['width']}
+        for idx, image in enumerate(file["images"]):
+            data[idx] = {
+                "file_name": image["file_name"],
+                "image_id": image["id"],
+                "height": image["height"],
+                "width": image["width"],
+            }
         bbox = {}
-        for i in file['annotations']:
-            if i['image_id'] not in bbox.keys():
-                bbox[i['image_id']] = {'bbox': [self.prepare_bbox(*i['bbox'])],
-                                       'category_id': [i['category_id']],
-                                       'iscrowd': [i['iscrowd']]}
+        for i in file["annotations"]:
+            if i["image_id"] not in bbox.keys():
+                bbox[i["image_id"]] = {
+                    "bbox": [self.prepare_bbox(*i["bbox"])],
+                    "category_id": [i["category_id"]],
+                    "iscrowd": [i["iscrowd"]],
+                }
             else:
-                bbox[i['image_id']]['bbox'].append(self.prepare_bbox(*i['bbox']))
-                bbox[i['image_id']]['category_id'].append(i['category_id'])
-                bbox[i['image_id']]['iscrowd'].append(i['iscrowd'])
+                bbox[i["image_id"]]["bbox"].append(self.prepare_bbox(*i["bbox"]))
+                bbox[i["image_id"]]["category_id"].append(i["category_id"])
+                bbox[i["image_id"]]["iscrowd"].append(i["iscrowd"])
 
         return data, bbox
 
     def __getitem__(self, index):
-        """ Returns (img_id, img_annotation), image"""
+        """Returns (img_id, img_annotation), image"""
         if index >= len(self):
             raise IndexError
 
-        shape_image = self.data[index]['height'], self.data[index]['width']
+        shape_image = self.data[index]["height"], self.data[index]["width"]
 
-        bbox = np.array(self.bbox.get(self.data[index]['image_id'], {}).get('bbox', []))
+        bbox = np.array(self.bbox.get(self.data[index]["image_id"], {}).get("bbox", []))
 
         if bbox.size != 0:
             x_maxs = np.max(bbox, axis=1)
@@ -63,13 +70,20 @@ class COCOLoader:
         else:
             x_maxs, y_maxs, x_mins, y_mins = [], [], [], []
 
-        labels = np.array(self.bbox.get(self.data[index]['image_id'], {}).get('category_id', []))
-        iscrowd = np.array(self.bbox.get(self.data[index]['image_id'], {}).get('iscrowd', []))
+        labels = np.array(self.bbox.get(self.data[index]["image_id"], {}).get("category_id", []))
+        iscrowd = np.array(self.bbox.get(self.data[index]["image_id"], {}).get("iscrowd", []))
 
-        annotation = {'boxes': bbox, 'labels': labels, 'iscrowd': iscrowd,
-                      'x_maxs': x_maxs, 'x_mins': x_mins, 'y_maxs': y_maxs, 'y_mins': y_mins}
+        annotation = {
+            "boxes": bbox,
+            "labels": labels,
+            "iscrowd": iscrowd,
+            "x_maxs": x_maxs,
+            "x_mins": x_mins,
+            "y_maxs": y_maxs,
+            "y_mins": y_mins,
+        }
         annotation = [annotation, shape_image]
-        return self._read_and_preprocess_image(self.images_path + self.data[index]['file_name']), annotation
+        return self._read_and_preprocess_image(self.images_path + self.data[index]["file_name"]), annotation
 
     def __len__(self):
         return len(self.images)
@@ -85,23 +99,23 @@ class COCOLoader:
         return np.array([x, y, x + weight, y + height])
 
 
-class MAP():
+class MAP:
     def __init__(self, num_classes, labels):
         self.reset()
         self._classes_num = num_classes
         self.labels = labels
-        self._name = 'MAP'
-        self.thresholds = np.linspace(.5, 0.95, np.round((0.95 - .5) / .05).astype(int) + 1, endpoint=True)
+        self._name = "MAP"
+        self.thresholds = np.linspace(0.5, 0.95, np.round((0.95 - 0.5) / 0.05).astype(int) + 1, endpoint=True)
 
     @property
     def value(self):
-        """ Returns metric value for the last model output.
-         Possible format: {metric_name: [metric_values_per_image]}
-         """
+        """Returns metric value for the last model output.
+        Possible format: {metric_name: [metric_values_per_image]}
+        """
         return {self._name: [self.average_precisions_per_image[-1]]}
 
     def reset(self):
-        """ Resets metric """
+        """Resets metric"""
         self.matching_results = [[] for _ in range(self._classes_num)]
         self.average_precisions_per_image = []
 
@@ -111,30 +125,27 @@ class MAP():
         Required attributes: 'direction': 'higher-better' or 'higher-worse'
                              'type': metric type
         """
-        return {self._name: {'direction': 'higher-better',
-                             'type': self._name}}
+        return {self._name: {"direction": "higher-better", "type": self._name}}
 
     @property
     def avg_value(self):
-        """ Returns average metric value for all model outputs.
+        """Returns average metric value for all model outputs.
         Possible format: {metric_name: metric_value}
         """
-        precision = [
-            self.compute_precision_recall(self.matching_results[i])[0]
-            for i, _ in enumerate(self.labels)]
+        precision = [self.compute_precision_recall(self.matching_results[i])[0] for i, _ in enumerate(self.labels)]
         return {self._name: np.nanmean(precision)}
 
     def compute_precision_recall(self, matching_results):
         num_thresholds = len(self.thresholds)
-        rectangle_thresholds = np.linspace(.0, 1.00, int(np.round((1.00 - .0) / .01)) + 1, endpoint=True)
+        rectangle_thresholds = np.linspace(0.0, 1.00, int(np.round((1.00 - 0.0) / 0.01)) + 1, endpoint=True)
         num_rec_thresholds = len(rectangle_thresholds)
         precision = -np.ones((num_thresholds, num_rec_thresholds))  # -1 for the precision of absent categories
         recall = -np.ones(num_thresholds)
-        dt_scores = np.concatenate([e['scores'] for e in matching_results])
+        dt_scores = np.concatenate([e["scores"] for e in matching_results])
         inds = np.argsort(-1 * dt_scores)
-        dtm = np.concatenate([e['dt_matches'] for e in matching_results], axis=1)[:, inds]
-        dt_ignored = np.concatenate([e['dt_ignore'] for e in matching_results], axis=1)[:, inds]
-        gt_ignored = np.concatenate([e['gt_ignore'] for e in matching_results])
+        dtm = np.concatenate([e["dt_matches"] for e in matching_results], axis=1)[:, inds]
+        dt_ignored = np.concatenate([e["dt_ignore"] for e in matching_results], axis=1)[:, inds]
+        gt_ignored = np.concatenate([e["gt_ignore"] for e in matching_results])
         npig = np.count_nonzero(gt_ignored == 0)
         tps = np.logical_and(dtm, np.logical_not(dt_ignored))
         fps = np.logical_and(np.logical_not(dtm), np.logical_not(dt_ignored))
@@ -163,7 +174,7 @@ class MAP():
                 if pr[i] > pr[i - 1]:
                     pr[i - 1] = pr[i]
 
-            inds = np.searchsorted(rc, rectangle_thresholds, side='left')
+            inds = np.searchsorted(rc, rectangle_thresholds, side="left")
             try:
                 for ri, pi in enumerate(inds):
                     q[ri] = pr[pi]
@@ -202,8 +213,7 @@ class MAP():
 
         return x_mins, y_mins, np.maximum(x_mins, x_maxs), np.maximum(y_mins, y_maxs)
 
-    def evaluate_image(
-            self, ground_truth, gt_difficult, iscrowd, detections, dt_difficult, scores, iou):
+    def evaluate_image(self, ground_truth, gt_difficult, iscrowd, detections, dt_difficult, scores, iou):
         thresholds_num = len(self.thresholds)
         gt_num = len(ground_truth)
         dt_num = len(detections)
@@ -238,11 +248,11 @@ class MAP():
                     gt_matched[tind, matched_id] = dtind
         # store results for given image
         results = {
-            'dt_matches': dt_matched,
-            'gt_matches': gt_matched,
-            'gt_ignore': gt_ignored,
-            'dt_ignore': np.logical_or(dt_ignored, dt_difficult),
-            'scores': scores
+            "dt_matches": dt_matched,
+            "gt_matches": gt_matched,
+            "gt_ignore": gt_ignored,
+            "dt_ignore": np.logical_or(dt_ignored, dt_difficult),
+            "scores": scores,
         }
 
         return results
@@ -252,7 +262,7 @@ class MAP():
         weight, height = shape
         res = np.array(prediction).squeeze()
         ind, _ = np.where(res == -1)
-        for i in res[:ind[0]]:
+        for i in res[: ind[0]]:
             i[3] *= height
             i[5] *= height
             i[4] *= weight
@@ -269,32 +279,39 @@ class MAP():
             boxes, labels, scores = [], [], []
             x_mins, y_mins, x_maxs, y_maxs = [], [], [], []
 
-        prediction = {'boxes': boxes, 'labels': labels, 'scores': scores,
-                      'x_maxs': x_maxs, 'x_mins': x_mins, 'y_maxs': y_maxs, 'y_mins': y_mins}
+        prediction = {
+            "boxes": boxes,
+            "labels": labels,
+            "scores": scores,
+            "x_maxs": x_maxs,
+            "x_mins": x_mins,
+            "y_maxs": y_maxs,
+            "y_mins": y_mins,
+        }
 
         return prediction
 
     @staticmethod
     def prepare_predictions_label(prediction, label):
-        if len(prediction['boxes']) == 0:
+        if len(prediction["boxes"]) == 0:
             return [], [], []
-        prediction_ids = prediction['labels'] == label
-        scores = prediction['scores'][prediction_ids]
+        prediction_ids = prediction["labels"] == label
+        scores = prediction["scores"][prediction_ids]
         if len(scores) == 0:
             return [], [], []
-        scores_ids = np.argsort(- scores, kind='mergesort')
-        difficult_box_mask = np.full(len(prediction['boxes']), False)
+        scores_ids = np.argsort(-scores, kind="mergesort")
+        difficult_box_mask = np.full(len(prediction["boxes"]), False)
         difficult_for_label = difficult_box_mask[prediction_ids]
-        detections = prediction['boxes'][prediction_ids]
+        detections = prediction["boxes"][prediction_ids]
         detections = detections[scores_ids]
 
         return detections, scores[scores_ids], difficult_for_label[scores_ids]
 
     @staticmethod
     def prepare_annotations_label(annotation, label):
-        annotation_ids = annotation['labels'] == label
-        difficult_box_mask = np.full(len(annotation['boxes']), False)
-        iscrowd = annotation['iscrowd']
+        annotation_ids = annotation["labels"] == label
+        difficult_box_mask = np.full(len(annotation["boxes"]), False)
+        iscrowd = annotation["iscrowd"]
         difficult_box_mask[iscrowd > 0] = True
         difficult_label = difficult_box_mask[annotation_ids]
         not_difficult_box_indices = np.argwhere(~difficult_label).reshape(-1)
@@ -302,20 +319,21 @@ class MAP():
         iscrowd_label = iscrowd[annotation_ids]
         order = np.hstack((not_difficult_box_indices, difficult_box_indices)).astype(int)
 
-        return annotation['boxes'][annotation_ids], difficult_label[order], iscrowd_label[order]
+        return annotation["boxes"][annotation_ids], difficult_label[order], iscrowd_label[order]
 
     @staticmethod
     def prepare(entry, order):
-        return np.c_[entry['x_mins'][order], entry['y_mins'][order], entry['x_maxs'][order], entry['y_maxs'][order]]
+        return np.c_[entry["x_mins"][order], entry["y_mins"][order], entry["x_maxs"][order], entry["y_maxs"][order]]
 
     def intersection_over_union(self, prediction_box, annotation_boxes):
         intersections_area = self.area(self.intersections(prediction_box, annotation_boxes))
         unions = self.area(prediction_box) + self.area(annotation_boxes) - intersections_area
         return np.divide(
-            intersections_area, unions, out=np.zeros_like(intersections_area, dtype=float), where=unions != 0)
+            intersections_area, unions, out=np.zeros_like(intersections_area, dtype=float), where=unions != 0
+        )
 
     def update(self, output, target):
-        """ Calculates and updates metric value
+        """Calculates and updates metric value
         :param output: model output
         :param target: targets
         """
@@ -329,13 +347,12 @@ class MAP():
             ground_truth, gt_difficult, iscrowd = self.prepare_annotations_label(target, label)
             iou = self.compute_iou_boxes(ground_truth, detections)
             eval_result = self.evaluate_image(
-                ground_truth, gt_difficult, iscrowd, detections, dt_difficult, scores, iou)
+                ground_truth, gt_difficult, iscrowd, detections, dt_difficult, scores, iou
+            )
             self.matching_results[label_id].append(eval_result)
             per_class_results.append(eval_result)
 
-        precision = [
-            self.compute_precision_recall([per_class_results[i]])[0]
-            for i, _ in enumerate(self.labels)]
+        precision = [self.compute_precision_recall([per_class_results[i]])[0] for i, _ in enumerate(self.labels)]
 
         self.average_precisions_per_image.append(np.nanmean(precision))
         return per_class_results
