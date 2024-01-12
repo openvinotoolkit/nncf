@@ -8,5 +8,3 @@ yattag>=1.14.0
 openvino-dev==2023.2
 fastdownload
 scikit-learn
-# Pandas requires it for styling in e2e report generation
-Jinja2==3.1.3
