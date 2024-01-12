@@ -18,10 +18,10 @@ import pytest
 from attr import dataclass
 
 from nncf import CompressWeightsMode
+from nncf import SensitivityMetric
 from nncf.data.dataset import Dataset
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.quantization.mixed_precision import MIXED_PRECISION_CRITERIA
-from nncf.parameters import SensitivityMetric
 from nncf.quantization import compress_weights
 from nncf.quantization.algorithms.weight_compression.compression_info import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.quantize import get_integer_quantization_error

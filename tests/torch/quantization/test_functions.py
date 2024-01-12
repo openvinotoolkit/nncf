@@ -393,15 +393,15 @@ class BaseParametrized:
 
     class TestAsymmetric:
         @classmethod
-        def generate_range(cls, input_size, scale_mode, is_weights, is_fp16, fixed=None):
+        def generate_range(cls, input_size, scale_mode, is_weights, is_fp16, levels, fixed=None):
             np_dtype = np.float16 if is_fp16 else np.float32
             return map(
                 lambda x: x.astype(np_dtype),
-                cls.generate_range_fp64(input_size, scale_mode, is_weights, fixed, is_fp16),
+                cls.generate_range_fp64(input_size, scale_mode, is_weights, fixed, is_fp16, levels),
             )
 
         @staticmethod
-        def generate_range_fp64(input_size, scale_mode, is_weights, fixed, is_fp16):
+        def generate_range_fp64(input_size, scale_mode, is_weights, fixed, is_fp16, levels):
             assert scale_mode in ["single_scale", "per_channel_scale"]
 
             if fixed is not None:
@@ -415,6 +415,19 @@ class BaseParametrized:
                     min_range = 1.0 if is_fp16 else 0.1
                     input_low = np.random.random_sample() * 3 - 1.5
                     input_range = min_range + np.random.random_sample() * 3
+                    if levels <= 16 and is_fp16:
+                        scale = (levels - 1) / input_range
+                        zp_fp = -input_low * scale
+                        # Checks zp_fp is not near the middle of two integer values
+                        # and fix it in case it is.
+                        if np.abs(np.abs(zp_fp - np.round(zp_fp)) - 0.5) < 0.1:
+                            # Make zp_fp += 0.2
+                            new_input_low = input_low + 0.2 / scale
+                            # Preserve sing of the input_low
+                            if np.sign(new_input_low) != np.sign(input_low):
+                                input_low -= 0.2 / scale
+                            else:
+                                input_low = new_input_low
                     return input_low, input_range
 
             if scale_mode == "single_scale":
@@ -465,7 +478,7 @@ class BaseParametrized:
                 np_dtype = np.float32
 
             level_low, level_high, levels = self.get_range_level(bits)
-            ref_input_low, ref_input_range = self.generate_range(input_size, scale_mode, is_weights, is_fp16)
+            ref_input_low, ref_input_range = self.generate_range(input_size, scale_mode, is_weights, is_fp16, levels)
             test_input_low, test_input_range = get_test_data(
                 [ref_input_low, ref_input_range], use_cuda, is_fp16=is_fp16
             )
@@ -529,7 +542,9 @@ class BaseParametrized:
                 fixed = {}
                 fixed["input_low"] = -(2 ** (bits - 1))
                 fixed["input_range"] = 2**bits - 1
-            ref_input_low, ref_input_range = self.generate_range(input_size, scale_mode, is_weights, is_fp16, fixed)
+            ref_input_low, ref_input_range = self.generate_range(
+                input_size, scale_mode, is_weights, is_fp16, levels, fixed
+            )
             test_input_low, test_input_range = get_test_data(
                 [ref_input_low, ref_input_range], use_cuda, is_backward=True, is_fp16=is_fp16
             )

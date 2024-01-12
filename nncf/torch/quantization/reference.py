@@ -88,7 +88,7 @@ class ReferenceQuantize:
         input_low[input_low > 0] = 0
         input_high[input_high < 0] = 0
         n = levels - 1
-        scale = levels / (input_high - input_low)
+        scale = n / (input_high - input_low)
         scale = self._astype(scale, input_high.dtype)
         zp = self.backend.round(-input_low * scale)
 
