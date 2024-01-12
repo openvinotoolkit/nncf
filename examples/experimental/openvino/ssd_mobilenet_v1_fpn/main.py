@@ -15,8 +15,8 @@ from typing import Any, Iterable
 
 import numpy as np
 import openvino.runtime as ov
-from openvino.tools.pot.api.samples.object_detection.data_loader import COCOLoader
-from openvino.tools.pot.api.samples.object_detection.metric import MAP
+from utils import MAP
+from utils import COCOLoader
 
 import nncf
 
