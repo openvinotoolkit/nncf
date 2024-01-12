@@ -19,6 +19,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.tensor.tensor import Tensor
 from nncf.parameters import CompressWeightsMode
@@ -26,13 +27,11 @@ from nncf.quantization.algorithms.weight_compression.backend import WeightCompre
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.torch.dynamic_graph.scope import Scope
-from nncf.torch.external_hook import EXTERNAL_OP_STORAGE_NAME
-from nncf.torch.external_hook import ExternalOpCallHook
 from nncf.torch.graph import operator_metatypes as om
+from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
-from nncf.torch.nncf_network import ExtraCompressionModuleType
+from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.nncf_network import PTInsertionPoint
 from nncf.torch.quantization.layers import WeightsDecompressor
 from nncf.torch.tensor_statistics.collectors import get_raw_stat_collector
 
@@ -186,10 +185,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def transform_model(
         self, model: NNCFNetwork, graph: NNCFGraph, weight_compression_parameters: Iterable[WeightCompressionParameters]
     ) -> NNCFNetwork:
-        # register storage for compression modules
-        compression_model_type = ExtraCompressionModuleType.EXTERNAL_OP
-        if not model.nncf.is_compression_module_registered(compression_model_type):
-            model.nncf.register_compression_module_type(compression_model_type)
+        transformation_layout = TransformationLayout()
 
         for wc_params in weight_compression_parameters:
             compression_config = wc_params.compression_config
@@ -228,20 +224,20 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
             # registry weight decompression module in the model
             decompressor_name = f"weights_decompressor_{weight_node.node_name.replace('.', '_')}"
-            model.nncf.add_compression_module(decompressor_name, decompressor, compression_model_type)
 
             # inserts the weight decompressor into the model as the post hook on the model weight
-            hook = ExternalOpCallHook(EXTERNAL_OP_STORAGE_NAME, model.nncf.get_tracing_context(), decompressor_name)
-            node_to_op_address_mapping = model.nncf.get_node_to_op_address_mapping()
-            model.nncf.insert_at_point(
-                PTInsertionPoint(TargetType.OPERATOR_POST_HOOK, node_to_op_address_mapping[weight_node.node_name]),
-                [hook],
+            transformation_layout.register(
+                PTSharedFnInsertionCommand(
+                    [PTTargetPoint(TargetType.OPERATOR_POST_HOOK, target_node_name=weight_node.node_name)],
+                    decompressor,
+                    decompressor_name,
+                )
             )
 
-        # rebuild compression graph with weight decompression module
-        model.nncf.rebuild_graph()
+        # apply transformations
+        transformed_model = PTModelTransformer(model).transform(transformation_layout)
 
-        return model
+        return transformed_model
 
     @staticmethod
     def dump_parameters(
