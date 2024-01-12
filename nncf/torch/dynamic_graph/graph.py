@@ -64,7 +64,10 @@ class FirstInputsMatcher(InputsMatcher):
         if not node_inputs[0] or not real_inputs[0]:
             return False
 
-        return all(tm_comparator(node_inputs[0], real_inputs[0]) for tm_comparator in tm_comparators)
+        for tm_comparator in tm_comparators:
+            if not tm_comparator(node_inputs[0], real_inputs[0]):
+                return False
+        return True
 
 
 class DefaultInputsMatcher(InputsMatcher):

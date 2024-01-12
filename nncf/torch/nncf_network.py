@@ -516,7 +516,10 @@ class NNCFNetworkInterface(torch.nn.Module):
         for scope_list_for_module in self.get_nncf_module_scopes():
             norm_nncf_scopes.extend([self._normalize_variable_recurrent_scope(x) for x in scope_list_for_module])
         norm_op_scope = self._normalize_variable_recurrent_scope(scope)
-        return any(norm_op_scope in nncf_scope for nncf_scope in norm_nncf_scopes)
+        for nncf_scope in norm_nncf_scopes:
+            if norm_op_scope in nncf_scope:
+                return True
+        return False
 
     def register_compression_module_type(self, compression_module_type: ExtraCompressionModuleType):
         attr_name = self._compression_module_type_to_attr_name(compression_module_type)

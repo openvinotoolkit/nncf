@@ -81,4 +81,7 @@ def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     :param nncf_graph: The NNCF graph.
     :return bool: return `True` if the node is quantized.
     """
-    return any(prev_node.node_type in OP_NAMES_QUANTIZE_NODE for prev_node in nncf_graph.get_previous_nodes(node))
+    for prev_node in nncf_graph.get_previous_nodes(node):
+        if prev_node.node_type in OP_NAMES_QUANTIZE_NODE:
+            return True
+    return False

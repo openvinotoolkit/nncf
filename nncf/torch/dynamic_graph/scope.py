@@ -69,7 +69,10 @@ class Scope:
         """Idiom: ('A/B/C' in 'A/B') == True"""
         if len(self.scope_elements) > len(item.scope_elements):
             return False
-        return all(element == item.scope_elements[i] for i, element in enumerate(self.scope_elements))
+        for i, element in enumerate(self.scope_elements):
+            if element != item.scope_elements[i]:
+                return False
+        return True
 
     def __add__(self, rhs: "Scope") -> "Scope":
         init_list = self.scope_elements + rhs.scope_elements

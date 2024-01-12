@@ -106,7 +106,10 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
         )
 
         def match_fn(obj):
-            return any(x.path == obj.path for x in compressed_model_loss_outputs_nested_obj_indexing)
+            for x in compressed_model_loss_outputs_nested_obj_indexing:
+                if x.path == obj.path:
+                    return True
+            return False
 
         orig_model_loss_outputs = list(
             map(

@@ -224,7 +224,10 @@ class PostprocessingNodeLocator:
         if not self._is_node_operator(node_key):
             return False
         underlying_nncf_nodes = self._quant_prop_graph.op_node_keys_to_underlying_nodes_mapping[node_key]
-        return any(node.node_key in self._quantizable_layer_node_keys for node in underlying_nncf_nodes)
+        for node in underlying_nncf_nodes:
+            if node.node_key in self._quantizable_layer_node_keys:
+                return True
+        return False
 
     def _get_node_metatype(self, node_key: str) -> OperatorMetatype:
         node = self._quant_prop_graph.nodes[node_key]
@@ -1412,7 +1415,10 @@ class QuantizerPropagationSolver:
         def compatible_with_requant(qconf: QuantizerConfig, other_qconf_list: List[QuantizerConfig]) -> bool:
             if qconf in other_qconf_list:
                 return True
-            return all(other_qconf.is_valid_requantization_for(qconf) for other_qconf in other_qconf_list)
+            for other_qconf in other_qconf_list:
+                if not other_qconf.is_valid_requantization_for(qconf):
+                    return False
+            return True
 
         def compatible_wo_requant(qconf: QuantizerConfig, other_qconf_list: List[QuantizerConfig]) -> bool:
             if qconf in other_qconf_list:

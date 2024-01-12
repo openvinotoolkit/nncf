@@ -530,7 +530,10 @@ class TestsWithONNXInspection:
             return False
         output_tensor_id = node.output[0]
         matches = [x for x in graph.node if output_tensor_id in x.input]
-        return any(match.op_type in ["Add", "Mul"] for match in matches)
+        for match in matches:
+            if match.op_type in ["Add", "Mul"]:
+                return True
+        return False
 
     @staticmethod
     def immediately_dominates_cat(node: onnx.NodeProto, graph: onnx.GraphProto) -> bool:
@@ -538,7 +541,10 @@ class TestsWithONNXInspection:
             return False
         output_tensor_id = node.output[0]
         matches = [x for x in graph.node if output_tensor_id in x.input]
-        return any(match.op_type in ["Concat"] for match in matches)
+        for match in matches:
+            if match.op_type in ["Concat"]:
+                return True
+        return False
 
     @staticmethod
     def immediately_dominates_embedding(node: onnx.NodeProto, graph: onnx.GraphProto) -> bool:
@@ -546,7 +552,10 @@ class TestsWithONNXInspection:
             return False
         output_tensor_id = node.output[0]
         matches = [x for x in graph.node if output_tensor_id in x.input]
-        return any(match.op_type in ["Gather"] for match in matches)
+        for match in matches:
+            if match.op_type in ["Gather"]:
+                return True
+        return False
 
     @staticmethod
     def group_nodes_by_output_target(nodes: List[onnx.NodeProto], graph: onnx.GraphProto) -> List[List[onnx.NodeProto]]:

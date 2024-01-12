@@ -49,7 +49,10 @@ def is_keras_layer_model(model: tf.keras.Model) -> bool:
     :return: `True` if there is `hub.KerasLayer` in the model and
         `False` otherwise.
     """
-    return any(layer.__class__.__name__ == "KerasLayer" for layer in model.submodules)
+    for layer in model.submodules:
+        if layer.__class__.__name__ == "KerasLayer":
+            return True
+    return False
 
 
 def get_keras_layers_class_names():
