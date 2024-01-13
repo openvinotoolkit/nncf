@@ -1,6 +1,6 @@
 # Setup
 
-## NNCF and PyTorch 
+## NNCF and PyTorch
 
 Install NNCF and PyTorch using the latest instructions in https://github.com/openvinotoolkit/nncf/blob/develop/docs/Installation.md.
 
