@@ -96,7 +96,7 @@ class WeightCompressionAlgoBackend(ABC):
         Applies weight compression transformations to the model.
 
         :param model: Model in which the weights will be compressed according to the weight compression description.
-        :param graph: The graph ssociated with the model.
+        :param graph: The graph associated with the model.
         :param weight_compression_parameters: List of weight compression parameters.
         :return: The transformed model.
         """

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import Iterable, List, Optional, Tuple, Union
 
 import torch
 
@@ -238,9 +238,3 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         transformed_model = PTModelTransformer(model).transform(transformation_layout)
 
         return transformed_model
-
-    @staticmethod
-    def dump_parameters(
-        model: torch.nn.Module, parameters: Dict, algo_name: Optional[str] = "quantization", path: Optional[List] = None
-    ) -> None:
-        pass

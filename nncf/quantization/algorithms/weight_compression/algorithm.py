@@ -212,39 +212,40 @@ class WeightCompression(Algorithm):
         return f"{percentage:.0f}% ({len(num_weights_list)} / {total_num_params})"
 
     def _get_bitwidth_distribution_str(
-        self, all_params: List[WeightCompressionParameters], internal_params: List[WeightCompressionParameters]
+        self, all_params: List[WeightCompressionParameters], ratio_defining_params: List[WeightCompressionParameters]
     ) -> str:
         """
         Generates a table that shows the ratio of weights quantized to different number of bits.
 
-        :param all_params: List of information about each weight node.
-        :param internal_params: List of information about weight nodes that are considered for mixed precision.
+        :param all_params: Information about each weight node.
+        :param ratio_defining_params: Information about weights that are used for calculating ratio between primary and
+            backup precisions.
         :return: A string containing the table.
         """
         num_bits_vs_num_weights_map = {}
-        internal_weight_names = set(wp.weight_name for wp in internal_params)
+        ratio_defining_weight_names = set(wp.weight_name for wp in ratio_defining_params)
         for data in all_params:
             num_bits = data.compression_config.num_bits
-            n_total, n_internal = num_bits_vs_num_weights_map.get(num_bits, ([], []))
-            if data.weight_name in internal_weight_names:
-                n_internal.append(data.num_weights)
+            n_total, n_ratio_defining = num_bits_vs_num_weights_map.get(num_bits, ([], []))
+            if data.weight_name in ratio_defining_weight_names:
+                n_ratio_defining.append(data.num_weights)
             n_total.append(data.num_weights)
-            num_bits_vs_num_weights_map[num_bits] = (n_total, n_internal)
+            num_bits_vs_num_weights_map[num_bits] = (n_total, n_ratio_defining)
 
-        num_internal_weights = sum(ws.num_weights for ws in internal_params)
-        num_internal_params = len(internal_params)
+        num_ratio_defining_weights = sum(ws.num_weights for ws in ratio_defining_params)
+        num_ratio_defining_params = len(ratio_defining_params)
         num_total_weights = sum(ws.num_weights for ws in all_params)
         num_params = len(all_params)
         num_bits_vs_num_weights_map = OrderedDict(sorted(num_bits_vs_num_weights_map.items(), reverse=True))
         # Table creation
-        header = ["Num bits (N)", "% all parameters (layers)", "% internal parameters (layers)"]
+        header = ["Num bits (N)", "% all parameters (layers)", "% ratio-defining parameters (layers)"]
         rows = []
-        for bitwidth, (n_total, n_internal) in num_bits_vs_num_weights_map.items():
+        for bitwidth, (n_total, n_ratio_defining) in num_bits_vs_num_weights_map.items():
             rows.append(
                 [
                     bitwidth,
                     self._proportion_str(n_total, num_total_weights, num_params),
-                    self._proportion_str(n_internal, num_internal_weights, num_internal_params),
+                    self._proportion_str(n_ratio_defining, num_ratio_defining_weights, num_ratio_defining_params),
                 ]
             )
 
