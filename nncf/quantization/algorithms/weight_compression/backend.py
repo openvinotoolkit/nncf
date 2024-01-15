@@ -103,20 +103,6 @@ class WeightCompressionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def dump_parameters(
-        model: TModel, parameters: Dict, algo_name: Optional[str] = "quantization", path: Optional[List] = None
-    ) -> None:
-        """
-        Dumps the given parameters into Model's meta section.
-
-        :param model: ov.Model instance.
-        :param algo_name: Name of the algorithm to which the parameters refer.
-        :param parameters: Incoming dictionary with parameters to save.
-        :param path: Optional list of the paths.
-        """
-
-    @staticmethod
-    @abstractmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:
         """
         Returns backend-specific target point.
@@ -148,4 +134,17 @@ class WeightCompressionAlgoBackend(ABC):
         :param node: Node of NNCFGraph with bias value.
         :param graph: NNCFGraph instance with the node.
         :return: target input port id.
+        """
+
+    @staticmethod
+    def dump_parameters(
+        model: TModel, parameters: Dict, algo_name: Optional[str] = "quantization", path: Optional[List] = None
+    ) -> None:
+        """
+        Dumps the given parameters into Model's meta section.
+
+        :param model: ov.Model instance.
+        :param algo_name: Name of the algorithm to which the parameters refer.
+        :param parameters: Incoming dictionary with parameters to save.
+        :param path: Optional list of the paths.
         """
