@@ -15,8 +15,8 @@ from typing import List
 import numpy as np
 import pytest
 
+from nncf.common.graph.utils import get_channel_agnostic_reduction_axes
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 
 
 class TemplateTestTensorCollectorBatchSize(ABC):

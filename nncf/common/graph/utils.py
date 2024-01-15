@@ -10,13 +10,14 @@
 # limitations under the License.
 
 from functools import partial
-from typing import List, Set
+from typing import List, Optional, Set
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.logging import nncf_logger
 from nncf.common.pruning.utils import traverse_function
+from nncf.common.tensor_statistics.collectors import ReductionAxes
 
 
 def get_concat_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]) -> int:
@@ -114,3 +115,17 @@ def get_number_of_quantized_ops(
             else:
                 nodes_to_see.extend(graph.get_next_nodes(node))
     return len(quantized_ops)
+
+
+def get_channel_agnostic_reduction_axes(channel_axes: List[int], shape: List[int]) -> Optional[ReductionAxes]:
+    """
+    Returns filtered reduction axes without axes that corresponds channels.
+
+    :param channel_axes: List of the channel axes.
+    :param shape: Shape that need to be filtered.
+    :return: Reduction axes in tuple format.
+    """
+    reduction_axes = list(range(len(shape)))
+    for channel_axis in sorted(channel_axes, reverse=True):
+        del reduction_axes[channel_axis]
+    return tuple(reduction_axes)

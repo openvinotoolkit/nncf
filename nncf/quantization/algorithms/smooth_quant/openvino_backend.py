@@ -25,7 +25,6 @@ from nncf.openvino.graph.layout import get_linear_weights_layout_from_node
 from nncf.openvino.graph.metatypes.groups import QUANTIZE_AGNOSTIC_OPERATIONS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
-from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
 from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
@@ -68,10 +67,6 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
             raise RuntimeError(f"Too many weight or activation ports for {node.node_name} node")
 
         return {"activation": activation_ports[0], "weight": weight_ports[0]}
-
-    @staticmethod
-    def get_channel_agnostic_reduction_axes(channel_axis: int, shape: Tuple[int]) -> Tuple[int]:
-        return get_channel_agnostic_reduction_axes([channel_axis], shape)
 
     @staticmethod
     def get_abs_max_channel_collector(

@@ -393,20 +393,6 @@ def get_matmul_channel_axes(node: ov.Node) -> List[int]:
     return [idx for idx, elem in enumerate(weights_layout) if elem in [OVLayoutElem.SPATIAL, OVLayoutElem.C_OUT]]
 
 
-def get_channel_agnostic_reduction_axes(channel_axes: List[int], shape: List[int]) -> Optional[ReductionAxes]:
-    """
-    Returns filtered reduction axes without axes that corresponds channels.
-
-    :param channel_axes: List of the channel axes.
-    :param shape: Shape that need to be filtered.
-    :return: Reduction axes in tuple format.
-    """
-    reduction_axes = list(range(len(shape)))
-    for channel_axis in sorted(channel_axes, reverse=True):
-        del reduction_axes[channel_axis]
-    return tuple(reduction_axes)
-
-
 def create_bias_tensor(node_without_bias: NNCFNode, graph: NNCFGraph, value: Any) -> np.ndarray:
     """
     Creates bias value constant array filled by given value.

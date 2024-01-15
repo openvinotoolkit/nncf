@@ -11,6 +11,7 @@
 
 import pytest
 
+from nncf.common.graph.utils import get_channel_agnostic_reduction_axes
 from nncf.common.graph.utils import get_concat_axis
 
 TEST_CASES = [
@@ -27,3 +28,18 @@ TEST_CASES = [
 def test_get_concat_axis(input_shape, output_shape, possible_axes):
     axis = get_concat_axis(input_shape, output_shape)
     assert axis in possible_axes
+
+
+@pytest.mark.parametrize(
+    "shape, channel_axes, ref_reduction_axes",
+    [
+        ((1, 128), [-1], (0,)),
+        ((1, 256, 1), [-2], (0, 2)),
+        ((1, 128, 512), [-1], (0, 1)),
+        ((1, 3, 224, 224), [1], (0, 2, 3)),
+        ((1, 1, 12, 12), [1], (0, 2, 3)),
+        ((1, 1, 12, 12), [1, 2], (0, 3)),
+    ],
+)
+def test_get_channel_agnostic_reduction_axes(shape, channel_axes, ref_reduction_axes):
+    assert get_channel_agnostic_reduction_axes(channel_axes=channel_axes, shape=shape) == ref_reduction_axes
