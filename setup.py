@@ -107,7 +107,7 @@ INSTALL_REQUIRES = [
     "networkx>=2.6, <=3.1",  # see ticket 94048 or https://github.com/networkx/networkx/issues/5962
     "ninja>=1.10.0.post2, <1.11",
     "numpy>=1.19.1, <1.27",
-    "openvino-telemetry>=2023.2.0",
+    "openvino-telemetry>=2023.3.0",
     "packaging>=20.0",
     "pandas>=1.1.5,<2.2",
     "psutil",
@@ -133,7 +133,7 @@ TORCH_EXTRAS = [
 
 ONNX_EXTRAS = ["onnx~=1.13.1", "onnxruntime~=1.14.1;python_version < '3.11'"]
 
-OPENVINO_EXTRAS = ["openvino==2023.2"]
+OPENVINO_EXTRAS = ["openvino==2023.3"]
 
 
 EXTRAS_REQUIRE = {
