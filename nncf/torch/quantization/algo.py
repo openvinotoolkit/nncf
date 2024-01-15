@@ -682,7 +682,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             for collector in scale_shape_vs_collector.values():
                 stat_points_container.add_statistic_point(StatisticPoint(target_point, collector, "QAT"))
         aggregator.register_statistic_points(stat_points_container)
-        aggregator.collect_statistics(target_model, original_nncf_graph)
+        with training_mode_switcher(target_model, is_training=False):
+            aggregator.collect_statistics(target_model, original_nncf_graph)
 
         retval = {}
         for target_point, scale_shape_vs_collector in target_points_vs_collectors_dict.items():
