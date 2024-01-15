@@ -12,18 +12,15 @@
 import gc
 from collections import OrderedDict
 
-import pytest
-
-from nncf.common.hook_handle import HookHandle
+from nncf.common.hook_handle import add_op_to_registry
 
 
 def test_hook_handle_adds_removes_unique_keys():
     num_hooks = 3
     hook_registry = OrderedDict()
-    handles = [HookHandle(hook_registry) for _ in range(num_hooks)]
-    for idx, handle in enumerate(handles):
-        handle.add(idx)
-    assert len(hook_registry) == num_hooks
+    handles = []
+    for _ in range(num_hooks):
+        handles.append(add_op_to_registry(hook_registry, 0))
 
     assert list(hook_registry.keys()) == list(map(str, range(num_hooks)))
     assert [h.hook_id for h in handles] == list(map(str, range(num_hooks)))
@@ -32,32 +29,9 @@ def test_hook_handle_adds_removes_unique_keys():
     assert list(hook_registry.keys()) == list(map(str, range(1, num_hooks)))
 
 
-def test_two_hooks_one_handle_error():
-    hook_registry = OrderedDict()
-    handle = HookHandle(hook_registry)
-    handle.add(0)
-    with pytest.raises(RuntimeError):
-        handle.add(1)
-
-
-def test_hook_id_getter_before_init():
-    hook_registry = OrderedDict()
-    handle = HookHandle(hook_registry)
-    with pytest.raises(RuntimeError):
-        handle.hook_id
-
-
-def test_remove_before_init():
-    hook_registry = OrderedDict()
-    handle = HookHandle(hook_registry)
-    with pytest.raises(RuntimeError):
-        handle.remove()
-
-
 def test_handle_does_not_fail_if_hook_does_not_exist():
     hook_registry = OrderedDict()
-    handle = HookHandle(hook_registry)
-    handle.add(0)
+    handle = add_op_to_registry(hook_registry, 0)
     del hook_registry[handle.hook_id]
     handle.remove()
     del hook_registry
@@ -66,13 +40,11 @@ def test_handle_does_not_fail_if_hook_does_not_exist():
 
 def test_handle_does_not_remove_op_twice():
     hook_registry = OrderedDict()
-    handle = HookHandle(hook_registry)
-    handle.add(0)
+    handle = add_op_to_registry(hook_registry, 0)
     handle.remove()
     assert not hook_registry
 
-    second_handle = HookHandle(hook_registry)
-    second_handle.add(1)
+    second_handle = add_op_to_registry(hook_registry, 1)
     assert handle.hook_id == second_handle.hook_id
     assert "0" in hook_registry
 
@@ -84,9 +56,7 @@ def test_handle_does_not_remove_op_twice():
 def test_hook_handle_weak_ref():
     def _local_scope_fn():
         hook_registry = OrderedDict()
-        handle = HookHandle(hook_registry)
-        handle.add(1)
-        return handle
+        return add_op_to_registry(hook_registry, 0)
 
     handle = _local_scope_fn()
     gc.collect()

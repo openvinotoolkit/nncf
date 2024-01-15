@@ -20,7 +20,8 @@ from typing import Callable, DefaultDict, Dict, List, Optional, Union
 import torch
 
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
-from nncf.common.hook_handle import HookHandle
+from nncf.common.hook_handle import HookHandleInterface
+from nncf.common.hook_handle import add_op_to_registry
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.debug import is_debug
 from nncf.common.utils.patcher import PATCHER
@@ -286,13 +287,11 @@ class TracingContext:
 
     def register_pre_hooks(
         self, fn_list: List[Callable], op_address: OperationAddress, input_port_id: int
-    ) -> List[HookHandle]:
+    ) -> List[HookHandleInterface]:
         pre_hook_id = PreHookId(op_address, input_port_id)
         handles = []
         for fn in fn_list:
-            handle = HookHandle(self._pre_hooks[pre_hook_id])
-            handle.add(fn)
-            handles.append(handle)
+            handles.append(add_op_to_registry(self._pre_hooks[pre_hook_id], fn))
         return handles
 
     def execute_pre_hooks(self, op_address: OperationAddress, op_inputs: OperatorInput) -> OperatorInput:
@@ -311,12 +310,10 @@ class TracingContext:
         self.in_operator = in_op
         return op_inputs
 
-    def register_post_hooks(self, fn_list: List[Callable], op_address: OperationAddress) -> List[HookHandle]:
+    def register_post_hooks(self, fn_list: List[Callable], op_address: OperationAddress) -> List[HookHandleInterface]:
         handles = []
         for fn in fn_list:
-            handle = HookHandle(self._post_hooks[op_address])
-            handle.add(fn)
-            handles.append(handle)
+            handles.append(add_op_to_registry(self._post_hooks[op_address], fn))
         return handles
 
     def execute_post_hooks(self, op_address: OperationAddress, outputs):

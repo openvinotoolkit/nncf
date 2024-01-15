@@ -13,7 +13,7 @@ import pytest
 import torch
 from torch import nn
 
-from nncf.common.hook_handle import HookHandle
+from nncf.common.hook_handle import HookHandleInterface
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.layers import NNCFLinear
 from nncf.torch.module_operations import UpdateWeight
@@ -31,7 +31,7 @@ class SingleLayerModel(nn.Module):
         super().__init__()
         self.layer = layer
         sparsifier = BinaryMask(layer.weight.size())
-        self.hook_handle: HookHandle = self.layer.register_pre_forward_operation(UpdateWeight(sparsifier))
+        self.hook_handle: HookHandleInterface = self.layer.register_pre_forward_operation(UpdateWeight(sparsifier))
 
     @property
     def sparsifier(self):

@@ -10,45 +10,46 @@
 # limitations under the License.
 
 import weakref
+from abc import ABC
+from abc import abstractmethod
 from typing import Any, Dict, Union
 
 
-class HookHandle:
+class HookHandleInterface(ABC):
     """
     A handle to remove a hook.
     """
 
-    def __init__(self, hooks_registry: Dict[Any, Any]):
+    @property
+    @abstractmethod
+    def hook_id(self) -> str:
+        """
+        Key to use to retrieve handle from the registry.
+        """
+
+    @abstractmethod
+    def remove(self) -> None:
+        """
+        Removes added operation from registered hooks registry if it is possible.
+        """
+
+
+class _HookHandle(HookHandleInterface):
+    """
+    Privat hook handle implementation which should be instanciated only by
+    the add_op_to_registry function.
+    """
+
+    def __init__(self, hooks_registry: Dict[Any, Any], hook_id: str):
         """
         :param hooks_registry: A dictionary of hooks, indexed by hook `id`.
         """
         self.hooks_registry_ref = weakref.ref(hooks_registry)
-        self._hook_id = None
-        self._op_registered = False
+        self._hook_id = hook_id
 
     @property
     def hook_id(self) -> Union[int, str]:
-        if self._hook_id is None:
-            raise RuntimeError("Attempt to use HookHandle hook id before actual hook registration.")
         return self._hook_id
-
-    def add(self, op: Any) -> None:
-        """
-        Adds operation to registered hooks registry.
-
-        :param op: Operation to set to registered hooks registry.
-        """
-        if self._hook_id is not None:
-            raise RuntimeError("Attempt to use one HookHandle for two hooks.")
-
-        hooks_registry = self.hooks_registry_ref()
-        if hooks_registry:
-            hook_id = max(map(int, hooks_registry))
-            hook_id = str(hook_id + 1)
-        else:
-            hook_id = "0"
-        self._hook_id = hook_id
-        hooks_registry[self._hook_id] = op
 
     def remove(self) -> None:
         """
@@ -61,3 +62,21 @@ class HookHandle:
         if hooks_registry is not None and self.hook_id in hooks_registry:
             del hooks_registry[self.hook_id]
             self.hooks_registry_ref = None
+
+
+def add_op_to_registry(hooks_registry: Dict[Any, Any], op: Any) -> HookHandleInterface:
+    """
+    Registers op into the hooks_registry and returns HookHandler instance.
+
+    :param hooks_registry: A dictionary of hooks, indexed by hook `id`.
+    :param op: Operation to set to registered hooks registry.
+    :return: HookHandle instance binded with hook registry and given op that
+        able to remove op from the hooks_registry.
+    """
+    if hooks_registry:
+        hook_id = max(map(int, hooks_registry))
+        hook_id = str(hook_id + 1)
+    else:
+        hook_id = "0"
+    hooks_registry[hook_id] = op
+    return _HookHandle(hooks_registry, hook_id)

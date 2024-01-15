@@ -12,7 +12,8 @@
 import torch
 from torch import nn
 
-from nncf.common.hook_handle import HookHandle
+from nncf.common.hook_handle import HookHandleInterface
+from nncf.common.hook_handle import add_op_to_registry
 from nncf.common.utils.registry import Registry
 
 COMPRESSION_MODULES = Registry("compression modules")
@@ -62,18 +63,14 @@ class _NNCFModuleMixin:
     def get_post_op(self, key):
         return self.post_ops[key]
 
-    def register_pre_forward_operation(self, op) -> HookHandle:
-        handle = HookHandle(self.pre_ops)
-        handle.add(op)
-        return handle
+    def register_pre_forward_operation(self, op) -> HookHandleInterface:
+        return add_op_to_registry(self.pre_ops, op)
 
     def remove_pre_forward_operation(self, key):
         return self.pre_ops.pop(key)
 
-    def register_post_forward_operation(self, op) -> HookHandle:
-        handle = HookHandle(self.post_ops)
-        handle.add(op)
-        return handle
+    def register_post_forward_operation(self, op) -> HookHandleInterface:
+        return add_op_to_registry(self.post_ops, op)
 
     def remove_post_forward_operation(self, key):
         return self.post_ops.pop(key)
