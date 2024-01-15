@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable, List, Tuple
 
 import numpy as np
@@ -40,10 +41,9 @@ from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.quantization.advanced_parameters import FP8Type
 from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
-from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.native.common import compare_nncf_graphs
+from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.common import get_openvino_major_minor_version
-from tests.openvino.native.common import get_openvino_version
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import ConvNotBiasModel
 from tests.openvino.native.models import FPModel
@@ -53,8 +53,7 @@ from tests.openvino.native.models import SimpleSplitModel
 from tests.openvino.native.models import WeightsModel
 from tests.openvino.native.models import ZeroRankEltwiseModel
 
-OV_VERSION = get_openvino_version()
-REFERENCE_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / "data" / OV_VERSION / "reference_graphs" / "original_nncf_graph"
+REFERENCE_GRAPHS_DIR = Path("reference_graphs") / "original_nncf_graph"
 
 TARGET_INSERT_LAYERS = [["Add"], ["MatMul"], ["Add", "MatMul"]]
 TARGET_PRE_LAYER_FQS = [["Add/fq_input_0"], ["MatMul/fq_input_0"], ["Add/fq_input_0", "MatMul/fq_input_0"]]
@@ -447,7 +446,7 @@ def test_node_removing(target_layers):
 
     transformed_model = model_transformer.transform(transformation_layout)
     ref_name = "removed_nodes_in_" + model_to_test.ref_graph_name
-    compare_nncf_graphs(transformed_model, REFERENCE_GRAPHS_DIR / ref_name)
+    compare_nncf_graphs(transformed_model, get_actual_reference_for_current_openvino(REFERENCE_GRAPHS_DIR / ref_name))
 
 
 @pytest.mark.parametrize("target_layers, ref_fq_names", zip(TARGET_INSERT_LAYERS, TARGET_PRE_LAYER_FQS))
@@ -689,7 +688,9 @@ def test_model_extraction(model_with_data):
     model_transformer = OVModelTransformer(model)
     transformed_model = model_transformer.transform(transformation_layout)
 
-    path_to_dot = REFERENCE_GRAPHS_DIR / f"exctracted_{model_to_test.ref_graph_name}"
+    path_to_dot = get_actual_reference_for_current_openvino(
+        REFERENCE_GRAPHS_DIR / f"exctracted_{model_to_test.ref_graph_name}"
+    )
     compare_nncf_graphs(transformed_model, path_to_dot)
 
 
