@@ -29,10 +29,8 @@ import numpy as np
 import openvino.runtime as ov
 from openvino.runtime import Dimension
 from openvino.runtime import PartialShape
-from openvino.tools import pot
 from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator
 from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import create_model_evaluator
-from openvino.tools.pot.configs.config import Config
 
 import nncf
 from nncf.common.deprecation import warning_deprecated
@@ -40,9 +38,6 @@ from nncf.common.logging.logger import set_log_file
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.data.dataset import DataProvider
-from nncf.openvino.pot.quantization.quantize_model import (
-    quantize_with_accuracy_control_impl as pot_quantize_with_native_accuracy_control,
-)
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
@@ -51,8 +46,24 @@ from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParame
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AggregatorType
 from nncf.quantization.advanced_parameters import OverflowFix
+from nncf.quantization.advanced_parameters import RestoreMode
 from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.scopes import IgnoredScope
+
+try:
+    from openvino.tools import pot
+    from openvino.tools.pot.configs.config import Config
+
+    from nncf.openvino.pot.quantization.quantize_model import (
+        quantize_with_accuracy_control_impl as pot_quantize_with_native_accuracy_control,
+    )
+
+    POT_AVAILABLE = True
+except ImportError:
+    from config import Config
+
+    POT_AVAILABLE = False
+
 
 TModel = TypeVar("TModel")
 
@@ -116,6 +127,7 @@ class CustomJSONEncoder(json.JSONEncoder):
                 AggregatorType,
                 DropType,
                 QuantizationMode,
+                RestoreMode,
             ),
         ):
             return o.value
@@ -956,6 +968,8 @@ def initialize_model_and_evaluator(xml_path: str, bin_path: str, accuracy_checke
 
     with tempfile.TemporaryDirectory(dir=tempfile.gettempdir()) as tmp_dir:
         if quantization_impl == "pot":
+            if not POT_AVAILABLE:
+                raise ImportError("POT is not available in the current evironment")
             pot_model = pot.load_model({"model_name": "model", "model": xml_path, "weights": bin_path}, "CPU")
             paths = pot.save_model(pot_model, save_path=tmp_dir, model_name="model")
             xml_path, bin_path = paths[0]["model"], paths[0]["weights"]
@@ -995,7 +1009,6 @@ def quantize_model_with_accuracy_control(
     validation_fn = ACValidationFunction(model_evaluator, metric_name, metric_type)
 
     name_to_quantization_impl_map = {
-        "pot": pot_quantize_with_native_accuracy_control,
         "native": nncf.quantize_with_accuracy_control,
     }
 
@@ -1003,7 +1016,11 @@ def quantize_model_with_accuracy_control(
         "advanced_quantization_parameters", AdvancedQuantizationParameters()
     )
     if quantization_impl == "pot":
+        if not POT_AVAILABLE:
+            raise ImportError("POT is not available in the current evironment")
         advanced_parameters.backend_params["use_pot"] = True
+        name_to_quantization_impl_map["pot"] = pot_quantize_with_native_accuracy_control
+
     elif quantization_impl == "native":
         advanced_parameters.backend_params["use_pot"] = False
     else:

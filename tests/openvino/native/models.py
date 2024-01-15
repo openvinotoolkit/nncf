@@ -769,7 +769,7 @@ class SequentialMatmulModel(OVReferenceModel):
 
     def _create_ov_model(self):
         input_node = opset.parameter([3, 3], name="Input_1")
-        main_values = [100, 1000, 10000, 10, 1]
+        main_values = [10000, 1000, 1, 10, 10000]
 
         last_node = input_node
         for i, main_value in enumerate(main_values):
@@ -782,6 +782,18 @@ class SequentialMatmulModel(OVReferenceModel):
             last_node = current_node
 
         result = opset.result(last_node, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+        model = ov.Model([result], [input_node])
+        return model
+
+
+class IdentityMatmul(OVReferenceModel):
+    def _create_ov_model(self):
+        input_node = opset.parameter([3, 3], name="Input_1")
+        weights_data = np.eye(3) * 255
+        current_weights = opset.constant(weights_data, dtype=np.float32, name="weights")
+        matmul_node = opset.matmul(input_node, current_weights, transpose_a=False, transpose_b=True, name="MatMul")
+        result = opset.result(matmul_node, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [input_node])
         return model
@@ -835,4 +847,41 @@ class ScaledDotProductAttentionModel(OVReferenceModel):
         result = opset.result(attn, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [query, key, value, attn_mask])
+        return model
+
+
+class LinearQuantizedModel(OVReferenceModel):
+    @staticmethod
+    def _create_fq_node(parent_node, name):
+        return opset.fake_quantize(
+            parent_node, np.float32(-1), np.float32(1), np.float32(-1), np.float32(1), 256, name=name
+        )
+
+    def _create_ov_model(self):
+        inputs = opset.parameter((1, 3, 4, 2), name="Input")
+
+        w = self._rng.random((2, 5), dtype=np.float32)
+        x = opset.matmul(
+            self._create_fq_node(inputs, "FQ_Inputs"),
+            self._create_fq_node(w, "FQ_Weights_0"),
+            transpose_a=False,
+            transpose_b=False,
+            name="MatMul_0",
+        )
+        x = opset.relu(x, name="ReLu_0")
+
+        w = self._rng.random((5, 2), dtype=np.float32)
+        x = opset.matmul(
+            self._create_fq_node(x, "FQ_ReLu_0"),
+            self._create_fq_node(w, "FQ_Weights_1"),
+            transpose_a=False,
+            transpose_b=False,
+            name="MatMul_1",
+        )
+        x = opset.relu(x, name="ReLu_1")
+
+        x = opset.result(x, name="Result")
+        x.get_output_tensor(0).set_names(set(["Result"]))
+
+        model = ov.Model([x], [inputs])
         return model

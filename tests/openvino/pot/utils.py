@@ -13,12 +13,16 @@ import tempfile
 from pathlib import Path
 
 import openvino.runtime as ov
-from openvino.tools import pot
+
+try:
+    from openvino.tools import pot
+except ImportError:
+    pot = None
 
 
 def convert_openvino_model_to_compressed_model(
     model: ov.Model, target_device: str
-) -> pot.graph.nx_model.CompressedModel:
+) -> "pot.graph.nx_model.CompressedModel":
     with tempfile.TemporaryDirectory(dir=tempfile.gettempdir()) as tmp_dir:
         xml_path = str(Path(tmp_dir) / "model.xml")
         bin_path = str(Path(tmp_dir) / "model.bin")

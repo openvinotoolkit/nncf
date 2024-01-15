@@ -58,7 +58,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:
-        return [om.PTModuleLinearMetatype]
+        return [om.PTModuleLinearMetatype, om.PTLinearMetatype, om.PTMatMulMetatype]
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:

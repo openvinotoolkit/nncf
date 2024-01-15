@@ -40,6 +40,10 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
     # Metatypes
 
     @staticmethod
+    def get_op_with_weights_metatypes() -> List[OVOpMetatype]:
+        return OPERATIONS_WITH_WEIGHTS
+
+    @staticmethod
     def get_quantizer_metatypes() -> List[OVOpMetatype]:
         return FAKE_QUANTIZE_OPERATIONS
 

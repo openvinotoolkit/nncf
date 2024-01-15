@@ -155,10 +155,22 @@ def get_result_node_name(output_name: str, port_id: int) -> str:
 
     :param output_name: Node name.
     :param port_id: Node port.
-    :return: Name of result.
+    :return: Name of Result.
     """
 
     return f"Result_{output_name}.{port_id}"
+
+
+def get_parameter_node_name(parameter_name: str, port_id: int) -> str:
+    """
+    Returns name of Parameter based on node name and its port.
+
+    :param parameter_name: Node name.
+    :param port_id: Node port.
+    :return: Name of Parameter.
+    """
+
+    return f"Parameter_{parameter_name}.{port_id}"
 
 
 def get_ov_model_reduce_node_name(output_name: str, reduce_node_name: str, port_id: int) -> str:

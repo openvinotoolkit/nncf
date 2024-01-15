@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import List, Optional, TypeVar
+from typing import List, Optional, Tuple, TypeVar
 
 import numpy as np
 
@@ -60,12 +60,16 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def model_extraction_command(inputs: List[str], outputs: List[str]) -> TransformationCommand:
+    def model_extraction_command(
+        input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]
+    ) -> TransformationCommand:
         """
         Returns backend-specific command to extract sub-model based on input & output names.
 
-        :param inputs: List of the input names for sub-model beginning.
-        :param outputs: List of the output names for sub-model end.
+        :param input_ids: List of the input IDs: pairs of node names and correspondent input port ids.
+            Each pair denotes the sub-graph beginning.
+        :param output_ids: List of the output IDs: pairs of node names and correspondent output port ids.
+            Each pair denotes the sub-graph ending.
         :return: Backend-specific TransformationCommand for the model extraction.
         """
 
@@ -103,7 +107,7 @@ class BiasCorrectionAlgoBackend(ABC):
     def raw_statistic_collector(inplace: bool, num_samples: int = None) -> TensorStatisticCollectorBase:
         """
         Returns backend-specific raw statistic collector.
-        This statistic collector uses for raw data calculation, without aggregating.
+        This statistic collector is used for raw data calculation, without aggregating.
 
         :param inplace: Whether to calculate statistic inplace or not.
         :param num_samples: Maximum number of samples to collect.
@@ -131,7 +135,7 @@ class BiasCorrectionAlgoBackend(ABC):
 
         :param node: Node of NNCFGraph with bias value.
         :param nncf_graph: NNCFGraph instance with the node.
-        :return: boolean port id.
+        :return: target input port id.
         """
 
     @staticmethod
@@ -148,24 +152,25 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_input_name(model: TModel, node_name: str) -> str:
+    def get_input_name(model: TModel, node_name: str, input_port_id: int) -> str:
         """
         Returns input tensor name for the specific node.
 
         :param model: Backend-specific model for the initializer finding.
         :param node_name: Name of the backend-specific node.
+        :param input_port_id: Port Id for input.
         :return: Input tensor name.
         """
 
     @staticmethod
     @abstractmethod
-    def get_output_name(model: TModel, node_name: str, output_id: int) -> str:
+    def get_output_name(model: TModel, node_name: str, output_port_id: int) -> str:
         """
         Returns output tensor name for the specific node.
 
         :param model: Backend-specific model.
         :param node_name: Name of the backend-specific node.
-        :param output_id: Port Id for output.
+        :param output_port_id: Port Id for output.
         :return: Output tensor name.
         """
 

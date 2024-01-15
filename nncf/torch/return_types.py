@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import inspect
-from typing import Any, Optional, Tuple, Type, Union
+from typing import Any, Tuple, Type, Union
 
 import torch
 
@@ -30,7 +30,7 @@ def __get_supported_torch_return_types() -> Tuple[Type[tuple], ...]:
 _TORCH_RETURN_TYPES = __get_supported_torch_return_types()
 
 
-def maybe_unwrap_from_torch_return_type(tensor: Any) -> torch.Tensor:
+def maybe_get_values_from_torch_return_type(tensor: Any) -> torch.Tensor:
     """
     Attempts to unwrap the tensor value from one of torch.return_types instances
     in case torch operation output is wrapped by a torch return_type.
@@ -43,7 +43,9 @@ def maybe_unwrap_from_torch_return_type(tensor: Any) -> torch.Tensor:
     return tensor
 
 
-def maybe_wrap_to_torch_return_type(tensor: torch.Tensor, wrapped_input: Optional[Union[tuple, torch.Tensor]]) -> Any:
+def maybe_wrap_to_torch_return_type(
+    tensor: torch.Tensor, wrapped_input: Union[tuple, torch.Tensor]
+) -> Union[tuple, torch.Tensor]:
     """
     Wraps tensor to wrapped_input wrapper in case wrapped_input is wrapped by a torch.return_value container.
 

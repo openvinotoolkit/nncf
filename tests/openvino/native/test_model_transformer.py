@@ -668,8 +668,12 @@ def test_null_biases_insertion(model_with_parameters):
 
 
 MODELS_WITH_DATA = [
-    {"model": ConvModel(), "input_layers": ["Conv"], "output_layers": ["Conv"]},
-    {"model": QuantizedModel(), "input_layers": ["Relu_1", "Transpose"], "output_layers": ["Conv_3", "Add_2"]},
+    {"model": ConvModel(), "input_ids": [("Conv", 0)], "output_ids": [("Conv", 0)]},
+    {
+        "model": QuantizedModel(),
+        "input_ids": [("Relu_1", 0), ("Transpose", 0)],
+        "output_ids": [("Conv_3", 0), ("Add_2", 0)],
+    },
 ]
 
 
@@ -678,7 +682,7 @@ def test_model_extraction(model_with_data):
     model_to_test = model_with_data["model"]
     model = model_to_test.ov_model
     transformation_layout = TransformationLayout()
-    command = OVModelExtractionCommand(model_with_data["input_layers"], model_with_data["output_layers"])
+    command = OVModelExtractionCommand(model_with_data["input_ids"], model_with_data["output_ids"])
     transformation_layout.register(command)
 
     model_transformer = OVModelTransformer(model)

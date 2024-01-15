@@ -17,7 +17,9 @@ import pytest
 import torch
 
 from nncf.common.graph.layer_attributes import Dtype
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.torch.tensor import PTNNCFTensor
+from nncf.torch.tensor_statistics.algo import create_register_input_hook
 from nncf.torch.tensor_statistics.collectors import PTAbsMaxReducer
 from nncf.torch.tensor_statistics.collectors import PTAbsQuantileReducer
 from nncf.torch.tensor_statistics.collectors import PTBatchMeanReducer
@@ -126,3 +128,19 @@ def test_median_function(device, size, ref):
     res = PTNNCFCollectorTensorProcessor.median(tensor, axis=0)
     assert res.tensor == ref
     assert res.tensor.is_cuda == (device == "cuda")
+
+
+def test_create_register_input_hook_with_return_type(mocker):
+    collector = TensorCollector()
+    collector.register_input_for_all_reducers = mocker.MagicMock()
+    hook = create_register_input_hook(collector)
+    input_ = torch.return_types.max([torch.tensor((1,))] * 2)
+    output_ = hook(input_)
+    assert input_ is output_
+    mocker = collector.register_input_for_all_reducers
+    mocker.assert_called_once()
+    attr = mocker.call_args_list[0][0][0]
+    assert isinstance(attr, PTNNCFTensor)
+    assert attr.tensor == torch.tensor(
+        1,
+    )

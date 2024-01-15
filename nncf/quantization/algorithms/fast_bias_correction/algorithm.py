@@ -274,7 +274,7 @@ class FastBiasCorrection(Algorithm):
         :param node_name: Name of the node that should be a center of the sub-model.
         :return: Backend-specific sub-model.
         """
-        model_extraction_command = self._backend_entity.model_extraction_command([node_name], [node_name])
+        model_extraction_command = self._backend_entity.model_extraction_command([(node_name, 0)], [(node_name, 0)])
         me_transformation_layout = TransformationLayout()
         me_transformation_layout.register(model_extraction_command)
         extracted_model = model_transformer.transform(me_transformation_layout)
