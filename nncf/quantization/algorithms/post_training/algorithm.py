@@ -14,7 +14,6 @@ from typing import Callable, List, Optional, TypeVar
 
 from nncf import Dataset
 from nncf.common.graph.graph import NNCFGraph
-from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
@@ -105,10 +104,6 @@ class PostTrainingQuantization(Algorithm):
                 "A dataset is required for the post-training quantization "
                 "algorithm to collect statistics for intermediate models."
             )
-        if dataset is not None:
-            batch_size = dataset.get_batch_size() or 1
-        if dataset is not None and batch_size > 1:
-            nncf_logger.warn("Statistics for batch_size > 1 does not match to the recomended batch_size=1")
         step_index_to_statistics = None
         if statistic_points:
             step_index_to_statistics = {0: statistic_points}

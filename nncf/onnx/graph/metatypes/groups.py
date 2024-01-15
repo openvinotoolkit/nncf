@@ -121,3 +121,9 @@ OPERATIONS_WITH_BIAS = [
     onnx_metatypes.ONNXConvolutionMetatype,
     onnx_metatypes.ONNXDepthwiseConvolutionMetatype,
 ]
+
+
+OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS = [
+    onnx_metatypes.ONNXROIAlignMetatype,
+    onnx_metatypes.ONNXEmbeddingMetatype,
+]

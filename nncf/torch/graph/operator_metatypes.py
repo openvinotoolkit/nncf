@@ -1027,3 +1027,10 @@ OPERATORS_FUSED_METATYPES = [
 ]
 
 OP_NAMES_QUANTIZE_NODE = ["symmetric_quantize", "asymmetric_quantize"]
+
+OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS = [
+    PTEmbeddingMetatype,
+    PTEmbeddingBagMetatype,
+    PTModuleEmbeddingBagMetatype,
+    PTModuleEmbeddingMetatype,
+]

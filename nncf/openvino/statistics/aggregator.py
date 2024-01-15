@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from collections import defaultdict
-from typing import Dict
+from typing import Dict, List
 
 import numpy as np
 import openvino.runtime as ov
@@ -23,12 +23,18 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.common.tensor_statistics.collectors import MergedTensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.openvino.graph.metatypes.groups import OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.tensor import OVNNCFTensor
 
 
 class OVStatisticsAggregator(StatisticsAggregator):
+    @property
+    def metatypes_output_has_no_batch_axis(self) -> List[OVOpMetatype]:
+        return OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
+
     def collect_statistics(self, model: ov.Model, graph: NNCFGraph) -> None:
         self._name_to_node_mapping = {op.get_friendly_name(): op for op in model.get_ops()}
         super().collect_statistics(model, graph)

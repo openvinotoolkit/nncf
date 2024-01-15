@@ -445,8 +445,8 @@ class ONNXScatterNDMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
-class ONNXRoiAlignMetatype(ONNXOpMetatype):
-    name = "RoiAlignOp"
+class ONNXROIAlignMetatype(ONNXOpMetatype):
+    name = "ROIAlignOp"
     op_names = ["RoiAlign"]
 
 

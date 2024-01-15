@@ -11,11 +11,13 @@
 from abc import ABC
 from abc import abstractmethod
 from itertools import islice
-from typing import Any, Dict, TypeVar
+from typing import Any, Dict, List, TypeVar
 
 from nncf.common import factory
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.logging.logger import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -46,6 +48,8 @@ class StatisticsAggregator(ABC):
         :param model: Backend-specific model instance.
         :param graph: Model graph.
         """
+        if self.batch_size > 1 and self.is_model_batch_size_limited_support(graph):
+            nncf_logger.warning("The batch size > 1 for the specific model can lead to accuracy degradation")
         if not self.statistic_points:
             return
         model_transformer = factory.ModelTransformerFactory.create(model)
@@ -98,6 +102,21 @@ class StatisticsAggregator(ABC):
                             self.stat_subset_size = tensor_collector.num_samples
                         elif tensor_collector.num_samples is not None:
                             self.stat_subset_size = max(self.stat_subset_size, tensor_collector.num_samples)
+
+    def is_model_batch_size_limited_support(self, graph: NNCFGraph) -> bool:
+        """
+        :param NNCFGraph graph: _description_
+        :return bool: _description_
+        """
+        for metatype in self.metatypes_output_has_no_batch_axis:
+            if metatype in set(node.metatype for node in graph.get_all_nodes()):
+                return True
+        return False
+
+    @property
+    @abstractmethod
+    def metatypes_output_has_no_batch_axis(self) -> List[OperatorMetatype]:
+        """ """
 
     @abstractmethod
     def _register_statistics(self, outputs: Dict[str, NNCFTensor], statistic_points: StatisticPointsContainer) -> None:

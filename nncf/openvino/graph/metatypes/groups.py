@@ -197,3 +197,10 @@ CONV_OPERATIONS = [
     ov_metatypes.OVConvolutionBackpropDataMetatype,
     ov_metatypes.OVGroupConvolutionBackpropDataMetatype,
 ]
+
+OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS = [
+    ov_metatypes.OVSpaceToBatchMetatype,
+    ov_metatypes.OVROIPoolingMetatype,
+    ov_metatypes.OVROIAlignMetatype,
+    ov_metatypes.OVEmbeddingMetatype,
+]
