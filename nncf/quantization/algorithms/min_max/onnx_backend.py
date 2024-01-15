@@ -18,6 +18,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
+from nncf.common.graph.utils import get_channel_agnostic_reduction_axes
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
@@ -26,7 +27,6 @@ from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
 from nncf.onnx.graph.node_utils import get_quantization_axis
 from nncf.onnx.graph.node_utils import get_quantized_tensor_shape
-from nncf.onnx.graph.node_utils import get_reduction_shape
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.hardware.config import ONNXHWConfig
@@ -159,7 +159,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantization_axis = get_quantization_axis(is_per_channel, node, target_point)
         quantized_tensor_shape = get_quantized_tensor_shape(nncf_graph, node, target_point)
         if quantization_axis is not None and quantized_tensor_shape is not None:  # Per-Channel
-            reduction_shape = get_reduction_shape(quantized_tensor_shape, quantization_axis)
+            reduction_shape = get_channel_agnostic_reduction_axes([quantization_axis], quantized_tensor_shape)
 
         if (
             range_estimator_params.min.statistics_type == StatisticsType.MIN
