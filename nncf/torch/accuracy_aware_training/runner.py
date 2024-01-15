@@ -131,14 +131,12 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         return osp.join(self._checkpoint_save_dir, f'acc_aware_checkpoint_{"best" if is_best else "last"}{extension}')
 
     def add_tensorboard_scalar(self, key, data, step):
-        if is_main_process():
-            if self.verbose and self._tensorboard_writer is not None:
-                self._tensorboard_writer.add_scalar(key, data, step)
+        if is_main_process() and self.verbose and self._tensorboard_writer is not None:
+            self._tensorboard_writer.add_scalar(key, data, step)
 
     def add_tensorboard_image(self, key, data, step):
-        if is_main_process():
-            if self.verbose and self._tensorboard_writer is not None:
-                self._tensorboard_writer.add_image(key, ToTensor()(data), step)
+        if is_main_process() and self.verbose and self._tensorboard_writer is not None:
+            self._tensorboard_writer.add_image(key, ToTensor()(data), step)
 
 
 class PTAdaptiveCompressionLevelTrainingRunner(

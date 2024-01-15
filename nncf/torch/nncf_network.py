@@ -604,9 +604,8 @@ class NNCFNetworkInterface(torch.nn.Module):
             with self._compressed_context as ctx:
                 ctx.base_module_thread_local_replica = self._model_ref
                 self._dummy_forward_fn(self._model_ref)
-        if force_eval:
-            if train_mode:
-                self._model_ref.train()
+        if force_eval and train_mode:
+            self._model_ref.train()
 
     def get_original_insertion_point_graph(self) -> InsertionPointGraph:
         # Set up a pre- and post-hooks on almost every op in PyTorch

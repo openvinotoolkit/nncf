@@ -623,7 +623,7 @@ def test_no_transformations():
     ret_val_1 = infer_model_with_ones(model, input_shape)
     ret_val_2 = infer_model_with_ones(transformed_model, input_shape)
     assert ret_val_1.keys() == ret_val_2.keys()
-    for output in ret_val_1.keys():
+    for output in ret_val_1:
         assert np.allclose(ret_val_1[output], ret_val_2[output])
     assert id(transformed_model) != id(model)
 

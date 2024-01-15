@@ -105,10 +105,9 @@ class PolyLRDropScheduler:
                 for group in self.optimizer.param_groups:
                     group["lr"] = lr
 
-        if self.disable_wd_start_epoch is not None:
-            if epoch_float > self.disable_wd_start_epoch:
-                for group in self.optimizer.param_groups:
-                    group["weight_decay"] = 0.0
+        if self.disable_wd_start_epoch is not None and epoch_float > self.disable_wd_start_epoch:
+            for group in self.optimizer.param_groups:
+                group["weight_decay"] = 0.0
 
     def epoch_step(self, epoch=None):
         if epoch is not None:

@@ -537,9 +537,12 @@ def test_weight_compress_with_ignored_scope(ignored_scope, num_compressed):
     ref_compressed_weights = TEST_MODELS[IntegerModel]
     act_num = 0
     for op in compressed_model.get_ops():
-        if op.get_type_name() == "Constant" and op.get_friendly_name() in ref_compressed_weights:
-            if op.get_element_type() == ov.Type(np.uint8):
-                act_num += 1
+        if (
+            op.get_type_name() == "Constant"
+            and op.get_friendly_name() in ref_compressed_weights
+            and op.get_element_type() == ov.Type(np.uint8)
+        ):
+            act_num += 1
     assert act_num == num_compressed
 
 
