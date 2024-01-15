@@ -214,12 +214,15 @@ class TemplateTestReducersAggreagtors:
             assert self.all_close(val[i].tensor, self.cast_tensor(ref_, Dtype.FLOAT))
 
     @pytest.mark.parametrize(
-        "reducer_name,ref",
-        [("batch_mean", [[[[-12.5, -11.5, -10.5], [-9.5, -8.5, -7.5], [-6.5, -5.5, -4.5]]]]), ("mean_per_ch", [-8.5])],
+        "reducer_name,ref,kwargs",
+        [
+            ("batch_mean", [[[[-12.5, -11.5, -10.5], [-9.5, -8.5, -7.5], [-6.5, -5.5, -4.5]]]], {}),
+            ("mean_per_ch", [-22.0, -13.0, -4.0, 5.0], {"channel_axis": 0}),
+        ],
     )
-    def test_batch_mean_mean_per_ch_reducers(self, reducer_name, ref, reducers):
+    def test_batch_mean_mean_per_ch_reducers(self, reducer_name, ref, reducers, kwargs):
         input_ = np.arange(-26, 10).reshape((4, 1, 3, 3))
-        reducer = reducers[reducer_name](inplace=False)
+        reducer = reducers[reducer_name](inplace=False, **kwargs)
         val = reducer([self.get_nncf_tensor(input_, Dtype.FLOAT)])
         assert len(val) == 1
         assert self.all_close(val[0].tensor, self.cast_tensor(ref, Dtype.FLOAT))
