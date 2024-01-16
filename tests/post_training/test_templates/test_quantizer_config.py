@@ -21,8 +21,8 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
 from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
-from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.tensor_statistics.collectors import ReductionAxes
@@ -89,9 +89,9 @@ class TemplateTestQuantizerConfig:
         nncf_graph = single_conv_nncf_graph.nncf_graph
         inference_nncf_graph = transform_to_inference_graph(
             deepcopy(nncf_graph),
+            min_max_algo._backend_entity.get_start_nodes_for_activation_path_tracing(nncf_graph),
             min_max_algo._backend_entity.shapeof_metatypes,
             min_max_algo._backend_entity.dropout_metatypes,
-            min_max_algo._backend_entity.read_variable_metatypes,
         )
         q_setup = min_max_algo._get_quantizer_setup(
             nncf_graph, inference_nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()
@@ -143,9 +143,9 @@ class TemplateTestQuantizerConfig:
         nncf_graph = single_conv_nncf_graph.nncf_graph
         inference_nncf_graph = transform_to_inference_graph(
             deepcopy(nncf_graph),
+            min_max_algo._backend_entity.get_start_nodes_for_activation_path_tracing(nncf_graph),
             min_max_algo._backend_entity.shapeof_metatypes,
             min_max_algo._backend_entity.dropout_metatypes,
-            min_max_algo._backend_entity.read_variable_metatypes,
         )
         if signed_weights is False or signed_activations in [True, False]:  # Incompatible with HW CPU config
             with pytest.raises(
@@ -185,9 +185,9 @@ class TemplateTestQuantizerConfig:
         nncf_graph = depthwise_conv_nncf_graph.nncf_graph
         inference_nncf_graph = transform_to_inference_graph(
             deepcopy(nncf_graph),
+            min_max_algo._backend_entity.get_start_nodes_for_activation_path_tracing(nncf_graph),
             min_max_algo._backend_entity.shapeof_metatypes,
             min_max_algo._backend_entity.dropout_metatypes,
-            min_max_algo._backend_entity.read_variable_metatypes,
         )
         q_setup = min_max_algo._get_quantizer_setup(
             nncf_graph, inference_nncf_graph, hw_patterns=GraphPattern(), ignored_patterns=GraphPattern()

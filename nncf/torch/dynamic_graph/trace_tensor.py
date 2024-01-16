@@ -8,15 +8,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Dict, Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import List, Optional, Tuple, Union
 
-import numpy as np
 import torch
 
-from nncf import nncf_logger
 from nncf.common.graph.layer_attributes import Dtype
-from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
-from nncf.torch.nested_objects_traversal import objwalk
 
 
 class TensorMeta:
@@ -25,13 +21,18 @@ class TensorMeta:
         return lhs.index == rhs.index and lhs.creator_id == rhs.creator_id and lhs.shape[1:] == rhs.shape[1:]
 
     def __init__(
-        self, creator_id: int, index: int, shape: Union[List[int], Tuple[torch.Tensor, ...]], dtype: Dtype = Dtype.FLOAT
+        self,
+        creator_id: Union[int, None],
+        index: int,
+        shape: Union[List[int], Tuple[torch.Tensor, ...]],
+        dtype: Dtype = Dtype.FLOAT,
     ):
         """
         :param creator_id: An ID of the node in DynamicGraph that corresponds to an operation that created the
             tensor.
         :param index: The index of this tensor in the creator operation's output.
         :param shape: The shape of the tensor.
+        :param dtype: The type of the tensor
         """
         self.creator_id = creator_id
         self.index = index
@@ -50,7 +51,57 @@ class TensorMeta:
         return "C{}_I{}_".format(self.creator_id, self.index) + "S" + "x".join([str(s) for s in self.shape])
 
 
-class TracedTensor(torch.Tensor):
+class TracedTensorMixin:
+    """
+    A mixin class providing tracing capabilities to PyTorch tensors.
+
+    This class provides interfaces for patching a given torch tensor and associating it with the provided tensor_meta.
+    """
+
+    TENSOR_META = "tensor_meta"
+    ORIGINAL_CLASS = "original_class"
+    _TRACING_ATTRS = "_tracing_attrs"
+
+    @property
+    def tensor_meta(self):
+        return self.tracing_attrs[TracedTensorMixin.TENSOR_META]
+
+    @tensor_meta.setter
+    def tensor_meta(self, value: Union[None, TensorMeta]):
+        self.tracing_attrs[TracedTensorMixin.TENSOR_META] = value
+
+    @property
+    def tracing_attrs(self):
+        if not hasattr(self, TracedTensorMixin._TRACING_ATTRS):
+            self._tracing_attrs = {}
+        return self._tracing_attrs
+
+    @classmethod
+    def patch(cls, tensor: torch.Tensor, tensor_meta: Optional[TensorMeta] = None) -> "TracedTensorMixin":
+        """
+        Patches a tensor with the TracedTensorMixin interface and associates it with the provided tensor_meta.
+
+        :param tensor: The input tensor.
+        :param tensor_meta: The metadata associated with the tensor.
+        :return: The patched ternsor.
+        """
+        if not isinstance(tensor, TracedTensorMixin):
+            original_class = tensor.__class__
+            tensor.__class__ = cls
+            tensor.tracing_attrs[TracedTensorMixin.ORIGINAL_CLASS] = original_class
+
+        tensor.tensor_meta = tensor_meta
+        return tensor
+
+    def strip(self) -> None:
+        """
+        Reverts the tensor to its original class by removing tracing attributes.
+        """
+        self.__class__ = self.tracing_attrs[TracedTensorMixin.ORIGINAL_CLASS]
+        delattr(self, TracedTensorMixin._TRACING_ATTRS)
+
+
+class TracedTensor(torch.Tensor, TracedTensorMixin):
     """
     When tracing a torch model, intermediate tensors will be dynamically turned into
     instances of this class to be able to store additional data required for establishing
@@ -58,7 +109,7 @@ class TracedTensor(torch.Tensor):
     """
 
     @staticmethod
-    def from_torch_tensor(tensor: torch.Tensor, tensor_meta: TensorMeta) -> "TracedTensor":
+    def from_torch_tensor(tensor: torch.Tensor, tensor_meta: Optional[TensorMeta] = None) -> "TracedTensor":
         """
         Creates a TracedTensor by patching a given torch.Tensor, associating it with the provided tensor_meta.
 
@@ -66,20 +117,7 @@ class TracedTensor(torch.Tensor):
         :param tensor_meta: The metadata associated with the tensor.
         :return: The resulting TracedTensor.
         """
-        tensor.tensor_meta = tensor_meta
-        if not isinstance(tensor, TracedTensor):
-            tensor.original_class = tensor.__class__
-            tensor.__class__ = TracedTensor
-
-        return tensor
-
-    def strip(self) -> None:
-        """
-        Reverts the tensor to its original class by removing tracing attributes.
-        """
-        self.__class__ = self.original_class
-        delattr(self, "tensor_meta")
-        delattr(self, "original_class")
+        return TracedTensor.patch(tensor, tensor_meta)
 
     def as_subclass(self, cls: "TracedTensor") -> "TracedTensor":
         """
@@ -96,99 +134,43 @@ class TracedTensor(torch.Tensor):
         __torch_function__ = torch._C._disabled_torch_function_impl
 
 
-def is_iterable(item):
-    non_iterable_types = (str, bytes, bytearray, torch.Tensor, np.ndarray)
-
-    return isinstance(item, Iterable) and not isinstance(item, non_iterable_types)
-
-
-def flatten(items):
-    it = items.items() if hasattr(items, "items") else iter(items)
-    for item in it:
-        if is_iterable(item):
-            for i in flatten(item):
-                yield i
-        else:
-            yield item
-
-
-def flatten_args(args, kwargs):
-    return list(flatten(args)) + list(flatten(kwargs))
-
-
-def get_dtype(x: torch.Tensor) -> Dtype:
-    if x.dtype in [torch.float, torch.float16, torch.float32, torch.float64]:
-        return Dtype.FLOAT
-    return Dtype.INTEGER
-
-
-TensorOrTupleOrList = TypeVar("TensorOrTupleOrList", List[torch.Tensor], Tuple[torch.Tensor], torch.Tensor)
-
-
-def trace_tensors(
-    operator_output: TensorOrTupleOrList, node: "DynamicGraphNode", ctx: "TracingContext" = None  # noqa: F821
-) -> TensorOrTupleOrList:
+class TracedParameter(torch.nn.Parameter, TracedTensorMixin):
     """
-    Dynamically turn torch.Tensor instances in `operator_output` into TracedTensor instances. `operator_output` is
-    presumed to be the output of a model operation (function call) associated with `node`.
-    :param operator_output: The output of an NNCF-wrapped function executed in a model object.
-    :param node: A node in DynamicGraph associated with the function that produced `operator_output`
-    :param ctx: If supplied, the resulting tensors will be registered within this TracingContext instance
-    to be marked as expired on context exit, which is required to correctly process situations when a traced model
-    retains intermediate tensor values.
-    :return: Same structure as `operator_output`, but with torch.Tensor entries turned into TracedTensors.
+    When tracing a torch model, model parameters will be dynamically turned into
+    instances of this class to be able to store additional data required for tracing parameters
+    across operations.
     """
-    if isinstance(operator_output, (list, tuple)):
-        output_ = []
-        for i, x in enumerate(operator_output):
-            meta = None
-            if node is not None:
-                meta = TensorMeta(node.node_id, i, x.shape, get_dtype(x))
-            tt = TracedTensor.from_torch_tensor(x, meta)
-            if ctx is not None:
-                ctx.register_traced_tensor(tt)
-            output_.append(tt)
-        return operator_output.__class__(output_)
-    if isinstance(operator_output, torch.Tensor):
-        meta = None
-        if node is not None:
-            meta = TensorMeta(node.node_id, 0, operator_output.shape, get_dtype(operator_output))
-        tt = TracedTensor.from_torch_tensor(operator_output, meta)
-        if ctx is not None:
-            ctx.register_traced_tensor(tt)
-        return tt
-    nncf_logger.debug(f"Could not find tensors to trace in operator output: {operator_output}")
-    return operator_output
 
+    NAME = "name"
 
-def make_tensor_metas(inputs: OperatorInput) -> List[Optional[TensorMeta]]:
-    """
-    Produces TensorMeta data for each torch.Tensor or TracedTensor in `inputs`.
-    :param inputs: An OperatorInput representation of input arguments to an operation in the traced model.
-    :return: A list of TensorMeta objects, one for every torch.Tensor or TracedTensor object in `inputs` in the
-    order of item enumeration in `inputs`.
-    """
-    tensor_metas = []
-    for i, node_input_index_entry in enumerate(inputs):
-        node_input = node_input_index_entry.getter()
-        if isinstance(node_input, TracedTensor):
-            tensor_metas.append(node_input.tensor_meta)
-        elif isinstance(node_input, torch.Tensor) and not isinstance(node_input, TracedTensor):
-            meta = TensorMeta(None, i, node_input.shape)
-            tensor_metas.append(meta)
-        else:
-            tensor_metas.append(None)
-    return tensor_metas
+    @property
+    def name(self):
+        return self.tracing_attrs[TracedParameter.NAME]
 
+    @staticmethod
+    def from_torch_parameter(tensor: torch.nn.Parameter, name: str) -> "TracedParameter":
+        """
+        Creates a TracedParameter by patching a given torch.nn.Parameter, associating it
+        with the provided parameter name.
 
-def strip_traced_tensors(args: Tuple, kwargs: Dict) -> Tuple[Tuple, Dict]:
-    """
-    Required to guard against new forward calls on tensors that have already passed
-    through NNCF's forward once and got turned into TracedTensors by reference access.
-    """
-    is_traced_tensor_predicate = lambda x: isinstance(x, TracedTensor)
-    strip_traced_tensor = lambda x: x.strip()
+        :param tensor: The input torch.nn.Parameter.
+        :param name: The parameter name.
+        :return: The resulting TracedParameter.
+        """
+        TracedParameter.patch(tensor)
+        tensor.tracing_attrs[TracedParameter.NAME] = name
+        return tensor
 
-    args = objwalk(args, is_traced_tensor_predicate, strip_traced_tensor)
-    kwargs = objwalk(kwargs, is_traced_tensor_predicate, strip_traced_tensor)
-    return args, kwargs
+    def as_subclass(self, cls: "TracedParameter") -> "TracedParameter":
+        """
+        Required for PyTorch 1.7.0 compatibility - the handle_torch_function and __torch_function__
+        API in general calls this after a wrapped function call; need to preserve the tensor_meta extensions
+        """
+
+        return self
+
+    # NOTE: This disables the __torch_function__ API altogether when using NNCF.
+    # TODO: make NNCF utilize the __torch_function__ API instead.
+
+    if hasattr(torch._C, "_disabled_torch_function_impl"):
+        __torch_function__ = torch._C._disabled_torch_function_impl

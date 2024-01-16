@@ -41,7 +41,7 @@ def _(a: torch.Tensor) -> TensorDeviceType:
 def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> torch.Tensor:
     if axis is None:
         return a.squeeze()
-    if isinstance(axis, Tuple) and any(1 != a.shape[i] for i in axis):
+    if isinstance(axis, Tuple) and any(a.shape[i] != 1 for i in axis):
         # Make Numpy behavior, torch.squeeze skips axes that are not equal to one..
         raise ValueError("Cannot select an axis to squeeze out which has size not equal to one")
     return a.squeeze(axis)

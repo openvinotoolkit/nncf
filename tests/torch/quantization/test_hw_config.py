@@ -12,7 +12,7 @@
 import torch
 
 from nncf.common.quantization.quantizer_setup import DEFAULT_QUANTIZER_CONFIG
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.torch.dynamic_graph.io_handling import FillerInputElement
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.hardware.config import PTHWConfig

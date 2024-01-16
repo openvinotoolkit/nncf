@@ -33,7 +33,7 @@ def replace_quantizer_to_torch_native_module(model: NNCFNetwork) -> NNCFNetwork:
     compression_module_type = ExtraCompressionModuleType.EXTERNAL_QUANTIZER
     if model.nncf.is_compression_module_registered(compression_module_type):
         external_quantizers = model.nncf.get_compression_modules_by_type(compression_module_type)
-        for key in external_quantizers.keys():
+        for key in external_quantizers:
             if external_quantizers[key].is_enabled_quantization():
                 external_quantizers[key] = convert_to_torch_fakequantizer(external_quantizers[key])
 

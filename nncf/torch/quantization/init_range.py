@@ -23,7 +23,7 @@ from nncf.common.quantization.initialization.range import RangeInitParams
 from nncf.common.quantization.quantizer_setup import QuantizationPointBase
 from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
 from nncf.common.quantization.structs import NonWeightQuantizerId
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
@@ -71,13 +71,13 @@ class PTRangeInitParams(RangeInitParams):
     def get_init_config_for_scope_and_group(self, qid: QuantizerId, group: QuantizerGroup) -> RangeInitConfig:
         matches: List[RangeInitConfig] = []
         for pl_config in self.per_layer_range_init_configs:
-            if should_consider_scope(qid, pl_config.ignored_scopes, pl_config.target_scopes):
-                if group == pl_config.target_group or pl_config.target_group is None:
-                    matches.append(
-                        RangeInitConfig(
-                            pl_config.init_type, pl_config.num_init_samples, pl_config.init_type_specific_params
-                        )
+            should_be_considered = should_consider_scope(qid, pl_config.ignored_scopes, pl_config.target_scopes)
+            if should_be_considered and (group == pl_config.target_group or pl_config.target_group is None):
+                matches.append(
+                    RangeInitConfig(
+                        pl_config.init_type, pl_config.num_init_samples, pl_config.init_type_specific_params
                     )
+                )
         if len(matches) > 1:
             raise ValueError(
                 "Location {} matches more than one per-layer initialization parameter definition!".format(str(qid))

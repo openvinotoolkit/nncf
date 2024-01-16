@@ -27,6 +27,7 @@ from nncf.openvino.quantization.quantize_ifmodel import apply_algorithm_if_bodie
 from nncf.openvino.rt_info import dump_parameters
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
+from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -55,7 +56,7 @@ def should_use_pot(advanced_parameters: Optional[AdvancedQuantizationParameters]
     :raises ImportError if POT is not found in the Python environment.
     """
     use_pot = USE_POT_AS_DEFAULT
-    if advanced_parameters is not None:
+    if advanced_parameters is not None and advanced_parameters.backend_params is not None:
         use_pot = advanced_parameters.backend_params.get(BackendParameters.USE_POT, USE_POT_AS_DEFAULT)
 
     if not use_pot:
@@ -76,6 +77,7 @@ def should_use_pot(advanced_parameters: Optional[AdvancedQuantizationParameters]
 def native_quantize_if_op_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
+    mode: Optional[QuantizationMode] = None,
     preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
@@ -92,6 +94,7 @@ def native_quantize_if_op_impl(
             "The BiasCorrection algorithm is not supported for OpenVINO models with If operation."
         )
     quantization_algorithm = PostTrainingQuantization(
+        mode=mode,
         preset=preset,
         target_device=target_device,
         subset_size=subset_size,
@@ -134,6 +137,7 @@ def native_quantize_if_op_impl(
 def native_quantize_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
+    mode: Optional[QuantizationMode] = None,
     preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
@@ -146,6 +150,7 @@ def native_quantize_impl(
     Implementation of the `quantize()` method for the OpenVINO backend via the OpenVINO Runtime API.
     """
     quantization_algorithm = PostTrainingQuantization(
+        mode=mode,
         preset=preset,
         target_device=target_device,
         subset_size=subset_size,
@@ -211,15 +216,15 @@ def native_quantize_with_accuracy_control_impl(
     copied_parameters.backend_params[BackendParameters.COMPRESS_WEIGHTS] = False
 
     quantized_model = quantize_impl(
-        model,
-        calibration_dataset,
-        preset,
-        target_device,
-        subset_size,
-        fast_bias_correction,
-        model_type,
-        ignored_scope,
-        copied_parameters,
+        model=model,
+        calibration_dataset=calibration_dataset,
+        preset=preset,
+        target_device=target_device,
+        subset_size=subset_size,
+        fast_bias_correction=fast_bias_correction,
+        model_type=model_type,
+        ignored_scope=ignored_scope,
+        advanced_parameters=copied_parameters,
     )
 
     if advanced_accuracy_restorer_parameters.intermediate_model_dir:
@@ -284,6 +289,7 @@ def native_quantize_with_accuracy_control_impl(
             max_drop,
             drop_type,
             advanced_accuracy_restorer_parameters.num_ranking_workers,
+            advanced_accuracy_restorer_parameters.restore_mode,
         )
         quantized_model = accuracy_restorer.apply(
             model,
@@ -319,6 +325,7 @@ def native_quantize_with_accuracy_control_impl(
 def quantize_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
+    mode: Optional[QuantizationMode] = None,
     preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
@@ -340,15 +347,16 @@ def quantize_impl(
             quantize_fn = native_quantize_if_op_impl
 
     return quantize_fn(
-        model,
-        calibration_dataset,
-        preset,
-        target_device,
-        subset_size,
-        fast_bias_correction,
-        model_type,
-        ignored_scope,
-        advanced_parameters,
+        model=model,
+        calibration_dataset=calibration_dataset,
+        mode=mode,
+        preset=preset,
+        target_device=target_device,
+        subset_size=subset_size,
+        fast_bias_correction=fast_bias_correction,
+        model_type=model_type,
+        ignored_scope=ignored_scope,
+        advanced_parameters=advanced_parameters,
     )
 
 

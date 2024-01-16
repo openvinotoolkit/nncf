@@ -16,6 +16,7 @@ import numpy as np
 import pytest
 import torch
 
+from nncf.api.compression import CompressionStage
 from nncf.common.pruning.schedulers import ExponentialPruningScheduler
 from nncf.common.pruning.shape_pruning_processor import ShapePruningProcessor
 from nncf.common.pruning.weights_flops_calculator import WeightsFlopsCalculator
@@ -304,7 +305,7 @@ def test_pruning_masks_applying_correctness(all_weights, prune_by_flops, pruning
         assert torch.allclose(output, ref_output)
 
     def check_model_weights(model_state_dict, ref_state_dict):
-        for key in ref_state_dict.keys():
+        for key in ref_state_dict:
             assert torch.allclose(model_state_dict[key], ref_state_dict[key])
 
     config = get_basic_pruning_config(input_sample_size=[1, 1] + [8] * dim)
@@ -710,8 +711,8 @@ def test_flops_calculator(model_module, all_weights, pruning_flops_target, ref_f
     config["compression"]["algorithm"] = "filter_pruning"
     config["compression"]["params"]["all_weights"] = all_weights
     config["compression"]["params"]["prune_first_conv"] = True
-    config["compression"]["pruning_init"] = 0.5 if not pruning_flops_target else pruning_flops_target
-    if pruning_flops_target:
+    config["compression"]["pruning_init"] = pruning_flops_target if pruning_flops_target is not None else 0.5
+    if pruning_flops_target is not None:
         config["compression"]["params"]["pruning_flops_target"] = pruning_flops_target
 
     model = model_module()
@@ -852,3 +853,32 @@ def test_disconnected_graph():
         else:
             assert sum(node.attributes["output_mask"].tensor) == mask_sum
         assert collected_shapes[name] == shape
+
+
+@pytest.mark.parametrize("prune_by_flops", [True, False])
+def test_compression_stage(prune_by_flops):
+    config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
+    pruning_init = 0.0
+    pruning_target = 0.3
+    config["compression"]["algorithm"] = "filter_pruning"
+    config["compression"]["pruning_init"] = pruning_init
+    config["compression"]["params"]["num_init_steps"] = 0
+    config["compression"]["params"]["pruning_steps"] = 3
+
+    if prune_by_flops:
+        config["compression"]["params"]["pruning_flops_target"] = pruning_target
+    else:
+        config["compression"]["params"]["pruning_target"] = pruning_target
+    _, pruning_algo, _ = create_pruning_algo_with_config(config)
+
+    assert pruning_algo.compression_stage() == (
+        CompressionStage.PARTIALLY_COMPRESSED if prune_by_flops else CompressionStage.UNCOMPRESSED
+    )
+    pruning_algo.scheduler.epoch_step()
+    assert pruning_algo.compression_stage() == (
+        CompressionStage.PARTIALLY_COMPRESSED if prune_by_flops else CompressionStage.UNCOMPRESSED
+    )
+    pruning_algo.scheduler.epoch_step()
+    assert pruning_algo.compression_stage() == CompressionStage.PARTIALLY_COMPRESSED
+    pruning_algo.scheduler.epoch_step()
+    assert pruning_algo.compression_stage() == CompressionStage.FULLY_COMPRESSED

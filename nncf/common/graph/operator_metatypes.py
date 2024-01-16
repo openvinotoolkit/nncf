@@ -127,6 +127,7 @@ class OperatorMetatypeRegistry(Registry):
 NOOP_METATYPES = Registry("noop_metatypes")
 INPUT_NOOP_METATYPES = Registry("input_noop_metatypes")
 OUTPUT_NOOP_METATYPES = Registry("output_noop_metatypes")
+CONST_NOOP_METATYPES = Registry("const_noop_metatypes")
 
 
 class UnknownMetatype(OperatorMetatype):
@@ -175,3 +176,13 @@ class OutputNoopMetatype(OperatorMetatype):
     @classmethod
     def get_all_aliases(cls) -> List[str]:
         return [NNCFGraphNodeType.OUTPUT_NODE]
+
+
+@NOOP_METATYPES.register()
+@CONST_NOOP_METATYPES.register()
+class ConstNoopMetatype(OperatorMetatype):
+    name = "const_noop"
+
+    @classmethod
+    def get_all_aliases(cls) -> List[str]:
+        return [NNCFGraphNodeType.CONST_NODE]

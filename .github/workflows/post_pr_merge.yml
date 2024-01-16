@@ -37,3 +37,13 @@ jobs:
       coverage_flags: ONNX
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+  upload-coverage-openvino:
+    if: github.event.pull_request.merged == true
+    uses: ./.github/workflows/upload_coverage_for_develop.yml
+    with:
+      merge_commit_sha: ${{ github.event.pull_request.merge_commit_sha }}
+      last_sha_in_pr: ${{ github.event.pull_request.head.sha }}
+      coverage_artifact_name_in_pr: coverage_openvino
+      coverage_flags: OPENVINO
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

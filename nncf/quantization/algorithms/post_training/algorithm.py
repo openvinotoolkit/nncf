@@ -18,6 +18,7 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.parameters import ModelType
+from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.algorithm import Algorithm
@@ -38,6 +39,7 @@ class PostTrainingQuantization(Algorithm):
 
     def __init__(
         self,
+        mode: Optional[QuantizationMode] = None,
         preset: Optional[QuantizationPreset] = None,
         target_device: TargetDevice = TargetDevice.ANY,
         subset_size: int = 300,
@@ -47,6 +49,7 @@ class PostTrainingQuantization(Algorithm):
         advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
     ):
         """
+        :param mode: Special quantization mode that specify different ways of the optimization.
         :param preset: A preset controls the quantization mode (symmetric and asymmetric).
             It can take the following values:
             - `performance`: Symmetric quantization of weights and activations.
@@ -69,7 +72,14 @@ class PostTrainingQuantization(Algorithm):
             fine-tuning the quantization algorithm
         """
         self._pipeline = create_ptq_pipeline(
-            preset, target_device, subset_size, fast_bias_correction, model_type, ignored_scope, advanced_parameters
+            mode=mode,
+            preset=preset,
+            target_device=target_device,
+            subset_size=subset_size,
+            fast_bias_correction=fast_bias_correction,
+            model_type=model_type,
+            ignored_scope=ignored_scope,
+            advanced_parameters=advanced_parameters,
         )
 
     @property

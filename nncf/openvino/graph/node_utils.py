@@ -13,7 +13,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 import numpy as np
 import openvino.runtime as ov
-import openvino.runtime.opset9 as opset
+import openvino.runtime.opset13 as opset
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -155,10 +155,22 @@ def get_result_node_name(output_name: str, port_id: int) -> str:
 
     :param output_name: Node name.
     :param port_id: Node port.
-    :return: Name of result.
+    :return: Name of Result.
     """
 
     return f"Result_{output_name}.{port_id}"
+
+
+def get_parameter_node_name(parameter_name: str, port_id: int) -> str:
+    """
+    Returns name of Parameter based on node name and its port.
+
+    :param parameter_name: Node name.
+    :param port_id: Node port.
+    :return: Name of Parameter.
+    """
+
+    return f"Parameter_{parameter_name}.{port_id}"
 
 
 def get_ov_model_reduce_node_name(output_name: str, reduce_node_name: str, port_id: int) -> str:
@@ -299,18 +311,12 @@ def get_inplace_mean_per_ch(op_type: str, axis: int) -> InplaceInsertionFnType:
             transposed_shape = input_shape
 
         keeped_dims = transposed_shape[:2]
+        keeped_dims = [0 if dim < 0 else dim for dim in keeped_dims]
         squized_dims = -1 if -1 in transposed_shape[2:] else np.prod(transposed_shape[2:])
-        if (-1 in keeped_dims and squized_dims == -1) or keeped_dims.count(-1) > 1:
-            raise RuntimeError(
-                f"Could not insert mean_per_ch operation inplace"
-                f" for the node {node} because of"
-                f" input_shape: {input_shape} -> transposed_shape: {transposed_shape}"
-            )
-
         reshape_op = opset.reshape(
             reshape_input_node.output(output_port_id),
             output_shape=np.array((keeped_dims[0], keeped_dims[1], squized_dims)),
-            special_zero=False,
+            special_zero=True,
         )
         return opset.reduce_mean(
             reshape_op,

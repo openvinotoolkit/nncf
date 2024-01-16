@@ -12,8 +12,10 @@ import functools
 from copy import deepcopy
 from typing import Callable, List, Tuple
 
+import torch
 from torch.nn import DataParallel
 
+from nncf.common.graph.definitions import MODEL_CONST_OP_NAME
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.debug import is_debug
@@ -23,13 +25,15 @@ from nncf.torch.dynamic_graph.layer_attributes_handlers import OP_NAMES_REQUIRIN
 from nncf.torch.dynamic_graph.layer_attributes_handlers import get_layer_attributes_from_args_and_kwargs
 from nncf.torch.dynamic_graph.layer_attributes_handlers import get_layer_attributes_from_module
 from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
+from nncf.torch.dynamic_graph.operation_address import OperationAddress
+from nncf.torch.dynamic_graph.structs import NamespaceTarget
 from nncf.torch.dynamic_graph.structs import PatchedOperatorInfo
-from nncf.torch.dynamic_graph.trace_tensor import make_tensor_metas
-from nncf.torch.dynamic_graph.trace_tensor import trace_tensors
+from nncf.torch.dynamic_graph.trace_functions import forward_trace_only
+from nncf.torch.dynamic_graph.trace_functions import make_tensor_metas
+from nncf.torch.dynamic_graph.trace_functions import trace_tensors
+from nncf.torch.dynamic_graph.trace_tensor import TracedParameter
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.layers import ITERATION_MODULES
-from nncf.torch.return_types import maybe_unwrap_from_torch_return_type
-from nncf.torch.return_types import maybe_wrap_to_torch_return_type
 
 _IGNORED_SCOPES = []
 
@@ -83,8 +87,6 @@ def wrap_operator(operator, operator_info: PatchedOperatorInfo):
             if operator_info.skip_trace:
                 result = operator(*args, **kwargs)
             elif ctx.is_forwarding:
-                from nncf.torch.dynamic_graph.trace_functions import forward_trace_only
-
                 result = forward_trace_only(operator, *args, **kwargs)
             else:
                 op_name = operator_info.name
@@ -161,16 +163,17 @@ def wrap_module_call(module_call):
 
 
 def _execute_op(
-    op_address: "OperationAddress",  # noqa: F821
-    operator_info: "PatchedOperatorInfo",
+    op_address: OperationAddress,
+    operator_info: PatchedOperatorInfo,
     operator: Callable,
-    ctx: "TracingContext",
+    ctx: TracingContext,
     *args,
     **kwargs,
 ):
     op_name = operator_info.name
 
     op_input = OperatorInput(list(args), kwargs)
+    op_input = _process_parameters(op_input, ctx)
     processed_input = ctx.execute_pre_hooks(op_address, op_input)
     args = tuple(processed_input.op_args)
     kwargs = processed_input.op_kwargs
@@ -190,10 +193,8 @@ def _execute_op(
         if is_debug() and node is not None:
             ctx.register_node_call(node)
 
-    unwrapped_result = maybe_unwrap_from_torch_return_type(result)
-    unwrapped_result = trace_tensors(unwrapped_result, node, ctx)
-    unwrapped_result = ctx.execute_post_hooks(op_address, unwrapped_result)
-    result = maybe_wrap_to_torch_return_type(unwrapped_result, result)
+    result = trace_tensors(result, node, ctx)
+    result = ctx.execute_post_hooks(op_address, result)
     return result
 
 
@@ -216,3 +217,62 @@ def _collect_module_attrs_and_ignored_algorithms(
     elif op_name in OP_NAMES_REQUIRING_ATTRS_FROM_ARGS_KWARGS:
         layer_attrs = get_layer_attributes_from_args_and_kwargs(op_name, args, kwargs)
     return layer_attrs, ignored_algos
+
+
+@functools.partial(wrap_operator, operator_info=PatchedOperatorInfo(MODEL_CONST_OP_NAME, NamespaceTarget.EXTERNAL))
+def process_parameter_fn(x: torch.nn.Parameter) -> torch.nn.Parameter:
+    """
+    The identity binding function to trace and apply hooks to parameters.
+
+    :param x: A parameter.
+    :return: A parameter.
+    """
+    return x
+
+
+def _process_parameters(operator_inputs: OperatorInput, ctx: TracingContext) -> OperatorInput:
+    """
+    Process model parameters into operator inputs applying registered hooks to them. The function guarantees
+    that the parameter is processed once.
+
+    :param operator_inputs: The operator inputs.
+    :param ctx: The compression context.
+    :return: The operator inputs with processed parameters.
+    """
+    if ctx.in_parameter_trace:
+        return operator_inputs
+
+    in_op = getattr(ctx, "in_operator", False)
+    ctx.in_operator = False
+
+    for idx in range(len(operator_inputs)):
+        traced_parameter = operator_inputs[idx]
+        if not isinstance(traced_parameter, TracedParameter):
+            continue
+
+        processed_parameter = ctx.get_processed_parameter(traced_parameter.name)
+        if processed_parameter is not None:
+            operator_inputs[idx] = processed_parameter
+            continue
+
+        in_parameter_trace = getattr(ctx, "in_parameter_trace", False)
+        ctx.in_parameter_trace = True
+        processed_parameter = process_parameter_fn(traced_parameter)
+        operator_inputs[idx] = processed_parameter
+        ctx.register_processed_parameter(traced_parameter.name, processed_parameter)
+        ctx.in_parameter_trace = in_parameter_trace
+
+    ctx.in_operator = in_op
+    return operator_inputs
+
+
+def wrap_parameters(model: torch.nn.Module):
+    """
+    Wrap model parameters inplace by adding tracing capabilities.
+
+    :param model: A model.
+    """
+    ctx = get_current_context()
+    for name, param in model.named_parameters():
+        tt = TracedParameter.from_torch_parameter(param, name)
+        ctx.register_traced_tensor(tt)

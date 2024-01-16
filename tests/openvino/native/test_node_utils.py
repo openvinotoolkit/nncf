@@ -12,7 +12,7 @@
 import numpy as np
 import openvino.runtime as ov
 import pytest
-from openvino.runtime import opset9 as opset
+from openvino.runtime import opset13 as opset
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.graph import NNCFNode

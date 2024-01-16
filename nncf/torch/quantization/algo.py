@@ -344,7 +344,7 @@ class PropagationBasedQuantizerSetupGenerator(QuantizerSetupGeneratorBase):
     def generate_setup(self) -> SingleConfigQuantizerSetup:
         quantizable_module_nodes = self.get_quantizable_module_nodes()
 
-        insertion_point_graph = self._target_model.nncf.get_insertion_point_graph()
+        insertion_point_graph = self._target_model.nncf.get_original_insertion_point_graph()
         if self._debug_interface:
             self._debug_interface.visualize_insertion_point_graph(insertion_point_graph)
         from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
@@ -862,7 +862,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         minmax_values_for_range_init: Dict[QuantizationPointId, MinMaxTensorStatistic],
     ):
         tps_with_uncollected_stats = set()
-        for qp_id in quantizer_setup.quantization_points.keys():
+        for qp_id in quantizer_setup.quantization_points:
             if qp_id not in minmax_values_for_range_init:
                 tps_with_uncollected_stats.add(quantizer_setup.quantization_points[qp_id].insertion_point)
         if tps_with_uncollected_stats:

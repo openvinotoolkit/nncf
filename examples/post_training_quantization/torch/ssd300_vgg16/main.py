@@ -27,6 +27,7 @@ from PIL import Image
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from torchvision.models.detection.ssd import SSD
 from torchvision.models.detection.ssd import GeneralizedRCNNTransform
+from torchvision.models.detection.anchor_utils import DefaultBoxGenerator
 from nncf.common.logging.track_progress import track
 from functools import partial
 
@@ -118,7 +119,7 @@ def validate(model: torch.nn.Module, dataset: COCO128Dataset, device: torch.devi
     with torch.no_grad():
         for img, target in track(dataset, description="Validating"):
             prediction = model(img.to(device)[None])[0]
-            for k in prediction.keys():
+            for k in prediction:
                 prediction[k] = prediction[k].to(torch.device("cpu"))
             metric.update([prediction], [target])
     computed_metrics = metric.compute()
@@ -147,6 +148,7 @@ def main():
     # Disable NNCF tracing for some methods in order for the model to be properly traced by NNCF
     disable_tracing(GeneralizedRCNNTransform.normalize)
     disable_tracing(SSD.postprocess_detections)
+    disable_tracing(DefaultBoxGenerator.forward)
 
     # Quantize model
     calibration_dataset = nncf.Dataset(dataset, partial(transform_fn, device=device))

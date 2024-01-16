@@ -11,7 +11,7 @@
 import torch
 from torch import nn
 
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import SymmetricQuantizer
@@ -30,13 +30,12 @@ def check_fq_op(traced_graph: nn.Module, is_per_channel: bool):
     aten_op = "aten::fake_quantize_per_channel_affine" if is_per_channel else "aten::fake_quantize_per_tensor_affine"
     is_fq_node = False
     for graph_node in traced_graph.inlined_graph.nodes():
-        if graph_node.kind() == "prim::PythonOp":
-            if "Subgraph" in graph_node.attributeNames():
-                subgraph = getattr(graph_node, graph_node.kindOf("Subgraph"))("Subgraph")
-                for subgraph_node in subgraph.nodes():
-                    if subgraph_node.kind() == aten_op:
-                        is_fq_node = True
-                        break
+        if graph_node.kind() == "prim::PythonOp" and "Subgraph" in graph_node.attributeNames():
+            subgraph = getattr(graph_node, graph_node.kindOf("Subgraph"))("Subgraph")
+            for subgraph_node in subgraph.nodes():
+                if subgraph_node.kind() == aten_op:
+                    is_fq_node = True
+                    break
         if is_fq_node:
             break
 

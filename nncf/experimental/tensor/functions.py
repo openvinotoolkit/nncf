@@ -8,14 +8,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import contextlib
 import functools
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, List, Optional, Tuple, TypeVar, Union
 
 from nncf.experimental.tensor.enums import TensorDataType
 from nncf.experimental.tensor.enums import TensorDeviceType
 from nncf.experimental.tensor.tensor import Tensor
 from nncf.experimental.tensor.tensor import unwrap_tensor_data
+
+TypeInfo = TypeVar("TypeInfo")
 
 
 def _tensor_guard(func: callable):
@@ -428,6 +430,18 @@ def _binary_reverse_op_nowarn(a: Tensor, b: Union[Tensor, float], operator_fn: C
     return Tensor(_binary_reverse_op_nowarn(a.data, unwrap_tensor_data(b), operator_fn))
 
 
+@functools.singledispatch
+@_tensor_guard
+def finfo(a: Tensor) -> TypeInfo:
+    """
+    Returns machine limits for tensor type.
+
+    :param a: Tensor.
+    :return: TypeInfo.
+    """
+    return finfo(a.data)
+
+
 def _dispatch_list(fn: "functools._SingleDispatchCallable", tensor_list: List[Tensor], *args, **kwargs):
     """
     Dispatches the function to the type of the wrapped data of the first element in tensor_list.
@@ -443,10 +457,8 @@ def _dispatch_list(fn: "functools._SingleDispatchCallable", tensor_list: List[Te
 def _initialize_backends():
     import nncf.experimental.tensor.numpy_functions
 
-    try:
+    with contextlib.suppress(ImportError):
         import nncf.experimental.tensor.torch_functions  # noqa: F401
-    except ImportError:
-        pass
 
 
 _initialize_backends()

@@ -1,0 +1,26 @@
+strict digraph  {
+"0 Input" [id=0, type=Parameter];
+"1 Input/fc_output_0" [id=1, type=FakeConvert];
+"2 Conv_1" [id=2, type=Convolution];
+"3 Conv_2" [id=3, type=Convolution];
+"4 Result_1" [id=4, type=Result];
+"5 Result_2" [id=5, type=Result];
+"6 Conv_1/fc_weights_1" [id=6, type=FakeConvert];
+"7 Constant_7938" [id=7, type=Constant];
+"8 Constant_7937" [id=8, type=Constant];
+"9 Shared_conv_w" [id=9, type=Constant];
+"10 Constant_7935" [id=10, type=Constant];
+"11 Constant_7934" [id=11, type=Constant];
+"0 Input" -> "1 Input/fc_output_0"  [label="[1, 3, 3, 3]", style=solid];
+"1 Input/fc_output_0" -> "2 Conv_1"  [label="[1, 3, 3, 3]", style=solid];
+"1 Input/fc_output_0" -> "3 Conv_2"  [label="[1, 3, 3, 3]", style=solid];
+"2 Conv_1" -> "4 Result_1"  [label="[1, 3, 3, 3]", style=solid];
+"3 Conv_2" -> "5 Result_2"  [label="[1, 3, 3, 3]", style=solid];
+"6 Conv_1/fc_weights_1" -> "2 Conv_1"  [label="[3, 3, 1, 1]", style=solid];
+"6 Conv_1/fc_weights_1" -> "3 Conv_2"  [label="[3, 3, 1, 1]", style=solid];
+"7 Constant_7938" -> "6 Conv_1/fc_weights_1"  [label="[3, 1, 1, 1]", style=solid];
+"8 Constant_7937" -> "6 Conv_1/fc_weights_1"  [label="[3, 1, 1, 1]", style=solid];
+"9 Shared_conv_w" -> "6 Conv_1/fc_weights_1"  [label="[3, 3, 1, 1]", style=solid];
+"10 Constant_7935" -> "1 Input/fc_output_0"  [label="[]", style=solid];
+"11 Constant_7934" -> "1 Input/fc_output_0"  [label="[]", style=solid];
+}

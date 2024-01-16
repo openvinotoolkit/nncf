@@ -14,7 +14,7 @@ from abc import ABC
 from abc import abstractmethod
 from enum import Enum
 from functools import partial
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
@@ -28,7 +28,7 @@ from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.quantizers import get_num_levels
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerSpec
 from nncf.common.utils.debug import is_debug
@@ -46,6 +46,8 @@ from nncf.torch.quantization.quantize_functions import TuneRange
 from nncf.torch.quantization.quantize_functions import asymmetric_quantize
 from nncf.torch.quantization.quantize_functions import get_scale_zp_from_input_low_input_high
 from nncf.torch.quantization.quantize_functions import symmetric_quantize
+from nncf.torch.return_types import maybe_get_values_from_torch_return_type
+from nncf.torch.return_types import maybe_wrap_to_torch_return_type
 from nncf.torch.utils import get_flat_tensor_contents_string
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import is_tracing_state
@@ -318,7 +320,7 @@ class BaseQuantizer(nn.Module, ABC):
             def hook_fn(
                 self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs, module
             ):
-                for module_key in module.state_dict().keys():
+                for module_key in module.state_dict():
                     candidate = prefix + module_key
                     if candidate in state_dict:
                         module.initialized = True
@@ -368,7 +370,16 @@ class BaseQuantizer(nn.Module, ABC):
         self.enabled[0] = 0
         self.disable_gradients()
 
-    def forward(self, x):
+    def forward(self, x: Union[torch.Tensor, tuple]):
+        """
+        Method that unwraps return types if it is needed
+        before acutal quantization forward impl
+        """
+        x_unwrapped = maybe_get_values_from_torch_return_type(x)
+        result = self._forward_impl(x_unwrapped)
+        return maybe_wrap_to_torch_return_type(result, x)
+
+    def _forward_impl(self, x: torch.Tensor):
         if is_debug():
             self.call_count += 1
         # TODO: refactor to get rid of extra if's and calls on each forward

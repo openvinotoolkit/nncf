@@ -87,7 +87,7 @@ class PercentileTensorStatistic(TensorStatistic):
     def __eq__(self, other: "PercentileTensorStatistic", rtol=1e-9) -> bool:
         if Counter(self.percentile_vs_values_dict.keys()) != Counter(other.percentile_vs_values_dict.keys()):
             return False
-        for pct in self.percentile_vs_values_dict.keys():
+        for pct in self.percentile_vs_values_dict:
             if not self.tensor_eq(self.percentile_vs_values_dict[pct], other.percentile_vs_values_dict[pct]):
                 return False
         return True

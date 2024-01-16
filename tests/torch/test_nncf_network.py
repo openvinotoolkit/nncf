@@ -32,18 +32,20 @@ from nncf.torch.dynamic_graph.io_handling import FillerInputElement
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
+from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.layers import NNCFConv2d
+from nncf.torch.model_creation import wrap_model
 from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
-from nncf.torch.nncf_network import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint
 from nncf.torch.nncf_network import PTInsertionType
+from nncf.torch.quantization.external_quantizer import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from tests.torch.composite.test_sparsity_quantization import get_basic_sparsity_plus_quantization_config
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import TwoConvTestModel
@@ -495,7 +497,7 @@ def test_temporary_clean_view():
             == intermediate_model.nncf.get_original_graph().get_nodes_count()
         )
     sd_after_tmp_clean_view = sparse_quantized_model.state_dict()
-    for key in old_sd.keys():
+    for key in old_sd:
         assert key in sd_after_tmp_clean_view
         assert torch.all(torch.eq(sd_after_tmp_clean_view[key], old_sd[key]))
     sparse_quantized_model.nncf.rebuild_graph()
@@ -646,7 +648,7 @@ def test_class_compares_as_original(simple_net):
     assert simple_net.__class__ == SimplestModel
     assert SimplestModel == simple_net.__class__
     assert simple_net.__class__ == simple_net.__class__
-    assert not simple_net.__class__ != simple_net.__class__
+    assert simple_net.__class__ == simple_net.__class__
     assert simple_net.__class__ != ModelWithAttr
     assert ModelWithAttr != simple_net.__class__
 
@@ -858,19 +860,68 @@ class ModelWithMax(torch.nn.Module):
     def forward(self, x):
         x = torch.max(x, dim=-1, keepdim=True)
         assert isinstance(x, torch.return_types.max)
-        return x.values
+        v = x.values + 1
+        i = x.indices + 1
+        return v, i
 
 
-def test_torch_return_types_unwrapped_for_post_hook():
+def test_torch_return_type_traced():
     model = ModelWithMax()
     nncf_model = NNCFNetwork(model, FillerInputInfo([FillerInputElement(SimplestModel.INPUT_SIZE)]))
+
     node_to_op_address_mapping = nncf_model.nncf.get_node_to_op_address_mapping()
     insertion_point = PTInsertionPoint(
         TargetType.OPERATOR_POST_HOOK, node_to_op_address_mapping["ModelWithMax/max_0"], 0
     )
 
-    def fn_to_check_input_type(input):
-        assert isinstance(input, torch.Tensor)
+    visited_times = 0
+
+    def fn_to_check_input_type(input_):
+        assert isinstance(input_, torch.return_types.max)
+        for val in input_:
+            assert isinstance(val, TracedTensor)
+        nonlocal visited_times
+        visited_times += 1
+        return input_
 
     nncf_model.nncf.insert_at_point(insertion_point, [fn_to_check_input_type])
     nncf_model.nncf.rebuild_graph()
+    assert visited_times == 1
+
+
+class TestWhisperDecoderModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.embedding = torch.nn.Embedding(10, 3)
+
+    def forward(self, idx):
+        x = self.embedding(idx)
+        x = x @ torch.transpose(self.embedding.weight, 0, 1)
+        return x
+
+
+class ZeroHook(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.forward_calls_counter = 0
+
+    def forward(self, x):
+        self.forward_calls_counter += 1
+        return x * 0
+
+
+def test_insert_hook_after_parameter():
+    model = TestWhisperDecoderModel()
+    example_input = torch.randint(0, 9, (2,))
+    nncf_model = wrap_model(model, example_input, trace_parameters=True)
+    result = nncf_model(example_input)
+
+    hook = ZeroHook()
+    node_to_op_address_mapping = nncf_model.nncf.get_node_to_op_address_mapping()
+    insertion_point = PTInsertionPoint(TargetType.OPERATOR_POST_HOOK, node_to_op_address_mapping["embedding.weight"], 0)
+    nncf_model.nncf.insert_at_point(insertion_point, [hook])
+    result_with_hook = nncf_model(example_input)
+
+    assert hook.forward_calls_counter == 1
+    assert torch.sum(result.nonzero()) > 0
+    assert torch.sum(result_with_hook.nonzero()) == 0

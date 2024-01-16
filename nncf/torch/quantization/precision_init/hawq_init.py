@@ -156,7 +156,7 @@ class TraceOrderBitwidthMatcher:
         optimized_observed_qconfs: List[List[QuantizerConfig]] = []
         for qconf_oset in observed_qconfs:
             variants: List[List[QuantizerConfig]] = []
-            for qconf in qconf_oset.keys():
+            for qconf in qconf_oset:
                 variants.append(list(filter(qconf.is_a_bitwidth_variant, qconf_oset.keys())))
             max_bw_varying_variant = max(variants, key=len)
             other_qconfs = list(filter(lambda x: x not in max_bw_varying_variant, qconf_oset.keys()))

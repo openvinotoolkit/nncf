@@ -17,6 +17,7 @@ from typing import Any, Callable, Dict, List, NoReturn, Optional, Tuple, TypeVar
 import numpy as np
 import torch
 from pymoo.algorithms.moo.nsga2 import NSGA2
+from pymoo.algorithms.moo.rnsga2 import RNSGA2
 from pymoo.core.problem import Problem
 from pymoo.operators.crossover.sbx import SBX
 from pymoo.operators.mutation.pm import PM
@@ -31,6 +32,7 @@ from nncf.common.logging import nncf_logger
 from nncf.common.plotting import noninteractive_plotting
 from nncf.common.utils.decorators import skip_if_dependency_unavailable
 from nncf.common.utils.os import safe_open
+from nncf.common.utils.registry import Registry
 from nncf.config.extractors import get_bn_adapt_algo_kwargs
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_controller import ElasticityController
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import SubnetConfig
@@ -41,6 +43,8 @@ from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator_handler import Ac
 from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator_handler import BaseEvaluatorHandler
 from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator_handler import EfficiencyEvaluatorHandler
 from nncf.torch.nncf_network import NNCFNetwork
+
+SEARCH_ALGORITHMS = Registry("search algorithm", add_name_as_attr=True)
 
 DataLoaderType = TypeVar("DataLoaderType")
 TModel = TypeVar("TModel")
@@ -59,6 +63,7 @@ class FixIntegerRandomSampling(IntegerRandomSampling):
 
 class EvolutionaryAlgorithms(Enum):
     NSGA2 = "NSGA2"
+    RNSGA2 = "RNSGA2"
 
 
 class SearchParams:
@@ -139,9 +144,78 @@ class SearchParams:
         )
 
 
+class RNSGA2SearchParams(SearchParams):
+    """
+    Storage class for search parameters of RNSGA-II algorithm.
+    """
+
+    def __init__(
+        self,
+        aspiration_points: np.ndarray,
+        epsilon: float,
+        weights: np.ndarray,
+        extreme_points_as_ref_points: bool,
+        **kwargs,
+    ):
+        """
+        Initializes storage class for search parameters of RNSGA-II.
+
+        :param aspiration_points: Aspiration or reference points for RNSGA-II.
+        :param epsilon: epsilon distance of surviving solutions for RNSGA-II .
+        :param weights: weights used by RNSGA-II.
+        :param extreme_points_as_ref_points: Find extreme points and use them as aspiration points.
+        """
+        super().__init__(**kwargs)
+        self.aspiration_points = aspiration_points
+        self.epsilon = epsilon
+        self.weights = weights
+        self.extreme_points_as_ref_points = extreme_points_as_ref_points
+
+    @classmethod
+    def from_dict(cls, search_config: Dict[str, Any]) -> "RNSGA2SearchParams":
+        """
+        Initializes search params storage class from Dict.
+
+        :param search_config: Dictionary with search configuration.
+        :return: Instance of the storage class
+        """
+        num_evals = search_config.get("num_evals", 3000)
+        num_constraints = search_config.get("num_constraints", 0)
+        population = search_config.get("population", 40)
+        seed = search_config.get("seed", 0)
+        crossover_prob = search_config.get("crossover_prob", 0.9)
+        crossover_eta = search_config.get("crossover_eta", 10.0)
+        mutation_prob = search_config.get("mutation_prob", 0.02)
+        mutation_eta = search_config.get("mutation_eta", 3.0)
+        acc_delta = search_config.get("acc_delta", 1)
+        ref_acc = search_config.get("ref_acc", -1)
+        aspiration_points = search_config.get("aspiration_points", [[0, 0]])
+        aspiration_points = np.array(aspiration_points)
+        epsilon = search_config.get("epsilon", 0.001)
+        weights = search_config.get("weights")
+        extreme_points_as_ref_points = search_config.get("extreme_points_as_ref_points", False)
+
+        return cls(
+            aspiration_points,
+            epsilon,
+            weights,
+            extreme_points_as_ref_points,
+            num_evals=num_evals,
+            num_constraints=num_constraints,
+            population=population,
+            seed=seed,
+            crossover_prob=crossover_prob,
+            crossover_eta=crossover_eta,
+            mutation_prob=mutation_prob,
+            mutation_eta=mutation_eta,
+            acc_delta=acc_delta,
+            ref_acc=ref_acc,
+        )
+
+
 class BaseSearchAlgorithm:
     """
-    Base class for search algorithms. It contains the evaluators used by search approches.
+    Base class for search algorithms. It contains the evaluators used by search approaches.
     """
 
     def __init__(self):
@@ -160,6 +234,28 @@ class BaseSearchAlgorithm:
         self.best_vals = None
         self.best_pair_objective = float("inf")
         self._tb = None
+
+    @classmethod
+    def from_config(cls, model, elasticity_ctrl, nncf_config):
+        """
+        Construct a search algorithm
+        :param model: Super-Network
+        :param elasticity_ctrl: Interface to manage elasticity of super-network
+        :param nncf_config: Dict with configuration for search algorithm
+        :return: instance of the search algorithm.
+        """
+        search_config = nncf_config.get("bootstrapNAS", {}).get("search", {})
+        algo_name = search_config.get("algorithm")
+        algo_cls = SEARCH_ALGORITHMS.get(algo_name)
+        if not algo_name:
+            raise NotImplementedError(f"Evolutionary Search Algorithm {algo_name} not implemented")
+        return algo_cls(model, elasticity_ctrl, nncf_config)
+
+    @classmethod
+    def from_checkpoint(
+        cls, model: NNCFNetwork, elasticity_ctrl: ElasticityController, bn_adapt_args, resuming_checkpoint_path: str
+    ) -> "BaseSearchAlgorithm":
+        raise NotImplementedError("Evolutionary Search Algorithm from checkpoint not implemented")
 
     @property
     def search_records(self):
@@ -190,7 +286,8 @@ class BaseSearchAlgorithm:
                 writer.writerow(record)
 
 
-class SearchAlgorithm(BaseSearchAlgorithm):
+@SEARCH_ALGORITHMS.register(EvolutionaryAlgorithms.NSGA2.value)
+class NSGA2SearchAlgorithm(BaseSearchAlgorithm):
     def __init__(
         self, model: NNCFNetwork, elasticity_ctrl: ElasticityController, nncf_config: NNCFConfig, verbose=True
     ):
@@ -212,28 +309,24 @@ class SearchAlgorithm(BaseSearchAlgorithm):
         self._verbose = verbose
         self._top1_accuracy_validation_fn = None
         self._val_loader = None
-        evo_algo = search_config["algorithm"]
-        if evo_algo == EvolutionaryAlgorithms.NSGA2.value:
-            self._algorithm = NSGA2(
-                pop_size=self.search_params.population,
-                sampling=FixIntegerRandomSampling(),
-                crossover=SBX(
-                    prob=self.search_params.crossover_prob,
-                    eta=self.search_params.crossover_eta,
-                    vtype=float,
-                    repair=RoundingRepair(),
-                ),
-                mutation=PM(
-                    prob=self.search_params.mutation_prob,
-                    eta=self.search_params.mutation_eta,
-                    vtype=float,
-                    repair=RoundingRepair(),
-                ),
-                eliminate_duplicates=True,
-                save_history=False,
-            )
-        else:
-            raise NotImplementedError(f"Evolutionary Search Algorithm {evo_algo} not implemented")
+        self._algorithm = NSGA2(
+            pop_size=self.search_params.population,
+            sampling=FixIntegerRandomSampling(),
+            crossover=SBX(
+                prob=self.search_params.crossover_prob,
+                eta=self.search_params.crossover_eta,
+                vtype=float,
+                repair=RoundingRepair(),
+            ),
+            mutation=PM(
+                prob=self.search_params.mutation_prob,
+                eta=self.search_params.mutation_eta,
+                vtype=float,
+                repair=RoundingRepair(),
+            ),
+            eliminate_duplicates=True,
+            save_history=False,
+        )
         self._num_vars = 0
         self._vars_lower = 0
         self._vars_upper = []
@@ -303,23 +396,6 @@ class SearchAlgorithm(BaseSearchAlgorithm):
         :return:
         """
         return self._num_vars
-
-    @classmethod
-    def from_config(cls, model, elasticity_ctrl, nncf_config):
-        """
-        Construct a search algorithm from a
-        :param model: Super-Network
-        :param elasticity_ctrl: Interface to manage elasticity of super-network
-        :param nncf_config: Dict with configuration for search algorithm
-        :return: instance of the search algorithm.
-        """
-        return cls(model, elasticity_ctrl, nncf_config)
-
-    @classmethod
-    def from_checkpoint(
-        cls, model: NNCFNetwork, elasticity_ctrl: ElasticityController, bn_adapt_args, resuming_checkpoint_path: str
-    ) -> "SearchAlgorithm":
-        raise NotImplementedError
 
     def run(
         self,
@@ -445,7 +521,7 @@ class SearchAlgorithm(BaseSearchAlgorithm):
                     linewidth=2.5,
                 )
             plt.legend()
-            plt.title("Search Progression")
+            plt.title("Search Progression (NSGA2)")
             plt.xlabel(self.efficiency_evaluator_handler.name)
             plt.ylabel(self.accuracy_evaluator_handler.name)
             plt.savefig(f"{self._log_dir}/{filename}.png")
@@ -478,12 +554,114 @@ class SearchAlgorithm(BaseSearchAlgorithm):
         return self._accuracy_evaluator_handler
 
 
+@SEARCH_ALGORITHMS.register(EvolutionaryAlgorithms.RNSGA2.value)
+class RNSGA2SearchAlgorithm(NSGA2SearchAlgorithm):
+    def __init__(
+        self, model: NNCFNetwork, elasticity_ctrl: ElasticityController, nncf_config: NNCFConfig, verbose=True
+    ):
+        """
+        Initializes search algorithm
+
+        :param model: Super-network
+        :param elasticity_ctrl: interface to manage the elasticity of the super-network.
+        :param nncf_config: Configuration file.
+        :param verbose:
+        """
+        super().__init__(model, elasticity_ctrl, nncf_config, verbose)
+        search_config = nncf_config.get("bootstrapNAS", {}).get("search", {})
+        self.search_params = RNSGA2SearchParams.from_dict(search_config)
+        self._algorithm = RNSGA2(
+            ref_points=self.search_params.aspiration_points,
+            pop_size=self.search_params.population,
+            epsilon=self.search_params.epsilon,
+            normalization="front",
+            extreme_points_as_reference_points=self.search_params.extreme_points_as_ref_points,
+            sampling=FixIntegerRandomSampling(),
+            crossover=SBX(
+                prob=self.search_params.crossover_prob,
+                eta=self.search_params.crossover_eta,
+                vtype=float,
+                repair=RoundingRepair(),
+            ),
+            mutation=PM(
+                prob=self.search_params.mutation_prob,
+                eta=self.search_params.mutation_eta,
+                vtype=float,
+                repair=RoundingRepair(),
+            ),
+            weights=self.search_params.weights,
+            eliminate_duplicates=True,
+            save_history=False,
+        )
+
+    @skip_if_dependency_unavailable(dependencies=["matplotlib.pyplot"])
+    def visualize_search_progression(self, filename="search_progression") -> NoReturn:
+        """
+        Visualizes search progression and saves the resulting figure.
+
+        :param filename:
+        :return:
+        """
+        import matplotlib.pyplot as plt
+
+        with noninteractive_plotting():
+            plt.figure()
+            colormap = plt.cm.get_cmap("viridis")
+            col = range(int(self.search_params.num_evals / self.search_params.population))
+            for i in range(0, len(self.search_records), self.search_params.population):
+                c = [col[int(i / self.search_params.population)]] * len(
+                    self.search_records[i : i + self.search_params.population]
+                )
+                plt.scatter(
+                    [abs(row[2]) for row in self.search_records][i : i + self.search_params.population],
+                    [abs(row[4]) for row in self.search_records][i : i + self.search_params.population],
+                    s=9,
+                    c=c,
+                    alpha=0.5,
+                    marker="D",
+                    cmap=colormap,
+                )
+            plt.scatter(
+                *tuple(abs(ev.input_model_value) for ev in self.evaluator_handlers),
+                marker="s",
+                s=120,
+                color="blue",
+                label="Input Model",
+                edgecolors="black",
+            )
+            if None not in self.best_vals:
+                plt.scatter(
+                    *tuple(abs(val) for val in self.best_vals),
+                    marker="o",
+                    s=120,
+                    color="yellow",
+                    label="BootstrapNAS A",
+                    edgecolors="black",
+                    linewidth=2.5,
+                )
+            for point in self._algorithm.survival.ref_points:
+                plt.scatter(
+                    point[0],
+                    point[1],
+                    marker="^",
+                    color="gray",
+                    label="Reference Points",
+                    edgecolors="black",
+                    linewidth=2.5,
+                )
+            plt.legend()
+            plt.title("Search Progression (RNSGA2)")
+            plt.xlabel(self.efficiency_evaluator_handler.name)
+            plt.ylabel(self.accuracy_evaluator_handler.name)
+            plt.savefig(f"{self._log_dir}/{filename}.png")
+
+
 class SearchProblem(Problem):
     """
     Pymoo problem with design variables and evaluation methods.
     """
 
-    def __init__(self, search: SearchAlgorithm):
+    def __init__(self, search: BaseSearchAlgorithm):
         """
         Initializes search problem
 
@@ -561,17 +739,14 @@ class SearchProblem(Problem):
         """
         acc_within_tolerance = self._accuracy_evaluator_handler.current_value
         pair_objective = self._efficiency_evaluator_handler.current_value
-        if acc_within_tolerance < (self._lower_bound_acc * -1.0):
-            if pair_objective < self._search.best_pair_objective:
-                self._search.best_pair_objective = pair_objective
-                self._search.best_config = config
-                self._search.best_vals = [
-                    evaluator_handler.current_value for evaluator_handler in self._evaluator_handlers
-                ]
-                checkpoint_path = Path(self._search.checkpoint_save_dir, "subnetwork_best.pth")
-                checkpoint = {
-                    "best_acc1": acc_within_tolerance * -1.0,
-                    "best_efficiency": pair_objective,
-                    "subnet_config": config,
-                }
-                torch.save(checkpoint, checkpoint_path)
+        if acc_within_tolerance < (self._lower_bound_acc * -1.0) and pair_objective < self._search.best_pair_objective:
+            self._search.best_pair_objective = pair_objective
+            self._search.best_config = config
+            self._search.best_vals = [evaluator_handler.current_value for evaluator_handler in self._evaluator_handlers]
+            checkpoint_path = Path(self._search.checkpoint_save_dir, "subnetwork_best.pth")
+            checkpoint = {
+                "best_acc1": acc_within_tolerance * -1.0,
+                "best_efficiency": pair_objective,
+                "subnet_config": config,
+            }
+            torch.save(checkpoint, checkpoint_path)

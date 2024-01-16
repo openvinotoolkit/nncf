@@ -201,11 +201,12 @@ class NonZeroLinearModel(nn.Module):
 
 
 class SplittedModel(nn.Module):
-    INPUT_SIZE = [1, 3, 28, 28]
+    INPUT_SIZE = [1, 2, 28, 28]
 
     def __init__(self) -> None:
         super().__init__()
         with set_torch_seed():
+            self.concat_1_data = torch.randn((1, 1, 28, 28), dtype=torch.float32)
             self.conv_1 = self._build_conv(3, 12, 3)
             self.add_1_data = torch.randn((1, 12, 26, 26), dtype=torch.float32)
             self.maxpool_1 = torch.nn.MaxPool2d(1)
@@ -246,6 +247,7 @@ class SplittedModel(nn.Module):
         return conv
 
     def forward(self, x):
+        x = torch.concat([self.concat_1_data, x], 1)
         x = self.conv_1(x)
         x = F.relu(x)
         x = torch.add(x, self.add_1_data)

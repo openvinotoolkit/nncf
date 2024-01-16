@@ -24,6 +24,7 @@ from nncf.common.utils.os import get_available_cpu_count
 from nncf.common.utils.os import get_available_memory_amount
 from nncf.data.dataset import Dataset
 from nncf.parameters import DropType
+from nncf.quantization.advanced_parameters import RestoreMode
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResults
@@ -145,6 +146,7 @@ class QuantizationAccuracyRestorer:
         max_drop: float = 0.01,
         drop_type: DropType = DropType.ABSOLUTE,
         num_ranking_workers: Optional[int] = None,
+        restore_mode: RestoreMode = RestoreMode.ACTIVATIONS_AND_WEIGHTS,
     ):
         """
         :param ranking_subset_size: The number of data items that will be selected from
@@ -156,12 +158,14 @@ class QuantizationAccuracyRestorer:
             calculated.
         :param num_ranking_workers: The number of parallel workers that are used to rank
             quantization operations.
+        :param restore_mode: Restore mode.
         """
         self.ranking_subset_size = ranking_subset_size
         self.max_num_iterations = max_num_iterations
         self.max_drop = max_drop
         self.drop_type = drop_type
         self.num_ranking_workers = num_ranking_workers
+        self.restore_mode = restore_mode
 
     def apply(
         self,
@@ -300,7 +304,12 @@ class QuantizationAccuracyRestorer:
             # greedy removal of the FQ node with the highest importance score
             current_group = ranked_groups.pop()
             current_model = revert_operations_to_floating_point_precision(
-                current_group.operations, current_group.quantizers, previous_model, quantized_model_graph
+                current_group.operations,
+                current_group.quantizers,
+                previous_model,
+                quantized_model_graph,
+                self.restore_mode,
+                algo_backend.get_op_with_weights_metatypes(),
             )
             report.removed_groups.append(current_group)
 

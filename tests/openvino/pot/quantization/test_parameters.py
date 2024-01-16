@@ -9,12 +9,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import pytest
-from openvino.tools.pot.algorithms.quantization.utils import load_hardware_config
 
 from nncf.parameters import TargetDevice
+
+utils_module = pytest.importorskip("openvino.tools.pot.algorithms.quantization.utils")
 
 
 @pytest.mark.parametrize("target_device", [TargetDevice.ANY, TargetDevice.CPU, TargetDevice.CPU_SPR, TargetDevice.GPU])
 def test_target_device(target_device):
     config = {"target_device": target_device.value}
-    assert load_hardware_config(config)
+    assert utils_module.load_hardware_config(config)

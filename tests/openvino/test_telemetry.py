@@ -12,7 +12,7 @@ from openvino.runtime import Model
 from openvino.runtime import Shape
 from openvino.runtime import Type
 from openvino.runtime import op
-from openvino.runtime import opset8
+from openvino.runtime import opset13 as opset
 
 import nncf
 from nncf import Dataset
@@ -25,7 +25,7 @@ INPUT_SHAPE = [2, 1, 1, 1]
 def get_mock_model() -> Model:
     param_node = op.Parameter(Type.f32, Shape(INPUT_SHAPE))
     softmax_axis = 1
-    softmax_node = opset8.softmax(param_node, softmax_axis)
+    softmax_node = opset.softmax(param_node, softmax_axis)
     return Model(softmax_node, [param_node], "mock")
 
 

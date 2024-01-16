@@ -621,7 +621,7 @@ class FilterPruningController(BasePruningAlgoController):
 
     def compression_stage(self) -> CompressionStage:
         target_pruning_level = self.scheduler.target_level
-        actual_pruning_level = self._pruning_level
+        actual_pruning_level = self.compression_rate
         if actual_pruning_level == 0:
             return CompressionStage.UNCOMPRESSED
         if (
