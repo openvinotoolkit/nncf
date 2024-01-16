@@ -459,9 +459,6 @@ class TestSanitySample:
             "--cpu-only": True,
         }
 
-        # to prevent starting a not closed mlflow session due to memory leak of config and SafeMLFLow happens with a
-        # mocked train function
-        mocker.patch("examples.torch.common.utils.SafeMLFLow")
         arg_list = arg_list_from_arg_dict(args)
         if config["sample_type"] == "classification":
             import examples.torch.classification.main as sample

@@ -59,10 +59,6 @@ class NASSampleValidator(SanitySampleValidator):
         self._all_spies = []
 
     def setup_spy(self, mocker):
-        # Need to mock SafeMLFLow to prevent starting a not closed mlflow session due to memory leak of config and
-        # SafeMLFLow, which happens with a mocked train function
-        self._sample_handler.mock_mlflow(mocker)
-
         self._all_spies = [
             mocker.spy(ElasticWidthHandler, "get_random_config"),
             mocker.spy(ElasticWidthHandler, "reorganize_weights"),

@@ -30,7 +30,6 @@ from examples.torch.common.execution import get_execution_mode
 from examples.torch.common.execution import set_seed
 from examples.torch.common.execution import start_worker
 from examples.torch.common.model_loader import load_model
-from examples.torch.common.utils import SafeMLFLow
 from examples.torch.common.utils import configure_device
 from examples.torch.common.utils import configure_logging
 from examples.torch.common.utils import create_code_snapshot
@@ -93,7 +92,6 @@ def main(argv):
 
 def main_worker(current_gpu, config: SampleConfig):
     configure_device(current_gpu, config)
-    config.mlflow = SafeMLFLow(config)
     if is_main_process():
         configure_logging(logger, config)
         print_args(config)
