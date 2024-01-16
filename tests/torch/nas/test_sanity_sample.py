@@ -16,10 +16,12 @@ from typing import Dict
 import pytest
 
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
+from nncf.experimental.torch.nas.bootstrapNAS import BaseSearchAlgorithm
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_depth import ElasticDepthHandler
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthHandler
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_controller import ElasticityController
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import MultiElasticityHandler
+from nncf.experimental.torch.nas.bootstrapNAS.search.search import NSGA2SearchAlgorithm
 from nncf.experimental.torch.nas.bootstrapNAS.training.progressive_shrinking_controller import (
     ProgressiveShrinkingController,
 )
@@ -96,6 +98,11 @@ class NASSearchSampleValidator(NASSampleValidator):
         super().setup_spy(mocker)
         self._all_spies = [
             mocker.spy(ElasticityController, "load_state"),
+            mocker.spy(BaseSearchAlgorithm, "from_config"),
+            mocker.spy(BaseSearchAlgorithm, "search_progression_to_csv"),
+            mocker.spy(NSGA2SearchAlgorithm, "run"),
+            mocker.spy(NSGA2SearchAlgorithm, "visualize_search_progression"),
+            mocker.spy(NSGA2SearchAlgorithm, "evaluators_to_csv"),
             mocker.spy(MultiElasticityHandler, "activate_subnet_for_config"),
         ]
 
