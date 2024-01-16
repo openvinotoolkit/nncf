@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import contextlib
 import functools
 from typing import Callable, List, Optional, Tuple, TypeVar, Union
 
@@ -457,10 +457,8 @@ def _dispatch_list(fn: "functools._SingleDispatchCallable", tensor_list: List[Te
 def _initialize_backends():
     import nncf.experimental.tensor.numpy_functions
 
-    try:
+    with contextlib.suppress(ImportError):
         import nncf.experimental.tensor.torch_functions  # noqa: F401
-    except ImportError:
-        pass
 
 
 _initialize_backends()

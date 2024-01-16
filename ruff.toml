@@ -1,10 +1,18 @@
 line-length = 120
 ignore-init-module-imports = true
-ignore = ["E731"]
+ignore = [
+    "E731",  # lambda-assignment
+    "SIM108",  # if-else-block-instead-of-if-exp
+    "SIM110",  # reimplemented-builtin
+    "SIM117",  # multiple-with-statements
+]
 select = [
-    "E", # pycodestyle rules
-    "F", # pyflakes rules
-    "CPY001"  # copyright check
+    "E",  # pycodestyle rules
+    "F",  # pyflakes rules
+    "CPY001",  # copyright check
+]
+extend-select = [
+    "SIM",  # https://pypi.org/project/flake8-simplify
 ]
 exclude = ["nncf/tensorflow/__init__.py"]
 

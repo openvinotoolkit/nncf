@@ -862,7 +862,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         minmax_values_for_range_init: Dict[QuantizationPointId, MinMaxTensorStatistic],
     ):
         tps_with_uncollected_stats = set()
-        for qp_id in quantizer_setup.quantization_points.keys():
+        for qp_id in quantizer_setup.quantization_points:
             if qp_id not in minmax_values_for_range_init:
                 tps_with_uncollected_stats.add(quantizer_setup.quantization_points[qp_id].insertion_point)
         if tps_with_uncollected_stats:

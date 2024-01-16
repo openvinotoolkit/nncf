@@ -157,6 +157,6 @@ class COCODataset(data.Dataset):
 
     def get_img_names(self):
         img_names = []
-        for full_name in self.annotation.keys():
+        for full_name in self.annotation:
             img_names.append(full_name[full_name.rfind("/") + 1 : full_name.rfind(".")])
         return img_names

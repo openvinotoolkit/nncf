@@ -18,9 +18,8 @@ from nncf.torch.tensor import PTNNCFTensor
 
 @pytest.mark.parametrize("device", (torch.device("cpu"), torch.device("cuda")))
 def test_ones(device):
-    if not torch.cuda.is_available():
-        if device == torch.device("cuda"):
-            pytest.skip("There are no available CUDA devices")
+    if not torch.cuda.is_available() and device == torch.device("cuda"):
+        pytest.skip("There are no available CUDA devices")
     shape = [1, 3, 10, 100]
     tensor = PTNNCFPruningTensorProcessor.ones(shape, device)
     assert torch.is_tensor(tensor.tensor)

@@ -1,5 +1,41 @@
 # Release Notes
 
+## New in Release 2.8.0
+
+Post-training Quantization:
+
+- Breaking changes:
+  - `nncf.quantize` signature has been changed to add `mode: Optional[nncf.QuantizationMode] = None` as its 3-rd argument, between the original `calibration_dataset` and `preset` arguments.
+  - (Common) `nncf.common.quantization.structs.QuantizationMode` has been renamed to `nncf.common.quantization.structs.QuantizationScheme`
+- General:
+  - (OpenVINO) Changed default OpenVINO opset from 9 to 13.
+- Features:
+  - (OpenVINO) Added 4-bit data-aware weights compression. For that `dataset` optional parameter has been added to `nncf.compress_weights()` and can be used to minimize accuracy degradation of compressed models (note that this option increases the compression time).
+  - (Common) Renamed the `nncf.CompressWeightsMode.INT8` to `nncf.CompressWeightsMode.INT8_ASYM` and introduce `nncf.CompressWeightsMode.INT8_SYM` that can be efficiently used with dynamic 8-bit quantization of activations.
+  The original `nncf.CompressWeightsMode.INT8` enum value is now deprecated.
+  - (OpenVINO) Added support for quantizing the ScaledDotProductAttention operation from OpenVINO opset 13.
+  - (OpenVINO) Added FP8 quantization support via `nncf.QuantizationMode.FP8_E4M3` and `nncf.QuantizationMode.FP8_E5M2` enum values, invoked via passing one of these values as an optional `mode` argument to `nncf.quantize`. Currently, OpenVINO supports inference of FP8-quantized models in reference mode with no performance benefits and can be used for accuracy projections.
+  - (Common) Post-training Quantization with Accuracy Control - `nncf.quantize_with_accuracy_control()` has been extended by `restore_mode` optional parameter to revert weights to int8 instead of the original precision.
+  This parameter helps to reduce the size of the quantized model and improves its performance.
+  By default, it's disabled and model weights are reverted to the original precision in `nncf.quantize_with_accuracy_control()`.
+  - (Common) Added an `all_layers: Optional[bool] = None` argument to `nncf.compress_weights` to indicate whether embeddings and last layers of the model should be compressed to a primary precision. This is relevant to 4-bit quantization only.
+  - (Common) Added a `sensitivity_metric: Optional[nncf.parameters.SensitivityMetric] = None` argument to `nncf.compress_weights` for finer control over the sensitivity metric for assigning quantization precision to layers.
+  Defaults to weight quantization error if a dataset is not provided for weight compression and to maximum variance of the layers' inputs multiplied by inverted 8-bit quantization noise if a dataset is provided.
+  By default, the backup precision is assigned for the embeddings and last layers.
+- Fixes:
+  - (OpenVINO) Models with embeddings (e.g. `gpt-2`, `stable-diffusion-v1-5`, `stable-diffusion-v2-1`, `opt-6.7b`, `falcon-7b`, `bloomz-7b1`) are now more accurately quantized.
+  - (PyTorch) `nncf.strip(..., do_copy=True)` now actually returns a deepcopy (stripped) of the model object.
+  - (PyTorch) Post-hooks can now be set up on operations that return `torch.return_type` (such as `torch.max`).
+  - (PyTorch) Improved dynamic graph tracing for various tensor operations from `torch` namespace.
+  - (PyTorch) More robust handling of models with disjoint traced graphs when applying PTQ.
+- Improvements:
+  - Reformatted the tutorials section in the top-level `README.md` for better readability.
+- Deprecations/Removals:
+  - (Common) The original `nncf.CompressWeightsMode.INT8` enum value is now deprecated.
+  - (PyTorch) The Git patch for integration with HuggingFace `transformers` repository is marked as deprecated and will be removed in a future release.
+  Developers are advised to use [optimum-intel](https://github.com/huggingface/optimum-intel) instead.
+  - Dockerfiles in the NNCF Git repository are deprecated and will be removed in a future release.
+
 ## New in Release 2.7.0
 
 Post-training Quantization:

@@ -325,7 +325,7 @@ class TestInsertionPointGraph:
             succs = list(ip_graph.successors(node_key))
             assert len(preds) != 0 or len(succs) != 0
 
-        for from_node_key, to_node_key in ip_graph.edges.keys():
+        for from_node_key, to_node_key in ip_graph.edges:
             assert from_node_key in ip_graph.nodes
             assert to_node_key in ip_graph.nodes
 
@@ -453,15 +453,15 @@ class TestInsertionPointGraph:
 
         load_graph = read_dot_graph(str(path_to_dot_file))
 
-        for key in load_graph.nodes.keys():
+        for key in load_graph.nodes:
             key.replace(r"\\n", r"\n")  # Somehow pydot mangles the \n characters while writing a .dot file
 
-        sanitized_loaded_keys = [key.replace("\\n", "\n") for key in load_graph.nodes.keys()]
+        sanitized_loaded_keys = [key.replace("\\n", "\n") for key in load_graph.nodes]
         sanitized_loaded_edges = [
             (u.replace("\\n", "\n"), v.replace("\\n", "\n")) for u, v in nx.DiGraph(load_graph).edges
         ]
 
-        assert Counter(sanitized_loaded_keys) == Counter(list(merged_ip_graph.nodes.keys()))
+        assert Counter(sanitized_loaded_keys) == Counter(list(merged_ip_graph.nodes))
         assert Counter(sanitized_loaded_edges) == Counter(list(merged_ip_graph.edges))
 
 
@@ -805,7 +805,7 @@ def _add_and_test_hook_depth_one(test_params: NestedHooksTestCase, pre_hook_op, 
     # Check order of calls
     GLOBAL_LIST.clear()
     transformed_model.nncf.rebuild_graph()
-    assert GLOBAL_LIST == ref
+    assert ref == GLOBAL_LIST
 
     # Check hooks are kept correctly
     checker = HookChecker(transformed_model, "m")
@@ -848,7 +848,7 @@ def test_nested_pre_post_hooks(test_params: NestedHooksTestCase, ref_depth_one, 
     # Check order of calls
     GLOBAL_LIST.clear()
     model_with_nested_hooks.nncf.rebuild_graph()
-    assert GLOBAL_LIST == ref_depth_two
+    assert ref_depth_two == GLOBAL_LIST
 
     # Check hooks are kept correctly
     checker = HookChecker(model_with_nested_hooks, "m")

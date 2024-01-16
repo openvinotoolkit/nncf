@@ -283,7 +283,7 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
                     node_name = str(node[NNCFNode.NODE_NAME_ATTR])
 
                     matched = False
-                    for aq_key in self._compressed_model.nncf.external_quantizers.keys():
+                    for aq_key in self._compressed_model.nncf.external_quantizers:
                         if node_name in aq_key:
                             matched = True
                             break

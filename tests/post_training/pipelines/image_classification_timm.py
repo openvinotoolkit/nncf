@@ -14,10 +14,9 @@ import os
 
 import numpy as np
 import onnx
-import openvino.runtime as ov
+import openvino as ov
 import timm
 import torch
-from openvino.tools.mo import convert_model
 from sklearn.metrics import accuracy_score
 from timm.data.transforms_factory import transforms_imagenet_eval
 from timm.layers.config import set_fused_attn
@@ -59,7 +58,7 @@ class ImageClassificationTimm(BaseTestPipeline):
             self.input_name = self.model.graph.input[0].name
 
         if self.backend in OV_BACKENDS + [BackendType.FP32]:
-            self.model = convert_model(timm_model, example_input=self.dummy_tensor, input_shape=self.input_size)
+            self.model = ov.convert_model(timm_model, example_input=self.dummy_tensor, input=self.input_size)
             self.input_name = list(inp.get_any_name() for inp in self.model.inputs)[0]
 
         self._dump_model_fp32()
@@ -72,12 +71,12 @@ class ImageClassificationTimm(BaseTestPipeline):
     def _dump_model_fp32(self) -> None:
         """Dump IRs of fp32 models, to help debugging."""
         if self.backend in PT_BACKENDS:
-            ov_model = convert_model(self.model, example_input=self.dummy_tensor, input_shape=self.input_size)
+            ov_model = ov.convert_model(self.model, example_input=self.dummy_tensor, input=self.input_size)
             ov.serialize(ov_model, self.output_model_dir / "model_fp32.xml")
 
         if self.backend == BackendType.ONNX:
             onnx_path = self.output_model_dir / "model_fp32.onnx"
-            ov_model = convert_model(onnx_path)
+            ov_model = ov.convert_model(onnx_path)
             ov.serialize(ov_model, self.output_model_dir / "model_fp32.xml")
 
         if self.backend in OV_BACKENDS + [BackendType.FP32]:

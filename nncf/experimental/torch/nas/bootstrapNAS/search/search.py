@@ -739,17 +739,14 @@ class SearchProblem(Problem):
         """
         acc_within_tolerance = self._accuracy_evaluator_handler.current_value
         pair_objective = self._efficiency_evaluator_handler.current_value
-        if acc_within_tolerance < (self._lower_bound_acc * -1.0):
-            if pair_objective < self._search.best_pair_objective:
-                self._search.best_pair_objective = pair_objective
-                self._search.best_config = config
-                self._search.best_vals = [
-                    evaluator_handler.current_value for evaluator_handler in self._evaluator_handlers
-                ]
-                checkpoint_path = Path(self._search.checkpoint_save_dir, "subnetwork_best.pth")
-                checkpoint = {
-                    "best_acc1": acc_within_tolerance * -1.0,
-                    "best_efficiency": pair_objective,
-                    "subnet_config": config,
-                }
-                torch.save(checkpoint, checkpoint_path)
+        if acc_within_tolerance < (self._lower_bound_acc * -1.0) and pair_objective < self._search.best_pair_objective:
+            self._search.best_pair_objective = pair_objective
+            self._search.best_config = config
+            self._search.best_vals = [evaluator_handler.current_value for evaluator_handler in self._evaluator_handlers]
+            checkpoint_path = Path(self._search.checkpoint_save_dir, "subnetwork_best.pth")
+            checkpoint = {
+                "best_acc1": acc_within_tolerance * -1.0,
+                "best_efficiency": pair_objective,
+                "subnet_config": config,
+            }
+            torch.save(checkpoint, checkpoint_path)

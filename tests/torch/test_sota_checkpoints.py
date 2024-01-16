@@ -362,9 +362,8 @@ class TestSotaCheckpoints:
             err_msgs.append(
                 "Target diff is not within thresholds: " + f"{diff_target_min} < {diff_target} < {diff_target_max}"
             )
-        if diff_fp32 is not None:
-            if diff_fp32 < diff_fp32_min or diff_fp32 > diff_fp32_max:
-                err_msgs.append(f"FP32 diff is not within thresholds: {diff_fp32_min} < {diff_fp32} < {diff_fp32_max}")
+        if diff_fp32 is not None and (diff_fp32 < diff_fp32_min or diff_fp32 > diff_fp32_max):
+            err_msgs.append(f"FP32 diff is not within thresholds: {diff_fp32_min} < {diff_fp32} < {diff_fp32_max}")
         if err_msgs:
             return ";".join(err_msgs)
         return None
@@ -659,7 +658,7 @@ class TestSotaCheckpoints:
             fp32_metric = REF_PT_FP32_METRIC[eval_run_param.reference, None]
             metric_value = self.read_metric(str(metrics_dump_file_path))
             diff_fp32 = round((metric_value - fp32_metric), 2)
-            if -1 < diff_fp32:
+            if diff_fp32 > -1:
                 err_msg = f"FP32 diff is not within thresholds: -1 < {diff_fp32}"
 
         collected_data.append(
