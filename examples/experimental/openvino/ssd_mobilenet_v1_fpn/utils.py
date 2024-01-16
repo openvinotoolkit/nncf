@@ -40,7 +40,7 @@ class COCOLoader:
             }
         bbox = {}
         for i in file["annotations"]:
-            if i["image_id"] not in bbox.keys():
+            if i["image_id"] not in bbox:
                 bbox[i["image_id"]] = {
                     "bbox": [self.prepare_bbox(*i["bbox"])],
                     "category_id": [i["category_id"]],
