@@ -62,6 +62,17 @@ def find_quantizer_nodes_to_cut(
                     if relative not in to_cut:
                         to_cut.append(relative)
                     to_see_children.append(relative)
+                    # We should see parents for the `relative` node here only if they are
+                    # all quantizers. This covers the quantize-dequantize case, where we
+                    # should see parents for the dequantize node.
+                    if all(x.metatype in quantizer_metatypes for x in graph.get_previous_nodes(relative)):
+                        to_see_parents.append(relative)
+                elif node.metatype in quantizer_metatypes:
+                    # `node` is a quantizer (quantize-dequantize case) here, and `relative`
+                    # is the dequantizer. So, we should cut `relative` and look at its children.
+                    if relative not in to_cut:
+                        to_cut.append(relative)
+                    to_see_children.append(relative)
                 else:
                     seen_children.append(relative)
             elif relative.metatype not in const_metatypes:
