@@ -586,7 +586,7 @@ MODELS_WITH_PARAMETERS = [
         "values": [np.full((3,), 2)],
         "refs": [2.0],
     },
-    # ov.Type.bf16 is not supported in 2023.2
+    # BF16 is not supported until 2023.3
     # {
     #     "model": FPModel(const_dtype=ov.Type.bf16, input_dtype=ov.Type.bf16).ov_model,
     #     "layers": ["MatMul"],
