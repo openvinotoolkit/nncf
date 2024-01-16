@@ -86,6 +86,21 @@ class ONNXBiasCorrectionCommand(TransformationCommand):
         self.bias_value = bias_value
 
 
+class ONNXWeightUpdateCommand(TransformationCommand):
+    """
+    Updates weight value in the model.
+    """
+
+    def __init__(self, target_point: ONNXTargetPoint, weight_value: np.ndarray, name):
+        """
+        :param target_point: Target point.
+        :param weight_value: New weight value.
+        """
+        super().__init__(TransformationType.CHANGE, target_point)
+        self.weight_value = weight_value
+        self.name = name
+
+
 class ONNXModelExtractionCommand(Command):
     """
     Extracts sub-graph based on the sub-model input and output names.

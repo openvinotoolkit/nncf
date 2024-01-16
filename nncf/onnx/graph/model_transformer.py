@@ -32,6 +32,7 @@ from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
+from nncf.onnx.graph.transformations.commands import ONNXWeightUpdateCommand
 
 
 class ONNXModelTransformer(ModelTransformer):
@@ -89,6 +90,7 @@ class ONNXModelTransformer(ModelTransformer):
         quantizer_insert_transformations = []
         output_insert_transformations = []
         bias_correction_transformations = []
+        weight_update_transformations = []
         qdq_node_removing_transformations = []
         model_extraction_transformation = None
         transformations = transformation_layout.transformations
@@ -100,21 +102,25 @@ class ONNXModelTransformer(ModelTransformer):
                 quantizer_insert_transformations.append(transformation)
             elif isinstance(transformation, ONNXOutputInsertionCommand):
                 output_insert_transformations.append(transformation)
-            elif isinstance(transformation, ONNXBiasCorrectionCommand):
-                bias_correction_transformations.append(transformation)
             elif isinstance(transformation, ONNXModelExtractionCommand):
                 model_extraction_transformation = transformation
             elif isinstance(transformation, ONNXQDQNodeRemovingCommand):
                 qdq_node_removing_transformations.append(transformation)
+            elif isinstance(transformation, ONNXBiasCorrectionCommand):
+                bias_correction_transformations.append(transformation)
+            elif isinstance(transformation, ONNXWeightUpdateCommand):
+                weight_update_transformations.append(transformation)
         # Inplace transformations, using deepcopy of model
         if quantizer_insert_transformations or bias_correction_transformations or qdq_node_removing_transformations:
             model = deepcopy(self._model)
             if quantizer_insert_transformations:
                 model = self._apply_quantizer_insertion_transformations(model, quantizer_insert_transformations)
-            if bias_correction_transformations:
-                model = self._apply_bias_correction_transformations(model, bias_correction_transformations)
             if qdq_node_removing_transformations:
                 model = self._apply_qdq_node_removing_transformations(model, qdq_node_removing_transformations)
+            if bias_correction_transformations:
+                model = self._apply_bias_correction_transformations(model, bias_correction_transformations)
+            if weight_update_transformations:
+                model = self._apply_weight_update_transformations(model, weight_update_transformations)
         # Transformations that create new model
         if output_insert_transformations:
             model = self._apply_output_insertion_transformations(output_insert_transformations)
@@ -376,6 +382,24 @@ class ONNXModelTransformer(ModelTransformer):
 
             new_bias_tensor = onnx.numpy_helper.from_array(transformation.bias_value, bias_initializer_name)
             bias_initializer.CopyFrom(new_bias_tensor)
+        return model
+
+    @staticmethod
+    def _apply_weight_update_transformations(
+        model: onnx.ModelProto, transformations: List[ONNXWeightUpdateCommand]
+    ) -> onnx.ModelProto:
+        """
+        :param model:
+        :param transformations:
+        :return:
+        """
+        name_to_node_map = get_name_to_node_map(model)
+        for transformation in transformations:
+            node_with_weight = name_to_node_map[transformation.target_point.target_node_name]
+            weight_initializer_name = node_with_weight.input[transformation.target_point.port_id]
+            weight_initializer = get_tensor(model, weight_initializer_name)
+            new_weight_tensor = onnx.numpy_helper.from_array(transformation.weight_value, weight_initializer_name)
+            weight_initializer.CopyFrom(new_weight_tensor)
         return model
 
     def _apply_model_extraction_transformation(self, transformation: ONNXModelExtractionCommand) -> onnx.ModelProto:
