@@ -478,7 +478,7 @@ def sum(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims:
         with size one.
     :return: Returns the sum of all elements in the input tensor in the given axis.
     """
-    return sum(a.data, axis, keepdims)
+    return Tensor(sum(a.data, axis, keepdims))
 
 
 @functools.singledispatch
@@ -496,7 +496,7 @@ def multiply(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
 
 @functools.singledispatch
 @tensor_guard
-def var(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> Tensor:
+def var(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False, ddof: int = 0) -> Tensor:
     """
     Compute the variance along the specified axis.
 
@@ -505,9 +505,11 @@ def var(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims:
         of the flattened tensor.
     :param keepdims: If this is set to True, the axes which are reduced are left in the result as dimensions
         with size one.
-    :return: eturns a new tensor containing the variance;
+    :param ddof: “Delta Degrees of Freedom”: difference between the sample size and sample degrees of freedom.
+        By default ddof is zero.
+    :return: A new tensor containing the variance.
     """
-    return Tensor(var(a.data, axis, keepdims))
+    return Tensor(var(a.data, axis, keepdims, ddof))
 
 
 @functools.singledispatch

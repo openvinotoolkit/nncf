@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from nncf.experimental.tensor.functions import linalg as linalg
 from nncf.experimental.tensor.functions.numeric import abs as abs
 from nncf.experimental.tensor.functions.numeric import all as all
 from nncf.experimental.tensor.functions.numeric import allclose as allclose

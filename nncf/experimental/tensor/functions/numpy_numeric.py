@@ -235,10 +235,13 @@ def _(x1: Union[np.ndarray, np.generic], x2: Union[np.ndarray, np.generic, float
 
 
 @register_numpy_types(numeric.var)
-def var(
-    a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False
+def _(
+    a: Union[np.ndarray, np.generic],
+    axis: Optional[Union[int, Tuple[int, ...]]] = None,
+    keepdims: bool = False,
+    ddof: int = 0,
 ) -> np.ndarray:
-    return np.array(np.var(a, axis=axis, keepdims=keepdims))
+    return np.array(np.var(a, axis=axis, keepdims=keepdims, ddof=ddof))
 
 
 @register_numpy_types(numeric.size)

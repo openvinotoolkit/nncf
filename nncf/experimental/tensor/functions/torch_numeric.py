@@ -233,8 +233,10 @@ def _(x1: torch.Tensor, x2: Union[torch.Tensor, float]) -> torch.Tensor:
 
 
 @numeric.var.register(torch.Tensor)
-def var(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> torch.Tensor:
-    return torch.var(a, dim=axis, keepdim=keepdims)
+def _(
+    a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False, ddof: int = 0
+) -> torch.Tensor:
+    return torch.var(a, dim=axis, keepdim=keepdims, correction=ddof)
 
 
 @numeric.size.register(torch.Tensor)
