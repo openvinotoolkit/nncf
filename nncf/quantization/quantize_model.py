@@ -339,7 +339,7 @@ def compress_weights(
         options = [all_layers, sensitivity_metric, dataset, awq]
         if any(option is not None for option in options):
             raise AttributeError(
-                "INT8 modes do not support `all_layers`, `sensitivity_metric`, `awq` and `dataset` options."
+                "INT8 modes do not support `all_layers`, `sensitivity_metric`, `awq` and `dataset` options. "
                 "Set them to None."
             )
 

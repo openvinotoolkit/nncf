@@ -139,7 +139,11 @@ class WeightCompression(Algorithm):
         :param nncf_graph: NNCFGraph instance.
         :return: List with the data for each layer.
         """
-        weighted_metatypes = self._backend_entity.matmul_metatypes + self._backend_entity.embedding_metatypes
+        weighted_metatypes = \
+            self._backend_entity.matmul_metatypes + \
+            self._backend_entity.embedding_metatypes + \
+            self._backend_entity.convolution_metatypes
+
         ordered_nodes_to_compress = []
         ignored_names = get_ignored_node_names_from_ignored_scope(
             self._ignored_scope, nncf_graph, strict=self._ignored_scope.validate
