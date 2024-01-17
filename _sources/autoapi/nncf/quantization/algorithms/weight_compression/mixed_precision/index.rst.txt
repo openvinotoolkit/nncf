@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.quantization.algorithms.weight_compression.mixed_precision`
+=========================================================================
+
+.. py:module:: nncf.quantization.algorithms.weight_compression.mixed_precision
+
+
