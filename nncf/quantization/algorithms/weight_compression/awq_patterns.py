@@ -13,12 +13,10 @@ from nncf.common.graph.patterns import GraphPattern
 from nncf.common.utils.registry import Registry
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 
-AWQ_PATTERNS = Registry("awq")
-
-# BLOCK PATTERNS
+OV_AWQ_PATTERNS = Registry("awq")
 
 
-@AWQ_PATTERNS.register("MatMul_Mul_MatMul")
+@OV_AWQ_PATTERNS.register("MatMul_Mul_MatMul")
 def create_matmul_mul_matmul() -> GraphPattern:
     pattern = GraphPattern()
     linear_node_1 = pattern.add_node(
@@ -36,5 +34,5 @@ def create_matmul_mul_matmul() -> GraphPattern:
     return pattern
 
 
-def get_awq_patterns():
-    return AWQ_PATTERNS.registry_dict
+def get_ov_awq_patterns():
+    return OV_AWQ_PATTERNS.registry_dict

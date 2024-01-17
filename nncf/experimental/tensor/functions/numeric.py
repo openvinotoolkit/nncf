@@ -522,3 +522,65 @@ def size(a: Tensor) -> int:
     :return: The size of the input tensor.
     """
     return size(a.data)
+
+
+@functools.singledispatch
+@tensor_guard
+def quantile(a: Tensor, q: float) -> Tensor:
+    """
+    :param a: Tensor.
+    :param q: value of quantile.
+    """
+    return Tensor(quantile(a.data, q))
+
+
+@functools.singledispatch
+@tensor_guard
+def matmul(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
+    """
+    Matrix multiplication.
+
+    :param x1: The first input tensor.
+    :param x2: The second input tensor or number.
+    :return: The product of x1 and x2, matmul.
+    """
+    return Tensor(matmul(x1.data, unwrap_tensor_data(x2)))
+
+
+@functools.singledispatch
+@tensor_guard
+def unsqueeze(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:
+    """
+    Add axes of length one to a.
+
+    :param a: The input tensor.
+    :param axis: Selects a subset of the entries of length one in the shape.
+    :return: The input array, but with expanded shape with len 1 defined in axis.
+    """
+    return Tensor(unsqueeze(a.data, axis=axis))
+
+
+@functools.singledispatch
+@tensor_guard
+def transpose(a: Tensor, axes: Optional[Tuple[int, ...]] = None) -> Tensor:
+    """
+    Returns an array with axes transposed.
+
+    :param a: The input tensor.
+    :param axes: list of permutations or None.
+    :return: array with permuted axes.
+    """
+    return Tensor(transpose(a.data, axes=axes))
+
+
+@functools.singledispatch
+@tensor_guard
+def argsort(a: Tensor, axis: int = None) -> Tensor:
+    """
+    Returns the indices that would sort an array.
+
+    :param a: The input tensor.
+    :param axis: Axis along which to sort. The default is -1 (the last axis). If None, the flattened array is used.
+    :return: Array of indices that sort a along the specified axis.
+    """
+    return Tensor(argsort(a.data, axis=axis))

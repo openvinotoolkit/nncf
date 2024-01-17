@@ -364,7 +364,9 @@ def compress_weights(
     if ratio < 0 or ratio > 1:
         raise ValueError(f"The ratio should be between 0 and 1, but ration={ratio} is specified.")
 
-    compression_algorithm = WeightCompression(mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric)
+    compression_algorithm = WeightCompression(
+        mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric, awq
+    )
     graph = NNCFGraphFactory.create(model)
     return compression_algorithm.apply(model, graph, dataset=dataset)
 

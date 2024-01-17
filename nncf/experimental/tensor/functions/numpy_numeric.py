@@ -247,3 +247,30 @@ def _(
 @register_numpy_types(numeric.size)
 def _(a: Union[np.ndarray, np.generic]) -> int:
     return a.size
+
+
+@register_numpy_types(numeric.quantile)
+def _(a: Union[np.ndarray, np.generic], q: float) -> float:
+    return np.quantile(a, q)
+
+
+@register_numpy_types(numeric.matmul)
+def _(x1: Union[np.ndarray, np.generic], x2: Union[np.ndarray, np.generic, float]) -> np.ndarray:
+    return np.matmul(x1, x2)
+
+
+@register_numpy_types(numeric.unsqueeze)
+def _(
+    a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None
+) -> Union[np.ndarray, np.generic]:
+    return np.expand_dims(a, axis=axis)
+
+
+@register_numpy_types(numeric.transpose)
+def _(a: Union[np.ndarray, np.generic], axes: Optional[Tuple[int, ...]] = None) -> Union[np.ndarray, np.generic]:
+    return np.transpose(a, axes=axes)
+
+
+@register_numpy_types(numeric.argsort)
+def _(a: Union[np.ndarray, np.generic], axis: Optional[int] = None) -> Union[np.ndarray, np.generic]:
+    return np.argsort(a, axis=axis)

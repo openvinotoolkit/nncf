@@ -14,6 +14,7 @@ from nncf.experimental.tensor.functions.numeric import abs as abs
 from nncf.experimental.tensor.functions.numeric import all as all
 from nncf.experimental.tensor.functions.numeric import allclose as allclose
 from nncf.experimental.tensor.functions.numeric import any as any
+from nncf.experimental.tensor.functions.numeric import argsort as argsort
 from nncf.experimental.tensor.functions.numeric import as_tensor_like as as_tensor_like
 from nncf.experimental.tensor.functions.numeric import astype as astype
 from nncf.experimental.tensor.functions.numeric import clip as clip
@@ -25,6 +26,7 @@ from nncf.experimental.tensor.functions.numeric import flatten as flatten
 from nncf.experimental.tensor.functions.numeric import isclose as isclose
 from nncf.experimental.tensor.functions.numeric import isempty as isempty
 from nncf.experimental.tensor.functions.numeric import item as item
+from nncf.experimental.tensor.functions.numeric import matmul as matmul
 from nncf.experimental.tensor.functions.numeric import max as max
 from nncf.experimental.tensor.functions.numeric import maximum as maximum
 from nncf.experimental.tensor.functions.numeric import mean as mean
@@ -33,11 +35,14 @@ from nncf.experimental.tensor.functions.numeric import minimum as minimum
 from nncf.experimental.tensor.functions.numeric import moveaxis as moveaxis
 from nncf.experimental.tensor.functions.numeric import multiply as multiply
 from nncf.experimental.tensor.functions.numeric import ones_like as ones_like
+from nncf.experimental.tensor.functions.numeric import quantile as quantile
 from nncf.experimental.tensor.functions.numeric import reshape as reshape
 from nncf.experimental.tensor.functions.numeric import round as round
 from nncf.experimental.tensor.functions.numeric import squeeze as squeeze
 from nncf.experimental.tensor.functions.numeric import stack as stack
 from nncf.experimental.tensor.functions.numeric import sum as sum
+from nncf.experimental.tensor.functions.numeric import transpose as transpose
+from nncf.experimental.tensor.functions.numeric import unsqueeze as unsqueeze
 from nncf.experimental.tensor.functions.numeric import unstack as unstack
 from nncf.experimental.tensor.functions.numeric import var as var
 from nncf.experimental.tensor.functions.numeric import where as where
