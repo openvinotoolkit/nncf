@@ -20,6 +20,7 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
+from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
@@ -188,7 +189,7 @@ class MinMaxAlgoBackend(ABC):
         range_estimator_params: RangeEstimatorParameters,
         nncf_graph: NNCFGraph,
         target_point: TargetPoint,
-        quantizer_config: QuantizerConfig,
+        collector_params: RangeInitCollectorParams,
         inplace: bool,
         num_samples: int = None,
     ) -> TensorStatisticCollectorBase:
@@ -198,7 +199,7 @@ class MinMaxAlgoBackend(ABC):
         :param range_estimator_params: Parameters that specify estimators types.
         :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
         :param target_point: Target location for the correction.
-        :param quantizer_config: QuantizerConfig instance for the current layer.
+        :param collector_params: RangeInitCollectorParams instance for the current layer.
         :param inplace: Whether to calculate statistic inplace or not.
         :param num_samples: Maximum number of samples to collect.
         :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.
