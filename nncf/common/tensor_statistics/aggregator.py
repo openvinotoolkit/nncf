@@ -40,6 +40,18 @@ class StatisticsAggregator(ABC):
         self.dataset_size = self.dataset_size * self.batch_size if self.dataset_size is not None else self.dataset_size
         self.statistic_points = StatisticPointsContainer()
 
+    def _get_total_calibration_samples(
+        self,
+    ):
+        return (
+            min(self.dataset_size or self.stat_subset_size, self.stat_subset_size)
+            if self.stat_subset_size is not None
+            else None
+        )
+
+    def _get_iterations_num(self, calibration_samples_num):
+        return calibration_samples_num // self.batch_size if calibration_samples_num is not None else None
+
     def collect_statistics(self, model: TModel, graph: NNCFGraph) -> None:
         """
         Collects statistics for registered StatisticPoints.
@@ -58,26 +70,20 @@ class StatisticsAggregator(ABC):
         model_with_outputs = model_transformer.transform(transformation_layout)
         engine = factory.EngineFactory.create(model_with_outputs)
 
-        calibration_samples_num = (
-            min(self.dataset_size or self.stat_subset_size, self.stat_subset_size)
-            if self.stat_subset_size is not None
-            else None
-        )  # Maybe subsample should be in terms of a tensor with arbitary batch_size
+        calibration_samples_num = self._get_total_calibration_samples()
+        iterataions_num = self._get_iterations_num(calibration_samples_num)
+        if iterataions_num == 0:
+            nncf_logger.error("Iterations num is 0")
+            iterataions_num = 1
         collected_statistics_num = 0
         with track(total=calibration_samples_num, description="Statistics collection") as pbar:
-            for input_data in islice(self.dataset.get_inference_data(), self.stat_subset_size):
-                batch_size_to_collect = (
-                    min(calibration_samples_num - collected_statistics_num, self.batch_size)
-                    if calibration_samples_num is not None
-                    else self.batch_size
-                )
+            for input_data in islice(self.dataset.get_inference_data(), iterataions_num):
                 outputs = engine.infer(input_data)
                 processed_outputs = self._process_outputs(outputs)
                 self._register_statistics(processed_outputs, merged_statistics)
-                collected_statistics_num += batch_size_to_collect
-                pbar.progress.update(pbar.task, advance=batch_size_to_collect)
-                if calibration_samples_num and collected_statistics_num == calibration_samples_num:
-                    break
+                collected_statistics_num += self.batch_size
+                pbar.progress.update(pbar.task, advance=self.batch_size)
+
         if collected_statistics_num == 0:
             raise RuntimeError(
                 "Calibration dataset must not be empty. Please provide calibration dataset with at least one sample."

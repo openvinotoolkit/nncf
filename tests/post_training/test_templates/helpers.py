@@ -30,9 +30,9 @@ class StaticDatasetMock:
     to convert data to backend specific type.
     """
 
-    def __init__(self, input_size: Tuple, fn_to_type: Callable = None):
+    def __init__(self, input_size: Tuple, length: int = 1, fn_to_type: Callable = None):
         super().__init__()
-        self._len = 1
+        self._len = length
         self._input_size = input_size
         self._fn_to_type = fn_to_type
 
@@ -47,11 +47,7 @@ class StaticDatasetMock:
         return self._len
 
 
-def get_static_dataset(
-    input_size: Tuple,
-    transform_fn: Callable,
-    fn_to_type: Callable,
-) -> Dataset:
+def get_static_dataset(input_size: Tuple, transform_fn: Callable, fn_to_type: Callable, length: int = 1) -> Dataset:
     """
     Create nncf.Dataset for StaticDatasetMock.
     :param input_size: Size of generated tensors,
@@ -59,7 +55,7 @@ def get_static_dataset(
     :param fn_to_type: Function, defaults to None.
     :return: Instance of nncf.Dataset for StaticDatasetMock.
     """
-    return Dataset(StaticDatasetMock(input_size, fn_to_type), transform_fn)
+    return Dataset(StaticDatasetMock(input_size, length, fn_to_type), transform_fn)
 
 
 class ConvTestModel(nn.Module):
