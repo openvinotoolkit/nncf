@@ -111,9 +111,6 @@ class ONNXAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
     def get_weight_value(node_with_weight: NNCFNode, model: onnx.ModelProto, port_id: int) -> np.ndarray:
         assert node_with_weight.layer_attributes.has_weight()
         weight_name = node_with_weight.layer_attributes.weight_attrs[port_id]["name"]
-
-        print(f"{port_id}_{weight_name}")
-
         return get_tensor_value(model, weight_name)
 
     @staticmethod
