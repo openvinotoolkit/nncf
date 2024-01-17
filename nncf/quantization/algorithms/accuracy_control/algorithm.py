@@ -50,6 +50,11 @@ def get_algo_backend(backend: BackendType) -> AccuracyControlAlgoBackend:
 
         return OVAccuracyControlAlgoBackend()
 
+    if backend == BackendType.ONNX:
+        from nncf.quantization.algorithms.accuracy_control.onnx_backend import ONNXAccuracyControlAlgoBackend
+
+        return ONNXAccuracyControlAlgoBackend()
+
     raise nncf.UnsupportedBackendError(
         f"Cannot create the backend for the accuracy control algorithm because {backend} is not supported."
     )
@@ -267,6 +272,11 @@ class QuantizationAccuracyRestorer:
         nncf_logger.info(f"Total number of quantized operations in the model: {report.num_quantized_operations}")
 
         # Calculate number of parallel processes for Ranker
+
+        # TODO(andrey-churkin): Check
+        if get_backend(initial_model) == BackendType.ONNX:
+            self.num_ranking_workers = 1
+
         num_ranking_workers = self.num_ranking_workers
         if num_ranking_workers is None:
             model_size = algo_backend.get_model_size(quantized_model)

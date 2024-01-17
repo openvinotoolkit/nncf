@@ -448,7 +448,11 @@ class ONNXModelTransformer(ModelTransformer):
 
             initializers = {i.name: i for i in model.graph.initializer}
             value_infos = {i.name: i for i in model.graph.value_info}
-            for initializer_name in node.input:
+
+            #TODO(andrey-churkin): Fix it
+            inputs = node.input[1:]
+
+            for initializer_name in inputs:
                 if initializer_name in initializers:
                     model.graph.initializer.remove(initializers[initializer_name])
                 if initializer_name in value_infos:

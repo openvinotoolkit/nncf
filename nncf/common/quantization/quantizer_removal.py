@@ -155,8 +155,11 @@ def revert_operations_to_floating_point_precision(
         if not should_revert_weights_to_fp32.get(node.node_name, True):
             continue
 
-        if node.layer_attributes and node.layer_attributes.constant_attributes is not None:
-            weight_port_ids = node.layer_attributes.get_const_port_ids()
+        # TODO(andrey-churkin): Fix it
+        # if node.layer_attributes and node.layer_attributes.constant_attributes is not None:
+        if node.layer_attributes and node.layer_attributes.has_weight():
+            # weight_port_ids = node.layer_attributes.get_const_port_ids()
+            weight_port_ids = list(node.layer_attributes.weight_attrs.keys())
             for port_id in weight_port_ids:
                 original_weight = node.attributes.get(f"original_weight.{port_id}", None)
                 if original_weight is not None:

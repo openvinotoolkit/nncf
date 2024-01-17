@@ -125,7 +125,14 @@ class Evaluator:
 
             return OVPreparedModel(model)
 
-        raise NotImplementedError(f"The `prepare_model()` method is not implemented for the {backend} backend.")
+        if backend == BackendType.ONNX:
+            from nncf.quantization.algorithms.accuracy_control.onnx_backend import ONNXPreparedModel
+
+            return ONNXPreparedModel(model)
+
+        raise NotImplementedError(
+            f"The `prepare_model_for_inference()` method is not implemented for the {backend} backend."
+        )
 
     def validate_prepared_model(
         self, prepared_model: PreparedModel, dataset: Dataset, indices: Optional[List[int]] = None

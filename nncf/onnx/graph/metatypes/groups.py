@@ -121,3 +121,9 @@ OPERATIONS_WITH_BIAS = [
     onnx_metatypes.ONNXConvolutionMetatype,
     onnx_metatypes.ONNXDepthwiseConvolutionMetatype,
 ]
+
+
+QUANTIZE_DEQUANTIZE_OPERATIONS = [
+    onnx_metatypes.ONNXQuantizeLinearMetatype,
+    onnx_metatypes.ONNXDequantizeLinearMetatype,
+]
