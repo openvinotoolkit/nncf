@@ -80,7 +80,7 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return ONNXMeanStatisticCollector(channel_axis, num_samples, window_size)
 
     @staticmethod
-    def raw_statistic_collector(inplace: bool, num_samples: int = None) -> ONNXMeanStatisticCollector:
+    def raw_statistic_collector(num_samples: Optional[int] = None) -> ONNXMeanStatisticCollector:
         return ONNXRawStatisticCollector(num_samples)
 
     @staticmethod
