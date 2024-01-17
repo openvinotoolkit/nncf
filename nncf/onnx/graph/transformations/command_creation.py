@@ -15,23 +15,22 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.command_creation import CommandCreator
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
+from nncf.onnx.graph.transformations.commands import ONNXInitializerUpdateCommand
 from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
-from nncf.onnx.graph.transformations.commands import ONNXWeightUpdateCommand
 
 
-def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray) -> ONNXBiasCorrectionCommand:
+def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray) -> ONNXInitializerUpdateCommand:
     """
      Creates bias correction command.
 
     :param node: The node in the NNCF graph that corresponds to operation with bias.
     :param bias_value: The new bias value that will be set.
-    :return: The `ONNXBiasCorrectionCommand` command to update bias.
+    :return: The `ONNXInitializerUpdateCommand` command to update bias.
     """
     bias_port_id = node.metatype.bias_port_id
     target_point = ONNXTargetPoint(TargetType.LAYER, node.node_name, bias_port_id)
-    return ONNXBiasCorrectionCommand(target_point, bias_value)
+    return ONNXInitializerUpdateCommand(target_point, bias_value)
 
 
 class ONNXCommandCreator(CommandCreator):
@@ -47,17 +46,15 @@ class ONNXCommandCreator(CommandCreator):
     @staticmethod
     def create_command_to_update_bias(
         node_with_bias: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph
-    ) -> ONNXBiasCorrectionCommand:
+    ) -> ONNXInitializerUpdateCommand:
         return create_bias_correction_command(node_with_bias, bias_value)
 
     @staticmethod
     def create_command_to_update_weight(
         node_with_weight: NNCFNode, weight_value: np.ndarray, weight_port_id: int
-    ) -> ONNXWeightUpdateCommand:
+    ) -> ONNXInitializerUpdateCommand:
         target_point = ONNXTargetPoint(TargetType.LAYER, node_with_weight.node_name, weight_port_id)
-        return ONNXWeightUpdateCommand(
-            target_point, weight_value, node_with_weight.layer_attributes.weight_attrs[weight_port_id]["name"]
-        )
+        return ONNXInitializerUpdateCommand(target_point, weight_value)
 
     @staticmethod
     def create_command_to_insert_bias(node_without_bias, bias_value):

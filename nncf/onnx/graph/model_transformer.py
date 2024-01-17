@@ -27,12 +27,11 @@ from nncf.onnx.graph.onnx_helper import get_edge_info_mapping
 from nncf.onnx.graph.onnx_helper import get_name_to_node_map
 from nncf.onnx.graph.onnx_helper import get_node_index
 from nncf.onnx.graph.onnx_helper import get_tensor
-from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
+from nncf.onnx.graph.transformations.commands import ONNXInitializerUpdateCommand
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
-from nncf.onnx.graph.transformations.commands import ONNXWeightUpdateCommand
 
 
 class ONNXModelTransformer(ModelTransformer):
@@ -89,8 +88,7 @@ class ONNXModelTransformer(ModelTransformer):
         """
         quantizer_insert_transformations = []
         output_insert_transformations = []
-        bias_correction_transformations = []
-        weight_update_transformations = []
+        initializer_update_transformations = []
         qdq_node_removing_transformations = []
         model_extraction_transformation = None
         transformations = transformation_layout.transformations
@@ -106,21 +104,17 @@ class ONNXModelTransformer(ModelTransformer):
                 model_extraction_transformation = transformation
             elif isinstance(transformation, ONNXQDQNodeRemovingCommand):
                 qdq_node_removing_transformations.append(transformation)
-            elif isinstance(transformation, ONNXBiasCorrectionCommand):
-                bias_correction_transformations.append(transformation)
-            elif isinstance(transformation, ONNXWeightUpdateCommand):
-                weight_update_transformations.append(transformation)
+            elif isinstance(transformation, ONNXInitializerUpdateCommand):
+                initializer_update_transformations.append(transformation)
         # Inplace transformations, using deepcopy of model
-        if quantizer_insert_transformations or bias_correction_transformations or qdq_node_removing_transformations:
+        if quantizer_insert_transformations or initializer_update_transformations or qdq_node_removing_transformations:
             model = deepcopy(self._model)
             if quantizer_insert_transformations:
                 model = self._apply_quantizer_insertion_transformations(model, quantizer_insert_transformations)
             if qdq_node_removing_transformations:
                 model = self._apply_qdq_node_removing_transformations(model, qdq_node_removing_transformations)
-            if bias_correction_transformations:
-                model = self._apply_bias_correction_transformations(model, bias_correction_transformations)
-            if weight_update_transformations:
-                model = self._apply_weight_update_transformations(model, weight_update_transformations)
+            if initializer_update_transformations:
+                model = self._apply_initializer_update_transformations(model, initializer_update_transformations)
         # Transformations that create new model
         if output_insert_transformations:
             model = self._apply_output_insertion_transformations(output_insert_transformations)
@@ -362,8 +356,8 @@ class ONNXModelTransformer(ModelTransformer):
         model.graph.node.insert(insert_index + 1, dequantizer)
         return model
 
-    def _apply_bias_correction_transformations(
-        self, model: onnx.ModelProto, transformations: List[ONNXBiasCorrectionCommand]
+    def _apply_initializer_update_transformations(
+        self, model: onnx.ModelProto, transformations: List[ONNXInitializerUpdateCommand]
     ) -> onnx.ModelProto:
         """
         Creates a copy of original model and applies bias correction transformations on the model.
@@ -372,34 +366,14 @@ class ONNXModelTransformer(ModelTransformer):
         :param transformations: Bias correction transformations.
         :return: Copy of original model with updated biases.
         """
-        node_mapping = get_name_to_node_map(model)
-        for transformation in transformations:
-            bias_tensor_position = transformation.target_point.port_id
-            node_name = transformation.target_point.target_node_name
-            onnx_node = node_mapping[node_name]
-            bias_initializer_name = onnx_node.input[bias_tensor_position]
-            bias_initializer = get_tensor(model, bias_initializer_name)
-
-            new_bias_tensor = onnx.numpy_helper.from_array(transformation.bias_value, bias_initializer_name)
-            bias_initializer.CopyFrom(new_bias_tensor)
-        return model
-
-    @staticmethod
-    def _apply_weight_update_transformations(
-        model: onnx.ModelProto, transformations: List[ONNXWeightUpdateCommand]
-    ) -> onnx.ModelProto:
-        """
-        :param model:
-        :param transformations:
-        :return:
-        """
         name_to_node_map = get_name_to_node_map(model)
         for transformation in transformations:
-            node_with_weight = name_to_node_map[transformation.target_point.target_node_name]
-            weight_initializer_name = node_with_weight.input[transformation.target_point.port_id]
-            weight_initializer = get_tensor(model, weight_initializer_name)
-            new_weight_tensor = onnx.numpy_helper.from_array(transformation.weight_value, weight_initializer_name)
-            weight_initializer.CopyFrom(new_weight_tensor)
+            node = name_to_node_map[transformation.target_point.target_node_name]
+            initializer_name = node.input[transformation.target_point.port_id]
+            initializer = get_tensor(model, initializer_name)
+
+            new_tensor = onnx.numpy_helper.from_array(transformation.new_value, initializer_name)
+            initializer.CopyFrom(new_tensor)
         return model
 
     def _apply_model_extraction_transformation(self, transformation: ONNXModelExtractionCommand) -> onnx.ModelProto:

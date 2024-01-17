@@ -22,7 +22,7 @@ from nncf.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.onnx_helper import get_tensor
 from nncf.onnx.graph.onnx_helper import get_tensor_value
-from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
+from nncf.onnx.graph.transformations.commands import ONNXInitializerUpdateCommand
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
@@ -173,7 +173,7 @@ def test_bias_correction(layers, values, refs):
     for conv_layer, bias_value in zip(layers, values):
         bias_port_id = 2
         target_point = ONNXTargetPoint(TargetType.LAYER, conv_layer, bias_port_id)
-        command = ONNXBiasCorrectionCommand(target_point, bias_value)
+        command = ONNXInitializerUpdateCommand(target_point, bias_value)
         transformation_layout.register(command)
 
     model_transformer = ONNXModelTransformer(model)

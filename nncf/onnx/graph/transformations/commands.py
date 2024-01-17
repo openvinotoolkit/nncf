@@ -72,33 +72,18 @@ class ONNXOutputInsertionCommand(ONNXInsertionCommand):
     pass
 
 
-class ONNXBiasCorrectionCommand(TransformationCommand):
+class ONNXInitializerUpdateCommand(TransformationCommand):
     """
-    Corrects bias value in the model based on the input value.
-    """
-
-    def __init__(self, target_point: ONNXTargetPoint, bias_value: np.ndarray):
-        """
-        :param target_point: The TargetPoint instance for the correction that contains layer's information.
-        :param bias_value: The bias shift value (numpy format) that will be added to the original bias value.
-        """
-        super().__init__(TransformationType.CHANGE, target_point)
-        self.bias_value = bias_value
-
-
-class ONNXWeightUpdateCommand(TransformationCommand):
-    """
-    Updates weight value in the model.
+    Update initializer in the value.
     """
 
-    def __init__(self, target_point: ONNXTargetPoint, weight_value: np.ndarray, name):
+    def __init__(self, target_point: ONNXTargetPoint, new_value: np.ndarray):
         """
         :param target_point: Target point.
         :param weight_value: New weight value.
         """
         super().__init__(TransformationType.CHANGE, target_point)
-        self.weight_value = weight_value
-        self.name = name
+        self.new_value = new_value
 
 
 class ONNXModelExtractionCommand(Command):
