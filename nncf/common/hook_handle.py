@@ -36,13 +36,14 @@ class HookHandleInterface(ABC):
 
 class _HookHandle(HookHandleInterface):
     """
-    Privat hook handle implementation which should be instanciated only by
+    Private hook handle implementation which should be instantiated only by
     the add_op_to_registry function.
     """
 
     def __init__(self, hooks_registry: Dict[Any, Any], hook_id: str):
         """
         :param hooks_registry: A dictionary of hooks, indexed by hook `id`.
+        :param hook_id: Hook id to use as key in the dictionary of hooks.
         """
         self.hooks_registry_ref = weakref.ref(hooks_registry)
         self._hook_id = hook_id
@@ -53,7 +54,7 @@ class _HookHandle(HookHandleInterface):
 
     def remove(self) -> None:
         """
-        Removes added operation from registered hooks registry if it is possible.
+        Removes the corresponding operation from the registered hooks registry if it is possible.
         """
         if self.hooks_registry_ref is None:
             return
@@ -70,8 +71,8 @@ def add_op_to_registry(hooks_registry: Dict[Any, Any], op: Any) -> HookHandleInt
 
     :param hooks_registry: A dictionary of hooks, indexed by hook `id`.
     :param op: Operation to set to registered hooks registry.
-    :return: HookHandle instance binded with hook registry and given op that
-        able to remove op from the hooks_registry.
+    :return: HookHandle that contains the registry of hooks and
+        the id of operation to remove it from the registry.
     """
     if hooks_registry:
         hook_id = max(map(int, hooks_registry))
