@@ -27,9 +27,13 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
+from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
+from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MinReducer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.passes import transform_to_inference_graph
@@ -44,17 +48,20 @@ class TemplateTestQuantizerConfig:
     def get_algo_backend(self):
         pass
 
-    @abstractmethod
-    def check_is_min_max_statistic_collector(self, tensor_collector):
-        pass
+    def check_is_min_max_statistic_collector(self, tensor_collector: TensorCollector):
+        aggrs = [aggr.__class__ for aggr in tensor_collector.aggregators.values()]
+        assert len(aggrs) == 2
+        assert MinAggregator in aggrs
+        assert MaxAggregator in aggrs
 
-    @abstractmethod
-    def check_is_mean_min_max_statistic_collector(self, tensor_collector):
-        pass
+    def check_is_mean_min_max_statistic_collector(self, tensor_collector: TensorCollector):
+        aggrs = [aggr.__class__ for aggr in tensor_collector.aggregators.values()]
+        assert len(aggrs) == 2
+        assert MeanAggregator in aggrs
+        assert aggrs[0].__class__ == aggrs[1].__class__
 
-    @abstractmethod
-    def get_reduction_axes(self, reducer) -> ReductionAxes:
-        pass
+    def get_reduction_axes(self, reducer: TensorReducerBase) -> ReductionAxes:
+        return reducer._reduction_axes
 
     @abstractmethod
     @pytest.fixture
