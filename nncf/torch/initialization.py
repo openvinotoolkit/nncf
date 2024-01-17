@@ -173,14 +173,6 @@ class DataLoaderBaseRunner:
         raise NotImplementedError
 
 
-class SimpleDataLoaderRunner(DataLoaderBaseRunner):
-    def _prepare_initialization(self):
-        pass
-
-    def _apply_initializers(self):
-        pass
-
-
 class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
     def __init__(self, model, init_device: str):
         super().__init__(model, init_device)
@@ -223,13 +215,7 @@ class DataLoaderBNAdaptationRunner(DataLoaderBaseRunner):
 
     def _run_model_inference(self, data_loader, num_init_steps, device):
         with self._bn_training_state_switcher():
-            for i, loaded_item in ProgressBar(
-                enumerate(data_loader), total=num_init_steps, desc=self.progressbar_description
-            ):
-                if num_init_steps is not None and i >= num_init_steps:
-                    break
-                args_kwargs_tuple = data_loader.get_inputs(loaded_item)
-                self._infer_batch(args_kwargs_tuple, device)
+            super()._run_model_inference(data_loader, num_init_steps, device)
 
     def _prepare_initialization(self):
         pass
