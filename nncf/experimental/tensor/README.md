@@ -54,7 +54,7 @@ nncf_tensor.max()  # Tensor(2)
 
 ### Functions over Tensor
 
-All available functions you can found in [functions.py](functions.py).
+All available functions you can found in the functions module.
 
 ```python
 from nncf.experimental.tensor import functions as fns
@@ -105,7 +105,7 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
             return fns.foo(self, arg1)
     ```
 
-2. Add function to [function.py](function.py)
+2. Add function to functions module
 
     ```python
     @functools.singledispatch
@@ -133,9 +133,9 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
         raise NotImplementedError(f"Function `foo` is not implemented for {type(x)}")
     ```
 
-3. Add backend specific implementation of method to:
+3. Add backend specific implementation of method to correcponding module:
 
-    - [numpy_function.py](numpy_functions.py)
+    - `functions/numpy_*.py`
 
         ```python
         @_register_numpy_types(fns.foo)
@@ -143,7 +143,7 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
             return np.foo(a, arg1)
         ```
 
-    - [torch_function.py](torch_functions.py)
+    - `functions/torch_*.py`
 
         ```python
         @fns.foo.register(torch.Tensor)
@@ -155,7 +155,7 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
 
 ### Add new backend
 
-1. Add backend specific implementation for all function from [function.py](function.py) in `<NEW_BACKEND>_functions.py` file.
+1. Add backend specific implementation for all function from functions module in `functions/<NEW_BACKEND>_*.py` file.
 
 2. Add `test_tensor.py` in backend-specific t directory for tests that inherited from class `TemplateTestNNCFTensorOperators`
 
@@ -177,8 +177,8 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
         "openvino",
         "tensorflow",
         "tensorflow_addons",
-        "nncf.experimental.tensor.torch_functions",
-        "nncf.experimental.tensor.numpy_functions",
-        "nncf.experimental.tensor.<NEW_BACKEND>_functions",
+        "nncf.experimental.tensor.functions.torch_*",
+        "nncf.experimental.tensor.functions.numpy_*",
+        "nncf.experimental.tensor.functions.<NEW_BACKEND>_*",
     ]
     ```

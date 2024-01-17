@@ -71,8 +71,8 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return get_mean_statistic_collector(num_samples, channel_axis, window_size, inplace)
 
     @staticmethod
-    def raw_statistic_collector(inplace: bool, num_samples: int = None) -> TensorCollector:
-        return get_raw_stat_collector(num_samples, inplace)
+    def raw_statistic_collector(num_samples: Optional[int] = None) -> TensorCollector:
+        return get_raw_stat_collector(num_samples)
 
     @staticmethod
     def process_model_output(raw_data: Dict, output_name: str) -> OVNNCFTensor:

@@ -15,6 +15,7 @@ import torch
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.quantization import compress_weights
+from nncf.torch import wrap_model
 
 DATA_BASED_SENSITIVITY_METRICS = (
     SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
@@ -30,7 +31,6 @@ UNSUPPORTED_MODES = (
     CompressWeightsMode.INT4_SYM,
     CompressWeightsMode.INT4_ASYM,
     CompressWeightsMode.NF4,
-    CompressWeightsMode.INT8_SYM,
 )
 
 
@@ -54,7 +54,9 @@ class ShortTransformer(torch.nn.Module):
 def test_compress_weights():
     model = ShortTransformer(5, 10)
 
-    compressed_model = compress_weights(model)
+    input_ids = torch.randint(0, 10, (5,))
+    wrapped_model = wrap_model(model, example_input=input_ids, trace_parameters=True)
+    compressed_model = compress_weights(wrapped_model)
 
     n_compressed_weights = 0
     n_target_modules = 0
@@ -68,10 +70,12 @@ def test_compress_weights():
     assert n_compressed_weights == n_target_modules
 
 
-def test_compress_shared_weights():
+def test_compress_shared_weights(mocker):
     model = ShortTransformer(5, 10, share_weights=True)
 
-    compressed_model = compress_weights(model)
+    input_ids = torch.randint(0, 10, (5,))
+    wrapped_model = wrap_model(model, example_input=input_ids, trace_parameters=True)
+    compressed_model = compress_weights(wrapped_model)
 
     n_compressed_weights = 0
     n_target_modules = 0
@@ -83,13 +87,21 @@ def test_compress_shared_weights():
                 n_compressed_weights += 1
 
     assert n_compressed_weights == n_target_modules
+    assert len(compressed_model.nncf.external_op) == 2
 
-    assert len(compressed_model.wte.pre_ops) > 0
+    # check that the weight decompressors are called only once
+    for val in compressed_model.nncf.external_op.values():
+        mocker.spy(val, "forward")
 
-    assert len(compressed_model.wte.pre_ops) == len(compressed_model.lm_head.pre_ops)
+    compressed_model(input_ids)
 
-    for key, val in compressed_model.wte.pre_ops.items():
-        assert compressed_model.lm_head.get_pre_op(key) is val
+    for val in compressed_model.nncf.external_op.values():
+        assert val.forward.call_count == 1
+
+
+class EmptyModel(torch.nn.Module):
+    def forward(self, input):
+        return input
 
 
 @pytest.mark.parametrize("mode", SUPPORTED_MODES)
@@ -106,13 +118,17 @@ def test_compress_shared_weights():
     ),
 )
 def test_raise_error_with_unsupported_params_for_int8(mode, params):
-    dummy_torch_model = torch.nn.Module()
+    dummy_torch_model = EmptyModel()
+    dummy_input = torch.Tensor()
+    wrapped_model = wrap_model(dummy_torch_model, example_input=dummy_input, trace_parameters=True)
     with pytest.raises(AttributeError):
-        compress_weights(dummy_torch_model, mode=mode, **params)
+        compress_weights(wrapped_model, mode=mode, **params)
 
 
 @pytest.mark.parametrize("mode", UNSUPPORTED_MODES)
 def test_raise_error_with_not_int8_asym(mode):
-    dummy_torch_model = torch.nn.Module()
+    dummy_torch_model = EmptyModel()
+    dummy_input = torch.Tensor()
+    wrapped_model = wrap_model(dummy_torch_model, example_input=dummy_input, trace_parameters=True)
     with pytest.raises(AttributeError):
-        compress_weights(dummy_torch_model, mode=mode)
+        compress_weights(wrapped_model, mode=mode)

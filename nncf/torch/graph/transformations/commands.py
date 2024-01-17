@@ -125,9 +125,6 @@ class PTTransformationCommand(TransformationCommand):
         """
         return False
 
-    def union(self, other: "PTTransformationCommand") -> "PTTransformationCommand":
-        raise NotImplementedError()
-
 
 class PTInsertionCommand(PTTransformationCommand):
     """
@@ -143,10 +140,6 @@ class PTInsertionCommand(PTTransformationCommand):
         super().__init__(TransformationType.INSERT, point)
         self.fn: Callable = fn
         self.priority: TransformationPriority = priority
-
-    def union(self, other: "PTTransformationCommand") -> "PTTransformationCommand":
-        # TODO: keep all TransformationCommands atomic, refactor TransformationLayout instead
-        raise NotImplementedError()
 
     def requires_graph_rebuild(self):
         # Rebuild graph when adding quantization nodes.
@@ -167,10 +160,6 @@ class PTSharedFnInsertionCommand(PTTransformationCommand):
         self.op_name = op_unique_name
         self.priority = priority
 
-    def union(self, other: "PTTransformationCommand") -> "PTTransformationCommand":
-        # TODO: keep all TransformationCommands atomic, refactor TransformationLayout instead
-        raise NotImplementedError()
-
     def requires_graph_rebuild(self):
         return True
 
@@ -188,9 +177,6 @@ class PTQuantizerInsertionCommand(PTTransformationCommand):
         super().__init__(TransformationType.INSERT, point)
         self.quantizer = quantizer
 
-    def union(self, other: "PTTransformationCommand") -> "PTTransformationCommand":
-        raise NotImplementedError()
-
     def requires_graph_rebuild(self):
         return True
 
@@ -207,9 +193,6 @@ class PTModelExtractionWithFusedBiasCommand(PTCommand):
         super().__init__(TransformationType.EXTRACT)
         self.node_name = node_name
 
-    def union(self, other: "Command") -> "Command":
-        raise NotImplementedError()
-
 
 class PTBiasCorrectionCommand(PTTransformationCommand):
     """
@@ -224,9 +207,6 @@ class PTBiasCorrectionCommand(PTTransformationCommand):
         super().__init__(TransformationType.CHANGE, target_point)
         self.bias_value = bias_value
 
-    def union(self, other: "PTTransformationCommand") -> "PTTransformationCommand":
-        raise NotImplementedError()
-
 
 class PTWeightUpdateCommand(PTTransformationCommand):
     """
@@ -240,6 +220,3 @@ class PTWeightUpdateCommand(PTTransformationCommand):
         """
         super().__init__(TransformationType.CHANGE, target_point)
         self.weight_value = weight_value
-
-    def union(self, other: "PTTransformationCommand") -> "PTTransformationCommand":
-        raise NotImplementedError()

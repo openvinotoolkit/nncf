@@ -20,6 +20,7 @@ from torch.nn import Module as TorchModule
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
+from nncf.common.graph.layer_attributes import ConstantLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.graph.layer_attributes import GetItemLayerAttributes
@@ -28,12 +29,12 @@ from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleInputLayerAttributes
 from nncf.common.graph.layer_attributes import MultipleOutputLayerAttributes
 from nncf.common.graph.layer_attributes import PadLayerAttributes
-from nncf.common.graph.layer_attributes import ParameterLayerAttributes
 from nncf.common.graph.layer_attributes import PermuteLayerAttributes
 from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 from nncf.common.graph.layer_attributes import TransposeLayerAttributes
 from nncf.common.graph.operator_metatypes import ConstNoopMetatype
 from nncf.common.graph.utils import get_split_axis
+from nncf.torch.dynamic_graph.trace_tensor import TracedParameter
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
 from nncf.torch.graph.operator_metatypes import PTGroupNormMetatype
 from nncf.torch.graph.operator_metatypes import PTPadMetatype
@@ -187,6 +188,10 @@ def _get_kwargs_shifted(args_names, args, kwargs, shift=1):
     return res_kwargs
 
 
-def _get_const_attrs_from_args_kwargs(args, _) -> ParameterLayerAttributes:
-    name = getattr(args[0], "name", "Unknown")
-    return ParameterLayerAttributes(name)
+def _get_const_attrs_from_args_kwargs(args, _) -> ConstantLayerAttributes:
+    name = "Unknown"
+    shape = []
+    if args and isinstance(args[0], TracedParameter):
+        name = args[0].name
+        shape = args[0].shape
+    return ConstantLayerAttributes(name, shape)

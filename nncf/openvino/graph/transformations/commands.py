@@ -46,10 +46,6 @@ class OVInsertionCommand(TransformationCommand):
     def __init__(self, target_point: OVTargetPoint):
         super().__init__(TransformationType.INSERT, target_point)
 
-    def union(self, other: "TransformationCommand") -> "TransformationCommand":
-        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
-        raise NotImplementedError()
-
 
 class OVOutputInsertionCommand(OVInsertionCommand):
     def union(self, other: "TransformationCommand") -> "TransformationCommand":
@@ -79,29 +75,17 @@ class OVFQNodeRemovingCommand(TransformationCommand):
         """
         super().__init__(TransformationType.REMOVE, target_point)
 
-    def union(self, other: "TransformationCommand") -> "TransformationCommand":
-        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
-        raise NotImplementedError()
-
 
 class OVQuantizerInsertionCommand(OVInsertionCommand):
     def __init__(self, target_point: OVTargetPoint, quantizer_parameters: FakeQuantizeParameters):
         super().__init__(target_point)
         self.quantizer_parameters = quantizer_parameters
 
-    def union(self, other: "TransformationCommand") -> "TransformationCommand":
-        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
-        raise NotImplementedError()
-
 
 class OVConvertInsertionCommand(OVInsertionCommand):
     def __init__(self, target_point: OVTargetPoint, convert_parameters: FakeConvertParameters):
         super().__init__(target_point)
         self.convert_parameters = convert_parameters
-
-    def union(self, other: "TransformationCommand") -> "TransformationCommand":
-        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
-        raise NotImplementedError()
 
 
 class OVBiasCorrectionCommand(TransformationCommand):
@@ -117,10 +101,6 @@ class OVBiasCorrectionCommand(TransformationCommand):
         super().__init__(TransformationType.CHANGE, target_point)
         self.bias_value = bias_value
 
-    def union(self, other: "TransformationCommand") -> "TransformationCommand":
-        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
-        raise NotImplementedError()
-
 
 class OVWeightUpdateCommand(TransformationCommand):
     """
@@ -134,10 +114,6 @@ class OVWeightUpdateCommand(TransformationCommand):
         """
         super().__init__(TransformationType.CHANGE, target_point)
         self.weight_value = weight_value
-
-    def union(self, other: "TransformationCommand") -> "TransformationCommand":
-        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
-        raise NotImplementedError()
 
 
 class OVModelExtractionCommand(Command):
@@ -156,10 +132,6 @@ class OVModelExtractionCommand(Command):
         self.input_ids = input_ids
         self.output_ids = output_ids
 
-    def union(self, other: "Command") -> "Command":
-        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
-        raise NotImplementedError()
-
 
 class OVBiasInsertionCommand(TransformationCommand):
     """
@@ -173,10 +145,6 @@ class OVBiasInsertionCommand(TransformationCommand):
         """
         super().__init__(TransformationType.INSERT, target_point)
         self.bias_value = bias_value
-
-    def union(self, other: "TransformationCommand") -> "TransformationCommand":
-        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
-        raise NotImplementedError()
 
 
 class OVMultiplyInsertionCommand(OVInsertionCommand):
@@ -202,10 +170,6 @@ class OVMultiplyInsertionCommand(OVInsertionCommand):
         self.destination_node_names = destination_node_names
         self.multiply_node_name = multiply_node_name
 
-    def union(self, other: "TransformationCommand") -> "TransformationCommand":
-        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
-        raise NotImplementedError()
-
 
 class OVUpdateIfBodyCommand(TransformationCommand):
     """
@@ -219,10 +183,6 @@ class OVUpdateIfBodyCommand(TransformationCommand):
         """
         super().__init__(TransformationType.CHANGE, target_point)
         self.subgraph_model = body_model
-
-    def union(self, other: "TransformationCommand") -> "TransformationCommand":
-        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
-        raise NotImplementedError()
 
 
 class OVExtractIfBodyCommand(Command):
@@ -238,7 +198,3 @@ class OVExtractIfBodyCommand(Command):
         super().__init__(TransformationType.EXTRACT)
         self.if_node_name = if_node_name
         self.if_body_condition = if_body_condition
-
-    def union(self, other: "TransformationCommand") -> "TransformationCommand":
-        # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
-        raise NotImplementedError()
