@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import re
-from typing import List, Optional, Union
+from typing import List, Optional, Set, Union
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -21,23 +21,23 @@ from nncf.scopes import IgnoredScope
 from nncf.scopes import convert_ignored_scope_to_list
 
 
-def matches_any(tested_str: str, str_or_list_to_match_to: Union[List[str], str]) -> bool:
+def matches_any(tested_str: str, strs_to_match_to: Union[List[str], Set[str], str]) -> bool:
     """
-    Return True if tested_str matches at least one element in str_or_list_to_match_to.
+    Return True if tested_str matches at least one element in strs_to_match_to.
 
     :param tested_str: One of the supported entity types to be matched - currently possible to pass either
         NNCFNodeName (to refer to the original model operations) or QuantizerId (to refer to specific quantizers).
-    :param str_or_list_to_match_to: A list of strings specifying for the serializable_id. Entries of the strings
+    :param strs_to_match_to: A list or set of strings specifying for the serializable_id. Entries of the strings
         may be prefixed with `{re}` to enable regex matching.
 
     :return: A boolean value specifying whether a tested_str should matches at least one element
-        in str_or_list_to_match_to.
+        in strs_to_match_to.
     """
 
-    if str_or_list_to_match_to is None:
+    if strs_to_match_to is None:
         return False
 
-    str_list = [str_or_list_to_match_to] if isinstance(str_or_list_to_match_to, str) else str_or_list_to_match_to
+    str_list = [strs_to_match_to] if isinstance(strs_to_match_to, str) else strs_to_match_to
     for item in str_list:
         if "{re}" in item:
             regex = item.replace("{re}", "")
@@ -51,7 +51,7 @@ def matches_any(tested_str: str, str_or_list_to_match_to: Union[List[str], str])
 
 def should_consider_scope(
     serializable_id: Union[QuantizerId, NNCFNodeName],
-    ignored_scopes: List[str],
+    ignored_scopes: Union[List[str], Set[str]],
     target_scopes: Optional[List[str]] = None,
 ) -> bool:
     """
@@ -59,7 +59,7 @@ def should_consider_scope(
 
     :param serializable_id: One of the supported entity types to be matched - currently possible to pass either
         NNCFNodeName (to refer to the original model operations) or QuantizerId (to refer to specific quantizers)
-    :param ignored_scopes: A list of strings specifying a denylist for the serializable_id. Entries of the list
+    :param ignored_scopes: A list or set of strings specifying a denylist for the serializable_id. Entries of the list
         may be prefixed with `{re}` to enable regex matching.
     :param target_scopes: A list of strings specifying an allowlist for the serializable_id. Entries of the list
         may be prefixed with `{re}` to enable regex matching.
