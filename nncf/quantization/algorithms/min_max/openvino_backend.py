@@ -19,7 +19,7 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.utils import get_channel_agnostic_reduction_axes
 from nncf.common.hardware.config import HWConfig
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
@@ -150,7 +150,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def _get_reduction_aggregation_axes(
-        nncf_graph: NNCFGraph, target_point: OVTargetPoint, quantizer_config: QuantizerConfig
+        nncf_graph: NNCFGraph, target_point: OVTargetPoint, collector_params: RangeInitCollectorParams
     ) -> Tuple[ReductionAxes, ReductionAxes]:
         """
         Returns reduce and aggregation axes. The following logic is applied:
@@ -172,7 +172,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             aggregation_axes = None
             assert isinstance(node.layer_attributes, OVLayerAttributes)
             shape = node.layer_attributes.constant_attributes[target_point.port_id]["shape"]
-            if quantizer_config.per_channel:
+            if collector_params.is_per_channel:
                 channel_axes = get_weight_channel_axes(node)
                 reduction_axes = get_channel_agnostic_reduction_axes(channel_axes, shape)
             else:
@@ -182,7 +182,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             batch_axis, channel_axis = 0, 1
             aggregation_axes = (batch_axis, channel_axis)
             shape = OVMinMaxAlgoBackend._get_activation_shape(target_point, nncf_graph, node)
-            if quantizer_config.per_channel:
+            if collector_params.is_per_channel:
                 # Keep batch to aggregate and channel for per-channel FakeQuantize.
                 # TODO (l-bat): Disable quantizer propagation through layout changing operations
                 reduction_axes = get_channel_agnostic_reduction_axes((batch_axis, channel_axis), shape)
@@ -197,13 +197,12 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         range_estimator_params: RangeEstimatorParameters,
         nncf_graph: NNCFGraph,
         target_point: OVTargetPoint,
-        quantizer_config: QuantizerConfig,
+        collector_params: RangeInitCollectorParams,
         inplace: bool,
         num_samples: int = None,
     ) -> TensorCollector:
-        use_abs_max = quantizer_config.mode == QuantizationMode.SYMMETRIC
         reduction_axes, aggregation_axes = OVMinMaxAlgoBackend._get_reduction_aggregation_axes(
-            nncf_graph, target_point, quantizer_config
+            nncf_graph, target_point, collector_params
         )
 
         collector = TensorCollector(OVMinMaxTensorStatistic)
@@ -228,7 +227,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 kwargs.update({"quantile": [quantile]})
             # TODO(dlyakhov): merge two quantile aggregators in one
             statistic_type = params.statistics_type
-            if use_abs_max and statistic_type == StatisticsType.MAX:
+            if collector_params.use_abs_max and statistic_type == StatisticsType.MAX:
                 statistic_type = StatisticsType.ABS_MAX
             reducer = OV_REDUCERS_MAP[statistic_type](**kwargs)
 

@@ -24,7 +24,7 @@ from nncf.common.quantization.initialization.range import RangeInitParams
 from nncf.common.quantization.quantizer_setup import QuantizationPointBase
 from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
 from nncf.common.quantization.structs import NonWeightQuantizerId
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import QuantizerId
 from nncf.common.quantization.structs import WeightQuantizerId
@@ -95,14 +95,15 @@ class PTRangeInitParams(RangeInitParams):
 
 class PTRangeInitCollectorParams(RangeInitCollectorParams):
     def __init__(
-        self, is_weights: bool, mode: QuantizationMode, per_channel: bool, input_shape: tuple, channel_idx: int
+        self, is_weights: bool, scheme: QuantizationScheme, per_channel: bool, input_shape: tuple, channel_idx: int
     ):
         """
-
+        :param is_weights: Boolean that defines tensor type. True for Weights, False for Activations.
+        :param scheme: Quantization scheme: symmetric or asymmetric.
         :param input_shape: Shape of the input tensor.
         :param channel_idx: Channel dimension.
         """
-        super().__init__(is_weights, mode, per_channel)
+        super().__init__(is_weights, scheme, per_channel)
         self._input_shape = input_shape
         self._channel_idx = channel_idx
 
@@ -118,7 +119,7 @@ class PTRangeInitCollectorParams(RangeInitCollectorParams):
         axes_to_remove = []
         if self.use_per_sample_stats(per_sample_stats):
             axes_to_remove.append(0)
-        if self._per_channel:
+        if self.is_per_channel:
             val = (ndims + self._channel_idx) % ndims
             axes_to_remove.append(val)
         return get_channel_agnostic_reduction_axes(axes_to_remove, reduction_axes)
@@ -307,9 +308,9 @@ class DataLoaderRangeInitializeRunner(DataLoaderBaseRunner):
                 num_samples_override = num_batches
 
             if isinstance(quantizer_module, SymmetricQuantizer):
-                mode = QuantizationMode.SYMMETRIC
+                mode = QuantizationScheme.SYMMETRIC
             else:
-                mode = QuantizationMode.ASYMMETRIC
+                mode = QuantizationScheme.ASYMMETRIC
 
             shape = quantizer_module.scale_shape
             if shape == (1,):  # Per-tensor

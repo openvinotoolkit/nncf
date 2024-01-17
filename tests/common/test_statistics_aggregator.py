@@ -21,6 +21,7 @@ import pytest
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
@@ -638,11 +639,17 @@ class TemplateTestStatisticsAggregator:
     ):
         algo_backend = cls.get_min_max_algo_backend_cls()
         nncf_graph = NNCFGraphFactory.create(model)
+
+        collector_params = RangeInitCollectorParams(
+            is_weights=target_point.is_weight_target_point(),
+            scheme=q_config.mode,
+            per_channel=q_config.per_channel,
+        )
         tensor_collector = algo_backend.get_statistic_collector(
             range_estimator,
             nncf_graph=nncf_graph,
             target_point=target_point,
-            quantizer_config=q_config,
+            collector_params=collector_params,
             num_samples=subset_size,
             inplace=inplace_statistics,
         )
@@ -759,11 +766,16 @@ class TemplateTestStatisticsAggregator:
         target_point_cls = self.get_target_point_cls()
         for target_point_args, ref in self.MERGED_TARGET_POINT_AND_REFS[key]:
             target_point = target_point_cls(*target_point_args)
+            collector_params = RangeInitCollectorParams(
+                is_weights=target_point.is_weight_target_point(),
+                scheme=quantizer_config.mode,
+                per_channel=quantizer_config.per_channel,
+            )
             min_max_tensor_collector = algo_backend.get_statistic_collector(
                 RangeEstimatorParametersSet.MINMAX,
                 nncf_graph=nncf_graph,
                 target_point=target_point,
-                quantizer_config=quantizer_config,
+                collector_params=collector_params,
                 num_samples=len(dataset_samples),
                 inplace=inplace_statistics,
             )
@@ -771,7 +783,7 @@ class TemplateTestStatisticsAggregator:
                 RangeEstimatorParametersSet.MEAN_MINMAX,
                 nncf_graph=nncf_graph,
                 target_point=target_point,
-                quantizer_config=quantizer_config,
+                collector_params=collector_params,
                 num_samples=len(dataset_samples),
                 inplace=inplace_statistics,
             )
