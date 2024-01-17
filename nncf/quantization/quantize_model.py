@@ -294,6 +294,32 @@ def compress_weights(
         )
         mode = CompressWeightsMode.INT8_ASYM
 
+    backend = get_backend(model)
+    if backend == BackendType.TORCH:
+        from nncf.torch.model_creation import is_wrapped_model
+        from nncf.torch.model_creation import wrap_model
+
+        if mode not in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
+            raise AttributeError(
+                "Torch backend supports only INT8_ASYM, INT8_SYM modes for weight compression, "
+                f"but given {mode.value} mode."
+            )
+
+        if is_wrapped_model(model):
+            if not model.nncf.trace_parameters:
+                raise ValueError(
+                    "Tracing capabilities with tracing parameters are required in the PyTorch model "
+                    "for nncf.compress_weights(). Please wrap the model using "
+                    "nncf.torch.wrap_model(model, example_input, trace_parameters=True) before calling "
+                    "nncf.compress_weights()."
+                )
+        elif dataset is None:
+            raise AttributeError("Please provide a dataset of at least one element for PyTorch model tracing.")
+        else:
+            example_input = next(iter(dataset.get_inference_data()))
+            model = wrap_model(model, example_input=example_input, trace_parameters=True)
+            dataset = None
+
     if mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
         if ratio is None:
             ratio = 1
@@ -309,23 +335,6 @@ def compress_weights(
             raise AttributeError(
                 "INT8 modes do not support `all_layers`, `sensitivity_metric` and `dataset` options."
                 "Set them to None."
-            )
-
-    backend = get_backend(model)
-    if backend == BackendType.TORCH:
-        from nncf.torch.model_creation import is_wrapped_model
-
-        if not is_wrapped_model(model) or (is_wrapped_model(model) and not model.nncf.trace_parameters):
-            raise ValueError(
-                "Tracing capabilities with tracing parameters are required in the PyTorch model "
-                "for nncf.compress_weights(). Please wrap the model using "
-                "nncf.torch.wrap_model(model, example_input, trace_parameters=True) before calling "
-                "nncf.compress_weights()."
-            )
-        if mode not in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
-            raise AttributeError(
-                "Torch backend supports only INT8_ASYM, INT8_SYM modes for weight compression, "
-                f"but given {mode.value} mode."
             )
 
     if ratio is None:
