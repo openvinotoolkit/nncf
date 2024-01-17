@@ -271,9 +271,11 @@ class ConvertDtypeLayerAttributes(BaseLayerAttributes):
 
 
 @dataclass
-class ParameterLayerAttributes(BaseLayerAttributes):
+class ConstantLayerAttributes(BaseLayerAttributes):
     """
-    :param name: Parameter name.
+    :param name: Constant name.
+    :param shape: Constant shape.
     """
 
     name: str
+    shape: List[int]

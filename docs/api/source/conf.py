@@ -139,8 +139,10 @@ mock_modules = [
     "keras",
     "tensorflow_addons",
     # Need add backend implementation functions to avoid endless loops on registered functions by mock module,
-    "nncf.experimental.tensor.torch_functions",
-    "nncf.experimental.tensor.numpy_functions",
+    "nncf.experimental.tensor.functions.numpy_numeric",
+    "nncf.experimental.tensor.functions.numpy_linalg",
+    "nncf.experimental.tensor.functions.torch_numeric",
+    "nncf.experimental.tensor.functions.torch_linalg",
 ]
 
 with mock(mock_modules):

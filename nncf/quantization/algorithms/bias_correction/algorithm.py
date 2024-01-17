@@ -550,9 +550,7 @@ class BiasCorrection(Algorithm):
             statistic_point = self._backend_entity.target_point(
                 TargetType.POST_LAYER_OPERATION, edge.from_node.node_name, port_id=edge.output_port_id
             )
-            stat_collector = self._backend_entity.raw_statistic_collector(
-                num_samples=self.subset_size, inplace=self.inplace_statistics
-            )
+            stat_collector = self._backend_entity.raw_statistic_collector(num_samples=self.subset_size)
             statistic_container.add_statistic_point(
                 StatisticPoint(
                     target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key
@@ -573,9 +571,7 @@ class BiasCorrection(Algorithm):
             statistic_point = self._backend_entity.target_point(
                 TargetType.POST_LAYER_OPERATION, input_node.node_name, port_id=OUTPUT_PORT_OF_NODE
             )
-            stat_collector = self._backend_entity.raw_statistic_collector(
-                num_samples=self.subset_size, inplace=self.inplace_statistics
-            )
+            stat_collector = self._backend_entity.raw_statistic_collector(num_samples=self.subset_size)
             statistic_container.add_statistic_point(
                 StatisticPoint(
                     target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key
