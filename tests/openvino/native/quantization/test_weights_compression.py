@@ -580,7 +580,7 @@ def test_raise_error_with_tuple():
 )
 def test_raise_error_with_unsupported_params_for_int8(mocker, mode, params):
     with pytest.raises(AttributeError):
-        compress_weights(mocker.Mock(), mode=mode, **params)
+        compress_weights(ov.Model([], []), mode=mode, **params)
 
 
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)
