@@ -122,13 +122,12 @@ class PTModelTransformer(ModelTransformer):
         insertion_commands: List[PTInsertionCommand] = []
 
         for shared_command in transformations:
-            op_id = (
-                shared_command.op_name + f"[{';'.join([tp.target_node_name for tp in shared_command.target_points])}]"
-            )
-            model.nncf.add_compression_module(op_id, shared_command.fn, compression_model_type)
+            model.nncf.add_compression_module(shared_command.op_name, shared_command.fn, compression_model_type)
 
             for target_point in shared_command.target_points:
-                fn = ExternalOpCallHook(EXTERNAL_OP_STORAGE_NAME, model.nncf.get_tracing_context(), op_id)
+                fn = ExternalOpCallHook(
+                    EXTERNAL_OP_STORAGE_NAME, model.nncf.get_tracing_context(), shared_command.op_name
+                )
                 insertion_commands.append(PTInsertionCommand(target_point, fn, priority=shared_command.priority))
 
         return PTModelTransformer._apply_insertion_transformations(model, insertion_commands)

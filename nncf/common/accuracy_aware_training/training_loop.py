@@ -323,9 +323,11 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
                 for ctrl_type in adaptive_compression_controllers.values():
                     if isinstance(controller, ctrl_type):
                         return controller
-        elif isinstance(compression_controller, CompressionAlgorithmController):
-            if compression_controller.name in adaptive_compression_controllers:
-                return compression_controller
+        elif (
+            isinstance(compression_controller, CompressionAlgorithmController)
+            and compression_controller.name in adaptive_compression_controllers
+        ):
+            return compression_controller
 
         raise RuntimeError(
             "No compression algorithm that supports adaptive compression accuracy-aware training was specified"

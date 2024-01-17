@@ -294,6 +294,32 @@ def compress_weights(
         )
         mode = CompressWeightsMode.INT8_ASYM
 
+    backend = get_backend(model)
+    if backend == BackendType.TORCH:
+        from nncf.torch.model_creation import is_wrapped_model
+        from nncf.torch.model_creation import wrap_model
+
+        if mode not in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
+            raise AttributeError(
+                "Torch backend supports only INT8_ASYM, INT8_SYM modes for weight compression, "
+                f"but given {mode.value} mode."
+            )
+
+        if is_wrapped_model(model):
+            if not model.nncf.trace_parameters:
+                raise ValueError(
+                    "Tracing capabilities with tracing parameters are required in the PyTorch model "
+                    "for nncf.compress_weights(). Please wrap the model using "
+                    "nncf.torch.wrap_model(model, example_input, trace_parameters=True) before calling "
+                    "nncf.compress_weights()."
+                )
+        elif dataset is None:
+            raise AttributeError("Please provide a dataset of at least one element for PyTorch model tracing.")
+        else:
+            example_input = next(iter(dataset.get_inference_data()))
+            model = wrap_model(model, example_input=example_input, trace_parameters=True)
+            dataset = None
+
     if mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
         if ratio is None:
             ratio = 1
@@ -310,12 +336,6 @@ def compress_weights(
                 "INT8 modes do not support `all_layers`, `sensitivity_metric` and `dataset` options."
                 "Set them to None."
             )
-
-    backend = get_backend(model)
-    if backend == BackendType.TORCH:
-        from nncf.torch.quantization.quantize_model import compress_weights_impl
-
-        return compress_weights_impl(model, mode, ratio, group_size, ignored_scope)
 
     if ratio is None:
         ratio = 1
@@ -336,6 +356,10 @@ def compress_weights(
             f"Mixed precision selection based on the given sensitivity metric={sensitivity_metric.value} requires "
             "a dataset, but it's not provided."
         )
+
+    if ratio < 0 or ratio > 1:
+        raise ValueError(f"The ratio should be between 0 and 1, but ration={ratio} is specified.")
+
     compression_algorithm = WeightCompression(mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric)
     graph = NNCFGraphFactory.create(model)
     return compression_algorithm.apply(model, graph, dataset=dataset)

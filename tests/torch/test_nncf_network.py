@@ -497,7 +497,7 @@ def test_temporary_clean_view():
             == intermediate_model.nncf.get_original_graph().get_nodes_count()
         )
     sd_after_tmp_clean_view = sparse_quantized_model.state_dict()
-    for key in old_sd.keys():
+    for key in old_sd:
         assert key in sd_after_tmp_clean_view
         assert torch.all(torch.eq(sd_after_tmp_clean_view[key], old_sd[key]))
     sparse_quantized_model.nncf.rebuild_graph()
@@ -648,7 +648,7 @@ def test_class_compares_as_original(simple_net):
     assert simple_net.__class__ == SimplestModel
     assert SimplestModel == simple_net.__class__
     assert simple_net.__class__ == simple_net.__class__
-    assert not simple_net.__class__ != simple_net.__class__
+    assert simple_net.__class__ == simple_net.__class__
     assert simple_net.__class__ != ModelWithAttr
     assert ModelWithAttr != simple_net.__class__
 

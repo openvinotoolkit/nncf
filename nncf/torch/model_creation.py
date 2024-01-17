@@ -315,7 +315,6 @@ def create_compression_algorithm_builder_from_algo_names(
 def wrap_model(
     model: torch.nn.Module,
     example_input: Any,
-    replace_modules: bool = True,
     trace_parameters: bool = False,
 ) -> NNCFNetwork:
     """
@@ -327,7 +326,6 @@ def wrap_model(
     :param example_input: An example input that will be used for model tracing. A tuple is interpreted
         as an example input of a set of non keyword arguments, and a dict as an example input of a set
         of keywords arguments.
-    :param replace_modules: Whether to replace model modules with NNCF modules. Default is True.
     :param trace_parameters: Whether to trace model parameters. Default is False.
     :return: A model wrapped by NNCFNetwork.
     """
@@ -336,8 +334,18 @@ def wrap_model(
 
     with training_mode_switcher(model, is_training=False):
         nncf_network = NNCFNetwork(
-            model, input_info=input_info, replace_modules=replace_modules, trace_parameters=trace_parameters
+            model, input_info=input_info, replace_modules=not trace_parameters, trace_parameters=trace_parameters
         )
         nncf_network.nncf.get_tracing_context().disable_trace_dynamic_graph()
 
     return nncf_network
+
+
+def is_wrapped_model(model: torch.nn.Module) -> bool:
+    """
+    Check that the model was wrapped by NNCFNetwork.
+
+    :param model: A model.
+    :return: True if the model is wrapped, False otherwise.
+    """
+    return isinstance(model, NNCFNetwork)

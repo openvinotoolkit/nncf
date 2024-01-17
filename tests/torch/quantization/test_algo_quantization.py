@@ -196,7 +196,7 @@ def test_can_load_quant_algo__with_defaults():
         quant_scope: Scope = deepcopy(module_scope)
         quant_scope.pop()
         quant_scope.push(ScopeElement("NNCFConv2d", "conv"))
-        assert quant_scope in quant_model_conv.keys()
+        assert quant_scope in quant_model_conv
 
         store = []
         for op in quant_model_conv[quant_scope].pre_ops.values():
@@ -879,7 +879,7 @@ def test_activation_ignored_scope(update_config_info, should_ignore_quantizers):
     train_loader = create_random_mock_dataloader(config, num_samples=10)
     config = register_default_init_args(config, train_loader)
     ctrl, _ = create_compressed_model(model, config)
-    assert Counter([item.target_node_name for item in ctrl.all_quantizations.keys()]) == Counter(ref_quantization_names)
+    assert Counter([item.target_node_name for item in ctrl.all_quantizations]) == Counter(ref_quantization_names)
 
 
 def test_sync_of_level_ranges_and_signed_parameter():

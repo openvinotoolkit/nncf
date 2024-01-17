@@ -255,11 +255,16 @@ def _process_parameters(operator_inputs: OperatorInput, ctx: TracingContext) -> 
             operator_inputs[idx] = processed_parameter
             continue
 
+        if traced_parameter.tensor_meta is not None:
+            continue
+
         in_parameter_trace = getattr(ctx, "in_parameter_trace", False)
         ctx.in_parameter_trace = True
+        is_reused = traced_parameter.is_reused
         processed_parameter = process_parameter_fn(traced_parameter)
         operator_inputs[idx] = processed_parameter
-        ctx.register_processed_parameter(traced_parameter.name, processed_parameter)
+        if is_reused:
+            ctx.register_processed_parameter(traced_parameter.name, processed_parameter)
         ctx.in_parameter_trace = in_parameter_trace
 
     ctx.in_operator = in_op
@@ -274,5 +279,6 @@ def wrap_parameters(model: torch.nn.Module):
     """
     ctx = get_current_context()
     for name, param in model.named_parameters():
-        tt = TracedParameter.from_torch_parameter(param, name)
+        is_reused = name in ctx.reused_parameters
+        tt = TracedParameter.from_torch_parameter(param, name, is_reused)
         ctx.register_traced_tensor(tt)

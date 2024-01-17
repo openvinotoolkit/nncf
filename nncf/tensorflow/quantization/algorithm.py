@@ -341,9 +341,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         if self._target_device in ["CPU", "ANY"] and qconfig.num_bits == 8:
             if self._overflow_fix == "enable":
                 return True
-            if self._overflow_fix == "first_layer_only":
-                if target_node in first_conv_nodes:
-                    return True
+            if self._overflow_fix == "first_layer_only" and target_node in first_conv_nodes:
+                return True
         return False
 
     def _create_quantizer(self, name: str, qspec: TFQuantizerSpec) -> Quantizer:

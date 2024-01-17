@@ -621,9 +621,8 @@ class OnlineAggregatorBase(AggregatorBase, ABC):
             self._container.append(reduced)
 
     def _aggregate_impl(self) -> NNCFTensor:
-        if 0 in self._aggregation_axes:
-            if self._keepdims:
-                return self._container[0].tensor
+        if 0 in self._aggregation_axes and self._keepdims:
+            return self._container[0].tensor
         return self._tensor_processor.stack(self._container).tensor
 
     @abstractmethod

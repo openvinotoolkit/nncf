@@ -131,7 +131,7 @@ DATASET_PATHS["classification"]["cifar10"] = lambda dataset_root: TEST_ROOT.join
 
 def get_sample_fn(sample_type, modes):
     variants = []
-    for key in SAMPLES[sample_type].keys():
+    for key in SAMPLES[sample_type]:
         supported_modes = set(key.split("-"))
         if set(modes).issubset(supported_modes):
             variants.append(key)
@@ -170,7 +170,7 @@ def _config(request, dataset_dir):
     with config_path.open() as f:
         jconfig = json.load(f)
 
-    if "checkpoint_save_dir" in jconfig.keys():
+    if "checkpoint_save_dir" in jconfig:
         del jconfig["checkpoint_save_dir"]
 
     jconfig["dataset"] = dataset_name

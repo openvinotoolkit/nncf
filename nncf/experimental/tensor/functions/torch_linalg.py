@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -8,9 +8,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Optional, Tuple, Union
 
-from nncf.experimental.tensor.definitions import TensorBackendType as TensorBackendType
-from nncf.experimental.tensor.definitions import TensorDataType as TensorDataType
-from nncf.experimental.tensor.definitions import TensorDeviceType as TensorDeviceType
-from nncf.experimental.tensor.tensor import Tensor as Tensor
-from nncf.experimental.tensor.tensor import unwrap_tensor_data as unwrap_tensor_data
+import torch
+
+from nncf.experimental.tensor.functions import linalg
+
+
+@linalg.norm.register(torch.Tensor)
+def _(
+    a: torch.Tensor,
+    ord: Optional[Union[str, float, int]] = None,
+    axis: Optional[Union[int, Tuple[int, ...]]] = None,
+    keepdims: bool = False,
+) -> torch.Tensor:
+    return torch.linalg.norm(a, ord=ord, dim=axis, keepdims=keepdims)

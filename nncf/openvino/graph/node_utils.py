@@ -311,18 +311,12 @@ def get_inplace_mean_per_ch(op_type: str, axis: int) -> InplaceInsertionFnType:
             transposed_shape = input_shape
 
         keeped_dims = transposed_shape[:2]
+        keeped_dims = [0 if dim < 0 else dim for dim in keeped_dims]
         squized_dims = -1 if -1 in transposed_shape[2:] else np.prod(transposed_shape[2:])
-        if (-1 in keeped_dims and squized_dims == -1) or keeped_dims.count(-1) > 1:
-            raise RuntimeError(
-                f"Could not insert mean_per_ch operation inplace"
-                f" for the node {node} because of"
-                f" input_shape: {input_shape} -> transposed_shape: {transposed_shape}"
-            )
-
         reshape_op = opset.reshape(
             reshape_input_node.output(output_port_id),
             output_shape=np.array((keeped_dims[0], keeped_dims[1], squized_dims)),
-            special_zero=False,
+            special_zero=True,
         )
         return opset.reduce_mean(
             reshape_op,

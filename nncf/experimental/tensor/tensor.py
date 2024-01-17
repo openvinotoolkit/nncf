@@ -13,8 +13,8 @@ from __future__ import annotations
 import operator
 from typing import Any, Optional, Tuple, TypeVar, Union
 
-from nncf.experimental.tensor.enums import TensorDataType
-from nncf.experimental.tensor.enums import TensorDeviceType
+from nncf.experimental.tensor.definitions import TensorDataType
+from nncf.experimental.tensor.definitions import TensorDeviceType
 
 TTensor = TypeVar("TTensor")
 
@@ -44,8 +44,12 @@ class Tensor:
         return _call_function("device", self)
 
     @property
-    def dtype(self) -> TensorDeviceType:
+    def dtype(self) -> TensorDataType:
         return _call_function("dtype", self)
+
+    @property
+    def size(self) -> int:
+        return _call_function("size", self)
 
     def __bool__(self) -> bool:
         return bool(self.data)
@@ -146,6 +150,9 @@ class Tensor:
     def reshape(self, shape: Tuple[int, ...]) -> Tensor:
         return _call_function("reshape", self, shape)
 
+    def item(self) -> float:
+        return _call_function("item", self)
+
 
 def _call_function(func_name: str, *args):
     """
@@ -154,9 +161,9 @@ def _call_function(func_name: str, *args):
     :param func_name: Name of function.
     :return: Result of function call.
     """
-    from nncf.experimental.tensor import functions
+    from nncf.experimental.tensor.functions import numeric
 
-    fn = getattr(functions, func_name)
+    fn = getattr(numeric, func_name)
     return fn(*args)
 
 
