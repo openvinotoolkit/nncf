@@ -62,7 +62,7 @@ class QuantizationDebugInterface(DebugInterface):
 
         quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
         quantizers_in_nncf_modules = owner_model.nncf.get_modules_in_nncf_modules_by_type(quantization_types)
-        nncf_module_quantizations_id_list: List[str] = [str(scope) for scope in quantizers_in_nncf_modules.keys()]
+        nncf_module_quantizations_id_list: List[str] = [str(scope) for scope in quantizers_in_nncf_modules]
 
         activation_quantizer_id_list: List[str] = owner_model.nncf.get_compression_modules_by_type(
             ExtraCompressionModuleType.EXTERNAL_QUANTIZER

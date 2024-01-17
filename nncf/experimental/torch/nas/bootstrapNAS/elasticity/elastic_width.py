@@ -709,35 +709,34 @@ class ElasticWidthHandler(SingleElasticityHandler):
             if not was_set and node_name not in names_of_processed_nodes:
                 nncf_logger.debug(f"input width was not set in scope={node.node_name}")
 
-            if self._add_dynamic_inputs:
-                if node_name in self._add_dynamic_inputs and not was_set:
-                    nncf_logger.debug(f"setting input width by user's request for scope={node_name}")
-                    nodes_to_check = [node]
-                    while any(elem is None for elem in input_masks):
-                        previous_nodes = []
-                        for node in nodes_to_check:
-                            previous_nodes.append(self._propagation_graph.get_previous_nodes(node))
-                        nodes_to_check.clear()
-                        previous_nodes = [item for nodes in previous_nodes for item in nodes]
-                        if not previous_nodes:
-                            break
-                        for previous in previous_nodes:
-                            if "output_mask" in previous.attributes:
-                                if previous.attributes["output_mask"] is not None:
-                                    input_masks.append(previous.attributes["output_mask"])
-                                    input_masks = [i for i in input_masks if i]
-                                else:
-                                    nodes_to_check.append(previous)
+            if self._add_dynamic_inputs and node_name in self._add_dynamic_inputs and not was_set:
+                nncf_logger.debug(f"setting input width by user's request for scope={node_name}")
+                nodes_to_check = [node]
+                while any(elem is None for elem in input_masks):
+                    previous_nodes = []
+                    for node in nodes_to_check:
+                        previous_nodes.append(self._propagation_graph.get_previous_nodes(node))
+                    nodes_to_check.clear()
+                    previous_nodes = [item for nodes in previous_nodes for item in nodes]
+                    if not previous_nodes:
+                        break
+                    for previous in previous_nodes:
+                        if "output_mask" in previous.attributes:
+                            if previous.attributes["output_mask"] is not None:
+                                input_masks.append(previous.attributes["output_mask"])
+                                input_masks = [i for i in input_masks if i]
                             else:
                                 nodes_to_check.append(previous)
-                    if input_masks:
-                        input_mask = input_masks[0]
-                        input_width = self.mask_to_width(input_mask)
-                        if input_width:
-                            dynamic_input_width_op.set_active_width(input_width)
-                            was_set = True
-                    if was_set:
-                        nncf_logger.debug(f"Success setting up user's request for dynamic input at scope={node_name}")
+                        else:
+                            nodes_to_check.append(previous)
+                if input_masks:
+                    input_mask = input_masks[0]
+                    input_width = self.mask_to_width(input_mask)
+                    if input_width:
+                        dynamic_input_width_op.set_active_width(input_width)
+                        was_set = True
+                if was_set:
+                    nncf_logger.debug(f"Success setting up user's request for dynamic input at scope={node_name}")
 
     def get_active_in_out_width_values(
         self,

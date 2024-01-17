@@ -11,10 +11,9 @@
 
 import numpy as np
 import onnx
-import openvino.runtime as ov
+import openvino as ov
 import torch
 import transformers
-from openvino.tools.mo import convert_model
 from optimum.intel import OVQuantizer
 from optimum.intel.openvino import OVModelForSequenceClassification
 from optimum.onnxruntime import ORTModelForSequenceClassification
@@ -53,13 +52,13 @@ class MaskedLanguageModelingHF(BaseTestPipeline):
     def _dump_model_fp32(self) -> None:
         """Dump IRs of fp32 models, to help debugging."""
         if self.backend in PT_BACKENDS:
-            ov_model = convert_model(self.model, example_input=self.dummy_tensor)
+            ov_model = ov.convert_model(self.model, example_input=self.dummy_tensor)
             ov.serialize(ov_model, self.output_model_dir / "model_fp32.xml")
 
         if self.backend == BackendType.ONNX:
             onnx_path = self.output_model_dir / "model_fp32.onnx"
             onnx.save(self.model, onnx_path)
-            ov_model = convert_model(onnx_path)
+            ov_model = ov.convert_model(onnx_path)
             ov.serialize(ov_model, self.output_model_dir / "model_fp32.xml")
 
         if self.backend in OV_BACKENDS + [BackendType.FP32]:

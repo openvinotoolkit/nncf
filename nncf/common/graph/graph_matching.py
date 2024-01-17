@@ -29,10 +29,9 @@ def _are_nodes_matched(node_1, node_2) -> bool:
                 continue
             # Torch and TF pattern mapping based on 'type' section,
             # While ONNX mapping based on metatypes -
-            # to support all of them, we need to check the existane of the attributes
-            if GraphPattern.NODE_TYPE_ATTR in node_1:
-                if node_1[GraphPattern.NODE_TYPE_ATTR] in node_2[attr]:
-                    continue
+            # to support all of them, we need to check the existence of the attributes
+            if GraphPattern.NODE_TYPE_ATTR in node_1 and node_1[GraphPattern.NODE_TYPE_ATTR] in node_2[attr]:
+                continue
         if node_1[attr] not in node_2[attr]:
             return False
     return True

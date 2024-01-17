@@ -80,9 +80,8 @@ def get_custom_objects(model):
             layer = layer.layer
         if layer.__class__.__name__ not in keras_layers:
             custom_objects[layer.__class__.__name__] = layer.__class__
-        if layer.__class__.__name__ == "Activation":
-            if layer.activation.__name__ not in keras_activations:
-                custom_objects[layer.activation.__name__] = layer.activation
+        if layer.__class__.__name__ == "Activation" and layer.activation.__name__ not in keras_activations:
+            custom_objects[layer.activation.__name__] = layer.activation
     return custom_objects
 
 

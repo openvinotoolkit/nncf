@@ -74,7 +74,7 @@ def main(argv):
         new_keys = {}
         for new_parameter in param_list:
             old_keys = list(sd.keys())
-            for k in sd.keys():
+            for k in sd:
                 for h in hooks:
                     new_key = k.replace(h, new_parameter.name)
                     if ("." + h in k) and ("." + new_parameter.name not in k) and (new_key not in old_keys):

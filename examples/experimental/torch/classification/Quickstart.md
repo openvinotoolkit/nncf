@@ -1,32 +1,8 @@
 # Setup
 
-## PyTorch
+## NNCF and PyTorch
 
-Install PyTorch and Torchvision using the [PyTorch installation guide](https://pytorch.org/get-started/locally/#start-locally). NNCF currently supports PyTorch 1.12.1. For this quickstart, PyTorch 1.12.1 and Torchvision 0.13.1 with CUDA 11.3 was installed using:
-
-```bash
-pip install torch==1.12.1+cu113 torchvision==0.13.1+cu113 --extra-index-url https://download.pytorch.org/whl/cu113
-```
-
-## NNCF
-
-There are two options for installing [***NNCF***](https://github.com/openvinotoolkit/nncf#installation):
-
-- Package built from NNCF repository or
-- PyPI package.
-
-To install NNCF and dependencies from the NNCF repository, install by running the following in the repository root directory and also set `PYTHONPATH` variable to include the root directory:
-
-```bash
-python setup.py develop
-export PYTHONPATH="${PYTHONPATH}:<Directory Path>/nncf"
-```
-
-To install NNCF and dependencies as a PyPI package, use the following:
-
-```bash
-pip install nncf
-```
+Install NNCF and PyTorch using the latest instructions in https://github.com/openvinotoolkit/nncf/blob/develop/docs/Installation.md.
 
 The ```examples``` folder from the NNCF repository ***is not*** included when you install NNCF using a package manager. To run the BootstrapNAS examples, you will need to obtain this folder from the repository and add it to your path.
 

@@ -30,6 +30,7 @@ from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.insertion_point_graph import InsertionPointGraph
@@ -296,6 +297,9 @@ class NNCFNetworkInterface(torch.nn.Module):
         self._compressed_graphs_pair: PTGraphPair = None
 
         self._compressed_context = TracingContext()
+
+        if self.trace_parameters:
+            self._compressed_context.reused_parameters = self.get_reused_parameters()
 
         self._dummy_forward_fn = self._get_dummy_forward_fn_for_graph_building(
             with_input_tracing=False, with_output_tracing=False
@@ -604,9 +608,8 @@ class NNCFNetworkInterface(torch.nn.Module):
             with self._compressed_context as ctx:
                 ctx.base_module_thread_local_replica = self._model_ref
                 self._dummy_forward_fn(self._model_ref)
-        if force_eval:
-            if train_mode:
-                self._model_ref.train()
+        if force_eval and train_mode:
+            self._model_ref.train()
 
     def get_original_insertion_point_graph(self) -> InsertionPointGraph:
         # Set up a pre- and post-hooks on almost every op in PyTorch
@@ -778,6 +781,20 @@ class NNCFNetworkInterface(torch.nn.Module):
             model = deepcopy(self._model_ref) if do_copy else self._model_ref
             return strip_quantized_model(model)
         return self.compression_controller.strip(do_copy)
+
+    def get_reused_parameters(self):
+        """
+        Return a list of parameter names which are used as an input in several operations of the model.
+
+        :return: A list of parameter names.
+        """
+        ret = []
+        graph = self._original_graphs_pair.nncf_graph
+        for node in graph.get_nodes_by_metatypes(CONST_NOOP_METATYPES):
+            next_nodes = graph.get_next_nodes(node)
+            if len(next_nodes) > 1:
+                ret.append(node.layer_attributes.name)
+        return ret
 
 
 class NNCFNetworkMeta(type):

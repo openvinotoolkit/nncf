@@ -342,7 +342,7 @@ def check_correct_nncf_modules_replacement(
     original_modules = get_all_modules_by_type(model, list(NNCF_MODULES_MAP.values()))
     nncf_modules = get_all_modules_by_type(compressed_model, list(NNCF_MODULES_MAP.keys()))
     assert len(original_modules) == len(nncf_modules)
-    for nncf_scope in nncf_modules.keys():
+    for nncf_scope in nncf_modules:
         original_scope = get_original_module_scope_from_nncf_module_scope(nncf_scope)
         assert original_scope in original_modules
     return original_modules, nncf_modules

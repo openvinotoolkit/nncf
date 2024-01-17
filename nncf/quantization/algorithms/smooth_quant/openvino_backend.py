@@ -154,14 +154,14 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         if port_id > 1:
             raise RuntimeError(f"{node.metatype.name} can not take more than 2 input tensors.")
 
-        if node.metatype == OVMatMulMetatype:
-            if (
-                node.layer_attributes is not None
-                and node.layer_attributes.input_attributes is not None
-                and "transpose" in node.layer_attributes.input_attributes
-            ):
-                transpose = node.layer_attributes.input_attributes["transpose"]
-                channel_axis = OVSmoothQuantAlgoBackend.calculate_port_based_channel_axis(port_id, transpose)
+        if (
+            node.metatype == OVMatMulMetatype
+            and node.layer_attributes is not None
+            and node.layer_attributes.input_attributes is not None
+            and "transpose" in node.layer_attributes.input_attributes
+        ):
+            transpose = node.layer_attributes.input_attributes["transpose"]
+            channel_axis = OVSmoothQuantAlgoBackend.calculate_port_based_channel_axis(port_id, transpose)
 
         return channel_axis
 

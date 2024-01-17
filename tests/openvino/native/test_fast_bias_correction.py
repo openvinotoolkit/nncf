@@ -12,9 +12,8 @@
 from typing import List
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 import torch
-from openvino.tools.mo import convert_model
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.openvino.graph.node_utils import get_bias_value
@@ -36,7 +35,7 @@ class TestOVFBCAlgorithm(TemplateTestFBCAlgorithm):
     def backend_specific_model(model: bool, tmp_dir: str):
         onnx_path = f"{tmp_dir}/model.onnx"
         torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
-        ov_model = convert_model(onnx_path, input_shape=model.INPUT_SIZE, compress_to_fp16=False)
+        ov_model = ov.convert_model(onnx_path, input=model.INPUT_SIZE)
         return ov_model
 
     @staticmethod

@@ -10,23 +10,22 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TypeVar
 
-import numpy as np
-from numpy import linalg
-
+from nncf.common.graph import NNCFGraph
 from nncf.common.logging.track_progress import track
 from nncf.common.utils.registry import Registry
-from nncf.openvino.graph.metatypes.openvino_metatypes import OVEmbeddingMetatype
-from nncf.openvino.graph.node_utils import get_const_value
+from nncf.experimental.tensor import Tensor
+from nncf.experimental.tensor import functions as fns
 from nncf.parameters import SensitivityMetric
-from nncf.quantization.algorithms.weight_compression.compression_info import WeightCompressionConfig
-from nncf.quantization.algorithms.weight_compression.compression_info import WeightNodeParams
-from nncf.quantization.algorithms.weight_compression.quantize import do_integer_quantization
-from nncf.quantization.algorithms.weight_compression.quantize import get_integer_quantization_error
+from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
+from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
+from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 
+TModel = TypeVar("TModel")
 MIXED_PRECISION_CRITERIA = Registry("mixed_precision_criteria")
-
 THE_LOWEST_SENSITIVITY = 0
 
 
@@ -37,19 +36,27 @@ class MixedPrecisionCriterion:
 
     def __init__(
         self,
-        weight_params: List[WeightNodeParams],
+        model: TModel,
+        graph: NNCFGraph,
+        backend_entity: WeightCompressionAlgoBackend,
+        weight_params: List[WeightCompressionParameters],
         primary_config: WeightCompressionConfig,
         ratio: float,
-        activations: Optional[Dict[str, np.ndarray]] = None,
+        activations: Optional[Dict[str, List[Tensor]]] = None,
     ):
         """
-        :param weight_params: Information about weights that are used for calculating ratio between primary and backup
-            precisions. The quantization scheme is added to this info.
-        :param primary_config: Information on how to compress (quantize) weights to primary precision.
+        :param model: The model.
+        :param graph: The model graph associated with the model.
+        :param backend_entity: The instance of the WeightCompressionAlgoBackend.
+        :param weight_params: Weight compression parameters which determines how and what weight should be compressed.
+        :param primary_config: Configuration on how to compress (quantize) weights to primary precision.
         :param ratio: The ratio between primary and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
             and the rest to INT8_ASYM).
         :param activations: The input activations of the nodes to be quantized.
         """
+        self._model = model
+        self._graph = graph
+        self._backend_entity = backend_entity
         self._weight_params = weight_params
         self._activations = activations
         self._primary_config = primary_config
@@ -89,16 +96,17 @@ class DataFreeCriterion(MixedPrecisionCriterion):
     A baseline mixed precision criterion that is based on quantization noise of weights only.
     """
 
-    @staticmethod
-    def _calc_weight_sensitivity(weight_param: WeightNodeParams) -> float:
-        weight = get_const_value(weight_param.weight_node)
+    def _calc_weight_sensitivity(self, weight_param: WeightCompressionParameters) -> float:
+        weight = self._backend_entity.get_weight(
+            weight_param.node_with_weight, weight_param.weight_port_id, self._model, self._graph
+        )
         backup_config = weight_param.compression_config
         reduction_axis = weight_param.reduction_axis
         int_error = get_integer_quantization_error(weight, reduction_axis, backup_config)
-        eps = np.finfo(weight.dtype).eps
+        eps = fns.finfo(weight).eps
         return 1 / (int_error + eps)
 
-    def _calc_score_per_node(self, weight_param: WeightNodeParams) -> float:
+    def _calc_score_per_node(self, weight_param: WeightCompressionParameters) -> float:
         weight_score = self._calc_weight_sensitivity(weight_param)
         return weight_score
 
@@ -117,20 +125,20 @@ class DataBasedCriterion(DataFreeCriterion):
 
     @staticmethod
     @abstractmethod
-    def _calc_activation_sensitivity(activations: np.ndarray):
+    def _calc_activation_sensitivity(activations: List[Tensor]) -> float:
         pass
 
-    def _calc_score_per_node(self, weight_param: WeightNodeParams):
+    def _calc_score_per_node(self, weight_param: WeightCompressionParameters):
         """
         NOTE: Data-based criteria for assigning 4-bit/8-bit precisions are valid for Matmul operations only.
         However, in some cases it can be beneficial to quantize Gather layers to 4-bit.
-        Since there's no data-based estimation of sensitivity in these layers, they receive the lowest sensitivity.
+        Since there's no data-aware estimation of sensitivity in these layers, they receive the lowest sensitivity.
         It allows assigning Gather operation 4-bit in the first place.
         """
-        if weight_param.metatype == OVEmbeddingMetatype:
+        if weight_param.node_with_weight.metatype in self._backend_entity.embedding_metatypes:
             return THE_LOWEST_SENSITIVITY
         weight_score = self._calc_weight_sensitivity(weight_param)
-        activation_score = self._calc_activation_sensitivity(self._activations[weight_param.node_name])
+        activation_score = self._calc_activation_sensitivity(self._activations[weight_param.node_with_weight.node_name])
         return weight_score * activation_score
 
 
@@ -142,21 +150,22 @@ class HAWQCriterion(DataBasedCriterion):
     """
 
     @staticmethod
-    def _calc_activation_sensitivity(activations: np.ndarray):
+    def _calc_activation_sensitivity(activations: List[Tensor]) -> float:
         htrace = 0
         nsamples = len(activations)
         for inp in activations:
             # NOTE: average trace?? divide by number of diagonal elements
-            htrace += np.sum(np.multiply(inp, inp))
+            htrace += fns.sum(fns.multiply(inp, inp)).item()
             # normalize by sequence_length - the same for all activations
             # normalize by hidden dimension
             htrace /= inp.size
         htrace *= 2 / nsamples
         return htrace
 
-    @staticmethod
-    def _calc_weight_sensitivity(weight_param: WeightNodeParams):
-        weight = get_const_value(weight_param.weight_node)
+    def _calc_weight_sensitivity(self, weight_param: WeightCompressionParameters) -> float:
+        weight = self._backend_entity.get_weight(
+            weight_param.node_with_weight, weight_param.weight_port_id, self._model, self._graph
+        )
         backup_config = weight_param.compression_config
         reduction_axis = weight_param.reduction_axis
 
@@ -165,7 +174,7 @@ class HAWQCriterion(DataBasedCriterion):
         decompressed_weight = compressed_weights.astype(dtype=scale.dtype)
         decompressed_weight = (compressed_weights - zero_point) * scale
         decompressed_weight = decompressed_weight.reshape(orig_shape)
-        return linalg.norm(decompressed_weight - weight, ord="fro")
+        return fns.linalg.norm(decompressed_weight - weight, ord="fro").item()
 
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.MEAN_ACTIVATION_VARIANCE)
@@ -175,8 +184,8 @@ class MeanVarianceCriterion(DataBasedCriterion):
     """
 
     @staticmethod
-    def _calc_activation_sensitivity(activations: np.ndarray):
-        return float(np.mean([np.mean(np.var(inp, axis=0)) for inp in activations]))
+    def _calc_activation_sensitivity(activations: List[Tensor]) -> float:
+        return fns.mean(fns.stack([fns.mean(fns.var(inp, axis=0)) for inp in activations])).item()
 
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.MAX_ACTIVATION_VARIANCE)
@@ -186,8 +195,8 @@ class MaxVarianceCriterion(DataBasedCriterion):
     """
 
     @staticmethod
-    def _calc_activation_sensitivity(activations: np.ndarray):
-        return float(np.mean([np.max(np.var(inp, axis=0)) for inp in activations]))
+    def _calc_activation_sensitivity(activations: List[Tensor]) -> float:
+        return fns.mean(fns.stack([fns.max(fns.var(inp, axis=0)) for inp in activations])).item()
 
 
 @MIXED_PRECISION_CRITERIA.register(SensitivityMetric.MEAN_ACTIVATION_MAGNITUDE)
@@ -197,5 +206,5 @@ class MeanMaxCriterion(DataBasedCriterion):
     """
 
     @staticmethod
-    def _calc_activation_sensitivity(activations: np.ndarray):
-        return float(np.mean([np.mean(np.max(np.abs(inp), axis=0)) for inp in activations]))
+    def _calc_activation_sensitivity(activations: List[Tensor]) -> float:
+        return fns.mean(fns.stack([fns.mean(fns.max(fns.abs(inp), axis=0)) for inp in activations])).item()

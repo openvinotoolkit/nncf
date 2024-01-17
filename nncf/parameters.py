@@ -89,6 +89,7 @@ class CompressWeightsMode(Enum):
     INT8 = "int8"  # Deprecated mode
 
 
+@api(canonical_alias="nncf.SensitivityMetric")
 class SensitivityMetric(Enum):
     """
     Defines a sensitivity metric for assigning quantization precision to layers. In order to

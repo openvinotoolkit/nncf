@@ -102,7 +102,7 @@ def is_any_weight_quantized(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     """
     is_quantized_weight = False
     if node.layer_attributes.has_weight():
-        for port_id in node.layer_attributes.weight_attrs.keys():
+        for port_id in node.layer_attributes.weight_attrs:
             is_quantized_weight = is_quantized_weight or is_port_quantized(node, nncf_graph, port_id)
     return is_quantized_weight
 
@@ -159,16 +159,15 @@ def _get_weight_quantization_axis(node: NNCFNode, port_id: int) -> int:
     :return: Axis, along which quantizer parameters are calculated.
     """
     weight_channel_axis = node.metatype.weight_channel_axis
-    if node.layer_attributes.has_node_attrs():
-        if node.metatype == om.ONNXGemmMetatype:
-            weight_shape = node.layer_attributes.weight_attrs[port_id]["shape"]
-            if (
-                port_id == 0
-                and node.layer_attributes.node_attrs["transA"] == 1
-                or port_id == 1
-                and node.layer_attributes.node_attrs["transB"] == 1
-            ):
-                weight_channel_axis = transpose_axis(weight_shape, weight_channel_axis)
+    if node.layer_attributes.has_node_attrs() and node.metatype == om.ONNXGemmMetatype:
+        weight_shape = node.layer_attributes.weight_attrs[port_id]["shape"]
+        if (
+            port_id == 0
+            and node.layer_attributes.node_attrs["transA"] == 1
+            or port_id == 1
+            and node.layer_attributes.node_attrs["transB"] == 1
+        ):
+            weight_channel_axis = transpose_axis(weight_shape, weight_channel_axis)
     return weight_channel_axis
 
 
