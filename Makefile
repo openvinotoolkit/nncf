@@ -168,3 +168,12 @@ test-examples:
 # Pre commit check
 pre-commit:
 	pre-commit run -a
+
+
+###############################################################################
+# Fuzzing tests
+install-fuzz-test: install-common-test
+	pip install -r tests/cross_fw/sdl/fuzz/requirements.txt
+
+test-fuzz:
+	python tests/cross_fw/sdl/fuzz/quantize_api.py
