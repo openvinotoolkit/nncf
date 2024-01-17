@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Tuple, TypeVar
+from typing import Callable, List, Tuple, TypeVar
 
 from nncf.common.factory import CommandCreatorFactory
 from nncf.common.factory import ModelTransformerFactory
@@ -105,6 +105,8 @@ def revert_operations_to_floating_point_precision(
     quantized_model_graph: NNCFGraph,
     restore_mode: RestoreMode,
     op_with_weights_metatypes: List[OperatorMetatype],
+    is_node_with_weight_fn: Callable[[NNCFNode], bool],
+    get_weight_tensor_port_ids_fn: Callable[[NNCFNode], List[int]],
 ) -> TModel:
     """
     Reverts provided operations to floating-point precision by removing
@@ -120,6 +122,9 @@ def revert_operations_to_floating_point_precision(
     :param restore_mode: Restore mode.
     :param op_with_weights_metatypes: List of operation metatypes that can be reverted to representation
         with int8 weights.
+    :param is_node_with_weight_fn: Checks if the node has a weight or not. Returns `True` if `node` corresponds
+        to the operation with weights, `False` otherwise.
+    :param get_weight_tensor_port_ids_fn: Returns node's input port indices with weights tensors.
     :return: The model where `operations` were reverted to floating-point precision.
     """
     transformation_layout = TransformationLayout()
@@ -155,11 +160,8 @@ def revert_operations_to_floating_point_precision(
         if not should_revert_weights_to_fp32.get(node.node_name, True):
             continue
 
-        # TODO(andrey-churkin): Fix it
-        # if node.layer_attributes and node.layer_attributes.constant_attributes is not None:
-        if node.layer_attributes and node.layer_attributes.has_weight():
-            # weight_port_ids = node.layer_attributes.get_const_port_ids()
-            weight_port_ids = list(node.layer_attributes.weight_attrs.keys())
+        if is_node_with_weight_fn(node):
+            weight_port_ids = get_weight_tensor_port_ids_fn(node)
             for port_id in weight_port_ids:
                 original_weight = node.attributes.get(f"original_weight.{port_id}", None)
                 if original_weight is not None:

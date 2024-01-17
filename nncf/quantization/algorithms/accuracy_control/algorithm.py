@@ -321,6 +321,8 @@ class QuantizationAccuracyRestorer:
                 quantized_model_graph,
                 self.restore_mode,
                 algo_backend.get_op_with_weights_metatypes(),
+                algo_backend.is_node_with_weight,
+                algo_backend.get_weight_tensor_port_ids,
             )
             report.removed_groups.append(current_group)
 
