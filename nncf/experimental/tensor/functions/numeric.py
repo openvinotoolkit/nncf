@@ -8,12 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-<<<<<<< HEAD:nncf/experimental/tensor/functions.py
-
-import functools
-from typing import Callable, List, Optional, Tuple, TypeVar, Union
-=======
->>>>>>> 203a2cf3 (Generalization the weight compression algorithm to PyTorch model. (#2333)):nncf/experimental/tensor/functions/numeric.py
 
 import functools
 from typing import Any, Callable, List, Optional, Tuple, Union
@@ -449,19 +443,12 @@ def as_tensor_like(a: Tensor, data: Any) -> Tensor:
     Converts the data into a tensor with the same data representation and hosted on the same device
     as the given tensor.
 
-<<<<<<< HEAD:nncf/experimental/tensor/functions.py
-    try:
-        import nncf.experimental.tensor.torch_functions  # noqa: F401
-    except ImportError:
-        pass
-=======
     :param a: A tensor for defining the data representation and the host device of the output tensor.
     :param data: Initial data for the tensor. Can be a list, tuple, NumPy ndarray, scalar, and other types.
     :return: A tensor with the same data representation and hosted on the same device as a,
         and which has been initialized with data.
     """
     return Tensor(as_tensor_like(a.data, data))
->>>>>>> 203a2cf3 (Generalization the weight compression algorithm to PyTorch model. (#2333)):nncf/experimental/tensor/functions/numeric.py
 
 
 @functools.singledispatch
