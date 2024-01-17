@@ -449,7 +449,7 @@ class ONNXModelTransformer(ModelTransformer):
             initializers = {i.name: i for i in model.graph.initializer}
             value_infos = {i.name: i for i in model.graph.value_info}
 
-            #TODO(andrey-churkin): Fix it
+            # TODO(andrey-churkin): Fix it
             inputs = node.input[1:]
 
             for initializer_name in inputs:

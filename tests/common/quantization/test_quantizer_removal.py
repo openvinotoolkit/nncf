@@ -212,13 +212,25 @@ class TestCase:
 
 TEST_CASES = {
     "simple_graph": [
-        TestCase("fake_quantize_119", ["fake_quantize_139", "fake_quantize_162", "fake_quantize_119"], ["add_117", "conv2d_161"]),
+        TestCase(
+            "fake_quantize_119",
+            ["fake_quantize_139", "fake_quantize_162", "fake_quantize_119"],
+            ["add_117", "conv2d_161"],
+        ),
         TestCase("fake_quantize_128", ["fake_quantize_134", "fake_quantize_128"], ["conv2d_127"]),
         TestCase("fake_quantize_134", ["fake_quantize_134", "fake_quantize_128"], ["conv2d_127"]),
-        TestCase("fake_quantize_139", ["fake_quantize_139", "fake_quantize_162", "fake_quantize_119"], ["add_117", "conv2d_161"]),
+        TestCase(
+            "fake_quantize_139",
+            ["fake_quantize_139", "fake_quantize_162", "fake_quantize_119"],
+            ["add_117", "conv2d_161"],
+        ),
         TestCase("fake_quantize_147", ["fake_quantize_153", "fake_quantize_147"], ["conv2d_146"]),
         TestCase("fake_quantize_153", ["fake_quantize_153", "fake_quantize_147"], ["conv2d_146"]),
-        TestCase("fake_quantize_162", ["fake_quantize_139", "fake_quantize_162", "fake_quantize_119"], ["add_117", "conv2d_161"]),
+        TestCase(
+            "fake_quantize_162",
+            ["fake_quantize_139", "fake_quantize_162", "fake_quantize_119"],
+            ["add_117", "conv2d_161"],
+        ),
     ],
     "graph_with_shapeof": [TestCase("fake_quantize_105", ["fake_quantize_105"], ["interpolate_115"])],
     "simple_graph_quantize_dequantize": [
