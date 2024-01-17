@@ -429,9 +429,11 @@ class QuantizerPropagationSolver:
         if default_qconfig_list is not None:
             for op_meta, qconf_list in self._operator_allowed_qconfigs_map.items():
                 trait = self._operator_quantization_trait_map.get(op_meta, QuantizationTrait.NON_QUANTIZABLE)
-                if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
-                    if HWConfig.is_qconf_list_corresponding_to_unspecified_op(qconf_list):
-                        self._operator_allowed_qconfigs_map[op_meta] = default_qconfig_list
+                if (
+                    trait == QuantizationTrait.INPUTS_QUANTIZABLE
+                    and HWConfig.is_qconf_list_corresponding_to_unspecified_op(qconf_list)
+                ):
+                    self._operator_allowed_qconfigs_map[op_meta] = default_qconfig_list
         self._active_propagating_quantizers_queue = deque()
         self._finished_propagating_quantizers: List[PropagatingQuantizer] = []
         self._quantizers_waiting_for_branch_merge = QuantizersWaitingForMergeManager()
@@ -728,7 +730,7 @@ class QuantizerPropagationSolver:
             )
         )
 
-        unified_scale_path_groups_vs_pqs = {k: [] for k in unified_scale_grouped_paths.keys() if k is not None}
+        unified_scale_path_groups_vs_pqs = {k: [] for k in unified_scale_grouped_paths if k is not None}
         existing_pq_assigned = False
         for gid, path_group in unified_scale_grouped_paths.items():
             for _ in path_group:

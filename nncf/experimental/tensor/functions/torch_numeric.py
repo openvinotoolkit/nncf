@@ -9,26 +9,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Any, Callable, List, Optional, Tuple, Union
 
 import torch
 
 from nncf.experimental.tensor import TensorDataType
 from nncf.experimental.tensor import TensorDeviceType
-from nncf.experimental.tensor import functions as fns
+from nncf.experimental.tensor.definitions import TypeInfo
+from nncf.experimental.tensor.functions import numeric as numeric
 
 DTYPE_MAP = {
     TensorDataType.float16: torch.float16,
     TensorDataType.float32: torch.float32,
     TensorDataType.float64: torch.float64,
     TensorDataType.int8: torch.int8,
+    TensorDataType.int32: torch.int32,
+    TensorDataType.int64: torch.int64,
     TensorDataType.uint8: torch.uint8,
 }
 
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
 
 
-@fns.device.register(torch.Tensor)
+@numeric.device.register(torch.Tensor)
 def _(a: torch.Tensor) -> TensorDeviceType:
     DEVICE_MAP = {
         "cpu": TensorDeviceType.CPU,
@@ -37,69 +40,65 @@ def _(a: torch.Tensor) -> TensorDeviceType:
     return DEVICE_MAP[a.device.type]
 
 
-@fns.squeeze.register(torch.Tensor)
+@numeric.squeeze.register(torch.Tensor)
 def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> torch.Tensor:
     if axis is None:
         return a.squeeze()
-    if isinstance(axis, Tuple) and any(1 != a.shape[i] for i in axis):
+    if isinstance(axis, Tuple) and any(a.shape[i] != 1 for i in axis):
         # Make Numpy behavior, torch.squeeze skips axes that are not equal to one..
         raise ValueError("Cannot select an axis to squeeze out which has size not equal to one")
     return a.squeeze(axis)
 
 
-@fns.flatten.register(torch.Tensor)
+@numeric.flatten.register(torch.Tensor)
 def _(a: torch.Tensor) -> torch.Tensor:
     return a.flatten()
 
 
-@fns.max.register(torch.Tensor)
-def _(
-    a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: Optional[bool] = False
-) -> torch.Tensor:
+@numeric.max.register(torch.Tensor)
+def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: bool = False) -> torch.Tensor:
     # Analog of numpy.max is torch.amax
     if axis is None:
         return torch.amax(a)
     return torch.amax(a, dim=axis, keepdim=keepdim)
 
 
-@fns.min.register(torch.Tensor)
-def _(
-    a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: Optional[bool] = False
-) -> torch.Tensor:
+@numeric.min.register(torch.Tensor)
+def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdim: bool = False) -> torch.Tensor:
     # Analog of numpy.min is torch.amin
     if axis is None:
         return torch.amin(a)
     return torch.amin(a, dim=axis, keepdim=keepdim)
 
 
-@fns.abs.register(torch.Tensor)
+@numeric.abs.register(torch.Tensor)
 def _(a: torch.Tensor) -> torch.Tensor:
     return torch.absolute(a)
 
 
-@fns.astype.register(torch.Tensor)
+@numeric.astype.register(torch.Tensor)
 def _(a: torch.Tensor, dtype: TensorDataType) -> torch.Tensor:
     return a.type(DTYPE_MAP[dtype])
 
 
-@fns.dtype.register(torch.Tensor)
+@numeric.dtype.register(torch.Tensor)
 def _(a: torch.Tensor) -> TensorDataType:
     return DTYPE_MAP_REV[a.dtype]
 
 
-@fns.reshape.register(torch.Tensor)
+@numeric.reshape.register(torch.Tensor)
 def _(a: torch.Tensor, shape: Tuple[int, ...]) -> torch.Tensor:
     return a.reshape(shape)
 
 
-@fns.all.register(torch.Tensor)
-def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Union[torch.Tensor, bool]:
+@numeric.all.register(torch.Tensor)
+def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> torch.Tensor:
     if axis is None:
         return torch.all(a)
     return torch.all(a, dim=axis)
 
 
-@fns.allclose.register(torch.Tensor)
+@numeric.allclose.register(torch.Tensor)
 def _(
     a: torch.Tensor, b: Union[torch.Tensor, float], rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False
 ) -> bool:
@@ -108,95 +107,138 @@ def _(
     return torch.allclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 
-@fns.any.register(torch.Tensor)
-def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Union[torch.Tensor, bool]:
+@numeric.any.register(torch.Tensor)
+def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> torch.Tensor:
     if axis is None:
         return torch.any(a)
     return torch.any(a, dim=axis)
 
 
-@fns.count_nonzero.register(torch.Tensor)
+@numeric.count_nonzero.register(torch.Tensor)
 def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> torch.Tensor:
     return torch.count_nonzero(a, dim=axis)
 
 
-@fns.isempty.register(torch.Tensor)
+@numeric.isempty.register(torch.Tensor)
 def _(a: torch.Tensor) -> bool:
     return a.numel() == 0
 
 
-@fns.isclose.register(torch.Tensor)
+@numeric.isclose.register(torch.Tensor)
 def _(
     a: torch.Tensor, b: Union[torch.Tensor, float], rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False
-):
+) -> torch.Tensor:
     if not isinstance(b, torch.Tensor):
         b = torch.tensor(b, device=a.device)
     return torch.isclose(a, b, atol=atol, rtol=rtol, equal_nan=equal_nan)
 
 
-@fns.maximum.register(torch.Tensor)
+@numeric.maximum.register(torch.Tensor)
 def _(x1: torch.Tensor, x2: Union[torch.Tensor, float]) -> torch.Tensor:
     if not isinstance(x2, torch.Tensor):
         x2 = torch.tensor(x2, device=x1.data.device)
     return torch.maximum(x1, x2)
 
 
-@fns.minimum.register(torch.Tensor)
+@numeric.minimum.register(torch.Tensor)
 def _(x1: torch.Tensor, x2: Union[torch.Tensor, float]) -> torch.Tensor:
     if not isinstance(x2, torch.Tensor):
         x2 = torch.tensor(x2, device=x1.data.device)
     return torch.minimum(x1, x2)
 
 
-@fns.ones_like.register(torch.Tensor)
+@numeric.ones_like.register(torch.Tensor)
 def _(a: torch.Tensor) -> torch.Tensor:
     return torch.ones_like(a)
 
 
-@fns.where.register(torch.Tensor)
+@numeric.where.register(torch.Tensor)
 def _(
     condition: torch.Tensor, x: Union[torch.Tensor, float, bool], y: Union[torch.Tensor, float, bool]
 ) -> torch.Tensor:
     return torch.where(condition, x, y)
 
 
-@fns.zeros_like.register(torch.Tensor)
+@numeric.zeros_like.register(torch.Tensor)
 def _(a: torch.Tensor) -> torch.Tensor:
     return torch.zeros_like(a)
 
 
-@fns.stack.register(torch.Tensor)
+@numeric.stack.register(torch.Tensor)
 def _(x: List[torch.Tensor], axis: int = 0) -> List[torch.Tensor]:
     return torch.stack(x, dim=axis)
 
 
-@fns.unstack.register(torch.Tensor)
+@numeric.unstack.register(torch.Tensor)
 def _(x: torch.Tensor, axis: int = 0) -> List[torch.Tensor]:
     if not list(x.shape):
         x = x.unsqueeze(0)
     return torch.unbind(x, dim=axis)
 
 
-@fns.moveaxis.register(torch.Tensor)
+@numeric.moveaxis.register(torch.Tensor)
 def _(a: torch.Tensor, source: Union[int, Tuple[int, ...]], destination: Union[int, Tuple[int, ...]]) -> torch.Tensor:
     return torch.moveaxis(a, source, destination)
 
 
-@fns.mean.register(torch.Tensor)
+@numeric.mean.register(torch.Tensor)
 def _(a: torch.Tensor, axis: Union[int, Tuple[int, ...]] = None, keepdims: bool = False) -> torch.Tensor:
-    return torch.mean(a, axis=axis, keepdims=keepdims)
+    return torch.mean(a, dim=axis, keepdim=keepdims)
 
 
-@fns.round.register(torch.Tensor)
+@numeric.round.register(torch.Tensor)
 def _(a: torch.Tensor, decimals=0) -> torch.Tensor:
     return torch.round(a, decimals=decimals)
 
 
-@fns._binary_op_nowarn.register(torch.Tensor)
+@numeric._binary_op_nowarn.register(torch.Tensor)
 def _(a: torch.Tensor, b: Union[torch.Tensor, float], operator_fn: Callable) -> torch.Tensor:
     return operator_fn(a, b)
 
 
-@fns._binary_reverse_op_nowarn.register(torch.Tensor)
+@numeric._binary_reverse_op_nowarn.register(torch.Tensor)
 def _(a: torch.Tensor, b: Union[torch.Tensor, float], operator_fn: Callable) -> torch.Tensor:
     return operator_fn(b, a)
+
+
+@numeric.clip.register(torch.Tensor)
+def _(a: torch.Tensor, a_min: Union[torch.Tensor, float], a_max: Union[torch.Tensor, float]) -> torch.Tensor:
+    return torch.clip(a, a_min, a_max)
+
+
+@numeric.finfo.register(torch.Tensor)
+def _(a: torch.Tensor) -> TypeInfo:
+    ti = torch.finfo(a.dtype)
+    return TypeInfo(ti.eps, ti.max, ti.min)
+
+
+@numeric.as_tensor_like.register(torch.Tensor)
+def _(a: torch.Tensor, data: Any) -> torch.Tensor:
+    return torch.as_tensor(data, device=a.device)
+
+
+@numeric.item.register(torch.Tensor)
+def _(a: torch.Tensor) -> Union[int, float, bool]:
+    return a.item()
+
+
+@numeric.sum.register(torch.Tensor)
+def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> torch.Tensor:
+    return torch.sum(a, dim=axis, keepdim=keepdims)
+
+
+@numeric.multiply.register(torch.Tensor)
+def _(x1: torch.Tensor, x2: Union[torch.Tensor, float]) -> torch.Tensor:
+    return torch.multiply(x1, x2)
+
+
+@numeric.var.register(torch.Tensor)
+def _(
+    a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False, ddof: int = 0
+) -> torch.Tensor:
+    return torch.var(a, dim=axis, keepdim=keepdims, correction=ddof)
+
+
+@numeric.size.register(torch.Tensor)
+def _(a: torch.Tensor) -> int:
+    return torch.numel(a)

@@ -23,6 +23,9 @@ from tests.openvino.omz_helpers import calculate_metrics
 from tests.openvino.omz_helpers import convert_model
 from tests.openvino.omz_helpers import download_model
 
+pytest.importorskip("openvino.tools.pot")
+
+
 OMZ_MODELS = [
     ("resnet-18-pytorch", "imagenette2-320", {"accuracy@top1": 0.771, "accuracy@top5": 0.949}),
     ("mobilenet-v3-small-1.0-224-tf", "imagenette2-320", {"accuracy@top1": 0.734, "accuracy@top5": 0.922}),

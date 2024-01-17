@@ -587,7 +587,7 @@ class TemplateTestStatisticsAggregator:
                 test_params.axis, inplace_statistics, len(dataset_samples)
             )
         elif test_params.collector_type == BCStatsCollectors.RAW:
-            tensor_collector = algo_backend.raw_statistic_collector(inplace_statistics, len(dataset_samples))
+            tensor_collector = algo_backend.raw_statistic_collector(len(dataset_samples))
         else:
             raise RuntimeError()
 
@@ -828,11 +828,9 @@ class TemplateTestStatisticsAggregator:
             params["reduction_axes"] = [None, (0, 1, 3), (1, 2, 3)]
             params["quantile"] = [[0.01, 0.99], [0.001, 0.999]]
         elif statistics_type == "batch_mean":
-            pytest.skip("Inplace statistic woun't work until openvino==2023.0.0 release")
             params["inplace"] = [False, True]
         elif statistics_type == "mean_per_ch":
-            # TODO(dlyakhov) uncoment when nncf will switch to openvino==2023.0.0
-            # params["inplace"] = [False, True]
+            params["inplace"] = [False, True]
             params["channel_axis"] = [1, 2]
 
         def product_dict(**kwargs):

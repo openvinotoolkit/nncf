@@ -179,7 +179,7 @@ class QuantizationEnv:
             self.qctrl.all_quantizations.keys()
         )
         if self.hw_cfg_type is None:
-            for qid in self.qconfig_space_map.keys():
+            for qid in self.qconfig_space_map:
                 conf = self.qctrl.all_quantizations[qid].get_quantizer_config()
                 conf_list_to_set = []
                 for bit in self.model_bitwidth_space:

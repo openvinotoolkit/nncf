@@ -143,5 +143,13 @@
             "int8_model_size": 35.55147361755371,
             "model_compression_rate": 3.8631822183889652
         }
+    },
+    "llm_compression": {
+        "backend": "openvino",
+        "requirements": "examples/llm_compression/openvino/requirements.txt",
+        "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
+        "accuracy_metrics": {
+            "word_count": 71
+        }
     }
 }

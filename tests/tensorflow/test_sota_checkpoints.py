@@ -155,10 +155,13 @@ class RunTest(ABC):
             exit_code = result.poll()
 
             def process_line(decoded_line: str, error_lines: List):
-                if re.search(r"Error|ERROR|(No module named)", decoded_line):
+                if (
+                    re.search(r"Error|ERROR|(No module named)", decoded_line)
+                    and not re.search("EOFError", decoded_line)
+                    and not re.search("Log level", decoded_line)
+                ):
                     # WA for tensorboardX multiprocessing bug (https://github.com/lanpa/tensorboardX/issues/598)
-                    if not re.search("EOFError", decoded_line) and not re.search("Log level", decoded_line):
-                        error_lines.append(decoded_line)
+                    error_lines.append(decoded_line)
                 if decoded_line != "":
                     print(decoded_line)
 

@@ -40,6 +40,7 @@ class SampleType(Enum):
     CLASSIFICATION = "classification"
     CLASSIFICATION_STAGED = "classification_staged"
     CLASSIFICATION_NAS = "classification_nas"
+    CLASSIFICATION_NAS_SEARCH = "classification_nas_search"
     SEMANTIC_SEGMENTATION = "semantic_segmentation"
     OBJECT_DETECTION = "object_detection"
 
@@ -141,6 +142,12 @@ class ClassificationNASHandler(ClassificationHandler):
 
     def get_optimal_subnet_accuracy(self):
         pass
+
+
+@SAMPLE_HANDLERS.register(SampleType.CLASSIFICATION_NAS_SEARCH)
+class ClassificationNASSearchHandler(ClassificationNASHandler):
+    def _get_main_filename(self):
+        return "bootstrap_nas_search"
 
 
 @SAMPLE_HANDLERS.register(SampleType.OBJECT_DETECTION)

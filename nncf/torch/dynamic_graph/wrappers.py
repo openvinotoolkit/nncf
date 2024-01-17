@@ -34,8 +34,6 @@ from nncf.torch.dynamic_graph.trace_functions import trace_tensors
 from nncf.torch.dynamic_graph.trace_tensor import TracedParameter
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.layers import ITERATION_MODULES
-from nncf.torch.return_types import maybe_unwrap_from_torch_return_type
-from nncf.torch.return_types import maybe_wrap_to_torch_return_type
 
 _IGNORED_SCOPES = []
 
@@ -195,10 +193,8 @@ def _execute_op(
         if is_debug() and node is not None:
             ctx.register_node_call(node)
 
-    unwrapped_result = maybe_unwrap_from_torch_return_type(result)
-    unwrapped_result = trace_tensors(unwrapped_result, node, ctx)
-    unwrapped_result = ctx.execute_post_hooks(op_address, unwrapped_result)
-    result = maybe_wrap_to_torch_return_type(unwrapped_result, result)
+    result = trace_tensors(result, node, ctx)
+    result = ctx.execute_post_hooks(op_address, result)
     return result
 
 
@@ -259,11 +255,16 @@ def _process_parameters(operator_inputs: OperatorInput, ctx: TracingContext) -> 
             operator_inputs[idx] = processed_parameter
             continue
 
+        if traced_parameter.tensor_meta is not None:
+            continue
+
         in_parameter_trace = getattr(ctx, "in_parameter_trace", False)
         ctx.in_parameter_trace = True
+        is_reused = traced_parameter.is_reused
         processed_parameter = process_parameter_fn(traced_parameter)
         operator_inputs[idx] = processed_parameter
-        ctx.register_processed_parameter(traced_parameter.name, processed_parameter)
+        if is_reused:
+            ctx.register_processed_parameter(traced_parameter.name, processed_parameter)
         ctx.in_parameter_trace = in_parameter_trace
 
     ctx.in_operator = in_op
@@ -278,5 +279,6 @@ def wrap_parameters(model: torch.nn.Module):
     """
     ctx = get_current_context()
     for name, param in model.named_parameters():
-        tt = TracedParameter.from_torch_parameter(param, name)
+        is_reused = name in ctx.reused_parameters
+        tt = TracedParameter.from_torch_parameter(param, name, is_reused)
         ctx.register_traced_tensor(tt)

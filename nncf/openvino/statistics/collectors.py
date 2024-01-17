@@ -255,7 +255,7 @@ class OVMeanPerChanelReducer(MeanPerChReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return get_inplace_mean_per_ch(self.name, self._reduction_axes)
+        return get_inplace_mean_per_ch(self.name, self._channel_axis)
 
     def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
         return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
@@ -296,9 +296,6 @@ def get_mean_statistic_collector(
     :param inplace: Whether the mean reducer should be calculated inplace or out of place.
     :return: Mean statistic collector.
     """
-    # TODO(dlyakhov): use inplace OVBatchMeanReducer and OVMeanPerChanelReducer
-    # after migration on openvino-dev=2023.0
-    inplace = False
     if channel_axis == 0:
         reducer = OVBatchMeanReducer(inplace)
     else:
@@ -319,7 +316,7 @@ def get_mean_statistic_collector(
     return collector
 
 
-def get_raw_stat_collector(num_samples, inplace=False):
+def get_raw_stat_collector(num_samples: Optional[int] = None) -> TensorCollector:
     reducer = OVNoopReducer()
     aggregator = NoopAggregator(num_samples)
 

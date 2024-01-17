@@ -36,7 +36,7 @@ def get_scoped_quantizer_config(
     qconfig = deepcopy(base_config)
     if scope_overrides is None:
         scope_overrides = {}
-    for overridden_scope in scope_overrides.keys():
+    for overridden_scope in scope_overrides:
         if matches_any(scope_str, overridden_scope):
             config_overrides = scope_overrides[overridden_scope]
             if config_overrides.get("bits") is not None:

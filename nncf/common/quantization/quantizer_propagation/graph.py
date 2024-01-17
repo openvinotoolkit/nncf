@@ -761,7 +761,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 successor_node_type = successor[QuantizerPropagationStateGraph.NODE_TYPE_NODE_ATTR]
                 if successor_node_type == QuantizerPropagationStateGraphNodeType.OPERATOR:
                     trait = successor[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR]
-                    if not trait == QuantizationTrait.QUANTIZATION_AGNOSTIC:
+                    if trait != QuantizationTrait.QUANTIZATION_AGNOSTIC:
                         target_node_list.append(successor_key)
                         return
                 recursive_helper(successor_key, target_node_list)
@@ -1076,7 +1076,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                     return
             elif curr_node_type == QuantizerPropagationStateGraphNodeType.OPERATOR:
                 trait = curr_node[QuantizerPropagationStateGraph.QUANTIZATION_TRAIT_NODE_ATTR]
-                if not trait == QuantizationTrait.QUANTIZATION_AGNOSTIC:
+                if trait != QuantizationTrait.QUANTIZATION_AGNOSTIC:
                     return
             elif curr_node_type == QuantizerPropagationStateGraphNodeType.AUXILIARY_BARRIER:
                 return
@@ -1285,7 +1285,7 @@ class QuantizerPropagationStateGraph(nx.DiGraph):
                 grouped_ids.add(qp_id)
 
             gid = setup.register_shared_inputs_group(list(grouped_ids))
-            for weighted_node_name in weight_quantizable_node_names_vs_configs.keys():
+            for weighted_node_name in weight_quantizable_node_names_vs_configs:
                 for affected_node_key in group.affected_op_node_keys:
                     underlying_node_names = [
                         n.node_name for n in self.op_node_keys_to_underlying_nodes_mapping[affected_node_key]

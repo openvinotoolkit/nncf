@@ -345,35 +345,34 @@ def test_inplace_reduce_fn_zero_rank_output(reduction_axes):
 
 
 DYNAMIC_SHAPE_TEST_CASES = [
-    InplaceOpTestCase("mean_per_ch", 1, get_inplace_mean_per_ch, ["Reshape"], [(-1, 3, 9), (0, 2)]),
+    InplaceOpTestCase("mean_per_ch", 1, get_inplace_mean_per_ch, ["Reshape"], [(0, 3, 9), (0, 2)]),
+    InplaceOpTestCase("mean_per_ch", 1, get_inplace_mean_per_ch, ["Reshape"], [(0, 0, 9), (0, 2)]),
     InplaceOpTestCase("mean_per_ch", 1, get_inplace_mean_per_ch, ["Reshape"], [(1, 3, -1), (0, 2)]),
-    InplaceOpTestCase("mean_per_ch", 3, get_inplace_mean_per_ch, ["Transpose", "Reshape"], [(0, 3, 2, 1), (-1, 3, 9)]),
-    InplaceOpTestCase("mean_per_ch", 3, get_inplace_mean_per_ch, ["Transpose", "Reshape"], [(0, 3, 2, 1), (1, -1, 9)]),
+    InplaceOpTestCase("mean_per_ch", 1, get_inplace_mean_per_ch, ["Reshape"], [(1, 0, -1), (0, 2)]),
+    InplaceOpTestCase("mean_per_ch", 3, get_inplace_mean_per_ch, ["Transpose", "Reshape"], [(0, 3, 2, 1), (0, 3, 9)]),
+    InplaceOpTestCase("mean_per_ch", 3, get_inplace_mean_per_ch, ["Transpose", "Reshape"], [(0, 3, 2, 1), (1, 0, 9)]),
     InplaceOpTestCase("mean_per_ch", 3, get_inplace_mean_per_ch, ["Transpose", "Reshape"], [(0, 3, 2, 1), (1, 3, -1)]),
+    InplaceOpTestCase("mean_per_ch", 3, get_inplace_mean_per_ch, ["Transpose", "Reshape"], [(0, 3, 2, 1), (1, 0, -1)]),
 ]
 
 
 @pytest.mark.parametrize(
-    "test_params,input_shape,raise_error",
+    "test_params,input_shape",
     [
-        (DYNAMIC_SHAPE_TEST_CASES[0], (ov.Dimension(), 3, 3, 3), False),
-        (DYNAMIC_SHAPE_TEST_CASES[1], (1, 3, 3, ov.Dimension()), False),
-        (DYNAMIC_SHAPE_TEST_CASES[0], (ov.Dimension(), ov.Dimension(), 3, 3), True),
-        (DYNAMIC_SHAPE_TEST_CASES[1], (1, 3, ov.Dimension(), ov.Dimension()), False),
-        (DYNAMIC_SHAPE_TEST_CASES[1], (1, ov.Dimension(), ov.Dimension(), 3), True),
-        (DYNAMIC_SHAPE_TEST_CASES[2], (ov.Dimension(), 3, 3, 3), False),
-        (DYNAMIC_SHAPE_TEST_CASES[3], (1, 3, 3, ov.Dimension()), False),
-        (DYNAMIC_SHAPE_TEST_CASES[4], (1, ov.Dimension(), ov.Dimension(), 3), False),
-        (DYNAMIC_SHAPE_TEST_CASES[4], (1, ov.Dimension(), ov.Dimension(), ov.Dimension()), True),
+        (DYNAMIC_SHAPE_TEST_CASES[0], (ov.Dimension(), 3, 3, 3)),
+        (DYNAMIC_SHAPE_TEST_CASES[2], (1, 3, 3, ov.Dimension())),
+        (DYNAMIC_SHAPE_TEST_CASES[1], (ov.Dimension(), ov.Dimension(), 3, 3)),
+        (DYNAMIC_SHAPE_TEST_CASES[2], (1, 3, ov.Dimension(), ov.Dimension())),
+        (DYNAMIC_SHAPE_TEST_CASES[3], (1, ov.Dimension(), ov.Dimension(), 3)),
+        (DYNAMIC_SHAPE_TEST_CASES[4], (ov.Dimension(), 3, 3, 3)),
+        (DYNAMIC_SHAPE_TEST_CASES[5], (1, 3, 3, ov.Dimension())),
+        (DYNAMIC_SHAPE_TEST_CASES[6], (1, ov.Dimension(), ov.Dimension(), 3)),
+        (DYNAMIC_SHAPE_TEST_CASES[7], (1, ov.Dimension(), ov.Dimension(), ov.Dimension())),
     ],
 )
-def test_inplace_mean_per_ch_fn_dynamic_shapes(test_params: InplaceOpTestCase, input_shape, raise_error):
+def test_inplace_mean_per_ch_fn_dynamic_shapes(test_params: InplaceOpTestCase, input_shape):
     input_1 = opset.parameter(input_shape, name="Input")
     fn = test_params.op_builder(test_params.name, test_params.reduce_shape)
-    if raise_error:
-        with pytest.raises(RuntimeError):
-            fn(input_1, 0)
-        return
     last_node = fn(input_1, 0)
     result = opset.result(last_node)
     model = ov.Model([result], [input_1])
@@ -624,7 +623,7 @@ def test_no_transformations():
     ret_val_1 = infer_model_with_ones(model, input_shape)
     ret_val_2 = infer_model_with_ones(transformed_model, input_shape)
     assert ret_val_1.keys() == ret_val_2.keys()
-    for output in ret_val_1.keys():
+    for output in ret_val_1:
         assert np.allclose(ret_val_1[output], ret_val_2[output])
     assert id(transformed_model) != id(model)
 
