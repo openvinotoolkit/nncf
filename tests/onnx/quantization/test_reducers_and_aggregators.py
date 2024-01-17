@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,44 +15,44 @@ import numpy as np
 import pytest
 
 from nncf.common.graph.layer_attributes import Dtype
-from nncf.openvino.statistics.collectors import OVAbsMaxReducer
-from nncf.openvino.statistics.collectors import OVAbsQuantileReducer
-from nncf.openvino.statistics.collectors import OVBatchMeanReducer
-from nncf.openvino.statistics.collectors import OVMaxReducer
-from nncf.openvino.statistics.collectors import OVMeanPerChanelReducer
-from nncf.openvino.statistics.collectors import OVMeanReducer
-from nncf.openvino.statistics.collectors import OVMinReducer
-from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
-from nncf.openvino.statistics.collectors import OVNoopReducer
-from nncf.openvino.statistics.collectors import OVQuantileReducer
-from nncf.openvino.tensor import OVNNCFTensor
+from nncf.onnx.statistics.collectors import ONNXAbsMaxReducer
+from nncf.onnx.statistics.collectors import ONNXAbsQuantileReducer
+from nncf.onnx.statistics.collectors import ONNXBatchMeanReducer
+from nncf.onnx.statistics.collectors import ONNXMaxReducer
+from nncf.onnx.statistics.collectors import ONNXMeanPerChanelReducer
+from nncf.onnx.statistics.collectors import ONNXMeanReducer
+from nncf.onnx.statistics.collectors import ONNXMinReducer
+from nncf.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
+from nncf.onnx.statistics.collectors import ONNXNoopReducer
+from nncf.onnx.statistics.collectors import ONNXQuantileReducer
+from nncf.onnx.tensor import ONNXNNCFTensor
 from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggreagtors
 
 
 class TestReducersAggregators(TemplateTestReducersAggreagtors):
     @pytest.fixture
     def tensor_processor(self):
-        return OVNNCFCollectorTensorProcessor
+        return ONNXNNCFCollectorTensorProcessor
 
     def get_nncf_tensor(self, x: np.array, dtype: Optional[Dtype] = None):
         if dtype is Dtype.INTEGER:
             x = x.astype(np.int64)
         if dtype is Dtype.FLOAT:
             x = x.astype(np.float32)
-        return OVNNCFTensor(x)
+        return ONNXNNCFTensor(x)
 
     @pytest.fixture(scope="module")
     def reducers(self):
         return {
-            "noop": OVNoopReducer,
-            "min": OVMinReducer,
-            "max": OVMaxReducer,
-            "abs_max": OVAbsMaxReducer,
-            "mean": OVMeanReducer,
-            "quantile": OVQuantileReducer,
-            "abs_quantile": OVAbsQuantileReducer,
-            "batch_mean": OVBatchMeanReducer,
-            "mean_per_ch": OVMeanPerChanelReducer,
+            "noop": ONNXNoopReducer,
+            "min": ONNXMinReducer,
+            "max": ONNXMaxReducer,
+            "abs_max": ONNXAbsMaxReducer,
+            "mean": ONNXMeanReducer,
+            "quantile": ONNXQuantileReducer,
+            "abs_quantile": ONNXAbsQuantileReducer,
+            "batch_mean": ONNXBatchMeanReducer,
+            "mean_per_ch": ONNXMeanPerChanelReducer,
         }
 
     def all_close(self, val, ref) -> bool:
