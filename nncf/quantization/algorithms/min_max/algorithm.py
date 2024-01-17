@@ -369,7 +369,7 @@ class MinMaxQuantization(Algorithm):
 
         collector_params = RangeInitCollectorParams(
             is_weights=target_point.is_weight_target_point(),
-            mode=quantizer_config.mode,
+            scheme=quantizer_config.mode,
             per_channel=quantizer_config.per_channel,
         )
         return self._backend_entity.get_statistic_collector(

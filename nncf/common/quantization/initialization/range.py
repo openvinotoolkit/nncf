@@ -12,7 +12,7 @@
 from typing import Dict, List, Optional
 
 from nncf.common.initialization.dataloader import NNCFDataLoader
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.config.schemata.defaults import NUM_INIT_SAMPLES
 
@@ -148,16 +148,16 @@ class RangeInitCollectorParams:
     Defines low-level parameters that are used to instantiate statistic collectors.
     """
 
-    def __init__(self, is_weights: bool, mode: QuantizationMode, per_channel: bool):
+    def __init__(self, is_weights: bool, scheme: QuantizationScheme, per_channel: bool):
         """
         Initializes Range Initialization Collector Parameters.
 
         :param is_weights: Boolean that defines tensor type. True for Weights, False for Activations.
-        :param mode: Quantization mode: symmetric or asymmetric.
+        :param scheme: Quantization scheme: symmetric or asymmetric.
         :param per_channel: Quantization granularity.
         """
         self._is_weights = is_weights
-        self._mode = mode
+        self._scheme = scheme
         self._is_per_channel = per_channel
 
     @property
@@ -169,11 +169,11 @@ class RangeInitCollectorParams:
         return self._is_weights
 
     @property
-    def mode(self) -> QuantizationMode:
+    def scheme(self) -> QuantizationScheme:
         """
-        Returns quantization mode: symmetric or asymmetric.
+        Returns quantization scheme: symmetric or asymmetric.
         """
-        return self._mode
+        return self._scheme
 
     @property
     def is_per_channel(self) -> bool:
@@ -195,11 +195,11 @@ class RangeInitCollectorParams:
     @property
     def use_abs_max(self) -> bool:
         """Applies abs(max) for symmetric quantization."""
-        return self._mode == QuantizationMode.SYMMETRIC
+        return self._scheme == QuantizationScheme.SYMMETRIC
 
     @property
     def use_means_of_mins(self) -> bool:
-        return not self._is_weights and not self._is_per_channel and self._mode == "asymmetric"
+        return not self._is_weights and not self._is_per_channel and self._scheme == "asymmetric"
 
     @property
     def use_means_of_maxs(self) -> bool:

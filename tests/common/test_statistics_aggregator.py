@@ -642,7 +642,7 @@ class TemplateTestStatisticsAggregator:
 
         collector_params = RangeInitCollectorParams(
             is_weights=target_point.is_weight_target_point(),
-            mode=q_config.mode,
+            scheme=q_config.mode,
             per_channel=q_config.per_channel,
         )
         tensor_collector = algo_backend.get_statistic_collector(
@@ -768,7 +768,7 @@ class TemplateTestStatisticsAggregator:
             target_point = target_point_cls(*target_point_args)
             collector_params = RangeInitCollectorParams(
                 is_weights=target_point.is_weight_target_point(),
-                mode=quantizer_config.mode,
+                scheme=quantizer_config.mode,
                 per_channel=quantizer_config.per_channel,
             )
             min_max_tensor_collector = algo_backend.get_statistic_collector(

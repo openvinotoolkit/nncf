@@ -254,7 +254,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         )
         return PTRangeInitCollectorParams(
             is_weights=collector_params.is_weights,
-            mode=collector_params.mode,
+            scheme=collector_params.scheme,
             per_channel=collector_params.is_per_channel,
             input_shape=input_shape,
             channel_idx=channel_idx,
