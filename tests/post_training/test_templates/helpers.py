@@ -30,7 +30,12 @@ class StaticDatasetMock:
     to convert data to backend specific type.
     """
 
-    def __init__(self, input_size: Tuple, length: int = 1, fn_to_type: Callable = None):
+    def __init__(
+        self,
+        input_size: Tuple,
+        fn_to_type: Callable = None,
+        length: int = 1,
+    ):
         super().__init__()
         self._len = length
         self._input_size = input_size
@@ -55,7 +60,10 @@ def get_static_dataset(input_size: Tuple, transform_fn: Callable, fn_to_type: Ca
     :param fn_to_type: Function, defaults to None.
     :return: Instance of nncf.Dataset for StaticDatasetMock.
     """
-    return Dataset(StaticDatasetMock(input_size, length, fn_to_type), transform_fn)
+    return Dataset(
+        StaticDatasetMock(input_size, fn_to_type, length),
+        transform_fn,
+    )
 
 
 class ConvTestModel(nn.Module):

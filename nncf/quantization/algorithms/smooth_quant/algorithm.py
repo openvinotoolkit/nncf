@@ -346,7 +346,7 @@ class SmoothQuant(Algorithm):
         reduction_axes = tuple([])
         if len(shape) > 1:
             channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port)
-            reduction_axes = get_reduction_axes(channel_axis, shape)
+            reduction_axes = get_reduction_axes((channel_axis,), shape)
         return reduction_axes
 
     def _process_weight_statistics(self, node: NNCFNode, weights: TTensor) -> TTensor:
