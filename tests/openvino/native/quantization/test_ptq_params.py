@@ -16,10 +16,6 @@ from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HW_CONFIG_TYPE_TARGET_DEVICE_MAP
 from nncf.common.utils.backend import BackendType
-from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
-from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
-from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSoftmaxMetatype
@@ -56,18 +52,6 @@ def test_target_device(target_device):
 class TestPTQParams(TemplateTestPTQParams):
     def get_algo_backend(self):
         return OVMinMaxAlgoBackend()
-
-    def check_is_min_max_statistic_collector(self, tensor_collector: TensorCollector):
-        aggrs = [aggr.__class__ for aggr in tensor_collector.aggregators.values()]
-        assert len(aggrs) == 2
-        assert MinAggregator in aggrs
-        assert MaxAggregator in aggrs
-
-    def check_is_mean_min_max_statistic_collector(self, tensor_collector: TensorCollector):
-        aggrs = [aggr.__class__ for aggr in tensor_collector.aggregators.values()]
-        assert len(aggrs) == 2
-        assert MeanAggregator in aggrs
-        assert aggrs[0].__class__ == aggrs[1].__class__
 
     def check_quantize_outputs_fq_num(self, quantize_outputs, act_num_q, weight_num_q):
         if quantize_outputs:

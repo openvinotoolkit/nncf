@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from dataclasses import dataclass
 from enum import Enum
 from enum import auto
 
@@ -31,6 +32,8 @@ class TensorDataType(Enum):
     float32 = auto()
     float64 = auto()
     int8 = auto()
+    int32 = auto()
+    int64 = auto()
     uint8 = auto()
 
 
@@ -41,3 +44,18 @@ class TensorDeviceType(Enum):
 
     CPU = auto()
     GPU = auto()
+
+
+@dataclass
+class TypeInfo:
+    """
+    The class represents the numerical properties of a floating point types.
+
+    :param eps: The smallest representable number such that 1.0 + eps != 1.0.
+    :param max: The largest representable number.
+    :param min: The smallest representable number (typically -max).
+    """
+
+    eps: float
+    max: float
+    min: float

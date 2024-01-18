@@ -316,7 +316,7 @@ def get_mean_statistic_collector(
     return collector
 
 
-def get_raw_stat_collector(num_samples, inplace=False):
+def get_raw_stat_collector(num_samples: Optional[int] = None) -> TensorCollector:
     reducer = OVNoopReducer(keep_empty_stats=True)
     aggregator = NoopAggregator(num_samples)
 

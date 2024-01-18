@@ -30,6 +30,7 @@ from nncf.common.hardware.config import get_hw_config_type
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.config_assignment import assign_qconfig_lists_to_modules
+from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.quantizer_propagation.solver import QuantizerPropagationSolver
 from nncf.common.quantization.quantizer_propagation.structs import IgnoreReason
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizationPoint
@@ -366,11 +367,16 @@ class MinMaxQuantization(Algorithm):
         """
         range_estimator_params = self._get_range_estimator_parameters(target_point, quantizer_config)
 
+        collector_params = RangeInitCollectorParams(
+            is_weights=target_point.is_weight_target_point(),
+            scheme=quantizer_config.mode,
+            per_channel=quantizer_config.per_channel,
+        )
         return self._backend_entity.get_statistic_collector(
             range_estimator_params,
             nncf_graph,
             target_point,
-            quantizer_config,
+            collector_params,
             inplace=self._inplace_statistics,
             num_samples=num_samples,
         )
