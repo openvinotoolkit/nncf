@@ -20,6 +20,7 @@ from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQua
 from nncf.torch.layers import NNCF_RNN
 from nncf.torch.layers import LSTMCellNNCF
 from tests.post_training.test_templates.helpers import EmbeddingModel
+from tests.post_training.test_templates.helpers import get_static_dataset
 from tests.torch import test_models
 from tests.torch.ptq.helpers import get_nncf_network
 from tests.torch.ptq.helpers import mock_collect_statistics
@@ -101,7 +102,7 @@ def test_min_max_classification_quantized_graphs(desc: ModelDesc, quantization_p
     quantization_algorithm = PostTrainingQuantization(**quantization_parameters)
 
     quantized_model = quantization_algorithm.apply(
-        nncf_network, nncf_network.nncf.get_graph(), dataset=None
-    )  # TODO: could dataset be None?
+        nncf_network, nncf_network.nncf.get_graph(), dataset=get_static_dataset(desc.input_sample_sizes, None, None)
+    )
 
     check_graph(quantized_model.nncf.get_graph(), desc.dot_filename(), graph_dir)

@@ -168,7 +168,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         input_shape, _, channel_idx = PTMinMaxAlgoBackend._get_input_scale_shape(
             nncf_graph, target_point, collector_params.is_per_channel
         )
-        reduction_axes, aggregation_axes = collector_params.get_reduction_aggregation_axes(input_shape, channel_idx)
+        reduction_axes, aggregation_axes = collector_params.get_reduction_aggregation_axes(input_shape, (channel_idx,))
         collector = TensorCollector(PTMinMaxTensorStatistic)
         for params, container_key in zip(
             [range_estimator_params.min, range_estimator_params.max],
