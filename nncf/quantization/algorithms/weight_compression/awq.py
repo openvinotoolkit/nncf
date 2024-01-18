@@ -89,7 +89,7 @@ class AWQ(AWQAlgoBackend):
             return model
 
         @dataclass
-        class AWQTriplet:
+        class AWQCompressionInfo:
             """
             Information on how to compress (quantize) a specific weight.
 
@@ -137,7 +137,7 @@ class AWQ(AWQAlgoBackend):
             target_node = self._nodes_to_compress[name_mapping[target_node_names[-1]]]
             merge_node = self._nodes_to_compress[name_mapping[merge_node_names[-1]]]
 
-            awq_data[target_node.node_name] = AWQTriplet(weight_params, target_node, merge_node)
+            awq_data[target_node.node_name] = AWQCompressionInfo(weight_params, target_node, merge_node)
 
         alpha_step = (self._alpha_max - self._alpha_min) / self._steps
 
@@ -211,7 +211,7 @@ class AWQ(AWQAlgoBackend):
                     sacts = gacts / fns.unsqueeze(cur_scale, 1)
 
                     cur_out = fns.matmul(g_decompressed_weighs, sacts)
-                    cur_diff = fns.mean(fns.abs(cur_out - fp32_out))
+                    cur_diff = fns.mean((cur_out - fp32_out) ** 2)
                     if cur_diff < min_diff:
                         min_diff = cur_diff
                         best_scale = cur_scale
