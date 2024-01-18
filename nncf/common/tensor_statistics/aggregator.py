@@ -117,8 +117,10 @@ class StatisticsAggregator(ABC):
 
     def is_model_batch_size_limited_support(self, graph: NNCFGraph) -> bool:
         """
-        :param NNCFGraph graph: _description_
-        :return bool: _description_
+        Returns True if NNCFGraph contains metatypes with no batch axis in output tensor.
+
+        :param graph: NNCFGraph
+        :return: True if NNCFGraph contains metatypes with no batch axis in output tensor.
         """
         for metatype in self.metatypes_output_has_no_batch_axis:
             if metatype in set(node.metatype for node in graph.get_all_nodes()):
@@ -128,7 +130,9 @@ class StatisticsAggregator(ABC):
     @property
     @abstractmethod
     def metatypes_output_has_no_batch_axis(self) -> List[OperatorMetatype]:
-        """ """
+        """
+        Metatypes with no batch axis in output tensor. These metatypes lead to accuracy degradation when batch size > 1.
+        """
 
     @abstractmethod
     def _register_statistics(self, outputs: Dict[str, NNCFTensor], statistic_points: StatisticPointsContainer) -> None:

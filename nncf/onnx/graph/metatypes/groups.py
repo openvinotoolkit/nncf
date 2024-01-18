@@ -122,7 +122,7 @@ OPERATIONS_WITH_BIAS = [
     onnx_metatypes.ONNXDepthwiseConvolutionMetatype,
 ]
 
-
+# These metatypes lead to inaccurate statistics when batch size > 1.
 OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS = [
     onnx_metatypes.ONNXROIAlignMetatype,
     onnx_metatypes.ONNXEmbeddingMetatype,
