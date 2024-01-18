@@ -294,6 +294,9 @@ Here is the word perplexity with data-free and data-aware mixed-precision INT4-I
 - [Optimize and Deploy Generative AI Models using Hugging Face Optimum Intel](https://docs.openvino.ai/nightly/gen_ai_guide.html)
 - [Optimum Intel documentation](https://huggingface.co/docs/optimum/intel/inference)
 - [Large Language Models Weight Compression Example](https://github.com/openvinotoolkit/nncf/blob/develop/examples/llm_compression/openvino/tiny_llama)
+
+If the accuracy or perplexity is still not satisfying, there are 2 more hyper-parameters to tune: `group_size` and `ratio`.
+
 - [Tuning Ratio and Group Size Example](https://github.com/openvinotoolkit/nncf/blob/develop/examples/llm_compression/openvino/tiny_llama_find_hyperparams)
 
 List of notebooks demonstrating OpenVINO conversion and inference together with NNCF weight compression for models from various domains:
