@@ -921,6 +921,6 @@ class TemplateTestStatisticsAggregator:
 
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
-        with pytest.raises(RuntimeError) as e:
+        with pytest.raises(ValueError) as e:
             statistics_aggregator.collect_statistics(model, graph)
-            assert "Calibration dataset must not be empty" in e.info
+            assert "Batch size > length of dataset or batch size > stat_subset_size." in e.info

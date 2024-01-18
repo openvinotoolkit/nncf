@@ -88,19 +88,12 @@ class StatisticsAggregator(ABC):
         iterataions_num = self._get_iterations_num(calibration_samples_num)
         if iterataions_num == 0:
             raise ValueError("Batch size > length of dataset or batch size > stat_subset_size.")
-        collected_statistics_num = 0
         with track(total=calibration_samples_num, description="Statistics collection") as pbar:
             for input_data in islice(self.dataset.get_inference_data(), iterataions_num):
                 outputs = engine.infer(input_data)
                 processed_outputs = self._process_outputs(outputs)
                 self._register_statistics(processed_outputs, merged_statistics)
-                collected_statistics_num += self.batch_size
                 pbar.progress.update(pbar.task, advance=self.batch_size)
-
-        if collected_statistics_num == 0:
-            raise RuntimeError(
-                "Calibration dataset must not be empty. Please provide calibration dataset with at least one sample."
-            )
 
     def register_statistic_points(self, statistic_points: StatisticPointsContainer) -> None:
         """
