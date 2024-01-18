@@ -65,6 +65,7 @@ from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.graph_builder import GraphConverter
 from nncf.torch.graph.operator_metatypes import OPERATORS_WITH_WEIGHTS_METATYPES
 from nncf.torch.graph.operator_metatypes import PTSplitMetatype
+from nncf.torch.graph.transformations.commands import DEFAULT_HOOKS_GROUP_NAME
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.knowledge_distillation.knowledge_distillation_handler import KnowledgeDistillationLossHandler
 from nncf.torch.layer_utils import _NNCFModuleMixin
@@ -137,18 +138,6 @@ class PTGraphPair:
 
     dynamic_graph: DynamicGraph
     nncf_graph: NNCFGraph
-
-
-class HookGroups(Enum):
-    """
-    Hook groups ids.
-        PERMANENT: Default hooks group id.
-        TEMPORARY: Id for hooks that are suppossed to be removed from a NNCFNetwork
-        at some point of an algorithm progress.
-    """
-
-    PERMANENT = 0
-    TEMPORARY = 1
 
 
 class NNCFNetworkInterface(torch.nn.Module):
@@ -414,13 +403,26 @@ class NNCFNetworkInterface(torch.nn.Module):
         return retval
 
     def insert_at_point(
-        self, point: PTInsertionPoint, fn_list: List[Callable], group: HookGroups = HookGroups.PERMANENT
-    ):
-        handles = []
+        self,
+        point: PTInsertionPoint,
+        fn: Callable,
+        hooks_group_name: Optional[str] = DEFAULT_HOOKS_GROUP_NAME,
+    ) -> List[HookHandleInterface]:
+        """
+        Inserts given function to the point in the NNCFNetwork, creates hook handle for the inserted function and
+        stores created hook handle in a group with the given name. A group name could be used late
+        to remove all hooks from the NNCFNewtork which belongs to the group.
+
+        :param point: Target point to insert function.
+        :param fn: Function to insert to the NNCFNetwork.
+        :param hooks_group_name: Name of hooks group for hook handle associated with the inserted function.
+        :return: Hook handle associated with the inserted function.
+        """
+        handle = None
         if point.insertion_type == PTInsertionType.OPERATOR_PRE_HOOK:
-            handles = self._compressed_context.register_pre_hooks(fn_list, point.op_address, point.input_port_id)
+            handle = self._compressed_context.register_pre_hook(fn, point.op_address, point.input_port_id)
         elif point.insertion_type == PTInsertionType.OPERATOR_POST_HOOK:
-            handles = self._compressed_context.register_post_hooks(fn_list, point.op_address)
+            handle = self._compressed_context.register_post_hook(fn, point.op_address)
         elif point.insertion_type in [PTInsertionType.NNCF_MODULE_PRE_OP, PTInsertionType.NNCF_MODULE_POST_OP]:
             nncf_module = self.get_module_by_scope(point.module_scope)
             if not isinstance(nncf_module, _NNCFModuleMixin):
@@ -439,24 +441,23 @@ class NNCFNetworkInterface(torch.nn.Module):
                 norm_nncf_scopes.extend([self._normalize_variable_recurrent_scope(x) for x in scope_list_for_module])
             assert norm_target_scope in norm_nncf_scopes  # Required for proper Recurrent/VariableRecurrent addressing
             if point.insertion_type == PTInsertionType.NNCF_MODULE_PRE_OP:
-                for fn in fn_list:
-                    handles.append(nncf_module.register_pre_forward_operation(fn))
+                handle = nncf_module.register_pre_forward_operation(fn)
             elif point.insertion_type == PTInsertionType.NNCF_MODULE_POST_OP:
-                for fn in fn_list:
-                    handles.append(nncf_module.register_post_forward_operation(fn))
+                handle = nncf_module.register_post_forward_operation(fn)
         else:
             raise RuntimeError("Unsupported insertion type: {}".format(point.insertion_type))
-        self._groups_vs_hooks_handlers[group].extend(handles)
+        self._groups_vs_hooks_handlers[hooks_group_name].append(handle)
+        return handle
 
-    def remove_hooks_group(self, group: HookGroups) -> None:
+    def remove_hooks_group(self, hooks_group_name: str) -> None:
         """
-        Removes all hooks of given group from the nncf interface.
+        Removes all hooks of given hooks group from the nncf interface.
 
-        :param group: Target hook group to remove all hooks from.
+        :param group: Target hooks group name to remove all hooks from.
         """
-        for handle in self._groups_vs_hooks_handlers[group]:
+        for handle in self._groups_vs_hooks_handlers[hooks_group_name]:
             handle.remove()
-        del self._groups_vs_hooks_handlers[group]
+        del self._groups_vs_hooks_handlers[hooks_group_name]
 
     def get_graph(self) -> PTNNCFGraph:
         if self._compressed_context.graph.get_nodes_count() == 0 or self._compressed_graphs_pair.nncf_graph is None:

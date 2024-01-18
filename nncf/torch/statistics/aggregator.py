@@ -20,18 +20,19 @@ from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticPointsContainer
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
-from nncf.torch.graph.transformations.commands import PTInsertionTemporaryCommand
-from nncf.torch.nncf_network import HookGroups
+from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.tensor_statistics.algo import create_register_input_hook
 
 
 class PTStatisticsAggregator(StatisticsAggregator):
+    HOOKS_GROUP_NAME = "statistics_hooks"
+
     def collect_statistics(self, model: NNCFNetwork, graph: NNCFGraph) -> None:
         with torch.no_grad():
             super().collect_statistics(model, graph)
-            model.nncf.remove_hooks_group(HookGroups.TEMPORARY)
+        model.nncf.remove_hooks_group(self.HOOKS_GROUP_NAME)
 
     def _register_statistics(
         self, outputs: Dict[str, PTNNCFTensor], statistic_points: StatisticPointsContainer
@@ -49,10 +50,11 @@ class PTStatisticsAggregator(StatisticsAggregator):
                 for collectors in _statistic_point.algorithm_to_tensor_collectors.values():
                     for collector in collectors:
                         transformation_commands.append(
-                            PTInsertionTemporaryCommand(
+                            PTInsertionCommand(
                                 _statistic_point.target_point,
                                 create_register_input_hook(collector=collector),
                                 TransformationPriority.FP32_TENSOR_STATISTICS_OBSERVATION,
+                                hooks_group_name=self.HOOKS_GROUP_NAME,
                             )
                         )
 

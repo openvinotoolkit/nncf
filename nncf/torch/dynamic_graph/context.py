@@ -285,14 +285,9 @@ class TracingContext:
         self.relative_scopes_stack.pop()
         self.module_call_stack.pop()
 
-    def register_pre_hooks(
-        self, fn_list: List[Callable], op_address: OperationAddress, input_port_id: int
-    ) -> List[HookHandleInterface]:
+    def register_pre_hook(self, fn: Callable, op_address: OperationAddress, input_port_id: int) -> HookHandleInterface:
         pre_hook_id = PreHookId(op_address, input_port_id)
-        handles = []
-        for fn in fn_list:
-            handles.append(add_op_to_registry(self._pre_hooks[pre_hook_id], fn))
-        return handles
+        return add_op_to_registry(self._pre_hooks[pre_hook_id], fn)
 
     def execute_pre_hooks(self, op_address: OperationAddress, op_inputs: OperatorInput) -> OperatorInput:
         in_op = getattr(self, "in_operator", False)
@@ -310,11 +305,8 @@ class TracingContext:
         self.in_operator = in_op
         return op_inputs
 
-    def register_post_hooks(self, fn_list: List[Callable], op_address: OperationAddress) -> List[HookHandleInterface]:
-        handles = []
-        for fn in fn_list:
-            handles.append(add_op_to_registry(self._post_hooks[op_address], fn))
-        return handles
+    def register_post_hook(self, fn: Callable, op_address: OperationAddress) -> HookHandleInterface:
+        return add_op_to_registry(self._post_hooks[op_address], fn)
 
     def execute_post_hooks(self, op_address: OperationAddress, outputs):
         in_op = getattr(self, "in_operator", False)

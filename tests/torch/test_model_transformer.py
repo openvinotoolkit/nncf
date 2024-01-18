@@ -50,7 +50,6 @@ from nncf.torch.graph.operator_metatypes import PTOutputNoopMetatype
 from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
-from nncf.torch.graph.transformations.commands import PTInsertionTemporaryCommand
 from nncf.torch.graph.transformations.commands import PTModelExtractionWithFusedBiasCommand
 from nncf.torch.graph.transformations.commands import PTQuantizerInsertionCommand
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
@@ -63,7 +62,6 @@ from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.module_operations import BaseOp
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nncf_network import ExtraCompressionModuleType
-from nncf.torch.nncf_network import HookGroups
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint
 from nncf.torch.nncf_network import PTInsertionType
@@ -151,9 +149,8 @@ class TestInsertionCommands:
         point_for_relu_inputs,
     ]
 
-    @pytest.mark.parametrize("hooks_group", [HookGroups.PERMANENT, HookGroups.TEMPORARY])
     @pytest.mark.parametrize("target_point", available_points)
-    def test_single_insertions(self, setup, target_point: PTTargetPoint, hooks_group: HookGroups):
+    def test_single_insertions(self, setup, target_point: PTTargetPoint):
         insertion_point = PTInsertionPoint(
             target_point.target_type,
             OperationAddress.from_str(target_point.target_node_name),
@@ -164,7 +161,8 @@ class TestInsertionCommands:
         else:
             hook = BaseOp(lambda x: x)
 
-        self.compressed_model.nncf.insert_at_point(insertion_point, [hook], group=hooks_group)
+        test_hook_group = "test_hook_group"
+        self.compressed_model.nncf.insert_at_point(insertion_point, hook, hooks_group_name=test_hook_group)
 
         if insertion_point.insertion_type == PTInsertionType.OPERATOR_PRE_HOOK:
             ctx = self.compressed_model.nncf.get_tracing_context()
@@ -181,7 +179,7 @@ class TestInsertionCommands:
             module = self.compressed_model.nncf.get_module_by_scope(insertion_point.module_scope)
             assert module.post_ops["0"] is hook
 
-        assert len(self.compressed_model.nncf._groups_vs_hooks_handlers[hooks_group]) == 1
+        assert len(self.compressed_model.nncf._groups_vs_hooks_handlers[test_hook_group]) == 1
 
     priority_types = ["same", "different"]
     insertion_types = TargetType
@@ -192,7 +190,7 @@ class TestInsertionCommands:
         for idx, order in enumerate(ordering):
             assert iterable1[idx] is iterable2[order]
 
-    @pytest.mark.parametrize("command_cls", [PTInsertionCommand, PTInsertionTemporaryCommand])
+    @pytest.mark.parametrize("command_cls", [PTInsertionCommand])
     @pytest.mark.parametrize("case", priority_test_cases, ids=[x[1].name + "-" + x[0] for x in priority_test_cases])
     def test_priority(self, case, command_cls, setup):
         priority_type = case[0]
@@ -611,6 +609,7 @@ def test_shared_fn_insertion_point(priority, compression_module_registered, mock
         ),
     ]
     OP_UNIQUE_NAME = "UNIQUE_NAME"
+    HOOK_GROUP_NAME = "shared_comands_hooks_group"
     hook_instance = Hook()
 
     def _insert_external_op_mocked():
@@ -618,7 +617,7 @@ def test_shared_fn_insertion_point(priority, compression_module_registered, mock
         if compression_module_registered:
             model.nncf.register_compression_module_type(ExtraCompressionModuleType.EXTERNAL_OP)
         unique_name = f"{OP_UNIQUE_NAME}[{';'.join([tp.target_node_name for tp in tps])}]"
-        command = PTSharedFnInsertionCommand(tps, hook_instance, unique_name, priority)
+        command = PTSharedFnInsertionCommand(tps, hook_instance, unique_name, priority, HOOK_GROUP_NAME)
         transformation_layout = PTTransformationLayout()
         transformation_layout.register(command)
 
@@ -651,6 +650,7 @@ def test_shared_fn_insertion_point(priority, compression_module_registered, mock
     assert len(commands) == len(tps)
     for command in commands:
         assert command.target_point in tps
+        assert command.hooks_group_name == HOOK_GROUP_NAME
         fn = command.fn
         assert isinstance(fn, ExternalOpCallHook)
         assert fn._storage_name == EXTERNAL_OP_STORAGE_NAME
