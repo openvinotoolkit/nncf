@@ -73,14 +73,12 @@ class TemplateTestTensorCollectorBatchSize(ABC):
         collector.register_statistic_branch(statistic_branch_random_name, reducer, aggregator)
         return collector, reducer, aggregator
 
-    def _register_inputs(self, collector, dataitems, reducer, output_info):
+    def _register_inputs(self, collector, dataitems, reducer):
         for item in dataitems:
             input_ = {hash(reducer): [self.get_nncf_tensor_class()(item)]}
             collector.register_inputs(input_)
 
     def test_statistics_batch_size_equal(self, reducers, aggregators, inplace):
-        target_node_name = "target_node_name"
-        port_id = 0
         tensor_shape = [3, 20, 20]
         dataitems = self.create_dataitems_without_batch_dim(input_shape=tensor_shape)
 
@@ -88,16 +86,14 @@ class TemplateTestTensorCollectorBatchSize(ABC):
         collector, reducer, _ = self._create_tensor_collector(shape_batch_1, inplace, reducers, aggregators)
         # output_name = reducer.get_output_names(target_node_name, port_id)
         dataitems_batch_1 = self.add_batch_dim_to_dataitems(dataitems, batch_size=1)
-        output_info = collector.get_output_info(target_node_name, port_id)
-        self._register_inputs(collector, dataitems_batch_1, reducer, output_info)
+        self._register_inputs(collector, dataitems_batch_1, reducer)
         aggregated_tensor_batch_1 = list(collector._aggregate().values())
 
         shape_batch_10 = [10, *tensor_shape]
         collector, reducer, _ = self._create_tensor_collector(shape_batch_10, inplace, reducers, aggregators)
         # output_name = reducer.get_output_names(target_node_name, port_id)
         dataitems_batch_10 = self.add_batch_dim_to_dataitems(dataitems, batch_size=10)
-        output_info = collector.get_output_info(target_node_name, port_id)
-        self._register_inputs(collector, dataitems_batch_10, reducer, output_info)
+        self._register_inputs(collector, dataitems_batch_10, reducer)
         aggregated_tensor_batch_10 = list(collector._aggregate().values())
 
         assert np.array_equal(aggregated_tensor_batch_1, aggregated_tensor_batch_10)
