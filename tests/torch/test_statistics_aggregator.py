@@ -166,10 +166,10 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         self,
         test_parameters: MinMaxTestParameters,
         dataset_samples,
-        is_stat_in_shape_of_scale,
         inplace_statistics,
         is_backend_support_custom_estimators,
     ):
+        is_stat_in_shape_of_scale = True
         model = self.get_backend_model(dataset_samples)
         quantizer_config = QuantizerConfig(
             mode=test_parameters.quantization_mode, per_channel=test_parameters.per_channel
@@ -252,10 +252,10 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         nested_target_type: TargetType,
         nested_target_node_name,
         dataset_samples,
-        is_stat_in_shape_of_scale,
         inplace_statistics,
         is_backend_support_custom_estimators,
     ):
+        is_stat_in_shape_of_scale = True
         model = self.get_backend_model(dataset_samples)
         quantizer_config = QuantizerConfig(
             mode=test_parameters.quantization_mode, per_channel=test_parameters.per_channel
