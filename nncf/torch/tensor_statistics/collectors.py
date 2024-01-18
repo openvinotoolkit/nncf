@@ -34,6 +34,7 @@ from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
 from nncf.experimental.common.tensor_statistics.collectors import PercentileAggregator
 from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
+from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.quantization.advanced_parameters import StatisticsType
@@ -256,6 +257,10 @@ class PTBatchMeanReducer(PTReducerMixIn, BatchMeanReducer):
 
 
 class PTMeanPerChanelReducer(PTReducerMixIn, MeanPerChReducer):
+    pass
+
+
+class PTRawReducer(PTReducerMixIn, RawReducer):
     pass
 
 

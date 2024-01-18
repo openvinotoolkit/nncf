@@ -26,6 +26,7 @@ from nncf.experimental.common.tensor_statistics.collectors import MinReducer
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
 from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
+from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
@@ -232,6 +233,10 @@ class ONNXBatchMeanReducer(ONNXBasicReducer, BatchMeanReducer):
 
 
 class ONNXMeanPerChanelReducer(ONNXBasicReducer, MeanPerChReducer):
+    pass
+
+
+class ONNXRawReducer(ONNXBasicReducer, RawReducer):
     pass
 
 

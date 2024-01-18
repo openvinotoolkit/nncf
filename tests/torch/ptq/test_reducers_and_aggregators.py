@@ -30,6 +30,7 @@ from nncf.torch.tensor_statistics.collectors import PTMinReducer
 from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
 from nncf.torch.tensor_statistics.collectors import PTNoopReducer
 from nncf.torch.tensor_statistics.collectors import PTQuantileReducer
+from nncf.torch.tensor_statistics.collectors import PTRawReducer
 from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggreagtors
 
 
@@ -58,6 +59,7 @@ class BaseTestReducersAggregators(TemplateTestReducersAggreagtors, ABC):
             "abs_quantile": PTAbsQuantileReducer,
             "batch_mean": PTBatchMeanReducer,
             "mean_per_ch": PTMeanPerChanelReducer,
+            "raw": PTRawReducer,
         }
 
     def all_close(self, val, ref) -> bool:

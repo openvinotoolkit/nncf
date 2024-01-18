@@ -28,6 +28,7 @@ from nncf.experimental.common.tensor_statistics.collectors import MinReducer
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
 from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
+from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.node_utils import get_inplace_batch_mean_op
@@ -195,6 +196,11 @@ class OVNoopReducer(NoopReducer):
         return [get_result_node_name(target_node_name, port_id)]
 
 
+class OVRawReducer(RawReducer):
+    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
+        return [get_result_node_name(target_node_name, port_id)]
+
+
 class OVMinReducer(MinReducer):
     def _get_processor(self):
         return OVNNCFCollectorTensorProcessor
@@ -317,7 +323,7 @@ def get_mean_statistic_collector(
 
 
 def get_raw_stat_collector(num_samples: Optional[int] = None) -> TensorCollector:
-    reducer = OVNoopReducer(keep_empty_stats=True)
+    reducer = OVRawReducer()
     aggregator = NoopAggregator(num_samples)
 
     collector = TensorCollector(OVRawTensorStatistic)

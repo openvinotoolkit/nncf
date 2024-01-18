@@ -37,19 +37,15 @@ class TensorReducerBase(ABC):
     the specified rule. Could handle tensors inplace or out of place.
     """
 
-    def __init__(
-        self, reduction_axes: Optional[ReductionAxes] = None, inplace: bool = False, keep_empty_stats: bool = False
-    ):
+    def __init__(self, reduction_axes: Optional[ReductionAxes] = None, inplace: bool = False):
         """
         :param reduction_axes: Reduction axes for reduction calculation. Equal to list(range(len(input.shape)))
             if empty.
         :param inplace: Whether should be calculated inplace or out of place.
-        :param keep_empty_stats: Whether should be keep empty statistics or not.
         """
         self._reduction_axes = reduction_axes
         self._tensor_processor: NNCFCollectorTensorProcessor = self._get_processor()
         self._inplace = inplace
-        self._keep_empty_stats = keep_empty_stats
         self._keepdims = True
 
     @property
@@ -97,7 +93,7 @@ class TensorReducerBase(ABC):
         """
 
     def __call__(self, x: List[NNCFTensor]):
-        if any(t.is_empty() for t in x) and not self._keep_empty_stats:
+        if any(t.is_empty() for t in x):
             return None
 
         if self.inplace:
@@ -110,11 +106,10 @@ class TensorReducerBase(ABC):
             isinstance(__o, self.__class__)
             and self._reduction_axes == __o._reduction_axes
             and self._inplace == __o.inplace
-            and self._keep_empty_stats == __o._keep_empty_stats
         )
 
     def __hash__(self) -> int:
-        return hash((self.__class__.__name__, self.inplace, self._reduction_axes, self._keep_empty_stats))
+        return hash((self.__class__.__name__, self.inplace, self._reduction_axes))
 
     def _get_reduction_axes(self, tensor: NNCFTensor) -> ReductionAxes:
         if self._reduction_axes is not None:
@@ -476,8 +471,8 @@ class MergedTensorCollector(TensorCollector):
 
 
 class NoopReducer(TensorReducerBase):
-    def __init__(self, keep_empty_stats=False):
-        super().__init__(inplace=False, keep_empty_stats=keep_empty_stats)
+    def __init__(self):
+        super().__init__(inplace=False)
 
     @staticmethod
     def _get_processor() -> NNCFCollectorTensorProcessor:
@@ -488,6 +483,14 @@ class NoopReducer(TensorReducerBase):
 
     def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
         return x
+
+
+class RawReducer(NoopReducer):
+    def __init__(self):
+        super().__init__()
+
+    def __call__(self, x: List[NNCFTensor]):
+        return self._reduce_out_of_place(x)
 
 
 class MinReducer(TensorReducerBase):
