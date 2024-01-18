@@ -44,8 +44,8 @@ class NumpyNNCFTensor(NNCFTensor):
 
 
 class DummyTensorReducer(TensorReducerBase):
-    def __init__(self, output_name: str, inplace: bool = False, inplace_mock=None):
-        super().__init__(inplace=inplace)
+    def __init__(self, output_name: str, inplace: bool = False, inplace_mock=None, keep_empty_stats=False):
+        super().__init__(inplace=inplace, keep_empty_stats=keep_empty_stats)
         self._output_name = output_name
         self._inplace_mock = inplace_mock
 
@@ -358,10 +358,10 @@ class TemplateTestStatisticCollector:
         pass
 
     @pytest.mark.parametrize("inplace", [False, True])
-    @pytest.mark.parametrize("any_not_empty", [False, True])
-    def test_empty_tensors_register(self, inplace, any_not_empty):
+    @pytest.mark.parametrize("keep_empty_stats", [False, True])
+    def test_empty_tensors_register(self, inplace, keep_empty_stats):
         collector = TensorCollector()
-        reducer = DummyTensorReducer("Dummy", inplace)
+        reducer = DummyTensorReducer("Dummy", inplace=inplace, keep_empty_stats=keep_empty_stats)
         aggregator = DummyTensorAggregator(5)
         collector.register_statistic_branch("A", reducer, aggregator)
         input_name = "input_name"
@@ -376,23 +376,23 @@ class TemplateTestStatisticCollector:
         assert len(stats) == 1
         assert stats["A"] is None
 
-        inputs = [full_inputs, empty_inputs, full_inputs] if any_not_empty else [empty_inputs, empty_inputs]
+        inputs = [empty_inputs, full_inputs]
         for input_ in inputs:
             collector.register_inputs(input_)
 
-        if any_not_empty:
+        if keep_empty_stats:
             assert len(aggregator._container) == 2
             assert aggregator._collected_samples == 2
             stats = collector.get_statistics()
             assert len(stats) == 1
-            assert stats["A"] == self.get_nncf_tensor([100])
+            assert stats["A"].is_empty()
             return
 
-        assert len(aggregator._container) == 0
-        assert aggregator._collected_samples == 0
+        assert len(aggregator._container) == 1
+        assert aggregator._collected_samples == 1
         stats = collector.get_statistics()
         assert len(stats) == 1
-        assert stats["A"] is None
+        assert stats["A"] == self.get_nncf_tensor(np.array([100]))
 
     def test_min_max_stat_building(self, min_max_statistic_cls: MinMaxTensorStatistic):
         tensor_collector = TensorCollector(min_max_statistic_cls)
