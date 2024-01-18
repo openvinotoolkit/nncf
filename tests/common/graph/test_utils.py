@@ -11,8 +11,8 @@
 
 import pytest
 
-from nncf.common.graph.utils import get_channel_agnostic_reduction_axes
 from nncf.common.graph.utils import get_concat_axis
+from nncf.common.graph.utils import get_reduction_axes
 
 TEST_CASES = [
     ([(1, 1), (1, 1)], [(2, 1)], [0]),
@@ -41,5 +41,5 @@ def test_get_concat_axis(input_shape, output_shape, possible_axes):
         ((1, 1, 12, 12), [1, 2], (0, 3)),
     ],
 )
-def test_get_channel_agnostic_reduction_axes(shape, channel_axes, ref_reduction_axes):
-    assert get_channel_agnostic_reduction_axes(channel_axes=channel_axes, shape=shape) == ref_reduction_axes
+def test_get_reduction_axes(shape, channel_axes, ref_reduction_axes):
+    assert get_reduction_axes(channel_axes=channel_axes, shape=shape) == ref_reduction_axes

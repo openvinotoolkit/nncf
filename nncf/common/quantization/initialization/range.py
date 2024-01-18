@@ -11,7 +11,7 @@
 
 from typing import Dict, List, Optional, Tuple
 
-from nncf.common.graph.utils import get_channel_agnostic_reduction_axes
+from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerGroup
@@ -218,7 +218,7 @@ class RangeInitCollectorParams:
         if self.is_weights:
             aggregation_axes = None
             if self.is_per_channel:
-                reduction_axes = get_channel_agnostic_reduction_axes(channel_axes, shape)
+                reduction_axes = get_reduction_axes(channel_axes, shape)
             else:
                 reduction_axes = tuple(range(len(shape)))
         else:
@@ -228,9 +228,9 @@ class RangeInitCollectorParams:
             if self.is_per_channel:
                 # Keep batch to aggregate and channel for per-channel FakeQuantize.
                 # TODO (l-bat): Disable quantizer propagation through layout changing operations
-                reduction_axes = get_channel_agnostic_reduction_axes(aggregation_axes, shape)
+                reduction_axes = get_reduction_axes(aggregation_axes, shape)
             else:
                 # Keep batch to aggregate
-                reduction_axes = get_channel_agnostic_reduction_axes((batch_axis,), shape)
+                reduction_axes = get_reduction_axes((batch_axis,), shape)
 
         return reduction_axes, aggregation_axes

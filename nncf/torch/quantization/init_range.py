@@ -17,7 +17,7 @@ import numpy as np
 import torch
 
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
-from nncf.common.graph.utils import get_channel_agnostic_reduction_axes
+from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.initialization.range import RangeInitParams
@@ -122,7 +122,7 @@ class PTRangeInitCollectorParams(RangeInitCollectorParams):
         if self.is_per_channel:
             val = (ndims + self._channel_idx) % ndims
             axes_to_remove.append(val)
-        return get_channel_agnostic_reduction_axes(axes_to_remove, reduction_axes)
+        return get_reduction_axes(axes_to_remove, reduction_axes)
 
     def get_aggregation_axes(self, per_sample_stats: bool) -> AggregationAxes:
         """

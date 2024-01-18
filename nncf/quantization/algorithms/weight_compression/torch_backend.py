@@ -121,9 +121,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return weight_port_ids
 
     @staticmethod
-    def get_channel_agnostic_reduction_axes(
-        node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph
-    ) -> Optional[Tuple[int]]:
+    def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[Tuple[int]]:
         weight_node = get_weight_node(node_with_weight, weight_port_id, graph)
 
         ndims = len(weight_node.layer_attributes.shape)

@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from functools import partial
-from typing import List, Optional, Set
+from typing import List, Set, Union
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -117,15 +117,15 @@ def get_number_of_quantized_ops(
     return len(quantized_ops)
 
 
-def get_channel_agnostic_reduction_axes(channel_axes: List[int], shape: List[int]) -> Optional[ReductionAxes]:
+def get_reduction_axes(axes_to_keep: Union[List[int], ReductionAxes], shape_to_reduce: List[int]) -> ReductionAxes:
     """
-    Returns filtered reduction axes without axes that corresponds channels.
+    Returns reduction axes without axes needed to keep.
 
-    :param channel_axes: List of the channel axes.
-    :param shape: Shape that need to be filtered.
-    :return: Reduction axes in tuple format.
+    :param axes_to_keep: Axes to keep.
+    :param shape_to_reduce: Shape to reduce.
+    :return: Reduction axes.
     """
-    reduction_axes = list(range(len(shape)))
-    for channel_axis in sorted(channel_axes, reverse=True):
+    reduction_axes = list(range(len(shape_to_reduce)))
+    for channel_axis in sorted(axes_to_keep, reverse=True):
         del reduction_axes[channel_axis]
     return tuple(reduction_axes)

@@ -15,7 +15,7 @@ from typing import List
 import numpy as np
 import pytest
 
-from nncf.common.graph.utils import get_channel_agnostic_reduction_axes
+from nncf.common.graph.utils import get_reduction_axes
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 
 
@@ -62,7 +62,7 @@ class TemplateTestTensorCollectorBatchSize(ABC):
         batch_axis = 0
         statistic_branch_random_name = "1"
         collector = TensorCollector(self.get_tensor_statistics_class())
-        reduction_axes = get_channel_agnostic_reduction_axes([batch_axis], shape)
+        reduction_axes = get_reduction_axes([batch_axis], shape)
         aggregation_axes = (0, 1)
         kwargs = {"reduction_axes": reduction_axes, "inplace": inplace}
         reducer = reducer(**kwargs)
