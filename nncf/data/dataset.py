@@ -83,9 +83,9 @@ class Dataset(Generic[DataItem, ModelInput]):
 
     def get_batch_size(self) -> Optional[int]:
         """ """
-        if hasattr(self._data_source, "batch_size"):  # Torch
+        if hasattr(self._data_source, "batch_size"):  # Torch dataloader
             return self._data_source.batch_size
-        if hasattr(self._data_source, "_batch_size"):  # TF
+        if hasattr(self._data_source, "_batch_size"):  # TF dataloader
             return self._data_source._batch_size
         return None
 
