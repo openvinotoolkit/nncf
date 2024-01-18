@@ -9,9 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from dataclasses import dataclass
-from typing import Any, Optional, TypeVar
+from typing import Optional, TypeVar
 
-from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.graph.graph import NNCFNode
 from nncf.parameters import CompressWeightsMode
 
 TWeightType = TypeVar("TWeightType")
@@ -20,7 +20,7 @@ TWeightType = TypeVar("TWeightType")
 @dataclass
 class WeightCompressionConfig:
     """
-    Information on how to compress (quantize) a specific weight.
+    Configuration on how to compress (quantize) a specific weight.
 
     :param mode: Defines a mode for weight compression. Defaults to INT8_ASYM mode.
     :param group_size: Number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
@@ -39,27 +39,21 @@ class WeightCompressionConfig:
 
 
 @dataclass
-class WeightNodeParams:
+class WeightCompressionParameters:
     """
-    Information about weight node in the ov.Model that is useful for weight compression.
+    Weight compression parameters determine how and what weight should be compressed.
 
-    :param reduction_axis: Axis, along which to reduce (collect) different statistics (e.g. min, max).
+    :param weight_name: Unique weight name.
+    :param node_with_weight: Node with weight in the NNCF graph.
+    :param weight_port_id: Number of elements in the weight array.
     :param num_weights: Number of elements in the weight array.
-    :param fq_name: Name for the inserted weight compression operation.
-    :param weight_node: The weight node itself.
-    :param original_weight_dtype: Type of elements in the weight array.
+    :param reduction_axis: Axis, along which to reduce (collect) different statistics (e.g. min, max).
     :param compression_config: Configuration of weight compression for the weight node.
-    :param metatype: Metatype of the corresponding operation with weight.
-    :param node_name: String representation of the node in the NNCFGraph. It is intended for accessing collected
-        activations.
     """
 
-    reduction_axis: int
+    weight_name: str
+    node_with_weight: NNCFNode
+    weight_port_id: int
     num_weights: int
-    fq_name: str
-    # TODO(nlyalyus): Should be NNCFNode
-    weight_node: Any  # ov.Node
-    original_weight_dtype: TWeightType
+    reduction_axis: int
     compression_config = WeightCompressionConfig()
-    metatype: OperatorMetatype = None
-    node_name: str = None

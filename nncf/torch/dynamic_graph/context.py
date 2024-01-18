@@ -97,6 +97,7 @@ class TracingContext:
         self._post_hooks: DefaultDict[OperationAddress, List[Callable]] = defaultdict(list)
         self._pre_hooks: DefaultDict[PreHookId, List[Callable]] = defaultdict(list)
         self._num_nested_hooks = 0
+        self.reused_parameters = []
 
         self._threading = CopySafeThreadingVars()
 

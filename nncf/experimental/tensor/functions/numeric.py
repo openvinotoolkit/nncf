@@ -10,32 +10,19 @@
 # limitations under the License.
 
 import functools
-from typing import Callable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, List, Optional, Tuple, Union
 
-from nncf.experimental.tensor.enums import TensorDataType
-from nncf.experimental.tensor.enums import TensorDeviceType
+from nncf.experimental.tensor.definitions import TensorDataType
+from nncf.experimental.tensor.definitions import TensorDeviceType
+from nncf.experimental.tensor.definitions import TypeInfo
+from nncf.experimental.tensor.functions.dispatcher import dispatch_list
+from nncf.experimental.tensor.functions.dispatcher import tensor_guard
 from nncf.experimental.tensor.tensor import Tensor
 from nncf.experimental.tensor.tensor import unwrap_tensor_data
 
-TypeInfo = TypeVar("TypeInfo")
-
-
-def _tensor_guard(func: callable):
-    """
-    A decorator that ensures that the first argument to the decorated function is a Tensor.
-    """
-
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        if isinstance(args[0], Tensor):
-            return func(*args, **kwargs)
-        raise NotImplementedError(f"Function `{func.__name__}` is not implemented for {type(args[0])}")
-
-    return wrapper
-
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def device(a: Tensor) -> TensorDeviceType:
     """
     Return the device of the tensor.
@@ -47,7 +34,7 @@ def device(a: Tensor) -> TensorDeviceType:
 
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def squeeze(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:
     """
     Remove axes of length one from a.
@@ -62,7 +49,7 @@ def squeeze(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Te
 
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def flatten(a: Tensor) -> Tensor:
     """
     Return a copy of the tensor collapsed into one dimension.
@@ -74,8 +61,8 @@ def flatten(a: Tensor) -> Tensor:
 
 
 @functools.singledispatch
-@_tensor_guard
-def max(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = False) -> Tensor:
+@tensor_guard
+def max(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> Tensor:
     """
     Return the maximum of an array or maximum along an axis.
 
@@ -89,8 +76,8 @@ def max(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims:
 
 
 @functools.singledispatch
-@_tensor_guard
-def min(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: Optional[bool] = False) -> Tensor:
+@tensor_guard
+def min(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> Tensor:
     """
     Return the minimum of an array or minimum along an axis.
 
@@ -104,7 +91,7 @@ def min(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims:
 
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def abs(a: Tensor) -> Tensor:
     """
     Calculate the absolute value element-wise.
@@ -116,7 +103,7 @@ def abs(a: Tensor) -> Tensor:
 
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def astype(a: Tensor, data_type: TensorDataType) -> Tensor:
     """
     Copy of the tensor, cast to a specified type.
@@ -130,7 +117,7 @@ def astype(a: Tensor, data_type: TensorDataType) -> Tensor:
 
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def dtype(a: Tensor) -> TensorDataType:
     """
     Return data type of the tensor.
@@ -142,7 +129,7 @@ def dtype(a: Tensor) -> TensorDataType:
 
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def reshape(a: Tensor, shape: Tuple[int, ...]) -> Tensor:
     """
     Gives a new shape to a tensor without changing its data.
@@ -155,23 +142,23 @@ def reshape(a: Tensor, shape: Tuple[int, ...]) -> Tensor:
 
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def all(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:
     """
     Test whether all tensor elements along a given axis evaluate to True.
 
     :param a: The input tensor.
     :param axis: Axis or axes along which a logical AND reduction is performed.
-    :return: A new boolean or tensor.
+    :return: A new tensor.
     """
     return Tensor(all(a.data, axis=axis))
 
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def allclose(
     a: Tensor, b: Union[Tensor, float], rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False
-) -> Tensor:
+) -> bool:
     """
     Returns True if two arrays are element-wise equal within a tolerance.
 
@@ -184,32 +171,24 @@ def allclose(
       Defaults to False.
     :return: True if the two arrays are equal within the given tolerance, otherwise False.
     """
-    return Tensor(
-        allclose(
-            a.data,
-            unwrap_tensor_data(b),
-            rtol=rtol,
-            atol=atol,
-            equal_nan=equal_nan,
-        )
-    )
+    return allclose(a.data, unwrap_tensor_data(b), rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def any(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:
     """
     Test whether any tensor elements along a given axis evaluate to True.
 
     :param a: The input tensor.
     :param axis: Axis or axes along which a logical OR reduction is performed.
-    :return: A new boolean or tensor.
+    :return: A new tensor.
     """
     return Tensor(any(a.data, axis))
 
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def count_nonzero(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:
     """
     Counts the number of non-zero values in the tensor input.
@@ -223,7 +202,7 @@ def count_nonzero(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None)
 
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def isempty(a: Tensor) -> bool:
     """
     Return True if input tensor is empty.
@@ -235,7 +214,7 @@ def isempty(a: Tensor) -> bool:
 
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def isclose(
     a: Tensor, b: Union[Tensor, float], rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False
 ) -> Tensor:
@@ -263,7 +242,7 @@ def isclose(
 
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def maximum(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
     """
     Element-wise maximum of tensor elements.
@@ -276,7 +255,7 @@ def maximum(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
 
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def minimum(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
     """
     Element-wise minimum of tensor elements.
@@ -289,7 +268,7 @@ def minimum(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
 
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def ones_like(a: Tensor) -> Tensor:
     """
     Return a tensor of ones with the same shape and type as a given tensor.
@@ -301,7 +280,7 @@ def ones_like(a: Tensor) -> Tensor:
 
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def where(condition: Tensor, x: Union[Tensor, float], y: Union[Tensor, float]) -> Tensor:
     """
     Return elements chosen from x or y depending on condition.
@@ -321,7 +300,7 @@ def where(condition: Tensor, x: Union[Tensor, float], y: Union[Tensor, float]) -
 
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def zeros_like(a: Tensor) -> Tensor:
     """
     Return an tensor of zeros with the same shape and type as a given tensor.
@@ -342,12 +321,12 @@ def stack(x: List[Tensor], axis: int = 0) -> Tensor:
     :return: Stacked Tensor.
     """
     if isinstance(x, List):
-        return Tensor(_dispatch_list(stack, x, axis=axis))
+        return Tensor(dispatch_list(stack, x, axis=axis))
     raise NotImplementedError(f"Function `stack` is not implemented for {type(x)}")
 
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def unstack(a: Tensor, axis: int = 0) -> List[Tensor]:
     """
     Unstack a Tensor into list.
@@ -361,7 +340,7 @@ def unstack(a: Tensor, axis: int = 0) -> List[Tensor]:
 
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def moveaxis(a: Tensor, source: Union[int, Tuple[int, ...]], destination: Union[int, Tuple[int, ...]]) -> Tensor:
     """
     Move axes of an array to new positions.
@@ -375,7 +354,7 @@ def moveaxis(a: Tensor, source: Union[int, Tuple[int, ...]], destination: Union[
 
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def mean(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> Tensor:
     """
     Compute the arithmetic mean along the specified axis.
@@ -389,7 +368,7 @@ def mean(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims
 
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def round(a: Tensor, decimals=0) -> Tensor:
     """
     Evenly round to the given number of decimals.
@@ -403,7 +382,7 @@ def round(a: Tensor, decimals=0) -> Tensor:
 
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def _binary_op_nowarn(a: Tensor, b: Union[Tensor, float], operator_fn: Callable) -> Tensor:
     """
     Applies a binary operation with disable warnings.
@@ -417,7 +396,7 @@ def _binary_op_nowarn(a: Tensor, b: Union[Tensor, float], operator_fn: Callable)
 
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def _binary_reverse_op_nowarn(a: Tensor, b: Union[Tensor, float], operator_fn: Callable) -> Tensor:
     """
     Applies a binary reverse operation with disable warnings.
@@ -431,7 +410,7 @@ def _binary_reverse_op_nowarn(a: Tensor, b: Union[Tensor, float], operator_fn: C
 
 
 @functools.singledispatch
-@_tensor_guard
+@tensor_guard
 def finfo(a: Tensor) -> TypeInfo:
     """
     Returns machine limits for tensor type.
@@ -442,25 +421,104 @@ def finfo(a: Tensor) -> TypeInfo:
     return finfo(a.data)
 
 
-def _dispatch_list(fn: "functools._SingleDispatchCallable", tensor_list: List[Tensor], *args, **kwargs):
+@functools.singledispatch
+@tensor_guard
+def clip(a: Tensor, a_min: Union[Tensor, float], a_max: Union[Tensor, float]) -> Tensor:
     """
-    Dispatches the function to the type of the wrapped data of the first element in tensor_list.
+    Clips all elements in input into the range [ a_min, a_max ]
 
-    :param fn: A function wrapped by `functools.singledispatch`.
-    :param tensor_list: List of Tensors.
-    :return: The result value of the function call.
+    :param a: Tensor.
+    :param a_min: A lower-bound of the range to be clamped to.
+    :param a_max: An upper-bound of the range to be clamped to.
+    :return: A clipped tensor with the elements of a, but where values < a_min are replaced with a_min,
+        and those > a_max with a_max.
     """
-    unwrapped_list = [i.data for i in tensor_list]
-    return fn.dispatch(type(unwrapped_list[0]))(unwrapped_list, *args, **kwargs)
+    return Tensor(clip(a.data, unwrap_tensor_data(a_min), unwrap_tensor_data(a_max)))
 
 
-def _initialize_backends():
-    import nncf.experimental.tensor.numpy_functions
+@functools.singledispatch
+@tensor_guard
+def as_tensor_like(a: Tensor, data: Any) -> Tensor:
+    """
+    Converts the data into a tensor with the same data representation and hosted on the same device
+    as the given tensor.
 
-    try:
-        import nncf.experimental.tensor.torch_functions  # noqa: F401
-    except ImportError:
-        pass
+    :param a: A tensor for defining the data representation and the host device of the output tensor.
+    :param data: Initial data for the tensor. Can be a list, tuple, NumPy ndarray, scalar, and other types.
+    :return: A tensor with the same data representation and hosted on the same device as a,
+        and which has been initialized with data.
+    """
+    return Tensor(as_tensor_like(a.data, data))
 
 
-_initialize_backends()
+@functools.singledispatch
+@tensor_guard
+def item(a: Tensor) -> Union[int, float, bool]:
+    """
+    Returns the value of this tensor as a standard Python number. This only works for tensors with one element.
+
+    :param a: Tensor.
+    :return: The value of this tensor as a standard Python number
+    """
+    if isinstance(a.data, (int, float, bool)):
+        return a.data
+    return item(a.data)
+
+
+@functools.singledispatch
+@tensor_guard
+def sum(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> Tensor:
+    """
+    Sum of tensor elements over a given axis.
+
+    :param a: The input tensor.
+    :param axis: Axis or axes along which a sum is performed. The default, axis=None, will sum all of the elements
+        of the input tensor.
+    :param keepdims: If this is set to True, the axes which are reduced are left in the result as dimensions
+        with size one.
+    :return: Returns the sum of all elements in the input tensor in the given axis.
+    """
+    return Tensor(sum(a.data, axis, keepdims))
+
+
+@functools.singledispatch
+@tensor_guard
+def multiply(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
+    """
+    Multiply arguments element-wise.
+
+    :param x1: The first input tensor.
+    :param x2: The second input tensor or number.
+    :return: The product of x1 and x2, element-wise.
+    """
+    return Tensor(multiply(x1.data, unwrap_tensor_data(x2)))
+
+
+@functools.singledispatch
+@tensor_guard
+def var(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False, ddof: int = 0) -> Tensor:
+    """
+    Compute the variance along the specified axis.
+
+    :param a: The input tensor.
+    :param axis: Axis or axes along which the variance is computed. The default is to compute the variance
+        of the flattened tensor.
+    :param keepdims: If this is set to True, the axes which are reduced are left in the result as dimensions
+        with size one.
+    :param ddof: “Delta Degrees of Freedom”: difference between the sample size and sample degrees of freedom.
+        By default ddof is zero.
+    :return: A new tensor containing the variance.
+    """
+    return Tensor(var(a.data, axis, keepdims, ddof))
+
+
+@functools.singledispatch
+@tensor_guard
+def size(a: Tensor) -> int:
+    """
+    Return number of elements in the tensor.
+
+    :param a: The input tensor
+    :return: The size of the input tensor.
+    """
+    return size(a.data)

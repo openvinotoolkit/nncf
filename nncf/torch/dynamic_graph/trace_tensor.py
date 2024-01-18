@@ -142,23 +142,30 @@ class TracedParameter(torch.nn.Parameter, TracedTensorMixin):
     """
 
     NAME = "name"
+    IS_REUSED = "is_reused"
 
     @property
     def name(self):
         return self.tracing_attrs[TracedParameter.NAME]
 
+    @property
+    def is_reused(self):
+        return self.tracing_attrs[TracedParameter.IS_REUSED]
+
     @staticmethod
-    def from_torch_parameter(tensor: torch.nn.Parameter, name: str) -> "TracedParameter":
+    def from_torch_parameter(tensor: torch.nn.Parameter, name: str, is_reused: bool) -> "TracedParameter":
         """
         Creates a TracedParameter by patching a given torch.nn.Parameter, associating it
         with the provided parameter name.
 
         :param tensor: The input torch.nn.Parameter.
         :param name: The parameter name.
+        :param is_shared: True if parameter is used as an input in several operations of the model otherwise False.
         :return: The resulting TracedParameter.
         """
         TracedParameter.patch(tensor)
         tensor.tracing_attrs[TracedParameter.NAME] = name
+        tensor.tracing_attrs[TracedParameter.IS_REUSED] = is_reused
         return tensor
 
     def as_subclass(self, cls: "TracedParameter") -> "TracedParameter":

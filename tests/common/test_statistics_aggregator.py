@@ -587,7 +587,7 @@ class TemplateTestStatisticsAggregator:
                 test_params.axis, inplace_statistics, len(dataset_samples)
             )
         elif test_params.collector_type == BCStatsCollectors.RAW:
-            tensor_collector = algo_backend.raw_statistic_collector(inplace_statistics, len(dataset_samples))
+            tensor_collector = algo_backend.raw_statistic_collector(len(dataset_samples))
         else:
             raise RuntimeError()
 
