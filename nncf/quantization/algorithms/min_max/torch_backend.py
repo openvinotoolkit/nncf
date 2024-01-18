@@ -40,7 +40,6 @@ from nncf.torch.graph.transformations.commands import PTQuantizerInsertionComman
 from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
-from nncf.torch.quantization.init_range import PTRangeInitCollectorParams
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
@@ -166,12 +165,10 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         inplace: bool,
         num_samples: int = None,
     ) -> TensorCollector:
-        collector_params = PTMinMaxAlgoBackend._default_collector_params(nncf_graph, target_point, collector_params)
-        reduction_axes = collector_params.get_reduction_axes(per_sample_stats=True)
-        aggregation_axes = collector_params.get_aggregation_axes(per_sample_stats=True)
-        if target_point.is_weight_target_point():
-            reduction_axes = collector_params.get_reduction_axes(per_sample_stats=False)
-            aggregation_axes = collector_params.get_aggregation_axes(per_sample_stats=False)
+        input_shape, _, channel_idx = PTMinMaxAlgoBackend._get_input_scale_shape(
+            nncf_graph, target_point, collector_params.is_per_channel
+        )
+        reduction_axes, aggregation_axes = collector_params.get_reduction_aggregation_axes(input_shape, channel_idx)
         collector = TensorCollector(PTMinMaxTensorStatistic)
         for params, container_key in zip(
             [range_estimator_params.min, range_estimator_params.max],
@@ -246,21 +243,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         )
 
         return input_shape, scale_shape, channel_idx
-
-    @staticmethod
-    def _default_collector_params(
-        nncf_graph: NNCFGraph, target_point: PTTargetPoint, collector_params: RangeInitCollectorParams
-    ) -> PTRangeInitCollectorParams:
-        input_shape, _, channel_idx = PTMinMaxAlgoBackend._get_input_scale_shape(
-            nncf_graph, target_point, collector_params.is_per_channel
-        )
-        return PTRangeInitCollectorParams(
-            is_weights=collector_params.is_weights,
-            scheme=collector_params.scheme,
-            per_channel=collector_params.is_per_channel,
-            input_shape=input_shape,
-            channel_idx=channel_idx,
-        )
 
     @staticmethod
     def _create_quantizer(

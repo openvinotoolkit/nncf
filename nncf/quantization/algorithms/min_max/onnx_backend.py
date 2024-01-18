@@ -18,7 +18,6 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
-from nncf.common.graph.utils import get_channel_agnostic_reduction_axes
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.structs import QuantizerConfig
@@ -161,15 +160,10 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         inplace: bool,
         num_samples: int = None,
     ) -> TensorCollector:
-        is_per_channel = collector_params.is_per_channel
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        use_abs_max = collector_params.use_abs_max
-        quantization_axis = get_quantization_axis(is_per_channel, node, target_point)
-        quantized_tensor_shape = get_quantized_tensor_shape(nncf_graph, node, target_point)
-        reduction_axes = None  # Per-Tensor
-        if quantization_axis is not None and quantized_tensor_shape is not None:  # Per-Channel
-            reduction_axes = get_channel_agnostic_reduction_axes([quantization_axis], quantized_tensor_shape)
-
+        shape = get_quantized_tensor_shape(nncf_graph, node, target_point)
+        channel_axis = get_quantization_axis(collector_params.is_per_channel, node, target_point)
+        reduction_axes, aggregation_axes = collector_params.get_reduction_aggregation_axes(shape, [channel_axis])
         collector = TensorCollector(ONNXMinMaxTensorStatistic)
         for params, container_key in zip(
             [range_estimator_params.min, range_estimator_params.max],
@@ -179,29 +173,26 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 raise RuntimeError(
                     f"Statistic type: {params.statistics_type} is not supported for ONNX PTQ backend yet."
                 )
-
             if params.aggregator_type not in AGGREGATORS_MAP:
                 raise RuntimeError(
                     f"Aggregator type: {params.aggregator_type} is not supported for ONNX PTQ backend yet."
                 )
-
-            statistic_type = params.statistics_type
-            kwargs = {"reduction_axes": reduction_axes, "inplace": inplace}
-            if statistic_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
-                # TODO(dlyakhov): merge two quantile aggregators in one
+            kwargs = {"reduction_axes": reduction_axes, "inplace": False}
+            if params.statistics_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
                 if container_key == ONNXMinMaxTensorStatistic.MIN_STAT:
                     quantile = params.quantile_outlier_prob
                 else:
                     quantile = 1 - params.quantile_outlier_prob
                 kwargs.update({"quantile": [quantile]})
-            if use_abs_max and statistic_type == StatisticsType.MAX:
+            # TODO(dlyakhov): merge two quantile aggregators in one
+            statistic_type = params.statistics_type
+            if collector_params.use_abs_max and statistic_type == StatisticsType.MAX:
                 statistic_type = StatisticsType.ABS_MAX
-            reducer = ONNX_REDUCERS_MAP[statistic_type](reduction_axes=reduction_axes)
+            reducer = ONNX_REDUCERS_MAP[statistic_type](**kwargs)
 
-            aggregation_axes = (0,)
             aggregator = AGGREGATORS_MAP[params.aggregator_type](
-                aggregation_axes=aggregation_axes,
                 num_samples=num_samples,
+                aggregation_axes=aggregation_axes,
                 tensor_processor=ONNXNNCFCollectorTensorProcessor,
             )
 

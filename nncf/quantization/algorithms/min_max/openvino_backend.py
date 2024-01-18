@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set
 
 import numpy as np
 
@@ -17,11 +17,9 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.graph.utils import get_channel_agnostic_reduction_axes
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
@@ -149,50 +147,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
 
     @staticmethod
-    def _get_reduction_aggregation_axes(
-        nncf_graph: NNCFGraph, target_point: OVTargetPoint, collector_params: RangeInitCollectorParams
-    ) -> Tuple[ReductionAxes, ReductionAxes]:
-        """
-        Returns reduce and aggregation axes. The following logic is applied:
-        If target point is applied to weight:
-        *Aggregator aggregates only inner saved statistics,
-        *Reducer reduces all axes except channels for per-channel, for per-tensor - all axes.
-        If target point is applied to activations:
-        *Aggregator aggregates batch dimension.
-        *Reducer reduces all axes except channel and batch for per-channel, for per-tensor - all axes except batch.
-
-        :param nncf_graph: NNCFGraph instance.
-        :param target_point: Point to collect statistics.
-        :param quantizer_config: Quantization configuration.
-        :return: Reduction axes for reducer and aggregation axes for aggregator.
-        """
-        node = nncf_graph.get_node_by_name(target_point.target_node_name)
-
-        if target_point.is_weight_target_point():
-            aggregation_axes = None
-            assert isinstance(node.layer_attributes, OVLayerAttributes)
-            shape = node.layer_attributes.constant_attributes[target_point.port_id]["shape"]
-            if collector_params.is_per_channel:
-                channel_axes = get_weight_channel_axes(node)
-                reduction_axes = get_channel_agnostic_reduction_axes(channel_axes, shape)
-            else:
-                reduction_axes = tuple(range(len(shape)))
-        else:
-            # OpenVINO activations have channel first layout: [N, C, Z, Y, X]
-            batch_axis, channel_axis = 0, 1
-            aggregation_axes = (batch_axis, channel_axis)
-            shape = OVMinMaxAlgoBackend._get_activation_shape(target_point, nncf_graph, node)
-            if collector_params.is_per_channel:
-                # Keep batch to aggregate and channel for per-channel FakeQuantize.
-                # TODO (l-bat): Disable quantizer propagation through layout changing operations
-                reduction_axes = get_channel_agnostic_reduction_axes((batch_axis, channel_axis), shape)
-            else:
-                # Keep batch to aggregate
-                reduction_axes = get_channel_agnostic_reduction_axes((batch_axis,), shape)
-
-        return reduction_axes, aggregation_axes
-
-    @staticmethod
     def get_statistic_collector(
         range_estimator_params: RangeEstimatorParameters,
         nncf_graph: NNCFGraph,
@@ -201,9 +155,15 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         inplace: bool,
         num_samples: int = None,
     ) -> TensorCollector:
-        reduction_axes, aggregation_axes = OVMinMaxAlgoBackend._get_reduction_aggregation_axes(
-            nncf_graph, target_point, collector_params
-        )
+        node = nncf_graph.get_node_by_name(target_point.target_node_name)
+        if target_point.is_weight_target_point():
+            assert isinstance(node.layer_attributes, OVLayerAttributes)
+            shape = node.layer_attributes.constant_attributes[target_point.port_id]["shape"]
+            channel_axes = get_weight_channel_axes(node)
+        else:
+            shape = OVMinMaxAlgoBackend._get_activation_shape(target_point, nncf_graph, node)
+            channel_axes = (1,)
+        reduction_axes, aggregation_axes = collector_params.get_reduction_aggregation_axes(shape, channel_axes)
 
         collector = TensorCollector(OVMinMaxTensorStatistic)
         for params, container_key in zip(
