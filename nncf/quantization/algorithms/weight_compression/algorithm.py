@@ -358,6 +358,7 @@ class WeightCompression(Algorithm):
                 "all_layers": self._all_layers,
                 "ignored_scope": self._ignored_scope,
                 "sensitivity_metric": self._sensitivity_metric.value,
+                "awq": self._awq,
             },
             algo_name="weight_compression",
         )

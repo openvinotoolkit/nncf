@@ -318,6 +318,11 @@ Here is the word perplexity with data-free and data-aware mixed-precision INT4-I
     </tr>
     <tr>
         <td>stable-zephyr-3b-dpo</td>
+        <td>int4_sym_g64_r80_data_awq</td>
+        <td>21.62</td>
+    </tr>
+    <tr>
+        <td>stable-zephyr-3b-dpo</td>
         <td>int4_sym_g64_r80_data</td>
         <td>21.74</td>
     </tr>
