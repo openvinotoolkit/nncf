@@ -42,4 +42,4 @@ def test_get_concat_axis(input_shape, output_shape, possible_axes):
     ],
 )
 def test_get_reduction_axes(shape, channel_axes, ref_reduction_axes):
-    assert get_reduction_axes(channel_axes=channel_axes, shape=shape) == ref_reduction_axes
+    assert get_reduction_axes(channel_axes, shape) == ref_reduction_axes
