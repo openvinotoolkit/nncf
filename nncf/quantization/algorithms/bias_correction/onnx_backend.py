@@ -26,7 +26,6 @@ from nncf.onnx.graph.onnx_helper import get_name_to_node_map
 from nncf.onnx.graph.transformations.command_creation import create_bias_correction_command
 from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
-from nncf.onnx.graph.transformations.commands import ONNXNullBiasInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
@@ -40,10 +39,6 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @property
     def tensor_processor(self) -> ONNXNNCFCollectorTensorProcessor:
         return ONNXNNCFCollectorTensorProcessor
-
-    @property
-    def types_to_insert_bias(self):
-        return []
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> ONNXTargetPoint:
@@ -60,10 +55,6 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]
     ) -> ONNXModelExtractionCommand:
         return ONNXModelExtractionCommand(input_ids, output_ids)
-
-    @staticmethod
-    def create_bias_insertion_command(node: NNCFNode) -> ONNXNullBiasInsertionCommand:
-        return ONNXNullBiasInsertionCommand(node)
 
     @staticmethod
     def output_insertion_command(nncf_graph: NNCFGraph, target_point: ONNXTargetPoint) -> ONNXOutputInsertionCommand:
