@@ -217,18 +217,14 @@ def get_quantized_tensor_shape(
     return _get_activation_tensor_shape(nncf_graph, node, target_point)
 
 
-def get_quantization_axis(is_per_channel: bool, node: NNCFNode, target_point: ONNXTargetPoint) -> Optional[int]:
+def get_quantization_axis(node: NNCFNode, target_point: ONNXTargetPoint) -> int:
     """
     Returns axis of quantizer parameters are calculated along.
-    If quantization is per-tensor returns None.
 
-    :param is_per_channel: True if quantizater is per-channel.
     :param node: NNCFNode.
     :param target_point: Target point indicates the quantizer place in the model graph.
-    :return: None if per-tensor, otherwise quantizion axis.
+    :return: Quantizion axis.
     """
-    if not is_per_channel:
-        return None
     if target_point.is_weight_target_point():
         return _get_weight_quantization_axis(node, target_point.port_id)
     return _get_activation_quantization_axis()

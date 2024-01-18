@@ -124,7 +124,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             tensor_type = np.int8  # The weight is restricted to have only signed range
         nncf_input_node_next_nodes = ONNXMinMaxAlgoBackend._get_input_edges_mapping(nncf_graph)
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        axis = get_quantization_axis(quantizer_config.per_channel, node, target_point)
+        axis = get_quantization_axis(node, target_point) if quantizer_config.per_channel else None
         onnx_parameters = convert_fq_params_to_onnx_params(parameters, quantizer_config.num_bits, tensor_type, axis)
         return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, onnx_parameters)
 
@@ -162,7 +162,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     ) -> TensorCollector:
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
         shape = get_quantized_tensor_shape(nncf_graph, node, target_point)
-        channel_axis = get_quantization_axis(collector_params.is_per_channel, node, target_point)
+        channel_axis = get_quantization_axis(node, target_point)
         reduction_axes, aggregation_axes = collector_params.get_reduction_aggregation_axes(shape, [channel_axis])
         collector = TensorCollector(ONNXMinMaxTensorStatistic)
         for params, container_key in zip(
