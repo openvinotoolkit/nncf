@@ -132,7 +132,7 @@ class DataBasedCriterion(DataFreeCriterion):
         """
         NOTE: Data-based criteria for assigning 4-bit/8-bit precisions are valid for Matmul operations only.
         However, in some cases it can be beneficial to quantize Gather layers to 4-bit.
-        Since there's no data-based estimation of sensitivity in these layers, they receive the lowest sensitivity.
+        Since there's no data-aware estimation of sensitivity in these layers, they receive the lowest sensitivity.
         It allows assigning Gather operation 4-bit in the first place.
         """
         if weight_param.node_with_weight.metatype in self._backend_entity.embedding_metatypes:
