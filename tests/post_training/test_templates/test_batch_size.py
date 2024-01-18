@@ -23,7 +23,7 @@ from tests.post_training.test_templates.helpers import get_static_dataset
 class DataForTest:
     batch_size: int
     dataset_len: int
-    subset_size: int
+    stat_subset_size: int
     ref_calibration_samples_num: int
     ref_iterations_num: int
 
@@ -36,33 +36,30 @@ class TemplateTestBatchSize(ABC):
     def create_dataset(self, lenght, batch_size):
         dataset = get_static_dataset(None, None, None, lenght)
         dataset._data_source.batch_size = batch_size
-        # print(dataset.get_batch_size())
         return dataset
 
     @pytest.mark.parametrize(
         ("test_data"),
         (
-            [
-                # DataForTest(None, 1000, None, None, None),
-                # DataForTest(1, 1000, 300, 300, 300),
-                # DataForTest(10, 1000, 300, 300, 30),
-                # DataForTest(300, 1000, 300, 300, 1),
-                # DataForTest(301, 1000, 300, 300, 0),
-                # DataForTest(301, 1000, 300, 300, 0),  # batch_size > subset_size
-                DataForTest(300, 10, 300, 10, 0),  # batch_size > len(dataset)
-                # DataForTest(300, 10, 300, 10, 0),  # batch_size > len(dataset)
+            [  # batch_size | dataset_len | stat_subset_size | ref_calibration_samples_num | ref_iterations_num
+                DataForTest(None, None, None, None, None),  # None is None
+                DataForTest(1, 1000, 300, 300, 300),
+                DataForTest(10, 1000, 300, 300, 30),
+                DataForTest(300, 1000, 300, 300, 1),
+                DataForTest(301, 1000, 300, 300, 0),  # batch_size > stat_subset_size
+                DataForTest(10, 10, 300, 100, 10),  # len(dataset) * batch_size < subset_size
+                DataForTest(11, 300, 300, 300, 27),  # stat_subset_size % batch_size != 0
             ]
         ),
     )
     def test_batch_size_subset(self, test_data):
-        batch_size, dataset_length, subset_size, ref_calibration_samples_num, ref_iterations_num = (
+        batch_size, dataset_length, stat_subset_size, ref_calibration_samples_num, ref_iterations_num = (
             getattr(test_data, field.name) for field in fields(test_data)
         )
         dataset = self.create_dataset(dataset_length, batch_size)
         statistics_aggregator = self.create_statistics_aggregator(dataset)
-        statistics_aggregator.stat_subset_size = subset_size
-        print(statistics_aggregator.dataset_size)
-        calibration_samples_num = statistics_aggregator._get_total_calibration_samples()
-        assert calibration_samples_num == ref_calibration_samples_num
-        iterataions_num = statistics_aggregator._get_iterations_num(calibration_samples_num)
+        statistics_aggregator.stat_subset_size = stat_subset_size
+        total_calibration_samples = statistics_aggregator._get_total_statistics_samples()
+        assert total_calibration_samples == ref_calibration_samples_num
+        iterataions_num = statistics_aggregator._get_iterations_num(total_calibration_samples)
         assert iterataions_num == ref_iterations_num

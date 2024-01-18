@@ -11,7 +11,7 @@
 from abc import ABC
 from abc import abstractmethod
 from itertools import islice
-from typing import Any, Dict, List, TypeVar
+from typing import Any, Dict, List, Optional, TypeVar
 
 from nncf.common import factory
 from nncf.common.graph.graph import NNCFGraph
@@ -36,21 +36,32 @@ class StatisticsAggregator(ABC):
         self.dataset = dataset
         self.stat_subset_size = None
         self.batch_size = self.dataset.get_batch_size() or 1
-        self.dataset_size = self.dataset.get_length()
-        self.dataset_size = self.dataset_size * self.batch_size if self.dataset_size is not None else self.dataset_size
+        dataset_len = self.dataset.get_length()
+        self.dataset_sample_size = dataset_len * self.batch_size if dataset_len is not None else dataset_len
         self.statistic_points = StatisticPointsContainer()
 
-    def _get_total_calibration_samples(
+    def _get_total_statistics_samples(
         self,
-    ):
+    ) -> Optional[int]:
+        """
+        Returns total number of statistics samples used.
+
+        :return: Total number of statistics samples used.
+        """
         return (
-            min(self.dataset_size or self.stat_subset_size, self.stat_subset_size)
+            min(self.dataset_sample_size or self.stat_subset_size, self.stat_subset_size)
             if self.stat_subset_size is not None
             else None
         )
 
-    def _get_iterations_num(self, calibration_samples_num):
-        return calibration_samples_num // self.batch_size if calibration_samples_num is not None else None
+    def _get_iterations_num(self, total_statistics_samples: Optional[int]) -> Optional[int]:
+        """
+        Returns number of iterations to collect statistics.
+
+        :param total_statistics_samples: Number of statistics samples are used.
+        :return: Iterations number statistics collection.
+        """
+        return total_statistics_samples // self.batch_size if total_statistics_samples is not None else None
 
     def collect_statistics(self, model: TModel, graph: NNCFGraph) -> None:
         """
@@ -61,7 +72,10 @@ class StatisticsAggregator(ABC):
         :param graph: Model graph.
         """
         if self.batch_size > 1 and self.is_model_batch_size_limited_support(graph):
-            nncf_logger.warning("The batch size > 1 for the specific model can lead to accuracy degradation")
+            nncf_logger.warning(
+                "The batch size > 1 for the particular model can lead to accuracy degradation. \
+                To collect the most appropriate statistics it is recommended to use batch size = 1."
+            )
         if not self.statistic_points:
             return
         model_transformer = factory.ModelTransformerFactory.create(model)
@@ -70,11 +84,10 @@ class StatisticsAggregator(ABC):
         model_with_outputs = model_transformer.transform(transformation_layout)
         engine = factory.EngineFactory.create(model_with_outputs)
 
-        calibration_samples_num = self._get_total_calibration_samples()
+        calibration_samples_num = self._get_total_statistics_samples()
         iterataions_num = self._get_iterations_num(calibration_samples_num)
         if iterataions_num == 0:
-            nncf_logger.error("Iterations num is 0")
-            iterataions_num = 1
+            raise ValueError("Batch size > length of dataset or batch size > stat_subset_size.")
         collected_statistics_num = 0
         with track(total=calibration_samples_num, description="Statistics collection") as pbar:
             for input_data in islice(self.dataset.get_inference_data(), iterataions_num):
