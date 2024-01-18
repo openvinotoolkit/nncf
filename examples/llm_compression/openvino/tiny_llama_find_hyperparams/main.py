@@ -38,6 +38,7 @@ MIN_GROUP_SIZE = 64
 MAX_GROUP_SIZE = 128
 MIN_RATIO = 0.5
 MAX_RATIO = 1.0
+RATIO_STEP = 0.1
 
 
 def compress_model(ov_model: ov.Model, nncf_dataset: nncf.Dataset, ratio: float, group_size: int) -> ov.Model:
@@ -117,7 +118,7 @@ def print_results(optimized_model: ov.Model, ratio: float, group_size: int, simi
     ov.save_model(optimized_model, MODEL_PATH)
     footprint = Path(MODEL_PATH).with_suffix(".bin").stat().st_size
     print(f"Compressed model was saved to: {MODEL_PATH}")
-    print(f"Best parameters: group_size={group_size}, ratio={ratio}")
+    print(f"Best parameters: group_size={group_size}, ratio={ratio:.1f}")
     print(f"Memory footprint: {footprint / 2**20 :.2f} MB")
     print(f"Similarity: {similarity:.2f}")
 
@@ -133,12 +134,18 @@ def find_parameters(evaluator: Evaluator, model: OVModelForCausalLM, nncf_datase
     original_ov_model = model.model
     evaluate_fn = partial(evaluate_model, hf_model=model, original_ov_model=original_ov_model, evaluator=evaluator)
 
-    param_grid = list(itertools.product(list((x / 10 for x in range(10, 4, -1))), [MAX_GROUP_SIZE, MIN_GROUP_SIZE]))
+    # Generating a grid of hyperparameter values for tuning, combining ratios and group sizes.
+    ratio_grid = np.arange(MAX_RATIO, MIN_RATIO - RATIO_STEP, -RATIO_STEP)
+    param_grid = list(itertools.product(ratio_grid, [MAX_GROUP_SIZE, MIN_GROUP_SIZE]))
+
+    # First, we try to use the maximum ratio and group_size to get the most efficient model
     ratio, group_size = param_grid[0]  # (MAX_GROUP_SIZE, MAX_RATIO)
     optimized_model = compress_model(original_ov_model, nncf_dataset, ratio, group_size)
     similarity = evaluate_fn(optimized_model=optimized_model)
     if similarity >= 1 - MAX_DROP:
         nncf_logger.info(f"Compress embeddings and last layers to {COMPRESSION_MODE.value} precision")
+        # If model with the maximum ratio and group_size is acceptable,
+        # we try to compress embeddings and last MatMul layers to a primary precision
         full_optimized_model = nncf.compress_weights(
             original_ov_model.clone(),
             mode=COMPRESSION_MODE,
@@ -154,6 +161,8 @@ def find_parameters(evaluator: Evaluator, model: OVModelForCausalLM, nncf_datase
             print_results(optimized_model, ratio, group_size, similarity)
         return
 
+    # If the best performing model is not acceptable, we try to use the smallest ratio and group_size
+    # to check the reachability of the max drop criterion
     ratio, group_size = param_grid[-1]  # (MIN_GROUP_SIZE, MIN_RATIO)
     optimized_model = compress_model(original_ov_model, nncf_dataset, ratio, group_size)
     similarity = evaluate_fn(optimized_model=optimized_model)
@@ -166,6 +175,7 @@ def find_parameters(evaluator: Evaluator, model: OVModelForCausalLM, nncf_datase
         print_results(optimized_model, ratio, group_size, similarity)
         return
 
+    # If max drop criterion is achivable, we run a grid-search to find the best parameters
     for ratio, group_size in param_grid[1:-1]:
         optimized_model = compress_model(original_ov_model, nncf_dataset, ratio, group_size)
         similarity = evaluate_fn(optimized_model=optimized_model)
@@ -177,7 +187,7 @@ def find_parameters(evaluator: Evaluator, model: OVModelForCausalLM, nncf_datase
     print_results(optimized_model, MIN_RATIO, MIN_GROUP_SIZE, similarity)
 
 
-def tiny_llama_transform_func(item, tokenizer, ov_model):
+def tiny_llama_transform_func(item, tokenizer, ov_model):  # <YOUR_TRANSFORMATION_FUNCTION>
     input_dtypes = {inp.get_any_name(): inp.get_element_type() for inp in ov_model.inputs}
     tokens = tokenizer(item["text"])
     input_ids = np.expand_dims(np.array(tokens["input_ids"]), 0)
@@ -205,7 +215,7 @@ def tiny_llama_transform_func(item, tokenizer, ov_model):
 
 
 def main():
-    model_id = "TinyLlama/TinyLlama-1.1B-step-50K-105b"
+    model_id = "TinyLlama/TinyLlama-1.1B-step-50K-105b"  # <YOUR_MODEL_ID>
     ov_config = {"PERFORMANCE_HINT": "LATENCY", "NUM_STREAMS": "1", "CACHE_DIR": ""}
     model = OVModelForCausalLM.from_pretrained(
         model_id,
@@ -214,9 +224,10 @@ def main():
         use_cache=True,
         ov_config=ov_config,
         stateful=False,
+        load_in_8bit=False,
     )
     tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
-    dataset = load_dataset("wikitext", "wikitext-2-v1", split="train[:1000]")
+    dataset = load_dataset("wikitext", "wikitext-2-v1", split="train[:1000]")  # <YOUR_DATASET>
     dataset = dataset.filter(lambda example: len(example["text"]) > 128)
     transform_func = partial(tiny_llama_transform_func, tokenizer=tokenizer, ov_model=model.model)
 
