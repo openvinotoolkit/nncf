@@ -409,39 +409,51 @@ class ONNXModelTransformer(ModelTransformer):
         :param transformations: Nodes removing transformations.
         :return: Model with removed nodes.
         """
-        for transformation in transformations:
-            node_mapping = get_name_to_node_map(model)
-            children_node_mapping = get_children_node_mapping(model)
-            node = node_mapping[transformation.target_point.target_node_name]
+        name_to_node_map = get_name_to_node_map(model)
+        children_node_mapping = get_children_node_mapping(model)
+        # We combine quantize and dequantize nodes into pairs here because it
+        # does not make sense to remove only the quantize node or the dequantize
+        # node. They should be removed together.
+        was_processed = {t.target_point.target_node_name: False for t in transformations}
+        quantize_dequantize_pairs = []
+        for node_name in was_processed:
+            if was_processed[node_name]:
+                continue
+            quantize_node_proto = name_to_node_map[node_name]
+            if quantize_node_proto.op_type != "QuantizeLinear":
+                continue
+            # `quantize_node_proto` has only one child, which is the dequantize node.
+            dequantize_node_proto = next(iter(get_children(quantize_node_proto, children_node_mapping)))
+            assert dequantize_node_proto.op_type == "DequantizeLinear"
 
-            node_children = get_children(node, children_node_mapping)
-            for node_child in node_children:
-                for input_id, input_obj in enumerate(node_child.input):
-                    if input_obj == node.output[0]:
-                        node_child.input[input_id] = node.input[0]
+            quantize_dequantize_pairs.append((quantize_node_proto, dequantize_node_proto))
+            was_processed[quantize_node_proto.name] = True
+            was_processed[dequantize_node_proto.name] = True
 
-            initializers = {i.name: i for i in model.graph.initializer}
-            value_infos = {i.name: i for i in model.graph.value_info}
+        if not all(was_processed.values()):
+            raise RuntimeError("Invalid transformation commands.")
 
+        initializers = {i.name: i for i in model.graph.initializer}
+        value_infos = {i.name: i for i in model.graph.value_info}
 
-            if node.op_type == "QuantizeLinear":
-                for input_name in node.input[1:]:
-                    if input_name in initializers:
-                        model.graph.initializer.remove(initializers[input_name])
-                    # if input_name in value_infos:
-                    #     model.graph.value_info.remove(value_infos[input_name])
+        for quantize_node_proto, dequantize_node_proto in quantize_dequantize_pairs:
+            # Unlink Q-DQ subgraph from graph
+            children = get_children(dequantize_node_proto, children_node_mapping)
+            for child in children:
+                for port_id, input_name in enumerate(child.input):
+                    if input_name == dequantize_node_proto.output[0]:
+                        child.input[port_id] = quantize_node_proto.input[0]
+            # QuantizeLinear and DequantizeLinear nodes have common initializers in ports 1 and 2.
+            for i in [1, 2]:
+                model.graph.initializer.remove(initializers[quantize_node_proto.input[i]])
+                model.graph.value_info.remove(value_infos[quantize_node_proto.input[i]])
 
-            elif node.op_type == "DequantizeLinear":
-                for idx, input_name in enumerate(node.input):
-                    if input_name in initializers and idx != 0:
-                        model.graph.initializer.remove(initializers[input_name])
-                    if input_name in value_infos:
-                        model.graph.value_info.remove(value_infos[input_name])
+            for node_proto in [quantize_node_proto, dequantize_node_proto]:
+                model.graph.value_info.remove(value_infos[node_proto.output[0]])
 
-            # Only one output
-            output_name = next(iter(node.output))
-            for output_name in value_infos:
-                model.graph.value_info.remove(value_infos[output_name])
+            model.graph.node.remove(quantize_node_proto)
+            model.graph.node.remove(dequantize_node_proto)
 
-            model.graph.node.remove(node)
+        onnx.checker.check_model(model)
+
         return model
