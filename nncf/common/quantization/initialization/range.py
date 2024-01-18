@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.initialization.dataloader import NNCFDataLoader
@@ -208,29 +208,31 @@ class RangeInitCollectorParams:
     def use_means_of_maxs(self) -> bool:
         return not self._is_weights and not self._is_per_channel
 
-    def get_reduction_aggregation_axes(self, shape, channel_axes) -> Tuple[ReductionAxes, AggregationAxes]:
+    def get_reduction_aggregation_axes(
+        self, shape_to_reduce: Union[Tuple[int], List[int]], quantization_axes: Union[Tuple[int], List[int]]
+    ) -> Tuple[ReductionAxes, AggregationAxes]:
         """
-        Calculates the reduction axes of the tensor.
+        Calculates the reduction axes, aggregation axes for the tensor.
 
-        :param per_sample_stats: Boolean flag that indicated whether statistics are collected per-sample or per-batch.
-        :return: Shape to reduce to.
+        :param shape_to_reduce: Shape of the tensor.
+        :param quantization_axes: Quantization axes if per-channel quantization.
+        :return: Reduction axes and aggregation axes.
         """
         if self.is_weights:
             aggregation_axes = None
             if self.is_per_channel:
-                reduction_axes = get_reduction_axes(channel_axes, shape)
+                reduction_axes = get_reduction_axes(quantization_axes, shape_to_reduce)
             else:
-                reduction_axes = tuple(range(len(shape)))
+                reduction_axes = tuple(range(len(shape_to_reduce)))
         else:
-            # OpenVINO activations have channel first layout: [N, C, Z, Y, X]
             batch_axis = 0
-            aggregation_axes = (batch_axis, *channel_axes)
+            aggregation_axes = (batch_axis, *quantization_axes)
             if self.is_per_channel:
-                # Keep batch to aggregate and channel for per-channel FakeQuantize.
+                # Keep batch to aggregate and channel for per-channel quantization.
                 # TODO (l-bat): Disable quantizer propagation through layout changing operations
-                reduction_axes = get_reduction_axes(aggregation_axes, shape)
+                reduction_axes = get_reduction_axes(aggregation_axes, shape_to_reduce)
             else:
                 # Keep batch to aggregate
-                reduction_axes = get_reduction_axes((batch_axis,), shape)
+                reduction_axes = get_reduction_axes((batch_axis,), shape_to_reduce)
 
         return reduction_axes, aggregation_axes
