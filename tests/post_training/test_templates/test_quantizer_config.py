@@ -85,10 +85,27 @@ class TemplateTestQuantizerConfig:
         ref_per_ch_reduction_axes: List[int]
         ref_per_tensor_reduction_axes: List[int]
 
-    @abstractmethod
-    @pytest.fixture
+    @pytest.fixture(
+        params=[
+            pytest.param(
+                TestGetStatisticsCollectorParameters(TargetType.PRE_LAYER_OPERATION, "/Sum_1_0", (2,), (1, 2)),
+            ),
+            TestGetStatisticsCollectorParameters(
+                TargetType.POST_LAYER_OPERATION,
+                "/Conv_1_0",
+                (2, 3),
+                (1, 2, 3),
+            ),
+            TestGetStatisticsCollectorParameters(
+                TargetType.OPERATION_WITH_WEIGHTS,
+                "/Conv_1_0",
+                (1, 2, 3),
+                (0, 1, 2, 3),
+            ),
+        ]
+    )
     def statistic_collector_parameters(self, request) -> TestGetStatisticsCollectorParameters:
-        pass
+        return request.param
 
     def test_default_quantizer_config(self, single_conv_nncf_graph):
         min_max_algo = MinMaxQuantization()
@@ -231,6 +248,7 @@ class TemplateTestQuantizerConfig:
         statistic_collector_parameters: TestGetStatisticsCollectorParameters,
     ):
         params = statistic_collector_parameters
+        print(params)
         min_max_algo = MinMaxQuantization(activations_range_estimator_params=range_estimator_params)
         min_max_algo._backend_entity = self.get_algo_backend()
         q_config = QuantizerConfig(num_bits=8, mode=q_config_mode, per_channel=q_config_per_channel)

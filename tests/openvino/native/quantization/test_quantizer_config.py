@@ -11,7 +11,6 @@
 
 import pytest
 
-from nncf.common.graph.transformations.commands import TargetType
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVDepthwiseConvolutionMetatype
@@ -22,34 +21,10 @@ from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseCo
 from tests.post_training.test_templates.models import NNCFGraphToTestSumAggregation
 from tests.post_training.test_templates.test_quantizer_config import TemplateTestQuantizerConfig
 
-ParamsCls = TemplateTestQuantizerConfig.TestGetStatisticsCollectorParameters
-
 
 class TestQuantizerConfig(TemplateTestQuantizerConfig):
     def get_algo_backend(self):
         return OVMinMaxAlgoBackend()
-
-    @pytest.fixture(
-        params=[
-            pytest.param(
-                (TargetType.PRE_LAYER_OPERATION, "/Sum_1_0", (2,), (1, 2)),
-            ),
-            (
-                TargetType.POST_LAYER_OPERATION,
-                "/Conv_1_0",
-                (2, 3),
-                (1, 2, 3),
-            ),
-            (
-                TargetType.OPERATION_WITH_WEIGHTS,
-                "/Conv_1_0",
-                (1, 2, 3),
-                (0, 1, 2, 3),
-            ),
-        ]
-    )
-    def statistic_collector_parameters(self, request) -> ParamsCls:
-        return ParamsCls(*request.param)
 
     @pytest.fixture
     def single_conv_nncf_graph(self) -> NNCFGraphToTest:
