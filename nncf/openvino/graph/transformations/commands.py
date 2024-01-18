@@ -54,10 +54,17 @@ class OVOutputInsertionCommand(OVInsertionCommand):
 
 
 class OVInplaceFnInsertionCommand(OVInsertionCommand):
-    def __init__(self, target_point: OVTargetPoint, inplace_op_fn: InplaceInsertionFnType, fn_output_port_id: int):
+    def __init__(
+        self,
+        target_point: OVTargetPoint,
+        inplace_op_fn: InplaceInsertionFnType,
+        fn_output_port_id: int,
+        last_inplace_node_name: str,
+    ):
         super().__init__(target_point)
         self.inplace_op_fn = inplace_op_fn
         self.fn_output_port_id = fn_output_port_id
+        self.last_inplace_node_name = last_inplace_node_name
 
     def union(self, other: "TransformationCommand") -> "TransformationCommand":
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
