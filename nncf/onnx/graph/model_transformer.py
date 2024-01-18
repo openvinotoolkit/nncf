@@ -423,14 +423,25 @@ class ONNXModelTransformer(ModelTransformer):
             initializers = {i.name: i for i in model.graph.initializer}
             value_infos = {i.name: i for i in model.graph.value_info}
 
-            # TODO(andrey-churkin): Fix it
-            inputs = node.input[1:]
 
-            for initializer_name in inputs:
-                if initializer_name in initializers:
-                    model.graph.initializer.remove(initializers[initializer_name])
-                if initializer_name in value_infos:
-                    model.graph.value_info.remove(value_infos[initializer_name])
+            if node.op_type == "QuantizeLinear":
+                for input_name in node.input[1:]:
+                    if input_name in initializers:
+                        model.graph.initializer.remove(initializers[input_name])
+                    # if input_name in value_infos:
+                    #     model.graph.value_info.remove(value_infos[input_name])
+
+            elif node.op_type == "DequantizeLinear":
+                for idx, input_name in enumerate(node.input):
+                    if input_name in initializers and idx != 0:
+                        model.graph.initializer.remove(initializers[input_name])
+                    if input_name in value_infos:
+                        model.graph.value_info.remove(value_infos[input_name])
+
+            # Only one output
+            output_name = next(iter(node.output))
+            for output_name in value_infos:
+                model.graph.value_info.remove(value_infos[output_name])
 
             model.graph.node.remove(node)
         return model
