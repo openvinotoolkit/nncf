@@ -23,40 +23,40 @@ class TemplateTestTensorCollectorBatchSize(ABC):
     @staticmethod
     @abstractmethod
     def get_tensor_statistics_class():
-        ...
+        pass
 
     @staticmethod
     @abstractmethod
     def get_tensor_processor():
-        ...
+        pass
 
     @staticmethod
     @abstractmethod
     def get_nncf_tensor_class():
-        ...
+        pass
 
     @pytest.fixture
     @abstractmethod
     def reducers(self):
-        ...
+        pass
 
     @pytest.fixture
     @abstractmethod
     def aggregators(self):
-        ...
+        pass
 
     @pytest.fixture
     @abstractmethod
     def inplace(self):
-        ...
+        pass
 
     @abstractmethod
     def create_dataitems_without_batch_dim(self, input_shape: List[int], length: int = 100) -> List[np.ndarray]:
-        ...
+        pass
 
     @abstractmethod
     def add_batch_dim_to_dataitems(self, data_items: List[np.ndarray], batch_size: int) -> List[np.ndarray]:
-        ...
+        pass
 
     def _create_tensor_collector(self, shape, inplace, reducer, aggregator) -> TensorCollector:
         batch_axis = 0

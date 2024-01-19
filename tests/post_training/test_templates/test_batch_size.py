@@ -31,7 +31,7 @@ class DataForTest:
 class TemplateTestBatchSize(ABC):
     @abstractmethod
     def create_statistics_aggregator(self, dataset) -> StatisticsAggregator:
-        ...
+        pass
 
     def create_dataset(self, lenght, batch_size):
         dataset = get_static_dataset(None, None, None, lenght)
@@ -52,7 +52,8 @@ class TemplateTestBatchSize(ABC):
             ]
         ),
     )
-    def test_batch_size_subset(self, test_data):
+    def test_batch_size_subset_size_dataset_len(self, test_data):
+        # Checks correct iterations number depending on batch_size, dataset length, subset_size
         batch_size, dataset_length, stat_subset_size, ref_calibration_samples_num, ref_iterations_num = (
             getattr(test_data, field.name) for field in fields(test_data)
         )
