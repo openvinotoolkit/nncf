@@ -23,9 +23,7 @@ from nncf.openvino.statistics.collectors import OVMeanPerChanelReducer
 from nncf.openvino.statistics.collectors import OVMeanReducer
 from nncf.openvino.statistics.collectors import OVMinReducer
 from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
-from nncf.openvino.statistics.collectors import OVNoopReducer
 from nncf.openvino.statistics.collectors import OVQuantileReducer
-from nncf.openvino.statistics.collectors import OVRawReducer
 from nncf.openvino.tensor import OVNNCFTensor
 from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggreagtors
 
@@ -45,7 +43,6 @@ class TestReducersAggregators(TemplateTestReducersAggreagtors):
     @pytest.fixture(scope="module")
     def reducers(self):
         return {
-            "noop": OVNoopReducer,
             "min": OVMinReducer,
             "max": OVMaxReducer,
             "abs_max": OVAbsMaxReducer,
@@ -54,7 +51,6 @@ class TestReducersAggregators(TemplateTestReducersAggreagtors):
             "abs_quantile": OVAbsQuantileReducer,
             "batch_mean": OVBatchMeanReducer,
             "mean_per_ch": OVMeanPerChanelReducer,
-            "raw": OVRawReducer,
         }
 
     def all_close(self, val, ref) -> bool:

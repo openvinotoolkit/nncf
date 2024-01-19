@@ -189,15 +189,6 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return NNCFTensor(np.abs(np_tensor) < eps)
 
 
-class OVNoopReducer(NoopReducer):
-    pass
-
-
-class OVRawReducer(RawReducer):
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return [get_result_node_name(target_node_name, port_id)]
-
-
 class OVMinReducer(MinReducer):
     def _get_processor(self):
         return OVNNCFCollectorTensorProcessor
@@ -279,7 +270,7 @@ def get_mean_statistic_collector(
         reducer = OVBatchMeanReducer(inplace)
     else:
         reducer = OVMeanPerChanelReducer(channel_axis=channel_axis, inplace=inplace)
-    noop_reducer = OVNoopReducer()
+    noop_reducer = NoopReducer()
 
     kwargs = {
         "tensor_processor": OVNNCFCollectorTensorProcessor,
@@ -296,7 +287,7 @@ def get_mean_statistic_collector(
 
 
 def get_raw_stat_collector(num_samples: Optional[int] = None) -> TensorCollector:
-    reducer = OVRawReducer()
+    reducer = RawReducer()
     aggregator = NoopAggregator(num_samples)
 
     collector = TensorCollector(OVRawTensorStatistic)
