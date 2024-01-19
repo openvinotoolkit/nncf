@@ -198,7 +198,9 @@ CONV_OPERATIONS = [
     ov_metatypes.OVGroupConvolutionBackpropDataMetatype,
 ]
 
-# These metatypes lead to inaccurate statistics when batch size > 1.
+# These metatypes mix outputs for different samples into one axis.
+# Reducers simply reduce the whole tensor and get 1 value instead of batch_size values.
+# This leads to inaccurate statistics.
 OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS = [
     ov_metatypes.OVSpaceToBatchMetatype,
     ov_metatypes.OVROIPoolingMetatype,
