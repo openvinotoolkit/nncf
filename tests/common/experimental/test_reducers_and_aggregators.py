@@ -170,14 +170,17 @@ class TemplateTestReducersAggreagtors:
     def cast_tensor(self, tensor, dtype: Dtype):
         pass
 
-    @pytest.mark.parametrize(
-        "reducer_name, input_data", [("noop", np.arange(24).reshape((1, 2, 3, 4))), ("raw", np.array([]))]
-    )
+    @pytest.mark.parametrize("reducer_name", ["noop", "raw"])
+    @pytest.mark.parametrize("input_data", [np.arange(24).reshape((1, 2, 3, 4)), np.array([])])
     def test_other_reducers(self, reducer_name, input_data, reducers):
         reducer = reducers[reducer_name]()
-        reduced_input = reducer([self.get_nncf_tensor(input_data)])
-        assert len(reduced_input) == 1
-        assert self.all_close(reduced_input[0].tensor, input_data)
+        tensor_data = self.get_nncf_tensor(input_data)
+        reduced_input = reducer([tensor_data])
+        if reducer_name == "noop" and tensor_data.is_empty():
+            assert reduced_input is None
+        else:
+            assert len(reduced_input) == 1
+            assert self.all_close(reduced_input[0].tensor, input_data)
 
     @pytest.mark.parametrize(
         "reducer_name,ref",
