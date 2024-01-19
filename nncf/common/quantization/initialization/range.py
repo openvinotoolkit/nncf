@@ -219,7 +219,7 @@ class RangeInitCollectorParams:
         :return: Reduction axes and aggregation axes.
         """
         if self.is_weights:
-            aggregation_axes = None
+            aggregation_axes = (0,)
             if self.is_per_channel:
                 reduction_axes = get_reduction_axes(quantization_axes, shape_to_reduce)
             else:
