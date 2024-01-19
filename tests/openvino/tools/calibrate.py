@@ -912,6 +912,8 @@ def quantize_model(xml_path, bin_path, accuracy_checker_config, quantization_par
     model_evaluator.select_dataset("")
 
     advanced_parameters = quantization_parameters.get("advanced_parameters", AdvancedQuantizationParameters())
+    if quantization_parameters.get("mode", None) is not None:
+        advanced_parameters.backend_params = None
     quantization_parameters["advanced_parameters"] = advanced_parameters
 
     transform_fn = get_transform_fn(model_evaluator, ov_model)
