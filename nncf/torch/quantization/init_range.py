@@ -17,7 +17,6 @@ import numpy as np
 import torch
 
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
-from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.initialization.range import RangeInitConfig
 from nncf.common.quantization.initialization.range import RangeInitParams
@@ -116,13 +115,14 @@ class PTRangeInitCollectorParams(RangeInitCollectorParams):
         """
         ndims = len(self._input_shape)
         reduction_axes: List[int] = list(range(ndims))
-        axes_to_remove = []
-        if self.use_per_sample_stats(per_sample_stats):
-            axes_to_remove.append(0)
         if self.is_per_channel:
             val = (ndims + self._channel_idx) % ndims
-            axes_to_remove.append(val)
-        return get_reduction_axes(axes_to_remove, reduction_axes)
+            reduction_axes.remove(val)
+            if not val and self.use_per_sample_stats(per_sample_stats):
+                raise RuntimeError("Batch dimension should be equal to zero")
+        if self.use_per_sample_stats(per_sample_stats):
+            reduction_axes = reduction_axes[1:]  # Assumes batch is the first dimension
+        return tuple(reduction_axes)
 
     def get_aggregation_axes(self, per_sample_stats: bool) -> AggregationAxes:
         """
@@ -131,7 +131,7 @@ class PTRangeInitCollectorParams(RangeInitCollectorParams):
         :param per_sample_stats: Boolean flag that indicated whether statistics are collected per-sample or per-batch.
         :return: Shape to aggregate to.
         """
-        return (0, 1) if self.use_per_sample_stats(per_sample_stats) else None
+        return (0, 1) if self.use_per_sample_stats(per_sample_stats) else (0,)
 
 
 class StatCollectorGenerator:
