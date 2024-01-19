@@ -184,6 +184,14 @@ class TemplateTestReducersAggreagtors:
             assert len(reduced_input) == 1
             assert self.all_close(reduced_input[0].tensor, input_data)
 
+    @pytest.mark.parametrize("reducer_cls", [NoopReducer, RawReducer])
+    def test_other_reducers_name_hash_equal(self, reducer_cls):
+        reducers_instances = [reducer_cls() for _ in range(2)]
+        assert hash(reducers_instances[0]) == hash(reducers_instances[1])
+        assert reducers_instances[0] == reducers_instances[1]
+        assert reducers_instances[0].name == reducers_instances[1].name
+        assert len(set(reducers_instances)) == 1
+
     @pytest.mark.parametrize(
         "reducer_name,ref",
         [
