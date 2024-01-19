@@ -95,14 +95,14 @@ def get_actual_reference_for_current_openvino(rel_path: Path) -> Path:
     root_dir = OPENVINO_NATIVE_TEST_ROOT / "data"
     current_ov_version = version.parse(get_openvino_version())
 
-    def is_version(dir_path: Path) -> bool:
+    def is_valid_version(dir_path: Path) -> bool:
         try:
             version.parse(dir_path.name)
         except version.InvalidVersion:
             return False
         return True
 
-    ref_versions = filter(is_version, root_dir.iterdir())
+    ref_versions = filter(is_valid_version, root_dir.iterdir())
     ref_versions = sorted(ref_versions, key=lambda x: version.parse(x.name), reverse=True)
     ref_versions = filter(lambda x: version.parse(x.name) <= current_ov_version, ref_versions)
 
