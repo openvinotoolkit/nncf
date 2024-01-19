@@ -614,11 +614,13 @@ class OVModelTransformer(ModelTransformer):
         port_id = transformation.target_point.port_id
         fn_output_port_id = transformation.fn_output_port_id
         if transform_type == TargetType.POST_LAYER_OPERATION:
-            new_node = transformation.inplace_op_fn(target_node, port_id)
+            new_node = transformation.inplace_op_fn(target_node, port_id, transformation.last_inplace_node_name)
             return (new_node.output(fn_output_port_id), fn_output_port_id)
         if transform_type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
             output = target_node.input_value(port_id)
-            new_node = transformation.inplace_op_fn(output.get_node(), output.get_index())
+            new_node = transformation.inplace_op_fn(
+                output.get_node(), output.get_index(), transformation.last_inplace_node_name
+            )
             return (new_node.output(fn_output_port_id), fn_output_port_id)
         raise RuntimeError(f"Transform type {transform_type} is not supported")
 
