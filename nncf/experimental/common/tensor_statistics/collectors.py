@@ -54,6 +54,10 @@ class TensorReducerBase(ABC):
 
     @property
     def output_port_id(self) -> int:
+        """
+        Port id of the last node of the reducer subgraph if statistic is inplace.
+        Port id of the reducer output return node if statistic is not inplace.
+        """
         return 0
 
     @property
@@ -71,17 +75,6 @@ class TensorReducerBase(ABC):
         Specifies the reduction rule in terms of NNCFCollectorTensorProcessor.
 
         :param x: Tensor to register.
-        """
-
-    @abstractmethod
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        """
-        Returns target output names from target model that is
-            modified for statistic collection.
-
-        :param target_node_name: Target node name for reducer.
-        :param port_id: Target port id for target node name for reducer.
-        :return: Target output names for reducer.
         """
 
     @abstractmethod
