@@ -132,7 +132,9 @@ class StatisticsAggregator(ABC):
     @abstractmethod
     def metatypes_output_has_no_batch_axis(self) -> List[OperatorMetatype]:
         """
-        Metatypes with no batch axis in output tensor. These metatypes lead to accuracy degradation when batch size > 1.
+        These metatypes mix outputs for different samples into one axis.
+        When reducers reduce the tensor they get only 1 value instead of batch_size values.
+        This leads to inaccurate statistics.
         """
 
     @abstractmethod

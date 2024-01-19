@@ -1053,7 +1053,7 @@ OPERATORS_FUSED_METATYPES = [
 OP_NAMES_QUANTIZE_NODE = ["symmetric_quantize", "asymmetric_quantize"]
 
 # These metatypes mix outputs for different samples into one axis.
-# Reducers simply reduce the whole tensor and get 1 value instead of batch_size values.
+# When reducers reduce the tensor they get only 1 value instead of batch_size values.
 # This leads to inaccurate statistics.
 OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS = [
     PTEmbeddingMetatype,
