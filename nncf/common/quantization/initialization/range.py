@@ -228,11 +228,11 @@ class RangeInitCollectorParams:
             batch_axis = 0
             aggregation_axes = (batch_axis, *quantization_axes)
             if self.is_per_channel:
-                # Keep batch to aggregate and channel for per-channel quantization.
+                # Batch and chanel axes should not be reduced in per-channel mode.
                 # TODO (l-bat): Disable quantizer propagation through layout changing operations
                 reduction_axes = get_reduction_axes(aggregation_axes, shape_to_reduce)
             else:
-                # Keep batch to aggregate
+                # Batch should not be reduced.
                 reduction_axes = get_reduction_axes((batch_axis,), shape_to_reduce)
 
         return reduction_axes, aggregation_axes

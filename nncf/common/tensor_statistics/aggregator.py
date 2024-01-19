@@ -119,7 +119,7 @@ class StatisticsAggregator(ABC):
         """
         Returns True if NNCFGraph contains metatypes with no batch axis in output tensor.
 
-        :param graph: NNCFGraph
+        :param graph: NNCFGraph.
         :return: True if NNCFGraph contains metatypes with no batch axis in output tensor.
         """
         graph_metatypes = set(node.metatype for node in graph.get_all_nodes())

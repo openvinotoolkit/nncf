@@ -82,7 +82,10 @@ class Dataset(Generic[DataItem, ModelInput]):
         return None
 
     def get_batch_size(self) -> Optional[int]:
-        """ """
+        """
+        Tries to fetch batch size of the underlying dataset.
+        :return: The value of batch_size or _batch_size attributes of the data_source if exist, and None otherwise.
+        """
         if hasattr(self._data_source, "batch_size"):  # Torch dataloader
             return self._data_source.batch_size
         if hasattr(self._data_source, "_batch_size"):  # TF dataloader
