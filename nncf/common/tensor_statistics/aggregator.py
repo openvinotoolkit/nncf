@@ -71,13 +71,13 @@ class StatisticsAggregator(ABC):
         :param model: Backend-specific model instance.
         :param graph: Model graph.
         """
-        if self.batch_size > 1 and self.is_model_batch_size_limited_support(graph):
-            nncf_logger.warning(
-                "The batch size > 1 for the particular model can lead to accuracy degradation. \
-                To collect the most appropriate statistics it is recommended to use batch size = 1."
-            )
         if not self.statistic_points:
             return
+        if self.batch_size > 1 and self.is_model_batch_size_limited_support(graph):
+            nncf_logger.warning(
+                "The batch size > 1 for the particular model can lead to inaccurate collected statistics . \
+                To get the appropriate statistics it is recommended to use batch size = 1."
+            )
         model_transformer = factory.ModelTransformerFactory.create(model)
         merged_statistics = self._get_merged_statistic_points(self.statistic_points, model, graph)
         transformation_layout = self._get_transformation_layout_extra_outputs(merged_statistics)
@@ -122,8 +122,9 @@ class StatisticsAggregator(ABC):
         :param graph: NNCFGraph
         :return: True if NNCFGraph contains metatypes with no batch axis in output tensor.
         """
+        graph_metatypes = set(node.metatype for node in graph.get_all_nodes())
         for metatype in self.metatypes_output_has_no_batch_axis:
-            if metatype in set(node.metatype for node in graph.get_all_nodes()):
+            if metatype in graph_metatypes:
                 return True
         return False
 
