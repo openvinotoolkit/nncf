@@ -14,7 +14,6 @@ import functools
 import json
 import multiprocessing
 import os
-import tempfile
 from argparse import ArgumentParser
 from collections import OrderedDict
 from collections import defaultdict
@@ -27,6 +26,7 @@ from typing import Any, Iterable, List, Optional, TypeVar
 
 import numpy as np
 import openvino.runtime as ov
+from config import Config
 from openvino.runtime import Dimension
 from openvino.runtime import PartialShape
 from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator
@@ -49,21 +49,6 @@ from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.advanced_parameters import RestoreMode
 from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.scopes import IgnoredScope
-
-try:
-    from openvino.tools import pot
-    from openvino.tools.pot.configs.config import Config
-
-    from nncf.openvino.pot.quantization.quantize_model import (
-        quantize_with_accuracy_control_impl as pot_quantize_with_native_accuracy_control,
-    )
-
-    POT_AVAILABLE = True
-except ImportError:
-    from config import Config
-
-    POT_AVAILABLE = False
-
 
 TModel = TypeVar("TModel")
 
@@ -103,7 +88,7 @@ def parse_args():
     """
     parser = ArgumentParser(description="NNCF OpenVINO Benchmarking Tool", allow_abbrev=False)
 
-    parser.add_argument("-c", "--config", help="Path to a config file with optimization parameters (POT format).")
+    parser.add_argument("-c", "--config", help="Path to a config file with optimization parameters (JSON format).")
 
     parser.add_argument(
         "--output-dir", type=str, default="./results", help="The directory where models are saved. Default: ./results"
@@ -913,19 +898,13 @@ class ACDattasetWrapper:
         return subset_size
 
 
-def quantize_model(xml_path, bin_path, accuracy_checker_config, quantization_impl, quantization_parameters):
+def quantize_model(xml_path, bin_path, accuracy_checker_config, quantization_parameters):
     ov_model = ov.Core().read_model(model=xml_path, weights=bin_path)
     model_evaluator = create_model_evaluator(accuracy_checker_config)
     model_evaluator.load_network([{"model": ov_model}])
     model_evaluator.select_dataset("")
 
     advanced_parameters = quantization_parameters.get("advanced_parameters", AdvancedQuantizationParameters())
-    if quantization_impl == "pot":
-        advanced_parameters.backend_params["use_pot"] = True
-    elif quantization_impl == "native":
-        advanced_parameters.backend_params["use_pot"] = False
-    else:
-        raise NotImplementedError()
     quantization_parameters["advanced_parameters"] = advanced_parameters
 
     transform_fn = get_transform_fn(model_evaluator, ov_model)
@@ -962,29 +941,19 @@ class ACDataset:
         return DataProvider(ACDattasetWrapper(self._model_evaluator), self._transform_func, indices)
 
 
-def initialize_model_and_evaluator(xml_path: str, bin_path: str, accuracy_checker_config, quantization_impl: str):
+def initialize_model_and_evaluator(xml_path: str, bin_path: str, accuracy_checker_config):
     model_evaluator = create_model_evaluator(accuracy_checker_config)
 
-    with tempfile.TemporaryDirectory(dir=tempfile.gettempdir()) as tmp_dir:
-        if quantization_impl == "pot":
-            if not POT_AVAILABLE:
-                raise ImportError("POT is not available in the current evironment")
-            pot_model = pot.load_model({"model_name": "model", "model": xml_path, "weights": bin_path}, "CPU")
-            paths = pot.save_model(pot_model, save_path=tmp_dir, model_name="model")
-            xml_path, bin_path = paths[0]["model"], paths[0]["weights"]
-
-        model = ov.Core().read_model(xml_path, bin_path)
-        model_evaluator.load_network_from_ir([{"model": xml_path, "weights": bin_path}])
-        model_evaluator.select_dataset("")
+    model = ov.Core().read_model(xml_path, bin_path)
+    model_evaluator.load_network_from_ir([{"model": xml_path, "weights": bin_path}])
+    model_evaluator.select_dataset("")
     return model, model_evaluator
 
 
 def quantize_model_with_accuracy_control(
-    xml_path: str, bin_path: str, accuracy_checker_config, quantization_impl: str, quantization_parameters
+    xml_path: str, bin_path: str, accuracy_checker_config, quantization_parameters
 ):
-    ov_model, model_evaluator = initialize_model_and_evaluator(
-        xml_path, bin_path, accuracy_checker_config, quantization_impl
-    )
+    ov_model, model_evaluator = initialize_model_and_evaluator(xml_path, bin_path, accuracy_checker_config)
 
     transform_fn = get_transform_fn(model_evaluator, ov_model)
     dataset = get_dataset(model_evaluator, quantization_parameters)
@@ -1007,32 +976,14 @@ def quantize_model_with_accuracy_control(
         metric_name = metric_type
     validation_fn = ACValidationFunction(model_evaluator, metric_name, metric_type)
 
-    name_to_quantization_impl_map = {
-        "native": nncf.quantize_with_accuracy_control,
-    }
-
     advanced_parameters = quantization_parameters.get(
         "advanced_quantization_parameters", AdvancedQuantizationParameters()
     )
-    if quantization_impl == "pot":
-        if not POT_AVAILABLE:
-            raise ImportError("POT is not available in the current evironment")
-        advanced_parameters.backend_params["use_pot"] = True
-        name_to_quantization_impl_map["pot"] = pot_quantize_with_native_accuracy_control
-
-    elif quantization_impl == "native":
-        advanced_parameters.backend_params["use_pot"] = False
-    else:
-        raise NotImplementedError()
     quantization_parameters["advanced_quantization_parameters"] = advanced_parameters
 
-    quantization_impl_fn = name_to_quantization_impl_map.get(quantization_impl)
-    if quantization_impl:
-        quantized_model = quantization_impl_fn(
-            ov_model, calibration_dataset, validation_dataset, validation_fn, **quantization_parameters
-        )
-    else:
-        raise NotImplementedError(f"Unsupported implementation: {quantization_impl}")
+    quantized_model = nncf.quantize_with_accuracy_control(
+        ov_model, calibration_dataset, validation_dataset, validation_fn, **quantization_parameters
+    )
 
     if original_model_shapes is not None:
         quantized_model.reshape(original_model_shapes)
@@ -1069,6 +1020,8 @@ def filter_configuration(config: Config) -> Config:
 
 def main():
     args = parse_args()
+    if args.impl is not None:
+        print("--impl option is deprecated and will have no effect. Only native calibration allowed.")
     config = Config.read_config(args.config)
     config = filter_configuration(config)
 
@@ -1091,14 +1044,13 @@ def main():
                 "xml_path": xml_path,
                 "bin_path": bin_path,
                 "accuracy_checker_config": accuracy_checker_config,
-                "quantization_impl": args.impl,
                 "quantization_parameters": algo_config,
             }
 
             output_model = algo_fn(**quantize_model_arguments)
 
             path = os.path.join(output_dir, "algorithm_parameters.json")
-            keys = ["xml_path", "quantization_impl", "quantization_parameters"]
+            keys = ["xml_path", "quantization_parameters"]
             dump_to_json(path, quantize_model_arguments, keys)
         else:
             raise RuntimeError(f"Support for {algo_name} is not implemented in the optimize tool.")
