@@ -35,8 +35,6 @@ from nncf.openvino.graph.node_utils import get_inplace_max_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_per_ch
 from nncf.openvino.graph.node_utils import get_inplace_min_op
-from nncf.openvino.graph.node_utils import get_reducer_output_node_names
-from nncf.openvino.graph.node_utils import get_result_node_name
 from nncf.openvino.statistics.statistics import OVMeanTensorStatistic
 from nncf.openvino.statistics.statistics import OVRawTensorStatistic
 from nncf.openvino.tensor import OVNNCFTensor
@@ -191,8 +189,7 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
 
 
 class OVNoopReducer(NoopReducer):
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return [get_result_node_name(target_node_name, port_id)]
+    pass
 
 
 class OVMinReducer(MinReducer):
@@ -200,10 +197,7 @@ class OVMinReducer(MinReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return get_inplace_min_op(self.name, self._reduction_axes)
-
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
+        return get_inplace_min_op(self._reduction_axes)
 
 
 class OVMaxReducer(MaxReducer):
@@ -211,10 +205,7 @@ class OVMaxReducer(MaxReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return get_inplace_max_op(self.name, self._reduction_axes, False)
-
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
+        return get_inplace_max_op(self._reduction_axes, False)
 
 
 class OVAbsMaxReducer(AbsMaxReducer):
@@ -222,10 +213,7 @@ class OVAbsMaxReducer(AbsMaxReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return get_inplace_max_op(self.name, self._reduction_axes, True)
-
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
+        return get_inplace_max_op(self._reduction_axes, True)
 
 
 class OVMeanReducer(MeanReducer):
@@ -233,10 +221,7 @@ class OVMeanReducer(MeanReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return get_inplace_mean_op(self.name, self._reduction_axes)
-
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
+        return get_inplace_mean_op(self._reduction_axes)
 
 
 class OVBatchMeanReducer(BatchMeanReducer):
@@ -244,10 +229,7 @@ class OVBatchMeanReducer(BatchMeanReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return get_inplace_batch_mean_op(self.name)
-
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
+        return get_inplace_batch_mean_op()
 
 
 class OVMeanPerChanelReducer(MeanPerChReducer):
@@ -255,10 +237,7 @@ class OVMeanPerChanelReducer(MeanPerChReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return get_inplace_mean_per_ch(self.name, self._channel_axis)
-
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
+        return get_inplace_mean_per_ch(self._channel_axis)
 
 
 class OVQuantileReducer(QuantileReducer):
@@ -268,9 +247,6 @@ class OVQuantileReducer(QuantileReducer):
     def _get_processor(self):
         return OVNNCFCollectorTensorProcessor
 
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
-
 
 class OVAbsQuantileReducer(AbsQuantileReducer):
     def _get_processor(self):
@@ -278,9 +254,6 @@ class OVAbsQuantileReducer(AbsQuantileReducer):
 
     def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
         return None
-
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
 
 
 def get_mean_statistic_collector(

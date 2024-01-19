@@ -195,9 +195,6 @@ class ONNXBasicReducer(TensorReducerBase):
     def get_inplace_fn(self):
         raise NotImplementedError("ONNX backend has no support of inplace statistics yet.")
 
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        raise NotImplementedError("The method is not implemented.")
-
 
 class ONNXNoopReducer(ONNXBasicReducer, NoopReducer):
     pass
