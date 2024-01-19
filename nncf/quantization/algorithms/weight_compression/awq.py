@@ -30,6 +30,15 @@ TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
 TWeightType = TypeVar("TWeightType")
 
+@dataclass
+class AWQCompressionInfo:
+    """
+    Information on AWQ nodes.
+    """
+
+    weight_params: WeightCompressionParameters = None
+    target_node: NNCFNode = None
+    merge_node: NNCFNode = None
 
 class AWQ(AWQAlgoBackend):
     """
@@ -49,7 +58,18 @@ class AWQ(AWQAlgoBackend):
         alpha_max=1.0,
         steps=100,
     ):
-        """ """
+        """
+        :param model: Model for applying algorithm.
+        :param name_to_node_mapping: Name to node mapping for updating node weights.
+        :param all_weight_params: List of all weight parameters.
+        :param nodes_to_compress: List of nodes for processing.
+        :param activations: The input activations of the layers considered for compression.
+        :param subset_size: The number of samples for AWQ.
+        :param percent_to_apply: The percent of outliers for correction.
+        :param alpha_min: Minimum value of smoothness parameter for grid search.
+        :param alpha_max: Maximal value of smoothness parameter for grid search.
+        :param steps: The number of the steps in grid search.
+        """
         super().__init__(model)
         self.name_to_node_mapping = name_to_node_mapping
         self._all_weight_params = all_weight_params
@@ -87,21 +107,6 @@ class AWQ(AWQAlgoBackend):
 
         if len(matches) == 0:
             return model
-
-        @dataclass
-        class AWQCompressionInfo:
-            """
-            Information on how to compress (quantize) a specific weight.
-
-            :param mode: Defines a mode for weight compression. Defaults to INT8_ASYM mode.
-            :param group_size: Number of weights (e.g. 128) in the channel dimension,
-                            that share quantization parameters (scale).
-                The value -1 means no grouping. Defaults to -1.
-            """
-
-            weight_params: WeightCompressionParameters = None
-            target_node: NNCFNode = None
-            merge_node: NNCFNode = None
 
         target_node_names = []
         merge_node_names = []

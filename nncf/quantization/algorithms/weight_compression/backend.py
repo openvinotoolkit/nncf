@@ -91,7 +91,7 @@ class WeightCompressionAlgoBackend(ABC):
     @abstractmethod
     def set_weight(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: TModel, graph: NNCFGraph, weight: Tensor
-    ):
+    ) -> None:
         """
         Update a weight associated with the given node on the given port id.
 
@@ -168,10 +168,5 @@ class AWQAlgoBackend(WeightCompressionAlgoBackend):
     @staticmethod
     def get_awq_patterns() -> Dict:
         """
-        Dumps the given parameters into Model's meta section.
-
-        :param model: ov.Model instance.
-        :param algo_name: Name of the algorithm to which the parameters refer.
-        :param parameters: Incoming dictionary with parameters to save.
-        :param path: Optional list of the paths.
+        Returns patterns of nodes in network graph for applying AWQ algorithm.
         """

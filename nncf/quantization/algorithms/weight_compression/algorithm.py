@@ -92,6 +92,7 @@ class WeightCompression(Algorithm):
             precision. By default, the backup precision is assigned for the embeddings and last layers.
         :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
             preserve the accuracy of the model, the more sensitive layers receives a higher precision.
+        :param awq: determines whether to use or not modified AWQ algorithm.
         """
         super().__init__()
         self._mode = mode
@@ -141,6 +142,9 @@ class WeightCompression(Algorithm):
         Creates a helper class with a backed-specific logic of the algorithm.
 
         :param model: Backend-specific input model.
+        :param all_weight_params: List of all weight parameters.
+        :param nodes_to_compress: List of nodes for processing.
+        :param activations: The input activations of the layers considered for compression.
         """
 
         model_backend = get_backend(model)
