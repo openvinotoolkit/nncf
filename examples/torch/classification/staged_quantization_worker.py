@@ -39,12 +39,10 @@ from examples.torch.common.model_loader import MODEL_STATE_ATTR
 from examples.torch.common.model_loader import extract_model_and_compression_states
 from examples.torch.common.model_loader import load_model
 from examples.torch.common.model_loader import load_resuming_checkpoint
-from examples.torch.common.utils import SafeMLFLow
 from examples.torch.common.utils import configure_device
 from examples.torch.common.utils import configure_logging
 from examples.torch.common.utils import get_run_name
 from examples.torch.common.utils import is_pretrained_model_requested
-from examples.torch.common.utils import log_common_mlflow_params
 from examples.torch.common.utils import make_additional_checkpoints
 from examples.torch.common.utils import print_args
 from nncf.api.compression import CompressionStage
@@ -105,10 +103,9 @@ class PolyLRDropScheduler:
                 for group in self.optimizer.param_groups:
                     group["lr"] = lr
 
-        if self.disable_wd_start_epoch is not None:
-            if epoch_float > self.disable_wd_start_epoch:
-                for group in self.optimizer.param_groups:
-                    group["weight_decay"] = 0.0
+        if self.disable_wd_start_epoch is not None and epoch_float > self.disable_wd_start_epoch:
+            for group in self.optimizer.param_groups:
+                group["weight_decay"] = 0.0
 
     def epoch_step(self, epoch=None):
         if epoch is not None:
@@ -124,7 +121,6 @@ class PolyLRDropScheduler:
 
 def staged_quantization_main_worker(current_gpu, config):
     configure_device(current_gpu, config)
-    config.mlflow = SafeMLFLow(config)
 
     if is_main_process():
         configure_logging(logger, config)
@@ -224,8 +220,6 @@ def staged_quantization_main_worker(current_gpu, config):
             )
         else:
             logger.info("=> loaded checkpoint '{}'".format(resuming_checkpoint_path))
-
-    log_common_mlflow_params(config)
 
     if is_export_only:
         export_model(compression_ctrl, config)
@@ -346,7 +340,6 @@ def train_staged(
             make_additional_checkpoints(checkpoint_path, is_best, epoch + 1, config)
 
             for key, value in prepare_for_tensorboard(statistics).items():
-                config.mlflow.safe_call("log_metric", "compression/statistics/{0}".format(key), value, epoch)
                 config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
 
 

@@ -17,7 +17,6 @@ from typing import Any, List, Optional, Tuple, Union
 
 
 class Dtype(Enum):
-    BOOL = "bool"
     FLOAT = "float"
     INTEGER = "int"
 
@@ -272,9 +271,11 @@ class ConvertDtypeLayerAttributes(BaseLayerAttributes):
 
 
 @dataclass
-class ParameterLayerAttributes(BaseLayerAttributes):
+class ConstantLayerAttributes(BaseLayerAttributes):
     """
-    :param name: Parameter name.
+    :param name: Constant name.
+    :param shape: Constant shape.
     """
 
     name: str
+    shape: List[int]

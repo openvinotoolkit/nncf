@@ -28,7 +28,7 @@ from tests.onnx.models import IdentityConvolutionalModel
 INPUT_NAME = "X"
 IDENTITY_NODE_NAME = "Identity"
 CONV_NODE_NAME = "Conv1"
-INPUT_SHAPE = [3, 3, 3]
+INPUT_SHAPE = [1, 3, 3, 3]
 
 
 class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
@@ -43,9 +43,10 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         return ONNXFastBiasCorrectionAlgoBackend
 
     def get_backend_model(self, dataset_samples):
-        conv_w = self.dataset_samples_to_conv_w(dataset_samples[0])
+        sample = dataset_samples[0].reshape(INPUT_SHAPE[1:])
+        conv_w = self.dataset_samples_to_conv_w(sample)
         return IdentityConvolutionalModel(
-            input_shape=[1] + INPUT_SHAPE, inp_ch=3, out_ch=3, kernel_size=3, conv_w=conv_w
+            input_shape=INPUT_SHAPE, inp_ch=3, out_ch=3, kernel_size=3, conv_w=conv_w
         ).onnx_model
 
     def get_statistics_aggregator(self, dataset):
@@ -62,7 +63,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     def get_dataset(self, samples):
         def transform_fn(data_item):
             inputs = data_item
-            return {INPUT_NAME: [inputs]}
+            return {INPUT_NAME: inputs}
 
         return Dataset(samples, transform_fn)
 
@@ -84,17 +85,12 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     @pytest.fixture
     def dataset_samples(self, dataset_values):
         input_shape = INPUT_SHAPE
-        dataset_samples = [np.zeros(input_shape), np.ones(input_shape)]
+        dataset_samples = [np.zeros(input_shape, dtype=np.float32), np.ones(input_shape, dtype=np.float32)]
 
         for i, value in enumerate(dataset_values):
-            dataset_samples[0][i, 0, 0] = value["max"]
-            dataset_samples[0][i, 0, 1] = value["min"]
-
+            dataset_samples[0][0, i, 0, 0] = value["max"]
+            dataset_samples[0][0, i, 0, 1] = value["min"]
         return dataset_samples
-
-    @pytest.fixture
-    def is_stat_in_shape_of_scale(self) -> bool:
-        return False
 
     @pytest.fixture(params=[False], ids=["out_of_palce"])
     def inplace_statistics(self, request) -> bool:

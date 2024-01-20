@@ -109,7 +109,7 @@ class ProcessedKeys:
         for keys in self._keys.values():
             all_processed_keys.extend(keys)
 
-        for key in model_state_dict.keys():
+        for key in model_state_dict:
             if key not in all_processed_keys:
                 if key.endswith(params_to_skip) or key in optional_param_names:
                     self.add_key(key, ProcessedKeyStatus.SKIPPED)

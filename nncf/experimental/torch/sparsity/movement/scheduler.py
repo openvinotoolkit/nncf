@@ -315,12 +315,15 @@ class MovementPolynomialThresholdScheduler(BaseCompressionScheduler):
         if self._steps_per_epoch is None and self._steps_in_current_epoch > 0:
             self._steps_per_epoch = self._steps_in_current_epoch
 
-        if self._steps_per_epoch is not None and self._steps_in_current_epoch > 0:
-            if self._steps_per_epoch != self._steps_in_current_epoch:
-                raise Exception(
-                    "Actual steps per epoch and steps per epoch from the scheduler "
-                    "parameters are different. Scheduling may be incorrect."
-                )
+        if (
+            self._steps_per_epoch is not None
+            and self._steps_in_current_epoch > 0
+            and self._steps_per_epoch != self._steps_in_current_epoch
+        ):
+            raise Exception(
+                "Actual steps per epoch and steps per epoch from the scheduler "
+                "parameters are different. Scheduling may be incorrect."
+            )
 
         if self._steps_per_epoch is None:
             self._should_skip = True

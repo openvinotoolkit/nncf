@@ -115,7 +115,7 @@ class TestCollectedStatistics:
         collector: Type[TensorStatisticCollectorBase],
         reduction_axes_vs_ref_statistic: Dict[Tuple[ReductionAxes, ReductionAxes], TensorStatistic],
     ):
-        for shapes in reduction_axes_vs_ref_statistic.keys():
+        for shapes in reduction_axes_vs_ref_statistic:
             scale_shape, reducer_axes = shapes
             collector_obj = collector(
                 scale_shape=scale_shape,

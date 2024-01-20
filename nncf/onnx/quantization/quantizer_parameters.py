@@ -14,6 +14,7 @@ from typing import Optional, Tuple
 
 import numpy as np
 
+from nncf.experimental.tensor import functions as fns
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
 
@@ -54,9 +55,9 @@ def convert_fq_params_to_onnx_params(
     if levels not in [255, 256]:
         raise ValueError("Can only export to INT8/UIN8 256-level ONNX Quantize/Dequantize pairs.")
 
-    input_low, input_high = parameters.input_low.data, parameters.input_high.data
-    output_low, output_high = parameters.output_low.data, parameters.output_high.data
-    if not np.allclose(input_high, output_high) or not np.allclose(input_low, output_low):
+    input_low, input_high = parameters.input_low, parameters.input_high
+    output_low, output_high = parameters.output_low, parameters.output_high
+    if not fns.allclose(input_high, output_high) or not fns.allclose(input_low, output_low):
         raise ValueError(
             "ONNX Quantize/Dequantize pairs only support input_high == output_high and input_low == output_low."
         )
@@ -64,7 +65,10 @@ def convert_fq_params_to_onnx_params(
     level_low, level_high = get_level_low_level_high(tensor_type)
     narrow_range = levels == 2**num_bits - 1
     scale, zero_point = calculate_scale_zero_point(input_low, input_high, level_low, level_high, narrow_range)
-    return ONNXQuantizerLayerParameters(scale, zero_point, tensor_type, axis)
+    # ONNX demands parameters to be a scalar or 1-D Tensor.
+    scale = np.squeeze(scale)
+    zero_point = np.squeeze(zero_point)
+    return ONNXQuantizerLayerParameters(scale.data, zero_point.data, tensor_type, axis)
 
 
 def get_level_low_level_high(tensor_type: np.dtype) -> Tuple[int, int]:

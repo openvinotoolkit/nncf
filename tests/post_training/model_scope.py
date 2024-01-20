@@ -116,7 +116,7 @@ TEST_MODELS = [
             "preset": QuantizationPreset.MIXED,
             "fast_bias_correction": False,
         },
-        "backends": [BackendType.ONNX, BackendType.OV, BackendType.POT],
+        "backends": [BackendType.ONNX, BackendType.OV],
     },
     {
         "reported_name": "timm/efficientnet_lite0",
@@ -173,7 +173,7 @@ TEST_MODELS = [
             "preset": QuantizationPreset.MIXED,
             "fast_bias_correction": False,
         },
-        "backends": [BackendType.ONNX, BackendType.OV, BackendType.POT],
+        "backends": [BackendType.ONNX, BackendType.OV],
     },
     {
         "reported_name": "timm/mobilenetv3_small_050",

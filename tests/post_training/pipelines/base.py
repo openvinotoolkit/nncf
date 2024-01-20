@@ -22,15 +22,13 @@ from typing import Optional
 
 import numpy as np
 import onnx
-import openvino.runtime as ov
+import openvino as ov
 import torch
 from memory_profiler import memory_usage
-from openvino.tools.mo import convert_model
 from optimum.intel import OVQuantizer
 
 import nncf
 from nncf import TargetDevice
-from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from tests.shared.command import Command
 
 DEFAULT_VAL_THREADS = 4
@@ -42,14 +40,13 @@ class BackendType(Enum):
     CUDA_TORCH = "CUDA_TORCH"
     ONNX = "ONNX"
     OV = "OV"
-    POT = "POT"
     OPTIMUM = "OPTIMUM"
 
 
 NNCF_PTQ_BACKENDS = [BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.ONNX, BackendType.OV]
-ALL_PTQ_BACKENDS = NNCF_PTQ_BACKENDS + [BackendType.POT]
+ALL_PTQ_BACKENDS = NNCF_PTQ_BACKENDS
 PT_BACKENDS = [BackendType.TORCH, BackendType.CUDA_TORCH]
-OV_BACKENDS = [BackendType.OV, BackendType.POT, BackendType.OPTIMUM]
+OV_BACKENDS = [BackendType.OV, BackendType.OPTIMUM]
 
 LIMIT_LENGTH_OF_STATUS = 120
 
@@ -182,11 +179,6 @@ class BaseTestPipeline(ABC):
             quantizer = OVQuantizer.from_pretrained(self.model_hf)
             quantizer.quantize(calibration_dataset=self.calibration_dataset, save_directory=self.output_model_dir)
         else:
-            if self.backend == BackendType.POT:
-                self.ptq_params["advanced_parameters"] = AdvancedQuantizationParameters(
-                    backend_params={"use_pot": True}
-                )
-
             self.quantized_model = nncf.quantize(
                 model=self.model,
                 target_device=TargetDevice.CPU,
@@ -222,15 +214,15 @@ class BaseTestPipeline(ABC):
         if self.backend == BackendType.OPTIMUM:
             self.path_quantized_ir = self.output_model_dir / "openvino_model.xml"
         elif self.backend in PT_BACKENDS:
-            ov_model = convert_model(
-                self.quantized_model.cpu(), example_input=self.dummy_tensor.cpu(), input_shape=self.input_size
+            ov_model = ov.convert_model(
+                self.quantized_model.cpu(), example_input=self.dummy_tensor.cpu(), input=self.input_size
             )
             self.path_quantized_ir = self.output_model_dir / "model.xml"
             ov.serialize(ov_model, self.path_quantized_ir)
         elif self.backend == BackendType.ONNX:
             onnx_path = self.output_model_dir / "model.onnx"
             onnx.save(self.quantized_model, str(onnx_path))
-            ov_model = convert_model(onnx_path)
+            ov_model = ov.convert_model(onnx_path)
             self.path_quantized_ir = self.output_model_dir / "model.xml"
             ov.serialize(ov_model, self.path_quantized_ir)
         elif self.backend in OV_BACKENDS:
@@ -290,15 +282,18 @@ class BaseTestPipeline(ABC):
         if metric_value is not None and metric_value_fp32 is not None:
             self.run_info.metric_diff = self.run_info.metric_value - self.reference_data["metric_value_fp32"]
 
-        if metric_value is not None and metric_reference is not None:
-            if not np.isclose(metric_value, metric_reference, atol=self.reference_data.get("atol", 0.001)):
-                if metric_value < metric_reference:
-                    status_msg = f"Regression: Metric value is less than reference {metric_value} < {metric_reference}"
-                    raise ValueError(status_msg)
-                if metric_value > metric_reference:
-                    self.run_info.status = (
-                        f"Improvement: Metric value is better than reference {metric_value} > {metric_reference}"
-                    )
+        if (
+            metric_value is not None
+            and metric_reference is not None
+            and not np.isclose(metric_value, metric_reference, atol=self.reference_data.get("atol", 0.001))
+        ):
+            if metric_value < metric_reference:
+                status_msg = f"Regression: Metric value is less than reference {metric_value} < {metric_reference}"
+                raise ValueError(status_msg)
+            if metric_value > metric_reference:
+                self.run_info.status = (
+                    f"Improvement: Metric value is better than reference {metric_value} > {metric_reference}"
+                )
 
     def run(self) -> None:
         """

@@ -30,10 +30,10 @@ from nncf.torch.tensor_statistics.collectors import PTMinReducer
 from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
 from nncf.torch.tensor_statistics.collectors import PTNoopReducer
 from nncf.torch.tensor_statistics.collectors import PTQuantileReducer
-from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggregators
+from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggreagtors
 
 
-class BaseTestReducersAggregators(TemplateTestReducersAggregators, ABC):
+class BaseTestReducersAggregators(TemplateTestReducersAggreagtors, ABC):
     @pytest.fixture
     def tensor_processor(self):
         return PTNNCFCollectorTensorProcessor
@@ -76,16 +76,7 @@ class BaseTestReducersAggregators(TemplateTestReducersAggregators, ABC):
             return tensor.float()
         if dtype == Dtype.INTEGER:
             return tensor.int()
-        if dtype == Dtype.BOOL:
-            return tensor.bool()
         raise RuntimeError()
-
-    def expand_dims(self, tensor, dims: Tuple[int, ...]):
-        tensor_ = torch.tensor(tensor)
-        shape = list(tensor_.shape)
-        for dim in dims:
-            shape.insert(dim, 1)
-        return tensor_.view(shape)
 
 
 class TestCPUReducersAggregators(BaseTestReducersAggregators):

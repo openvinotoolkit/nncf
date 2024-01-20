@@ -379,7 +379,7 @@ class RetinanetClassLoss:
         num_positives_sum = tf.reduce_sum(input_tensor=num_positives) + 1.0
 
         cls_losses = []
-        for level in cls_outputs.keys():
+        for level in cls_outputs:
             cls_losses.append(self.class_loss(cls_outputs[level], labels[int(level)], num_positives_sum))
 
         # Sums per level losses to total loss.
@@ -440,7 +440,7 @@ class RetinanetBoxLoss:
         num_positives_sum = tf.reduce_sum(input_tensor=num_positives) + 1.0
 
         box_losses = []
-        for level in box_outputs.keys():
+        for level in box_outputs:
             box_targets_l = labels[int(level)]
             box_losses.append(self.box_loss(box_outputs[level], box_targets_l, num_positives_sum))
 

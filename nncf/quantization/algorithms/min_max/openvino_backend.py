@@ -18,7 +18,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
@@ -140,12 +140,11 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return OVMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     @staticmethod
-    def _get_reduction_axes_and_use_abs_max(
-        nncf_graph: NNCFGraph, target_point: OVTargetPoint, quantizer_config: QuantizerConfig
+    def _get_reduction_axes(
+        nncf_graph: NNCFGraph, target_point: OVTargetPoint, collector_params: RangeInitCollectorParams
     ) -> Tuple[ReductionAxes, bool]:
-        use_abs_max = quantizer_config.mode == QuantizationMode.SYMMETRIC
-        if not quantizer_config.per_channel:
-            return None, use_abs_max
+        if not collector_params.is_per_channel:
+            return None
 
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
         if not target_point.is_weight_target_point():
@@ -159,30 +158,28 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             # TODO (l-bat): Disable quantizer propagation through layout changing operations
             channel_axis = 1  # OpenVINO activations have channel first layout: [N, C, Z, Y, X]
             axes = get_channel_agnostic_reduction_axes([channel_axis], shape)
-            return axes, use_abs_max
+            return axes
 
         assert isinstance(node.layer_attributes, OVLayerAttributes)
         const_shape = node.layer_attributes.constant_attributes[target_point.port_id]["shape"]
 
-        if quantizer_config.per_channel:
+        if collector_params.is_per_channel:
             channel_axes = get_weight_channel_axes(node)
             axes = get_channel_agnostic_reduction_axes(channel_axes, const_shape)
         else:
             axes = tuple(range(len(const_shape)))
-        return axes, use_abs_max
+        return axes
 
     @staticmethod
     def get_statistic_collector(
         range_estimator_params: RangeEstimatorParameters,
         nncf_graph: NNCFGraph,
         target_point: OVTargetPoint,
-        quantizer_config: QuantizerConfig,
+        collector_params: RangeInitCollectorParams,
         inplace: bool,
         num_samples: int = None,
     ) -> TensorCollector:
-        reduction_axes, use_abs_max = OVMinMaxAlgoBackend._get_reduction_axes_and_use_abs_max(
-            nncf_graph, target_point, quantizer_config
-        )
+        reduction_axes = OVMinMaxAlgoBackend._get_reduction_axes(nncf_graph, target_point, collector_params)
 
         collector = TensorCollector(OVMinMaxTensorStatistic)
         for params, container_key in zip(
@@ -208,7 +205,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 kwargs.update({"quantile": [quantile]})
             # TODO(dlyakhov): merge two quantile aggregators in one
             statistic_type = params.statistics_type
-            if use_abs_max and statistic_type == StatisticsType.MAX:
+            if collector_params.use_abs_max and statistic_type == StatisticsType.MAX:
                 statistic_type = StatisticsType.ABS_MAX
             reducer = OV_REDUCERS_MAP[statistic_type](**kwargs)
 
@@ -251,9 +248,11 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         ignored_names = []
         target_nodes = nncf_graph.get_nodes_by_metatypes([om.OVGRUSequenceMetatype])
         for node in target_nodes:
-            if isinstance(node.layer_attributes, OVLayerAttributes):
-                if node.layer_attributes.input_attributes["linear_before_reset"]:
-                    ignored_names.append(node.node_name)
+            if (
+                isinstance(node.layer_attributes, OVLayerAttributes)
+                and node.layer_attributes.input_attributes["linear_before_reset"]
+            ):
+                ignored_names.append(node.node_name)
         return ignored_names
 
     @staticmethod

@@ -232,9 +232,8 @@ class GraphPattern:
             self._graph.add_edges_from(remapped_edges)
 
     def add_node(self, **attrs) -> int:
-        if GraphPattern.METATYPE_ATTR in attrs:
-            if not isinstance(attrs[GraphPattern.METATYPE_ATTR], list):
-                attrs[GraphPattern.METATYPE_ATTR] = [attrs[GraphPattern.METATYPE_ATTR]]
+        if GraphPattern.METATYPE_ATTR in attrs and not isinstance(attrs[GraphPattern.METATYPE_ATTR], list):
+            attrs[GraphPattern.METATYPE_ATTR] = [attrs[GraphPattern.METATYPE_ATTR]]
         self._graph.add_node(self._node_counter, **attrs)
         self._node_counter += 1
         return self._node_counter - 1

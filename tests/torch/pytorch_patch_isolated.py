@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import contextlib
 import inspect
 import os
 
@@ -66,10 +67,8 @@ def test_jit_script_exception_preserves_patching_isolated():
         ),
     )
 
-    try:
+    with contextlib.suppress(Exception):
         torch.jit.script(compressed_model)  # supposed to fail since torch.jit.script does not support NNCF models
-    except:  # noqa: E722
-        pass
 
     # torch.nn.Module.__call__ is one of the fundamental patched functions, if the code object points to NNCF code,
     # then it means patching is still present

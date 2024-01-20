@@ -35,8 +35,6 @@ from nncf.openvino.graph.node_utils import get_inplace_max_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_per_ch
 from nncf.openvino.graph.node_utils import get_inplace_min_op
-from nncf.openvino.graph.node_utils import get_reducer_output_node_names
-from nncf.openvino.graph.node_utils import get_result_node_name
 from nncf.openvino.statistics.statistics import OVMeanTensorStatistic
 from nncf.openvino.statistics.statistics import OVRawTensorStatistic
 from nncf.openvino.tensor import OVNNCFTensor
@@ -70,16 +68,11 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
 
     @staticmethod
     def mean(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
-        comp_dtype, out_dtype = _get_computing_dtype(x.tensor.dtype)
-        return OVNNCFTensor(
-            np.mean(x.tensor, axis=axis, keepdims=keepdims, dtype=comp_dtype).astype(dtype=out_dtype, copy=False)
-        )
+        return OVNNCFTensor(np.mean(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
     def median(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
-        comp_dtype, out_dtype = _get_computing_dtype(x.tensor.dtype)
-        t = x.tensor.astype(dtype=comp_dtype, copy=False)
-        return OVNNCFTensor(np.median(t, axis=axis, keepdims=keepdims).astype(dtype=out_dtype, copy=False))
+        return OVNNCFTensor(np.median(x.tensor, axis=axis, keepdims=keepdims))
 
     @classmethod
     def masked_mean(
@@ -91,12 +84,11 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     ) -> NNCFTensor:
         if mask is None:
             return cls.mean(x, axis=axis, keepdims=keepdims)
-        comp_dtype, out_dtype = _get_computing_dtype(x.tensor.dtype)
         masked_x = np.ma.array(x.tensor, mask=mask.tensor)
-        result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims, dtype=comp_dtype)
+        result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims)
         if isinstance(result, np.ma.MaskedArray):
-            result = result.data
-        return OVNNCFTensor(result.astype(dtype=out_dtype, copy=False))
+            return OVNNCFTensor(result.data)
+        return OVNNCFTensor(result)
 
     @classmethod
     def masked_median(
@@ -108,21 +100,19 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     ) -> NNCFTensor:
         if mask is None:
             return cls.median(x, axis=axis, keepdims=keepdims)
-        comp_dtype, out_dtype = _get_computing_dtype(x.tensor.dtype)
-        t = x.tensor.astype(dtype=comp_dtype, copy=False)
-        masked_x = np.ma.array(t, mask=mask.tensor)
+        masked_x = np.ma.array(x.tensor, mask=mask.tensor)
         result = np.ma.median(masked_x, axis=axis, keepdims=keepdims)
         if isinstance(result, np.ma.MaskedArray):
-            result = result.data
-        return OVNNCFTensor(result.astype(dtype=out_dtype, copy=False))
+            return OVNNCFTensor(result.data)
+        return OVNNCFTensor(result)
 
     @staticmethod
     def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
         if len(x.shape) < 3:
-            return OVNNCFCollectorTensorProcessor.mean(x, axis=0)
+            return OVNNCFTensor(np.mean(x.tensor, axis=0))
         x = np.moveaxis(x.tensor, axis, 1)
         t = x.reshape(x.shape[0], x.shape[1], -1)
-        return OVNNCFCollectorTensorProcessor.mean(OVNNCFTensor(t), axis=(0, 2))
+        return OVNNCFTensor(np.mean(t, axis=(0, 2)))
 
     @staticmethod
     def transpose(x: NNCFTensor, axes: Tuple[int, ...]) -> NNCFTensor:
@@ -199,8 +189,7 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
 
 
 class OVNoopReducer(NoopReducer):
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return [get_result_node_name(target_node_name, port_id)]
+    pass
 
 
 class OVMinReducer(MinReducer):
@@ -208,10 +197,7 @@ class OVMinReducer(MinReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return get_inplace_min_op(self.name, self._reduction_axes)
-
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
+        return get_inplace_min_op(self._reduction_axes)
 
 
 class OVMaxReducer(MaxReducer):
@@ -219,10 +205,7 @@ class OVMaxReducer(MaxReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return get_inplace_max_op(self.name, self._reduction_axes, False)
-
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
+        return get_inplace_max_op(self._reduction_axes, False)
 
 
 class OVAbsMaxReducer(AbsMaxReducer):
@@ -230,10 +213,7 @@ class OVAbsMaxReducer(AbsMaxReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return get_inplace_max_op(self.name, self._reduction_axes, True)
-
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
+        return get_inplace_max_op(self._reduction_axes, True)
 
 
 class OVMeanReducer(MeanReducer):
@@ -241,10 +221,7 @@ class OVMeanReducer(MeanReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return get_inplace_mean_op(self.name, self._reduction_axes)
-
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
+        return get_inplace_mean_op(self._reduction_axes)
 
 
 class OVBatchMeanReducer(BatchMeanReducer):
@@ -252,10 +229,7 @@ class OVBatchMeanReducer(BatchMeanReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return get_inplace_batch_mean_op(self.name)
-
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
+        return get_inplace_batch_mean_op()
 
 
 class OVMeanPerChanelReducer(MeanPerChReducer):
@@ -263,10 +237,7 @@ class OVMeanPerChanelReducer(MeanPerChReducer):
         return OVNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
-        return get_inplace_mean_per_ch(self.name, self._reduction_axes)
-
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
+        return get_inplace_mean_per_ch(self._channel_axis)
 
 
 class OVQuantileReducer(QuantileReducer):
@@ -276,9 +247,6 @@ class OVQuantileReducer(QuantileReducer):
     def _get_processor(self):
         return OVNNCFCollectorTensorProcessor
 
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
-
 
 class OVAbsQuantileReducer(AbsQuantileReducer):
     def _get_processor(self):
@@ -286,9 +254,6 @@ class OVAbsQuantileReducer(AbsQuantileReducer):
 
     def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
         return None
-
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        return get_reducer_output_node_names(self.name, target_node_name, port_id, self.output_port_id, self.inplace)
 
 
 def get_mean_statistic_collector(
@@ -304,9 +269,6 @@ def get_mean_statistic_collector(
     :param inplace: Whether the mean reducer should be calculated inplace or out of place.
     :return: Mean statistic collector.
     """
-    # TODO(dlyakhov): use inplace OVBatchMeanReducer and OVMeanPerChanelReducer
-    # after migration on openvino-dev=2023.0
-    inplace = False
     if channel_axis == 0:
         reducer = OVBatchMeanReducer(inplace)
     else:
@@ -327,7 +289,7 @@ def get_mean_statistic_collector(
     return collector
 
 
-def get_raw_stat_collector(num_samples, inplace=False):
+def get_raw_stat_collector(num_samples: Optional[int] = None) -> TensorCollector:
     reducer = OVNoopReducer()
     aggregator = NoopAggregator(num_samples)
 
@@ -344,20 +306,3 @@ OV_REDUCERS_MAP = {
     StatisticsType.QUANTILE: OVQuantileReducer,
     StatisticsType.ABS_QUANTILE: OVAbsQuantileReducer,
 }
-
-
-def _get_computing_dtype(dtype: np.dtype) -> Tuple[Optional[np.dtype], Optional[np.dtype]]:
-    """
-    Determines the appropriate dtypes for intermediate computations and the final output,
-    aiming to prevent overflow while maintaining precision.
-
-    :param dtype: The dtype of the processed tensor.
-    :return:
-        - comp_dtype: The recommended dtype for intermediate computations to avoid overflow.
-            If None, no dtype change is necessary for intermediate computations.
-        - out_dtype: The recommended dtype for the final output, balancing precision and memory usage.
-            If None, the input dtype is preserved for the output.
-    """
-    if dtype in [np.float32, np.float16]:
-        return (np.float64, dtype)
-    return (None, None)

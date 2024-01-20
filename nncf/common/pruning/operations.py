@@ -315,7 +315,7 @@ class SplitPruningOp(BasePruningOp):
             # propagate as is
             return input_mask
 
-        if not input_mask.shape[0] == sum(output_shapes):
+        if input_mask.shape[0] != sum(output_shapes):
             return None
 
         split_masks = tensor_processor.split(input_mask, output_shapes)

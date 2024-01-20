@@ -30,3 +30,6 @@ class TFNNCFTensor(NNCFTensor):
     @property
     def device(self) -> tf.device:
         return self._tensor.device
+
+    def is_empty(self) -> bool:
+        return tf.equal(tf.size(self._tensor), 0)

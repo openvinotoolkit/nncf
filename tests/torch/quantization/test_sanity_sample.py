@@ -70,10 +70,6 @@ class PrecisionSampleValidator(SanitySampleValidator):
         train_location = self._sample_handler.get_train_location()
         self._train_mock = mocker.patch(train_location)
 
-        # Need to mock SafeMLFLow to prevent starting a not closed mlflow session due to memory leak of config and
-        # SafeMLFLow, which happens with a mocked train function
-        self._sample_handler.mock_mlflow(mocker)
-
     def validate_spy(self):
         self._train_mock.assert_called_once()
 

@@ -83,28 +83,30 @@ def collect_api_entities() -> APIInfo:
         print(f"{modname}")
         for obj_name, obj in inspect.getmembers(module):
             objects_module = getattr(obj, "__module__", None)
-            if objects_module == modname:
-                if inspect.isclass(obj) or inspect.isfunction(obj):
-                    if hasattr(obj, api.API_MARKER_ATTR):
-                        marked_object_name = obj._nncf_api_marker
-                        # Check the actual name of the originally marked object
-                        # so that the classes derived from base API classes don't
-                        # all automatically end up in API
-                        if marked_object_name != obj.__name__:
-                            continue
-                        fqn = f"{modname}.{obj_name}"
-                        if hasattr(obj, api.CANONICAL_ALIAS_ATTR):
-                            canonical_import_name = getattr(obj, api.CANONICAL_ALIAS_ATTR)
-                            if canonical_import_name in canonical_imports_seen:
-                                assert False, f"Duplicate canonical_alias detected: {canonical_import_name}"
-                            retval.fqn_vs_canonical_name[fqn] = canonical_import_name
-                            retval.canonical_name_vs_fqn[canonical_import_name] = fqn
-                            canonical_imports_seen.add(canonical_import_name)
-                            if canonical_import_name == fqn:
-                                print(f"\t{obj_name}")
-                            else:
-                                print(f"\t{obj_name} -> {canonical_import_name}")
-                        retval.api_names_vs_obj_dict[fqn] = obj
+            if (
+                objects_module == modname
+                and (inspect.isclass(obj) or inspect.isfunction(obj))
+                and hasattr(obj, api.API_MARKER_ATTR)
+            ):
+                marked_object_name = obj._nncf_api_marker
+                # Check the actual name of the originally marked object
+                # so that the classes derived from base API classes don't
+                # all automatically end up in API
+                if marked_object_name != obj.__name__:
+                    continue
+                fqn = f"{modname}.{obj_name}"
+                if hasattr(obj, api.CANONICAL_ALIAS_ATTR):
+                    canonical_import_name = getattr(obj, api.CANONICAL_ALIAS_ATTR)
+                    if canonical_import_name in canonical_imports_seen:
+                        assert False, f"Duplicate canonical_alias detected: {canonical_import_name}"
+                    retval.fqn_vs_canonical_name[fqn] = canonical_import_name
+                    retval.canonical_name_vs_fqn[canonical_import_name] = fqn
+                    canonical_imports_seen.add(canonical_import_name)
+                    if canonical_import_name == fqn:
+                        print(f"\t{obj_name}")
+                    else:
+                        print(f"\t{obj_name} -> {canonical_import_name}")
+                retval.api_names_vs_obj_dict[fqn] = obj
 
     print()
     skipped_str = "\n".join([f"{k}: {v}" for k, v in skipped_modules.items()])
@@ -137,8 +139,10 @@ mock_modules = [
     "keras",
     "tensorflow_addons",
     # Need add backend implementation functions to avoid endless loops on registered functions by mock module,
-    "nncf.experimental.tensor.torch_functions",
-    "nncf.experimental.tensor.numpy_functions",
+    "nncf.experimental.tensor.functions.numpy_numeric",
+    "nncf.experimental.tensor.functions.numpy_linalg",
+    "nncf.experimental.tensor.functions.torch_numeric",
+    "nncf.experimental.tensor.functions.torch_linalg",
 ]
 
 with mock(mock_modules):

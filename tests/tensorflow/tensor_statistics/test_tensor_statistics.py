@@ -103,7 +103,7 @@ class TestCollectedStatistics:
         collector: Type[TensorStatisticCollectorBase],
         reduction_shapes_vs_ref_statistic: Dict[Tuple[ReductionAxes, ReductionAxes], TensorStatistic],
     ):
-        for reduction_shape in reduction_shapes_vs_ref_statistic.keys():
+        for reduction_shape in reduction_shapes_vs_ref_statistic:
             collector_obj = collector(use_abs_max=True, reduction_shape=reduction_shape)
             for input_ in TestCollectedStatistics.REF_INPUTS:
                 collector_obj.register_input(input_)
@@ -181,7 +181,7 @@ class TestCollectedStatistics:
         collector: Type[TensorStatisticCollectorBase],
         reduction_shapes_vs_ref_statistic: Dict[ReductionAxes, TensorStatistic],
     ):
-        for reduction_shape in reduction_shapes_vs_ref_statistic.keys():
+        for reduction_shape in reduction_shapes_vs_ref_statistic:
             collector_obj = collector(reduction_shape=reduction_shape)
             for input_ in TestCollectedStatistics.REF_INPUTS:
                 collector_obj.register_input(input_)
