@@ -104,7 +104,7 @@ class CamVid(data.Dataset):
                 os.path.join(self.root_dir, self.test_lbl_folder), extension_filter=self.img_extension
             )
         else:
-            raise RuntimeError("Unexpected dataset mode. Supported modes are: train, val and test")
+            raise nncf.ValidationError("Unexpected dataset mode. Supported modes are: train, val and test")
 
     def __getitem__(self, index):
         """
@@ -123,7 +123,7 @@ class CamVid(data.Dataset):
         elif self.mode.lower() == "test":
             data_path, label_path = self.test_data[index], self.test_labels[index]
         else:
-            raise RuntimeError("Unexpected dataset mode. Supported modes are: train, val and test")
+            raise nncf.ValidationError("Unexpected dataset mode. Supported modes are: train, val and test")
 
         img, label = self.loader(data_path, label_path)
 
@@ -141,4 +141,4 @@ class CamVid(data.Dataset):
         if self.mode.lower() == "test":
             return len(self.test_data)
 
-        raise RuntimeError("Unexpected dataset mode. Supported modes are: train, val and test")
+        raise nncf.ValidationError("Unexpected dataset mode. Supported modes are: train, val and test")

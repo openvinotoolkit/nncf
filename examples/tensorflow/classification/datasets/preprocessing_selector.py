@@ -29,7 +29,7 @@ def get_preprocessing(dataset_name, model_name, preset=None):
     if not preset:
         preset = dataset_name
     if preset not in PREPROCESSING_FN_MAP:
-        raise ValueError(
+        raise nncf.ValidationError(
             "Preprocessing for dataset {} and model {} was not recognized".format(dataset_name, model_name)
         )
 

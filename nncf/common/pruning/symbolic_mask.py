@@ -109,7 +109,7 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
     def ones(cls, shape: Union[int, List[int]], device) -> SymbolicMask:
         if isinstance(shape, list):
             if len(shape) != 1:
-                raise RuntimeError(f"Unexpected shape = {shape} for 1D symbolic mask")
+                raise nncf.ValidationError(f"Unexpected shape = {shape} for 1D symbolic mask")
             shape = shape[0]
 
         return SymbolicMask(shape)

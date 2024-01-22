@@ -87,7 +87,7 @@ class BaseDatasetBuilder(ABC):
 
         builder = dataset_builders.get(self._dataset_type, None)
         if builder is None:
-            raise ValueError("Unknown dataset type {}".format(self._dataset_type))
+            raise nncf.UnknownDatasetError("Unknown dataset type {}".format(self._dataset_type))
 
         dataset = builder()
         dataset = self._pipeline(dataset)
@@ -124,7 +124,7 @@ class BaseDatasetBuilder(ABC):
         if dataset_key in self._tfrecord_datasets:
             self._dataset_loader = self._tfrecord_datasets[dataset_key](config=self._config, is_train=self._is_train)
         else:
-            raise ValueError("Unknown dataset name: {}".format(self._dataset_name))
+            raise nncf.UnknownDatasetError("Unknown dataset name: {}".format(self._dataset_name))
 
         dataset = self._dataset_loader.as_dataset()
 

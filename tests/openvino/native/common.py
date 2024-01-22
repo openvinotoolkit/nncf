@@ -111,4 +111,4 @@ def get_actual_reference_for_current_openvino(rel_path: Path) -> Path:
         if file_name.is_file():
             return file_name
 
-    raise RuntimeError(f"Not found file {root_dir}/{current_ov_version}/{rel_path}")
+    raise nncf.InternalError(f"Not found file {root_dir}/{current_ov_version}/{rel_path}")

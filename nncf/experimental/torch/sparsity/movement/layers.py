@@ -304,7 +304,7 @@ class MovementSparsifier(nn.Module):
                 score_shape.append(dim // factor)
             return tuple(score_shape)
 
-        raise RuntimeError("Unknown sparse structure.")
+        raise nncf.InternalError("Unknown sparse structure.")
 
     @staticmethod
     def _get_sparse_factors(weight_shape: List[int], sparse_config: SparseConfig) -> Tuple[int, int]:

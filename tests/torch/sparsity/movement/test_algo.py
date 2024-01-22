@@ -218,7 +218,7 @@ class TestControllerCreation:
         "recipe", [Conv2dRunRecipe(), LinearRunRecipe().algo_config_(ignored_scopes=["{re}model"])]
     )
     def test_error_on_no_supported_layers(self, recipe: BaseMockRunRecipe):
-        with pytest.raises(RuntimeError, match="No sparsifiable layer"):
+        with pytest.raises(nncf.InternalError, match="No sparsifiable layer"):
             create_compressed_model(recipe.model(), recipe.nncf_config(), dump_graphs=False)
 
     @pytest.mark.parametrize("enable_structured_masking", [True, False])
@@ -234,7 +234,7 @@ class TestControllerCreation:
                 handler = getattr(compression_ctrl, "_structured_mask_handler")
                 assert isinstance(handler, StructuredMaskHandler)
             else:
-                with pytest.raises(RuntimeError, match=r"no supported model"):
+                with pytest.raises(nncf.InternalError, match=r"no supported model"):
                     create_compressed_model(recipe.model(), recipe.nncf_config(), dump_graphs=False)
         else:
             compression_ctrl, _ = create_compressed_model(recipe.model(), recipe.nncf_config(), dump_graphs=False)

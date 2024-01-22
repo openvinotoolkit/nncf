@@ -14,7 +14,7 @@ import sys
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        raise RuntimeError("Must be run with target extensions build mode")
+        raise nncf.ValidationError("Must be run with target extensions build mode")
     mode = sys.argv[1]
     if mode == "cpu":
         # Do not remove - the import here is for testing purposes.
@@ -30,4 +30,4 @@ if __name__ == "__main__":
         os.environ["TORCH_CUDA_ARCH_LIST"] = "7.5+PTX"
         force_build_cuda_extensions()
     else:
-        raise RuntimeError("Invalid mode type!")
+        raise nncf.ValidationError("Invalid mode type!")

@@ -171,7 +171,7 @@ def generate_qp(
     elif target is QuantizerGroup.ACTIVATIONS:
         qip = ActivationQuantizationInsertionPoint(target_node_name=node_name, input_port_id=input_port_id)
     else:
-        raise RuntimeError()
+        raise nncf.InvalidQuantizerGroupError(f"Invalid quantizer group: {target}. Supported groups are {QuantizerGroup.WEIGHTS} and {QuantizerGroup.ACTIVATIONS}.")
     return SingleConfigQuantizationPoint(qip, QuantizerConfig(), [node_name])
 
 

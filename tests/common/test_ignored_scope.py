@@ -78,5 +78,5 @@ WRONG_IGNORED_SCOPES_TEST_DATA = [
 @pytest.mark.parametrize("ignored_scope", WRONG_IGNORED_SCOPES_TEST_DATA)
 def test_wrong_ignored_scopes(ignored_scope):
     nncf_graph = NNCFGraphToTestIgnoredScope(CONV_TYPE, LINEAR_TYPE).nncf_graph
-    with pytest.raises(RuntimeError):
+    with pytest.raises(nncf.ValidationError):
         get_ignored_node_names_from_ignored_scope(ignored_scope, nncf_graph)

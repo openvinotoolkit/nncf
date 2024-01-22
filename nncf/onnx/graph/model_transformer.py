@@ -272,7 +272,7 @@ class ONNXModelTransformer(ModelTransformer):
         elif tensor_type == np.int8:
             onnx_tensor_type = onnx.TensorProto.INT8
         else:
-            raise RuntimeError(f"Incorrect tensor type - {tensor_type}.")
+            raise nncf.ValidationError(f"Incorrect tensor type - {tensor_type}.")
         assert quantizer.input[1] == dequantizer.input[1] and quantizer.input[2] == dequantizer.input[2]
         scale_tensor_name = quantizer.input[1]
         zero_point_tensor_name = quantizer.input[2]
@@ -326,7 +326,7 @@ class ONNXModelTransformer(ModelTransformer):
         input_nodes = []
         input_nodes.extend(children_node_mapping[target_edge_name])
         if not input_nodes:
-            raise RuntimeError(
+            raise nncf.InternalError(
                 f"Can not add the quantizer to the {target_edge_name} edge. This edge does not have end node."
             )
 

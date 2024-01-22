@@ -123,7 +123,7 @@ class WeightCompression(Algorithm):
 
             self._backend_entity = PTWeightCompressionAlgoBackend()
         else:
-            raise RuntimeError(
+            raise nncf.UnsupportedBackendError(
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
             )
 

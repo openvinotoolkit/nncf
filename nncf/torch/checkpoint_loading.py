@@ -140,7 +140,7 @@ class ProcessedKeys:
         if error_msgs:
             error_msg = "Error(s) when loading model parameters:\n\t{}".format("\n\t".join(error_msgs))
             if is_resume:
-                raise RuntimeError(error_msg)
+                raise nncf.InternalError(error_msg)
             nncf_logger.error(error_msg)
 
 

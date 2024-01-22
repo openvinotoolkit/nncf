@@ -67,7 +67,7 @@ def test_assert_broadcastable_mask_and_weight_shape():
 
     mask = torch.zeros(10)
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(nncf.InternalError):
         apply_filter_binary_mask(mask, nncf_module.weight.data)
 
 

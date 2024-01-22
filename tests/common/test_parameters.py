@@ -35,5 +35,5 @@ def test_convert_ignored_scope_to_list():
 
 def test_create_ignored_scope_config_raise_exception():
     ignored_scope = IgnoredScope(types=["type1"])
-    with pytest.raises(Exception):
+    with pytest.raises(nncf.InternalError):
         _ = convert_ignored_scope_to_list(ignored_scope)

@@ -39,7 +39,7 @@ def get_namespaces_to_patch(namespace_target: NamespaceTarget) -> Tuple[object, 
         return (TracedTensor, TracedParameter)
     if namespace_target == NamespaceTarget.TORCH:
         return (torch,)
-    raise RuntimeError("{} namespace wasn't found in {}".format(namespace_target, NamespaceTarget))
+    raise nncf.ValidationError("{} namespace wasn't found in {}".format(namespace_target, NamespaceTarget))
 
 
 def get_namespace_to_extract_functions_from(namespace_target: NamespaceTarget) -> object:
@@ -49,7 +49,7 @@ def get_namespace_to_extract_functions_from(namespace_target: NamespaceTarget) -
         return torch.Tensor
     if namespace_target == NamespaceTarget.TORCH:
         return torch._C._VariableFunctions
-    raise RuntimeError("{} namespace wasn't found in {}".format(namespace_target, NamespaceTarget))
+    raise nncf.ValidationError("{} namespace wasn't found in {}".format(namespace_target, NamespaceTarget))
 
 
 class FunctionsToPatchWithoutTracing:

@@ -333,7 +333,7 @@ class NSGA2SearchAlgorithm(BaseSearchAlgorithm):
 
         self._num_vars, self._vars_upper = self._elasticity_ctrl.multi_elasticity_handler.get_design_vars_info()
         if self._num_vars == 0 or self._vars_lower is None:
-            raise RuntimeError("Search space is empty")
+            raise nncf.InternalError("Search space is empty")
 
         self._result = None
         bn_adapt_params = search_config.get("batchnorm_adaptation", {})
@@ -353,7 +353,7 @@ class NSGA2SearchAlgorithm(BaseSearchAlgorithm):
         """
         if self._evaluator_handlers:
             return self._evaluator_handlers
-        raise RuntimeError("Evaluator handlers haven't been defined")
+        raise nncf.ValidationError("Evaluator handlers haven't been defined")
 
     @property
     def acc_delta(self) -> float:

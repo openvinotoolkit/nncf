@@ -193,5 +193,5 @@ def test_maximal_compression_rate():
     for comp_rate in np.linspace(0, maximal_compression_rate, 10):
         compression_ctrl.compression_rate = comp_rate
     for comp_rate in np.linspace(maximal_compression_rate + 1e-5, 1, 10):
-        with pytest.raises(RuntimeError):
+        with pytest.raises(nncf.ValidationError):
             compression_ctrl.compression_rate = comp_rate

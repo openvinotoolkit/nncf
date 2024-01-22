@@ -223,5 +223,5 @@ class TemplateTestFQParams(ABC):
             ref_fq_params = read_ref_fq_params(quant_group, q_config, narrow_range, half_range)
             compare_fq_parameters(fq_params, ref_fq_params)
         else:
-            with pytest.raises(RuntimeError):
+            with pytest.raises(nncf.ValidationError):
                 calculate_quantizer_parameters(statistics, q_config, quant_group, narrow_range, half_range)

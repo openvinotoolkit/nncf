@@ -186,7 +186,7 @@ def staged_quantization_main_worker(current_gpu, config):
         load_state(model, model_state_dict, is_resume=True)
 
     if not isinstance(compression_ctrl, (BinarizationController, QuantizationController)):
-        raise RuntimeError(
+        raise nncf.InternalError(
             "The stage quantization sample worker may only be run with the binarization and quantization algorithms!"
         )
 

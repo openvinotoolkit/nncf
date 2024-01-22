@@ -543,7 +543,7 @@ def test_deepcopy_nncf_network():
 def test_insertion_point_target_point_translation():
     op_address = OperationAddress("dummy", Scope(), 0)
     for target_type in [PTInsertionType.NNCF_MODULE_POST_OP, TargetType.AFTER_LAYER]:
-        with pytest.raises(RuntimeError):
+        with pytest.raises(nncf.ValidationError):
             PTInsertionPoint(target_type, op_address)
     target_type = TargetType.POST_LAYER_OPERATION
     assert PTInsertionPoint(target_type, op_address).insertion_type == PTInsertionType.NNCF_MODULE_POST_OP

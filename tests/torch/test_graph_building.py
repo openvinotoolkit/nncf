@@ -120,11 +120,11 @@ def test_forward_trace_function():
     assert outputs[1].tensor_meta == input_tensor2.tensor_meta
 
     # M -> N (2 -> 3)
-    with pytest.raises(RuntimeError):
+    with pytest.raises(nncf.ValidationError):
         outputs = forward_trace_only(lambda x: x + [torch.Tensor(shape2)], [input_tensor1, input_tensor2])
 
     # M -> N (2 -> 1)
-    with pytest.raises(RuntimeError):
+    with pytest.raises(nncf.ValidationError):
         outputs = forward_trace_only(lambda x: x[0], [input_tensor1, input_tensor2])
 
 

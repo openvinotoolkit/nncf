@@ -65,7 +65,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         ]
 
         if len(weight_ports) != 1 or len(activation_ports) != 1:
-            raise RuntimeError(f"Too many weight or activation ports for {node.node_name} node")
+            raise nncf.ExcessParameterError(f"Too many weight or activation ports for {node.node_name} node")
 
         return {"activation": activation_ports[0], "weight": weight_ports[0]}
 
@@ -95,7 +95,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     def get_weight_tensor_port_id(node: NNCFNode) -> int:
         const_ids = node.layer_attributes.get_const_port_ids()
         if len(const_ids) != 1:
-            raise RuntimeError(f"Found more than 1 port for {node.node_name} node")
+            raise nncf.ExcessParameterError(f"Found more than 1 port for {node.node_name} node")
         return const_ids[0]
 
     @staticmethod
@@ -152,7 +152,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         channel_axis = 1
 
         if port_id > 1:
-            raise RuntimeError(f"{node.metatype.name} can not take more than 2 input tensors.")
+            raise nncf.ExcessParameterError(f"{node.metatype.name} can not take more than 2 input tensors.")
 
         if (
             node.metatype == OVMatMulMetatype

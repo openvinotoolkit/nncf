@@ -156,7 +156,7 @@ def quantize(
             advanced_parameters=advanced_parameters,
         )
 
-    raise RuntimeError(f"Unsupported type of backend: {backend}")
+    raise nncf.UnsupportedBackendError(f"Unsupported type of backend: {backend}")
 
 
 @api(canonical_alias="nncf.quantize_with_accuracy_control")
@@ -245,7 +245,7 @@ def quantize_with_accuracy_control(
             advanced_accuracy_restorer_parameters,
         )
 
-    raise RuntimeError(f"Unsupported type of backend: {backend}")
+    raise nncf.UnsupportedBackendError(f"Unsupported type of backend: {backend}")
 
 
 @api(canonical_alias="nncf.compress_weights")

@@ -278,7 +278,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         super().__init__(compression_controller)
         self.adaptive_controller = self._get_adaptive_compression_ctrl(compression_controller)
         if self.adaptive_controller is None:
-            raise RuntimeError(
+            raise nncf.InternalError(
                 "No compression algorithm supported by the accuracy-aware training "
                 "runner was specified in the config"
             )
@@ -305,7 +305,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
                 for prefix in ("pt_", "tf_"):
                     if algo_name.startswith(prefix):
                         return algo_name[len(prefix) :]
-                raise RuntimeError(
+                raise nncf.ValidationError(
                     "Compression algorithm names in the adaptive controllers "
                     'registry should be prefixed with "pt_" or "tf_" depending on the '
                     "backend framework"
@@ -329,7 +329,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         ):
             return compression_controller
 
-        raise RuntimeError(
+        raise nncf.InternalError(
             "No compression algorithm that supports adaptive compression accuracy-aware training was specified"
         )
 
@@ -572,4 +572,4 @@ def create_accuracy_aware_training_loop(
         return AdaptiveCompressionTrainingLoop(
             nncf_config, compression_ctrl, uncompressed_model_accuracy, **additional_runner_args
         )
-    raise RuntimeError("Incorrect accuracy aware mode in the config file")
+    raise nncf.InternalError("Incorrect accuracy aware mode in the config file")

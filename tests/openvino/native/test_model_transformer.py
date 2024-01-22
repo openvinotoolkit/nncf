@@ -310,7 +310,7 @@ def test_inplace_reduce_fn_dynamic_shapes(input_shape, raise_error):
     input_1 = opset.parameter(input_shape, name="Input")
     fn = get_inplace_min_op(reduction_axes=None)
     if raise_error:
-        with pytest.raises(RuntimeError):
+        with pytest.raises(nncf.ValidationError):
             fn(input_1, 0, "test")
         return
     op = fn(input_1, 0, "test")

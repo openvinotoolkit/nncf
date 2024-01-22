@@ -45,7 +45,7 @@ def quantize_impl(
     if fast_bias_correction is False:
         raise ValueError(f"fast_bias_correction={fast_bias_correction} is not supported")
     if target_device == TargetDevice.CPU_SPR:
-        raise RuntimeError("target_device == CPU_SPR is not supported")
+        raise nncf.InternalError("target_device == CPU_SPR is not supported")
     if mode is not None:
         raise ValueError(f"mode={mode} is not supported")
 

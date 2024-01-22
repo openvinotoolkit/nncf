@@ -627,7 +627,7 @@ def test_can_broadcast_initialized_precisions_in_distributed_mode(tmp_path, runs
     assert not compare_multi_gpu_dump(config, tmp_path, get_path_to_bitwidth_dump)
 
 
-@pytest.mark.parametrize(("method_name", "expected_behavior"), [("_calc_traces", pytest.raises(RuntimeError))])
+@pytest.mark.parametrize(("method_name", "expected_behavior"), [("_calc_traces", pytest.raises(nncf.InternalError))])
 def test_hawq_behaviour__if_method_returns_none(mocker, method_name, expected_behavior):
     config = HAWQConfigBuilder().with_sample_size([1, 1, 4, 4]).for_trial().build()
     config["compression"]["initializer"]["range"]["num_init_samples"] = 0

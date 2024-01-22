@@ -639,9 +639,9 @@ class NNCFGraph:
     def get_node_by_name(self, name: NNCFNodeName) -> NNCFNode:
         node_ids = self._node_name_to_node_id_map.get(name, None)
         if node_ids is None:
-            raise RuntimeError("Could not find a node {} in NNCFGraph!".format(name))
+            raise nncf.InternalError("Could not find a node {} in NNCFGraph!".format(name))
         if len(node_ids) > 1:
-            raise RuntimeError(f"More than one node in NNCFGraph matches name {name}")
+            raise nncf.InternalError(f"More than one node in NNCFGraph matches name {name}")
 
         node_key = f"{node_ids[0]} {name}"
         return self._nodes[node_key]
@@ -692,7 +692,7 @@ class NNCFGraph:
             elif to_node_key in match:
                 input_nncf_edges.append(nncf_edge)
             else:
-                raise RuntimeError("Invalid graph expression supplied!")
+                raise nncf.InternalError("Invalid graph expression supplied!")
 
         return NNCFGraphPatternIO(input_nncf_edges, output_nncf_edges)
 

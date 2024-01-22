@@ -118,7 +118,7 @@ def test_ptq_quantization(
 
     try:
         if test_case_name not in reference_data:
-            raise RuntimeError(f"{test_case_name} does not exist in 'reference_data.yaml'")
+            raise nncf.ValidationError(f"{test_case_name} does not exist in 'reference_data.yaml'")
 
         test_model_param = TEST_CASES[test_case_name]
 

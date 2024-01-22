@@ -245,7 +245,7 @@ def load_module_state(base_module: Module, state: _ModuleState, strict=False) ->
             msg = f"Could not find a module to restore state: {name}"
             nncf_logger.debug(msg)
             if strict:
-                raise RuntimeError(msg) from e
+                raise nncf.InternalError(msg) from e
 
     for name, param in base_module.named_parameters():
         param.requires_grad = state.requires_grad_state[name]

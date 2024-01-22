@@ -76,7 +76,7 @@ class CompositeCompressionLoss(CompressionLoss):
         """
 
         if len(self._child_losses) == 0:
-            raise RuntimeError("Cannot calculate the loss value because the number of child loss is 0.")
+            raise nncf.InternalError("Cannot calculate the loss value because the number of child loss is 0.")
 
         result_loss = 0
         for loss in self._child_losses:
@@ -200,7 +200,7 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         :param child_ctrl: A `CompressionAlgorithmController` instance.
         """
         if child_ctrl.model is not self.model:
-            raise RuntimeError("Cannot create a composite controller from controllers belonging to different models!")
+            raise nncf.InternalError("Cannot create a composite controller from controllers belonging to different models!")
 
         self._child_ctrls.append(child_ctrl)
         self._loss.add(child_ctrl.loss)
@@ -345,7 +345,7 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
 
     def get_compression_state(self) -> Dict[str, Any]:
         if self._builder_state is None:
-            raise RuntimeError("Internal error: builder state is not set for the controller")
+            raise nncf.InternalError("Internal error: builder state is not set for the controller")
 
         return {self.BUILDER_STATE: self._builder_state, self.CONTROLLER_STATE: self.get_state()}
 

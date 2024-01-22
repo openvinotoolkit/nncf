@@ -147,7 +147,7 @@ def get_dataset(dataset_name: str) -> torch.utils.data.Dataset:
         from examples.torch.semantic_segmentation.datasets import Mapillary as dataset
     else:
         # Should never happen...but just in case it does
-        raise RuntimeError('"{0}" is not a supported dataset.'.format(dataset_name))
+        raise nncf.UnsupportedDatasetError('"{0}" is not a supported dataset.'.format(dataset_name))
     return dataset
 
 

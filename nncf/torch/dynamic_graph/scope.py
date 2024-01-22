@@ -35,12 +35,12 @@ class ScopeElement:
     def from_str(string: str):
         matches = re.search(r"(.*)\[(.*)\]|(.*)", string)
         if matches is None:
-            raise RuntimeError("Invalid scope element string")
+            raise nncf.InternalError("Invalid scope element string")
         if matches.groups()[0] is None and matches.groups()[1] is None:
             return ScopeElement(matches.groups()[2])
         if matches.groups()[0] is not None and matches.groups()[1] is not None:
             return ScopeElement(matches.groups()[0], matches.groups()[1])
-        raise RuntimeError("Could not parse the scope element string")
+        raise nncf.InternalError("Could not parse the scope element string")
 
 
 class Scope:

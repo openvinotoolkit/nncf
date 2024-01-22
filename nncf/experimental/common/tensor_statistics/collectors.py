@@ -255,11 +255,11 @@ class TensorCollector:
         :reducer_output_port_id: Reducer target output port id.
         """
         if container_key in self._stat_container_kwargs_map:
-            raise RuntimeError(
+            raise nncf.InternalError(
                 f"Two different statistic branches for one container key {container_key} are encountered"
             )
         if any(aggr is aggregator for aggr in self._aggregators.values()):
-            raise RuntimeError(f"One aggregator instance {aggregator} for different branches is encountered")
+            raise nncf.InternalError(f"One aggregator instance {aggregator} for different branches is encountered")
 
         self._reducers.add(reducer)
         key = (hash(reducer), reducer_output_port_id, hash(aggregator))
@@ -426,7 +426,7 @@ class TensorCollector:
                 for (_, percentile), value in kwargs.items():
                     percentile_vs_values_dict[percentile] = value
             return statistic_container_cls(percentile_vs_values_dict=percentile_vs_values_dict)
-        raise RuntimeError(
+        raise nncf.InternalError(
             f"Statistic collector class {statistic_container_cls} is not supported by the TensorCollector class."
         )
 

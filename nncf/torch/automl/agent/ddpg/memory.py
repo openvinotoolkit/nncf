@@ -81,7 +81,7 @@ class RingBuffer:
             self.data.append(v)
         else:
             # This should never happen.
-            raise RuntimeError()
+            raise nncf.BufferFullError()
 
 
 def zeroed_observation(observation):

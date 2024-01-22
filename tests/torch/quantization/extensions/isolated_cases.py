@@ -76,7 +76,7 @@ def _parametrized_missing_cuda_test_body(mocker, exception):
     patched_fn = mocker.patch("torch.cuda.is_available")
     patched_fn.return_value = True
     # loading should trigger an exception and a message to the user
-    with pytest.raises(RuntimeError) as exc_info:
+    with pytest.raises(nncf.InstallationError) as exc_info:
         from nncf.torch.quantization.extensions import QuantizedFunctionsCUDALoader
 
         QuantizedFunctionsCUDALoader.load()

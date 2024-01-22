@@ -582,7 +582,7 @@ class TemplateTestStatisticsAggregator:
         elif test_params.collector_type == BCStatsCollectors.RAW:
             tensor_collector = algo_backend.raw_statistic_collector(len(dataset_samples))
         else:
-            raise RuntimeError()
+            raise nncf.InvalidCollectorTypeError(f"Invalid collector type: {test_params.collector_type}")
 
         target_point = self.get_target_point(test_params.target_type)
 
@@ -616,7 +616,7 @@ class TemplateTestStatisticsAggregator:
                 ret_val = stat.values
                 test_params.ref_values = dataset_samples
             else:
-                raise RuntimeError()
+                raise nncf.InvalidCollectorTypeError(f"Invalid collector type: {test_params.collector_type}")
 
             for val, ref in zip(ret_val, test_params.ref_values):
                 if isinstance(ref, np.ndarray):

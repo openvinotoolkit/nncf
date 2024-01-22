@@ -70,7 +70,7 @@ class StatisticsAggregator(ABC):
             self._register_statistics(processed_outputs, merged_statistics)
             empty_statistics = False
         if empty_statistics:
-            raise RuntimeError(
+            raise nncf.ValidationError(
                 "Calibration dataset must not be empty. Please provide calibration dataset with at least one sample."
             )
 

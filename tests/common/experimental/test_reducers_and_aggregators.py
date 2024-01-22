@@ -529,7 +529,7 @@ class TemplateTestReducersAggreagtors:
             params["inplace"] = [False, True]
             params["channel_axis"] = [1, 2]
         else:
-            raise RuntimeError(
+            raise nncf.ValidationError(
                 "test_min_max_mean_reducer_hash_equal configurated in a wrong way."
                 f" Wrong reducer_name: {reducer_name}"
             )

@@ -133,5 +133,5 @@ def test_repeat_compression_fails():
     model = SimplestModel()
     nncf_config = NNCFConfig.from_dict({"input_info": {"sample_size": SimplestModel.INPUT_SIZE}})
     _ = create_compressed_model(model, nncf_config)
-    with pytest.raises(RuntimeError, match="The model object has already been compressed."):
+    with pytest.raises(nncf.InternalError, match="The model object has already been compressed."):
         _ = create_compressed_model(model, nncf_config)

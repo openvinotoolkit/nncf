@@ -97,7 +97,7 @@ def get_dataset_for_test(dataset_name: str, data_dir: Path) -> Path:
     if dataset_name == "wider":
         return prepare_wider_for_test(data_dir)
 
-    raise RuntimeError(f"Unknown dataset: {dataset_name}.")
+    raise nncf.ValidationError(f"Unknown dataset: {dataset_name}. Supported datasets are: 'imagenette2-320' and 'wider' ")
 
 
 def get_nncf_dataset_from_ac_config(model_path, config_path, data_dir, framework="openvino", device="CPU"):

@@ -101,7 +101,7 @@ class BiasCorrection(Algorithm):
         self._algorithm_key = f"BC_{hash(self)}"
 
         if self.apply_for_all_nodes:
-            raise RuntimeError("BiasCorrection algorithm does not support apply_for_all_nodes=True yet")
+            raise nncf.InternalError("BiasCorrection algorithm does not support apply_for_all_nodes=True yet")
 
     @property
     def available_backends(self) -> List[BackendType]:
@@ -123,7 +123,7 @@ class BiasCorrection(Algorithm):
 
             self._backend_entity = OVBiasCorrectionAlgoBackend()
         else:
-            raise RuntimeError(
+            raise nncf.UnsupportedBackendError(
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
             )
 

@@ -74,7 +74,7 @@ class BaseTestReducersAggregators(TemplateTestReducersAggreagtors, ABC):
             return tensor.float()
         if dtype == Dtype.INTEGER:
             return tensor.int()
-        raise RuntimeError()
+        raise nncf.ValidationError(f"Invalid dtype: {dtype}. Supported dtypes are {Dtype.FLOAT} and {Dtype.INTEGER}")
 
 
 class TestCPUReducersAggregators(BaseTestReducersAggregators):

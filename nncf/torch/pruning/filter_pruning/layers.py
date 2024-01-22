@@ -79,7 +79,7 @@ def apply_filter_binary_mask(
     :return: result with applied mask
     """
     if filter_mask.size(0) != module_parameter.size(dim):
-        raise RuntimeError(
+        raise nncf.InternalError(
             "Shape of mask = {} for module {} isn't broadcastable to weight shape={}."
             " ".format(filter_mask.shape, node_name_for_logging, module_parameter.shape)
         )

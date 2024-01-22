@@ -128,7 +128,7 @@ def get_backend(model: TModel) -> BackendType:
     if BackendType.OPENVINO in available_backends and is_openvino_model(model):
         return BackendType.OPENVINO
 
-    raise RuntimeError(
+    raise nncf.UnsupportedBackendError(
         "Could not infer the backend framework from the model type because "
         "the framework is not available or the model type is unsupported. "
         "The available frameworks found: {}.".format(", ".join([b.value for b in available_backends]))

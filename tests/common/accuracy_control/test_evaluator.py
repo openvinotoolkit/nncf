@@ -84,7 +84,7 @@ def test_determine_mode(ts: TestCase):
         return (ts.metric_value, ts.values_for_each_item)
 
     if ts.raise_exception:
-        with pytest.raises(RuntimeError):
+        with pytest.raises(nncf.InternalError):
             _ = Evaluator.determine_mode(None, Dataset([None]), _validation_fn)
     else:
         is_metric_mode = Evaluator.determine_mode(None, Dataset([None]), _validation_fn)

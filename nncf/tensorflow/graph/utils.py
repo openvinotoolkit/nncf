@@ -128,7 +128,7 @@ def get_layer_to_graph_nodes_map(model, node_names):
     for node in node_names:
         parent_layer_name = node.split("/")[1]  # model_name/layer_name/layer_op_name/...
         if parent_layer_name not in layer_to_nodes_map:
-            raise RuntimeError("Could not find {} layer in Model".format(parent_layer_name))
+            raise nncf.ValidationError("Could not find {} layer in Model".format(parent_layer_name))
         layer_to_nodes_map[parent_layer_name]["nodes"].append(node)
     return layer_to_nodes_map
 

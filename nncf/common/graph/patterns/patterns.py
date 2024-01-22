@@ -257,7 +257,7 @@ def merge_two_types_of_operations(first_op: Dict, second_op: Dict, label: str) -
         res[GraphPattern.METATYPE_ATTR].extend(second_op[GraphPattern.METATYPE_ATTR])
         res[GraphPattern.LABEL_ATTR] = label
         return res
-    raise RuntimeError("Incorrect dicts of operations")
+    raise nncf.InternalError("Incorrect dicts of operations")
 
 
 @dataclass

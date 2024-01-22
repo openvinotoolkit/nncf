@@ -239,7 +239,7 @@ def test_ambigous_container_key():
     reducer = DummyTensorReducer("Dummy")
     aggregator = DummyTensorAggregator(5)
     collector.register_statistic_branch("A", reducer, aggregator)
-    with pytest.raises(RuntimeError):
+    with pytest.raises(nncf.InternalError):
         collector.register_statistic_branch("A", reducer, aggregator)
 
 
@@ -248,7 +248,7 @@ def test_ambiguous_branches():
     reducer = DummyTensorReducer("Dummy")
     aggregator = DummyTensorAggregator(5)
     collector.register_statistic_branch("A", reducer, aggregator)
-    with pytest.raises(RuntimeError):
+    with pytest.raises(nncf.InternalError):
         collector.register_statistic_branch("B", reducer, aggregator)
 
 
@@ -326,7 +326,7 @@ def test_wrong_statistic_container_class():
     tensor_collector = TensorCollector(BadStatContainer)
     tensor_collector.register_statistic_branch("A", DummyTensorReducer("A"), DummyTensorAggregator())
     tensor_collector.register_input_for_all_reducers(NumpyNNCFTensor(np.array(1)))
-    with pytest.raises(RuntimeError):
+    with pytest.raises(nncf.InternalError):
         tensor_collector.get_statistics()
 
 

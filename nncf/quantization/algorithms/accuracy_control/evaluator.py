@@ -224,7 +224,7 @@ class Evaluator:
         try:
             metric_value = metric_value if metric_value is None else float(metric_value)
         except Exception as ex:
-            raise RuntimeError(
+            raise nncf.InternalError(
                 f"Metric value of {type(metric_value)} type was returned from the `validation_fn` "
                 "but the float value is expected."
             ) from ex
@@ -257,7 +257,7 @@ class Evaluator:
         if isinstance(metric_value, float) and (values_for_each_item is None or convert_to_float_possible):
             metric_mode = True
         elif values_for_each_item is not None and not isinstance(values_for_each_item[0], list):
-            raise RuntimeError("Unexpected return value from provided validation function.")
+            raise nncf.InternalError("Unexpected return value from provided validation function.")
 
         return metric_mode
 

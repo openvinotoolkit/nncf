@@ -313,9 +313,9 @@ def _calculate_scaled_parameters(
         levels: Number of quantization levels.
     """
     if quantizer_config.mode == QuantizationMode.ASYMMETRIC:
-        raise RuntimeError("half_range is only applied to symmetric quantization mode.")
+        raise nncf.ValidationError("half_range is only applied to symmetric quantization mode.")
     if quant_group != QuantizerGroup.WEIGHTS:
-        raise RuntimeError("half_range is only applied to weight quantizers.")
+        raise nncf.ValidationError("half_range is only applied to weight quantizers.")
 
     num_bits = quantizer_config.num_bits
     level_low, level_high = calculate_symmetric_level_ranges(num_bits - 1, signed=True, narrow_range=False)

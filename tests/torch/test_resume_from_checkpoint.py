@@ -96,7 +96,7 @@ def test_can_resume_with_algo_mixing(mocker, is_strict):
         create_compressed_model_and_algo_for_test, desc.model_creator(), config, compression_state=compression_state
     )
     if is_strict:
-        with pytest.raises(RuntimeError):
+        with pytest.raises(nncf.InternalError):
             fn()
     else:
         _, compression_ctrl = fn()
@@ -196,7 +196,7 @@ def test_load_state_interoperability(_algos, _model_wrapper, is_resume):
             ref_num_loaded -= 2
         assert act_num_loaded == ref_num_loaded
     else:
-        with pytest.raises(RuntimeError):
+        with pytest.raises(nncf.InternalError):
             load_state(model_resume, saved_model_state, is_resume)
 
 

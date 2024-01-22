@@ -64,7 +64,7 @@ class DatasetBuilder(BaseDatasetBuilder):
         }
         dtype = dtype_map.get(self._dtype, None)
         if dtype is None:
-            raise ValueError("Invalid DType provided. Supported types: {}".format(dtype_map.keys()))
+            raise nncf.ValidationError("Invalid DType provided. Supported types: {}".format(dtype_map.keys()))
 
         return dtype
 

@@ -51,7 +51,7 @@ def reshape_weight_for_grouped_quantization(weight: Tensor, reduction_axis: int,
     assert isinstance(reduction_axis, int)
     channel_size = weight.shape[reduction_axis]
     if channel_size % group_size != 0:
-        raise RuntimeError(f"Channel size {channel_size} should be divisible by size of group {group_size}")
+        raise nncf.ValidationError(f"Channel size {channel_size} should be divisible by size of group {group_size}")
 
     num_groups_per_channel = channel_size // group_size
     shape = list(weight.shape)  # [a1, r, a2] - "r" refers to number of channels along reduction axis

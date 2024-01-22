@@ -78,7 +78,7 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
     elif package_type == "build_w":
         run_cmd_line = f"{python_executable_with_venv} -m build -n -w"
     else:
-        raise RuntimeError(f"Invalid package type: {package_type}")
+        raise nncf.ValidationError(f"Invalid package type: {package_type}")
 
     # Currently CI runs on RTX3090s, which require CUDA 11 to work.
     # Current torch, however (v1.12), is installed via pip using .whl packages

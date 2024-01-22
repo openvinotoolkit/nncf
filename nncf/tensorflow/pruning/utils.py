@@ -94,7 +94,7 @@ def collect_output_shapes(model: "NNCFNetwork", graph: NNCFGraph) -> Dict[NNCFNo
         out_shape = layer.get_output_shape_at(node_index)[dims_slice]
 
         if not is_valid_shape(in_shape) or not is_valid_shape(out_shape):
-            raise RuntimeError(f"Input/output shape is not defined for layer `{layer.name}` ")
+            raise ncf.ValidationError(f"Input/output shape is not defined for layer `{layer.name}` ")
 
         layers_out_shapes[node.node_name] = out_shape
 
@@ -106,7 +106,7 @@ def collect_output_shapes(model: "NNCFNetwork", graph: NNCFGraph) -> Dict[NNCFNo
         out_shape = layer.get_output_shape_at(node_index)[1:]
 
         if not is_valid_shape(in_shape) or not is_valid_shape(out_shape):
-            raise RuntimeError(f"Input/output shape is not defined for layer `{layer.name}` ")
+            raise nncf.ValidationError(f"Input/output shape is not defined for layer `{layer.name}` ")
 
         layers_out_shapes[node.node_name] = out_shape
     return layers_out_shapes

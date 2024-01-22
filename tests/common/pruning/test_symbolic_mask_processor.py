@@ -26,7 +26,7 @@ from nncf.experimental.common.pruning.propagation_data import PruningBlock
 def test_ones(shape, raise_runtime_error):
     device = None
     if raise_runtime_error:
-        with pytest.raises(RuntimeError):
+        with pytest.raises(nncf.ValidationError):
             tensor = SymbolicMaskProcessor.ones(shape, device)
     else:
         tensor = SymbolicMaskProcessor.ones(shape, device)

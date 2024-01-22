@@ -44,7 +44,7 @@ class PTCompositeCompressionAlgorithmBuilder(CompositeCompressionAlgorithmBuilde
 
         algo_names = extract_algorithm_names(config)
         if len(algo_names) < 2:
-            raise RuntimeError(
+            raise nncf.ValidationError(
                 "Composite algorithm builder must be supplied with a config with more than one "
                 "compression algo specified!"
             )

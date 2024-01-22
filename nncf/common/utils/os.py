@@ -17,7 +17,7 @@ import psutil
 
 def fail_if_symlink(file: Path):
     if file.is_symlink():
-        raise RuntimeError("File {} is a symbolic link, aborting.".format(str(file)))
+        raise nncf.ValidationError("File {} is a symbolic link, aborting.".format(str(file)))
 
 
 @contextmanager

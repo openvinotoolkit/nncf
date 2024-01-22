@@ -330,7 +330,7 @@ def convert_quantization_parameters_to_dict(params: QuantizationParameters) -> D
         if params.per_channel is not None:
             result["per_channel"] = params.per_channel
         if params.narrow_range is not None:
-            raise RuntimeError("narrow_range parameter is not supported in the legacy format")
+            raise nncf.ParameterNotSupportedError("narrow_range parameter is not supported in the legacy format")
     return result
 
 
@@ -342,7 +342,7 @@ def convert_range_estimator_parameters_to_dict(params: RangeEstimatorParameters)
     :return: range estimator parameters as dict in the legacy format
     """
     if params.min.clipping_value is not None or params.max.clipping_value is not None:
-        raise RuntimeError("clipping_value parameter is not supported in the legacy format")
+        raise nncf.ParameterNotSupportedError("clipping_value parameter is not supported in the legacy format")
 
     result = {}
     if (
@@ -378,7 +378,7 @@ def convert_range_estimator_parameters_to_dict(params: RangeEstimatorParameters)
     ):
         return {}
     else:
-        raise RuntimeError(f"The following range estimator parameters are not supported: {str(params)}")
+        raise nncf.ParameterNotSupportedError(f"The following range estimator parameters are not supported: {str(params)}")
 
     return result
 
@@ -438,11 +438,11 @@ def apply_advanced_parameters_to_config(
         config["initializer"] = initializer
 
     if params.bias_correction_params.apply_for_all_nodes:
-        raise RuntimeError(
+        raise nncf.ParameterNotSupportedError(
             "apply_for_all_nodes parameter of the BiasCorrection algorithm is not supported in the legacy format"
         )
 
     if params.bias_correction_params.threshold is not None:
-        raise RuntimeError("threshold parameter of the BiasCorrection algorithm is not supported in the legacy format")
+        raise nncf.ParameterNotSupportedError("threshold parameter of the BiasCorrection algorithm is not supported in the legacy format")
 
     return config

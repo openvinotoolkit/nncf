@@ -31,6 +31,24 @@ from nncf.quantization import quantize_with_accuracy_control as quantize_with_ac
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters as AdvancedQuantizationParameters
 from nncf.scopes import IgnoredScope as IgnoredScope
 from nncf.version import __version__ as __version__
+from nncf.errors import ValidationError
+from nncf.errors import InternalError
+from nncf.errors import UnsupportedDatasetError
+from nncf.errors import InvalidFolderPathError
+from nncf.errors import UnsupportedBackendError
+from nncf.errors import InconsistentRegistryError
+from nncf.errors import InvalidQuantizerGroupError
+from nncf.errors import InstallationError
+from nncf.errors import UnsupportedModelError
+from nncf.errors import UnsupportedVersionError
+from nncf.errors import ModuleNotFoundError
+from nncf.errors import ParameterNotFoundError
+from nncf.errors import ParameterNotSupportedError
+from nncf.errors import NotSupportedError
+from nncf.errors import ExcessParameterError
+from nncf.errors import InvalidCollectorTypeError
+from nncf.errors import BufferFullError
+from nncf.errors import UnknownDatasetError
 
 _SUPPORTED_FRAMEWORKS = ["torch", "tensorflow", "onnx", "openvino"]
 

@@ -512,7 +512,7 @@ def test_match_key(desc: MatchKeyDesc, mocker, nncf_caplog):
 
     assert key_matcher._processed_keys._keys == desc.processed_keys._keys
     if desc.expects_error:
-        with pytest.raises(RuntimeError):
+        with pytest.raises(nncf.InternalError):
             key_matcher.handle_problematic_keys()
     else:
         with nncf_caplog.at_level(logging.WARNING):

@@ -51,7 +51,7 @@ def get_module_by_name(module_name: str, model: torch.nn.Module) -> torch.nn.Mod
                 curr_module = child_module
                 break
         else:
-            raise RuntimeError(f"Could not find the {module_name} module in the model.")
+            raise nncf.ModuleNotFoundError(f"Could not find the {module_name} module in the model.")
     return curr_module
 
 
@@ -72,7 +72,7 @@ def get_weight_node(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCF
         if edge.input_port_id == weight_port_id:
             weight_node = find_weight_node_in_constant_subgraph(prev_node, graph)
             if weight_node is None:
-                raise RuntimeError("Could not find a constant node in the model graph.")
+                raise nncf.InternalError("Could not find a constant node in the model graph.")
             return weight_node
 
 
@@ -178,7 +178,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         module = get_module_by_name(module_name, model)
         weight = getattr(module, weight_attr_name)
         if weight is None or not isinstance(weight, torch.nn.Parameter):
-            raise RuntimeError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
+            raise nncf.ParameterNotFoundError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
 
         return Tensor(weight)
 
@@ -202,7 +202,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             module = get_module_by_name(module_name, model)
             weight = getattr(module, weight_attr_name)
             if weight is None or not isinstance(weight, torch.nn.Parameter):
-                raise RuntimeError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
+                raise nncf.ParameterNotFoundError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
 
             # calculates compressed weights and decompression parameters
             compressed_weight = compress_weight(Tensor(weight), wc_params.reduction_axis, compression_config)

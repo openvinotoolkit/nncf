@@ -208,7 +208,7 @@ def _collect_module_attrs_and_ignored_algorithms(
     if op_name in OP_NAMES_WITH_WEIGHTS:
         curr_module = ctx.get_current_module()
         if curr_module is None:
-            raise RuntimeError(
+            raise nncf.ValidationError(
                 f"Operation {op_name} requires module attributes, but it was executed outside any module"
             )
         layer_attrs = get_layer_attributes_from_module(curr_module, op_name)

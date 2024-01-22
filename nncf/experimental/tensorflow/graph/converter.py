@@ -377,7 +377,7 @@ class SubclassedConverter(TFModelConverter):
         elif dtype.is_integer:
             tensor_dtype = Dtype.INTEGER
         else:
-            raise RuntimeError(f"Unexpected dtype of tensor: {dtype}")
+            raise nncf.InternalError(f"Unexpected dtype of tensor: {dtype}")
 
         return tensor_dtype
 

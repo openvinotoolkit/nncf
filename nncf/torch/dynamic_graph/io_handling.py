@@ -178,7 +178,7 @@ class FillerInputInfo(ModelInputInfo):
         """
         input_infos = config.get("input_info")
         if input_infos is None:
-            raise RuntimeError("Passed NNCFConfig does not have an 'input_info' field")
+            raise nncf.ValidationError("Passed NNCFConfig does not have an 'input_info' field")
         if isinstance(input_infos, dict):
             return FillerInputInfo(
                 [
@@ -202,7 +202,7 @@ class FillerInputInfo(ModelInputInfo):
                     )
                 )
             return FillerInputInfo(elements)
-        raise RuntimeError("Invalid input_infos specified in config - should be either dict or list of dicts")
+        raise nncf.ValidationError("Invalid input_infos specified in config - should be either dict or list of dicts")
 
     def get_forward_inputs(
         self, device: Optional[Union[str, torch.device]] = None
