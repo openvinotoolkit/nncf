@@ -22,7 +22,6 @@ class BackendParameters:
     WEIGHTS = "weights"
     LEVEL_LOW = "level_low"
     LEVEL_HIGH = "level_high"
-    USE_POT = "use_pot"
 
 
 def is_weight_compression_needed(advanced_parameters: Optional[AdvancedQuantizationParameters]) -> bool:

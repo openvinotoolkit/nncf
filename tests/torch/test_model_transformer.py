@@ -609,7 +609,8 @@ def test_shared_fn_insertion_point(priority, compression_module_registered, mock
         model = NNCFNetwork(InsertionPointTestModel(), FillerInputInfo([FillerInputElement([1, 1, 10, 10])]))
         if compression_module_registered:
             model.nncf.register_compression_module_type(ExtraCompressionModuleType.EXTERNAL_OP)
-        command = PTSharedFnInsertionCommand(tps, hook_instance, OP_UNIQUE_NAME, priority)
+        unique_name = f"{OP_UNIQUE_NAME}[{';'.join([tp.target_node_name for tp in tps])}]"
+        command = PTSharedFnInsertionCommand(tps, hook_instance, unique_name, priority)
         transformation_layout = PTTransformationLayout()
         transformation_layout.register(command)
 

@@ -30,6 +30,7 @@ from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
 from nncf.experimental.common.tensor_statistics.collectors import MedianAbsoluteDeviationAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MinReducer
+from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
 from nncf.experimental.common.tensor_statistics.collectors import PercentileAggregator
 from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
@@ -41,6 +42,7 @@ from nncf.torch.tensor_statistics.statistics import PTMeanTensorStatistic
 from nncf.torch.tensor_statistics.statistics import PTMedianMADTensorStatistic
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 from nncf.torch.tensor_statistics.statistics import PTPercentileTensorStatistic
+from nncf.torch.tensor_statistics.statistics import PTRawTensorStatistic
 
 
 class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
@@ -543,6 +545,21 @@ def get_mean_statistic_collector(
     collector = TensorCollector(PTMeanTensorStatistic)
     collector.register_statistic_branch(PTMeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
     collector.register_statistic_branch(PTMeanTensorStatistic.SHAPE_STAT, noop_reducer, aggregate_shape)
+    return collector
+
+
+def get_raw_stat_collector(num_samples: Optional[int] = None) -> TensorCollector:
+    """
+    Raw statistic collector builder.
+
+    :param num_samples: Maximum number of samples to collect.
+    :return: Raw statistic collector.
+    """
+    reducer = PTNoopReducer()
+    aggregator = NoopAggregator(num_samples)
+
+    collector = TensorCollector(PTRawTensorStatistic)
+    collector.register_statistic_branch(PTRawTensorStatistic.VALUES_STATS, reducer, aggregator)
     return collector
 
 

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, List, Optional, Set
 
 import numpy as np
 
@@ -19,8 +19,10 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
-from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
+from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
@@ -32,12 +34,11 @@ from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.hardware.config import ONNXHWConfig
 from nncf.onnx.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 from nncf.onnx.quantization.quantizer_parameters import convert_fq_params_to_onnx_params
-from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
-from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
+from nncf.onnx.statistics.collectors import ONNX_REDUCERS_MAP
+from nncf.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
 from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
-from nncf.quantization.advanced_parameters import AggregatorType
 from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeConvertParameters
@@ -60,7 +61,11 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
-        return [om.ONNXConvolutionMetatype, om.ONNXConvolutionTransposeMetatype, *MATMUL_METATYPES]
+        return [
+            om.ONNXConvolutionMetatype,
+            om.ONNXConvolutionTransposeMetatype,
+            *MATMUL_METATYPES,
+        ]
 
     @property
     def add_metatypes(self) -> List[OperatorMetatype]:
@@ -99,7 +104,9 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 
     @staticmethod
-    def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+    def get_start_nodes_for_activation_path_tracing(
+        nncf_graph: NNCFGraph,
+    ) -> List[NNCFNode]:
         return nncf_graph.get_input_nodes()
 
     @staticmethod
@@ -130,7 +137,9 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         raise RuntimeError("FakeConvert insertion not implemented in ONNX backend!")
 
     @staticmethod
-    def unify_statistics(statistics: List[ONNXMinMaxTensorStatistic]) -> ONNXMinMaxTensorStatistic:
+    def unify_statistics(
+        statistics: List[ONNXMinMaxTensorStatistic],
+    ) -> ONNXMinMaxTensorStatistic:
         max_values, min_values = [], []
         for statistic in statistics:
             max_values.append(np.array(statistic.max_values).flatten())
@@ -148,44 +157,55 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         range_estimator_params: RangeEstimatorParameters,
         nncf_graph: NNCFGraph,
         target_point: ONNXTargetPoint,
-        quantizer_config: QuantizerConfig,
+        collector_params: RangeInitCollectorParams,
         inplace: bool,
         num_samples: int = None,
-    ) -> Union[ONNXMinMaxStatisticCollector, ONNXMeanMinMaxStatisticCollector]:
-        is_per_channel = quantizer_config.per_channel
+    ) -> TensorCollector:
+        is_per_channel = collector_params.is_per_channel
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        use_abs_max = quantizer_config.mode == QuantizationMode.SYMMETRIC
-        reduction_shape = None  # Per-Tensor
+        use_abs_max = collector_params.use_abs_max
         quantization_axis = get_quantization_axis(is_per_channel, node, target_point)
         quantized_tensor_shape = get_quantized_tensor_shape(nncf_graph, node, target_point)
+        reduction_axes = None  # Per-Tensor
         if quantization_axis is not None and quantized_tensor_shape is not None:  # Per-Channel
-            reduction_shape = get_reduction_shape(quantized_tensor_shape, quantization_axis)
-
-        if (
-            range_estimator_params.min.statistics_type == StatisticsType.MIN
-            and range_estimator_params.min.aggregator_type == AggregatorType.MIN
-            and range_estimator_params.max.statistics_type == StatisticsType.MAX
-            and range_estimator_params.max.aggregator_type == AggregatorType.MAX
+            reduction_axes = get_reduction_shape(quantized_tensor_shape, quantization_axis)
+        collector = TensorCollector(ONNXMinMaxTensorStatistic)
+        for params, container_key in zip(
+            [range_estimator_params.min, range_estimator_params.max],
+            [ONNXMinMaxTensorStatistic.MIN_STAT, ONNXMinMaxTensorStatistic.MAX_STAT],
         ):
-            return ONNXMinMaxStatisticCollector(use_abs_max, reduction_shape, num_samples)
+            if params.statistics_type not in ONNX_REDUCERS_MAP:
+                raise RuntimeError(
+                    f"Statistic type: {params.statistics_type} is not supported for ONNX PTQ backend yet."
+                )
 
-        if (
-            range_estimator_params.min.statistics_type == StatisticsType.MIN
-            and range_estimator_params.min.aggregator_type == AggregatorType.MEAN
-            and range_estimator_params.max.statistics_type == StatisticsType.MAX
-            and range_estimator_params.max.aggregator_type == AggregatorType.MEAN
-        ):
-            return ONNXMeanMinMaxStatisticCollector(
-                use_per_sample_stats=False,
-                use_abs_max=use_abs_max,
-                reduction_shape=reduction_shape,
+            if params.aggregator_type not in AGGREGATORS_MAP:
+                raise RuntimeError(
+                    f"Aggregator type: {params.aggregator_type} is not supported for ONNX PTQ backend yet."
+                )
+
+            statistic_type = params.statistics_type
+            kwargs = {"reduction_axes": reduction_axes, "inplace": inplace}
+            if statistic_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
+                # TODO(dlyakhov): merge two quantile aggregators in one
+                if container_key == ONNXMinMaxTensorStatistic.MIN_STAT:
+                    quantile = params.quantile_outlier_prob
+                else:
+                    quantile = 1 - params.quantile_outlier_prob
+                kwargs.update({"quantile": [quantile]})
+            if use_abs_max and statistic_type == StatisticsType.MAX:
+                statistic_type = StatisticsType.ABS_MAX
+            reducer = ONNX_REDUCERS_MAP[statistic_type](reduction_axes=reduction_axes)
+
+            aggregation_axes = (0,)
+            aggregator = AGGREGATORS_MAP[params.aggregator_type](
+                aggregation_axes=aggregation_axes,
                 num_samples=num_samples,
-                window_size=None,
+                tensor_processor=ONNXNNCFCollectorTensorProcessor,
             )
-        raise RuntimeError(
-            "The following range estimator parameters are not supported by ONNX backend by now: "
-            f"{str(range_estimator_params)}"
-        )
+
+            collector.register_statistic_branch(container_key, reducer, aggregator)
+        return collector
 
     @staticmethod
     def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:

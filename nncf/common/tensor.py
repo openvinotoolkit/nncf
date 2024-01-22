@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from abc import abstractmethod
 from typing import List, Optional, TypeVar
 
 TensorType = TypeVar("TensorType")
@@ -39,9 +38,8 @@ class NNCFTensor:
         return self._tensor.shape
 
     @property
-    @abstractmethod
     def device(self) -> DeviceType:
-        pass
+        raise NotImplementedError
 
     def is_empty(self) -> bool:
-        return False
+        raise NotImplementedError

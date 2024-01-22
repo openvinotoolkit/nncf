@@ -20,13 +20,15 @@ from attr import dataclass
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.data.dataset import Dataset
+from nncf.experimental.tensor import Tensor
 from nncf.openvino.graph.node_utils import get_const_value
-from nncf.openvino.quantization.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization import compress_weights
-from nncf.quantization.algorithms.weight_compression.compression_info import WeightCompressionConfig
-from nncf.quantization.algorithms.weight_compression.quantize import get_integer_quantization_error
-from nncf.quantization.algorithms.weight_compression.quantize import reshape_weights_for_grouped_quantization
+from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
+from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
+from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
+from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.scopes import IgnoredScope
+from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.models import GatherAndMatmulShareData
 from tests.openvino.native.models import GatherWithTwoReductionAxes
 from tests.openvino.native.models import IdentityMatmul
@@ -197,7 +199,9 @@ def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
             check_fn = check_fn_per_node_map[op_name]
             actual_stats[op_name] = check_fn(op)
 
-    ref_stats_path = REFERENCE_SCALES_DIR / f"IntegerModel_compressed_weights_{mode.value}.json"
+    ref_stats_path = get_actual_reference_for_current_openvino(
+        REFERENCE_SCALES_DIR / f"IntegerModel_compressed_weights_{mode.value}.json"
+    )
 
     if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
         dump_to_json(ref_stats_path, actual_stats)
@@ -469,7 +473,7 @@ LIST_DESCS = [
 
 @pytest.mark.parametrize("desc", LIST_DESCS, ids=map(str, LIST_DESCS))
 def test_quantization_error_calculation(desc: QuantErrorDesc):
-    weight = desc.weight
+    weight = Tensor(desc.weight)
     axis = 1
     actual_error = get_integer_quantization_error(weight, axis, desc.config)
     ref_error = desc.ref_error
@@ -548,7 +552,7 @@ def test_weight_compress_with_ignored_scope(ignored_scope, num_compressed):
 
 @pytest.mark.parametrize("desc", CALCULATE_SCALE_DESCS)
 def test_calculate_scale_per_group(desc: CalculateScaleDesc):
-    reshaped_weight, reduction_axis = reshape_weights_for_grouped_quantization(
+    reshaped_weight, reduction_axis = reshape_weight_for_grouped_quantization(
         desc.weight, reduction_axis=desc.axis, group_size=desc.group_size
     )
     act_scale = np.max(np.abs(reshaped_weight), axis=reduction_axis, keepdims=True)  # [a1, r//gs, 1, a2]
@@ -557,12 +561,12 @@ def test_calculate_scale_per_group(desc: CalculateScaleDesc):
 
 def test_raise_error_for_many_axes():
     with pytest.raises(AssertionError):
-        reshape_weights_for_grouped_quantization(WEIGHTS_2x4, reduction_axis=(0, 1), group_size=1)
+        reshape_weight_for_grouped_quantization(WEIGHTS_2x4, reduction_axis=(0, 1), group_size=1)
 
 
 def test_raise_error_with_tuple():
     with pytest.raises(AssertionError):
-        reshape_weights_for_grouped_quantization(WEIGHTS_2x4, reduction_axis=(0,), group_size=3)
+        reshape_weight_for_grouped_quantization(WEIGHTS_2x4, reduction_axis=(0,), group_size=3)
 
 
 @pytest.mark.parametrize("mode", INT8_MODES)
@@ -579,7 +583,7 @@ def test_raise_error_with_tuple():
 )
 def test_raise_error_with_unsupported_params_for_int8(mocker, mode, params):
     with pytest.raises(AttributeError):
-        compress_weights(mocker.Mock(), mode=mode, **params)
+        compress_weights(ov.Model([], []), mode=mode, **params)
 
 
 @pytest.mark.parametrize("mode", INT4_NF4_MODES)

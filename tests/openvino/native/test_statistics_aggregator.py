@@ -105,10 +105,6 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         return dataset_samples
 
     @pytest.fixture
-    def is_stat_in_shape_of_scale(self) -> bool:
-        return True
-
-    @pytest.fixture
     def is_backend_support_custom_estimators(self) -> bool:
         return True
 

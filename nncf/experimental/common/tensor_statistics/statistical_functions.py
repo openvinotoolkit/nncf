@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor import functions as fns
+from nncf.experimental.tensor.functions import numeric as fns
 
 
 def mean_per_channel(x: Tensor, axis: int) -> Tensor:

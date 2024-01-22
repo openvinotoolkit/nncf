@@ -39,7 +39,7 @@ compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_SYM) # 
 
 - Generally, `INT4_SYM` mode is the fastest mixed-precision mode, but it may lead to a significant accuracy degradation or perplexity increase.
   Compressing weights asymmetrically (`INT4_ASYM` mode) is the way to increase accuracy, however in turns it slows down inference a bit.
-  If the accuracy or perplexity is still not satisfying, there are 2 more hyper-parameters to tune: `group_size` and `ratio`.
+  If the accuracy or perplexity is still not satisfying, there are 2 more hyper-parameters to tune: `group_size` and `ratio`. Please refer to the [example](https://github.com/openvinotoolkit/nncf/blob/develop/examples/llm_compression/openvino/tiny_llama_find_hyperparams) how to automatically tune these parameters.
   Lower group size and less ratio of 4-bit layers usually improve accuracy at the sacrifice of inference speed.
   Below is the example how to compress weights of 90% of layers to 4-bit integer asymmetrically with the group size 64, and
   the rest of layers to 8-bit asymmetric integer data type. The same parametrization is applicable for `INT4_SYM` mode.
@@ -293,6 +293,8 @@ Here is the word perplexity with data-free and data-aware mixed-precision INT4-I
 - [LLM Weight Compression](https://docs.openvino.ai/nightly/weight_compression.html)
 - [Optimize and Deploy Generative AI Models using Hugging Face Optimum Intel](https://docs.openvino.ai/nightly/gen_ai_guide.html)
 - [Optimum Intel documentation](https://huggingface.co/docs/optimum/intel/inference)
+- [Large Language Models Weight Compression Example](https://github.com/openvinotoolkit/nncf/blob/develop/examples/llm_compression/openvino/tiny_llama)
+- [Tuning Ratio and Group Size Example](https://github.com/openvinotoolkit/nncf/blob/develop/examples/llm_compression/openvino/tiny_llama_find_hyperparams)
 
 List of notebooks demonstrating OpenVINO conversion and inference together with NNCF weight compression for models from various domains:
 

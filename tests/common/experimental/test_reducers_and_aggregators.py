@@ -170,10 +170,6 @@ class TemplateTestReducersAggreagtors:
     def cast_tensor(self, tensor, dtype: Dtype):
         pass
 
-    @abstractmethod
-    def expand_dims(self, tensor, dims: Tuple[int, ...]):
-        pass
-
     def test_noop_reducer(self, reducers):
         reducer = reducers["noop"]()
         input_ = np.arange(24).reshape((1, 2, 3, 4))
