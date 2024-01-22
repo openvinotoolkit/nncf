@@ -10,9 +10,9 @@
 # limitations under the License.
 
 from functools import partial
+
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.utils.registry import Registry
-
 
 AWQ_PATTERNS = Registry("awq")
 
@@ -20,15 +20,9 @@ AWQ_PATTERNS = Registry("awq")
 @AWQ_PATTERNS.register("MatMul_Mul_MatMul")
 def create_matmul_mul_matmul(matmul_metatype, multiply_metatype) -> GraphPattern:
     pattern = GraphPattern()
-    linear_node_1 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "LINEAR", GraphPattern.METATYPE_ATTR: matmul_metatype}
-    )
-    mul_node = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: multiply_metatype}
-    )
-    linear_node_2 = pattern.add_node(
-        **{GraphPattern.LABEL_ATTR: "LINEAR", GraphPattern.METATYPE_ATTR: matmul_metatype}
-    )
+    linear_node_1 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "LINEAR", GraphPattern.METATYPE_ATTR: matmul_metatype})
+    mul_node = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MULTIPLY", GraphPattern.METATYPE_ATTR: multiply_metatype})
+    linear_node_2 = pattern.add_node(**{GraphPattern.LABEL_ATTR: "LINEAR", GraphPattern.METATYPE_ATTR: matmul_metatype})
 
     pattern.add_edge(linear_node_1, mul_node)
     pattern.add_edge(mul_node, linear_node_2)
