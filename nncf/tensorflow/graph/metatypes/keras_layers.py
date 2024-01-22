@@ -14,6 +14,7 @@ from typing import List, Optional, Type
 
 import tensorflow as tf
 
+import nncf
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype

@@ -12,6 +12,7 @@
 import copy
 from typing import Dict
 
+import nncf
 from nncf import ModelType
 from nncf import QuantizationPreset
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters

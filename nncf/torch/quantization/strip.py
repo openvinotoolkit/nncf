@@ -14,6 +14,7 @@ import numpy as np
 import torch
 from torch.quantization.fake_quantize import FakeQuantize
 
+import nncf
 from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import AsymmetricQuantizer

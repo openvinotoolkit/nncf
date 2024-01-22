@@ -16,6 +16,7 @@ import torch
 from torch.distributed import barrier
 from torch.nn import Module
 
+import nncf
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.common.deprecation import warning_deprecated

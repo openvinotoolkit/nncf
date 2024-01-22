@@ -11,6 +11,7 @@
 
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
+import nncf
 from nncf.api.compression import TModel
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.factory import NNCFGraphFactory

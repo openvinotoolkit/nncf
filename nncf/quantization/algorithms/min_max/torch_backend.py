@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 import torch
 
+import nncf
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph

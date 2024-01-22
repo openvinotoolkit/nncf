@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Set
 
 import numpy as np
 
+import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype

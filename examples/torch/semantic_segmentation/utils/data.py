@@ -19,6 +19,7 @@ import torchvision.transforms as T
 from PIL import Image
 from torchvision.transforms import ToPILImage
 from tqdm import tqdm
+import nncf
 
 
 def get_files(folder, name_filter=None, extension_filter=None):
@@ -34,7 +35,7 @@ def get_files(folder, name_filter=None, extension_filter=None):
 
     """
     if not os.path.isdir(folder):
-        raise nncf.InvalidFolderPathError('"{0}" is not a folder.'.format(folder))
+        raise nncf.InvalidPathError('"{0}" is not a folder.'.format(folder))
 
     # Filename filter: if not specified don't filter (condition always true);
     # otherwise, use a lambda expression to filter out files that do not

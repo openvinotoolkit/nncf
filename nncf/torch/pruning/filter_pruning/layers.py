@@ -12,6 +12,7 @@ import numpy as np
 import torch
 from torch import nn
 
+import nncf
 from nncf.common.graph import NNCFNodeName
 from nncf.torch.layer_utils import COMPRESSION_MODULES
 

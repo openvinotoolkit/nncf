@@ -11,6 +11,8 @@
 
 import sys
 
+import nncf
+
 import torch
 
 if len(sys.argv) != 3:

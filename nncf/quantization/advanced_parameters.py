@@ -19,6 +19,7 @@ from dataclasses import is_dataclass
 from enum import Enum
 from typing import Any, Dict, Optional, Union
 
+import nncf
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.utils.api_marker import api
 from nncf.quantization.range_estimator import AggregatorType

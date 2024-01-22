@@ -18,6 +18,7 @@ from torch import distributed as dist
 from torch.utils.data import Sampler
 
 from examples.torch.common.example_logger import logger
+import nncf
 
 
 def configure_distributed(config):

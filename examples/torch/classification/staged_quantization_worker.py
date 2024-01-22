@@ -57,6 +57,7 @@ from nncf.torch.initialization import default_criterion_fn
 from nncf.torch.initialization import register_default_init_args
 from nncf.torch.quantization.algo import QuantizationController
 from nncf.torch.utils import is_main_process
+import nncf
 
 
 class KDLossCalculator:

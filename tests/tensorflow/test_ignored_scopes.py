@@ -14,6 +14,7 @@ import pytest
 import tensorflow as tf
 from tensorflow.keras import layers
 
+import nncf
 from nncf.config.schemata.defaults import VALIDATE_SCOPES
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.layers.wrapper import NNCFWrapper

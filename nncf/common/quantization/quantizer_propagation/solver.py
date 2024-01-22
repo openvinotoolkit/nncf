@@ -18,6 +18,7 @@ from enum import Enum
 from typing import Deque, Dict, List, Optional, Set, Tuple
 
 import networkx as nx
+import nncf
 
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES

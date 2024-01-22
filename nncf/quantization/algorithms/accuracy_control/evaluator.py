@@ -12,6 +12,7 @@
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
+import nncf
 from nncf.common.factory import EngineFactory
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.backend import BackendType

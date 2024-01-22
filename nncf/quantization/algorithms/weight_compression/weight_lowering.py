@@ -18,7 +18,7 @@ from nncf.experimental.tensor.functions import numeric as fns
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
-
+import nncf
 
 @dataclass
 class CompressedWeight:

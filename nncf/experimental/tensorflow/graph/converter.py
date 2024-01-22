@@ -18,6 +18,7 @@ from tensorflow.lite.python.util import run_graph_optimizations as _run_graph_op
 from tensorflow.python.framework import convert_to_constants as _convert_to_constants
 from tensorflow.python.keras.saving import saving_utils as _saving_utils
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.experimental.tensorflow.graph.node_attributes import TFNodeAttributes

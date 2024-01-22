@@ -18,6 +18,7 @@ from typing import Dict, Hashable, List, Optional, Tuple
 import networkx as nx
 import networkx.algorithms.isomorphism as ism
 
+import nncf
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice

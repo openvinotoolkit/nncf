@@ -14,6 +14,7 @@ from typing import NamedTuple
 import networkx as nx
 import torch
 
+import nncf
 from nncf.common.graph import NNCFNodeName
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.torch.layers import NNCFConv2d

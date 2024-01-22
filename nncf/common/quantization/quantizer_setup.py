@@ -15,6 +15,7 @@ from copy import deepcopy
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set
 
+import nncf
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import NonWeightQuantizerId

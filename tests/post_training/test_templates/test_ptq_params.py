@@ -15,6 +15,7 @@ from typing import Dict
 
 import pytest
 
+import nncf
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype

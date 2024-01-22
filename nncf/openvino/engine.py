@@ -16,6 +16,7 @@ import openvino.runtime as ov
 
 from nncf.common.engine import Engine
 from nncf.parameters import TargetDevice
+import nncf
 
 
 class OVCompiledModelEngine(Engine):

@@ -11,6 +11,7 @@
 
 import pytest
 
+import nncf
 from nncf import NNCFConfig
 from nncf.common.logging import nncf_logger
 from nncf.config.structures import QuantizationRangeInitArgs

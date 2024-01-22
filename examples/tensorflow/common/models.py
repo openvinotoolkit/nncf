@@ -14,6 +14,7 @@ import tensorflow_hub as hub
 
 from nncf.tensorflow.tf_internals import Rescaling
 from nncf.tensorflow.tf_internals import imagenet_utils
+import nncf
 
 
 def mobilenet_v2_100_224(input_shape=None, trainable=True, batch_norm_momentum=0.997, **_):

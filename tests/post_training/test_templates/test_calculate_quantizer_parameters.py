@@ -16,6 +16,7 @@ from dataclasses import dataclass
 import numpy as np
 import pytest
 
+import nncf
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup

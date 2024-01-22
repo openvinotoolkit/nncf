@@ -15,6 +15,7 @@ from typing import Callable, Dict, List, Optional, Set, Tuple, Type
 import torch
 from torch import nn
 
+import nncf
 from nncf.common.logging import nncf_logger
 from nncf.common.scopes import matches_any
 from nncf.torch.dynamic_graph.scope import Scope

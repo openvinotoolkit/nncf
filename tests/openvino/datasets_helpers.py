@@ -19,6 +19,7 @@ from openvino.tools.accuracy_checker.argparser import build_arguments_parser
 from openvino.tools.accuracy_checker.config import ConfigReader
 from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
 
+import nncf
 from nncf import Dataset
 from tests.openvino.omz_helpers import OPENVINO_DATASET_DEFINITIONS_PATH
 

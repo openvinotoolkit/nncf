@@ -15,6 +15,7 @@ from typing import List, Union
 import numpy as np
 import pytest
 
+import nncf
 from nncf.data.dataset import Dataset
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 

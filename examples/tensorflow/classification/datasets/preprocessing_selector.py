@@ -14,6 +14,7 @@ from examples.tensorflow.classification.datasets.preprocessing.cifar import cifa
 from examples.tensorflow.classification.datasets.preprocessing.imagenet import imagenet_1000_to_1001_classes
 from examples.tensorflow.classification.datasets.preprocessing.imagenet import imagenet_preprocess_image
 from examples.tensorflow.classification.datasets.preprocessing.imagenet import imagenet_slim_preprocess_image
+import nncf
 
 PREPROCESSING_FN_MAP = {
     "imagenet2012": imagenet_preprocess_image,

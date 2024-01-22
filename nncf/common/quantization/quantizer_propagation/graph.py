@@ -46,7 +46,7 @@ from nncf.common.quantization.structs import QuantizationScheme as QuantizationM
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import UnifiedScaleType
 from nncf.common.scopes import should_consider_scope
-
+import nncf
 
 class QuantizerPropagationStateGraph(nx.DiGraph):
 

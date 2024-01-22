@@ -20,6 +20,7 @@ import torch
 from torch import cuda
 from torch import nn
 
+import nncf
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionStage
 from nncf.config.schemata.defaults import VALIDATE_SCOPES

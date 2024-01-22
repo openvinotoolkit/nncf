@@ -24,6 +24,7 @@ from examples.tensorflow.segmentation.models.model_selector import get_predefine
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from nncf.tensorflow.utils.state import TFCompressionState
 from nncf.tensorflow.utils.state import TFCompressionStateLoader
+import nncf
 
 
 class ModelType:

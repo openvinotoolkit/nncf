@@ -18,6 +18,7 @@ import networkx as nx
 import numpy as np
 import torch
 
+import nncf
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
 from nncf.common.logging import nncf_logger

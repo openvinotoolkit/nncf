@@ -13,6 +13,7 @@ from typing import Callable, List, TypeVar
 
 import numpy as np
 
+import nncf
 from nncf.common.utils.backend import BackendType
 
 TTensor = TypeVar("TTensor")

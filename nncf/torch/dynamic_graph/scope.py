@@ -11,7 +11,7 @@
 import re
 from copy import deepcopy
 from typing import List
-
+import nncf
 
 class ScopeElement:
     def __init__(self, calling_module_class_name: str, calling_field_name: str = None):

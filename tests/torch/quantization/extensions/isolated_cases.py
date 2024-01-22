@@ -21,6 +21,8 @@ import numpy as np
 import pytest
 import torch
 
+import nncf
+
 from tests.shared.isolation_runner import ISOLATION_RUN_ENV_VAR
 
 

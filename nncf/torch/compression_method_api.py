@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Tuple, TypeVar
 import torch
 from torch import nn
 
+import nncf
 from nncf.api.compression import CompressionLoss
 from nncf.common.compression import BaseCompressionAlgorithmBuilder
 from nncf.common.compression import BaseCompressionAlgorithmController

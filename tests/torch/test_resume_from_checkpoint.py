@@ -14,6 +14,7 @@ from functools import partial
 import pytest
 from torch.nn import DataParallel
 
+import nncf
 from nncf.common.logging import nncf_logger
 from nncf.torch import load_state
 from nncf.torch import register_default_init_args

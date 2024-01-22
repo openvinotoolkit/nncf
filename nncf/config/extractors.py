@@ -18,6 +18,7 @@ from nncf.config.config import NNCFConfig
 from nncf.config.schemata.defaults import NUM_BN_ADAPTATION_SAMPLES
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
+import nncf
 
 
 def extract_algorithm_names(config: NNCFConfig) -> List[str]:

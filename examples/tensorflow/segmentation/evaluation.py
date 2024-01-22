@@ -35,6 +35,7 @@ from nncf.tensorflow import register_default_init_args
 from nncf.tensorflow.helpers.model_manager import TFModelManager
 from nncf.tensorflow.utils.state import TFCompressionState
 from nncf.tensorflow.utils.state import TFCompressionStateLoader
+import nncf
 
 
 def get_argument_parser():

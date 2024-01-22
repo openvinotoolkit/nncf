@@ -14,7 +14,7 @@ import os
 import tensorflow as tf
 
 from examples.tensorflow.common.utils import set_memory_growth
-
+import nncf
 
 def get_distribution_strategy(config):
     if config.get("cpu_only", False):

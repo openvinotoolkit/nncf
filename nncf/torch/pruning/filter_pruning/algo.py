@@ -17,6 +17,7 @@ from typing import Dict, List, Tuple, Union
 import numpy as np
 import torch
 
+import nncf
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionStage

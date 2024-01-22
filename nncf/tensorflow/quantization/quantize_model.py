@@ -13,6 +13,7 @@ from typing import Any, Dict, Optional
 
 import tensorflow as tf
 
+import nncf
 from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.config import NNCFConfig

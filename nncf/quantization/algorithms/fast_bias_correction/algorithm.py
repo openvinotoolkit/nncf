@@ -12,6 +12,7 @@
 from math import inf
 from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
 
+import nncf
 from nncf import Dataset
 from nncf.common.factory import EngineFactory
 from nncf.common.factory import ModelTransformerFactory

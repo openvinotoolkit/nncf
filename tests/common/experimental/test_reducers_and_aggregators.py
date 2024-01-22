@@ -18,6 +18,7 @@ from typing import Any, Iterator, List, Optional, Tuple
 import numpy as np
 import pytest
 
+import nncf
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor

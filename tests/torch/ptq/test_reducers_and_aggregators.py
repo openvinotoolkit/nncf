@@ -16,6 +16,7 @@ import numpy as np
 import pytest
 import torch
 
+import nncf
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.torch.tensor import PTNNCFTensor

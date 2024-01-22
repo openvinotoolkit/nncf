@@ -19,6 +19,7 @@ from torch import distributed as dist
 from torch import nn
 from torch.nn import Module
 
+import nncf
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph import NNCFNodeName

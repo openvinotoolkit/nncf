@@ -58,7 +58,7 @@ from nncf.torch import create_compressed_model
 from nncf.torch import load_state
 from nncf.torch.initialization import register_default_init_args
 from nncf.torch.utils import is_main_process
-
+import nncf
 
 def get_arguments_parser():
     parser = get_common_argument_parser()

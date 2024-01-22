@@ -14,6 +14,7 @@ from typing import Any, Tuple
 import numpy as np
 import openvino.runtime as ov
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes

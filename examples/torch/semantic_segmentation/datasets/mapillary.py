@@ -15,7 +15,7 @@ from collections import OrderedDict
 from torch.utils import data
 
 import examples.torch.semantic_segmentation.utils.data as data_utils
-
+import nncf
 
 class Mapillary(data.Dataset):
     """Mapillary Vistas dataset

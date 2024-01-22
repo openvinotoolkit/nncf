@@ -15,6 +15,7 @@ from collections import defaultdict
 from collections import deque
 from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
+import nncf
 from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.tensor_statistics.collectors import NNCFTensor

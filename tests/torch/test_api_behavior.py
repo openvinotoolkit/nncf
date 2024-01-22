@@ -13,6 +13,7 @@ import pytest
 import torch
 from torch.utils.data import DataLoader
 
+import nncf
 from nncf import NNCFConfig
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch import create_compressed_model

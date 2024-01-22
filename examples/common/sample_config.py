@@ -15,6 +15,7 @@ from pathlib import Path
 import jstyleson as json
 from addict import Dict
 
+import nncf
 from nncf import NNCFConfig
 from nncf.common.utils.os import safe_open
 

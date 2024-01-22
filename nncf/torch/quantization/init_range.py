@@ -16,6 +16,7 @@ from typing import Callable, Dict, List, Tuple
 import numpy as np
 import torch
 
+import nncf
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.initialization.range import RangeInitConfig

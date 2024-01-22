@@ -69,6 +69,7 @@ from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
 from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.utils import get_filters_num
 from nncf.torch.utils import get_model_device
+import nncf
 
 PruningGroupID = int
 WidthType = int

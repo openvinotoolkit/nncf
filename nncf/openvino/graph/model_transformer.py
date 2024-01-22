@@ -18,6 +18,7 @@ import openvino.runtime as ov
 from openvino._pyopenvino import DescriptorTensor
 from openvino.runtime import opset13 as opset
 
+import nncf
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.model_transformer import TModel
 from nncf.common.graph.transformations.commands import TargetType

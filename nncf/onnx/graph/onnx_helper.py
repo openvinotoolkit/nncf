@@ -14,7 +14,7 @@ from typing import Dict, Iterator, List, Optional, Union
 import numpy as np
 import onnx
 from onnx import numpy_helper
-
+import nncf
 
 def get_name_to_node_map(model: onnx.ModelProto) -> Dict[str, onnx.NodeProto]:
     """

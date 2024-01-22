@@ -14,6 +14,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import tensorflow as tf
 
+import nncf
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController

@@ -12,6 +12,7 @@
 
 from typing import TypeVar
 
+import nncf
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend

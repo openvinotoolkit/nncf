@@ -11,6 +11,7 @@
 
 import pytest
 
+import nncf
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.scopes import IgnoredScope

@@ -11,6 +11,7 @@
 
 from typing import TypeVar
 
+import nncf
 from nncf.common.engine import Engine
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.model_transformer import ModelTransformer

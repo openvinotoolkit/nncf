@@ -12,6 +12,7 @@
 from typing import Optional
 
 import onnx
+import nncf
 
 from nncf.common.logging.logger import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset

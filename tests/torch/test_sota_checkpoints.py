@@ -29,6 +29,8 @@ from tests.shared.paths import PROJECT_ROOT
 from tests.shared.paths import TEST_ROOT
 from tests.torch.helpers import Command
 
+import nncf
+
 DIFF_TARGET_PT_MIN = -0.1
 DIFF_TARGET_PT_MAX = 0.1
 DIFF_TARGET_OV_MIN = -0.01

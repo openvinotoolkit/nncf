@@ -19,6 +19,7 @@ from torch.nn import init
 from torch.nn.utils.rnn import PackedSequence
 from torch.nn.utils.weight_norm import WeightNorm
 
+import nncf
 from nncf import nncf_logger
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.utils.api_marker import api

@@ -21,6 +21,7 @@ import torch
 from torch import distributed
 from torch import nn
 
+import nncf
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_setup import QuantizationPointId

@@ -23,6 +23,7 @@ from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor import TensorDataType
 from nncf.experimental.tensor import functions as fns
 from nncf.quantization.advanced_parameters import FP8Type
+import nncf
 
 
 @dataclass

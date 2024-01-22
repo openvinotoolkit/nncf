@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
 import numpy as np
 
+import nncf
 from nncf import Dataset
 from nncf import nncf_logger
 from nncf.common.factory import EngineFactory

@@ -11,6 +11,7 @@
 
 import pytest
 
+import nncf
 from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
 from nncf.torch.initialization import register_default_init_args
 from tests.torch.helpers import LeNet

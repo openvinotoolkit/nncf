@@ -11,6 +11,7 @@
 
 import pytest
 
+import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.pruning.symbolic_mask import AmbiguousSymbolicMask
 from nncf.common.pruning.symbolic_mask import SymbolicMask

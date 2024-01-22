@@ -29,6 +29,7 @@ from torchvision.transforms import transforms
 from examples.common.sample_config import SampleConfig
 from examples.torch.classification.main import create_cifar
 from examples.torch.object_detection.models.ssd_vgg import SSD_VGG
+import nncf
 from nncf import NNCFConfig
 from nncf.common.graph import NNCFNodeName
 from nncf.common.hardware.config import HWConfigType

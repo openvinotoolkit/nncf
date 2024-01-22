@@ -24,6 +24,7 @@ from typing import Callable, Dict, Iterator, List, Optional, Tuple, TypeVar
 import torch
 from torch import nn
 
+import nncf
 from nncf import nncf_logger
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.graph import NNCFNode

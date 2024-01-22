@@ -18,6 +18,7 @@ from collections import namedtuple
 
 import numpy as np
 
+import nncf
 from nncf import nncf_logger
 
 # [reference] https://github.com/matthiasplappert/keras-rl/blob/master/rl/memory.py

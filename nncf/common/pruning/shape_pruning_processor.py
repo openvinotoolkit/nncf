@@ -25,7 +25,7 @@ from nncf.common.pruning.utils import get_next_nodes_of_types
 from nncf.common.pruning.utils import get_output_channels
 from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
 from nncf.common.pruning.utils import get_rounded_pruned_element_number
-
+import nncf
 
 class ShapePruningProcessor:
     """

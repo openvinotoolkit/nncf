@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional, Protocol, Set, Tuple, Type, Union
 
 import torch
 
+import nncf
 from nncf import Dataset
 from nncf import NNCFConfig
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME

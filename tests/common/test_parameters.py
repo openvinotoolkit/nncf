@@ -11,6 +11,7 @@
 
 import pytest
 
+import nncf
 from nncf.scopes import IgnoredScope
 from nncf.scopes import convert_ignored_scope_to_list
 

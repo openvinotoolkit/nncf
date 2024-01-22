@@ -13,6 +13,7 @@ from typing import Iterable, List, Optional, Tuple, Union
 
 import torch
 
+import nncf
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -178,7 +179,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         module = get_module_by_name(module_name, model)
         weight = getattr(module, weight_attr_name)
         if weight is None or not isinstance(weight, torch.nn.Parameter):
-            raise nncf.ParameterNotFoundError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
+            raise nncf.InternalError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
 
         return Tensor(weight)
 
@@ -202,7 +203,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             module = get_module_by_name(module_name, model)
             weight = getattr(module, weight_attr_name)
             if weight is None or not isinstance(weight, torch.nn.Parameter):
-                raise nncf.ParameterNotFoundError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
+                raise nncf.InternalError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
 
             # calculates compressed weights and decompression parameters
             compressed_weight = compress_weight(Tensor(weight), wc_params.reduction_axis, compression_config)

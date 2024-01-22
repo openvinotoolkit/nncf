@@ -17,6 +17,7 @@ from typing import Dict, Optional, Tuple, Union
 
 import networkx as nx
 
+import nncf
 from nncf.common.utils.dot_file_rw import read_dot_graph
 from nncf.common.utils.dot_file_rw import write_dot_graph
 

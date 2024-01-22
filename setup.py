@@ -50,7 +50,7 @@ BKC_SETUPTOOLS_VERSION = "59.5.0"
 
 setuptools_version = parse_version(setuptools.__version__).base_version
 if setuptools_version < "43.0.0":
-    raise nncf.InstallationError(
+    raise RuntimeError(
         "To properly install NNCF, please install setuptools>=43.0.0, "
         f"while current setuptools version is {setuptools.__version__}. "
         f"Recommended version is {BKC_SETUPTOOLS_VERSION}."
@@ -78,7 +78,7 @@ def find_version(*file_paths):
     version_file = read(*file_paths)
     version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", version_file, re.M)
     if not version_match:
-        raise nncf.InternalError("Unable to find version string.")
+        raise RuntimeError("Unable to find version string.")
     version_value = version_match.group(1)
     if not is_building_release:
         if is_installing_editable:

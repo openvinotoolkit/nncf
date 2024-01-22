@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional, OrderedDict, Set, TypeVar, Union
 
 import numpy as np
 
+import nncf
 from nncf import Dataset
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -197,33 +198,33 @@ class MinMaxQuantization(Algorithm):
         nncf_logger.warning(f"You're using experimental option mode with {self._mode} value.")
 
         if self._preset != QuantizationPreset.PERFORMANCE:
-            raise nncf.NotSupportedError(f"preset option with {self._preset} value is not supported with the mode option!")
+            raise nncf.ParameterNotSupportedError(f"preset option with {self._preset} value is not supported with the mode option!")
 
         if self._target_device not in [TargetDevice.CPU, TargetDevice.ANY]:
-            raise nncf.NotSupportedError(
+            raise nncf.ParameterNotSupportedError(
                 f"target_device option with {self._target_device} value is not supported with the mode option!"
             )
 
         if self._overflow_fix != OverflowFix.DISABLE:
-            raise nncf.NotSupportedError(
+            raise nncf.ParameterNotSupportedError(
                 f"overflow_fix option with {self._overflow_fix} value is not supported with the mode option!"
             )
 
         if self._quantize_outputs:
-            raise nncf.NotSupportedError("quantize_outputs option is not supported with the mode option!")
+            raise nncf.ParameterNotSupportedError("quantize_outputs option is not supported with the mode option!")
 
         if self._backend_params is not None:
-            raise nncf.NotSupportedError("backend_params option is not supported with the mode option!")
+            raise nncf.ParameterNotSupportedError("backend_params option is not supported with the mode option!")
 
         if isinstance(self._quantization_params[QuantizerGroup.WEIGHTS], QuantizationParameters):
-            raise nncf.NotSupportedError(
+            raise nncf.ParameterNotSupportedError(
                 "quantization_params option for weights with "
                 f"{self._quantization_params[QuantizerGroup.WEIGHTS]} "
                 "value is not supported with the mode option!"
             )
 
         if isinstance(self._quantization_params[QuantizerGroup.ACTIVATIONS], QuantizationParameters):
-            raise nncf.NotSupportedError(
+            raise nncf.ParameterNotSupportedError(
                 "quantization_params option for activations with "
                 f"{self._quantization_params[QuantizerGroup.ACTIVATIONS]} "
                 "value is not supported with the mode option!"

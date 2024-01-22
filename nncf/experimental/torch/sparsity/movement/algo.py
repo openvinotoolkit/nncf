@@ -15,6 +15,7 @@ from typing import List
 import torch
 import torch.distributed as dist
 
+import nncf
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionStage
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS

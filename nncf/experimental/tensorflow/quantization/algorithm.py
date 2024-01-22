@@ -11,6 +11,7 @@
 
 from typing import Any, Dict, List, Optional
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetPoint

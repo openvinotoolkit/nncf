@@ -21,6 +21,7 @@ import torch
 from _pytest.mark import ParameterSet
 from torch import nn
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.torch.model_creation import wrap_model
 

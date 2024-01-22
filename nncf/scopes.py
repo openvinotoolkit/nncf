@@ -17,7 +17,7 @@ from typing import List, Optional, Set
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api
-
+import nncf
 
 @api(canonical_alias="nncf.IgnoredScope")
 @dataclass

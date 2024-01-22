@@ -17,6 +17,7 @@ import tensorflow_datasets as tfds
 from examples.tensorflow.common.logger import logger
 from examples.tensorflow.common.utils import set_hard_limit_num_open_files
 
+import nncf
 
 class BaseDatasetBuilder(ABC):
     """Abstract dataset loader and input processing."""

@@ -27,6 +27,7 @@ from torch.nn import functional as F
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 
+import nncf
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algorithm_names

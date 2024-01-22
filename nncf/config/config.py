@@ -16,6 +16,7 @@ from typing import Dict, List, Optional, Type
 import jsonschema
 import jstyleson as json
 
+import nncf
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.os import safe_open

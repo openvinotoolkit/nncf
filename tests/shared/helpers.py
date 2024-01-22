@@ -19,6 +19,7 @@ from typing import Callable, Dict, List, Set, TypeVar, Union
 
 import numpy as np
 
+import nncf
 from nncf.common.utils.os import is_linux
 from nncf.common.utils.os import is_windows
 from tests.shared.paths import GITHUB_REPO_URL

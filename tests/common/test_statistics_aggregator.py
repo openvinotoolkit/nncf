@@ -18,6 +18,7 @@ from typing import Any, List, Type, Union
 import numpy as np
 import pytest
 
+import nncf
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType

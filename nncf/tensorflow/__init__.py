@@ -15,6 +15,7 @@ Base subpackage for NNCF TensorFlow functionality.
 import tensorflow
 from packaging import version
 
+import nncf
 from nncf import nncf_logger
 from nncf.common.logging.logger import warn_bkc_version_mismatch
 from nncf.version import BKC_TF_VERSION

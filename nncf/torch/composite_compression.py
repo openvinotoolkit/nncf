@@ -12,6 +12,7 @@ from typing import TypeVar
 
 import torch.nn
 
+import nncf
 from nncf import NNCFConfig
 from nncf.common.composite_compression import CompositeCompressionAlgorithmBuilder
 from nncf.common.composite_compression import CompositeCompressionAlgorithmController

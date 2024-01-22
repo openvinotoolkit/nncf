@@ -20,21 +20,15 @@ class UnsupportedDatasetError(Exception):
     """
     pass
 
-class InvalidFolderPathError(Exception):
+class InvalidPathError(Exception):
     """
-    Raised when an invalid folder path is provided
+    Raised when an invalid path is provided
     """
     pass
 
 class UnsupportedBackendError(Exception):
     """
     Raised when an unsupported backend is specified
-    """
-    pass
-
-class InconsistentRegistryError(Exception):
-    """
-    Raised when there is an inconsistency in the registry
     """
     pass
 
@@ -68,27 +62,13 @@ class ModuleNotFoundError(Exception):
     """
     pass
 
-class ParameterNotFoundError(Exception):
-    """
-    Raised when a required parameter is not found.
-    """
-    pass
-
 class ParameterNotSupportedError(Exception):
     """
     Raised when an unsupported parameter is encountered.
-    """
-    pass
 
-class NotSupportedError(Exception):
-    """
-    Raised when a type or operation is not supported.
-    """
-    pass
+    This error indicates that an unsupported parameter was provided, typically in the context
+    of a compression algorithm's configuration or an argument passed to an API call.
 
-class ExcessParameterError(Exception):
-    """
-    Raised when an excess parameter is encountered.
     """
     pass
 

@@ -19,7 +19,7 @@ from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizerId
 from nncf.scopes import IgnoredScope
 from nncf.scopes import convert_ignored_scope_to_list
-
+import nncf
 
 def matches_any(tested_str: str, strs_to_match_to: Union[List[str], Set[str], str]) -> bool:
     """

@@ -13,6 +13,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
+import nncf
 from nncf.common.pruning.shape_pruning_processor import ShapePruningProcessor
 from nncf.common.pruning.weights_flops_calculator import WeightsFlopsCalculator
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES

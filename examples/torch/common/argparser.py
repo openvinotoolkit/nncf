@@ -11,7 +11,7 @@
 
 from examples.common.sample_config import CustomArgumentParser
 from nncf.common.hardware.config import HWConfigType
-
+import nncf
 
 def get_common_argument_parser():
     """Defines command-line arguments, and parses them."""

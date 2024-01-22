@@ -14,6 +14,7 @@ from typing import Dict, List
 import numpy as np
 import tensorflow as tf
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
@@ -94,7 +95,7 @@ def collect_output_shapes(model: "NNCFNetwork", graph: NNCFGraph) -> Dict[NNCFNo
         out_shape = layer.get_output_shape_at(node_index)[dims_slice]
 
         if not is_valid_shape(in_shape) or not is_valid_shape(out_shape):
-            raise ncf.ValidationError(f"Input/output shape is not defined for layer `{layer.name}` ")
+            raise nncf.ValidationError(f"Input/output shape is not defined for layer `{layer.name}` ")
 
         layers_out_shapes[node.node_name] = out_shape
 

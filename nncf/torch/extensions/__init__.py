@@ -22,6 +22,7 @@ from typing import Callable
 import torch
 from torch.utils.cpp_extension import _get_build_directory
 
+import nncf
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.logger import extension_is_loading_info_log
 from nncf.common.utils.api_marker import api

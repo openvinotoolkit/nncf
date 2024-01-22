@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import torch
 from torch import nn
 
+import nncf
 from nncf.common.graph import NNCFNode
 from nncf.experimental.torch.sparsity.movement.functions import binary_mask_by_threshold
 from nncf.torch.layer_utils import COMPRESSION_MODULES

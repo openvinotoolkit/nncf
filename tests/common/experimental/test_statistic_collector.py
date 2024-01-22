@@ -15,6 +15,7 @@ from typing import List, Optional, Type
 import numpy as np
 import pytest
 
+import nncf
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf.common.tensor_statistics.statistics import MedianMADTensorStatistic

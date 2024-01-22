@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Tuple
 
 import torch
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes

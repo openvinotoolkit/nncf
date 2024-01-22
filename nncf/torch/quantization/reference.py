@@ -15,6 +15,7 @@ from typing import List, Tuple, TypeVar
 import numpy as np
 import torch
 
+import nncf
 from nncf.torch.utils import sum_like
 
 GeneralizedTensor = TypeVar("GeneralizedTensor", torch.Tensor, np.ndarray)

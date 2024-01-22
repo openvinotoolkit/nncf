@@ -15,6 +15,7 @@ from typing import Any, Callable, Dict, Generator, KeysView, List, Optional, Tup
 import networkx as nx
 import networkx.algorithms.isomorphism as iso
 
+import nncf
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype

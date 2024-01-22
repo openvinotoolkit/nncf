@@ -15,6 +15,7 @@ from typing import Callable, Dict, List, Set, Union
 
 import tensorflow as tf
 
+import nncf
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType

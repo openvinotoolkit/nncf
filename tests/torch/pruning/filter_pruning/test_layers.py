@@ -13,6 +13,7 @@ import pytest
 import torch
 from torch import nn
 
+import nncf
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.module_operations import UpdateWeightAndBias
 from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask

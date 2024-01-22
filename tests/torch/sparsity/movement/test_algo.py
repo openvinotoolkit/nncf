@@ -20,6 +20,7 @@ from transformers import TrainingArguments
 from transformers.trainer_callback import TrainerControl
 from transformers.trainer_callback import TrainerState
 
+import nncf
 from nncf.api.compression import CompressionStage
 from nncf.common.scopes import matches_any
 from nncf.common.scopes import should_consider_scope

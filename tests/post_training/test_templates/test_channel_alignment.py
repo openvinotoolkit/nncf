@@ -15,6 +15,7 @@ from typing import Type
 import numpy as np
 import pytest
 
+import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes

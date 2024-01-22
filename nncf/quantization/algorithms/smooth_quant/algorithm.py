@@ -24,6 +24,7 @@ from collections import defaultdict
 from copy import deepcopy
 from typing import Dict, List, Optional, Tuple, TypeVar
 
+import nncf
 from nncf import Dataset
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph

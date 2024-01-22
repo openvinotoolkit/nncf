@@ -11,6 +11,7 @@
 
 from typing import Any, Dict, List, Optional, Tuple
 
+import nncf
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionAlgorithmController

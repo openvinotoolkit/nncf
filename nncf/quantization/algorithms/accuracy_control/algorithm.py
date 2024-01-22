@@ -12,6 +12,7 @@
 import sys
 from typing import Iterable, List, Optional, Tuple, TypeVar
 
+import nncf
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode

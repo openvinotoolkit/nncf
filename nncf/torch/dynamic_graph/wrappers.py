@@ -15,6 +15,7 @@ from typing import Callable, List, Tuple
 import torch
 from torch.nn import DataParallel
 
+import nncf
 from nncf.common.graph.definitions import MODEL_CONST_OP_NAME
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.logging import nncf_logger

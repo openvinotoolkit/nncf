@@ -14,6 +14,7 @@ from typing import Optional
 
 import torch
 
+import nncf
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.parameters import ModelType

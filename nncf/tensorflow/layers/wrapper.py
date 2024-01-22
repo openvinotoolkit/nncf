@@ -15,6 +15,7 @@ from typing import Dict
 
 import tensorflow as tf
 
+import nncf
 from nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
 from nncf.tensorflow.layers.custom_objects import get_nncf_custom_objects
 from nncf.tensorflow.layers.operation import InputType

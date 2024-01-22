@@ -15,6 +15,7 @@ from typing import Callable, Dict, Iterable, List, Optional, Tuple, TypeVar
 import numpy as np
 import torch
 
+import nncf
 from nncf import nncf_logger
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.torch.dynamic_graph.context import TracingContext

@@ -43,6 +43,7 @@ from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator_handler import Ac
 from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator_handler import BaseEvaluatorHandler
 from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator_handler import EfficiencyEvaluatorHandler
 from nncf.torch.nncf_network import NNCFNetwork
+import nncf
 
 SEARCH_ALGORITHMS = Registry("search algorithm", add_name_as_attr=True)
 

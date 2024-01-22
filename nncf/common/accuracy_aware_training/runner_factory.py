@@ -13,6 +13,7 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Dict
 
+import nncf
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
 from nncf.common.accuracy_aware_training.runner import BaseAdaptiveCompressionLevelTrainingRunner

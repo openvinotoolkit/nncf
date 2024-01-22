@@ -16,6 +16,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName

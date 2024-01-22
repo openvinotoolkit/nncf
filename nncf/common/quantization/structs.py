@@ -19,7 +19,7 @@ from nncf.common.utils.api_marker import api
 from nncf.config.schemata.defaults import QUANTIZATION_BITS
 from nncf.config.schemata.defaults import QUANTIZATION_PER_CHANNEL
 from nncf.parameters import TargetDevice
-
+import nncf
 
 @api()
 class QuantizationScheme:

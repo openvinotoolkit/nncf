@@ -13,6 +13,8 @@ from copy import deepcopy
 from enum import Enum
 from typing import List, TypeVar
 
+import nncf
+
 TModel = TypeVar("TModel")
 
 

@@ -15,6 +15,8 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+import nncf
+
 
 def is_in_backend_directory(file_path: Path, backend: str):
     return backend in file_path.parts

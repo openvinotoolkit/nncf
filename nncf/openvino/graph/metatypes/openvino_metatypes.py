@@ -14,6 +14,7 @@ from typing import List, Optional, Type
 
 import openvino.runtime as ov
 
+import nncf
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -47,7 +48,7 @@ class OVOpMetatype(OperatorMetatype):
             if subtype.matches(node):
                 matches.append(subtype)
         if len(matches) > 1:
-            raise ncf.InternalError("Multiple subtypes match operator call - can not determine single subtype.")
+            raise nncf.InternalError("Multiple subtypes match operator call - can not determine single subtype.")
         if not matches:
             return None
         return matches[0]

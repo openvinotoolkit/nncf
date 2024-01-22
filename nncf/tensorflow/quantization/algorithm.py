@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Tuple
 
 import tensorflow as tf
 
+import nncf
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler

@@ -21,6 +21,7 @@ from torch.jit import is_tracing
 from torch.nn import DataParallel
 from torch.nn.parallel import DistributedDataParallel
 
+import nncf
 from nncf import nncf_logger
 from nncf.common.utils.api_marker import api
 from nncf.torch.dynamic_graph.structs import NamespaceTarget

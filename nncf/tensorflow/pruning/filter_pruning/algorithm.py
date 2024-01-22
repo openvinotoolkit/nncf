@@ -15,6 +15,7 @@ from typing import List, Set
 
 import tensorflow as tf
 
+import nncf
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionStage

@@ -14,6 +14,7 @@ from typing import Dict, List, Set, Tuple
 
 import torch
 
+import nncf
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api

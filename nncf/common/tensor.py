@@ -10,6 +10,7 @@
 # limitations under the License.
 
 from typing import List, Optional, TypeVar
+import nncf
 
 TensorType = TypeVar("TensorType")
 DeviceType = TypeVar("DeviceType")
