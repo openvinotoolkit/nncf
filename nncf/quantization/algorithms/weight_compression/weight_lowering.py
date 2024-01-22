@@ -192,9 +192,9 @@ def do_dequantization(compressed_weights: Tensor, scale: Tensor, zero_point: Ten
     The method dequantizes the given weights to float point data type in accordance with the scale and
     zero_point data type.
 
-    :param compressed_weights : compressed weights.
-    :param scale : scale in compression/quantization.
-    :param zero_point : zero point in compression/quantization.
+    :param compressed_weights: compressed weights.
+    :param scale: scale in compression/quantization.
+    :param zero_point: zero point in compression/quantization.
     :return: dequantized/decompressed weights.
     """
     decompressed_weights = (compressed_weights - zero_point) * scale

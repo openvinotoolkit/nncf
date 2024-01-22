@@ -30,6 +30,7 @@ TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
 TWeightType = TypeVar("TWeightType")
 
+
 @dataclass
 class AWQCompressionInfo:
     """
@@ -39,6 +40,7 @@ class AWQCompressionInfo:
     weight_params: WeightCompressionParameters = None
     target_node: NNCFNode = None
     merge_node: NNCFNode = None
+
 
 class AWQ(AWQAlgoBackend):
     """
@@ -114,15 +116,6 @@ class AWQ(AWQAlgoBackend):
         name_mapping = {wp.weight_name: idx for idx, wp in enumerate(self._all_weight_params)}
 
         for match in matches:
-            skip = False
-            for m in match[:-1]:
-                node = graph.get_node_by_key(m)
-                n_outupts = len(graph.get_output_edges(node))
-                if n_outupts > 1:
-                    skip = True
-            if skip:
-                continue
-
             nncf_node = graph.get_node_by_key(match[-1])
             weight_port_ids = nncf_node.layer_attributes.get_const_port_ids()
             for weight_port_id in weight_port_ids:
