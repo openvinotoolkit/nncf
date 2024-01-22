@@ -84,10 +84,6 @@ class BaseSampleHandler(ABC):
         """
         return self.get_sample_location() + ".train"
 
-    def mock_mlflow(self, mocker):
-        mlflow_location = self.get_sample_location() + ".SafeMLFLow"
-        mocker.patch(mlflow_location)
-
     @staticmethod
     def get_checkpoint_path(
         checkpoint_save_dir: str, checkpoint_name: Optional[str] = None, config_path: Optional[Path] = None

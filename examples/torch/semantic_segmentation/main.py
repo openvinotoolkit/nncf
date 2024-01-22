@@ -38,12 +38,10 @@ from examples.torch.common.model_loader import extract_model_and_compression_sta
 from examples.torch.common.model_loader import load_model
 from examples.torch.common.model_loader import load_resuming_checkpoint
 from examples.torch.common.optimizer import make_optimizer
-from examples.torch.common.utils import SafeMLFLow
 from examples.torch.common.utils import configure_device
 from examples.torch.common.utils import configure_logging
 from examples.torch.common.utils import get_run_name
 from examples.torch.common.utils import is_pretrained_model_requested
-from examples.torch.common.utils import log_common_mlflow_params
 from examples.torch.common.utils import make_additional_checkpoints
 from examples.torch.common.utils import print_args
 from examples.torch.common.utils import write_metrics
@@ -471,7 +469,6 @@ def predict(model, images, class_encoding, config):
 
 def main_worker(current_gpu, config):
     configure_device(current_gpu, config)
-    config.mlflow = SafeMLFLow(config)
     if is_main_process():
         configure_logging(logger, config)
         print_args(config)
@@ -544,8 +541,6 @@ def main_worker(current_gpu, config):
 
     if config.distributed:
         compression_ctrl.distributed()
-
-    log_common_mlflow_params(config)
 
     if is_export_only:
         export_model(compression_ctrl, config)

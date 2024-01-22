@@ -11,6 +11,7 @@ Post-training Quantization:
   - (OpenVINO) Changed default OpenVINO opset from 9 to 13.
 - Features:
   - (OpenVINO) Added 4-bit data-aware weights compression. For that `dataset` optional parameter has been added to `nncf.compress_weights()` and can be used to minimize accuracy degradation of compressed models (note that this option increases the compression time).
+  - (PyTorch) Added support for PyTorch models with shared weights and custom PyTorch modules in nncf.compress_weights(). The weights compression algorithm for PyTorch models is now based on tracing the model graph. The dataset parameter is now required in nncf.compress_weights() for the compression of PyTorch models.
   - (Common) Renamed the `nncf.CompressWeightsMode.INT8` to `nncf.CompressWeightsMode.INT8_ASYM` and introduce `nncf.CompressWeightsMode.INT8_SYM` that can be efficiently used with dynamic 8-bit quantization of activations.
   The original `nncf.CompressWeightsMode.INT8` enum value is now deprecated.
   - (OpenVINO) Added support for quantizing the ScaledDotProductAttention operation from OpenVINO opset 13.

@@ -29,7 +29,6 @@ from optimum.intel import OVQuantizer
 
 import nncf
 from nncf import TargetDevice
-from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from tests.shared.command import Command
 
 DEFAULT_VAL_THREADS = 4
@@ -41,14 +40,13 @@ class BackendType(Enum):
     CUDA_TORCH = "CUDA_TORCH"
     ONNX = "ONNX"
     OV = "OV"
-    POT = "POT"
     OPTIMUM = "OPTIMUM"
 
 
 NNCF_PTQ_BACKENDS = [BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.ONNX, BackendType.OV]
-ALL_PTQ_BACKENDS = NNCF_PTQ_BACKENDS + [BackendType.POT]
+ALL_PTQ_BACKENDS = NNCF_PTQ_BACKENDS
 PT_BACKENDS = [BackendType.TORCH, BackendType.CUDA_TORCH]
-OV_BACKENDS = [BackendType.OV, BackendType.POT, BackendType.OPTIMUM]
+OV_BACKENDS = [BackendType.OV, BackendType.OPTIMUM]
 
 LIMIT_LENGTH_OF_STATUS = 120
 
@@ -181,11 +179,6 @@ class BaseTestPipeline(ABC):
             quantizer = OVQuantizer.from_pretrained(self.model_hf)
             quantizer.quantize(calibration_dataset=self.calibration_dataset, save_directory=self.output_model_dir)
         else:
-            if self.backend == BackendType.POT:
-                self.ptq_params["advanced_parameters"] = AdvancedQuantizationParameters(
-                    backend_params={"use_pot": True}
-                )
-
             self.quantized_model = nncf.quantize(
                 model=self.model,
                 target_device=TargetDevice.CPU,
