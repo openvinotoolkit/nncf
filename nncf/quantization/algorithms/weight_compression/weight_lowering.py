@@ -136,9 +136,6 @@ def do_integer_quantization(
         scale = scale / level_high_sym
         zero_point = fns.as_tensor_like(scale, [-level_low_sym])
 
-    scale = scale.astype(weight.dtype)
-    zero_point = zero_point.astype(TensorDataType.uint8)
-
     eps = fns.finfo(weight).eps
     # NOTE: adding machine epsilon to avoid division by zero
     scale = fns.where(fns.abs(scale) < eps, eps, scale)
@@ -160,7 +157,6 @@ def get_integer_quantization_error(weight: Tensor, reduction_axis: int, config: 
     orig_shape = weight.shape
     compressed_weights, scale, zero_point = do_integer_quantization(weight, reduction_axis, config)
 
-    compressed_weights = compressed_weights.astype(dtype=weight.dtype)
     decompressed_weight = (compressed_weights - zero_point) * scale
 
     decompressed_weight = decompressed_weight.reshape(orig_shape)

@@ -171,7 +171,6 @@ class HAWQCriterion(DataBasedCriterion):
 
         orig_shape = weight.shape
         compressed_weights, scale, zero_point = do_integer_quantization(weight, reduction_axis, backup_config)
-        decompressed_weight = compressed_weights.astype(dtype=scale.dtype)
         decompressed_weight = (compressed_weights - zero_point) * scale
         decompressed_weight = decompressed_weight.reshape(orig_shape)
         return fns.linalg.norm(decompressed_weight - weight, ord="fro").item()
