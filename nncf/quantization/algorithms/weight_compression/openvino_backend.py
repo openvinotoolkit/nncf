@@ -21,6 +21,7 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 from nncf.experimental.tensor.tensor import Tensor
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVEmbeddingMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVMultiplyMetatype
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_const_value
@@ -30,7 +31,7 @@ from nncf.openvino.rt_info import dump_parameters
 from nncf.openvino.statistics.collectors import get_raw_stat_collector
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
-from nncf.quantization.algorithms.weight_compression.awq_patterns import get_ov_awq_patterns
+from nncf.quantization.algorithms.weight_compression.awq_patterns import get_awq_patterns
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
@@ -184,4 +185,4 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 class OVAWQAlgoAlgoBackend(AWQ, OVWeightCompressionAlgoBackend):
     @staticmethod
     def get_awq_patterns():
-        return get_ov_awq_patterns()
+        return get_awq_patterns(OVMatMulMetatype, OVMultiplyMetatype)
