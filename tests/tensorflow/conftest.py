@@ -44,7 +44,7 @@ def pytest_addoption(parser):
     )
     parser.addoption(
         "--metrics-dump-path",
-        type=str,
+        type=Path,
         default=None,
         help="Path to directory to store metrics. "
         "Directory must be empty or should not exist."
