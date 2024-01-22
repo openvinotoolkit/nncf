@@ -21,6 +21,7 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.tensor.definitions import TensorDataType
 from nncf.experimental.tensor.tensor import Tensor
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
@@ -207,8 +208,11 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             # calculates compressed weights and decompression parameters
             compressed_weight = compress_weight(Tensor(weight), wc_params.reduction_axis, compression_config)
 
+            # pack compressed tensor
+            packed_tensor = compressed_weight.tensor.astype(TensorDataType.uint8)
+
             # sets compressed tensor
-            compressed_parameter = torch.nn.Parameter(compressed_weight.tensor.data, requires_grad=False)
+            compressed_parameter = torch.nn.Parameter(packed_tensor.data, requires_grad=False)
             setattr(module, weight_attr_name, compressed_parameter)
 
             consumer_nodes = graph.get_next_nodes(weight_node)
@@ -219,8 +223,11 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                         if id(param) == id(weight):
                             setattr(c_module, name, compressed_parameter)
 
+            # pack zero point tensor
+            packed_zero_point = compressed_weight.zero_point.astype(TensorDataType.uint8)
+
             # creates weight decompressor
-            decompressor = WeightsDecompressor(compressed_weight.scale.data, compressed_weight.zero_point.data)
+            decompressor = WeightsDecompressor(compressed_weight.scale.data, packed_zero_point.data)
 
             # registry weight decompression module in the model
             decompressor_name = f"weights_decompressor_{weight_node.node_name.replace('.', '_')}"
