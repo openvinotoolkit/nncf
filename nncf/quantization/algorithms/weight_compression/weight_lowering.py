@@ -137,7 +137,6 @@ def do_integer_quantization(
         zero_point = fns.as_tensor_like(scale, [-level_low_sym])
 
     scale = scale.astype(weight.dtype)
-    zero_point = zero_point.astype(TensorDataType.uint8)
 
     eps = fns.finfo(weight).eps
     # NOTE: adding machine epsilon to avoid division by zero
