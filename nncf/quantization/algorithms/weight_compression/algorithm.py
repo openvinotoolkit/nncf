@@ -90,8 +90,8 @@ class WeightCompression(Algorithm):
             that share quantization parameters (scale). The value -1 means no grouping.
         :param ignored_scope: An ignored scope that defined the list of model control
             flow graph nodes to be ignored during quantization.
-        :param all_layers: Indicates whether embeddings and last layers should be compressed to a primary
-            precision. By default, the backup precision is assigned for the embeddings and last layers.
+        :param all_layers: Indicates whether embeddings and last MatMul layers should be compressed to a primary
+            precision. By default, the backup precision is assigned for the embeddings and last MatMul layers.
         :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
             preserve the accuracy of the model, the more sensitive layers receives a higher precision.
         :param awq: determines whether to use or not modified AWQ algorithm.
@@ -139,10 +139,11 @@ class WeightCompression(Algorithm):
         :param nncf_graph: NNCFGraph instance.
         :return: List with the data for each layer.
         """
-        weighted_metatypes = \
-            self._backend_entity.matmul_metatypes + \
-            self._backend_entity.embedding_metatypes + \
-            self._backend_entity.convolution_metatypes
+        weighted_metatypes = (
+            self._backend_entity.matmul_metatypes
+            + self._backend_entity.embedding_metatypes
+            + self._backend_entity.convolution_metatypes
+        )
 
         ordered_nodes_to_compress = []
         ignored_names = get_ignored_node_names_from_ignored_scope(
@@ -175,11 +176,22 @@ class WeightCompression(Algorithm):
 
         ratio_defining_params = list(
             filter(
-                lambda wp: wp.node_with_weight.metatype not in self._backend_entity.embedding_metatypes,
+                lambda wp: wp.node_with_weight.metatype in self._backend_entity.matmul_metatypes,
                 all_weight_params,
             )
         )
-        if not is_last_layer_shared:
+
+        # Embedding layers are quantized to 4-bits only if all_layers=True.
+        if self._all_layers:
+            embedding_params = list(
+                filter(
+                    lambda wp: wp.node_with_weight.metatype in self._backend_entity.embedding_metatypes,
+                    all_weight_params,
+                )
+            )
+            ratio_defining_params.extend(embedding_params)
+
+        if not self._all_layers and not is_last_layer_shared:
             ratio_defining_params = ratio_defining_params[:-1]
         return ratio_defining_params
 
@@ -313,6 +325,7 @@ class WeightCompression(Algorithm):
                     and len(reduction_axes) != 1
                 ):
                     # NNCF supports multiple reduction axes only for ops with group_size != -1.
+                    # Convolution ops are always quantized to 8-bits (without groups).
                     # Embedding layers are quantized to 4-bits only if all_layers=True.
                     # MatMul ops can't have multiple reduction axes.
                     nncf_logger.warning(

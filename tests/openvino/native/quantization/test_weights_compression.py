@@ -284,6 +284,36 @@ def test_gather_can_be_8_bit_if_all_layers_without_data():
             assert ov.Type(np.uint8) == op.get_element_type()
 
 
+@pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
+def test_conv_in_8_bit_if_mode_8bit(mode):
+    model = WeightsModel().ov_model
+    compressed_model = compress_weights(model, mode=mode)
+    for op in compressed_model.get_ordered_ops():
+        if op.get_type_name() == "Constant" and "conv_weights" in op.get_friendly_name():
+            assert ov.Type.u8 == op.get_element_type()
+
+
+@pytest.mark.parametrize("all_layers", (True, False))
+def test_conv_in_8_bit_if_mode_4bit(all_layers):
+    model = WeightsModel().ov_model
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_SYM,
+        ratio=1,
+        group_size=1,
+        all_layers=all_layers,
+    )
+    for op in compressed_model.get_ordered_ops():
+        if op.get_type_name() == "Constant":
+            if "conv_weights_" in op.get_friendly_name():
+                assert ov.Type.u8 == op.get_element_type()
+            elif "weights_1" in op.get_friendly_name():
+                assert ov.Type.u4 == op.get_element_type()
+            elif "weights_0" in op.get_friendly_name():
+                dtype = ov.Type.u4 if all_layers else ov.Type.u8
+                assert dtype == op.get_element_type()
+
+
 def test_gather_can_be_4_bit_if_all_layers_without_data():
     model = IntegerModel().ov_model
     compressed_model = compress_weights(

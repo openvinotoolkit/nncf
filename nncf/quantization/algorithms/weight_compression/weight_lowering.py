@@ -87,6 +87,12 @@ def calculate_normalized_weight_and_nf4_scale(
 
     if group_size != -1:
         # weights are reshaped: [a1, r, a2] -> [a1, r//gs, gs, a2]
+        if isinstance(reduction_axis, tuple) and len(reduction_axis) == 1:
+            reduction_axis = reduction_axis[0]
+        if not isinstance(reduction_axis, int):
+            raise NotImplementedError(
+                f"Group-wise quantization expects a single reduction axes, but given: {reduction_axis}."
+            )
         weight, reduction_axis = reshape_weight_for_grouped_quantization(weight, reduction_axis, group_size)
         scale = fns.max(fns.abs(weight), axis=reduction_axis, keepdims=True)  # [a1, r//gs, 1, a2]
     else:
@@ -136,6 +142,12 @@ def do_integer_quantization(
 
     if group_size != -1:
         # weights are reshaped from [a1, r, a2] to [a1, r//gs, gs, a2]
+        if isinstance(reduction_axis, tuple) and len(reduction_axis) == 1:
+            reduction_axis = reduction_axis[0]
+        if not isinstance(reduction_axis, int):
+            raise NotImplementedError(
+                f"Group-wise quantization expects a single reduction axes, but given: {reduction_axis}."
+            )
         weight, reduction_axis = reshape_weight_for_grouped_quantization(weight, reduction_axis, group_size)
 
     if mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]:
