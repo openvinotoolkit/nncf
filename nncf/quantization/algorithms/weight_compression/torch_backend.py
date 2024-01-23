@@ -85,6 +85,17 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     }
     MATMUL_METATYPES = [om.PTLinearMetatype, om.PTMatMulMetatype, om.PTAddmmMetatype]
     EMBEDDING_METATYPES = [om.PTEmbeddingMetatype]
+    CONVOLUTION_METATYPES = [
+        om.PTConv1dMetatype,
+        om.PTConv2dMetatype,
+        om.PTConv3dMetatype,
+        om.PTDepthwiseConv1dSubtype,
+        om.PTDepthwiseConv2dSubtype,
+        om.PTDepthwiseConv3dSubtype,
+        om.PTConvTranspose1dMetatype,
+        om.PTConvTranspose2dMetatype,
+        om.PTConvTranspose3dMetatype,
+    ]
 
     @property
     def matmul_metatypes(self) -> List[OperatorMetatype]:
@@ -94,11 +105,16 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def embedding_metatypes(self) -> List[OperatorMetatype]:
         return PTWeightCompressionAlgoBackend.EMBEDDING_METATYPES
 
+    @property
+    def convolution_metatypes(self) -> List[OperatorMetatype]:
+        return PTWeightCompressionAlgoBackend.CONVOLUTION_METATYPES
+
     @staticmethod
     def is_node_with_weights(node: NNCFNode, graph: NNCFGraph) -> bool:
         if (
             node.metatype not in PTWeightCompressionAlgoBackend.MATMUL_METATYPES
             and node.metatype not in PTWeightCompressionAlgoBackend.EMBEDDING_METATYPES
+            and node.metatype not in PTWeightCompressionAlgoBackend.CONVOLUTION_METATYPES
         ):
             return False
         for prev_node in graph.get_previous_nodes(node):
@@ -146,6 +162,10 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             elif weight_port_id == 2:
                 reduction_axis = [max(0, ndims - 2)]
             reduction_axis = [max(0, reduction_axis)]
+        elif node_with_weight.metatype in PTWeightCompressionAlgoBackend.CONVOLUTION_METATYPES:
+            layer_attributes = node_with_weight.layer_attributes
+            channel_idx = layer_attributes.get_target_dim_for_compression()
+            reduction_axis = [i for i in range(ndims) if i != channel_idx]
         return tuple(reduction_axis)
 
     @staticmethod
