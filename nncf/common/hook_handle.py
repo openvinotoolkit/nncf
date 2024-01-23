@@ -10,34 +10,13 @@
 # limitations under the License.
 
 import weakref
-from abc import ABC
-from abc import abstractmethod
 from typing import Any, Dict, Union
 
 
-class HookHandleInterface(ABC):
+class HookHandle:
     """
-    A handle to remove a hook.
-    """
-
-    @property
-    @abstractmethod
-    def hook_id(self) -> str:
-        """
-        Key to use to retrieve handle from the registry.
-        """
-
-    @abstractmethod
-    def remove(self) -> None:
-        """
-        Removes added operation from registered hooks registry if it is possible.
-        """
-
-
-class _HookHandle(HookHandleInterface):
-    """
-    Private hook handle implementation which should be instantiated only by
-    the add_op_to_registry function.
+    A handle to remove a hook. Does not guarantee that
+    hook_id is unique for the hooks_registry.
     """
 
     def __init__(self, hooks_registry: Dict[Any, Any], hook_id: str):
@@ -50,6 +29,9 @@ class _HookHandle(HookHandleInterface):
 
     @property
     def hook_id(self) -> Union[int, str]:
+        """
+        Key to use to retrieve handle from the registry.
+        """
         return self._hook_id
 
     def remove(self) -> None:
@@ -65,7 +47,7 @@ class _HookHandle(HookHandleInterface):
             self.hooks_registry_ref = None
 
 
-def add_op_to_registry(hooks_registry: Dict[Any, Any], op: Any) -> HookHandleInterface:
+def add_op_to_registry(hooks_registry: Dict[Any, Any], op: Any) -> HookHandle:
     """
     Registers op into the hooks_registry and returns HookHandler instance.
 
@@ -80,4 +62,4 @@ def add_op_to_registry(hooks_registry: Dict[Any, Any], op: Any) -> HookHandleInt
     else:
         hook_id = "0"
     hooks_registry[hook_id] = op
-    return _HookHandle(hooks_registry, hook_id)
+    return HookHandle(hooks_registry, hook_id)

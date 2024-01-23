@@ -34,7 +34,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.hook_handle import HookHandleInterface
+from nncf.common.hook_handle import HookHandle
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
@@ -247,7 +247,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         self._target_scopes = target_scopes
         self._user_dummy_forward_fn = dummy_forward_fn
         self._kd_loss_handler = None
-        self._groups_vs_hooks_handlers: Dict[str, List[HookHandleInterface]] = defaultdict(list)
+        self._groups_vs_hooks_handlers: Dict[str, List[HookHandle]] = defaultdict(list)
 
         if wrap_inputs_fn is not None:
             self._wrap_inputs_fn = wrap_inputs_fn
@@ -407,7 +407,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         point: PTInsertionPoint,
         fn: Callable,
         hooks_group_name: Optional[str] = DEFAULT_HOOKS_GROUP_NAME,
-    ) -> List[HookHandleInterface]:
+    ) -> List[HookHandle]:
         """
         Inserts given function to the point in the NNCFNetwork, creates hook handle for the inserted function and
         stores created hook handle in a group with the given name. A group name could be used late

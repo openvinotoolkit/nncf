@@ -26,7 +26,7 @@ from nncf import nncf_logger
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.hook_handle import HookHandleInterface
+from nncf.common.hook_handle import HookHandle
 from nncf.torch import register_module
 from nncf.torch.dynamic_graph.io_handling import ExampleInputInfo
 from nncf.torch.dynamic_graph.io_handling import FillerInputElement
@@ -950,7 +950,7 @@ class TestHookHandles:
     @staticmethod
     def _prepare_hook_handles_test(
         target_type: TargetType, target_node_name: str, input_port_id: int
-    ) -> Tuple[NNCFNetwork, PTInsertionPoint, Callable[[List[HookHandleInterface]], None]]:
+    ) -> Tuple[NNCFNetwork, PTInsertionPoint, Callable[[List[HookHandle]], None]]:
         model = SimplestModel()
         example_input = torch.ones(SimplestModel.INPUT_SIZE)
         input_info = ExampleInputInfo.from_example_input(example_input)

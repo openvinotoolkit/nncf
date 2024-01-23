@@ -84,7 +84,6 @@ class PTModelTransformer(ModelTransformer):
 
         :param model: Model to apply transformations.
         :param transformations: List of the bias correction transformations.
-        :param hooks_group: Target hooks group to pass to the NNCFNetwork.
         :return: A modified NNCFNetwork.
         """
         node_to_op_address_mapping = model.nncf.get_node_to_op_address_mapping()

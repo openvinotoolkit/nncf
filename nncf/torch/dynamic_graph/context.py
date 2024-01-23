@@ -20,7 +20,7 @@ from typing import Callable, DefaultDict, Dict, List, Optional, Union
 import torch
 
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
-from nncf.common.hook_handle import HookHandleInterface
+from nncf.common.hook_handle import HookHandle
 from nncf.common.hook_handle import add_op_to_registry
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.debug import is_debug
@@ -285,7 +285,7 @@ class TracingContext:
         self.relative_scopes_stack.pop()
         self.module_call_stack.pop()
 
-    def register_pre_hook(self, fn: Callable, op_address: OperationAddress, input_port_id: int) -> HookHandleInterface:
+    def register_pre_hook(self, fn: Callable, op_address: OperationAddress, input_port_id: int) -> HookHandle:
         pre_hook_id = PreHookId(op_address, input_port_id)
         return add_op_to_registry(self._pre_hooks[pre_hook_id], fn)
 
@@ -305,7 +305,7 @@ class TracingContext:
         self.in_operator = in_op
         return op_inputs
 
-    def register_post_hook(self, fn: Callable, op_address: OperationAddress) -> HookHandleInterface:
+    def register_post_hook(self, fn: Callable, op_address: OperationAddress) -> HookHandle:
         return add_op_to_registry(self._post_hooks[op_address], fn)
 
     def execute_post_hooks(self, op_address: OperationAddress, outputs):
