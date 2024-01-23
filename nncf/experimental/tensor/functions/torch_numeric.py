@@ -247,7 +247,7 @@ def _(a: torch.Tensor) -> int:
 @numeric.quantile.register(torch.Tensor)
 def _(
     a: torch.Tensor,
-    q: float,
+    q: Union[float, Tuple[float, ...]],
     axis: Optional[Union[int, Tuple[int, ...]]] = None,
     method: Optional[str] = "linear",
     keepdims: bool = False,
