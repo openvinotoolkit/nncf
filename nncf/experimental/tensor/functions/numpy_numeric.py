@@ -188,10 +188,7 @@ def _(
 ) -> Union[float, Union[np.ndarray, np.generic]]:
     if keepdims is None:
         keepdims = np._NoValue
-    ret_val = np.quantile(a, q=q, axis=axis, keepdims=keepdims)
-    if isinstance(ret_val, np.ndarray):
-        return ret_val
-    return np.array(ret_val)
+    return np.array(np.quantile(a, q=q, axis=axis, keepdims=keepdims))
 
 
 @register_numpy_types(numeric._binary_op_nowarn)
