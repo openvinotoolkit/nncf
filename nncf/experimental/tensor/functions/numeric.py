@@ -386,7 +386,7 @@ def round(a: Tensor, decimals=0) -> Tensor:
 def quantile(
     a: Tensor,
     q: Union[float, List[float]],
-    axis: Union[int, Tuple[int]] = None,
+    axis: Optional[Union[int, Tuple[int]]] = None,
     keepdims: Optional[bool] = None,
 ) -> Tensor:
     """

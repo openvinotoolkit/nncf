@@ -964,6 +964,7 @@ class TemplateTestNNCFTensorOperators:
             (zero_ten_range_two_axes, (0.1, 0.9), (0, 1), False, [1.0, 9.0]),
             (zero_ten_range_two_axes, (0.1, 0.9), (0, 1), True, [[[1.0]], [[9.0]]]),
             (16000 * zero_ten_range, 0.1, 0, False, 1.0),  # reason: https://github.com/pytorch/pytorch/issues/64947
+            (zero_ten_range_two_axes, (0.1, 0.9), None, False, [1.0, 9.0]),
         ),
     )
     def test_fn_quantile(self, x, q, axis, keepdims, ref):

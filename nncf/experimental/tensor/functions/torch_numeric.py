@@ -196,7 +196,7 @@ def _(a: torch.Tensor, decimals=0) -> torch.Tensor:
 def _(
     a: torch.Tensor,
     q: Union[float, List[float]],
-    axis: Union[int, Tuple[int]] = None,
+    axis: Optional[Union[int, Tuple[int]]] = None,
     keepdims: Optional[bool] = None,
 ) -> torch.Tensor:
     device = a.device

@@ -183,11 +183,9 @@ def _(a: Union[np.ndarray, np.generic], decimals: int = 0) -> np.ndarray:
 def _(
     a: Union[np.ndarray, np.generic],
     q: Union[float, List[float]],
-    axis: Union[int, Tuple[int]] = None,
+    axis: Optional[Union[int, Tuple[int]]] = None,
     keepdims: Optional[bool] = None,
 ) -> Union[np.ndarray, np.generic]:
-    if keepdims is None:
-        keepdims = np._NoValue
     return np.array(np.quantile(a, q=q, axis=axis, keepdims=keepdims))
 
 
