@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import nncf
 from nncf.experimental.tensor import Tensor
@@ -63,14 +63,14 @@ def reshape_weight_for_grouped_quantization(weight: Tensor, reduction_axis: int,
 
 
 def calculate_normalized_weight_and_nf4_scale(
-    weight: Tensor, reduction_axis: int, group_size: int = -1
+    weight: Tensor, reduction_axis: Union[int, Tuple[int]], group_size: int = -1
 ) -> Tuple[Tensor, Tensor]:
     """
     Calculates scale for nf4 quantization and normalizes weights by the scale.
     Weights are reshaped in case of positive value of group size.
 
     :param weight: Weight array to compress.
-    :param reduction_axis: Axis, along which to reduce (collect) different statistics (e.g. min, max).
+    :param reduction_axis: Axes, along which to reduce (collect) different statistics (e.g. min, max).
     :param group_size: Number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
         The value -1 means no grouping. Defaults to -1.
     :return: Normalized weight tensor of float32 type and nf4 scale tensor of float32 type.
@@ -80,6 +80,12 @@ def calculate_normalized_weight_and_nf4_scale(
 
     if group_size != -1:
         # weights are reshaped: [a1, r, a2] -> [a1, r//gs, gs, a2]
+        if isinstance(reduction_axis, tuple) and len(reduction_axis) == 1:
+            reduction_axis = reduction_axis[0]
+        if not isinstance(reduction_axis, int):
+            raise NotImplementedError(
+                f"Group-wise quantization expects a single reduction axis, but given: {reduction_axis}."
+            )
         weight, reduction_axis = reshape_weight_for_grouped_quantization(weight, reduction_axis, group_size)
         scale = fns.max(fns.abs(weight), axis=reduction_axis, keepdims=True)  # [a1, r//gs, 1, a2]
     else:
@@ -92,7 +98,7 @@ def calculate_normalized_weight_and_nf4_scale(
 
 
 def do_integer_quantization(
-    weight: Tensor, reduction_axis: int, config: WeightCompressionConfig
+    weight: Tensor, reduction_axis: Union[int, Tuple[int]], config: WeightCompressionConfig
 ) -> Tuple[Tensor, Tensor, Tensor]:
     """
     The method quantizes the given weights to integer data type in accordance with the compression config.
@@ -111,7 +117,7 @@ def do_integer_quantization(
     (scales).
 
     :param weight: Weight array to compress.
-    :param reduction_axis: Axis, along which to reduce (collect) different statistics (e.g. min, max).
+    :param reduction_axis: Axes, along which to reduce (collect) different statistics (e.g. min, max).
     :param config: Information on how to compress (quantize) a specific weight.
     :return: The compressed weights tensor of uint8 type, scale tensor of float32 type and
         zero point tensor of int32 type that was used for its quantization.
@@ -129,6 +135,12 @@ def do_integer_quantization(
 
     if group_size != -1:
         # weights are reshaped from [a1, r, a2] to [a1, r//gs, gs, a2]
+        if isinstance(reduction_axis, tuple) and len(reduction_axis) == 1:
+            reduction_axis = reduction_axis[0]
+        if not isinstance(reduction_axis, int):
+            raise NotImplementedError(
+                f"Group-wise quantization expects a single reduction axis, but given: {reduction_axis}."
+            )
         weight, reduction_axis = reshape_weight_for_grouped_quantization(weight, reduction_axis, group_size)
 
     if mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]:

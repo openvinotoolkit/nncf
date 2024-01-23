@@ -356,12 +356,21 @@ def test_data_based_criterion(mode, ref_scores, ref_act_scores, mocker):
 
 
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
-def test_not_quantize_with_multiple_reduction_axes(mode):
+def test_quantize_Gather_with_multiple_reduction_axes_in_8bit(mode):
     model = GatherWithTwoReductionAxes().ov_model
     compressed_model = compress_weights(model, mode=mode)
     for op in compressed_model.get_ordered_ops():
         if op.get_type_name() == "Constant" and op.get_friendly_name() == "gather_1_data":
-            assert op.get_element_type() == ov.Type(np.float32)
+            assert op.get_element_type() == ov.Type.u8
+
+
+@pytest.mark.parametrize("mode", (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM))
+def test_not_quantize_Gather_with_multiple_reduction_axes_if_all_layers(mode):
+    model = GatherWithTwoReductionAxes().ov_model
+    compressed_model = compress_weights(model, mode=mode, all_layers=True)
+    for op in compressed_model.get_ordered_ops():
+        if op.get_type_name() == "Constant" and op.get_friendly_name() == "gather_1_data":
+            assert op.get_element_type() == ov.Type.f32
 
 
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM))

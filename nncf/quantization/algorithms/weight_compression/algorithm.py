@@ -298,17 +298,25 @@ class WeightCompression(Algorithm):
                 if weight.dtype not in [TensorDataType.float32, TensorDataType.float16, TensorDataType.float64]:
                     continue
                 reduction_axes = self._backend_entity.get_channel_agnostic_reduction_axes(node, weight_port_id, graph)
-                if isinstance(reduction_axes, tuple) and len(reduction_axes) != 1:
+                if (
+                    self._group_size != -1
+                    and self._all_layers
+                    and node.metatype in self._backend_entity.embedding_metatypes
+                    and isinstance(reduction_axes, tuple)
+                    and len(reduction_axes) != 1
+                ):
+                    # NNCF supports multiple reduction axes only for ops with group_size != -1.
+                    # Embedding layers are quantized to 4-bits only if all_layers=True.
+                    # MatMul ops can't have multiple reduction axes.
                     nncf_logger.warning(
                         f"Weight compression expects a single reduction axis, but {len(reduction_axes)} given. "
                         f"Weight shape: {weight.shape}, reduction axes: {reduction_axes}, "
                         f"node name: {node.node_name}. The node won't be quantized."
                     )
                     continue
-                reduction_axis = reduction_axes[0] if isinstance(reduction_axes, tuple) else reduction_axes
 
                 weight_params = WeightCompressionParameters(
-                    weight_name, node, weight_port_id, weight.size, reduction_axis
+                    weight_name, node, weight_port_id, weight.size, reduction_axes
                 )
                 all_weight_params.append(weight_params)
                 weight_names.add(weight_name)
