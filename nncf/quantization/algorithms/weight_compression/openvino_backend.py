@@ -30,7 +30,6 @@ from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.rt_info import dump_parameters
 from nncf.openvino.statistics.collectors import get_raw_stat_collector
 from nncf.parameters import CompressWeightsMode
-from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.awq_patterns import get_awq_patterns
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
@@ -182,7 +181,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         dump_parameters(model, parameters, algo_name, path)
 
 
-class OVAWQAlgoAlgoBackend(AWQ, OVWeightCompressionAlgoBackend):
+class OVAWQAlgoAlgoBackend(OVWeightCompressionAlgoBackend):
     @staticmethod
     def get_awq_patterns():
         return get_awq_patterns(OVMatMulMetatype, OVMultiplyMetatype)

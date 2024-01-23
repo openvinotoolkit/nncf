@@ -40,6 +40,7 @@ from nncf.experimental.tensor.definitions import TensorDataType
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.weight_lowering import WeightCompressionConfig
@@ -100,7 +101,6 @@ class WeightCompression(Algorithm):
         self._ratio = ratio
         self._ignored_scope = ignored_scope
         self._backend_entity = None
-        self._awq_backend_entity = None
         self._algorithm_key = f"CW_{hash(self)}"
         self._fp_inputs = defaultdict(list)
         self._all_layers = all_layers
@@ -129,34 +129,6 @@ class WeightCompression(Algorithm):
         else:
             raise RuntimeError(
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
-            )
-
-    def _set_awq_backend_entity(
-        self,
-        model: TModel,
-        all_weight_params: List[WeightCompressionParameters],
-        nodes_to_compress: List[NNCFNode],
-        activations: Dict[str, List[Tensor]],
-    ) -> None:
-        """
-        Creates a helper class with a backed-specific logic of the algorithm.
-
-        :param model: Backend-specific input model.
-        :param all_weight_params: List of all weight parameters.
-        :param nodes_to_compress: List of nodes for processing.
-        :param activations: The input activations of the layers considered for compression.
-        """
-
-        model_backend = get_backend(model)
-        if model_backend == BackendType.OPENVINO:
-            from nncf.quantization.algorithms.weight_compression.openvino_backend import OVAWQAlgoAlgoBackend
-
-            self._awq_backend_entity = OVAWQAlgoAlgoBackend(
-                model, self._backend_entity.name_to_node_mapping, all_weight_params, nodes_to_compress, activations
-            )
-        else:
-            raise RuntimeError(
-                "Cannot return backend-specific AWQ entity because {} is not supported!".format(model_backend.value)
             )
 
     def _get_nodes_to_compress(self, nncf_graph: NNCFGraph) -> List[NNCFNode]:
@@ -345,8 +317,10 @@ class WeightCompression(Algorithm):
         nncf_logger.info(self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params))
 
         if self._awq and activations is not None and self._mode != CompressWeightsMode.NF4:
-            self._set_awq_backend_entity(model, all_weight_params, nodes_to_compress, activations)
-            self._awq_backend_entity.apply(model, graph)
+            awq_algo = AWQ(
+                model, self._backend_entity.name_to_node_mapping, all_weight_params, nodes_to_compress, activations
+            )
+            awq_algo.apply(model, graph)
 
         # Compress model using weight compression parameters
         transformed_model = self._backend_entity.transform_model(

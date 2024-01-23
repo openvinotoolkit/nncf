@@ -19,8 +19,10 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import get_backend
 from nncf.experimental.tensor import functions as fns
-from nncf.quantization.algorithms.weight_compression.backend import AWQAlgoBackend
+from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
@@ -42,7 +44,7 @@ class AWQCompressionInfo:
     merge_node: NNCFNode = None
 
 
-class AWQ(AWQAlgoBackend):
+class AWQ(Algorithm):
     """
     Modified AWQ algorithm implementation.
     """
@@ -72,7 +74,7 @@ class AWQ(AWQAlgoBackend):
         :param alpha_max: Maximal value of smoothness parameter for grid search.
         :param steps: The number of the steps in grid search.
         """
-        super().__init__(model)
+        super().__init__()
         self.name_to_node_mapping = name_to_node_mapping
         self._all_weight_params = all_weight_params
         self._nodes_to_compress = nodes_to_compress
@@ -82,7 +84,35 @@ class AWQ(AWQAlgoBackend):
         self._alpha_min = alpha_min
         self._alpha_max = alpha_max
         self._steps = steps
-        self._patterns = self.get_awq_patterns()
+        self._backend_entity = None
+        self._patterns = None
+
+        self._set_backend_entity(model)
+
+    @property
+    def available_backends(self) -> List[BackendType]:
+        return [BackendType.OPENVINO]
+
+    def _set_backend_entity(self, model: TModel) -> None:
+        """
+        Creates a helper class with a backed-specific logic of the algorithm.
+
+        :param model: Backend-specific input model.
+        :param all_weight_params: List of all weight parameters.
+        :param nodes_to_compress: List of nodes for processing.
+        :param activations: The input activations of the layers considered for compression.
+        """
+
+        model_backend = get_backend(model)
+        if model_backend == BackendType.OPENVINO:
+            from nncf.quantization.algorithms.weight_compression.openvino_backend import OVAWQAlgoAlgoBackend
+
+            self._backend_entity = OVAWQAlgoAlgoBackend(model)
+            self._patterns = self._backend_entity.get_awq_patterns()
+        else:
+            raise RuntimeError(
+                "Cannot return backend-specific AWQ entity because {} is not supported!".format(model_backend.value)
+            )
 
     def apply(
         self,
@@ -144,7 +174,7 @@ class AWQ(AWQAlgoBackend):
             target_node = awq_data_item.target_node
             merge_node = awq_data_item.merge_node
 
-            weight_data = self.get_weight_names_and_port_ids(wp.node_with_weight, graph)
+            weight_data = self._backend_entity.get_weight_names_and_port_ids(wp.node_with_weight, graph)
             if len(weight_data) != 1:  # not supported by the algorithm
                 continue
             _, weight_port_id = weight_data[0]
@@ -168,7 +198,7 @@ class AWQ(AWQAlgoBackend):
 
             groups_to_correct = list(groups_to_correct)
 
-            weight = self.get_weight(
+            weight = self._backend_entity.get_weight(
                 wp.node_with_weight, weight_port_id, model, graph
             )  # get_const_value(wp.weight_node)
             reduction_axis = wp.reduction_axis
@@ -228,12 +258,12 @@ class AWQ(AWQAlgoBackend):
                 a_scale = fns.unsqueeze(1.0 / a_scale, 1)
 
             scaled_weight = weight * w_scale
-            self.set_weight(wp.node_with_weight, weight_port_id, model, graph, scaled_weight)
+            self._backend_entity.set_weight(wp.node_with_weight, weight_port_id, model, graph, scaled_weight)
 
-            for _, port_id in self.get_weight_names_and_port_ids(merge_node, graph):
-                merge_weight = self.get_weight(merge_node, port_id, model, graph)
+            for _, port_id in self._backend_entity.get_weight_names_and_port_ids(merge_node, graph):
+                merge_weight = self._backend_entity.get_weight(merge_node, port_id, model, graph)
                 merge_weight = merge_weight * a_scale
-                self.set_weight(merge_node, port_id, model, graph, merge_weight)
+                self._backend_entity.set_weight(merge_node, port_id, model, graph, merge_weight)
 
         return model
 
