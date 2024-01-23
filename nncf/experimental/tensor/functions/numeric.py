@@ -575,12 +575,15 @@ def transpose(a: Tensor, axes: Optional[Tuple[int, ...]] = None) -> Tensor:
 
 @functools.singledispatch
 @tensor_guard
-def argsort(a: Tensor, axis: int = None) -> Tensor:
+def argsort(a: Tensor, axis: int = None, descending=False, stable=Flase) -> Tensor:
     """
     Returns the indices that would sort an array.
 
     :param a: The input tensor.
     :param axis: Axis along which to sort. The default is -1 (the last axis). If None, the flattened array is used.
+    :param descending: Controls the sorting order (ascending or descending).
+    :param stable: If True then the sorting routine becomes stable, preserving the order of equivalent elements. 
+        If False, the relative order of values which compare equal is not guaranteed. True is slower.
     :return: Array of indices that sort a along the specified axis.
     """
     return Tensor(argsort(a.data, axis=axis))
