@@ -122,11 +122,8 @@ class StatisticsAggregator(ABC):
         :param graph: NNCFGraph.
         :return: True if NNCFGraph contains metatypes with no batch axis in output tensor.
         """
-        graph_metatypes = set(node.metatype for node in graph.get_all_nodes())
-        for metatype in self.metatypes_output_has_no_batch_axis:
-            if metatype in graph_metatypes:
-                return True
-        return False
+        unique_graph_metatypes = set(node.metatype for node in graph.get_all_nodes())
+        return any(metatype in self.metatypes_output_has_no_batch_axis for metatype in unique_graph_metatypes)
 
     @property
     @abstractmethod
