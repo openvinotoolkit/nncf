@@ -64,12 +64,6 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     def is_node_with_weights(node: NNCFNode) -> bool:
         return node.layer_attributes and node.layer_attributes.constant_attributes
 
-    def _get_weight_port_id(node: NNCFNode) -> int:
-        weight_ports = node.layer_attributes.get_const_port_ids()
-        if len(weight_ports) != 1:
-            raise RuntimeError(f"Too many weight ports for {node.node_name} node")
-        return weight_ports[0]
-
     @staticmethod
     def get_activations_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
         weight_ports = node.layer_attributes.get_const_port_ids()
@@ -77,7 +71,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
             e.input_port_id for e in nncf_graph.get_input_edges(node) if e.input_port_id not in weight_ports
         ]
 
-        if len(weight_ports) != 1 or len(activation_ports) != 1:
+        if len(activation_ports) != 1:
             raise nncf.InternalError(f"Too many weight or activation ports for {node.node_name} node")
         return activation_ports[0]
 
@@ -156,7 +150,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def is_node_with_shared_weight(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        weight_port_id = OVSmoothQuantAlgoBackend._get_weight_port_id(node)
+        weight_port_id = OVSmoothQuantAlgoBackend.get_weight_tensor_port_id(node)
         weight_node = nncf_graph.get_input_edges(node)[weight_port_id].from_node
         return len(nncf_graph.get_next_nodes(weight_node)) > 1
 

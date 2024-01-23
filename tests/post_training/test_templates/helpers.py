@@ -338,3 +338,21 @@ class EmbeddingModel(nn.Module):
         x = self.embedding(x)
         x = self.matmul(x)
         return x
+
+
+class ShareWeghtsConvAndShareLinearModel(nn.Module):
+    INPUT_SIZE = [1, 1, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        with set_torch_seed():
+            self.conv = create_conv(1, 1, 1)
+            self.linear = nn.Linear(4, 4)
+            self.linear.weight.data = torch.randn((4, 4), dtype=torch.float32)
+            self.linear.bias.data = torch.randn((1, 4), dtype=torch.float32)
+
+    def forward(self, x):
+        for _ in range(2):
+            x = self.conv(x)
+            x = self.linear(x)
+        return x

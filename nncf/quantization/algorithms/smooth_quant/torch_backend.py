@@ -12,6 +12,7 @@
 from typing import Callable, List, Tuple
 
 import numpy as np
+import torch
 
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph import NNCFGraph
@@ -28,7 +29,7 @@ from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionComm
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
 from nncf.torch.graph.transformations.command_creation import create_command_to_update_weight
-from nncf.torch.graph.transformations.command_creation import multiply_insertion_command
+from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
@@ -36,27 +37,27 @@ from nncf.torch.tensor_statistics.collectors import PTAbsMaxReducer
 from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
 
 
+class SQMultiply(torch.nn.Module):
+    def __init__(self, scale_value):
+        super().__init__()
+        self._scale_value = scale_value
+
+    def forward(self, x):
+        return torch.mul(x, self._scale_value)
+
+
 class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     @property
     def convolution_metatypes(self) -> List[OperatorMetatype]:
         return [
-            om.PTConv1dMetatype,
-            om.PTConv2dMetatype,
-            om.PTConv3dMetatype,
             om.PTModuleConv1dMetatype,
             om.PTModuleConv2dMetatype,
             om.PTModuleConv3dMetatype,
-            om.PTDepthwiseConv1dSubtype,
-            om.PTDepthwiseConv2dSubtype,
-            om.PTDepthwiseConv3dSubtype,
-            om.PTConvTranspose1dMetatype,
-            om.PTConvTranspose2dMetatype,
-            om.PTConvTranspose3dMetatype,
         ]
 
     @property
     def matmul_metatypes(self) -> List[OperatorMetatype]:
-        return [om.PTMatMulMetatype, om.PTLinearMetatype, om.PTModuleLinearMetatype]
+        return [om.PTModuleLinearMetatype]
 
     @property
     def quantize_agnostic_metatypes(self) -> List[OperatorMetatype]:
@@ -72,10 +73,15 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def is_node_with_weights(node: NNCFNode) -> bool:
-        return node.layer_attributes is not None
+        # Metatypes of matmuls and convolutions guarantee
+        # all nodes with the metatypes have weights, we can skip
+        # this check by returning True.
+        return True
 
     @staticmethod
     def get_activations_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
+        # Metatypes of matmuls and convolutions guarantee
+        # all nodes with the metatypes have 0 activation port id
         return 0
 
     @staticmethod
@@ -119,18 +125,24 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         scale_node_name: str,
     ) -> OVMultiplyInsertionCommand:
         input_port_id = 0
-        return multiply_insertion_command(nodes, scale_value, scale_node_name, input_port_id)
+        target_points = []
+        for node in nodes:
+            target_points.append(
+                PTTargetPoint(TargetType.OPERATOR_PRE_HOOK, node.node_name, input_port_id=input_port_id)
+            )
+
+        return PTSharedFnInsertionCommand(target_points, SQMultiply(scale_value), scale_node_name)
 
     @staticmethod
     def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
         if node.metatype == om.PTModuleLinearMetatype:
             return -1
-        # TODO: Add activation axis calculation when MatMul wiil be supported
+        # TODO: Add activation axis calculation when MatMul will be supported
         return 1
 
     @staticmethod
     def get_weight_channel_axis(node: NNCFNode) -> int:
-        # TODO: Add activation axis calculation when MatMul wiil be supported
+        # TODO: Add activation axis calculation when MatMul will be supported
         return 1
 
     @staticmethod
@@ -140,6 +152,6 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     @staticmethod
     def get_filter_fn_for_statistics(activation_port_id: int) -> Callable[[StatisticPoint], bool]:
         def filter_func(point: StatisticPoint) -> bool:
-            return True
+            return point.target_point.input_port_id == activation_port_id
 
         return filter_func
