@@ -197,5 +197,6 @@ def do_dequantization(compressed_weights: Tensor, scale: Tensor, zero_point: Ten
     :param zero_point: zero point in compression/quantization.
     :return: dequantized/decompressed weights.
     """
-    decompressed_weights = (compressed_weights - zero_point) * scale
-    return decompressed_weights
+    decompressed_weight = compressed_weights.astype(dtype=scale.dtype)
+    decompressed_weight = (decompressed_weight - zero_point) * scale
+    return decompressed_weight

@@ -950,3 +950,130 @@ class TemplateTestNNCFTensorOperators:
         assert isinstance(res, Tensor)
         assert fns.allclose(res.data, ref_tensor)
         assert res.device == tensor.device
+
+    @pytest.mark.parametrize(
+        "x, q, ref",
+        (
+            (
+                [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+                0.0,
+                0.0,
+            ),
+            (
+                [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+                0.5,
+                0.5,
+            ),
+            (
+                [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+                0.6,
+                0.6,
+            ),
+            (
+                [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+                1.0,
+                1.0,
+            ),
+        ),
+    )
+    def test_fn_quantile(self, x, q, ref):
+        tensor = Tensor(self.to_tensor(x))
+        ref_tensor = self.to_tensor(ref)
+
+        res = fns.quantile(tensor, q)
+
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res.data, ref_tensor)
+        assert res.device == tensor.device
+
+    @pytest.mark.parametrize(
+        "m1, m2, ref",
+        (
+            (
+                [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+                [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+                [[9.0, 12.0, 15.0], [19.0, 26.0, 33.0], [29.0, 40.0, 51.0]],
+            ),
+            (
+                [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
+                [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+                [[22.0, 28.0], [49.0, 64.0]],
+            ),
+        ),
+    )
+    def test_fn_matmul(self, m1, m2, ref):
+        tensor1 = Tensor(self.to_tensor(m1))
+        tensor2 = Tensor(self.to_tensor(m2))
+        ref_tensor = self.to_tensor(ref)
+
+        res = fns.matmul(tensor1, tensor2)
+
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res.data, ref_tensor)
+        assert res.device == tensor1.device
+
+    @pytest.mark.parametrize(
+        "val, axis, ref",
+        (
+            (1, None, 1),
+            ([1], None, 1),
+            ([[[[1], [2]], [[1], [2]]]], None, [[1, 2], [1, 2]]),
+            ([[[[1], [2]], [[1], [2]]]], 0, [[[1], [2]], [[1], [2]]]),
+            ([[[[1], [2]], [[1], [2]]]], -1, [[[1, 2], [1, 2]]]),
+            ([[[[1], [2]], [[1], [2]]]], (0, 3), [[1, 2], [1, 2]]),
+        ),
+    )
+    def test_unsqueeze(self, val, axis, ref):
+        tensor = self.to_tensor(val)
+        nncf_tensor = Tensor(tensor)
+        ref_tensor = self.to_tensor(ref)
+        res = fns.squeeze(nncf_tensor, axis=axis)
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res, ref_tensor)
+        assert res.device == nncf_tensor.device
+
+    @pytest.mark.parametrize(
+        "x, ref",
+        (
+            (
+                [[1, 2], [3, 4], [5, 6]],
+                [[1, 3, 5], [2, 4, 6]],
+            ),
+            (
+                [[1, 2, 3], [4, 5, 6]],
+                [[1, 4], [2, 5], [3, 6]],
+            ),
+        ),
+    )
+    def test_fn_transpose(self, x, ref):
+        tensor = Tensor(self.to_tensor(x))
+        ref_tensor = self.to_tensor(ref)
+
+        res = fns.transpose(tensor)
+
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res.data, ref_tensor)
+        assert res.device == tensor.device
+
+    @pytest.mark.parametrize(
+        "x, ref",
+        (
+            (
+                [1, 2, 3, 4, 5, 6],
+                [0, 1, 2, 3, 4, 5],
+            ),
+            (
+                [6, 5, 4, 3, 2, 1],
+                [5, 4, 3, 2, 1, 0],
+            ),
+        ),
+    )
+    def test_fn_argsort(self, x, ref):
+        tensor = Tensor(self.to_tensor(x))
+        ref_tensor = self.to_tensor(ref)
+
+        res = fns.argsort(tensor)
+
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res.data, ref_tensor)
+        assert res.device == tensor.device

@@ -526,12 +526,18 @@ def size(a: Tensor) -> int:
 
 @functools.singledispatch
 @tensor_guard
-def quantile(a: Tensor, q: float) -> Tensor:
+def quantile(
+    a: Tensor,
+    q: float,
+    axis: Optional[Union[int, Tuple[int, ...]]] = None,
+    method: Optional[str] = "linear",
+    keepdims: bool = False,
+) -> Tensor:
     """
     :param a: Tensor.
     :param q: value of quantile.
     """
-    return Tensor(quantile(a.data, q))
+    return Tensor(quantile(a.data, q, axis=axis, method=method, keepdims=keepdims))
 
 
 @functools.singledispatch
@@ -575,14 +581,14 @@ def transpose(a: Tensor, axes: Optional[Tuple[int, ...]] = None) -> Tensor:
 
 @functools.singledispatch
 @tensor_guard
-def argsort(a: Tensor, axis: int = None, descending=False, stable=Flase) -> Tensor:
+def argsort(a: Tensor, axis: int = -1, descending: bool = False, stable: bool = False) -> Tensor:
     """
     Returns the indices that would sort an array.
 
     :param a: The input tensor.
     :param axis: Axis along which to sort. The default is -1 (the last axis). If None, the flattened array is used.
     :param descending: Controls the sorting order (ascending or descending).
-    :param stable: If True then the sorting routine becomes stable, preserving the order of equivalent elements. 
+    :param stable: If True then the sorting routine becomes stable, preserving the order of equivalent elements.
         If False, the relative order of values which compare equal is not guaranteed. True is slower.
     :return: Array of indices that sort a along the specified axis.
     """

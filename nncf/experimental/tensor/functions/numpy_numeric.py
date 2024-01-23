@@ -250,8 +250,14 @@ def _(a: Union[np.ndarray, np.generic]) -> int:
 
 
 @register_numpy_types(numeric.quantile)
-def _(a: Union[np.ndarray, np.generic], q: float) -> float:
-    return np.quantile(a, q)
+def _(
+    a: Union[np.ndarray, np.generic],
+    q: float,
+    axis: Optional[Union[int, Tuple[int, ...]]] = None,
+    method: Optional[str] = "linear",
+    keepdims: bool = False,
+) -> float:
+    return np.quantile(a, q, axis=axis, method=method, keepdims=keepdims)
 
 
 @register_numpy_types(numeric.matmul)
@@ -272,5 +278,7 @@ def _(a: Union[np.ndarray, np.generic], axes: Optional[Tuple[int, ...]] = None) 
 
 
 @register_numpy_types(numeric.argsort)
-def _(a: Union[np.ndarray, np.generic], axis: Optional[int] = None) -> Union[np.ndarray, np.generic]:
+def _(
+    a: Union[np.ndarray, np.generic], axis: Optional[int] = None, descending=False, stable=False
+) -> Union[np.ndarray, np.generic]:
     return np.argsort(a, axis=axis)
