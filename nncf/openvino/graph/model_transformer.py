@@ -568,7 +568,14 @@ class OVModelTransformer(ModelTransformer):
         if not results:
             results = model.get_results()
 
-        return ov.Model(results, params)
+        extracted_model = ov.Model(results, params)
+        pre_post_processor = PrePostProcessor(extracted_model)
+        for input_id, _ in enumerate(extracted_model.inputs):
+            pre_post_processor.input(input_id).tensor().set_element_type(ov.Type.f32)
+        for output_id, _ in enumerate(extracted_model.outputs):
+            pre_post_processor.output(output_id).tensor().set_element_type(ov.Type.f32)
+        extracted_model = pre_post_processor.build()
+        return extracted_model
 
     @staticmethod
     def _apply_insert_operation(model: ov.Model, transformations: OVInplaceFnInsertionCommand) -> ov.Model:
