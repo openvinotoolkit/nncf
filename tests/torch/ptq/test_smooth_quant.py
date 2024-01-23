@@ -18,12 +18,15 @@ import torch
 
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.quantization.algorithms.smooth_quant.torch_backend import PTSmoothQuantAlgoBackend
+from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
-from nncf.torch.graph.transformations.command_creation import SQMultiply
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.model_creation import wrap_model
 from nncf.torch.nncf_network import ExtraCompressionModuleType
+from tests.post_training.test_templates.helpers import ConvTestModel
+from tests.post_training.test_templates.helpers import LinearMultiShapeModel
+from tests.post_training.test_templates.helpers import ShareWeghtsConvAndShareLinearModel
 from tests.post_training.test_templates.test_smooth_quant import TemplateTestSQAlgorithm
 
 PT_LINEAR_MODEL_SQ_MAP = {
@@ -39,6 +42,10 @@ PT_LINEAR_MODEL_MM_MAP = {
     "Linear4": "LinearMultiShapeModel/NNCFLinear[linear_4]/linear_0",
 }
 
+PT_CONV_MODEL_SQ_MAP = {("Conv1",): "/nncf_model_input_0_0_0/nncf_smooth_quant"}
+
+PT_CONV_MODEL_MM_MAP = {"Conv1": "ConvTestModel/NNCFConv2d[conv]/conv2d_0"}
+
 
 class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
     @staticmethod
@@ -49,8 +56,14 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
     def inplace_statistics(self, request) -> bool:
         return request.param
 
-    def get_node_name_map(self) -> Dict[str, str]:
-        return PT_LINEAR_MODEL_MM_MAP
+    def get_node_name_map(self, model_cls) -> Dict[str, str]:
+        if model_cls is LinearMultiShapeModel:
+            return PT_LINEAR_MODEL_MM_MAP
+        if model_cls is ConvTestModel:
+            return PT_CONV_MODEL_MM_MAP
+        if model_cls is ShareWeghtsConvAndShareLinearModel:
+            return {}
+        raise NotImplementedError
 
     @staticmethod
     def get_target_node_name(command: TransformationCommand):
@@ -74,14 +87,15 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
         return wrap_model(model.eval(), torch.rand(model.INPUT_SIZE))
 
     @staticmethod
-    def check_scales(model: torch.nn.Module, reference_values: Dict[str, np.ndarray]) -> None:
+    def check_scales(model: torch.nn.Module, reference_values: Dict[str, np.ndarray], model_cls) -> None:
+        names_map = PT_LINEAR_MODEL_SQ_MAP if model_cls is LinearMultiShapeModel else PT_CONV_MODEL_SQ_MAP
         modules = model.nncf.get_compression_modules_by_type(ExtraCompressionModuleType.EXTERNAL_OP)
         for ref_names, ref_value in reference_values.items():
-            if not all(name.startswith("Linear") for name in ref_names):
-                # Pytorch SQ algorithm supports only linear modules by far,
+            if not all(name.startswith("Linear") or name.startswith("Conv") for name in ref_names):
+                # Pytorch SQ algorithm supports only linear and conv modules by far,
                 # so other multiplies are skipped
                 continue
-            sq_node = modules[PT_LINEAR_MODEL_SQ_MAP[ref_names]]
+            sq_node = modules[names_map[ref_names]]
 
             assert isinstance(sq_node, SQMultiply)
 

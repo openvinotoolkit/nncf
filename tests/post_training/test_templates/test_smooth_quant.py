@@ -28,8 +28,11 @@ from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
+from nncf.quantization.algorithms.smooth_quant.openvino_backend import OVSmoothQuantAlgoBackend
+from tests.post_training.test_templates.helpers import ConvTestModel
 from tests.post_training.test_templates.helpers import LinearMultiShapeModel
 from tests.post_training.test_templates.helpers import NonZeroLinearModel
+from tests.post_training.test_templates.helpers import ShareWeghtsConvAndShareLinearModel
 from tests.post_training.test_templates.helpers import get_static_dataset
 
 TModel = TypeVar("TModel")
@@ -49,9 +52,9 @@ class TemplateTestSQAlgorithm:
         """
 
     @abstractmethod
-    def get_node_name_map(self) -> Dict[str, str]:
+    def get_node_name_map(self, model_cls) -> Dict[str, str]:
         """
-        Return backend specific map from the LinearMultiShapeModel labels
+        Return backend specific map from the given model class labels
         to nncf_grpah nodes names.
         """
 
@@ -78,7 +81,7 @@ class TemplateTestSQAlgorithm:
 
     @staticmethod
     @abstractmethod
-    def check_scales(model: TModel, reference_values: Dict[str, TTensor]) -> None:
+    def check_scales(model: TModel, reference_values: Dict[str, TTensor], model_cls) -> None:
         """
         Checking scales from model with references.
         """
@@ -104,7 +107,7 @@ class TemplateTestSQAlgorithm:
             model_type=ModelType.TRANSFORMER,
             advanced_parameters=AdvancedQuantizationParameters(
                 overflow_fix=OverflowFix.DISABLE,
-                smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=0.95),
+                smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=0.95, convolution=0.95),
                 inplace_statistics=False,
             ),
         )
@@ -142,6 +145,12 @@ class TemplateTestSQAlgorithm:
                     ("Linear3", "Linear4"): [[[[0.33630377, 0.3288621, 0.9898262, 0.7217065]]]],
                 },
             ),
+            (
+                ConvTestModel,
+                {
+                    ("Conv1",): [[[[1.0723]]]],
+                },
+            ),
         ),
     )
     def test_smooth_quant_algo(self, model_cls, reference_values, tmpdir):
@@ -152,7 +161,7 @@ class TemplateTestSQAlgorithm:
         graph = NNCFGraphFactory.create(model)
         quantized_model = quantization_algorithm.apply(model, graph, dataset=dataset)
 
-        self.check_scales(quantized_model, reference_values)
+        self.check_scales(quantized_model, reference_values, model_cls)
 
     def test_get_abs_max_channel_collector(self, inplace_statistics: bool):
         backend = self.get_backend()
@@ -196,11 +205,16 @@ class TemplateTestSQAlgorithm:
                     ("Linear4", 0),
                 ],
             ),
+            (ConvTestModel, [("Conv1", 0)]),
+            (ShareWeghtsConvAndShareLinearModel, []),
         ),
     )
     def test__get_nodes_to_smooth_data(self, model_cls, references, tmpdir):
         model = self.backend_specific_model(model_cls(), tmpdir)
         nncf_graph = NNCFGraphFactory.create(model)
+
+        if isinstance(self.get_backend(), OVSmoothQuantAlgoBackend) and model_cls is ShareWeghtsConvAndShareLinearModel:
+            pytest.xfail("Matmuls don't share one weight in OV ir for some reason")
 
         algo = SmoothQuant()
         algo._set_backend_entity(model)
@@ -208,7 +222,7 @@ class TemplateTestSQAlgorithm:
         smooth_data = algo._get_nodes_to_smooth_data(nncf_graph, alpha_map.keys())
         smooth_data = {d["node_to_smooth"].node_name: d["input_act_port"] for d in smooth_data}
 
-        name_map = self.get_node_name_map()
+        name_map = self.get_node_name_map(model_cls)
         assert len(name_map) == len(smooth_data)
         matched = 0
         for ref_node_name, ref_port_id in references:

@@ -23,6 +23,9 @@ from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.quantization.algorithms.smooth_quant.openvino_backend import OVSmoothQuantAlgoBackend
+from tests.post_training.test_templates.helpers import ConvTestModel
+from tests.post_training.test_templates.helpers import LinearMultiShapeModel
+from tests.post_training.test_templates.helpers import ShareWeghtsConvAndShareLinearModel
 from tests.post_training.test_templates.test_smooth_quant import TemplateTestSQAlgorithm
 
 OV_LINEAR_MODEL_MM_OP_MAP = {
@@ -40,7 +43,6 @@ OV_LINEAR_MODEL_MM_OP_MAP = {
     "Linear4": "/linear_4/MatMul",
 }
 
-
 OV_LINEAR_MODEL_SQ_OP_MAP = {
     "MatMul1": "/Reshape_0_0/nncf_smooth_quant",
     "MatMul2": "/Reshape_0_0/nncf_smooth_quant",
@@ -56,6 +58,14 @@ OV_LINEAR_MODEL_SQ_OP_MAP = {
     "Linear4": "/Add_0_0/nncf_smooth_quant",
 }
 
+OV_CONV_MODEL_MM_OP_MAP = {
+    "Conv1": "/conv/Conv/WithoutBiases",
+}
+
+OV_CONV_MODEL_SQ_OP_MAP = {
+    "Conv1": "input.1_0_0/nncf_smooth_quant",
+}
+
 
 class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
     @staticmethod
@@ -66,8 +76,14 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
     def inplace_statistics(self, request) -> bool:
         return request.param
 
-    def get_node_name_map(self) -> Dict[str, str]:
-        return OV_LINEAR_MODEL_MM_OP_MAP
+    def get_node_name_map(self, model_cls) -> Dict[str, str]:
+        if model_cls is LinearMultiShapeModel:
+            return OV_LINEAR_MODEL_MM_OP_MAP
+        if model_cls is ConvTestModel:
+            return OV_CONV_MODEL_MM_OP_MAP
+        if model_cls is ShareWeghtsConvAndShareLinearModel:
+            return {}
+        raise NotImplementedError
 
     @staticmethod
     def get_target_node_name(command: TransformationCommand):
@@ -94,12 +110,13 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
         return ov_model
 
     @staticmethod
-    def check_scales(model: ov.Model, reference_values: Dict[str, np.ndarray]) -> None:
+    def check_scales(model: ov.Model, reference_values: Dict[str, np.ndarray], model_cls) -> None:
+        names_map = OV_LINEAR_MODEL_SQ_OP_MAP if model_cls is LinearMultiShapeModel else OV_CONV_MODEL_SQ_OP_MAP
         ops_list = {op.get_friendly_name(): op for op in model.get_ops()}
         for ref_names, ref_value in reference_values.items():
             const_nodes = []
             for ref_name in ref_names:
-                node = ops_list[OV_LINEAR_MODEL_SQ_OP_MAP[ref_name]]
+                node = ops_list[names_map[ref_name]]
                 const_nodes.append(node.input(1).get_source_output().get_node())
             # Check unified group acutally shares one constant
             assert all(node is const_nodes[0] for node in const_nodes[1:])

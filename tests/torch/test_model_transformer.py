@@ -149,11 +149,8 @@ class TestInsertionCommands:
         point_for_relu_inputs,
     ]
 
-    @pytest.mark.parametrize(
-        "insert_method_name,check_tmp_ops", [("insert_at_point", False), ("temporary_insert_at_point", True)]
-    )
     @pytest.mark.parametrize("target_point", available_points)
-    def test_single_insertions(self, setup, target_point: PTTargetPoint, insert_method_name: str, check_tmp_ops: bool):
+    def test_single_insertions(self, setup, target_point: PTTargetPoint):
         insertion_point = PTInsertionPoint(
             target_point.target_type,
             OperationAddress.from_str(target_point.target_node_name),

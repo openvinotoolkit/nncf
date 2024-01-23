@@ -1079,3 +1079,17 @@ class TemplateTestNNCFTensorOperators:
         assert fns.allclose(self.cast_to(res.data, TensorDataType.float32), ref_tensor)
         assert res.device == tensor.device
         assert res.shape == tuple(ref_tensor.shape)
+
+    @pytest.mark.parametrize(
+        "x,power,ref", [(list(map(float, range(10))), 2.0, list(map(float, [x**2 for x in range(10)])))]
+    )
+    def test_fn_power(self, x, power, ref):
+        tensor = Tensor(self.to_tensor(x))
+        ref_tensor = self.to_tensor(ref)
+
+        res = fns.power(tensor, power)
+
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res.data, ref_tensor)
+        assert res.device == tensor.device
+        assert res.shape == tuple(ref_tensor.shape)
