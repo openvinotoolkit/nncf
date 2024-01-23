@@ -179,6 +179,21 @@ def _(a: Union[np.ndarray, np.generic], decimals: int = 0) -> np.ndarray:
     return np.round(a, decimals=decimals)
 
 
+@register_numpy_types(numeric.quantile)
+def _(
+    a: Union[np.ndarray, np.generic],
+    q: Union[float, List[float]],
+    axis: Union[int, Tuple[int]] = None,
+    keepdims: Optional[bool] = None,
+) -> Union[float, Union[np.ndarray, np.generic]]:
+    if keepdims is None:
+        keepdims = np._NoValue
+    ret_val = np.quantile(a, q=q, axis=axis, keepdims=keepdims)
+    if isinstance(ret_val, np.ndarray):
+        return ret_val
+    return np.array(ret_val)
+
+
 @register_numpy_types(numeric._binary_op_nowarn)
 def _(
     a: Union[np.ndarray, np.generic], b: Union[np.ndarray, np.generic, float], operator_fn: Callable
