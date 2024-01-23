@@ -22,7 +22,6 @@ import torch.nn.functional as F
 from torch import nn
 from torch.nn.utils import weight_norm
 
-import nncf
 from nncf import nncf_logger
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import UnknownMetatype

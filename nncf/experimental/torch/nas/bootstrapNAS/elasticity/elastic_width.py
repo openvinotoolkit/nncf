@@ -579,7 +579,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
     @width_num_params_indicator.setter
     def width_num_params_indicator(self, width_num_params_indicator):
         if width_num_params_indicator == 0 or width_num_params_indicator < -1:
-            raise mmcf.InternalError(f"Invalid width indicator: {width_num_params_indicator}")
+            raise nncf.InternalError(f"Invalid width indicator: {width_num_params_indicator}")
         self._width_num_params_indicator = width_num_params_indicator
 
     @property

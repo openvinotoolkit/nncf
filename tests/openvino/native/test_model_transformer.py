@@ -18,6 +18,7 @@ import openvino.runtime as ov
 import pytest
 from openvino.runtime import opset13 as opset
 
+import nncf
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.tensor import Tensor
