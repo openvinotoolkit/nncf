@@ -28,7 +28,6 @@ from nncf.torch.tensor_statistics.collectors import PTMeanPerChanelReducer
 from nncf.torch.tensor_statistics.collectors import PTMeanReducer
 from nncf.torch.tensor_statistics.collectors import PTMinReducer
 from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
-from nncf.torch.tensor_statistics.collectors import PTNoopReducer
 from nncf.torch.tensor_statistics.collectors import PTQuantileReducer
 from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggreagtors
 
@@ -49,7 +48,6 @@ class BaseTestReducersAggregators(TemplateTestReducersAggreagtors, ABC):
     @pytest.fixture(scope="module")
     def reducers(self):
         return {
-            "noop": PTNoopReducer,
             "min": PTMinReducer,
             "max": PTMaxReducer,
             "abs_max": PTAbsMaxReducer,

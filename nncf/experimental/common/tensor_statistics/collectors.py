@@ -86,6 +86,9 @@ class TensorReducerBase(ABC):
         """
 
     def __call__(self, x: List[NNCFTensor]):
+        if any(t.is_empty() for t in x):
+            return None
+
         if self.inplace:
             return x
 
@@ -292,9 +295,9 @@ class TensorCollector:
         for reducer in self._reducers:
             reducer_hash = hash(reducer)
             input_ = inputs[reducer_hash]
-            if any(tensor.is_empty() for tensor in input_):
-                continue
-            reduced_inputs[reducer_hash] = reducer(input_)
+            reduced_input = reducer(input_)
+            if reduced_input is not None:
+                reduced_inputs[reducer_hash] = reduced_input
 
         for (
             (reducer_hash, reducer_port_id, _),
@@ -473,6 +476,14 @@ class NoopReducer(TensorReducerBase):
 
     def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
         return x
+
+
+class RawReducer(NoopReducer):
+    def __init__(self):
+        super().__init__()
+
+    def __call__(self, x: List[NNCFTensor]):
+        return self._reduce_out_of_place(x)
 
 
 class MinReducer(TensorReducerBase):

@@ -34,6 +34,7 @@ from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
 from nncf.experimental.common.tensor_statistics.collectors import PercentileAggregator
 from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
+from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.quantization.advanced_parameters import StatisticsType
@@ -221,10 +222,6 @@ class PTReducerMixIn:
 
     def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
         return []
-
-
-class PTNoopReducer(PTReducerMixIn, NoopReducer):
-    pass
 
 
 class PTMinReducer(PTReducerMixIn, MinReducer):
@@ -465,7 +462,7 @@ def _get_collection_without_reduction(
     :return: Target statistic collector.
     """
     tensor_collector = TensorCollector(statistic_cls)
-    reducer = PTNoopReducer()
+    reducer = NoopReducer()
     aggregation_axes = list(set(list(aggregation_axes) + [dim + 1 for dim in reduction_axes]))
     aggregator = aggregator_cls(
         PTNNCFCollectorTensorProcessor,
@@ -532,7 +529,7 @@ def get_mean_statistic_collector(
         reducer = PTBatchMeanReducer()
     else:
         reducer = PTMeanPerChanelReducer(channel_axis=channel_axis)
-    noop_reducer = PTNoopReducer()
+    noop_reducer = NoopReducer()
 
     kwargs = {
         "tensor_processor": PTNNCFCollectorTensorProcessor,
@@ -555,7 +552,7 @@ def get_raw_stat_collector(num_samples: Optional[int] = None) -> TensorCollector
     :param num_samples: Maximum number of samples to collect.
     :return: Raw statistic collector.
     """
-    reducer = PTNoopReducer()
+    reducer = RawReducer()
     aggregator = NoopAggregator(num_samples)
 
     collector = TensorCollector(PTRawTensorStatistic)
