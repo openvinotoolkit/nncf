@@ -163,8 +163,11 @@ class WeightCompression(Algorithm):
             should be quantized or not.
         :return: Information about each weight node that is considered for mixed precision.
         """
-        if self._mode in [CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM] or self._all_layers:
+        if self._mode in [CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM]:
             return all_weight_params
+
+        if self._all_layers:
+            return list(filter(lambda wp: len(wp.reduction_axis) == 1, all_weight_params))
 
         ratio_defining_params = list(
             filter(
@@ -311,9 +314,8 @@ class WeightCompression(Algorithm):
                     nncf_logger.warning(
                         f"Weight compression expects a single reduction axis, but {len(reduction_axes)} given. "
                         f"Weight shape: {weight.shape}, reduction axes: {reduction_axes}, "
-                        f"node name: {node.node_name}. The node won't be quantized."
+                        f"node name: {node.node_name}. The node will be asymmetrically quantized to 8 bits."
                     )
-                    continue
 
                 weight_params = WeightCompressionParameters(
                     weight_name, node, weight_port_id, weight.size, reduction_axes

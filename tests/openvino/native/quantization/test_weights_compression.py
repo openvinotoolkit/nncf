@@ -365,12 +365,13 @@ def test_quantize_Gather_with_multiple_reduction_axes_in_8bit(mode):
 
 
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM))
-def test_not_quantize_Gather_with_multiple_reduction_axes_if_all_layers(mode):
+@pytest.mark.parametrize("all_layers", (True, False))
+def test_quantize_Gather_with_multiple_reduction_axes_if_mode_4bit(mode, all_layers):
     model = GatherWithTwoReductionAxes().ov_model
-    compressed_model = compress_weights(model, mode=mode, all_layers=True)
+    compressed_model = compress_weights(model, mode=mode, all_layers=all_layers)
     for op in compressed_model.get_ordered_ops():
         if op.get_type_name() == "Constant" and op.get_friendly_name() == "gather_1_data":
-            assert op.get_element_type() == ov.Type.f32
+            assert op.get_element_type() == ov.Type.u8
 
 
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM))
