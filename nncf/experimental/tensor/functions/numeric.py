@@ -388,7 +388,7 @@ def quantile(
     q: Union[float, List[float]],
     axis: Union[int, Tuple[int]] = None,
     keepdims: Optional[bool] = None,
-) -> Union[float, Tensor]:
+) -> Tensor:
     """
     Compute the quantile(s) of the data along the specified axis.
 

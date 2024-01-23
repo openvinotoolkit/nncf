@@ -198,7 +198,7 @@ def _(
     q: Union[float, List[float]],
     axis: Union[int, Tuple[int]] = None,
     keepdims: Optional[bool] = None,
-) -> Union[float, torch.Tensor]:
+) -> torch.Tensor:
     device = a.device
     # See https://github.com/pytorch/pytorch/issues/61582
     # https://github.com/pytorch/pytorch/issues/64947

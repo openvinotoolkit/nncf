@@ -185,7 +185,7 @@ def _(
     q: Union[float, List[float]],
     axis: Union[int, Tuple[int]] = None,
     keepdims: Optional[bool] = None,
-) -> Union[float, Union[np.ndarray, np.generic]]:
+) -> Union[np.ndarray, np.generic]:
     if keepdims is None:
         keepdims = np._NoValue
     return np.array(np.quantile(a, q=q, axis=axis, keepdims=keepdims))
