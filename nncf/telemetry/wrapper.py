@@ -99,6 +99,7 @@ class NNCFTelemetry(ITelemetry):
                 tid=self.MEASUREMENT_ID,
                 backend="ga4",
                 enable_opt_in_dialog=False,
+                disable_in_ci=True,
             )
 
         except Exception as e:

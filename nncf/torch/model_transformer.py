@@ -15,16 +15,21 @@ from typing import Callable, Dict, List, Tuple
 
 from torch import Tensor
 from torch import nn
+from torch.nn.parameter import Parameter
 
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.quantization.structs import NonWeightQuantizerId
+from nncf.torch.external_hook import EXTERNAL_OP_STORAGE_NAME
+from nncf.torch.external_hook import ExternalOpCallHook
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTModelExtractionWithFusedBiasCommand
 from nncf.torch.graph.transformations.commands import PTQuantizerInsertionCommand
+from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.graph.transformations.commands import PTWeightUpdateCommand
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.model_analyzer import get_potential_fused_node
 from nncf.torch.module_operations import UpdateWeight
@@ -32,6 +37,8 @@ from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint
 from nncf.torch.quantization.external_quantizer import ExternalQuantizerCallHook
+from nncf.torch.utils import get_model_device
+from nncf.torch.utils import is_multidevice
 
 
 class PTModelTransformer(ModelTransformer):
@@ -47,6 +54,8 @@ class PTModelTransformer(ModelTransformer):
             (PTInsertionCommand, self._apply_insertion_transformations),
             (PTQuantizerInsertionCommand, self._apply_quantizer_insertion_transformations),
             (PTBiasCorrectionCommand, self._apply_bias_correction_transformations),
+            (PTSharedFnInsertionCommand, self._apply_shared_nodes_insertion),
+            (PTWeightUpdateCommand, self._apply_weights_update_transformations),
         ]
 
     def transform(self, transformation_layout: PTTransformationLayout) -> NNCFNetwork:
@@ -99,8 +108,29 @@ class PTModelTransformer(ModelTransformer):
         for pt_ip, fn_list_with_priority in fns_grouped_by_points.items():
             fn_list_with_priority = sorted(fn_list_with_priority, key=lambda x: x[1])
             model.nncf.insert_at_point(pt_ip, [x[0] for x in fn_list_with_priority])
-
         return model
+
+    @staticmethod
+    def _apply_shared_nodes_insertion(
+        model: NNCFNetwork, transformations: List[PTSharedFnInsertionCommand]
+    ) -> NNCFNetwork:
+        compression_model_type = ExtraCompressionModuleType.EXTERNAL_OP
+
+        if not model.nncf.is_compression_module_registered(compression_model_type):
+            model.nncf.register_compression_module_type(compression_model_type)
+
+        insertion_commands: List[PTInsertionCommand] = []
+
+        for shared_command in transformations:
+            model.nncf.add_compression_module(shared_command.op_name, shared_command.fn, compression_model_type)
+
+            for target_point in shared_command.target_points:
+                fn = ExternalOpCallHook(
+                    EXTERNAL_OP_STORAGE_NAME, model.nncf.get_tracing_context(), shared_command.op_name
+                )
+                insertion_commands.append(PTInsertionCommand(target_point, fn, priority=shared_command.priority))
+
+        return PTModelTransformer._apply_insertion_transformations(model, insertion_commands)
 
     @staticmethod
     def _apply_quantizer_insertion_transformations(
@@ -119,15 +149,21 @@ class PTModelTransformer(ModelTransformer):
             model.nncf.register_compression_module_type(compression_model_type)
 
         insertion_commands: List[PTInsertionCommand] = []
+        device = None
+        if not is_multidevice(model):
+            device = get_model_device(model)
 
         for transformation_command in transformations:
             target_point: PTTargetPoint = transformation_command.target_point
-            fn = transformation_command.quantizer
+            quantizer_module = transformation_command.quantizer
+            if device is not None:
+                quantizer_module = quantizer_module.to(device)
+            fn = quantizer_module
 
             if target_point.type is not TargetType.OPERATION_WITH_WEIGHTS:
                 quantizer_id = NonWeightQuantizerId(target_point.target_node_name, target_point.input_port_id)
                 storage_key = str(quantizer_id)
-                model.nncf.add_compression_module(storage_key, transformation_command.quantizer, compression_model_type)
+                model.nncf.add_compression_module(storage_key, quantizer_module, compression_model_type)
                 fn = ExternalQuantizerCallHook(model.nncf.get_tracing_context(), storage_key)
 
             insertion_commands.append(
@@ -169,6 +205,21 @@ class PTModelTransformer(ModelTransformer):
             )
         return model
 
+    @staticmethod
+    def _apply_weights_update_transformations(
+        model: NNCFNetwork, transformations: List[PTWeightUpdateCommand]
+    ) -> NNCFNetwork:
+        """
+        Applies weight update transformations on the model.
+
+        :param model: Model to apply transformations.
+        :param transformations: List of the weight update transformations.
+        :return: Model with updated weights.
+        """
+        for transformation in transformations:
+            update_parameter(transformation.target_point.target_node_name, "weight", transformation.weight_value, model)
+        return model
+
 
 def update_fused_bias(target_node_name: str, new_bias: Tensor, model: NNCFNetwork) -> None:
     """
@@ -182,9 +233,21 @@ def update_fused_bias(target_node_name: str, new_bias: Tensor, model: NNCFNetwor
     fused_node = get_potential_fused_node(target_node_name, nncf_graph)
     if fused_node:
         target_node_name = fused_node.node_name
+    update_parameter(target_node_name, "bias", new_bias, model)
 
-    node = model.nncf.get_containing_module(target_node_name)
-    node.bias.data = new_bias
+
+def update_parameter(target_node_name: str, parameter_name: str, new_value: Tensor, model: NNCFNetwork) -> None:
+    """
+    Update parameter for target module.
+
+    :param target_node_name: The target node name.
+    :param parmeter_name: The name of the parameter to update.
+    :param new_value: New parameter value.
+    :param model: The model.
+    """
+    module = model.nncf.get_containing_module(target_node_name)
+    parameter: Parameter = getattr(module, parameter_name)
+    parameter.data = new_value
 
 
 def extraction_potential_fused_modules(node_name: str, model: NNCFNetwork) -> nn.Sequential:

@@ -130,10 +130,8 @@ def test_can_export_single_batch_bn(tmp_path):
 
 
 def test_can_export_with_model_args(tmp_path):
-    pytest.xfail(
-        "Torch now parses the function signature and sets up default parameters for unprovided "
-        "arguments on its own. Need to rethink and possibly deprecate model_args parameter."
-    )
+    # Torch now parses the function signature and sets up default parameters for unprovided
+    # arguments on its own. Need to rethink and possibly deprecate model_args parameter.
     test_path = tmp_path.joinpath("test.onnx")
     model = MultiParamForwardModel()
     config = get_basic_quantization_config(input_info=[{"sample_size": [1, 1, 1, 1]}, {"sample_size": [1, 1, 1, 1]}])

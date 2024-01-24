@@ -12,7 +12,7 @@
 from typing import Dict, List, Optional
 
 from nncf.common.initialization.dataloader import NNCFDataLoader
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.config.schemata.defaults import NUM_INIT_SAMPLES
 

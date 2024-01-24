@@ -16,7 +16,7 @@ from typing import Callable, Dict, List, Tuple
 import numpy as np
 import openvino.runtime as ov
 from openvino._pyopenvino import DescriptorTensor
-from openvino.runtime import opset9 as opset
+from openvino.runtime import opset13 as opset
 
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.model_transformer import TModel
@@ -25,6 +25,7 @@ from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.openvino.graph.node_utils import get_result_node_name
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVBiasInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVConvertInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVExtractIfBodyCommand
 from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
@@ -34,6 +35,7 @@ from nncf.openvino.graph.transformations.commands import OVOutputInsertionComman
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVUpdateIfBodyCommand
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
+from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
 
@@ -47,6 +49,7 @@ class OVModelTransformer(ModelTransformer):
         self._command_transformation_ordered_pairs = [
             (OVFQNodeRemovingCommand, self._apply_fq_nodes_removing_transformation),
             (OVQuantizerInsertionCommand, self._apply_quantizer_insertion_transformations),
+            (OVConvertInsertionCommand, self._apply_convert_insertion_transformations),
             (OVBiasCorrectionCommand, self._apply_bias_correction_transformations),
             (OVWeightUpdateCommand, self._apply_weight_update_transformations),
             (OVModelExtractionCommand, self._apply_model_extraction_transformation),
@@ -57,6 +60,11 @@ class OVModelTransformer(ModelTransformer):
             (OVUpdateIfBodyCommand, self._apply_update_if_body_transformations),
             (OVExtractIfBodyCommand, self._apply_extract_if_body_transformation),
         ]
+
+    @staticmethod
+    def _convert_to_fp16(data):
+        clip_data = np.clip(data, np.finfo(np.float16).min, np.finfo(np.float16).max)
+        return clip_data.astype(np.float16)
 
     @staticmethod
     def _get_name_to_node_mapping(model: ov.Model) -> Dict[str, ov.Node]:
@@ -235,25 +243,116 @@ class OVModelTransformer(ModelTransformer):
         return model
 
     @staticmethod
-    def convert_params_to_fp16(
-        fq_params: FakeQuantizeParameters,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def _apply_convert_insertion_transformations(
+        model: ov.Model, transformations: List[OVConvertInsertionCommand]
+    ) -> ov.Model:
         """
-        Converts FakeQuantize parameters to FP16 precision.
+        Applies transformations on the model.
 
-        :param fq_params: FakeQuantize node attributes.
-        :return: FakeQuantize parameters in FP16 precision.
+        :param model: Model to apply transformations.
+        :param transformations: List of the OVConvertInsertionCommand transformations.
+        :return: Model with inserted FakeConvert nodes.
+        """
+        name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
+        for transformation in transformations:
+            OVModelTransformer._insert_fake_convert_op(transformation, name_to_node_mapping)
+        return model
+
+    @staticmethod
+    def _create_constant(value: np.ndarray, dtype: ov.Type, name: str) -> ov.Node:
+        """
+        Creates constant using opset.
+
+        :param value: Numpy value.
+        :param type: Constant type.
+        :param name: Name for the constant.
+        :return: ov.Node instance.
+        """
+        return opset.constant(value, dtype=dtype, name=name)
+
+    @staticmethod
+    def _create_fake_quantize(
+        op_output: ov.Output,
+        fake_quantize_params: FakeQuantizeParameters,
+        fake_quantize_name: str,
+        convert_to_fp16: bool,
+    ) -> ov.Node:
+        """
+        Creates FakeQuantize node.
+
+        :param op_output: Output of the previous node.
+        :param fake_quantize_params: FakeQuantizeParameters instance.
+        :param fake_quantize_name: New layer name.
+        :param convert_to_fp16: Whether convert parameters to FP16 or not.
+        :return: ov.Node instance.
         """
 
-        def _convert_to_fp16(data):
-            clip_data = np.clip(data, np.finfo(np.float16).min, np.finfo(np.float16).max)
-            return clip_data.astype(np.float16)
+        input_low = fake_quantize_params.input_low.data
+        input_high = fake_quantize_params.input_high.data
+        output_low = fake_quantize_params.output_low.data
+        output_high = fake_quantize_params.output_high.data
+        levels = fake_quantize_params.levels
+        dtype = ov.Type.f32
 
-        input_low = _convert_to_fp16(fq_params.input_low.data)
-        input_high = _convert_to_fp16(fq_params.input_high.data)
-        output_low = _convert_to_fp16(fq_params.output_low.data)
-        output_high = _convert_to_fp16(fq_params.output_high.data)
-        return input_low, input_high, output_low, output_high
+        if convert_to_fp16:
+            input_low = OVModelTransformer._convert_to_fp16(input_low)
+            input_high = OVModelTransformer._convert_to_fp16(input_high)
+            output_low = OVModelTransformer._convert_to_fp16(output_low)
+            output_high = OVModelTransformer._convert_to_fp16(output_high)
+            dtype = ov.Type.f16
+
+        input_low = OVModelTransformer._create_constant(input_low, dtype=dtype, name=f"{fake_quantize_name}/input_low")
+        input_high = OVModelTransformer._create_constant(
+            input_high, dtype=dtype, name=f"{fake_quantize_name}/input_high"
+        )
+        output_low = OVModelTransformer._create_constant(
+            output_low, dtype=dtype, name=f"{fake_quantize_name}/output_low"
+        )
+        output_high = OVModelTransformer._create_constant(
+            output_high, dtype=dtype, name=f"{fake_quantize_name}/output_high"
+        )
+
+        return opset.fake_quantize(
+            op_output, input_low, input_high, output_low, output_high, levels, name=fake_quantize_name
+        )
+
+    @staticmethod
+    def _create_fake_convert(
+        op_output: ov.Output,
+        fake_convert_params: FakeConvertParameters,
+        fake_convert_name: str,
+        convert_to_fp16: bool,
+    ) -> ov.Node:
+        """
+        Creates FakeConvert node.
+
+        :param op_output: Output of the previous node.
+        :param fake_convert_params: FakeConvertParameters instance.
+        :param fake_convert_name: New layer name.
+        :param convert_to_fp16: Whether convert parameters to FP16 or not.
+        :return: ov.Node instance.
+        """
+
+        scale = fake_convert_params.scale.data
+        shift = fake_convert_params.shift.data
+        dtype = ov.Type.f32
+
+        if convert_to_fp16:
+            scale = OVModelTransformer._convert_to_fp16(scale)
+            shift = OVModelTransformer._convert_to_fp16(shift)
+            dtype = ov.Type.f16
+
+        destination_type = fake_convert_params.destination_type.value
+        scale = OVModelTransformer._create_constant(scale, dtype=dtype, name=f"{fake_convert_name}/scale")
+        shift = OVModelTransformer._create_constant(shift, dtype=dtype, name=f"{fake_convert_name}/shift")
+
+        return opset.fake_convert(
+            data=op_output,
+            scale=scale,
+            shift=shift,
+            destination_type=destination_type,
+            name=fake_convert_name,
+        )
 
     @staticmethod
     def _insert_fake_quantize_op(
@@ -266,11 +365,6 @@ class OVModelTransformer(ModelTransformer):
         :param name_to_node_mapping: Mapping from node name to node instance.
         """
         fq_params = transformation.quantizer_parameters
-        input_low = fq_params.input_low.data
-        input_high = fq_params.input_high.data
-        output_low = fq_params.output_low.data
-        output_high = fq_params.output_high.data
-        levels = fq_params.levels
 
         node_name = transformation.target_point.target_node_name
         target_node = name_to_node_mapping[node_name]
@@ -280,8 +374,7 @@ class OVModelTransformer(ModelTransformer):
             inp_node = target_node.input(port_id)
             input_node_output = inp_node.get_source_output()
             data_type = inp_node.get_element_type()
-            if data_type == ov.Type(np.float16):
-                input_low, input_high, output_low, output_high = OVModelTransformer.convert_params_to_fp16(fq_params)
+            convert_to_fp16 = data_type == ov.Type(np.float16)
             name = "fq_weights" if transform_type == TargetType.OPERATION_WITH_WEIGHTS else "fq_input"
             fq_name = f"{node_name}/{name}_{port_id}"
 
@@ -292,20 +385,81 @@ class OVModelTransformer(ModelTransformer):
                     if out.get_node().get_type_name() == "FakeQuantize":
                         fq = out.get_node()
             if fq is None:
-                fq = opset.fake_quantize(
-                    input_node_output, input_low, input_high, output_low, output_high, levels, name=fq_name
+                fq = OVModelTransformer._create_fake_quantize(
+                    op_output=input_node_output,
+                    fake_quantize_params=fq_params,
+                    fake_quantize_name=fq_name,
+                    convert_to_fp16=convert_to_fp16,
                 )
             inp_node.replace_source_output(fq.output(0))
         elif transform_type == TargetType.POST_LAYER_OPERATION:
             output = target_node.output(port_id)
             data_type = output.get_element_type()
-            if data_type == ov.Type(np.float16):
-                input_low, input_high, output_low, output_high = OVModelTransformer.convert_params_to_fp16(fq_params)
+            convert_to_fp16 = data_type == ov.Type(np.float16)
             target_inputs = output.get_target_inputs()
             fq_name = f"{node_name}/fq_output_{port_id}"
-            fq = opset.fake_quantize(output, input_low, input_high, output_low, output_high, levels, name=fq_name)
+            fq = OVModelTransformer._create_fake_quantize(
+                op_output=output,
+                fake_quantize_params=fq_params,
+                fake_quantize_name=fq_name,
+                convert_to_fp16=convert_to_fp16,
+            )
             for inp_node in target_inputs:
                 inp_node.replace_source_output(fq.output(0))
+        else:
+            raise RuntimeError(f"Incorrect target point type {transform_type}")
+
+    @staticmethod
+    def _insert_fake_convert_op(
+        transformation: OVConvertInsertionCommand, name_to_node_mapping: Dict[str, ov.Node]
+    ) -> None:
+        """
+        Inserts FakeConvert Operation to a model which name_to_node_mapping is passed.
+
+        :param transformation: FakeConvert insertion command.
+        :param name_to_node_mapping: Mapping from node name to node instance.
+        """
+        fc_params = transformation.convert_parameters
+
+        node_name = transformation.target_point.target_node_name
+        target_node = name_to_node_mapping[node_name]
+        port_id = transformation.target_point.port_id
+        transform_type = transformation.target_point.type
+        name = "weights" if transform_type == TargetType.OPERATION_WITH_WEIGHTS else "input"
+
+        if transform_type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
+            inp_node = target_node.input(port_id)
+            input_node_output = inp_node.get_source_output()
+
+            fc = None
+            if transform_type == TargetType.OPERATION_WITH_WEIGHTS:
+                # If the nodes share one weight tensor, we should have only one quantizer on that
+                for out in input_node_output.get_target_inputs():
+                    if out.get_node().get_type_name() == "FakeConvert":
+                        fc = out.get_node()
+            if fc is None:
+                convert_to_fp16 = inp_node.get_element_type() == ov.Type(np.float16)
+                fc_name = f"{node_name}/fc_{name}_{port_id}"
+                fc = OVModelTransformer._create_fake_convert(
+                    op_output=input_node_output,
+                    fake_convert_params=fc_params,
+                    fake_convert_name=fc_name,
+                    convert_to_fp16=convert_to_fp16,
+                )
+            inp_node.replace_source_output(fc.output(0))
+        elif transform_type == TargetType.POST_LAYER_OPERATION:
+            output = target_node.output(port_id)
+            convert_to_fp16 = output.get_element_type() == ov.Type(np.float16)
+            target_inputs = output.get_target_inputs()
+            fc_name = f"{node_name}/fc_output_{port_id}"
+            fc = OVModelTransformer._create_fake_convert(
+                op_output=output,
+                fake_convert_params=fc_params,
+                fake_convert_name=fc_name,
+                convert_to_fp16=convert_to_fp16,
+            )
+            for inp_node in target_inputs:
+                inp_node.replace_source_output(fc.output(0))
         else:
             raise RuntimeError(f"Incorrect target point type {transform_type}")
 
@@ -354,9 +508,12 @@ class OVModelTransformer(ModelTransformer):
         if const_node is None:
             raise RuntimeError("Constant node was expected but could not find it.")
 
-        const_shape = const_node.get_data().shape
-        const_value = np.reshape(const_value, const_shape)
-        new_const_node = opset.constant(const_value, dtype=const_node.get_element_type())
+        const_shape = const_node.data.shape
+        const_dtype = const_node.data.dtype
+        const_value = np.reshape(const_value, const_shape).astype(const_dtype)
+
+        # TODO(andrey-churkin): Replace on opset13.constant() in 2023.3 release
+        new_const_node = ov.op.Constant(const_value, shared_memory=True)
         new_const_node.set_friendly_name(const_node.get_friendly_name())
         const_port.replace_source_output(new_const_node.output(0))
 
@@ -483,10 +640,16 @@ class OVModelTransformer(ModelTransformer):
             node_output_port = node.output(transformation.target_point.port_id)
             node_output_source_ports = node_output_port.get_target_inputs()
 
-            bias_const_node = opset.constant(transformation.bias_value, dtype=node.get_element_type().to_dtype())
+            bias_node_name = f"{node_name}/nncf_null_bias_"
+
+            bias_const_node = OVModelTransformer._create_constant(
+                transformation.bias_value,
+                dtype=node_output_port.get_element_type(),
+                name=f"{bias_node_name}/bias_value",
+            )
             bias_const_output_port = bias_const_node.output(0)
 
-            add_node = opset.add(node_output_port, bias_const_output_port, name=f"{node_name}/nncf_null_bias_")
+            add_node = opset.add(node_output_port, bias_const_output_port, name=bias_node_name)
 
             for node_output_source_port in node_output_source_ports:
                 node_output_source_port.replace_source_output(add_node.output(0))
@@ -523,7 +686,9 @@ class OVModelTransformer(ModelTransformer):
             if all(p.get_element_type() == fp16_dtype for p in destination_ports):
                 scale_dtype = fp16_dtype
 
-            scale_constant = opset.constant(transformation.scale_value, dtype=scale_dtype)
+            scale_constant = OVModelTransformer._create_constant(
+                transformation.scale_value, dtype=scale_dtype, name=f"{transformation.multiply_node_name}/scale"
+            )
             multiply_node = opset.multiply(node_output_port, scale_constant, name=transformation.multiply_node_name)
 
             for destination_port in destination_ports:
@@ -567,5 +732,5 @@ class OVModelTransformer(ModelTransformer):
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
         ov_node = name_to_node_mapping[transformation.if_node_name]
         if transformation.if_body_condition:
-            return ov.Model(ov_node.get_function(0))  # ticket: 121115
-        return ov.Model(ov_node.get_function(1))  # ticket: 121115
+            return ov_node.get_function(0)
+        return ov_node.get_function(1)

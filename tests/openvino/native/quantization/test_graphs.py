@@ -22,12 +22,15 @@ from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.quantization.quantize_model import quantize_impl
 from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from nncf.parameters import ModelType
+from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
+from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.common import dump_model
 from tests.openvino.native.common import get_dataset_for_test
+from tests.openvino.native.common import get_openvino_major_minor_version
 from tests.openvino.native.common import get_openvino_version
 from tests.openvino.native.models import SYNTHETIC_MODELS
 from tests.openvino.native.models import DepthwiseConv3DModel
@@ -36,6 +39,7 @@ from tests.openvino.native.models import DepthwiseConv5DModel
 from tests.openvino.native.models import GRUSequenceModel
 from tests.openvino.native.models import IfModel
 from tests.openvino.native.models import MatmulSoftmaxMatmulBlock
+from tests.openvino.native.models import ScaledDotProductAttentionModel
 from tests.openvino.native.quantization.test_fq_params_calculation import quantize_model
 from tests.openvino.omz_helpers import convert_model
 from tests.openvino.omz_helpers import download_model
@@ -196,3 +200,47 @@ def test_if_model_fq_placement():
     compare_nncf_graphs(quantized_model, QUANTIZED_REF_GRAPHS_DIR / main_model_path)
     compare_nncf_graphs(if_op.get_function(0), QUANTIZED_REF_GRAPHS_DIR / then_body_path)
     compare_nncf_graphs(if_op.get_function(1), QUANTIZED_REF_GRAPHS_DIR / else_body_path)
+
+
+@pytest.mark.parametrize("q_params", [{}, {"model_type": ModelType.TRANSFORMER}], ids=["default", "transformer"])
+def test_scaled_dot_product_attention_placement(q_params, tmp_path):
+    ov_major_version, ov_minor_version = get_openvino_major_minor_version()
+    if ov_major_version < 2023 or (ov_major_version == 2023 and ov_minor_version < 3):
+        pytest.xfail("ScaledDotProductAttention is not supported until 2023.3")
+    model = ScaledDotProductAttentionModel().ov_model
+    quantized_model = quantize_model(model, q_params)
+
+    if q_params:
+        params_str = "_".join([param.value for param in q_params.values()])
+    else:
+        params_str = "default"
+
+    path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / "scaled_dot_product_attention.dot"
+    result_name = f"scaled_dot_product_attention_{params_str}"
+    xml_path = tmp_path / (result_name + ".xml")
+    bin_path = tmp_path / (result_name + ".bin")
+    dump_model(quantized_model, str(xml_path), str(bin_path))
+    compare_nncf_graphs(quantized_model, path_ref_graph)
+
+
+@pytest.mark.parametrize(
+    "model_creator_func",
+    [SYNTHETIC_MODELS.get("LinearModel"), SYNTHETIC_MODELS.get("ConvModel"), SYNTHETIC_MODELS.get("SharedConvModel")],
+)
+def test_synthetic_models_fc_placement(model_creator_func):
+    ov_major_version, ov_minor_version = get_openvino_major_minor_version()
+    if ov_major_version < 2023 or (ov_major_version == 2023 and ov_minor_version < 3):
+        pytest.xfail("FakeConvert is not supported until 2023.3")
+    model = model_creator_func()
+    quantized_model = quantize_model(
+        model.ov_model,
+        {
+            "preset": QuantizationPreset.PERFORMANCE,
+            "inplace_statistics": True,
+            "mode": QuantizationMode.FP8_E4M3,
+            "overflow_fix": OverflowFix.DISABLE,
+        },
+    )
+
+    path_ref_graph = QUANTIZED_REF_GRAPHS_DIR / f"{model.ref_model_name}_FC.dot"
+    compare_nncf_graphs(quantized_model, path_ref_graph)

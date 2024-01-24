@@ -26,6 +26,7 @@ from tests.torch.nas.helpers import compare_tensors_ignoring_the_order
 from tests.torch.nas.helpers import move_model_to_cuda_if_available
 from tests.torch.nas.models.synthetic import ConvTwoFcTestModel
 from tests.torch.nas.models.synthetic import TwoConvAddConvTestModel
+from tests.torch.nas.models.synthetic import TwoConvMeanModel
 from tests.torch.nas.models.synthetic import TwoSequentialConvBNTestModel
 from tests.torch.nas.models.synthetic import TwoSequentialFcLNTestModel
 from tests.torch.nas.test_all_elasticity import NAS_MODELS_SCOPE
@@ -39,7 +40,12 @@ from tests.torch.test_compressed_graph import get_full_path_to_the_graph
 
 @pytest.fixture(
     name="basic_model",
-    params=(TwoSequentialFcLNTestModel, ConvTwoFcTestModel, TwoConvAddConvTestModel, TwoSequentialConvBNTestModel),
+    params=(
+        TwoSequentialFcLNTestModel,
+        ConvTwoFcTestModel,
+        TwoConvAddConvTestModel,
+        TwoSequentialConvBNTestModel,
+    ),
 )
 def fixture_basic_model(request):
     model_cls = request.param
@@ -50,6 +56,7 @@ def fixture_basic_model(request):
 
 BASIC_ELASTIC_WIDTH_PARAMS = {
     "filter_importance": "L1",
+    "external_importance_path": None,
     "add_dynamic_inputs": None,
     "max_num_widths": -1,
     "min_width": 1,
@@ -69,6 +76,21 @@ def test_set_elastic_width_by_value_not_from_list():
     width_handler, _ = create_two_conv_width_supernet()
     with pytest.raises(ValueError):
         width_handler.activate_subnet_for_config({0: 16})
+
+
+def test_add_dynamic_inputs():
+    elasticity_params = {
+        "width": {
+            "overwrite_groups": [["TwoConvMeanModel/NNCFConv2d[conv1]/conv2d_0"]],
+            "overwrite_groups_widths": [[3, 1]],
+            "add_dynamic_inputs": ["TwoConvMeanModel/NNCFConv2d[last_conv]/conv2d_0"],
+        }
+    }
+    width_handler, _ = create_two_conv_width_supernet(elasticity_params=elasticity_params, model=TwoConvMeanModel)
+    width_handler.activate_minimum_subnet()
+    input_channel, output_channel = width_handler.get_active_in_out_width_values()
+    assert input_channel["TwoConvMeanModel/NNCFConv2d[last_conv]/conv2d_0"] == 1
+    assert output_channel["TwoConvMeanModel/NNCFConv2d[conv1]/conv2d_0"] == 1
 
 
 ###########################
@@ -144,6 +166,37 @@ def test_width_reorg(basic_model):
     after_reorg = model(dummy_input)
 
     model.check_reorg()
+    compare_tensors_ignoring_the_order(after_reorg, before_reorg)
+
+
+def test_width_custom_external_reorg(basic_model, tmp_path):
+    config = get_empty_config(input_sample_sizes=basic_model.INPUT_SIZE)
+    external_importance = basic_model.IMPORTANCE
+    external_importance_tempfile = tmp_path / "importance_file"
+    torch.save(external_importance, external_importance_tempfile)
+    config.update(
+        {
+            "bootstrapNAS": {
+                "training": {
+                    "elasticity": {
+                        "width": {
+                            "filter_importance": "external",
+                            "external_importance_path": external_importance_tempfile,
+                        }
+                    },
+                }
+            }
+        }
+    )
+    model, ctrl = create_bootstrap_training_model_and_ctrl(basic_model, config)
+    model.eval()
+    device = next(model.parameters()).device
+    dummy_input = torch.Tensor([1]).reshape(basic_model.INPUT_SIZE).to(device)
+    before_reorg = model(dummy_input)
+    ctrl.multi_elasticity_handler.width_handler.reorganize_weights()
+    after_reorg = model(dummy_input)
+
+    model.check_custom_external_reorg()
     compare_tensors_ignoring_the_order(after_reorg, before_reorg)
 
 

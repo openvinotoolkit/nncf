@@ -152,11 +152,11 @@ def get_reduction_shape(shape: List[int], axis: int) -> ReductionAxes:
 
 def _get_weight_quantization_axis(node: NNCFNode, port_id: int) -> int:
     """
-    Returns weight tensor axis along quantizer parameters are calculated.
+    Returns weight tensor axis, along which quantizer parameters are calculated.
 
     :param node: NNCFNode, which has a weight on input port_id.
     :param port_id: Input port id on which there is a weight of a node.
-    :return: Axis along quantizer parameters are calculated.
+    :return: Axis, along which quantizer parameters are calculated.
     """
     weight_channel_axis = node.metatype.weight_channel_axis
     if node.layer_attributes.has_node_attrs():
@@ -174,9 +174,9 @@ def _get_weight_quantization_axis(node: NNCFNode, port_id: int) -> int:
 
 def _get_activation_quantization_axis() -> int:
     """
-    Returns activation tensor axis along quantizer parameters are calculated.
+    Returns activation tensor axis, along which quantizer parameters are calculated.
 
-    :return: Axis along quantizer parameters are calculated.
+    :return: Axis, along which quantizer parameters are calculated.
     """
     return 1  # Activations have channel first layout: [N, C, Z, Y, X]
 

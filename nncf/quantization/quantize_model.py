@@ -12,6 +12,7 @@
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 from nncf.api.compression import TModel
+from nncf.common.deprecation import warning_deprecated
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.api_marker import api
@@ -21,6 +22,8 @@ from nncf.data import Dataset
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
+from nncf.parameters import QuantizationMode
+from nncf.parameters import SensitivityMetric
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -38,6 +41,7 @@ TTensor = TypeVar("TTensor")
 def quantize(
     model: TModel,
     calibration_dataset: Dataset,
+    mode: Optional[QuantizationMode] = None,
     preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
@@ -54,6 +58,8 @@ def quantize(
     :param calibration_dataset: A representative dataset for the
         calibration process.
     :type  calibration_dataset: nncf.Dataset
+    :param mode: Special quantization mode that specify different ways of the optimization.
+    :type mode: Optional[nncf.QuantizationMode]
     :param preset: A preset controls the quantization mode (symmetric and asymmetric).
         It can take the following values:
         - `performance`: Symmetric quantization of weights and activations.
@@ -90,60 +96,64 @@ def quantize(
         from nncf.openvino.quantization.quantize_model import quantize_impl
 
         return quantize_impl(
-            model,
-            calibration_dataset,
-            preset,
-            target_device,
-            subset_size,
-            fast_bias_correction,
-            model_type,
-            ignored_scope,
-            advanced_parameters,
+            model=model,
+            calibration_dataset=calibration_dataset,
+            mode=mode,
+            preset=preset,
+            target_device=target_device,
+            subset_size=subset_size,
+            fast_bias_correction=fast_bias_correction,
+            model_type=model_type,
+            ignored_scope=ignored_scope,
+            advanced_parameters=advanced_parameters,
         )
 
     if backend == BackendType.ONNX:
         from nncf.onnx.quantization.quantize_model import quantize_impl
 
         return quantize_impl(
-            model,
-            calibration_dataset,
-            preset,
-            target_device,
-            subset_size,
-            fast_bias_correction,
-            model_type,
-            ignored_scope,
-            advanced_parameters,
+            model=model,
+            calibration_dataset=calibration_dataset,
+            mode=mode,
+            preset=preset,
+            target_device=target_device,
+            subset_size=subset_size,
+            fast_bias_correction=fast_bias_correction,
+            model_type=model_type,
+            ignored_scope=ignored_scope,
+            advanced_parameters=advanced_parameters,
         )
 
     if backend == BackendType.TENSORFLOW:
         from nncf.tensorflow.quantization.quantize_model import quantize_impl
 
         return quantize_impl(
-            model,
-            calibration_dataset,
-            preset,
-            target_device,
-            subset_size,
-            fast_bias_correction,
-            model_type,
-            ignored_scope,
-            advanced_parameters,
+            model=model,
+            calibration_dataset=calibration_dataset,
+            mode=mode,
+            preset=preset,
+            target_device=target_device,
+            subset_size=subset_size,
+            fast_bias_correction=fast_bias_correction,
+            model_type=model_type,
+            ignored_scope=ignored_scope,
+            advanced_parameters=advanced_parameters,
         )
 
     if backend == BackendType.TORCH:
         from nncf.torch.quantization.quantize_model import quantize_impl
 
         return quantize_impl(
-            model,
-            calibration_dataset,
-            preset,
-            target_device,
-            subset_size,
-            fast_bias_correction,
-            model_type,
-            ignored_scope,
-            advanced_parameters,
+            model=model,
+            calibration_dataset=calibration_dataset,
+            mode=mode,
+            preset=preset,
+            target_device=target_device,
+            subset_size=subset_size,
+            fast_bias_correction=fast_bias_correction,
+            model_type=model_type,
+            ignored_scope=ignored_scope,
+            advanced_parameters=advanced_parameters,
         )
 
     raise RuntimeError(f"Unsupported type of backend: {backend}")
@@ -241,34 +251,76 @@ def quantize_with_accuracy_control(
 @api(canonical_alias="nncf.compress_weights")
 def compress_weights(
     model: TModel,
-    mode=CompressWeightsMode.INT8,
+    mode=CompressWeightsMode.INT8_ASYM,
     ratio: Optional[float] = None,
     group_size: Optional[int] = None,
     ignored_scope: Optional[IgnoredScope] = None,
+    all_layers: Optional[bool] = None,
+    dataset: Optional[Dataset] = None,
+    sensitivity_metric: Optional[SensitivityMetric] = None,
 ) -> TModel:
     """
     Compress model weights.
 
     :param model: A model to be compressed.
     :param mode: Defines a mode for weight compression.
-        INT8 stands for 8-bit integer quantization of all weights.
+        INT8_SYM stands for 8-bit integer symmetric quantization of all weights.
+        INT8_ASYM is the same as INT8_SYM mode, but weights are quantized to a primary precision asymmetrically
+            with a typical non-fixed zero point.
         INT4_SYM stands for a mixed-precision weights quantization with 4-bit integer as a primary precision.
             Weights are quantized to a primary precision symmetrically with a fixed zero point equals to 8.
-            The first and the last layers are always compressed to a backup precision, which is 8-bit integer,
+            All embeddings and the last layer are always compressed to a backup precision, which is INT8_ASYM,
             by default. All others are quantized whether to 4-bit integer or to a backup precision depending on
             criteria and the given ratio.
         INT4_ASYM is the same as INT4_SYM mode, but weights are quantized to a primary precision asymmetrically
             with a typical non-fixed zero point.
         NF4 is the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
     :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
-        and the rest to INT8).
+        and the rest to INT8_ASYM).
     :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
         The value -1 means no grouping.
     :param ignored_scope: An ignored scope that defined the list of model control
         flow graph nodes to be ignored during quantization.
+    :param all_layers: Indicates whether embeddings and last layers should be compressed to a primary
+        precision. By default, the backup precision is assigned for the embeddings and last layers.
+    :param dataset: Dataset used for assigning different quantization precision by finding outliers in activations.
+    :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
+        preserve the accuracy of the model, the more sensitive layers receives a higher precision.
     :return: The non-trainable model with compressed weights.
     """
     if mode == CompressWeightsMode.INT8:
+        warning_deprecated(
+            "`CompressWeightsMode.INT8` is deprecated." "Please, use `CompressWeightsMode.INT8_ASYM` as value instead."
+        )
+        mode = CompressWeightsMode.INT8_ASYM
+
+    backend = get_backend(model)
+    if backend == BackendType.TORCH:
+        from nncf.torch.model_creation import is_wrapped_model
+        from nncf.torch.model_creation import wrap_model
+
+        if mode not in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
+            raise AttributeError(
+                "Torch backend supports only INT8_ASYM, INT8_SYM modes for weight compression, "
+                f"but given {mode.value} mode."
+            )
+
+        if is_wrapped_model(model):
+            if not model.nncf.trace_parameters:
+                raise ValueError(
+                    "Tracing capabilities with tracing parameters are required in the PyTorch model "
+                    "for nncf.compress_weights(). Please wrap the model using "
+                    "nncf.torch.wrap_model(model, example_input, trace_parameters=True) before calling "
+                    "nncf.compress_weights()."
+                )
+        elif dataset is None:
+            raise AttributeError("Please provide a dataset of at least one element for PyTorch model tracing.")
+        else:
+            example_input = next(iter(dataset.get_inference_data()))
+            model = wrap_model(model, example_input=example_input, trace_parameters=True)
+            dataset = None
+
+    if mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
         if ratio is None:
             ratio = 1
         if group_size is None:
@@ -278,21 +330,39 @@ def compress_weights(
                 "INT8 mode assumes per-channel quantization of all layers in 8 bit. "
                 "Default values of `ratio` (1) and `group_size` (-1) parameters can not be overridden"
             )
-    else:
-        if ratio is None:
-            ratio = 1
-        if group_size is None:
-            group_size = 128
+        options = [all_layers, sensitivity_metric, dataset]
+        if any(option is not None for option in options):
+            raise AttributeError(
+                "INT8 modes do not support `all_layers`, `sensitivity_metric` and `dataset` options."
+                "Set them to None."
+            )
 
-    backend = get_backend(model)
-    if backend == BackendType.TORCH:
-        from nncf.torch.quantization.quantize_model import compress_weights_impl
+    if ratio is None:
+        ratio = 1
+    if group_size is None:
+        group_size = 128
+    if all_layers is None:
+        all_layers = False
+    if ignored_scope is None:
+        ignored_scope = IgnoredScope()
+    if sensitivity_metric is None:
+        sensitivity_metric = (
+            SensitivityMetric.WEIGHT_QUANTIZATION_ERROR
+            if dataset is None
+            else SensitivityMetric.MAX_ACTIVATION_VARIANCE
+        )
+    if ratio != 1 and dataset is None and sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR:
+        raise AttributeError(
+            f"Mixed precision selection based on the given sensitivity metric={sensitivity_metric.value} requires "
+            "a dataset, but it's not provided."
+        )
 
-        return compress_weights_impl(model, mode, ratio, group_size, ignored_scope)
+    if ratio < 0 or ratio > 1:
+        raise ValueError(f"The ratio should be between 0 and 1, but ration={ratio} is specified.")
 
-    compression_algorithm = WeightCompression(mode, ratio, group_size, ignored_scope)
+    compression_algorithm = WeightCompression(mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric)
     graph = NNCFGraphFactory.create(model)
-    return compression_algorithm.apply(model, graph)
+    return compression_algorithm.apply(model, graph, dataset=dataset)
 
 
 def quantize_with_tune_hyperparams(

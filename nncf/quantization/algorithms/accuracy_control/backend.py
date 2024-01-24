@@ -26,6 +26,17 @@ class AccuracyControlAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
+    def get_op_with_weights_metatypes() -> List[OperatorMetatype]:
+        """
+        Returns a list of operation metatypes that can be reverted to representation
+        with int8 weights.
+
+        :return: The list of operation metatypes that can be reverted to representation
+            with int8 weights.
+        """
+
+    @staticmethod
+    @abstractmethod
     def get_quantizer_metatypes() -> List[OperatorMetatype]:
         """
         Returns a list of quantizer metatypes.
@@ -49,6 +60,16 @@ class AccuracyControlAlgoBackend(ABC):
         Returns a list of metatypes for operations that may be quantized.
 
         :return: The list of metatypes for operations that may be quantized.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+        """
+        Returns a list of NNCFNodes to use as start nodes for activation path tracing.
+
+        :param nncf_graph: NNCFGraph to get the start nodes.
+        :return: List of NNCFNodes to use as start nodes for activation path tracing.
         """
 
     @staticmethod

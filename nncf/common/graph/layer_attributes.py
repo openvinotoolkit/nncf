@@ -13,7 +13,7 @@ from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, List, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 
 class Dtype(Enum):
@@ -32,20 +32,22 @@ class BaseLayerAttributes(ABC):
 
 
 class MultipleInputLayerAttributes(BaseLayerAttributes):
-    def __init__(self, axis: int):
+    def __init__(self, axis: int, num_inputs: Optional[int] = None):
         """
 
         :param axis: the dimension over which the inputs are combined (e.g. concatenated).
+        :param num_inputs: Number of inputs.
         """
         self.axis = axis
+        self.num_inputs = num_inputs
 
 
 class MultipleOutputLayerAttributes(BaseLayerAttributes):
     def __init__(self, chunks: Union[int, List], axis: int):
         """
 
-        :param chunks:  number of chunks (outputs)
-        :param axis: the dimension along which to make multiple outputs (e.g. split the tensor).
+        :param chunks: Number of chunks (outputs).
+        :param axis: The dimension along which to make multiple outputs (e.g. split the tensor).
         """
         self.chunks = chunks
         self.axis = axis
@@ -95,7 +97,7 @@ class GenericWeightedLayerAttributes(WeightedLayerAttributes):
         :param weight_requires_grad: Is True if gradients need to be computed for the corresponding Tensor,
         False otherwise.
         :param weight_shape: shape of weight tensor.
-        :param filter_dimension_idx: the axis along which the filters are stored.
+        :param filter_dimension_idx: the axis, along which the filters are stored.
         """
         super().__init__(weight_requires_grad=weight_requires_grad, with_bias=with_bias)
         self.weight_shape = weight_shape
@@ -109,7 +111,13 @@ class GenericWeightedLayerAttributes(WeightedLayerAttributes):
 
 
 class LinearLayerAttributes(WeightedLayerAttributes):
-    def __init__(self, weight_requires_grad: bool, in_features: int, out_features: int, with_bias: bool = True):
+    def __init__(
+        self,
+        weight_requires_grad: bool,
+        in_features: int,
+        out_features: int,
+        with_bias: bool = True,
+    ):
         """
 
         :param weight_requires_grad: Is True if gradients need to be computed for the corresponding Tensor,
@@ -260,3 +268,14 @@ class ConvertDtypeLayerAttributes(BaseLayerAttributes):
 
     src_dtype: Any
     dst_dtype: Any
+
+
+@dataclass
+class ConstantLayerAttributes(BaseLayerAttributes):
+    """
+    :param name: Constant name.
+    :param shape: Constant shape.
+    """
+
+    name: str
+    shape: List[int]

@@ -18,7 +18,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
@@ -26,8 +26,10 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
+from nncf.openvino.graph.model_utils import get_start_nodes_for_activation_path_tracing
 from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
+from nncf.openvino.graph.transformations.commands import OVConvertInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.hardware.config import OVHWConfig
@@ -40,6 +42,7 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import RangeEstimatorParameters
 from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
+from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 
 
@@ -87,6 +90,10 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return [om.OVReadValueMetatype]
 
     @property
+    def scaled_dot_product_attention_metatypes(self) -> List[OperatorMetatype]:
+        return [om.OVScaledDotProductAttentionMetatype]
+
+    @property
     def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
         return {om.OVConcatMetatype: self.overflow_fix_metatypes}
 
@@ -97,6 +104,10 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     @property
     def quant_trait_op_dict(self) -> Dict[int, OperatorMetatype]:
         return DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
+
+    @staticmethod
+    def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+        return get_start_nodes_for_activation_path_tracing(nncf_graph)
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:
@@ -110,6 +121,13 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         parameters: FakeQuantizeParameters,
     ) -> OVQuantizerInsertionCommand:
         return OVQuantizerInsertionCommand(target_point, parameters)
+
+    @staticmethod
+    def create_convert_insertion_command(
+        target_point: OVTargetPoint,
+        parameters: FakeConvertParameters,
+    ) -> OVQuantizerInsertionCommand:
+        return OVConvertInsertionCommand(target_point, parameters)
 
     @staticmethod
     def unify_statistics(statistics: List[OVMinMaxTensorStatistic]) -> OVMinMaxTensorStatistic:
@@ -147,7 +165,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         const_shape = node.layer_attributes.constant_attributes[target_point.port_id]["shape"]
 
         if quantizer_config.per_channel:
-            channel_axes = get_weight_channel_axes(node, target_point.port_id)
+            channel_axes = get_weight_channel_axes(node)
             axes = get_channel_agnostic_reduction_axes(channel_axes, const_shape)
         else:
             axes = tuple(range(len(const_shape)))

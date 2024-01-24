@@ -46,7 +46,8 @@ class PTIdentityConvModel(nn.Module, ToNNCFNetworkInterface):
 
 
 class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
-    def get_min_max_algo_backend_cls(self) -> Type[PTMinMaxAlgoBackend]:
+    @staticmethod
+    def get_min_max_algo_backend_cls() -> Type[PTMinMaxAlgoBackend]:
         return PTMinMaxAlgoBackend
 
     def get_bias_correction_algo_backend_cls(self) -> None:
@@ -77,7 +78,8 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
 
         return Dataset(samples, transform_fn)
 
-    def get_target_point(self, target_type: TargetType):
+    @staticmethod
+    def get_target_point(target_type: TargetType):
         target_node_name = IDENTITY_NODE_NAME
         port_id = 0
         if target_type == TargetType.OPERATION_WITH_WEIGHTS:

@@ -15,10 +15,11 @@ from typing import Callable, List, Tuple
 import numpy as np
 import openvino.runtime as ov
 import pytest
-from openvino.runtime import opset9 as opset
+from openvino.runtime import opset13 as opset
 
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.experimental.tensor import Tensor
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_inplace_batch_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_max_op
@@ -29,6 +30,7 @@ from nncf.openvino.graph.node_utils import get_ov_model_reduce_node_name
 from nncf.openvino.graph.node_utils import get_result_node_name
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVBiasInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVConvertInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
@@ -36,9 +38,12 @@ from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionComm
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
+from nncf.quantization.advanced_parameters import FP8Type
+from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.native.common import compare_nncf_graphs
+from tests.openvino.native.common import get_openvino_major_minor_version
 from tests.openvino.native.common import get_openvino_version
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import ConvNotBiasModel
@@ -54,8 +59,11 @@ REFERENCE_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / "data" / OV_VERSION / "refere
 
 TARGET_INSERT_LAYERS = [["Add"], ["MatMul"], ["Add", "MatMul"]]
 TARGET_PRE_LAYER_FQS = [["Add/fq_input_0"], ["MatMul/fq_input_0"], ["Add/fq_input_0", "MatMul/fq_input_0"]]
+TARGET_PRE_LAYER_FCS = [["Add/fc_input_0"], ["MatMul/fc_input_0"], ["Add/fc_input_0", "MatMul/fc_input_0"]]
 TARGET_POST_LAYER_FQS = [["Add/fq_output_0"], ["MatMul/fq_output_0"], ["Add/fq_output_0", "MatMul/fq_output_0"]]
+TARGET_POST_LAYER_FCS = [["Add/fc_output_0"], ["MatMul/fc_output_0"], ["Add/fc_output_0", "MatMul/fc_output_0"]]
 TARGET_WEIGHTS_FQS = [["Add/fq_weights_1"], ["MatMul/fq_weights_1"], ["Add/fq_weights_1", "MatMul/fq_weights_1"]]
+TARGET_WEIGHTS_FCS = [["Add/fc_weights_1"], ["MatMul/fc_weights_1"], ["Add/fc_weights_1", "MatMul/fc_weights_1"]]
 
 
 def create_transformed_model(model, target_layers, target_type, command_type, port_id=0, command_kwargs=None):
@@ -84,13 +92,25 @@ def get_extra_outputs(original_model, transformed_model):
     return extra_outputs
 
 
-def get_fq_nodes(model):
+def get_nodes_by_type(model: ov.Model, type_name: str) -> List[ov.Node]:
     fq_nodes = []
     for op in model.get_ops():
-        if op.get_type_name() == "FakeQuantize":
+        if op.get_type_name() == type_name:
             fq_nodes.append(op.get_friendly_name())
 
     return fq_nodes
+
+
+def create_fake_quantize_params() -> FakeQuantizeParameters:
+    min_values = Tensor(np.zeros((1, 1, 1, 1)).astype(np.float32))
+    max_values = Tensor(np.ones((1, 1, 1, 1)).astype(np.float32))
+    return FakeQuantizeParameters(min_values, max_values, min_values, max_values, levels=256)
+
+
+def create_fake_convert_params(destination_type: FP8Type) -> FakeConvertParameters:
+    scale = Tensor(np.ones((1)).astype(np.float32))
+    shift = Tensor(np.zeros((1)).astype(np.float32))
+    return FakeConvertParameters(scale, shift, destination_type)
 
 
 @dataclass
@@ -182,13 +202,13 @@ def check_inplace_op(target_node, ref_types, ref_vals, inplace_branches_num, out
         if ref_val is not None:
             const = get_prev_node(node, 1)
             if ref_val == []:
-                assert const.get_data().shape == (0,)
+                assert const.data.shape == (0,)
             elif not isinstance(ref_val, tuple):
-                assert const.get_data() == ref_val
+                assert const.data == ref_val
             else:
-                res = np.equal(const.get_data(), np.array(ref_val))
+                res = np.equal(const.data, np.array(ref_val))
                 assert all(res)
-                assert const.get_data().shape == np.array(ref_val).shape
+                assert const.data.shape == np.array(ref_val).shape
 
         nodes = get_next_nodes(node, 0)
         assert len(nodes) == 1
@@ -296,7 +316,7 @@ def test_inplace_reduce_fn_dynamic_shapes(input_shape, raise_error):
     op = fn(input_1, 0)
     # check_const
     ref_const = np.array([0, 1, 2, 3])
-    assert all(np.equal(get_prev_node(op, 1).get_data(), ref_const))
+    assert all(np.equal(get_prev_node(op, 1).data, ref_const))
 
 
 @pytest.mark.parametrize("reduction_axes", [None, np.array([], dtype=np.int64)])
@@ -354,8 +374,10 @@ def test_inplace_mean_per_ch_fn_dynamic_shapes(test_params: InplaceOpTestCase, i
         with pytest.raises(RuntimeError):
             fn(input_1, 0)
         return
-    fn(input_1, 0)
-    check_inplace_op(input_1, test_params.ref_types, test_params.ref_values, 1, 0)
+    last_node = fn(input_1, 0)
+    result = opset.result(last_node)
+    model = ov.Model([result], [input_1])
+    check_inplace_op(model.input().get_node(), test_params.ref_types, test_params.ref_values, 1, 0)
 
 
 @pytest.mark.parametrize(
@@ -431,65 +453,119 @@ def test_node_removing(target_layers):
 def test_fq_insertion_pre_layer(target_layers, ref_fq_names):
     model = LinearModel().ov_model
 
-    min_values = np.zeros((1, 1, 1, 1)).astype(np.float32)
-    max_values = np.ones((1, 1, 1, 1)).astype(np.float32)
-    quantizer_parameters = FakeQuantizeParameters(min_values, max_values, min_values, max_values, levels=256)
-
     transformed_model = create_transformed_model(
         model,
         target_layers,
         TargetType.PRE_LAYER_OPERATION,
         OVQuantizerInsertionCommand,
-        command_kwargs={"quantizer_parameters": quantizer_parameters},
+        command_kwargs={"quantizer_parameters": create_fake_quantize_params()},
     )
-    fq_nodes = get_fq_nodes(transformed_model)
+    fq_nodes = get_nodes_by_type(transformed_model, type_name="FakeQuantize")
 
     assert len(fq_nodes) == len(ref_fq_names)
     for fq_name in fq_nodes:
         assert fq_name in ref_fq_names
+
+
+@pytest.mark.parametrize("target_layers, ref_fс_names", zip(TARGET_INSERT_LAYERS, TARGET_PRE_LAYER_FCS))
+def test_fc_insertion_pre_layer(target_layers, ref_fс_names):
+    ov_major_version, ov_minor_version = get_openvino_major_minor_version()
+    if ov_major_version < 2023 or (ov_major_version == 2023 and ov_minor_version < 3):
+        pytest.xfail("FakeConvert is not supported until 2023.3")
+    model = LinearModel().ov_model
+
+    transformed_model = create_transformed_model(
+        model,
+        target_layers,
+        TargetType.PRE_LAYER_OPERATION,
+        OVConvertInsertionCommand,
+        command_kwargs={"convert_parameters": create_fake_convert_params(destination_type=FP8Type.E4M3)},
+    )
+    fc_nodes = get_nodes_by_type(transformed_model, type_name="FakeConvert")
+
+    assert len(fc_nodes) == len(ref_fс_names)
+    for fc_name in fc_nodes:
+        assert fc_name in ref_fс_names
 
 
 @pytest.mark.parametrize("target_layers, ref_fq_names", zip(TARGET_INSERT_LAYERS, TARGET_POST_LAYER_FQS))
 def test_fq_insertion_post_layer(target_layers, ref_fq_names):
     model = LinearModel().ov_model
 
-    min_values = np.zeros((1, 1, 1, 1)).astype(np.float32)
-    max_values = np.ones((1, 1, 1, 1)).astype(np.float32)
-    quantizer_parameters = FakeQuantizeParameters(min_values, max_values, min_values, max_values, levels=256)
     transformed_model = create_transformed_model(
         model,
         target_layers,
         TargetType.POST_LAYER_OPERATION,
         OVQuantizerInsertionCommand,
-        command_kwargs={"quantizer_parameters": quantizer_parameters},
+        command_kwargs={"quantizer_parameters": create_fake_quantize_params()},
     )
-    fq_nodes = get_fq_nodes(transformed_model)
+    fq_nodes = get_nodes_by_type(transformed_model, type_name="FakeQuantize")
 
     assert len(fq_nodes) == len(ref_fq_names)
     for fq_name in fq_nodes:
         assert fq_name in ref_fq_names
+
+
+@pytest.mark.parametrize("target_layers, ref_fс_names", zip(TARGET_INSERT_LAYERS, TARGET_POST_LAYER_FCS))
+def test_fc_insertion_post_layer(target_layers, ref_fс_names):
+    ov_major_version, ov_minor_version = get_openvino_major_minor_version()
+    if ov_major_version < 2023 or (ov_major_version == 2023 and ov_minor_version < 3):
+        pytest.xfail("FakeConvert is not supported until 2023.3")
+    model = LinearModel().ov_model
+
+    transformed_model = create_transformed_model(
+        model,
+        target_layers,
+        TargetType.POST_LAYER_OPERATION,
+        OVConvertInsertionCommand,
+        command_kwargs={"convert_parameters": create_fake_convert_params(destination_type=FP8Type.E4M3)},
+    )
+    fc_nodes = get_nodes_by_type(transformed_model, type_name="FakeConvert")
+
+    assert len(fc_nodes) == len(ref_fс_names)
+    for fc_name in fc_nodes:
+        assert fc_name in ref_fс_names
 
 
 @pytest.mark.parametrize("target_layers, ref_fq_names", zip(TARGET_INSERT_LAYERS, TARGET_WEIGHTS_FQS))
 def test_fq_insertion_weights(target_layers, ref_fq_names):
     model = LinearModel().ov_model
 
-    min_values = np.zeros((1, 1, 1, 1)).astype(np.float32)
-    max_values = np.ones((1, 1, 1, 1)).astype(np.float32)
-    quantizer_parameters = FakeQuantizeParameters(min_values, max_values, min_values, max_values, levels=256)
     transformed_model = create_transformed_model(
         model,
         target_layers,
         TargetType.OPERATION_WITH_WEIGHTS,
         OVQuantizerInsertionCommand,
-        1,
-        {"quantizer_parameters": quantizer_parameters},
+        port_id=1,
+        command_kwargs={"quantizer_parameters": create_fake_quantize_params()},
     )
-    fq_nodes = get_fq_nodes(transformed_model)
+    fq_nodes = get_nodes_by_type(transformed_model, type_name="FakeQuantize")
 
     assert len(fq_nodes) == len(ref_fq_names)
     for fq_name in fq_nodes:
         assert fq_name in ref_fq_names
+
+
+@pytest.mark.parametrize("target_layers, ref_fс_names", zip(TARGET_INSERT_LAYERS, TARGET_WEIGHTS_FCS))
+def test_fc_insertion_weights(target_layers, ref_fс_names):
+    ov_major_version, ov_minor_version = get_openvino_major_minor_version()
+    if ov_major_version < 2023 or (ov_major_version == 2023 and ov_minor_version < 3):
+        pytest.xfail("FakeConvert is not supported until 2023.3")
+    model = LinearModel().ov_model
+
+    transformed_model = create_transformed_model(
+        model,
+        target_layers,
+        TargetType.OPERATION_WITH_WEIGHTS,
+        OVConvertInsertionCommand,
+        port_id=1,
+        command_kwargs={"convert_parameters": create_fake_convert_params(destination_type=FP8Type.E4M3)},
+    )
+    fc_nodes = get_nodes_by_type(transformed_model, type_name="FakeConvert")
+
+    assert len(fc_nodes) == len(ref_fс_names)
+    for fc_name in fc_nodes:
+        assert fc_name in ref_fс_names
 
 
 MODELS_WITH_PARAMETERS = [

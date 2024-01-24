@@ -35,20 +35,23 @@ from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator imp
 from openvino.tools.pot.configs.config import Config
 
 import nncf
+from nncf.common.deprecation import warning_deprecated
 from nncf.common.logging.logger import set_log_file
-from nncf.common.quantization.structs import QuantizationMode
 from nncf.common.quantization.structs import QuantizationPreset
+from nncf.common.quantization.structs import QuantizationScheme
 from nncf.data.dataset import DataProvider
 from nncf.openvino.pot.quantization.quantize_model import (
     quantize_with_accuracy_control_impl as pot_quantize_with_native_accuracy_control,
 )
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
+from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AggregatorType
 from nncf.quantization.advanced_parameters import OverflowFix
+from nncf.quantization.advanced_parameters import RestoreMode
 from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.scopes import IgnoredScope
 
@@ -104,7 +107,18 @@ def parse_args():
 class CustomJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(
-            o, (TargetDevice, ModelType, QuantizationPreset, OverflowFix, StatisticsType, AggregatorType, DropType)
+            o,
+            (
+                TargetDevice,
+                ModelType,
+                QuantizationPreset,
+                OverflowFix,
+                StatisticsType,
+                AggregatorType,
+                DropType,
+                QuantizationMode,
+                RestoreMode,
+            ),
         ):
             return o.value
         if isinstance(o, (IgnoredScope, AdvancedQuantizationParameters, AdvancedAccuracyRestorerParameters)):
@@ -430,9 +444,9 @@ def update_quantization_parameters(quantization_params, pot_config):
     mode = pot_config.get("mode")
     if mode is not None:
         if mode == "symmetric":
-            quantization_params.mode = QuantizationMode.SYMMETRIC
+            quantization_params.mode = QuantizationScheme.SYMMETRIC
         elif mode == "asymmetric":
-            quantization_params.mode = QuantizationMode.ASYMMETRIC
+            quantization_params.mode = QuantizationScheme.ASYMMETRIC
         else:
             raise ValueError(f"mode = {mode} is not supported")
     granularity = pot_config.get("granularity")
@@ -506,12 +520,22 @@ def map_apply_for_all_nodes(apply_for_all_nodes):
     return {advanced_parameter_name: advanced_parameters}
 
 
-def map_smooth_quant_alpha(smooth_quant_alpha):
+def map_smooth_quant_alphas(smooth_quant_alphas):
     ctx = get_algorithm_parameters_context()
     advanced_parameter_name = ctx.param_name_map[ParameterNames.advanced_parameters]
     advanced_parameters = ctx.params.get(advanced_parameter_name, AdvancedQuantizationParameters())
-    advanced_parameters.smooth_quant_alpha = smooth_quant_alpha
+    for key in ["convolution", "matmul"]:
+        if key in smooth_quant_alphas:
+            advanced_parameters.smooth_quant_alphas.__setattr__(key, smooth_quant_alphas[key])
     return {advanced_parameter_name: advanced_parameters}
+
+
+def map_smooth_quant_alpha(smooth_quant_alpha):
+    warning_deprecated(
+        "`smooth_quant_alpha` parameter is deprecated."
+        "Please, use `smooth_quant_alphas: {'convolution': .., 'matmul': ..}` instead."
+    )
+    return map_smooth_quant_alphas({"matmul": smooth_quant_alpha, "convolution": -1})
 
 
 def map_threshold(threshold):
@@ -592,6 +616,7 @@ def get_pot_quantization_parameters_mapping():
         "saturation_fix": map_saturation_fix,
         "apply_for_all_nodes": map_apply_for_all_nodes,
         "threshold": map_threshold,
+        "smooth_quant_alphas": map_smooth_quant_alphas,
         "smooth_quant_alpha": map_smooth_quant_alpha,
     }
 
@@ -1000,7 +1025,7 @@ def quantize_model_with_accuracy_control(
 
 
 def filter_configuration(config: Config) -> Config:
-    fields_to_filter = ["smooth_quant_alpha"]
+    fields_to_filter = ["smooth_quant_alphas", "smooth_quant_alpha"]
     algorithms_to_update = defaultdict(dict)
 
     # Drop params before configure

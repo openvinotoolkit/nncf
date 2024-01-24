@@ -20,6 +20,7 @@ from torch.nn import Module as TorchModule
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
+from nncf.common.graph.layer_attributes import ConstantLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.graph.layer_attributes import GetItemLayerAttributes
@@ -31,8 +32,9 @@ from nncf.common.graph.layer_attributes import PadLayerAttributes
 from nncf.common.graph.layer_attributes import PermuteLayerAttributes
 from nncf.common.graph.layer_attributes import ReshapeLayerAttributes
 from nncf.common.graph.layer_attributes import TransposeLayerAttributes
-from nncf.common.graph.utils import get_concat_axis
+from nncf.common.graph.operator_metatypes import ConstNoopMetatype
 from nncf.common.graph.utils import get_split_axis
+from nncf.torch.dynamic_graph.trace_tensor import TracedParameter
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
 from nncf.torch.graph.operator_metatypes import PTGroupNormMetatype
 from nncf.torch.graph.operator_metatypes import PTPadMetatype
@@ -49,8 +51,10 @@ TRANSPOSE_OP_NAMES = ["transpose", "transpose_"]
 PERMUTE_OP_NAMES = ["permute"]
 GETITEM_OP_NAMES = ["__getitem__"]
 PAD_OP_NAMES = PTPadMetatype.get_all_aliases()
+CONCAT_OP_NAMES = PTCatMetatype.get_all_aliases()
+CONST_OP_NAMES = ConstNoopMetatype.get_all_aliases()
 OP_NAMES_REQUIRING_ATTRS_FROM_ARGS_KWARGS = list(
-    TRANSPOSE_OP_NAMES + PERMUTE_OP_NAMES + GETITEM_OP_NAMES + PAD_OP_NAMES
+    TRANSPOSE_OP_NAMES + PERMUTE_OP_NAMES + GETITEM_OP_NAMES + PAD_OP_NAMES + CONCAT_OP_NAMES + CONST_OP_NAMES
 )
 
 
@@ -119,25 +123,15 @@ def get_layer_attributes_from_args_and_kwargs(op_name: str, args, kwargs) -> Bas
         layer_attrs = _get_getitem_attrs_from_args_kwargs(args, kwargs)
     elif op_name in PAD_OP_NAMES:
         layer_attrs = _get_pad_attrs_from_args_kwargs(args, kwargs)
+    elif op_name in CONCAT_OP_NAMES:
+        layer_attrs = _get_concat_attrs_from_args_kwargs(args, kwargs)
+    elif op_name in CONST_OP_NAMES:
+        layer_attrs = _get_const_attrs_from_args_kwargs(args, kwargs)
     return layer_attrs
 
 
 def set_nodes_attributes_in_nncf_graph(graph: NNCFGraph) -> None:
     for node in graph.get_all_nodes():
-        if node.metatype is PTCatMetatype:
-            input_edges = graph.get_input_edges(node)
-            output_edges = graph.get_output_edges(node)
-            # Case of intermediate node
-            if input_edges and output_edges:
-                input_shapes = [edge.tensor_shape for edge in input_edges]
-                output_shapes = [edge.tensor_shape for edge in output_edges]
-                # Case node is stack
-                if len(input_shapes[0]) != len(output_shapes[0]):
-                    continue
-                axis = get_concat_axis(input_shapes, output_shapes)
-                layer_attributes = MultipleInputLayerAttributes(axis)
-                node.layer_attributes = layer_attributes
-
         if node.metatype in [PTReshapeMetatype, PTSqueezeMetatype]:
             input_nodes = graph.get_input_edges(node)
             output_nodes = graph.get_output_edges(node)
@@ -178,8 +172,26 @@ def _get_pad_attrs_from_args_kwargs(args, kwargs) -> PadLayerAttributes:
     return PadLayerAttributes(mode, value)
 
 
+def _get_concat_attrs_from_args_kwargs(args, kwargs) -> MultipleInputLayerAttributes:
+    if "tensors" in kwargs:
+        tensors = kwargs["tensors"]
+    else:
+        tensors = args[0]
+    axis = kwargs.get("dim", 0 if len(args) < 2 else args[1])
+    return MultipleInputLayerAttributes(axis=axis, num_inputs=len(tensors))
+
+
 def _get_kwargs_shifted(args_names, args, kwargs, shift=1):
     res_kwargs = {}
     for idx, arg_name in enumerate(args_names):
         res_kwargs[arg_name] = kwargs[arg_name] if arg_name in kwargs else args[idx + shift]
     return res_kwargs
+
+
+def _get_const_attrs_from_args_kwargs(args, _) -> ConstantLayerAttributes:
+    name = "Unknown"
+    shape = []
+    if args and isinstance(args[0], TracedParameter):
+        name = args[0].name
+        shape = args[0].shape
+    return ConstantLayerAttributes(name, shape)

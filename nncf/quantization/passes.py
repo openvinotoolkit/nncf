@@ -10,9 +10,10 @@
 # limitations under the License.
 
 import collections
-from typing import List, Optional, TypeVar
+from typing import List, TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 
 TModel = TypeVar("TModel")
@@ -20,50 +21,44 @@ TModel = TypeVar("TModel")
 
 def transform_to_inference_graph(
     nncf_graph: NNCFGraph,
+    input_nodes: List[NNCFNode],
     shapeof_metatypes: List[OperatorMetatype],
     dropout_metatypes: List[OperatorMetatype],
-    read_variable_metatypes: Optional[List[OperatorMetatype]] = None,
-    nncf_graph_contains_constants: bool = True,
 ) -> NNCFGraph:
     """
     This method contains inplace pipeline of the passes that uses to provide inference graph without constant flows.
 
     :param nncf_graph: NNCFGraph instance for the transformation.
+    :param input_nodes: List of input nodes for the given NNCFGraph.
     :param shapeof_metatypes: List of backend-specific ShapeOf metatypes.
     :param dropout_metatypes: List of backend-specific Dropout metatypes.
-    :param read_variable_metatypes: List of backend-specific metatypes
-        that also can be interpreted as inputs (ReadValue).
-    :param nncf_graph_contains_constants: Whether NNCFGraph contains constant nodes or not.
     :return: NNCFGraph in the inference style.
     """
-    remove_shapeof_subgraphs(nncf_graph, shapeof_metatypes, read_variable_metatypes)
+    remove_shapeof_subgraphs(nncf_graph, shapeof_metatypes, input_nodes)
+    filter_constant_nodes(nncf_graph, input_nodes)
     remove_nodes_and_reconnect_graph(nncf_graph, dropout_metatypes)
-    if nncf_graph_contains_constants:
-        filter_constant_nodes(nncf_graph, read_variable_metatypes)
     return nncf_graph
 
 
 def remove_shapeof_subgraphs(
     nncf_graph: NNCFGraph,
     shapeof_metatypes: List[OperatorMetatype],
-    read_variable_metatypes: Optional[List[OperatorMetatype]] = None,
+    input_nodes: List[NNCFNode],
 ) -> NNCFGraph:
     """
     Removes the ShapeOf subgraphs from the provided NNCFGraph instance inplace.
+    Constant subgraph should be already removed from the given NNCFGraph.
 
     :param nncf_graph: NNCFGraph instance for the transformation.
     :param shapeof_metatypes: List of backend-specific ShapeOf metatypes.
-    :param read_variable_metatypes: List of backend-specific metatypes
-        that also can be interpreted as inputs (ReadValue).
+    :param input_nodes: List of input nodes for the given NNCFGraph.
     :return: NNCFGraph without ShapeOf subgraphs.
     """
-    read_variable_metatypes = read_variable_metatypes if read_variable_metatypes else []
     nodes_to_drop = set()
     shape_of_nodes = []
     infer_nodes = []
 
-    similar_inputs = nncf_graph.get_nodes_by_metatypes(read_variable_metatypes)
-    nodes_queue = collections.deque(nncf_graph.get_input_nodes() + similar_inputs)
+    nodes_queue = collections.deque(input_nodes)
     while nodes_queue:
         node = nodes_queue.pop()
         if node.metatype in shapeof_metatypes:
@@ -143,28 +138,22 @@ def remove_nodes_and_reconnect_graph(
 
 
 def filter_constant_nodes(
-    nncf_graph: NNCFGraph, read_variable_metatypes: Optional[List[OperatorMetatype]] = None
+    nncf_graph: NNCFGraph,
+    input_nodes: List[NNCFNode],
 ) -> NNCFGraph:
     """
     Removes all Constant nodes from NNCFGraph inplace, making it inference graph.
     The traversing starts from the input nodes and nodes with weights.
 
     :param nncf_graph: NNCFGraph instance for the transformation.
-    :param read_variable_metatypes: List of backend-specific metatypes
-        that also can be interpreted as inputs (ReadValue).
+    :param input_nodes: List of input nodes for the given NNCFGraph.
     :return: NNCFGraph without Constant nodes.
     """
-    read_variable_metatypes = read_variable_metatypes if read_variable_metatypes else []
-    input_nodes = nncf_graph.get_input_nodes()
-    similar_input_nodes = nncf_graph.get_nodes_by_metatypes(read_variable_metatypes)
-
-    start_nodes = input_nodes + similar_input_nodes
-
-    if not start_nodes:
+    if not input_nodes:
         return nncf_graph
 
     visited_nodes = set()
-    nodes_queue = collections.deque(start_nodes)
+    nodes_queue = collections.deque(input_nodes)
     while nodes_queue:
         node = nodes_queue.pop()
         if node in visited_nodes:

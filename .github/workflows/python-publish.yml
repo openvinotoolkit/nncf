@@ -25,9 +25,9 @@ jobs:
     runs-on: ubuntu-20.04
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: '3.x'
     - name: Install dependencies
@@ -42,8 +42,8 @@ jobs:
         python -m build -C--global-option=--release
 
         # Disallow uploading dev packages
-        for file in dist; do
-          if [[$file == *"dev"* ]]; then
+        for file in dist/*; do
+          if [[ $file == *"dev"* ]]; then
              exit 42
           fi
         done

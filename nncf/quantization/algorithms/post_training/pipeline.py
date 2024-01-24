@@ -14,6 +14,7 @@ from typing import Optional, TypeVar
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.parameters import ModelType
+from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.bias_correction.algorithm import BIAS_CORRECTION_THRESHOLD
@@ -30,6 +31,7 @@ TModel = TypeVar("TModel")
 
 
 def create_ptq_pipeline(
+    mode: Optional[QuantizationMode] = None,
     preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
@@ -47,6 +49,7 @@ def create_ptq_pipeline(
         3) MinMaxQuantization
         4) FastBiasCorrection or BiasCorrection
 
+    :param mode: Special quantization mode that specify different ways of the optimization.
     :param preset: A preset controls the quantization mode (symmetric and asymmetric).
         It can take the following values:
         - `performance`: Symmetric quantization of weights and activations.
@@ -80,10 +83,23 @@ def create_ptq_pipeline(
 
     # Add the `SmoothQuant` algorithm as the first step of the pipeline.
     # It is added only for `ModelType.TRANSFORMER`.
-    if model_type == ModelType.TRANSFORMER and advanced_parameters.smooth_quant_alpha >= 0:
-        pipeline_steps.append(
-            [SmoothQuant(subset_size, advanced_parameters.inplace_statistics, advanced_parameters.smooth_quant_alpha)]
+    sq_params = advanced_parameters.smooth_quant_alphas
+    sq_alpha = advanced_parameters.smooth_quant_alpha
+    if sq_alpha is not None:
+        warning_deprecated(
+            "`AdvancedQuantizationParameters(smooth_quant_alpha=..)` is deprecated."
+            "Please, use `AdvancedQuantizationParameters(smooth_quant_alphas)` option "
+            "with AdvancedSmoothQuantParameters(convolution=.., matmul=..) as value instead."
         )
+        if sq_alpha < 0:
+            sq_params.convolution = -1
+            sq_params.matmul = -1
+        else:
+            sq_params.matmul = sq_alpha
+
+    if model_type == ModelType.TRANSFORMER and (sq_params.convolution >= 0 or sq_params.matmul >= 0):
+        alpha_map = {"convolution": sq_params.convolution, "matmul": sq_params.matmul}
+        pipeline_steps.append([SmoothQuant(subset_size, advanced_parameters.inplace_statistics, alpha_map=alpha_map)])
 
     # Add the `ChannelAlignment` algorithm as the second step of the pipeline.
     if not advanced_parameters.disable_channel_alignment:
@@ -93,19 +109,20 @@ def create_ptq_pipeline(
     pipeline_steps.append(
         [
             MinMaxQuantization(
-                preset,
-                target_device,
-                subset_size,
-                model_type,
-                ignored_scope,
-                advanced_parameters.overflow_fix,
-                advanced_parameters.quantize_outputs,
-                advanced_parameters.inplace_statistics,
-                advanced_parameters.activations_quantization_params,
-                advanced_parameters.weights_quantization_params,
-                advanced_parameters.activations_range_estimator_params,
-                advanced_parameters.weights_range_estimator_params,
-                advanced_parameters.backend_params,
+                mode=mode,
+                preset=preset,
+                target_device=target_device,
+                subset_size=subset_size,
+                model_type=model_type,
+                ignored_scope=ignored_scope,
+                overflow_fix=advanced_parameters.overflow_fix,
+                quantize_outputs=advanced_parameters.quantize_outputs,
+                inplace_statistics=advanced_parameters.inplace_statistics,
+                activations_quantization_params=advanced_parameters.activations_quantization_params,
+                weights_quantization_params=advanced_parameters.weights_quantization_params,
+                activations_range_estimator_params=advanced_parameters.activations_range_estimator_params,
+                weights_range_estimator_params=advanced_parameters.weights_range_estimator_params,
+                backend_params=advanced_parameters.backend_params,
             )
         ]
     )

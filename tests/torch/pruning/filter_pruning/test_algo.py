@@ -16,6 +16,7 @@ import numpy as np
 import pytest
 import torch
 
+from nncf.api.compression import CompressionStage
 from nncf.common.pruning.schedulers import ExponentialPruningScheduler
 from nncf.common.pruning.shape_pruning_processor import ShapePruningProcessor
 from nncf.common.pruning.weights_flops_calculator import WeightsFlopsCalculator
@@ -852,3 +853,32 @@ def test_disconnected_graph():
         else:
             assert sum(node.attributes["output_mask"].tensor) == mask_sum
         assert collected_shapes[name] == shape
+
+
+@pytest.mark.parametrize("prune_by_flops", [True, False])
+def test_compression_stage(prune_by_flops):
+    config = get_basic_pruning_config(input_sample_size=[1, 1, 8, 8])
+    pruning_init = 0.0
+    pruning_target = 0.3
+    config["compression"]["algorithm"] = "filter_pruning"
+    config["compression"]["pruning_init"] = pruning_init
+    config["compression"]["params"]["num_init_steps"] = 0
+    config["compression"]["params"]["pruning_steps"] = 3
+
+    if prune_by_flops:
+        config["compression"]["params"]["pruning_flops_target"] = pruning_target
+    else:
+        config["compression"]["params"]["pruning_target"] = pruning_target
+    _, pruning_algo, _ = create_pruning_algo_with_config(config)
+
+    assert pruning_algo.compression_stage() == (
+        CompressionStage.PARTIALLY_COMPRESSED if prune_by_flops else CompressionStage.UNCOMPRESSED
+    )
+    pruning_algo.scheduler.epoch_step()
+    assert pruning_algo.compression_stage() == (
+        CompressionStage.PARTIALLY_COMPRESSED if prune_by_flops else CompressionStage.UNCOMPRESSED
+    )
+    pruning_algo.scheduler.epoch_step()
+    assert pruning_algo.compression_stage() == CompressionStage.PARTIALLY_COMPRESSED
+    pruning_algo.scheduler.epoch_step()
+    assert pruning_algo.compression_stage() == CompressionStage.FULLY_COMPRESSED

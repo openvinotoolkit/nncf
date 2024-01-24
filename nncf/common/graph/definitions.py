@@ -11,8 +11,10 @@
 
 MODEL_INPUT_OP_NAME = "nncf_model_input"
 MODEL_OUTPUT_OP_NAME = "nncf_model_output"
+MODEL_CONST_OP_NAME = "nncf_model_const"
 
 
 class NNCFGraphNodeType:
     INPUT_NODE = MODEL_INPUT_OP_NAME
     OUTPUT_NODE = MODEL_OUTPUT_OP_NAME
+    CONST_NODE = MODEL_CONST_OP_NAME

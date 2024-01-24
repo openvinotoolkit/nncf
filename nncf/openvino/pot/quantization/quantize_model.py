@@ -18,6 +18,7 @@ import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
 from openvino.tools import pot
 
+from nncf.common.deprecation import warning_deprecated
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
@@ -28,6 +29,7 @@ from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
+from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -160,28 +162,29 @@ def _create_quantization_group_config(
     :return: A POT quantization group configuration as dict.
     """
     config = {}
-    if quantization_params.num_bits is not None:
-        config["bits"] = quantization_params.num_bits
+    if quantization_params is not None:
+        if quantization_params.num_bits is not None:
+            config["bits"] = quantization_params.num_bits
 
-    if quantization_params.mode is not None:
-        config["mode"] = str(quantization_params.mode)
-    if quantization_params.per_channel is not None:
-        config["perchannel"] = quantization_params.per_channel
+        if quantization_params.mode is not None:
+            config["mode"] = str(quantization_params.mode)
+        if quantization_params.per_channel is not None:
+            config["perchannel"] = quantization_params.per_channel
 
-    not_supported_params = {
-        "narrow_range": quantization_params.narrow_range,
-        "signedness_to_force": quantization_params.signedness_to_force,
-    }
-    for name, value in not_supported_params.items():
-        if value is not None:
-            raise RuntimeError(
-                "Quantization algorithm from the OpenVINO backend does not support "
-                f"{name} directly, please, use backend specific parameters level_low "
-                "and level_high to specify the quantization levels for activations "
-                "and weights quantization groups to specify the quantization levels."
-                'Example:\n {"activations" : {"level_low": 0, "level_high": 255}}\n'
-                '{"weights" : {"level_low": -127, "level_high": 127}}'
-            )
+        not_supported_params = {
+            "narrow_range": quantization_params.narrow_range,
+            "signedness_to_force": quantization_params.signedness_to_force,
+        }
+        for name, value in not_supported_params.items():
+            if value is not None:
+                raise RuntimeError(
+                    "Quantization algorithm from the OpenVINO backend does not support "
+                    f"{name} directly, please, use backend specific parameters level_low "
+                    "and level_high to specify the quantization levels for activations "
+                    "and weights quantization groups to specify the quantization levels."
+                    'Example:\n {"activations" : {"level_low": 0, "level_high": 255}}\n'
+                    '{"weights" : {"level_low": -127, "level_high": 127}}'
+                )
     if BackendParameters.LEVEL_LOW in backend_params:
         config["level_low"] = backend_params[BackendParameters.LEVEL_LOW]
     if BackendParameters.LEVEL_HIGH in backend_params:
@@ -323,6 +326,7 @@ def _create_engine_config(
 def quantize_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
+    mode: Optional[QuantizationMode] = None,
     preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
@@ -336,13 +340,25 @@ def quantize_impl(
     """
     pot.utils.logger.init_logger(level=logging.getLevelName(nncf_logger.getEffectiveLevel()))
 
+    if mode is not None:
+        raise ValueError(f"mode={mode} is not supported")
+
     if advanced_parameters is None:
         advanced_parameters = AdvancedQuantizationParameters()
 
-    if model_type == ModelType.TRANSFORMER and advanced_parameters.smooth_quant_alpha > 0:
+    if advanced_parameters.smooth_quant_alpha is not None:
+        warning_deprecated(
+            "`AdvancedQuantizationParameters(smooth_quant_alpha=..)` is deprecated."
+            "Please, use `AdvancedQuantizationParameters(smooth_quant_alphas)` option "
+            "with AdvancedSmoothQuantParameters(convolution=.., matmul=..) as value instead."
+        )
+
+    sq_params = advanced_parameters.smooth_quant_alphas
+
+    if model_type == ModelType.TRANSFORMER and (sq_params.convolution > 0 or sq_params.matmul > 0):
         nncf_logger.warning(
-            'IMPORTANT. The advanced parameter "smooth_quant_alpha > 0" IS NOT SUPPORTED for the POT backend!'
-            'Please, use "smooth_quant_alpha = -1".'
+            "IMPORTANT. The AdvancedSmoothQuantParameters parameter value > 0 IS NOT SUPPORTED for the POT backend!"
+            "Please, use `AdvancedSmoothQuantParameters(convolution = -1, matmul = -1)`."
         )
 
     algorithm_parameters = _create_quantization_config(
@@ -443,10 +459,19 @@ def quantize_with_accuracy_control_impl(
     if advanced_quantization_parameters is None:
         advanced_quantization_parameters = AdvancedQuantizationParameters()
 
-    if model_type == ModelType.TRANSFORMER and advanced_quantization_parameters.smooth_quant_alpha > 0:
+    if advanced_quantization_parameters.smooth_quant_alpha is not None:
+        warning_deprecated(
+            "`AdvancedQuantizationParameters(smooth_quant_alpha=..)` is deprecated."
+            "Please, use `AdvancedQuantizationParameters(smooth_quant_alphas)` option "
+            "with AdvancedSmoothQuantParameters(convolution=.., matmul=..) as value instead."
+        )
+
+    sq_params = advanced_quantization_parameters.smooth_quant_alphas
+
+    if model_type == ModelType.TRANSFORMER and (sq_params.convolution > 0 or sq_params.matmul > 0):
         nncf_logger.warning(
-            'IMPORTANT. The advanced parameter "smooth_quant_alpha > 0" IS NOT SUPPORTED for the POT backend!'
-            'Please, use "smooth_quant_alpha = -1".'
+            "IMPORTANT. The AdvancedSmoothQuantParameters parameter value > 0 IS NOT SUPPORTED for the POT backend!"
+            "Please, use `AdvancedSmoothQuantParameters(convolution = -1, matmul = -1)`."
         )
 
     if advanced_quantization_parameters.disable_bias_correction:

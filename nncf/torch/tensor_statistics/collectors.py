@@ -20,6 +20,7 @@ from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcesso
 from nncf.common.tensor_statistics.collectors import NNCFTensor
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
+from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
 from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
@@ -29,11 +30,11 @@ from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
 from nncf.experimental.common.tensor_statistics.collectors import MedianAbsoluteDeviationAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MinReducer
+from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
 from nncf.experimental.common.tensor_statistics.collectors import PercentileAggregator
 from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
-from nncf.experimental.common.tensor_statistics.collectors import TensorAggregatorBase
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.torch.tensor import PTNNCFTensor
@@ -41,6 +42,7 @@ from nncf.torch.tensor_statistics.statistics import PTMeanTensorStatistic
 from nncf.torch.tensor_statistics.statistics import PTMedianMADTensorStatistic
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 from nncf.torch.tensor_statistics.statistics import PTPercentileTensorStatistic
+from nncf.torch.tensor_statistics.statistics import PTRawTensorStatistic
 
 
 class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
@@ -443,8 +445,8 @@ def get_percentile_tensor_collector(
 
 
 def _get_collection_without_reduction(
-    aggregator_cls: TensorAggregatorBase,
-    statistic_cls: TensorAggregatorBase,
+    aggregator_cls: AggregatorBase,
+    statistic_cls: AggregatorBase,
     reduction_axes: Tuple[int, ...],
     aggregation_axes: Tuple[int, ...],
     num_samples: int,
@@ -543,6 +545,21 @@ def get_mean_statistic_collector(
     collector = TensorCollector(PTMeanTensorStatistic)
     collector.register_statistic_branch(PTMeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
     collector.register_statistic_branch(PTMeanTensorStatistic.SHAPE_STAT, noop_reducer, aggregate_shape)
+    return collector
+
+
+def get_raw_stat_collector(num_samples: Optional[int] = None) -> TensorCollector:
+    """
+    Raw statistic collector builder.
+
+    :param num_samples: Maximum number of samples to collect.
+    :return: Raw statistic collector.
+    """
+    reducer = PTNoopReducer()
+    aggregator = NoopAggregator(num_samples)
+
+    collector = TensorCollector(PTRawTensorStatistic)
+    collector.register_statistic_branch(PTRawTensorStatistic.VALUES_STATS, reducer, aggregator)
     return collector
 
 

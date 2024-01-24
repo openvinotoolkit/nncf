@@ -21,7 +21,7 @@ class OperatorMetatype:
 
     :param name: The name of the operator.
     :param hw_config_names: The names of the hardware configurations.
-    :param output_channel_axis: The axis along which the output channels of the operator are arranged.
+    :param output_channel_axis: The axis, along which the output channels of the operator are arranged.
     :param ignored_input_ports: Input ports of the operations that should not be considered for purposes of compression.
     """
 
@@ -29,6 +29,7 @@ class OperatorMetatype:
     hw_config_names: List[str] = []
     output_channel_axis: Optional[int] = None
     ignored_input_ports: List[int] = []
+    target_input_ports: Optional[List[int]] = None
 
     @classmethod
     def get_all_aliases(cls) -> List[str]:
@@ -126,6 +127,7 @@ class OperatorMetatypeRegistry(Registry):
 NOOP_METATYPES = Registry("noop_metatypes")
 INPUT_NOOP_METATYPES = Registry("input_noop_metatypes")
 OUTPUT_NOOP_METATYPES = Registry("output_noop_metatypes")
+CONST_NOOP_METATYPES = Registry("const_noop_metatypes")
 
 
 class UnknownMetatype(OperatorMetatype):
@@ -174,3 +176,13 @@ class OutputNoopMetatype(OperatorMetatype):
     @classmethod
     def get_all_aliases(cls) -> List[str]:
         return [NNCFGraphNodeType.OUTPUT_NODE]
+
+
+@NOOP_METATYPES.register()
+@CONST_NOOP_METATYPES.register()
+class ConstNoopMetatype(OperatorMetatype):
+    name = "const_noop"
+
+    @classmethod
+    def get_all_aliases(cls) -> List[str]:
+        return [NNCFGraphNodeType.CONST_NODE]

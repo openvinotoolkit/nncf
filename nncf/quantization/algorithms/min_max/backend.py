@@ -25,6 +25,7 @@ from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBas
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
+from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 
@@ -69,13 +70,6 @@ class MinMaxAlgoBackend(ABC):
 
     @property
     @abstractmethod
-    def read_variable_metatypes(self) -> List[OperatorMetatype]:
-        """
-        Property for the backend-specific metatypes that also can be interpreted as inputs (ReadValue).
-        """
-
-    @property
-    @abstractmethod
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific metatypes for which overflow_fix is applicable.
@@ -93,6 +87,13 @@ class MinMaxAlgoBackend(ABC):
     def group_conv_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific Grouped Convolution metatypes.
+        """
+
+    @property
+    @abstractmethod
+    def scaled_dot_product_attention_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific Scaled Dot Product Attention metatypes.
         """
 
     @property
@@ -144,6 +145,31 @@ class MinMaxAlgoBackend(ABC):
         :param quantizer_config: QuantizerConfig instance for the current layer.
         :param parameters: FakeQuantizeParameters to calculate activation quantization parameters.
         :return: Backend-specific TransformationCommand for the quantizer insertion operation.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def create_convert_insertion_command(
+        target_point: TargetPoint,
+        parameters: FakeConvertParameters,
+    ) -> TransformationCommand:
+        """
+        Returns backend-specific convert insertion command.
+
+        :param target_point: Target location for the correction.
+        :param parameters: FakeConvertParameters to calculate activation quantization parameters.
+        :return: Backend-specific TransformationCommand for the quantizer insertion operation.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[NNCFNode]:
+        """
+        Returns a list of NNCFNodes to use as start nodes for activation path tracing.
+
+        :param nncf_graph: NNCFGraph to get the start nodes.
+        :return: List of NNCFNodes to use as start nodes for activation path tracing.
+
         """
 
     @staticmethod

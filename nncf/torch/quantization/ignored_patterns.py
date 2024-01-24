@@ -18,16 +18,21 @@ PT_IGNORED_PATTERNS = Registry("IGNORED_PATTERNS")
 
 
 def _add_softmax_matmul(
-    pattern: GraphPattern, matmul_aliases, reshape_squeeze_aliases, gather_aliases, transpose_aliases
+    pattern: GraphPattern,
+    matmul_aliases,
+    reshape_squeeze_aliases,
+    gather_aliases,
+    transpose_aliases,
+    concat_aliases,
 ) -> None:
-    #       SOFTMAX  RESHAPE||TRANSPOSE||GATHER||SQUEEZE
+    #       SOFTMAX  RESHAPE||TRANSPOSE||GATHER||SQUEEZE||CONCAT
     #           \              /
     #            \            /
     #             \          /
     #              \        /
     #               \      /
     #                MATMUL
-    branch_matmul_nodes = reshape_squeeze_aliases + gather_aliases + transpose_aliases
+    branch_matmul_nodes = reshape_squeeze_aliases + gather_aliases + transpose_aliases + concat_aliases
     softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: "softmax"})
     matmul = pattern.add_node(**{GraphPattern.LABEL_ATTR: "MATMUL", GraphPattern.METATYPE_ATTR: matmul_aliases})
     matmul_branch_nodes = pattern.add_node(
@@ -38,13 +43,18 @@ def _add_softmax_matmul(
 
 
 def _add_softmax_reshape_matmul(
-    pattern: GraphPattern, matmul_aliases, reshape_squeeze_aliases, gather_aliases, transpose_aliases
+    pattern: GraphPattern,
+    matmul_aliases,
+    reshape_squeeze_aliases,
+    gather_aliases,
+    transpose_aliases,
+    concat_aliases,
 ) -> None:
     #       SOFTMAX
     #           \
     #            \
     #             \
-    #             RESHAPE   RESHAPE||TRANSPOSE||GATHER||SQUEEZE
+    #             RESHAPE   RESHAPE||TRANSPOSE||GATHER||SQUEEZE||CONCAT
     #                 \                 /
     #                  \               /
     #                   \             /
@@ -52,7 +62,7 @@ def _add_softmax_reshape_matmul(
     #                     \         /
     #                      \       /
     #                        MATMUL
-    branch_matmul_nodes = reshape_squeeze_aliases + gather_aliases + transpose_aliases
+    branch_matmul_nodes = reshape_squeeze_aliases + gather_aliases + transpose_aliases + concat_aliases
     softmax = pattern.add_node(**{GraphPattern.LABEL_ATTR: "SOFTMAX", GraphPattern.METATYPE_ATTR: "softmax"})
     reshape = pattern.add_node(
         **{GraphPattern.LABEL_ATTR: "RESHAPE", GraphPattern.METATYPE_ATTR: reshape_squeeze_aliases}
@@ -80,6 +90,7 @@ def create_multihead_attention_output() -> GraphPattern:
     ]
     gather_aliases = ["gather", "index_select", "where", "index_select", "__getitem__"]
     transpose_aliases = ["transpose", "permute", "transpose_"]
+    concat_aliases = ["cat", "stack"]
 
     pattern = GraphPattern()
     _add_softmax_matmul(
@@ -88,6 +99,7 @@ def create_multihead_attention_output() -> GraphPattern:
         reshape_squeeze_aliases=reshape_squeeze_aliases,
         gather_aliases=gather_aliases,
         transpose_aliases=transpose_aliases,
+        concat_aliases=concat_aliases,
     )
     _add_softmax_reshape_matmul(
         pattern,
@@ -95,6 +107,7 @@ def create_multihead_attention_output() -> GraphPattern:
         reshape_squeeze_aliases=reshape_squeeze_aliases,
         gather_aliases=gather_aliases,
         transpose_aliases=transpose_aliases,
+        concat_aliases=concat_aliases,
     )
     return pattern
 

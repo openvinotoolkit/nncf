@@ -35,7 +35,7 @@ OMZ_MODELS = [
     (
         "mobilenet-v3-small-1.0-224-tf",
         "imagenette2-320",
-        {"accuracy@top1": 0.75, "accuracy@top5": 0.916},
+        {"accuracy@top1": 0.735, "accuracy@top5": 0.925},
         AdvancedQuantizationParameters(disable_channel_alignment=False),
     ),
     ("googlenet-v3-pytorch", "imagenette2-320", {"accuracy@top1": 0.911, "accuracy@top5": 0.994}, None),
@@ -66,8 +66,8 @@ def test_compression(data_dir, tmp_path, model, dataset, ref_metrics, advanced_p
     quantized_model = nncf.quantize(
         ov_model,
         calibration_dataset,
-        QuantizationPreset.PERFORMANCE,
-        TargetDevice.ANY,
+        preset=QuantizationPreset.PERFORMANCE,
+        target_device=TargetDevice.ANY,
         subset_size=300,
         fast_bias_correction=True,
         advanced_parameters=advanced_params,

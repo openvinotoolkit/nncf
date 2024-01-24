@@ -11,7 +11,7 @@
 
 import importlib
 from copy import deepcopy
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
@@ -24,8 +24,10 @@ from nncf.openvino.graph.node_utils import get_number_if_op
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
 from nncf.openvino.quantization.quantize_ifmodel import apply_algorithm_if_bodies
+from nncf.openvino.rt_info import dump_parameters
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
+from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -54,7 +56,7 @@ def should_use_pot(advanced_parameters: Optional[AdvancedQuantizationParameters]
     :raises ImportError if POT is not found in the Python environment.
     """
     use_pot = USE_POT_AS_DEFAULT
-    if advanced_parameters is not None:
+    if advanced_parameters is not None and advanced_parameters.backend_params is not None:
         use_pot = advanced_parameters.backend_params.get(BackendParameters.USE_POT, USE_POT_AS_DEFAULT)
 
     if not use_pot:
@@ -71,31 +73,11 @@ def should_use_pot(advanced_parameters: Optional[AdvancedQuantizationParameters]
     return True
 
 
-def dump_parameters(model: ov.Model, parameters: Dict, path: Optional[List] = None) -> None:
-    """
-    Dumps input parameters into Model's meta section.
-
-    :param model: ov.Model instance.
-    :param parameters: Incoming dictionary with parameters to save.
-    :param path: Optional list of the paths.
-    """
-    try:
-        path = path if path else []
-        for key, value in parameters.items():
-            # Special condition for composed fields like IgnoredScope
-            if isinstance(value, IgnoredScope):
-                dump_parameters(model, value.__dict__, [key])
-                continue
-            rt_path = ["nncf", "quantization"] + path + [key]
-            model.set_rt_info(str(value), rt_path)
-    except RuntimeError as e:
-        nncf_logger.debug(f"Unable to dump optimization parameters due to error: {e}")
-
-
 @tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
 def native_quantize_if_op_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
+    mode: Optional[QuantizationMode] = None,
     preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
@@ -112,6 +94,7 @@ def native_quantize_if_op_impl(
             "The BiasCorrection algorithm is not supported for OpenVINO models with If operation."
         )
     quantization_algorithm = PostTrainingQuantization(
+        mode=mode,
         preset=preset,
         target_device=target_device,
         subset_size=subset_size,
@@ -154,6 +137,7 @@ def native_quantize_if_op_impl(
 def native_quantize_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
+    mode: Optional[QuantizationMode] = None,
     preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
@@ -166,6 +150,7 @@ def native_quantize_impl(
     Implementation of the `quantize()` method for the OpenVINO backend via the OpenVINO Runtime API.
     """
     quantization_algorithm = PostTrainingQuantization(
+        mode=mode,
         preset=preset,
         target_device=target_device,
         subset_size=subset_size,
@@ -231,15 +216,15 @@ def native_quantize_with_accuracy_control_impl(
     copied_parameters.backend_params[BackendParameters.COMPRESS_WEIGHTS] = False
 
     quantized_model = quantize_impl(
-        model,
-        calibration_dataset,
-        preset,
-        target_device,
-        subset_size,
-        fast_bias_correction,
-        model_type,
-        ignored_scope,
-        copied_parameters,
+        model=model,
+        calibration_dataset=calibration_dataset,
+        preset=preset,
+        target_device=target_device,
+        subset_size=subset_size,
+        fast_bias_correction=fast_bias_correction,
+        model_type=model_type,
+        ignored_scope=ignored_scope,
+        advanced_parameters=copied_parameters,
     )
 
     if advanced_accuracy_restorer_parameters.intermediate_model_dir:
@@ -304,6 +289,7 @@ def native_quantize_with_accuracy_control_impl(
             max_drop,
             drop_type,
             advanced_accuracy_restorer_parameters.num_ranking_workers,
+            advanced_accuracy_restorer_parameters.restore_mode,
         )
         quantized_model = accuracy_restorer.apply(
             model,
@@ -339,6 +325,7 @@ def native_quantize_with_accuracy_control_impl(
 def quantize_impl(
     model: ov.Model,
     calibration_dataset: Dataset,
+    mode: Optional[QuantizationMode] = None,
     preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
@@ -360,15 +347,16 @@ def quantize_impl(
             quantize_fn = native_quantize_if_op_impl
 
     return quantize_fn(
-        model,
-        calibration_dataset,
-        preset,
-        target_device,
-        subset_size,
-        fast_bias_correction,
-        model_type,
-        ignored_scope,
-        advanced_parameters,
+        model=model,
+        calibration_dataset=calibration_dataset,
+        mode=mode,
+        preset=preset,
+        target_device=target_device,
+        subset_size=subset_size,
+        fast_bias_correction=fast_bias_correction,
+        model_type=model_type,
+        ignored_scope=ignored_scope,
+        advanced_parameters=advanced_parameters,
     )
 
 

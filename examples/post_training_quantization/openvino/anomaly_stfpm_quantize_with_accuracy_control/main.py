@@ -39,8 +39,7 @@ MODEL_PATH = HOME_PATH / ".cache/nncf/models/stfpm_mvtec_capsule"
 
 DATASET_INFO = download.DownloadInfo(
     name="mvtec_capsule",
-    url="https://www.mydrive.ch/shares/38536/3830184030e49fe74747669442f0f282/"
-    "download/420937454-1629951595/capsule.tar.xz",
+    url="https://huggingface.co/datasets/alexsu52/mvtec_capsule/resolve/main/capsule.tar.xz",
     hash="380afc46701c99cb7b9a928edbe16eb5",
 )
 DATASET_PATH = HOME_PATH / ".cache/nncf/datasets/mvtec_capsule"

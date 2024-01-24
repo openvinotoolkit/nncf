@@ -17,6 +17,10 @@ models:
         preprocessing:
           - type: resize
             size: 300
+          - type: bgr_to_rgb
+          - type: normalization
+            mean: 123.675, 116.28, 103.53
+            std: 58.4795, 57.1429, 57.4713
         postprocessing:
           - type: resize_prediction_boxes
         metrics:

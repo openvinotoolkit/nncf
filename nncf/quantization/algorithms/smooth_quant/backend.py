@@ -28,9 +28,29 @@ TTensor = TypeVar("TTensor")
 class SmoothQuantAlgoBackend(ABC):
     @property
     @abstractmethod
-    def weighted_metatypes(self) -> List[OperatorMetatype]:
+    def convolution_metatype(self) -> OperatorMetatype:
         """
-        Property for the backend-specific metatypes.
+        Parameter for backend-specific metatype for Convolution.
+
+        :return: OperatorMetatype
+        """
+
+    @property
+    @abstractmethod
+    def matmul_metatype(self) -> OperatorMetatype:
+        """
+        Parameter for backend-specific metatype for MatMul.
+
+        :return: OperatorMetatype
+        """
+
+    @property
+    @abstractmethod
+    def quantize_agnostic_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Parameter for backend-specific quantize agnostic metatypes.
+
+        :return: List of OperatorMetatype.
         """
 
     @staticmethod
@@ -215,12 +235,11 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_channel_axis(node: NNCFNode, port_id: int) -> int:
+    def get_weight_channel_axis(node: NNCFNode) -> int:
         """
         Returns axis number of the weight tensor which correspond to it channel.
 
         :param node: NNCFNode instance.
-        :param port_id: Specified input port id.
         :return: Channel axis number.
         """
 

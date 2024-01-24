@@ -42,10 +42,10 @@ def get_fq_nodes_stats_algo(model):
     nodes = {}
     for op in model.get_ops():
         if op.get_type_name() == "FakeQuantize":
-            input_low = op.input_value(1).get_node().get_data()
-            input_high = op.input_value(2).get_node().get_data()
-            output_low = op.input_value(3).get_node().get_data()
-            output_high = op.input_value(4).get_node().get_data()
+            input_low = op.input_value(1).get_node().data
+            input_high = op.input_value(2).get_node().data
+            output_low = op.input_value(3).get_node().data
+            output_high = op.input_value(4).get_node().data
 
             nodes[op.get_friendly_name()] = {
                 "input_low": input_low,
@@ -120,7 +120,7 @@ def test_overflow_fix_scales(overflow_fix):
 OMZ_MODELS = [
     "mobilenet-v2-pytorch",
     "resnet-18-pytorch",
-    "yolo-v4-tiny-tf",
+    "yolo-v3-tiny-onnx",
 ]
 
 

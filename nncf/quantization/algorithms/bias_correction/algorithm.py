@@ -432,6 +432,7 @@ class BiasCorrection(Algorithm):
 
     def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str, port_id: int) -> np.ndarray:
         """
+        # TODO: paraphrase
         Makes out pre-layer needed data from the floating-point collected statistics.
 
         :param statistic_points: Filled StatisticPointsContainer.
@@ -525,9 +526,7 @@ class BiasCorrection(Algorithm):
             statistic_point = self._backend_entity.target_point(
                 TargetType.POST_LAYER_OPERATION, activation_node_name, port_id=output_port_id
             )
-            stat_collector = self._backend_entity.raw_statistic_collector(
-                num_samples=self.subset_size, inplace=self.inplace_statistics
-            )
+            stat_collector = self._backend_entity.raw_statistic_collector(num_samples=self.subset_size)
             statistic_container.add_statistic_point(
                 StatisticPoint(
                     target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key
@@ -545,9 +544,7 @@ class BiasCorrection(Algorithm):
             statistic_point = self._backend_entity.target_point(
                 TargetType.POST_LAYER_OPERATION, input_node.node_name, port_id=OUTPUT_PORT_OF_NODE
             )
-            stat_collector = self._backend_entity.raw_statistic_collector(
-                num_samples=self.subset_size, inplace=self.inplace_statistics
-            )
+            stat_collector = self._backend_entity.raw_statistic_collector(num_samples=self.subset_size)
             statistic_container.add_statistic_point(
                 StatisticPoint(
                     target_point=statistic_point, tensor_collector=stat_collector, algorithm=self._algorithm_key
@@ -565,8 +562,9 @@ class BiasCorrection(Algorithm):
         :return: Tuple with the activation node and port id.
         """
         activation_port = self._backend_entity.get_activation_port_id(node, nncf_graph)
-        activation_node = nncf_graph.get_input_edges(node)[activation_port].from_node
-        port_id = nncf_graph.get_edge(activation_node, node).output_port_id
+        activation_edge = nncf_graph.get_input_edges(node)[activation_port]
+        activation_node = activation_edge.from_node
+        port_id = activation_edge.output_port_id
         return activation_node, port_id
 
     def _get_biased_after_nodes(self, nncf_graph: NNCFGraph, nodes: List[NNCFNode], model: TModel) -> List[NNCFNode]:

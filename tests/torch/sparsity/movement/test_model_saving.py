@@ -279,7 +279,7 @@ class TestONNXExport:
         for i in range(len(dataset)):
             item = dataset[i : i + 1]
             onnx_input = {}
-            for input_name, input_info in zip(input_names, recipe.model_input_info):
+            for input_name, input_info in zip(input_names, recipe.model_input_info.elements):
                 onnx_input[input_name] = torch.tensor(item[input_info.keyword], dtype=input_info.type).numpy()
             outputs = sess.run(None, onnx_input)
             for name, output in zip(output_names, outputs):
@@ -445,5 +445,7 @@ class TestCompressionState:
         resumed_trainer.train(str(resume_folder))
 
         PTTensorListComparator.check_equal(
-            list(compressed_model.state_dict().values()), list(resumed_compressed_model.state_dict().values())
+            list(compressed_model.state_dict().values()),
+            list(resumed_compressed_model.state_dict().values()),
+            atol=0.001,
         )

@@ -58,7 +58,6 @@ class OVConvolutionMetatype(OVOpMetatype):
     name = "ConvOp"
     op_names = ["Convolution"]
     hw_config_names = [HWConfigOpName.CONVOLUTION]
-    const_channel_axis = [0]  # const layout: [C_OUT, C_IN, Z, Y, X]
     output_channel_axis = 1
 
 
@@ -67,7 +66,6 @@ class OVConvolutionBackpropDataMetatype(OVOpMetatype):
     name = "ConvBackpropDataOp"
     op_names = ["ConvolutionBackpropData"]
     hw_config_names = [HWConfigOpName.CONVOLUTION]
-    const_channel_axis = [1]  # const layout: [C_IN, C_OUT, Z, Y, X]
     output_channel_axis = 1
 
 
@@ -76,7 +74,6 @@ class OVDepthwiseConvolutionMetatype(OVOpMetatype):
     name = "DepthwiseConvolutionOp"
     op_names = ["GroupConvolution"]
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
-    const_channel_axis = [0, 1]  # const layout: [GROUPS, C_OUT / GROUPS, C_IN / GROUPS, Z, Y, X]
     output_channel_axis = 1
 
     @classmethod
@@ -90,7 +87,6 @@ class OVGroupConvolutionMetatype(OVOpMetatype):
     op_names = ["GroupConvolution"]
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     subtypes = [OVDepthwiseConvolutionMetatype]
-    const_channel_axis = [0, 1]  # const layout: [GROUPS, C_OUT / GROUPS, C_IN / GROUPS, Z, Y, X]
     output_channel_axis = 1
 
 
@@ -99,7 +95,6 @@ class OVGroupConvolutionBackpropDataMetatype(OVOpMetatype):
     name = "GroupConvolutionBackpropDataOp"
     op_names = ["GroupConvolutionBackpropData"]
     hw_config_names = [HWConfigOpName.CONVOLUTION]
-    const_channel_axis = [0, 2]  # const layout: [GROUPS, C_IN / GROUPS,  C_OUT / GROUPS, Z, Y, X]
     output_channel_axis = 1
 
 
@@ -108,9 +103,6 @@ class OVMatMulMetatype(OVOpMetatype):
     name = "MatMulOp"
     op_names = ["MatMul"]
     hw_config_names = [HWConfigOpName.MATMUL]
-    const_channel_axis = [
-        -1
-    ]  # const layout: [B, ..., Y, X], where const is the second operand of matrix multiplication
     output_channel_axis = -1
 
 
@@ -339,6 +331,12 @@ class OVGRUSequenceMetatype(OVOpMetatype):
 class OVFakeQuantizeMetatype(OVOpMetatype):
     name = "FakeQuantizeOp"
     op_names = ["FakeQuantize"]
+
+
+@OV_OPERATOR_METATYPES.register()
+class OVFakeConvertMetatype(OVOpMetatype):
+    name = "FakeConvertOp"
+    op_names = ["FakeConvert"]
 
 
 @OV_OPERATOR_METATYPES.register()
@@ -692,6 +690,14 @@ class OVGroupNormalizationMetatype(OVOpMetatype):
     hw_config_names = [HWConfigOpName.GROUPNORMALIZATION]
 
 
+@OV_OPERATOR_METATYPES.register()
+class OVScaledDotProductAttentionMetatype(OVOpMetatype):
+    name = "ScaledDotProductAttentionOp"
+    op_names = ["ScaledDotProductAttention"]
+    hw_config_names = [HWConfigOpName.SCALED_DOT_PRODUCT_ATTENTION]
+    target_input_ports = [0, 1]
+
+
 def get_operator_metatypes() -> List[Type[OperatorMetatype]]:
     """
     Returns a list of the operator metatypes.
@@ -713,13 +719,13 @@ def get_operation_const_op(operation: ov.Node, const_port_id: int) -> Optional[o
     # There are several cases here
     # (Constant) -> (Operation)
     # (Constant) -> (Convert) -> (Operation)
-    # (Constant) -> (Convert) -> (FakeQuantize) -> (Operation)
-    # (Constant) -> (Convert) -> (FakeQuantize) -> (Reshape) -> (Operation)
+    # (Constant) -> (Convert) -> (FakeQuantize, FakeConvert) -> (Operation)
+    # (Constant) -> (Convert) -> (FakeQuantize, FakeConvert) -> (Reshape) -> (Operation)
     #  and etc. We need properly find the constant node. So we start with
     # `node` and traverse up until the constant node is not found.
     queue = deque([node])
     constant_node = None
-    allowed_propagation_types_list = ["Convert", "FakeQuantize", "Reshape"]
+    allowed_propagation_types_list = ["Convert", "FakeQuantize", "FakeConvert", "Reshape"]
 
     while len(queue) != 0:
         curr_node = queue.popleft()

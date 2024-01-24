@@ -17,7 +17,6 @@ import onnx
 import openvino.runtime as ov
 import timm
 import torch
-import tqdm
 from openvino.tools.mo import convert_model
 from sklearn.metrics import accuracy_score
 from timm.layers.config import set_fused_attn
@@ -26,6 +25,7 @@ from torchvision import transforms
 from torchvision.transforms import InterpolationMode
 
 import nncf
+from nncf.common.logging.track_progress import track
 from nncf.experimental.torch.replace_custom_modules.timm_custom_modules import (
     replace_timm_custom_modules_with_torch_native,
 )
@@ -54,22 +54,20 @@ class ImageClassificationTimm(BaseTestPipeline):
 
         if self.backend == BackendType.ONNX:
             onnx_path = self.output_model_dir / "model_fp32.onnx"
-            torch.onnx.export(
-                timm_model,
-                self.dummy_tensor,
-                onnx_path,
-                export_params=True,
-                opset_version=13,
-                do_constant_folding=False,
-            )
+            torch.onnx.export(timm_model, self.dummy_tensor, onnx_path, export_params=True, opset_version=13)
             self.model = onnx.load(onnx_path)
             self.input_name = self.model.graph.input[0].name
 
-        if self.backend in OV_BACKENDS:
+        if self.backend in OV_BACKENDS + [BackendType.FP32]:
             self.model = convert_model(timm_model, example_input=self.dummy_tensor, input_shape=self.input_size)
             self.input_name = list(inp.get_any_name() for inp in self.model.inputs)[0]
 
         self._dump_model_fp32()
+
+        # Set device after dump fp32 model
+        if self.backend == BackendType.CUDA_TORCH:
+            self.model.cuda()
+            self.dummy_tensor = self.dummy_tensor.cuda()
 
     def _dump_model_fp32(self) -> None:
         """Dump IRs of fp32 models, to help debugging."""
@@ -82,7 +80,7 @@ class ImageClassificationTimm(BaseTestPipeline):
             ov_model = convert_model(onnx_path)
             ov.serialize(ov_model, self.output_model_dir / "model_fp32.xml")
 
-        if self.backend in OV_BACKENDS:
+        if self.backend in OV_BACKENDS + [BackendType.FP32]:
             ov.serialize(self.model, self.output_model_dir / "model_fp32.xml")
 
     def prepare_preprocessor(self) -> None:
@@ -107,10 +105,11 @@ class ImageClassificationTimm(BaseTestPipeline):
 
     def get_transform_calibration_fn(self):
         if self.backend in PT_BACKENDS:
+            device = torch.device("cuda" if self.backend == BackendType.CUDA_TORCH else "cpu")
 
             def transform_fn(data_item):
                 images, _ = data_item
-                return images
+                return images.to(device)
 
         else:
 
@@ -148,16 +147,13 @@ class ImageClassificationTimm(BaseTestPipeline):
         jobs = int(os.environ.get("NUM_VAL_THREADS", DEFAULT_VAL_THREADS))
         infer_queue = ov.AsyncInferQueue(compiled_model, jobs)
 
-        # Disable tqdm for Jenkins
-        disable_tqdm = os.environ.get("JENKINS_HOME") is not None
-
-        with tqdm.tqdm(total=dataset_size, desc="Validation", disable=disable_tqdm) as pbar:
+        with track(total=dataset_size, description="Validation") as pbar:
 
             def process_result(request, userdata):
                 output_data = request.get_output_tensor().data
                 predicted_label = np.argmax(output_data, axis=1)
                 predictions[userdata] = [predicted_label]
-                pbar.update()
+                pbar.progress.update(pbar.task, advance=1)
 
             infer_queue.set_callback(process_result)
 

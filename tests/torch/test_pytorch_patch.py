@@ -10,13 +10,16 @@
 # limitations under the License.
 
 import inspect
+from typing import List
 
+import pytest
 import torch
 
 from nncf.config import NNCFConfig
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.patch_pytorch import _ORIG_JIT_SCRIPT
 from nncf.torch.dynamic_graph.patch_pytorch import MagicFunctionsToPatch
+from nncf.torch.dynamic_graph.structs import NamespaceTarget
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
@@ -37,19 +40,31 @@ def test_get_all_aliases_is_valid():
     for operator_metatypes, function_names in operator_names_to_function_name.items():
         if not function_names:
             invalid_metatypes.append(operator_metatypes)
-    assert not invalid_metatypes, f"There are metatypes with invalid `get_all_aliaces` method: {invalid_metatypes}"
+    assert not invalid_metatypes, f"There are metatypes with invalid `get_all_aliases` method: {invalid_metatypes}"
 
 
-def test_are_all_magic_functions_patched():
-    for operator in PT_OPERATOR_METATYPES.registry_dict:
-        for function_name in PT_OPERATOR_METATYPES.get(operator).get_all_aliases():
-            if function_name.startswith("__") and function_name.endswith("__"):
-                is_contained = False
-                for _, functions in MagicFunctionsToPatch.MAGIC_FUNCTIONS_TO_PATCH.items():
-                    if function_name in functions:
-                        is_contained = True
-                        break
-                assert is_contained
+@pytest.mark.parametrize("name_space", [NamespaceTarget.TORCH_TENSOR])
+def test_patch_magic_functions(name_space):
+    patched_magic_fns = MagicFunctionsToPatch.MAGIC_FUNCTIONS_TO_PATCH.get(name_space, [])
+    for op_name, operator in PT_OPERATOR_METATYPES.registry_dict.items():
+        op_fns: List[str] = operator.module_to_function_names.get(name_space, [])
+        op_magic_fns = [x for x in op_fns if x.startswith("__") and x.endswith("__")]
+        for fn_name in op_magic_fns:
+            assert fn_name in patched_magic_fns, f"{op_name} contains not patched magic function {fn_name}"
+
+
+@pytest.mark.parametrize("name_space", [NamespaceTarget.TORCH_TENSOR])
+def test_op_for_patch_magic_functions(name_space):
+    patched_magic_fns = MagicFunctionsToPatch.MAGIC_FUNCTIONS_TO_PATCH.get(name_space, [])
+
+    all_magic_fns_in_op: List[str] = []
+    for operator in PT_OPERATOR_METATYPES.registry_dict.values():
+        op_fns: List[str] = operator.module_to_function_names.get(name_space, [])
+        all_magic_fns_in_op += [x for x in op_fns if x.startswith("__") and x.endswith("__")]
+
+    for patched_fn in patched_magic_fns:
+        assert patched_fn in dir(torch.Tensor), f"Magic function {patched_fn} does not exist in Tensor"
+        assert patched_fn in all_magic_fns_in_op, f"No metatype for patched magic function {patched_fn}"
 
 
 def test_tensor_printing_does_not_inflate_graph():

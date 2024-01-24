@@ -35,7 +35,7 @@ class MaskedLanguageModelingHF(BaseTestPipeline):
             self.model = self.model_hf
             self.model.config.torchscript = True  # Set to export by convert_model via torch.jit.trace
             self.dummy_tensor = self.model_hf.dummy_inputs["input_ids"]
-        if self.backend in OV_BACKENDS:
+        if self.backend in OV_BACKENDS + [BackendType.FP32]:
             self.model_hf = OVModelForSequenceClassification.from_pretrained(self.model_id, export=True, compile=False)
             self.model = self.model_hf.model
 
@@ -44,6 +44,11 @@ class MaskedLanguageModelingHF(BaseTestPipeline):
             self.model = onnx.load(self.model_hf.model_path)
 
         self._dump_model_fp32()
+
+        # Set device after dump fp32 model
+        if self.backend == BackendType.CUDA_TORCH:
+            self.model.cuda()
+            self.dummy_tensor = self.dummy_tensor.cuda()
 
     def _dump_model_fp32(self) -> None:
         """Dump IRs of fp32 models, to help debugging."""
@@ -57,7 +62,7 @@ class MaskedLanguageModelingHF(BaseTestPipeline):
             ov_model = convert_model(onnx_path)
             ov.serialize(ov_model, self.output_model_dir / "model_fp32.xml")
 
-        if self.backend in OV_BACKENDS:
+        if self.backend in OV_BACKENDS + [BackendType.FP32]:
             ov.serialize(self.model, self.output_model_dir / "model_fp32.xml")
 
     def prepare_preprocessor(self) -> None:
@@ -65,9 +70,10 @@ class MaskedLanguageModelingHF(BaseTestPipeline):
 
     def get_transform_calibration_fn(self):
         if self.backend in PT_BACKENDS:
+            device = torch.device("cuda" if self.backend == BackendType.CUDA_TORCH else "cpu")
 
             def transform_func(data):
-                return torch.Tensor([data["input_ids"]]).type(dtype=torch.LongTensor)
+                return torch.tensor([data["input_ids"]]).type(dtype=torch.LongTensor).to(device)
 
         else:
 

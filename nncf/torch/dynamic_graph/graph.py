@@ -13,6 +13,7 @@ from typing import Any, Dict, Generator, List, Optional, Tuple
 
 import networkx as nx
 import networkx.algorithms.isomorphism as iso
+import torch
 from torch import Tensor
 
 from nncf import nncf_logger
@@ -22,6 +23,7 @@ from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
+from nncf.torch.dynamic_graph.trace_tensor import TracedParameter
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 
 
@@ -400,7 +402,7 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
         It finds and saves "starting" points of iteration for further matching with them on next iteration,
         instead of adding new nodes for each iteration. "Starting" points of iteration are nodes
             * that have at least one input node, which is outside of iteration scope
-            * or whose all inputs are not TracedTensor
+            * or whose all inputs are not tensors with TracedTensorMixin tracing capabilities.
         """
         op_exec_context = node.op_exec_context
         name = str(node)
@@ -413,16 +415,23 @@ class IterationScopeNodeMatcher(DefaultScopeNodeMatcher):
                 has_input_outside_iteration = False
                 untraced_tensor_inputs = []
                 traced_tensor_inputs = []
+                traced_parameter_inputs = []
                 non_tensor_inputs = []
                 for i in inputs:
                     input_obj = i.getter()
                     if isinstance(input_obj, Tensor):
-                        if not isinstance(input_obj, TracedTensor):
-                            untraced_tensor_inputs.append(input_obj)
-                        else:
+                        if isinstance(input_obj, TracedTensor):
                             traced_tensor_inputs.append(input_obj)
+                        elif isinstance(input_obj, TracedParameter):
+                            traced_parameter_inputs.append(input_obj)
+                        else:
+                            untraced_tensor_inputs.append(input_obj)
                     else:
                         non_tensor_inputs.append(input_obj)
+
+                for i in traced_parameter_inputs:
+                    if i.tensor_meta is not None:
+                        traced_tensor_inputs.append(i)
 
                 for i in traced_tensor_inputs:
                     creator_id = i.tensor_meta.creator_id
@@ -608,6 +617,7 @@ class DynamicGraph:
         self.match_manager = NodeManager(self._node_id_to_key_dict, self._nx_graph)
         self._input_nncf_nodes = []
         self._output_nncf_nodes = []
+        self._integer_input_nodes = []
 
     def __eq__(self, other: "DynamicGraph"):
         nm = iso.categorical_node_match(
@@ -638,7 +648,7 @@ class DynamicGraph:
         op_address: OperationAddress,
         tensor_metas: List[TensorMeta],
         input_comparators_per_scope: List[Tuple[TensorMetaComparator, List[str]]],
-        inputs,
+        inputs: OperatorInput,
         node_parameters: DynamicGraphNodeParameters,
     ) -> DynamicGraphNode:
         node = self.match_manager.add_node(
@@ -650,6 +660,13 @@ class DynamicGraph:
 
         if node.op_exec_context.operator_name == MODEL_INPUT_OP_NAME:
             self._input_nncf_nodes.append(node)
+            # Currently the MODEL_INPUT_OP_NAME node is added when an input is wrapped as
+            # _ = nncf_model_input(input_tensor)
+            # so it is expected that there 0-th positional arg will be the torch.Tensor we need to inspect
+            tensor_input = inputs.op_args[0]
+            assert isinstance(tensor_input, torch.Tensor)
+            if tensor_input.dtype in (torch.int32, torch.int64, torch.long):
+                self._integer_input_nodes.append(node)
 
         if node.op_exec_context.operator_name == MODEL_OUTPUT_OP_NAME:
             self._output_nncf_nodes.append(node)
@@ -657,6 +674,9 @@ class DynamicGraph:
 
     def get_input_nodes(self) -> List[DynamicGraphNode]:
         return self._input_nncf_nodes
+
+    def is_integer_input_node(self, node: DynamicGraphNode) -> bool:
+        return node in self._integer_input_nodes
 
     def get_output_nodes(self) -> List[DynamicGraphNode]:
         return self._output_nncf_nodes

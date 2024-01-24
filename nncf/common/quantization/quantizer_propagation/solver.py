@@ -40,7 +40,7 @@ from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.common.quantization.structs import QuantizableWeightedLayerNode
 from nncf.common.quantization.structs import QuantizationConstraints
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.quantization.structs import UnifiedScaleType
@@ -1152,6 +1152,9 @@ class QuantizerPropagationSolver:
             ip = pred_node[QuantizerPropagationStateGraph.QUANT_INSERTION_POINT_DATA_NODE_ATTR]
             input_port_id = ip.input_port_id
             if input_port_id in metatype.ignored_input_ports:
+                continue
+
+            if metatype.target_input_ports is not None and input_port_id not in metatype.target_input_ports:
                 continue
 
             edge = quant_prop_graph.edges[pred_ip_key, operator_node_key]

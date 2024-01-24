@@ -73,7 +73,7 @@ from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from nncf.config.utils import is_accuracy_aware_training
 from nncf.torch import create_compressed_model
 from nncf.torch.checkpoint_loading import load_state
-from nncf.torch.dynamic_graph.graph_tracer import create_input_infos
+from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.initialization import default_criterion_fn
 from nncf.torch.initialization import register_default_init_args
 from nncf.torch.structures import ExecutionParameters
@@ -235,8 +235,7 @@ def main_worker(current_gpu, config: SampleConfig):
         load_state(model, model_state_dict, is_resume=True)
 
     if is_export_only:
-        export_model(compression_ctrl, config.to_onnx, config.no_strip_on_export)
-        logger.info(f"Saved to {config.to_onnx}")
+        export_model(compression_ctrl, config)
         return
 
     model, _ = prepare_model_for_execution(model, config)
@@ -328,8 +327,7 @@ def main_worker(current_gpu, config: SampleConfig):
     config.mlflow.end_run()
 
     if "export" in config.mode:
-        export_model(compression_ctrl, config.to_onnx, config.no_strip_on_export)
-        logger.info(f"Saved to {config.to_onnx}")
+        export_model(compression_ctrl, config)
 
 
 def train(
@@ -450,8 +448,8 @@ def create_datasets(config):
     elif dataset_config in ["mock_32x32", "mock_299x299"]:
         normalize = transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
 
-    input_info_list = create_input_infos(config)
-    image_size = input_info_list[0].shape[-1]
+    input_info = FillerInputInfo.from_nncf_config(config)
+    image_size = input_info.elements[0].shape[-1]
     size = int(image_size / 0.875)
     if dataset_config in ["cifar10", "cifar100_224x224", "cifar100"]:
         list_val_transforms = [transforms.ToTensor(), normalize]

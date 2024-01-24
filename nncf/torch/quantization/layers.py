@@ -28,7 +28,7 @@ from nncf.common.quantization.quantizer_setup import QuantizerSetupBase
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.quantizers import get_num_levels
-from nncf.common.quantization.structs import QuantizationMode
+from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerSpec
 from nncf.common.utils.debug import is_debug
@@ -44,6 +44,7 @@ from nncf.torch.quantization.quantize_functions import ExportQuantizeToFakeQuant
 from nncf.torch.quantization.quantize_functions import ExportQuantizeToONNXQuantDequant
 from nncf.torch.quantization.quantize_functions import TuneRange
 from nncf.torch.quantization.quantize_functions import asymmetric_quantize
+from nncf.torch.quantization.quantize_functions import decompress
 from nncf.torch.quantization.quantize_functions import get_scale_zp_from_input_low_input_high
 from nncf.torch.quantization.quantize_functions import symmetric_quantize
 from nncf.torch.utils import get_flat_tensor_contents_string
@@ -1019,3 +1020,21 @@ def get_scale_shape(input_shape: List[int], is_weights: bool, per_channel: bool,
     if not per_channel:
         return [1]
     return get_per_channel_scale_shape(input_shape, is_weights, channel_idx)
+
+
+class WeightsDecompressor(nn.Module):
+    """
+    Applies decompression of compressed weights in the forward pass
+    """
+
+    def __init__(self, scale: torch.Tensor, zero_point: torch.Tensor):
+        """
+        :param scale: A scale in quantization scheme
+        :param zero_point: A zero point in quantization scheme
+        """
+        super().__init__()
+        self.register_buffer("_scale", scale)
+        self.register_buffer("_zero_point", zero_point)
+
+    def forward(self, x):
+        return decompress(x, self._scale, self._zero_point)

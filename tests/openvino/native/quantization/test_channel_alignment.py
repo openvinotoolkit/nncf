@@ -9,17 +9,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import Enum
 from typing import Type
 
 import pytest
 
-from nncf.common.graph import NNCFNode
+from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
+from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVAddMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConstantMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
-from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
@@ -31,17 +32,6 @@ from nncf.quantization.algorithms.channel_alignment.openvino_backend import OVCh
 from tests.post_training.test_templates.test_channel_alignment import TemplateTestChannelAlignment
 
 
-def _get_nncf_node(metatype, layer_attrs):
-    return NNCFNode(
-        {
-            NNCFNode.ID_NODE_ATTR: 0,
-            NNCFNode.NODE_NAME_ATTR: "test",
-            NNCFNode.METATYPE_ATTR: metatype,
-            NNCFNode.LAYER_ATTRIBUTES: layer_attrs,
-        }
-    )
-
-
 class TestOVChannelAlignment(TemplateTestChannelAlignment):
     def get_backend_cls(self) -> Type[OVChannelAlignmentAlgoBackend]:
         return OVChannelAlignmentAlgoBackend
@@ -50,7 +40,7 @@ class TestOVChannelAlignment(TemplateTestChannelAlignment):
         return OVTargetPoint(target_type, target_node_name, port_id)
 
     def convert_conv_layer_attrs(self, layer_attributes):
-        return OVLayerAttributes({}, {1: layer_attributes})
+        return OVLayerAttributes({}, layer_attributes)
 
     def get_conv_metatype(self):
         return OVConvolutionMetatype
@@ -70,39 +60,70 @@ class TestOVChannelAlignment(TemplateTestChannelAlignment):
     def mock_command_creation_factory(self, mocker) -> None:
         mocker.patch("nncf.common.factory.CommandCreatorFactory.create", return_value=OVCommandCreator)
 
-    @pytest.mark.parametrize("transpose", [False, True])
-    @pytest.mark.parametrize("shape", [[3, 4], [1, 2, 3, 4]])
-    @pytest.mark.parametrize("port_id", [-1, -2])
-    def test_get_dims_descriptor_matmul(self, transpose, shape, port_id):
-        _port_id = len(shape) + port_id
-        node = _get_nncf_node(OVMatMulMetatype, OVLayerAttributes({_port_id: {"transpose": transpose, "shape": shape}}))
-        dims_descr = OVChannelAlignmentAlgoBackend.get_dims_descriptor(node)
-
-        in_dims, out_dims = (0, 1) if port_id == -1 else (1, 0)
-        if len(shape) > 2:
-            in_dims += 2
-            out_dims += 2
-        if transpose:
-            in_dims, out_dims = out_dims, in_dims
-
-        assert dims_descr.conv_weight_in_channels_dim == in_dims
-        assert dims_descr.conv_weight_out_channels_dim == out_dims
-        assert dims_descr.bias_channels_dim == OVMatMulMetatype.output_channel_axis
-
-    def test_get_dims_descriptor_mm_no_layer_attrs(self):
-        node = _get_nncf_node(OVMatMulMetatype, None)
-        with pytest.raises(RuntimeError):
-            OVChannelAlignmentAlgoBackend.get_dims_descriptor(node)
+    class NodeType(Enum):
+        CONVOLUTION = "CONVOLUTION"
+        LINEAR = "LINEAR"
 
     @pytest.mark.parametrize(
-        "metatype,ref_desc",
+        "weights_layout,node_type,ref_layout_desc",
         [
-            (OVConvolutionMetatype, LayoutDescriptor(0, 1, 1)),
-            (OVGroupConvolutionMetatype, LayoutDescriptor(0, 2, 1)),
-            (OVGroupConvolutionMetatype, LayoutDescriptor(0, 2, 1)),
+            (
+                (OVLayoutElem.C_OUT, OVLayoutElem.C_IN, OVLayoutElem.SPATIAL, OVLayoutElem.SPATIAL),
+                NodeType.CONVOLUTION,
+                LayoutDescriptor(0, 1, 1),
+            ),
+            (
+                (
+                    OVLayoutElem.GROUPS,
+                    OVLayoutElem.C_OUT,
+                    OVLayoutElem.C_IN,
+                    OVLayoutElem.SPATIAL,
+                    OVLayoutElem.SPATIAL,
+                ),
+                NodeType.CONVOLUTION,
+                LayoutDescriptor(0, 2, 1),
+            ),
+            ((OVLayoutElem.C_IN, OVLayoutElem.C_OUT), NodeType.LINEAR, LayoutDescriptor(1, 0, -1)),
+            ((OVLayoutElem.C_IN,), NodeType.LINEAR, LayoutDescriptor(None, 0, -1)),
+            (
+                (
+                    OVLayoutElem.SPATIAL,
+                    OVLayoutElem.SPATIAL,
+                    OVLayoutElem.SPATIAL,
+                    OVLayoutElem.C_IN,
+                    OVLayoutElem.C_OUT,
+                ),
+                NodeType.LINEAR,
+                LayoutDescriptor(4, 3, -1),
+            ),
         ],
     )
-    def test_get_dims_descriptor_convs(self, metatype, ref_desc):
-        node = _get_nncf_node(metatype, None)
-        dims_descr = OVChannelAlignmentAlgoBackend.get_dims_descriptor(node)
-        assert dims_descr.__dict__ == ref_desc.__dict__
+    def test_conv_params_dims(self, weights_layout, node_type, ref_layout_desc, mocker):
+        base = "nncf.quantization.algorithms.channel_alignment.openvino_backend."
+        conv_layout_path = base + "get_conv_weights_layout_from_node"
+        linear_layout_path = base + "get_linear_weights_layout_from_node"
+
+        if node_type == self.NodeType.CONVOLUTION:
+            metatype = OVConvolutionMetatype
+
+            mocker.patch(
+                conv_layout_path,
+                return_value=weights_layout,
+            )
+            mocker.patch(
+                linear_layout_path,
+                return_value=None,
+            )
+        else:
+            metatype = OVMatMulMetatype
+            mocker.patch(
+                conv_layout_path,
+                return_value=None,
+            )
+            mocker.patch(
+                linear_layout_path,
+                return_value=weights_layout,
+            )
+        node = NNCFNode({NNCFNode.METATYPE_ATTR: metatype})
+        layout_descr = OVChannelAlignmentAlgoBackend.get_dims_descriptor(node)
+        assert layout_descr == ref_layout_desc
