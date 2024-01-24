@@ -14,7 +14,7 @@ import inspect
 from abc import ABCMeta
 from abc import abstractmethod
 from copy import deepcopy
-from typing import Callable, Type
+from typing import Callable, List, Tuple, Type
 
 import pytest
 import torch
@@ -26,6 +26,7 @@ from nncf import nncf_logger
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.hook_handle import HookHandle
 from nncf.torch import register_module
 from nncf.torch.dynamic_graph.io_handling import ExampleInputInfo
 from nncf.torch.dynamic_graph.io_handling import FillerInputElement
@@ -48,6 +49,7 @@ from nncf.torch.nncf_network import PTInsertionType
 from nncf.torch.quantization.external_quantizer import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from tests.torch.composite.test_sparsity_quantization import get_basic_sparsity_plus_quantization_config
 from tests.torch.helpers import BasicConvTestModel
+from tests.torch.helpers import HookChecker
 from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import check_correct_nncf_modules_replacement
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
@@ -884,7 +886,7 @@ def test_torch_return_type_traced():
         visited_times += 1
         return input_
 
-    nncf_model.nncf.insert_at_point(insertion_point, [fn_to_check_input_type])
+    nncf_model.nncf.insert_at_point(insertion_point, fn_to_check_input_type)
     nncf_model.nncf.rebuild_graph()
     assert visited_times == 1
 
@@ -919,9 +921,105 @@ def test_insert_hook_after_parameter():
     hook = ZeroHook()
     node_to_op_address_mapping = nncf_model.nncf.get_node_to_op_address_mapping()
     insertion_point = PTInsertionPoint(TargetType.OPERATOR_POST_HOOK, node_to_op_address_mapping["embedding.weight"], 0)
-    nncf_model.nncf.insert_at_point(insertion_point, [hook])
+    nncf_model.nncf.insert_at_point(insertion_point, hook)
     result_with_hook = nncf_model(example_input)
 
     assert hook.forward_calls_counter == 1
     assert torch.sum(result.nonzero()) > 0
     assert torch.sum(result_with_hook.nonzero()) == 0
+
+
+@pytest.mark.parametrize(
+    "target_type, target_node_name, input_port_id",
+    [
+        (TargetType.OPERATOR_PRE_HOOK, "/nncf_model_output_0", 0),
+        (TargetType.OPERATOR_POST_HOOK, "/nncf_model_input_0", 0),
+        (TargetType.PRE_LAYER_OPERATION, "SimplestModel/NNCFConv2d[conv]/conv2d_0", 0),
+        (TargetType.POST_LAYER_OPERATION, "SimplestModel/NNCFConv2d[conv]/conv2d_0", 0),
+    ],
+)
+class TestHookHandles:
+    class TestHook(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self._p = torch.nn.Parameter(torch.zeros((1,)))
+
+        def forward(self, x):
+            return x + self._p
+
+    @staticmethod
+    def _prepare_hook_handles_test(
+        target_type: TargetType, target_node_name: str, input_port_id: int
+    ) -> Tuple[NNCFNetwork, PTInsertionPoint, Callable[[List[HookHandle]], None]]:
+        model = SimplestModel()
+        example_input = torch.ones(SimplestModel.INPUT_SIZE)
+        input_info = ExampleInputInfo.from_example_input(example_input)
+        nncf_model = NNCFNetwork(model, input_info)
+
+        node_name_vs_address = nncf_model.nncf.get_node_to_op_address_mapping()
+        ip = PTInsertionPoint(target_type, node_name_vs_address[target_node_name], input_port_id=input_port_id)
+
+        checker = HookChecker(nncf_model, "conv")
+
+        def _check(ref_hooks_):
+            checker.clear()
+            checker.add_ref(ref_hooks_, target_type, target_node_name, input_port_id)
+            checker.check_with_reference()
+
+        return nncf_model, ip, _check
+
+    def test_temporary_insert_at_point_by_hook_group_name(
+        self, target_type: TargetType, target_node_name: str, input_port_id: int
+    ):
+        nncf_model, ip, _check = self._prepare_hook_handles_test(target_type, target_node_name, input_port_id)
+        permanent_hook = self.TestHook()
+        TEMPORARY_HOOK_GROUP_NAME = "tmp"
+        # Make temporary hook a ref to the permanent hook
+        # to check tmp hooks are not removed by their id()
+        temporary_hook = permanent_hook
+        nncf_model.nncf.insert_at_point(ip, permanent_hook)
+        ref_hooks = [permanent_hook]
+        _check(ref_hooks)
+
+        for _ in range(2):
+            temporary_hook = self.TestHook()
+            nncf_model.nncf.insert_at_point(ip, temporary_hook, TEMPORARY_HOOK_GROUP_NAME)
+            ref_hooks.append(temporary_hook)
+            _check(ref_hooks)
+
+            nncf_model.nncf.insert_at_point(ip, permanent_hook)
+            ref_hooks.append(permanent_hook)
+            _check(ref_hooks)
+
+            nncf_model.nncf.remove_hooks_group(TEMPORARY_HOOK_GROUP_NAME)
+            del ref_hooks[-2]
+            _check(ref_hooks)
+            assert not nncf_model.nncf._groups_vs_hooks_handlers[TEMPORARY_HOOK_GROUP_NAME]
+
+    def test_insert_at_point_hook_handles(self, target_type: TargetType, target_node_name: str, input_port_id: int):
+        nncf_model, ip, _check = self._prepare_hook_handles_test(target_type, target_node_name, input_port_id)
+        permanent_hook = self.TestHook()
+        # Make temporary hook a ref to the permanent hook
+        # to check tmp hooks are not removed by their id()
+        temporary_hook = permanent_hook
+        tmp_hh = []
+        nncf_model.nncf.insert_at_point(ip, permanent_hook)
+
+        ref_hooks = [permanent_hook]
+        _check(ref_hooks)
+
+        for _ in range(2):
+            temporary_hook = self.TestHook()
+            tmp_hh.append(nncf_model.nncf.insert_at_point(ip, temporary_hook))
+            ref_hooks.append(temporary_hook)
+            _check(ref_hooks)
+
+            nncf_model.nncf.insert_at_point(ip, permanent_hook)
+            ref_hooks.append(permanent_hook)
+            _check(ref_hooks)
+
+            for hh in tmp_hh:
+                hh.remove()
+
+            del ref_hooks[-2]
+            _check(ref_hooks)

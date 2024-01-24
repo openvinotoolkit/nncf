@@ -161,15 +161,16 @@ class TestInsertionCommands:
         else:
             hook = BaseOp(lambda x: x)
 
-        self.compressed_model.nncf.insert_at_point(insertion_point, [hook])
+        test_hook_group = "test_hook_group"
+        self.compressed_model.nncf.insert_at_point(insertion_point, hook, hooks_group_name=test_hook_group)
 
         if insertion_point.insertion_type == PTInsertionType.OPERATOR_PRE_HOOK:
             ctx = self.compressed_model.nncf.get_tracing_context()
             pre_hook_id = PreHookId(insertion_point.op_address, input_port_id=insertion_point.input_port_id)
-            assert ctx._pre_hooks[pre_hook_id][0] is hook
+            assert ctx._pre_hooks[pre_hook_id]["0"] is hook
         if insertion_point.insertion_type == PTInsertionType.OPERATOR_POST_HOOK:
             ctx = self.compressed_model.nncf.get_tracing_context()
-            assert ctx._post_hooks[insertion_point.op_address][0] is hook
+            assert ctx._post_hooks[insertion_point.op_address]["0"] is hook
         if insertion_point.insertion_type == PTInsertionType.NNCF_MODULE_PRE_OP:
             module = self.compressed_model.nncf.get_module_by_scope(insertion_point.module_scope)
             assert module.pre_ops["0"] is hook
@@ -177,6 +178,8 @@ class TestInsertionCommands:
         if insertion_point.insertion_type == PTInsertionType.NNCF_MODULE_POST_OP:
             module = self.compressed_model.nncf.get_module_by_scope(insertion_point.module_scope)
             assert module.post_ops["0"] is hook
+
+        assert len(self.compressed_model.nncf._groups_vs_hooks_handlers[test_hook_group]) == 1
 
     priority_types = ["same", "different"]
     insertion_types = TargetType
@@ -187,8 +190,9 @@ class TestInsertionCommands:
         for idx, order in enumerate(ordering):
             assert iterable1[idx] is iterable2[order]
 
+    @pytest.mark.parametrize("command_cls", [PTInsertionCommand])
     @pytest.mark.parametrize("case", priority_test_cases, ids=[x[1].name + "-" + x[0] for x in priority_test_cases])
-    def test_priority(self, case, setup):
+    def test_priority(self, case, command_cls, setup):
         priority_type = case[0]
         insertion_type = case[1]
 
@@ -218,14 +222,14 @@ class TestInsertionCommands:
 
         if priority_type == "same":
             # Same-priority commands will be executed in registration order
-            command1 = PTInsertionCommand(point, hook1, TransformationPriority.DEFAULT_PRIORITY)
-            command2 = PTInsertionCommand(point, hook2, TransformationPriority.DEFAULT_PRIORITY)
-            command3 = PTInsertionCommand(point, hook3, TransformationPriority.DEFAULT_PRIORITY)
+            command1 = command_cls(point, hook1, TransformationPriority.DEFAULT_PRIORITY)
+            command2 = command_cls(point, hook2, TransformationPriority.DEFAULT_PRIORITY)
+            command3 = command_cls(point, hook3, TransformationPriority.DEFAULT_PRIORITY)
         else:
             # Prioritized commands will be executed in ascending priority order
-            command1 = PTInsertionCommand(point, hook1, TransformationPriority.SPARSIFICATION_PRIORITY)
-            command2 = PTInsertionCommand(point, hook2, TransformationPriority.QUANTIZATION_PRIORITY)
-            command3 = PTInsertionCommand(point, hook3, TransformationPriority.DEFAULT_PRIORITY)
+            command1 = command_cls(point, hook1, TransformationPriority.SPARSIFICATION_PRIORITY)
+            command2 = command_cls(point, hook2, TransformationPriority.QUANTIZATION_PRIORITY)
+            command3 = command_cls(point, hook3, TransformationPriority.DEFAULT_PRIORITY)
 
         layout = PTTransformationLayout()
         layout.register(command1)
@@ -245,10 +249,12 @@ class TestInsertionCommands:
             pre_hook_id = PreHookId(
                 OperationAddress.from_str(point.target_node_name), input_port_id=point.input_port_id
             )
-            self.check_order(ctx._pre_hooks[pre_hook_id], hook_list, order)
+            actual_pre_hooks = list(ctx._pre_hooks[pre_hook_id].values())
+            self.check_order(actual_pre_hooks, hook_list, order)
         if insertion_type == TargetType.OPERATOR_POST_HOOK:
             ctx = self.compressed_model.nncf.get_tracing_context()
-            self.check_order(ctx._post_hooks[OperationAddress.from_str(point.target_node_name)], hook_list, order)
+            actual_post_hooks = list(ctx._post_hooks[OperationAddress.from_str(point.target_node_name)].values())
+            self.check_order(actual_post_hooks, hook_list, order)
 
         if insertion_type == TargetType.OPERATION_WITH_WEIGHTS:
             module = self.compressed_model.nncf.get_containing_module(point.target_node_name)
@@ -603,6 +609,7 @@ def test_shared_fn_insertion_point(priority, compression_module_registered, mock
         ),
     ]
     OP_UNIQUE_NAME = "UNIQUE_NAME"
+    HOOK_GROUP_NAME = "shared_comands_hooks_group"
     hook_instance = Hook()
 
     def _insert_external_op_mocked():
@@ -610,7 +617,7 @@ def test_shared_fn_insertion_point(priority, compression_module_registered, mock
         if compression_module_registered:
             model.nncf.register_compression_module_type(ExtraCompressionModuleType.EXTERNAL_OP)
         unique_name = f"{OP_UNIQUE_NAME}[{';'.join([tp.target_node_name for tp in tps])}]"
-        command = PTSharedFnInsertionCommand(tps, hook_instance, unique_name, priority)
+        command = PTSharedFnInsertionCommand(tps, hook_instance, unique_name, priority, HOOK_GROUP_NAME)
         transformation_layout = PTTransformationLayout()
         transformation_layout.register(command)
 
@@ -643,6 +650,7 @@ def test_shared_fn_insertion_point(priority, compression_module_registered, mock
     assert len(commands) == len(tps)
     for command in commands:
         assert command.target_point in tps
+        assert command.hooks_group_name == HOOK_GROUP_NAME
         fn = command.fn
         assert isinstance(fn, ExternalOpCallHook)
         assert fn._storage_name == EXTERNAL_OP_STORAGE_NAME

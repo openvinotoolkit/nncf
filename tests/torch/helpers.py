@@ -15,7 +15,7 @@ from abc import abstractmethod
 from collections import defaultdict
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Tuple, TypeVar, Union
 
 import numpy as np
 import onnx
@@ -35,6 +35,7 @@ from nncf.torch.algo_selector import PT_COMPRESSION_ALGORITHMS
 from nncf.torch.compression_method_api import PTCompressionAlgorithmController
 from nncf.torch.dynamic_graph.context import PreHookId
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
+from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.initialization import PTInitializingDataLoader
 from nncf.torch.initialization import register_default_init_args
@@ -503,6 +504,9 @@ def load_exported_onnx_version(
     return model_proto
 
 
+HookType = TypeVar("HookType")
+
+
 class HookChecker:
     """
     Class to check pre/post hooks and pre ops are placed correctly.
@@ -535,7 +539,11 @@ class HookChecker:
         address = address_map[target_node_name]
         if target_type == TargetType.OPERATOR_PRE_HOOK:
             address = PreHookId(address, input_port_id)
-        elif target_type == TargetType.OPERATION_WITH_WEIGHTS:
+        elif target_type in [
+            TargetType.OPERATION_WITH_WEIGHTS,
+            TargetType.PRE_LAYER_OPERATION,
+            TargetType.POST_LAYER_OPERATION,
+        ]:
             address = getattr(self._target_model, self._nncf_module_attr_name)
         return address
 
@@ -544,6 +552,15 @@ class HookChecker:
         Check hooks in the target model and reference hooks are matching.
         """
         self._check_weight_update_hooks(self._ref_hooks[TargetType.OPERATION_WITH_WEIGHTS])
+
+        target_module = getattr(self._target_model, self._nncf_module_attr_name)
+        if target_module in self._ref_hooks[TargetType.PRE_LAYER_OPERATION]:
+            hooks = target_module.pre_ops
+            self._check_pre_post_op_hooks(hooks, self._ref_hooks[TargetType.PRE_LAYER_OPERATION][target_module])
+        if target_module in self._ref_hooks[TargetType.POST_LAYER_OPERATION]:
+            hooks = target_module.post_ops
+            self._check_pre_post_op_hooks(hooks, self._ref_hooks[TargetType.POST_LAYER_OPERATION][target_module])
+
         hooks = self._target_model.nncf._compressed_context._pre_hooks
         self._check_pre_post_hooks(hooks, self._ref_hooks[TargetType.OPERATOR_PRE_HOOK])
         hooks = self._target_model.nncf._compressed_context._post_hooks
@@ -556,7 +573,7 @@ class HookChecker:
         self._ref_hooks.clear()
 
     @staticmethod
-    def _check_weight_update_hooks(ref_hooks):
+    def _check_weight_update_hooks(ref_hooks: Dict[torch.nn.Module, List[HookType]]):
         for target_module, ref_hooks_per_module in ref_hooks.items():
             assert len(target_module.pre_ops) == len(ref_hooks_per_module)
             for actual_op, ref_op in zip(target_module.pre_ops.values(), ref_hooks_per_module):
@@ -564,10 +581,18 @@ class HookChecker:
                 assert actual_op.op is ref_op
 
     @staticmethod
-    def _check_pre_post_hooks(hooks, ref_hooks):
+    def _check_pre_post_op_hooks(hooks: List[torch.ModuleDict], ref_hooks: List[HookType]):
+        assert len(hooks) == len(ref_hooks)
+        for actual_hook, ref_hook in zip(hooks.values(), ref_hooks):
+            assert actual_hook is ref_hook
+
+    @staticmethod
+    def _check_pre_post_hooks(
+        hooks: Dict[OperationAddress, Dict[Any, HookType]], ref_hooks: Dict[OperationAddress, List[HookType]]
+    ):
         assert len(hooks) == len(ref_hooks)
         for op_address, ref_hooks in ref_hooks.items():
-            actual_hooks = hooks[op_address]
+            actual_hooks = hooks[op_address].values()
             assert len(actual_hooks) == len(ref_hooks)
             for actual_hook, ref_hook in zip(actual_hooks, ref_hooks):
                 assert actual_hook is ref_hook

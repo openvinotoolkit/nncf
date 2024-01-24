@@ -84,9 +84,10 @@ class PTModelTransformer(ModelTransformer):
 
         :param model: Model to apply transformations.
         :param transformations: List of the bias correction transformations.
+        :return: A modified NNCFNetwork.
         """
         node_to_op_address_mapping = model.nncf.get_node_to_op_address_mapping()
-        fns_grouped_by_points: Dict[PTInsertionPoint, List[Tuple[Callable, TransformationPriority]]] = {}
+        fns_grouped_by_points: Dict[PTInsertionPoint, List[Tuple[Callable, TransformationPriority]]] = defaultdict(list)
 
         for transformation_command in transformations:
             target_point: PTTargetPoint = transformation_command.target_point
@@ -99,15 +100,14 @@ class PTModelTransformer(ModelTransformer):
             fn = transformation_command.fn
             if target_point.type is TargetType.OPERATION_WITH_WEIGHTS:
                 fn = UpdateWeight(fn)
-            tup = (fn, transformation_command.priority)
-            if pt_ip not in fns_grouped_by_points:
-                fns_grouped_by_points[pt_ip] = [tup]
-            else:
-                fns_grouped_by_points[pt_ip].append(tup)
+            tup = (fn, transformation_command)
+            fns_grouped_by_points[pt_ip].append(tup)
 
         for pt_ip, fn_list_with_priority in fns_grouped_by_points.items():
-            fn_list_with_priority = sorted(fn_list_with_priority, key=lambda x: x[1])
-            model.nncf.insert_at_point(pt_ip, [x[0] for x in fn_list_with_priority])
+            fn_list_with_priority = sorted(fn_list_with_priority, key=lambda x: x[1].priority)
+            for fn, command in fn_list_with_priority:
+                model.nncf.insert_at_point(pt_ip, fn, command.hooks_group_name)
+
         return model
 
     @staticmethod
@@ -128,7 +128,14 @@ class PTModelTransformer(ModelTransformer):
                 fn = ExternalOpCallHook(
                     EXTERNAL_OP_STORAGE_NAME, model.nncf.get_tracing_context(), shared_command.op_name
                 )
-                insertion_commands.append(PTInsertionCommand(target_point, fn, priority=shared_command.priority))
+                insertion_commands.append(
+                    PTInsertionCommand(
+                        target_point,
+                        fn,
+                        priority=shared_command.priority,
+                        hooks_group_name=shared_command.hooks_group_name,
+                    )
+                )
 
         return PTModelTransformer._apply_insertion_transformations(model, insertion_commands)
 
@@ -256,7 +263,6 @@ def extraction_potential_fused_modules(node_name: str, model: NNCFNetwork) -> nn
 
     :param node_name: The node name.
     :param model: The model.
-
     :return nn.Sequential: Copy of the modules.
     """
     extracted_node_names = [node_name]
