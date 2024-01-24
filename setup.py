@@ -107,7 +107,7 @@ INSTALL_REQUIRES = [
     "networkx>=2.6, <=3.1",  # see ticket 94048 or https://github.com/networkx/networkx/issues/5962
     "ninja>=1.10.0.post2, <1.11",
     "numpy>=1.19.1, <1.27",
-    "openvino-telemetry>=2023.3.0",
+    "openvino-telemetry>=2023.2.0",
     "packaging>=20.0",
     "pandas>=1.1.5,<2.2",
     "psutil",
