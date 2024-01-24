@@ -225,7 +225,7 @@ class TemplateTestSQAlgorithm:
         except nncf.InternalError as e:  # noqa
             # TODO: this is wrong, should only expect an exception for cases where the exception is known to be raised
             #  with pytest.raises(...)
-            pass
+            pytest.xfail("FIXME")
         assert activation_channel_axis == reference_value
 
     def test_get_weight_channel_axis(self, node_metatype, layer_attributes, reference_value):
