@@ -212,7 +212,7 @@ def extract_accuracy_aware_training_params(config: NNCFConfig) -> Dict[str, obje
                     "Take a note that you still can use it combined with quantization."
                 )
             if len(algorithms) == 1 and algorithms[0] == NNCFAlgorithmNames.QUANTIZATION:
-                raise nncf.InternalError("adaptive_compression_level mode doesn't support quantization")
+                raise nncf.ValidationError("adaptive_compression_level mode doesn't support quantization")
 
     accuracy_aware_training_config = config.get("accuracy_aware_training", None)
 

@@ -101,7 +101,7 @@ class PTInsertionPoint:
             not isinstance(target_type, TargetType)
             or target_type not in PTInsertionPoint.TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT
         ):
-            raise nncf.ValidationError("Unsupported target type for PyTorch: {}".format(target_type))
+            raise nncf.InternalError("Unsupported target type for PyTorch: {}".format(target_type))
         return PTInsertionPoint.TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT[target_type]
 
     def __init__(self, target_type: TargetType, op_address: OperationAddress, input_port_id: int = None):

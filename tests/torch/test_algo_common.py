@@ -401,7 +401,7 @@ NOT_SUPPORT_SCOPES_ALGO = ["knowledge_distillation", "NoCompressionAlgorithm"]
 
 @pytest.mark.parametrize("algo_name", PT_COMPRESSION_ALGORITHMS.registry_dict.keys() - NOT_SUPPORT_SCOPES_ALGO)
 @pytest.mark.parametrize("validate_scopes", (True, False, None))
-def test_raise_runtimeerror_for_not_matched_scope_names(algo_name, validate_scopes):
+def test_raise_validationerror_for_not_matched_scope_names(algo_name, validate_scopes):
     model = BasicLinearTestModel()
     config = ConfigCreator().add_algo(algo_name).create()
     config["compression"][0]["ignored_scopes"] = ["unknown"]
@@ -422,7 +422,7 @@ def test_raise_runtimeerror_for_not_matched_scope_names(algo_name, validate_scop
         config["compression"][0]["validate_scopes"] = validate_scopes
 
     if validate_scopes or (validate_scopes is None and VALIDATE_SCOPES is True):
-        with pytest.raises(nncf.InternalError, match="scope definitions"):
+        with pytest.raises(nncf.ValidationError, match="scope definitions"):
             create_compressed_model_and_algo_for_test(model, config)
     else:
         create_compressed_model_and_algo_for_test(model, config)

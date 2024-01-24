@@ -104,7 +104,7 @@ def test_accuracy_aware_config(aa_config, must_raise):
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     if must_raise:
-        with pytest.raises(nncf.InternalError):
+        with pytest.raises(nncf.ValidationError):
             _ = create_accuracy_aware_training_loop(config, compression_ctrl, 0, dump_checkpoints=False)
     else:
         _ = create_accuracy_aware_training_loop(config, compression_ctrl, 0, dump_checkpoints=False)
