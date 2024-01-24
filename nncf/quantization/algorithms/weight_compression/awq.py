@@ -239,7 +239,7 @@ class AWQ(Algorithm):
                     sacts = gacts / fns.unsqueeze(cur_scale, 1)
 
                     cur_out = fns.matmul(g_decompressed_weighs, sacts)
-                    cur_diff = fns.mean((cur_out - fp32_out) ** 2)
+                    cur_diff = fns.mean(fns.abs(cur_out - fp32_out))
                     if cur_diff < min_diff:
                         min_diff = cur_diff
                         best_scale = cur_scale
