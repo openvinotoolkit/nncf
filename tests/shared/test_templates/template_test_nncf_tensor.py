@@ -52,6 +52,11 @@ class TemplateTestNNCFTensorOperators:
     def to_tensor(x: TTensor) -> TTensor:
         pass
 
+    @staticmethod
+    @abstractmethod
+    def cast_to(x: TTensor, dtype: TensorDataType) -> TTensor:
+        pass
+
     @pytest.mark.parametrize("op_name", OPERATOR_MAP.keys())
     def test_operators_tensor(self, op_name):
         tensor_a = self.to_tensor([1, 2])
@@ -967,12 +972,17 @@ class TemplateTestNNCFTensorOperators:
             (zero_ten_range_two_axes, (0.1, 0.9), None, False, [1.0, 9.0]),
         ),
     )
-    def test_fn_quantile(self, x, q, axis, keepdims, ref):
-        tensor = Tensor(self.to_tensor(x))
+    @pytest.mark.parametrize("fp16", [False, True])
+    def test_fn_quantile(self, x, q, axis, keepdims, ref, fp16):
+        tensor = self.to_tensor(x)
+        if fp16:
+            tensor = self.cast_to(tensor, TensorDataType.float16)
+        tensor = Tensor(tensor)
         ref_tensor = self.to_tensor(ref)
 
         res = fns.quantile(tensor, axis=axis, q=q, keepdims=keepdims)
         assert isinstance(res, Tensor)
-        assert fns.allclose(res.data, ref_tensor)
+        assert res.dtype == TensorDataType.float64
+        assert fns.allclose(self.cast_to(res.data, TensorDataType.float32), ref_tensor)
         assert res.device == tensor.device
         assert res.shape == tuple(ref_tensor.shape)

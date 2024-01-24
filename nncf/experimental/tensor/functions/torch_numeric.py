@@ -202,16 +202,14 @@ def _(
     device = a.device
     # See https://github.com/pytorch/pytorch/issues/61582
     # https://github.com/pytorch/pytorch/issues/64947
-    if len(a) <= 16_000_000 and isinstance(axis, int):
-        result = torch.quantile(
+    if len(a) <= 16_000_000 and isinstance(axis, int) and a.dtype in [torch.float32, torch.float64]:
+        return torch.quantile(
             a,
             torch.tensor(q, dtype=a.dtype, device=a.device),
             axis,
             keepdims,
-        )
-    else:
-        result = torch.tensor(np.quantile(a.detach().cpu().numpy(), q=q, axis=axis, keepdims=keepdims))
-    return result.type(a.dtype).to(device)
+        ).type(torch.float64)
+    return torch.tensor(np.quantile(a.detach().cpu().numpy(), q=q, axis=axis, keepdims=keepdims)).to(device)
 
 
 @numeric._binary_op_nowarn.register(torch.Tensor)
