@@ -33,6 +33,7 @@ from nncf.experimental.tensor.functions.numeric import minimum as minimum
 from nncf.experimental.tensor.functions.numeric import moveaxis as moveaxis
 from nncf.experimental.tensor.functions.numeric import multiply as multiply
 from nncf.experimental.tensor.functions.numeric import ones_like as ones_like
+from nncf.experimental.tensor.functions.numeric import quantile as quantile
 from nncf.experimental.tensor.functions.numeric import reshape as reshape
 from nncf.experimental.tensor.functions.numeric import round as round
 from nncf.experimental.tensor.functions.numeric import squeeze as squeeze
