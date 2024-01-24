@@ -466,7 +466,7 @@ class FilterPruningController(BasePruningAlgoController):
             self.current_flops = flops
             self.current_params_num = params_num
             return right
-        raise nncf.InternalError(
+        raise nncf.ParameterNotSupportedError(
             f"Unable to prune the model to get the required pruning level in flops = {target_flops_pruning_level}"
         )
 

@@ -19,6 +19,7 @@ import pytest
 import torch
 import torch.nn
 
+import nncf
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfigType
