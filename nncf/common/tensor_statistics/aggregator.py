@@ -54,14 +54,14 @@ class StatisticsAggregator(ABC):
             else None
         )
 
-    def _get_iterations_num(self, total_statistics_samples: Optional[int]) -> Optional[int]:
+    def _get_iterations_num(self, total_statistics_samples: int) -> int:
         """
         Returns number of iterations to collect statistics.
 
         :param total_statistics_samples: Number of statistics samples are used.
-        :return: Iterations number statistics collection.
+        :return: Iterations number of statistics collection.
         """
-        return total_statistics_samples // self.batch_size if total_statistics_samples is not None else None
+        return total_statistics_samples // self.batch_size
 
     def collect_statistics(self, model: TModel, graph: NNCFGraph) -> None:
         """
@@ -85,8 +85,10 @@ class StatisticsAggregator(ABC):
         engine = factory.EngineFactory.create(model_with_outputs)
 
         calibration_samples_num = self._get_total_statistics_samples()
-        iterataions_num = self._get_iterations_num(calibration_samples_num)
-        if iterataions_num == 0:
+        iterataions_num = (
+            self._get_iterations_num(calibration_samples_num) if calibration_samples_num is not None else None
+        )
+        if iterataions_num is not None and iterataions_num == 0:
             raise ValueError("Batch size > length of dataset or batch size > stat_subset_size.")
         with track(total=calibration_samples_num, description="Statistics collection") as pbar:
             for input_data in islice(self.dataset.get_inference_data(), iterataions_num):

@@ -164,7 +164,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         shape = get_quantized_tensor_shape(nncf_graph, node, target_point)
         channel_axis = get_quantization_axis(node, target_point)
         if shape is None:  # No information about shape
-            reduction_axes, aggregation_axes = None, (0, 1)  # default per-tensor values
+            reduction_axes, aggregation_axes = None, None  # default per-tensor values
         else:
             reduction_axes, aggregation_axes = collector_params.get_reduction_aggregation_axes(shape, [channel_axis])
         collector = TensorCollector(ONNXMinMaxTensorStatistic)
