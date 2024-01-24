@@ -962,6 +962,7 @@ class TemplateTestNNCFTensorOperators:
     @pytest.mark.parametrize(
         "x,q,axis,keepdims,ref",
         (
+            (1.0, 0.1, None, True, 1.0),
             (zero_ten_range, 0.1, 0, True, [1.0]),
             (zero_ten_range, 0.1, 0, False, 1.0),
             (zero_ten_range, (0.1, 0.9), 0, False, [1.0, 9.0]),
