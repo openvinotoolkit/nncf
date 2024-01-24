@@ -23,14 +23,13 @@ import torch
 from packaging import version
 
 try:
-    _torch_version = torch.__version__
-    torch_version = version.parse(_torch_version).base_version
+    _torch_version = version.parse(torch.__version__)
 except:  # noqa: E722
     nncf_logger.debug("Could not parse torch version")
-    _torch_version = "0.0.0"
-    torch_version = version.parse(_torch_version).base_version
+    _torch_version = version.parse("0.0.0")
 
-if version.parse(BKC_TORCH_VERSION).base_version != torch_version:
+_bkc_version = version.parse(BKC_TORCH_VERSION)
+if _bkc_version.major != _torch_version.major or _bkc_version.minor != _torch_version.minor:
     warn_bkc_version_mismatch("torch", BKC_TORCH_VERSION, torch.__version__)
 
 
