@@ -289,7 +289,7 @@ def test_insertion_point_coalescing(
     ref_coalesced_ip_lists: List[List[PTTargetPoint]],
 ):
     if ref_coalesced_ip_lists is None:
-        with pytest.raises(nncf.InternalError):
+        with pytest.raises((nncf.InternalError, nncf.ValidationError)):
             _ = QuantizerPropagationSolver.coalesce_insertion_points(input_insertion_points, linked_scopes_groups_list)
     else:
         test_coalesced_ip_lists = QuantizerPropagationSolver.coalesce_insertion_points(
