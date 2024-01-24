@@ -13,8 +13,9 @@ from typing import Optional
 
 import torch.nn
 
-from nncf.torch.dynamic_graph.scope import Scope
 import nncf
+from nncf.torch.dynamic_graph.scope import Scope
+
 
 def get_module_by_scope(model: torch.nn.Module, scope: Scope) -> Optional[torch.nn.Module]:
     curr_module = model

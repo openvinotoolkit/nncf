@@ -104,7 +104,9 @@ class QuantizationDebugInterface(DebugInterface):
                 if tracker.get_never_called_keys():
                     # This will always trigger for DataParallel - disregard or disable debug mode
                     # for DataParallel runs
-                    raise nncf.InternalError(f"{tracker.name} has never called modules: {tracker.get_never_called_keys()}!")
+                    raise nncf.InternalError(
+                        f"{tracker.name} has never called modules: {tracker.get_never_called_keys()}!"
+                    )
 
     def dump_scale(self, quantizer_scale_params: Dict[str, torch.Tensor], quantizer_name: str):
         import re

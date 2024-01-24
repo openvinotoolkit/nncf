@@ -20,6 +20,7 @@ from typing import Callable, Optional, TypeVar, Union
 import numpy as np
 from scipy.interpolate import interp1d
 
+import nncf
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
 from nncf.common.accuracy_aware_training.runner_factory import AdaptiveCompressionLevelTrainingRunnerCreator
@@ -31,7 +32,6 @@ from nncf.common.utils.api_marker import api
 from nncf.common.utils.registry import Registry
 from nncf.config.config import NNCFConfig
 from nncf.config.extractors import extract_accuracy_aware_training_params
-import nncf
 
 TModel = TypeVar("TModel")
 TensorboardWriterType = TypeVar("TensorboardWriterType")

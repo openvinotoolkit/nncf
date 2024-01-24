@@ -11,6 +11,7 @@
 
 from typing import Any, Dict, List, Optional
 
+import nncf
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.initialization.range import PerLayerRangeInitConfig
 from nncf.common.quantization.initialization.range import RangeInitConfig
@@ -18,7 +19,6 @@ from nncf.config.config import NNCFConfig
 from nncf.config.schemata.defaults import NUM_BN_ADAPTATION_SAMPLES
 from nncf.config.structures import BNAdaptationInitArgs
 from nncf.config.structures import QuantizationRangeInitArgs
-import nncf
 
 
 def extract_algorithm_names(config: NNCFConfig) -> List[str]:
@@ -71,7 +71,9 @@ def extract_algo_specific_config(config: NNCFConfig, algo_name_to_match: str) ->
             f"algo {algo_name_to_match} in the NNCF config!"
         )
     if not matches:
-        raise nncf.InternalError(f"Did not find an algorithm configuration for algo {algo_name_to_match} in the NNCF config!")
+        raise nncf.InternalError(
+            f"Did not find an algorithm configuration for algo {algo_name_to_match} in the NNCF config!"
+        )
     return next(iter(matches))
 
 

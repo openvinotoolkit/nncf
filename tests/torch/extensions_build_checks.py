@@ -11,6 +11,7 @@
 
 import os
 import sys
+
 import nncf
 
 if __name__ == "__main__":

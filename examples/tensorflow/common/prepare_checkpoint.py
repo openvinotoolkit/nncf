@@ -13,6 +13,7 @@ import sys
 
 import tensorflow as tf
 
+import nncf
 from examples.common.sample_config import create_sample_config
 from examples.tensorflow.common.argparser import get_common_argument_parser
 from examples.tensorflow.common.logger import logger
@@ -24,7 +25,6 @@ from examples.tensorflow.segmentation.models.model_selector import get_predefine
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 from nncf.tensorflow.utils.state import TFCompressionState
 from nncf.tensorflow.utils.state import TFCompressionStateLoader
-import nncf
 
 
 class ModelType:

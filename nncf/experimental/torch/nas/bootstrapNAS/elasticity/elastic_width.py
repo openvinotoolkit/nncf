@@ -18,6 +18,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import torch
 from torch import nn
 
+import nncf
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
@@ -69,7 +70,6 @@ from nncf.torch.pruning.tensor_processor import PTNNCFPruningTensorProcessor
 from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.utils import get_filters_num
 from nncf.torch.utils import get_model_device
-import nncf
 
 PruningGroupID = int
 WidthType = int

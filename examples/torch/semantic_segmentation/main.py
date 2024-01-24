@@ -24,6 +24,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import examples.torch.semantic_segmentation.utils.data as data_utils
 import examples.torch.semantic_segmentation.utils.transforms as JT
+import nncf
 from examples.common.paths import configure_paths
 from examples.common.sample_config import create_sample_config
 from examples.torch.common.argparser import get_common_argument_parser
@@ -58,7 +59,7 @@ from nncf.torch import create_compressed_model
 from nncf.torch import load_state
 from nncf.torch.initialization import register_default_init_args
 from nncf.torch.utils import is_main_process
-import nncf
+
 
 def get_arguments_parser():
     parser = get_common_argument_parser()

@@ -9,7 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import nncf 
+import nncf
+
 
 def get_built_model(model, config):
     if not model.built:

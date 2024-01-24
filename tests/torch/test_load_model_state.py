@@ -16,8 +16,8 @@ from typing import Dict, List, Set
 import pytest
 import torch
 
-from examples.torch.common.model_loader import load_model
 import nncf
+from examples.torch.common.model_loader import load_model
 from nncf.common.logging.logger import NNCFDeprecationWarning
 from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
 from nncf.torch.checkpoint_loading import KeyMatcher

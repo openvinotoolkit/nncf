@@ -410,7 +410,9 @@ class TFModelTransformer(ModelTransformer):
 
         self._insert_after_model_outputs(layer_name, instance_idx, layer_out_ports, replace_layer_name)
         if len(layer_out_ports) > 1:
-            raise nncf.InternalError("Insertion after layer ({}) with multiple ports is not supported".format(layer_name))
+            raise nncf.InternalError(
+                "Insertion after layer ({}) with multiple ports is not supported".format(layer_name)
+            )
         self._insert_layer_after_sequential(layer_name, layer_to_insert_config)
 
     def _insert_layer_after_sequential(self, layer_name: str, layer_configs):

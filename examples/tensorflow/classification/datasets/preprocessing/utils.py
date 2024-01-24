@@ -12,7 +12,9 @@
 from typing import Tuple
 
 import tensorflow as tf
+
 import nncf
+
 
 def resize_image(image: tf.Tensor, height: int, width: int) -> tf.Tensor:
     """

@@ -26,6 +26,7 @@ from pymoo.operators.sampling.rnd import IntegerRandomSampling
 from pymoo.optimize import minimize
 from torch.utils.data.dataloader import DataLoader
 
+import nncf
 from nncf import NNCFConfig
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.logging import nncf_logger
@@ -43,7 +44,6 @@ from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator_handler import Ac
 from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator_handler import BaseEvaluatorHandler
 from nncf.experimental.torch.nas.bootstrapNAS.search.evaluator_handler import EfficiencyEvaluatorHandler
 from nncf.torch.nncf_network import NNCFNetwork
-import nncf
 
 SEARCH_ALGORITHMS = Registry("search algorithm", add_name_as_attr=True)
 

@@ -11,6 +11,7 @@
 
 from typing import TypeVar
 
+import nncf
 from nncf import NNCFConfig
 from nncf.common.composite_compression import CompositeCompressionAlgorithmBuilder
 from nncf.common.composite_compression import CompositeCompressionAlgorithmController
@@ -18,7 +19,6 @@ from nncf.config.extractors import extract_algorithm_names
 from nncf.tensorflow.algorithm_selector import get_compression_algorithm_builder
 from nncf.tensorflow.api.compression import TFCompressionAlgorithmBuilder
 from nncf.tensorflow.graph.transformations.layout import TFTransformationLayout
-import nncf
 
 TModel = TypeVar("TModel")
 

@@ -18,6 +18,20 @@ from nncf.common.logging.logger import set_log_level as set_log_level
 from nncf.common.strip import strip as strip
 from nncf.config import NNCFConfig as NNCFConfig
 from nncf.data import Dataset as Dataset
+from nncf.errors import BufferFullError
+from nncf.errors import InstallationError
+from nncf.errors import InternalError
+from nncf.errors import InvalidCollectorTypeError
+from nncf.errors import InvalidPathError
+from nncf.errors import InvalidQuantizerGroupError
+from nncf.errors import ModuleNotFoundError
+from nncf.errors import ParameterNotSupportedError
+from nncf.errors import UnknownDatasetError
+from nncf.errors import UnsupportedBackendError
+from nncf.errors import UnsupportedDatasetError
+from nncf.errors import UnsupportedModelError
+from nncf.errors import UnsupportedVersionError
+from nncf.errors import ValidationError
 from nncf.parameters import CompressWeightsMode as CompressWeightsMode
 from nncf.parameters import DropType as DropType
 from nncf.parameters import ModelType as ModelType
@@ -31,20 +45,6 @@ from nncf.quantization import quantize_with_accuracy_control as quantize_with_ac
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters as AdvancedQuantizationParameters
 from nncf.scopes import IgnoredScope as IgnoredScope
 from nncf.version import __version__ as __version__
-from nncf.errors import ValidationError
-from nncf.errors import InternalError
-from nncf.errors import UnsupportedDatasetError
-from nncf.errors import InvalidPathError
-from nncf.errors import UnsupportedBackendError
-from nncf.errors import InvalidQuantizerGroupError
-from nncf.errors import InstallationError
-from nncf.errors import UnsupportedModelError
-from nncf.errors import UnsupportedVersionError
-from nncf.errors import ModuleNotFoundError
-from nncf.errors import ParameterNotSupportedError
-from nncf.errors import InvalidCollectorTypeError
-from nncf.errors import BufferFullError
-from nncf.errors import UnknownDatasetError
 
 _SUPPORTED_FRAMEWORKS = ["torch", "tensorflow", "onnx", "openvino"]
 

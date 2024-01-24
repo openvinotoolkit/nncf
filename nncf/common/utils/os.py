@@ -11,9 +11,10 @@
 import sys
 from contextlib import contextmanager
 from pathlib import Path
-import nncf
 
 import psutil
+
+import nncf
 
 
 def fail_if_symlink(file: Path):

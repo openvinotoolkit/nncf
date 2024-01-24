@@ -379,7 +379,9 @@ def convert_range_estimator_parameters_to_dict(params: RangeEstimatorParameters)
     ):
         return {}
     else:
-        raise nncf.ParameterNotSupportedError(f"The following range estimator parameters are not supported: {str(params)}")
+        raise nncf.ParameterNotSupportedError(
+            f"The following range estimator parameters are not supported: {str(params)}"
+        )
 
     return result
 
@@ -444,6 +446,8 @@ def apply_advanced_parameters_to_config(
         )
 
     if params.bias_correction_params.threshold is not None:
-        raise nncf.ParameterNotSupportedError("threshold parameter of the BiasCorrection algorithm is not supported in the legacy format")
+        raise nncf.ParameterNotSupportedError(
+            "threshold parameter of the BiasCorrection algorithm is not supported in the legacy format"
+        )
 
     return config

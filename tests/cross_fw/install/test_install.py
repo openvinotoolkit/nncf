@@ -17,6 +17,7 @@ from typing import List
 
 import pytest
 
+import nncf
 from nncf.common.utils.os import is_linux
 from nncf.common.utils.os import is_windows
 from tests.cross_fw.install.conftest import TESTED_BACKENDS
@@ -26,7 +27,6 @@ from tests.shared.helpers import get_pip_executable_with_venv
 from tests.shared.helpers import get_python_executable_with_venv
 from tests.shared.paths import PROJECT_ROOT
 from tests.shared.paths import TEST_ROOT
-import nncf
 
 
 def run_install_checks(venv_path: Path, tmp_path: Path, package_type: str, backend: str, install_type: str):

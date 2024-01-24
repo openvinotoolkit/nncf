@@ -12,13 +12,14 @@
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
+import nncf
 from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor.definitions import TensorDataType
 from nncf.experimental.tensor.functions import numeric as fns
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
-import nncf
+
 
 @dataclass
 class CompressedWeight:

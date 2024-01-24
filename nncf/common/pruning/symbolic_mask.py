@@ -11,9 +11,10 @@
 
 from typing import List, Union
 
+import nncf
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 from nncf.common.tensor import NNCFTensor
-import nncf
+
 
 class SymbolicMaskProducer:
     """

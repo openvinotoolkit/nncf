@@ -26,10 +26,10 @@ from torch import nn
 from torchvision.models import resnet50
 from torchvision.transforms import transforms
 
+import nncf
 from examples.common.sample_config import SampleConfig
 from examples.torch.classification.main import create_cifar
 from examples.torch.object_detection.models.ssd_vgg import SSD_VGG
-import nncf
 from nncf import NNCFConfig
 from nncf.common.graph import NNCFNodeName
 from nncf.common.hardware.config import HWConfigType

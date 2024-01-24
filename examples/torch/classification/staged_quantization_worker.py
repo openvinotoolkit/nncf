@@ -22,6 +22,7 @@ from torch import nn
 from torch.backends import cudnn
 from torchvision.models import InceptionOutputs
 
+import nncf
 from examples.torch.classification.main import AverageMeter
 from examples.torch.classification.main import accuracy
 from examples.torch.classification.main import create_data_loaders
@@ -57,7 +58,6 @@ from nncf.torch.initialization import default_criterion_fn
 from nncf.torch.initialization import register_default_init_args
 from nncf.torch.quantization.algo import QuantizationController
 from nncf.torch.utils import is_main_process
-import nncf
 
 
 class KDLossCalculator:

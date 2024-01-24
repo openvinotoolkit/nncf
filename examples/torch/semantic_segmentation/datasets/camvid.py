@@ -17,6 +17,7 @@ from torch.utils import data
 import examples.torch.semantic_segmentation.utils.data as data_utils
 import nncf
 
+
 class CamVid(data.Dataset):
     """CamVid dataset loader where the dataset is arranged as in
     https://github.com/alexgkendall/SegNet-Tutorial/tree/master/CamVid.

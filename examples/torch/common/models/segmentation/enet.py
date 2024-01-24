@@ -15,8 +15,8 @@
 import torch
 from torch import nn
 
-from examples.torch.common.example_logger import logger
 import nncf
+from examples.torch.common.example_logger import logger
 
 
 class InitialBlock(nn.Module):

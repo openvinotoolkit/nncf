@@ -9,9 +9,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import nncf
 from examples.common.sample_config import CustomArgumentParser
 from nncf.common.hardware.config import HWConfigType
-import nncf
+
 
 def get_common_argument_parser():
     """Defines command-line arguments, and parses them."""

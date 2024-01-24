@@ -11,11 +11,11 @@
 
 import tensorflow as tf
 
+import nncf
 from examples.tensorflow.classification.datasets import tfrecords as records_dataset
 from examples.tensorflow.classification.datasets.preprocessing_selector import get_label_preprocessing_fn
 from examples.tensorflow.classification.datasets.preprocessing_selector import get_preprocessing
 from examples.tensorflow.common.dataset_builder import BaseDatasetBuilder
-import nncf
 
 DATASET_SPLITS = {"imagenet2012": ("train", "validation"), "cifar10": ("train", "test"), "cifar100": ("train", "test")}
 

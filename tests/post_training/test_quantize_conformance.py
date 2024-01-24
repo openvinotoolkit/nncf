@@ -20,12 +20,11 @@ import pandas as pd
 import pytest
 import yaml
 
+import nncf
 from tests.post_training.model_scope import TEST_CASES
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import RunInfo
-
-import nncf
 
 
 @pytest.fixture(scope="session", name="data_dir")

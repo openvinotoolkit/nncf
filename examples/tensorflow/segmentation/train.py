@@ -16,6 +16,7 @@ from pathlib import Path
 import numpy as np
 import tensorflow as tf
 
+import nncf
 from examples.common.paths import configure_paths
 from examples.common.sample_config import EVAL_ONLY_ERROR_TEXT
 from examples.common.sample_config import SampleConfig
@@ -44,7 +45,6 @@ from nncf.tensorflow.helpers.model_manager import TFModelManager
 from nncf.tensorflow.initialization import register_default_init_args
 from nncf.tensorflow.utils.state import TFCompressionState
 from nncf.tensorflow.utils.state import TFCompressionStateLoader
-import nncf
 
 
 def get_argument_parser():

@@ -14,6 +14,7 @@ from typing import TypeVar
 
 import numpy as np
 import torch
+
 import nncf
 
 GeneralizedTensor = TypeVar("GeneralizedTensor", torch.Tensor, np.ndarray)

@@ -15,6 +15,7 @@ import numpy as np
 import openvino.runtime as ov
 import openvino.runtime.opset13 as opset
 
+import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
@@ -39,7 +40,6 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVIfMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
-import nncf
 
 InplaceInsertionFnType = Callable[[ov.Node, int], ov.Node]
 

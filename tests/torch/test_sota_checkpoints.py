@@ -22,14 +22,13 @@ import pandas as pd
 import pytest
 from pytest import FixtureRequest
 
+import nncf
 from tests.shared.metric_thresholds import DIFF_FP32_MAX_GLOBAL
 from tests.shared.metric_thresholds import DIFF_FP32_MIN_GLOBAL
 from tests.shared.paths import DATASET_DEFINITIONS_PATH
 from tests.shared.paths import PROJECT_ROOT
 from tests.shared.paths import TEST_ROOT
 from tests.torch.helpers import Command
-
-import nncf
 
 DIFF_TARGET_PT_MIN = -0.1
 DIFF_TARGET_PT_MAX = 0.1

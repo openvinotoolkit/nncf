@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional, Set, Type
 
 import jstyleson as json
 
+import nncf
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization import quantizers as quant
@@ -26,7 +27,6 @@ from nncf.common.utils.helpers import product_dict
 from nncf.common.utils.os import safe_open
 from nncf.definitions import HW_CONFIG_RELATIVE_DIR
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
-import nncf
 
 
 class HWConfigType(Enum):

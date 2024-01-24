@@ -13,6 +13,7 @@ from abc import abstractmethod
 from itertools import islice
 from typing import Any, Dict, TypeVar
 
+import nncf
 from nncf.common import factory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -20,7 +21,6 @@ from nncf.common.logging.track_progress import track
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.data.dataset import Dataset
-import nncf
 
 TensorType = TypeVar("TensorType")
 TModel = TypeVar("TModel")

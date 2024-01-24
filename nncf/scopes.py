@@ -14,10 +14,11 @@ from dataclasses import dataclass
 from dataclasses import field
 from typing import List, Optional, Set
 
+import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api
-import nncf
+
 
 @api(canonical_alias="nncf.IgnoredScope")
 @dataclass
@@ -133,7 +134,9 @@ def get_ignored_node_names_from_ignored_scope(
                 not_matched_patterns.append(str_pattern)
             matched_by_patterns.extend(matches)
         if strict and not_matched_patterns:
-            raise nncf.ValidationError(f"No matches for ignored patterns {not_matched_patterns} in the NNCFGraph. " + error_msg)
+            raise nncf.ValidationError(
+                f"No matches for ignored patterns {not_matched_patterns} in the NNCFGraph. " + error_msg
+            )
         nncf_logger.info(f"{len(matched_by_patterns)} ignored nodes were found by patterns in the NNCFGraph")
 
     matched_by_types = []

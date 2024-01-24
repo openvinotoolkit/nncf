@@ -198,7 +198,9 @@ class MinMaxQuantization(Algorithm):
         nncf_logger.warning(f"You're using experimental option mode with {self._mode} value.")
 
         if self._preset != QuantizationPreset.PERFORMANCE:
-            raise nncf.ParameterNotSupportedError(f"preset option with {self._preset} value is not supported with the mode option!")
+            raise nncf.ParameterNotSupportedError(
+                f"preset option with {self._preset} value is not supported with the mode option!"
+            )
 
         if self._target_device not in [TargetDevice.CPU, TargetDevice.ANY]:
             raise nncf.ParameterNotSupportedError(

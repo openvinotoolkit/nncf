@@ -12,8 +12,8 @@ from collections import Counter
 from typing import Any, Dict, List, Optional, Set
 
 import onnx
-import nncf
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME

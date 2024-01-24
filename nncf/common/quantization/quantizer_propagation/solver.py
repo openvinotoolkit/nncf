@@ -18,8 +18,8 @@ from enum import Enum
 from typing import Deque, Dict, List, Optional, Set, Tuple
 
 import networkx as nx
-import nncf
 
+import nncf
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
@@ -144,7 +144,9 @@ class QuantizationProposal:
         """
         prior_list = self.quantizer_setup.quantization_points[quantization_point_id].possible_qconfigs
         if not all(qc in prior_list for qc in constrained_config_list):
-            raise nncf.InternalError("Constrained config list is incompatible with the result of the quantizer propagation!")
+            raise nncf.InternalError(
+                "Constrained config list is incompatible with the result of the quantizer propagation!"
+            )
         # TODO (vshampor): only allow to constrain 'input-group'-wise?
         self.quantizer_setup.quantization_points[quantization_point_id].possible_qconfigs = constrained_config_list
 

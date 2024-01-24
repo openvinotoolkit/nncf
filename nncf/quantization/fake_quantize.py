@@ -12,6 +12,7 @@
 from dataclasses import dataclass
 from typing import Tuple
 
+import nncf
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.quantizers import get_num_levels
@@ -23,7 +24,6 @@ from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor import TensorDataType
 from nncf.experimental.tensor import functions as fns
 from nncf.quantization.advanced_parameters import FP8Type
-import nncf
 
 
 @dataclass

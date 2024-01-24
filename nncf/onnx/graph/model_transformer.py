@@ -15,6 +15,7 @@ from typing import Dict, List, Set, Tuple, Union
 import numpy as np
 import onnx
 
+import nncf
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -31,7 +32,6 @@ from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXQDQNodeRemovingCommand
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
-import nncf
 
 
 class ONNXModelTransformer(ModelTransformer):

@@ -11,12 +11,14 @@
 
 import sys
 
-import nncf
-
 import torch
 
+import nncf
+
 if len(sys.argv) != 3:
-    raise nncf.ValidationError("Must be run with an execution type as argument (either 'cpu' or 'gpu') and package type")
+    raise nncf.ValidationError(
+        "Must be run with an execution type as argument (either 'cpu' or 'gpu') and package type"
+    )
 execution_type = sys.argv[1]
 package_type = sys.argv[2]
 

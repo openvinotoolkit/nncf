@@ -856,7 +856,9 @@ class NNCF_RNN(nn.Module):
         is_input_packed = batch_sizes is not None
         expected_input_dim = 2 if is_input_packed else 3
         if input_.dim() != expected_input_dim:
-            raise nncf.ValidationError("input_ must have {} dimensions, got {}".format(expected_input_dim, input_.dim()))
+            raise nncf.ValidationError(
+                "input_ must have {} dimensions, got {}".format(expected_input_dim, input_.dim())
+            )
         if self.input_size != input_.size(-1):
             raise nncf.ValidationError(
                 "input_.size(-1) must be equal to input_size. Expected {}, got {}".format(
