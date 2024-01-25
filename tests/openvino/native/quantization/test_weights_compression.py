@@ -571,12 +571,12 @@ def test_calculate_scale_per_group(desc: CalculateScaleDesc):
 
 
 def test_raise_error_for_many_axes():
-    with pytest.raises(AssertionError):
+    with pytest.raises(RuntimeError):
         reshape_weight_for_grouped_quantization(WEIGHTS_2x4, reduction_axis=(0, 1), group_size=1)
 
 
-def test_raise_error_with_tuple():
-    with pytest.raises(AssertionError):
+def test_raise_error_channel_size_is_not_divisible_by_group_size():
+    with pytest.raises(RuntimeError):
         reshape_weight_for_grouped_quantization(WEIGHTS_2x4, reduction_axis=(0,), group_size=3)
 
 
