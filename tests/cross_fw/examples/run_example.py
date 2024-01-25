@@ -131,7 +131,7 @@ def post_training_quantization_torch_ssd300_vgg16() -> Dict[str, float]:
 
 
 def llm_compression() -> Dict[str, float]:
-    from examples.llm_compression.openvino.main import main as llm_compression_main
+    from examples.llm_compression.openvino.tiny_llama.main import main as llm_compression_main
 
     result = llm_compression_main()
 
