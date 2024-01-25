@@ -73,8 +73,11 @@ def calculate_normalized_weight_and_nf4_scale(
     :param reduction_axis: Axis, along which to reduce (collect) different statistics (e.g. min, max).
     :param group_size: Number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
         The value -1 means no grouping. Defaults to -1.
-    :return: Normalized weights and nf4 scale.
+    :return: Normalized weight tensor of float32 type and nf4 scale tensor of float32 type.
     """
+    if weight.dtype != TensorDataType.float32:
+        weight = weight.astype(TensorDataType.float32)
+
     if group_size != -1:
         # weights are reshaped: [a1, r, a2] -> [a1, r//gs, gs, a2]
         weight, reduction_axis = reshape_weight_for_grouped_quantization(weight, reduction_axis, group_size)
@@ -110,7 +113,8 @@ def do_integer_quantization(
     :param weight: Weight array to compress.
     :param reduction_axis: Axis, along which to reduce (collect) different statistics (e.g. min, max).
     :param config: Information on how to compress (quantize) a specific weight.
-    :return: The compressed weights, scale and zero point that was used for its quantization.
+    :return: The compressed weights tensor of uint8 type, scale tensor of float32 type and
+        zero point tensor of int32 type that was used for its quantization.
     """
     mode = config.mode
     assert mode != CompressWeightsMode.NF4, "The function supports integer quantization only"
@@ -119,6 +123,9 @@ def do_integer_quantization(
 
     level_low = 0
     level_high = 2**num_bits - 1
+
+    if weight.dtype != TensorDataType.float32:
+        weight = weight.astype(TensorDataType.float32)
 
     if group_size != -1:
         # weights are reshaped from [a1, r, a2] to [a1, r//gs, gs, a2]
@@ -136,14 +143,11 @@ def do_integer_quantization(
         level_high_sym = 2 ** (num_bits - 1) - 1
         scale = scale / level_high_sym
         zero_point = fns.as_tensor_like(scale, [-level_low_sym])
+        eps = fns.finfo(scale).eps
+        # NOTE: adding machine epsilon to avoid division by zero
+        scale = fns.where(fns.abs(scale) < eps, eps, scale)
 
-    scale = scale.astype(weight.dtype)
-    zero_point = zero_point.astype(TensorDataType.uint8)
-
-    eps = fns.finfo(weight).eps
-    # NOTE: adding machine epsilon to avoid division by zero
-    scale = fns.where(fns.abs(scale) < eps, eps, scale)
-    compressed_weights = fns.round(weight / scale + zero_point)
+    compressed_weights = fns.round(weight / scale + zero_point.astype(weight.dtype))
     compressed_weights = fns.clip(compressed_weights, level_low, level_high).astype(TensorDataType.uint8)
     return compressed_weights, scale, zero_point
 
@@ -159,10 +163,13 @@ def get_integer_quantization_error(weight: Tensor, reduction_axis: int, config: 
     :return: The quantity characterizing the error of integer quantization.
     """
     orig_shape = weight.shape
+
+    if weight.dtype != TensorDataType.float32:
+        weight = weight.astype(TensorDataType.float32)
+
     compressed_weights, scale, zero_point = do_integer_quantization(weight, reduction_axis, config)
 
-    compressed_weights = compressed_weights.astype(dtype=weight.dtype)
-    decompressed_weight = (compressed_weights - zero_point) * scale
+    decompressed_weight = (compressed_weights - zero_point).astype(weight.dtype) * scale
 
     decompressed_weight = decompressed_weight.reshape(orig_shape)
     diff = (decompressed_weight - weight) ** 2
