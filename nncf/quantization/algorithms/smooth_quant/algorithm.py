@@ -243,7 +243,7 @@ class SmoothQuant(Algorithm):
         statistics_for_node = []
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
             node_name,
-            self._backend_entity.get_filter_fn_for_statistics(act_port),
+            self._backend_entity.get_filter_fn_for_statistics(act_port, self._algorithm_key),
             self._algorithm_key,
         ):
             statistic = tensor_collector.get_statistics()[STATISTIC_BRANCH_KEY]

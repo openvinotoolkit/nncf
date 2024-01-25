@@ -46,6 +46,9 @@ class SQMultiply(torch.nn.Module):
         return torch.mul(x, self._scale_value)
 
 
+PT_PRE_LAYER_TARGET_TYPE = TargetType.OPERATOR_PRE_HOOK
+
+
 class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     @property
     def convolution_metatypes(self) -> List[OperatorMetatype]:
@@ -65,7 +68,7 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def pre_layer_target_type() -> TargetType:
-        return TargetType.OPERATOR_PRE_HOOK
+        return PT_PRE_LAYER_TARGET_TYPE
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
@@ -73,14 +76,14 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def is_node_with_weights(node: NNCFNode) -> bool:
-        # Metatypes of matmuls and convolutions guarantee
+        # Metatypes of linears and convolutions guarantee
         # all nodes with the metatypes have weights, we can skip
         # this check by returning True.
         return True
 
     @staticmethod
     def get_activations_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
-        # Metatypes of matmuls and convolutions guarantee
+        # Metatypes of linears and convolutions guarantee
         # all nodes with the metatypes have 0 activation port id
         return 0
 
@@ -127,9 +130,7 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         input_port_id = 0
         target_points = []
         for node in nodes:
-            target_points.append(
-                PTTargetPoint(TargetType.OPERATOR_PRE_HOOK, node.node_name, input_port_id=input_port_id)
-            )
+            target_points.append(PTTargetPoint(PT_PRE_LAYER_TARGET_TYPE, node.node_name, input_port_id=input_port_id))
 
         return PTSharedFnInsertionCommand(target_points, SQMultiply(scale_value), scale_node_name)
 
@@ -150,8 +151,12 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return node.is_shared()
 
     @staticmethod
-    def get_filter_fn_for_statistics(activation_port_id: int) -> Callable[[StatisticPoint], bool]:
+    def get_filter_fn_for_statistics(activation_port_id: int, algorithm_key: str) -> Callable[[StatisticPoint], bool]:
         def filter_func(point: StatisticPoint) -> bool:
-            return point.target_point.input_port_id == activation_port_id
+            return (
+                algorithm_key in point.algorithm_to_tensor_collectors
+                and point.target_point.type == PT_PRE_LAYER_TARGET_TYPE
+                and point.target_point.input_port_id == activation_port_id
+            )
 
         return filter_func

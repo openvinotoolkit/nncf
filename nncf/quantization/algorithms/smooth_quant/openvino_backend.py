@@ -38,6 +38,8 @@ from nncf.openvino.statistics.collectors import OVAbsMaxReducer
 from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
 
+OV_PRE_LAYER_TARGET_TYPE = TargetType.PRE_LAYER_OPERATION
+
 
 class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     @property
@@ -54,7 +56,7 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def pre_layer_target_type() -> TargetType:
-        return TargetType.PRE_LAYER_OPERATION
+        return OV_PRE_LAYER_TARGET_TYPE
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:
@@ -155,8 +157,12 @@ class OVSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return len(nncf_graph.get_next_nodes(weight_node)) > 1
 
     @staticmethod
-    def get_filter_fn_for_statistics(activation_port_id: int) -> Callable[[StatisticPoint], bool]:
+    def get_filter_fn_for_statistics(activation_port_id: int, algorithm_key: str) -> Callable[[StatisticPoint], bool]:
         def filter_func(point: StatisticPoint) -> bool:
-            return point.target_point.port_id == activation_port_id
+            return (
+                algorithm_key in point.algorithm_to_tensor_collectors
+                and point.target_point.type == OV_PRE_LAYER_TARGET_TYPE
+                and point.target_point.port_id == activation_port_id
+            )
 
         return filter_func

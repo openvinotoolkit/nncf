@@ -207,9 +207,11 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_filter_fn_for_statistics(activation_port_id: int) -> Callable[[StatisticPoint], bool]:
+    def get_filter_fn_for_statistics(activation_port_id: int, algorithm_key: str) -> Callable[[StatisticPoint], bool]:
         """
         Returns backend-specific callable to filter statistic containers according to its statistic point.
 
         :param activation_port_id: Activation port id for the statistic collection target node.
+        :param algorithm_key: Current algorithm key.
+        :return: Backend-specific callable to filter statistic containers according to its statistic point.
         """
