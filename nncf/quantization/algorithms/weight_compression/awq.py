@@ -147,15 +147,11 @@ class AWQ(Algorithm):
 
         for match in matches:
             nncf_node = graph.get_node_by_key(match[-1])
-            weight_port_ids = nncf_node.layer_attributes.get_const_port_ids()
-            for weight_port_id in weight_port_ids:
-                weight_op_friendly_name = nncf_node.layer_attributes.constant_attributes[weight_port_id]["name"]
+            for weight_op_friendly_name, _ in self._backend_entity.get_weight_names_and_port_ids(nncf_node, graph):
                 target_node_names.append(weight_op_friendly_name)
 
             nncf_node = graph.get_node_by_key(match[0])
-            weight_port_ids = nncf_node.layer_attributes.get_const_port_ids()
-            for weight_port_id in weight_port_ids:
-                weight_op_friendly_name = nncf_node.layer_attributes.constant_attributes[weight_port_id]["name"]
+            for weight_op_friendly_name, _ in self._backend_entity.get_weight_names_and_port_ids(nncf_node, graph):
                 merge_node_names.append(weight_op_friendly_name)
 
             assert len(target_node_names) == len(merge_node_names)

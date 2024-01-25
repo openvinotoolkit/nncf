@@ -307,6 +307,9 @@ def compress_weights(
                 f"but given {mode.value} mode."
             )
 
+        if awq is True:
+            raise AttributeError("Torch backend doesn`t supports AWQ algorithm, but given awq parameter is True mode.")
+
         if is_wrapped_model(model):
             if not model.nncf.trace_parameters:
                 raise ValueError(
@@ -335,7 +338,7 @@ def compress_weights(
         options = [all_layers, sensitivity_metric, dataset, awq]
         if any(option is not None for option in options):
             raise AttributeError(
-                "INT8 modes do not support `all_layers`, `sensitivity_metric` and `dataset` options."
+                "INT8 modes do not support `all_layers`, `sensitivity_metric`, `awq` and `dataset` options."
                 "Set them to None."
             )
 
