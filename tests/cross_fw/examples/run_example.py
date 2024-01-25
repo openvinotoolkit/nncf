@@ -138,6 +138,14 @@ def llm_compression() -> Dict[str, float]:
     return {"word_count": len(result.split())}
 
 
+def llm_tune_params() -> Dict[str, float]:
+    from examples.llm_compression.openvino.tiny_llama_find_hyperparams.main import main as llm_tune_params_main
+
+    ratio, group_size = llm_tune_params_main()
+
+    return {"ratio": ratio, "group_size": group_size}
+
+
 def main(argv):
     parser = ArgumentParser()
     parser.add_argument("--name", help="Example name", required=True)
