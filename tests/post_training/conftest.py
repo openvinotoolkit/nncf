@@ -9,6 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+from pathlib import Path
+
+from pytest import Config
+
 from tests.shared.paths import TEST_ROOT
 
 PTQ_TEST_ROOT = TEST_ROOT / "post_training"
@@ -28,3 +33,9 @@ def pytest_addoption(parser):
         action="store_true",
         help="Add additional columns to reports.csv",
     )
+
+
+def pytest_configure(config: Config):
+    data = config.getoption("--data", None)
+    if data is not None:
+        os.environ["HF_HOME"] = str(Path(data) / "hf_cache")
