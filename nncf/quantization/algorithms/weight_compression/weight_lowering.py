@@ -161,7 +161,9 @@ def do_integer_quantization(
     return compressed_weights, scale, zero_point
 
 
-def get_integer_quantization_error(weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig) -> float:
+def get_integer_quantization_error(
+    weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig
+) -> float:
     """
     Calculates a quantity characterizing the difference between floating point weights and fake quantized
     (compressed and decompressed) to integer ones.
