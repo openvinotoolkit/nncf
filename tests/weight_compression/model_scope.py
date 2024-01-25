@@ -19,10 +19,10 @@ from tests.weight_compression.pipelines.lm_weight_compression import LMWeightCom
 BACKENDS = [BackendType.OV]
 TEST_MODELS = [
     {
-        "reported_name": "tinyllama/tinyllama-1.1b-step-50k-105b",
-        "model_id": "tinyllama_data_free",
+        "reported_name": "tinyllama_data_free",
+        "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
         "pipeline_cls": LMWeightCompression,
-        "cw_params": {
+        "ptq_params": {
             "group_size": 64,
             "ratio": 0.8,
             "mode": CompressWeightsMode.INT4_SYM

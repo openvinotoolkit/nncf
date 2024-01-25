@@ -18,10 +18,10 @@ import transformers
 from datasets import load_dataset
 from memory_profiler import memory_usage
 from optimum.intel.openvino import OVModelForCausalLM
+from transformers import AutoTokenizer
 from whowhatbench import Evaluator
 
 import nncf
-from tests.post_training.pipelines.base import DEFAULT_VAL_THREADS
 from tests.post_training.pipelines.base import OV_BACKENDS
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
@@ -33,7 +33,6 @@ class LMWeightCompression(BaseTestPipeline):
     def prepare_model(self) -> None:
         if self.backend in OV_BACKENDS + [BackendType.FP32]:
             self.model_hf = OVModelForCausalLM.from_pretrained(self.model_id, export=True, load_in_8bit=False, compile=False, stateful=False)
-            # TODO: is model really needed?
             self.model = self.model_hf.model
         self._dump_model_fp32()
 
@@ -44,7 +43,7 @@ class LMWeightCompression(BaseTestPipeline):
             self.model_hf._save_config(self.output_model_dir)
 
     def prepare_preprocessor(self) -> None:
-        self.preprocessor = transformers.AutoTokenizer.from_pretrained(self.model_id)
+        self.preprocessor = AutoTokenizer.from_pretrained(self.model_id)
 
     def get_transform_calibration_fn(self):
         if self.backend in OV_BACKENDS:
@@ -61,8 +60,8 @@ class LMWeightCompression(BaseTestPipeline):
 
                 # The magic forms KV cache as model inputs
                 batch_size = input_ids.shape[0]
-                for input_name in self.model.key_value_input_names:
-                    model_inputs = self.model.model.input(input_name)
+                for input_name in self.model_hf.key_value_input_names:
+                    model_inputs = self.model.input(input_name)
                     shape = model_inputs.get_partial_shape()
                     shape[0] = batch_size
                     if shape[2].is_dynamic:
@@ -85,14 +84,15 @@ class LMWeightCompression(BaseTestPipeline):
         """
         Quantize self.model
         """
+        self._compressed_model_dir = self.output_model_dir / 'compressed'
         self.quantized_model = nncf.compress_weights(
             self.model,
             dataset=self.calibration_dataset,
             **self.ptq_params,
         )
-        self._compressed_model_dir = self.output_dir / 'compressed'
         self._compressed_model_dir.mkdir(parents=True, exist_ok=True)
         ov.serialize(self.model, self._compressed_model_dir / OV_MODEL_NAME)
+        self.model_hf._save_config(self._compressed_model_dir)
 
 
     def quantize(self) -> None:
@@ -127,7 +127,7 @@ class LMWeightCompression(BaseTestPipeline):
         gold_csv = gold_folder / 'gold_all.csv'
         print('gold path:', gold_csv.resolve())
         if gold_csv.exists():
-            evaluator = Evaluator(tokenizer=self.prepare_preprocessor, gt_data=gold_csv, test_data=str(gold_csv), metrics=("similarity",))
+            evaluator = Evaluator(tokenizer=self.preprocessor, gt_data=gold_csv, test_data=str(gold_csv), metrics=("similarity",))
         else:
             model_gold = OVModelForCausalLM.from_pretrained(
                 gold_folder,
@@ -136,7 +136,7 @@ class LMWeightCompression(BaseTestPipeline):
                 compile=False,
                 stateful=False
             )
-            evaluator = Evaluator(base_model=model_gold, tokenizer=self.prepare_preprocessor, metrics=("similarity",))
+            evaluator = Evaluator(base_model=model_gold, tokenizer=self.preprocessor, metrics=("similarity",))
             evaluator.dump_gt(str(gold_csv))
 
         compressed_model_hf = OVModelForCausalLM.from_pretrained(

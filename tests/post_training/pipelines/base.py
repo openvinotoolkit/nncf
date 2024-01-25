@@ -307,6 +307,7 @@ class BaseTestPipeline(ABC):
         self.run_bench()
         self.cleanup_torchscript_cache()
 
+    # TODO: general cleanup, remove model_cache for OV as well
     @staticmethod
     def cleanup_torchscript_cache():
         """
