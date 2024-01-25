@@ -16,6 +16,7 @@ from pathlib import Path
 import tensorflow as tf
 import tensorflow_addons as tfa
 
+import nncf
 from examples.common.paths import configure_paths
 from examples.common.sample_config import create_sample_config
 from examples.tensorflow.classification.datasets.builder import DatasetBuilder
@@ -112,7 +113,7 @@ def load_checkpoint(checkpoint, ckpt_path):
     if not path_to_checkpoint:
         logger.info("No checkpoint detected.")
         if ckpt_path:
-            raise RuntimeError(f"ckpt_path was given, but no checkpoint detected in path: {ckpt_path}")
+            raise nncf.ValidationError(f"ckpt_path was given, but no checkpoint detected in path: {ckpt_path}")
 
     logger.info("Checkpoint file {} found and restoring from checkpoint".format(path_to_checkpoint))
 

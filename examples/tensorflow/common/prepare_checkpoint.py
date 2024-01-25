@@ -13,6 +13,7 @@ import sys
 
 import tensorflow as tf
 
+import nncf
 from examples.common.sample_config import create_sample_config
 from examples.tensorflow.common.argparser import get_common_argument_parser
 from examples.tensorflow.common.logger import logger
@@ -40,7 +41,7 @@ def get_config_and_model_type_from_argv(argv, parser):
     elif args.model_type == ModelType.segmentation:
         predefined_config = get_predefined_seg_config(config_from_json.model)
     else:
-        raise RuntimeError("Wrong model type specified")
+        raise nncf.ValidationError("Wrong model type specified")
 
     predefined_config.update(config_from_json)
     return predefined_config, args.model_type

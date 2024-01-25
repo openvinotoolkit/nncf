@@ -13,6 +13,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
+import nncf
 from nncf.common.pruning.shape_pruning_processor import ShapePruningProcessor
 from nncf.common.pruning.weights_flops_calculator import WeightsFlopsCalculator
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
@@ -193,5 +194,5 @@ def test_maximal_compression_rate():
     for comp_rate in np.linspace(0, maximal_compression_rate, 10):
         compression_ctrl.compression_rate = comp_rate
     for comp_rate in np.linspace(maximal_compression_rate + 1e-5, 1, 10):
-        with pytest.raises(RuntimeError):
+        with pytest.raises(nncf.ParameterNotSupportedError):
             compression_ctrl.compression_rate = comp_rate

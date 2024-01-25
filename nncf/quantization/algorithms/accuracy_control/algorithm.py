@@ -12,6 +12,7 @@
 import sys
 from typing import Iterable, List, Optional, Tuple, TypeVar
 
+import nncf
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -49,7 +50,7 @@ def get_algo_backend(backend: BackendType) -> AccuracyControlAlgoBackend:
 
         return OVAccuracyControlAlgoBackend()
 
-    raise RuntimeError(
+    raise nncf.UnsupportedBackendError(
         f"Cannot create the backend for the accuracy control algorithm because {backend} is not supported."
     )
 

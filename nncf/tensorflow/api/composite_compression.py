@@ -11,6 +11,7 @@
 
 from typing import TypeVar
 
+import nncf
 from nncf import NNCFConfig
 from nncf.common.composite_compression import CompositeCompressionAlgorithmBuilder
 from nncf.common.composite_compression import CompositeCompressionAlgorithmController
@@ -28,7 +29,7 @@ class TFCompositeCompressionAlgorithmBuilder(CompositeCompressionAlgorithmBuilde
 
         algo_names = extract_algorithm_names(config)
         if len(algo_names) < 2:
-            raise RuntimeError(
+            raise nncf.ValidationError(
                 "Composite algorithm builder must be supplied with a config with more than one "
                 "compression algo specified!"
             )

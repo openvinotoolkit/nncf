@@ -11,6 +11,7 @@
 
 import tensorflow as tf
 
+import nncf
 from examples.tensorflow.classification.datasets import tfrecords as records_dataset
 from examples.tensorflow.classification.datasets.preprocessing_selector import get_label_preprocessing_fn
 from examples.tensorflow.classification.datasets.preprocessing_selector import get_preprocessing
@@ -64,7 +65,7 @@ class DatasetBuilder(BaseDatasetBuilder):
         }
         dtype = dtype_map.get(self._dtype, None)
         if dtype is None:
-            raise ValueError("Invalid DType provided. Supported types: {}".format(dtype_map.keys()))
+            raise nncf.ValidationError("Invalid DType provided. Supported types: {}".format(dtype_map.keys()))
 
         return dtype
 

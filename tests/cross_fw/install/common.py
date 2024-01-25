@@ -26,7 +26,7 @@ def excluded_module(name, excluded_modules_patterns):
 
 def onerror(name, excluded_modules_patterns):
     if not excluded_module(name, excluded_modules_patterns):
-        raise RuntimeError(f"Could not import {name}")
+        raise nncf.InternalError(f"Could not import {name}")
 
 
 def load_nncf_modules(excluded_modules_patterns, verbose=False):

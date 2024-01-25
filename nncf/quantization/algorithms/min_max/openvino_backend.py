@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 import numpy as np
 
+import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -187,12 +188,12 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             [OVMinMaxTensorStatistic.MIN_STAT, OVMinMaxTensorStatistic.MAX_STAT],
         ):
             if params.statistics_type not in OV_REDUCERS_MAP:
-                raise RuntimeError(
+                raise nncf.InternalError(
                     f"Statistic type: {params.statistics_type} is not supported for OpenVino PTQ backend yet."
                 )
 
             if params.aggregator_type not in AGGREGATORS_MAP:
-                raise RuntimeError(
+                raise nncf.InternalError(
                     f"Aggregator type: {params.aggregator_type} is not supported for OpenVino PTQ backend yet."
                 )
 

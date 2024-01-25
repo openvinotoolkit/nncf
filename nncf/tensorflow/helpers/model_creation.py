@@ -14,6 +14,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import tensorflow as tf
 
+import nncf
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
@@ -117,7 +118,7 @@ def get_input_signature(config: NNCFConfig):
             sample_size = info["sample_size"]
             samples_sizes.append(sample_size)
     else:
-        raise RuntimeError("sample_size must be provided in configuration file")
+        raise nncf.ValidationError("sample_size must be provided in configuration file")
 
     input_signature = []
     for sample_size in samples_sizes:

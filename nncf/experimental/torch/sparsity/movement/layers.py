@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import torch
 from torch import nn
 
+import nncf
 from nncf.common.graph import NNCFNode
 from nncf.experimental.torch.sparsity.movement.functions import binary_mask_by_threshold
 from nncf.torch.layer_utils import COMPRESSION_MODULES
@@ -304,7 +305,7 @@ class MovementSparsifier(nn.Module):
                 score_shape.append(dim // factor)
             return tuple(score_shape)
 
-        raise RuntimeError("Unknown sparse structure.")
+        raise nncf.InternalError("Unknown sparse structure.")
 
     @staticmethod
     def _get_sparse_factors(weight_shape: List[int], sparse_config: SparseConfig) -> Tuple[int, int]:

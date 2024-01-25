@@ -14,6 +14,7 @@ from typing import Any, Callable
 
 import pytest
 
+import nncf
 from nncf.common.utils.os import is_windows
 
 
@@ -24,7 +25,7 @@ def check_symlinks_are_not_followed(tmp_path: Path, file_opening_entrypoint: Cal
     real_file = tmp_path / "real_file"
     real_file.touch(exist_ok=True)
     symlink_path.symlink_to(real_file)
-    with pytest.raises(RuntimeError, match="is a symbolic link, aborting"):
+    with pytest.raises(nncf.ValidationError, match="is a symbolic link, aborting"):
         file_opening_entrypoint(str(symlink_path))
 
 

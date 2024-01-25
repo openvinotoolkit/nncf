@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Set
 
 import onnx
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
 from nncf.common.graph.definitions import MODEL_OUTPUT_OP_NAME
@@ -225,7 +226,7 @@ class GraphConverter:
         name_counter = Counter([node.name for node in model.graph.node])
 
         if max(name_counter.values()) > 1:
-            raise RuntimeError(
+            raise nncf.ValidationError(
                 f"Nodes {[(name, cnt) for name, cnt in name_counter.items() if cnt > 1]} "
                 "(name, counts) occurred more than once. "
                 "NNCF expects every node to have a unique name."

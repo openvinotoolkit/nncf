@@ -11,6 +11,7 @@
 
 from typing import List, Optional, Type
 
+import nncf
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.utils.registry import Registry
 
@@ -102,7 +103,7 @@ class OperatorMetatypeRegistry(Registry):
             op_names = obj.get_all_aliases()
             for name in op_names:
                 if name in self._op_name_to_op_meta_dict and not obj.subtype_check(self._op_name_to_op_meta_dict[name]):
-                    raise RuntimeError(
+                    raise nncf.InternalError(
                         "Inconsistent operator metatype registry - single patched "
                         "op name maps to multiple metatypes!"
                     )

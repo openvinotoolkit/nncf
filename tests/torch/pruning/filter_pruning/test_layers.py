@@ -13,6 +13,7 @@ import pytest
 import torch
 from torch import nn
 
+import nncf
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.module_operations import UpdateWeightAndBias
 from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask
@@ -67,7 +68,7 @@ def test_assert_broadcastable_mask_and_weight_shape():
 
     mask = torch.zeros(10)
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(nncf.InternalError):
         apply_filter_binary_mask(mask, nncf_module.weight.data)
 
 

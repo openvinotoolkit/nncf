@@ -14,6 +14,7 @@ from typing import Any, Tuple
 import numpy as np
 import openvino.runtime as ov
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
@@ -110,7 +111,7 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         elif node.metatype == OVMatMulMetatype:
             weights_layout = get_linear_weights_layout_from_node(node=node)
         else:
-            raise RuntimeError(
+            raise nncf.InternalError(
                 f"Metatype {node.metatype} of node {node.node_name} dimensions description retrieving is not supported"
             )
 

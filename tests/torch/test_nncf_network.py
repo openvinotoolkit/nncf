@@ -22,6 +22,7 @@ import torch.nn.functional as F
 from torch import nn
 from torch.nn.utils import weight_norm
 
+import nncf
 from nncf import nncf_logger
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import UnknownMetatype
@@ -543,7 +544,7 @@ def test_deepcopy_nncf_network():
 def test_insertion_point_target_point_translation():
     op_address = OperationAddress("dummy", Scope(), 0)
     for target_type in [PTInsertionType.NNCF_MODULE_POST_OP, TargetType.AFTER_LAYER]:
-        with pytest.raises(RuntimeError):
+        with pytest.raises(nncf.InternalError):
             PTInsertionPoint(target_type, op_address)
     target_type = TargetType.POST_LAYER_OPERATION
     assert PTInsertionPoint(target_type, op_address).insertion_type == PTInsertionType.NNCF_MODULE_POST_OP

@@ -17,6 +17,7 @@ import torch
 from torch import distributed as dist
 from torch.utils.data import Sampler
 
+import nncf
 from examples.torch.common.example_logger import logger
 
 
@@ -44,11 +45,11 @@ class DistributedSampler(Sampler):
         super().__init__(dataset)
         if world_size is None:
             if not dist.is_available():
-                raise RuntimeError("Requires distributed package to be available")
+                raise nncf.ValidationError("Requires distributed package to be available")
             world_size = dist.get_world_size()
         if rank is None:
             if not dist.is_available():
-                raise RuntimeError("Requires distributed package to be available")
+                raise nncf.ValidationError("Requires distributed package to be available")
             rank = dist.get_rank()
         self.world_size = world_size
         self.rank = rank
