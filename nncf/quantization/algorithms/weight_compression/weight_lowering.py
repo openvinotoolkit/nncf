@@ -37,19 +37,26 @@ class CompressedWeight:
     zero_point: Optional[Tensor] = None
 
 
-def reshape_weight_for_grouped_quantization(weight: Tensor, reduction_axis: int, group_size: int) -> Tuple[Tensor, int]:
+def reshape_weight_for_grouped_quantization(
+    weight: Tensor, reduction_axis: Union[int, Tuple[int]], group_size: int
+) -> Tuple[Tensor, int]:
     """
     Reshapes weight for group-wise quantization and return a new reduction axis for collecting statistics per group
     dimension. Having weight with shapes [c_out, c_in] and group size = 128, shape of reshaped weight is
     [c_out, c_in // 128, 128].
 
     :param weight: Weight array to compress.
-    :param reduction_axis: Axis, along which to reduce (collect) different statistics (e.g. min, max).
+    :param reduction_axis: Axes, along which to reduce (collect) different statistics (e.g. min, max).
     :param group_size: Number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
     :return: reshaped weight and new reduction axis.
     """
     assert group_size != -1
-    assert isinstance(reduction_axis, int)
+    if isinstance(reduction_axis, tuple) and len(reduction_axis) == 1:
+        reduction_axis = reduction_axis[0]
+    if not isinstance(reduction_axis, int):
+        raise NotImplementedError(
+            f"Group-wise quantization expects a single reduction axis, but given: {reduction_axis}."
+        )
     channel_size = weight.shape[reduction_axis]
     if channel_size % group_size != 0:
         raise nncf.ValidationError(f"Channel size {channel_size} should be divisible by size of group {group_size}")
@@ -80,12 +87,6 @@ def calculate_normalized_weight_and_nf4_scale(
 
     if group_size != -1:
         # weights are reshaped: [a1, r, a2] -> [a1, r//gs, gs, a2]
-        if isinstance(reduction_axis, tuple) and len(reduction_axis) == 1:
-            reduction_axis = reduction_axis[0]
-        if not isinstance(reduction_axis, int):
-            raise NotImplementedError(
-                f"Group-wise quantization expects a single reduction axis, but given: {reduction_axis}."
-            )
         weight, reduction_axis = reshape_weight_for_grouped_quantization(weight, reduction_axis, group_size)
         scale = fns.max(fns.abs(weight), axis=reduction_axis, keepdims=True)  # [a1, r//gs, 1, a2]
     else:
@@ -135,12 +136,6 @@ def do_integer_quantization(
 
     if group_size != -1:
         # weights are reshaped from [a1, r, a2] to [a1, r//gs, gs, a2]
-        if isinstance(reduction_axis, tuple) and len(reduction_axis) == 1:
-            reduction_axis = reduction_axis[0]
-        if not isinstance(reduction_axis, int):
-            raise NotImplementedError(
-                f"Group-wise quantization expects a single reduction axis, but given: {reduction_axis}."
-            )
         weight, reduction_axis = reshape_weight_for_grouped_quantization(weight, reduction_axis, group_size)
 
     if mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]:
