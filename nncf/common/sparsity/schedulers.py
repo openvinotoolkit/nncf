@@ -28,7 +28,7 @@ from nncf.config.schemata.defaults import SPARSITY_SCHEDULER_UPDATE_PER_OPTIMIZE
 from nncf.config.schemata.defaults import SPARSITY_TARGET
 from nncf.config.schemata.defaults import SPARSITY_TARGET_EPOCH
 
-SPARSITY_SCHEDULERS = Registry("sparsity_schedulers")
+SPARSITY_SCHEDULERS: Registry = Registry("sparsity_schedulers")
 
 
 class SparsityScheduler(BaseCompressionScheduler):
@@ -50,7 +50,7 @@ class SparsityScheduler(BaseCompressionScheduler):
         mask will be frozen and will not be trained.
     """
 
-    def __init__(self, controller: SparsityController, params: dict):
+    def __init__(self, controller: SparsityController, params: Dict[str, Any]) -> None:
         """
         Initializes the internal state of the sparsity scheduler.
 
@@ -91,6 +91,7 @@ class SparsityScheduler(BaseCompressionScheduler):
 
         :return: Current sparsity level.
         """
+        self.initial_level = 0.0
         if self._current_epoch == -1:
             return self.initial_level
         return self._calculate_sparsity_level()
@@ -113,7 +114,7 @@ class PolynomialSparsityScheduler(SparsityScheduler):
     after `steps_per_epoch` will be calculated.
     """
 
-    def __init__(self, controller: SparsityController, params: dict):
+    def __init__(self, controller: SparsityController, params: Dict[str, Any]):
         """
         Initializes a sparsity scheduler with a polynomial decay schedule.
 
@@ -121,8 +122,8 @@ class PolynomialSparsityScheduler(SparsityScheduler):
         :param params: Parameters of the scheduler.
         """
         super().__init__(controller, params)
-        self.schedule = PolynomialDecaySchedule(
-            self.initial_level,
+        self.schedule= PolynomialDecaySchedule(
+            self.initial_level or 0.0,
             self.target_level,
             self.target_epoch,
             params.get("power", SPARSITY_SCHEDULER_POWER),
@@ -213,7 +214,7 @@ class ExponentialSparsityScheduler(SparsityScheduler):
         current_density = 1.0 - current_level
     """
 
-    def __init__(self, controller: SparsityController, params: dict):
+    def __init__(self, controller: SparsityController, params: Dict[str, Any]):
         """
         Initializes a sparsity scheduler with an exponential decay schedule.
 
@@ -221,6 +222,10 @@ class ExponentialSparsityScheduler(SparsityScheduler):
         :param params: Parameters of the scheduler.
         """
         super().__init__(controller, params)
+       
+        if self.initial_level is None:
+            self.initial_level = 0.0
+
         initial_density = 1.0 - self.initial_level
         target_density = 1.0 - self.target_level
         self.schedule = ExponentialDecaySchedule(initial_density, target_density, self.target_epoch)
@@ -230,8 +235,9 @@ class ExponentialSparsityScheduler(SparsityScheduler):
         self._update_sparsity_level()
 
     def _calculate_sparsity_level(self) -> float:
-        current_density = self.schedule(self.current_epoch)
-        current_level = 1.0 - current_density
+        self.target_level = 0.0
+        current_density: float = self.schedule(self.current_epoch)
+        current_level: float = 1.0 - current_density
         return min(current_level, self.target_level)
 
 
@@ -241,7 +247,7 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
     Sparsity scheduler with an adaptive schedule.
     """
 
-    def __init__(self, controller: SparsityController, params: dict):
+    def __init__(self, controller: SparsityController, params: Dict[str, Any]):
         """
         Initializes a sparsity scheduler with an adaptive schedule.
 
@@ -253,10 +259,11 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
         self.eps = params.get("eps", 0.03)
         self.patience = params.get("patience", SPARSITY_SCHEDULER_PATIENCE)
         self.num_bad_epochs = 0
-        self._current_level = self.initial_level
+        self._current_level: float = self.initial_level or 0.0
 
     @property
     def current_sparsity_level(self) -> float:
+        self._current_level = 0.0
         """
         Returns sparsity level for the `current_epoch` or for step
         in the `current_epoch`.
@@ -300,7 +307,7 @@ class MultiStepSparsityScheduler(SparsityScheduler):
     Sparsity scheduler with a piecewise constant schedule.
     """
 
-    def __init__(self, controller: SparsityController, params: dict):
+    def __init__(self, controller: SparsityController, params: Dict[str, Any]):
         """
         Initializes a sparsity scheduler with a piecewise constant schedule.
 
