@@ -21,6 +21,7 @@ import torch
 from torch import distributed
 from torch import nn
 
+import nncf
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
@@ -501,7 +502,7 @@ class BaseQuantizer(nn.Module, ABC):
             y_scale, y_zero_point = get_scale_zp_from_input_low_input_high(level_low, level_high, input_low, input_high)
             possible_axes = self._possible_per_channel_dimensions()
             if len(possible_axes) > 1:
-                raise RuntimeError(
+                raise nncf.InternalError(
                     f"Impossible to determine the per-channel axis for a scale shape {self.scale_shape} - "
                     f"more than one dimension is >1"
                 )
@@ -533,7 +534,7 @@ class BaseQuantizer(nn.Module, ABC):
             if self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
                 x, y_scale, y_zero_point, axis = self._prepare_qdq_export_quantization(x)
                 return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point, axis)
-        raise RuntimeError("Unknown export mode")
+        raise nncf.InternalError("Unknown export mode")
 
     def extra_repr(self):
         return "bit={}, ch={}".format(self.num_bits, self.per_channel)

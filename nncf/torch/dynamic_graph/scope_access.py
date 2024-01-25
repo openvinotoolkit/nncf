@@ -13,6 +13,7 @@ from typing import Optional
 
 import torch.nn
 
+import nncf
 from nncf.torch.dynamic_graph.scope import Scope
 
 
@@ -26,7 +27,7 @@ def get_module_by_scope(model: torch.nn.Module, scope: Scope) -> Optional[torch.
 
         next_module = curr_module._modules.get(scope_element.calling_field_name)
         if next_module is None:
-            raise RuntimeError(
+            raise nncf.InternalError(
                 "Could not find a {} module member in {} module of scope {} during node search".format(
                     scope_element.calling_field_name, scope_element.calling_module_class_name, str(scope)
                 )

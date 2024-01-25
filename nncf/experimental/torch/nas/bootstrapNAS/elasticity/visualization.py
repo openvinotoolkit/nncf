@@ -12,6 +12,7 @@ from typing import Optional
 
 import networkx as nx
 
+import nncf
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.pruning.utils import get_input_masks
@@ -90,6 +91,6 @@ class SubnetGraph:
         try:
             propagation_graph: PTNNCFGraph = width_handler.propagation_graph
             result = propagation_graph.get_node_by_name(node_name)
-        except RuntimeError:
+        except nncf.InternalError:
             result = None
         return result

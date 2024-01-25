@@ -16,6 +16,7 @@ from typing import Dict, List, Set
 import pytest
 import torch
 
+import nncf
 from examples.torch.common.model_loader import load_model
 from nncf.common.logging.logger import NNCFDeprecationWarning
 from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
@@ -512,7 +513,7 @@ def test_match_key(desc: MatchKeyDesc, mocker, nncf_caplog):
 
     assert key_matcher._processed_keys._keys == desc.processed_keys._keys
     if desc.expects_error:
-        with pytest.raises(RuntimeError):
+        with pytest.raises(nncf.InternalError):
             key_matcher.handle_problematic_keys()
     else:
         with nncf_caplog.at_level(logging.WARNING):

@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Tuple, TypeVar
 import torch
 from torch import nn
 
+import nncf
 from nncf.api.compression import CompressionLoss
 from nncf.common.compression import BaseCompressionAlgorithmBuilder
 from nncf.common.compression import BaseCompressionAlgorithmController
@@ -166,7 +167,7 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         """
         ctrl = self._build_controller(model)
         if not isinstance(ctrl, PTCompressionAlgorithmController):
-            raise RuntimeError(
+            raise nncf.InternalError(
                 "Internal error: builder must create controller inherited from "
                 "`PTCompressionAlgorithmController` class"
             )
@@ -206,7 +207,7 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
                     f"{reason}, compressing them without tuning weights.\nFrozen layers:\n{scopes_to_print}"
                 )
             else:
-                raise RuntimeError(
+                raise nncf.InternalError(
                     f"{reason}.\n"
                     f"Please unfreeze them or put into the Ignored Scope.\n"
                     f"Frozen Layers:\n"

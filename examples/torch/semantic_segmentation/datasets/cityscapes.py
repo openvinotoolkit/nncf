@@ -15,6 +15,7 @@ from collections import OrderedDict
 from torch.utils import data
 
 import examples.torch.semantic_segmentation.utils.data as data_utils
+import nncf
 
 
 class Cityscapes(data.Dataset):
@@ -193,7 +194,7 @@ class Cityscapes(data.Dataset):
                 extension_filter=self.img_extension,
             )
         else:
-            raise RuntimeError("Unexpected dataset mode. Supported modes are: train, val and test")
+            raise nncf.ValidationError("Unexpected dataset mode. Supported modes are: train, val and test")
 
     def __getitem__(self, index):
         """
@@ -212,7 +213,7 @@ class Cityscapes(data.Dataset):
         elif self.mode.lower() == "test":
             data_path, label_path = self.test_data[index], self.test_labels[index]
         else:
-            raise RuntimeError("Unexpected dataset mode. Supported modes are: train, val and test")
+            raise nncf.ValidationError("Unexpected dataset mode. Supported modes are: train, val and test")
 
         img, label = self.loader(data_path, label_path)
 
@@ -233,4 +234,4 @@ class Cityscapes(data.Dataset):
         if self.mode.lower() == "test":
             return len(self.test_data)
 
-        raise RuntimeError("Unexpected dataset mode. Supported modes are: train, val and test")
+        raise nncf.ValidationError("Unexpected dataset mode. Supported modes are: train, val and test")

@@ -15,6 +15,7 @@ from argparse import ArgumentParser
 
 import networkx as nx
 
+import nncf
 from nncf.common.utils.dot_file_rw import read_dot_graph
 from nncf.common.utils.dot_file_rw import write_dot_graph
 
@@ -42,7 +43,7 @@ def main(argv):
                 break
 
     if start_key is None:
-        raise RuntimeError("Could not find the node with ID {} to start from!".format(args.start_id))
+        raise nncf.InternalError("Could not find the node with ID {} to start from!".format(args.start_id))
 
     for edge in nx.edge_bfs(graph, start_key, orientation="ignore"):
         from_key, to_key, _ = edge

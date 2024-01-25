@@ -13,6 +13,7 @@ from typing import Optional
 
 import onnx
 
+import nncf
 from nncf.common.logging.logger import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
@@ -46,11 +47,11 @@ def quantize_impl(
     Implementation of the `quantize()` method for the ONNX backend.
     """
     if target_device == TargetDevice.CPU_SPR:
-        raise RuntimeError("target_device == CPU_SPR is not supported.")
+        raise nncf.ValidationError("target_device == CPU_SPR is not supported.")
     if mode is not None:
         raise ValueError(f"mode={mode} is not supported")
     if model.opset_import[0].version < 10:
-        raise RuntimeError("ONNX models with opset version < 10 do not support quantization.")
+        raise nncf.ValidationError("ONNX models with opset version < 10 do not support quantization.")
     if model.opset_import[0].version < 13:
         nncf_logger.warning(
             "ONNX models with 10 < opset version < 13 do not support per-channel quantization."

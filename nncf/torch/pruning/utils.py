@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Tuple
 
 import torch
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
@@ -87,7 +88,7 @@ def _calculate_output_shape(graph: NNCFGraph, node: NNCFNode) -> Tuple[int, ...]
     elif isinstance(attrs, LinearLayerAttributes):
         shape = shape[:-1] + [attrs.out_features]
     else:
-        raise RuntimeError(f"Unexpected node type {node.node_type} is fed to _calculate_output_shape")
+        raise nncf.ValidationError(f"Unexpected node type {node.node_type} is fed to _calculate_output_shape")
     return tuple(shape)
 
 

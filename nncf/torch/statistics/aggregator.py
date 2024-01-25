@@ -27,10 +27,12 @@ from nncf.torch.tensor_statistics.algo import create_register_input_hook
 
 
 class PTStatisticsAggregator(StatisticsAggregator):
+    HOOKS_GROUP_NAME = "statistics_hooks"
+
     def collect_statistics(self, model: NNCFNetwork, graph: NNCFGraph) -> None:
         with torch.no_grad():
-            with model.nncf.temporary_clean_view() as intermediate_model:
-                super().collect_statistics(intermediate_model, graph)
+            super().collect_statistics(model, graph)
+        model.nncf.remove_hooks_group(self.HOOKS_GROUP_NAME)
 
     def _register_statistics(
         self, outputs: Dict[str, PTNNCFTensor], statistic_points: StatisticPointsContainer
@@ -52,6 +54,7 @@ class PTStatisticsAggregator(StatisticsAggregator):
                                 _statistic_point.target_point,
                                 create_register_input_hook(collector=collector),
                                 TransformationPriority.FP32_TENSOR_STATISTICS_OBSERVATION,
+                                hooks_group_name=self.HOOKS_GROUP_NAME,
                             )
                         )
 

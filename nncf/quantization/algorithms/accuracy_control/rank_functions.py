@@ -13,6 +13,7 @@ from typing import Callable, List, TypeVar
 
 import numpy as np
 
+import nncf
 from nncf.common.utils.backend import BackendType
 
 TTensor = TypeVar("TTensor")
@@ -28,7 +29,9 @@ def create_normalized_mse_func(backend: BackendType) -> Callable[[List[TTensor],
     if backend == BackendType.OPENVINO:
         return normalized_mse
 
-    raise RuntimeError(f"Could not create backend-specific implementation! {backend} backend is not supported!")
+    raise nncf.UnsupportedBackendError(
+        f"Could not create backend-specific implementation! {backend} backend is not supported!"
+    )
 
 
 def normalized_mse(ref_outputs: List[np.ndarray], approx_outputs: List[np.ndarray]) -> float:

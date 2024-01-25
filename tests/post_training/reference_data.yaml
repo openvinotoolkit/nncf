@@ -23,7 +23,7 @@ timm/crossvit_9_240_backend_ONNX:
 timm/crossvit_9_240_backend_OV:
   metric_value: 0.72812
 timm/crossvit_9_240_backend_TORCH:
-  metric_value: 0.72922
+  metric_value: 0.72816
 timm/darknet53_backend_CUDA_TORCH:
   metric_value: 0.79176
 timm/darknet53_backend_FP32:

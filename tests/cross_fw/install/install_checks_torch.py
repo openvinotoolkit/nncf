@@ -13,8 +13,12 @@ import sys
 
 import torch
 
+import nncf
+
 if len(sys.argv) != 3:
-    raise RuntimeError("Must be run with an execution type as argument (either 'cpu' or 'gpu') and package type")
+    raise nncf.ValidationError(
+        "Must be run with an execution type as argument (either 'cpu' or 'gpu') and package type"
+    )
 execution_type = sys.argv[1]
 package_type = sys.argv[2]
 
@@ -59,4 +63,4 @@ elif execution_type == "gpu":
     )
     output_tensor = BinarizedFunctionsCUDA.get("WeightBinarize_forward")(output_tensor, True)
 else:
-    raise RuntimeError(f"Invalid execution type {execution_type} (expected 'cpu' or 'gpu')!")
+    raise nncf.ValidationError(f"Invalid execution type {execution_type} (expected 'cpu' or 'gpu')!")

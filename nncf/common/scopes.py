@@ -12,6 +12,7 @@
 import re
 from typing import List, Optional, Set, Union
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
@@ -137,5 +138,5 @@ def check_scopes_in_graph(
         )
 
         if validate_scopes:
-            raise RuntimeError(err_message)
+            raise nncf.ValidationError(err_message)
         nncf_logger.info(err_message)

@@ -15,6 +15,8 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+import nncf
+
 
 def is_in_backend_directory(file_path: Path, backend: str):
     return backend in file_path.parts
@@ -35,7 +37,7 @@ CHECKS_FILE_PATH_BELONGS_TO_BACKEND = [is_in_backend_directory, is_file_name_sta
 
 def main(target_backend: str):
     if target_backend not in BACKENDS + [COMMON_BACKEND_NAME]:
-        raise RuntimeError(
+        raise nncf.UnsupportedBackendError(
             f"Wrong backend passed: {target_backend}. Please choose one of available backends: {BACKENDS}"
         )
 

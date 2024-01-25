@@ -12,6 +12,7 @@
 from math import inf
 from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
 
+import nncf
 from nncf import Dataset
 from nncf.common.factory import EngineFactory
 from nncf.common.factory import ModelTransformerFactory
@@ -88,7 +89,7 @@ class FastBiasCorrection(Algorithm):
         self._algorithm_key = f"FBC_{hash(self)}"
 
         if self.apply_for_all_nodes:
-            raise RuntimeError("FastBiasCorrection algorithm does not support apply_for_all_nodes=True yet")
+            raise nncf.InternalError("FastBiasCorrection algorithm does not support apply_for_all_nodes=True yet")
 
     @property
     def available_backends(self) -> List[BackendType]:
@@ -116,7 +117,7 @@ class FastBiasCorrection(Algorithm):
 
             self._backend_entity = PTFastBiasCorrectionAlgoBackend()
         else:
-            raise RuntimeError(
+            raise nncf.UnsupportedBackendError(
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
             )
 

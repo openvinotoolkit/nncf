@@ -18,6 +18,7 @@ from typing import Dict, List, Optional, Set, Tuple
 import networkx as nx
 import pytest
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
@@ -141,7 +142,7 @@ class TestQuantizerPropagationStateGraph:
             else:
                 assert not edge_data[QPSG.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(nncf.InternalError):
             _ = mock_qp_graph.add_propagating_quantizer(
                 ref_qconf_list, InsertionPointGraph.get_post_hook_node_key(target_node_key)
             )

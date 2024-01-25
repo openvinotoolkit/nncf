@@ -12,6 +12,7 @@
 import copy
 from typing import Dict
 
+import nncf
 from nncf import ModelType
 from nncf import QuantizationPreset
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -270,7 +271,7 @@ def generate_tests_scope() -> Dict[str, dict]:
             model_param["backend"] = backend
             model_param.pop("backends")
             if test_case_name in tests_scope:
-                raise RuntimeError(f"{test_case_name} already in tests_scope")
+                raise nncf.ValidationError(f"{test_case_name} already in tests_scope")
             tests_scope[test_case_name] = model_param
     return tests_scope
 

@@ -13,6 +13,7 @@ from copy import deepcopy
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+import nncf
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.utils.api_marker import api
@@ -193,7 +194,9 @@ class QuantizationConstraints:
         """
         for attr_name in kwargs:
             if not hasattr(QuantizationConstraints.REF_QCONF_OBJ, attr_name):
-                raise RuntimeError("Invalid constraint - QuantizerConfig has no attribute '{}'".format(attr_name))
+                raise nncf.ValidationError(
+                    "Invalid constraint - QuantizerConfig has no attribute '{}'".format(attr_name)
+                )
         self.qconf_attr_vs_constraint_dict = kwargs
 
     def apply_constraints_to(self, qconfig: QuantizerConfig) -> QuantizerConfig:

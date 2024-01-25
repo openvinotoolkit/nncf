@@ -14,6 +14,7 @@ from typing import List, Optional, Type
 
 import tensorflow as tf
 
+import nncf
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -65,7 +66,7 @@ class TFLayerMetatype(OperatorMetatype):
                 else:
                     matches.append(subtype)
         if len(matches) > 1:
-            raise RuntimeError("Multiple subtypes match operator call - cannot determine single subtype.")
+            raise nncf.InternalError("Multiple subtypes match operator call - cannot determine single subtype.")
         if not matches:
             return None
         return matches[0]
