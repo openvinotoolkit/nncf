@@ -1,2 +1,2 @@
 pycocotools
-openvino-dev==2023.2
+openvino-dev==2023.3

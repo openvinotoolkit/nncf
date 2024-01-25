@@ -18,6 +18,7 @@ from typing import Any, List, Type, Union
 import numpy as np
 import pytest
 
+import nncf
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
@@ -582,7 +583,7 @@ class TemplateTestStatisticsAggregator:
         elif test_params.collector_type == BCStatsCollectors.RAW:
             tensor_collector = algo_backend.raw_statistic_collector(len(dataset_samples))
         else:
-            raise RuntimeError()
+            raise nncf.InvalidCollectorTypeError(f"Invalid collector type: {test_params.collector_type}")
 
         target_point = self.get_target_point(test_params.target_type)
 
@@ -616,7 +617,7 @@ class TemplateTestStatisticsAggregator:
                 ret_val = stat.values
                 test_params.ref_values = dataset_samples
             else:
-                raise RuntimeError()
+                raise nncf.InvalidCollectorTypeError(f"Invalid collector type: {test_params.collector_type}")
 
             for val, ref in zip(ret_val, test_params.ref_values):
                 if isinstance(ref, np.ndarray):
@@ -921,6 +922,6 @@ class TemplateTestStatisticsAggregator:
 
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(nncf.ValidationError) as e:
             statistics_aggregator.collect_statistics(model, graph)
             assert "Batch size > length of dataset or batch size > stat_subset_size." in e.info

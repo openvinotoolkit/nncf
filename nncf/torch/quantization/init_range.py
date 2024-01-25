@@ -16,6 +16,7 @@ from typing import Callable, Dict, List, Tuple
 import numpy as np
 import torch
 
+import nncf
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.initialization.range import RangeInitConfig
@@ -157,7 +158,7 @@ class StatCollectorGenerator:
         if num_samples_to_collect_override is not None:
             num_samples = num_samples_to_collect_override
         if init_config.init_type not in RANGE_INIT_TYPES_VS_DESCRIPTIONS:
-            raise RuntimeError("Unknown range init type: {}".format(init_config.init_type))
+            raise nncf.InternalError("Unknown range init type: {}".format(init_config.init_type))
 
         use_per_sample_stats = collector_params.use_per_sample_stats(init_config.init_type == "mixed_min_max")
         reduction_axes, aggregation_axes = collector_params.get_reduction_aggregation_axes(use_per_sample_stats)

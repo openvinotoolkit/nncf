@@ -13,6 +13,7 @@ from abc import abstractmethod
 from itertools import islice
 from typing import Any, Dict, List, Optional, TypeVar
 
+import nncf
 from nncf.common import factory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -89,7 +90,7 @@ class StatisticsAggregator(ABC):
             self._get_iterations_num(calibration_samples_num) if calibration_samples_num is not None else None
         )
         if iterataions_num is not None and iterataions_num == 0:
-            raise ValueError("Batch size > length of dataset or batch size > stat_subset_size.")
+            raise nncf.ValidationError("Batch size > length of dataset or batch size > stat_subset_size.")
         with track(total=calibration_samples_num, description="Statistics collection") as pbar:
             for input_data in islice(self.dataset.get_inference_data(), iterataions_num):
                 outputs = engine.infer(input_data)

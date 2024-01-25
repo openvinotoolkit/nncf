@@ -12,6 +12,7 @@
 
 from typing import TypeVar
 
+import nncf
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
@@ -36,4 +37,4 @@ def strip(model: TModel, do_copy: bool = True) -> TModel:
 
         return strip_pt(model, do_copy)
 
-    raise RuntimeError(f"Method `strip` does not support for {model_backend.value} backend.")
+    raise nncf.UnsupportedBackendError(f"Method `strip` does not support for {model_backend.value} backend.")

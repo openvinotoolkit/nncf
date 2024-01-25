@@ -14,6 +14,7 @@ from typing import Dict, List, Set, Tuple
 
 import torch
 
+import nncf
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api
@@ -140,7 +141,7 @@ class ProcessedKeys:
         if error_msgs:
             error_msg = "Error(s) when loading model parameters:\n\t{}".format("\n\t".join(error_msgs))
             if is_resume:
-                raise RuntimeError(error_msg)
+                raise nncf.InternalError(error_msg)
             nncf_logger.error(error_msg)
 
 

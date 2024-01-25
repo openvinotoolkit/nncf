@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
 from typing import Dict, List
 
 import numpy as np
@@ -21,15 +22,12 @@ from nncf.openvino.graph.model_utils import remove_fq_from_inputs
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.quantization.algorithms.bias_correction.openvino_backend import OVBiasCorrectionAlgoBackend
-from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.native.common import compare_nncf_graphs
-from tests.openvino.native.common import get_openvino_version
+from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.post_training.test_templates.helpers import ConvTestModel
 from tests.post_training.test_templates.helpers import MultipleConvTestModel
 from tests.post_training.test_templates.helpers import SplittedModel
 from tests.post_training.test_templates.test_bias_correction import TemplateTestBCAlgorithm
-
-OV_VERSION = get_openvino_version()
 
 
 class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
@@ -72,14 +70,8 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
 
     @staticmethod
     def get_ref_path(suffix: str) -> str:
-        return (
-            OPENVINO_NATIVE_TEST_ROOT
-            / "data"
-            / OV_VERSION
-            / "reference_graphs"
-            / "quantized"
-            / "subgraphs"
-            / f"{suffix}.dot"
+        return get_actual_reference_for_current_openvino(
+            Path("reference_graphs") / "quantized" / "subgraphs" / f"{suffix}.dot"
         )
 
     @staticmethod

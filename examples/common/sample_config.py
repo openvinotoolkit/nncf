@@ -15,6 +15,7 @@ from pathlib import Path
 import jstyleson as json
 from addict import Dict
 
+import nncf
 from nncf import NNCFConfig
 from nncf.common.utils.os import safe_open
 
@@ -136,7 +137,7 @@ def _embed_nncf_config(args, sample_config: SampleConfig) -> SampleConfig:
 
 def _fail_if_training_with_eval_only_config(sample_config: SampleConfig):
     if sample_config.eval_only and "train" in sample_config.mode:
-        raise RuntimeError(EVAL_ONLY_ERROR_TEXT)
+        raise nncf.ValidationError(EVAL_ONLY_ERROR_TEXT)
 
 
 def create_sample_config(args, parser, **kwargs) -> SampleConfig:

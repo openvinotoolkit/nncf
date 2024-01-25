@@ -24,6 +24,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import examples.torch.semantic_segmentation.utils.data as data_utils
 import examples.torch.semantic_segmentation.utils.transforms as JT
+import nncf
 from examples.common.paths import configure_paths
 from examples.common.sample_config import create_sample_config
 from examples.torch.common.argparser import get_common_argument_parser
@@ -147,7 +148,7 @@ def get_dataset(dataset_name: str) -> torch.utils.data.Dataset:
         from examples.torch.semantic_segmentation.datasets import Mapillary as dataset
     else:
         # Should never happen...but just in case it does
-        raise RuntimeError('"{0}" is not a supported dataset.'.format(dataset_name))
+        raise nncf.UnsupportedDatasetError('"{0}" is not a supported dataset.'.format(dataset_name))
     return dataset
 
 

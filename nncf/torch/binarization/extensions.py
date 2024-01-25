@@ -14,6 +14,7 @@ import subprocess
 
 import torch
 
+import nncf
 from nncf import nncf_logger
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
 from nncf.torch.binarization.reference import ReferenceBinarizedFunctions
@@ -98,7 +99,7 @@ class BinarizedFunctionsCUDALoader(ExtensionLoader):
             raise e
         except (subprocess.CalledProcessError, OSError, RuntimeError) as e:
             assert torch.cuda.is_available()
-            raise RuntimeError(
+            raise nncf.InstallationError(
                 "CUDA is available for PyTorch, but NNCF could not compile "
                 "GPU binarization extensions. Make sure that you have installed CUDA development "
                 "tools (see https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html for "

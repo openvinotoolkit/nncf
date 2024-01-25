@@ -11,6 +11,7 @@
 
 import pytest
 
+import nncf
 from nncf import NNCFConfig
 from nncf.common.logging import nncf_logger
 from nncf.config.structures import QuantizationRangeInitArgs
@@ -242,7 +243,7 @@ def test_frozen_layers(_nncf_caplog, params):
     register_bn_adaptation_init_args(config)
 
     if params.raising_error:
-        with pytest.raises(RuntimeError):
+        with pytest.raises(nncf.InternalError):
             __, _ = create_compressed_model_and_algo_for_test(model, config)
     else:
         __, _ = create_compressed_model_and_algo_for_test(model, config)

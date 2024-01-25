@@ -13,6 +13,7 @@ from typing import Iterable, List, Optional, Tuple, Union
 
 import torch
 
+import nncf
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -21,6 +22,7 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.tensor.definitions import TensorDataType
 from nncf.experimental.tensor.tensor import Tensor
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
@@ -51,7 +53,7 @@ def get_module_by_name(module_name: str, model: torch.nn.Module) -> torch.nn.Mod
                 curr_module = child_module
                 break
         else:
-            raise RuntimeError(f"Could not find the {module_name} module in the model.")
+            raise nncf.ModuleNotFoundError(f"Could not find the {module_name} module in the model.")
     return curr_module
 
 
@@ -72,7 +74,7 @@ def get_weight_node(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCF
         if edge.input_port_id == weight_port_id:
             weight_node = find_weight_node_in_constant_subgraph(prev_node, graph)
             if weight_node is None:
-                raise RuntimeError("Could not find a constant node in the model graph.")
+                raise nncf.InternalError("Could not find a constant node in the model graph.")
             return weight_node
 
 
@@ -176,7 +178,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         module = get_module_by_name(module_name, model)
         weight = getattr(module, weight_attr_name)
         if weight is None or not isinstance(weight, torch.nn.Parameter):
-            raise RuntimeError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
+            raise nncf.InternalError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
 
         return Tensor(weight)
 
@@ -200,13 +202,16 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             module = get_module_by_name(module_name, model)
             weight = getattr(module, weight_attr_name)
             if weight is None or not isinstance(weight, torch.nn.Parameter):
-                raise RuntimeError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
+                raise nncf.InternalError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
 
             # calculates compressed weights and decompression parameters
             compressed_weight = compress_weight(Tensor(weight), wc_params.reduction_axis, compression_config)
 
+            # pack compressed tensor
+            packed_tensor = compressed_weight.tensor.astype(TensorDataType.uint8)
+
             # sets compressed tensor
-            compressed_parameter = torch.nn.Parameter(compressed_weight.tensor.data, requires_grad=False)
+            compressed_parameter = torch.nn.Parameter(packed_tensor.data, requires_grad=False)
             setattr(module, weight_attr_name, compressed_parameter)
 
             consumer_nodes = graph.get_next_nodes(weight_node)
@@ -217,8 +222,11 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                         if id(param) == id(weight):
                             setattr(c_module, name, compressed_parameter)
 
+            # pack zero point tensor
+            packed_zero_point = compressed_weight.zero_point.astype(TensorDataType.uint8)
+
             # creates weight decompressor
-            decompressor = WeightsDecompressor(compressed_weight.scale.data, compressed_weight.zero_point.data)
+            decompressor = WeightsDecompressor(compressed_weight.scale.data, packed_zero_point.data)
 
             # registry weight decompression module in the model
             decompressor_name = f"weights_decompressor_{weight_node.node_name.replace('.', '_')}"

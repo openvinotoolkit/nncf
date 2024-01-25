@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Type
 
 import onnx
 
+import nncf
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
@@ -47,7 +48,7 @@ class ONNXOpMetatype(OperatorMetatype):
             if subtype.matches(model, node):
                 matches.append(subtype)
         if len(matches) > 1:
-            raise RuntimeError("Multiple subtypes match operator call - cannot determine single subtype.")
+            raise nncf.InternalError("Multiple subtypes match operator call - cannot determine single subtype.")
         if not matches:
             return None
         return matches[0]

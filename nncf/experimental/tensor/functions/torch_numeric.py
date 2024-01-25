@@ -11,6 +11,7 @@
 
 from typing import Any, Callable, List, Optional, Tuple, Union
 
+import numpy as np
 import torch
 
 from nncf.experimental.tensor import TensorDataType
@@ -189,6 +190,26 @@ def _(a: torch.Tensor, axis: Union[int, Tuple[int, ...]] = None, keepdims: bool 
 @numeric.round.register(torch.Tensor)
 def _(a: torch.Tensor, decimals=0) -> torch.Tensor:
     return torch.round(a, decimals=decimals)
+
+
+@numeric.quantile.register(torch.Tensor)
+def _(
+    a: torch.Tensor,
+    q: Union[float, List[float]],
+    axis: Optional[Union[int, Tuple[int]]] = None,
+    keepdims: Optional[bool] = None,
+) -> torch.Tensor:
+    device = a.device
+    # See https://github.com/pytorch/pytorch/issues/61582
+    # https://github.com/pytorch/pytorch/issues/64947
+    if a.numel() <= 16_000_000 and isinstance(axis, int) and a.dtype in [torch.float32, torch.float64]:
+        return torch.quantile(
+            a,
+            torch.tensor(q, dtype=a.dtype, device=a.device),
+            axis,
+            keepdims,
+        ).type(torch.float64)
+    return torch.tensor(np.quantile(a.detach().cpu().numpy(), q=q, axis=axis, keepdims=keepdims)).to(device)
 
 
 @numeric._binary_op_nowarn.register(torch.Tensor)

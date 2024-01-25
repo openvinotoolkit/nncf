@@ -383,6 +383,29 @@ def round(a: Tensor, decimals=0) -> Tensor:
 
 @functools.singledispatch
 @tensor_guard
+def quantile(
+    a: Tensor,
+    q: Union[float, List[float]],
+    axis: Optional[Union[int, Tuple[int]]] = None,
+    keepdims: Optional[bool] = None,
+) -> Tensor:
+    """
+    Compute the quantile(s) of the data along the specified axis.
+
+    :param a: Given tensor.
+    :params q: Quantile or sequence of quantiles to compute, which must be between
+        0 and 1 inclusive.
+    :param axis: Axis or axes along which the quantiles are computed.
+    :param keepdims: If True, the axes which are reduced are left in the result
+        as dimensions with size one.
+    :return: An tensor with quantiles, the first axis of the result corresponds
+        to the quantiles, other axes of the result correspond to the quantiles values.
+    """
+    return Tensor(quantile(a.data, q, axis, keepdims))
+
+
+@functools.singledispatch
+@tensor_guard
 def _binary_op_nowarn(a: Tensor, b: Union[Tensor, float], operator_fn: Callable) -> Tensor:
     """
     Applies a binary operation with disable warnings.

@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 import numpy as np
 
+import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -137,7 +138,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_point: ONNXTargetPoint,
         parameters: FakeConvertParameters,
     ) -> TransformationCommand:
-        raise RuntimeError("FakeConvert insertion not implemented in ONNX backend!")
+        raise nncf.InternalError("FakeConvert insertion not implemented in ONNX backend!")
 
     @staticmethod
     def unify_statistics(
@@ -184,11 +185,11 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             [ONNXMinMaxTensorStatistic.MIN_STAT, ONNXMinMaxTensorStatistic.MAX_STAT],
         ):
             if params.statistics_type not in ONNX_REDUCERS_MAP:
-                raise RuntimeError(
+                raise nncf.InternalError(
                     f"Statistic type: {params.statistics_type} is not supported for ONNX PTQ backend yet."
                 )
             if params.aggregator_type not in AGGREGATORS_MAP:
-                raise RuntimeError(
+                raise nncf.InternalError(
                     f"Aggregator type: {params.aggregator_type} is not supported for ONNX PTQ backend yet."
                 )
             kwargs = {"reduction_axes": reduction_axes, "inplace": False}

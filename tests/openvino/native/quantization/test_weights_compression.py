@@ -28,6 +28,7 @@ from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXE
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.scopes import IgnoredScope
+from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.models import GatherAndMatmulShareData
 from tests.openvino.native.models import GatherWithTwoReductionAxes
 from tests.openvino.native.models import IdentityMatmul
@@ -198,7 +199,9 @@ def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
             check_fn = check_fn_per_node_map[op_name]
             actual_stats[op_name] = check_fn(op)
 
-    ref_stats_path = REFERENCE_SCALES_DIR / f"IntegerModel_compressed_weights_{mode.value}.json"
+    ref_stats_path = get_actual_reference_for_current_openvino(
+        REFERENCE_SCALES_DIR / f"IntegerModel_compressed_weights_{mode.value}.json"
+    )
 
     if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
         dump_to_json(ref_stats_path, actual_stats)

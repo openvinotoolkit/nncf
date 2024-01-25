@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import nncf
+
 
 def get_built_model(model, config):
     if not model.built:
@@ -18,7 +20,7 @@ def get_built_model(model, config):
         else:
             sample_size = input_info[0].get("sample_size", None) if input_info else None
         if not sample_size:
-            raise RuntimeError("sample_size must be provided in configuration file")
+            raise nncf.ValidationError("sample_size must be provided in configuration file")
         model.build([None] + list(sample_size[1:]))
 
     return model

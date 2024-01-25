@@ -11,6 +11,7 @@
 
 import numpy as np
 
+from nncf.experimental.tensor import TensorDataType
 from tests.shared.test_templates.template_test_nncf_tensor import TemplateTestNNCFTensorOperators
 
 
@@ -18,3 +19,11 @@ class TestNPNNCFTensorOperators(TemplateTestNNCFTensorOperators):
     @staticmethod
     def to_tensor(x):
         return np.array(x)
+
+    @staticmethod
+    def cast_to(x: np.ndarray, dtype: TensorDataType) -> np.ndarray:
+        if dtype is TensorDataType.float32:
+            return x.astype(np.float32)
+        if dtype is TensorDataType.float16:
+            return x.astype(np.float16)
+        raise NotImplementedError

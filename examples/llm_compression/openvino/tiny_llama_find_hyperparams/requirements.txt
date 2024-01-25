@@ -1,0 +1,6 @@
+datasets
+who_what_benchmark @ git+https://github.com/andreyanufr/who_what_benchmark.git
+numpy>=1.23.5
+openvino-nightly==2024.0.0.dev20231221
+optimum-intel[openvino]
+transformers>=4.35.2

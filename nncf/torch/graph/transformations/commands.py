@@ -21,6 +21,8 @@ from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.commands import TransformationType
 
+DEFAULT_HOOKS_GROUP_NAME = "default_hooks_group"
+
 
 class PTTargetPointStateNames:
     TARGET_NODE_NAME = "target_node_name"
@@ -136,10 +138,12 @@ class PTInsertionCommand(PTTransformationCommand):
         point: PTTargetPoint,
         fn: Callable,
         priority: TransformationPriority = TransformationPriority.DEFAULT_PRIORITY,
+        hooks_group_name: str = DEFAULT_HOOKS_GROUP_NAME,
     ):
         super().__init__(TransformationType.INSERT, point)
         self.fn: Callable = fn
         self.priority: TransformationPriority = priority
+        self.hooks_group_name = hooks_group_name
 
     def requires_graph_rebuild(self):
         # Rebuild graph when adding quantization nodes.
@@ -153,12 +157,14 @@ class PTSharedFnInsertionCommand(PTTransformationCommand):
         fn: Callable,
         op_unique_name: str,
         priority: TransformationPriority = TransformationPriority.DEFAULT_PRIORITY,
+        hooks_group_name: str = DEFAULT_HOOKS_GROUP_NAME,
     ):
         super().__init__(TransformationType.INSERT, None)
         self.target_points = target_points
         self.fn = fn
         self.op_name = op_unique_name
         self.priority = priority
+        self.hooks_group_name = hooks_group_name
 
     def requires_graph_rebuild(self):
         return True
@@ -173,9 +179,11 @@ class PTQuantizerInsertionCommand(PTTransformationCommand):
         self,
         point: PTTargetPoint,
         quantizer: "BaseQuantizer",  # noqa: F821
+        hooks_group_name: str = DEFAULT_HOOKS_GROUP_NAME,
     ):
         super().__init__(TransformationType.INSERT, point)
         self.quantizer = quantizer
+        self.hooks_group_name = hooks_group_name
 
     def requires_graph_rebuild(self):
         return True
