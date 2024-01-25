@@ -9,6 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+from pathlib import Path
+
+from pytest import Config
+
+
 def pytest_addoption(parser):
     parser.addoption("--data", action="store", help="Data directory")
     parser.addoption("--output", action="store", default="./tmp/", help="Directory to store artifacts")
@@ -22,3 +28,11 @@ def pytest_addoption(parser):
         action="store_true",
         help="Add additional columns to reports.csv",
     )
+
+
+def pytest_configure(config: Config):
+    data = config.getoption("--data", None)
+    if data is not None:
+        os.environ["HF_HOME"] = str(Path(data) / 'hf_cache')
+
+
