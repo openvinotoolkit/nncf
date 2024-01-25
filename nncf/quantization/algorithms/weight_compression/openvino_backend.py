@@ -148,7 +148,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
             weight = Tensor(get_const_value(const_node))
             original_shape = weight.shape
-            compressed_weight = compress_weight(weight, wc_params.reduction_axis, compression_config)
+            compressed_weight = compress_weight(weight, wc_params.reduction_axes, compression_config)
 
             compressed_const = opset.constant(
                 compressed_weight.tensor.data, dtype=compression_dtype, name=const_node_name

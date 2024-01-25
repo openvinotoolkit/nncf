@@ -102,8 +102,8 @@ class DataFreeCriterion(MixedPrecisionCriterion):
             weight_param.node_with_weight, weight_param.weight_port_id, self._model, self._graph
         )
         backup_config = weight_param.compression_config
-        reduction_axis = weight_param.reduction_axis
-        int_error = get_integer_quantization_error(weight, reduction_axis, backup_config)
+        reduction_axes = weight_param.reduction_axes
+        int_error = get_integer_quantization_error(weight, reduction_axes, backup_config)
         eps = fns.finfo(weight).eps
         return 1 / (int_error + eps)
 
@@ -168,14 +168,14 @@ class HAWQCriterion(DataBasedCriterion):
             weight_param.node_with_weight, weight_param.weight_port_id, self._model, self._graph
         )
         backup_config = weight_param.compression_config
-        reduction_axis = weight_param.reduction_axis
+        reduction_axes = weight_param.reduction_axes
 
         orig_shape = weight.shape
 
         if weight.dtype != TensorDataType.float32:
             weight = weight.astype(TensorDataType.float32)
 
-        compressed_weights, scale, zero_point = do_integer_quantization(weight, reduction_axis, backup_config)
+        compressed_weights, scale, zero_point = do_integer_quantization(weight, reduction_axes, backup_config)
         decompressed_weight = (compressed_weights - zero_point).astype(weight.dtype) * scale
         decompressed_weight = decompressed_weight.reshape(orig_shape)
         return fns.linalg.norm(decompressed_weight - weight, ord="fro").item()
