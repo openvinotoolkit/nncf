@@ -89,8 +89,8 @@ class PostTrainingQuantization(Algorithm):
             backends = backends.intersection(algorithm.available_backends)
         return list(backends)
 
-    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
-        return self._pipeline.get_statistic_points_for_step(0, model, graph)
+    def get_statistic_points(self, model: TModel, graph: NNCFGraph, dataset: Dataset) -> StatisticPointsContainer:
+        return self._pipeline.get_statistic_points_for_step(0, model, graph, dataset)
 
     def apply(
         self,

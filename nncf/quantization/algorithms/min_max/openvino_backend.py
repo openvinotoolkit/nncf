@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
 
 import numpy as np
 
@@ -18,7 +18,6 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
-from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
@@ -138,33 +137,34 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return OVMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     @staticmethod
-    def _get_activation_shape(target_point: OVTargetPoint, nncf_graph: NNCFGraph, node: NNCFNode) -> List[int]:
+    def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: OVTargetPoint) -> List[int]:
+        if target_point.is_weight_target_point():
+            return node.layer_attributes.constant_attributes[target_point.port_id]["shape"]
         if target_point.type == TargetType.PRE_LAYER_OPERATION:
             return nncf_graph.get_input_edges(node)[target_point.port_id].tensor_shape
         elif target_point.type == TargetType.POST_LAYER_OPERATION:
             return nncf_graph.get_output_edges(node)[target_point.port_id].tensor_shape
-        else:
-            raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
+        raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
+
+    @staticmethod
+    def get_channel_axes(
+        node: NNCFNode, target_point: OVTargetPoint, is_weight: bool, is_per_channel: bool
+    ) -> Tuple[int]:
+        if not is_per_channel:
+            return ()
+        if is_weight:
+            return get_weight_channel_axes(node)
+        return (1,)
 
     @staticmethod
     def get_statistic_collector(
         range_estimator_params: RangeEstimatorParameters,
-        nncf_graph: NNCFGraph,
-        target_point: OVTargetPoint,
-        collector_params: RangeInitCollectorParams,
+        use_abs_max: bool,
+        reduction_axes: Optional[Tuple[int]],
+        aggregation_axes: Optional[Tuple[int]],
         inplace: bool,
-        num_samples: int = None,
+        num_samples: Optional[int] = None,
     ) -> TensorCollector:
-        node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        if target_point.is_weight_target_point():
-            assert isinstance(node.layer_attributes, OVLayerAttributes)
-            shape = node.layer_attributes.constant_attributes[target_point.port_id]["shape"]
-            channel_axes = get_weight_channel_axes(node)
-        else:
-            shape = OVMinMaxAlgoBackend._get_activation_shape(target_point, nncf_graph, node)
-            channel_axes = (1,)
-        reduction_axes, aggregation_axes = collector_params.get_reduction_aggregation_axes(shape, channel_axes)
-
         collector = TensorCollector(OVMinMaxTensorStatistic)
         for params, container_key in zip(
             [range_estimator_params.min, range_estimator_params.max],
@@ -187,7 +187,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 kwargs.update({"quantile": [quantile]})
             # TODO(dlyakhov): merge two quantile aggregators in one
             statistic_type = params.statistics_type
-            if collector_params.use_abs_max and statistic_type == StatisticsType.MAX:
+            if use_abs_max and statistic_type == StatisticsType.MAX:
                 statistic_type = StatisticsType.ABS_MAX
             reducer = OV_REDUCERS_MAP[statistic_type](**kwargs)
 

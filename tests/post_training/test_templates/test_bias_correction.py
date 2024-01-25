@@ -184,7 +184,7 @@ class TemplateTestBCAlgorithm:
         graph = NNCFGraphFactory.create(model)
 
         bc_algo = self.get_bias_correction_algorithm()
-        bc_algo.get_statistic_points(model, graph)
+        bc_algo.get_statistic_points(model, graph, None)
 
         collected_stat_inputs_map = getattr(bc_algo, "_collected_stat_inputs_map")
         assert collected_stat_inputs_map == ref_stat_inputs_map

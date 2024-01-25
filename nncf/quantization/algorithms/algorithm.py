@@ -54,11 +54,12 @@ class Algorithm(ABC):
         """
 
     @abstractmethod
-    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
+    def get_statistic_points(self, model: TModel, graph: NNCFGraph, dataset: Dataset) -> StatisticPointsContainer:
         """
         Returns statistic points, for which StatisticsCollector should collect statistics.
 
         :param model: Model for statistics collection.
         :param graph: Model graph.
+        :param dataset: A representative dataset for the calibration process.
         :return: Statistic points, for which StatisticsCollector should collect statistics.
         """

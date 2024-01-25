@@ -321,7 +321,7 @@ class FastBiasCorrection(Algorithm):
         bias_shift = fns.stack(output_fp) - q_outputs
         return bias_shift
 
-    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
+    def get_statistic_points(self, model: TModel, graph: NNCFGraph, dataset: Dataset) -> StatisticPointsContainer:
         self._set_backend_entity(model)
         nodes_with_bias = [
             node for node in graph.get_all_nodes() if self._backend_entity.is_node_with_bias(node, graph)

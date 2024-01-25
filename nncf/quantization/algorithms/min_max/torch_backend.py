@@ -22,7 +22,6 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
-from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
@@ -157,18 +156,30 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return PTMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     @staticmethod
+    def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: PTTargetPoint) -> List[int]:
+        if target_point.is_weight_target_point():
+            return node.layer_attributes.get_weight_shape()
+        return nncf_graph.get_input_shape_for_insertion_point(target_point)
+
+    @staticmethod
+    def get_channel_axes(
+        node: NNCFNode, target_point: PTTargetPoint, is_weight: bool, is_per_channel: bool
+    ) -> Tuple[int]:
+        if not is_per_channel:
+            return ()
+        if is_weight:
+            return (node.layer_attributes.get_target_dim_for_compression(),)
+        return (1,)
+
+    @staticmethod
     def get_statistic_collector(
         range_estimator_params: RangeEstimatorParameters,
-        nncf_graph: NNCFGraph,
-        target_point: PTTargetPoint,
-        collector_params: RangeInitCollectorParams,
+        use_abs_max: bool,
+        reduction_axes: Optional[Tuple[int]],
+        aggregation_axes: Optional[Tuple[int]],
         inplace: bool,
-        num_samples: int = None,
+        num_samples: Optional[int] = None,
     ) -> TensorCollector:
-        input_shape, _, channel_idx = PTMinMaxAlgoBackend._get_input_scale_shape(
-            nncf_graph, target_point, collector_params.is_per_channel
-        )
-        reduction_axes, aggregation_axes = collector_params.get_reduction_aggregation_axes(input_shape, (channel_idx,))
         collector = TensorCollector(PTMinMaxTensorStatistic)
         for params, container_key in zip(
             [range_estimator_params.min, range_estimator_params.max],
@@ -193,7 +204,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                     quantile = 1 - params.quantile_outlier_prob
                 reducer = PT_REDUCERS_MAP[statistic_type](reduction_axes=reduction_axes, quantile=[quantile])
             else:
-                if collector_params.use_abs_max and statistic_type == StatisticsType.MAX:
+                if use_abs_max and statistic_type == StatisticsType.MAX:
                     statistic_type = StatisticsType.ABS_MAX
                 reducer = PT_REDUCERS_MAP[statistic_type](reduction_axes=reduction_axes)
 

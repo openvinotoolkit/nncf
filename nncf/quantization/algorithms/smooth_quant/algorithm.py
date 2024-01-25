@@ -223,7 +223,7 @@ class SmoothQuant(Algorithm):
             statistics_for_node.append(tensor_collector.get_statistics()[STATISTIC_BRANCH_KEY])
         return statistics_for_node
 
-    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
+    def get_statistic_points(self, model: TModel, graph: NNCFGraph, dataset: Dataset) -> StatisticPointsContainer:
         statistic_container = StatisticPointsContainer()
 
         self._set_backend_entity(model)

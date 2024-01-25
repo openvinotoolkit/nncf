@@ -208,31 +208,44 @@ class RangeInitCollectorParams:
     def use_means_of_maxs(self) -> bool:
         return not self._is_weights and not self._is_per_channel
 
+    def _get_reduction_axes(
+        self, shape_to_reduce: List[int], quantization_axes: Union[Tuple[int], List[int]], aggregation_axes: List[int]
+    ):
+        """
+        TODO
+
+        :param shape_to_reduce:
+        :param quantization_axes:
+        :param aggregation_axes:
+        :return:
+        """
+        axes_to_keep = set(el - 1 for el in aggregation_axes if el != 0)
+        axes_to_keep.update(quantization_axes)
+        return get_reduction_axes(axes_to_keep, shape_to_reduce)
+
+    def _get_aggregation_axes(self, is_per_sample: bool) -> Tuple[int]:
+        """
+        TODO
+
+        :param bool is_per_sample: _description_
+        :return Tuple[int]: _description_
+        """
+        return (0, 1) if is_per_sample else (0,)
+
     def get_reduction_aggregation_axes(
-        self, shape_to_reduce: Union[Tuple[int], List[int]], quantization_axes: Union[Tuple[int], List[int]]
+        self,
+        shape_to_reduce: Union[Tuple[int], List[int]],
+        quantization_axes: Union[Tuple[int], List[int]],
+        is_per_sample: bool,
     ) -> Tuple[ReductionAxes, AggregationAxes]:
         """
         Calculates the reduction axes, aggregation axes for the tensor.
 
         :param shape_to_reduce: Shape of the tensor.
         :param quantization_axes: Quantization axes if per-channel quantization.
+        :param is_per_sample: Whether to calculate statistics per-sample (aggregate batch axis)
         :return: Reduction axes and aggregation axes.
         """
-        if self.is_weights:
-            aggregation_axes = (0,)
-            if self.is_per_channel:
-                reduction_axes = get_reduction_axes(quantization_axes, shape_to_reduce)
-            else:
-                reduction_axes = tuple(range(len(shape_to_reduce)))
-        else:
-            batch_axis = 0
-            aggregation_axes = (batch_axis, *quantization_axes)
-            if self.is_per_channel:
-                # Batch and chanel axes should not be reduced in per-channel mode.
-                # TODO (l-bat): Disable quantizer propagation through layout changing operations
-                reduction_axes = get_reduction_axes(aggregation_axes, shape_to_reduce)
-            else:
-                # Batch should not be reduced.
-                reduction_axes = get_reduction_axes((batch_axis,), shape_to_reduce)
-
+        aggregation_axes = self._get_aggregation_axes(is_per_sample)
+        reduction_axes = self._get_reduction_axes(shape_to_reduce, quantization_axes, aggregation_axes)
         return reduction_axes, aggregation_axes

@@ -62,7 +62,7 @@ def quantize_model(ov_model, q_params):
 
     min_max_algo = MinMaxQuantization(subset_size=1, **q_params)
     statistics_aggregator = OVStatisticsAggregator(dataset)
-    statistic_points = min_max_algo.get_statistic_points(ov_model, graph)
+    statistic_points = min_max_algo.get_statistic_points(ov_model, graph, dataset)
     statistics_aggregator.register_statistic_points(statistic_points)
     statistics_aggregator.collect_statistics(ov_model, graph)
     quantized_model = min_max_algo.apply(ov_model, graph, statistics_aggregator.statistic_points)

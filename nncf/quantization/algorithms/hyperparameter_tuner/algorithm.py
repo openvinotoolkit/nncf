@@ -292,7 +292,9 @@ class HyperparameterTuner:
                 # TODO(andrey-churkin): Think about how it can be avoided.
                 params = apply_combination(self._init_params, best_settings)
                 pipeline = self._pipeline_fn(**params)
-                container = pipeline.get_statistic_points_for_step(step_index, step_model, step_graph)
+                container = pipeline.get_statistic_points_for_step(
+                    step_index, step_model, step_graph, self._calibration_dataset
+                )
                 step_statistics = collect_statistics(container, step_model, step_graph, self._calibration_dataset)
                 step_model = pipeline.run_step(step_index, step_statistics, step_model, step_graph)
                 continue

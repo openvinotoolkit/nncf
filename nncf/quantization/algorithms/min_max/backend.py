@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, List, Optional, Set, TypeVar
+from typing import Dict, List, Optional, Set, Tuple, TypeVar
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -20,7 +20,6 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
-from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
@@ -185,21 +184,48 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
+    def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: TargetPoint) -> List[int]:
+        """
+        TODO
+
+        :param NNCFGraph nncf_graph:
+        :param NNCFNode node:
+        :param TargetPoint target_point:
+        :return List[int]:
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_channel_axes(
+        node: NNCFNode, target_point: TargetPoint, is_weight: bool, is_per_channel: bool
+    ) -> Tuple[int]:
+        """
+        TODO
+
+        :param NNCFNode node:
+        :param TargetPoint target_point:
+        :param bool is_weight:
+        :param bool is_per_channel:
+        :return Tuple[int]:
+        """
+
+    @staticmethod
+    @abstractmethod
     def get_statistic_collector(
         range_estimator_params: RangeEstimatorParameters,
-        nncf_graph: NNCFGraph,
-        target_point: TargetPoint,
-        collector_params: RangeInitCollectorParams,
+        use_abs_max: bool,
+        reduction_axes: Optional[Tuple[int]],
+        aggregation_axes: Optional[Tuple[int]],
         inplace: bool,
-        num_samples: int = None,
+        num_samples: Optional[int] = None,
     ) -> TensorStatisticCollectorBase:
         """
         Returns backend-specific statistic collector.
 
         :param range_estimator_params: Parameters that specify estimators types.
-        :param nncf_graph: NNCFGraph to get input/output shapes for the target point.
-        :param target_point: Target location for the correction.
-        :param collector_params: RangeInitCollectorParams instance for the current layer.
+        :param use_abs_max:
+        :param reduction_axes: TODO
+        :param aggregation_axes:
         :param inplace: Whether to calculate statistic inplace or not.
         :param num_samples: Maximum number of samples to collect.
         :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.

@@ -134,7 +134,7 @@ def transpose_axis(shape: List[int], axis: int) -> int:
     return range(len(shape) - 1, -1, -1)[axis]  # Iterate backward throug axis
 
 
-def _get_weight_quantization_axis(node: NNCFNode, port_id: int) -> int:
+def get_weight_quantization_axis(node: NNCFNode, port_id: int) -> int:
     """
     Returns weight tensor axis, along which quantizer parameters are calculated.
 
@@ -153,15 +153,6 @@ def _get_weight_quantization_axis(node: NNCFNode, port_id: int) -> int:
         ):
             weight_channel_axis = transpose_axis(weight_shape, weight_channel_axis)
     return weight_channel_axis
-
-
-def _get_activation_quantization_axis() -> int:
-    """
-    Returns activation tensor axis, along which quantizer parameters are calculated.
-
-    :return: Axis, along which quantizer parameters are calculated.
-    """
-    return 1  # Activations have channel first layout: [N, C, Z, Y, X]
 
 
 def _get_activation_tensor_shape(
@@ -215,16 +206,3 @@ def get_quantized_tensor_shape(
     if target_point.is_weight_target_point():
         return node.layer_attributes.weight_attrs[target_point.port_id]["shape"]
     return _get_activation_tensor_shape(nncf_graph, node, target_point)
-
-
-def get_quantization_axis(node: NNCFNode, target_point: ONNXTargetPoint) -> int:
-    """
-    Returns axis of quantizer parameters are calculated along.
-
-    :param node: NNCFNode.
-    :param target_point: Target point indicates the quantizer place in the model graph.
-    :return: Quantizion axis.
-    """
-    if target_point.is_weight_target_point():
-        return _get_weight_quantization_axis(node, target_point.port_id)
-    return _get_activation_quantization_axis()

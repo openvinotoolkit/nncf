@@ -350,34 +350,50 @@ class MinMaxQuantization(Algorithm):
 
     def _get_stat_collector(
         self,
-        nncf_graph: NNCFGraph,
+        graph: NNCFGraph,
         target_point: TargetPoint,
-        quantizer_config: QuantizerConfig,
-        num_samples: int,
+        qconfig: QuantizerConfig,
+        is_many_samples: bool,
     ) -> TensorStatisticCollectorBase:
         """
         Creates and returns a statistic collector based on the quantizer's configuration.
 
-        :param nncf_graph: NNCFGraph instance.
+        :param graph: NNCFGraph instance.
         :param target_point: Target point indicates where statistics should be collected.
-        :param quantizer_config: Configuration of a quantizer layer,
+        :param qconfig: Configuration of a quantizer layer,
         defining the configuration of created statistic collector.
-        :param num_samples: Number of samples to collect from the 'target_point'.
+        :param is_many_samples: True meaning that one data tensor consists of some samples.
+        False - data tnesor has onle one sample.
         :return: Statistic Collector.
         """
-        range_estimator_params = self._get_range_estimator_parameters(target_point, quantizer_config)
+        is_weight = target_point.is_weight_target_point()
+        node = graph.get_node_by_name(target_point.target_node_name)
+
+        shape = self._backend_entity.get_target_point_shape(graph, node, target_point)
+        channel_axes = self._backend_entity.get_channel_axes(node, target_point, is_weight, qconfig.per_channel)
+
+        range_estimator_params = self._get_range_estimator_parameters(target_point, qconfig)
+
+        # Weight statistics is constant, so only one collection is enough.
+        num_samples = self._subset_size if not is_weight else 1
+
+        is_per_sample = is_many_samples and not is_weight
 
         collector_params = RangeInitCollectorParams(
-            is_weights=target_point.is_weight_target_point(),
-            scheme=quantizer_config.mode,
-            per_channel=quantizer_config.per_channel,
+            is_weights=is_weight, scheme=qconfig.mode, per_channel=qconfig.per_channel
         )
+        reduction_axes, aggregation_axes = None, None
+        if shape is not None:
+            reduction_axes, aggregation_axes = collector_params.get_reduction_aggregation_axes(
+                shape, channel_axes, is_per_sample
+            )
+
         return self._backend_entity.get_statistic_collector(
             range_estimator_params,
-            nncf_graph,
-            target_point,
-            collector_params,
-            inplace=self._inplace_statistics,
+            collector_params.use_abs_max,
+            reduction_axes,
+            aggregation_axes,
+            self._inplace_statistics,
             num_samples=num_samples,
         )
 
@@ -859,21 +875,14 @@ class MinMaxQuantization(Algorithm):
         quantized_model = model_transformer.transform(transformation_layout)
         return quantized_model
 
-    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
+    def get_statistic_points(self, model: TModel, graph: NNCFGraph, dataset: Dataset) -> StatisticPointsContainer:
         self._set_backend_entity(model)
         self._reset_cache()
         quantization_target_points, _ = self._get_quantization_target_points(model, graph)
         output = StatisticPointsContainer()
         for quantization_target_point, qconfig in quantization_target_points.items():
-            nncf_logger.debug(
-                f"Adding target point {quantization_target_point.target_node_name}"
-                f" with type {quantization_target_point.type} for statistics collection"
-            )
-            num_samples = self._subset_size
-            if quantization_target_point.is_weight_target_point():
-                # Weight statistics is constant, so only one collection is enough.
-                num_samples = 1
-            stat_collector = self._get_stat_collector(graph, quantization_target_point, qconfig, num_samples)
+            is_many_samples = dataset.get_batch_size() is not None and dataset.get_batch_size() > 1
+            stat_collector = self._get_stat_collector(graph, quantization_target_point, qconfig, is_many_samples)
             output.add_statistic_point(
                 StatisticPoint(
                     target_point=quantization_target_point,
