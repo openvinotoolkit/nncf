@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from itertools import islice
 from typing import Dict, List, Optional, TypeVar, Union
 
 from nncf.common.factory import NNCFGraphFactory
@@ -149,7 +150,8 @@ class Pipeline:
         # The `step_model` and `step_graph` entities are required to execute `step_index`-th pipeline step
         step_model = model
         step_graph = graph
-        for step_index in range(start_step_index, len(pipeline_steps)):
+        for step_index in islice(range(start_step_index, len(pipeline_steps)), 1):
+            # for step_index in range(start_step_index, len(pipeline_steps)):
             # Create graph required to run current pipeline step
             if step_graph is None:
                 step_graph = NNCFGraphFactory.create(step_model)
