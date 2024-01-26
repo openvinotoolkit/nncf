@@ -47,6 +47,11 @@ from tests.common.quantization.mock_graphs import create_mock_graph
 from tests.common.quantization.mock_graphs import get_nncf_graph_from_mock_nx_graph
 
 
+class MockdedDataset:
+    def get_batch_size(self):
+        return 1
+
+
 class ModelToTestOverflowFix:
     #   Input_1       Input_2
     #      |             |
@@ -140,7 +145,8 @@ class TemplateTestPTQParams:
         assert min_max_algo._range_estimator_params[QuantizerGroup.ACTIVATIONS] == range_estimator_params
 
         params = test_params["test_range_estimator_per_tensor"]
-        stat_points = min_max_algo.get_statistic_points(params["model"], params["nncf_graph"], None)
+
+        stat_points = min_max_algo.get_statistic_points(params["model"], params["nncf_graph"], MockdedDataset())
         assert len(stat_points) == params["stat_points_num"]
 
         for _, stat_point in stat_points.items():

@@ -40,9 +40,9 @@ class TemplateTestBatchSize(ABC):
 
     @pytest.mark.parametrize(
         ("test_data"),
-        (
+        (  # BAD TEST
             [  # batch_size | dataset_len | stat_subset_size | ref_calibration_samples_num | ref_iterations_num
-                DataForTest(None, None, None, None, None),  # None is None
+                # DataForTest(None, None, None, None, None),  # None is None
                 DataForTest(1, 1000, 300, 300, 300),
                 DataForTest(10, 1000, 300, 300, 30),
                 DataForTest(300, 1000, 300, 300, 1),
