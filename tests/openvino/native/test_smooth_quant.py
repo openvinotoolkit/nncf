@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pathlib import Path
 from typing import Callable, Dict
 
 import numpy as np
@@ -29,41 +28,41 @@ from tests.post_training.test_templates.helpers import ShareWeghtsConvAndShareLi
 from tests.post_training.test_templates.test_smooth_quant import TemplateTestSQAlgorithm
 
 OV_LINEAR_MODEL_MM_OP_MAP = {
-    "MatMul1": "/MatMul",
-    "MatMul2": "/MatMul_1",
-    "MatMul3": "/MatMul_2",
-    "MatMul4": "/MatMul_4",
-    "MatMul5": "32",
-    "MatMul6": "37",
-    "MatMul7": "54",
-    "MatMul8": "68",
-    "Linear1": "/linear_2/MatMul",
-    "Linear2": "/linear_1/MatMul",
-    "Linear3": "/linear_3/MatMul",
-    "Linear4": "/linear_4/MatMul",
+    "MatMul1": "aten::matmul/MatMul",
+    "MatMul2": "aten::matmul/MatMul_1",
+    "MatMul3": "aten::matmul/MatMul_6",
+    "MatMul4": "aten::matmul/MatMul_4",
+    "MatMul5": "aten::matmul/MatMul_7",
+    "MatMul6": "aten::matmul/MatMul_5",
+    "MatMul7": "aten::matmul/MatMul_3",
+    "MatMul8": "aten::matmul/MatMul_2",
+    "Linear1": "__module.linear_2/aten::linear/MatMul",
+    "Linear2": "__module.linear_1/aten::linear/MatMul",
+    "Linear3": "__module.linear_3/aten::linear/MatMul",
+    "Linear4": "__module.linear_4/aten::linear/MatMul",
 }
 
 OV_LINEAR_MODEL_SQ_OP_MAP = {
-    "MatMul1": "/Reshape_0_0/nncf_smooth_quant",
-    "MatMul2": "/Reshape_0_0/nncf_smooth_quant",
-    "MatMul3": "/Reshape_1_0_0/nncf_smooth_quant",
-    "MatMul4": "/Reshape_1_0_1/nncf_smooth_quant",
-    "MatMul5": "/Reshape_2_0_0/nncf_smooth_quant",
-    "MatMul6": "/ReduceMax_0_0/nncf_smooth_quant",
-    "MatMul7": "/Reshape_3_0_0/nncf_smooth_quant",
-    "MatMul8": "/Reshape_4_0_0/nncf_smooth_quant",
-    "Linear1": "/Split_1_0/nncf_smooth_quant",
-    "Linear2": "/Split_0_0/nncf_smooth_quant",
-    "Linear3": "/Add_0_0/nncf_smooth_quant",
-    "Linear4": "/Add_0_0/nncf_smooth_quant",
+    "MatMul1": "aten::reshape/Reshape_0_0/nncf_smooth_quant",
+    "MatMul2": "aten::reshape/Reshape_0_0/nncf_smooth_quant",
+    "MatMul3": "aten::reshape/Reshape_1_0_1/nncf_smooth_quant",
+    "MatMul4": "aten::reshape/Reshape_1_0_0/nncf_smooth_quant",
+    "MatMul5": "aten::reshape/Reshape_2_0_0/nncf_smooth_quant",
+    "MatMul6": "aten::max/ReduceMax_0_0/nncf_smooth_quant",
+    "MatMul7": "aten::flatten/Reshape_1_0_0/nncf_smooth_quant",
+    "MatMul8": "aten::flatten/Reshape_0_0/nncf_smooth_quant",
+    "Linear1": "prim::ListUnpack/VariadicSplit_1_0/nncf_smooth_quant",
+    "Linear2": "prim::ListUnpack/VariadicSplit_0_0/nncf_smooth_quant",
+    "Linear3": "aten::add/Add_0_0/nncf_smooth_quant",
+    "Linear4": "aten::add/Add_0_0/nncf_smooth_quant",
 }
 
 OV_CONV_MODEL_MM_OP_MAP = {
-    "Conv1": "/conv/Conv/WithoutBiases",
+    "Conv1": "__module.conv/aten::_convolution/Convolution",
 }
 
 OV_CONV_MODEL_SQ_OP_MAP = {
-    "Conv1": "input.1_0_0/nncf_smooth_quant",
+    "Conv1": "x_0_0/nncf_smooth_quant",
 }
 
 
@@ -93,7 +92,7 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
     def get_transform_fn() -> Callable:
         def transform_fn(data_item):
             tensor, _ = data_item
-            return {"input.1": tensor}
+            return {"x": tensor}
 
         return transform_fn
 
@@ -103,11 +102,7 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
 
     @staticmethod
     def backend_specific_model(model: torch.nn.Module, tmp_dir: str) -> ov.Model:
-        # TODO(AlexanderDokuchaev): remove onnx export after fix 119625
-        onnx_path = Path(f"{tmp_dir}/model.onnx")
-        torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
-        ov_model = ov.convert_model(onnx_path, input=model.INPUT_SIZE)
-        return ov_model
+        return ov.convert_model(model, example_input=torch.rand(model.INPUT_SIZE), input=model.INPUT_SIZE)
 
     @staticmethod
     def check_scales(model: ov.Model, reference_values: Dict[str, np.ndarray], model_cls) -> None:
