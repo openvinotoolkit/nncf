@@ -214,7 +214,7 @@ class TemplateTestSQAlgorithm:
         nncf_graph = NNCFGraphFactory.create(model)
 
         if isinstance(self.get_backend(), OVSmoothQuantAlgoBackend) and model_cls is ShareWeghtsConvAndShareLinearModel:
-            pytest.xfail("Matmuls don't share one weight in OV ir for some reason")
+            pytest.xfail("Matmuls don't share one weight in OV ir after 2023.3 update.")
 
         algo = SmoothQuant()
         algo._set_backend_entity(model)
