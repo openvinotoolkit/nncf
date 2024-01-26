@@ -386,6 +386,7 @@ class TemplateTestStatisticsAggregator:
         dataset_samples,
         inplace_statistics,
         is_backend_support_custom_estimators,
+        mocker,
     ):
         model = self.get_backend_model(dataset_samples)
         quantizer_config = QuantizerConfig(
@@ -409,6 +410,7 @@ class TemplateTestStatisticsAggregator:
             algorithm_name,
             inplace_statistics,
             test_parameters.range_estimator_params,
+            mocker,
         )
         statistics_points = StatisticPointsContainer()
         statistics_points.add_statistic_point(statistic_point)
@@ -630,16 +632,15 @@ class TemplateTestStatisticsAggregator:
 
     @classmethod
     def create_statistics_point(
-        cls, model, q_config, target_point, subset_size, algorithm_name, inplace_statistics, range_estimator, algo=None
+        cls, model, q_config, target_point, subset_size, algorithm_name, inplace_statistics, range_estimator, mocker
     ):
-        algo = (
-            cls.get_min_max_algo_cls()(
-                subset_size=subset_size,
-                inplace_statistics=inplace_statistics,
-                activations_range_estimator_params=range_estimator,
-            )
-            if algo is None
-            else algo
+        _ = mocker.patch(
+            "nncf.quantization.algorithms.min_max.algorithm.MinMaxQuantization._get_range_estimator_parameters",
+            return_value=range_estimator,
+        )
+        algo = cls.get_min_max_algo_cls()(
+            subset_size=subset_size,
+            inplace_statistics=inplace_statistics,
         )
         algo._set_backend_entity(model)
         nncf_graph = NNCFGraphFactory.create(model)
@@ -657,7 +658,7 @@ class TemplateTestStatisticsAggregator:
             ),
         ),
     )
-    def test_statistics_merging_simple(self, dataset_samples, inplace_statistics, statistic_point_params):
+    def test_statistics_merging_simple(self, dataset_samples, inplace_statistics, statistic_point_params, mocker):
         model = self.get_backend_model(dataset_samples)
         quantizer_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC, per_channel=False)
         subset_size = len(dataset_samples)
@@ -670,7 +671,14 @@ class TemplateTestStatisticsAggregator:
             ref_val[algorithm_name] = (ref_min_val, ref_max_val)
             target_point = self.get_target_point(target_point_type)
             statistics_point = self.create_statistics_point(
-                model, quantizer_config, target_point, subset_size, algorithm_name, inplace_statistics, range_estimator
+                model,
+                quantizer_config,
+                target_point,
+                subset_size,
+                algorithm_name,
+                inplace_statistics,
+                range_estimator,
+                mocker,
             )
             statistics_points.add_statistic_point(statistics_point)
 
@@ -746,7 +754,7 @@ class TemplateTestStatisticsAggregator:
     }
 
     @pytest.mark.parametrize("key", ["split_concat", "shared_conv"])
-    def test_statistic_merging(self, test_params, key, dataset_samples, inplace_statistics):
+    def test_statistic_merging(self, test_params, key, dataset_samples, inplace_statistics, mocker):
         params = test_params["test_statistic_merging"][key]
         model = params["model"](dataset_samples)
         nncf_graph = NNCFGraphFactory.create(model)
@@ -761,11 +769,6 @@ class TemplateTestStatisticsAggregator:
                 (RangeEstimatorParametersSet.MINMAX, ref["min_max"]),
                 (RangeEstimatorParametersSet.MEAN_MINMAX, ref["mean_min_max"]),
             ):
-                algo = self.get_min_max_algo_cls()(
-                    subset_size=len(dataset_samples),
-                    inplace_statistics=inplace_statistics,
-                    activations_range_estimator_params=estimator,
-                )
                 s_p = self.create_statistics_point(
                     model,
                     quantizer_config,
@@ -774,7 +777,7 @@ class TemplateTestStatisticsAggregator:
                     "TEST",
                     inplace_statistics,
                     estimator,
-                    algo,
+                    mocker,
                 )
                 statistics_points.add_statistic_point(s_p)
                 sp_and_refs.append((s_p, ref_val))
@@ -866,7 +869,7 @@ class TemplateTestStatisticsAggregator:
             ),
         ),
     )
-    def test_register_statistics(self, dataset_samples, statistic_point_params):
+    def test_register_statistics(self, dataset_samples, statistic_point_params, mocker):
         model = self.get_backend_model(dataset_samples)
         quantizer_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC, per_channel=False)
         statistics_points = StatisticPointsContainer()
@@ -877,7 +880,7 @@ class TemplateTestStatisticsAggregator:
             ref_val[algorithm_name] = subset_size
             target_point = self.get_target_point(target_point_type)
             statistics_point = self.create_statistics_point(
-                model, quantizer_config, target_point, subset_size, algorithm_name, True, range_estimator
+                model, quantizer_config, target_point, subset_size, algorithm_name, True, range_estimator, mocker
             )
             statistics_points.add_statistic_point(statistics_point)
 
@@ -893,7 +896,7 @@ class TemplateTestStatisticsAggregator:
                 ref_subset_size = subset_size
         assert statistics_aggregator.stat_subset_size == ref_subset_size
 
-    def test_collect_with_empty_dataset(self, dataset_samples):
+    def test_collect_with_empty_dataset(self, dataset_samples, mocker):
         model = self.get_backend_model(dataset_samples)
         dataset_samples = []
         dataset = self.get_dataset(dataset_samples)
@@ -911,6 +914,7 @@ class TemplateTestStatisticsAggregator:
             algorithm_name,
             inplace_statistics,
             RangeEstimatorParametersSet.MEAN_MINMAX,
+            mocker,
         )
         statistics_points = StatisticPointsContainer()
         statistics_points.add_statistic_point(statistic_point)
