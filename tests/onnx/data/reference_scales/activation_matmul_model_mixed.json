@@ -1,7 +1,7 @@
 {
     "QuantizeLinear_X_1": {
-        "scale": 0.0007594539201818407,
-        "zero_point": 0
+        "scale": 0.006937139667570591,
+        "zero_point": -11
     },
     "QuantizeLinear_Y_1": {
         "scale": 0.006937139667570591,
