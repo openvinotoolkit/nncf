@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -379,6 +379,29 @@ def round(a: Tensor, decimals=0) -> Tensor:
     :return: An array of the same type as a, containing the rounded values.
     """
     return Tensor(round(a.data, decimals))
+
+
+@functools.singledispatch
+@tensor_guard
+def quantile(
+    a: Tensor,
+    q: Union[float, List[float]],
+    axis: Optional[Union[int, Tuple[int]]] = None,
+    keepdims: Optional[bool] = None,
+) -> Tensor:
+    """
+    Compute the quantile(s) of the data along the specified axis.
+
+    :param a: Given tensor.
+    :params q: Quantile or sequence of quantiles to compute, which must be between
+        0 and 1 inclusive.
+    :param axis: Axis or axes along which the quantiles are computed.
+    :param keepdims: If True, the axes which are reduced are left in the result
+        as dimensions with size one.
+    :return: An tensor with quantiles, the first axis of the result corresponds
+        to the quantiles, other axes of the result correspond to the quantiles values.
+    """
+    return Tensor(quantile(a.data, q, axis, keepdims))
 
 
 @functools.singledispatch

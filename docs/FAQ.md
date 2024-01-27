@@ -151,7 +151,7 @@ class MyInitializingDataLoader(PTInitializingDataLoader):
         # in this function, for instance, if your dataloader returns dictionaries where
         # the input image is under key `"img"`, and your YOLOv8 model accepts the input
         # images as 0-th `forward` positional arg, you would do:
-        return dataloader_output["img"], {}
+        return (dataloader_output["img"],), {}
 
    def get_target(self, dataloader_output: Any) -> Any:
         # and in this function you should extract the "ground truth" value from your

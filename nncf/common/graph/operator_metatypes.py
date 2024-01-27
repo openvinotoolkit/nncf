@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,6 +11,7 @@
 
 from typing import List, Optional, Type
 
+import nncf
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.utils.registry import Registry
 
@@ -102,7 +103,7 @@ class OperatorMetatypeRegistry(Registry):
             op_names = obj.get_all_aliases()
             for name in op_names:
                 if name in self._op_name_to_op_meta_dict and not obj.subtype_check(self._op_name_to_op_meta_dict[name]):
-                    raise RuntimeError(
+                    raise nncf.InternalError(
                         "Inconsistent operator metatype registry - single patched "
                         "op name maps to multiple metatypes!"
                     )

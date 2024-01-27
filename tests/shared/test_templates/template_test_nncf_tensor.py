@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -50,6 +50,11 @@ class TemplateTestNNCFTensorOperators:
     @staticmethod
     @abstractmethod
     def to_tensor(x: TTensor) -> TTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def cast_to(x: TTensor, dtype: TensorDataType) -> TTensor:
         pass
 
     @pytest.mark.parametrize("op_name", OPERATOR_MAP.keys())
@@ -950,3 +955,35 @@ class TemplateTestNNCFTensorOperators:
         assert isinstance(res, Tensor)
         assert fns.allclose(res.data, ref_tensor)
         assert res.device == tensor.device
+
+    zero_ten_range = [x / 100 for x in range(1001)]
+    zero_ten_range_two_axes = [[a + b / 100 for b in range(101)] for a in range(10)]
+
+    @pytest.mark.parametrize(
+        "x,q,axis,keepdims,ref",
+        (
+            (1.0, 0.1, None, True, 1.0),
+            (zero_ten_range, 0.1, 0, True, [1.0]),
+            (zero_ten_range, 0.1, 0, False, 1.0),
+            (zero_ten_range, (0.1, 0.9), 0, False, [1.0, 9.0]),
+            (zero_ten_range, (0.1, 0.9), 0, True, [[1.0], [9.0]]),
+            (zero_ten_range_two_axes, (0.1, 0.9), (0, 1), False, [1.0, 9.0]),
+            (zero_ten_range_two_axes, (0.1, 0.9), (0, 1), True, [[[1.0]], [[9.0]]]),
+            (16000 * zero_ten_range, 0.1, 0, False, 1.0),  # reason: https://github.com/pytorch/pytorch/issues/64947
+            (zero_ten_range_two_axes, (0.1, 0.9), None, False, [1.0, 9.0]),
+        ),
+    )
+    @pytest.mark.parametrize("fp16", [False, True])
+    def test_fn_quantile(self, x, q, axis, keepdims, ref, fp16):
+        tensor = self.to_tensor(x)
+        if fp16:
+            tensor = self.cast_to(tensor, TensorDataType.float16)
+        tensor = Tensor(tensor)
+        ref_tensor = self.to_tensor(ref)
+
+        res = fns.quantile(tensor, axis=axis, q=q, keepdims=keepdims)
+        assert isinstance(res, Tensor)
+        assert res.dtype == TensorDataType.float64
+        assert fns.allclose(self.cast_to(res.data, TensorDataType.float32), ref_tensor)
+        assert res.device == tensor.device
+        assert res.shape == tuple(ref_tensor.shape)

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,6 +14,7 @@ from abc import abstractmethod
 
 import tensorflow_datasets as tfds
 
+import nncf
 from examples.tensorflow.common.logger import logger
 from examples.tensorflow.common.utils import set_hard_limit_num_open_files
 
@@ -87,7 +88,7 @@ class BaseDatasetBuilder(ABC):
 
         builder = dataset_builders.get(self._dataset_type, None)
         if builder is None:
-            raise ValueError("Unknown dataset type {}".format(self._dataset_type))
+            raise nncf.UnknownDatasetError("Unknown dataset type {}".format(self._dataset_type))
 
         dataset = builder()
         dataset = self._pipeline(dataset)
@@ -124,7 +125,7 @@ class BaseDatasetBuilder(ABC):
         if dataset_key in self._tfrecord_datasets:
             self._dataset_loader = self._tfrecord_datasets[dataset_key](config=self._config, is_train=self._is_train)
         else:
-            raise ValueError("Unknown dataset name: {}".format(self._dataset_name))
+            raise nncf.UnknownDatasetError("Unknown dataset name: {}".format(self._dataset_name))
 
         dataset = self._dataset_loader.as_dataset()
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,6 +16,7 @@ from dataclasses import dataclass
 import numpy as np
 import pytest
 
+import nncf
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
@@ -223,5 +224,5 @@ class TemplateTestFQParams(ABC):
             ref_fq_params = read_ref_fq_params(quant_group, q_config, narrow_range, half_range)
             compare_fq_parameters(fq_params, ref_fq_params)
         else:
-            with pytest.raises(RuntimeError):
+            with pytest.raises(nncf.ValidationError):
                 calculate_quantizer_parameters(statistics, q_config, quant_group, narrow_range, half_range)

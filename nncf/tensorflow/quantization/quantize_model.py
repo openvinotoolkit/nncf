@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,6 +13,7 @@ from typing import Any, Dict, Optional
 
 import tensorflow as tf
 
+import nncf
 from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.config import NNCFConfig
@@ -151,13 +152,13 @@ def quantize_impl(
     if fast_bias_correction is False:
         raise ValueError(f"fast_bias_correction={fast_bias_correction} is not supported")
     if ignored_scope is not None and ignored_scope.types:
-        raise RuntimeError(
+        raise nncf.InternalError(
             "Quantization algorithm form the TensorFlow backend "
             "does not support operation types in the ignored "
             "scopes yet"
         )
     if target_device == TargetDevice.CPU_SPR:
-        raise RuntimeError("target_device == CPU_SPR is not supported.")
+        raise nncf.InternalError("target_device == CPU_SPR is not supported.")
 
     if mode is not None:
         raise ValueError(f"mode={mode} is not supported")

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,6 +17,7 @@ import yaml
 from addict import Dict
 from openvino.tools.accuracy_checker.config import ConfigReader
 
+import nncf
 from nncf.common.logging import nncf_logger
 
 DEFAULT_PATH = "PATH"
@@ -74,15 +75,15 @@ class Config(Dict):
             nncf_logger.warning("Cascade is defined with single model")
 
         if not models:
-            raise RuntimeError("Path to input model xml and bin is required.")
+            raise nncf.ValidationError("Path to input model xml and bin is required.")
 
         for model in models:
             if len(models) > 1 and not model.name:
-                raise RuntimeError("Name of input model is required.")
+                raise nncf.ValidationError("Name of input model is required.")
             if not model.model:
-                raise RuntimeError("Path to input model xml is required.")
+                raise nncf.ValidationError("Path to input model xml is required.")
             if not model.weights:
-                raise RuntimeError("Path to input model bin is required.")
+                raise nncf.ValidationError("Path to input model bin is required.")
 
     def validate_algo_config(self):
         """
@@ -338,7 +339,7 @@ def read_config_from_file(path):
             return yaml.load(f, Loader=yaml.SafeLoader)
         if extension in (".json",):
             return json.load(f)
-        raise RuntimeError('Unknown file extension for the file "{}"'.format(path))
+        raise nncf.InternalError('Unknown file extension for the file "{}"'.format(path))
 
 
 def check_params(algo_name, config, supported_params):
@@ -349,9 +350,9 @@ def check_params(algo_name, config, supported_params):
     """
     for key, value in config.items():
         if key not in supported_params:
-            raise RuntimeError("Algorithm {}. Unknown parameter: {}".format(algo_name, key))
+            raise nncf.InternalError("Algorithm {}. Unknown parameter: {}".format(algo_name, key))
         if isinstance(value, dict):
             if isinstance(supported_params[key], dict):
                 check_params(algo_name, value, supported_params[key])
             else:
-                raise RuntimeError("Algorithm {}. Wrong structure for parameter: {}".format(algo_name, key))
+                raise nncf.InternalError("Algorithm {}. Wrong structure for parameter: {}".format(algo_name, key))

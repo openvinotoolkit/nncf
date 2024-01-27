@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -177,6 +177,16 @@ def _(a: Union[np.ndarray, np.generic], axis: Union[int, Tuple[int, ...]] = None
 @register_numpy_types(numeric.round)
 def _(a: Union[np.ndarray, np.generic], decimals: int = 0) -> np.ndarray:
     return np.round(a, decimals=decimals)
+
+
+@register_numpy_types(numeric.quantile)
+def _(
+    a: Union[np.ndarray, np.generic],
+    q: Union[float, List[float]],
+    axis: Optional[Union[int, Tuple[int]]] = None,
+    keepdims: Optional[bool] = None,
+) -> Union[np.ndarray, np.generic]:
+    return np.array(np.quantile(a, q=q, axis=axis, keepdims=keepdims))
 
 
 @register_numpy_types(numeric._binary_op_nowarn)

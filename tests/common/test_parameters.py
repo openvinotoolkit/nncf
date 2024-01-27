@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,6 +11,7 @@
 
 import pytest
 
+import nncf
 from nncf.scopes import IgnoredScope
 from nncf.scopes import convert_ignored_scope_to_list
 
@@ -35,5 +36,5 @@ def test_convert_ignored_scope_to_list():
 
 def test_create_ignored_scope_config_raise_exception():
     ignored_scope = IgnoredScope(types=["type1"])
-    with pytest.raises(Exception):
+    with pytest.raises(nncf.InternalError):
         _ = convert_ignored_scope_to_list(ignored_scope)

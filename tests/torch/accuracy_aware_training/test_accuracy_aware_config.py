@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,6 +11,7 @@
 
 import pytest
 
+import nncf
 from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
 from nncf.torch.initialization import register_default_init_args
 from tests.torch.helpers import LeNet
@@ -103,7 +104,7 @@ def test_accuracy_aware_config(aa_config, must_raise):
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
 
     if must_raise:
-        with pytest.raises(RuntimeError):
+        with pytest.raises(nncf.ValidationError):
             _ = create_accuracy_aware_training_loop(config, compression_ctrl, 0, dump_checkpoints=False)
     else:
         _ = create_accuracy_aware_training_loop(config, compression_ctrl, 0, dump_checkpoints=False)

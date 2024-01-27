@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -21,6 +21,7 @@ import torch
 from _pytest.mark import ParameterSet
 from torch import nn
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.torch.model_creation import wrap_model
 
@@ -117,7 +118,9 @@ def get_models_list(path: Path) -> List[ModelInfo]:
                     model_link = None
                 assert mark in ["skip", "xfail"], "Incorrect failure mark for model info {}".format(model_info)
             else:
-                raise RuntimeError(f"Incorrect model info `{model_info}`. It must contain either 1, 2 or 3 fields.")
+                raise nncf.ValidationError(
+                    f"Incorrect model info `{model_info}`. It must contain either 1, 2 or 3 fields."
+                )
             models.append(ModelInfo(model_name, model_link, mark, reason))
 
     return models

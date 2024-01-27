@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -26,6 +26,7 @@ from torch import nn
 from torchvision.models import resnet50
 from torchvision.transforms import transforms
 
+import nncf
 from examples.common.sample_config import SampleConfig
 from examples.torch.classification.main import create_cifar
 from examples.torch.object_detection.models.ssd_vgg import SSD_VGG
@@ -627,7 +628,7 @@ def test_can_broadcast_initialized_precisions_in_distributed_mode(tmp_path, runs
     assert not compare_multi_gpu_dump(config, tmp_path, get_path_to_bitwidth_dump)
 
 
-@pytest.mark.parametrize(("method_name", "expected_behavior"), [("_calc_traces", pytest.raises(RuntimeError))])
+@pytest.mark.parametrize(("method_name", "expected_behavior"), [("_calc_traces", pytest.raises(nncf.InternalError))])
 def test_hawq_behaviour__if_method_returns_none(mocker, method_name, expected_behavior):
     config = HAWQConfigBuilder().with_sample_size([1, 1, 4, 4]).for_trial().build()
     config["compression"]["initializer"]["range"]["num_init_samples"] = 0

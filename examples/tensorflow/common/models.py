@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,6 +12,7 @@
 import tensorflow as tf
 import tensorflow_hub as hub
 
+import nncf
 from nncf.tensorflow.tf_internals import Rescaling
 from nncf.tensorflow.tf_internals import imagenet_utils
 
@@ -42,7 +43,7 @@ def MobileNetV3(stack_fn, last_point_ch, input_shape=None, model_type="large", *
     rows = input_shape[row_axis]
     cols = input_shape[col_axis]
     if rows and cols and (rows < 32 or cols < 32):
-        raise ValueError("Input size must be at least 32x32; got `input_shape=" + str(input_shape) + "`")
+        raise nncf.ValidationError("Input size must be at least 32x32; got `input_shape=" + str(input_shape) + "`")
 
     img_input = tf.keras.layers.Input(shape=input_shape)
     channel_axis = 1 if tf.keras.backend.image_data_format() == "channels_first" else -1

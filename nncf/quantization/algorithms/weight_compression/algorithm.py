@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -22,6 +22,7 @@
 from collections import defaultdict
 from typing import Dict, List, Optional, OrderedDict, Tuple, TypeVar
 
+import nncf
 from nncf import Dataset
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -123,7 +124,7 @@ class WeightCompression(Algorithm):
 
             self._backend_entity = PTWeightCompressionAlgoBackend()
         else:
-            raise RuntimeError(
+            raise nncf.UnsupportedBackendError(
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
             )
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional, OrderedDict, Set, TypeVar, Union
 
 import numpy as np
 
+import nncf
 from nncf import Dataset
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -197,33 +198,35 @@ class MinMaxQuantization(Algorithm):
         nncf_logger.warning(f"You're using experimental option mode with {self._mode} value.")
 
         if self._preset != QuantizationPreset.PERFORMANCE:
-            raise RuntimeError(f"preset option with {self._preset} value is not supported with the mode option!")
+            raise nncf.ParameterNotSupportedError(
+                f"preset option with {self._preset} value is not supported with the mode option!"
+            )
 
         if self._target_device not in [TargetDevice.CPU, TargetDevice.ANY]:
-            raise RuntimeError(
+            raise nncf.ParameterNotSupportedError(
                 f"target_device option with {self._target_device} value is not supported with the mode option!"
             )
 
         if self._overflow_fix != OverflowFix.DISABLE:
-            raise RuntimeError(
+            raise nncf.ParameterNotSupportedError(
                 f"overflow_fix option with {self._overflow_fix} value is not supported with the mode option!"
             )
 
         if self._quantize_outputs:
-            raise RuntimeError("quantize_outputs option is not supported with the mode option!")
+            raise nncf.ParameterNotSupportedError("quantize_outputs option is not supported with the mode option!")
 
         if self._backend_params is not None:
-            raise RuntimeError("backend_params option is not supported with the mode option!")
+            raise nncf.ParameterNotSupportedError("backend_params option is not supported with the mode option!")
 
         if isinstance(self._quantization_params[QuantizerGroup.WEIGHTS], QuantizationParameters):
-            raise RuntimeError(
+            raise nncf.ParameterNotSupportedError(
                 "quantization_params option for weights with "
                 f"{self._quantization_params[QuantizerGroup.WEIGHTS]} "
                 "value is not supported with the mode option!"
             )
 
         if isinstance(self._quantization_params[QuantizerGroup.ACTIVATIONS], QuantizationParameters):
-            raise RuntimeError(
+            raise nncf.ParameterNotSupportedError(
                 "quantization_params option for activations with "
                 f"{self._quantization_params[QuantizerGroup.ACTIVATIONS]} "
                 "value is not supported with the mode option!"
@@ -275,7 +278,7 @@ class MinMaxQuantization(Algorithm):
 
         if isinstance(quantization_params, FP8QuantizationParameters):
             if self._mode is None:
-                raise RuntimeError(
+                raise nncf.InternalError(
                     f"FP8QuantizationParameters for {group.value} can not be used without QuantizationMode option!"
                 )
             return QuantizationConstraints(**constraints)
@@ -311,7 +314,7 @@ class MinMaxQuantization(Algorithm):
 
             self._backend_entity = PTMinMaxAlgoBackend()
         else:
-            raise RuntimeError(
+            raise nncf.UnsupportedBackendError(
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
             )
 
@@ -656,7 +659,7 @@ class MinMaxQuantization(Algorithm):
             elif quantization_point.is_activation_quantization_point():
                 self._add_activation_quantization_target_point(quantization_point)
             else:
-                raise RuntimeError("Incorrect quantization point")
+                raise nncf.InternalError("Incorrect quantization point")
         return self._quantization_target_points_to_qconfig, self._unified_scale_groups
 
     def _collect_unified_groups(
@@ -793,7 +796,7 @@ class MinMaxQuantization(Algorithm):
                 ):
                     statistics = tensor_collector.get_statistics()
                     if statistics.min_values is None or statistics.max_values is None:
-                        raise RuntimeError(f"Statistics were not collected for the node {target_node_name}")
+                        raise nncf.InternalError(f"Statistics were not collected for the node {target_node_name}")
                     group_statistics.append(statistics)
 
             unified_values = self._backend_entity.unify_statistics(group_statistics)
@@ -837,7 +840,7 @@ class MinMaxQuantization(Algorithm):
                 narrow_range = get_quantizer_narrow_range(qconfig, quant_group)
                 statistics = tensor_collector.get_statistics()
                 if statistics.min_values is None or statistics.max_values is None:
-                    raise RuntimeError(f"Statistics were not collected for the node {target_node_name}")
+                    raise nncf.InternalError(f"Statistics were not collected for the node {target_node_name}")
                 if self._mode is not None:
                     destination_type = self._quantization_params[quant_group].destination_type
                     parameters = calculate_convert_parameters(

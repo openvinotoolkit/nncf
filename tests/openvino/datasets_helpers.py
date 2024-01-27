@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -19,6 +19,7 @@ from openvino.tools.accuracy_checker.argparser import build_arguments_parser
 from openvino.tools.accuracy_checker.config import ConfigReader
 from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
 
+import nncf
 from nncf import Dataset
 from tests.openvino.omz_helpers import OPENVINO_DATASET_DEFINITIONS_PATH
 
@@ -97,7 +98,9 @@ def get_dataset_for_test(dataset_name: str, data_dir: Path) -> Path:
     if dataset_name == "wider":
         return prepare_wider_for_test(data_dir)
 
-    raise RuntimeError(f"Unknown dataset: {dataset_name}.")
+    raise nncf.ValidationError(
+        f"Unknown dataset: {dataset_name}. Supported datasets are: 'imagenette2-320' and 'wider' "
+    )
 
 
 def get_nncf_dataset_from_ac_config(model_path, config_path, data_dir, framework="openvino", device="CPU"):

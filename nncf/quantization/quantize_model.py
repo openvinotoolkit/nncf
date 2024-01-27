@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,6 +11,7 @@
 
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
+import nncf
 from nncf.api.compression import TModel
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.factory import NNCFGraphFactory
@@ -156,7 +157,7 @@ def quantize(
             advanced_parameters=advanced_parameters,
         )
 
-    raise RuntimeError(f"Unsupported type of backend: {backend}")
+    raise nncf.UnsupportedBackendError(f"Unsupported type of backend: {backend}")
 
 
 @api(canonical_alias="nncf.quantize_with_accuracy_control")
@@ -245,7 +246,7 @@ def quantize_with_accuracy_control(
             advanced_accuracy_restorer_parameters,
         )
 
-    raise RuntimeError(f"Unsupported type of backend: {backend}")
+    raise nncf.UnsupportedBackendError(f"Unsupported type of backend: {backend}")
 
 
 @api(canonical_alias="nncf.compress_weights")

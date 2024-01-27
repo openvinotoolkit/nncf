@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -24,6 +24,7 @@ from collections import defaultdict
 from copy import deepcopy
 from typing import Dict, List, Optional, Tuple, TypeVar
 
+import nncf
 from nncf import Dataset
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -91,7 +92,7 @@ class SmoothQuant(Algorithm):
 
             self._backend_entity = OVSmoothQuantAlgoBackend()
         else:
-            raise RuntimeError(
+            raise nncf.UnsupportedBackendError(
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
             )
 
@@ -312,7 +313,7 @@ class SmoothQuant(Algorithm):
         channel_axis = channel_axes[0]
 
         if not all(axis == channel_axis for axis in channel_axes):
-            raise RuntimeError(f"Channel axes for nodes {[n.node_name for n in nodes]} are not identical")
+            raise nncf.InternalError(f"Channel axes for nodes {[n.node_name for n in nodes]} are not identical")
 
         activations_size = len(activations_shape)
         return self._backend_entity.calculate_activation_scale(scale_value, activations_size, channel_axis)

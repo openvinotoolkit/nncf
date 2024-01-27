@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,6 +14,7 @@ import pytest
 import tensorflow as tf
 from tensorflow.keras import layers
 
+import nncf
 from nncf.config.schemata.defaults import VALIDATE_SCOPES
 from nncf.tensorflow.algorithm_selector import TF_COMPRESSION_ALGORITHMS
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
@@ -75,7 +76,7 @@ def test_raise_runtimeerror_for_not_matched_scope_names(algo_name, validate_scop
         config["compression"]["validate_scopes"] = validate_scopes
 
     if validate_scopes or (validate_scopes is None and VALIDATE_SCOPES is True):
-        with pytest.raises(RuntimeError, match="scope definitions"):
+        with pytest.raises(nncf.ValidationError, match="scope definitions"):
             create_compressed_model_and_algo_for_test(model, config)
     else:
         create_compressed_model_and_algo_for_test(model, config)

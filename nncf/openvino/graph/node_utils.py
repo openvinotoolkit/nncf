@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,6 +15,7 @@ import numpy as np
 import openvino.runtime as ov
 import openvino.runtime.opset13 as opset
 
+import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
@@ -316,7 +317,7 @@ def get_inplace_mean_per_ch(axis: int) -> InplaceInsertionFnType:
 def get_partial_shape_safe(node, port_id) -> Tuple[int, ...]:
     partial_shape = node.get_output_partial_shape(port_id)
     if partial_shape.rank.is_dynamic or not partial_shape.all_non_negative:
-        raise RuntimeError(
+        raise nncf.ValidationError(
             f"Could not collect statistics for the node {node} because its output shape rank is dynamic or negative"
         )
     return partial_shape

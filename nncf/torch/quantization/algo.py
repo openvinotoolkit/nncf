@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -22,6 +22,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 import torch
 
+import nncf
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
@@ -463,9 +464,9 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
         algo_config = self._get_algo_specific_config_section()
         if self._target_device == "VPU" and "preset" in algo_config:
-            raise RuntimeError("The VPU target device does not support presets.")
+            raise nncf.InternalError("The VPU target device does not support presets.")
         if self._target_device == "CPU_SPR":
-            raise RuntimeError("The CPU_SPR target device does not supported.")
+            raise nncf.InternalError("The CPU_SPR target device does not supported.")
 
         self._range_init_params = None
         self._precision_init_type = None
@@ -538,7 +539,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             return None, None
         precision_init_type = init_precision_config.get("type", "manual")
         if precision_init_type not in PRECISION_INIT_TYPES_VS_DESCRIPTION:
-            raise RuntimeError(f"Unrecognized precision init type: {precision_init_type}")
+            raise nncf.InternalError(f"Unrecognized precision init type: {precision_init_type}")
         if precision_init_type == "hawq":
             try:
                 precision_init_args = self.config.get_extra_struct(QuantizationPrecisionInitArgs)
@@ -752,7 +753,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                             half_range = True
                             quantizers_with_overflow_fix_str = "first convolution weight quantizers"
                     elif self._overflow_fix != "disable":
-                        raise RuntimeError(f"Unknown overflow fix type: {self._overflow_fix}")
+                        raise nncf.InternalError(f"Unknown overflow fix type: {self._overflow_fix}")
                     if half_range:
                         nncf_logger.debug(f"Overflow issue fix will be applied to {quantizers_with_overflow_fix_str}")
 
@@ -905,7 +906,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
             for layer_name in shared_weight_quantized_layers_in_group:
                 if layer_name in already_weight_quantized_shared_layers:
-                    raise RuntimeError(
+                    raise nncf.InternalError(
                         "Attempted to assign a unified-scale quantizer to a shared layer node that has "
                         "already had its weights quantized by another unified-scale quantizer!"
                     )
@@ -1074,7 +1075,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         linked_qspecs = [quantizer_setup.quantization_points[qp_id].qspec for qp_id in linked_qp_ids]
         for linked_qspec in linked_qspecs:
             if not qspec == linked_qspec:
-                raise RuntimeError("The qspecs for unified scale quantization points should be identical!")
+                raise nncf.InternalError("The qspecs for unified scale quantization points should be identical!")
 
         range_init_minmax_values = None
         if minmax_values_for_range_init:
@@ -1136,7 +1137,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
         target_model_graph = target_model.nncf.get_original_graph()
         if not insertion_points:
-            raise RuntimeError("No insertion points to put quantizers into!")
+            raise nncf.InternalError("No insertion points to put quantizers into!")
 
         def is_weights(ip: PTTargetPoint) -> bool:
             return ip.target_type is TargetType.OPERATION_WITH_WEIGHTS
@@ -1194,7 +1195,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         insertion_commands = []
         for curr_insertion_point in insertion_points:
             if curr_insertion_point in self._processed_insertion_points:
-                raise RuntimeError("Insertion point {} already quantized!".format(str(curr_insertion_point)))
+                raise nncf.InternalError("Insertion point {} already quantized!".format(str(curr_insertion_point)))
             self._processed_insertion_points.add(curr_insertion_point)
 
             if is_weights(curr_insertion_point):

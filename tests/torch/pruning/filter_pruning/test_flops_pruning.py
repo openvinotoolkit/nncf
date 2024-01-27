@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,6 +14,7 @@ from functools import partial
 import numpy as np
 import pytest
 
+import nncf
 from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.pruning.helpers import BigPruningTestModel
@@ -167,5 +168,5 @@ def test_maximal_compression_rate():
     for comp_rate in np.linspace(0, maximal_compression_rate, 10):
         pruning_algo.compression_rate = comp_rate
     for comp_rate in np.linspace(maximal_compression_rate + 1e-5, 1, 10):
-        with pytest.raises(RuntimeError):
+        with pytest.raises(nncf.InternalError):
             pruning_algo.compression_rate = comp_rate

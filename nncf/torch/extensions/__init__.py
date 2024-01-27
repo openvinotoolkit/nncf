@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -22,6 +22,7 @@ from typing import Callable
 import torch
 from torch.utils.cpp_extension import _get_build_directory
 
+import nncf
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.logger import extension_is_loading_info_log
 from nncf.common.utils.api_marker import api
@@ -138,7 +139,7 @@ def force_build_cuda_extensions():
 
 class CudaNotAvailableStub:
     def __getattr__(self, item):
-        raise RuntimeError(
+        raise nncf.InstallationError(
             f"CUDA is not available on this machine. Check that the machine has a GPU and a proper "
             f"driver supporting CUDA {torch.version.cuda} is installed."
         )

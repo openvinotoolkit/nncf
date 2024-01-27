@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -224,7 +224,7 @@ class ACValidationFunction:
 
     def _output_callback(self, raw_predictions, **kwargs):
         if not ("metrics_result" in kwargs and "dataset_indices" in kwargs):
-            raise RuntimeError(
+            raise nncf.ValidationError(
                 "Expected `metrics_result`, `dataset_indices` be passed to output_callback inside accuracy checker"
             )
 
@@ -768,14 +768,14 @@ def maybe_reshape_model(model, dataset, subset_size, input_to_tensor_name):
         model_inputs_shapes[input_to_tensor_name[input_node.friendly_name]] = tuple(partial_shape)
 
     if len(dataset_inputs_shapes) != len(model_inputs_shapes):
-        raise RuntimeError(
+        raise nncf.InternalError(
             f"Model inputs: {list(model_inputs_shapes.keys())}"
             f" and dataset inputs {list(dataset_inputs_shapes.keys())} are not compatible"
         )
 
     for name in model_inputs_shapes:
         if name not in dataset_inputs_shapes:
-            raise RuntimeError(
+            raise nncf.ValidationError(
                 f"Model input {name} is not present in dataset inputs: {list(dataset_inputs_shapes.keys())}"
             )
 
@@ -784,7 +784,7 @@ def maybe_reshape_model(model, dataset, subset_size, input_to_tensor_name):
     for name, shapes in dataset_inputs_shapes.items():
         shapes = list(shapes)
         if len(set(len(shape) for shape in shapes)) != 1 or len(model_inputs_shapes[name]) != len(shapes[0]):
-            raise RuntimeError("calibrate.py does not support dataset with dynamic ranks")
+            raise nncf.InternalError("calibrate.py does not support dataset with dynamic ranks")
 
         for idx in range(len(shapes[0])):
             if len(shapes) == 1:
@@ -1053,7 +1053,7 @@ def main():
             keys = ["xml_path", "quantization_parameters"]
             dump_to_json(path, quantize_model_arguments, keys)
         else:
-            raise RuntimeError(f"Support for {algo_name} is not implemented in the optimize tool.")
+            raise nncf.InternalError(f"Support for {algo_name} is not implemented in the optimize tool.")
 
     model_name = config.model.model_name
     output_model_path = os.path.join(output_dir, f"{model_name}.xml")

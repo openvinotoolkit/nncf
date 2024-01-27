@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,6 +17,7 @@ import numpy as np
 import openvino.runtime as ov
 from packaging import version
 
+import nncf
 from nncf import Dataset
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
@@ -111,4 +112,4 @@ def get_actual_reference_for_current_openvino(rel_path: Path) -> Path:
         if file_name.is_file():
             return file_name
 
-    raise RuntimeError(f"Not found file {root_dir}/{current_ov_version}/{rel_path}")
+    raise nncf.InternalError(f"Not found file {root_dir}/{current_ov_version}/{rel_path}")

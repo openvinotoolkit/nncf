@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,6 +11,8 @@
 import re
 from copy import deepcopy
 from typing import List
+
+import nncf
 
 
 class ScopeElement:
@@ -35,12 +37,12 @@ class ScopeElement:
     def from_str(string: str):
         matches = re.search(r"(.*)\[(.*)\]|(.*)", string)
         if matches is None:
-            raise RuntimeError("Invalid scope element string")
+            raise nncf.InternalError("Invalid scope element string")
         if matches.groups()[0] is None and matches.groups()[1] is None:
             return ScopeElement(matches.groups()[2])
         if matches.groups()[0] is not None and matches.groups()[1] is not None:
             return ScopeElement(matches.groups()[0], matches.groups()[1])
-        raise RuntimeError("Could not parse the scope element string")
+        raise nncf.InternalError("Could not parse the scope element string")
 
 
 class Scope:

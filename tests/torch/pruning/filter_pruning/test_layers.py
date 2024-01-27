@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,6 +13,7 @@ import pytest
 import torch
 from torch import nn
 
+import nncf
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.module_operations import UpdateWeightAndBias
 from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask
@@ -67,7 +68,7 @@ def test_assert_broadcastable_mask_and_weight_shape():
 
     mask = torch.zeros(10)
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(nncf.InternalError):
         apply_filter_binary_mask(mask, nncf_module.weight.data)
 
 
