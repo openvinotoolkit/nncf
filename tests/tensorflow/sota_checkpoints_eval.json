@@ -34,8 +34,6 @@
                     "metric_type": "Acc@1",
                     "model_description": "Inception V3",
                     "compression_description": "INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations), Sparsity 61% (RB)",
-                    "diff_fp32_min": -1,
-                    "diff_fp32_max": 0.1,
                     "target_tf": 77.52,
                     "target_ov": 77.51
                 },
@@ -47,8 +45,6 @@
                     "metric_type": "Acc@1",
                     "model_description": "Inception V3",
                     "compression_description": "Sparsity 54% (Magnitude)",
-                    "diff_fp32_min": -1,
-                    "diff_fp32_max": 0.1,
                     "target_tf": 77.86,
                     "target_ov": 77.86
                 },
@@ -80,7 +76,6 @@
                     "metric_type": "Acc@1",
                     "model_description": "MobileNet V2",
                     "compression_description": "INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations), Sparsity 52% (RB)",
-                    "diff_fp32_min": -1,
                     "diff_fp32_max": 1,
                     "target_tf": 70.94,
                     "target_ov": 71.00
@@ -93,7 +88,6 @@
                     "metric_type": "Acc@1",
                     "model_description": "MobileNet V2",
                     "compression_description": " Sparsity 50% (RB)",
-                    "diff_fp32_min": -1,
                     "diff_fp32_max": 1,
                     "target_tf": 71.34,
                     "target_ov": 71.22
@@ -106,8 +100,7 @@
                     "metric_type": "Acc@1",
                     "model_description": "MobileNet V2 (TensorFlow Hub MobileNet V2)",
                     "compression_description": "Sparsity 35% (Magnitude)",
-                    "diff_target_min": -1,
-                    "diff_target_max": 1,
+                    "diff_fp32_max": 0.2,
                     "target_tf": 71.87,
                     "target_ov": 72.01
                 },
@@ -186,8 +179,6 @@
                     "metric_type": "Acc@1",
                     "model_description": "ResNet-50",
                     "compression_description": "INT8",
-                    "diff_fp32_min": -1,
-                    "diff_fp32_max": 0.1,
                     "diff_target_max": 0.15,
                     "target_tf": 74.99,
                     "target_ov": 74.99
@@ -200,10 +191,8 @@
                     "metric_type": "Acc@1",
                     "model_description": "ResNet-50",
                     "compression_description": "INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 65% (RB)",
-                    "diff_fp32_min": -1,
-                    "diff_fp32_max": 0.1,
-                    "target_tf": 74.16,
-                    "target_ov": 74.36
+                    "target_tf": 74.35,
+                    "target_ov": 74.16
                 },
                 "resnet50_imagenet_rb_sparsity": {
                     "config": "examples/tensorflow/classification/configs/sparsity/resnet50_imagenet_rb_sparsity.json",
@@ -213,8 +202,6 @@
                     "metric_type": "Acc@1",
                     "model_description": "ResNet-50",
                     "compression_description": "Sparsity 80% (RB)",
-                    "diff_fp32_min": -1,
-                    "diff_fp32_max": 0.1,
                     "target_tf": 74.38,
                     "target_ov": 74.32
                 },
@@ -226,8 +213,6 @@
                     "metric_type": "Acc@1",
                     "model_description": "ResNet-50",
                     "compression_description": "Filter pruning, 40%, geometric median criterion",
-                    "diff_fp32_min": -1,
-                    "diff_fp32_max": 0.1,
                     "target_tf": 74.96,
                     "target_ov": 74.92
                 },
@@ -239,8 +224,6 @@
                     "metric_type": "Acc@1",
                     "model_description": "ResNet-50",
                     "compression_description": "INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + Filter pruning, 40%, geometric median criterion",
-                    "diff_fp32_min": -1,
-                    "diff_fp32_max": 0.1,
                     "target_tf": 75.06,
                     "target_ov": 75.00
                 }
@@ -297,7 +280,6 @@
                     "model_description": "RetinaNet",
                     "compression_description": "Filter pruning, 40%",
                     "batch_per_gpu": 15,
-                    "diff_fp32_min": -1,
                     "diff_fp32_max": 0.4,
                     "target_tf": 32.72,
                     "target_ov": 32.59
