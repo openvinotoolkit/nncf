@@ -476,7 +476,7 @@ class TestSotaCheckpoints:
             pytest.skip()
         if eval_test_struct.skip_ov:
             status = f"Skip by: {eval_test_struct.skip_ov}"
-            collected_data.append(ResultInfo(eval_test_struct.model_name, "OV", status))
+            collected_data.append(ResultInfo(model_name=eval_test_struct.model_name, backend="OV", status=status))
             pytest.skip(status)
 
         # WA to avoid OS error
