@@ -317,7 +317,7 @@
                     "diff_target_max": 0.15,
                     "diff_target_min": -0.15,
                     "target_tf": 46.2,
-                    "target_ov": 47.77
+                    "target_ov": 47.78
                 },
                 "yolo_v4_coco_magnitude_sparsity": {
                     "config": "examples/tensorflow/object_detection/configs/sparsity/yolo_v4_coco_magnitude_sparsity.json",
