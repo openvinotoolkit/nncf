@@ -580,7 +580,7 @@ class PTMatMulMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTAddmmMetatype(PTOperatorMetatype):
     name = "MatMulOp"
-    module_to_function_names = {NamespaceTarget.TORCH: ["addmm"], NamespaceTarget.TORCH: ["baddbmm"]}
+    module_to_function_names = {NamespaceTarget.TORCH: ["addmm", "baddbmm"]}
     hw_config_names = [HWConfigOpName.MATMUL]
     # 0-th arg to the baddbmm is basically a (b)ias to be (add)ed to the (bmm) operation,
     # presuming that most runtime implementations will fuse the bias addition into the matrix multiplication

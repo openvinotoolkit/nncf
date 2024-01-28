@@ -155,13 +155,11 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 reduction_axes = [ndims - 1]
             elif weight_port_id == 1:
                 reduction_axes = [max(0, ndims - 2)]
-            reduction_axes = [max(0, reduction_axes)]
         elif node_with_weight.metatype == om.PTAddmmMetatype:
             if weight_port_id == 1:
                 reduction_axes = [ndims - 1]
             elif weight_port_id == 2:
                 reduction_axes = [max(0, ndims - 2)]
-            reduction_axes = [max(0, reduction_axes)]
         elif node_with_weight.metatype in PTWeightCompressionAlgoBackend.CONVOLUTION_METATYPES:
             layer_attributes = node_with_weight.layer_attributes
             channel_idx = layer_attributes.get_target_dim_for_compression()
