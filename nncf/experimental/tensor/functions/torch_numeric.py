@@ -193,7 +193,7 @@ def _(a: torch.Tensor, decimals=0) -> torch.Tensor:
 
 
 @numeric.power.register(torch.Tensor)
-def _(a: torch.Tensor, exponent: float) -> torch.Tensor:
+def _(a: torch.Tensor, exponent: Union[torch.Tensor, float]) -> torch.Tensor:
     return torch.pow(a, exponent=exponent)
 
 

@@ -84,7 +84,7 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     @staticmethod
     def get_activations_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
         # Metatypes of linears and convolutions guarantee
-        # all nodes with the metatypes have 0 activation port id
+        # all nodes with the metatypes have 0 activation port id.
         return 0
 
     @staticmethod

@@ -180,7 +180,7 @@ def _(a: Union[np.ndarray, np.generic], decimals: int = 0) -> np.ndarray:
 
 
 @register_numpy_types(numeric.power)
-def _(a: Union[np.ndarray, np.generic], exponent: float) -> Union[np.ndarray, np.generic]:
+def _(a: Union[np.ndarray, np.generic], exponent: Union[np.ndarray, float]) -> Union[np.ndarray, np.generic]:
     return np.power(a, exponent)
 
 
