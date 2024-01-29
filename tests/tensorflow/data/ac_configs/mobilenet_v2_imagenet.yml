@@ -12,7 +12,7 @@ models:
             crop_padding: 32
           - type: rgb_to_bgr
           - type: normalization
-            mean: '127.5, 127.5, 127.5'
+            mean: 127.5, 127.5, 127.5
             std: 127.5
         metrics:
           - name: accuracy@top1
