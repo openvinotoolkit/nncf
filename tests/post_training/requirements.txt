@@ -5,7 +5,7 @@ torchvision==0.16.0
 transformers==4.36.0
 onnx==1.13.1
 onnxruntime==1.14.1
-pytest
+pytest==7.4.4
 pytest-cov
 openvino-dev==2023.3.0
 optimum[onnxruntime,openvino]==1.16.0
