@@ -23,6 +23,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.tensor.definitions import TensorDataType
+from nncf.experimental.tensor.functions import count_nonzero
 from nncf.experimental.tensor.tensor import Tensor
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
@@ -38,7 +39,8 @@ from nncf.torch.model_graph_manager import get_module_by_name
 from nncf.torch.model_graph_manager import split_const_name
 from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.quantization.layers import WeightsDecompressor
+from nncf.torch.quantization.layers import AsymmetricWeightsDecompressor
+from nncf.torch.quantization.layers import SymmetricWeightsDecompressor
 from nncf.torch.tensor_statistics.collectors import get_raw_stat_collector
 
 
@@ -211,7 +213,11 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             compressed_weight.scale = compressed_weight.scale.astype(dtype=TensorDataType.float16)
 
             # pack compressed tensor
-            packed_tensor = compressed_weight.tensor.astype(TensorDataType.uint8)
+            if compression_config.mode == CompressWeightsMode.INT8_SYM:
+                dtype = TensorDataType.int8
+            else:
+                dtype = TensorDataType.uint8
+            packed_tensor = compressed_weight.tensor.astype(dtype)
 
             # sets compressed tensor
             compressed_parameter = torch.nn.Parameter(packed_tensor.data, requires_grad=False)
@@ -225,13 +231,15 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                         if id(param) == id(weight):
                             setattr(c_module, name, compressed_parameter)
 
-            # pack zero point tensor
-            packed_zero_point = compressed_weight.zero_point.astype(TensorDataType.uint8)
-
             # creates weight decompressor
-            decompressor = WeightsDecompressor(
-                compressed_weight.scale.data, packed_zero_point.data, result_dtype=weight.dtype
-            )
+            if compression_config.mode == CompressWeightsMode.INT8_SYM:
+                assert count_nonzero(compressed_weight.zero_point) == 0
+                decompressor = SymmetricWeightsDecompressor(compressed_weight.scale.data, result_dtype=weight.dtype)
+            else:
+                packed_zero_point = compressed_weight.zero_point.astype(dtype)
+                decompressor = AsymmetricWeightsDecompressor(
+                    compressed_weight.scale.data, packed_zero_point.data, result_dtype=weight.dtype
+                )
 
             # registry weight decompression module in the model
             decompressor_name = f"weights_decompressor_{weight_node.node_name.replace('.', '_')}"

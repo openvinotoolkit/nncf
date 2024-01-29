@@ -74,41 +74,41 @@ def get_next_node(node):
 
 
 def check_int8_node(op: ov.Node, mode: CompressWeightsMode = CompressWeightsMode.INT8_ASYM):
-    assert op.get_element_type() == ov.Type(np.uint8)
+    dtype = ov.Type.u8 if mode == CompressWeightsMode.INT8_ASYM else ov.Type.i8
+    assert op.get_element_type() == dtype
     compressed_weight = get_const_value(op)
+    stats = {"compressed_weight": compressed_weight}
 
     convert_node = get_next_node(op)
     assert convert_node.get_type_name() == "Convert"
 
-    sub_node = get_next_node(convert_node)
-    assert sub_node.get_type_name() == "Subtract"
+    if mode == CompressWeightsMode.INT8_ASYM:
+        sub_node = get_next_node(convert_node)
+        assert sub_node.get_type_name() == "Subtract"
 
-    convert_node = sub_node.input_value(1).get_node()
-    assert convert_node.get_type_name() == "Convert"
+        convert_node = sub_node.input_value(1).get_node()
+        assert convert_node.get_type_name() == "Convert"
 
-    zero_point_node = convert_node.input_value(0).get_node()
-    zero_point = get_const_value(zero_point_node)
-    if mode == CompressWeightsMode.INT8_SYM:
-        assert list(zero_point_node.shape) == [1]
-    else:
+        zero_point_node = convert_node.input_value(0).get_node()
+        zero_point = get_const_value(zero_point_node)
+        stats["zero_point"] = zero_point
         reduced_weight_shape = list(op.shape)
         reduced_weight_shape[-1] = 1
         assert list(zero_point_node.shape) == reduced_weight_shape
+        mul_node = get_next_node(sub_node)
+    else:
+        mul_node = get_next_node(convert_node)
 
-    mul_node = get_next_node(sub_node)
     assert mul_node.get_type_name() == "Multiply"
     scale_node = mul_node.input_value(1).get_node()
     scale = get_const_value(scale_node)
-
-    return {
-        "compressed_weight": compressed_weight,
-        "zero_point": zero_point,
-        "scale": scale,
-    }
+    stats["scale"] = scale
+    return stats
 
 
 def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int = 7):
-    assert op.get_element_type() == ov.Type.u4
+    dtype = ov.Type.u4 if mode == CompressWeightsMode.INT4_ASYM else ov.Type.i4
+    assert op.get_element_type() == dtype
     weight_shape = op.shape
     # NOTE: get_const_value doesn't work for 4-bit types
     assert list(weight_shape)[-1] == group_size
@@ -118,20 +118,20 @@ def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int =
     convert_node = get_next_node(op)
     assert convert_node.get_type_name() == "Convert"
 
-    sub_node = get_next_node(convert_node)
-    assert sub_node.get_type_name() == "Subtract"
+    if mode == CompressWeightsMode.INT4_ASYM:
+        sub_node = get_next_node(convert_node)
+        assert sub_node.get_type_name() == "Subtract"
 
-    convert_node = sub_node.input_value(1).get_node()
-    assert convert_node.get_type_name() == "Convert"
+        convert_node = sub_node.input_value(1).get_node()
+        assert convert_node.get_type_name() == "Convert"
 
-    zero_point_node = convert_node.input_value(0).get_node()
-    assert zero_point_node.get_element_type() == ov.Type.u4
-    if mode == CompressWeightsMode.INT4_SYM:
-        assert list(zero_point_node.shape) == [1]
-    else:
+        zero_point_node = convert_node.input_value(0).get_node()
+        assert zero_point_node.get_element_type() == dtype
         assert list(zero_point_node.shape) == reduced_weight_shape
+        mul_node = get_next_node(sub_node)
+    else:
+        mul_node = get_next_node(convert_node)
 
-    mul_node = get_next_node(sub_node)
     assert mul_node.get_type_name() == "Multiply"
     scale_node = mul_node.input_value(1).get_node()
     assert list(scale_node.shape) == reduced_weight_shape
@@ -282,7 +282,7 @@ def test_gather_in_4_bit_if_all_layers_with_data(metric):
     for node_name in int4_reference_node_names:
         node = nodes_map[node_name]
         assert node.get_type_name() == "Constant"
-        assert node.get_element_type() == ov.Type.u4
+        assert node.get_element_type() == ov.Type.i4
 
 
 def test_gather_can_be_8_bit_if_all_layers_without_data():
@@ -359,7 +359,7 @@ def test_gather_can_be_4_bit_if_all_layers_without_data():
     for node_name in int4_reference_node_names:
         node = nodes_map[node_name]
         assert node.get_type_name() == "Constant"
-        assert node.get_element_type() == ov.Type.u4
+        assert node.get_element_type() == ov.Type.i4
 
 
 @pytest.mark.parametrize("metric", ALL_SENSITIVITY_METRICS)
@@ -380,7 +380,7 @@ def test_gather_in_8_bit_if_not_all_layers(metric):
     for node_name in int8_reference_node_names:
         node = nodes_map[node_name]
         assert node.get_type_name() == "Constant"
-        assert node.get_element_type() == ov.Type.u8
+        assert node.get_element_type() == ov.Type.i8
 
 
 MAX_BASELINE_SCORE = 1 / np.finfo(np.float32).eps
@@ -445,9 +445,9 @@ def test_quantize_Gather_with_multiple_reduction_axes_if_mode_4bit(mode, all_lay
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM))
 def test_shared_gather(mode):
     weight_name_vs_type = {
-        "gather_2_data": ov.Type(np.uint8),
-        "shared_data": ov.Type(np.uint8),
-        "matmul_1_data": ov.Type.u4,
+        "gather_2_data": ov.Type.u8,
+        "shared_data": ov.Type.u8,
+        "matmul_1_data": ov.Type.i4 if mode == CompressWeightsMode.INT4_SYM else ov.Type.u4,
     }
     model = GatherAndMatmulShareData().ov_model
     compressed_model = compress_weights(model, mode, group_size=3)
@@ -638,7 +638,7 @@ def test_weight_compress_with_ignored_scope(ignored_scope, num_compressed):
         if (
             op.get_type_name() == "Constant"
             and op.get_friendly_name() in ref_compressed_weights
-            and op.get_element_type() == ov.Type(np.uint8)
+            and op.get_element_type() == ov.Type.u8
         ):
             act_num += 1
     assert act_num == num_compressed

@@ -20,6 +20,8 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.utils import get_reduction_axes
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.tensor.definitions import TensorDataType
+from nncf.experimental.tensor.functions import count_nonzero
 from nncf.experimental.tensor.tensor import Tensor
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.model_transformer import OVModelTransformer
@@ -134,17 +136,14 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             compression_config = wc_params.compression_config
             if compression_config.mode == CompressWeightsMode.NF4:
                 compression_dtype = ov.Type.nf4
-            elif compression_config.mode in [
-                CompressWeightsMode.INT8_ASYM,
-                CompressWeightsMode.INT8_SYM,
-                CompressWeightsMode.INT8,
-                CompressWeightsMode.INT4_ASYM,
-                CompressWeightsMode.INT4_SYM,
-            ]:
-                if compression_config.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT4_SYM]:
-                    compression_dtype = ov.Type.u4
-                else:
-                    compression_dtype = ov.Type.u8
+            elif compression_config.mode == CompressWeightsMode.INT4_SYM:
+                compression_dtype = ov.Type.i4
+            elif compression_config.mode == CompressWeightsMode.INT4_ASYM:
+                compression_dtype = ov.Type.u4
+            elif compression_config.mode == CompressWeightsMode.INT8_SYM:
+                compression_dtype = ov.Type.i8
+            elif compression_config.mode == CompressWeightsMode.INT8_ASYM:
+                compression_dtype = ov.Type.u8
             else:
                 raise ValueError(f"{compression_config.mode.value} is not supported.")
 
@@ -176,15 +175,18 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             )
             converted_const = opset.convert(compressed_const, ov.Type.f16)
             if compressed_weight.zero_point is not None:
-                zero_point_const = opset.constant(
-                    compressed_weight.zero_point.data,
-                    dtype=compression_dtype,
-                    name=f"{const_node_name}/zero_point",
-                )
-                converted_zero_point = opset.convert(zero_point_const, ov.Type.f16)
-                converted_const = opset.subtract(
-                    converted_const, converted_zero_point, name=f"{const_node_name}/zero_point/subtract"
-                )
+                if compressed_weight.tensor.dtype == TensorDataType.int8:
+                    assert count_nonzero(compressed_weight.zero_point.data) == 0
+                else:
+                    zero_point_const = opset.constant(
+                        compressed_weight.zero_point.data,
+                        dtype=compression_dtype,
+                        name=f"{const_node_name}/zero_point",
+                    )
+                    converted_zero_point = opset.convert(zero_point_const, ov.Type.f16)
+                    converted_const = opset.subtract(
+                        converted_const, converted_zero_point, name=f"{const_node_name}/zero_point/subtract"
+                    )
 
             scale_const = opset.constant(
                 compressed_weight.scale.data, dtype=ov.Type.f16, name=f"{const_node_name}/scale"

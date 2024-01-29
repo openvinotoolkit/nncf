@@ -222,25 +222,22 @@ def calculate_integer_quantization_params(
     assert mode != CompressWeightsMode.NF4, "The function supports integer quantization only"
     num_bits = config.num_bits
 
-    level_low = 0
-    level_high = 2**num_bits - 1
-
     if weight.dtype != TensorDataType.float32:
         weight = weight.astype(TensorDataType.float32)
 
     if mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]:
+        level_low = 0
+        level_high = 2**num_bits - 1
         min_values = fns.min(weight, axis=reduction_axes, keepdims=True)  # [a1, r, a2] -> [a1, 1, a2]
         max_values = fns.max(weight, axis=reduction_axes, keepdims=True)  # [a1, r, a2] -> [a1, 1, a2]
         scale, zero_point = calculate_scale_zero_point(
             min_values, max_values, level_low, level_high, narrow_range=False
         )
     else:
-        level_low_sym = -(2 ** (num_bits - 1))
-        level_high_sym = 2 ** (num_bits - 1) - 1
-
+        level_high = 2 ** (num_bits - 1) - 1
         scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)  # [a1, r//gs, 1, a2]
-        scale = scale / level_high_sym
-        zero_point = fns.as_tensor_like(scale, [-level_low_sym]).astype(TensorDataType.int32)
+        scale = scale / level_high
+        zero_point = fns.zeros_like(scale).astype(TensorDataType.int32)
         eps = fns.finfo(scale).eps
         # NOTE: adding machine epsilon to avoid division by zero
         scale = fns.where(fns.abs(scale) < eps, eps, scale)
@@ -258,7 +255,7 @@ def calculate_quantized_weight(
     :param scale: Scale tensor used for quantization.
     :param zero_point: Zero point tensor used for quantization.
     :param config: Weight compression configuration.
-    :return: Quantized weight tensor of uint8 type.
+    :return: Quantized weight tensor of uint8 or int8 type.
     """
     if weight.dtype != TensorDataType.float32:
         weight = weight.astype(TensorDataType.float32)
@@ -266,12 +263,13 @@ def calculate_quantized_weight(
         scale = scale.astype(TensorDataType.float32)
 
     num_bits = config.num_bits
-
-    level_low = 0
-    level_high = 2**num_bits - 1
+    asym_quant = config.mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]
+    dtype = TensorDataType.uint8 if asym_quant else TensorDataType.int8
+    level_low = 0 if asym_quant else -(2 ** (num_bits - 1))
+    level_high = 2**num_bits - 1 if asym_quant else 2 ** (num_bits - 1) - 1
 
     compressed_weights = fns.round(weight / scale + zero_point.astype(weight.dtype))
-    compressed_weights = fns.clip(compressed_weights, level_low, level_high).astype(TensorDataType.uint8)
+    compressed_weights = fns.clip(compressed_weights, level_low, level_high).astype(dtype)
     return compressed_weights
 
 
@@ -285,14 +283,14 @@ def do_integer_quantization(
     """
     The method quantizes the given weights to integer data type in accordance with the compression config.
     The config defines a quantization mode:
-        INT8_SYM mode refers to unsigned int8 symmetric weight compression with a fixed zero point equals to 128 -
-            quantization to [0, 255] range.
+        INT8_SYM mode refers to signed int8 symmetric weight compression without zero point -
+            quantization to [-128, 127] range.
         INT8_ASYM mode refers to unsigned int8 asymmetric weight compression with a typical non-fixed zero-point -
             quantization to [0, 255] range.
         INT4_ASYM mode refers to unsigned int4 asymmetric weight compression with a typical non-fixed zero-point -
             quantization to [0, 15] range.
-        INT4_SYM mode refers to unsigned int4 symmetric weight compression with a fixed zero point equals to 8 -
-            quantization to [0, 15] range.
+        INT4_SYM mode refers to signed int4 symmetric weight compression without zero point -
+            quantization to [-8, 7] range.
         NF4 mode requires a dedicated procedure and it is not supported in this method.
     One of the parameter of compression config is a group size. Quantization is per-channel, if group size equals to -1,
     otherwise it's per-group, i.e. group size number of weights in the channel dimension share quantization parameters
@@ -303,8 +301,8 @@ def do_integer_quantization(
     :param config: Information on how to compress (quantize) a specific weight.
     :param precomputed_scale: Precomputed scale.
     :param precomputed_zero_point: Precomputed zero point.
-    :return: The compressed weights tensor of uint8 type, scale tensor of float32 type and
-        zero point tensor of int32 type that was used for its quantization.
+    :return: The compressed weights tensor of uint8 (asymmetric mode) or int8 (symmetric mode) type,
+        scale tensor of float32 type and zero point tensor of int32 type that was used for its quantization.
     """
     mode = config.mode
     assert mode != CompressWeightsMode.NF4, "The function supports integer quantization only"
