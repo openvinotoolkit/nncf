@@ -263,3 +263,23 @@ def _(
 @numeric.size.register(torch.Tensor)
 def _(a: torch.Tensor) -> int:
     return torch.numel(a)
+
+
+@numeric.matmul.register(torch.Tensor)
+def _(x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
+    return torch.matmul(x1, x2)
+
+
+@numeric.unsqueeze.register(torch.Tensor)
+def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> torch.Tensor:
+    return torch.unsqueeze(a, dim=axis)
+
+
+@numeric.transpose.register(torch.Tensor)
+def _(a: torch.Tensor, axes: Optional[Tuple[int, ...]] = None) -> torch.Tensor:
+    return a.t()
+
+
+@numeric.argsort.register(torch.Tensor)
+def _(a: torch.Tensor, axis: Optional[int] = None, descending=False, stable=False) -> torch.Tensor:
+    return torch.argsort(a, dim=axis, descending=descending, stable=stable)

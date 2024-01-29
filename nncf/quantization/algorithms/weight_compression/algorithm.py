@@ -41,6 +41,7 @@ from nncf.experimental.tensor.definitions import TensorDataType
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.weight_lowering import WeightCompressionConfig
@@ -67,6 +68,7 @@ class WeightCompression(Algorithm):
         ignored_scope: IgnoredScope,
         all_layers: bool,
         sensitivity_metric: SensitivityMetric,
+        awq: bool,
     ):
         """
         :param mode: Defines a mode for weight compression.
@@ -92,6 +94,7 @@ class WeightCompression(Algorithm):
             precision. By default, the backup precision is assigned for the embeddings and last layers.
         :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
             preserve the accuracy of the model, the more sensitive layers receives a higher precision.
+        :param awq: determines whether to use or not modified AWQ algorithm.
         """
         super().__init__()
         self._mode = mode
@@ -103,6 +106,7 @@ class WeightCompression(Algorithm):
         self._fp_inputs = defaultdict(list)
         self._all_layers = all_layers
         self._sensitivity_metric = sensitivity_metric
+        self._awq = awq
 
     @property
     def available_backends(self) -> List[BackendType]:
@@ -313,6 +317,12 @@ class WeightCompression(Algorithm):
         self._set_weight_compression_config(ratio_defining_params, model, graph, activations)
         nncf_logger.info(self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params))
 
+        if self._awq and activations is not None and self._mode != CompressWeightsMode.NF4:
+            awq_algo = AWQ(
+                model, self._backend_entity.name_to_node_mapping, all_weight_params, nodes_to_compress, activations
+            )
+            awq_algo.apply(model, graph)
+
         # Compress model using weight compression parameters
         transformed_model = self._backend_entity.transform_model(
             model, graph, track(all_weight_params, description="Applying Weight Compression")
@@ -327,6 +337,7 @@ class WeightCompression(Algorithm):
                 "all_layers": self._all_layers,
                 "ignored_scope": self._ignored_scope,
                 "sensitivity_metric": self._sensitivity_metric.value,
+                "awq": self._awq,
             },
             algo_name="weight_compression",
         )

@@ -193,3 +193,18 @@ def compress_weight(weight: Tensor, reduction_axis: int, config: WeightCompressi
 
     compressed_weight, scale, zero_point = do_integer_quantization(weight, reduction_axis, config)
     return CompressedWeight(compressed_weight, scale, zero_point)
+
+
+def do_dequantization(compressed_weights: Tensor, scale: Tensor, zero_point: Tensor) -> Tensor:
+    """
+    The method dequantizes the given weights to float point data type in accordance with the scale and
+    zero_point data type.
+
+    :param compressed_weights: compressed weights.
+    :param scale: scale in compression/quantization.
+    :param zero_point: zero point in compression/quantization.
+    :return: dequantized/decompressed weights.
+    """
+    decompressed_weight = compressed_weights.astype(dtype=scale.dtype)
+    decompressed_weight = (decompressed_weight - zero_point) * scale
+    return decompressed_weight

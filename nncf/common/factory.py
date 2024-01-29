@@ -53,11 +53,12 @@ class NNCFGraphFactory:
 
 class ModelTransformerFactory:
     @staticmethod
-    def create(model: TModel) -> ModelTransformer:
+    def create(model: TModel, inplace: bool = False) -> ModelTransformer:
         """
         Factory method to create backend-specific ModelTransformer instance based on the input model.
 
         :param model: backend-specific model instance
+        :param inplace: apply transformations inplace
         :return: backend-specific ModelTransformer instance
         """
         model_backend = get_backend(model)
@@ -68,7 +69,7 @@ class ModelTransformerFactory:
         if model_backend == BackendType.OPENVINO:
             from nncf.openvino.graph.model_transformer import OVModelTransformer
 
-            return OVModelTransformer(model)
+            return OVModelTransformer(model, inplace=inplace)
         if model_backend == BackendType.TORCH:
             from nncf.torch.model_transformer import PTModelTransformer
 
