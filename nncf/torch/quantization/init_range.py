@@ -108,12 +108,7 @@ class PTRangeInitCollectorParams(RangeInitCollectorParams):
         self._channel_idx = channel_idx
 
     def get_reduction_aggregation_axes(self, per_sample_stats: bool) -> Tuple[ReductionAxes, AggregationAxes]:
-        reduction_axes, aggregation_axes = super().get_reduction_aggregation_axes(
-            self._input_shape, (self._channel_idx,)
-        )
-        if per_sample_stats:
-            return (0,) + reduction_axes, (0,)
-        return reduction_axes, aggregation_axes
+        return super().get_reduction_aggregation_axes(self._input_shape, (self._channel_idx,), per_sample_stats)
 
 
 class StatCollectorGenerator:
