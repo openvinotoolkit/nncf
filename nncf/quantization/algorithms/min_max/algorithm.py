@@ -883,8 +883,13 @@ class MinMaxQuantization(Algorithm):
         self._reset_cache()
         quantization_target_points, _ = self._get_quantization_target_points(model, graph)
         output = StatisticPointsContainer()
+        is_many_samples = dataset.get_batch_size() is not None and dataset.get_batch_size() > 1
+        if self._model_type == ModelType.TRANSFORMER and is_many_samples:
+            nncf_logger.warning(
+                "For transfomer-like models batch_size > 1 could result in inaccurate statistics. \
+                The recomendation is to use batch_size = 1."
+            )
         for quantization_target_point, qconfig in quantization_target_points.items():
-            is_many_samples = dataset.get_batch_size() is not None and dataset.get_batch_size() > 1
             stat_collector = self._get_stat_collector(graph, quantization_target_point, qconfig, is_many_samples)
             output.add_statistic_point(
                 StatisticPoint(

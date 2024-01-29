@@ -76,8 +76,8 @@ class StatisticsAggregator(ABC):
             return
         if self.batch_size > 1 and self.is_model_batch_size_limited_support(graph):
             nncf_logger.warning(
-                "The batch size > 1 for the particular model can lead to inaccurate collected statistics . \
-                To get the appropriate statistics it is recommended to use batch size = 1."
+                "For the particular model the batch size > 1 can lead to inaccurate collected statistics . \
+                The recomendation is to use batch_size = 1."
             )
         model_transformer = factory.ModelTransformerFactory.create(model)
         merged_statistics = self._get_merged_statistic_points(self.statistic_points, model, graph)
