@@ -107,8 +107,10 @@ class PTRangeInitCollectorParams(RangeInitCollectorParams):
         self._input_shape = input_shape
         self._channel_idx = channel_idx
 
-    def get_reduction_aggregation_axes(self, per_sample_stats: bool) -> Tuple[ReductionAxes, AggregationAxes]:
-        return super().get_reduction_aggregation_axes(self._input_shape, (self._channel_idx,), per_sample_stats)
+    def get_reduction_aggregation_axes(self, is_per_sample: bool) -> Tuple[ReductionAxes, AggregationAxes]:
+        if self.is_per_channel:
+            return super().get_reduction_aggregation_axes(self._input_shape, (self._channel_idx,), is_per_sample)
+        return super().get_reduction_aggregation_axes(self._input_shape, (), is_per_sample)
 
 
 class StatCollectorGenerator:
@@ -157,7 +159,6 @@ class StatCollectorGenerator:
 
         use_per_sample_stats = collector_params.use_per_sample_stats(init_config.init_type == "mixed_min_max")
         reduction_axes, aggregation_axes = collector_params.get_reduction_aggregation_axes(use_per_sample_stats)
-
         if init_config.init_type == "min_max":
             return get_min_max_statistic_collector(
                 use_abs_max=collector_params.use_abs_max,
