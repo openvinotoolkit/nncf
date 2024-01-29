@@ -17,10 +17,10 @@ from optimum.intel.openvino import OVModelForCausalLM
 
 from tests.post_training.pipelines.base import OV_BACKENDS
 from tests.post_training.pipelines.base import BackendType
-from tests.post_training.pipelines.base import BaseTestPipeline
+from tests.post_training.pipelines.base import PTQTestPipeline
 
 
-class CausalLMHF(BaseTestPipeline):
+class CausalLMHF(PTQTestPipeline):
     """Pipeline for causal language models from Hugging Face repository"""
 
     def prepare_model(self) -> None:
@@ -42,7 +42,7 @@ class CausalLMHF(BaseTestPipeline):
     def prepare_calibration_dataset(self):
         quantizer = OVQuantizer.from_pretrained(self.model_hf)
 
-        num_samples = self.ptq_params.get("subset_size", 300)
+        num_samples = self.compression_params.get("subset_size", 300)
         calibration_dataset = quantizer.get_calibration_dataset(
             "glue",
             dataset_config_name="sst2",

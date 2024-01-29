@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional
 
 import numpy as np
 import onnx
@@ -51,6 +51,62 @@ OV_BACKENDS = [BackendType.OV, BackendType.OPTIMUM]
 LIMIT_LENGTH_OF_STATUS = 120
 
 
+class StatsFromOutput:
+    def get_result_dict(self) -> Dict[str, str]:
+        return {}
+
+@dataclass
+class PTQTimeStats(StatsFromOutput):
+    """
+    Parsing stdout of the test and collect additional data:
+        - time of statistic collection
+        - time of bias correction
+        - time of validation
+
+    :param stdout: stdout text
+    """
+    time_stat_collection: Optional[str] = None
+    time_bias_correction: Optional[str] = None
+    time_validation: Optional[str] = None
+
+    def fill(self, stdout: str):
+        for line in stdout.splitlines():
+            print(line)
+            match = re.search(r"Statistics\scollection.*•\s(.*)\s•.*", line)
+            if match:
+                if time_stat_collection is None:
+                    time_stat_collection = dt.datetime.strptime(match.group(1), "%H:%M:%S")
+                else:
+                    time = dt.datetime.strptime(match.group(1), "%H:%M:%S")
+                    time_stat_collection += dt.timedelta(hours=time.hour, minutes=time.minute, seconds=time.second)
+                continue
+
+            match = re.search(r"Applying.*correction.*\/(\d+)\s•\s(.*)\s•.*", line)
+            if match:
+                if time_bias_correction is None:
+                    time_bias_correction = dt.datetime.strptime(match.group(2), "%H:%M:%S")
+                else:
+                    time_bias_correction += dt.datetime.strptime(match.group(2), "%H:%M:%S")
+                continue
+
+            match = re.search(r"Validation.*\/\d+\s•\s(.*)\s•.*", line)
+            if match:
+                self.time_validation = dt.datetime.strptime(match.group(1), "%H:%M:%S")
+                continue
+
+        if time_stat_collection:
+            self.time_stat_collection = time_stat_collection.strftime("%H:%M:%S")
+        if time_bias_correction:
+            self.time_bias_correction = time_bias_correction.strftime("%H:%M:%S")
+
+    def get_result_dict(self):
+        return {
+            "Stat. collection time": self.time_stat_collection,
+            "Bias correction time": self.time_bias_correction,
+            "Validation time": self.time_validation,
+        }
+
+
 @dataclass
 class RunInfo:
     """
@@ -64,13 +120,11 @@ class RunInfo:
     metric_diff: Optional[float] = None
     num_fq_nodes: Optional[float] = None
     quant_memory_usage: Optional[int] = None
-    time_total: Optional[float] = None
-    time_quantization: Optional[float] = None
     status: Optional[str] = None
     fps: Optional[float] = None
-    time_stat_collection: Optional[str] = None
-    time_bias_correction: Optional[str] = None
-    time_validation: Optional[str] = None
+    time_total: Optional[float] = None
+    time_quantization: Optional[float] = None
+    stats_from_output = StatsFromOutput()
 
     @staticmethod
     def format_time(time_elapsed):
@@ -94,9 +148,7 @@ class RunInfo:
             "Num FQ": self.num_fq_nodes,
             "RAM MiB": self.format_memory_usage(self.quant_memory_usage),
             "Quant. time": self.format_time(self.time_quantization),
-            "Stat. collection time": self.time_stat_collection,
-            "Bias correction time": self.time_bias_correction,
-            "Validation time": self.time_validation,
+            **self.stats_from_output.get_result_dict(),
             "Total time": self.format_time(self.time_total),
             "FPS": self.fps,
             "Status": self.status[:LIMIT_LENGTH_OF_STATUS] if self.status is not None else None,
@@ -113,7 +165,7 @@ class BaseTestPipeline(ABC):
         reported_name: str,
         model_id: str,
         backend: BackendType,
-        ptq_params: dict,
+        compression_params: dict,
         output_dir: Path,
         data_dir: Path,
         reference_data: dict,
@@ -124,7 +176,7 @@ class BaseTestPipeline(ABC):
         self.reported_name = reported_name
         self.model_id = model_id
         self.backend = backend
-        self.ptq_params = ptq_params
+        self.compression_params = compression_params
         self.output_dir = output_dir
         self.data_dir = data_dir
         self.reference_data = reference_data
@@ -160,6 +212,45 @@ class BaseTestPipeline(ABC):
     def prepare_model(self) -> None:
         """Prepare model"""
 
+    @staticmethod
+    @abstractmethod
+    def cleanup_cache():
+        """
+        Helper for removing cached model representation.
+        """
+
+    @abstractmethod
+    def collect_data_from_stdout(self, stdout: str):
+        pass
+
+    @abstractmethod
+    def quantize(self) -> None:
+        """
+        Run quantization of the model and collect time and memory usage information.
+        """
+
+    @abstractmethod
+    def save_quantized_model(self) -> None:
+        """
+        Save quantized model to IR.
+        """
+
+    @abstractmethod
+    def get_num_quantized(self) -> None:
+        """
+        Get number of the quantized nodes in the quantized IR.
+        """
+
+    @abstractmethod
+    def run_bench(self) -> None:
+        """
+        Run a benchmark to collect performance statistics.
+        """
+
+    @abstractmethod
+    def _validate(self) -> None:
+        """Validate IR"""
+
     def prepare(self):
         """
         Preparing model and calibration dataset for quantization.
@@ -171,6 +262,54 @@ class BaseTestPipeline(ABC):
         self.prepare_preprocessor()
         self.prepare_calibration_dataset()
 
+    def validate(self) -> None:
+        """
+        Validate and compare result with reference
+        """
+        if self.no_eval:
+            print("Validation skipped")
+            return
+        print("Validation...")
+
+        self._validate()
+
+        metric_value = self.run_info.metric_value
+        metric_reference = self.reference_data.get("metric_value")
+        metric_value_fp32 = self.reference_data.get("metric_value_fp32")
+
+        if metric_value is not None and metric_value_fp32 is not None:
+            self.run_info.metric_diff = self.run_info.metric_value - self.reference_data["metric_value_fp32"]
+
+        if (
+            metric_value is not None
+            and metric_reference is not None
+            and not np.isclose(metric_value, metric_reference, atol=self.reference_data.get("atol", 0.001))
+        ):
+            if metric_value < metric_reference:
+                status_msg = f"Regression: Metric value is less than reference {metric_value} < {metric_reference}"
+                raise ValueError(status_msg)
+            if metric_value > metric_reference:
+                self.run_info.status = (
+                    f"Improvement: Metric value is better than reference {metric_value} > {metric_reference}"
+                )
+
+    def run(self) -> None:
+        """
+        Run full pipeline of quantization
+        """
+        self.prepare()
+        self.quantize()
+        self.save_quantized_model()
+        self.get_num_quantized()
+        self.validate()
+        self.run_bench()
+        self.cleanup_cache()
+
+
+class PTQTestPipeline(BaseTestPipeline):
+    """
+    Base class to test post training quantization.
+    """
     def _quantize(self):
         """
         Quantize self.model
@@ -183,7 +322,7 @@ class BaseTestPipeline(ABC):
                 model=self.model,
                 target_device=TargetDevice.CPU,
                 calibration_dataset=self.calibration_dataset,
-                **self.ptq_params,
+                **self.compression_params,
             )
 
     def quantize(self) -> None:
@@ -229,7 +368,7 @@ class BaseTestPipeline(ABC):
             self.path_quantized_ir = self.output_model_dir / "model.xml"
             ov.serialize(self.quantized_model, str(self.path_quantized_ir))
 
-    def get_num_fq(self) -> None:
+    def get_num_quantized(self) -> None:
         """
         Get number of the FakeQuantize nodes in the quantized IR.
         """
@@ -260,109 +399,16 @@ class BaseTestPipeline(ABC):
             fps = match.group(1)
             self.run_info.fps = float(fps)
 
-    @abstractmethod
-    def _validate(self) -> None:
-        """Validate IR"""
-
-    def validate(self) -> None:
-        """
-        Validate and compare result with reference
-        """
-        if self.no_eval:
-            print("Validation skipped")
-            return
-        print("Validation...")
-
-        self._validate()
-
-        metric_value = self.run_info.metric_value
-        metric_reference = self.reference_data.get("metric_value")
-        metric_value_fp32 = self.reference_data.get("metric_value_fp32")
-
-        if metric_value is not None and metric_value_fp32 is not None:
-            self.run_info.metric_diff = self.run_info.metric_value - self.reference_data["metric_value_fp32"]
-
-        if (
-            metric_value is not None
-            and metric_reference is not None
-            and not np.isclose(metric_value, metric_reference, atol=self.reference_data.get("atol", 0.001))
-        ):
-            if metric_value < metric_reference:
-                status_msg = f"Regression: Metric value is less than reference {metric_value} < {metric_reference}"
-                raise ValueError(status_msg)
-            if metric_value > metric_reference:
-                self.run_info.status = (
-                    f"Improvement: Metric value is better than reference {metric_value} > {metric_reference}"
-                )
-
-    def run(self) -> None:
-        """
-        Run full pipeline of quantization
-        """
-        self.prepare()
-        self.quantize()
-        self.save_quantized_model()
-        self.get_num_fq()
-        self.validate()
-        self.run_bench()
-        self.cleanup_torchscript_cache()
-
-    # TODO: general cleanup, remove model_cache for OV as well
     @staticmethod
-    def cleanup_torchscript_cache():
+    def cleanup_cache():
         """
         Helper for removing cached model representation.
 
         After run torch.jit.trace in convert_model, PyTorch does not clear the trace cache automatically.
         """
-
         torch._C._jit_clear_class_registry()
         torch.jit._recursive.concrete_type_store = torch.jit._recursive.ConcreteTypeStore()
         torch.jit._state._clear_class_state()
 
-    def get_run_info(self) -> RunInfo:
-        return self.run_info
-
     def collect_data_from_stdout(self, stdout: str):
-        """
-        Parsing stdout of the test and collect additional data:
-         - time of statistic collection
-         - time of bias correction
-         - time of validation
-
-        :param stdout: stdout text
-        """
-        time_validation = None
-        time_bias_correction = None
-        time_stat_collection = None
-
-        for line in stdout.splitlines():
-            print(line)
-            match = re.search(r"Statistics\scollection.*•\s(.*)\s•.*", line)
-            if match:
-                if time_stat_collection is None:
-                    time_stat_collection = dt.datetime.strptime(match.group(1), "%H:%M:%S")
-                else:
-                    time = dt.datetime.strptime(match.group(1), "%H:%M:%S")
-                    time_stat_collection += dt.timedelta(hours=time.hour, minutes=time.minute, seconds=time.second)
-                continue
-
-            match = re.search(r"Applying.*correction.*\/(\d+)\s•\s(.*)\s•.*", line)
-            if match:
-                if time_bias_correction is None:
-                    time_bias_correction = dt.datetime.strptime(match.group(2), "%H:%M:%S")
-                else:
-                    time_bias_correction += dt.datetime.strptime(match.group(2), "%H:%M:%S")
-                continue
-
-            match = re.search(r"Validation.*\/\d+\s•\s(.*)\s•.*", line)
-            if match:
-                time_validation = dt.datetime.strptime(match.group(1), "%H:%M:%S")
-                continue
-
-        if time_stat_collection:
-            self.run_info.time_stat_collection = time_stat_collection.strftime("%H:%M:%S")
-        if time_bias_correction:
-            self.run_info.time_bias_correction = time_bias_correction.strftime("%H:%M:%S")
-        if time_validation:
-            self.run_info.time_validation = time_validation.strftime("%H:%M:%S")
+        self.run_info.stats_from_output = PTQTimeStats(stdout)

@@ -22,10 +22,10 @@ import nncf
 from tests.post_training.pipelines.base import OV_BACKENDS
 from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
-from tests.post_training.pipelines.base import BaseTestPipeline
+from tests.post_training.pipelines.base import PTQTestPipeline
 
 
-class MaskedLanguageModelingHF(BaseTestPipeline):
+class MaskedLanguageModelingHF(PTQTestPipeline):
     """Pipeline for masked language models from Hugging Face repository"""
 
     def prepare_model(self) -> None:
@@ -88,7 +88,7 @@ class MaskedLanguageModelingHF(BaseTestPipeline):
     def prepare_calibration_dataset(self):
         quantizer = OVQuantizer.from_pretrained(self.model_hf)
 
-        num_samples = self.ptq_params.get("subset_size", 300)
+        num_samples = self.compression_params.get("subset_size", 300)
 
         def preprocess_function(examples):
             return self.preprocessor(examples["sentence"], padding=True, truncation=True, max_length=128)

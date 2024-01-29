@@ -9,12 +9,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime as dt
 import os
+import re
 import time
+from dataclasses import dataclass
+from typing import Optional
 
 import numpy as np
 import openvino as ov
-import transformers
 from datasets import load_dataset
 from memory_profiler import memory_usage
 from optimum.intel.openvino import OVModelForCausalLM
@@ -25,8 +28,52 @@ import nncf
 from tests.post_training.pipelines.base import OV_BACKENDS
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
+from tests.post_training.pipelines.base import StatsFromOutput
 
 OV_MODEL_NAME = 'openvino_model.xml'
+
+@dataclass
+class WCTimeStats(StatsFromOutput):
+    time_stat_collection: Optional[str] = None
+    time_mixed_precision: Optional[str] = None
+    time_awq: Optional[str] = None
+    time_apply_compression: Optional[str] = None
+
+
+    def fill(self, stdout: str):
+        """
+        Parsing stdout of the test and collect additional data:
+         - time of statistic collection
+         - time of bias correction
+         - time of validation
+
+        :param stdout: stdout text
+        """
+        mapping = {
+            'time_stat_collection': 'Statistics collection',
+            'time_mixed_precision': 'Searching for Mixed-Precision Configuration',
+            'time_awq': 'Applying AWQ',
+            'time_apply_compression': 'Applying Weight Compression'
+        }
+        time_regex = '.*•\s(.*)\s•.*'
+        for line in stdout.splitlines():
+            for attr_name, prefix_regex in mapping.items():
+                match = re.search(r"{}{}".format(prefix_regex, time_regex), line)
+                if match:
+                    parsed_time = dt.datetime.strptime(match.group(1), "%H:%M:%S")
+                    setattr(self, attr_name, parsed_time)
+                continue
+
+
+    def get_result_dict(self):
+        return {
+            "Stat. collection time": self.time_stat_collection,
+            "Mixed-Precision search time": self.time_mixed_precision,
+            "AWQ time": self.time_awq,
+            "Apply Compression time": self.time_apply_compression
+        }
+
+
 class LMWeightCompression(BaseTestPipeline):
     """Pipeline for casual language models from Hugging Face repository"""
 
@@ -88,12 +135,16 @@ class LMWeightCompression(BaseTestPipeline):
         self.quantized_model = nncf.compress_weights(
             self.model,
             dataset=self.calibration_dataset,
-            **self.ptq_params,
+            **self.compression_params,
         )
         self._compressed_model_dir.mkdir(parents=True, exist_ok=True)
         ov.serialize(self.model, self._compressed_model_dir / OV_MODEL_NAME)
         self.model_hf._save_config(self._compressed_model_dir)
 
+    @staticmethod
+    def cleanup_cache(self):
+        # TODO: general cleanup, remove model_cache for OV as well
+        pass
 
     def quantize(self) -> None:
         """
@@ -109,7 +160,7 @@ class LMWeightCompression(BaseTestPipeline):
         self.run_info.quant_memory_usage = memory_usage(self._quantize, max_usage=True)
         self.run_info.time_quantization = time.perf_counter() - start_time
 
-    def get_num_fq(self) -> None:
+    def get_num_quantized(self) -> None:
         # TODO: 0 FQ, but number of weights compressed
         # TODO: maybe should be removed from base!
         # can calculate u4 or u8 constants? or by certain name? 'fq'
@@ -151,3 +202,26 @@ class LMWeightCompression(BaseTestPipeline):
         similarity = all_metrics["similarity"][0]
         self.run_info.metric_name = "Similarity"
         self.run_info.metric_value = similarity
+
+    def collect_data_from_stdout(self, stdout: str):
+        self.run_info.stats_from_output = WCTimeStats(stdout)
+
+    @staticmethod
+    def cleanup_cache():
+        """
+        Helper for removing cached model representation.
+
+        """
+        # TODO: remove model_cache
+
+    def save_quantized_model(self) -> None:
+        """
+        Save quantized model to IR.
+        """
+
+    def run_bench(self) -> None:
+        """
+        Run a benchmark to collect performance statistics.
+        """
+
+

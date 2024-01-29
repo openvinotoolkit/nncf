@@ -31,13 +31,13 @@ from tests.post_training.pipelines.base import DEFAULT_VAL_THREADS
 from tests.post_training.pipelines.base import OV_BACKENDS
 from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
-from tests.post_training.pipelines.base import BaseTestPipeline
+from tests.post_training.pipelines.base import PTQTestPipeline
 
 # Disable using aten::scaled_dot_product_attention
 set_fused_attn(False, False)
 
 
-class ImageClassificationTimm(BaseTestPipeline):
+class ImageClassificationTimm(PTQTestPipeline):
     """Pipeline for Image Classification model from timm repository"""
 
     def prepare_model(self) -> None:
