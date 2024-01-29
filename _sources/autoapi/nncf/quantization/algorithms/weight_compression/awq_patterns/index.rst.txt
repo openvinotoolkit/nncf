@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.quantization.algorithms.weight_compression.awq_patterns`
+======================================================================
+
+.. py:module:: nncf.quantization.algorithms.weight_compression.awq_patterns
+
+

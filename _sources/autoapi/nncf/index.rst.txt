@@ -271,7 +271,7 @@ Functions
    An enum with values corresponding to the available quantization presets.
 
 
-.. py:function:: compress_weights(model, mode=CompressWeightsMode.INT8_ASYM, ratio = None, group_size = None, ignored_scope = None, all_layers = None, dataset = None, sensitivity_metric = None)
+.. py:function:: compress_weights(model, mode=CompressWeightsMode.INT8_ASYM, ratio = None, group_size = None, ignored_scope = None, all_layers = None, dataset = None, sensitivity_metric = None, awq = None)
 
    Compress model weights.
 
@@ -299,6 +299,7 @@ Functions
    :param dataset: Dataset used for assigning different quantization precision by finding outliers in activations.
    :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
        preserve the accuracy of the model, the more sensitive layers receives a higher precision.
+   :param awq: Indicates whether use AWQ weights correction.
    :return: The non-trainable model with compressed weights.
 
 
