@@ -259,6 +259,7 @@ def compress_weights(
     all_layers: Optional[bool] = None,
     dataset: Optional[Dataset] = None,
     sensitivity_metric: Optional[SensitivityMetric] = None,
+    awq: Optional[bool] = None,
 ) -> TModel:
     """
     Compress model weights.
@@ -287,6 +288,7 @@ def compress_weights(
     :param dataset: Dataset used for assigning different quantization precision by finding outliers in activations.
     :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
         preserve the accuracy of the model, the more sensitive layers receives a higher precision.
+    :param awq: Indicates whether use AWQ weights correction.
     :return: The non-trainable model with compressed weights.
     """
     if mode == CompressWeightsMode.INT8:
@@ -305,6 +307,9 @@ def compress_weights(
                 "Torch backend supports only INT8_ASYM, INT8_SYM modes for weight compression, "
                 f"but given {mode.value} mode."
             )
+
+        if awq is True:
+            raise AttributeError("Torch backend doesn`t supports AWQ algorithm, but given awq parameter is True mode.")
 
         if is_wrapped_model(model):
             if not model.nncf.trace_parameters:
@@ -331,10 +336,10 @@ def compress_weights(
                 "INT8 mode assumes per-channel quantization of all layers in 8 bit. "
                 "Default values of `ratio` (1) and `group_size` (-1) parameters can not be overridden"
             )
-        options = [all_layers, sensitivity_metric, dataset]
+        options = [all_layers, sensitivity_metric, dataset, awq]
         if any(option is not None for option in options):
             raise AttributeError(
-                "INT8 modes do not support `all_layers`, `sensitivity_metric` and `dataset` options."
+                "INT8 modes do not support `all_layers`, `sensitivity_metric`, `awq` and `dataset` options."
                 "Set them to None."
             )
 
@@ -344,6 +349,8 @@ def compress_weights(
         group_size = 128
     if all_layers is None:
         all_layers = False
+    if awq is None:
+        awq = False
     if ignored_scope is None:
         ignored_scope = IgnoredScope()
     if sensitivity_metric is None:
@@ -361,7 +368,9 @@ def compress_weights(
     if ratio < 0 or ratio > 1:
         raise ValueError(f"The ratio should be between 0 and 1, but ration={ratio} is specified.")
 
-    compression_algorithm = WeightCompression(mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric)
+    compression_algorithm = WeightCompression(
+        mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric, awq
+    )
     graph = NNCFGraphFactory.create(model)
     return compression_algorithm.apply(model, graph, dataset=dataset)
 
