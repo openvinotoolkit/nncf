@@ -55,6 +55,7 @@ class StatsFromOutput:
     def get_result_dict(self) -> Dict[str, str]:
         return {}
 
+
 @dataclass
 class PTQTimeStats(StatsFromOutput):
     """
@@ -65,28 +66,28 @@ class PTQTimeStats(StatsFromOutput):
 
     :param stdout: stdout text
     """
+
     time_stat_collection: Optional[str] = None
     time_bias_correction: Optional[str] = None
-    time_validation: Optional[str] = None
 
     def fill(self, stdout: str):
         for line in stdout.splitlines():
             print(line)
             match = re.search(r"Statistics\scollection.*•\s(.*)\s•.*", line)
             if match:
-                if time_stat_collection is None:
-                    time_stat_collection = dt.datetime.strptime(match.group(1), "%H:%M:%S")
+                if time_stat_collection_ is None:
+                    time_stat_collection_ = dt.datetime.strptime(match.group(1), "%H:%M:%S")
                 else:
                     time = dt.datetime.strptime(match.group(1), "%H:%M:%S")
-                    time_stat_collection += dt.timedelta(hours=time.hour, minutes=time.minute, seconds=time.second)
+                    time_stat_collection_ += dt.timedelta(hours=time.hour, minutes=time.minute, seconds=time.second)
                 continue
 
             match = re.search(r"Applying.*correction.*\/(\d+)\s•\s(.*)\s•.*", line)
             if match:
-                if time_bias_correction is None:
-                    time_bias_correction = dt.datetime.strptime(match.group(2), "%H:%M:%S")
+                if time_bias_correction_ is None:
+                    time_bias_correction_ = dt.datetime.strptime(match.group(2), "%H:%M:%S")
                 else:
-                    time_bias_correction += dt.datetime.strptime(match.group(2), "%H:%M:%S")
+                    time_bias_correction_ += dt.datetime.strptime(match.group(2), "%H:%M:%S")
                 continue
 
             match = re.search(r"Validation.*\/\d+\s•\s(.*)\s•.*", line)
@@ -94,10 +95,10 @@ class PTQTimeStats(StatsFromOutput):
                 self.time_validation = dt.datetime.strptime(match.group(1), "%H:%M:%S")
                 continue
 
-        if time_stat_collection:
-            self.time_stat_collection = time_stat_collection.strftime("%H:%M:%S")
-        if time_bias_correction:
-            self.time_bias_correction = time_bias_correction.strftime("%H:%M:%S")
+        if time_stat_collection_:
+            self.time_stat_collection = time_stat_collection_.strftime("%H:%M:%S")
+        if time_bias_correction_:
+            self.time_bias_correction = time_bias_correction_.strftime("%H:%M:%S")
 
     def get_result_dict(self):
         return {
@@ -212,9 +213,8 @@ class BaseTestPipeline(ABC):
     def prepare_model(self) -> None:
         """Prepare model"""
 
-    @staticmethod
     @abstractmethod
-    def cleanup_cache():
+    def cleanup_cache(self):
         """
         Helper for removing cached model representation.
         """
@@ -310,6 +310,7 @@ class PTQTestPipeline(BaseTestPipeline):
     """
     Base class to test post training quantization.
     """
+
     def _quantize(self):
         """
         Quantize self.model
@@ -399,8 +400,7 @@ class PTQTestPipeline(BaseTestPipeline):
             fps = match.group(1)
             self.run_info.fps = float(fps)
 
-    @staticmethod
-    def cleanup_cache():
+    def cleanup_cache(self):
         """
         Helper for removing cached model representation.
 

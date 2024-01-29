@@ -30,7 +30,8 @@ from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import StatsFromOutput
 
-OV_MODEL_NAME = 'openvino_model.xml'
+OV_MODEL_NAME = "openvino_model.xml"
+
 
 @dataclass
 class WCTimeStats(StatsFromOutput):
@@ -38,7 +39,6 @@ class WCTimeStats(StatsFromOutput):
     time_mixed_precision: Optional[str] = None
     time_awq: Optional[str] = None
     time_apply_compression: Optional[str] = None
-
 
     def fill(self, stdout: str):
         """
@@ -50,12 +50,12 @@ class WCTimeStats(StatsFromOutput):
         :param stdout: stdout text
         """
         mapping = {
-            'time_stat_collection': 'Statistics collection',
-            'time_mixed_precision': 'Searching for Mixed-Precision Configuration',
-            'time_awq': 'Applying AWQ',
-            'time_apply_compression': 'Applying Weight Compression'
+            "time_stat_collection": "Statistics collection",
+            "time_mixed_precision": "Searching for Mixed-Precision Configuration",
+            "time_awq": "Applying AWQ",
+            "time_apply_compression": "Applying Weight Compression",
         }
-        time_regex = '.*•\s(.*)\s•.*'
+        time_regex = ".*•\s(.*)\s•.*"
         for line in stdout.splitlines():
             for attr_name, prefix_regex in mapping.items():
                 match = re.search(r"{}{}".format(prefix_regex, time_regex), line)
@@ -64,13 +64,12 @@ class WCTimeStats(StatsFromOutput):
                     setattr(self, attr_name, parsed_time)
                 continue
 
-
     def get_result_dict(self):
         return {
             "Stat. collection time": self.time_stat_collection,
             "Mixed-Precision search time": self.time_mixed_precision,
             "AWQ time": self.time_awq,
-            "Apply Compression time": self.time_apply_compression
+            "Apply Compression time": self.time_apply_compression,
         }
 
 
@@ -79,7 +78,9 @@ class LMWeightCompression(BaseTestPipeline):
 
     def prepare_model(self) -> None:
         if self.backend in OV_BACKENDS + [BackendType.FP32]:
-            self.model_hf = OVModelForCausalLM.from_pretrained(self.model_id, export=True, load_in_8bit=False, compile=False, stateful=False)
+            self.model_hf = OVModelForCausalLM.from_pretrained(
+                self.model_id, export=True, load_in_8bit=False, compile=False, stateful=False
+            )
             self.model = self.model_hf.model
         self._dump_model_fp32()
 
@@ -94,6 +95,7 @@ class LMWeightCompression(BaseTestPipeline):
 
     def get_transform_calibration_fn(self):
         if self.backend in OV_BACKENDS:
+
             def transform_fn(data):
                 tokenized_text = self.preprocessor(data["text"], return_tensors="np")
                 input_ids = tokenized_text["input_ids"]
@@ -123,7 +125,7 @@ class LMWeightCompression(BaseTestPipeline):
         return transform_fn
 
     def prepare_calibration_dataset(self):
-        dataset = load_dataset('wikitext', 'wikitext-2-v1', split='train')
+        dataset = load_dataset("wikitext", "wikitext-2-v1", split="train")
         dataset = dataset.filter(lambda example: len(example["text"]) > 80)
         self.calibration_dataset = nncf.Dataset(dataset, self.get_transform_calibration_fn())
 
@@ -131,7 +133,7 @@ class LMWeightCompression(BaseTestPipeline):
         """
         Quantize self.model
         """
-        self._compressed_model_dir = self.output_model_dir / 'compressed'
+        self._compressed_model_dir = self.output_model_dir / "compressed"
         self.quantized_model = nncf.compress_weights(
             self.model,
             dataset=self.calibration_dataset,
@@ -141,8 +143,13 @@ class LMWeightCompression(BaseTestPipeline):
         ov.serialize(self.model, self._compressed_model_dir / OV_MODEL_NAME)
         self.model_hf._save_config(self._compressed_model_dir)
 
-    @staticmethod
     def cleanup_cache(self):
+        dir_with_cache = 'model_cache'
+        shutil.rmtree(path)
+
+        self._compressed_model_dir / dir_with_cache
+        self.output_model_dir / dir_with_cache
+
         # TODO: general cleanup, remove model_cache for OV as well
         pass
 
@@ -174,28 +181,22 @@ class LMWeightCompression(BaseTestPipeline):
             cpu_threads_num = os.environ.get("CPU_THREADS_NUM")
             core.set_property("CPU", properties={"CPU_THREADS_NUM": str(cpu_threads_num)})
 
-        gold_folder = self.output_model_dir # TODO: should be a parameter
-        gold_csv = gold_folder / 'gold_all.csv'
-        print('gold path:', gold_csv.resolve())
+        gold_folder = self.output_model_dir  # TODO: should be a parameter
+        gold_csv = gold_folder / "gold_all.csv"
+        print("gold path:", gold_csv.resolve())
         if gold_csv.exists():
-            evaluator = Evaluator(tokenizer=self.preprocessor, gt_data=gold_csv, test_data=str(gold_csv), metrics=("similarity",))
+            evaluator = Evaluator(
+                tokenizer=self.preprocessor, gt_data=gold_csv, test_data=str(gold_csv), metrics=("similarity",)
+            )
         else:
             model_gold = OVModelForCausalLM.from_pretrained(
-                gold_folder,
-                trust_remote_code=True,
-                load_in_8bit=False,
-                compile=False,
-                stateful=False
+                gold_folder, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=False
             )
             evaluator = Evaluator(base_model=model_gold, tokenizer=self.preprocessor, metrics=("similarity",))
             evaluator.dump_gt(str(gold_csv))
 
         compressed_model_hf = OVModelForCausalLM.from_pretrained(
-            self._compressed_model_dir,
-            trust_remote_code=True,
-            load_in_8bit=False,
-            compile=False,
-            stateful=False
+            self._compressed_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=False
         )
 
         _, all_metrics = evaluator.score(compressed_model_hf)
@@ -223,5 +224,3 @@ class LMWeightCompression(BaseTestPipeline):
         """
         Run a benchmark to collect performance statistics.
         """
-
-
