@@ -80,7 +80,7 @@ class ONNXInitializerUpdateCommand(TransformationCommand):
     def __init__(self, target_point: ONNXTargetPoint, new_value: np.ndarray):
         """
         :param target_point: Target point.
-        :param weight_value: New weight value.
+        :param new_value: New value for initializer.
         """
         super().__init__(TransformationType.CHANGE, target_point)
         self.new_value = new_value
