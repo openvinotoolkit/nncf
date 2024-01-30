@@ -172,7 +172,7 @@ class WeightCompression(Algorithm):
             return all_weight_params
 
         if self._all_layers:
-            return list(filter(lambda wp: len(wp.reduction_axis) == 1, all_weight_params))
+            return list(filter(lambda wp: len(wp.reduction_axes) == 1, all_weight_params))
 
         ratio_defining_params = list(
             filter(
