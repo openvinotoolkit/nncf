@@ -20,6 +20,7 @@ from attr import dataclass
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.data.dataset import Dataset
+from nncf.errors import ValidationError
 from nncf.experimental.tensor import Tensor
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.quantization import compress_weights
@@ -356,12 +357,22 @@ def test_data_based_criterion(mode, ref_scores, ref_act_scores, mocker):
 
 
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
-def test_not_quantize_with_multiple_reduction_axes(mode):
+def test_quantize_Gather_with_multiple_reduction_axes_in_8bit(mode):
     model = GatherWithTwoReductionAxes().ov_model
     compressed_model = compress_weights(model, mode=mode)
     for op in compressed_model.get_ordered_ops():
         if op.get_type_name() == "Constant" and op.get_friendly_name() == "gather_1_data":
-            assert op.get_element_type() == ov.Type(np.float32)
+            assert op.get_element_type() == ov.Type.u8
+
+
+@pytest.mark.parametrize("mode", (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM))
+@pytest.mark.parametrize("all_layers", (True, False))
+def test_quantize_Gather_with_multiple_reduction_axes_if_mode_4bit(mode, all_layers):
+    model = GatherWithTwoReductionAxes().ov_model
+    compressed_model = compress_weights(model, mode=mode, all_layers=all_layers)
+    for op in compressed_model.get_ordered_ops():
+        if op.get_type_name() == "Constant" and op.get_friendly_name() == "gather_1_data":
+            assert op.get_element_type() == ov.Type.u8
 
 
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM))
@@ -561,12 +572,12 @@ def test_calculate_scale_per_group(desc: CalculateScaleDesc):
 
 
 def test_raise_error_for_many_axes():
-    with pytest.raises(AssertionError):
+    with pytest.raises(RuntimeError):
         reshape_weight_for_grouped_quantization(WEIGHTS_2x4, reduction_axis=(0, 1), group_size=1)
 
 
-def test_raise_error_with_tuple():
-    with pytest.raises(AssertionError):
+def test_raise_error_channel_size_is_not_divisible_by_group_size():
+    with pytest.raises(ValidationError):
         reshape_weight_for_grouped_quantization(WEIGHTS_2x4, reduction_axis=(0,), group_size=3)
 
 

@@ -144,7 +144,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             elif weight_port_id == 2:
                 reduction_axis = [max(0, ndims - 2)]
             reduction_axis = [max(0, reduction_axis)]
-        return reduction_axis
+        return tuple(reduction_axis)
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
