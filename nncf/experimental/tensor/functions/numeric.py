@@ -383,6 +383,22 @@ def round(a: Tensor, decimals=0) -> Tensor:
 
 @functools.singledispatch
 @tensor_guard
+def power(a: Tensor, exponent: Union[Tensor, float]) -> Tensor:
+    """
+    Takes the power of each element in input with exponent and returns a tensor with the result.
+    Exponent can be either a single float number or a broadcastable Tensor. In case exponent is
+    a brodcastable tensor, the exponent is being broadcasted and the return tensor contains
+    the power of each element in input with exponent elementwise.
+
+    :param a: Input data.
+    :param exponent: Exponent value.
+    :return: The result of the power of each element in input with given exponent.
+    """
+    return Tensor(power(a.data, unwrap_tensor_data(exponent)))
+
+
+@functools.singledispatch
+@tensor_guard
 def quantile(
     a: Tensor,
     q: Union[float, List[float]],

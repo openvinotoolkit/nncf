@@ -15,6 +15,7 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.graph.transformations.commands import PTWeightUpdateCommand
 
 
 def create_bias_correction_command(node: NNCFNode, bias_value: Tensor) -> PTBiasCorrectionCommand:
@@ -27,3 +28,15 @@ def create_bias_correction_command(node: NNCFNode, bias_value: Tensor) -> PTBias
     """
     target_point = PTTargetPoint(TargetType.LAYER, node.node_name)
     return PTBiasCorrectionCommand(target_point, bias_value)
+
+
+def create_command_to_update_weight(node: NNCFNode, weight_value: Tensor) -> PTWeightUpdateCommand:
+    """
+     Creates weight update command.
+
+    :param node: The node in the NNCF graph that corresponds to operation with weight.
+    :param weight_value: The new weight value that will be set.
+    :return: The `PTWeightUpdateCommand` command to update weight.
+    """
+    target_point = PTTargetPoint(TargetType.LAYER, node.node_name)
+    return PTWeightUpdateCommand(target_point, weight_value)
