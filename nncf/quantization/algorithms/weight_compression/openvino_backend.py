@@ -192,4 +192,4 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 class OVAWQAlgoAlgoBackend(OVWeightCompressionAlgoBackend):
     @staticmethod
     def get_awq_patterns():
-        return get_awq_patterns(OVMatMulMetatype, OVMultiplyMetatype)
+        return get_awq_patterns(om.OVMatMulMetatype, om.OVMultiplyMetatype)
