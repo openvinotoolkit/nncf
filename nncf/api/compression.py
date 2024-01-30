@@ -31,9 +31,6 @@ class CompressionLoss(ABC):
     sparsity algorithm calculates the number of non-zero weights in convolutional
     and fully-connected layers to construct the loss function.
     """
-    def __init__(self):
-        super().__init__()
-        self.current_sparsity = 0.0
 
     @abstractmethod
     def calculate(self, *args, **kwargs) -> Any:

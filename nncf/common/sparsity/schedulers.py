@@ -59,10 +59,11 @@ class SparsityScheduler(BaseCompressionScheduler):
         """
         super().__init__()
         self._controller = controller
-        self.initial_level = params.get("sparsity_init")
-        self.target_level = params.get("sparsity_target", SPARSITY_TARGET)
+        self.initial_level = params.get("sparsity_init", float)
+        self.target_level: float = params.get("sparsity_target", SPARSITY_TARGET)
         self.target_epoch = params.get("sparsity_target_epoch", SPARSITY_TARGET_EPOCH)
         self.freeze_epoch = params.get("sparsity_freeze_epoch", SPARSITY_FREEZE_EPOCH)
+        # self.current_sparsity = 0.0
 
     def _calculate_sparsity_level(self) -> float:
         """
@@ -122,8 +123,8 @@ class PolynomialSparsityScheduler(SparsityScheduler):
         :param params: Parameters of the scheduler.
         """
         super().__init__(controller, params)
-        self.schedule= PolynomialDecaySchedule(
-            self.initial_level or 0.0,
+        self.schedule = PolynomialDecaySchedule(
+            self.initial_level,
             self.target_level,
             self.target_epoch,
             params.get("power", SPARSITY_SCHEDULER_POWER),
@@ -222,7 +223,7 @@ class ExponentialSparsityScheduler(SparsityScheduler):
         :param params: Parameters of the scheduler.
         """
         super().__init__(controller, params)
-       
+
         if self.initial_level is None:
             self.initial_level = 0.0
 
@@ -235,9 +236,9 @@ class ExponentialSparsityScheduler(SparsityScheduler):
         self._update_sparsity_level()
 
     def _calculate_sparsity_level(self) -> float:
-        self.target_level = 0.0
         current_density: float = self.schedule(self.current_epoch)
         current_level: float = 1.0 - current_density
+        self.target_level
         return min(current_level, self.target_level)
 
 
@@ -259,11 +260,11 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
         self.eps = params.get("eps", 0.03)
         self.patience = params.get("patience", SPARSITY_SCHEDULER_PATIENCE)
         self.num_bad_epochs = 0
-        self._current_level: float = self.initial_level or 0.0
+        self._current_level: float = self.initial_level
 
     @property
     def current_sparsity_level(self) -> float:
-        self._current_level = 0.0
+        self._current_level
         """
         Returns sparsity level for the `current_epoch` or for step
         in the `current_epoch`.

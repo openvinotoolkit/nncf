@@ -27,7 +27,13 @@ class SparsifiedLayerSummary:
     :param weight_percentage: Proportion of the layer's weights in the whole model.
     """
 
-    def __init__(self, name: str, weight_shape: List[int], sparsity_level: float, weight_percentage: float):
+    def __init__(
+        self,
+        name: str,
+        weight_shape: List[int],
+        sparsity_level: float,
+        weight_percentage: float,
+    ):
         self.name = name
         self.weight_shape = weight_shape
         self.sparsity_level = sparsity_level
@@ -60,12 +66,20 @@ class SparsifiedModelStatistics(Statistics):
             header=["Statistic's name", "Value"],
             rows=[
                 ["Sparsity level of the whole model", self.sparsity_level],
-                ["Sparsity level of all sparsified layers", self.sparsity_level_for_layers],
+                [
+                    "Sparsity level of all sparsified layers",
+                    self.sparsity_level_for_layers,
+                ],
             ],
         )
 
         layers_string = create_table(
-            header=["Layer's name", "Weight's shape", "Sparsity level", "Weight's percentage"],
+            header=[
+                "Layer's name",
+                "Weight's shape",
+                "Sparsity level",
+                "Weight's percentage",
+            ],
             rows=[
                 [s.name, s.weight_shape, s.sparsity_level, s.weight_percentage] for s in self.sparsified_layers_summary
             ],
@@ -106,13 +120,17 @@ class MagnitudeSparsityStatistics(Statistics):
 
     def to_str(self) -> str:
         thresholds_string = create_table(
-            ["Layer's name", "Sparsity threshold"], [[s.name, s.threshold] for s in self.thresholds]
+            ["Layer's name", "Sparsity threshold"],
+            [[s.name, s.threshold] for s in self.thresholds],
         )
 
         algorithm_string = create_table(
             header=["Statistic's name", "Value"],
             rows=[
-                ["A target level of the sparsity for the algorithm for the current epoch", self.target_sparsity_level],
+                [
+                    "A target level of the sparsity for the algorithm for the current epoch",
+                    self.target_sparsity_level,
+                ],
             ],
         )
 
@@ -150,7 +168,10 @@ class RBSparsityStatistics(Statistics):
     """
 
     def __init__(
-        self, model_statistics: SparsifiedModelStatistics, target_sparsity_level: float, mean_sparse_prob: float
+        self,
+        model_statistics: SparsifiedModelStatistics,
+        target_sparsity_level: float,
+        mean_sparse_prob: float,
     ):
         self.model_statistics = model_statistics
         self.target_sparsity_level = target_sparsity_level
@@ -160,8 +181,14 @@ class RBSparsityStatistics(Statistics):
         algorithm_string = create_table(
             header=["Statistic's name", "Value"],
             rows=[
-                ["A target level of the sparsity for the algorithm for the current epoch", self.target_sparsity_level],
-                ["The probability that one weight will be zeroed", self.mean_sparse_prob],
+                [
+                    "A target level of the sparsity for the algorithm for the current epoch",
+                    self.target_sparsity_level,
+                ],
+                [
+                    "The probability that one weight will be zeroed",
+                    self.mean_sparse_prob,
+                ],
             ],
         )
 
@@ -196,7 +223,10 @@ class MovementSparsityStatistics(Statistics):
             header=["Statistic's name", "Value"],
             rows=[
                 ["Mask Importance Threshold", self.importance_threshold],
-                ["Importance Regularization Factor", self.importance_regularization_factor],
+                [
+                    "Importance Regularization Factor",
+                    self.importance_regularization_factor,
+                ],
             ],
         )
 

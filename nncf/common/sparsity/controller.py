@@ -10,12 +10,21 @@
 # limitations under the License.
 
 from nncf.api.compression import CompressionAlgorithmController
+from nncf.api.compression import CompressionLoss
+
+
+class SparsityLoss(CompressionLoss):
+    def __init__(self) -> None:
+        super().__init__()
+        self.current_sparsity: float = 0.0
 
 
 class SparsityController(CompressionAlgorithmController):
     """
     This is the class from which all sparsity controllers inherit.
     """
+
+    loss: SparsityLoss
 
     def set_sparsity_level(self, sparsity_level: float) -> None:
         """
