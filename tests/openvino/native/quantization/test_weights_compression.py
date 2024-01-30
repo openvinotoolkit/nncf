@@ -20,6 +20,7 @@ from attr import dataclass
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.data.dataset import Dataset
+from nncf.errors import ValidationError
 from nncf.experimental.tensor import Tensor
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.quantization import compress_weights
@@ -576,7 +577,7 @@ def test_raise_error_for_many_axes():
 
 
 def test_raise_error_channel_size_is_not_divisible_by_group_size():
-    with pytest.raises(RuntimeError):
+    with pytest.raises(ValidationError):
         reshape_weight_for_grouped_quantization(WEIGHTS_2x4, reduction_axis=(0,), group_size=3)
 
 
