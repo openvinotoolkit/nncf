@@ -125,7 +125,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             tensor_type = np.int8  # The weight is restricted to have only signed range
         nncf_input_node_next_nodes = ONNXMinMaxAlgoBackend._get_input_edges_mapping(nncf_graph)
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        axis = ONNXMinMaxAlgoBackend.get_channel_axes(node, target_point, is_weight, quantizer_config.per_channel)
+        axis = ONNXMinMaxAlgoBackend.get_channel_axes(node, target_point, quantizer_config.per_channel)
         if not axis:
             axis = None
         else:

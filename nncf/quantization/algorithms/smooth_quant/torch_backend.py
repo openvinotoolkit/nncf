@@ -19,12 +19,12 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.tensor import Tensor
-from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
@@ -89,7 +89,7 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def get_channel_agnostic_reduction_axes(channel_axis: int, shape: Tuple[int]) -> Tuple[int]:
-        return get_channel_agnostic_reduction_axes([channel_axis], shape)
+        return get_reduction_axes([channel_axis], shape)
 
     @staticmethod
     def get_abs_max_channel_collector(
