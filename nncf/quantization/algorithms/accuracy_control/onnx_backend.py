@@ -119,7 +119,16 @@ class ONNXAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
 
     @staticmethod
     def get_model_size(model: onnx.ModelProto) -> int:
-        raise NotImplementedError
+        model_size = 0
+        for initializer in model.graph.initializer:
+            model_size += onnx.numpy_helper.to_array(initializer).nbytes
+        for node in model.graph.node:
+            for attr in node.attribute:
+                if attr.HasField("t"):
+                    model_size += onnx.numpy_helper.to_array(attr.t).nbytes
+                for t in attr.tensors:
+                    model_size += onnx.numpy_helper.to_array(t).nbytes
+        return model_size
 
     # Preparation of model
 
