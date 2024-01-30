@@ -186,27 +186,24 @@ class MinMaxAlgoBackend(ABC):
     @abstractmethod
     def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: TargetPoint) -> List[int]:
         """
-        TODO
+        Returns shape of a targer point tensor.
 
-        :param NNCFGraph nncf_graph:
-        :param NNCFNode node:
-        :param TargetPoint target_point:
-        :return List[int]:
+        :param nncf_graph: NNCFGraph instance.
+        :param node: NNCFNode.
+        :param target_point: Target point of which tensor shape is seeked.
+        :return: Shape of target point tensor.
         """
 
     @staticmethod
     @abstractmethod
-    def get_channel_axes(
-        node: NNCFNode, target_point: TargetPoint, is_weight: bool, is_per_channel: bool
-    ) -> Tuple[int]:
+    def get_channel_axes(node: NNCFNode, target_point: TargetPoint, is_per_channel: bool) -> Tuple[int]:
         """
-        TODO
+        Returns axes for per-channel quantization.
 
-        :param NNCFNode node:
-        :param TargetPoint target_point:
-        :param bool is_weight:
-        :param bool is_per_channel:
-        :return Tuple[int]:
+        :param node: Quantized node.
+        :param target_point: Corresponding target point.
+        :param is_per_channel: Is per-channel quantization or not.
+        :return: Axes for per-channel quantization.
         """
 
     @staticmethod
@@ -223,9 +220,9 @@ class MinMaxAlgoBackend(ABC):
         Returns backend-specific statistic collector.
 
         :param range_estimator_params: Parameters that specify estimators types.
-        :param use_abs_max:
-        :param reduction_axes: TODO
-        :param aggregation_axes:
+        :param use_abs_max: Wheather reduce absolute values of input tensors or not.
+        :param reduction_axes: Axes for reducer.
+        :param aggregation_axes: Axes for aggregator.
         :param inplace: Whether to calculate statistic inplace or not.
         :param num_samples: Maximum number of samples to collect.
         :return: Backend-specific TensorStatisticCollectorBase for the statistics calculation.

@@ -161,12 +161,10 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return get_quantized_tensor_shape(nncf_graph, node, target_point)
 
     @staticmethod
-    def get_channel_axes(
-        node: NNCFNode, target_point: ONNXTargetPoint, is_weight: bool, is_per_channel: bool
-    ) -> Tuple[int]:
+    def get_channel_axes(node: NNCFNode, target_point: ONNXTargetPoint, is_per_channel: bool) -> Tuple[int]:
         if not is_per_channel:
             return ()
-        if is_weight:
+        if target_point.is_weight_target_point():
             return (get_weight_quantization_axis(node, target_point.port_id),)
         return (1,)
 

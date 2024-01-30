@@ -373,7 +373,7 @@ class MinMaxQuantization(Algorithm):
         node = graph.get_node_by_name(target_point.target_node_name)
 
         shape = self._backend_entity.get_target_point_shape(graph, node, target_point)
-        channel_axes = self._backend_entity.get_channel_axes(node, target_point, is_weight, qconfig.per_channel)
+        channel_axes = self._backend_entity.get_channel_axes(node, target_point, qconfig.per_channel)
 
         range_estimator_params = self._get_range_estimator_parameters(target_point, qconfig)
 

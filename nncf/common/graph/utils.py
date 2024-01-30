@@ -10,14 +10,13 @@
 # limitations under the License.
 
 from functools import partial
-from typing import List, Set, Union
+from typing import List, Set, Tuple, Union
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.logging import nncf_logger
 from nncf.common.pruning.utils import traverse_function
-from nncf.common.tensor_statistics.collectors import ReductionAxes
 
 
 def get_concat_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]) -> int:
@@ -117,15 +116,15 @@ def get_number_of_quantized_ops(
     return len(quantized_ops)
 
 
-def get_reduction_axes(axes_to_keep: Union[List[int], ReductionAxes], shape_to_reduce: List[int]) -> ReductionAxes:
+def get_reduction_axes(channel_axes: Union[List[int], Tuple[int]], shape: Union[List[int], Tuple[int]]) -> Tuple[int]:
     """
-    Returns reduction axes without axes needed to keep.
+    Returns filtered reduction axes without axes that corresponds channels.
 
-    :param axes_to_keep: Axes to keep.
-    :param shape_to_reduce: Shape to reduce.
+    :param channel_axes: Channel axes.
+    :param shape: Shape that need to be filtered.
     :return: Reduction axes.
     """
-    reduction_axes = list(range(len(shape_to_reduce)))
-    for channel_axis in sorted(axes_to_keep, reverse=True):
+    reduction_axes = list(range(len(shape)))
+    for channel_axis in sorted(channel_axes, reverse=True):
         del reduction_axes[channel_axis]
     return tuple(reduction_axes)
