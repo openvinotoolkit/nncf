@@ -123,6 +123,67 @@ def fixture_wc_report_data(output_dir, run_benchmark_app, extra_columns):
         df.to_csv(output_dir / "results.csv", index=False)
 
 
+def maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend):
+    if test_model_param["backend"] == BackendType.FP32 and not run_fp32_backend:
+        pytest.skip("To run test for not quantized model use --fp32 argument")
+    if test_model_param["backend"] == BackendType.CUDA_TORCH and not run_torch_cuda_backend:
+        pytest.skip("To run test for CUDA_TORCH backend use --cuda argument")
+    return test_model_param
+
+
+def create_short_run_info(test_model_param, err_msg, test_case_name):
+    if test_model_param is not None:
+        run_info = RunInfo(
+            model=test_model_param["reported_name"],
+            backend=test_model_param["backend"],
+            status=err_msg,
+        )
+    else:
+        splitted = test_case_name.split("_backend_")
+        run_info = RunInfo(
+            model=splitted[0],
+            backend=BackendType[splitted[1]],
+            status=err_msg,
+        )
+
+    return run_info
+
+
+def write_logs(captured, pipeline):
+    stdout_file = pipeline.output_model_dir / "stdout.log"
+    stderr_file = pipeline.output_model_dir / "stderr.log"
+
+    stdout_file.write_text(captured.out, encoding="utf-8")
+    stderr_file.write_text(captured.err, encoding="utf-8")
+    return captured
+
+
+def create_pipeline_kwargs(test_model_param, subset_size, test_case_name, reference_data):
+    if subset_size:
+        if "compression_params" not in test_model_param:
+            test_model_param["compression_params"] = {}
+        test_model_param["compression_params"]["subset_size"] = subset_size
+
+    print("\n")
+    print(f"Model: {test_model_param['reported_name']}")
+    print(f"Backend: {test_model_param['backend']}")
+    print(f"PTQ params: {test_model_param['compression_params']}")
+
+    # Get target fp32 metric value
+    model_name = test_case_name.split("_backend_")[0]
+    test_reference = reference_data[test_case_name]
+    test_reference["metric_value_fp32"] = reference_data[f"{model_name}_backend_FP32"]["metric_value"]
+
+    return {
+        "reported_name": test_model_param["reported_name"],
+        "model_id": test_model_param["model_id"],
+        "backend": test_model_param["backend"],
+        "compression_params": test_model_param["compression_params"],
+        "params": test_model_param.get("params"),
+        "reference_data": test_reference,
+    }
+
+
 @pytest.mark.parametrize("test_case_name", PTQ_TEST_CASES.keys())
 def test_ptq_quantization(
     ptq_reference_data: dict,
@@ -231,64 +292,3 @@ def test_weight_compression(
 
     if err_msg:
         pytest.fail(err_msg)
-
-
-def maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend):
-    if test_model_param["backend"] == BackendType.FP32 and not run_fp32_backend:
-        pytest.skip("To run test for not quantized model use --fp32 argument")
-    if test_model_param["backend"] == BackendType.CUDA_TORCH and not run_torch_cuda_backend:
-        pytest.skip("To run test for CUDA_TORCH backend use --cuda argument")
-    return test_model_param
-
-
-def create_short_run_info(test_model_param, err_msg, test_case_name):
-    if test_model_param is not None:
-        run_info = RunInfo(
-            model=test_model_param["reported_name"],
-            backend=test_model_param["backend"],
-            status=err_msg,
-        )
-    else:
-        splitted = test_case_name.split("_backend_")
-        run_info = RunInfo(
-            model=splitted[0],
-            backend=BackendType[splitted[1]],
-            status=err_msg,
-        )
-
-    return run_info
-
-
-def write_logs(captured, pipeline):
-    stdout_file = pipeline.output_model_dir / "stdout.log"
-    stderr_file = pipeline.output_model_dir / "stderr.log"
-
-    stdout_file.write_text(captured.out, encoding="utf-8")
-    stderr_file.write_text(captured.err, encoding="utf-8")
-    return captured
-
-
-def create_pipeline_kwargs(test_model_param, subset_size, test_case_name, reference_data):
-    if subset_size:
-        if "compression_params" not in test_model_param:
-            test_model_param["compression_params"] = {}
-        test_model_param["compression_params"]["subset_size"] = subset_size
-
-    print("\n")
-    print(f"Model: {test_model_param['reported_name']}")
-    print(f"Backend: {test_model_param['backend']}")
-    print(f"PTQ params: {test_model_param['compression_params']}")
-
-    # Get target fp32 metric value
-    model_name = test_case_name.split("_backend_")[0]
-    test_reference = reference_data[test_case_name]
-    test_reference["metric_value_fp32"] = reference_data[f"{model_name}_backend_FP32"]["metric_value"]
-
-    return {
-        "reported_name": test_model_param["reported_name"],
-        "model_id": test_model_param["model_id"],
-        "backend": test_model_param["backend"],
-        "compression_params": test_model_param["compression_params"],
-        "params": test_model_param.get("params"),
-        "reference_data": test_reference,
-    }

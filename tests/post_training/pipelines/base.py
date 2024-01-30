@@ -71,6 +71,8 @@ class PTQTimeStats(StatsFromOutput):
     time_bias_correction: Optional[str] = None
 
     def fill(self, stdout: str):
+        time_stat_collection_ = None
+        time_bias_correction_ = None
         for line in stdout.splitlines():
             print(line)
             match = re.search(r"Statistics\scollection.*•\s(.*)\s•.*", line)

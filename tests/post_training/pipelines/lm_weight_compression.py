@@ -12,6 +12,7 @@
 import datetime as dt
 import os
 import re
+import shutil
 import time
 from dataclasses import dataclass
 from typing import Optional
@@ -144,14 +145,11 @@ class LMWeightCompression(BaseTestPipeline):
         self.model_hf._save_config(self._compressed_model_dir)
 
     def cleanup_cache(self):
-        dir_with_cache = 'model_cache'
-        shutil.rmtree(path)
-
-        self._compressed_model_dir / dir_with_cache
-        self.output_model_dir / dir_with_cache
-
-        # TODO: general cleanup, remove model_cache for OV as well
-        pass
+        dir_with_cache = "model_cache"
+        dirs_to_remove = [self._compressed_model_dir / dir_with_cache, self.output_model_dir / dir_with_cache]
+        for dir_to_remove in dirs_to_remove:
+            if dir_to_remove.exist():
+                shutil.rmtree(dir_to_remove)
 
     def quantize(self) -> None:
         """
@@ -206,14 +204,6 @@ class LMWeightCompression(BaseTestPipeline):
 
     def collect_data_from_stdout(self, stdout: str):
         self.run_info.stats_from_output = WCTimeStats(stdout)
-
-    @staticmethod
-    def cleanup_cache():
-        """
-        Helper for removing cached model representation.
-
-        """
-        # TODO: remove model_cache
 
     def save_quantized_model(self) -> None:
         """
