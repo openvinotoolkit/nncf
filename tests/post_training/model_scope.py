@@ -218,7 +218,20 @@ TEST_MODELS = [
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
         },
-        "backends": ALL_PTQ_BACKENDS,
+        "backends": [BackendType.OV],
+    },
+    {
+        "reported_name": "timm/swin_base_patch4_window7_224_no_sq",
+        "model_id": "swin_base_patch4_window7_224",
+        "pipeline_cls": ImageClassificationTimm,
+        "ptq_params": {
+            "preset": QuantizationPreset.MIXED,
+            "model_type": ModelType.TRANSFORMER,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                smooth_quant_alpha=AdvancedSmoothQuantParameters(matmul=-1)
+            ),
+        },
+        "backends": [BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.ONNX],
     },
     {
         "reported_name": "timm/tf_inception_v3",
