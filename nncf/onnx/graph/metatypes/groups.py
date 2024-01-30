@@ -123,8 +123,9 @@ OPERATIONS_WITH_BIAS = [
 ]
 
 # These metatypes mix outputs for different samples into one axis.
-# When reducers reduce the tensor they get only 1 value instead of batch_size values.
-# This leads to inaccurate statistics.
+# If reducers and aggregators collect statistics at the output of the following operations,
+# assuming that 0-axis is batch axis, they get only 1 value instead of batch_size values.
+# It could lead to inaccurate/incorrect statistics result.
 OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS = [
     onnx_metatypes.ONNXROIAlignMetatype,
     onnx_metatypes.ONNXEmbeddingMetatype,

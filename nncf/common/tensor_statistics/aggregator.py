@@ -74,7 +74,7 @@ class StatisticsAggregator(ABC):
         """
         if not self.statistic_points:
             return
-        if self.batch_size > 1 and self.is_model_batch_size_limited_support(graph):
+        if self.batch_size > 1 and self.is_model_has_no_batch_axis(graph):
             nncf_logger.warning(
                 "For the particular model the batch size > 1 can lead to inaccurate collected statistics . \
                 The recomendation is to use batch_size = 1."
@@ -118,7 +118,7 @@ class StatisticsAggregator(ABC):
                         elif tensor_collector.num_samples is not None:
                             self.stat_subset_size = max(self.stat_subset_size, tensor_collector.num_samples)
 
-    def is_model_batch_size_limited_support(self, graph: NNCFGraph) -> bool:
+    def is_model_has_no_batch_axis(self, graph: NNCFGraph) -> bool:
         """
         Returns True if NNCFGraph contains metatypes with no batch axis in output tensor.
 
@@ -133,8 +133,9 @@ class StatisticsAggregator(ABC):
     def metatypes_output_has_no_batch_axis(self) -> List[OperatorMetatype]:
         """
         These metatypes mix outputs for different samples into one axis.
-        When reducers reduce the tensor they get only 1 value instead of batch_size values.
-        This leads to inaccurate statistics.
+        If reducers and aggregators collect statistics at the output of the following operations,
+        assuming that 0-axis is batch axis, they get only 1 value instead of batch_size values.
+        It could lead to inaccurate/incorrect statistics result.
         """
 
     @abstractmethod

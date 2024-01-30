@@ -209,15 +209,18 @@ class RangeInitCollectorParams:
         return not self._is_weights and not self._is_per_channel
 
     def _get_reduction_axes(
-        self, shape_to_reduce: List[int], quantization_axes: Union[Tuple[int], List[int]], aggregation_axes: List[int]
+        self,
+        shape_to_reduce: Union[Tuple[int], List[int]],
+        quantization_axes: Union[Tuple[int], List[int]],
+        aggregation_axes: Union[Tuple[int], List[int]],
     ):
         """
-        TODO
+        Returns axes for a reducer.
 
-        :param shape_to_reduce:
-        :param quantization_axes:
-        :param aggregation_axes:
-        :return:
+        :param shape_to_reduce: Shape of a reduced tensor.
+        :param quantization_axes: Axes of quantization.
+        :param aggregation_axes: Axes of aggregator which is applied onto reduced tensor.
+        :return: Axes for reducer.
         """
         axes_to_keep = set(el - 1 for el in aggregation_axes if el != 0)
         axes_to_keep.update(quantization_axes)
@@ -225,10 +228,10 @@ class RangeInitCollectorParams:
 
     def _get_aggregation_axes(self, is_per_sample: bool) -> Tuple[int]:
         """
-        TODO
+        Returns axes for aggregator.
 
-        :param bool is_per_sample: _description_
-        :return Tuple[int]: _description_
+        :param is_per_sample: Whether to aggreagate tensor statistics per batch axis.
+        :return Tuple[int]: Aggregation axes.
         """
         return (0, 1) if is_per_sample else (0,)
 
