@@ -26,7 +26,7 @@ DATA_BASED_SENSITIVITY_METRICS = (
 
 ALL_SENSITIVITY_METRICS = DATA_BASED_SENSITIVITY_METRICS + (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,)
 
-SUPPORTED_MODES = (CompressWeightsMode.INT8, CompressWeightsMode.INT8_ASYM)
+SUPPORTED_MODES = (CompressWeightsMode.INT8, CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM)
 UNSUPPORTED_MODES = (
     CompressWeightsMode.INT4_SYM,
     CompressWeightsMode.INT4_ASYM,
@@ -51,12 +51,14 @@ class ShortTransformer(torch.nn.Module):
         return res
 
 
-def test_compress_weights():
+@pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
+def test_compress_weights(mode):
     model = ShortTransformer(5, 10)
+    dtype = torch.int8 if mode == CompressWeightsMode.INT8_SYM else torch.uint8
 
     input_ids = torch.randint(0, 10, (5,))
     wrapped_model = wrap_model(model, example_input=input_ids, trace_parameters=True)
-    compressed_model = compress_weights(wrapped_model)
+    compressed_model = compress_weights(wrapped_model, mode=mode)
 
     n_compressed_weights = 0
     n_target_modules = 0
@@ -64,18 +66,20 @@ def test_compress_weights():
     for _, module in compressed_model.named_children():
         if isinstance(module, (torch.nn.Linear, torch.nn.Embedding)):
             n_target_modules += 1
-            if module.weight.dtype in [torch.uint8, torch.int8]:
+            if module.weight.dtype == dtype:
                 n_compressed_weights += 1
 
     assert n_compressed_weights == n_target_modules
 
 
-def test_compress_shared_weights(mocker):
+@pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
+def test_compress_shared_weights(mocker, mode):
     model = ShortTransformer(5, 10, share_weights=True)
+    dtype = torch.int8 if mode == CompressWeightsMode.INT8_SYM else torch.uint8
 
     input_ids = torch.randint(0, 10, (5,))
     wrapped_model = wrap_model(model, example_input=input_ids, trace_parameters=True)
-    compressed_model = compress_weights(wrapped_model)
+    compressed_model = compress_weights(wrapped_model, mode=mode)
 
     n_compressed_weights = 0
     n_target_modules = 0
@@ -83,7 +87,7 @@ def test_compress_shared_weights(mocker):
     for _, module in compressed_model.named_children():
         if isinstance(module, (torch.nn.Linear, torch.nn.Embedding)):
             n_target_modules += 1
-            if module.weight.dtype in [torch.uint8, torch.int8]:
+            if module.weight.dtype == dtype:
                 n_compressed_weights += 1
 
     assert n_compressed_weights == n_target_modules
@@ -126,7 +130,7 @@ def test_raise_error_with_unsupported_params_for_int8(mode, params):
 
 
 @pytest.mark.parametrize("mode", UNSUPPORTED_MODES)
-def test_raise_error_with_not_int8_asym(mode):
+def test_raise_error_with_not_int8(mode):
     dummy_torch_model = EmptyModel()
     dummy_input = torch.Tensor()
     wrapped_model = wrap_model(dummy_torch_model, example_input=dummy_input, trace_parameters=True)

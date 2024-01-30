@@ -1034,9 +1034,9 @@ def get_scale_shape(input_shape: List[int], is_weights: bool, per_channel: bool,
     return get_per_channel_scale_shape(input_shape, is_weights, channel_idx)
 
 
-class WeightsDecompressor(nn.Module):
+class AsymmetricWeightsDecompressor(nn.Module):
     """
-    Applies decompression of compressed weights in the forward pass
+    Applies asymmetric decompression of compressed weights in the forward pass
     """
 
     def __init__(self, scale: torch.Tensor, zero_point: torch.Tensor):
@@ -1050,3 +1050,20 @@ class WeightsDecompressor(nn.Module):
 
     def forward(self, x):
         return decompress(x, self._scale, self._zero_point)
+
+
+class SymmetricWeightsDecompressor(nn.Module):
+    """
+    Applies symmetric decompression of compressed weights in the forward pass
+    """
+
+    def __init__(self, scale: torch.Tensor):
+        """
+        :param scale: A scale in quantization scheme
+        """
+        super().__init__()
+        self.register_buffer("_scale", scale)
+
+    def forward(self, x):
+        zero_point = torch.zeros_like(self._scale)
+        return decompress(x, self._scale, zero_point)
