@@ -47,7 +47,7 @@ class WeightCompressionParameters:
     :param node_with_weight: Node with weight in the NNCF graph.
     :param weight_port_id: Number of elements in the weight array.
     :param num_weights: Number of elements in the weight array.
-    :param reduction_axes: Axess, along which to reduce (collect) different statistics (e.g. min, max).
+    :param reduction_axes: Axes, along which to reduce (collect) different statistics (e.g. min, max).
     :param compression_config: Configuration of weight compression for the weight node.
     """
 
