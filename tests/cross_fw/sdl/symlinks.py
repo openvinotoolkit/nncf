@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,6 +14,7 @@ from typing import Any, Callable
 
 import pytest
 
+import nncf
 from nncf.common.utils.os import is_windows
 
 
@@ -24,7 +25,7 @@ def check_symlinks_are_not_followed(tmp_path: Path, file_opening_entrypoint: Cal
     real_file = tmp_path / "real_file"
     real_file.touch(exist_ok=True)
     symlink_path.symlink_to(real_file)
-    with pytest.raises(RuntimeError, match="is a symbolic link, aborting"):
+    with pytest.raises(nncf.ValidationError, match="is a symbolic link, aborting"):
         file_opening_entrypoint(str(symlink_path))
 
 

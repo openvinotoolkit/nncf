@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,6 +15,7 @@ from typing import List, Optional, Type
 import numpy as np
 import pytest
 
+import nncf
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf.common.tensor_statistics.statistics import MedianMADTensorStatistic
@@ -239,7 +240,7 @@ def test_ambigous_container_key():
     reducer = DummyTensorReducer("Dummy")
     aggregator = DummyTensorAggregator(5)
     collector.register_statistic_branch("A", reducer, aggregator)
-    with pytest.raises(RuntimeError):
+    with pytest.raises(nncf.InternalError):
         collector.register_statistic_branch("A", reducer, aggregator)
 
 
@@ -248,7 +249,7 @@ def test_ambiguous_branches():
     reducer = DummyTensorReducer("Dummy")
     aggregator = DummyTensorAggregator(5)
     collector.register_statistic_branch("A", reducer, aggregator)
-    with pytest.raises(RuntimeError):
+    with pytest.raises(nncf.InternalError):
         collector.register_statistic_branch("B", reducer, aggregator)
 
 
@@ -326,7 +327,7 @@ def test_wrong_statistic_container_class():
     tensor_collector = TensorCollector(BadStatContainer)
     tensor_collector.register_statistic_branch("A", DummyTensorReducer("A"), DummyTensorAggregator())
     tensor_collector.register_input_for_all_reducers(NumpyNNCFTensor(np.array(1)))
-    with pytest.raises(RuntimeError):
+    with pytest.raises(nncf.InternalError):
         tensor_collector.get_statistics()
 
 

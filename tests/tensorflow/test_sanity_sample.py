@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,6 +18,7 @@ from pathlib import Path
 import pytest
 import tensorflow as tf
 
+import nncf
 from examples.common.sample_config import EVAL_ONLY_ERROR_TEXT
 from examples.tensorflow.classification import main as cls_main
 from examples.tensorflow.common.model_loader import AVAILABLE_MODELS
@@ -458,6 +459,6 @@ def test_eval_only_config_fails_to_train(tmp_path, sample_type):
     }
 
     main = get_sample_fn(sample_type, modes=["train"])
-    with pytest.raises(RuntimeError) as e_info:
+    with pytest.raises(nncf.ValidationError) as e_info:
         main(convert_to_argv(args))
     assert remove_line_breaks(EVAL_ONLY_ERROR_TEXT) in remove_line_breaks(e_info.value.args[0])

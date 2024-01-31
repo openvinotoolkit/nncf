@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,6 +14,7 @@ from typing import Any, Dict, Optional
 
 import tensorflow as tf
 
+import nncf
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerSpec
@@ -326,7 +327,9 @@ class SymmetricQuantizer(Quantizer):
 
     def apply_overflow_fix(self, weights):
         if self.num_bits != 8 or not self._half_range:
-            raise RuntimeError("Attempt to apply overflow issue fix to quantizer which is not configured for that.")
+            raise nncf.InternalError(
+                "Attempt to apply overflow issue fix to quantizer which is not configured for that."
+            )
 
         # Multiplier to expand scale from 7 bit to 8 bit
         multiplier = 127 / 63 if self.narrow_range else 255 / 127
@@ -450,7 +453,9 @@ class AsymmetricQuantizer(Quantizer):
 
     def apply_overflow_fix(self, weights):
         if self.num_bits != 8 or not self._half_range:
-            raise RuntimeError("Attempt to apply overflow issue fix to quantizer which is not configured for that.")
+            raise nncf.InternalError(
+                "Attempt to apply overflow issue fix to quantizer which is not configured for that."
+            )
 
         # Low value shift to expand quantize range from 7 bit to 8 bit properly
         weights["input_low_var"].assign(

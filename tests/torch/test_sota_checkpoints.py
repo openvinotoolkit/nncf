@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -22,6 +22,7 @@ import pandas as pd
 import pytest
 from pytest import FixtureRequest
 
+import nncf
 from tests.shared.metric_thresholds import DIFF_FP32_MAX_GLOBAL
 from tests.shared.metric_thresholds import DIFF_FP32_MIN_GLOBAL
 from tests.shared.paths import DATASET_DEFINITIONS_PATH
@@ -115,7 +116,7 @@ def read_reference_file(ref_path: Path) -> List[EvalRunParamsStruct]:
             model_dict = datasets[dataset_name]
             for model_name, sample_dict in model_dict.items():
                 if model_name in model_names:
-                    raise RuntimeError(f"Model name {model_name} is not unique.")
+                    raise nncf.InternalError(f"Model name {model_name} is not unique.")
                 model_names.append(model_name)
                 param_list.append(
                     EvalRunParamsStruct(

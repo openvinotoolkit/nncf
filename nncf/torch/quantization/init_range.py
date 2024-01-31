@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,6 +16,7 @@ from typing import Callable, Dict, List, Tuple
 import numpy as np
 import torch
 
+import nncf
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.initialization.range import RangeInitConfig
@@ -119,7 +120,7 @@ class PTRangeInitCollectorParams(RangeInitCollectorParams):
             val = (ndims + self._channel_idx) % ndims
             reduction_axes.remove(val)
             if not val and self.use_per_sample_stats(per_sample_stats):
-                raise RuntimeError("Batch dimension should be equal to zero")
+                raise nncf.InternalError("Batch dimension should be equal to zero")
         if self.use_per_sample_stats(per_sample_stats):
             reduction_axes = reduction_axes[1:]  # Assumes batch is the first dimension
         return tuple(reduction_axes)
@@ -176,7 +177,7 @@ class StatCollectorGenerator:
         if num_samples_to_collect_override is not None:
             num_samples = num_samples_to_collect_override
         if init_config.init_type not in RANGE_INIT_TYPES_VS_DESCRIPTIONS:
-            raise RuntimeError("Unknown range init type: {}".format(init_config.init_type))
+            raise nncf.InternalError("Unknown range init type: {}".format(init_config.init_type))
 
         use_per_sample_stats = collector_params.use_per_sample_stats(init_config.init_type == "mixed_min_max")
         reduction_axes = collector_params.get_reduction_axes(use_per_sample_stats)

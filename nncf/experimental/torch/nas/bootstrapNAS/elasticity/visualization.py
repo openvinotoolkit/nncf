@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,6 +12,7 @@ from typing import Optional
 
 import networkx as nx
 
+import nncf
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.pruning.utils import get_input_masks
@@ -90,6 +91,6 @@ class SubnetGraph:
         try:
             propagation_graph: PTNNCFGraph = width_handler.propagation_graph
             result = propagation_graph.get_node_by_name(node_name)
-        except RuntimeError:
+        except nncf.InternalError:
             result = None
         return result

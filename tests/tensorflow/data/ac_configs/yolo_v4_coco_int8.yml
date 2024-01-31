@@ -28,10 +28,12 @@ models:
           use_full_label_map: False
         annotation: mscoco_det_80.pickle
         dataset_meta: mscoco_det_80.json
-        
         preprocessing:
           - type: resize
             size: 608
+          - type: rgb_to_bgr
+          - type: normalization
+            std: 255
         postprocessing:
           - type: resize_prediction_boxes
           - type: filter
@@ -43,14 +45,6 @@ models:
           - type: clip_boxes
             apply_to: prediction
         metrics:
-          - type: map
-            integral: 11point
-            ignore_difficult: true
-            presenter: print_scalar
-          - name: AP@0.5
-            type: coco_precision
-            max_detections: 100
-            threshold: 0.5
           - name: AP@0.5:0.05:0.95
             type: coco_precision
             max_detections: 100

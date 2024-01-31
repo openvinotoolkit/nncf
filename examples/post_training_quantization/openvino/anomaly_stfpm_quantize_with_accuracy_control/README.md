@@ -29,8 +29,8 @@ pip install -r requirements.txt
 
 It's pretty simple. The example does not require additional preparation. It will do the preparation itself, such as loading the dataset and model, etc.
 
-The maximum accuracy drop you can pass as a command line argument. F1 score is calculted in range [0,1] for STFPM. Thus if you want to specify the maximum accuracy drop between the quantized and pre-trained model of 0.1% you must specify 0.001 as a command line argument:
+The maximum accuracy drop you can pass as a command line argument. F1 score is calculted in range [0,1] for STFPM. Thus if you want to specify the maximum accuracy drop between the quantized and pre-trained model of 0.5% you must specify 0.005 as a command line argument:
 
 ```bash
-python main.py 0.001
+python main.py 0.005
 ```

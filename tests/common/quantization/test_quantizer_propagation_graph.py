@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,6 +18,7 @@ from typing import Dict, List, Optional, Set, Tuple
 import networkx as nx
 import pytest
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
@@ -141,7 +142,7 @@ class TestQuantizerPropagationStateGraph:
             else:
                 assert not edge_data[QPSG.AFFECTING_PROPAGATING_QUANTIZERS_ATTR]
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(nncf.InternalError):
             _ = mock_qp_graph.add_propagating_quantizer(
                 ref_qconf_list, InsertionPointGraph.get_post_hook_node_key(target_node_key)
             )

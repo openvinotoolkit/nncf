@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,6 +12,7 @@
 
 from typing import TypeVar
 
+import nncf
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
@@ -36,4 +37,4 @@ def strip(model: TModel, do_copy: bool = True) -> TModel:
 
         return strip_pt(model, do_copy)
 
-    raise RuntimeError(f"Method `strip` does not support for {model_backend.value} backend.")
+    raise nncf.UnsupportedBackendError(f"Method `strip` does not support for {model_backend.value} backend.")

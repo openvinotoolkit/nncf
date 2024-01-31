@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,6 +16,7 @@ from pathlib import Path
 import numpy as np
 import tensorflow as tf
 
+import nncf
 from examples.common.paths import configure_paths
 from examples.common.sample_config import EVAL_ONLY_ERROR_TEXT
 from examples.common.sample_config import SampleConfig
@@ -72,7 +73,7 @@ def get_config_from_argv(argv, parser):
 
     config_from_json = create_sample_config(args, parser, mode="train")
     if config_from_json.eval_only:
-        raise RuntimeError(EVAL_ONLY_ERROR_TEXT)
+        raise nncf.ValidationError(EVAL_ONLY_ERROR_TEXT)
 
     predefined_config = get_predefined_config(config_from_json.model)
 
@@ -324,7 +325,7 @@ def main(argv):
     create_code_snapshot(nncf_root, os.path.join(config.log_dir, "snapshot.tar.gz"))
 
     if config.dataset_type != "tfrecords":
-        raise RuntimeError("The train.py does not support TensorFlow Datasets (TFDS). Please use TFRecords.")
+        raise nncf.ValidationError("The train.py does not support TensorFlow Datasets (TFDS). Please use TFRecords.")
 
     run_train(config)
 

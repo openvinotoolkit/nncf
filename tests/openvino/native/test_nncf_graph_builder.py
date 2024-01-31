@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,28 +9,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
+
 import openvino.runtime as ov
 import pytest
 
 from nncf.common.graph.graph import NNCFGraphEdge
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
-from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.openvino.native.common import compare_nncf_graphs
-from tests.openvino.native.common import get_openvino_version
+from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.models import SYNTHETIC_MODELS
 from tests.openvino.native.models import ParallelEdgesModel
 from tests.openvino.omz_helpers import convert_model
 from tests.openvino.omz_helpers import download_model
 
-OV_VERSION = get_openvino_version()
-REFERENCE_GRAPHS_DIR = OPENVINO_NATIVE_TEST_ROOT / "data" / OV_VERSION / "reference_graphs" / "original_nncf_graph"
+REFERENCE_GRAPHS_DIR = Path("reference_graphs") / "original_nncf_graph"
 
 
 @pytest.mark.parametrize("model_cls_to_test", SYNTHETIC_MODELS.values())
 def test_compare_nncf_graph_synthetic_models(model_cls_to_test):
     model_to_test = model_cls_to_test()
-    path_to_dot = REFERENCE_GRAPHS_DIR / model_to_test.ref_graph_name
+    path_to_dot = get_actual_reference_for_current_openvino(REFERENCE_GRAPHS_DIR / model_to_test.ref_graph_name)
     compare_nncf_graphs(model_to_test.ov_model, path_to_dot)
 
 
@@ -51,7 +51,7 @@ def test_compare_nncf_graph_omz_models(tmp_path, omz_cache_dir, model_name):
     model_path = tmp_path / "public" / model_name / "FP32" / f"{model_name}.xml"
     model = ov.Core().read_model(model_path)
 
-    path_to_dot = REFERENCE_GRAPHS_DIR / f"{model_name}.dot"
+    path_to_dot = get_actual_reference_for_current_openvino(REFERENCE_GRAPHS_DIR / f"{model_name}.dot")
     compare_nncf_graphs(model, path_to_dot)
 
 

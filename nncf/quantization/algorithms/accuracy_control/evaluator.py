@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,6 +12,7 @@
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
+import nncf
 from nncf.common.factory import EngineFactory
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.backend import BackendType
@@ -224,7 +225,7 @@ class Evaluator:
         try:
             metric_value = metric_value if metric_value is None else float(metric_value)
         except Exception as ex:
-            raise RuntimeError(
+            raise nncf.InternalError(
                 f"Metric value of {type(metric_value)} type was returned from the `validation_fn` "
                 "but the float value is expected."
             ) from ex
@@ -257,7 +258,7 @@ class Evaluator:
         if isinstance(metric_value, float) and (values_for_each_item is None or convert_to_float_possible):
             metric_mode = True
         elif values_for_each_item is not None and not isinstance(values_for_each_item[0], list):
-            raise RuntimeError("Unexpected return value from provided validation function.")
+            raise nncf.InternalError("Unexpected return value from provided validation function.")
 
         return metric_mode
 
