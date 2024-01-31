@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -50,13 +50,35 @@ class TemplateTestTensorCollectorBatchSize(ABC):
     def inplace(self):
         pass
 
+    @staticmethod
     @abstractmethod
-    def create_dataitems_without_batch_dim(self, input_shape: List[int], length: int = 100) -> List[np.ndarray]:
+    def to_backend_tensor(self, tensor: np.ndarray):
         pass
 
-    @abstractmethod
+    def create_dataitems_without_batch_dim(self, input_shape: List[int], length: int = 100) -> List[np.ndarray]:
+        rng = np.random.default_rng(seed=0)
+        data_items = []
+        for _ in range(length):
+            data_items.append(rng.uniform(0, 1, input_shape))
+        return data_items
+
     def add_batch_dim_to_dataitems(self, data_items: List[np.ndarray], batch_size: int) -> List[np.ndarray]:
-        pass
+        assert batch_size >= 1
+        dataset = []
+        item = []
+        cnt = 0
+        for data_item in data_items:
+            if batch_size == 1:
+                dataset.append(np.expand_dims(data_item, 0))
+            else:
+                item.append(data_item)
+                if cnt == batch_size - 1:
+                    dataset.append(np.array(item))
+                    item = []
+                    cnt = -1
+                cnt += 1
+
+        return dataset
 
     def _create_tensor_collector(self, shape, inplace, reducer, aggregator) -> TensorCollector:
         batch_axis = 0
@@ -75,6 +97,7 @@ class TemplateTestTensorCollectorBatchSize(ABC):
 
     def _register_inputs(self, collector, dataitems, reducer):
         for item in dataitems:
+            item = self.to_backend_tensor(item)
             input_ = {hash(reducer): [self.get_nncf_tensor_class()(item)]}
             collector.register_inputs(input_)
 

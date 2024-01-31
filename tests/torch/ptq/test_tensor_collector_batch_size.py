@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -8,8 +8,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import List
 
+import numpy as np
 import pytest
 import torch
 
@@ -46,28 +46,6 @@ class TestTensorCollectorBatchSize(TemplateTestTensorCollectorBatchSize):
     def inplace(self, request):
         return request.param
 
-    def create_dataitems_without_batch_dim(self, input_shape: List[int], length: int = 100) -> List[torch.TensorType]:
-        torch.random.manual_seed(seed=0)
-
-        data_items = []
-        for _ in range(length):
-            data_items.append(torch.rand(input_shape))
-        return data_items
-
-    def add_batch_dim_to_dataitems(self, data_items: List[torch.TensorType], batch_size: int) -> List[torch.TensorType]:
-        assert batch_size >= 1
-        dataset = []
-        item = []
-        cnt = 0
-        for data_item in data_items:
-            if batch_size == 1:
-                dataset.append(torch.unsqueeze(data_item, 0))
-            else:
-                item.append(data_item)
-                if cnt == batch_size - 1:
-                    dataset.append(torch.stack(item))
-                    item = []
-                    cnt = -1
-                cnt += 1
-
-        return dataset
+    @staticmethod
+    def to_backend_tensor(tensor: np.ndarray):
+        return torch.tensor(tensor)
