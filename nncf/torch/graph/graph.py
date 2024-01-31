@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,6 +11,7 @@
 
 from typing import Dict, List, Tuple
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
@@ -67,7 +68,7 @@ class PTNNCFGraph(NNCFGraph):
                 matches.append(Scope.from_str(scope_str))
         assert len(matches) <= 1
         if not matches:
-            raise RuntimeError("Node name {} not found in the node-vs-scope dict!".format(node_name))
+            raise nncf.InternalError("Node name {} not found in the node-vs-scope dict!".format(node_name))
         return matches[0]
 
     def get_nodes_with_missed_input_edges(self) -> List[NNCFNode]:

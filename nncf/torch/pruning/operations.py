@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,6 +14,7 @@ from enum import auto
 
 import torch
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import UnknownMetatype
@@ -574,7 +575,7 @@ class PTLayerNormPruningOp(LayerNormPruningOp, PTPruner):
         node_module = model.nncf.get_containing_module(node.node_name)
 
         if prun_type == PrunType.CUT_WEIGHTS:
-            raise RuntimeError("LayerNorm does not support pruning by cutting channels")
+            raise nncf.InternalError("LayerNorm does not support pruning by cutting channels")
 
         node_module.weight = torch.nn.Parameter(apply_filter_binary_mask(input_mask, node_module.weight))
         node_module.bias = torch.nn.Parameter(apply_filter_binary_mask(input_mask, node_module.bias))

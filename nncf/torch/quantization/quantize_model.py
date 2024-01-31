@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,6 +14,7 @@ from typing import Optional
 
 import torch
 
+import nncf
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.parameters import ModelType
@@ -45,7 +46,7 @@ def quantize_impl(
     if fast_bias_correction is False:
         raise ValueError(f"fast_bias_correction={fast_bias_correction} is not supported")
     if target_device == TargetDevice.CPU_SPR:
-        raise RuntimeError("target_device == CPU_SPR is not supported")
+        raise nncf.InternalError("target_device == CPU_SPR is not supported")
     if mode is not None:
         raise ValueError(f"mode={mode} is not supported")
 

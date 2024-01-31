@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,6 +18,7 @@ import openvino.runtime as ov
 from openvino._pyopenvino import DescriptorTensor
 from openvino.runtime import opset13 as opset
 
+import nncf
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.model_transformer import TModel
 from nncf.common.graph.transformations.commands import TargetType
@@ -45,8 +46,9 @@ class OVModelTransformer(ModelTransformer):
     Applies transformations to an OpenVINO model.
     """
 
-    def __init__(self, model: TModel):
+    def __init__(self, model: TModel, inplace: bool = False):
         super().__init__(model)
+        self._inplace = inplace
         self._command_transformation_ordered_pairs = [
             (OVFQNodeRemovingCommand, self._apply_fq_nodes_removing_transformation),
             (OVQuantizerInsertionCommand, self._apply_quantizer_insertion_transformations),
@@ -125,7 +127,10 @@ class OVModelTransformer(ModelTransformer):
         for transformation in transformations:
             aggregated_transformations[transformation.__class__].append(transformation)
 
-        model = self._model.clone()
+        if self._inplace:
+            model = self._model
+        else:
+            model = self._model.clone()
         # Inplace transformations; Using deepcopy of model
         for transformation_cls, transformation_fn in self._command_transformation_ordered_pairs:
             transformations = aggregated_transformations[transformation_cls]
@@ -408,7 +413,7 @@ class OVModelTransformer(ModelTransformer):
             for inp_node in target_inputs:
                 inp_node.replace_source_output(fq.output(0))
         else:
-            raise RuntimeError(f"Incorrect target point type {transform_type}")
+            raise nncf.InternalError(f"Incorrect target point type {transform_type}")
 
     @staticmethod
     def _insert_fake_convert_op(
@@ -462,7 +467,7 @@ class OVModelTransformer(ModelTransformer):
             for inp_node in target_inputs:
                 inp_node.replace_source_output(fc.output(0))
         else:
-            raise RuntimeError(f"Incorrect target point type {transform_type}")
+            raise nncf.InternalError(f"Incorrect target point type {transform_type}")
 
     @staticmethod
     def _apply_bias_correction_transformations(model, transformations: List[OVBiasCorrectionCommand]) -> ov.Model:
@@ -507,7 +512,7 @@ class OVModelTransformer(ModelTransformer):
             queue.append((curr_node.input(0), curr_node.input_value(0).get_node()))
 
         if const_node is None:
-            raise RuntimeError("Constant node was expected but could not find it.")
+            raise nncf.InternalError("Constant node was expected but could not find it.")
 
         const_shape = const_node.data.shape
         const_dtype = const_node.data.dtype
@@ -622,7 +627,7 @@ class OVModelTransformer(ModelTransformer):
                 output.get_node(), output.get_index(), transformation.last_inplace_node_name
             )
             return (new_node.output(fn_output_port_id), fn_output_port_id)
-        raise RuntimeError(f"Transform type {transform_type} is not supported")
+        raise nncf.InternalError(f"Transform type {transform_type} is not supported")
 
     @staticmethod
     def _apply_bias_insertion_transformations(

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,6 +15,7 @@ from typing import List, Union
 import numpy as np
 import pytest
 
+import nncf
 from nncf.data.dataset import Dataset
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 
@@ -84,7 +85,7 @@ def test_determine_mode(ts: TestCase):
         return (ts.metric_value, ts.values_for_each_item)
 
     if ts.raise_exception:
-        with pytest.raises(RuntimeError):
+        with pytest.raises(nncf.InternalError):
             _ = Evaluator.determine_mode(None, Dataset([None]), _validation_fn)
     else:
         is_metric_mode = Evaluator.determine_mode(None, Dataset([None]), _validation_fn)

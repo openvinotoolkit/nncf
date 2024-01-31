@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -20,6 +20,7 @@ import pandas as pd
 import pytest
 import yaml
 
+import nncf
 from tests.post_training.model_scope import PTQ_TEST_CASES
 from tests.post_training.model_scope import WC_TEST_CASES
 from tests.post_training.pipelines.base import BackendType
@@ -205,7 +206,7 @@ def test_ptq_quantization(
     start_time = time.perf_counter()
     try:
         if test_case_name not in ptq_reference_data:
-            raise RuntimeError(f"{test_case_name} does not exist in 'reference_data.yaml'")
+            raise nncf.ValidationError(f"{test_case_name} does not exist in 'reference_data.yaml'")
         test_model_param = PTQ_TEST_CASES[test_case_name]
         maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend)
         pipeline_cls = test_model_param["pipeline_cls"]

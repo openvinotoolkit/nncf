@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, List, Optional, Tuple, TypeVar
+from typing import Callable, List, Tuple, TypeVar
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -19,7 +19,9 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
+from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.tensor import Tensor
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -28,20 +30,20 @@ TTensor = TypeVar("TTensor")
 class SmoothQuantAlgoBackend(ABC):
     @property
     @abstractmethod
-    def convolution_metatype(self) -> OperatorMetatype:
+    def convolution_metatypes(self) -> List[OperatorMetatype]:
         """
-        Parameter for backend-specific metatype for Convolution.
+        Parameter for backend-specific metatypes for Convolution.
 
-        :return: OperatorMetatype
+        :return: OperatorMetatype list.
         """
 
     @property
     @abstractmethod
-    def matmul_metatype(self) -> OperatorMetatype:
+    def matmul_metatypes(self) -> List[OperatorMetatype]:
         """
-        Parameter for backend-specific metatype for MatMul.
+        Parameter for backend-specific metatypes for MatMul.
 
-        :return: OperatorMetatype
+        :return: OperatorMetatype list.
         """
 
     @property
@@ -51,6 +53,15 @@ class SmoothQuantAlgoBackend(ABC):
         Parameter for backend-specific quantize agnostic metatypes.
 
         :return: List of OperatorMetatype.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def pre_layer_target_type() -> TargetType:
+        """
+        Returns backend-specific pre layer target type.
+
+        :returns: Backend-specific pre layer target type.
         """
 
     @staticmethod
@@ -77,7 +88,7 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_input_ports_map(node: NNCFNode, nncf_graph: NNCFGraph) -> Dict[str, int]:
+    def get_activations_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
         """
         Returns map with activation & weighted ports.
 
@@ -113,18 +124,7 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def process_weight_statistics(weights: TTensor, channel_axis: int) -> TTensor:
-        """
-        Returns processed weight statistics for node.
-
-        :param weights: Weights tensor.
-        :param channel_axis: Channel axis for calculation.
-        :return: Weight statistics.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def get_weight_value(node_with_weight: NNCFNode, model: TModel, port_id: int) -> TTensor:
+    def get_weight_value(node_with_weight: NNCFNode, model: TModel, port_id: int) -> Tensor:
         """
         Returns the weight value for the node with weight.
 
@@ -146,55 +146,6 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def clip_statistics(statistics: TTensor) -> TTensor:
-        """
-        Clips statistics for further calculation.
-
-        :param statistics: Input statistics.
-        :return: Clipped statistics.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def calculate_scale_and_ratio(
-        activations: TTensor, weights: TTensor, alpha: float, quantile: Optional[float]
-    ) -> Tuple[TTensor, TTensor]:
-        """
-        Calculates base scale value and it's ratio.
-
-        :param activations: Activation statistics value.
-        :param weights: Weights statistics value.
-        :param alpha: Base value for exponentiation.
-        :param quantile: Base quantile value.
-        :return: Calculated base scale value & ratio.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def calculate_activation_scale(scale_value: TTensor, activations_size: int, channel_axis: int) -> TTensor:
-        """
-        Calculates activation scales for Smooth node.
-
-        :param scale_value: Base scale value.
-        :param activations_size: Size of the activation shape.
-        :param channel_axis: Axis for shape calculation.
-        :return: Calculated activation scale.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def calculate_weight_scale(scale_value: TTensor, weights_size: int, channel_axis: int) -> TTensor:
-        """
-        Calculates scale for weight tensor.
-
-        :param scale_value: Base scale value.
-        :param weights_size: Size of the weights shape.
-        :param channel_axis: Axis for shape calculation.
-        :return: Calculated scale for weights.
-        """
-
-    @staticmethod
-    @abstractmethod
     def weight_update_command(
         node_with_weight: NNCFNode, weight_value: TTensor, weight_port_id: int
     ) -> TransformationCommand:
@@ -210,14 +161,14 @@ class SmoothQuantAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def scale_insertion_command(
-        source_node: NNCFNode, scale_value: TTensor, port_id: int, nodes: List[NNCFNode]
+        source_node: NNCFNode, scale_value: TTensor, source_output_port_id: int, nodes: List[NNCFNode]
     ) -> TransformationCommand:
         """
         Returns command to insert Smooth Quant node.
 
         :param source_node: NNCFNode instance.
         :param scale_value: Smooth Quant value.
-        :param port_id: Output port for source node.
+        :param source_output_port_id: Output port for source node.
         :param nodes: List of consumers for Smooth node.
         :return: TransformationCommand instance.
         """
@@ -245,11 +196,22 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def calculate_port_based_channel_axis(port_id: int, transpose: bool) -> int:
+    def is_node_with_shared_weight(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         """
-        Returns port-based channel axis.
+        Returns true if given node shares constant with a different node.
 
-        :param port_id: Specified input port id.
-        :param transpose: Transpose position.
-        :return: Channel axis.
+        :param node: NNCFNode instance.
+        :param nncf_graph: NNCFGraph instance.
+        :return: Whether the given node is shares weights with a different node or not.
+        """
+
+    @staticmethod
+    @abstractmethod
+    def get_filter_fn_for_statistics(activation_port_id: int, algorithm_key: str) -> Callable[[StatisticPoint], bool]:
+        """
+        Returns backend-specific callable to filter statistic containers according to its statistic point.
+
+        :param activation_port_id: Activation port id for the statistic collection target node.
+        :param algorithm_key: Current algorithm key.
+        :return: Backend-specific callable to filter statistic containers according to its statistic point.
         """

@@ -13,7 +13,7 @@ import datetime
 import itertools
 from functools import partial
 from pathlib import Path
-from typing import Callable, Iterable, Optional, TypeVar
+from typing import Callable, Iterable, Optional, Tuple, TypeVar
 
 import numpy as np
 import openvino as ov
@@ -123,13 +123,14 @@ def print_results(optimized_model: ov.Model, ratio: float, group_size: int, simi
     print(f"Similarity: {similarity:.2f}")
 
 
-def find_parameters(evaluator: Evaluator, model: OVModelForCausalLM, nncf_dataset: nncf.Dataset) -> None:
+def find_parameters(evaluator: Evaluator, model: OVModelForCausalLM, nncf_dataset: nncf.Dataset) -> Tuple[float, int]:
     """
     Find the optimal `ratio` and `group_size` for weight compression algorithm.
 
     :param evaluator: The evaluator object from whowhatbench Benchmark.
     :param model: The OpenVINO model for causal language modeling.
     :param nncf_dataset: A representative dataset for the weight compression algorithm.
+    :return: The optimal ratio and group_size.
     """
     original_ov_model = model.model
     evaluate_fn = partial(evaluate_model, hf_model=model, original_ov_model=original_ov_model, evaluator=evaluator)
@@ -159,7 +160,7 @@ def find_parameters(evaluator: Evaluator, model: OVModelForCausalLM, nncf_datase
             print_results(full_optimized_model, ratio, group_size, all_layers_similarity)
         else:
             print_results(optimized_model, ratio, group_size, similarity)
-        return
+        return ratio, group_size
 
     # If the best performing model is not acceptable, we try to use the smallest ratio and group_size
     # to check the reachability of the max drop criterion
@@ -173,7 +174,7 @@ def find_parameters(evaluator: Evaluator, model: OVModelForCausalLM, nncf_datase
             "We recommend choosing a different mode for weight compression.",
         )
         print_results(optimized_model, ratio, group_size, similarity)
-        return
+        return ratio, group_size
 
     # If max drop criterion is achivable, we run a grid-search to find the best parameters
     for ratio, group_size in param_grid[1:-1]:
@@ -181,10 +182,11 @@ def find_parameters(evaluator: Evaluator, model: OVModelForCausalLM, nncf_datase
         similarity = evaluate_fn(optimized_model=optimized_model)
         if similarity >= 1 - MAX_DROP:
             print_results(optimized_model, ratio, group_size, similarity)
-            return
+            return ratio, group_size
 
     optimized_model = compress_model(original_ov_model, nncf_dataset, MIN_RATIO, MIN_GROUP_SIZE)
     print_results(optimized_model, MIN_RATIO, MIN_GROUP_SIZE, similarity)
+    return MIN_RATIO, MIN_GROUP_SIZE
 
 
 def tiny_llama_transform_func(item, tokenizer, ov_model):  # <YOUR_TRANSFORMATION_FUNCTION>
@@ -234,11 +236,12 @@ def main():
     start = datetime.datetime.now()
     evaluator = Evaluator(model, tokenizer=tokenizer, metrics=("similarity",))
     nncf_dataset = get_nncf_dataset(dataset, transform_func)
-    find_parameters(evaluator, model, nncf_dataset)
+    ratio, group_size = find_parameters(evaluator, model, nncf_dataset)
     end = datetime.datetime.now()
     delta = end - start
     delta -= datetime.timedelta(microseconds=delta.microseconds)
     print(f"Elapsed time: {delta}")
+    return ratio, group_size
 
 
 if __name__ == "__main__":

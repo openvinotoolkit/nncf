@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,6 +17,7 @@ from nncf.common.logging.track_progress import track
 from nncf.common.utils.registry import Registry
 from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor import functions as fns
+from nncf.experimental.tensor.definitions import TensorDataType
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
@@ -170,9 +171,12 @@ class HAWQCriterion(DataBasedCriterion):
         reduction_axis = weight_param.reduction_axis
 
         orig_shape = weight.shape
+
+        if weight.dtype != TensorDataType.float32:
+            weight = weight.astype(TensorDataType.float32)
+
         compressed_weights, scale, zero_point = do_integer_quantization(weight, reduction_axis, backup_config)
-        decompressed_weight = compressed_weights.astype(dtype=scale.dtype)
-        decompressed_weight = (compressed_weights - zero_point) * scale
+        decompressed_weight = (compressed_weights - zero_point).astype(weight.dtype) * scale
         decompressed_weight = decompressed_weight.reshape(orig_shape)
         return fns.linalg.norm(decompressed_weight - weight, ord="fro").item()
 

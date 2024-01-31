@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -21,6 +21,7 @@ import numpy as np
 import pytest
 import torch
 
+import nncf
 from tests.shared.isolation_runner import ISOLATION_RUN_ENV_VAR
 
 
@@ -76,7 +77,7 @@ def _parametrized_missing_cuda_test_body(mocker, exception):
     patched_fn = mocker.patch("torch.cuda.is_available")
     patched_fn.return_value = True
     # loading should trigger an exception and a message to the user
-    with pytest.raises(RuntimeError) as exc_info:
+    with pytest.raises(nncf.InstallationError) as exc_info:
         from nncf.torch.quantization.extensions import QuantizedFunctionsCUDALoader
 
         QuantizedFunctionsCUDALoader.load()

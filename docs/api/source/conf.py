@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.abspath("../../.."))
 
 project = "NNCF"
 html_title = "NNCF"
-copyright_ = "2023, Intel Corporation"
+copyright_ = "2024, Intel Corporation"
 author = "Intel Corporation"
 
 extensions = ["autoapi.extension", "sphinx.ext.autodoc", "sphinx.ext.linkcode"]

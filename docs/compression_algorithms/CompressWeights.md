@@ -61,6 +61,64 @@ nncf_dataset = nncf.Dataset(data_source, transform_fn)
 compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_SYM, ratio=0.8, dataset=nncf_dataset) # model is openvino.Model object
 ```
 
+- Accuracy of the 4-bit compressed models also can be improved by using AWQ algorithm over data-based mixed-precision algorithm. It is capable to equalize some subset of weights to minimize difference between
+original precision and 4-bit.
+Below is the example how to compress 80% of layers to 4-bit integer with a default data-based mixed precision algorithm and AWQ.
+It requires to set `awq` to `True` additionally to data-based mixed-precision algorithm.
+
+```python
+from datasets import load_dataset
+from functools import partial
+from nncf import compress_weights, CompressWeightsMode, Dataset
+from optimum.intel.openvino import OVModelForCausalLM
+from transformers import AutoTokenizer
+
+def transform_func(item, tokenizer, input_shapes):
+    text = item['text']
+    tokens = tokenizer(text)
+
+    res = {'input_ids': np.expand_dims(np.array(tokens['input_ids']), 0),
+           'attention_mask': np.expand_dims(np.array(tokens['attention_mask']), 0)}
+
+    if 'position_ids' in input_shapes:
+        position_ids = np.cumsum(res['attention_mask'], axis=1) - 1
+        position_ids[res['attention_mask'] == 0] = 1
+        res['position_ids'] = position_ids
+
+    for name, shape in input_shapes.items():
+        if name in res:
+            continue
+        res[name] = np.zeros(shape)
+
+    return res
+
+def get_input_shapes(model, batch_size = 1):
+    inputs = {}
+
+    for val in model.model.inputs:
+        name = val.any_name
+        shape = list(val.partial_shape.get_min_shape())
+        shape[0] = batch_size
+        inputs[name] = shape
+
+    return inputs
+
+# load your model and tokenizer
+model = OVModelForCausalLM.from_pretrained(...)
+tokenizer = AutoTokenizer.from_pretrained(...)
+
+# prepare dataset for compression
+dataset = load_dataset('wikitext', 'wikitext-2-v1', split='train')
+dataset = dataset.filter(lambda example: len(example["text"]) > 80)
+input_shapes = get_input_shapes(model)
+nncf_dataset = Dataset(dataset, partial(transform_func, tokenizer=tokenizer,
+                                                        input_shapes=input_shapes))
+
+model.model = compress_weights(model.model, mode=CompressWeightsMode.INT4_SYM, ratio=0.8, dataset=nncf_dataset, awq=True)
+
+model.save_pretrained(...)
+```
+
 - `NF4` mode can be considered for improving accuracy, but currently models quantized to nf4 should not be faster models
   quantized to 8-bit asymmetric integer. Here's the example how to compress weights to nf4 data type with group size = 128.
   Different `group_size` and `ratio` are also supported.
@@ -257,6 +315,11 @@ Here is the word perplexity with data-free and data-aware mixed-precision INT4-I
         <td>stabilityai_stablelm-3b-4e1t</td>
         <td>int4_sym_g64_r80</td>
         <td>10.83</td>
+    </tr>
+    <tr>
+        <td>stable-zephyr-3b-dpo</td>
+        <td>int4_sym_g64_r80_data_awq</td>
+        <td>21.62</td>
     </tr>
     <tr>
         <td>stable-zephyr-3b-dpo</td>

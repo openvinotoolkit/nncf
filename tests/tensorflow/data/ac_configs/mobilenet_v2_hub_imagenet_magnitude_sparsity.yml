@@ -1,5 +1,4 @@
 models:
-
   - name: mobilenet_v2_hub_imagenet_magnitude_sparsity
     launchers:
       - framework: dlsdk
@@ -14,6 +13,7 @@ models:
             central_fraction: 0.875
           - type: resize
             size: 224
+          - type: rgb_to_bgr
           - type: normalization
             std: 255
         metrics:

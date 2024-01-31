@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,6 +12,8 @@ import importlib
 from copy import deepcopy
 from enum import Enum
 from typing import List, TypeVar
+
+import nncf
 
 TModel = TypeVar("TModel")
 
@@ -128,7 +130,7 @@ def get_backend(model: TModel) -> BackendType:
     if BackendType.OPENVINO in available_backends and is_openvino_model(model):
         return BackendType.OPENVINO
 
-    raise RuntimeError(
+    raise nncf.UnsupportedBackendError(
         "Could not infer the backend framework from the model type because "
         "the framework is not available or the model type is unsupported. "
         "The available frameworks found: {}.".format(", ".join([b.value for b in available_backends]))

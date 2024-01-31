@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -19,6 +19,7 @@ from typing import Deque, Dict, List, Optional, Set, Tuple
 
 import networkx as nx
 
+import nncf
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
@@ -143,7 +144,9 @@ class QuantizationProposal:
         """
         prior_list = self.quantizer_setup.quantization_points[quantization_point_id].possible_qconfigs
         if not all(qc in prior_list for qc in constrained_config_list):
-            raise RuntimeError("Constrained config list is incompatible with the result of the quantizer propagation!")
+            raise nncf.InternalError(
+                "Constrained config list is incompatible with the result of the quantizer propagation!"
+            )
         # TODO (vshampor): only allow to constrain 'input-group'-wise?
         self.quantizer_setup.quantization_points[quantization_point_id].possible_qconfigs = constrained_config_list
 
@@ -188,7 +191,7 @@ class QuantizationProposal:
                         )
                     )
                     if not compatible_initial_qconfs:
-                        raise RuntimeError(
+                        raise nncf.InternalError(
                             "The final quantizer setup has configurations that were not present in the "
                             "initial proposal!"
                         )
@@ -589,7 +592,7 @@ class QuantizerPropagationSolver:
         if Counter(final_weight_quantizable_node_names_vs_qconfig_dict.keys()) != Counter(
             self._weight_quantizable_node_names_vs_qconfigs.keys()
         ):
-            raise RuntimeError("Final weight quantizer setup is inconsistent with initial solver assumptions!")
+            raise nncf.InternalError("Final weight quantizer setup is inconsistent with initial solver assumptions!")
 
         multi_setup_with_one_config_per_point = quant_prop_graph.create_quantizer_setup(
             final_weight_quantizable_node_names_vs_qconfig_dict
@@ -1016,7 +1019,7 @@ class QuantizerPropagationSolver:
                     )
                 )
                 if len(matching_indices) == 0:
-                    raise RuntimeError(
+                    raise nncf.ValidationError(
                         "No match for linked quantizer entry {} among activation quantizers!".format(
                             group_member_node_name
                         )
@@ -1024,7 +1027,7 @@ class QuantizerPropagationSolver:
 
                 for target_idx in matching_indices:
                     if target_idx in insertion_point_indices_vs_group_id:
-                        raise RuntimeError(
+                        raise nncf.InternalError(
                             "Linked activation quantizer groups {} and {} "
                             "overlap!".format(group_idx, insertion_point_indices_vs_group_id[target_idx])
                         )
@@ -1131,7 +1134,7 @@ class QuantizerPropagationSolver:
             op_meta_name = metatype.__class__.__name__
             if len(per_tensor_qconf_list) != len(qconf_list):
                 if not per_tensor_qconf_list:
-                    raise RuntimeError(
+                    raise nncf.InternalError(
                         "Unified scales currently do not support per-channel configuration - dropping"
                         "per-channel configuration options for {} resulted in no valid quantization "
                         "configs!".format(op_meta_name)
@@ -1430,7 +1433,7 @@ class QuantizerPropagationSolver:
         elif self._propagation_strategy == PropagationStrategy.MERGE_WITH_SINGLE_FQ_RESULT:
             compatible_fn = compatible_wo_requant
         else:
-            raise RuntimeError(f"Unknown propagation strategy: {self._propagation_strategy}")
+            raise nncf.ValidationError(f"Unknown propagation strategy: {self._propagation_strategy}")
 
         for qconf in qconfigs_union:
             if all(compatible_fn(qconf, qconf_list) for qconf_list in potential_qconfigs_for_each_branch):

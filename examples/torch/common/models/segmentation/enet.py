@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,6 +15,7 @@
 import torch
 from torch import nn
 
+import nncf
 from examples.torch.common.example_logger import logger
 
 
@@ -134,7 +135,7 @@ class RegularBottleneck(nn.Module):
         # Check in the internal_scale parameter is within the expected range
         # [1, channels]
         if internal_ratio <= 1 or internal_ratio > channels:
-            raise RuntimeError(
+            raise nncf.ValidationError(
                 "Value out of range. Expected value in the "
                 "interval [1, {0}], got internal_scale={1}.".format(channels, internal_ratio)
             )
@@ -292,7 +293,7 @@ class DownsamplingBottleneck(nn.Module):
         # Check in the internal_scale parameter is within the expected range
         # [1, channels]
         if internal_ratio <= 1 or internal_ratio > in_channels:
-            raise RuntimeError(
+            raise nncf.ValidationError(
                 "Value out of range. Expected value in the "
                 "interval [1, {0}], got internal_scale={1}. ".format(in_channels, internal_ratio)
             )
@@ -426,7 +427,7 @@ class UpsamplingBottleneck(nn.Module):
         # Check in the internal_scale parameter is within the expected range
         # [1, channels]
         if internal_ratio <= 1 or internal_ratio > in_channels:
-            raise RuntimeError(
+            raise nncf.ValidationError(
                 "Value out of range. Expected value in the "
                 "interval [1, {0}], got internal_scale={1}. ".format(in_channels, internal_ratio)
             )

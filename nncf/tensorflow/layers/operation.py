@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,7 +11,7 @@
 
 from collections import OrderedDict
 
-from nncf.tensorflow.utils.hook_handle import HookHandle
+from nncf.common.hook_handle import add_op_to_registry
 
 
 class InputType:
@@ -83,9 +83,7 @@ class NNCFOperation:
         :return: a handle that can be used to remove the hook form
                  the NNCF operation by calling handle.remove()
         """
-        handle = HookHandle(self._call_pre_hooks)
-        self._call_pre_hooks[handle.hook_id] = hook
-        return handle
+        return add_op_to_registry(self._call_pre_hooks, hook)
 
     def __call__(self, *args, **kwargs):
         inputs = args[0]

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -19,6 +19,7 @@ from torch import distributed as dist
 from torch import nn
 from torch.nn import Module
 
+import nncf
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph import NNCFNodeName
@@ -245,7 +246,7 @@ def load_module_state(base_module: Module, state: _ModuleState, strict=False) ->
             msg = f"Could not find a module to restore state: {name}"
             nncf_logger.debug(msg)
             if strict:
-                raise RuntimeError(msg) from e
+                raise nncf.InternalError(msg) from e
 
     for name, param in base_module.named_parameters():
         param.requires_grad = state.requires_grad_state[name]

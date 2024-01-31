@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,6 +10,8 @@
 # limitations under the License.
 
 from typing import List, Optional, TypeVar
+
+import nncf
 
 TensorType = TypeVar("TensorType")
 DeviceType = TypeVar("DeviceType")
@@ -34,7 +36,7 @@ class NNCFTensor:
     @property
     def shape(self) -> List[int]:
         if self._tensor is None:
-            raise RuntimeError("Attempt to get shape of empty NNCFTensor")
+            raise nncf.InternalError("Attempt to get shape of empty NNCFTensor")
         return self._tensor.shape
 
     @property
