@@ -66,6 +66,10 @@ class OVCompiledModelEngine(Engine):
         :return output_data: Model's output.
         """
         self._check_input_data_format(input_data)
+
+        if self.compiled_model._infer_request is not None and hasattr(self.compiled_model._infer_request, 'reset_state'):
+            self.compiled_model._infer_request.reset_state()
+
         model_outputs = self.compiled_model(input_data)
 
         output_data = {}
