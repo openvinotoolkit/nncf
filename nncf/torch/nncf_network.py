@@ -388,6 +388,8 @@ class NNCFNetworkInterface(torch.nn.Module):
             self._ignored_scopes,
             self._target_scopes,
             wrap_outputs_fn=self._wrap_outputs_fn,
+            replace_modules=self.replace_modules,
+            trace_parameters=self.trace_parameters,
         )
         self._model_ref._nncf = new_interface
         self._model_ref.nncf.reset_nncf_modules()
