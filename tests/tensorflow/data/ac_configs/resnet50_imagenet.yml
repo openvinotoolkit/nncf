@@ -10,6 +10,8 @@ models:
         - type: crop_image_with_padding
           size: 224
           crop_padding: 32
+        - type: normalization
+          mean: '103.939, 116.779, 123.68'
         metrics:
           - name: accuracy@top1
             type: accuracy

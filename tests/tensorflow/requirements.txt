@@ -4,8 +4,6 @@ pytest==7.4.4
 pytest-cov
 pytest-mock
 pytest-dependency
-yattag>=1.14.0
-prettytable>=2.0.0
 pydot
 tensorflow_hub
 virtualenv

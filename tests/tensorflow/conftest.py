@@ -8,6 +8,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from pathlib import Path
+
 import pytest
 
 from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
@@ -33,16 +35,16 @@ def clear_session():
 
 
 def pytest_addoption(parser):
-    parser.addoption("--data", type=str, default=None, help="Path to test datasets")
+    parser.addoption("--data", type=Path, default=None, help="Path to test datasets")
     parser.addoption(
-        "--sota-checkpoints-dir", type=str, default=None, help="Path to checkpoints directory for sota accuracy test"
+        "--sota-checkpoints-dir", type=Path, default=None, help="Path to checkpoints directory for sota accuracy test"
     )
     parser.addoption(
-        "--sota-data-dir", type=str, default=None, help="Path to datasets directory for sota accuracy test"
+        "--sota-data-dir", type=Path, default=None, help="Path to datasets directory for sota accuracy test"
     )
     parser.addoption(
         "--metrics-dump-path",
-        type=str,
+        type=Path,
         default=None,
         help="Path to directory to store metrics. "
         "Directory must be empty or should not exist."
