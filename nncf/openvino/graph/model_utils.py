@@ -60,3 +60,20 @@ def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[N
     :return: Target NNCFGraph input nodes.
     """
     return nncf_graph.get_input_nodes() + nncf_graph.get_nodes_by_metatypes([OVReadValueMetatype])
+
+
+def remove_friendly_name_duplicates(model: ov.Model) -> ov.Model:
+    """
+    Removes diplicates of node names (friendly_name attribute) in the model.
+
+    :param model: ov.Model instance to update.
+    :return: Updated ov.Model without duplicated names.
+    """
+    existing_names = set()
+    for op in model.get_ops():
+        friendly_name = op.get_friendly_name()
+        if friendly_name in existing_names:
+            friendly_name = friendly_name + "0"
+            op.set_friendly_name(friendly_name)
+        existing_names.add(friendly_name)
+    return model

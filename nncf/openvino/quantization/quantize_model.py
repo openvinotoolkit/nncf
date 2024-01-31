@@ -18,6 +18,7 @@ from openvino._offline_transformations import compress_quantize_weights_transfor
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
+from nncf.openvino.graph.model_utils import remove_friendly_name_duplicates
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.node_utils import get_number_if_op
 from nncf.openvino.quantization.backend_parameters import BackendParameters
@@ -308,6 +309,8 @@ def quantize_impl(
     """
     Implementation of the `quantize()` method for the OpenVINO backend.
     """
+    model = remove_friendly_name_duplicates(model)
+
     quantize_fn = native_quantize_impl
     if get_number_if_op(model) > 0:
         quantize_fn = native_quantize_if_op_impl
@@ -362,6 +365,8 @@ def quantize_with_accuracy_control_impl(
     """
     Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend.
     """
+    model = remove_friendly_name_duplicates(model)
+
     quantize_with_accuracy_control_fn = native_quantize_with_accuracy_control_impl
 
     val_func = wrap_validation_fn(validation_fn)
