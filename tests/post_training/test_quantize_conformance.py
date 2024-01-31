@@ -100,7 +100,6 @@ def fixture_ptq_report_data(output_dir, run_benchmark_app):
     if data:
         test_results = OrderedDict(sorted(data.items()))
         df = pd.DataFrame(v.get_result_dict() for v in test_results.values())
-        print(df)
         if not run_benchmark_app:
             df = df.drop(columns=["FPS"])
 
@@ -117,7 +116,6 @@ def fixture_wc_report_data(output_dir):
     if data:
         test_results = OrderedDict(sorted(data.items()))
         df = pd.DataFrame(v.get_result_dict() for v in test_results.values())
-        print(df)
         df = df.drop(columns=["FPS", "Num FQ"])
 
         output_dir.mkdir(parents=True, exist_ok=True)

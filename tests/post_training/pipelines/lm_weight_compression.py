@@ -9,14 +9,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import datetime as dt
 import os
 import re
 import shutil
 import time
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional
 
 import numpy as np
 import openvino as ov
@@ -34,6 +32,10 @@ from tests.post_training.pipelines.base import StatsFromOutput
 
 @dataclass
 class WCTimeStats(StatsFromOutput):
+    """
+    Contains statistics that are parsed from the stdout of Weight Compression tests.
+    """
+
     time_stat_collection: Optional[str] = None
     time_mixed_precision: Optional[str] = None
     time_awq: Optional[str] = None
@@ -48,12 +50,7 @@ class WCTimeStats(StatsFromOutput):
         "Applying Weight Compression",
     ]
 
-    def fill(self, stdout: str):
-        """
-        Parses stdout of the test and collect execution time for different algorithm's stages.
-
-        :param stdout: stdout text
-        """
+    def fill(self, stdout: str) -> None:
         time_regex = r".*•\s(.*)\s•.*"
         for line in stdout.splitlines():
             for attr_name, prefix_regex in zip(self.VAR_NAMES, self.REGEX_PREFIX):
@@ -62,42 +59,15 @@ class WCTimeStats(StatsFromOutput):
                     setattr(self, attr_name, match.group(1))
                 continue
 
-    def get_stats(self):
+    def get_stats(self) -> Dict[str, str]:
         VARS = [getattr(self, name) for name in self.VAR_NAMES]
         return dict(zip(self.STAT_NAMES, VARS))
+
 
 class LMWeightCompression(BaseTestPipeline):
     """Pipeline for casual language models from Hugging Face repository"""
 
     OV_MODEL_NAME = "openvino_model.xml"
-
-    def __init__(
-        self,
-        reported_name: str,
-        model_id: str,
-        backend: BackendType,
-        compression_params: dict,
-        output_dir: Path,
-        data_dir: Path,
-        reference_data: dict,
-        no_eval: bool,
-        run_benchmark_app: bool,
-        params: dict = None,
-    ) -> None:
-        super().__init__(
-            reported_name,
-            model_id,
-            backend,
-            compression_params,
-            output_dir,
-            data_dir,
-            reference_data,
-            no_eval,
-            run_benchmark_app,
-            params,
-        )
-        self.fp32_model_dir: Path = self.output_dir / "fp32_models" / self.model_id.replace("/", "__")
-        self.fp32_model_dir.mkdir(parents=True, exist_ok=True)
 
     def prepare_model(self) -> None:
         if not (self.fp32_model_dir / self.OV_MODEL_NAME).exists():

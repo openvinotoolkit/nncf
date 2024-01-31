@@ -52,7 +52,7 @@ class ImageClassificationTimm(PTQTestPipeline):
             self.model = timm_model
 
         if self.backend == BackendType.ONNX:
-            onnx_path = self.output_model_dir / "model_fp32.onnx"
+            onnx_path = self.fp32_model_dir / "model_fp32.onnx"
             torch.onnx.export(timm_model, self.dummy_tensor, onnx_path, export_params=True, opset_version=13)
             self.model = onnx.load(onnx_path)
             self.input_name = self.model.graph.input[0].name
@@ -72,15 +72,15 @@ class ImageClassificationTimm(PTQTestPipeline):
         """Dump IRs of fp32 models, to help debugging."""
         if self.backend in PT_BACKENDS:
             ov_model = ov.convert_model(self.model, example_input=self.dummy_tensor, input=self.input_size)
-            ov.serialize(ov_model, self.output_model_dir / "model_fp32.xml")
+            ov.serialize(ov_model, self.fp32_model_dir / "model_fp32.xml")
 
         if self.backend == BackendType.ONNX:
-            onnx_path = self.output_model_dir / "model_fp32.onnx"
+            onnx_path = self.fp32_model_dir / "model_fp32.onnx"
             ov_model = ov.convert_model(onnx_path)
-            ov.serialize(ov_model, self.output_model_dir / "model_fp32.xml")
+            ov.serialize(ov_model, self.fp32_model_dir / "model_fp32.xml")
 
         if self.backend in OV_BACKENDS + [BackendType.FP32]:
-            ov.serialize(self.model, self.output_model_dir / "model_fp32.xml")
+            ov.serialize(self.model, self.fp32_model_dir / "model_fp32.xml")
 
     def prepare_preprocessor(self) -> None:
         config = self.model_cfg

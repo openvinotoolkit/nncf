@@ -53,16 +53,16 @@ class MaskedLanguageModelingHF(PTQTestPipeline):
         """Dump IRs of fp32 models, to help debugging."""
         if self.backend in PT_BACKENDS:
             ov_model = ov.convert_model(self.model, example_input=self.dummy_tensor)
-            ov.serialize(ov_model, self.output_model_dir / "model_fp32.xml")
+            ov.serialize(ov_model, self.fp32_model_dir / "model_fp32.xml")
 
         if self.backend == BackendType.ONNX:
-            onnx_path = self.output_model_dir / "model_fp32.onnx"
+            onnx_path = self.fp32_model_dir / "model_fp32.onnx"
             onnx.save(self.model, onnx_path)
             ov_model = ov.convert_model(onnx_path)
-            ov.serialize(ov_model, self.output_model_dir / "model_fp32.xml")
+            ov.serialize(ov_model, self.fp32_model_dir / "model_fp32.xml")
 
         if self.backend in OV_BACKENDS + [BackendType.FP32]:
-            ov.serialize(self.model, self.output_model_dir / "model_fp32.xml")
+            ov.serialize(self.model, self.fp32_model_dir / "model_fp32.xml")
 
     def prepare_preprocessor(self) -> None:
         self.preprocessor = transformers.AutoTokenizer.from_pretrained(self.model_id)

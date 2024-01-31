@@ -62,6 +62,15 @@ class StatsFromOutput:
         """
         return {}
 
+    def fill(self, stdout: str) -> None:
+        """
+        Parses standard output from the post-training conformance tests and collect statistics, for instance, the
+        duration of different algorithm's stages.
+
+        :param stdout: string containing the standard output
+        """
+
+
 @dataclass
 class PTQTimeStats(StatsFromOutput):
     """
@@ -75,18 +84,9 @@ class PTQTimeStats(StatsFromOutput):
     STAT_NAMES = ["Stat. collection time", "Bias correction time", "Validation time"]
 
     def fill(self, stdout: str):
-        """
-        Parsing stdout of the PTQ test and collect additional data:
-            - time of statistic collection
-            - time of bias correction
-            - time of validation
-
-        :param stdout: stdout text
-        """
         time_stat_collection_ = None
         time_bias_correction_ = None
         for line in stdout.splitlines():
-            print(line)
             match = re.search(r"Statistics\scollection.*•\s(.*)\s•.*", line)
             if match:
                 if time_stat_collection_ is None:
@@ -198,6 +198,8 @@ class BaseTestPipeline(ABC):
         self.output_model_dir: Path = self.output_dir / self.reported_name / self.backend.value
         self.output_model_dir.mkdir(parents=True, exist_ok=True)
         self.model_name = f"{self.reported_name}_{self.backend.value}"
+        self.fp32_model_dir: Path = self.output_dir / "fp32_models" / self.model_id.replace("/", "__")
+        self.fp32_model_dir.mkdir(parents=True, exist_ok=True)
 
         self.model = None
         self.model_hf = None
@@ -207,60 +209,45 @@ class BaseTestPipeline(ABC):
 
         self.run_info = RunInfo(model=reported_name, backend=self.backend)
 
-        self.post_init()
-
-    def post_init(self):
-        """Post init actions"""
-
     @abstractmethod
     def prepare_preprocessor(self) -> None:
-        """Prepare preprocessor for the target model"""
+        """Prepare preprocessor for the target model."""
 
     @abstractmethod
     def prepare_calibration_dataset(self) -> None:
-        """Prepare calibration dataset for the target model"""
+        """Prepare calibration dataset for the target model."""
 
     @abstractmethod
     def prepare_model(self) -> None:
-        """Prepare model"""
+        """Prepare model."""
 
     @abstractmethod
     def cleanup_cache(self):
-        """
-        Helper for removing cached model representation.
-        """
+        """Helper for removing cached model representation."""
 
     @abstractmethod
     def collect_data_from_stdout(self, stdout: str):
-        pass
+        """Collects statistics from the standard output."""
 
     @abstractmethod
     def compress(self) -> None:
-        """
-        Run compression of the model and collect time and memory usage information.
-        """
+        """Run compression of the model and collect time and memory usage information."""
 
     @abstractmethod
     def save_compressed_model(self) -> None:
-        """
-        Save compressed model to IR.
-        """
+        """Save compressed model to IR."""
 
     @abstractmethod
     def get_num_compressed(self) -> None:
-        """
-        Get number of the compressed nodes in the compressed IR.
-        """
+        """Get number of the compressed nodes in the compressed IR."""
 
     @abstractmethod
     def run_bench(self) -> None:
-        """
-        Run a benchmark to collect performance statistics.
-        """
+        """Run a benchmark to collect performance statistics."""
 
     @abstractmethod
     def _validate(self) -> None:
-        """Validate IR"""
+        """Validate IR."""
 
     def prepare(self):
         """
@@ -275,7 +262,7 @@ class BaseTestPipeline(ABC):
 
     def validate(self) -> None:
         """
-        Validate and compare result with reference
+        Validate and compare result with reference.
         """
         if self.no_eval:
             print("Validation skipped")
@@ -306,12 +293,12 @@ class BaseTestPipeline(ABC):
 
     def run(self) -> None:
         """
-        Run full pipeline of compression
+        Run full pipeline of compression.
         """
         self.prepare()
         self.compress()
-        # self.save_compressed_model()
-        # self.get_num_compressed()
+        self.save_compressed_model()
+        self.get_num_compressed()
         self.validate()
         self.run_bench()
 
@@ -342,7 +329,7 @@ class PTQTestPipeline(BaseTestPipeline):
         """
         if self.backend == BackendType.FP32:
             # To validate not compressed model
-            self.path_compressed_ir = self.output_model_dir / "model_fp32.xml"
+            self.path_compressed_ir = self.fp32_model_dir / "model_fp32.xml"
             return
 
         print("Quantization...")
