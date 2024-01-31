@@ -10,10 +10,11 @@
 # limitations under the License.
 
 from collections import UserDict
-from typing import Callable, Generator, Optional, Tuple
+from typing import Any, Callable, Generator, List, Optional, Tuple
+
+import torch
 
 from nncf.common.graph.transformations.commands import TargetPoint
-from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 
 
@@ -25,23 +26,29 @@ class StatisticPoint:
     algorithm implies on what algorithm nedeed this statistics.
     """
 
-    def __init__(self, target_point: TargetPoint, tensor_collector: TensorStatisticCollectorBase, algorithm: str):
+    def __init__(
+        self,
+        target_point: TargetPoint,
+        tensor_collector: TensorStatisticCollectorBase,
+        algorithm: str,
+    ):
         self.target_point = target_point
         self.algorithm_to_tensor_collectors = {algorithm: [tensor_collector]}
 
-    def __eq__(self, other):
-        return (
+    def __eq__(self, other: Any) -> bool:
+        result: bool = (
             self.target_point == other.target_point
             and self.algorithm_to_tensor_collectors == other.self.algorithm_to_tensor_collectors
         )
+        return result
 
-    def register_tensor(self, x: TensorType):
+    def register_tensor(self, x: torch.Tensor) -> None:
         for tensor_collectors in self.algorithm_to_tensor_collectors.values():
             for tensor_collector in tensor_collectors:
                 tensor_collector.register_input(x)
 
 
-class StatisticPointsContainer(UserDict):
+class StatisticPointsContainer(UserDict[str, List[StatisticPoint]]):
     """
     Container with iteration interface for handling a composition of StatisticPoint.
     """
@@ -73,7 +80,7 @@ class StatisticPointsContainer(UserDict):
 
     def iter_through_statistic_points_in_target_node(
         self, target_node_name: str, filter_fn: Callable[[StatisticPoint], bool]
-    ) -> StatisticPoint:
+    ) -> Generator[StatisticPoint, None, None]:
         """
         Returns iterable through all statistic points in node with target_node_name.
 
@@ -98,14 +105,17 @@ class StatisticPointsContainer(UserDict):
         """
         if filter_fn is None:
 
-            def default_filter_fn(stat_point: StatisticPoint):
+            def default_filter_fn(stat_point: StatisticPoint) -> bool:
                 return True
 
             filter_fn = default_filter_fn
 
         for target_node_name in self.data:
             for statistic_point in self.iter_through_statistic_points_in_target_node(target_node_name, filter_fn):
-                for algorithm, tensor_collectors in statistic_point.algorithm_to_tensor_collectors.items():
+                for (
+                    algorithm,
+                    tensor_collectors,
+                ) in statistic_point.algorithm_to_tensor_collectors.items():
                     for tensor_collector in tensor_collectors:
                         yield algorithm, statistic_point, tensor_collector
 

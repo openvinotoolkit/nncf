@@ -10,9 +10,10 @@
 # limitations under the License.
 
 from collections import deque
-from typing import List, Tuple
+from typing import Any, List, Tuple
 
 import numpy as np
+from numpy import ndarray
 
 
 def get_channel_count_and_dim_idx(scale_shape: List[int]) -> Tuple[int, int]:
@@ -25,7 +26,9 @@ def get_channel_count_and_dim_idx(scale_shape: List[int]) -> Tuple[int, int]:
     return channel_count, channel_dim_idx
 
 
-def split_into_channels(input_: np.ndarray, scale_shape: List[int]) -> List[np.ndarray]:
+def split_into_channels(
+    input_: np.ndarray[np.float64, Any], scale_shape: List[int]
+) -> List[np.ndarray[np.float64, Any]]:
     channel_count, channel_dim_idx = get_channel_count_and_dim_idx(scale_shape)
     channel_first_tensor = np.moveaxis(input_, channel_dim_idx, 0)
     if channel_count == 1:
@@ -37,9 +40,13 @@ def split_into_channels(input_: np.ndarray, scale_shape: List[int]) -> List[np.n
     return ret_list
 
 
-def get_per_channel_history(raw_input_history: deque, scale_shape: List[int], discard_zeros=False) -> List:
+def get_per_channel_history(
+    raw_input_history: deque[np.ndarray[np.float64, Any]],
+    scale_shape: List[int],
+    discard_zeros: bool = False,
+) -> List[ndarray[np.float64, Any]]:
     channel_count, _ = get_channel_count_and_dim_idx(scale_shape)
-    per_channel_history = [None for i in range(channel_count)]
+    per_channel_history = [np.zeros((0,)) for _ in range(channel_count)]
     for _ in range(len(raw_input_history)):
         entry = raw_input_history.popleft()
         split = split_into_channels(entry, scale_shape)
@@ -52,14 +59,16 @@ def get_per_channel_history(raw_input_history: deque, scale_shape: List[int], di
                 flat_channel_split = flat_channel_split[flat_channel_split != 0]
 
             if per_channel_history[i] is None:
-                per_channel_history[i] = flat_channel_split
+                per_channel_history[i] = flat_channel_split.tolist()
             else:
                 per_channel_history[i] = np.concatenate([per_channel_history[i], flat_channel_split])
         raw_input_history.append(entry)
     return per_channel_history
 
 
-def np_percentile_reduce_like(input_: np.array, ref_tensor_shape: Tuple[int], q: float) -> np.array:
+def np_percentile_reduce_like(
+    input_: ndarray[np.float64, Any], ref_tensor_shape: Tuple[int], q: float
+) -> ndarray[np.float64, Any]:
     numel = np.prod(ref_tensor_shape)
     if numel == 1:
         return np.array([np.percentile(input_, q)])

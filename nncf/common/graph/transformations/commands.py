@@ -140,6 +140,7 @@ class TargetPoint:
         :param target_type: Type of the target point.
         """
         self._target_type = target_type
+        self.target_node_name: str = ""
 
     @property
     def type(self) -> TargetType:

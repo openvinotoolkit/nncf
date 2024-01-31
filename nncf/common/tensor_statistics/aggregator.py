@@ -10,13 +10,12 @@
 # limitations under the License.
 from abc import ABC
 from abc import abstractmethod
-from itertools import islice
 from typing import Any, Dict, TypeVar
 
 from nncf.common import factory
 from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.logging.track_progress import track
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.data.dataset import Dataset
@@ -30,9 +29,9 @@ class StatisticsAggregator(ABC):
     Base class for statistics collection.
     """
 
-    def __init__(self, dataset: Dataset):
+    def __init__(self, dataset: Dataset[int, int]):
         self.dataset = dataset
-        self.stat_subset_size = None
+        self.stat_subset_size = 0
         self.statistic_points = StatisticPointsContainer()
 
     def collect_statistics(self, model: TModel, graph: NNCFGraph) -> None:
@@ -50,21 +49,15 @@ class StatisticsAggregator(ABC):
 
         merged_statistics = self._get_merged_statistic_points(self.statistic_points, model, graph)
         transformation_layout = self._get_transformation_layout_extra_outputs(merged_statistics)
-        model_with_outputs = model_transformer.transform(transformation_layout)
+        model_with_outputs: ModelTransformer = model_transformer.transform(transformation_layout)
         engine = factory.EngineFactory.create(model_with_outputs)
 
-        dataset_length = self.dataset.get_length()
-        total = (
-            min(dataset_length or self.stat_subset_size, self.stat_subset_size)
-            if self.stat_subset_size is not None
-            else None
-        )
         empty_statistics = True
-        for input_data in track(
-            islice(self.dataset.get_inference_data(), self.stat_subset_size),
-            total=total,
-            description="Statistics collection",
-        ):
+        data_iterable = iter([self.dataset.get_inference_data()])
+        for input_data in data_iterable:
+            outputs = engine.infer(input_data)
+            processed_outputs = self._process_outputs(outputs)
+            self._register_statistics(processed_outputs, merged_statistics)
             outputs = engine.infer(input_data)
             processed_outputs = self._process_outputs(outputs)
             self._register_statistics(processed_outputs, merged_statistics)
@@ -87,7 +80,10 @@ class StatisticsAggregator(ABC):
 
         for _, _statistic_points in self.statistic_points.items():
             for _statistic_point in _statistic_points:
-                for _, tensor_collectors in _statistic_point.algorithm_to_tensor_collectors.items():
+                for (
+                    _,
+                    tensor_collectors,
+                ) in _statistic_point.algorithm_to_tensor_collectors.items():
                     for tensor_collector in tensor_collectors:
                         if self.stat_subset_size is None:
                             self.stat_subset_size = tensor_collector.num_samples

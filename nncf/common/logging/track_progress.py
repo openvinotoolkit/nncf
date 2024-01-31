@@ -146,6 +146,10 @@ class track:
                 self.sequence, total=self.total, description=self.description, update_period=self.update_period
             )
 
+    def __next__(self):
+        with self.progress:
+            return next(self.iterator)
+
     def __enter__(self):
         self.progress.start()
         self.task = self.progress.add_task(self.description, total=self.total)
