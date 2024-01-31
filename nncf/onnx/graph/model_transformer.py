@@ -454,6 +454,4 @@ class ONNXModelTransformer(ModelTransformer):
             model.graph.node.remove(quantize_node_proto)
             model.graph.node.remove(dequantize_node_proto)
 
-        onnx.checker.check_model(model)
-
         return model

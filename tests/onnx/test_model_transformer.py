@@ -209,6 +209,7 @@ def test_node_removing(target_layers):
     model_transformer = ONNXModelTransformer(quantized_model)
 
     transformed_model = model_transformer.transform(transformation_layout)
+    onnx.checker.check_model(transformed_model)
     compare_nncf_graph(transformed_model, "synthetic/" + "removed_nodes_in_" + model_to_test.path_ref_graph)
 
 
