@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,6 +18,7 @@ from typing import Any, Iterator, List, Optional, Tuple
 import numpy as np
 import pytest
 
+import nncf
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
@@ -529,7 +530,7 @@ class TemplateTestReducersAggreagtors:
             params["inplace"] = [False, True]
             params["channel_axis"] = [1, 2]
         else:
-            raise RuntimeError(
+            raise nncf.ValidationError(
                 "test_min_max_mean_reducer_hash_equal configurated in a wrong way."
                 f" Wrong reducer_name: {reducer_name}"
             )

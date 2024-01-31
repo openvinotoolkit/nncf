@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,8 +13,12 @@ import sys
 
 import torch
 
+import nncf
+
 if len(sys.argv) != 3:
-    raise RuntimeError("Must be run with an execution type as argument (either 'cpu' or 'gpu') and package type")
+    raise nncf.ValidationError(
+        "Must be run with an execution type as argument (either 'cpu' or 'gpu') and package type"
+    )
 execution_type = sys.argv[1]
 package_type = sys.argv[2]
 
@@ -59,4 +63,4 @@ elif execution_type == "gpu":
     )
     output_tensor = BinarizedFunctionsCUDA.get("WeightBinarize_forward")(output_tensor, True)
 else:
-    raise RuntimeError(f"Invalid execution type {execution_type} (expected 'cpu' or 'gpu')!")
+    raise nncf.ValidationError(f"Invalid execution type {execution_type} (expected 'cpu' or 'gpu')!")

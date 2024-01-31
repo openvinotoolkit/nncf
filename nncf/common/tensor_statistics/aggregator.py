@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,6 +13,7 @@ from abc import abstractmethod
 from itertools import islice
 from typing import Any, Dict, TypeVar
 
+import nncf
 from nncf.common import factory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -70,7 +71,7 @@ class StatisticsAggregator(ABC):
             self._register_statistics(processed_outputs, merged_statistics)
             empty_statistics = False
         if empty_statistics:
-            raise RuntimeError(
+            raise nncf.ValidationError(
                 "Calibration dataset must not be empty. Please provide calibration dataset with at least one sample."
             )
 

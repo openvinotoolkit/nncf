@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,6 +11,7 @@
 
 import pytest
 
+import nncf
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.scopes import IgnoredScope
@@ -78,5 +79,5 @@ WRONG_IGNORED_SCOPES_TEST_DATA = [
 @pytest.mark.parametrize("ignored_scope", WRONG_IGNORED_SCOPES_TEST_DATA)
 def test_wrong_ignored_scopes(ignored_scope):
     nncf_graph = NNCFGraphToTestIgnoredScope(CONV_TYPE, LINEAR_TYPE).nncf_graph
-    with pytest.raises(RuntimeError):
+    with pytest.raises(nncf.ValidationError):
         get_ignored_node_names_from_ignored_scope(ignored_scope, nncf_graph)

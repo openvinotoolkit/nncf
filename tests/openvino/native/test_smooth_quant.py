@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pathlib import Path
 from typing import Callable, Dict
 
 import numpy as np
@@ -17,12 +16,54 @@ import openvino as ov
 import pytest
 import torch
 
+from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.quantization.algorithms.smooth_quant.openvino_backend import OVSmoothQuantAlgoBackend
+from tests.post_training.test_templates.helpers import ConvTestModel
+from tests.post_training.test_templates.helpers import LinearMultiShapeModel
+from tests.post_training.test_templates.helpers import ShareWeghtsConvAndShareLinearModel
 from tests.post_training.test_templates.test_smooth_quant import TemplateTestSQAlgorithm
+
+OV_LINEAR_MODEL_MM_OP_MAP = {
+    "MatMul1": "aten::matmul/MatMul",
+    "MatMul2": "aten::matmul/MatMul_1",
+    "MatMul3": "aten::matmul/MatMul_6",
+    "MatMul4": "aten::matmul/MatMul_4",
+    "MatMul5": "aten::matmul/MatMul_7",
+    "MatMul6": "aten::matmul/MatMul_5",
+    "MatMul7": "aten::matmul/MatMul_3",
+    "MatMul8": "aten::matmul/MatMul_2",
+    "Linear1": "__module.linear_2/aten::linear/MatMul",
+    "Linear2": "__module.linear_1/aten::linear/MatMul",
+    "Linear3": "__module.linear_3/aten::linear/MatMul",
+    "Linear4": "__module.linear_4/aten::linear/MatMul",
+}
+
+OV_LINEAR_MODEL_SQ_OP_MAP = {
+    "MatMul1": "aten::reshape/Reshape_0_0/nncf_smooth_quant",
+    "MatMul2": "aten::reshape/Reshape_0_0/nncf_smooth_quant",
+    "MatMul3": "aten::reshape/Reshape_1_0_1/nncf_smooth_quant",
+    "MatMul4": "aten::reshape/Reshape_1_0_0/nncf_smooth_quant",
+    "MatMul5": "aten::reshape/Reshape_2_0_0/nncf_smooth_quant",
+    "MatMul6": "aten::max/ReduceMax_0_0/nncf_smooth_quant",
+    "MatMul7": "aten::flatten/Reshape_1_0_0/nncf_smooth_quant",
+    "MatMul8": "aten::flatten/Reshape_0_0/nncf_smooth_quant",
+    "Linear1": "prim::ListUnpack/VariadicSplit_1_0/nncf_smooth_quant",
+    "Linear2": "prim::ListUnpack/VariadicSplit_0_0/nncf_smooth_quant",
+    "Linear3": "aten::add/Add_0_0/nncf_smooth_quant",
+    "Linear4": "aten::add/Add_0_0/nncf_smooth_quant",
+}
+
+OV_CONV_MODEL_MM_OP_MAP = {
+    "Conv1": "__module.conv/aten::_convolution/Convolution",
+}
+
+OV_CONV_MODEL_SQ_OP_MAP = {
+    "Conv1": "x_0_0/nncf_smooth_quant",
+}
 
 
 class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
@@ -30,11 +71,28 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
     def fn_to_type(tensor) -> np.ndarray:
         return np.array(tensor)
 
+    @pytest.fixture(params=[False, True], ids=["out_of_palce", "inplace"])
+    def inplace_statistics(self, request) -> bool:
+        return request.param
+
+    def get_node_name_map(self, model_cls) -> Dict[str, str]:
+        if model_cls is LinearMultiShapeModel:
+            return OV_LINEAR_MODEL_MM_OP_MAP
+        if model_cls is ConvTestModel:
+            return OV_CONV_MODEL_MM_OP_MAP
+        if model_cls is ShareWeghtsConvAndShareLinearModel:
+            return {}
+        raise NotImplementedError
+
+    @staticmethod
+    def get_target_node_name(command: TransformationCommand):
+        return command.target_point.target_node_name
+
     @staticmethod
     def get_transform_fn() -> Callable:
         def transform_fn(data_item):
             tensor, _ = data_item
-            return {"input.1": tensor}
+            return {"x": tensor}
 
         return transform_fn
 
@@ -44,19 +102,20 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
 
     @staticmethod
     def backend_specific_model(model: torch.nn.Module, tmp_dir: str) -> ov.Model:
-        # TODO(AlexanderDokuchaev): remove onnx export after fix 119625
-        onnx_path = Path(f"{tmp_dir}/model.onnx")
-        torch.onnx.export(model, torch.rand(model.INPUT_SIZE), onnx_path, opset_version=13, input_names=["input.1"])
-        ov_model = ov.convert_model(onnx_path, input=model.INPUT_SIZE)
-        return ov_model
+        return ov.convert_model(model, example_input=torch.rand(model.INPUT_SIZE), input=model.INPUT_SIZE)
 
     @staticmethod
-    def check_scales(model: ov.Model, reference_values: Dict[str, np.ndarray]) -> None:
+    def check_scales(model: ov.Model, reference_values: Dict[str, np.ndarray], model_cls) -> None:
+        names_map = OV_LINEAR_MODEL_SQ_OP_MAP if model_cls is LinearMultiShapeModel else OV_CONV_MODEL_SQ_OP_MAP
         ops_list = {op.get_friendly_name(): op for op in model.get_ops()}
-        for ref_name, ref_value in reference_values.items():
-            node = ops_list[ref_name]
-            const_node = node.input(1).get_source_output().get_node()
-
+        for ref_names, ref_value in reference_values.items():
+            const_nodes = []
+            for ref_name in ref_names:
+                node = ops_list[names_map[ref_name]]
+                const_nodes.append(node.input(1).get_source_output().get_node())
+            # Check unified group acutally shares one constant
+            assert all(node is const_nodes[0] for node in const_nodes[1:])
+            const_node = const_nodes[0]
             assert const_node.get_type_name() == "Constant"
 
             value = const_node.data

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,6 +15,7 @@ from typing import Dict, List, Set, Tuple, Union
 import numpy as np
 import onnx
 
+import nncf
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
@@ -272,7 +273,7 @@ class ONNXModelTransformer(ModelTransformer):
         elif tensor_type == np.int8:
             onnx_tensor_type = onnx.TensorProto.INT8
         else:
-            raise RuntimeError(f"Incorrect tensor type - {tensor_type}.")
+            raise nncf.ValidationError(f"Incorrect tensor type - {tensor_type}.")
         assert quantizer.input[1] == dequantizer.input[1] and quantizer.input[2] == dequantizer.input[2]
         scale_tensor_name = quantizer.input[1]
         zero_point_tensor_name = quantizer.input[2]
@@ -326,7 +327,7 @@ class ONNXModelTransformer(ModelTransformer):
         input_nodes = []
         input_nodes.extend(children_node_mapping[target_edge_name])
         if not input_nodes:
-            raise RuntimeError(
+            raise nncf.InternalError(
                 f"Can not add the quantizer to the {target_edge_name} edge. This edge does not have end node."
             )
 

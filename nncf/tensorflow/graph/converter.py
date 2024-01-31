@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,6 +18,7 @@ import tensorflow as tf
 from tensorflow.core.framework.node_def_pb2 import NodeDef
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -257,7 +258,7 @@ class BaseFunctionalSequentialConverter(TFModelConverter):
                         input_graphdef_node_name = splits[0]
                         output_port_id = int(splits[1])
                     else:
-                        raise RuntimeError("Could not parse NodeDef's input field!")
+                        raise nncf.InternalError("Could not parse NodeDef's input field!")
 
                     pretty_input_node_name = custom_layer_info.graphdef_node_name_to_pretty_node_name[
                         input_graphdef_node_name
@@ -359,7 +360,7 @@ class BaseFunctionalSequentialConverter(TFModelConverter):
             # Filter control inputs, whatever these are
             previous_node_names = list(filter(lambda x: "^" not in x, previous_node_names))
         if weight_node_name is None:
-            raise RuntimeError("Could not find a weight node for a weighted node {}".format(weighted_node.name))
+            raise nncf.InternalError("Could not find a weight node for a weighted node {}".format(weighted_node.name))
         return weight_node_name
 
     @staticmethod

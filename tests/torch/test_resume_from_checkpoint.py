@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,6 +14,7 @@ from functools import partial
 import pytest
 from torch.nn import DataParallel
 
+import nncf
 from nncf.common.logging import nncf_logger
 from nncf.torch import load_state
 from nncf.torch import register_default_init_args
@@ -96,7 +97,7 @@ def test_can_resume_with_algo_mixing(mocker, is_strict):
         create_compressed_model_and_algo_for_test, desc.model_creator(), config, compression_state=compression_state
     )
     if is_strict:
-        with pytest.raises(RuntimeError):
+        with pytest.raises(nncf.InternalError):
             fn()
     else:
         _, compression_ctrl = fn()
@@ -196,7 +197,7 @@ def test_load_state_interoperability(_algos, _model_wrapper, is_resume):
             ref_num_loaded -= 2
         assert act_num_loaded == ref_num_loaded
     else:
-        with pytest.raises(RuntimeError):
+        with pytest.raises(nncf.InternalError):
             load_state(model_resume, saved_model_state, is_resume)
 
 

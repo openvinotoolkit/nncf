@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,6 +17,7 @@ from typing import Dict, List, Tuple, Union
 import numpy as np
 import torch
 
+import nncf
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionStage
@@ -352,7 +353,7 @@ class FilterPruningController(BasePruningAlgoController):
             self.current_flops = flops
             self.current_params_num = params_num
             return right
-        raise RuntimeError(
+        raise nncf.InternalError(
             "Can't prune the model to get the required "
             "pruning level in flops = {}".format(target_flops_pruning_level)
         )
@@ -377,7 +378,7 @@ class FilterPruningController(BasePruningAlgoController):
             with torch.no_grad():
                 if self.all_weights:
                     if groupwise_pruning_levels_set:
-                        raise RuntimeError("Cannot set group-wise pruning levels with all_weights=True")
+                        raise nncf.InternalError("Cannot set group-wise pruning levels with all_weights=True")
                     # Non-uniform (global) importance-score-based pruning according
                     # to the global pruning level
                     if self.prune_flops:
@@ -388,7 +389,9 @@ class FilterPruningController(BasePruningAlgoController):
                     if groupwise_pruning_levels_set:
                         group_ids = [group.id for group in self.pruned_module_groups_info.get_all_clusters()]
                         if set(pruning_level.keys()) != set(group_ids):
-                            raise RuntimeError("Groupwise pruning level dict keys do not correspond to layer group ids")
+                            raise nncf.InternalError(
+                                "Groupwise pruning level dict keys do not correspond to layer group ids"
+                            )
                     else:
                         # Pruning uniformly with the same pruning level across layers
                         if self.prune_flops:
@@ -592,7 +595,7 @@ class FilterPruningController(BasePruningAlgoController):
                 self.current_params_num = params_num
                 return
             cur_num += 1
-        raise RuntimeError("Can't prune model to asked flops pruning level")
+        raise nncf.InternalError("Can't prune model to asked flops pruning level")
 
     def _propagate_masks(self):
         nncf_logger.debug("Propagating pruning masks")

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,6 +16,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
@@ -385,7 +386,7 @@ def get_input_channels(node: NNCFNode) -> int:
         return layer_attrs.in_channels
     if isinstance(layer_attrs, LinearLayerAttributes):
         return layer_attrs.in_features
-    raise RuntimeError(f"Can't get count of input channels from node {node}")
+    raise nncf.InternalError(f"Can't get count of input channels from node {node}")
 
 
 def get_output_channels(node: NNCFNode) -> int:
@@ -400,7 +401,7 @@ def get_output_channels(node: NNCFNode) -> int:
         return layer_attrs.out_channels
     if isinstance(layer_attrs, LinearLayerAttributes):
         return layer_attrs.out_features
-    raise RuntimeError(f"Can't get count of output channels from node {node}")
+    raise nncf.InternalError(f"Can't get count of output channels from node {node}")
 
 
 def identity_mask_propagation(node: NNCFNode, graph: NNCFGraph) -> None:

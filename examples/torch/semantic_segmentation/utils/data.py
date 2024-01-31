@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -20,6 +20,8 @@ from PIL import Image
 from torchvision.transforms import ToPILImage
 from tqdm import tqdm
 
+import nncf
+
 
 def get_files(folder, name_filter=None, extension_filter=None):
     """Helper function that returns the list of files in a specified folder
@@ -34,7 +36,7 @@ def get_files(folder, name_filter=None, extension_filter=None):
 
     """
     if not os.path.isdir(folder):
-        raise RuntimeError('"{0}" is not a folder.'.format(folder))
+        raise nncf.InvalidPathError('"{0}" is not a folder.'.format(folder))
 
     # Filename filter: if not specified don't filter (condition always true);
     # otherwise, use a lambda expression to filter out files that do not

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,6 +11,7 @@
 
 import tensorflow as tf
 
+import nncf
 from examples.tensorflow.classification.datasets import tfrecords as records_dataset
 from examples.tensorflow.classification.datasets.preprocessing_selector import get_label_preprocessing_fn
 from examples.tensorflow.classification.datasets.preprocessing_selector import get_preprocessing
@@ -64,7 +65,7 @@ class DatasetBuilder(BaseDatasetBuilder):
         }
         dtype = dtype_map.get(self._dtype, None)
         if dtype is None:
-            raise ValueError("Invalid DType provided. Supported types: {}".format(dtype_map.keys()))
+            raise nncf.ValidationError("Invalid DType provided. Supported types: {}".format(dtype_map.keys()))
 
         return dtype
 

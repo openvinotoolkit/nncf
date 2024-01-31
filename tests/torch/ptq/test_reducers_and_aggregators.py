@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,6 +16,7 @@ import numpy as np
 import pytest
 import torch
 
+import nncf
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.torch.tensor import PTNNCFTensor
@@ -74,7 +75,7 @@ class BaseTestReducersAggregators(TemplateTestReducersAggreagtors, ABC):
             return tensor.float()
         if dtype == Dtype.INTEGER:
             return tensor.int()
-        raise RuntimeError()
+        raise nncf.ValidationError(f"Invalid dtype: {dtype}. Supported dtypes are {Dtype.FLOAT} and {Dtype.INTEGER}")
 
 
 class TestCPUReducersAggregators(BaseTestReducersAggregators):

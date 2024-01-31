@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,6 +11,7 @@
 
 import pytest
 
+import nncf
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerGroup
@@ -99,8 +100,8 @@ def test_mode_against_default_map(algo_params, is_error):
     if is_error:
         try:
             minmax = MinMaxQuantization(**algo_params)
-        except RuntimeError:
-            pytest.xfail("Caught expected RuntimeError")
+        except nncf.ParameterNotSupportedError:
+            pytest.xfail("Caught expected error")
     minmax = MinMaxQuantization(**algo_params)
     for ref_parameter_name, ref_parameter_value in default_values_to_compare.items():
         parameter_value = getattr(minmax, ref_parameter_name)

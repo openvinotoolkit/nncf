@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,6 +11,7 @@
 
 from typing import TypeVar
 
+import nncf
 from nncf.common.engine import Engine
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.model_transformer import ModelTransformer
@@ -45,18 +46,19 @@ class NNCFGraphFactory:
             return GraphConverter.create_nncf_graph(model)
         if model_backend == BackendType.TORCH:
             return model.nncf.get_graph()
-        raise RuntimeError(
+        raise nncf.UnsupportedBackendError(
             "Cannot create backend-specific graph because {} is not supported!".format(model_backend.value)
         )
 
 
 class ModelTransformerFactory:
     @staticmethod
-    def create(model: TModel) -> ModelTransformer:
+    def create(model: TModel, inplace: bool = False) -> ModelTransformer:
         """
         Factory method to create backend-specific ModelTransformer instance based on the input model.
 
         :param model: backend-specific model instance
+        :param inplace: apply transformations inplace
         :return: backend-specific ModelTransformer instance
         """
         model_backend = get_backend(model)
@@ -67,12 +69,12 @@ class ModelTransformerFactory:
         if model_backend == BackendType.OPENVINO:
             from nncf.openvino.graph.model_transformer import OVModelTransformer
 
-            return OVModelTransformer(model)
+            return OVModelTransformer(model, inplace=inplace)
         if model_backend == BackendType.TORCH:
             from nncf.torch.model_transformer import PTModelTransformer
 
             return PTModelTransformer(model)
-        raise RuntimeError(
+        raise nncf.UnsupportedBackendError(
             "Cannot create backend-specific model transformer because {} is not supported!".format(model_backend.value)
         )
 
@@ -105,7 +107,7 @@ class EngineFactory:
             from nncf.torch.engine import PTEngine
 
             return PTEngine(model)
-        raise RuntimeError(
+        raise nncf.UnsupportedBackendError(
             "Cannot create backend-specific engine because {} is not supported!".format(model_backend.value)
         )
 
@@ -124,7 +126,7 @@ class CommandCreatorFactory:
             from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
 
             return OVCommandCreator()
-        raise RuntimeError(
+        raise nncf.UnsupportedBackendError(
             "Cannot create backend-specific command creator because {} is not supported!".format(model_backend.value)
         )
 
@@ -151,7 +153,7 @@ class StatisticsAggregatorFactory:
             from nncf.torch.statistics.aggregator import PTStatisticsAggregator
 
             return PTStatisticsAggregator(dataset)
-        raise RuntimeError(
+        raise nncf.UnsupportedBackendError(
             "Cannot create backend-specific statistics aggregator because {} is not supported!".format(
                 model_backend.value
             )

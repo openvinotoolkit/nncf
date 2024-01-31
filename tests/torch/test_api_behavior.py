@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,6 +13,7 @@ import pytest
 import torch
 from torch.utils.data import DataLoader
 
+import nncf
 from nncf import NNCFConfig
 from nncf.common.quantization.quantizer_setup import SingleConfigQuantizerSetup
 from nncf.torch import create_compressed_model
@@ -133,5 +134,5 @@ def test_repeat_compression_fails():
     model = SimplestModel()
     nncf_config = NNCFConfig.from_dict({"input_info": {"sample_size": SimplestModel.INPUT_SIZE}})
     _ = create_compressed_model(model, nncf_config)
-    with pytest.raises(RuntimeError, match="The model object has already been compressed."):
+    with pytest.raises(nncf.InternalError, match="The model object has already been compressed."):
         _ = create_compressed_model(model, nncf_config)

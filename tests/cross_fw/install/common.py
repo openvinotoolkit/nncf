@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -26,7 +26,7 @@ def excluded_module(name, excluded_modules_patterns):
 
 def onerror(name, excluded_modules_patterns):
     if not excluded_module(name, excluded_modules_patterns):
-        raise RuntimeError(f"Could not import {name}")
+        raise nncf.InternalError(f"Could not import {name}")
 
 
 def load_nncf_modules(excluded_modules_patterns, verbose=False):

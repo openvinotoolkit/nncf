@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional, Protocol, Set, Tuple, Type, Union
 
 import torch
 
+import nncf
 from nncf import Dataset
 from nncf import NNCFConfig
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
@@ -178,7 +179,7 @@ class FillerInputInfo(ModelInputInfo):
         """
         input_infos = config.get("input_info")
         if input_infos is None:
-            raise RuntimeError("Passed NNCFConfig does not have an 'input_info' field")
+            raise nncf.ValidationError("Passed NNCFConfig does not have an 'input_info' field")
         if isinstance(input_infos, dict):
             return FillerInputInfo(
                 [
@@ -202,7 +203,7 @@ class FillerInputInfo(ModelInputInfo):
                     )
                 )
             return FillerInputInfo(elements)
-        raise RuntimeError("Invalid input_infos specified in config - should be either dict or list of dicts")
+        raise nncf.ValidationError("Invalid input_infos specified in config - should be either dict or list of dicts")
 
     def get_forward_inputs(
         self, device: Optional[Union[str, torch.device]] = None

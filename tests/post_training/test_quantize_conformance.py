@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -20,6 +20,7 @@ import pandas as pd
 import pytest
 import yaml
 
+import nncf
 from tests.post_training.model_scope import TEST_CASES
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
@@ -118,7 +119,7 @@ def test_ptq_quantization(
 
     try:
         if test_case_name not in reference_data:
-            raise RuntimeError(f"{test_case_name} does not exist in 'reference_data.yaml'")
+            raise nncf.ValidationError(f"{test_case_name} does not exist in 'reference_data.yaml'")
 
         test_model_param = TEST_CASES[test_case_name]
 

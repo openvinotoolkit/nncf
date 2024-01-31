@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,6 +18,7 @@ from typing import Dict, Hashable, List, Optional, Tuple
 import networkx as nx
 import networkx.algorithms.isomorphism as ism
 
+import nncf
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -257,7 +258,7 @@ def merge_two_types_of_operations(first_op: Dict, second_op: Dict, label: str) -
         res[GraphPattern.METATYPE_ATTR].extend(second_op[GraphPattern.METATYPE_ATTR])
         res[GraphPattern.LABEL_ATTR] = label
         return res
-    raise RuntimeError("Incorrect dicts of operations")
+    raise nncf.InternalError("Incorrect dicts of operations")
 
 
 @dataclass

@@ -176,15 +176,17 @@ timm/resnet18_backend_OV:
   metric_value: 0.71042
 timm/resnet18_backend_TORCH:
   metric_value: 0.71024
-timm/swin_base_patch4_window7_224_backend_CUDA_TORCH:
-  metric_value: 0.8131
 timm/swin_base_patch4_window7_224_backend_FP32:
   metric_value: 0.85274
-timm/swin_base_patch4_window7_224_backend_ONNX:
-  metric_value: 0.85158
 timm/swin_base_patch4_window7_224_backend_OV:
   metric_value: 0.83636
-timm/swin_base_patch4_window7_224_backend_TORCH:
+timm/swin_base_patch4_window7_224_no_sq_backend_FP32:
+  metric_value: 0.85274
+timm/swin_base_patch4_window7_224_no_sq_backend_CUDA_TORCH:
+  metric_value: 0.85142
+timm/swin_base_patch4_window7_224_no_sq_backend_ONNX:
+  metric_value: 0.85158
+timm/swin_base_patch4_window7_224_no_sq_backend_TORCH:
   metric_value: 0.85142
 timm/tf_inception_v3_backend_CUDA_TORCH:
   metric_value: 0.77542

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,6 +13,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
+import nncf
 from nncf.common.pruning.shape_pruning_processor import ShapePruningProcessor
 from nncf.common.pruning.weights_flops_calculator import WeightsFlopsCalculator
 from nncf.tensorflow.graph.metatypes.common import GENERAL_CONV_LAYER_METATYPES
@@ -193,5 +194,5 @@ def test_maximal_compression_rate():
     for comp_rate in np.linspace(0, maximal_compression_rate, 10):
         compression_ctrl.compression_rate = comp_rate
     for comp_rate in np.linspace(maximal_compression_rate + 1e-5, 1, 10):
-        with pytest.raises(RuntimeError):
+        with pytest.raises(nncf.ParameterNotSupportedError):
             compression_ctrl.compression_rate = comp_rate
