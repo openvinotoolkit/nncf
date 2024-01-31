@@ -15,6 +15,7 @@ import re
 import shutil
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
@@ -26,12 +27,9 @@ from transformers import AutoTokenizer
 from whowhatbench import Evaluator
 
 import nncf
-from tests.post_training.pipelines.base import OV_BACKENDS
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import StatsFromOutput
-
-OV_MODEL_NAME = "openvino_model.xml"
 
 
 @dataclass
@@ -41,87 +39,109 @@ class WCTimeStats(StatsFromOutput):
     time_awq: Optional[str] = None
     time_apply_compression: Optional[str] = None
 
+    STAT_NAMES = ["Stat. collection time", "Mixed-Precision search time", "AWQ time", "Apply Compression time"]
+    VAR_NAMES = ["time_stat_collection", "time_mixed_precision", "time_awq", "time_apply_compression"]
+    REGEX_PREFIX = [
+        "Statistics collection",
+        "Mixed-Precision assignment",
+        "Applying AWQ",
+        "Applying Weight Compression",
+    ]
+
     def fill(self, stdout: str):
         """
-        Parsing stdout of the test and collect additional data:
-         - time of statistic collection
-         - time of bias correction
-         - time of validation
+        Parses stdout of the test and collect execution time for different algorithm's stages.
 
         :param stdout: stdout text
         """
-        mapping = {
-            "time_stat_collection": "Statistics collection",
-            "time_mixed_precision": "Searching for Mixed-Precision Configuration",
-            "time_awq": "Applying AWQ",
-            "time_apply_compression": "Applying Weight Compression",
-        }
-        time_regex = ".*•\s(.*)\s•.*"
+        time_regex = r".*•\s(.*)\s•.*"
         for line in stdout.splitlines():
-            for attr_name, prefix_regex in mapping.items():
+            for attr_name, prefix_regex in zip(self.VAR_NAMES, self.REGEX_PREFIX):
                 match = re.search(r"{}{}".format(prefix_regex, time_regex), line)
                 if match:
-                    parsed_time = dt.datetime.strptime(match.group(1), "%H:%M:%S")
-                    setattr(self, attr_name, parsed_time)
+                    setattr(self, attr_name, match.group(1))
                 continue
 
-    def get_result_dict(self):
-        return {
-            "Stat. collection time": self.time_stat_collection,
-            "Mixed-Precision search time": self.time_mixed_precision,
-            "AWQ time": self.time_awq,
-            "Apply Compression time": self.time_apply_compression,
-        }
-
+    def get_stats(self):
+        VARS = [getattr(self, name) for name in self.VAR_NAMES]
+        return dict(zip(self.STAT_NAMES, VARS))
 
 class LMWeightCompression(BaseTestPipeline):
     """Pipeline for casual language models from Hugging Face repository"""
 
+    OV_MODEL_NAME = "openvino_model.xml"
+
+    def __init__(
+        self,
+        reported_name: str,
+        model_id: str,
+        backend: BackendType,
+        compression_params: dict,
+        output_dir: Path,
+        data_dir: Path,
+        reference_data: dict,
+        no_eval: bool,
+        run_benchmark_app: bool,
+        params: dict = None,
+    ) -> None:
+        super().__init__(
+            reported_name,
+            model_id,
+            backend,
+            compression_params,
+            output_dir,
+            data_dir,
+            reference_data,
+            no_eval,
+            run_benchmark_app,
+            params,
+        )
+        self.fp32_model_dir: Path = self.output_dir / "fp32_models" / self.model_id.replace("/", "__")
+        self.fp32_model_dir.mkdir(parents=True, exist_ok=True)
+
     def prepare_model(self) -> None:
-        if self.backend in OV_BACKENDS + [BackendType.FP32]:
+        if not (self.fp32_model_dir / self.OV_MODEL_NAME).exists():
+            # export by model_id
             self.model_hf = OVModelForCausalLM.from_pretrained(
                 self.model_id, export=True, load_in_8bit=False, compile=False, stateful=False
             )
-            self.model = self.model_hf.model
-        self._dump_model_fp32()
-
-    def _dump_model_fp32(self) -> None:
-        """Dump IRs of fp32 models, to help debugging."""
-        if self.backend in OV_BACKENDS + [BackendType.FP32]:
-            self.model_hf.save_pretrained(self.output_model_dir)
-            self.model_hf._save_config(self.output_model_dir)
+            self._dump_model_fp32()
+        else:
+            # no export, load from IR
+            self.model_hf = OVModelForCausalLM.from_pretrained(
+                self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=False
+            )
+        self.model = self.model_hf.model
 
     def prepare_preprocessor(self) -> None:
         self.preprocessor = AutoTokenizer.from_pretrained(self.model_id)
 
     def get_transform_calibration_fn(self):
-        if self.backend in OV_BACKENDS:
+        def transform_fn(data):
+            tokenized_text = self.preprocessor(data["text"], return_tensors="np")
+            input_ids = tokenized_text["input_ids"]
+            attention_mask = tokenized_text["attention_mask"]
 
-            def transform_fn(data):
-                tokenized_text = self.preprocessor(data["text"], return_tensors="np")
-                input_ids = tokenized_text["input_ids"]
-                attention_mask = tokenized_text["attention_mask"]
+            inputs = {}
+            inputs["input_ids"] = input_ids
+            inputs["attention_mask"] = tokenized_text["attention_mask"]
+            position_ids = np.cumsum(attention_mask, axis=1) - 1
+            position_ids[attention_mask == 0] = 1
 
-                inputs = {}
-                inputs["input_ids"] = input_ids
-                inputs["attention_mask"] = tokenized_text["attention_mask"]
-                position_ids = np.cumsum(attention_mask, axis=1) - 1
-                position_ids[attention_mask == 0] = 1
+            # The magic forms KV cache as model inputs
+            batch_size = input_ids.shape[0]
+            for input_name in self.model_hf.key_value_input_names:
+                model_inputs = self.model.input(input_name)
+                shape = model_inputs.get_partial_shape()
+                shape[0] = batch_size
+                if shape[2].is_dynamic:
+                    shape[2] = 0
+                else:
+                    shape[1] = 0
+                inputs[input_name] = ov.Tensor(model_inputs.get_element_type(), shape.get_shape())
 
-                # The magic forms KV cache as model inputs
-                batch_size = input_ids.shape[0]
-                for input_name in self.model_hf.key_value_input_names:
-                    model_inputs = self.model.input(input_name)
-                    shape = model_inputs.get_partial_shape()
-                    shape[0] = batch_size
-                    if shape[2].is_dynamic:
-                        shape[2] = 0
-                    else:
-                        shape[1] = 0
-                    inputs[input_name] = ov.Tensor(model_inputs.get_element_type(), shape.get_shape())
-
-                inputs["position_ids"] = position_ids
-                return inputs
+            inputs["position_ids"] = position_ids
+            return inputs
 
         return transform_fn
 
@@ -130,46 +150,56 @@ class LMWeightCompression(BaseTestPipeline):
         dataset = dataset.filter(lambda example: len(example["text"]) > 80)
         self.calibration_dataset = nncf.Dataset(dataset, self.get_transform_calibration_fn())
 
-    def _quantize(self):
-        """
-        Quantize self.model
-        """
-        self._compressed_model_dir = self.output_model_dir / "compressed"
-        self.quantized_model = nncf.compress_weights(
-            self.model,
-            dataset=self.calibration_dataset,
-            **self.compression_params,
-        )
-        self._compressed_model_dir.mkdir(parents=True, exist_ok=True)
-        ov.serialize(self.model, self._compressed_model_dir / OV_MODEL_NAME)
-        self.model_hf._save_config(self._compressed_model_dir)
-
     def cleanup_cache(self):
         dir_with_cache = "model_cache"
-        dirs_to_remove = [self._compressed_model_dir / dir_with_cache, self.output_model_dir / dir_with_cache]
+        dirs_to_remove = [self.output_model_dir / dir_with_cache, self.fp32_model_dir / dir_with_cache]
         for dir_to_remove in dirs_to_remove:
-            if dir_to_remove.exist():
+            if dir_to_remove.exists():
                 shutil.rmtree(dir_to_remove)
 
-    def quantize(self) -> None:
-        """
-        Run quantization of the model and collect time and memory usage information.
-        """
+    def compress(self) -> None:
         if self.backend == BackendType.FP32:
-            # To validate not quantized model
-            self.path_quantized_ir = self.output_model_dir / OV_MODEL_NAME
             return
 
         print("Weight compression...")
         start_time = time.perf_counter()
-        self.run_info.quant_memory_usage = memory_usage(self._quantize, max_usage=True)
-        self.run_info.time_quantization = time.perf_counter() - start_time
+        self.run_info.compression_memory_usage = memory_usage(self._compress, max_usage=True)
+        self.run_info.time_compression = time.perf_counter() - start_time
 
-    def get_num_quantized(self) -> None:
-        # TODO: 0 FQ, but number of weights compressed
-        # TODO: maybe should be removed from base!
-        # can calculate u4 or u8 constants? or by certain name? 'fq'
+    def collect_data_from_stdout(self, stdout: str):
+        stats = WCTimeStats()
+        stats.fill(stdout)
+        self.run_info.stats_from_output = stats
+
+    def save_compressed_model(self) -> None:
+        if self.backend == BackendType.FP32:
+            return
+        ov.serialize(self.model, self.output_model_dir / self.OV_MODEL_NAME)
+        self.model_hf._save_config(self.output_model_dir)
+
+    def get_num_compressed(self) -> None:
         pass
+
+    def run_bench(self) -> None:
+        pass
+
+    def _dump_model_fp32(self) -> None:
+        """
+        Dump IRs of fp32 models, to help debugging. The test cases may share the same fp32 model, therefore it is saved
+        to the dedicated shared folder.
+        """
+        self.model_hf.save_pretrained(self.fp32_model_dir)
+        self.model_hf._save_config(self.fp32_model_dir)
+
+    def _compress(self):
+        """
+        Actual call of weight compression
+        """
+        self.compressed_model = nncf.compress_weights(
+            self.model,
+            dataset=self.calibration_dataset,
+            **self.compression_params,
+        )
 
     def _validate(self):
         core = ov.Core()
@@ -179,38 +209,30 @@ class LMWeightCompression(BaseTestPipeline):
             cpu_threads_num = os.environ.get("CPU_THREADS_NUM")
             core.set_property("CPU", properties={"CPU_THREADS_NUM": str(cpu_threads_num)})
 
-        gold_folder = self.output_model_dir  # TODO: should be a parameter
+        gold_folder = self.fp32_model_dir
         gold_csv = gold_folder / "gold_all.csv"
-        print("gold path:", gold_csv.resolve())
         if gold_csv.exists():
+            print("Loading existing ground-truth validation data:", gold_csv.resolve())
             evaluator = Evaluator(
                 tokenizer=self.preprocessor, gt_data=gold_csv, test_data=str(gold_csv), metrics=("similarity",)
             )
         else:
+            print("Collection ground-truth validation data for model in the directory:", gold_folder.resolve())
             model_gold = OVModelForCausalLM.from_pretrained(
                 gold_folder, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=False
             )
             evaluator = Evaluator(base_model=model_gold, tokenizer=self.preprocessor, metrics=("similarity",))
             evaluator.dump_gt(str(gold_csv))
+            print("Saving ground-truth validation data:", gold_csv.resolve())
+
+        eval_model_dir = self.fp32_model_dir if self.backend == BackendType.FP32 else self.output_model_dir
 
         compressed_model_hf = OVModelForCausalLM.from_pretrained(
-            self._compressed_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=False
+            eval_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=False
         )
 
+        print("Evaluation of the model from the directory:", eval_model_dir.resolve())
         _, all_metrics = evaluator.score(compressed_model_hf)
         similarity = all_metrics["similarity"][0]
         self.run_info.metric_name = "Similarity"
-        self.run_info.metric_value = similarity
-
-    def collect_data_from_stdout(self, stdout: str):
-        self.run_info.stats_from_output = WCTimeStats(stdout)
-
-    def save_quantized_model(self) -> None:
-        """
-        Save quantized model to IR.
-        """
-
-    def run_bench(self) -> None:
-        """
-        Run a benchmark to collect performance statistics.
-        """
+        self.run_info.metric_value = round(similarity, 5)

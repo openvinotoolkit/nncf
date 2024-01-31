@@ -1,4 +1,4 @@
 tinyllama_data_free_backend_OV:
+  metric_value: 0.7211
+tinyllama_data_aware_backend_OV:
   metric_value: 0.8308
-tinyllama_data_free_backend_FP32:
-  metric_value: 1

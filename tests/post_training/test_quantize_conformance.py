@@ -9,10 +9,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import time
 import traceback
 from collections import OrderedDict
+from collections import defaultdict
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -82,42 +82,42 @@ def fixture_wc_reference_data():
     path_reference = Path(__file__).parent / "data" / "wc_reference_data.yaml"
     with path_reference.open() as f:
         data = yaml.safe_load(f)
+        fp32_test_cases = defaultdict(dict)
+        for test_case_name in data:
+            model_name = test_case_name.split("_backend_")[0]
+            fp32_test_cases[f"{model_name}_backend_FP32"]["metric_value"] = 1
+        data.update(fp32_test_cases)
     return data
 
 
 @pytest.fixture(scope="session", name="ptq_result_data")
-def fixture_ptq_report_data(output_dir, run_benchmark_app, extra_columns):
+def fixture_ptq_report_data(output_dir, run_benchmark_app):
     data: Dict[str, RunInfo] = {}
 
     yield data
 
     if data:
         test_results = OrderedDict(sorted(data.items()))
-        df = pd.DataFrame(v for v in test_results.values())
-
+        df = pd.DataFrame(v.get_result_dict() for v in test_results.values())
+        print(df)
         if not run_benchmark_app:
             df = df.drop(columns=["FPS"])
-        if not extra_columns:
-            df = df.drop(columns=["Stat. collection time", "Bias correction time", "Validation time"])
 
         output_dir.mkdir(parents=True, exist_ok=True)
         df.to_csv(output_dir / "results.csv", index=False)
 
 
 @pytest.fixture(scope="session", name="wc_result_data")
-def fixture_wc_report_data(output_dir, run_benchmark_app, extra_columns):
+def fixture_wc_report_data(output_dir):
     data: Dict[str, RunInfo] = {}
 
     yield data
 
     if data:
         test_results = OrderedDict(sorted(data.items()))
-        df = pd.DataFrame(v for v in test_results.values())
-
-        if not run_benchmark_app:
-            df = df.drop(columns=["FPS"])
-        if not extra_columns:
-            df = df.drop(columns=["Stat. collection time", "Bias correction time", "Validation time"])
+        df = pd.DataFrame(v.get_result_dict() for v in test_results.values())
+        print(df)
+        df = df.drop(columns=["FPS", "Num FQ"])
 
         output_dir.mkdir(parents=True, exist_ok=True)
         df.to_csv(output_dir / "results.csv", index=False)
@@ -218,6 +218,8 @@ def test_ptq_quantization(
     except Exception as e:
         err_msg = str(e)
         traceback.print_exc()
+    finally:
+        pipeline.cleanup_cache()
 
     if pipeline is not None:
         run_info = pipeline.run_info
@@ -233,7 +235,7 @@ def test_ptq_quantization(
         run_info = create_short_run_info(test_model_param, err_msg, test_case_name)
 
     run_info.time_total = time.perf_counter() - start_time
-    ptq_result_data[test_case_name] = run_info.get_result_dict()
+    ptq_result_data[test_case_name] = run_info
 
     if err_msg:
         pytest.fail(err_msg)
@@ -273,6 +275,8 @@ def test_weight_compression(
     except Exception as e:
         err_msg = str(e)
         traceback.print_exc()
+    finally:
+        pipeline.cleanup_cache()
 
     if pipeline is not None:
         run_info = pipeline.run_info
@@ -288,7 +292,7 @@ def test_weight_compression(
         run_info = create_short_run_info(test_model_param, err_msg, test_case_name)
 
     run_info.time_total = time.perf_counter() - start_time
-    wc_result_data[test_case_name] = run_info.get_result_dict()
+    wc_result_data[test_case_name] = run_info
 
     if err_msg:
         pytest.fail(err_msg)

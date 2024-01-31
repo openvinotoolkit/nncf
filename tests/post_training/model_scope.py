@@ -15,6 +15,7 @@ from typing import Dict, List
 from nncf import ModelType
 from nncf import QuantizationPreset
 from nncf.parameters import CompressWeightsMode
+from nncf.parameters import SensitivityMetric
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from tests.post_training.pipelines.base import ALL_PTQ_BACKENDS
@@ -264,20 +265,21 @@ WEIGHT_COMPRESSION_MODELS = [
         "reported_name": "tinyllama_data_free",
         "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
         "pipeline_cls": LMWeightCompression,
+        "compression_params": {
+            "group_size": 64,
+            "ratio": 0.8,
+            "mode": CompressWeightsMode.INT4_SYM,
+            "sensitivity_metric": SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
+        },
+        "backends": [BackendType.OV],
+    },
+    {
+        "reported_name": "tinyllama_data_aware",
+        "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
+        "pipeline_cls": LMWeightCompression,
         "compression_params": {"group_size": 64, "ratio": 0.8, "mode": CompressWeightsMode.INT4_SYM},
         "backends": [BackendType.OV],
     },
-    # {
-    #     "reported_name": "tinyllama/tinyllama-1.1b-step-50k-105b",
-    #     "model_id": "tinyllama_data_aware",
-    #     "pipeline_cls": LMWeightCompression,
-    #     "cw_params": {
-    #         "group_size": 64,
-    #         "ratio": 0.8,
-    #         "mode": CompressWeightsMode.INT4_SYM
-    #     },
-    #     "backends": BACKENDS,
-    # },
 ]
 
 

@@ -52,25 +52,37 @@ LIMIT_LENGTH_OF_STATUS = 120
 
 
 class StatsFromOutput:
-    def get_result_dict(self) -> Dict[str, str]:
-        return {}
+    """
+    Contains statistics that are parsed from the stdout.
+    """
 
+    def get_stats(self) -> Dict[str, str]:
+        """
+        Returns statistics collected from the stdout. Usually it parses execution time from the log of the progress bar.
+        """
+        return {}
 
 @dataclass
 class PTQTimeStats(StatsFromOutput):
     """
-    Parsing stdout of the test and collect additional data:
-        - time of statistic collection
-        - time of bias correction
-        - time of validation
-
-    :param stdout: stdout text
+    Contains statistics that are parsed from the stdout of PTQ tests.
     """
 
     time_stat_collection: Optional[str] = None
     time_bias_correction: Optional[str] = None
+    time_validation: Optional[str] = None
+
+    STAT_NAMES = ["Stat. collection time", "Bias correction time", "Validation time"]
 
     def fill(self, stdout: str):
+        """
+        Parsing stdout of the PTQ test and collect additional data:
+            - time of statistic collection
+            - time of bias correction
+            - time of validation
+
+        :param stdout: stdout text
+        """
         time_stat_collection_ = None
         time_bias_correction_ = None
         for line in stdout.splitlines():
@@ -94,7 +106,7 @@ class PTQTimeStats(StatsFromOutput):
 
             match = re.search(r"Validation.*\/\d+\s•\s(.*)\s•.*", line)
             if match:
-                self.time_validation = dt.datetime.strptime(match.group(1), "%H:%M:%S")
+                self.time_validation = match.group(1)
                 continue
 
         if time_stat_collection_:
@@ -102,18 +114,15 @@ class PTQTimeStats(StatsFromOutput):
         if time_bias_correction_:
             self.time_bias_correction = time_bias_correction_.strftime("%H:%M:%S")
 
-    def get_result_dict(self):
-        return {
-            "Stat. collection time": self.time_stat_collection,
-            "Bias correction time": self.time_bias_correction,
-            "Validation time": self.time_validation,
-        }
+    def get_stats(self):
+        VARS = [self.time_stat_collection, self.time_bias_correction, self.time_validation]
+        return dict(zip(self.STAT_NAMES, VARS))
 
 
 @dataclass
 class RunInfo:
     """
-    Containing data about quantization of the model.
+    Containing data about compression of the model.
     """
 
     model: Optional[str] = None
@@ -122,11 +131,11 @@ class RunInfo:
     metric_value: Optional[float] = None
     metric_diff: Optional[float] = None
     num_fq_nodes: Optional[float] = None
-    quant_memory_usage: Optional[int] = None
+    compression_memory_usage: Optional[int] = None
     status: Optional[str] = None
     fps: Optional[float] = None
     time_total: Optional[float] = None
-    time_quantization: Optional[float] = None
+    time_compression: Optional[float] = None
     stats_from_output = StatsFromOutput()
 
     @staticmethod
@@ -149,9 +158,9 @@ class RunInfo:
             "Metric value": self.metric_value,
             "Metric diff": self.metric_diff,
             "Num FQ": self.num_fq_nodes,
-            "RAM MiB": self.format_memory_usage(self.quant_memory_usage),
-            "Quant. time": self.format_time(self.time_quantization),
-            **self.stats_from_output.get_result_dict(),
+            "RAM MiB": self.format_memory_usage(self.compression_memory_usage),
+            "Compression time": self.format_time(self.time_compression),
+            **self.stats_from_output.get_stats(),
             "Total time": self.format_time(self.time_total),
             "FPS": self.fps,
             "Status": self.status[:LIMIT_LENGTH_OF_STATUS] if self.status is not None else None,
@@ -160,7 +169,7 @@ class RunInfo:
 
 class BaseTestPipeline(ABC):
     """
-    Base class to test post training quantization.
+    Base class to test compression algorithms.
     """
 
     def __init__(
@@ -226,21 +235,21 @@ class BaseTestPipeline(ABC):
         pass
 
     @abstractmethod
-    def quantize(self) -> None:
+    def compress(self) -> None:
         """
-        Run quantization of the model and collect time and memory usage information.
-        """
-
-    @abstractmethod
-    def save_quantized_model(self) -> None:
-        """
-        Save quantized model to IR.
+        Run compression of the model and collect time and memory usage information.
         """
 
     @abstractmethod
-    def get_num_quantized(self) -> None:
+    def save_compressed_model(self) -> None:
         """
-        Get number of the quantized nodes in the quantized IR.
+        Save compressed model to IR.
+        """
+
+    @abstractmethod
+    def get_num_compressed(self) -> None:
+        """
+        Get number of the compressed nodes in the compressed IR.
         """
 
     @abstractmethod
@@ -255,7 +264,7 @@ class BaseTestPipeline(ABC):
 
     def prepare(self):
         """
-        Preparing model and calibration dataset for quantization.
+        Preparing model and calibration dataset for compression.
         """
         print("Preparing...")
         self.prepare_model()
@@ -297,15 +306,14 @@ class BaseTestPipeline(ABC):
 
     def run(self) -> None:
         """
-        Run full pipeline of quantization
+        Run full pipeline of compression
         """
         self.prepare()
-        self.quantize()
-        self.save_quantized_model()
-        self.get_num_quantized()
+        self.compress()
+        # self.save_compressed_model()
+        # self.get_num_compressed()
         self.validate()
         self.run_bench()
-        self.cleanup_cache()
 
 
 class PTQTestPipeline(BaseTestPipeline):
@@ -313,7 +321,7 @@ class PTQTestPipeline(BaseTestPipeline):
     Base class to test post training quantization.
     """
 
-    def _quantize(self):
+    def _compress(self):
         """
         Quantize self.model
         """
@@ -321,20 +329,20 @@ class PTQTestPipeline(BaseTestPipeline):
             quantizer = OVQuantizer.from_pretrained(self.model_hf)
             quantizer.quantize(calibration_dataset=self.calibration_dataset, save_directory=self.output_model_dir)
         else:
-            self.quantized_model = nncf.quantize(
+            self.compressed_model = nncf.quantize(
                 model=self.model,
                 target_device=TargetDevice.CPU,
                 calibration_dataset=self.calibration_dataset,
                 **self.compression_params,
             )
 
-    def quantize(self) -> None:
+    def compress(self) -> None:
         """
         Run quantization of the model and collect time and memory usage information.
         """
         if self.backend == BackendType.FP32:
-            # To validate not quantized model
-            self.path_quantized_ir = self.output_model_dir / "model_fp32.xml"
+            # To validate not compressed model
+            self.path_compressed_ir = self.output_model_dir / "model_fp32.xml"
             return
 
         print("Quantization...")
@@ -345,39 +353,39 @@ class PTQTestPipeline(BaseTestPipeline):
                 torch.set_num_threads(int(cpu_threads_num))
 
         start_time = time.perf_counter()
-        self.run_info.quant_memory_usage = memory_usage(self._quantize, max_usage=True)
-        self.run_info.time_quantization = time.perf_counter() - start_time
+        self.run_info.compression_memory_usage = memory_usage(self._compress, max_usage=True)
+        self.run_info.time_compression = time.perf_counter() - start_time
 
-    def save_quantized_model(self) -> None:
+    def save_compressed_model(self) -> None:
         """
-        Save quantized model to IR.
+        Save compressed model to IR.
         """
-        print("Save quantized model...")
+        print("Saving quantized model...")
         if self.backend == BackendType.OPTIMUM:
-            self.path_quantized_ir = self.output_model_dir / "openvino_model.xml"
+            self.path_compressed_ir = self.output_model_dir / "openvino_model.xml"
         elif self.backend in PT_BACKENDS:
             ov_model = ov.convert_model(
-                self.quantized_model.cpu(), example_input=self.dummy_tensor.cpu(), input=self.input_size
+                self.compressed_model.cpu(), example_input=self.dummy_tensor.cpu(), input=self.input_size
             )
-            self.path_quantized_ir = self.output_model_dir / "model.xml"
-            ov.serialize(ov_model, self.path_quantized_ir)
+            self.path_compressed_ir = self.output_model_dir / "model.xml"
+            ov.serialize(ov_model, self.path_compressed_ir)
         elif self.backend == BackendType.ONNX:
             onnx_path = self.output_model_dir / "model.onnx"
-            onnx.save(self.quantized_model, str(onnx_path))
+            onnx.save(self.compressed_model, str(onnx_path))
             ov_model = ov.convert_model(onnx_path)
-            self.path_quantized_ir = self.output_model_dir / "model.xml"
-            ov.serialize(ov_model, self.path_quantized_ir)
+            self.path_compressed_ir = self.output_model_dir / "model.xml"
+            ov.serialize(ov_model, self.path_compressed_ir)
         elif self.backend in OV_BACKENDS:
-            self.path_quantized_ir = self.output_model_dir / "model.xml"
-            ov.serialize(self.quantized_model, str(self.path_quantized_ir))
+            self.path_compressed_ir = self.output_model_dir / "model.xml"
+            ov.serialize(self.compressed_model, str(self.path_compressed_ir))
 
-    def get_num_quantized(self) -> None:
+    def get_num_compressed(self) -> None:
         """
-        Get number of the FakeQuantize nodes in the quantized IR.
+        Get number of the FakeQuantize nodes in the compressed IR.
         """
 
         ie = ov.Core()
-        model = ie.read_model(model=self.path_quantized_ir)
+        model = ie.read_model(model=self.path_compressed_ir)
 
         num_fq = 0
         for node in model.get_ops():
@@ -393,7 +401,7 @@ class PTQTestPipeline(BaseTestPipeline):
         """
         if not self.run_benchmark_app:
             return
-        runner = Command(f"benchmark_app -m {self.path_quantized_ir}")
+        runner = Command(f"benchmark_app -m {self.path_compressed_ir}")
         runner.run(stdout=False)
         cmd_output = " ".join(runner.output)
 
@@ -413,4 +421,6 @@ class PTQTestPipeline(BaseTestPipeline):
         torch.jit._state._clear_class_state()
 
     def collect_data_from_stdout(self, stdout: str):
-        self.run_info.stats_from_output = PTQTimeStats(stdout)
+        stats = PTQTimeStats()
+        stats.fill(stdout)
+        self.run_info.stats_from_output = stats
