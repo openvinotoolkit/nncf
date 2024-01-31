@@ -13,7 +13,7 @@ import re
 import subprocess
 from functools import partial
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import onnx
@@ -36,7 +36,10 @@ ROOT = Path(__file__).parent.resolve()
 
 
 def validate(
-    model: onnx.ModelProto, data_loader: torch.utils.data.DataLoader, validator: Validator, num_samples: int = None
+    model: onnx.ModelProto,
+    data_loader: torch.utils.data.DataLoader,
+    validator: Validator,
+    num_samples: Optional[int] = None,
 ) -> Tuple[Dict, int, int]:
     validator.seen = 0
     validator.jdict = []
@@ -155,7 +158,7 @@ def quantize_ac(
         val_model: onnx.ModelProto,
         validation_loader: torch.utils.data.DataLoader,
         validator: Validator,
-        num_samples: int = None,
+        num_samples: Optional[int] = None,
     ) -> float:
         validator.seen = 0
         validator.jdict = []

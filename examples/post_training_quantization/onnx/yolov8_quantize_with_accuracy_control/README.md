@@ -1,11 +1,12 @@
 # Post-Training Quantization of YOLOv8 ONNX Model
 
-This example demonstrates how to use Post-Training Quantization API from Neural Network Compression Framework (NNCF) to quantize YOLOv8n model.
+This example demonstrates how to use Post-Training Quantization API from Neural Network Compression Framework (NNCF) to quantize YOLOv8n model
+with accuracy control.
 
 The example includes the following steps:
 
 - Download and prepare COCO-128-seg dataset.
-- Quantize the model with "AccuracyAwareQuantization" algorithm instead of "DefaultQuantization".
+- Quantize the model with accuracy control.
 - Measure accuracy and performance of the floating-point and quantized models.
 
 ## Install requirements
