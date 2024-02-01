@@ -328,12 +328,12 @@ Here is the word perplexity with data-free and data-aware mixed-precision INT4-I
     </tr>
     <tr>
         <td></td>
-        <td>int4_sym_g64_r10_data_awq</td>
+        <td>int4_sym_g64_r100_data_awq</td>
         <td>10.89</td>
     </tr>
     <tr>
         <td></td>
-        <td>int4_sym_g64_r10</td>
+        <td>int4_sym_g64_r100</td>
         <td>11.07</td>
     </tr>
     <tr>
@@ -353,12 +353,12 @@ Here is the word perplexity with data-free and data-aware mixed-precision INT4-I
     </tr>
     <tr>
         <td></td>
-        <td>int4_sym_g64_r10_data_awq</td>
+        <td>int4_sym_g64_r100_data_awq</td>
         <td>21.76</td>
     </tr>
     <tr>
         <td></td>
-        <td>int4_sym_g64_r10</td>
+        <td>int4_sym_g64_r100</td>
         <td>23.19</td>
     </tr>
     <tr>
