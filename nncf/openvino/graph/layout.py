@@ -87,8 +87,7 @@ def get_conv_weights_layout(ov_metatype: OVOpMetatype, weights_shape: Tuple[int,
     """
     weights_layout = _CONV_BASE_CONST_LAYOUT[ov_metatype]
     kernel_size = weights_shape[len(weights_layout) :]
-    weights_layout += [OVLayoutElem.SPATIAL] * len(kernel_size)
-    return tuple(weights_layout)
+    return tuple(weights_layout + [OVLayoutElem.SPATIAL] * len(kernel_size))
 
 
 def get_linear_weights_layout(weights_shape: Tuple[int, ...], transpose: bool, port_id: int) -> List[OVLayoutElem]:
