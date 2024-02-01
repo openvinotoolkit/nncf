@@ -35,6 +35,13 @@ class WeightCompressionAlgoBackend(ABC):
 
     @property
     @abstractmethod
+    def convolution_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific metatypes for convolution layers.
+        """
+
+    @property
+    @abstractmethod
     def embedding_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific metatypes for embedding layers.

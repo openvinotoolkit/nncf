@@ -19,9 +19,7 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.tensor.tensor import Tensor
-from nncf.openvino.graph.metatypes.openvino_metatypes import OVEmbeddingMetatype
-from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
-from nncf.openvino.graph.metatypes.openvino_metatypes import OVMultiplyMetatype
+from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_const_value
@@ -42,11 +40,21 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
     @property
     def matmul_metatypes(self) -> List[OperatorMetatype]:
-        return [OVMatMulMetatype]
+        return [om.OVMatMulMetatype]
+
+    @property
+    def convolution_metatypes(self) -> List[OperatorMetatype]:
+        return [
+            om.OVConvolutionMetatype,
+            om.OVDepthwiseConvolutionMetatype,
+            om.OVConvolutionBackpropDataMetatype,
+            om.OVGroupConvolutionMetatype,
+            om.OVGroupConvolutionBackpropDataMetatype,
+        ]
 
     @property
     def embedding_metatypes(self) -> List[OperatorMetatype]:
-        return [OVEmbeddingMetatype]
+        return [om.OVEmbeddingMetatype]
 
     @staticmethod
     def is_node_with_weights(node: NNCFNode, graph: NNCFGraph) -> bool:
@@ -140,7 +148,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
             weight = Tensor(get_const_value(const_node))
             original_shape = weight.shape
-            compressed_weight = compress_weight(weight, wc_params.reduction_axis, compression_config)
+            compressed_weight = compress_weight(weight, wc_params.reduction_axes, compression_config)
 
             compressed_const = opset.constant(
                 compressed_weight.tensor.data, dtype=compression_dtype, name=const_node_name
@@ -184,4 +192,4 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 class OVAWQAlgoAlgoBackend(OVWeightCompressionAlgoBackend):
     @staticmethod
     def get_awq_patterns():
-        return get_awq_patterns(OVMatMulMetatype, OVMultiplyMetatype)
+        return get_awq_patterns(om.OVMatMulMetatype, om.OVMultiplyMetatype)

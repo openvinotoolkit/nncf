@@ -200,12 +200,14 @@ class QuantizedModel(OVReferenceModel):
 class WeightsModel(OVReferenceModel):
     def _create_ov_model(self):
         input_1 = opset.parameter([1, 3, 5, 5], name="Input_1")
-        kernel = self._rng.random((3, 3, 1, 1)).astype(np.float32)
+        kernel_data = self._rng.random((3, 3, 1, 1)).astype(np.float32)
+        kernel = opset.constant(kernel_data, dtype=np.float32, name="conv_weights_0")
         strides = [1, 1]
         pads = [0, 0]
         dilations = [1, 1]
         conv = opset.convolution(input_1, kernel, strides, pads, pads, dilations, name="Conv")
-        kernel_2 = self._rng.random((3, 3, 1, 1)).astype(np.float32)
+        kernel_data_2 = self._rng.random((3, 3, 1, 1)).astype(np.float32)
+        kernel_2 = opset.constant(kernel_data_2, dtype=np.float32, name="conv_weights_1")
         output_shape = [1, 1]
         conv_tr = opset.convolution_backprop_data(
             conv, kernel_2, output_shape, strides, pads, pads, dilations, name="Conv_backprop"

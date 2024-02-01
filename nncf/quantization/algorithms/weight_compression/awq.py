@@ -198,7 +198,8 @@ class AWQ(Algorithm):
             weight = self._backend_entity.get_weight(
                 wp.node_with_weight, weight_port_id, model, graph
             )  # get_const_value(wp.weight_node)
-            reduction_axis = wp.reduction_axis
+            assert isinstance(wp.reduction_axes, tuple) and len(wp.reduction_axes) == 1
+            reduction_axis = wp.reduction_axes[0]
 
             if reduction_axis == 0:
                 weight = fns.transpose(weight)
@@ -247,7 +248,7 @@ class AWQ(Algorithm):
 
             a_scale = scale
             w_scale = scale
-            if wp.reduction_axis == 0:
+            if wp.reduction_axes[0] == 0:
                 w_scale = fns.unsqueeze(w_scale, 1)
                 a_scale = fns.unsqueeze(1.0 / a_scale, 0)
             else:
