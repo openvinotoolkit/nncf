@@ -276,7 +276,7 @@ class BaseTestPipeline(ABC):
         metric_value_fp32 = self.reference_data.get("metric_value_fp32")
 
         if metric_value is not None and metric_value_fp32 is not None:
-            self.run_info.metric_diff = self.run_info.metric_value - self.reference_data["metric_value_fp32"]
+            self.run_info.metric_diff = round(self.run_info.metric_value - self.reference_data["metric_value_fp32"], 5)
 
         if (
             metric_value is not None
