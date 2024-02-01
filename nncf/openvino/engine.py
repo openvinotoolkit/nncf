@@ -30,6 +30,8 @@ class OVCompiledModelEngine(Engine):
 
     def __init__(self, model: ov.CompiledModel):
         self.compiled_model = model
+        self.infer_request = model.create_infer_request()
+        self.reset_state = hasattr(self.infer_request, "reset_state")
         self.input_tensor_names = set()
         self.number_of_inputs = len(model.inputs)
         for model_input in model.inputs:
@@ -67,10 +69,10 @@ class OVCompiledModelEngine(Engine):
         """
         self._check_input_data_format(input_data)
 
-        if self.compiled_model._infer_request is not None and hasattr(self.compiled_model._infer_request, 'reset_state'):
-            self.compiled_model._infer_request.reset_state()
+        if self.reset_state:
+            self.infer_request.reset_state()
 
-        model_outputs = self.compiled_model(input_data)
+        model_outputs = self.infer_request.infer(input_data, share_inputs=True)
 
         output_data = {}
         for tensor, value in model_outputs.items():
