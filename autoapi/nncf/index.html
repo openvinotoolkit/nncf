@@ -793,8 +793,8 @@ and the rest to INT8_ASYM).</p></li>
 The value -1 means no grouping.</p></li>
 <li><p><strong>ignored_scope</strong> (<em>Optional</em><em>[</em><em>nncf.scopes.IgnoredScope</em><em>]</em>) – An ignored scope that defined the list of model control
 flow graph nodes to be ignored during quantization.</p></li>
-<li><p><strong>all_layers</strong> (<em>Optional</em><em>[</em><em>bool</em><em>]</em>) – Indicates whether embeddings and last layers should be compressed to a primary
-precision. By default, the backup precision is assigned for the embeddings and last layers.</p></li>
+<li><p><strong>all_layers</strong> (<em>Optional</em><em>[</em><em>bool</em><em>]</em>) – Indicates whether embeddings and last MatMul layers should be compressed to a primary
+precision. By default, the backup precision is assigned for the embeddings and last MatMul layers.</p></li>
 <li><p><strong>dataset</strong> (<em>Optional</em><em>[</em><em>nncf.data.Dataset</em><em>]</em>) – Dataset used for assigning different quantization precision by finding outliers in activations.</p></li>
 <li><p><strong>sensitivity_metric</strong> (<em>Optional</em><em>[</em><em>nncf.parameters.SensitivityMetric</em><em>]</em>) – The sensitivity metric for assigning quantization precision to layers. In order to
 preserve the accuracy of the model, the more sensitive layers receives a higher precision.</p></li>
