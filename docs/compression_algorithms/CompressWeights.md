@@ -291,7 +291,7 @@ Here is the word perplexity with data-free and data-aware mixed-precision INT4-I
 `data` suffix refers to the data-aware mixed-precision.
 
 <table>
-    <tr>
+    <tr bgcolor='#B4B5BB'>
         <td>Model</td>
         <td>Mode</td>
         <td>Word Perplexity (↓)</td>
@@ -302,9 +302,19 @@ Here is the word perplexity with data-free and data-aware mixed-precision INT4-I
         <td>11.87</td>
     </tr>
     <tr>
-        <td>meta-llama/llama-7b-chat-hf</td>
+        <td></td>
         <td>int4_sym_g128_r80</td>
         <td>11.92</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>int4_sym_g128_r10_data_awq</td>
+        <td>12.34</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>int4_sym_g128_r10</td>
+        <td>12.35</td>
     </tr>
     <tr>
         <td>stabilityai_stablelm-3b-4e1t</td>
@@ -312,9 +322,19 @@ Here is the word perplexity with data-free and data-aware mixed-precision INT4-I
         <td>10.67</td>
     </tr>
     <tr>
-        <td>stabilityai_stablelm-3b-4e1t</td>
+        <td></td>
         <td>int4_sym_g64_r80</td>
         <td>10.83</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>int4_sym_g64_r10_data_awq</td>
+        <td>10.89</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>int4_sym_g64_r10</td>
+        <td>11.07</td>
     </tr>
     <tr>
         <td>stable-zephyr-3b-dpo</td>
@@ -322,14 +342,24 @@ Here is the word perplexity with data-free and data-aware mixed-precision INT4-I
         <td>21.62</td>
     </tr>
     <tr>
-        <td>stable-zephyr-3b-dpo</td>
+        <td></td>
         <td>int4_sym_g64_r80_data</td>
         <td>21.74</td>
     </tr>
     <tr>
-        <td>stable-zephyr-3b-dpo</td>
+        <td></td>
         <td>int4_sym_g64_r80</td>
         <td>23.10</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>int4_sym_g64_r10_data_awq</td>
+        <td>21.76</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>int4_sym_g64_r10</td>
+        <td>23.19</td>
     </tr>
     <tr>
         <td>HuggingFaceH4/zephyr-7b-beta</td>
@@ -337,7 +367,7 @@ Here is the word perplexity with data-free and data-aware mixed-precision INT4-I
         <td>10.13</td>
     </tr>
     <tr>
-        <td>HuggingFaceH4/zephyr-7b-beta</td>
+        <td></td>
         <td>int4_sym_g128</td>
         <td>10.22</td>
     </tr>
