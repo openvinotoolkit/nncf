@@ -23,16 +23,16 @@ from nncf.version import BKC_TF_SPEC
 from nncf.version import STRICT_TF_SPEC
 
 try:
-    _tf_version = version.parse(version.parse(tensorflow.__version__).base_version)
+    tensorflow_version = version.parse(version.parse(tensorflow.__version__).base_version)
 except:
     nncf_logger.debug("Could not parse tensorflow version")
-    _tf_version = version.parse("0.0.0")
+    tensorflow_version = version.parse("0.0.0")
 
-if _tf_version not in SpecifierSet(STRICT_TF_SPEC):
+if tensorflow_version not in SpecifierSet(STRICT_TF_SPEC):
     raise nncf.UnsupportedVersionError(
-        f"NNCF only supports tensorflow{STRICT_TF_SPEC}, while current tensorflow version is {_tf_version}"
+        f"NNCF only supports tensorflow{STRICT_TF_SPEC}, while current tensorflow version is {tensorflow_version}"
     )
-if _tf_version not in SpecifierSet(BKC_TF_SPEC):
+if tensorflow_version not in SpecifierSet(BKC_TF_SPEC):
     warn_bkc_version_mismatch("torch", BKC_TF_SPEC, tensorflow.__version__)
 
 
