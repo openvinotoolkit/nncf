@@ -11,6 +11,8 @@
 from dataclasses import dataclass
 from typing import Optional, Tuple, TypeVar
 
+import numpy as np
+
 from nncf.common.graph.graph import NNCFNode
 from nncf.parameters import CompressWeightsMode
 
@@ -54,6 +56,11 @@ class WeightCompressionParameters:
     weight_name: str
     node_with_weight: NNCFNode
     weight_port_id: int
-    num_weights: int
+    num_weights: np.uint64
     reduction_axes: Tuple[int, ...]
     compression_config = WeightCompressionConfig()
+
+    def __post_init__(self):
+        # Explicitly cast num_weights to avoid overflow on finding total number of weights.
+        # The issue happens on Windows, because np.ndarray.size() returns np.int32 and sum of weights is more than 2^32.
+        self.num_weights = np.uint64(self.num_weights)
