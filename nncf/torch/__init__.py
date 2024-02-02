@@ -17,20 +17,20 @@ Base subpackage for NNCF PyTorch functionality.
 from nncf import nncf_logger
 from nncf.common.logging.logger import warn_bkc_version_mismatch
 
-from nncf.version import BKC_TORCH_VERSION
+from nncf.version import BKC_TORCH_SPEC
 
 import torch
 from packaging import version
+from packaging.specifiers import SpecifierSet
 
 try:
-    _torch_version = version.parse(torch.__version__)
+    _torch_version = version.parse(version.parse(torch.__version__).base_version)
 except:  # noqa: E722
     nncf_logger.debug("Could not parse torch version")
     _torch_version = version.parse("0.0.0")
 
-_bkc_version = version.parse(BKC_TORCH_VERSION)
-if _bkc_version.major != _torch_version.major or _bkc_version.minor != _torch_version.minor:
-    warn_bkc_version_mismatch("torch", BKC_TORCH_VERSION, torch.__version__)
+if _torch_version not in SpecifierSet(BKC_TORCH_SPEC):
+    warn_bkc_version_mismatch("torch", BKC_TORCH_SPEC, torch.__version__)
 
 
 # Required for correct COMPRESSION_ALGORITHMS registry functioning
