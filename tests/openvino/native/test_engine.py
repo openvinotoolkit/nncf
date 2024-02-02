@@ -16,6 +16,7 @@ from nncf.openvino.engine import OVNativeEngine
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import QuantizedModel
+from tests.openvino.native.models import StatefulModel
 
 
 def check_engine_creation_and_inference(model, input_data):
@@ -58,3 +59,21 @@ def test_infer_quantized_model_list():
     model = QuantizedModel().ov_model
     input_data = [np.random.rand(*inp.shape) for inp in model.get_parameters()]
     check_engine_creation_and_inference(model, input_data)
+
+
+@pytest.mark.parametrize("stateful", [True, False])
+def test_compiled_model_engine_inference_stateful(stateful):
+    model = StatefulModel(stateful).ov_model
+    input_data = [np.ones(inp.shape) for inp in model.get_parameters()]
+
+    engine = OVNativeEngine(model)
+
+    for _ in range(10):
+        engine.infer(input_data)
+
+    out = engine.infer(input_data)
+
+    input_data = input_data[0]
+    out = out["Result"]
+
+    assert np.array_equal(out[0], input_data[0])
