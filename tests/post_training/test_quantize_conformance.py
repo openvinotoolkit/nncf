@@ -217,10 +217,9 @@ def test_ptq_quantization(
     except Exception as e:
         err_msg = str(e)
         traceback.print_exc()
-    finally:
-        pipeline.cleanup_cache()
 
     if pipeline is not None:
+        pipeline.cleanup_cache()
         run_info = pipeline.run_info
         if err_msg:
             run_info.status = f"{run_info.status} | {err_msg}" if run_info.status else err_msg
