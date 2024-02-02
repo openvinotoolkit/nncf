@@ -113,7 +113,7 @@ class DataFreeCriterion(MixedPrecisionCriterion):
 
     def _calc_sensitivity(self) -> List[float]:
         scores = []
-        for weight_param in track(self._weight_params, description="Searching for Mixed-Precision Configuration"):
+        for weight_param in track(self._weight_params, description="Mixed-Precision assignment"):
             scores.append(self._calc_score_per_node(weight_param))
         return scores
 

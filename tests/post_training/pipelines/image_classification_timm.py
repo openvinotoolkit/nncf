@@ -31,13 +31,13 @@ from tests.post_training.pipelines.base import DEFAULT_VAL_THREADS
 from tests.post_training.pipelines.base import OV_BACKENDS
 from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
-from tests.post_training.pipelines.base import BaseTestPipeline
+from tests.post_training.pipelines.base import PTQTestPipeline
 
 # Disable using aten::scaled_dot_product_attention
 set_fused_attn(False, False)
 
 
-class ImageClassificationTimm(BaseTestPipeline):
+class ImageClassificationTimm(PTQTestPipeline):
     """Pipeline for Image Classification model from timm repository"""
 
     def prepare_model(self) -> None:
@@ -52,7 +52,7 @@ class ImageClassificationTimm(BaseTestPipeline):
             self.model = timm_model
 
         if self.backend == BackendType.ONNX:
-            onnx_path = self.output_model_dir / "model_fp32.onnx"
+            onnx_path = self.fp32_model_dir / "model_fp32.onnx"
             torch.onnx.export(timm_model, self.dummy_tensor, onnx_path, export_params=True, opset_version=13)
             self.model = onnx.load(onnx_path)
             self.input_name = self.model.graph.input[0].name
@@ -72,15 +72,15 @@ class ImageClassificationTimm(BaseTestPipeline):
         """Dump IRs of fp32 models, to help debugging."""
         if self.backend in PT_BACKENDS:
             ov_model = ov.convert_model(self.model, example_input=self.dummy_tensor, input=self.input_size)
-            ov.serialize(ov_model, self.output_model_dir / "model_fp32.xml")
+            ov.serialize(ov_model, self.fp32_model_dir / "model_fp32.xml")
 
         if self.backend == BackendType.ONNX:
-            onnx_path = self.output_model_dir / "model_fp32.onnx"
+            onnx_path = self.fp32_model_dir / "model_fp32.onnx"
             ov_model = ov.convert_model(onnx_path)
-            ov.serialize(ov_model, self.output_model_dir / "model_fp32.xml")
+            ov.serialize(ov_model, self.fp32_model_dir / "model_fp32.xml")
 
         if self.backend in OV_BACKENDS + [BackendType.FP32]:
-            ov.serialize(self.model, self.output_model_dir / "model_fp32.xml")
+            ov.serialize(self.model, self.fp32_model_dir / "model_fp32.xml")
 
     def prepare_preprocessor(self) -> None:
         config = self.model_cfg
@@ -132,7 +132,7 @@ class ImageClassificationTimm(BaseTestPipeline):
             cpu_threads_num = os.environ.get("CPU_THREADS_NUM")
             core.set_property("CPU", properties={"CPU_THREADS_NUM": str(cpu_threads_num)})
 
-        ov_model = core.read_model(self.path_quantized_ir)
+        ov_model = core.read_model(self.path_compressed_ir)
         compiled_model = core.compile_model(ov_model)
 
         jobs = int(os.environ.get("NUM_VAL_THREADS", DEFAULT_VAL_THREADS))
