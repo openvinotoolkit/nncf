@@ -935,3 +935,34 @@ class AWQMatmulModel(OVReferenceModel):
         result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [input_node])
         return model
+
+
+class StatefulModel(OVReferenceModel):
+    """
+    Stateful model for testing.
+    Borrowed from https://github.com/openvinotoolkit/openvino/blob/0c552b7b152c341b5e545d131bd032fcb3cb6b86/src/bindings/python/tests/utils/helpers.py#L212
+    """
+
+    def __init__(self, stateful=True):
+        super().__init__(stateful=stateful)
+
+    def _create_ov_model(self, stateful=True):
+        input_shape = [1, 8]
+        data_type = np.float32
+        input_data = opset.parameter(input_shape, name="input_data", dtype=data_type)
+        init_val = opset.constant(np.zeros(input_shape), data_type)
+        if stateful:
+            rv = opset.read_value(init_val, "var_id_667", data_type, input_shape)
+            add = opset.add(rv, input_data, name="MemoryAdd")
+            node = opset.assign(add, "var_id_667")
+            result = opset.result(add, name="Result")
+            result.get_output_tensor(0).set_names(set(["Result"]))
+            model = ov.Model(results=[result], sinks=[node], parameters=[input_data], name="TestModel")
+        else:
+            bias = opset.constant(init_val, data_type)
+            add = opset.add(input_data, bias, name="Add")
+            result = opset.result(add, name="Result")
+            result.get_output_tensor(0).set_names(set(["Result"]))
+            model = ov.Model(results=[result], parameters=[input_data], name="TestModel")
+
+        return model
