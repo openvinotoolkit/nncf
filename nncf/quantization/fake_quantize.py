@@ -121,7 +121,7 @@ def tune_range(
         qval = fns.round(fval)
 
     ra = fns.where(qval < level_high, qval / (qval - level_high) * right_border, left_border)
-    qval_ = fns.where(qval == 0.0, fns.ones_like(qval), qval)
+    qval_ = fns.where(qval == 0.0, 1.0, qval)
     rb = fns.where(qval > 0.0, (qval - level_high) / qval_ * left_border, right_border)
 
     range_a = right_border - ra
