@@ -24,6 +24,7 @@ from nncf.experimental.tensor import Tensor
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.quantization import compress_weights
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
+from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
@@ -598,3 +599,9 @@ def test_call_max_var_criterion_with_dataset_by_default(mocker, mode):
     compress_weights(model, mode=mode, ratio=0.8, group_size=-1, dataset=dataset)
 
     scores_spy.assert_called()
+
+
+def test_data_type_for_num_weights(mocker):
+    stub = mocker.stub()
+    params = WeightCompressionParameters(stub, stub, stub, np.int32(1), stub)
+    assert isinstance(params.num_weights, np.uint64)
