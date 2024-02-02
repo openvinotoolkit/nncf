@@ -44,11 +44,11 @@ def download_model() -> Path:
     return download_url(MODEL_URL, Path(MODEL_PATH).resolve())
 
 
-def validate(onnx_model: onnx.ModelProto, validation_loader: torch.utils.data.DataLoader) -> float:
+def validate(path_to_model: str, validation_loader: torch.utils.data.DataLoader) -> float:
     predictions = []
     references = []
 
-    compiled_model = ov.compile_model(onnx_model)
+    compiled_model = ov.compile_model(path_to_model)
     output = compiled_model.outputs[0]
 
     for images, target in tqdm(validation_loader):

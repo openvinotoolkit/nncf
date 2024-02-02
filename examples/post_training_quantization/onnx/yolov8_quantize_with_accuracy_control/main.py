@@ -17,7 +17,8 @@ from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import onnx
-import onnxruntime
+import openvino
+import openvino.runtime as ov
 import torch
 from tqdm import tqdm
 from ultralytics.cfg import get_cfg
@@ -36,7 +37,7 @@ ROOT = Path(__file__).parent.resolve()
 
 
 def validate(
-    model: onnx.ModelProto,
+    path_to_model: str,
     data_loader: torch.utils.data.DataLoader,
     validator: Validator,
     num_samples: Optional[int] = None,
@@ -46,33 +47,24 @@ def validate(
     validator.stats = []
     validator.batch_i = 1
     validator.confusion_matrix = ConfusionMatrix(nc=validator.nc)
-
-    input_name = model.graph.input[0].name
-    serialized_model = model.SerializeToString()
-
-    session = onnxruntime.InferenceSession(serialized_model, providers=["CPUExecutionProvider"])
-    output_names = [output.name for output in session.get_outputs()]
-    num_outputs = len(output_names)
-
+    ov_model = openvino.convert_model(path_to_model)
+    compiled_model = ov.compile_model(ov_model)
+    num_outputs = len(compiled_model.outputs)
     for batch_i, batch in enumerate(data_loader):
         if num_samples is not None and batch_i == num_samples:
             break
         batch = validator.preprocess(batch)
-
-        input_feed = {input_name: batch["img"].numpy()}
-        results = session.run(output_names, input_feed=input_feed)
-
+        results = compiled_model(batch["img"])
         if num_outputs == 1:
-            preds = torch.from_numpy(results[0])
+            preds = torch.from_numpy(results[compiled_model.output(0)])
         else:
             preds = [
-                torch.from_numpy(results[0]),
-                torch.from_numpy(results[1]),
+                torch.from_numpy(results[compiled_model.output(0)]),
+                torch.from_numpy(results[compiled_model.output(1)]),
             ]
         preds = validator.postprocess(preds)
         validator.update_metrics(preds, batch)
     stats = validator.get_stats()
-
     return stats, validator.seen, validator.nt_per_class.sum()
 
 
@@ -155,7 +147,7 @@ def quantize_ac(
         return {input_name: input_tensor}
 
     def validation_ac(
-        val_model: onnx.ModelProto,
+        compiled_model: ov.CompiledModel,
         validation_loader: torch.utils.data.DataLoader,
         validator: Validator,
         num_samples: Optional[int] = None,
@@ -165,36 +157,26 @@ def quantize_ac(
         validator.stats = []
         validator.batch_i = 1
         validator.confusion_matrix = ConfusionMatrix(nc=validator.nc)
-
-        rt_session_options = {"providers": ["CPUExecutionProvider"]}
-        serialized_model = val_model.SerializeToString()
-        session = onnxruntime.InferenceSession(serialized_model, **rt_session_options)
-        output_names = [output.name for output in session.get_outputs()]
-        num_outputs = len(output_names)
+        num_outputs = len(compiled_model.outputs)
 
         counter = 0
         for batch_i, batch in enumerate(validation_loader):
             if num_samples is not None and batch_i == num_samples:
                 break
             batch = validator.preprocess(batch)
-            input_feed = {input_name: batch["img"].numpy()}
-            results = session.run(output_names, input_feed=input_feed)
-
+            results = compiled_model(batch["img"])
             if num_outputs == 1:
-                preds = torch.from_numpy(results[0])
+                preds = torch.from_numpy(results[compiled_model.output(0)])
             else:
                 preds = [
-                    torch.from_numpy(results[0]),
-                    torch.from_numpy(results[1]),
+                    torch.from_numpy(results[compiled_model.output(0)]),
+                    torch.from_numpy(results[compiled_model.output(1)]),
                 ]
             preds = validator.postprocess(preds)
             validator.update_metrics(preds, batch)
             counter += 1
         stats = validator.get_stats()
-        if num_outputs == 1:
-            stats_metrics = stats["metrics/mAP50-95(B)"]
-        else:
-            stats_metrics = stats["metrics/mAP50-95(M)"]
+        stats_metrics = stats["metrics/mAP50-95(B)"]
         print(f"Validate: dataset length = {counter}, metric value = {stats_metrics:.3f}")
         return stats_metrics, None
 
@@ -237,15 +219,15 @@ args.data = "coco128-seg.yaml"
 
 validator, data_loader = prepare_validation(model, args)
 
-onnx_model, onnx_model_path = prepare_onnx_model(model, MODEL_NAME)
-quantized_model = quantize_ac(onnx_model, data_loader, validator)
+fp32_model, fp32_model_path = prepare_onnx_model(model, MODEL_NAME)
+quantized_model = quantize_ac(fp32_model, data_loader, validator)
 
 int8_model_path = ROOT / f"{MODEL_NAME}_int8.onnx"
 onnx.save(quantized_model, int8_model_path)
 print(f"[2/7] Save INT8 model: {int8_model_path}")
 
 print("[3/7] Benchmark FP32 model:")
-fp32_fps = benchmark_performance(onnx_model_path, args)
+fp32_fps = benchmark_performance(fp32_model_path, args)
 print(f"{fp32_fps} FPS")
 
 print("[4/7] Benchmark INT8 model:")
@@ -253,14 +235,16 @@ int8_fps = benchmark_performance(int8_model_path, args)
 print(f"{int8_fps} FPS")
 
 print("[5/7] Validate ONNX FP32 model:")
-fp_stats, total_images, total_objects = validate(onnx_model, tqdm(data_loader), validator)
+fp_stats, total_images, total_objects = validate(fp32_model_path, tqdm(data_loader), validator)
 print_statistics(fp_stats, total_images, total_objects)
 
 print("[6/7] Validate ONNX INT8 model:")
-q_stats, total_images, total_objects = validate(quantized_model, tqdm(data_loader), validator)
+q_stats, total_images, total_objects = validate(int8_model_path, tqdm(data_loader), validator)
 print_statistics(q_stats, total_images, total_objects)
 
 print("[7/7] Report:")
-metric_drop = fp_stats["metrics/mAP50-95(B)"] - q_stats["metrics/mAP50-95(B)"]
-print(f"Metric drop: {metric_drop}")
+metric_drop_box = fp_stats["metrics/mAP50-95(B)"] - q_stats["metrics/mAP50-95(B)"]
+metric_drop_mask = fp_stats["metrics/mAP50-95(M)"] - q_stats["metrics/mAP50-95(M)"]
+print(f"Metric drop [mAP50-95(B)]: {metric_drop_box:.6f}")
+print(f"Metric drop [mAP50-95(M)]: {metric_drop_mask:.6f}")
 print(f"Performance speed up (throughput mode): {int8_fps / fp32_fps:.3f}")

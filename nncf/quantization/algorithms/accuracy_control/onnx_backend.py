@@ -133,5 +133,9 @@ class ONNXAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
     # Preparation of model
 
     @staticmethod
-    def prepare_for_inference(model: onnx.ModelProto) -> onnx.ModelProto:
-        return model
+    def prepare_for_inference(model: onnx.ModelProto) -> ov.CompiledModel:
+        with tempfile.TemporaryDirectory(dir=tempfile.gettempdir()) as tmp_dir:
+            model_path = f"{tmp_dir}/model.onnx"
+            onnx.save(model, model_path)
+            ov_model = openvino.convert_model(model_path)
+            return ov.compile_model(ov_model)
