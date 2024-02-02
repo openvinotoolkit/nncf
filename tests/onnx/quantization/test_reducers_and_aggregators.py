@@ -23,7 +23,6 @@ from nncf.onnx.statistics.collectors import ONNXMeanPerChanelReducer
 from nncf.onnx.statistics.collectors import ONNXMeanReducer
 from nncf.onnx.statistics.collectors import ONNXMinReducer
 from nncf.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
-from nncf.onnx.statistics.collectors import ONNXNoopReducer
 from nncf.onnx.statistics.collectors import ONNXQuantileReducer
 from nncf.onnx.tensor import ONNXNNCFTensor
 from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggreagtors
@@ -44,7 +43,6 @@ class TestReducersAggregators(TemplateTestReducersAggreagtors):
     @pytest.fixture(scope="module")
     def reducers(self):
         return {
-            "noop": ONNXNoopReducer,
             "min": ONNXMinReducer,
             "max": ONNXMaxReducer,
             "abs_max": ONNXAbsMaxReducer,

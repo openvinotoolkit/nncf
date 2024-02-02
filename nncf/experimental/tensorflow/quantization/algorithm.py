@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,6 +11,7 @@
 
 from typing import Any, Dict, List, Optional
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -190,7 +191,7 @@ class QuantizationBuilderV2(QuantizationBuilder):
 
             for qp_id in unified_scales_group:
                 if was_processed[qp_id]:
-                    raise RuntimeError("Unexpected behavior")
+                    raise nncf.InternalError("Unexpected behavior")
                 was_processed[qp_id] = True
 
                 curr_qp = quantization_points[qp_id]
@@ -271,7 +272,7 @@ class QuantizationBuilderV2(QuantizationBuilder):
                 if target_node.node_name in node_name_to_qconfig_map:
                     assigned_qconfig = node_name_to_qconfig_map[target_node.node_name]
                     if qp.qconfig != assigned_qconfig:
-                        raise RuntimeError(
+                        raise nncf.InternalError(
                             "Inconsistent quantizer configurations selected by solver for one "
                             f"and the same quantizable op! Tried to assign {qp.qconfig} to "
                             f"{target_node.node_name} as specified by QP {qp_id}, but the op "
@@ -285,7 +286,7 @@ class QuantizationBuilderV2(QuantizationBuilder):
                 narrow_range = not half_range
                 target_type = TargetType.OPERATOR_PRE_HOOK
                 if not issubclass(target_node.metatype, TFOpWithWeightsMetatype):
-                    raise RuntimeError(f"Unexpected type of metatype: {type(target_node.metatype)}")
+                    raise nncf.InternalError(f"Unexpected type of metatype: {type(target_node.metatype)}")
                 port_ids = [weight_def.port_id for weight_def in target_node.metatype.weight_definitions]
 
             else:
@@ -293,7 +294,7 @@ class QuantizationBuilderV2(QuantizationBuilder):
 
                 # Check correctness
                 if not isinstance(qp.insertion_point, ActivationQuantizationInsertionPoint):
-                    raise RuntimeError(f"Unexpected type of insertion point: {type(qp.insertion_point)}")
+                    raise nncf.InternalError(f"Unexpected type of insertion point: {type(qp.insertion_point)}")
 
                 # Parameters
                 half_range = False

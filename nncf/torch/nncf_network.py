@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,6 +13,7 @@ import functools
 import inspect
 import types
 from collections import OrderedDict
+from collections import defaultdict
 from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass
@@ -23,6 +24,7 @@ from typing import Callable, Dict, Iterator, List, Optional, Tuple, TypeVar
 import torch
 from torch import nn
 
+import nncf
 from nncf import nncf_logger
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.graph import NNCFNode
@@ -33,6 +35,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.hook_handle import HookHandle
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import PostHookInsertionPoint
 from nncf.common.insertion_point_graph import PreHookInsertionPoint
@@ -63,6 +66,7 @@ from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.graph_builder import GraphConverter
 from nncf.torch.graph.operator_metatypes import OPERATORS_WITH_WEIGHTS_METATYPES
 from nncf.torch.graph.operator_metatypes import PTSplitMetatype
+from nncf.torch.graph.transformations.commands import DEFAULT_HOOKS_GROUP_NAME
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.knowledge_distillation.knowledge_distillation_handler import KnowledgeDistillationLossHandler
 from nncf.torch.layer_utils import _NNCFModuleMixin
@@ -97,7 +101,7 @@ class PTInsertionPoint:
             not isinstance(target_type, TargetType)
             or target_type not in PTInsertionPoint.TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT
         ):
-            raise RuntimeError("Unsupported target type for PyTorch: {}".format(target_type))
+            raise nncf.InternalError("Unsupported target type for PyTorch: {}".format(target_type))
         return PTInsertionPoint.TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT[target_type]
 
     def __init__(self, target_type: TargetType, op_address: OperationAddress, input_port_id: int = None):
@@ -244,6 +248,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         self._target_scopes = target_scopes
         self._user_dummy_forward_fn = dummy_forward_fn
         self._kd_loss_handler = None
+        self._groups_vs_hooks_handlers: Dict[str, List[HookHandle]] = defaultdict(list)
 
         if wrap_inputs_fn is not None:
             self._wrap_inputs_fn = wrap_inputs_fn
@@ -383,6 +388,8 @@ class NNCFNetworkInterface(torch.nn.Module):
             self._ignored_scopes,
             self._target_scopes,
             wrap_outputs_fn=self._wrap_outputs_fn,
+            replace_modules=self.replace_modules,
+            trace_parameters=self.trace_parameters,
         )
         self._model_ref._nncf = new_interface
         self._model_ref.nncf.reset_nncf_modules()
@@ -398,15 +405,31 @@ class NNCFNetworkInterface(torch.nn.Module):
                 retval[nncf_module_scope + relative_scope] = target_module
         return retval
 
-    def insert_at_point(self, point: PTInsertionPoint, fn_list: List[Callable]):
+    def insert_at_point(
+        self,
+        point: PTInsertionPoint,
+        fn: Callable,
+        hooks_group_name: Optional[str] = DEFAULT_HOOKS_GROUP_NAME,
+    ) -> List[HookHandle]:
+        """
+        Inserts given function to the point in the NNCFNetwork, creates hook handle for the inserted function and
+        stores created hook handle in a group with the given name. A group name could be used late
+        to remove all hooks from the NNCFNewtork which belongs to the group.
+
+        :param point: Target point to insert function.
+        :param fn: Function to insert to the NNCFNetwork.
+        :param hooks_group_name: Name of hooks group for hook handle associated with the inserted function.
+        :return: Hook handle associated with the inserted function.
+        """
+        handle = None
         if point.insertion_type == PTInsertionType.OPERATOR_PRE_HOOK:
-            self._compressed_context.register_pre_hooks(fn_list, point.op_address, point.input_port_id)
+            handle = self._compressed_context.register_pre_hook(fn, point.op_address, point.input_port_id)
         elif point.insertion_type == PTInsertionType.OPERATOR_POST_HOOK:
-            self._compressed_context.register_post_hooks(fn_list, point.op_address)
+            handle = self._compressed_context.register_post_hook(fn, point.op_address)
         elif point.insertion_type in [PTInsertionType.NNCF_MODULE_PRE_OP, PTInsertionType.NNCF_MODULE_POST_OP]:
             nncf_module = self.get_module_by_scope(point.module_scope)
             if not isinstance(nncf_module, _NNCFModuleMixin):
-                raise RuntimeError(
+                raise nncf.ValidationError(
                     f"Failed to insert pre/post op for not registered custom module {point.module_scope}. NNCF only "
                     f"supports native PyTorch modules with respect to trainable parameter (weight) compressed, such "
                     f"as `torch.nn.Conv2d`. If your model contains a custom, non-PyTorch standard module with trainable"
@@ -421,13 +444,23 @@ class NNCFNetworkInterface(torch.nn.Module):
                 norm_nncf_scopes.extend([self._normalize_variable_recurrent_scope(x) for x in scope_list_for_module])
             assert norm_target_scope in norm_nncf_scopes  # Required for proper Recurrent/VariableRecurrent addressing
             if point.insertion_type == PTInsertionType.NNCF_MODULE_PRE_OP:
-                for fn in fn_list:
-                    nncf_module.register_pre_forward_operation(fn)
+                handle = nncf_module.register_pre_forward_operation(fn)
             elif point.insertion_type == PTInsertionType.NNCF_MODULE_POST_OP:
-                for fn in fn_list:
-                    nncf_module.register_post_forward_operation(fn)
+                handle = nncf_module.register_post_forward_operation(fn)
         else:
-            raise RuntimeError("Unsupported insertion type: {}".format(point.insertion_type))
+            raise nncf.ValidationError("Unsupported insertion type: {}".format(point.insertion_type))
+        self._groups_vs_hooks_handlers[hooks_group_name].append(handle)
+        return handle
+
+    def remove_hooks_group(self, hooks_group_name: str) -> None:
+        """
+        Removes all hooks of given hooks group from the nncf interface.
+
+        :param group: Target hooks group name to remove all hooks from.
+        """
+        for handle in self._groups_vs_hooks_handlers[hooks_group_name]:
+            handle.remove()
+        del self._groups_vs_hooks_handlers[hooks_group_name]
 
     def get_graph(self) -> PTNNCFGraph:
         if self._compressed_context.graph.get_nodes_count() == 0 or self._compressed_graphs_pair.nncf_graph is None:
@@ -528,7 +561,7 @@ class NNCFNetworkInterface(torch.nn.Module):
     def register_compression_module_type(self, compression_module_type: ExtraCompressionModuleType):
         attr_name = self._compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type in self._extra_module_types:
-            raise RuntimeError(f"Module type {compression_module_type} is already registered")
+            raise nncf.ValidationError(f"Module type {compression_module_type} is already registered")
 
         self.__setattr__(attr_name, nn.ModuleDict())
         self._extra_module_types.append(compression_module_type)
@@ -538,16 +571,16 @@ class NNCFNetworkInterface(torch.nn.Module):
     ):
         attr_name = self._compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type not in self._extra_module_types:
-            raise RuntimeError(f"Module type {compression_module_type} was not registered")
+            raise nncf.InternalError(f"Module type {compression_module_type} was not registered")
         storage = self.__getattr__(attr_name)
         if module_key in storage:
-            raise RuntimeError(f"Module {module_key} is already registered under {attr_name}")
+            raise nncf.InternalError(f"Module {module_key} is already registered under {attr_name}")
         storage[module_key] = module
 
     def get_compression_modules_by_type(self, compression_module_type: ExtraCompressionModuleType) -> nn.ModuleDict:
         attr_name = self._compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type not in self._extra_module_types:
-            raise RuntimeError(f"Module type {compression_module_type} was not registered")
+            raise nncf.InternalError(f"Module type {compression_module_type} was not registered")
         return self.__getattr__(attr_name)
 
     def is_compression_module_registered(self, compression_module_type: ExtraCompressionModuleType) -> bool:
@@ -569,12 +602,12 @@ class NNCFNetworkInterface(torch.nn.Module):
             return EXTERNAL_QUANTIZERS_STORAGE_NAME
         if compression_module_type == ExtraCompressionModuleType.EXTERNAL_OP:
             return EXTERNAL_OP_STORAGE_NAME
-        raise RuntimeError("Unknown extra module type")
+        raise nncf.ValidationError("Unknown extra module type")
 
     def sort_compression_modules(self, compression_module_type: ExtraCompressionModuleType):
         attr_name = self._compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type not in self._extra_module_types:
-            raise RuntimeError("Module type {} was not registered".format(compression_module_type))
+            raise nncf.InternalError("Module type {} was not registered".format(compression_module_type))
         module_dict = self.__getattr__(attr_name)
 
         module_dict._modules = OrderedDict(sorted(module_dict._modules.items()))
@@ -962,7 +995,7 @@ class NNCFNetwork(torch.nn.Module, metaclass=NNCFNetworkMeta):
         achieved by a __call__ method defined in the metaclass `NNCFNetworkMeta`.
         """
         super().__init__()
-        raise RuntimeError("Direct instantiation of NNCFNetwork objects using __init__ is prohibited.")
+        raise nncf.InternalError("Direct instantiation of NNCFNetwork objects using __init__ is prohibited.")
 
     def __call__(self, *args, **kwargs):
         """

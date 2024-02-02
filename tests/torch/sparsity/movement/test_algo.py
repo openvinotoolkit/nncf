@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -20,6 +20,7 @@ from transformers import TrainingArguments
 from transformers.trainer_callback import TrainerControl
 from transformers.trainer_callback import TrainerState
 
+import nncf
 from nncf.api.compression import CompressionStage
 from nncf.common.scopes import matches_any
 from nncf.common.scopes import should_consider_scope
@@ -103,7 +104,7 @@ desc_improper_sparse_structures = {
             {"mode": "block", "sparse_factors": [2, 2], "target_scopes": "{re}attention"},
             {"mode": "per_dim", "axis": 0, "target_scopes": "{re}query"},
         ],
-        error=RuntimeError,
+        error=nncf.InternalError,
         match="matched by multiple",
     ),
     "duplicate_matches_same_config": dict(
@@ -111,7 +112,7 @@ desc_improper_sparse_structures = {
             {"mode": "per_dim", "axis": 0, "target_scopes": "{re}attention"},
             {"mode": "per_dim", "axis": 0, "target_scopes": "{re}query"},
         ],
-        error=RuntimeError,
+        error=nncf.InternalError,
         match="matched by multiple",
     ),
 }
@@ -218,7 +219,7 @@ class TestControllerCreation:
         "recipe", [Conv2dRunRecipe(), LinearRunRecipe().algo_config_(ignored_scopes=["{re}model"])]
     )
     def test_error_on_no_supported_layers(self, recipe: BaseMockRunRecipe):
-        with pytest.raises(RuntimeError, match="No sparsifiable layer"):
+        with pytest.raises(nncf.InternalError, match="No sparsifiable layer"):
             create_compressed_model(recipe.model(), recipe.nncf_config(), dump_graphs=False)
 
     @pytest.mark.parametrize("enable_structured_masking", [True, False])
@@ -234,7 +235,7 @@ class TestControllerCreation:
                 handler = getattr(compression_ctrl, "_structured_mask_handler")
                 assert isinstance(handler, StructuredMaskHandler)
             else:
-                with pytest.raises(RuntimeError, match=r"no supported model"):
+                with pytest.raises(nncf.UnsupportedModelError, match=r"no supported model"):
                     create_compressed_model(recipe.model(), recipe.nncf_config(), dump_graphs=False)
         else:
             compression_ctrl, _ = create_compressed_model(recipe.model(), recipe.nncf_config(), dump_graphs=False)

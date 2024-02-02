@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -44,7 +44,7 @@ DATASET_INFO = download.DownloadInfo(
 )
 DATASET_PATH = HOME_PATH / ".cache/nncf/datasets/mvtec_capsule"
 
-max_accuracy_drop = 0.001 if len(sys.argv) < 2 else float(sys.argv[1])
+max_accuracy_drop = 0.005 if len(sys.argv) < 2 else float(sys.argv[1])
 
 
 def download_and_extract(root: Path, info: download.DownloadInfo) -> None:

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -200,12 +200,14 @@ class QuantizedModel(OVReferenceModel):
 class WeightsModel(OVReferenceModel):
     def _create_ov_model(self):
         input_1 = opset.parameter([1, 3, 5, 5], name="Input_1")
-        kernel = self._rng.random((3, 3, 1, 1)).astype(np.float32)
+        kernel_data = self._rng.random((3, 3, 1, 1)).astype(np.float32)
+        kernel = opset.constant(kernel_data, dtype=np.float32, name="conv_weights_0")
         strides = [1, 1]
         pads = [0, 0]
         dilations = [1, 1]
         conv = opset.convolution(input_1, kernel, strides, pads, pads, dilations, name="Conv")
-        kernel_2 = self._rng.random((3, 3, 1, 1)).astype(np.float32)
+        kernel_data_2 = self._rng.random((3, 3, 1, 1)).astype(np.float32)
+        kernel_2 = opset.constant(kernel_data_2, dtype=np.float32, name="conv_weights_1")
         output_shape = [1, 1]
         conv_tr = opset.convolution_backprop_data(
             conv, kernel_2, output_shape, strides, pads, pads, dilations, name="Conv_backprop"
@@ -884,4 +886,52 @@ class LinearQuantizedModel(OVReferenceModel):
         x.get_output_tensor(0).set_names(set(["Result"]))
 
         model = ov.Model([x], [inputs])
+        return model
+
+
+class AWQMatmulModel(OVReferenceModel):
+    """
+    Model for testing AWQ algorithm. Contains MatMul->Multiply->MatMul pattern.
+    """
+
+    def _create_ov_model(self):
+        input_node = opset.parameter([8, 8], name="Input_1")
+
+        weights_data1 = np.arange(0, 64).reshape(8, 8)
+        weights_data1[:] = 2.0
+        weights1 = opset.constant(weights_data1, dtype=np.float32, name="weights_1")
+        node1 = opset.matmul(input_node, weights1, transpose_a=False, transpose_b=True, name="MatMul_1")
+
+        weights_data2 = np.arange(0, 64).reshape(8, 8)
+        weights_data2[:] = 3.0
+        weights2 = opset.constant(weights_data2, dtype=np.float32, name="weights_2")
+        node2 = opset.matmul(input_node, weights2, transpose_a=False, transpose_b=True, name="MatMul_2")
+
+        node_multiply = opset.multiply(node1, node2, name="Multiply")
+
+        weights_data3 = np.arange(0, 64).reshape(8, 8)
+        weights_data3[:] = 4.0
+        weights3 = opset.constant(weights_data3, dtype=np.float32, name="weights_3")
+        node3 = opset.matmul(node_multiply, weights3, transpose_a=False, transpose_b=True, name="MatMul_3")
+
+        weights_data4 = np.arange(0, 64).reshape(8, 8)
+        weights_data4[:] = 2.0
+        weights4 = opset.constant(weights_data4, dtype=np.float32, name="weights_4")
+        node4 = opset.matmul(node3, weights4, transpose_a=False, transpose_b=True, name="MatMul_4")
+
+        weights_data5 = np.arange(0, 64).reshape(8, 8)
+        weights_data5[:] = 3.0
+        weights5 = opset.constant(weights_data5, dtype=np.float32, name="weights_5")
+        node5 = opset.matmul(node3, weights5, transpose_a=False, transpose_b=True, name="MatMul_5")
+
+        node_multiply_2 = opset.multiply(node4, node5, name="Multiply_2")
+
+        weights_data6 = np.arange(0, 64).reshape(8, 8)
+        weights_data6[:] = 4.0
+        weights6 = opset.constant(weights_data6, dtype=np.float32, name="weights_6")
+        node6 = opset.matmul(node_multiply_2, weights6, transpose_a=False, transpose_b=True, name="MatMul_6")
+
+        result = opset.result(node6, name="Result")
+        result.get_output_tensor(0).set_names(set(["Result"]))
+        model = ov.Model([result], [input_node])
         return model

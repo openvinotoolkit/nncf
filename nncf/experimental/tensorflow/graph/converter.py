@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,6 +18,7 @@ from tensorflow.lite.python.util import run_graph_optimizations as _run_graph_op
 from tensorflow.python.framework import convert_to_constants as _convert_to_constants
 from tensorflow.python.keras.saving import saving_utils as _saving_utils
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.experimental.tensorflow.graph.node_attributes import TFNodeAttributes
@@ -377,7 +378,7 @@ class SubclassedConverter(TFModelConverter):
         elif dtype.is_integer:
             tensor_dtype = Dtype.INTEGER
         else:
-            raise RuntimeError(f"Unexpected dtype of tensor: {dtype}")
+            raise nncf.InternalError(f"Unexpected dtype of tensor: {dtype}")
 
         return tensor_dtype
 

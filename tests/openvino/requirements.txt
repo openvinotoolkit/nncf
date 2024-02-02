@@ -1,7 +1,7 @@
-pytest
+pytest==7.4.4
 virtualenv
 pytest-cov
 pytest-mock>=3.3.1
-openvino-dev[onnx,pytorch,tensorflow2]==2023.2
+openvino-dev[onnx,pytorch,tensorflow2]==2023.3
 torch==2.1
 fastdownload

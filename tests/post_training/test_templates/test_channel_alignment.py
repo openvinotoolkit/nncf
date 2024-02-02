@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,6 +15,7 @@ from typing import Type
 import numpy as np
 import pytest
 
+import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
@@ -475,7 +476,7 @@ class TemplateTestChannelAlignment:
                 _class = weights_update_cls
                 _attr = "weight_value"
             else:
-                raise RuntimeError(f"Wrong type of transformation: {type(transformation)}")
+                raise nncf.ValidationError(f"Wrong type of transformation: {type(transformation)}")
 
             target_names[tp.target_node_name].append(_class)
             assert ref_values[tp.target_node_name][_attr] == getattr(transformation, _attr)

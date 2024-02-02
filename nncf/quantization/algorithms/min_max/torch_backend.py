@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 import torch
 
+import nncf
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
@@ -145,7 +146,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_point: PTTargetPoint,
         parameters: FakeConvertParameters,
     ) -> TransformationCommand:
-        raise RuntimeError("FakeConvert insertion not implemented in PyTorch backend!")
+        raise nncf.InternalError("FakeConvert insertion not implemented in PyTorch backend!")
 
     @staticmethod
     def unify_statistics(statistics: List[PTMinMaxTensorStatistic]) -> PTMinMaxTensorStatistic:
@@ -176,12 +177,12 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
             [PTMinMaxTensorStatistic.MIN_STAT, PTMinMaxTensorStatistic.MAX_STAT],
         ):
             if params.statistics_type not in PT_REDUCERS_MAP:
-                raise RuntimeError(
+                raise nncf.InternalError(
                     f"Statistic type: {params.statistics_type} is not supported for Torch PTQ backend yet."
                 )
 
             if params.aggregator_type not in AGGREGATORS_MAP:
-                raise RuntimeError(
+                raise nncf.InternalError(
                     f"Aggregator type: {params.aggregator_type} is not supported for Torch PTQ backend yet."
                 )
 

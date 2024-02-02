@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -38,11 +38,11 @@ class OVLayoutElem(Enum):
 
 
 _CONV_BASE_CONST_LAYOUT = {
-    OVConvolutionMetatype: [OVLayoutElem.C_OUT, OVLayoutElem.C_IN],
-    OVConvolutionBackpropDataMetatype: [OVLayoutElem.C_IN, OVLayoutElem.C_OUT],
-    OVDepthwiseConvolutionMetatype: [OVLayoutElem.GROUPS, OVLayoutElem.C_OUT, OVLayoutElem.C_IN],
-    OVGroupConvolutionMetatype: [OVLayoutElem.GROUPS, OVLayoutElem.C_OUT, OVLayoutElem.C_IN],
-    OVGroupConvolutionBackpropDataMetatype: [OVLayoutElem.GROUPS, OVLayoutElem.C_IN, OVLayoutElem.C_OUT],
+    OVConvolutionMetatype: (OVLayoutElem.C_OUT, OVLayoutElem.C_IN),
+    OVConvolutionBackpropDataMetatype: (OVLayoutElem.C_IN, OVLayoutElem.C_OUT),
+    OVDepthwiseConvolutionMetatype: (OVLayoutElem.GROUPS, OVLayoutElem.C_OUT, OVLayoutElem.C_IN),
+    OVGroupConvolutionMetatype: (OVLayoutElem.GROUPS, OVLayoutElem.C_OUT, OVLayoutElem.C_IN),
+    OVGroupConvolutionBackpropDataMetatype: (OVLayoutElem.GROUPS, OVLayoutElem.C_IN, OVLayoutElem.C_OUT),
 }
 
 
@@ -85,9 +85,9 @@ def get_conv_weights_layout(ov_metatype: OVOpMetatype, weights_shape: Tuple[int,
     :param weights_shape: Shape of the target convolution node weight.
     :return: Target convolution node weights layout.
     """
-    weights_layout = _CONV_BASE_CONST_LAYOUT[ov_metatype]
-    kernel_size = weights_shape[len(weights_layout) :]
-    weights_layout += [OVLayoutElem.SPATIAL] * len(kernel_size)
+    base_layout = _CONV_BASE_CONST_LAYOUT[ov_metatype]
+    kernel_size = weights_shape[len(base_layout) :]
+    weights_layout = list(base_layout) + [OVLayoutElem.SPATIAL] * len(kernel_size)
     return tuple(weights_layout)
 
 

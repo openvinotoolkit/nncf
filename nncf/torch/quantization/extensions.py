@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,6 +14,7 @@ import subprocess
 
 import torch
 
+import nncf
 from nncf import nncf_logger
 from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
 from nncf.torch.extensions import EXTENSIONS
@@ -94,7 +95,7 @@ class QuantizedFunctionsCUDALoader(ExtensionLoader):
             raise e
         except (subprocess.CalledProcessError, OSError, RuntimeError) as e:
             assert torch.cuda.is_available()
-            raise RuntimeError(
+            raise nncf.InstallationError(
                 "CUDA is available for PyTorch, but NNCF could not compile "
                 "GPU quantization extensions. Make sure that you have installed CUDA development "
                 "tools (see https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html for "

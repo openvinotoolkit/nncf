@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -22,6 +22,7 @@ from torch import nn
 from torch.backends import cudnn
 from torchvision.models import InceptionOutputs
 
+import nncf
 from examples.torch.classification.main import AverageMeter
 from examples.torch.classification.main import accuracy
 from examples.torch.classification.main import create_data_loaders
@@ -186,7 +187,7 @@ def staged_quantization_main_worker(current_gpu, config):
         load_state(model, model_state_dict, is_resume=True)
 
     if not isinstance(compression_ctrl, (BinarizationController, QuantizationController)):
-        raise RuntimeError(
+        raise nncf.InternalError(
             "The stage quantization sample worker may only be run with the binarization and quantization algorithms!"
         )
 

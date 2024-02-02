@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -179,6 +179,21 @@ def _(a: Union[np.ndarray, np.generic], decimals: int = 0) -> np.ndarray:
     return np.round(a, decimals=decimals)
 
 
+@register_numpy_types(numeric.power)
+def _(a: Union[np.ndarray, np.generic], exponent: Union[np.ndarray, float]) -> Union[np.ndarray, np.generic]:
+    return np.power(a, exponent)
+
+
+@register_numpy_types(numeric.quantile)
+def _(
+    a: Union[np.ndarray, np.generic],
+    q: Union[float, List[float]],
+    axis: Optional[Union[int, Tuple[int]]] = None,
+    keepdims: Optional[bool] = None,
+) -> Union[np.ndarray, np.generic]:
+    return np.array(np.quantile(a, q=q, axis=axis, keepdims=keepdims))
+
+
 @register_numpy_types(numeric._binary_op_nowarn)
 def _(
     a: Union[np.ndarray, np.generic], b: Union[np.ndarray, np.generic, float], operator_fn: Callable
@@ -247,3 +262,27 @@ def _(
 @register_numpy_types(numeric.size)
 def _(a: Union[np.ndarray, np.generic]) -> int:
     return a.size
+
+
+@register_numpy_types(numeric.matmul)
+def _(x1: Union[np.ndarray, np.generic], x2: Union[np.ndarray, np.generic, float]) -> np.ndarray:
+    return np.matmul(x1, x2)
+
+
+@register_numpy_types(numeric.unsqueeze)
+def _(
+    a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None
+) -> Union[np.ndarray, np.generic]:
+    return np.expand_dims(a, axis=axis)
+
+
+@register_numpy_types(numeric.transpose)
+def _(a: Union[np.ndarray, np.generic], axes: Optional[Tuple[int, ...]] = None) -> Union[np.ndarray, np.generic]:
+    return np.transpose(a, axes=axes)
+
+
+@register_numpy_types(numeric.argsort)
+def _(
+    a: Union[np.ndarray, np.generic], axis: Optional[int] = None, descending=False, stable=False
+) -> Union[np.ndarray, np.generic]:
+    return np.argsort(a, axis=axis)

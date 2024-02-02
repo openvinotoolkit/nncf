@@ -4,14 +4,14 @@
 
 #### The algorithm description
 
-The Weights Compression algorithm is aimed at compressing the weights of the models and can be used to optimize the model footprint and performance of large models where the size of weights is relatively larger than the size of activations, for example, Large Language Models (LLM). The algorithm compresses weights only for Linear and Embedding layers.
+The Weights Compression algorithm is aimed at compressing the weights of the models and can be used to optimize the model footprint and performance of large models where the size of weights is relatively larger than the size of activations, for example, Large Language Models (LLM). The algorithm compresses weights for Linear, Convolution and Embedding layers.
 
 #### Supported modes
 
 By default, weights are compressed asymmetrically to 8-bit integer data type - "INT8_ASYM" mode.
 OpenVINO backend also supports 3 modes of mixed precision weight quantization with a 4-bit data type as a primary precision - INT4_SYM, INT4_ASYM and NF4. The primary precision in case of INT4_SYM mode is unsigned 4-bit integer and weights are quantized to it [symmetrically](https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#symmetric-quantization) with a fixed zero point equals to 8. In case of INT4_ASYM mode - also unsigned 4-bit integer, but weight are quantized to it [asymmetrically](https://github.com/openvinotoolkit/nncf/blob/develop/docs/compression_algorithms/Quantization.md#asymmetric-quantization) with a typical non-fixed zero point. In case of NF4 mode - [nf4](https://arxiv.org/pdf/2305.14314v1.pdf) data type without zero point.
 All 4-bit modes have a grouped quantization support, when small group of weights (e.g. 128) in the channel dimension share quantization parameters (scale).
-All embeddings and last linear layers are always compressed to 8-bit integer data type.
+All embeddings, convolutions and last linear layers are always compressed to 8-bit integer data type. To quantize embeddings and last linear layers to 4-bit, use `all_layers=True`.
 Percent of the rest layers compressed to 4-bit can be configured by "ratio" parameter. E.g. ratio=0.9 means 90% of layers compressed to the corresponding 4-bit data type and the rest to 8-bit asymmetric integer data type.
 
 #### User guide
@@ -30,7 +30,7 @@ from nncf import compress_weights, CompressWeightsMode
 compressed_model = compress_weights(model, mode=CompressWeightsMode.INT8_SYM) # model is openvino.Model object
 ```
 
-- Compress weights symmetrically to 4-bit integer data type with group size = 128, except embeddings and last linear layers - they are compressed asymmetrically to 8-bit integer data type.
+- Compress weights symmetrically to 4-bit integer data type with group size = 128, except embeddings, convolutions and last linear layers - they are compressed asymmetrically to 8-bit integer data type.
 
 ```python
 from nncf import compress_weights, CompressWeightsMode
@@ -59,6 +59,64 @@ On the average the data-aware mixed-precision weight compression takes more time
 from nncf import compress_weights, CompressWeightsMode, Dataset
 nncf_dataset = nncf.Dataset(data_source, transform_fn)
 compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_SYM, ratio=0.8, dataset=nncf_dataset) # model is openvino.Model object
+```
+
+- Accuracy of the 4-bit compressed models also can be improved by using AWQ algorithm over data-based mixed-precision algorithm. It is capable to equalize some subset of weights to minimize difference between
+original precision and 4-bit.
+Below is the example how to compress 80% of layers to 4-bit integer with a default data-based mixed precision algorithm and AWQ.
+It requires to set `awq` to `True` additionally to data-based mixed-precision algorithm.
+
+```python
+from datasets import load_dataset
+from functools import partial
+from nncf import compress_weights, CompressWeightsMode, Dataset
+from optimum.intel.openvino import OVModelForCausalLM
+from transformers import AutoTokenizer
+
+def transform_func(item, tokenizer, input_shapes):
+    text = item['text']
+    tokens = tokenizer(text)
+
+    res = {'input_ids': np.expand_dims(np.array(tokens['input_ids']), 0),
+           'attention_mask': np.expand_dims(np.array(tokens['attention_mask']), 0)}
+
+    if 'position_ids' in input_shapes:
+        position_ids = np.cumsum(res['attention_mask'], axis=1) - 1
+        position_ids[res['attention_mask'] == 0] = 1
+        res['position_ids'] = position_ids
+
+    for name, shape in input_shapes.items():
+        if name in res:
+            continue
+        res[name] = np.zeros(shape)
+
+    return res
+
+def get_input_shapes(model, batch_size = 1):
+    inputs = {}
+
+    for val in model.model.inputs:
+        name = val.any_name
+        shape = list(val.partial_shape.get_min_shape())
+        shape[0] = batch_size
+        inputs[name] = shape
+
+    return inputs
+
+# load your model and tokenizer
+model = OVModelForCausalLM.from_pretrained(...)
+tokenizer = AutoTokenizer.from_pretrained(...)
+
+# prepare dataset for compression
+dataset = load_dataset('wikitext', 'wikitext-2-v1', split='train')
+dataset = dataset.filter(lambda example: len(example["text"]) > 80)
+input_shapes = get_input_shapes(model)
+nncf_dataset = Dataset(dataset, partial(transform_func, tokenizer=tokenizer,
+                                                        input_shapes=input_shapes))
+
+model.model = compress_weights(model.model, mode=CompressWeightsMode.INT4_SYM, ratio=0.8, dataset=nncf_dataset, awq=True)
+
+model.save_pretrained(...)
 ```
 
 - `NF4` mode can be considered for improving accuracy, but currently models quantized to nf4 should not be faster models
@@ -257,6 +315,11 @@ Here is the word perplexity with data-free and data-aware mixed-precision INT4-I
         <td>stabilityai_stablelm-3b-4e1t</td>
         <td>int4_sym_g64_r80</td>
         <td>10.83</td>
+    </tr>
+    <tr>
+        <td>stable-zephyr-3b-dpo</td>
+        <td>int4_sym_g64_r80_data_awq</td>
+        <td>21.62</td>
     </tr>
     <tr>
         <td>stable-zephyr-3b-dpo</td>

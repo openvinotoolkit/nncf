@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from dataclasses import dataclass
-from typing import Optional, TypeVar
+from typing import Optional, Tuple, TypeVar
 
 from nncf.common.graph.graph import NNCFNode
 from nncf.parameters import CompressWeightsMode
@@ -47,7 +47,7 @@ class WeightCompressionParameters:
     :param node_with_weight: Node with weight in the NNCF graph.
     :param weight_port_id: Number of elements in the weight array.
     :param num_weights: Number of elements in the weight array.
-    :param reduction_axis: Axis, along which to reduce (collect) different statistics (e.g. min, max).
+    :param reduction_axes: Axes, along which to reduce (collect) different statistics (e.g. min, max).
     :param compression_config: Configuration of weight compression for the weight node.
     """
 
@@ -55,5 +55,5 @@ class WeightCompressionParameters:
     node_with_weight: NNCFNode
     weight_port_id: int
     num_weights: int
-    reduction_axis: int
+    reduction_axes: Tuple[int, ...]
     compression_config = WeightCompressionConfig()

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,6 +14,7 @@ import numpy as np
 import torch
 from torch.quantization.fake_quantize import FakeQuantize
 
+import nncf
 from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import AsymmetricQuantizer
@@ -79,7 +80,7 @@ def convert_to_torch_fakequantizer(nncf_quantizer: BaseQuantizer) -> FakeQuantiz
     nncf_quantizer.set_levels()
 
     if nncf_quantizer.num_bits not in SUPPORTED_NUM_BITS_FOR_STRIP_MODEL:
-        raise RuntimeError(
+        raise nncf.InternalError(
             "Converting nncf quantizer module to torch native only supports "
             f"for num_bits in {SUPPORTED_NUM_BITS_FOR_STRIP_MODEL}."
         )

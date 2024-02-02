@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -20,6 +20,7 @@ from attr import dataclass
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.data.dataset import Dataset
+from nncf.errors import ValidationError
 from nncf.experimental.tensor import Tensor
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.quantization import compress_weights
@@ -29,6 +30,7 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import get_
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.scopes import IgnoredScope
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
+from tests.openvino.native.models import AWQMatmulModel
 from tests.openvino.native.models import GatherAndMatmulShareData
 from tests.openvino.native.models import GatherWithTwoReductionAxes
 from tests.openvino.native.models import IdentityMatmul
@@ -282,6 +284,36 @@ def test_gather_can_be_8_bit_if_all_layers_without_data():
             assert ov.Type(np.uint8) == op.get_element_type()
 
 
+@pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
+def test_conv_in_8_bit_if_mode_8bit(mode):
+    model = WeightsModel().ov_model
+    compressed_model = compress_weights(model, mode=mode)
+    for op in compressed_model.get_ordered_ops():
+        if op.get_type_name() == "Constant" and "conv_weights" in op.get_friendly_name():
+            assert ov.Type.u8 == op.get_element_type()
+
+
+@pytest.mark.parametrize("all_layers", (True, False))
+def test_conv_in_8_bit_if_mode_4bit(all_layers):
+    model = WeightsModel().ov_model
+    compressed_model = compress_weights(
+        model,
+        mode=CompressWeightsMode.INT4_SYM,
+        ratio=1,
+        group_size=1,
+        all_layers=all_layers,
+    )
+    for op in compressed_model.get_ordered_ops():
+        if op.get_type_name() == "Constant":
+            if "conv_weights_" in op.get_friendly_name():
+                assert ov.Type.u8 == op.get_element_type()
+            elif "weights_1" in op.get_friendly_name():
+                assert ov.Type.u4 == op.get_element_type()
+            elif "weights_0" in op.get_friendly_name():
+                dtype = ov.Type.u4 if all_layers else ov.Type.u8
+                assert dtype == op.get_element_type()
+
+
 def test_gather_can_be_4_bit_if_all_layers_without_data():
     model = IntegerModel().ov_model
     compressed_model = compress_weights(
@@ -355,12 +387,22 @@ def test_data_based_criterion(mode, ref_scores, ref_act_scores, mocker):
 
 
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
-def test_not_quantize_with_multiple_reduction_axes(mode):
+def test_quantize_Gather_with_multiple_reduction_axes_in_8bit(mode):
     model = GatherWithTwoReductionAxes().ov_model
     compressed_model = compress_weights(model, mode=mode)
     for op in compressed_model.get_ordered_ops():
         if op.get_type_name() == "Constant" and op.get_friendly_name() == "gather_1_data":
-            assert op.get_element_type() == ov.Type(np.float32)
+            assert op.get_element_type() == ov.Type.u8
+
+
+@pytest.mark.parametrize("mode", (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM))
+@pytest.mark.parametrize("all_layers", (True, False))
+def test_quantize_Gather_with_multiple_reduction_axes_if_mode_4bit(mode, all_layers):
+    model = GatherWithTwoReductionAxes().ov_model
+    compressed_model = compress_weights(model, mode=mode, all_layers=all_layers)
+    for op in compressed_model.get_ordered_ops():
+        if op.get_type_name() == "Constant" and op.get_friendly_name() == "gather_1_data":
+            assert op.get_element_type() == ov.Type.u8
 
 
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM))
@@ -553,20 +595,20 @@ def test_weight_compress_with_ignored_scope(ignored_scope, num_compressed):
 @pytest.mark.parametrize("desc", CALCULATE_SCALE_DESCS)
 def test_calculate_scale_per_group(desc: CalculateScaleDesc):
     reshaped_weight, reduction_axis = reshape_weight_for_grouped_quantization(
-        desc.weight, reduction_axis=desc.axis, group_size=desc.group_size
+        desc.weight, reduction_axes=desc.axis, group_size=desc.group_size
     )
     act_scale = np.max(np.abs(reshaped_weight), axis=reduction_axis, keepdims=True)  # [a1, r//gs, 1, a2]
     assert np.allclose(act_scale, desc.ref_scale)
 
 
 def test_raise_error_for_many_axes():
-    with pytest.raises(AssertionError):
-        reshape_weight_for_grouped_quantization(WEIGHTS_2x4, reduction_axis=(0, 1), group_size=1)
+    with pytest.raises(RuntimeError):
+        reshape_weight_for_grouped_quantization(WEIGHTS_2x4, reduction_axes=(0, 1), group_size=1)
 
 
-def test_raise_error_with_tuple():
-    with pytest.raises(AssertionError):
-        reshape_weight_for_grouped_quantization(WEIGHTS_2x4, reduction_axis=(0,), group_size=3)
+def test_raise_error_channel_size_is_not_divisible_by_group_size():
+    with pytest.raises(ValidationError):
+        reshape_weight_for_grouped_quantization(WEIGHTS_2x4, reduction_axes=(0,), group_size=3)
 
 
 @pytest.mark.parametrize("mode", INT8_MODES)
@@ -604,3 +646,11 @@ def test_call_max_var_criterion_with_dataset_by_default(mocker, mode):
     compress_weights(model, mode=mode, ratio=0.8, group_size=-1, dataset=dataset)
 
     scores_spy.assert_called()
+
+
+@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+def test_call_max_var_criterion_with_dataset_by_default_awq(mode):
+    model = AWQMatmulModel().ov_model
+    dataset = Dataset([np.ones([8, 8])])
+
+    compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, awq=True)

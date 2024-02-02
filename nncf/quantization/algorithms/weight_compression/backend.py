@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -31,6 +31,13 @@ class WeightCompressionAlgoBackend(ABC):
     def matmul_metatypes(self) -> List[OperatorMetatype]:
         """
         Property for the backend-specific metatypes for matmul layers.
+        """
+
+    @property
+    @abstractmethod
+    def convolution_metatypes(self) -> List[OperatorMetatype]:
+        """
+        Property for the backend-specific metatypes for convolution layers.
         """
 
     @property
@@ -86,6 +93,20 @@ class WeightCompressionAlgoBackend(ABC):
         :param model: The model.
         :param graph: The model graph associated with the model.
         :return: The weight tensor.
+        """
+
+    @abstractmethod
+    def set_weight(
+        self, node_with_weight: NNCFNode, weight_port_id: int, model: TModel, graph: NNCFGraph, weight: Tensor
+    ) -> None:
+        """
+        Update a weight associated with the given node on the given port id.
+
+        :param node_with_weight: The node with weight.
+        :param weight_port_id: The weight port id for given node with weight.
+        :param model: The model.
+        :param graph: The model graph associated with the model.
+        :param weight: The weight tensor.
         """
 
     @abstractmethod
@@ -147,4 +168,12 @@ class WeightCompressionAlgoBackend(ABC):
         :param algo_name: Name of the algorithm to which the parameters refer.
         :param parameters: Incoming dictionary with parameters to save.
         :param path: Optional list of the paths.
+        """
+
+
+class AWQAlgoBackend(WeightCompressionAlgoBackend):
+    @staticmethod
+    def get_awq_patterns() -> Dict:
+        """
+        Returns patterns of nodes in network graph for applying AWQ algorithm.
         """

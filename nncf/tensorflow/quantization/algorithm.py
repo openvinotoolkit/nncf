@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Tuple
 
 import tensorflow as tf
 
+import nncf
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
@@ -255,9 +256,9 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         self._target_device = config.get("target_device", TARGET_DEVICE)
         algo_config = self._get_algo_specific_config_section()
         if self._target_device == "VPU" and "preset" in algo_config:
-            raise RuntimeError("The VPU target device does not support presets.")
+            raise nncf.ValidationError("The VPU target device does not support presets.")
         if self._target_device == "CPU_SPR":
-            raise RuntimeError("The CPU_SPR target device does not supported.")
+            raise nncf.ValidationError("The CPU_SPR target device does not supported.")
 
         self.global_quantizer_constraints = {}
         self.ignored_scopes_per_group = {}
@@ -467,13 +468,13 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
                 target_node = nncf_graph.get_node_by_name(qp.insertion_point.target_node_name)
                 is_custom, layer_info = converter.get_layer_info_for_node(target_node.node_name)
                 if is_custom:
-                    raise RuntimeError("Quantizing custom layer weights is currently unsupported!")
+                    raise nncf.InternalError("Quantizing custom layer weights is currently unsupported!")
                 layer_name = layer_info.layer_name
                 qconfig = qp.qconfig
                 if layer_name in quantized_layer_names_vs_qconfigs:
                     assigned_qconfig = quantized_layer_names_vs_qconfigs[layer_name]
                     if qconfig != assigned_qconfig:
-                        raise RuntimeError(
+                        raise nncf.InternalError(
                             f"Inconsistent quantizer configurations selected by solver for one and the "
                             f"same quantizable layer! Tried to assign {qconfig} to {layer_name} as "
                             f"specified by QP {qp_id}, but the layer already has quantizer "
@@ -507,7 +508,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
 
                 is_custom, layer_info = converter.get_layer_info_for_node(target_node_name)
                 if is_custom:
-                    raise RuntimeError("Quantizing custom layer activations is currently unsupported!")
+                    raise nncf.InternalError("Quantizing custom layer activations is currently unsupported!")
                 if input_port_id is not None:
                     target_point = TFBeforeLayer(
                         layer_info.layer_name, instance_idx=layer_info.instance_idx, input_port_id=input_port_id
@@ -544,7 +545,7 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
             elif self._overflow_fix == "first_layer_only":
                 quantizers_with_overflow_fix_str = "first convolution weight quantizers"
             elif self._overflow_fix != "disable":
-                raise RuntimeError(f"Unknown overflow fix type: {self._overflow_fix}")
+                raise nncf.InternalError(f"Unknown overflow fix type: {self._overflow_fix}")
             nncf_logger.info(f"Overflow issue fix was applied to {quantizers_with_overflow_fix_str}.")
 
     def _generate_unified_scale_groups(

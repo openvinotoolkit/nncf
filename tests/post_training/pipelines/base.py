@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -167,7 +167,7 @@ class BaseTestPipeline(ABC):
         print("Preparing...")
         self.prepare_model()
         if self.model is None:
-            raise RuntimeError("self.model is None")
+            raise nncf.ValidationError("self.model is None")
         self.prepare_preprocessor()
         self.prepare_calibration_dataset()
 

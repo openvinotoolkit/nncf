@@ -35,8 +35,8 @@
             "resnet50_imagenet_int4_int8": {
                 "config": "examples/torch/classification/configs/mixed_precision/resnet50_imagenet_mixed_int_hawq.json",
                 "reference": "resnet50_imagenet",
-                "target_ov": 75.74,
-                "target_pt": 75.86                ,
+                "target_ov": 75.61,
+                "target_pt": 75.86,
                 "metric_type": "Acc@1",
                 "resume": "resnet50_imagenet_int4_int8.pth",
                 "model_description": "ResNet-50",
@@ -137,7 +137,7 @@
                 "config": "examples/torch/classification/configs/quantization/mobilenet_v2_imagenet_int8_per_tensor.json",
                 "reference": "mobilenet_v2_imagenet",
                 "target_ov": 71.17,
-                "target_pt": 71.28                ,
+                "target_pt": 71.28,
                 "metric_type": "Acc@1",
                 "resume": "mobilenet_v2_imagenet_int8_per_tensor.pth",
                 "model_description": "MobileNet V2",
@@ -150,7 +150,7 @@
             "mobilenet_v2_imagenet_int4_int8": {
                 "config": "examples/torch/classification/configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_hawq.json",
                 "reference": "mobilenet_v2_imagenet",
-                "target_ov": 70.49,
+                "target_ov": 70.52,
                 "target_pt": 70.57,
                 "metric_type": "Acc@1",
                 "resume": "mobilenet_v2_imagenet_int4_int8.pth",
