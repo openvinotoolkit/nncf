@@ -85,6 +85,17 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     }
     MATMUL_METATYPES = [om.PTLinearMetatype, om.PTMatMulMetatype, om.PTAddmmMetatype]
     EMBEDDING_METATYPES = [om.PTEmbeddingMetatype]
+    CONVOLUTION_METATYPES = [
+        om.PTConv1dMetatype,
+        om.PTConv2dMetatype,
+        om.PTConv3dMetatype,
+        om.PTDepthwiseConv1dSubtype,
+        om.PTDepthwiseConv2dSubtype,
+        om.PTDepthwiseConv3dSubtype,
+        om.PTConvTranspose1dMetatype,
+        om.PTConvTranspose2dMetatype,
+        om.PTConvTranspose3dMetatype,
+    ]
 
     @property
     def matmul_metatypes(self) -> List[OperatorMetatype]:
@@ -94,11 +105,16 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def embedding_metatypes(self) -> List[OperatorMetatype]:
         return PTWeightCompressionAlgoBackend.EMBEDDING_METATYPES
 
+    @property
+    def convolution_metatypes(self) -> List[OperatorMetatype]:
+        return PTWeightCompressionAlgoBackend.CONVOLUTION_METATYPES
+
     @staticmethod
     def is_node_with_weights(node: NNCFNode, graph: NNCFGraph) -> bool:
         if (
             node.metatype not in PTWeightCompressionAlgoBackend.MATMUL_METATYPES
             and node.metatype not in PTWeightCompressionAlgoBackend.EMBEDDING_METATYPES
+            and node.metatype not in PTWeightCompressionAlgoBackend.CONVOLUTION_METATYPES
         ):
             return False
         for prev_node in graph.get_previous_nodes(node):
@@ -129,24 +145,28 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         weight_node = get_weight_node(node_with_weight, weight_port_id, graph)
 
         ndims = len(weight_node.layer_attributes.shape)
-        reduction_axis = None
+        reduction_axes = None
         if node_with_weight.metatype == om.PTEmbeddingMetatype:
-            reduction_axis = [1]
+            reduction_axes = [1]
         elif node_with_weight.metatype == om.PTLinearMetatype:
-            reduction_axis = [ndims - 1]
+            reduction_axes = [ndims - 1]
         elif node_with_weight.metatype == om.PTMatMulMetatype:
             if weight_port_id == 0:
-                reduction_axis = [ndims - 1]
+                reduction_axes = [ndims - 1]
             elif weight_port_id == 1:
-                reduction_axis = [max(0, ndims - 2)]
-            reduction_axis = [max(0, reduction_axis)]
+                reduction_axes = [max(0, ndims - 2)]
+            reduction_axes = [max(0, reduction_axes)]
         elif node_with_weight.metatype == om.PTAddmmMetatype:
             if weight_port_id == 1:
-                reduction_axis = [ndims - 1]
+                reduction_axes = [ndims - 1]
             elif weight_port_id == 2:
-                reduction_axis = [max(0, ndims - 2)]
-            reduction_axis = [max(0, reduction_axis)]
-        return tuple(reduction_axis)
+                reduction_axes = [max(0, ndims - 2)]
+            reduction_axes = [max(0, reduction_axes)]
+        elif node_with_weight.metatype in PTWeightCompressionAlgoBackend.CONVOLUTION_METATYPES:
+            layer_attributes = node_with_weight.layer_attributes
+            channel_idx = layer_attributes.get_target_dim_for_compression()
+            reduction_axes = [i for i in range(ndims) if i != channel_idx]
+        return tuple(reduction_axes)
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
@@ -212,7 +232,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 raise nncf.InternalError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
 
             # calculates compressed weights and decompression parameters
-            compressed_weight = compress_weight(Tensor(weight), wc_params.reduction_axis, compression_config)
+            compressed_weight = compress_weight(Tensor(weight), wc_params.reduction_axes, compression_config)
 
             # pack compressed tensor
             packed_tensor = compressed_weight.tensor.astype(TensorDataType.uint8)

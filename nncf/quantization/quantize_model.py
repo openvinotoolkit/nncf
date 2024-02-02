@@ -283,8 +283,8 @@ def compress_weights(
         The value -1 means no grouping.
     :param ignored_scope: An ignored scope that defined the list of model control
         flow graph nodes to be ignored during quantization.
-    :param all_layers: Indicates whether embeddings and last layers should be compressed to a primary
-        precision. By default, the backup precision is assigned for the embeddings and last layers.
+    :param all_layers: Indicates whether embeddings and last MatMul layers should be compressed to a primary
+        precision. By default, the backup precision is assigned for the embeddings and last MatMul layers.
     :param dataset: Dataset used for assigning different quantization precision by finding outliers in activations.
     :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
         preserve the accuracy of the model, the more sensitive layers receives a higher precision.
@@ -339,7 +339,7 @@ def compress_weights(
         options = [all_layers, sensitivity_metric, dataset, awq]
         if any(option is not None for option in options):
             raise AttributeError(
-                "INT8 modes do not support `all_layers`, `sensitivity_metric`, `awq` and `dataset` options."
+                "INT8 modes do not support `all_layers`, `sensitivity_metric`, `awq` and `dataset` options. "
                 "Set them to None."
             )
 
