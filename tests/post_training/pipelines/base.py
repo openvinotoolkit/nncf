@@ -159,7 +159,7 @@ class RunInfo:
             "Metric diff": self.metric_diff,
             "Num FQ": self.num_fq_nodes,
             "RAM MiB": self.format_memory_usage(self.compression_memory_usage),
-            "Compression time": self.format_time(self.time_compression),
+            "Compr. time": self.format_time(self.time_compression),
             **self.stats_from_output.get_stats(),
             "Total time": self.format_time(self.time_total),
             "FPS": self.fps,
