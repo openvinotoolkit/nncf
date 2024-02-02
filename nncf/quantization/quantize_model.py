@@ -258,6 +258,7 @@ def compress_weights(
     ignored_scope: Optional[IgnoredScope] = None,
     all_layers: Optional[bool] = None,
     dataset: Optional[Dataset] = None,
+    subset_size: Optional[int] = 128,
     sensitivity_metric: Optional[SensitivityMetric] = None,
     awq: Optional[bool] = None,
 ) -> TModel:
@@ -286,6 +287,8 @@ def compress_weights(
     :param all_layers: Indicates whether embeddings and last MatMul layers should be compressed to a primary
         precision. By default, the backup precision is assigned for the embeddings and last MatMul layers.
     :param dataset: Dataset used for assigning different quantization precision by finding outliers in activations.
+    :param subset_size: Number of data samples to calculate activation statistics used for assigning different
+        quantization precision. Defaults to 128.
     :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
         preserve the accuracy of the model, the more sensitive layers receives a higher precision.
     :param awq: Indicates whether use AWQ weights correction.
@@ -309,7 +312,7 @@ def compress_weights(
             )
 
         if awq is True:
-            raise AttributeError("Torch backend doesn`t supports AWQ algorithm, but given awq parameter is True mode.")
+            raise AttributeError("Torch backend doesn`t supports AWQ algorithm, but awq=True is specified.")
 
         if is_wrapped_model(model):
             if not model.nncf.trace_parameters:
@@ -364,12 +367,13 @@ def compress_weights(
             f"Mixed precision selection based on the given sensitivity metric={sensitivity_metric.value} requires "
             "a dataset, but it's not provided."
         )
-
     if ratio < 0 or ratio > 1:
-        raise ValueError(f"The ratio should be between 0 and 1, but ration={ratio} is specified.")
+        raise ValueError(f"The ratio should be between 0 and 1, but ratio={ratio} is specified.")
+    if subset_size is None or subset_size <= 0:
+        raise ValueError(f"The subset_size value should be positive, but subset_size={subset_size} is given.")
 
     compression_algorithm = WeightCompression(
-        mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric, awq
+        mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric, awq, subset_size
     )
     graph = NNCFGraphFactory.create(model)
     return compression_algorithm.apply(model, graph, dataset=dataset)
