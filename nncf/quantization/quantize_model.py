@@ -20,6 +20,7 @@ from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data import Dataset
+from nncf.openvino.graph.model_utils import remove_friendly_name_duplicates
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
@@ -325,6 +326,9 @@ def compress_weights(
             example_input = next(iter(dataset.get_inference_data()))
             model = wrap_model(model, example_input=example_input, trace_parameters=True)
             dataset = None
+
+    if backend == BackendType.OPENVINO:
+        model = remove_friendly_name_duplicates(model)
 
     if mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
         if ratio is None:
