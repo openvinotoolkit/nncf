@@ -60,3 +60,13 @@ def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[N
     :return: Target NNCFGraph input nodes.
     """
     return nncf_graph.get_input_nodes() + nncf_graph.get_nodes_by_metatypes([OVReadValueMetatype])
+
+
+def model_has_state(model: ov.Model) -> bool:
+    """
+    Returns True if model has state else False
+
+    :param model: OpenVINO model
+    :return: True if model has state else False
+    """
+    return len(model.get_sinks()) > 0
