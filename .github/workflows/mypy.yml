@@ -19,7 +19,5 @@ jobs:
       run: pip install -e .
     - name: Install mypy
       run: pip install mypy==1.8.0
-    - name: Install mypy types if any are missing
-      run: mypy --install-types
-    - name:
-      run: mypy --config-file=.mypy.ini
+    - name: Run mypy
+      run: mypy --install-types --config-file=.mypy.ini
