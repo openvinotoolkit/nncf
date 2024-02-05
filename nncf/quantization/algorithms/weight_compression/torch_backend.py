@@ -138,13 +138,11 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 reduction_axis = [ndims - 1]
             elif weight_port_id == 1:
                 reduction_axis = [max(0, ndims - 2)]
-            reduction_axis = [max(0, reduction_axis)]
         elif node_with_weight.metatype == om.PTAddmmMetatype:
             if weight_port_id == 1:
                 reduction_axis = [ndims - 1]
             elif weight_port_id == 2:
                 reduction_axis = [max(0, ndims - 2)]
-            reduction_axis = [max(0, reduction_axis)]
         return reduction_axis
 
     @staticmethod
