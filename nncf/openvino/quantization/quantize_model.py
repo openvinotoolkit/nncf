@@ -15,6 +15,7 @@ from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Unio
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
 
+from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
@@ -25,9 +26,11 @@ from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
 from nncf.openvino.quantization.quantize_ifmodel import apply_algorithm_if_bodies
 from nncf.openvino.rt_info import dump_parameters
+from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
+from nncf.parameters import SensitivityMetric
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -36,6 +39,7 @@ from nncf.quantization.algorithms.accuracy_control.algorithm import Quantization
 from nncf.quantization.algorithms.accuracy_control.algorithm import calculate_accuracy_drop
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
@@ -221,6 +225,7 @@ def native_quantize_with_accuracy_control_impl(
 
     # TODO(andrey-churkin): Collect statistics only once
     if advanced_accuracy_restorer_parameters.tune_hyperparams and not should_terminate:
+        model = remove_friendly_name_duplicates(model)
         tuned_quantized_model = quantize_with_tune_hyperparams(
             model,
             calibration_dataset,
@@ -365,7 +370,6 @@ def quantize_with_accuracy_control_impl(
     """
     Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend.
     """
-    model = remove_friendly_name_duplicates(model)
 
     quantize_with_accuracy_control_fn = native_quantize_with_accuracy_control_impl
 
@@ -387,3 +391,26 @@ def quantize_with_accuracy_control_impl(
         advanced_quantization_parameters,
         advanced_accuracy_restorer_parameters,
     )
+
+
+def compress_weights_impl(
+    model: ov.Model,
+    dataset: Dataset,
+    mode: CompressWeightsMode,
+    ratio: float,
+    group_size: int,
+    ignored_scope: IgnoredScope,
+    all_layers: bool,
+    sensitivity_metric: SensitivityMetric,
+    awq: bool,
+) -> ov.Model:
+    """
+    Implementation of the `compress_weights()` method for the OpenVINO backend.
+    """
+
+    model = remove_friendly_name_duplicates(model)
+    compression_algorithm = WeightCompression(
+        mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric, awq
+    )
+    graph = NNCFGraphFactory.create(model)
+    return compression_algorithm.apply(model, graph, dataset=dataset)
