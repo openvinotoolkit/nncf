@@ -143,7 +143,7 @@ def llm_tune_params() -> Dict[str, float]:
 
     awq, ratio, group_size = llm_tune_params_main()
 
-    return {"awq": awq, "ratio": ratio, "group_size": group_size}
+    return {"awq": bool(awq), "ratio": ratio, "group_size": group_size}
 
 
 def main(argv):
