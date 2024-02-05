@@ -41,7 +41,9 @@ MAX_RATIO = 1.0
 RATIO_STEP = 0.1
 
 
-def compress_model(ov_model: ov.Model, nncf_dataset: nncf.Dataset, ratio: float, group_size: int) -> ov.Model:
+def compress_model(
+    ov_model: ov.Model, nncf_dataset: nncf.Dataset, ratio: float, group_size: int, awq: bool
+) -> ov.Model:
     """
     Compress the given OpenVINO model using NNCF weight compression.
 
@@ -50,6 +52,7 @@ def compress_model(ov_model: ov.Model, nncf_dataset: nncf.Dataset, ratio: float,
     :param ratio: The ratio between baseline and backup precisions
     :param group_size: Number of weights (e.g. 128) in the channel dimension
         that share quantization parameters (scale).
+    :param awq: Indicates whether use AWQ weights correction.
     :return: The OpenVINO model with compressed weights.
     """
     optimized_ov_model = nncf.compress_weights(
@@ -58,6 +61,7 @@ def compress_model(ov_model: ov.Model, nncf_dataset: nncf.Dataset, ratio: float,
         mode=COMPRESSION_MODE,
         ratio=ratio,
         group_size=group_size,
+        awq=awq,
         sensitivity_metric=nncf.parameters.SensitivityMetric.MAX_ACTIVATION_VARIANCE,
     )
     return optimized_ov_model
@@ -83,8 +87,10 @@ def evaluate_model(
     similarity = all_metrics["similarity"][0]
     group_size = optimized_model.get_rt_info()["nncf"]["weight_compression"]["group_size"].value
     ratio = optimized_model.get_rt_info()["nncf"]["weight_compression"]["ratio"].value
+    awq = optimized_model.get_rt_info()["nncf"]["weight_compression"]["awq"].value
     nncf_logger.info(
-        f"The similarity of model compressed with group_size={group_size}, ratio={ratio} is {similarity:.3f}"
+        "The similarity of model compressed with ",
+        f"group_size={group_size}, ratio={ratio}, awq={awq} is {similarity:.3f}",
     )
     return similarity
 
@@ -106,7 +112,7 @@ def get_nncf_dataset(
     return nncf.Dataset(data_source)
 
 
-def print_results(optimized_model: ov.Model, ratio: float, group_size: int, similarity: float) -> None:
+def print_results(optimized_model: ov.Model, ratio: float, group_size: int, awq: bool, similarity: float) -> None:
     """
     Print report with optimization details, memory footprint, and similarity score.
 
@@ -114,23 +120,27 @@ def print_results(optimized_model: ov.Model, ratio: float, group_size: int, simi
     :param ratio: The ratio between baseline and backup precisions
     :param group_size: Number of weights (e.g. 128) in the channel dimension
         that share quantization parameters (scale).
+    :param awq: Indicates whether use AWQ weights correction.
+    :param similarity: The similarity score between the original and optimized models.
     """
     ov.save_model(optimized_model, MODEL_PATH)
     footprint = Path(MODEL_PATH).with_suffix(".bin").stat().st_size
     print(f"Compressed model was saved to: {MODEL_PATH}")
-    print(f"Best parameters: group_size={group_size}, ratio={ratio:.1f}")
+    print(f"Best parameters: group_size={group_size}, ratio={ratio:.1f}, awq={awq}")
     print(f"Memory footprint: {footprint / 2**20 :.2f} MB")
     print(f"Similarity: {similarity:.2f}")
 
 
-def find_parameters(evaluator: Evaluator, model: OVModelForCausalLM, nncf_dataset: nncf.Dataset) -> Tuple[float, int]:
+def find_parameters(
+    evaluator: Evaluator, model: OVModelForCausalLM, nncf_dataset: nncf.Dataset
+) -> Tuple[bool, float, int]:
     """
-    Find the optimal `ratio` and `group_size` for weight compression algorithm.
+    Find the optimal `awq`, `ratio` and `group_size` for weight compression algorithm.
 
     :param evaluator: The evaluator object from whowhatbench Benchmark.
     :param model: The OpenVINO model for causal language modeling.
     :param nncf_dataset: A representative dataset for the weight compression algorithm.
-    :return: The optimal ratio and group_size.
+    :return: The optimal awq, ratio and group_size.
     """
     original_ov_model = model.model
     evaluate_fn = partial(evaluate_model, hf_model=model, original_ov_model=original_ov_model, evaluator=evaluator)
@@ -141,7 +151,8 @@ def find_parameters(evaluator: Evaluator, model: OVModelForCausalLM, nncf_datase
 
     # First, we try to use the maximum ratio and group_size to get the most efficient model
     ratio, group_size = param_grid[0]  # (MAX_GROUP_SIZE, MAX_RATIO)
-    optimized_model = compress_model(original_ov_model, nncf_dataset, ratio, group_size)
+    use_awq = False
+    optimized_model = compress_model(original_ov_model, nncf_dataset, ratio, group_size, awq=use_awq)
     similarity = evaluate_fn(optimized_model=optimized_model)
     if similarity >= 1 - MAX_DROP:
         nncf_logger.info(f"Compress embeddings and last layers to {COMPRESSION_MODE.value} precision")
@@ -157,15 +168,24 @@ def find_parameters(evaluator: Evaluator, model: OVModelForCausalLM, nncf_datase
         all_layers_similarity = evaluate_fn(optimized_model=full_optimized_model)
         if all_layers_similarity >= 1 - MAX_DROP:
             print("Compressed embeddings and last layers to a primary precision.")
-            print_results(full_optimized_model, ratio, group_size, all_layers_similarity)
+            print_results(full_optimized_model, ratio, group_size, use_awq, all_layers_similarity)
         else:
-            print_results(optimized_model, ratio, group_size, similarity)
-        return ratio, group_size
+            print_results(optimized_model, ratio, group_size, use_awq, similarity)
+        return use_awq, ratio, group_size
+
+    # If the best performing model is not acceptable, we try to use AWQ weights correction and compare similarity
+    use_awq = True
+    optimized_model = compress_model(original_ov_model, nncf_dataset, ratio, group_size, awq=use_awq)
+    awq_similarity = evaluate_fn(optimized_model=optimized_model)
+    if awq_similarity >= 1 - MAX_DROP:
+        print_results(optimized_model, ratio, group_size, use_awq, awq_similarity)
+        return use_awq, ratio, group_size
+    use_awq = awq_similarity > similarity
 
     # If the best performing model is not acceptable, we try to use the smallest ratio and group_size
     # to check the reachability of the max drop criterion
     ratio, group_size = param_grid[-1]  # (MIN_GROUP_SIZE, MIN_RATIO)
-    optimized_model = compress_model(original_ov_model, nncf_dataset, ratio, group_size)
+    optimized_model = compress_model(original_ov_model, nncf_dataset, ratio, group_size, awq=use_awq)
     similarity = evaluate_fn(optimized_model=optimized_model)
     if similarity < 1 - MAX_DROP:
         nncf_logger.info(
@@ -173,20 +193,20 @@ def find_parameters(evaluator: Evaluator, model: OVModelForCausalLM, nncf_datase
             "but it could not achieve the required accuracy drop. ",
             "We recommend choosing a different mode for weight compression.",
         )
-        print_results(optimized_model, ratio, group_size, similarity)
-        return ratio, group_size
+        print_results(optimized_model, ratio, group_size, use_awq, similarity)
+        return use_awq, ratio, group_size
 
     # If max drop criterion is achivable, we run a grid-search to find the best parameters
     for ratio, group_size in param_grid[1:-1]:
-        optimized_model = compress_model(original_ov_model, nncf_dataset, ratio, group_size)
+        optimized_model = compress_model(original_ov_model, nncf_dataset, ratio, group_size, awq=use_awq)
         similarity = evaluate_fn(optimized_model=optimized_model)
         if similarity >= 1 - MAX_DROP:
-            print_results(optimized_model, ratio, group_size, similarity)
-            return ratio, group_size
+            print_results(optimized_model, ratio, group_size, use_awq, similarity)
+            return use_awq, ratio, group_size
 
-    optimized_model = compress_model(original_ov_model, nncf_dataset, MIN_RATIO, MIN_GROUP_SIZE)
-    print_results(optimized_model, MIN_RATIO, MIN_GROUP_SIZE, similarity)
-    return MIN_RATIO, MIN_GROUP_SIZE
+    optimized_model = compress_model(original_ov_model, nncf_dataset, MIN_RATIO, MIN_GROUP_SIZE, awq=use_awq)
+    print_results(optimized_model, MIN_RATIO, MIN_GROUP_SIZE, use_awq, similarity)
+    return use_awq, MIN_RATIO, MIN_GROUP_SIZE
 
 
 def tiny_llama_transform_func(item, tokenizer, ov_model):  # <YOUR_TRANSFORMATION_FUNCTION>
@@ -236,12 +256,12 @@ def main():
     start = datetime.datetime.now()
     evaluator = Evaluator(model, tokenizer=tokenizer, metrics=("similarity",))
     nncf_dataset = get_nncf_dataset(dataset, transform_func)
-    ratio, group_size = find_parameters(evaluator, model, nncf_dataset)
+    awq, ratio, group_size = find_parameters(evaluator, model, nncf_dataset)
     end = datetime.datetime.now()
     delta = end - start
     delta -= datetime.timedelta(microseconds=delta.microseconds)
     print(f"Elapsed time: {delta}")
-    return ratio, group_size
+    return awq, ratio, group_size
 
 
 if __name__ == "__main__":
