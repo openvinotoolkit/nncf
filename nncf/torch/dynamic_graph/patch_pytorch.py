@@ -113,6 +113,7 @@ class FunctionsToPatchWithoutTracing:
         "storage_offset",
         "stride",
         "get_device",
+        "is_floating_point",
     ]
 
     FUNCTIONS_TO_PATCH_WITHOUT_TRACING = TENSOR_CREATING_FUNCTIONS + TENSOR_UTILITY_FUNCTIONS
