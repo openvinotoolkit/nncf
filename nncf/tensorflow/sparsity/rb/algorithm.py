@@ -150,6 +150,12 @@ class RBSparsityController(BaseSparsityController):
     def set_sparsity_level(self, sparsity_level):
         self._loss.set_target_sparsity_loss(sparsity_level)
 
+    @property
+    def current_sparsity_level(self) -> float:
+        # TODO: align with torch where it currently shows the sparsity level as reported by loss object.
+        #  TF does not seem to have this functionality in its SparseLoss right now.
+        return self.scheduler.current_sparsity_level
+
     def freeze(self):
         self._loss.disable()
 

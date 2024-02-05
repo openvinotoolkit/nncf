@@ -148,6 +148,7 @@ def magnitude_algo_mock_(mocker):
         def __init__(self):
             self.set_sparsity_level = mocker.stub()
             self.freeze = mocker.stub()
+            self.current_sparsity_level = 0.0
 
     return MockSparsityAlgo()
 
@@ -269,10 +270,15 @@ def rb_algo_mock_(mocker):
         def __init__(self):
             self.set_sparsity_level = mocker.stub()
             self.freeze = mocker.stub()
+
             from nncf.torch.sparsity.rb.loss import SparseLoss
 
             self.loss = SparseLoss()
             self.loss.current_sparsity = 0.3
+
+        @property
+        def current_sparsity_level(self) -> float:
+            return self.loss.current_sparsity
 
     return MockSparsityAlgo()
 
@@ -326,6 +332,10 @@ class MockCompressionController:
 
     def set_sparsity_level(self, level):
         pass
+
+    @property
+    def current_sparsity_level(self) -> float:
+        return 0.5
 
 
 @pytest.mark.parametrize(

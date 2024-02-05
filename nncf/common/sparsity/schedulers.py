@@ -19,6 +19,7 @@ from nncf.common.schedulers import PolynomialDecaySchedule
 from nncf.common.sparsity.controller import SparsityController
 from nncf.common.utils.registry import Registry
 from nncf.config.schemata.defaults import SPARSITY_FREEZE_EPOCH
+from nncf.config.schemata.defaults import SPARSITY_INIT
 from nncf.config.schemata.defaults import SPARSITY_MULTISTEP_SPARSITY_LEVELS
 from nncf.config.schemata.defaults import SPARSITY_MULTISTEP_STEPS
 from nncf.config.schemata.defaults import SPARSITY_SCHEDULER_CONCAVE
@@ -59,11 +60,10 @@ class SparsityScheduler(BaseCompressionScheduler):
         """
         super().__init__()
         self._controller = controller
-        self.initial_level = params.get("sparsity_init", float)
+        self.initial_level: float = params.get("sparsity_init", SPARSITY_INIT)
         self.target_level: float = params.get("sparsity_target", SPARSITY_TARGET)
         self.target_epoch = params.get("sparsity_target_epoch", SPARSITY_TARGET_EPOCH)
         self.freeze_epoch = params.get("sparsity_freeze_epoch", SPARSITY_FREEZE_EPOCH)
-        # self.current_sparsity = 0.0
 
     def _calculate_sparsity_level(self) -> float:
         """
@@ -92,7 +92,6 @@ class SparsityScheduler(BaseCompressionScheduler):
 
         :return: Current sparsity level.
         """
-        self.initial_level = 0.0
         if self._current_epoch == -1:
             return self.initial_level
         return self._calculate_sparsity_level()
@@ -224,9 +223,6 @@ class ExponentialSparsityScheduler(SparsityScheduler):
         """
         super().__init__(controller, params)
 
-        if self.initial_level is None:
-            self.initial_level = 0.0
-
         initial_density = 1.0 - self.initial_level
         target_density = 1.0 - self.target_level
         self.schedule = ExponentialDecaySchedule(initial_density, target_density, self.target_epoch)
@@ -238,7 +234,6 @@ class ExponentialSparsityScheduler(SparsityScheduler):
     def _calculate_sparsity_level(self) -> float:
         current_density: float = self.schedule(self.current_epoch)
         current_level: float = 1.0 - current_density
-        self.target_level
         return min(current_level, self.target_level)
 
 
@@ -264,7 +259,6 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
 
     @property
     def current_sparsity_level(self) -> float:
-        self._current_level
         """
         Returns sparsity level for the `current_epoch` or for step
         in the `current_epoch`.
@@ -278,7 +272,7 @@ class AdaptiveSparsityScheduler(SparsityScheduler):
         self._update_sparsity_level()
 
     def _calculate_sparsity_level(self) -> float:
-        if self._controller.loss.current_sparsity >= self._current_level - self.eps:
+        if self._controller.current_sparsity_level >= self._current_level - self.eps:
             self.num_bad_epochs += 1
 
         current_level = self._current_level
