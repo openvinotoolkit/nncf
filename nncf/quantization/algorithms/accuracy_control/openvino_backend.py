@@ -16,6 +16,7 @@ import openvino.runtime as ov
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.openvino.engine import OVCompiledModelEngine
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.groups import CONSTANT_OPERATIONS
 from nncf.openvino.graph.metatypes.groups import FAKE_QUANTIZE_OPERATIONS
@@ -26,10 +27,33 @@ from nncf.openvino.graph.metatypes.groups import SHAPEOF_OPERATIONS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConcatMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.openvino.graph.model_utils import get_start_nodes_for_activation_path_tracing
+from nncf.openvino.graph.model_utils import model_has_state
 from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.node_utils import is_node_with_bias
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
+from nncf.quantization.algorithms.accuracy_control.backend import PreparedModel
+
+
+class OVPreparedModel(PreparedModel):
+    """
+    Implementation of the `PreparedModel` for OpenVINO backend.
+    """
+
+    def __init__(self, model: ov.Model):
+        self._stateful = model_has_state(model)
+        self._compiled_model = ov.compile_model(model)
+        self._engine = None
+
+    @property
+    def model_for_inference(self) -> ov.CompiledModel:
+        return self._compiled_model
+
+    @property
+    def engine(self) -> OVCompiledModelEngine:
+        if self._engine is None:
+            self._engine = OVCompiledModelEngine(self._compiled_model, self._stateful)
+        return self._engine
 
 
 class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
@@ -97,9 +121,3 @@ class OVAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
                 model_size += op.data.nbytes
 
         return model_size
-
-    # Preparation of model
-
-    @staticmethod
-    def prepare_for_inference(model: ov.Model) -> ov.CompiledModel:
-        return ov.compile_model(model)
