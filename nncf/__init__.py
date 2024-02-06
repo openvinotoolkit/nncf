@@ -42,6 +42,9 @@ from nncf.quantization import QuantizationPreset as QuantizationPreset
 from nncf.quantization import compress_weights as compress_weights
 from nncf.quantization import quantize as quantize
 from nncf.quantization import quantize_with_accuracy_control as quantize_with_accuracy_control
+from nncf.quantization.advanced_parameters import (
+    AdvancedAccuracyRestorerParameters as AdvancedAccuracyRestorerParameters,
+)
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters as AdvancedQuantizationParameters
 from nncf.scopes import IgnoredScope as IgnoredScope
 from nncf.version import __version__ as __version__

@@ -17,6 +17,7 @@ from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.quantization import compress_weights
 from nncf.torch import wrap_model
+from nncf.torch.quantization.layers import WeightsDecompressor
 
 DATA_BASED_SENSITIVITY_METRICS = (
     SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
@@ -50,6 +51,32 @@ class ShortTransformer(torch.nn.Module):
         x = self.linear(x)
         res = self.lm_head(x)
         return res
+
+
+class NestedMatMul(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.w = torch.nn.Parameter(torch.ones(size=(300, 300), dtype=torch.float32))
+
+    def forward(self, input):
+        return input @ self.w
+
+
+class FunctionalModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv_w = torch.nn.Parameter(torch.ones(size=(5, 3, 3, 3), dtype=torch.float32))
+        self.matmul_w = torch.nn.Parameter(torch.ones(size=(1, 3, 300, 300), dtype=torch.float32))
+        self.conv_tr_w = torch.nn.Parameter(torch.rand(size=(5, 4, 3, 3)))
+        self.nested_matmul = NestedMatMul()
+
+    def forward(self, input_):
+        x = input_.to(torch.float32)
+        x = x @ self.matmul_w
+        x = self.nested_matmul(x)
+        x = F.conv2d(x, self.conv_w)
+        x = F.conv_transpose2d(x, self.conv_tr_w)
+        return x
 
 
 class ConvolutionModel(torch.nn.Module):
@@ -96,6 +123,20 @@ def test_compress_weights():
                 n_compressed_weights += 1
 
     assert n_compressed_weights == n_target_modules
+
+
+def test_compress_weights_functional_model():
+    model = FunctionalModel()
+
+    input_ids = torch.randint(0, 10, [1, 3, 300, 300])
+    wrapped_model = wrap_model(model, example_input=input_ids, trace_parameters=True)
+    compressed_model = compress_weights(wrapped_model)
+
+    n_compressed_weights = 0
+    for layer in compressed_model.nncf.external_op.values():
+        if isinstance(layer, WeightsDecompressor):
+            n_compressed_weights += 1
+    assert n_compressed_weights == 4
 
 
 def test_compress_weights_conv():

@@ -83,3 +83,13 @@ def remove_friendly_name_duplicates(model: ov.Model) -> ov.Model:
         existing_names.add(friendly_name)
     model.set_rt_info(friendly_names_flag, rt_info_path)
     return model
+
+
+def model_has_state(model: ov.Model) -> bool:
+    """
+    Returns True if model has state else False
+
+    :param model: OpenVINO model
+    :return: True if model has state else False
+    """
+    return len(model.get_sinks()) > 0

@@ -200,7 +200,7 @@ class Ranker:
                 self._algo_backend.get_op_with_weights_metatypes(),
             )
 
-            prepared_model = self._algo_backend.prepare_for_inference(modified_model)
+            prepared_model = self._evaluator.prepare_model(modified_model)
             ranking_score = self._calculate_ranking_score(
                 prepared_model, ranking_subset_indices, reference_values_for_each_item
             )
@@ -229,7 +229,7 @@ class Ranker:
                 self._algo_backend.get_op_with_weights_metatypes(),
             )
 
-            prepared_model_queue.append(executor.submit(self._algo_backend.prepare_for_inference, modified_model))
+            prepared_model_queue.append(executor.submit(self._evaluator.prepare_model, modified_model))
 
             if idx >= (self._num_workers - 1):
                 prepared_model = prepared_model_queue.pop(0).result()
@@ -263,12 +263,12 @@ class Ranker:
         """
         if self._evaluator.is_metric_mode():
             # Calculate ranking score based on metric
-            ranking_score, _ = self._evaluator.validate_model_for_inference(
+            ranking_score, _ = self._evaluator.validate_prepared_model(
                 prepared_model, self._dataset, ranking_subset_indices
             )
         else:
             # Calculate ranking score based on differences in logits
-            approximate_outputs = self._evaluator.collect_values_for_each_item_using_model_for_inference(
+            approximate_outputs = self._evaluator.collect_values_for_each_item_using_prepared_model(
                 prepared_model, self._dataset, ranking_subset_indices
             )
             reference_outputs = [reference_values_for_each_item[i] for i in ranking_subset_indices]
