@@ -69,6 +69,11 @@ def remove_friendly_name_duplicates(model: ov.Model) -> ov.Model:
     :param model: ov.Model instance to update.
     :return: Updated ov.Model without duplicated names.
     """
+    rt_info_path = ["nncf", "friendly_names_were_updated"]
+    friendly_names_flag = str("True")
+    if model.has_rt_info(rt_info_path) and model.get_rt_info(rt_info_path).value == friendly_names_flag:
+        return model
+
     existing_names = set()
     for op in model.get_ops():
         friendly_name = op.get_friendly_name()
@@ -76,4 +81,5 @@ def remove_friendly_name_duplicates(model: ov.Model) -> ov.Model:
             friendly_name = friendly_name + "0"
             op.set_friendly_name(friendly_name)
         existing_names.add(friendly_name)
+    model.set_rt_info(friendly_names_flag, rt_info_path)
     return model
