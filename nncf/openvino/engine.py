@@ -16,6 +16,7 @@ import openvino.runtime as ov
 
 import nncf
 from nncf.common.engine import Engine
+from nncf.openvino.graph.model_utils import model_has_state
 from nncf.parameters import TargetDevice
 
 
@@ -28,13 +29,12 @@ class OVCompiledModelEngine(Engine):
     to infer the compiled model.
     """
 
-    def __init__(self, model: ov.CompiledModel):
-        self.compiled_model = model
-        self.infer_request = model.create_infer_request()
-        self.reset_state = hasattr(self.infer_request, "reset_state")
+    def __init__(self, compiled_model: ov.CompiledModel, stateful: bool):
+        self.infer_request = compiled_model.create_infer_request()
+        self.reset_state = stateful and hasattr(self.infer_request, "reset_state")
         self.input_tensor_names = set()
-        self.number_of_inputs = len(model.inputs)
-        for model_input in model.inputs:
+        self.number_of_inputs = len(compiled_model.inputs)
+        for model_input in compiled_model.inputs:
             self.input_tensor_names.update(model_input.get_names())
 
     def _check_input_data_format(
@@ -95,8 +95,9 @@ class OVNativeEngine(Engine):
             target_device = TargetDevice.CPU
 
         ie = ov.Core()
+        stateful = model_has_state(model)
         compiled_model = ie.compile_model(model, target_device.value)
-        self.engine = OVCompiledModelEngine(compiled_model)
+        self.engine = OVCompiledModelEngine(compiled_model, stateful)
 
     def infer(
         self, input_data: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray], Dict[str, np.ndarray]]
