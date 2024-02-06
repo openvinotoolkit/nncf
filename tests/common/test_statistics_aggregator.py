@@ -13,7 +13,7 @@ from collections import Counter
 from dataclasses import dataclass
 from enum import Enum
 from itertools import product
-from typing import Any, List, Type, Union
+from typing import List, Tuple, Type, Union
 
 import numpy as np
 import pytest
@@ -453,12 +453,15 @@ class TemplateTestStatisticsAggregator:
                 assert stat.max_values.shape == ref_shape
 
     @dataclass
-    class BCTestParameters:
+    class RawBCTestParameters:
         algo: BiasCorrectionAlgos
-        collector_type: BCStatsCollectors
         target_type: TargetType
-        ref_values: Any = None
         axis: int = 1
+
+    @dataclass
+    class MeanBCTestParameters(RawBCTestParameters):
+        ref_values: np.ndarray = None
+        ref_shape: Tuple[int] = None
 
     MEAN_ACT_AXIS_0_REF = np.array(
         [
@@ -484,112 +487,108 @@ class TemplateTestStatisticsAggregator:
         "test_params",
         [
             # TargeType: activations
-            BCTestParameters(
-                BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
-                BCStatsCollectors.MEAN,
-                TargetType.POST_LAYER_OPERATION,
-                (MEAN_ACT_AXIS_0_REF, (1, 3, 3, 3)),
+            MeanBCTestParameters(
+                algo=BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
+                target_type=TargetType.POST_LAYER_OPERATION,
+                ref_values=MEAN_ACT_AXIS_0_REF,
+                ref_shape=(1, 3, 3, 3),
                 axis=0,
             ),
-            BCTestParameters(
-                BiasCorrectionAlgos.BIAS_CORRECTION,
-                BCStatsCollectors.MEAN,
-                TargetType.POST_LAYER_OPERATION,
-                (MEAN_ACT_AXIS_0_REF, (1, 3, 3, 3)),
+            MeanBCTestParameters(
+                algo=BiasCorrectionAlgos.BIAS_CORRECTION,
+                target_type=TargetType.POST_LAYER_OPERATION,
+                ref_values=MEAN_ACT_AXIS_0_REF,
+                ref_shape=(1, 3, 3, 3),
                 axis=0,
             ),
-            BCTestParameters(
-                BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
-                BCStatsCollectors.MEAN,
-                TargetType.POST_LAYER_OPERATION,
-                (np.array((0.0, 0.45, 0.5)), (1, 3, 3, 3)),
+            MeanBCTestParameters(
+                algo=BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
+                target_type=TargetType.POST_LAYER_OPERATION,
+                ref_values=(np.array((0.0, 0.45, 0.5))),
+                ref_shape=(1, 3, 3, 3),
                 axis=1,
             ),
-            BCTestParameters(
-                BiasCorrectionAlgos.BIAS_CORRECTION,
-                BCStatsCollectors.MEAN,
-                TargetType.POST_LAYER_OPERATION,
-                (np.array((0.0, 0.45, 0.5)), (1, 3, 3, 3)),
+            MeanBCTestParameters(
+                algo=BiasCorrectionAlgos.BIAS_CORRECTION,
+                target_type=TargetType.POST_LAYER_OPERATION,
+                ref_values=(np.array((0.0, 0.45, 0.5))),
+                ref_shape=(1, 3, 3, 3),
                 axis=1,
             ),
-            BCTestParameters(
-                BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
-                BCStatsCollectors.MEAN,
-                TargetType.POST_LAYER_OPERATION,
-                (np.array([-0.04999995, 0.5, 0.5]), (1, 3, 3, 3)),
+            MeanBCTestParameters(
+                algo=BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
+                target_type=TargetType.POST_LAYER_OPERATION,
+                ref_values=(np.array([-0.04999995, 0.5, 0.5])),
+                ref_shape=(1, 3, 3, 3),
                 axis=2,
             ),
-            BCTestParameters(
-                BiasCorrectionAlgos.BIAS_CORRECTION,
-                BCStatsCollectors.MEAN,
-                TargetType.POST_LAYER_OPERATION,
-                (np.array([-0.04999995, 0.5, 0.5]), (1, 3, 3, 3)),
+            MeanBCTestParameters(
+                algo=BiasCorrectionAlgos.BIAS_CORRECTION,
+                target_type=TargetType.POST_LAYER_OPERATION,
+                ref_values=(np.array([-0.04999995, 0.5, 0.5])),
+                ref_shape=(1, 3, 3, 3),
                 axis=2,
             ),
-            BCTestParameters(
-                BiasCorrectionAlgos.BIAS_CORRECTION, BCStatsCollectors.RAW, TargetType.POST_LAYER_OPERATION
-            ),
+            RawBCTestParameters(algo=BiasCorrectionAlgos.BIAS_CORRECTION, target_type=TargetType.POST_LAYER_OPERATION),
             # TargeType: weights
-            BCTestParameters(
-                BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
-                BCStatsCollectors.MEAN,
-                TargetType.OPERATION_WITH_WEIGHTS,
-                (MEAN_WEIGHTS_AXIS_0_REF, (3, 3, 3, 3)),
+            MeanBCTestParameters(
+                algo=BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
+                target_type=TargetType.OPERATION_WITH_WEIGHTS,
+                ref_values=(MEAN_WEIGHTS_AXIS_0_REF),
+                ref_shape=(3, 3, 3, 3),
                 axis=0,
             ),
-            BCTestParameters(
-                BiasCorrectionAlgos.BIAS_CORRECTION,
-                BCStatsCollectors.MEAN,
-                TargetType.OPERATION_WITH_WEIGHTS,
-                (MEAN_WEIGHTS_AXIS_0_REF, (3, 3, 3, 3)),
+            MeanBCTestParameters(
+                algo=BiasCorrectionAlgos.BIAS_CORRECTION,
+                target_type=TargetType.OPERATION_WITH_WEIGHTS,
+                ref_values=(MEAN_WEIGHTS_AXIS_0_REF),
+                ref_shape=(3, 3, 3, 3),
                 axis=0,
             ),
-            BCTestParameters(
-                BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
-                BCStatsCollectors.MEAN,
-                TargetType.OPERATION_WITH_WEIGHTS,
-                (np.array([-0.36666664, -0.36666664, -0.36666664]), (3, 3, 3, 3)),
+            MeanBCTestParameters(
+                algo=BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
+                target_type=TargetType.OPERATION_WITH_WEIGHTS,
+                ref_values=(np.array([-0.36666664, -0.36666664, -0.36666664])),
+                ref_shape=(3, 3, 3, 3),
                 axis=1,
             ),
-            BCTestParameters(
-                BiasCorrectionAlgos.BIAS_CORRECTION,
-                BCStatsCollectors.MEAN,
-                TargetType.OPERATION_WITH_WEIGHTS,
-                (np.array([-0.36666664, -0.36666664, -0.36666664]), (3, 3, 3, 3)),
+            MeanBCTestParameters(
+                algo=BiasCorrectionAlgos.BIAS_CORRECTION,
+                target_type=TargetType.OPERATION_WITH_WEIGHTS,
+                ref_values=(np.array([-0.36666664, -0.36666664, -0.36666664])),
+                ref_shape=(3, 3, 3, 3),
                 axis=1,
             ),
-            BCTestParameters(
-                BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
-                BCStatsCollectors.MEAN,
-                TargetType.OPERATION_WITH_WEIGHTS,
-                (np.array([-1.1, 0.0, 0.0]), (3, 3, 3, 3)),
+            MeanBCTestParameters(
+                algo=BiasCorrectionAlgos.FAST_BIAS_CORRECTION,
+                target_type=TargetType.OPERATION_WITH_WEIGHTS,
+                ref_values=(np.array([-1.1, 0.0, 0.0])),
+                ref_shape=(3, 3, 3, 3),
                 axis=2,
             ),
-            BCTestParameters(
-                BiasCorrectionAlgos.BIAS_CORRECTION,
-                BCStatsCollectors.MEAN,
-                TargetType.OPERATION_WITH_WEIGHTS,
-                (np.array([-1.1, 0.0, 0.0]), (3, 3, 3, 3)),
+            MeanBCTestParameters(
+                algo=BiasCorrectionAlgos.BIAS_CORRECTION,
+                target_type=TargetType.OPERATION_WITH_WEIGHTS,
+                ref_values=(np.array([-1.1, 0.0, 0.0])),
+                ref_shape=(3, 3, 3, 3),
                 axis=2,
             ),
         ],
     )
     def test_statistics_aggregator_bias_correction(
-        self, dataset_samples, test_params: BCTestParameters, inplace_statistics
+        self, dataset_samples, test_params: RawBCTestParameters, inplace_statistics
     ):
         name_to_algo_backend_map = {
             BiasCorrectionAlgos.BIAS_CORRECTION: self.get_bias_correction_algo_backend_cls,
             BiasCorrectionAlgos.FAST_BIAS_CORRECTION: self.get_fast_bias_correction_algo_backend_cls,
         }
         algo_backend = name_to_algo_backend_map[test_params.algo]()
-        if test_params.collector_type == BCStatsCollectors.MEAN:
+        if isinstance(test_params, self.MeanBCTestParameters):
             tensor_collector = algo_backend.mean_statistic_collector(
                 test_params.axis, inplace_statistics, len(dataset_samples)
             )
-        elif test_params.collector_type == BCStatsCollectors.RAW:
+        elif isinstance(test_params, self.RawBCTestParameters):
             tensor_collector = algo_backend.raw_statistic_collector(len(dataset_samples))
-        else:
-            raise nncf.InvalidCollectorTypeError(f"Invalid collector type: {test_params.collector_type}")
 
         target_point = self.get_target_point(test_params.target_type)
 
@@ -617,18 +616,19 @@ class TemplateTestStatisticsAggregator:
 
         for tensor_collector in tensor_collectors:
             stat = tensor_collector.get_statistics()
-            if test_params.collector_type == BCStatsCollectors.MEAN:
-                ret_val = [stat.mean_values, stat.shape]
-            elif test_params.collector_type == BCStatsCollectors.RAW:
-                ret_val = stat.values
-                test_params.ref_values = dataset_samples
+            if isinstance(test_params, self.MeanBCTestParameters):
+                self._check_params_mean_collector(stat, test_params.ref_shape, test_params.ref_values)
+            elif isinstance(test_params, self.RawBCTestParameters):
+                self._check_params_raw_collector(stat, dataset_samples)
             else:
-                raise nncf.InvalidCollectorTypeError(f"Invalid collector type: {test_params.collector_type}")
+                assert False
 
-            for val, ref in zip(ret_val, test_params.ref_values):
-                if isinstance(ref, np.ndarray):
-                    assert ref.shape == val.shape
-                assert np.allclose(val, ref)
+    def _check_params_raw_collector(self, stat, ref_values):
+        assert np.allclose(stat.values, ref_values)
+
+    def _check_params_mean_collector(self, stat, ref_shape, ref_values):
+        assert ref_shape == stat.shape
+        assert np.allclose(stat.mean_values, ref_values)
 
     @classmethod
     def create_statistics_point(
