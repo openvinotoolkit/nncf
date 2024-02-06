@@ -234,7 +234,7 @@ def native_quantize_with_accuracy_control_impl(
             fast_bias_correction,
             model_type,
             ignored_scope,
-            advanced_quantization_parameters,
+            copied_parameters,
         )
         tuned_quantized_metric_results = evaluator.collect_metric_results(
             tuned_quantized_model, validation_dataset, model_name="tuned"
