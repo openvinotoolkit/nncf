@@ -227,7 +227,7 @@ QUANTIZATION_MODELS = [
         "reported_name": "timm/swin_base_patch4_window7_224_no_sq",
         "model_id": "swin_base_patch4_window7_224",
         "pipeline_cls": ImageClassificationTimm,
-        "ptq_params": {
+        "compression_params": {
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(
