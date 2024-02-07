@@ -231,7 +231,7 @@ QUANTIZATION_MODELS = [
             "preset": QuantizationPreset.MIXED,
             "model_type": ModelType.TRANSFORMER,
             "advanced_parameters": AdvancedQuantizationParameters(
-                smooth_quant_alpha=AdvancedSmoothQuantParameters(matmul=-1)
+                smooth_quant_alphas=AdvancedSmoothQuantParameters(matmul=-1)
             ),
         },
         "backends": [BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.ONNX],
