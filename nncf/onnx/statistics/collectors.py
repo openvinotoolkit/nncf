@@ -242,7 +242,6 @@ def get_mean_statistic_collector(
     :param inplace: Whether the mean reducer should be calculated inplace or out of place.
     :return: Mean statistic collector.
     """
-    inplace = False
     if channel_axis == 0:
         reducer = ONNXBatchMeanReducer(inplace)
     else:

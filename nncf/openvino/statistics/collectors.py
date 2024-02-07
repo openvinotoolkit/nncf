@@ -13,7 +13,6 @@ from typing import Deque, List, Optional, Tuple, Union
 
 import numpy as np
 
-from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorElementsType
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
@@ -111,9 +110,10 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     @staticmethod
     def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
         if len(x.shape) < 3:
-            return OVNNCFTensor(x)
-        red_axes = get_reduction_axes((0, axis), x.shape)
-        return OVNNCFTensor(np.mean(x.tensor, axis=red_axes))
+            return OVNNCFTensor(np.mean(x.tensor, axis=0))
+        x = np.moveaxis(x.tensor, axis, 1)
+        t = x.reshape(x.shape[0], x.shape[1], -1)
+        return OVNNCFTensor(np.mean(t, axis=(0, 2)))
 
     @staticmethod
     def transpose(x: NNCFTensor, axes: Tuple[int, ...]) -> NNCFTensor:
@@ -276,10 +276,10 @@ def get_mean_statistic_collector(
         "tensor_processor": OVNNCFCollectorTensorProcessor,
         "num_samples": num_samples,
         "window_size": window_size,
-        "aggregation_axes": (0, 1),
+        # "aggregation_axes": (0,),
     }
     aggregate_mean = MeanAggregator(**kwargs)
-    aggregate_mean._keepdims = False
+    # aggregate_mean._keepdims = True
     aggregate_shape = ShapeAggregator()
 
     collector = TensorCollector(OVMeanTensorStatistic)

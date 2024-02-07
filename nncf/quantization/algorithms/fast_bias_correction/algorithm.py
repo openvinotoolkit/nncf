@@ -21,13 +21,13 @@ from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.experimental.common.tensor_statistics.statistical_functions import mean_per_channel
 from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor import TensorDataType
 from nncf.experimental.tensor import functions as fns
@@ -322,16 +322,10 @@ class FastBiasCorrection(Algorithm):
         engine = EngineFactory.create(model)
         raw_output = engine.infer(input_blob)
         q_outputs = self._backend_entity.process_model_output(raw_output, output_name)
-        if len(q_outputs.shape) < 3:
-            return fns.mean(q_outputs, axis=0)
-
-        reduction_axes = get_reduction_axes(
-            (channel_axis,),
-            q_outputs.shape,
-        )
-        q_outputs = fns.mean(
-            q_outputs, axis=reduction_axes, dtype=TensorDataType.float64
+        q_outputs = mean_per_channel(
+            q_outputs, channel_axis, TensorDataType.float64
         )  # Use float64 to vanish issues with computing sum for float32.
+
         bias_shift = fns.stack(output_fp) - q_outputs
         return bias_shift
 

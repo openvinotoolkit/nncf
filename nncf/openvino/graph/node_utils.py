@@ -22,7 +22,6 @@ from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
 from nncf.common.graph.layer_attributes import WeightedLayerAttributes
-from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.layout import get_conv_weights_layout
@@ -277,21 +276,38 @@ def get_inplace_mean_per_ch(axis: int) -> InplaceInsertionFnType:
     def get_reduce_op(node: ov.Node, output_port_id: int, output_node_name: str) -> ov.Node:
         input_shape = get_partial_shape_safe(node, output_port_id)
         input_shape = [dim.get_length() if dim.is_static else -1 for dim in input_shape]
-        reduction_axes = get_reduction_axes(
-            (
-                0,
-                axis,
-            ),
-            input_shape,
-        )
         if len(input_shape) < 3:
             return opset.reduce_mean(
                 node.output(output_port_id),
+                reduction_axes=0,
+                keep_dims=False,
                 name=output_node_name,
             )
+
+        ch_dim = 1
+        if axis != ch_dim:
+            transpose_dims = list(range(len(input_shape)))
+            transpose_dims[axis], transpose_dims[ch_dim] = transpose_dims[ch_dim], transpose_dims[axis]
+            transposed_shape = [input_shape[dim] for dim in transpose_dims]
+
+            reshape_input_node = opset.transpose(node.output(output_port_id), transpose_dims)
+            output_port_id = 0
+        else:
+            reshape_input_node = node
+            transposed_shape = input_shape
+
+        keeped_dims = transposed_shape[:2]
+        keeped_dims = [0 if dim < 0 else dim for dim in keeped_dims]
+        squized_dims = -1 if -1 in transposed_shape[2:] else np.prod(transposed_shape[2:])
+        reshape_op = opset.reshape(
+            reshape_input_node.output(output_port_id),
+            output_shape=np.array((keeped_dims[0], keeped_dims[1], squized_dims)),
+            special_zero=True,
+        )
         return opset.reduce_mean(
-            node.output(output_port_id),
-            reduction_axes=reduction_axes,
+            reshape_op,
+            reduction_axes=np.array((0, 2)),
+            keep_dims=False,
             name=output_node_name,
         )
 

@@ -176,7 +176,8 @@ def _(
     keepdims: bool = False,
     dtype: Optional[TensorDataType] = None,
 ) -> np.ndarray:
-    return np.array(np.mean(a, axis=axis, keepdims=keepdims, dtype=DTYPE_MAP[dtype]))
+    dtype = DTYPE_MAP[dtype] if dtype else None
+    return np.array(np.mean(a, axis=axis, keepdims=keepdims, dtype=dtype))
 
 
 @register_numpy_types(numeric.round)
