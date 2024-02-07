@@ -289,7 +289,7 @@ Here is the perplexity and model size before and after weight compression for di
 
 Here is the word perplexity with data-free and data-aware mixed-precision INT4-INT8 weight compression for different language models on the [wikitext dataset](https://arxiv.org/pdf/1609.07843.pdf).
 `data` suffix refers to the data-aware mixed-precision.
-`data_awq` suffix refers to the data-aware mixed-precision with modified AWQ algorithm.
+`data_awq` suffix refers to the data-aware mixed-precision with modified [AWQ](https://arxiv.org/abs/2306.00978) algorithm.
 <table>
     <tr bgcolor='#B4B5BB'>
         <td>Model</td>
