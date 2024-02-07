@@ -206,9 +206,13 @@ class OVModelTransformer(ModelTransformer):
             OVModelTransformer._update_tensor_name([result.get_output_tensor(0)], result_name)
             extra_model_outputs.append(result)
 
-        return ov.Model(
+        model_with_outputs = ov.Model(
             results=results + extra_model_outputs, sinks=assign_ops, parameters=params, name=model.friendly_name
         )
+        rt_info_path = ["nncf"]
+        original_rt_info = model.get_rt_info(rt_info_path)
+        model_with_outputs.set_rt_info(original_rt_info, rt_info_path)
+        return model_with_outputs
 
     @staticmethod
     def _apply_fq_nodes_removing_transformation(
@@ -585,7 +589,11 @@ class OVModelTransformer(ModelTransformer):
         if not results:
             results = model.get_results()
 
-        return ov.Model(results, params)
+        extracted_model = ov.Model(results, params)
+        rt_info_path = ["nncf"]
+        original_rt_info = model.get_rt_info(rt_info_path)
+        extracted_model.set_rt_info(original_rt_info, rt_info_path)
+        return extracted_model
 
     @staticmethod
     def _apply_insert_operation(model: ov.Model, transformations: OVInplaceFnInsertionCommand) -> ov.Model:
