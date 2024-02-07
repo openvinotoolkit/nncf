@@ -210,8 +210,9 @@ class OVModelTransformer(ModelTransformer):
             results=results + extra_model_outputs, sinks=assign_ops, parameters=params, name=model.friendly_name
         )
         rt_info_path = ["nncf"]
-        original_rt_info = model.get_rt_info(rt_info_path)
-        model_with_outputs.set_rt_info(original_rt_info, rt_info_path)
+        if model.has_rt_info(rt_info_path):
+            original_rt_info = model.get_rt_info(rt_info_path)
+            model_with_outputs.set_rt_info(original_rt_info, rt_info_path)
         return model_with_outputs
 
     @staticmethod
@@ -591,8 +592,9 @@ class OVModelTransformer(ModelTransformer):
 
         extracted_model = ov.Model(results, params)
         rt_info_path = ["nncf"]
-        original_rt_info = model.get_rt_info(rt_info_path)
-        extracted_model.set_rt_info(original_rt_info, rt_info_path)
+        if model.has_rt_info(rt_info_path):
+            original_rt_info = model.get_rt_info(rt_info_path)
+            extracted_model.set_rt_info(original_rt_info, rt_info_path)
         return extracted_model
 
     @staticmethod
