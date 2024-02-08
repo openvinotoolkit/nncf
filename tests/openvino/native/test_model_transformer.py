@@ -577,11 +577,24 @@ MODELS_WITH_PARAMETERS = [
         "refs": [2.0],
     },
     {
-        "model": FPModel(const_dtype="FP16").ov_model,
+        "model": FPModel(const_dtype=ov.Type.f16).ov_model,
         "layers": ["MatMul"],
         "values": [np.full((3,), 2)],
         "refs": [2.0],
     },
+    {
+        "model": FPModel(const_dtype=ov.Type.f16, input_dtype=ov.Type.f16).ov_model,
+        "layers": ["MatMul"],
+        "values": [np.full((3,), 2)],
+        "refs": [2.0],
+    },
+    # BF16 is not supported until 2023.3
+    # {
+    #     "model": FPModel(const_dtype=ov.Type.bf16, input_dtype=ov.Type.bf16).ov_model,
+    #     "layers": ["MatMul"],
+    #     "values": [np.full((3,), 2)],
+    #     "refs": [2.0],
+    # },
 ]
 
 
