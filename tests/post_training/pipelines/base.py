@@ -198,7 +198,8 @@ class BaseTestPipeline(ABC):
         self.output_model_dir: Path = self.output_dir / self.reported_name / self.backend.value
         self.output_model_dir.mkdir(parents=True, exist_ok=True)
         self.model_name = f"{self.reported_name}_{self.backend.value}"
-        self.fp32_model_dir: Path = self.output_dir / "fp32_models" / self.model_id.replace("/", "__")
+        self.fp32_model_name = self.model_id.replace("/", "__")
+        self.fp32_model_dir: Path = self.output_dir / "fp32_models" / self.fp32_model_name
         self.fp32_model_dir.mkdir(parents=True, exist_ok=True)
 
         self.model = None
