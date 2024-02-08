@@ -85,7 +85,7 @@ def fixture_wc_reference_data():
         data = yaml.safe_load(f)
         fp32_test_cases = defaultdict(dict)
         for test_case_name in data:
-            data[test_case_name]['atol'] = 1e-5
+            data[test_case_name]["atol"] = 1e-5
             model_name = test_case_name.split("_backend_")[0]
             fp32_test_cases[f"{model_name}_backend_FP32"]["metric_value"] = 1
             fp32_test_cases[f"{model_name}_backend_FP32"]["atol"] = 1e-10
