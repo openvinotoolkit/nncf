@@ -43,7 +43,7 @@ class ONNXPreparedModel(PreparedModel):
             model_path = f"{tmp_dir}/model.onnx"
             onnx.save(model, model_path)
             ov_model = ov.convert_model(model_path)
-        self._stateful = model_has_state(model)
+        self._stateful = model_has_state(ov_model)
         self._compiled_model = ov.compile_model(ov_model)
         self._engine = None
 
@@ -129,13 +129,3 @@ class ONNXAccuracyControlAlgoBackend(AccuracyControlAlgoBackend):
                 for t in attr.tensors:
                     model_size += onnx.numpy_helper.to_array(t).nbytes
         return model_size
-
-    # Preparation of model
-
-    @staticmethod
-    def prepare_for_inference(model: onnx.ModelProto) -> ov.CompiledModel:
-        with tempfile.TemporaryDirectory(dir=tempfile.gettempdir()) as tmp_dir:
-            model_path = f"{tmp_dir}/model.onnx"
-            onnx.save(model, model_path)
-            ov_model = openvino.convert_model(model_path)
-            return ov.compile_model(ov_model)
