@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import inspect
 import os
 from typing import Callable, List
 
@@ -21,6 +22,7 @@ from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.data.dataset import Dataset
 from nncf.errors import ValidationError
+from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
 from nncf.experimental.tensor import Tensor
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.quantization import compress_weights
@@ -661,3 +663,37 @@ def test_data_type_for_num_weights(mocker):
     stub = mocker.stub()
     params = WeightCompressionParameters(stub, stub, stub, np.int32(1), stub)
     assert isinstance(params.num_weights, np.uint64)
+
+
+DATASET_SIZE = 129
+
+
+@pytest.mark.parametrize(
+    ("subset_size", "ref_size"),
+    (
+        (1, 1),
+        (5, 5),
+        (130, DATASET_SIZE),
+    ),
+)
+def test_valid_subset_size(mocker, subset_size, ref_size):
+    model = IdentityMatmul().ov_model
+    dataset = Dataset([ACTIVATION] * DATASET_SIZE)
+    stats_spy = mocker.spy(AggregatorBase, "register_reduced_input")
+
+    compress_weights(model, mode=CompressWeightsMode.INT4_ASYM, ratio=0.5, dataset=dataset, subset_size=subset_size)
+
+    assert stats_spy.call_count == ref_size
+
+
+def test_default_subset_value():
+    default_value = inspect.signature(compress_weights).parameters["subset_size"].default
+    assert default_value == 128
+
+
+@pytest.mark.parametrize("subset_size", (-1, 0, None))
+def test_invalid_subset_size(subset_size):
+    model = IdentityMatmul().ov_model
+    dataset = Dataset([ACTIVATION])
+    with pytest.raises(ValueError):
+        compress_weights(model, mode=CompressWeightsMode.INT4_ASYM, ratio=0.5, dataset=dataset, subset_size=subset_size)
