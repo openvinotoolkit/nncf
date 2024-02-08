@@ -88,13 +88,14 @@ def compress_weights_impl(
     all_layers: bool,
     sensitivity_metric: SensitivityMetric,
     awq: bool,
+    subset_size: int
 ) -> torch.nn.Module:
     """
     Implementation of the `compress_weights()` method for the PyTorch backend.
     """
 
     compression_algorithm = WeightCompression(
-        mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric, awq
+        mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric, awq, subset_size
     )
     graph = NNCFGraphFactory.create(model)
     return compression_algorithm.apply(model, graph, dataset=dataset)

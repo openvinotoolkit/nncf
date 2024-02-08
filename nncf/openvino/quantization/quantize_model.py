@@ -403,6 +403,7 @@ def compress_weights_impl(
     all_layers: bool,
     sensitivity_metric: SensitivityMetric,
     awq: bool,
+    subset_size: int
 ) -> ov.Model:
     """
     Implementation of the `compress_weights()` method for the OpenVINO backend.
@@ -410,7 +411,7 @@ def compress_weights_impl(
 
     model = remove_friendly_name_duplicates(model)
     compression_algorithm = WeightCompression(
-        mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric, awq
+        mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric, awq, subset_size
     )
     graph = NNCFGraphFactory.create(model)
     return compression_algorithm.apply(model, graph, dataset=dataset)
