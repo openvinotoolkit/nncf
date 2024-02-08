@@ -18,6 +18,7 @@ from typing import Any, Callable, List, Optional, TypeVar, Union
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.logging import nncf_logger
+from nncf.common.logging.track_progress import track
 from nncf.common.quantization.quantizer_removal import find_quantizer_nodes_to_cut
 from nncf.common.quantization.quantizer_removal import revert_operations_to_floating_point_precision
 from nncf.common.utils.backend import BackendType
@@ -155,7 +156,6 @@ class Ranker:
             self._ranking_fn,
         )
 
-        nncf_logger.info("Calculating ranking score for groups of quantizers")
         with timer():
             # Calculate ranking score for groups of quantizers.
             if self._num_workers > 1:
@@ -190,7 +190,7 @@ class Ranker:
         reference_values_for_each_item: Union[List[float], List[List[TTensor]]],
     ):
         ranking_scores = []  # ranking_scores[i] is the ranking score for groups_to_rank[i]
-        for current_group in groups_to_rank:
+        for current_group in track(groups_to_rank, description="Calculating ranking scores"):
             modified_model = revert_operations_to_floating_point_precision(
                 current_group.operations,
                 current_group.quantizers,
@@ -219,6 +219,7 @@ class Ranker:
         ranking_scores = []  # ranking_scores[i] is the ranking score for groups_to_rank[i]
         prepared_model_queue = []
         executor = ThreadPoolExecutor(max_workers=self._num_workers)
+        nncf_logger.info("Calculating ranking scores")
         for idx, current_group in enumerate(groups_to_rank):
             modified_model = revert_operations_to_floating_point_precision(
                 current_group.operations,
