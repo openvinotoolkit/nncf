@@ -97,7 +97,7 @@ def model_has_state(model: ov.Model) -> bool:
 
 def copy_rt_info(model_source: ov.Model, model_dest: ov.Model, path: List[str]) -> None:
     """
-    Checks and copy the rt_info from the source to destination model.
+    Checks and copies the rt_info from the source to destination model.
 
     :param model_source: ov.Model instance to copy rt_info from.
     :param model_dest: ov.Model instance to copy rt_info to.
