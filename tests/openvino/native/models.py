@@ -937,6 +937,26 @@ class AWQMatmulModel(OVReferenceModel):
         return model
 
 
+class DuplicatedNamesModel(OVReferenceModel):
+    """
+    Model with duplicated node names (friendly_name field).
+    """
+
+    def _create_ov_model(self):
+        main_shape = [1, 2]
+        input_1 = opset.parameter(main_shape, name="Parameter")
+
+        add_1_data = self._rng.random(main_shape).astype(np.float32)
+        add_1 = opset.add(input_1, add_1_data, name="Duplicate")
+
+        matmul_1_data = self._rng.random(main_shape).astype(np.float32)
+        matmul_1 = opset.matmul(add_1, matmul_1_data, transpose_a=False, transpose_b=True, name="Duplicate")
+
+        result = opset.result(matmul_1, name="Result")
+        model = ov.Model([result], [input_1])
+        return model
+
+
 class StatefulModel(OVReferenceModel):
     """
     Stateful model for testing.

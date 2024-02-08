@@ -28,6 +28,7 @@ from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVIfMetatype
+from nncf.openvino.graph.model_utils import remove_friendly_name_duplicates
 from nncf.openvino.graph.node_utils import get_number_if_op
 from nncf.openvino.graph.transformations.commands import OVExtractIfBodyCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
@@ -173,8 +174,12 @@ def apply_algorithm_if_bodies(
             else_model_input_names,
             subset_size,
         )
+
         then_model = _extract_if_body(model_transformer_fp32, if_node, True)
+        then_model = remove_friendly_name_duplicates(then_model)
         else_model = _extract_if_body(model_transformer_fp32, if_node, False)
+        else_model = remove_friendly_name_duplicates(else_model)
+
         then_quantized_model, current_model_num = apply_algorithm_if_bodies(
             algorithm,
             then_model,

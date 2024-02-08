@@ -14,7 +14,6 @@ from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Unio
 import nncf
 from nncf.api.compression import TModel
 from nncf.common.deprecation import warning_deprecated
-from nncf.common.factory import NNCFGraphFactory
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
@@ -32,7 +31,6 @@ from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResult
 from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
 from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_quantization_param_grids
 from nncf.quantization.algorithms.post_training.pipeline import create_ptq_pipeline
-from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.scopes import IgnoredScope
 
 TTensor = TypeVar("TTensor")
@@ -301,9 +299,12 @@ def compress_weights(
         mode = CompressWeightsMode.INT8_ASYM
 
     backend = get_backend(model)
+    compression_weights_impl = None
+
     if backend == BackendType.TORCH:
         from nncf.torch.model_creation import is_wrapped_model
         from nncf.torch.model_creation import wrap_model
+        from nncf.torch.quantization.quantize_model import compress_weights_impl as pt_compression_weights_impl
 
         if mode not in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
             raise AttributeError(
@@ -328,6 +329,12 @@ def compress_weights(
             example_input = next(iter(dataset.get_inference_data()))
             model = wrap_model(model, example_input=example_input, trace_parameters=True)
             dataset = None
+        compression_weights_impl = pt_compression_weights_impl
+
+    if backend == BackendType.OPENVINO:
+        from nncf.openvino.quantization.quantize_model import compress_weights_impl as ov_compress_weights_impl
+
+        compression_weights_impl = ov_compress_weights_impl
 
     if mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
         if ratio is None:
@@ -372,11 +379,12 @@ def compress_weights(
     if subset_size is None or subset_size <= 0:
         raise ValueError(f"The subset_size value should be positive, but subset_size={subset_size} is given.")
 
-    compression_algorithm = WeightCompression(
-        mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric, awq, subset_size
+    if compression_weights_impl is None:
+        raise nncf.UnsupportedBackendError(f"Unsupported type of backend: {backend}")
+
+    return compression_weights_impl(
+        model, dataset, mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric, awq, subset_size
     )
-    graph = NNCFGraphFactory.create(model)
-    return compression_algorithm.apply(model, graph, dataset=dataset)
 
 
 def quantize_with_tune_hyperparams(
