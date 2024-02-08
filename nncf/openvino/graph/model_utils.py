@@ -70,7 +70,7 @@ def remove_friendly_name_duplicates(model: ov.Model) -> ov.Model:
     :return: Updated ov.Model without duplicated names.
     """
     rt_info_path = ["nncf", "friendly_names_were_updated"]
-    friendly_names_flag = str("True")
+    friendly_names_flag = "True"
     if model.has_rt_info(rt_info_path) and model.get_rt_info(rt_info_path).value == friendly_names_flag:
         return model
 
@@ -93,3 +93,16 @@ def model_has_state(model: ov.Model) -> bool:
     :return: True if model has state else False
     """
     return len(model.get_sinks()) > 0
+
+
+def copy_rt_info(model_source: ov.Model, model_dest: ov.Model, path: List[str]) -> None:
+    """
+    Checks and copy the rt_info from the source to destination model.
+
+    :param model_source: ov.Model instance to copy rt_info from.
+    :param model_dest: ov.Model instance to copy rt_info to.
+    :param path: Path to rt_info.
+    """
+    if model_source.has_rt_info(path):
+        source_rt_info = model_source.get_rt_info(path)
+        model_dest.set_rt_info(source_rt_info, path)
