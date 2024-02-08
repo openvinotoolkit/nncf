@@ -1,5 +1,16 @@
 # Release Notes
 
+## New in Release 2.8.1
+
+Post-training Quantization:
+
+- Bugfixes:
+  - (Common) Fixed issue with `nncf.compress_weights()` to avoid overflows on 32-bit Windows systems.
+  - (Common) Fixed performance issue with `nncf.compress_weights()` on LLama models.
+  - (Common) Fixed `nncf.quantize_with_accuracy_control` pipeline with `tune_hyperparams=True` enabled option.
+  - (OpenVINO) Fixed issue for stateful LLM models and added state restoring after the inference for it.
+  - (PyTorch) Fixed issue with `nncf.compress_weights()` for LLM models with the executing `is_floating_point` with tracing.
+
 ## New in Release 2.8.0
 
 Post-training Quantization:
