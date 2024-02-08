@@ -88,7 +88,7 @@ def compress_weights_impl(
     all_layers: bool,
     sensitivity_metric: SensitivityMetric,
     awq: bool,
-    subset_size: int
+    subset_size: int,
 ) -> torch.nn.Module:
     """
     Implementation of the `compress_weights()` method for the PyTorch backend.
