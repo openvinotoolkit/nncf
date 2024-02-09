@@ -423,7 +423,8 @@ def quantize_with_tune_hyperparams(
         "advanced_parameters": advanced_quantization_parameters,
     }
 
-    param_grids = get_quantization_param_grids(create_ptq_pipeline(**init_quantization_params))
+    backend = get_backend(model)
+    param_grids = get_quantization_param_grids(create_ptq_pipeline(**init_quantization_params), backend)
 
     hyperparameter_tuner = HyperparameterTuner(
         create_ptq_pipeline,

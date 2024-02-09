@@ -1,6 +1,6 @@
 PyYAML
 tensorflow_addons~=0.20.0
-pytest
+pytest==7.4.4
 pytest-cov
 pytest-mock
 pytest-dependency
