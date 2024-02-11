@@ -80,8 +80,8 @@ class EvalRunParamsStruct:
     batch: Optional[int]
     diff_fp32_min: float
     diff_fp32_max: float
-    diff_target_pt_min: float
-    diff_target_pt_max: float
+    diff_target_tf_min: float
+    diff_target_tf_max: float
     diff_target_ov_min: float
     diff_target_ov_max: float
     skip_ov: Optional[str]
@@ -160,8 +160,8 @@ def read_reference_file(ref_path: Path) -> List[EvalRunParamsStruct]:
                         diff_fp32_max=sample_dict.get("diff_fp32_max", DIFF_FP32_MAX_GLOBAL),
                         diff_target_ov_min=sample_dict.get("diff_target_ov_min", DIFF_TARGET_OV_MIN),
                         diff_target_ov_max=sample_dict.get("diff_target_ov_max", DIFF_TARGET_OV_MAX),
-                        diff_target_pt_min=sample_dict.get("diff_target_pt_min", DIFF_TARGET_TF_MIN),
-                        diff_target_pt_max=sample_dict.get("diff_target_pt_max", DIFF_TARGET_TF_MAX),
+                        diff_target_tf_min=sample_dict.get("diff_target_tf_min", DIFF_TARGET_TF_MIN),
+                        diff_target_tf_max=sample_dict.get("diff_target_tf_max", DIFF_TARGET_TF_MAX),
                         skip_ov=sample_dict.get("skip_ov"),
                         xfail_ov=sample_dict.get("xfail_ov"),
                     )
@@ -429,8 +429,8 @@ class TestSotaCheckpoints:
 
         threshold_errors = self.threshold_check(
             diff_target=diff_target,
-            diff_target_min=eval_test_struct.diff_target_pt_min,
-            diff_target_max=eval_test_struct.diff_target_pt_max,
+            diff_target_min=eval_test_struct.diff_target_tf_min,
+            diff_target_max=eval_test_struct.diff_target_tf_max,
             diff_fp32=diff_fp32,
             diff_fp32_min=eval_test_struct.diff_fp32_min,
             diff_fp32_max=eval_test_struct.diff_fp32_max,
