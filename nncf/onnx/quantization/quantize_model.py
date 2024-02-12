@@ -29,6 +29,7 @@ from nncf.quantization.algorithms.accuracy_control.algorithm import Quantization
 from nncf.quantization.algorithms.accuracy_control.algorithm import calculate_accuracy_drop
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
 from nncf.telemetry import tracked_function
@@ -145,7 +146,34 @@ def quantize_with_accuracy_control_impl(
     nncf_logger.info(f"Accuracy drop: {accuracy_drop} ({drop_type})")
 
     if advanced_accuracy_restorer_parameters.tune_hyperparams and not should_terminate:
-        pass
+        tuned_quantized_model = quantize_with_tune_hyperparams(
+            model,
+            calibration_dataset,
+            validation_dataset,
+            validation_fn,
+            initial_metric_results,
+            quantized_metric_results,
+            subset_size,
+            preset,
+            target_device,
+            subset_size,
+            fast_bias_correction,
+            model_type,
+            ignored_scope,
+            advanced_quantization_parameters,
+        )
+        tuned_quantized_metric_results = evaluator.collect_metric_results(
+            tuned_quantized_model, validation_dataset, model_name="tuned"
+        )
+        should_terminate, tuned_accuracy_drop = calculate_accuracy_drop(
+            initial_metric_results.metric_value, tuned_quantized_metric_results.metric_value, max_drop, drop_type
+        )
+
+        nncf_logger.info(f"Accuracy drop (tuned): {tuned_accuracy_drop} ({drop_type})")
+
+        if should_terminate or tuned_accuracy_drop < accuracy_drop:
+            quantized_model = tuned_quantized_model
+            quantized_metric_results = tuned_quantized_metric_results
 
     if not should_terminate:
         ranking_subset_size = subset_size
