@@ -86,11 +86,11 @@ def evaluate_model(
     hf_model.request = None
     similarity = all_metrics["similarity"][0]
     group_size = optimized_model.get_rt_info()["nncf"]["weight_compression"]["group_size"].value
-    ratio = optimized_model.get_rt_info()["nncf"]["weight_compression"]["ratio"].value
+    ratio = float(optimized_model.get_rt_info()["nncf"]["weight_compression"]["ratio"].value)
     awq = optimized_model.get_rt_info()["nncf"]["weight_compression"]["awq"].value
     nncf_logger.info(
-        "The similarity of model compressed with ",
-        f"group_size={group_size}, ratio={ratio}, awq={awq} is {similarity:.3f}",
+        "The similarity of model compressed with "
+        f"group_size={group_size}, ratio={ratio:.1f}, awq={awq} is {similarity:.3f}"
     )
     return similarity
 
@@ -189,9 +189,9 @@ def find_parameters(
     similarity = evaluate_fn(optimized_model=optimized_model)
     if similarity < 1 - MAX_DROP:
         nncf_logger.info(
-            "The model was compressed with the minimum ratio and group_size, ",
-            "but it could not achieve the required accuracy drop. ",
-            "We recommend choosing a different mode for weight compression.",
+            "The model was compressed with the minimum ratio and group_size, "
+            "but it could not achieve the required accuracy drop. "
+            "We recommend choosing a different mode for weight compression."
         )
         print_results(optimized_model, ratio, group_size, use_awq, similarity)
         return use_awq, ratio, group_size
