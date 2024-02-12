@@ -142,7 +142,7 @@ class AccuracyControlAlgoBackend(ABC):
 
         :param node: The node to check.
         :param nncf_graph: The NNCF graph.
-        :return: True` if `node` corresponds to the operation with weights, `False` otherwise.
+        :return: `True` if `node` corresponds to the operation with weights, `False` otherwise.
         """
 
     @staticmethod

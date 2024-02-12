@@ -92,17 +92,17 @@ def test_get_subset_indices(errors: List[float], subset_size: int, expected_indi
         (
             "simple_graph",
             [
-                GroupToRank(["quantizer_139", "quantizer_162", "quantizer_119"], ["add_117", "conv2d_161"]),
-                GroupToRank(["quantizer_153", "quantizer_147"], ["conv2d_146"]),
-                GroupToRank(["quantizer_134", "quantizer_128"], ["conv2d_127"]),
+                GroupToRank(["fake_quantize_139", "fake_quantize_162", "fake_quantize_119"], ["add_117", "conv2d_161"]),
+                GroupToRank(["fake_quantize_153", "fake_quantize_147"], ["conv2d_146"]),
+                GroupToRank(["fake_quantize_134", "fake_quantize_128"], ["conv2d_127"]),
             ],
         ),
         (
             "graph_with_shapeof",
             [
-                GroupToRank(["quantizer_105"], ["interpolate_115"]),
-                GroupToRank(["quantizer_710", "quantizer_93"], ["multiply_99"]),
-                GroupToRank(["quantizer_82"], ["power_87"]),
+                GroupToRank(["fake_quantize_105"], ["interpolate_115"]),
+                GroupToRank(["fake_quantize_710", "fake_quantize_93"], ["multiply_99"]),
+                GroupToRank(["fake_quantize_82"], ["power_87"]),
             ],
         ),
     ],
