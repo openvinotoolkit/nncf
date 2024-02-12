@@ -42,7 +42,7 @@ def quantize(
     calibration_dataset: Dataset,
     mode: Optional[QuantizationMode] = None,
     preset: Optional[QuantizationPreset] = None,
-    target_device: TargetDevice = TargetDevice.ANY,
+    target_device: Optional[TargetDevice] = None,
     subset_size: int = 300,
     fast_bias_correction: bool = True,
     model_type: Optional[ModelType] = None,

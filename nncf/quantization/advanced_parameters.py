@@ -212,8 +212,8 @@ class AdvancedQuantizationParameters:
     """
 
     # General parameters
-    overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER
-    quantize_outputs: bool = False
+    overflow_fix: OverflowFix = None
+    quantize_outputs: bool = None
     inplace_statistics: bool = True
     disable_channel_alignment: bool = True
     disable_bias_correction: bool = False
@@ -235,7 +235,7 @@ class AdvancedQuantizationParameters:
     smooth_quant_alpha: float = None
 
     # Backend specific parameters
-    backend_params: Dict[str, Any] = field(default_factory=dict)
+    backend_params: Dict[str, Any] = None
 
 
 @api()
