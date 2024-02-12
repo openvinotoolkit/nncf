@@ -9,15 +9,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import tempfile
 from typing import List, Optional
 
 import numpy as np
 import onnx
-import openvino as ov
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.onnx.engine import ONNXEngine
 from nncf.onnx.graph.metatypes import onnx_metatypes
 from nncf.onnx.graph.metatypes.groups import INPUTS_QUANTIZABLE_OPERATIONS
 from nncf.onnx.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
@@ -27,8 +26,6 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpMetatype
 from nncf.onnx.graph.node_utils import get_bias_value
 from nncf.onnx.graph.node_utils import is_node_with_bias
 from nncf.onnx.graph.onnx_helper import get_tensor_value
-from nncf.openvino.engine import OVCompiledModelEngine
-from nncf.openvino.graph.model_utils import model_has_state
 from nncf.quantization.algorithms.accuracy_control.backend import AccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.backend import PreparedModel
 
@@ -39,22 +36,17 @@ class ONNXPreparedModel(PreparedModel):
     """
 
     def __init__(self, model: onnx.ModelProto):
-        with tempfile.TemporaryDirectory(dir=tempfile.gettempdir()) as tmp_dir:
-            model_path = f"{tmp_dir}/model.onnx"
-            onnx.save(model, model_path)
-            ov_model = ov.convert_model(model_path)
-        self._stateful = model_has_state(ov_model)
-        self._compiled_model = ov.compile_model(ov_model)
+        self._model = model
         self._engine = None
 
     @property
-    def model_for_inference(self) -> ov.CompiledModel:
-        return self._compiled_model
+    def model_for_inference(self) -> onnx.ModelProto:
+        return self._model
 
     @property
-    def engine(self) -> OVCompiledModelEngine:
+    def engine(self) -> ONNXEngine:
         if self._engine is None:
-            self._engine = OVCompiledModelEngine(self._compiled_model, self._stateful)
+            self._engine = ONNXEngine(self._model)
         return self._engine
 
 
