@@ -28,6 +28,7 @@ import nncf
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import StatsFromOutput
+from tests.shared.paths import TEST_ROOT
 
 
 @dataclass
@@ -77,7 +78,7 @@ class LMWeightCompression(BaseTestPipeline):
             )
             self._dump_model_fp32()
         else:
-            # no export, load from IR
+            # no export, load from IR. Applicable for sequential run of test cases in local environment.
             self.model_hf = OVModelForCausalLM.from_pretrained(
                 self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=False
             )
@@ -179,29 +180,28 @@ class LMWeightCompression(BaseTestPipeline):
             cpu_threads_num = os.environ.get("CPU_THREADS_NUM")
             core.set_property("CPU", properties={"CPU_THREADS_NUM": str(cpu_threads_num)})
 
-        gold_folder = self.fp32_model_dir
-        gold_csv = gold_folder / "gold_all.csv"
-        if gold_csv.exists():
-            print("Loading existing ground-truth validation data:", gold_csv.resolve())
-            evaluator = Evaluator(
-                tokenizer=self.preprocessor, gt_data=gold_csv, test_data=str(gold_csv), metrics=("similarity",)
-            )
-        else:
-            print("Collection ground-truth validation data for model in the directory:", gold_folder.resolve())
+        gt_data_path = TEST_ROOT / "post_training" / "data" / "wwb_ref_answers" / self.fp32_model_name / "ref_qa.csv"
+        gt_data_path.parent.mkdir(parents=True, exist_ok=True)
+        if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
+            print("Collection ground-truth reference data")
             model_gold = OVModelForCausalLM.from_pretrained(
-                gold_folder, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=False
+                self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=False
             )
             evaluator = Evaluator(base_model=model_gold, tokenizer=self.preprocessor, metrics=("similarity",))
-            evaluator.dump_gt(str(gold_csv))
-            print("Saving ground-truth validation data:", gold_csv.resolve())
+            evaluator.dump_gt(str(gt_data_path))
+            print("Saving ground-truth validation data:", gt_data_path.resolve())
+        else:
+            print("Loading existing ground-truth validation data:", gt_data_path.resolve())
+            evaluator = Evaluator(
+                tokenizer=self.preprocessor, gt_data=gt_data_path, test_data=str(gt_data_path), metrics=("similarity",)
+            )
 
-        eval_model_dir = self.fp32_model_dir if self.backend == BackendType.FP32 else self.output_model_dir
-
-        compressed_model_hf = OVModelForCausalLM.from_pretrained(
-            eval_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=False
-        )
-
-        print("Evaluation of the model from the directory:", eval_model_dir.resolve())
+        compressed_model_hf = self.model_hf
+        if self.backend != BackendType.FP32:
+            compressed_model_hf = OVModelForCausalLM.from_pretrained(
+                self.output_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=False
+            )
+        print("Evaluation of the target model")
         _, all_metrics = evaluator.score(compressed_model_hf)
         similarity = all_metrics["similarity"][0]
         self.run_info.metric_name = "Similarity"

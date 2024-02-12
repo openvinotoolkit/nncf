@@ -308,11 +308,20 @@ def generate_tests_scope(models_list: List[Dict]) -> Dict[str, dict]:
     """
     Generate tests by names "{reported_name}_backend_{backend}"
     """
+    reported_name_to_model_id_mapping = {mc["reported_name"]: mc["model_id"] for mc in models_list}
     tests_scope = {}
+    fp32_models = set()
     for test_model_param in models_list:
         for backend in test_model_param["backends"] + [BackendType.FP32]:
             model_param = copy.deepcopy(test_model_param)
             reported_name = model_param["reported_name"]
+            model_id = reported_name_to_model_id_mapping[reported_name]
+            if backend == BackendType.FP32:
+                # Some test cases may share the same model_id, therefore fp32 test case is added only once for model_id.
+                if model_id not in fp32_models:
+                    fp32_models.add(model_id)
+                else:
+                    continue
             test_case_name = f"{reported_name}_backend_{backend.value}"
             model_param["backend"] = backend
             model_param.pop("backends")
