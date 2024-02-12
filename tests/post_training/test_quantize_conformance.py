@@ -23,6 +23,7 @@ import yaml
 import nncf
 from tests.post_training.model_scope import PTQ_TEST_CASES
 from tests.post_training.model_scope import WC_TEST_CASES
+from tests.post_training.model_scope import WEIGHT_COMPRESSION_MODELS
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import RunInfo
@@ -81,14 +82,22 @@ def fixture_ptq_reference_data():
 @pytest.fixture(scope="session", name="wc_reference_data")
 def fixture_wc_reference_data():
     path_reference = Path(__file__).parent / "data" / "wc_reference_data.yaml"
+    reported_name_to_model_id_mapping = {mc["reported_name"]: mc["model_id"] for mc in WEIGHT_COMPRESSION_MODELS}
     with path_reference.open() as f:
         data = yaml.safe_load(f)
         fp32_test_cases = defaultdict(dict)
+        fp32_models = set()
         for test_case_name in data:
-            data[test_case_name]["atol"] = 1e-5
-            model_name = test_case_name.split("_backend_")[0]
-            fp32_test_cases[f"{model_name}_backend_FP32"]["metric_value"] = 1
-            fp32_test_cases[f"{model_name}_backend_FP32"]["atol"] = 1e-10
+            if "atol" not in data[test_case_name]:
+                data[test_case_name]["atol"] = 1e-5
+            reported_name = test_case_name.split("_backend_")[0]
+            model_id = reported_name_to_model_id_mapping[reported_name]
+            if model_id not in fp32_models:
+                fp32_models.add(model_id)
+                fp32_case_name = f"{model_id}_backend_FP32"
+                fp32_test_cases[fp32_case_name]["metric_value"] = 1
+                if "atol" not in fp32_test_cases[fp32_case_name]:
+                    fp32_test_cases[fp32_case_name]["atol"] = 1e-10
         data.update(fp32_test_cases)
     return data
 
