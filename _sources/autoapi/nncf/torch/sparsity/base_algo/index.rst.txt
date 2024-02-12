@@ -26,6 +26,12 @@ Classes
 
    Base class for sparsity algorithm controllers in PT.
 
+   .. py:property:: current_sparsity_level
+      :type: float
+
+      Returns the current sparsity level of the underlying model.
+
+
    .. py:property:: loss
       :type: nncf.api.compression.CompressionLoss
 
@@ -33,7 +39,7 @@ Classes
 
 
    .. py:property:: scheduler
-      :type: nncf.api.compression.CompressionScheduler
+      :type: nncf.common.sparsity.schedulers.SparsityScheduler
 
       The compression scheduler for this particular algorithm combination.
 

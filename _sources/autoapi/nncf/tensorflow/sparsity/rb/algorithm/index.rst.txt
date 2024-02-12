@@ -33,6 +33,12 @@ Classes
       The compression loss for this particular algorithm combination.
 
 
+   .. py:property:: current_sparsity_level
+      :type: float
+
+      Returns the current sparsity level of the underlying model.
+
+
    .. py:property:: compression_rate
       :type: float
 

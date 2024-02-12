@@ -327,6 +327,17 @@
 </dd>
 </dl>
 <dl class="py property">
+<dt class="sig sig-object py" id="nncf.torch.sparsity.base_algo.BaseSparsityAlgoController.current_sparsity_level">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">current_sparsity_level</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/torch/sparsity/base_algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.sparsity.base_algo.BaseSparsityAlgoController.current_sparsity_level" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns the current sparsity level of the underlying model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="nncf.torch.sparsity.base_algo.BaseSparsityAlgoController.loss">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">loss</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="../../../api/compression/index.html#nncf.api.compression.CompressionLoss" title="nncf.api.compression.CompressionLoss"><span class="pre">nncf.api.compression.CompressionLoss</span></a></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/torch/sparsity/base_algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.sparsity.base_algo.BaseSparsityAlgoController.loss" title="Permalink to this definition">#</a></dt>
 <dd><p>The compression loss for this particular algorithm combination.</p>
@@ -339,11 +350,11 @@
 
 <dl class="py property">
 <dt class="sig sig-object py" id="nncf.torch.sparsity.base_algo.BaseSparsityAlgoController.scheduler">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">scheduler</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="../../../api/compression/index.html#nncf.api.compression.CompressionScheduler" title="nncf.api.compression.CompressionScheduler"><span class="pre">nncf.api.compression.CompressionScheduler</span></a></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/torch/sparsity/base_algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.sparsity.base_algo.BaseSparsityAlgoController.scheduler" title="Permalink to this definition">#</a></dt>
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">scheduler</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">nncf.common.sparsity.schedulers.SparsityScheduler</span></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/torch/sparsity/base_algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.sparsity.base_algo.BaseSparsityAlgoController.scheduler" title="Permalink to this definition">#</a></dt>
 <dd><p>The compression scheduler for this particular algorithm combination.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference internal" href="../../../api/compression/index.html#nncf.api.compression.CompressionScheduler" title="nncf.api.compression.CompressionScheduler">nncf.api.compression.CompressionScheduler</a></p>
+<dd class="field-odd"><p>nncf.common.sparsity.schedulers.SparsityScheduler</p>
 </dd>
 </dl>
 </dd></dl>
@@ -455,6 +466,7 @@ in the target format.</p>
 <li><a class="reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.sparsity.base_algo</span></code></a><ul>
 <li><a class="reference internal" href="#classes">Classes</a><ul>
 <li><a class="reference internal" href="#nncf.torch.sparsity.base_algo.BaseSparsityAlgoController"><code class="docutils literal notranslate"><span class="pre">BaseSparsityAlgoController</span></code></a><ul>
+<li><a class="reference internal" href="#nncf.torch.sparsity.base_algo.BaseSparsityAlgoController.current_sparsity_level"><code class="docutils literal notranslate"><span class="pre">BaseSparsityAlgoController.current_sparsity_level</span></code></a></li>
 <li><a class="reference internal" href="#nncf.torch.sparsity.base_algo.BaseSparsityAlgoController.loss"><code class="docutils literal notranslate"><span class="pre">BaseSparsityAlgoController.loss</span></code></a></li>
 <li><a class="reference internal" href="#nncf.torch.sparsity.base_algo.BaseSparsityAlgoController.scheduler"><code class="docutils literal notranslate"><span class="pre">BaseSparsityAlgoController.scheduler</span></code></a></li>
 <li><a class="reference internal" href="#nncf.torch.sparsity.base_algo.BaseSparsityAlgoController.disable_scheduler"><code class="docutils literal notranslate"><span class="pre">BaseSparsityAlgoController.disable_scheduler()</span></code></a></li>

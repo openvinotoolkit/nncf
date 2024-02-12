@@ -327,6 +327,17 @@
 </dd>
 </dl>
 <dl class="py property">
+<dt class="sig sig-object py" id="nncf.torch.sparsity.rb.algo.RBSparsityController.current_sparsity_level">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">current_sparsity_level</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/torch/sparsity/rb/algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.sparsity.rb.algo.RBSparsityController.current_sparsity_level" title="Permalink to this definition">#</a></dt>
+<dd><p>Returns the current sparsity level of the underlying model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
 <dt class="sig sig-object py" id="nncf.torch.sparsity.rb.algo.RBSparsityController.compression_rate">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">compression_rate</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/torch/sparsity/rb/algo.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.torch.sparsity.rb.algo.RBSparsityController.compression_rate" title="Permalink to this definition">#</a></dt>
 <dd><p>Returns a float compression rate value ranging from 0 to 1 (e.g. the sparsity level,
@@ -456,6 +467,7 @@ need to keep track of statistics on each training batch/step/iteration.</p>
 <li><a class="reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.torch.sparsity.rb.algo</span></code></a><ul>
 <li><a class="reference internal" href="#classes">Classes</a><ul>
 <li><a class="reference internal" href="#nncf.torch.sparsity.rb.algo.RBSparsityController"><code class="docutils literal notranslate"><span class="pre">RBSparsityController</span></code></a><ul>
+<li><a class="reference internal" href="#nncf.torch.sparsity.rb.algo.RBSparsityController.current_sparsity_level"><code class="docutils literal notranslate"><span class="pre">RBSparsityController.current_sparsity_level</span></code></a></li>
 <li><a class="reference internal" href="#nncf.torch.sparsity.rb.algo.RBSparsityController.compression_rate"><code class="docutils literal notranslate"><span class="pre">RBSparsityController.compression_rate</span></code></a></li>
 <li><a class="reference internal" href="#nncf.torch.sparsity.rb.algo.RBSparsityController.set_sparsity_level"><code class="docutils literal notranslate"><span class="pre">RBSparsityController.set_sparsity_level()</span></code></a></li>
 <li><a class="reference internal" href="#nncf.torch.sparsity.rb.algo.RBSparsityController.compression_stage"><code class="docutils literal notranslate"><span class="pre">RBSparsityController.compression_stage()</span></code></a></li>

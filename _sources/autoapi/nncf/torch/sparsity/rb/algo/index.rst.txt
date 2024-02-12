@@ -21,6 +21,12 @@ Classes
 
    Controller for the regularization-based (RB) sparsity algorithm in PT.
 
+   .. py:property:: current_sparsity_level
+      :type: float
+
+      Returns the current sparsity level of the underlying model.
+
+
    .. py:property:: compression_rate
 
       Returns a float compression rate value ranging from 0 to 1 (e.g. the sparsity level,
