@@ -26,3 +26,4 @@ repos:
     hooks:
       - id: markdownlint
         args: [--config=.markdownlint.yaml]
+
