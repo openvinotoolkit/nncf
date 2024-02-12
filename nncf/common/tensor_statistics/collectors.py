@@ -28,7 +28,11 @@ ReductionAxes = Tuple[int, ...]
 class TensorStatisticCollectorBase(ABC):
     """Collector estimate statistics at the quantization point based on the provided reduction shape."""
 
-    def __init__(self, reduction_shape: ReductionAxes = None, num_samples: Optional[int] = None):
+    def __init__(
+        self,
+        reduction_shape: Optional[ReductionAxes] = None,
+        num_samples: Optional[int] = None,
+    ):
         """
         Initializes Tensor Statistic Collector
 

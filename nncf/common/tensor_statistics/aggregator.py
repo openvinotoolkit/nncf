@@ -14,7 +14,6 @@ from typing import Any, Dict, TypeVar
 
 from nncf.common import factory
 from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -49,7 +48,7 @@ class StatisticsAggregator(ABC):
 
         merged_statistics = self._get_merged_statistic_points(self.statistic_points, model, graph)
         transformation_layout = self._get_transformation_layout_extra_outputs(merged_statistics)
-        model_with_outputs: ModelTransformer = model_transformer.transform(transformation_layout)
+        model_with_outputs: TModel = model_transformer.transform(transformation_layout)
         engine = factory.EngineFactory.create(model_with_outputs)
 
         empty_statistics = True
@@ -80,10 +79,7 @@ class StatisticsAggregator(ABC):
 
         for _, _statistic_points in self.statistic_points.items():
             for _statistic_point in _statistic_points:
-                for (
-                    _,
-                    tensor_collectors,
-                ) in _statistic_point.algorithm_to_tensor_collectors.items():
+                for tensor_collectors in _statistic_point.algorithm_to_tensor_collectors.values():
                     for tensor_collector in tensor_collectors:
                         if self.stat_subset_size is None:
                             self.stat_subset_size = tensor_collector.num_samples
