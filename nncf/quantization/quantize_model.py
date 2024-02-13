@@ -275,8 +275,9 @@ def compress_weights(
     ignored_scope: Optional[IgnoredScope] = None,
     all_layers: Optional[bool] = None,
     dataset: Optional[Dataset] = None,
-    subset_size: Optional[int] = 128,
     sensitivity_metric: Optional[SensitivityMetric] = None,
+    *,
+    subset_size: Optional[int] = 128,
     awq: Optional[bool] = None,
 ) -> TModel:
     """
@@ -304,10 +305,10 @@ def compress_weights(
     :param all_layers: Indicates whether embeddings and last MatMul layers should be compressed to a primary
         precision. By default, the backup precision is assigned for the embeddings and last MatMul layers.
     :param dataset: Dataset used for assigning different quantization precision by finding outliers in activations.
-    :param subset_size: Number of data samples to calculate activation statistics used for assigning different
-        quantization precision. Defaults to 128.
     :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
         preserve the accuracy of the model, the more sensitive layers receives a higher precision.
+    :param subset_size: Number of data samples to calculate activation statistics used for assigning different
+        quantization precision. Defaults to 128.
     :param awq: Indicates whether use AWQ weights correction.
     :return: The non-trainable model with compressed weights.
     """
