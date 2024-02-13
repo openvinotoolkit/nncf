@@ -51,7 +51,7 @@ class TestOVFBCAlgorithm(TemplateTestFBCAlgorithm):
         return transform_fn
 
     @staticmethod
-    def check_bias(model: ov.Model, ref_bias: list):
+    def check_bias(model: ov.runtime.Model, ref_bias: list):
         ref_bias = np.array(ref_bias)
         nncf_graph = NNCFGraphFactory.create(model)
         for node in nncf_graph.get_all_nodes():
