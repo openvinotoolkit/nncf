@@ -11,7 +11,6 @@
 
 from typing import Dict, List, Optional, Tuple
 
-import numpy as np
 import torch
 
 from nncf.common.graph import NNCFGraph
@@ -76,9 +75,14 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def create_input_data(shape: Tuple[int], data: List[Tensor], input_name: str, channel_axis: int) -> torch.Tensor:
         blob = torch.zeros(shape, dtype=data[0].data.dtype, device=data[0].data.device)
-        for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):
-            index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))
-            blob[index] = data[j].data
+        blob = torch.moveaxis(blob, channel_axis, 0)
+        data = data.squeeze()
+        if data.size == 1:
+            blob[0] = data.item()
+        else:
+            for i, tensor in enumerate(data):
+                blob[i] = tensor.data
+        blob = torch.moveaxis(blob, 0, channel_axis)
         return blob
 
     @staticmethod

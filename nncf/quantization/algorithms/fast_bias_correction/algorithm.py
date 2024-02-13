@@ -29,7 +29,6 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.experimental.common.tensor_statistics.statistical_functions import mean_per_channel
 from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor import TensorDataType
 from nncf.experimental.tensor import functions as fns
 from nncf.quantization.algorithms.algorithm import Algorithm
 
@@ -215,6 +214,7 @@ class FastBiasCorrection(Algorithm):
 
         :return TTensor: Updated bias_shift.
         """
+        bias_shift = bias_shift.squeeze()
         if bias_value.ndim > 1:
             new_shape = [1] * bias_value.ndim
             new_shape[channel_axis] = bias_shift.shape[0]
@@ -236,14 +236,12 @@ class FastBiasCorrection(Algorithm):
                 TargetType.OPERATOR_PRE_HOOK,
             ]
 
-        input_fp = []
-        input_shape = []
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
             node_name, input_filter_func, self._algorithm_key
         ):
             statistics = tensor_collector.get_statistics()
-            input_fp.extend(Tensor(statistics.mean_values))
-            input_shape.extend(statistics.shape)
+            input_fp = Tensor(statistics.mean_values)
+            input_shape = statistics.shape
         return input_fp, input_shape
 
     def _get_fp_outputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> List[TTensor]:
@@ -261,11 +259,10 @@ class FastBiasCorrection(Algorithm):
                 TargetType.OPERATOR_POST_HOOK,
             ]
 
-        output_fp = []
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
             node_name, output_filter_func, self._algorithm_key
         ):
-            output_fp.extend(Tensor(tensor_collector.get_statistics().mean_values))
+            output_fp = Tensor(tensor_collector.get_statistics().mean_values)
         return output_fp
 
     def _extract_submodel(self, model_transformer: ModelTransformer, node_name: str) -> TModel:
@@ -322,11 +319,8 @@ class FastBiasCorrection(Algorithm):
         engine = EngineFactory.create(model)
         raw_output = engine.infer(input_blob)
         q_outputs = self._backend_entity.process_model_output(raw_output, output_name)
-        q_outputs = mean_per_channel(
-            q_outputs, channel_axis, TensorDataType.float64
-        )  # Use float64 to vanish issues with computing sum for float32.
-
-        bias_shift = fns.stack(output_fp) - q_outputs
+        q_outputs = mean_per_channel(q_outputs, channel_axis)
+        bias_shift = output_fp - q_outputs
         return bias_shift
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph, dataset: Dataset) -> StatisticPointsContainer:

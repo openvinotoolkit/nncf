@@ -17,7 +17,6 @@ import pytest
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.openvino.statistics.collectors import OVAbsMaxReducer
 from nncf.openvino.statistics.collectors import OVAbsQuantileReducer
-from nncf.openvino.statistics.collectors import OVBatchMeanReducer
 from nncf.openvino.statistics.collectors import OVMaxReducer
 from nncf.openvino.statistics.collectors import OVMeanPerChanelReducer
 from nncf.openvino.statistics.collectors import OVMeanReducer
@@ -49,7 +48,6 @@ class TestReducersAggregators(TemplateTestReducersAggreagtors):
             "mean": OVMeanReducer,
             "quantile": OVQuantileReducer,
             "abs_quantile": OVAbsQuantileReducer,
-            "batch_mean": OVBatchMeanReducer,
             "mean_per_ch": OVMeanPerChanelReducer,
         }
 

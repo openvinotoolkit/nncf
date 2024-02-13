@@ -149,13 +149,13 @@ INPLACE_OPS_TEST_CASES = [
     ),
     # Batch mean and mean per ch operations
     InplaceOpTestCase("batch_mean", None, lambda r: get_inplace_batch_mean_op(), ["ReduceMean"], [0]),
-    InplaceOpTestCase("mean_per_ch", 1, get_inplace_mean_per_ch, ["Reshape", "ReduceMean"], [(1, 3, 16), (0, 2)]),
+    InplaceOpTestCase("mean_per_ch", 1, get_inplace_mean_per_ch, ["Reshape", "ReduceMean"], [(1, 3, 16), (2)]),
     InplaceOpTestCase(
         "mean_per_ch",
         2,
         get_inplace_mean_per_ch,
         ["Transpose", "Reshape", "ReduceMean"],
-        [(0, 2, 1, 3), (1, 4, 12), (0, 2)],
+        [(0, 2, 1, 3), (1, 4, 12), (2)],
     ),
     InplaceOpTestCase(
         "mean_per_ch",

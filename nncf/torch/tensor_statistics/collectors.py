@@ -21,7 +21,6 @@ from nncf.common.tensor_statistics.collectors import NNCFTensor
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
 from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
-from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
@@ -245,10 +244,6 @@ class PTQuantileReducer(PTReducerMixIn, QuantileReducer):
 
 
 class PTAbsQuantileReducer(PTReducerMixIn, AbsQuantileReducer):
-    pass
-
-
-class PTBatchMeanReducer(PTReducerMixIn, BatchMeanReducer):
     pass
 
 
@@ -525,16 +520,17 @@ def get_mean_statistic_collector(
         Aggregates all available collected statistics in case parameter is None.
     :return: Mean statistic collector.
     """
-    if channel_axis == 0:
-        reducer = PTBatchMeanReducer()
-    else:
-        reducer = PTMeanPerChanelReducer(channel_axis=channel_axis)
-    noop_reducer = NoopReducer()
 
+    reducer = PTMeanPerChanelReducer(channel_axis=channel_axis)
+    noop_reducer = NoopReducer()
+    aggregation_axes = (
+        (0,) if channel_axis == -1 else (0, 1)
+    )  # Assume that batch is on 0-axis for Convolutions and No batch axis for MatMul
     kwargs = {
         "tensor_processor": PTNNCFCollectorTensorProcessor,
         "num_samples": num_samples,
         "window_size": window_size,
+        "aggregation_axes": aggregation_axes,
     }
     aggregate_mean = MeanAggregator(**kwargs)
     aggregate_shape = ShapeAggregator()

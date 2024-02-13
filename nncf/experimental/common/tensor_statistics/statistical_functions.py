@@ -9,12 +9,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Optional
+
 from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor import TensorDataType
 from nncf.experimental.tensor.functions import numeric as fns
 
 
-def mean_per_channel(x: Tensor, axis: int, dtype: TensorDataType) -> Tensor:
+def mean_per_channel(x: Tensor, axis: int, dtype: Optional[TensorDataType] = None) -> Tensor:
     """
     Computes the mean of elements across given channel dimension of Tensor.
 
@@ -24,7 +26,8 @@ def mean_per_channel(x: Tensor, axis: int, dtype: TensorDataType) -> Tensor:
     :return: Reduced Tensor.
     """
     if len(x.shape) < 3:
-        return fns.mean(x, axis=0)
+        return fns.mean(x, axis=0, dtype=dtype)
+
     pos_axis = axis + x.ndim if axis < 0 else axis
     if pos_axis < 0 or pos_axis >= x.ndim:
         raise ValueError(f"axis {axis} is out of bounds for array of dimension {x.ndim}")

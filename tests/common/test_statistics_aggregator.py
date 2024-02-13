@@ -463,7 +463,7 @@ class TemplateTestStatisticsAggregator:
         ref_values: np.ndarray = None
         ref_shape: Tuple[int] = None
 
-    MEAN_ACT_AXIS_0_REF = np.array(
+    MEAN_ACT_AXIS_0_REF = np.mean(
         [
             [
                 [[1.0, -4.5, 0.5], [0.5, 0.5, 0.5], [0.5, 0.5, 0.5]],
@@ -473,15 +473,18 @@ class TemplateTestStatisticsAggregator:
         ]
     )
 
-    MEAN_WEIGHTS_AXIS_0_REF = np.array(
+    MEAN_WEIGHTS_AXIS_0_REF = np.mean(
         [
             [
                 [[43.033337, -46.333332, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
                 [[43.033337, -46.333332, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
                 [[43.033337, -46.333332, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
             ]
-        ]
+        ],
+        axis=(0),
     )
+
+    MEAN_WEIGHTS_AXIS_0_REF = np.array([[-1, -0.09999999, 0]])
 
     @pytest.mark.parametrize(
         "test_params",

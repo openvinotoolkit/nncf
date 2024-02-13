@@ -18,7 +18,6 @@ from nncf.common.tensor import TensorElementsType
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
-from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
 from nncf.experimental.common.tensor_statistics.collectors import InplaceInsertionFNType
 from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
@@ -31,7 +30,6 @@ from nncf.experimental.common.tensor_statistics.collectors import QuantileReduce
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.openvino.graph.node_utils import get_inplace_batch_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_max_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_per_ch
@@ -113,7 +111,7 @@ class OVNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
             return OVNNCFTensor(np.mean(x.tensor, axis=0))
         x = np.moveaxis(x.tensor, axis, 1)
         t = x.reshape(x.shape[0], x.shape[1], -1)
-        return OVNNCFTensor(np.mean(t, axis=(0, 2)))
+        return OVNNCFTensor(np.mean(t, axis=(2,)))
 
     @staticmethod
     def transpose(x: NNCFTensor, axes: Tuple[int, ...]) -> NNCFTensor:
@@ -221,14 +219,6 @@ class OVMeanReducer(MeanReducer):
         return get_inplace_mean_op(self._reduction_axes)
 
 
-class OVBatchMeanReducer(BatchMeanReducer):
-    def _get_processor(self):
-        return OVNNCFCollectorTensorProcessor
-
-    def get_inplace_fn(self):
-        return get_inplace_batch_mean_op()
-
-
 class OVMeanPerChanelReducer(MeanPerChReducer):
     def _get_processor(self):
         return OVNNCFCollectorTensorProcessor
@@ -266,20 +256,18 @@ def get_mean_statistic_collector(
     :param inplace: Whether the mean reducer should be calculated inplace or out of place.
     :return: Mean statistic collector.
     """
-    if channel_axis == 0:
-        reducer = OVBatchMeanReducer(inplace)
-    else:
-        reducer = OVMeanPerChanelReducer(channel_axis=channel_axis, inplace=inplace)
+    reducer = OVMeanPerChanelReducer(channel_axis=channel_axis, inplace=inplace)
     noop_reducer = NoopReducer()
-
+    aggregation_axes = (
+        (0,) if channel_axis == -1 else (0, 1)
+    )  # Assume that batch is on 0-axis for Convolutions and No batch axis for MatMul
     kwargs = {
         "tensor_processor": OVNNCFCollectorTensorProcessor,
         "num_samples": num_samples,
         "window_size": window_size,
-        # "aggregation_axes": (0,),
+        "aggregation_axes": aggregation_axes,
     }
     aggregate_mean = MeanAggregator(**kwargs)
-    # aggregate_mean._keepdims = True
     aggregate_shape = ShapeAggregator()
 
     collector = TensorCollector(OVMeanTensorStatistic)

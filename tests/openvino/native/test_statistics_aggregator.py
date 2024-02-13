@@ -23,7 +23,6 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorReducerB
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from nncf.openvino.statistics.collectors import OV_REDUCERS_MAP
-from nncf.openvino.statistics.collectors import OVBatchMeanReducer
 from nncf.openvino.statistics.collectors import OVMeanPerChanelReducer
 from nncf.quantization.algorithms.bias_correction.openvino_backend import OVBiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.fast_bias_correction.openvino_backend import OVFastBiasCorrectionAlgoBackend
@@ -122,5 +121,5 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
 
     def reducers_map(self) -> List[TensorReducerBase]:
         map_ = OV_REDUCERS_MAP.copy()
-        map_.update({"batch_mean": OVBatchMeanReducer, "mean_per_ch": OVMeanPerChanelReducer})
+        map_.update({"mean_per_ch": OVMeanPerChanelReducer})
         return map_

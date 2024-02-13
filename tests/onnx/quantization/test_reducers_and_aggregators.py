@@ -17,7 +17,6 @@ import pytest
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.onnx.statistics.collectors import ONNXAbsMaxReducer
 from nncf.onnx.statistics.collectors import ONNXAbsQuantileReducer
-from nncf.onnx.statistics.collectors import ONNXBatchMeanReducer
 from nncf.onnx.statistics.collectors import ONNXMaxReducer
 from nncf.onnx.statistics.collectors import ONNXMeanPerChanelReducer
 from nncf.onnx.statistics.collectors import ONNXMeanReducer
@@ -49,7 +48,6 @@ class TestReducersAggregators(TemplateTestReducersAggreagtors):
             "mean": ONNXMeanReducer,
             "quantile": ONNXQuantileReducer,
             "abs_quantile": ONNXAbsQuantileReducer,
-            "batch_mean": ONNXBatchMeanReducer,
             "mean_per_ch": ONNXMeanPerChanelReducer,
         }
 

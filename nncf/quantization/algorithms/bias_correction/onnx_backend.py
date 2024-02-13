@@ -71,6 +71,7 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         num_samples: Optional[int] = None,
         window_size: Optional[int] = None,
     ) -> TensorCollector:
+        inplace = False
         return get_mean_statistic_collector(num_samples, channel_axis, window_size, inplace)
 
     @staticmethod

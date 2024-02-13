@@ -23,7 +23,6 @@ from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.tensor_statistics.algo import create_register_input_hook
 from nncf.torch.tensor_statistics.collectors import PTAbsMaxReducer
 from nncf.torch.tensor_statistics.collectors import PTAbsQuantileReducer
-from nncf.torch.tensor_statistics.collectors import PTBatchMeanReducer
 from nncf.torch.tensor_statistics.collectors import PTMaxReducer
 from nncf.torch.tensor_statistics.collectors import PTMeanPerChanelReducer
 from nncf.torch.tensor_statistics.collectors import PTMeanReducer
@@ -55,7 +54,6 @@ class BaseTestReducersAggregators(TemplateTestReducersAggreagtors, ABC):
             "mean": PTMeanReducer,
             "quantile": PTQuantileReducer,
             "abs_quantile": PTAbsQuantileReducer,
-            "batch_mean": PTBatchMeanReducer,
             "mean_per_ch": PTMeanPerChanelReducer,
         }
 

@@ -255,15 +255,6 @@ def get_inplace_mean_op(reduction_axes: Optional[ReductionAxes]) -> InplaceInser
     return get_inplace_reduce_op(opset.reduce_mean, reduction_axes, False)
 
 
-def get_inplace_batch_mean_op() -> InplaceInsertionFnType:
-    """
-    Returns inplace batch mean function that adds reduce batch mean node to a passed node.
-
-    :returns: Inplace insertion function to use in ModelTransformer.
-    """
-    return get_inplace_reduce_op(opset.reduce_mean, np.array(0), False)
-
-
 def get_inplace_mean_per_ch(axis: int) -> InplaceInsertionFnType:
     """
     Returns inplace mean per channel function that adds reduce mean per channel node
@@ -306,7 +297,7 @@ def get_inplace_mean_per_ch(axis: int) -> InplaceInsertionFnType:
         )
         return opset.reduce_mean(
             reshape_op,
-            reduction_axes=np.array((0, 2)),
+            reduction_axes=np.array((2)),
             keep_dims=False,
             name=output_node_name,
         )

@@ -61,13 +61,16 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return subgraph.inputs[0].get_any_name(), subgraph.outputs[0].get_any_name()
 
     @staticmethod
-    def create_input_data(
-        shape: Tuple[int], data: List[Tensor], input_name: str, channel_axis: int
-    ) -> Dict[str, np.ndarray]:
+    def create_input_data(shape: Tuple[int], data: Tensor, input_name: str, channel_axis: int) -> Dict[str, np.ndarray]:
         blob = np.zeros(shape, dtype=data[0].data.dtype)
-        for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):
-            index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))
-            blob[index] = data[j].data
+        blob = np.moveaxis(blob, channel_axis, 0)
+        data = data.squeeze()
+        if data.size == 1:
+            blob[0] = data.item()
+        else:
+            for i, tensor in enumerate(data):
+                blob[i] = tensor.data
+        blob = np.moveaxis(blob, 0, channel_axis)
         input_data = {input_name: blob}
         return input_data
 

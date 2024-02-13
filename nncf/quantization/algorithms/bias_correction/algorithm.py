@@ -42,7 +42,6 @@ OUTPUT_PORT_OF_NODE = 0
 
 
 class BiasCorrection(Algorithm):
-
     """
     Post-training BiasCorrection algorithm implementation
 
@@ -180,6 +179,7 @@ class BiasCorrection(Algorithm):
                 axes = [i for i in range(current_bias.ndim) if i != channel_axis]
                 bias_shift = np.expand_dims(bias_shift, axes)
 
+            bias_shift = self._reshape_bias_shift(bias_shift, current_bias, channel_axis)
             updated_bias = current_bias + bias_shift
             magnitude = self._get_bias_shift_magnitude(current_bias, updated_bias)
 
@@ -203,6 +203,24 @@ class BiasCorrection(Algorithm):
             self._remove_unnecessary_stats(position, subgraphs_data)
 
         return main_model_transformer.transform(main_transformations_layout)
+
+    @staticmethod
+    def _reshape_bias_shift(bias_shift, bias_value, channel_axis: int):
+        """
+        Reshape bias_shift tensor in case of dimensions of bias_value is more then 1.
+
+        :param bias_shift: Bias shift tensor.
+        :param bias_value: Bias value tensor.
+        :param channel_axis: Axis to update bias.
+
+        :return TTensor: Updated bias_shift.
+        """
+        bias_shift = bias_shift.squeeze()
+        if bias_value.ndim > 1:
+            new_shape = [1] * bias_value.ndim
+            new_shape[channel_axis] = bias_shift.shape[0]
+            bias_shift = bias_shift.reshape(new_shape)
+        return bias_shift
 
     def _is_node_correctable(self, node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
         """
@@ -476,11 +494,10 @@ class BiasCorrection(Algorithm):
         if input_id in self._fp_inputs:
             return self._fp_inputs[input_id]
 
-        input_fp = []
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
             node_name, input_filter_func, self._algorithm_key
         ):
-            input_fp.extend(tensor_collector.get_statistics().values)
+            input_fp = tensor_collector.get_statistics().values
         self._fp_inputs[input_id] = input_fp
         return self._fp_inputs[input_id]
 
@@ -503,7 +520,7 @@ class BiasCorrection(Algorithm):
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
             node_name, output_filter_func, self._algorithm_key
         ):
-            output_fp.extend(tensor_collector.get_statistics().mean_values)
+            output_fp = tensor_collector.get_statistics().mean_values
         return np.array(output_fp)
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph, dataset: Dataset) -> StatisticPointsContainer:
