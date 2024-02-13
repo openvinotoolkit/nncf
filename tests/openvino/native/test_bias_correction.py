@@ -64,7 +64,7 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
         return mapping
 
     @staticmethod
-    def remove_fq_from_inputs(model: ov.Model) -> ov.Model:
+    def remove_fq_from_inputs(model: ov.runtime.Model) -> ov.runtime.Model:
         graph = GraphConverter.create_nncf_graph(model)
         return remove_fq_from_inputs(model, graph)
 
@@ -75,11 +75,11 @@ class TestOVBCAlgorithm(TemplateTestBCAlgorithm):
         )
 
     @staticmethod
-    def compare_nncf_graphs(model: ov.Model, ref_path: str) -> None:
+    def compare_nncf_graphs(model: ov.runtime.Model, ref_path: str) -> None:
         return compare_nncf_graphs(model, ref_path)
 
     @staticmethod
-    def check_bias(model: ov.Model, ref_biases: Dict) -> None:
+    def check_bias(model: ov.runtime.Model, ref_biases: Dict) -> None:
         nncf_graph = NNCFGraphFactory.create(model)
         for ref_name, ref_value in ref_biases.items():
             node = nncf_graph.get_node_by_name(ref_name)
