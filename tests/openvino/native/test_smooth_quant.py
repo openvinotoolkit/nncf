@@ -101,11 +101,11 @@ class TestOVSQAlgorithm(TemplateTestSQAlgorithm):
         return OVSmoothQuantAlgoBackend()
 
     @staticmethod
-    def backend_specific_model(model: torch.nn.Module, tmp_dir: str) -> ov.Model:
+    def backend_specific_model(model: torch.nn.Module, tmp_dir: str) -> ov.runtime.Model:
         return ov.convert_model(model, example_input=torch.rand(model.INPUT_SIZE), input=model.INPUT_SIZE)
 
     @staticmethod
-    def check_scales(model: ov.Model, reference_values: Dict[str, np.ndarray], model_cls) -> None:
+    def check_scales(model: ov.runtime.Model, reference_values: Dict[str, np.ndarray], model_cls) -> None:
         names_map = OV_LINEAR_MODEL_SQ_OP_MAP if model_cls is LinearMultiShapeModel else OV_CONV_MODEL_SQ_OP_MAP
         ops_list = {op.get_friendly_name(): op for op in model.get_ops()}
         for ref_names, ref_value in reference_values.items():
