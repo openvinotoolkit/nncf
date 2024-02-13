@@ -157,8 +157,9 @@
         "requirements": "examples/llm_compression/openvino/tiny_llama_find_hyperparams/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
+            "awq": true,
             "ratio": 0.9,
-            "group_size": 64
+            "group_size": 128
         }
     }
 }
