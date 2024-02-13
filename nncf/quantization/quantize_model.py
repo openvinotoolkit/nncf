@@ -243,6 +243,25 @@ def quantize_with_accuracy_control(
             advanced_quantization_parameters,
             advanced_accuracy_restorer_parameters,
         )
+    if backend == BackendType.ONNX:
+        from nncf.onnx.quantization.quantize_model import quantize_with_accuracy_control_impl
+
+        return quantize_with_accuracy_control_impl(
+            model,
+            calibration_dataset,
+            validation_dataset,
+            validation_fn,
+            max_drop,
+            drop_type,
+            preset,
+            target_device,
+            subset_size,
+            fast_bias_correction,
+            model_type,
+            ignored_scope,
+            advanced_quantization_parameters,
+            advanced_accuracy_restorer_parameters,
+        )
 
     raise nncf.UnsupportedBackendError(f"Unsupported type of backend: {backend}")
 

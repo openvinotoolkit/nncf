@@ -17,7 +17,9 @@ import pytest
 
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.quantization.quantizer_removal import revert_operations_to_floating_point_precision
+from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes import openvino_metatypes as ov_metatypes
+from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
 from nncf.quantization.advanced_parameters import RestoreMode
 from tests.openvino.native.models import LinearQuantizedModel
 
@@ -88,6 +90,8 @@ def test_revert_operations_to_floating_point_precision(test_case: InputTestData)
         quantized_model_graph,
         test_case.restore_mode,
         [ov_metatypes.OVMatMulMetatype, ov_metatypes.OVEmbeddingMetatype],
+        lambda node: node.metatype in OPERATIONS_WITH_WEIGHTS and isinstance(node.layer_attributes, OVLayerAttributes),
+        lambda node: node.layer_attributes.get_const_port_ids(),
     )
 
     updated_model_graph = NNCFGraphFactory.create(updated_model)

@@ -163,6 +163,21 @@ class ParameterTestMetatype(TestMetatype):
     name = "parameter"
 
 
+@METATYPES_FOR_TEST.register()
+class FakeQuantizeTestMetatype(TestMetatype):
+    name = "fake_quantize"
+
+
+@METATYPES_FOR_TEST.register()
+class QuantizeTestMetatype(TestMetatype):
+    name = "quantize"
+
+
+@METATYPES_FOR_TEST.register()
+class DequantizeTestMetatype(TestMetatype):
+    name = "dequantize"
+
+
 WEIGHT_LAYER_METATYPES = [LinearTestMetatype, Conv2dTestMetatype, MatMulTestMetatype]
 
 
@@ -180,7 +195,9 @@ DEFAULT_TEST_QUANT_TRAIT_MAP = {
 
 
 QUANTIZER_METATYPES = [
-    QuantizerTestMetatype,
+    FakeQuantizeTestMetatype,
+    QuantizeTestMetatype,
+    DequantizeTestMetatype,
 ]
 
 

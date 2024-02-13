@@ -118,6 +118,12 @@ class CommandCreatorFactory:
             from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
 
             return OVCommandCreator()
+
+        if model_backend == BackendType.ONNX:
+            from nncf.onnx.graph.transformations.command_creation import ONNXCommandCreator
+
+            return ONNXCommandCreator()
+
         raise nncf.UnsupportedBackendError(
             "Cannot create backend-specific command creator because {} is not supported!".format(model_backend.value)
         )

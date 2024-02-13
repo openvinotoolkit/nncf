@@ -94,13 +94,15 @@ class Ranker:
         :param quantized_model_graph: Graph for quantized model.
         :return: List of groups of quantizers to rank.
         """
+        quantizer_metatypes = self._algo_backend.get_quantizer_metatypes()
+
+        if len(quantizer_metatypes) == 2:  # Quantize-Dequantize case
+            # Use only Quantize metatype
+            quantizer_metatypes = quantizer_metatypes[:1]
+
         groups_to_rank = []
         processed = {}
-        quantizers = [
-            x
-            for x in quantized_model_graph.topological_sort()
-            if x.metatype in self._algo_backend.get_quantizer_metatypes()
-        ]
+        quantizers = [x for x in quantized_model_graph.topological_sort() if x.metatype in quantizer_metatypes]
 
         quantized_model_graph_without_shapeof = remove_shapeof_subgraphs(
             deepcopy(quantized_model_graph),
@@ -198,6 +200,8 @@ class Ranker:
                 quantized_model_graph,
                 self._restore_mode,
                 self._algo_backend.get_op_with_weights_metatypes(),
+                self._algo_backend.is_node_with_weight,
+                self._algo_backend.get_weight_tensor_port_ids,
             )
 
             prepared_model = self._evaluator.prepare_model(modified_model)

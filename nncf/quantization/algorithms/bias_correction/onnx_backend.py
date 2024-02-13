@@ -24,7 +24,7 @@ from nncf.onnx.graph.node_utils import is_any_weight_quantized
 from nncf.onnx.graph.node_utils import is_node_with_bias
 from nncf.onnx.graph.onnx_helper import get_name_to_node_map
 from nncf.onnx.graph.transformations.command_creation import create_bias_correction_command
-from nncf.onnx.graph.transformations.commands import ONNXBiasCorrectionCommand
+from nncf.onnx.graph.transformations.commands import ONNXInitializerUpdateCommand
 from nncf.onnx.graph.transformations.commands import ONNXModelExtractionCommand
 from nncf.onnx.graph.transformations.commands import ONNXOutputInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
@@ -47,7 +47,7 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
     @staticmethod
     def create_bias_correction_command(
         node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph
-    ) -> ONNXBiasCorrectionCommand:
+    ) -> ONNXInitializerUpdateCommand:
         return create_bias_correction_command(node, bias_value)
 
     @staticmethod
