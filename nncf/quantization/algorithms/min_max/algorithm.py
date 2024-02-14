@@ -188,9 +188,15 @@ class MinMaxQuantization(Algorithm):
         self._weights_quantization_params = weights_quantization_params
         self._activations_range_estimator_params = activations_range_estimator_params
         self._weights_range_estimator_params = weights_range_estimator_params
-        self._preset = QuantizationPreset.PERFORMANCE if preset is None else preset
-        self._preset = QuantizationPreset.MIXED if model_type == ModelType.TRANSFORMER else self._preset
+        self._preset = preset
         self._ignored_scope = IgnoredScope() if ignored_scope is None else ignored_scope
+
+        # preset definition
+        if self._preset is None:
+            if model_type == ModelType.TRANSFORMER:
+                self._preset = QuantizationPreset.MIXED
+            else:
+                self._preset = QuantizationPreset.PERFORMANCE
 
         self._set_mode_based_defaults()
         self._review_mode_based_defaults()
@@ -262,6 +268,20 @@ class MinMaxQuantization(Algorithm):
                     "quantization_params option for activations with "
                     f"{self._activations_quantization_params} "
                     "value is not supported with the mode option!"
+                )
+        elif self._mode is None:
+            if isinstance(self._weights_quantization_params, FP8QuantizationParameters):
+                raise nncf.ParameterNotSupportedError(
+                    "quantization_params option for weights with "
+                    f"{self._weights_quantization_params} "
+                    "value is not supported with the mode: None option!"
+                )
+
+            if isinstance(self._activations_quantization_params, FP8QuantizationParameters):
+                raise nncf.ParameterNotSupportedError(
+                    "quantization_params option for activations with "
+                    f"{self._activations_quantization_params} "
+                    "value is not supported with the mode: None option!"
                 )
 
     def _reset_cache(self):
