@@ -415,5 +415,5 @@ def compress_weights_impl(
     )
     graph = NNCFGraphFactory.create(model)
     compressed_model = compression_algorithm.apply(model, graph, dataset=dataset)
-    model = remove_friendly_name_duplicates(compressed_model)
+    compressed_model = remove_friendly_name_duplicates(compressed_model)
     return compressed_model
