@@ -144,17 +144,18 @@ class GraphConverter:
         return nncf_graph
 
 
-def _propagate_true_for_is_shared_attribute(node: NNCFNode, graph: NNCFGraph):
+def _propagate_true_for_is_shared_attribute(node: NNCFNode, graph: NNCFGraph, val: bool):
     """
     Propagates the is_shared attribute through specific nodes in an NNCFGraph.
 
     :param node: The start NNCFNode to process.
     :param graph: The NNCFGraph instance.
+    :param val: Propagated value for is_shared.
     """
-    node.attributes[NNCFNode.IS_SHARED_ATTR] = True
+    node.attributes[NNCFNode.IS_SHARED_ATTR] = val
     if node.metatype in CONST_NOOP_METATYPES or node.node_type in QUANTIZE_NODE_TYPES:
         for next_node in graph.get_next_nodes(node):
-            _propagate_true_for_is_shared_attribute(next_node, graph)
+            _propagate_true_for_is_shared_attribute(next_node, graph, val)
 
 
 def propagate_is_shared_attribute_from_constant_nodes(graph: NNCFGraph):
@@ -169,4 +170,4 @@ def propagate_is_shared_attribute_from_constant_nodes(graph: NNCFGraph):
     for const_node in graph.get_nodes_by_metatypes(CONST_NOOP_METATYPES):
         next_nodes = graph.get_next_nodes(const_node)
         if len(next_nodes) > 1:
-            _propagate_true_for_is_shared_attribute(const_node, graph)
+            _propagate_true_for_is_shared_attribute(const_node, graph, True)
