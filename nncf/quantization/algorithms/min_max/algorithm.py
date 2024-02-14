@@ -129,7 +129,7 @@ class MinMaxQuantization(Algorithm):
     def __init__(
         self,
         mode: Optional[QuantizationMode] = None,
-        preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+        preset: Optional[QuantizationPreset] = None,
         target_device: TargetDevice = TargetDevice.ANY,
         subset_size: int = 300,
         model_type: Optional[ModelType] = None,
