@@ -817,7 +817,6 @@ class TemplateTestStatisticsAggregator:
             StatisticsType.MEAN,
             StatisticsType.QUANTILE,
             StatisticsType.ABS_QUANTILE,
-            "batch_mean",
             "mean_per_ch",
         ],
     )

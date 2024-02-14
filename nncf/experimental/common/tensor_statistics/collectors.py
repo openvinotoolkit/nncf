@@ -652,11 +652,8 @@ class OfflineAggregatorBase(AggregatorBase, ABC):
         # Case when all registered tensors have identical shape
         if all(self._container[0].shape == x.shape for x in self._container):
             stacked_value = self._tensor_processor.stack(self._container)
-            if self._keepdims:
-                aggregated = self._aggregation_fn(stacked_value, axis=self._aggregation_axes, keepdims=self._keepdims)
-                return self._tensor_processor.squeeze(aggregated, 0).tensor
             aggregated = self._aggregation_fn(stacked_value, axis=self._aggregation_axes, keepdims=self._keepdims)
-            return aggregated.tensor
+            return self._tensor_processor.squeeze(aggregated, 0).tensor
         online_axes = tuple(x - 1 for x in self._aggregation_axes if x > 0)
 
         # Case when some registered tensors have different shapes and

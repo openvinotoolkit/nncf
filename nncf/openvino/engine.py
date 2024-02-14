@@ -31,10 +31,6 @@ class OVCompiledModelEngine(Engine):
     def __init__(self, compiled_model: ov.CompiledModel, stateful: bool):
         self.infer_request = compiled_model.create_infer_request()
         self.reset_state = stateful and hasattr(self.infer_request, "reset_state")
-        self.input_tensor_names = set()
-        self.number_of_inputs = len(compiled_model.inputs)
-        for model_input in compiled_model.inputs:
-            self.input_tensor_names.update(model_input.get_names())
 
     def infer(
         self, input_data: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray], Dict[str, np.ndarray]]
@@ -46,8 +42,6 @@ class OVCompiledModelEngine(Engine):
         :param input_data: Inputs for the model.
         :return output_data: Model's output.
         """
-        model_outputs = self.compiled_model(input_data)
-
         if self.reset_state:
             self.infer_request.reset_state()
 
