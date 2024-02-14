@@ -397,7 +397,7 @@ class BiasCorrection(Algorithm):
             q_output = self._backend_entity.process_model_output(q_output, output_tensor_name)
             q_outputs.append(self._backend_entity.tensor_processor.mean_per_channel(q_output, channel_axis).tensor)
         # Here we get the per-sample average, so the axis is 0.
-        q_output = np.mean(q_outputs, axis=0)
+        q_output = np.mean(q_outputs, axis=(0, 1))
         return output_fp - q_output
 
     @staticmethod
@@ -487,7 +487,6 @@ class BiasCorrection(Algorithm):
             return (
                 self._algorithm_key in point.algorithm_to_tensor_collectors
                 and point.target_point.type == TargetType.POST_LAYER_OPERATION
-                and point.target_point.port_id == port_id
             )
 
         input_id = (node_name, port_id)
