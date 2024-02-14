@@ -23,8 +23,8 @@ from nncf.torch.dynamic_graph.graph_tracer import GraphTracer
 from nncf.torch.dynamic_graph.layer_attributes_handlers import set_nodes_attributes_in_nncf_graph
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph.graph import PTNNCFGraph
-from nncf.torch.graph.operator_metatypes import OP_NAMES_QUANTIZE_NODE
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
+from nncf.torch.graph.operator_metatypes import QUANTIZE_NODE_TYPES
 
 
 class GraphBuilder:
@@ -152,7 +152,7 @@ def _propagate_true_for_is_shared_attribute(node: NNCFNode, graph: NNCFGraph):
     :param graph: The NNCFGraph instance.
     """
     node.attributes[NNCFNode.IS_SHARED_ATTR] = True
-    if node.metatype in CONST_NOOP_METATYPES or node.node_type in OP_NAMES_QUANTIZE_NODE:
+    if node.metatype in CONST_NOOP_METATYPES or node.node_type in QUANTIZE_NODE_TYPES:
         for next_node in graph.get_next_nodes(node):
             _propagate_true_for_is_shared_attribute(next_node, graph)
 

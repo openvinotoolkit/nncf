@@ -1050,4 +1050,4 @@ OPERATORS_FUSED_METATYPES = [
     PTModuleBatchNormMetatype,
 ]
 
-OP_NAMES_QUANTIZE_NODE = ["symmetric_quantize", "asymmetric_quantize"]
+QUANTIZE_NODE_TYPES = ["symmetric_quantize", "asymmetric_quantize"]
