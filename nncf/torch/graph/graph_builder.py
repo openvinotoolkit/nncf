@@ -144,7 +144,7 @@ class GraphConverter:
         return nncf_graph
 
 
-def _propagate_true_for_is_shared_attribute(node: NNCFNode, graph: NNCFGraph, val: bool):
+def _propagate_true_for_is_shared_attribute(node: NNCFNode, graph: NNCFGraph, val: bool) -> None:
     """
     Propagates the is_shared attribute through specific nodes in an NNCFGraph.
 
@@ -158,7 +158,7 @@ def _propagate_true_for_is_shared_attribute(node: NNCFNode, graph: NNCFGraph, va
             _propagate_true_for_is_shared_attribute(next_node, graph, val)
 
 
-def propagate_is_shared_attribute_from_constant_nodes(graph: NNCFGraph):
+def propagate_is_shared_attribute_from_constant_nodes(graph: NNCFGraph) -> None:
     """
     Detect shared constant nodes that used in several operations and propagate is_shared node attributes nodes.
     For constant nodes the is_shared attribute set to True if constant used in multiple operations.
