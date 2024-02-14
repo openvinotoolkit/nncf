@@ -64,7 +64,7 @@ def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[N
 
 def remove_friendly_name_duplicates(model: ov.Model) -> ov.Model:
     """
-    Removes diplicates of node names (friendly_name attribute) in the model.
+    Removes duplicates of node names (friendly_name attribute) in the model.
 
     :param model: ov.Model instance to update.
     :return: Updated ov.Model without duplicated names.
