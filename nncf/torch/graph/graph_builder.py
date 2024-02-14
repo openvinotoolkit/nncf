@@ -106,8 +106,8 @@ class GraphConverter:
                 is_integer_input = dynamic_graph.is_integer_input_node(dynamic_graph_node)
 
             is_shared = False
-            # if not traced_parameters:
-            is_shared = len(module_id_vs_sorted_scopes_map[dynamic_graph_node.calling_module_id]) > 1
+            if not traced_parameters:
+                is_shared = len(module_id_vs_sorted_scopes_map[dynamic_graph_node.calling_module_id]) > 1
             canonical_scope = module_id_vs_sorted_scopes_map[dynamic_graph_node.calling_module_id][0]
 
             node_name = str(op_address)
@@ -139,8 +139,8 @@ class GraphConverter:
             )
 
         set_nodes_attributes_in_nncf_graph(nncf_graph)
-        # if traced_parameters:
-        #     propagate_is_shared_attribute_from_constant_nodes(nncf_graph)
+        if traced_parameters:
+            propagate_is_shared_attribute_from_constant_nodes(nncf_graph)
         return nncf_graph
 
 
