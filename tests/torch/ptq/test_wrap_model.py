@@ -16,6 +16,9 @@ from torch import nn
 from nncf.torch.dynamic_graph.context import no_nncf_trace
 from nncf.torch.model_creation import wrap_model
 from nncf.torch.nested_objects_traversal import objwalk
+from tests.torch.helpers import BasicConvTestModel
+from tests.torch.helpers import SharedConv
+from tests.torch.helpers import SharedCustomConv
 
 
 class ArgumentModel(nn.Module):
@@ -83,3 +86,36 @@ def test_wrap_model_with_example_input(example_input, model_cls):
     num_io_nodes = num_nodes // 2
     nodes = ["nncf_model_input"] * num_io_nodes + ["nncf_model_output"] * num_io_nodes
     assert sorted([node.node_type for node in all_nodes]) == nodes
+
+
+@pytest.mark.parametrize(
+    ("model_cls", "shared_node_names"),
+    (
+        (BasicConvTestModel, []),
+        (
+            SharedConv,
+            [
+                "conv.weight",
+                "conv.bias",
+                "SharedConv/Conv2d[conv]/conv2d_0",
+                "SharedConv/Conv2d[conv]/conv2d_1",
+            ],
+        ),
+        (
+            SharedCustomConv,
+            [
+                "weight",
+                "SharedCustomConv/conv2d_0",
+                "SharedCustomConv/conv2d_1",
+            ],
+        ),
+    ),
+)
+def test_shared_nodes_in_wrapped_model_with_trace_parameters(model_cls, shared_node_names):
+    model = wrap_model(model_cls(), torch.ones(model_cls.INPUT_SIZE), True)
+    graph = model.nncf.get_graph()
+    for node in graph.get_all_nodes():
+        ref_is_shared = node.node_name in shared_node_names
+        assert (
+            node.is_shared() == ref_is_shared
+        ), f"Attribute is_shared expect to be {ref_is_shared} for {node.node_name} node"
