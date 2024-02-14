@@ -18,6 +18,7 @@ from typing import Dict, List, Optional, Set, Tuple, Type
 import networkx as nx
 import pytest
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
@@ -2116,7 +2117,7 @@ class TestQuantizerPropagationSolver:
 
         register_us_group_w_t_spy = mocker.spy(MultiConfigQuantizerSetup, "register_unified_scale_group_with_types")
         if test_struct.ref_qp_vs_unified_scale_type is None:
-            with pytest.raises(RuntimeError):
+            with pytest.raises(nncf.InternalError):
                 quant_proposal = quant_prop_solver.run_on_ip_graph(ip_graph)
         else:
             quant_proposal = quant_prop_solver.run_on_ip_graph(ip_graph)
