@@ -131,7 +131,7 @@ def transform_fn(data_item):
 # (default: 300 samples) of the calibration dataset.
 
 calibration_dataset = nncf.Dataset(val_data_loader, transform_fn)
-ov_quantized_model = nncf.quantize(ov_model, calibration_dataset)
+ov_quantized_model = nncf.quantize(ov_model, calibration_dataset, mode=nncf.QuantizationMode.FP8_E4M3)
 
 ###############################################################################
 # Benchmark performance, calculate compression rate and validate accuracy

@@ -197,7 +197,7 @@ class MinMaxQuantization(Algorithm):
 
         self._quantization_params = {
             QuantizerGroup.WEIGHTS: self._weights_quantization_params,
-            QuantizerGroup.ACTIVATIONS: self._weights_quantization_params,
+            QuantizerGroup.ACTIVATIONS: self._activations_quantization_params,
         }
 
         self._range_estimator_params = {

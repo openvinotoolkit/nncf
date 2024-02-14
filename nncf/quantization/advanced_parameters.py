@@ -213,7 +213,7 @@ class AdvancedQuantizationParameters:
 
     # General parameters
     overflow_fix: OverflowFix = None
-    quantize_outputs: bool = None
+    quantize_outputs: bool = False
     inplace_statistics: bool = True
     disable_channel_alignment: bool = True
     disable_bias_correction: bool = False
