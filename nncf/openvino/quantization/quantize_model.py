@@ -414,4 +414,6 @@ def compress_weights_impl(
         mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric, awq, subset_size
     )
     graph = NNCFGraphFactory.create(model)
-    return compression_algorithm.apply(model, graph, dataset=dataset)
+    compressed_model = compression_algorithm.apply(model, graph, dataset=dataset)
+    model = remove_friendly_name_duplicates(compressed_model)
+    return compressed_model
