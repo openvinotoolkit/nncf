@@ -31,8 +31,8 @@ def test_get_nodes_with_missed_input_edges(node_between_const_and_target):
         node_between_const_and_target,
         PTNNCFGraph,
     ).nncf_graph
-    ref_diconnected_nodes = ["/Conv2_0", "/Concat_with_missed_input_0"]
+    ref_disconnected_nodes = ["/Conv2_0", "/Concat_with_missed_input_0"]
     disconnected_nodes = nncf_graph.get_nodes_with_missed_input_edges()
-    assert len(ref_diconnected_nodes) == len(disconnected_nodes)
+    assert len(ref_disconnected_nodes) == len(disconnected_nodes)
     for node in disconnected_nodes:
-        assert node.node_name in ref_diconnected_nodes
+        assert node.node_name in ref_disconnected_nodes

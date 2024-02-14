@@ -14,6 +14,7 @@ from typing import Any
 from nncf.torch.dynamic_graph.context import TracingContext
 
 EXTERNAL_OP_STORAGE_NAME = "external_op"
+EXTERNAL_OP_STORAGE_PREFIX = "_nncf." + EXTERNAL_OP_STORAGE_NAME
 
 
 class ExternalOpCallHook:
