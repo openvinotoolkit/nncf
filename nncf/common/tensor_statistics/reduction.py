@@ -27,7 +27,7 @@ def get_channel_count_and_dim_idx(scale_shape: List[int]) -> Tuple[int, int]:
 
 
 def split_into_channels(
-    input_: np.ndarray[np.float64, Any], scale_shape: List[int]
+    input_: np.ndarray[np.float64, Any], scale_shape: list[int]
 ) -> List[np.ndarray[np.float64, Any]]:
     channel_count, channel_dim_idx = get_channel_count_and_dim_idx(scale_shape)
     channel_first_tensor = np.moveaxis(input_, channel_dim_idx, 0)
