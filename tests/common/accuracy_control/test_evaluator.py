@@ -80,21 +80,27 @@ class TestCase:
         TestCase(metric_value=[0.1], values_for_each_item=None, expected_is_metric_mode=None, raise_exception=True),
     ],
 )
-def test_determine_mode(ts: TestCase):
+def test_determine_mode(ts: TestCase, mocker):
     def _validation_fn(dummy_model, dummy_dataset):
         return (ts.metric_value, ts.values_for_each_item)
 
+    prepared_model = mocker.Mock()
+    prepared_model.model_for_inference = None
+
     if ts.raise_exception:
         with pytest.raises(nncf.InternalError):
-            _ = Evaluator.determine_mode(None, Dataset([None]), _validation_fn)
+            _ = Evaluator.determine_mode(prepared_model, Dataset([None]), _validation_fn)
     else:
-        is_metric_mode = Evaluator.determine_mode(None, Dataset([None]), _validation_fn)
+        is_metric_mode = Evaluator.determine_mode(prepared_model, Dataset([None]), _validation_fn)
         assert is_metric_mode == ts.expected_is_metric_mode
 
 
-def test_determine_mode_2():
+def test_determine_mode_2(mocker):
     def _validation_fn_with_error(dummy_model, dummy_dataset):
         raise RuntimeError
 
-    is_metric_mode = Evaluator.determine_mode(None, Dataset([None]), _validation_fn_with_error)
+    prepared_model = mocker.Mock()
+    prepared_model.model_for_inference = None
+
+    is_metric_mode = Evaluator.determine_mode(prepared_model, Dataset([None]), _validation_fn_with_error)
     assert not is_metric_mode

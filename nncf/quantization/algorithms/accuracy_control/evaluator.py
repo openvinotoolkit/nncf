@@ -13,15 +13,14 @@ from dataclasses import dataclass
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import nncf
-from nncf.common.factory import EngineFactory
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.common.utils.timer import timer
 from nncf.data.dataset import Dataset
+from nncf.quantization.algorithms.accuracy_control.backend import PreparedModel
 
 TModel = TypeVar("TModel")
-TPModel = TypeVar("TPModel")
 TTensor = TypeVar("TTensor")
 
 
@@ -112,7 +111,7 @@ class Evaluator:
         """
         return self._metric_mode
 
-    def prepare_model_for_inference(self, model: TModel) -> TPModel:
+    def prepare_model(self, model: TModel) -> PreparedModel:
         """
         Prepares model for inference.
 
@@ -122,21 +121,26 @@ class Evaluator:
         backend = get_backend(model)
 
         if backend == BackendType.OPENVINO:
-            import openvino.runtime as ov
+            from nncf.quantization.algorithms.accuracy_control.openvino_backend import OVPreparedModel
 
-            return ov.compile_model(model)
+            return OVPreparedModel(model)
+
+        if backend == BackendType.ONNX:
+            from nncf.quantization.algorithms.accuracy_control.onnx_backend import ONNXPreparedModel
+
+            return ONNXPreparedModel(model)
 
         raise NotImplementedError(
             f"The `prepare_model_for_inference()` method is not implemented for the {backend} backend."
         )
 
-    def validate_model_for_inference(
-        self, model_for_inference: TPModel, dataset: Dataset, indices: Optional[List[int]] = None
+    def validate_prepared_model(
+        self, prepared_model: PreparedModel, dataset: Dataset, indices: Optional[List[int]] = None
     ):
         """
         Validates prepared model for inference.
 
-        :param model: Prepared model to validate.
+        :param prepared_model: Prepared model to validate.
         :param dataset: Dataset to validate the model.
         :param indices: Zero-based indices of data items that should be selected from
             the dataset.
@@ -148,7 +152,7 @@ class Evaluator:
                 item.
         """
         if self._metric_mode is None:
-            self._metric_mode = Evaluator.determine_mode(model_for_inference, dataset, self._validation_fn)
+            self._metric_mode = Evaluator.determine_mode(prepared_model, dataset, self._validation_fn)
 
         if not self.is_metric_mode() and indices is not None:
             raise ValueError("The `indices` parameter can be used only if Evaluator.is_metric_mode() = True")
@@ -157,7 +161,7 @@ class Evaluator:
         if self._enable_iteration_count:
             validation_dataset = IterationCounter(validation_dataset)
 
-        metric, values_for_each_item = self._validation_fn(model_for_inference, validation_dataset)
+        metric, values_for_each_item = self._validation_fn(prepared_model.model_for_inference, validation_dataset)
 
         self._num_passed_iterations = validation_dataset.num_iterations if self._enable_iteration_count else 0
 
@@ -190,12 +194,12 @@ class Evaluator:
                 Otherwise, if the condition is false, it represents list of logits for each
                 item.
         """
-        model_for_inference = self.prepare_model_for_inference(model)
-        return self.validate_model_for_inference(model_for_inference, dataset, indices)
+        prepared_model = self.prepare_model(model)
+        return self.validate_prepared_model(prepared_model, dataset, indices)
 
     @staticmethod
     def determine_mode(
-        model_for_inference: TPModel,
+        prepared_model: PreparedModel,
         dataset: Dataset,
         validation_fn: Callable[[Any, Iterable[Any]], Tuple[float, Union[None, List[float], List[List[TTensor]]]]],
     ) -> bool:
@@ -203,7 +207,7 @@ class Evaluator:
         Determines mode based on the type of returned value from the
         validation function.
 
-        :param model_for_inference: Model to validate.
+        :param prepared_model: Model to validate.
         :param dataset: Dataset to validate the model.
         :param validation_fn: Validation function to validate model.
         :return: A boolean indicator where `True` means that the `Evaluator` collects
@@ -215,7 +219,7 @@ class Evaluator:
         data_item = dataset.get_data([0])
 
         try:
-            metric_value, values_for_each_item = validation_fn(model_for_inference, data_item)
+            metric_value, values_for_each_item = validation_fn(prepared_model.model_for_inference, data_item)
         except Exception:
             metric_mode = False
 
@@ -262,15 +266,15 @@ class Evaluator:
 
         return metric_mode
 
-    def collect_values_for_each_item_using_model_for_inference(
-        self, model_for_inference: TPModel, dataset: Dataset, indices: Optional[List[int]] = None
+    def collect_values_for_each_item_using_prepared_model(
+        self, prepared_model: PreparedModel, dataset: Dataset, indices: Optional[List[int]] = None
     ) -> Union[List[float], List[List[TTensor]]]:
         """
         Collects value for each item from the dataset using prepared model for inference.
         If `is_metric_mode()` returns `True` then i-th value is a metric for i-th data item.
         It is an output of the model for i-th data item otherwise.
 
-        :param model: Model to infer.
+        :param prepared_model: Model to infer.
         :param dataset: Dataset to collect values.
         :param indices: The zero-based indices of data items that should be selected from
             the dataset.
@@ -279,15 +283,14 @@ class Evaluator:
         if self._metric_mode:
             # Collect metrics for each item
             values_for_each_item = [
-                self._validation_fn(model_for_inference, [data_item])[0] for data_item in dataset.get_data(indices)
+                self._validation_fn(prepared_model.model_for_inference, [data_item])[0]
+                for data_item in dataset.get_data(indices)
             ]
         else:
             # Collect outputs for each item
-            engine = EngineFactory.create(model_for_inference)
-
             values_for_each_item = []
             for data_item in dataset.get_inference_data(indices):
-                logits = engine.infer(data_item)
+                logits = prepared_model(data_item)
                 values_for_each_item.append(list(logits.values()))
 
         self._num_passed_iterations = len(values_for_each_item) if self._enable_iteration_count else 0
@@ -308,8 +311,8 @@ class Evaluator:
             the dataset.
         :return: Collected values.
         """
-        model_for_inference = self.prepare_model_for_inference(model)
-        return self.collect_values_for_each_item_using_model_for_inference(model_for_inference, dataset, indices)
+        prepared_model = self.prepare_model(model)
+        return self.collect_values_for_each_item_using_prepared_model(prepared_model, dataset, indices)
 
     def collect_metric_results(self, model: TModel, dataset: Dataset, model_name: str = "") -> MetricResults:
         """
@@ -323,18 +326,16 @@ class Evaluator:
         nncf_logger.info(f"Validation of {model_name} model was started")
 
         with timer() as preparation_time:
-            model_for_inference = self.prepare_model_for_inference(model)
+            prepared_model = self.prepare_model(model)
 
         with timer() as validation_time:
-            metric, values_for_each_item = self.validate_model_for_inference(model_for_inference, dataset)
+            metric, values_for_each_item = self.validate_prepared_model(prepared_model, dataset)
 
         nncf_logger.info(f"Metric of {model_name} model: {metric}")
 
         if values_for_each_item is None:
             nncf_logger.info(f"Collecting values for each data item using the {model_name} model")
             with timer():
-                values_for_each_item = self.collect_values_for_each_item_using_model_for_inference(
-                    model_for_inference, dataset
-                )
+                values_for_each_item = self.collect_values_for_each_item_using_prepared_model(prepared_model, dataset)
 
         return MetricResults(metric, values_for_each_item, preparation_time(), validation_time())

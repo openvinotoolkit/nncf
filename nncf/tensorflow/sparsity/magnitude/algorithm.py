@@ -15,7 +15,6 @@ import tensorflow as tf
 
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
-from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
 from nncf.common.accuracy_aware_training.training_loop import ADAPTIVE_COMPRESSION_CONTROLLERS
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
@@ -25,6 +24,7 @@ from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.scopes import check_scopes_in_graph
 from nncf.common.scopes import should_consider_scope
 from nncf.common.sparsity.schedulers import SPARSITY_SCHEDULERS
+from nncf.common.sparsity.schedulers import SparsityScheduler
 from nncf.common.sparsity.statistics import LayerThreshold
 from nncf.common.sparsity.statistics import MagnitudeSparsityStatistics
 from nncf.common.statistics import NNCFStatistics
@@ -157,15 +157,19 @@ class MagnitudeSparsityController(BaseSparsityController):
             raise ValueError("Magnitude sparsity algorithm do not support adaptive scheduler")
 
         scheduler_cls = SPARSITY_SCHEDULERS.get(scheduler_type)
-        self._scheduler = scheduler_cls(self, params)
+        self._scheduler: SparsityScheduler = scheduler_cls(self, params)
         self._loss = TFZeroCompressionLoss()
         self._bn_adaptation = None
         self._config = config
         self.set_sparsity_level(sparsity_init)
 
     @property
-    def scheduler(self) -> CompressionScheduler:
+    def scheduler(self) -> SparsityScheduler:
         return self._scheduler
+
+    @property
+    def current_sparsity_level(self) -> float:
+        return self._scheduler.current_sparsity_level
 
     @property
     def loss(self) -> CompressionLoss:

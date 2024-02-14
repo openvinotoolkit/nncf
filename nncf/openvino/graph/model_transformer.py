@@ -23,6 +23,7 @@ from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.model_transformer import TModel
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.openvino.graph.model_utils import copy_rt_info
 from nncf.openvino.graph.node_utils import get_parameter_node_name
 from nncf.openvino.graph.node_utils import get_result_node_name
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
@@ -206,9 +207,11 @@ class OVModelTransformer(ModelTransformer):
             OVModelTransformer._update_tensor_name([result.get_output_tensor(0)], result_name)
             extra_model_outputs.append(result)
 
-        return ov.Model(
+        model_with_outputs = ov.Model(
             results=results + extra_model_outputs, sinks=assign_ops, parameters=params, name=model.friendly_name
         )
+        copy_rt_info(model, model_with_outputs, path=["nncf"])
+        return model_with_outputs
 
     @staticmethod
     def _apply_fq_nodes_removing_transformation(
@@ -585,7 +588,9 @@ class OVModelTransformer(ModelTransformer):
         if not results:
             results = model.get_results()
 
-        return ov.Model(results, params)
+        extracted_model = ov.Model(results, params)
+        copy_rt_info(model, extracted_model, path=["nncf"])
+        return extracted_model
 
     @staticmethod
     def _apply_insert_operation(model: ov.Model, transformations: OVInplaceFnInsertionCommand) -> ov.Model:

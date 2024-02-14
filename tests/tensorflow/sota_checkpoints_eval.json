@@ -119,7 +119,9 @@
                     "metric_type": "Acc@1",
                     "model_description": "MobileNet V3 (Small)",
                     "compression_description": "INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)",
-                    "diff_target_min": -0.15,
+                    "diff_target_tf_min": -0.15,
+                    "diff_target_tf_max": 0.15,
+                    "diff_target_ov_min": -0.06,
                     "target_tf": 67.66,
                     "target_ov": 67.74
                 },
@@ -131,6 +133,8 @@
                     "metric_type": "Acc@1",
                     "model_description": "MobileNet V3 (Small)",
                     "compression_description": "INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 42% (Magnitude)",
+                    "diff_target_tf_min": -0.15,
+                    "diff_target_tf_max": 0.15,
                     "target_tf": 67.69,
                     "target_ov": 67.68
                 },
@@ -149,7 +153,9 @@
                     "metric_type": "Acc@1",
                     "model_description": "MobileNet V3 (Large)",
                     "compression_description": "INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)",
-                    "diff_target_min": -0.15,
+                    "diff_target_tf_min": -0.15,
+                    "diff_target_tf_max": 0.15,
+                    "diff_target_ov_min": -0.09,
                     "target_tf": 74.91,
                     "target_ov": 74.96
                 },
@@ -161,6 +167,9 @@
                     "metric_type": "Acc@1",
                     "model_description": "MobileNet V3 (Large)",
                     "compression_description": "INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations) + Sparsity 42% (RB)",
+                    "diff_target_tf_min": -0.15,
+                    "diff_target_tf_max": 0.15,
+                    "diff_target_ov_max": 0.04,
                     "target_tf": 75.23,
                     "target_ov": 75.02
                 },
@@ -179,7 +188,8 @@
                     "metric_type": "Acc@1",
                     "model_description": "ResNet-50",
                     "compression_description": "INT8",
-                    "diff_target_max": 0.15,
+                    "diff_target_tf_min": -0.15,
+                    "diff_target_tf_max": 0.15,
                     "target_tf": 74.99,
                     "target_ov": 74.99
                 },
@@ -224,6 +234,8 @@
                     "metric_type": "Acc@1",
                     "model_description": "ResNet-50",
                     "compression_description": "INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + Filter pruning, 40%, geometric median criterion",
+                    "diff_target_tf_min": -0.15,
+                    "diff_target_tf_max": 0.15,
                     "target_tf": 75.06,
                     "target_ov": 75.00
                 }
@@ -255,7 +267,8 @@
                     "model_description": "RetinaNet",
                     "compression_description": "INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations)",
                     "batch_per_gpu": 15,
-                    "diff_target_max": 0.15,
+                    "diff_target_tf_min": -0.15,
+                    "diff_target_tf_max": 0.15,
                     "target_tf": 33.19,
                     "target_ov": 33.23
                 },
@@ -314,8 +327,9 @@
                     "model_description": "YOLO v4",
                     "compression_description": "INT8 (per-channel symmetric for weights, per-tensor asymmetric half-range for activations)",
                     "batch_per_gpu": 15,
-                    "diff_target_max": 0.15,
-                    "diff_target_min": -0.15,
+                    "diff_target_tf_min": -0.15,
+                    "diff_target_tf_max": 0.15,
+                    "diff_target_ov_max": 0.07,
                     "target_tf": 46.2,
                     "target_ov": 47.78
                 },
@@ -328,8 +342,8 @@
                     "model_description": "YOLO v4",
                     "compression_description": "Magnitude sparsity, 50%",
                     "batch_per_gpu": 15,
-                    "diff_target_max": 0.15,
-                    "diff_target_min": -0.15,
+                    "diff_target_tf_min": -0.15,
+                    "diff_target_tf_max": 0.15,
                     "target_tf": 46.49,
                     "target_ov": 48.08
                 }

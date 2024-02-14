@@ -71,7 +71,3 @@ class AABackendForTests(AccuracyControlAlgoBackend):
     @staticmethod
     def get_model_size(model: TModel) -> int:
         return 0
-
-    @staticmethod
-    def prepare_for_inference(model: TModel) -> TModel:
-        return model

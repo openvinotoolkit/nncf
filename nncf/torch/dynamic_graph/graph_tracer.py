@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from copy import deepcopy
 from typing import Any, Callable, Dict, Optional, Tuple, TypeVar
 
 import torch
@@ -35,8 +34,6 @@ class GraphTracer:
         as_eval: bool = False,
         trace_parameters: bool = False,
     ) -> DynamicGraph:
-        sd = deepcopy(model.state_dict())
-
         if context_to_use is None:
             context_to_use = TracingContext()
 
@@ -54,7 +51,6 @@ class GraphTracer:
                         self.custom_forward_fn(model)
                 else:
                     self.custom_forward_fn(model)
-        model.load_state_dict(sd)
 
         context_to_use.disable_trace_dynamic_graph()
         return context_to_use.graph

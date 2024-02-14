@@ -60,3 +60,49 @@ def get_start_nodes_for_activation_path_tracing(nncf_graph: NNCFGraph) -> List[N
     :return: Target NNCFGraph input nodes.
     """
     return nncf_graph.get_input_nodes() + nncf_graph.get_nodes_by_metatypes([OVReadValueMetatype])
+
+
+def remove_friendly_name_duplicates(model: ov.Model) -> ov.Model:
+    """
+    Removes diplicates of node names (friendly_name attribute) in the model.
+
+    :param model: ov.Model instance to update.
+    :return: Updated ov.Model without duplicated names.
+    """
+    rt_info_path = ["nncf", "friendly_names_were_updated"]
+    friendly_names_flag = "True"
+    if model.has_rt_info(rt_info_path) and model.get_rt_info(rt_info_path).value == friendly_names_flag:
+        return model
+
+    existing_names = set()
+    for op in model.get_ops():
+        friendly_name = op.get_friendly_name()
+        if friendly_name in existing_names:
+            friendly_name = friendly_name + "0"
+            op.set_friendly_name(friendly_name)
+        existing_names.add(friendly_name)
+    model.set_rt_info(friendly_names_flag, rt_info_path)
+    return model
+
+
+def model_has_state(model: ov.Model) -> bool:
+    """
+    Returns True if model has state else False
+
+    :param model: OpenVINO model
+    :return: True if model has state else False
+    """
+    return len(model.get_sinks()) > 0
+
+
+def copy_rt_info(model_source: ov.Model, model_dest: ov.Model, path: List[str]) -> None:
+    """
+    Checks and copies the rt_info from the source to destination model.
+
+    :param model_source: ov.Model instance to copy rt_info from.
+    :param model_dest: ov.Model instance to copy rt_info to.
+    :param path: Path to rt_info.
+    """
+    if model_source.has_rt_info(path):
+        source_rt_info = model_source.get_rt_info(path)
+        model_dest.set_rt_info(source_rt_info, path)

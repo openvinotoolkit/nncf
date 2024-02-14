@@ -50,6 +50,11 @@ def get_algo_backend(backend: BackendType) -> AccuracyControlAlgoBackend:
 
         return OVAccuracyControlAlgoBackend()
 
+    if backend == BackendType.ONNX:
+        from nncf.quantization.algorithms.accuracy_control.onnx_backend import ONNXAccuracyControlAlgoBackend
+
+        return ONNXAccuracyControlAlgoBackend()
+
     raise nncf.UnsupportedBackendError(
         f"Cannot create the backend for the accuracy control algorithm because {backend} is not supported."
     )
@@ -311,6 +316,8 @@ class QuantizationAccuracyRestorer:
                 quantized_model_graph,
                 self.restore_mode,
                 algo_backend.get_op_with_weights_metatypes(),
+                algo_backend.is_node_with_weight,
+                algo_backend.get_weight_tensor_port_ids,
             )
             report.removed_groups.append(current_group)
 

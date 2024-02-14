@@ -22,8 +22,8 @@ class SparseLoss(PTCompressionLoss):
         self.target = target
         self.p = p
         self.disabled = False
-        self.current_sparsity = 0
-        self.mean_sparse_prob = 0
+        self.current_sparsity: float = 0.0
+        self.mean_sparse_prob = 0.0
 
     def set_layers(self, sparse_layers):
         self._sparse_layers = sparse_layers

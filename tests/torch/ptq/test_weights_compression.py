@@ -11,11 +11,13 @@
 
 import pytest
 import torch
+import torch.nn.functional as F
 
 from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.quantization import compress_weights
 from nncf.torch import wrap_model
+from nncf.torch.quantization.layers import WeightsDecompressor
 
 DATA_BASED_SENSITIVITY_METRICS = (
     SensitivityMetric.HESSIAN_INPUT_ACTIVATION,
@@ -51,6 +53,59 @@ class ShortTransformer(torch.nn.Module):
         return res
 
 
+class NestedMatMul(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.w = torch.nn.Parameter(torch.ones(size=(300, 300), dtype=torch.float32))
+
+    def forward(self, input):
+        return input @ self.w
+
+
+class FunctionalModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv_w = torch.nn.Parameter(torch.ones(size=(5, 3, 3, 3), dtype=torch.float32))
+        self.matmul_w = torch.nn.Parameter(torch.ones(size=(1, 3, 300, 300), dtype=torch.float32))
+        self.conv_tr_w = torch.nn.Parameter(torch.rand(size=(5, 4, 3, 3)))
+        self.nested_matmul = NestedMatMul()
+
+    def forward(self, input_):
+        x = input_.to(torch.float32)
+        x = x @ self.matmul_w
+        x = self.nested_matmul(x)
+        x = F.conv2d(x, self.conv_w)
+        x = F.conv_transpose2d(x, self.conv_tr_w)
+        return x
+
+
+class ConvolutionModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv_regular = torch.nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3)
+        self.max_pool2d = torch.nn.MaxPool2d(kernel_size=2)
+        self.conv_transpose = torch.nn.ConvTranspose2d(in_channels=16, out_channels=8, kernel_size=3)
+        self.conv_depthwise = torch.nn.Conv2d(in_channels=8, out_channels=8, kernel_size=5, groups=8)
+        self.adaptive_avg_pool = torch.nn.AdaptiveAvgPool2d(output_size=1)
+        self.linear = torch.nn.Linear(in_features=8, out_features=8)
+
+    def forward(self, input_):
+        input_ = input_.to(torch.float32)
+        x = self.conv_regular(input_)
+        x = F.relu(x)
+        x.transpose_(2, 3)
+        x = self.max_pool2d(x)
+        y = self.conv_transpose(x)
+        z = F.conv_transpose2d(x, self.conv_transpose.weight)
+        x = y + z
+        x = self.conv_depthwise(x)
+        x = F.conv2d(x, self.conv_depthwise.weight, groups=self.conv_depthwise.groups)
+        x += torch.ones_like(x)
+        x = self.adaptive_avg_pool(x)
+        x = self.linear(x.flatten())
+        return x
+
+
 def test_compress_weights():
     model = ShortTransformer(5, 10)
 
@@ -63,6 +118,39 @@ def test_compress_weights():
 
     for _, module in compressed_model.named_children():
         if isinstance(module, (torch.nn.Linear, torch.nn.Embedding)):
+            n_target_modules += 1
+            if module.weight.dtype in [torch.uint8, torch.int8]:
+                n_compressed_weights += 1
+
+    assert n_compressed_weights == n_target_modules
+
+
+def test_compress_weights_functional_model():
+    model = FunctionalModel()
+
+    input_ids = torch.randint(0, 10, [1, 3, 300, 300])
+    wrapped_model = wrap_model(model, example_input=input_ids, trace_parameters=True)
+    compressed_model = compress_weights(wrapped_model)
+
+    n_compressed_weights = 0
+    for layer in compressed_model.nncf.external_op.values():
+        if isinstance(layer, WeightsDecompressor):
+            n_compressed_weights += 1
+    assert n_compressed_weights == 4
+
+
+def test_compress_weights_conv():
+    model = ConvolutionModel()
+
+    input_ids = torch.randint(0, 10, [1, 3, 300, 300])
+    wrapped_model = wrap_model(model, example_input=input_ids, trace_parameters=True)
+    compressed_model = compress_weights(wrapped_model)
+
+    n_compressed_weights = 0
+    n_target_modules = 0
+
+    for _, module in compressed_model.named_children():
+        if isinstance(module, (torch.nn.Linear, torch.nn.Conv2d, torch.nn.ConvTranspose2d)):
             n_target_modules += 1
             if module.weight.dtype in [torch.uint8, torch.int8]:
                 n_compressed_weights += 1

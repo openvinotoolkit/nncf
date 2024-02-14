@@ -21,7 +21,7 @@ from nncf.common.tensor import TensorElementsType
 from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.reduction import get_per_channel_history
 
-ReductionAxes = Tuple[int]
+ReductionAxes = Tuple[int, ...]
 
 
 class TensorStatisticCollectorBase(ABC):
