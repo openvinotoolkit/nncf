@@ -78,15 +78,9 @@ class ModeBasedDefaults:
     Contains default values that should be set in case of abscense.
     """
 
-    preset: QuantizationPreset = QuantizationPreset.PERFORMANCE
-    target_device: TargetDevice = TargetDevice.ANY
     overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER
-    quantize_outputs: bool = False
     activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = QuantizationParameters()
     weights_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = QuantizationParameters()
-    activations_range_estimator_params: RangeEstimatorParameters = RangeEstimatorParameters()
-    weights_range_estimator_params: RangeEstimatorParameters = RangeEstimatorParameters()
-    ignored_scope: IgnoredScope = IgnoredScope()
 
 
 MODE_BASED_DEFAULTS = {
@@ -135,13 +129,13 @@ class MinMaxQuantization(Algorithm):
     def __init__(
         self,
         mode: Optional[QuantizationMode] = None,
-        preset: Optional[QuantizationPreset] = None,
-        target_device: Optional[TargetDevice] = None,
+        preset: QuantizationPreset = QuantizationPreset.PERFORMANCE,
+        target_device: TargetDevice = TargetDevice.ANY,
         subset_size: int = 300,
         model_type: Optional[ModelType] = None,
         ignored_scope: Optional[IgnoredScope] = None,
         overflow_fix: Optional[OverflowFix] = None,
-        quantize_outputs: Optional[bool] = None,
+        quantize_outputs: bool = False,
         inplace_statistics: bool = True,
         activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None,
         weights_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None,
@@ -186,16 +180,17 @@ class MinMaxQuantization(Algorithm):
         self._subset_size = subset_size
         self._mode = mode
         self._model_type = model_type
-        self._ignored_scope = ignored_scope
         self._overflow_fix = overflow_fix
         self._quantize_outputs = quantize_outputs
         self._inplace_statistics = inplace_statistics
         self._backend_params = backend_params
-        self._preset = preset
         self._activations_quantization_params = activations_quantization_params
         self._weights_quantization_params = weights_quantization_params
         self._activations_range_estimator_params = activations_range_estimator_params
         self._weights_range_estimator_params = weights_range_estimator_params
+        self._preset = QuantizationPreset.PERFORMANCE if preset is None else preset
+        self._preset = QuantizationPreset.MIXED if model_type == ModelType.TRANSFORMER else self._preset
+        self._ignored_scope = IgnoredScope() if ignored_scope is None else ignored_scope
 
         self._set_mode_based_defaults()
         self._review_mode_based_defaults()
@@ -254,9 +249,6 @@ class MinMaxQuantization(Algorithm):
 
             if self._quantize_outputs:
                 raise nncf.ParameterNotSupportedError("quantize_outputs option is not supported with the mode option!")
-
-            if self._backend_params is not None:
-                raise nncf.ParameterNotSupportedError("backend_params option is not supported with the mode option!")
 
             if isinstance(self._weights_quantization_params, QuantizationParameters):
                 raise nncf.ParameterNotSupportedError(

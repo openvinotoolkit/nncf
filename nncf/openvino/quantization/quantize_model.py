@@ -146,7 +146,7 @@ def native_quantize_impl(
         quantized_model,
         {
             "preset": preset,
-            "target_device": target_device,
+            "target_device": target_device.value,
             "subset_size": subset_size,
             "fast_bias_correction": fast_bias_correction,
             "model_type": model_type,

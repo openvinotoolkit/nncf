@@ -235,7 +235,7 @@ class AdvancedQuantizationParameters:
     smooth_quant_alpha: float = None
 
     # Backend specific parameters
-    backend_params: Dict[str, Any] = None
+    backend_params: Dict[str, Any] = field(default_factory=dict)
 
 
 @api()
