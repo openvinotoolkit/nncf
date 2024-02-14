@@ -118,7 +118,7 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
             return PTNNCFTensor(torch.mean(x.tensor, axis=0))
         x = torch.moveaxis(x.tensor, axis, 1)
         t = x.reshape(x.shape[0], x.shape[1], -1)
-        return PTNNCFTensor(torch.mean(t, axis=(0, 2)))
+        return PTNNCFTensor(torch.mean(t, axis=2))
 
     @staticmethod
     def batch_mean(x: NNCFTensor) -> NNCFTensor:
@@ -520,7 +520,6 @@ def get_mean_statistic_collector(
         Aggregates all available collected statistics in case parameter is None.
     :return: Mean statistic collector.
     """
-
     reducer = PTMeanPerChanelReducer(channel_axis=channel_axis)
     noop_reducer = NoopReducer()
     aggregation_axes = (
