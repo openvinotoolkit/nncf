@@ -957,6 +957,28 @@ class DuplicatedNamesModel(OVReferenceModel):
         return model
 
 
+class ModelNamedConsts(OVReferenceModel):
+    """
+    Model with named constant nodes (friendly_name field).
+    """
+
+    def _create_ov_model(self):
+        main_shape = [1, 2]
+        input_1 = opset.parameter(main_shape, name="Parameter")
+
+        add_1_data = self._rng.random(main_shape).astype(np.float32)
+        add_1_const = opset.constant(add_1_data, name="Constant_16")
+        add_1 = opset.add(input_1, add_1_const, name="Add_1")
+
+        matmul_1_data = self._rng.random(main_shape).astype(np.float32)
+        matmul_1_const = opset.constant(matmul_1_data, name="Constant_1")
+        matmul_1 = opset.matmul(add_1, matmul_1_const, transpose_a=False, transpose_b=True, name="MatMul_1")
+
+        result = opset.result(matmul_1, name="Result")
+        model = ov.Model([result], [input_1])
+        return model
+
+
 class StatefulModel(OVReferenceModel):
     """
     Stateful model for testing.
