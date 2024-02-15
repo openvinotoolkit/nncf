@@ -152,6 +152,15 @@ class TracedParameter(torch.nn.Parameter, TracedTensorMixin):
     def is_reused(self):
         return self.tracing_attrs[TracedParameter.IS_REUSED]
 
+    def get_dtype(self):
+        # Type of self is TracedParameter or TracedTensor
+        return super(self.__class__, self).__getattribute__("dtype")
+
+    def __getattribute__(self, name):
+        if name == "dtype":
+            return self.get_dtype()
+        return super().__getattribute__(name)
+
     @staticmethod
     def from_torch_parameter(tensor: torch.nn.Parameter, name: str, is_reused: bool) -> "TracedParameter":
         """
