@@ -27,6 +27,7 @@ from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -173,13 +174,7 @@ class BiasCorrection(Algorithm):
 
             current_bias = self._backend_entity.get_bias_value(node, model_copy, nncf_graph)
 
-            channel_axis = node.metatype.output_channel_axis
-            if current_bias.ndim > 1:
-                channel_axis = range(current_bias.ndim)[channel_axis]
-                axes = [i for i in range(current_bias.ndim) if i != channel_axis]
-                bias_shift = np.expand_dims(bias_shift, axes)
-
-            bias_shift = self._reshape_bias_shift(bias_shift, current_bias, channel_axis)
+            bias_shift = self._reshape_bias_shift(bias_shift, current_bias, node.metatype.output_channel_axis)
             updated_bias = current_bias + bias_shift
             magnitude = self._get_bias_shift_magnitude(current_bias, updated_bias)
 
@@ -205,7 +200,7 @@ class BiasCorrection(Algorithm):
         return main_model_transformer.transform(main_transformations_layout)
 
     @staticmethod
-    def _reshape_bias_shift(bias_shift, bias_value, channel_axis: int):
+    def _reshape_bias_shift(bias_shift: np.ndarray, bias_value: np.ndarray, channel_axis: int) -> np.ndarray:
         """
         Reshape bias_shift tensor in case of dimensions of bias_value is more then 1.
 
@@ -392,12 +387,17 @@ class BiasCorrection(Algorithm):
         engine = EngineFactory.create(model)
         channel_axis = node.metatype.output_channel_axis
         q_outputs = []
+        axis = None
         for feed_dict in feed_dicts:
             q_output = engine.infer(feed_dict)
             q_output = self._backend_entity.process_model_output(q_output, output_tensor_name)
-            q_outputs.append(self._backend_entity.tensor_processor.mean_per_channel(q_output, channel_axis).tensor)
+            if len(q_output.shape) < 3:
+                axis = 0
+            else:
+                axis = get_reduction_axes((channel_axis,), q_output.shape) if axis is None else axis
+            q_outputs.append((np.mean(q_output.tensor, axis=axis)))
         # Here we get the per-sample average, so the axis is 0.
-        q_output = np.mean(q_outputs, axis=(0, 1))
+        q_output = np.mean(q_outputs, axis=(0))
         return output_fp - q_output
 
     @staticmethod
