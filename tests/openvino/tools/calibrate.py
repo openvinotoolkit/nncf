@@ -29,8 +29,13 @@ import openvino.runtime as ov
 from config import Config
 from openvino.runtime import Dimension
 from openvino.runtime import PartialShape
-from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator
-from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import create_model_evaluator
+
+try:
+    from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator
+    from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import create_model_evaluator
+except ImportError:
+    from accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator
+    from accuracy_checker.evaluators.quantization_model_evaluator import create_model_evaluator
 
 import nncf
 from nncf.common.deprecation import warning_deprecated
