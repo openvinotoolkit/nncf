@@ -53,8 +53,9 @@ def test_safe_open_not_symlink(setup_links):
 
 def test_safe_open_is_symlink(setup_links):
     with pytest.raises(ValidationError):
-        with safe_open(setup_links["file_symlink"], "r") as file_stream:
+        with safe_open(setup_links["file_symlink"], "r"):
             pass
+          
 
 
 def test_is_windows(monkeypatch):
