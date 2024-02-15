@@ -9,14 +9,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-from typing import List, Optional, Type
 from dataclasses import dataclass
+from typing import List, Optional, Type
 from unittest.mock import patch
-from nncf.common.utils.decorators import (
-    skip_if_dependency_unavailable,
-    IMPORTED_DEPENDENCIES,
-)
+
+import pytest
+
+from nncf.common.utils.decorators import IMPORTED_DEPENDENCIES
+from nncf.common.utils.decorators import skip_if_dependency_unavailable
 
 
 @dataclass
@@ -26,6 +26,7 @@ class StructForTest:
     result_is_none: bool
     final_imported_dependencies: bool
 
+
 @pytest.mark.parametrize(
     "ts",
     [
@@ -33,17 +34,16 @@ class StructForTest:
             dependencies=["dependency1", "dependency2"],
             side_effect=None,
             result_is_none=False,
-            final_imported_dependencies=True
+            final_imported_dependencies=True,
         ),
         StructForTest(
             dependencies=["nonexistent_dependency"],
             side_effect=ImportError("Module not found"),
             result_is_none=True,
-            final_imported_dependencies=False
+            final_imported_dependencies=False,
         ),
     ],
 )
-
 def test_case_parametrized(ts: StructForTest, mocker):
     mocked_func = mocker.MagicMock()
     wrapped_func = skip_if_dependency_unavailable(ts.dependencies)(mocked_func)
@@ -63,6 +63,3 @@ def test_case_parametrized(ts: StructForTest, mocker):
         assert IMPORTED_DEPENDENCIES[d] == ts.final_imported_dependencies
 
     IMPORTED_DEPENDENCIES.clear()
-
-
-

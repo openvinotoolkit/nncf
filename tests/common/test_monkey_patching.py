@@ -9,8 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nncf.common.utils.patcher import PATCHER
 from unittest.mock import patch
+
+from nncf.common.utils.patcher import PATCHER
 
 CORRECT_WRAPPER_STACK = "base"
 
@@ -26,31 +27,24 @@ def wrapper2(self, fn, *args, **kwargs):
 
 
 def assert_wrapper_stack(wrapper_stack=None):
-    assert (
-        wrapper_stack == CORRECT_WRAPPER_STACK
-    ), f"{wrapper_stack} != {CORRECT_WRAPPER_STACK}"
+    assert wrapper_stack == CORRECT_WRAPPER_STACK, f"{wrapper_stack} != {CORRECT_WRAPPER_STACK}"
 
 
 class TestOverrideClass:
     def assert_wrapper_stack_method(self, wrapper_stack=None):
-        assert (
-            wrapper_stack == CORRECT_WRAPPER_STACK
-        ), f"{wrapper_stack} != {CORRECT_WRAPPER_STACK}"
+        assert wrapper_stack == CORRECT_WRAPPER_STACK, f"{wrapper_stack} != {CORRECT_WRAPPER_STACK}"
 
     @staticmethod
     def assert_wrapper_stack_static(wrapper_stack=None):
-        assert (
-            wrapper_stack == CORRECT_WRAPPER_STACK
-        ), f"{wrapper_stack} != {CORRECT_WRAPPER_STACK}"
+        assert wrapper_stack == CORRECT_WRAPPER_STACK, f"{wrapper_stack} != {CORRECT_WRAPPER_STACK}"
 
     @classmethod
     def assert_wrapper_stack_class(cls, wrapper_stack=None):
-        assert (
-            wrapper_stack == CORRECT_WRAPPER_STACK
-        ), f"{wrapper_stack} != {CORRECT_WRAPPER_STACK}"
+        assert wrapper_stack == CORRECT_WRAPPER_STACK, f"{wrapper_stack} != {CORRECT_WRAPPER_STACK}"
 
     def ori_method(self):
         return "placeholder_method"
+
 
 def test_patcher():
     global CORRECT_WRAPPER_STACK
@@ -75,16 +69,12 @@ def test_patcher():
     # Test single patch static method
     PATCHER.patch(TestOverrideClass.assert_wrapper_stack_static, wrapper1)
     CORRECT_WRAPPER_STACK = "base_wrapper1"
-    test_obj.assert_wrapper_stack_static(
-        wrapper_stack="base"
-    )  # doesn't work if called from class level
+    test_obj.assert_wrapper_stack_static(wrapper_stack="base")  # doesn't work if called from class level
 
     # Test single patch class method
     PATCHER.patch(TestOverrideClass.assert_wrapper_stack_class, wrapper1)
     CORRECT_WRAPPER_STACK = "base_wrapper1"
-    test_obj.assert_wrapper_stack_class(
-        wrapper_stack="base"
-    )  # doesn't work if called from class level
+    test_obj.assert_wrapper_stack_class(wrapper_stack="base")  # doesn't work if called from class level
 
     # Test single patch object method
     PATCHER.patch(TestOverrideClass.assert_wrapper_stack_method, wrapper1)
@@ -135,17 +125,14 @@ def test_patcher():
     CORRECT_WRAPPER_STACK = "base_wrapper1"
     test_obj.assert_wrapper_stack_method(wrapper_stack="base")
 
-    
+
 def test_attribute_error_module():
     with patch("inspect.getfullargspec", return_value=[["mock_value"]]):
-        with patch.object(
-            TestOverrideClass, "__getattribute__", side_effect=AttributeError()
-        ):
+        with patch.object(TestOverrideClass, "__getattribute__", side_effect=AttributeError()):
             pass
+
 
 def test_attribute_error_class():
     with patch("inspect.getfullargspec", return_value=[["mock_value1, mock_value2"]]):
-        with patch.object(
-            TestOverrideClass, "__getattribute__", side_effect=AttributeError()
-        ):
+        with patch.object(TestOverrideClass, "__getattribute__", side_effect=AttributeError()):
             pass

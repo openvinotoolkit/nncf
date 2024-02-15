@@ -9,19 +9,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nncf.common.utils.os import (
-    fail_if_symlink,
-    safe_open,
-    is_windows,
-    is_linux,
-    get_available_cpu_count,
-    get_available_memory_amount
-)
-from nncf import ValidationError
-from pathlib import Path
 import os
-import pytest
 import sys
+from pathlib import Path
+
+import pytest
+
+from nncf import ValidationError
+from nncf.common.utils.os import fail_if_symlink
+from nncf.common.utils.os import get_available_cpu_count
+from nncf.common.utils.os import get_available_memory_amount
+from nncf.common.utils.os import is_linux
+from nncf.common.utils.os import is_windows
+from nncf.common.utils.os import safe_open
+
 
 @pytest.fixture
 def setup_links(tmpdir):
@@ -55,7 +56,6 @@ def test_safe_open_is_symlink(setup_links):
     with pytest.raises(ValidationError):
         with safe_open(setup_links["file_symlink"], "r"):
             pass
-          
 
 
 def test_is_windows(monkeypatch):
@@ -112,6 +112,7 @@ def test_get_available_memory_amount(mock_virtual_memory):
     )
     result = get_available_memory_amount()
     assert result == 500000000
+
 
 def test_get_available_memory_amount_exception(mock_virtual_memory):
     mock_virtual_memory.side_effect = Exception("Error fetching virtual memory")

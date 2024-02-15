@@ -10,14 +10,16 @@
 # limitations under the License.
 
 import logging
-from nncf.common.utils.timer import timer
 import time
+
+from nncf.common.utils.timer import timer
+
 
 def test_timer(nncf_caplog):
     with timer() as t:
         time.sleep(1)
 
     t()
-    
+
     with nncf_caplog.at_level(logging.INFO):
-         assert "nncf:timer.py:28 Elapsed Time: 00:00:01" in nncf_caplog.text
+        assert "nncf:timer.py:28 Elapsed Time: 00:00:01" in nncf_caplog.text

@@ -9,17 +9,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
+import re
+
 import jsonschema
-from nncf.config.schema import (
-    validate_single_compression_algo_schema,
-    validate_accuracy_aware_training_schema,
-)
-from nncf.config.schemata.common.compression import BASIC_COMPRESSION_ALGO_SCHEMA
-from nncf.config.schemata.basic import with_attributes
+import pytest
+
+from nncf.config.schema import validate_accuracy_aware_training_schema
+from nncf.config.schema import validate_single_compression_algo_schema
 from nncf.config.schemata.basic import BOOLEAN
 from nncf.config.schemata.basic import STRING
-import re
+from nncf.config.schemata.basic import with_attributes
+from nncf.config.schemata.common.compression import BASIC_COMPRESSION_ALGO_SCHEMA
 
 MOCK_ALGO_SCHEMA = {
     **BASIC_COMPRESSION_ALGO_SCHEMA,
@@ -83,13 +83,9 @@ def test_validate_single_compression_algo_schema_additional_property(mock_algo_d
 def test_validate_single_compression_with_readme_url(mock_algo_dict, monkeypatch):
     with pytest.raises(
         jsonschema.ValidationError,
-        match=re.compile(
-            "or to the algorithm documentation for examples of the configs:"
-        ),
+        match=re.compile("or to the algorithm documentation for examples of the configs:"),
     ):
-        monkeypatch.setattr(
-            "nncf.config.schema.ALGO_NAME_VS_README_URL", MOCK_ALGO_NAME_VS_README_URL
-        )
+        monkeypatch.setattr("nncf.config.schema.ALGO_NAME_VS_README_URL", MOCK_ALGO_NAME_VS_README_URL)
         mock_algo_dict["invalid_property"] = True
         validate_single_compression_algo_schema(mock_algo_dict, MOCK_REF_VS_ALGO_SCHEMA)
 
@@ -100,18 +96,14 @@ def test_validate_accuracy_aware_training_schema_valid(mock_algo_dict, monkeypat
         MOCK_ACCURACY_AWARE_TRAINING_SCHEMA,
     )
     monkeypatch.setattr(
-            "nncf.config.schema.ACCURACY_AWARE_MODES_VS_SCHEMA",
-            MOCK_ACCURACY_AWARE_MODES_VS_SCHEMA,
-        )
+        "nncf.config.schema.ACCURACY_AWARE_MODES_VS_SCHEMA",
+        MOCK_ACCURACY_AWARE_MODES_VS_SCHEMA,
+    )
     validate_accuracy_aware_training_schema(mock_algo_dict)
 
 
-def test_validate_accuracy_aware_training_schema_invalid_mode(
-    mock_algo_dict, monkeypatch
-):
-    with pytest.raises(
-        jsonschema.ValidationError, match=re.compile("Incorrect Accuracy Aware mode")
-    ):
+def test_validate_accuracy_aware_training_schema_invalid_mode(mock_algo_dict, monkeypatch):
+    with pytest.raises(jsonschema.ValidationError, match=re.compile("Incorrect Accuracy Aware mode")):
         monkeypatch.setattr(
             "nncf.config.schema.ACCURACY_AWARE_TRAINING_SCHEMA",
             MOCK_ACCURACY_AWARE_TRAINING_SCHEMA,
@@ -123,12 +115,9 @@ def test_validate_accuracy_aware_training_schema_invalid_mode(
         mock_algo_dict["mode"] = "invalid_mode"
         validate_accuracy_aware_training_schema(mock_algo_dict)
 
-def test_validate_accuracy_aware_training_schema_missing_property(
-    mock_algo_dict, monkeypatch
-):
-    with pytest.raises(
-        jsonschema.ValidationError
-    ):
+
+def test_validate_accuracy_aware_training_schema_missing_property(mock_algo_dict, monkeypatch):
+    with pytest.raises(jsonschema.ValidationError):
         monkeypatch.setattr(
             "nncf.config.schema.ACCURACY_AWARE_TRAINING_SCHEMA",
             MOCK_ACCURACY_AWARE_TRAINING_SCHEMA,
