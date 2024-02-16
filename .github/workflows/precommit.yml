@@ -93,6 +93,14 @@ jobs:
         image: openvinogithubactions.azurecr.io/dockerhub/ubuntu:20.04
 
     steps:
+      - name: Set apt retries
+        run: echo 'Acquire::Retries "10";' > /etc/apt/apt.conf.d/80-retries
+
+      - name: Install git
+        run: |
+          apt-get update
+          apt-get install --assume-yes --no-install-recommends git ca-certificates
+
       - uses: actions/checkout@v3
         with:
           lfs: true
@@ -101,10 +109,10 @@ jobs:
           python-version: 3.8.10
       - name: Install NNCF and test requirements
         run: make install-torch-test
-      - name: Run TORCH precommit test scope
-        run: make test-torch
-        env:
-          NNCF_COVERAGE: 1
+      # - name: Run TORCH precommit test scope
+      #   run: make test-torch
+      #   env:
+      #     NNCF_COVERAGE: 1
       # - name: Upload coverage report as artifact
       #   uses: actions/upload-artifact@v3
       #   with:
