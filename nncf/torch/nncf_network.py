@@ -297,7 +297,7 @@ class NNCFNetworkInterface(torch.nn.Module):
             original_dynamic_graph = GraphTracer(_orig_graph_build_forward_fn).trace_graph(
                 model, _orig_context, as_eval=True, trace_parameters=self.trace_parameters
             )
-            original_graph = GraphConverter.convert(original_dynamic_graph)
+            original_graph = GraphConverter.convert(original_dynamic_graph, trace_parameters)
             self._original_graphs_pair = PTGraphPair(dynamic_graph=original_dynamic_graph, nncf_graph=original_graph)
         self._compressed_graphs_pair: PTGraphPair = None
 
@@ -543,7 +543,7 @@ class NNCFNetworkInterface(torch.nn.Module):
             compressed_traced_graph = builder.build_dynamic_graph(
                 self._model_ref, self._compressed_context, trace_parameters=self.trace_parameters
             )
-            compressed_graph = GraphConverter.convert(compressed_traced_graph)
+            compressed_graph = GraphConverter.convert(compressed_traced_graph, self.trace_parameters)
             self._compressed_graphs_pair = PTGraphPair(
                 dynamic_graph=compressed_traced_graph, nncf_graph=compressed_graph
             )
@@ -824,8 +824,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         ret = []
         graph = self._original_graphs_pair.nncf_graph
         for node in graph.get_nodes_by_metatypes(CONST_NOOP_METATYPES):
-            next_nodes = graph.get_next_nodes(node)
-            if len(next_nodes) > 1:
+            if node.is_shared():
                 ret.append(node.layer_attributes.name)
         return ret
 

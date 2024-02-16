@@ -160,7 +160,7 @@ class TracedParameter(torch.nn.Parameter, TracedTensorMixin):
 
         :param tensor: The input torch.nn.Parameter.
         :param name: The parameter name.
-        :param is_shared: True if parameter is used as an input in several operations of the model otherwise False.
+        :param is_reused: True if parameter is used as an input in several operations of the model otherwise False.
         :return: The resulting TracedParameter.
         """
         TracedParameter.patch(tensor)
