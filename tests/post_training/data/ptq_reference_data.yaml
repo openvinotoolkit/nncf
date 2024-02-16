@@ -217,7 +217,7 @@ timm/visformer_small_backend_ONNX:
 timm/visformer_small_backend_OV:
   metric_value: 0.81692
 timm/visformer_small_backend_TORCH:
-  metric_value: 0.81624
+  metric_value: 0.8146
 timm/wide_resnet50_2_backend_CUDA_TORCH:
   metric_value: 0.81186
 timm/wide_resnet50_2_backend_FP32:
