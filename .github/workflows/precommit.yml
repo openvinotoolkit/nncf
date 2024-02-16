@@ -99,14 +99,17 @@ jobs:
       - name: Install git
         run: |
           apt-get update
-          apt-get install --assume-yes --no-install-recommends git ca-certificates
+          apt-get install --assume-yes --no-install-recommends git git-lfs ca-certificates
+          lspci
 
       - uses: actions/checkout@v3
         with:
           lfs: true
+
       - uses: actions/setup-python@v3
         with:
           python-version: 3.8.10
+
       - name: Install NNCF and test requirements
         run: make install-torch-test
       # - name: Run TORCH precommit test scope
