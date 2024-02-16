@@ -161,7 +161,7 @@ class MinMaxQuantization(Algorithm):
         :param ignored_scope: An ignored scope that defined the list of model control
             flow graph nodes to be ignored during quantization.
         :param overflow_fix: This option controls whether to apply the overflow issue
-            fix for the 8-bit quantization, defaults to OverflowFix.FIRST_LAYER.
+            fix for the 8-bit quantization.
         :param quantize_outputs: Whether to insert additional quantizers right before
             each of the model outputs.
         :param inplace_statistics: Defines wheather to calculate quantizers statistics
