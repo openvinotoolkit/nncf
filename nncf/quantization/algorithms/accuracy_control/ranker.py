@@ -232,6 +232,8 @@ class Ranker:
                 quantized_model_graph,
                 self._restore_mode,
                 self._algo_backend.get_op_with_weights_metatypes(),
+                self._algo_backend.is_node_with_weight,
+                self._algo_backend.get_weight_tensor_port_ids,
             )
 
             prepared_model_queue.append(executor.submit(self._evaluator.prepare_model, modified_model))
