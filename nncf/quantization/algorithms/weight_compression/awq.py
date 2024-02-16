@@ -11,7 +11,6 @@
 
 from copy import deepcopy
 from dataclasses import dataclass
-from math import ceil
 from typing import Any, Dict, List, Optional, TypeVar
 
 from nncf import Dataset
@@ -186,17 +185,9 @@ class AWQ(Algorithm):
             s = fns.max(fns.abs(X), axis=1)
 
             if X.shape[1] > self._subset_size:
-                part_size = ceil(X.shape[1] / self._subset_size)
-                rest = X.shape[1]
-                X_smooth = []
-                while rest + len(X_smooth) > self._subset_size:
-                    x = fns.mean(X[:, rest - part_size : rest], axis=1)
-                    X_smooth.append(x)
-                    rest -= part_size
-                while rest > 0:
-                    X_smooth.append(X[:, rest])
-                    rest -= 1
-                X = fns.stack(X_smooth, axis=1)
+                lens = [stat.shape[0] for stat in stats]
+                idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][: self._subset_size]
+                X = X[:, idxs]
 
             top_k = max(int(s.shape[0] * self._percent_to_apply), 1)
             topk_idxs = fns.argsort(-s)[:top_k]
