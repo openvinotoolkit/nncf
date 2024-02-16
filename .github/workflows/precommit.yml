@@ -88,10 +88,14 @@ jobs:
   #         flags: OPENVINO
 
   pytorch:
+    defaults:
+      run:
+        shell: bash
     runs-on: aks-linux-4-cores-28gb-gpu-testla-t4
     container:
         image: openvinogithubactions.azurecr.io/dockerhub/ubuntu:20.04
-
+    env:
+      DEBIAN_FRONTEND: noninteractive # to prevent apt-get from waiting user input
     steps:
       - name: Set apt retries
         run: echo 'Acquire::Retries "10";' > /etc/apt/apt.conf.d/80-retries
@@ -99,21 +103,20 @@ jobs:
       - name: Install git
         run: |
           apt-get update
-          apt-get install --assume-yes --no-install-recommends git git-lfs ca-certificates
-          lspci
+          apt-get install --assume-yes --no-install-recommends git git-lfs ca-certificates make
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           lfs: true
 
-      - uses: actions/setup-python@v3
+      - uses: actions/setup-python@v4
         with:
           python-version: 3.8.10
 
       - name: Install NNCF and test requirements
         run: make install-torch-test
-      # - name: Run TORCH precommit test scope
-      #   run: make test-torch
+      - name: Run TORCH precommit test scope
+        run: make test-torch
       #   env:
       #     NNCF_COVERAGE: 1
       # - name: Upload coverage report as artifact
