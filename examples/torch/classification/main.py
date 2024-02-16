@@ -16,7 +16,7 @@ from copy import deepcopy
 from functools import partial
 from pathlib import Path
 from shutil import copyfile
-from typing import Any, Tuple
+from typing import Any
 
 import torch
 import torch.nn.parallel
@@ -35,7 +35,6 @@ from torchvision.datasets import CIFAR10
 from torchvision.datasets import CIFAR100
 from torchvision.models import InceptionOutputs
 
-import nncf
 from examples.common.paths import configure_paths
 from examples.common.sample_config import SampleConfig
 from examples.common.sample_config import create_sample_config
@@ -47,7 +46,8 @@ from examples.torch.common.execution import get_execution_mode
 from examples.torch.common.execution import prepare_model_for_execution
 from examples.torch.common.execution import set_seed
 from examples.torch.common.execution import start_worker
-from examples.torch.common.export import export_model_after_ptq
+from examples.torch.common.export import export_model
+from examples.torch.common.model_loader import COMPRESSION_STATE_ATTR
 from examples.torch.common.model_loader import MODEL_STATE_ATTR
 from examples.torch.common.model_loader import extract_model_and_compression_states
 from examples.torch.common.model_loader import load_model
@@ -66,14 +66,14 @@ from examples.torch.common.utils import make_additional_checkpoints
 from examples.torch.common.utils import print_args
 from examples.torch.common.utils import write_metrics
 from nncf.api.compression import CompressionStage
-from nncf.config.structures import QuantizationRangeInitArgs
+from nncf.common.accuracy_aware_training import create_accuracy_aware_training_loop
+from nncf.common.utils.tensorboard import prepare_for_tensorboard
 from nncf.config.utils import is_accuracy_aware_training
+from nncf.torch import create_compressed_model
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.initialization import default_criterion_fn
 from nncf.torch.initialization import register_default_init_args
-from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.structures import ExecutionParameters
 from nncf.torch.utils import is_main_process
 from nncf.torch.utils import safe_thread_call
@@ -81,12 +81,6 @@ from nncf.torch.utils import safe_thread_call
 model_names = sorted(
     name for name, val in models.__dict__.items() if name.islower() and not name.startswith("__") and callable(val)
 )
-
-
-def broadcast_initialized_parameters(quantized_model: NNCFNetwork):
-    for module in quantized_model.modules():
-        if isinstance(module, BaseQuantizer):
-            module.broadcast_initialized_params()
 
 
 def get_argument_parser():
@@ -170,47 +164,50 @@ def main_worker(current_gpu, config: SampleConfig):
     pretrained = is_pretrained_model_requested(config)
     is_export_only = "export" in config.mode and ("train" not in config.mode and "test" not in config.mode)
 
-    # Data loading code
-    train_dataset, val_dataset = create_datasets(config)
-    train_loader, train_sampler, val_loader, init_loader = create_data_loaders(config, train_dataset, val_dataset)
+    if is_export_only:
+        assert pretrained or (resuming_checkpoint_path is not None)
+    else:
+        # Data loading code
+        train_dataset, val_dataset = create_datasets(config)
+        train_loader, train_sampler, val_loader, init_loader = create_data_loaders(config, train_dataset, val_dataset)
 
-    def train_steps_fn(loader, model, optimizer, compression_ctrl, train_steps):
-        train_epoch(
-            loader,
-            model,
-            criterion,
-            train_criterion_fn,
-            optimizer,
-            compression_ctrl,
-            0,
-            config,
-            train_iters=train_steps,
-            log_training_info=False,
+        def train_steps_fn(loader, model, optimizer, compression_ctrl, train_steps):
+            train_epoch(
+                loader,
+                model,
+                criterion,
+                train_criterion_fn,
+                optimizer,
+                compression_ctrl,
+                0,
+                config,
+                train_iters=train_steps,
+                log_training_info=False,
+            )
+
+        def validate_model_fn(model, eval_loader):
+            top1, top5, loss = validate(eval_loader, model, criterion, config, log_validation_info=False)
+            return top1, top5, loss
+
+        def model_eval_fn(model):
+            top1, _, _ = validate(val_loader, model, criterion, config)
+            return top1
+
+        execution_params = ExecutionParameters(config.cpu_only, config.current_gpu)
+
+        nncf_config = register_default_init_args(
+            nncf_config,
+            init_loader,
+            criterion=criterion,
+            criterion_fn=train_criterion_fn,
+            train_steps_fn=train_steps_fn,
+            validate_fn=lambda *x: validate_model_fn(*x)[::2],
+            autoq_eval_fn=lambda *x: validate_model_fn(*x)[1],
+            val_loader=val_loader,
+            model_eval_fn=model_eval_fn,
+            device=config.device,
+            execution_parameters=execution_params,
         )
-
-    def validate_model_fn(model, eval_loader):
-        top1, top5, loss = validate(eval_loader, model, criterion, config, log_validation_info=False)
-        return top1, top5, loss
-
-    def model_eval_fn(model):
-        top1, _, _ = validate(val_loader, model, criterion, config)
-        return top1
-
-    execution_params = ExecutionParameters(config.cpu_only, config.current_gpu)
-
-    nncf_config = register_default_init_args(
-        nncf_config,
-        init_loader,
-        criterion=criterion,
-        criterion_fn=train_criterion_fn,
-        train_steps_fn=train_steps_fn,
-        validate_fn=lambda *x: validate_model_fn(*x)[::2],
-        autoq_eval_fn=lambda *x: validate_model_fn(*x)[1],
-        val_loader=val_loader,
-        model_eval_fn=model_eval_fn,
-        device=config.device,
-        execution_parameters=execution_params,
-    )
 
     # create model
     model = load_model(
@@ -223,50 +220,24 @@ def main_worker(current_gpu, config: SampleConfig):
 
     model.to(config.device)
 
+    if "train" in config.mode and is_accuracy_aware_training(config):
+        uncompressed_model_accuracy = model_eval_fn(model)
+
     resuming_checkpoint = None
     if resuming_checkpoint_path is not None:
         resuming_checkpoint = load_resuming_checkpoint(resuming_checkpoint_path)
-    # Compression state loading is not possible yet for PTQ + training.
-    # model_state_dict, compression_state = extract_model_and_compression_states(resuming_checkpoint)
-    model_state_dict, _ = extract_model_and_compression_states(resuming_checkpoint)
-
-    #####################PTQ##############################
-
-    def transform_fn(data_item: Tuple[torch.Tensor, int], device: torch.device) -> torch.Tensor:
-        images, _ = data_item
-        return images.to(device)
-
-    quantize_data_loader = torch.utils.data.DataLoader(
-        val_dataset,
-        batch_size=1,
-        shuffle=False,
-        num_workers=1,
-        pin_memory=False,
-    )
-    quantize_init_args: QuantizationRangeInitArgs = nncf_config.get_extra_struct(QuantizationRangeInitArgs)
-    calibration_dataset = nncf.Dataset(quantize_data_loader, partial(transform_fn, device=quantize_init_args.device))
-
-    model = nncf.quantize(model, calibration_dataset)
-    # validate(val_loader, model, criterion, config)
-
-    ######################################################
+    model_state_dict, compression_state = extract_model_and_compression_states(resuming_checkpoint)
+    compression_ctrl, model = create_compressed_model(model, nncf_config, compression_state)
     if model_state_dict is not None:
-        current_state_dict = model.state_dict()
-        updated_weights = {}
-        for k, v in model_state_dict.items():
-            if k.startswith("_nncf"):
-                current_shape = current_state_dict[k].shape
-                updated_weights[k] = v.reshape(current_shape)
-        model_state_dict.update(updated_weights)
         load_state(model, model_state_dict, is_resume=True)
 
     if is_export_only:
-        export_model_after_ptq(model, config)
+        export_model(compression_ctrl, config)
         return
 
     model, _ = prepare_model_for_execution(model, config)
     if config.distributed:
-        broadcast_initialized_parameters(model)
+        compression_ctrl.distributed()
 
     # define optimizer
     params_to_optimize = get_parameter_groups(model, config)
@@ -290,33 +261,71 @@ def main_worker(current_gpu, config: SampleConfig):
     if config.execution_mode != ExecutionMode.CPU_ONLY:
         cudnn.benchmark = True
 
+    if is_main_process():
+        statistics = compression_ctrl.statistics()
+        logger.info(statistics.to_str())
+
     if "train" in config.mode:
         if is_accuracy_aware_training(config):
-            raise RuntimeError("Accuracy aware training is not supported for QAT after PTQ.")
-        train(
-            config,
-            model,
-            criterion,
-            train_criterion_fn,
-            lr_scheduler,
-            model_name,
-            optimizer,
-            train_loader,
-            train_sampler,
-            val_loader,
-            best_acc1,
-        )
+            # validation function that returns the target metric value
+
+            def validate_fn(model, epoch):
+                top1, _, _ = validate(val_loader, model, criterion, config, epoch=epoch)
+                return top1
+
+            # training function that trains the model for one epoch (full training dataset pass)
+            # it is assumed that all the NNCF-related methods are properly called inside of
+            # this function (like e.g. the step and epoch_step methods of the compression scheduler)
+            def train_epoch_fn(compression_ctrl, model, epoch, optimizer, **kwargs):
+                return train_epoch(
+                    train_loader, model, criterion, train_criterion_fn, optimizer, compression_ctrl, epoch, config
+                )
+
+            # function that initializes optimizers & lr schedulers to start training
+            def configure_optimizers_fn():
+                params_to_optimize = get_parameter_groups(model, config)
+                optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
+                return optimizer, lr_scheduler
+
+            acc_aware_training_loop = create_accuracy_aware_training_loop(
+                nncf_config, compression_ctrl, uncompressed_model_accuracy
+            )
+            model = acc_aware_training_loop.run(
+                model,
+                train_epoch_fn=train_epoch_fn,
+                validate_fn=validate_fn,
+                configure_optimizers_fn=configure_optimizers_fn,
+                tensorboard_writer=config.tb,
+                log_dir=config.log_dir,
+            )
+            logger.info(f"Compressed model statistics:\n{acc_aware_training_loop.statistics.to_str()}")
+        else:
+            train(
+                config,
+                compression_ctrl,
+                model,
+                criterion,
+                train_criterion_fn,
+                lr_scheduler,
+                model_name,
+                optimizer,
+                train_loader,
+                train_sampler,
+                val_loader,
+                best_acc1,
+            )
 
     if "test" in config.mode:
         val_model = model
         validate(val_loader, val_model, criterion, config)
 
     if "export" in config.mode:
-        export_model_after_ptq(model, config)
+        export_model(compression_ctrl, config)
 
 
 def train(
     config,
+    compression_ctrl,
     model,
     criterion,
     criterion_fn,
@@ -332,24 +341,26 @@ def train(
 
     for epoch in range(config.start_epoch, config.epochs):
         # update compression scheduler state at the begin of the epoch
+        compression_ctrl.scheduler.epoch_step()
 
         if config.distributed:
             train_sampler.set_epoch(epoch)
 
         # train for one epoch
-        train_epoch(train_loader, model, criterion, criterion_fn, optimizer, epoch, config)
+        train_epoch(train_loader, model, criterion, criterion_fn, optimizer, compression_ctrl, epoch, config)
 
         # Learning rate scheduling should be applied after optimizer’s update
         lr_scheduler.step(epoch if not isinstance(lr_scheduler, ReduceLROnPlateau) else best_acc1)
 
         # compute compression algo statistics
+        statistics = compression_ctrl.statistics()
 
         acc1 = best_acc1
         if epoch % config.test_every_n_epochs == 0:
             # evaluate on validation set
             acc1, _, _ = validate(val_loader, model, criterion, config, epoch=epoch)
 
-        compression_stage = CompressionStage.FULLY_COMPRESSED
+        compression_stage = compression_ctrl.compression_stage()
         # remember best acc@1, considering compression stage. If current acc@1 less then the best acc@1, checkpoint
         # still can be best if current compression stage is larger than the best one. Compression stages in ascending
         # order: UNCOMPRESSED, PARTIALLY_COMPRESSED, FULLY_COMPRESSED.
@@ -359,6 +370,8 @@ def train(
             best_acc1 = acc1
         best_compression_stage = max(compression_stage, best_compression_stage)
         if is_main_process():
+            logger.info(statistics.to_str())
+
             if config.metrics_dump is not None:
                 acc = best_acc1 / 100
                 write_metrics(acc, config.metrics_dump)
@@ -368,6 +381,7 @@ def train(
                 "epoch": epoch + 1,
                 "arch": model_name,
                 MODEL_STATE_ATTR: model.state_dict(),
+                COMPRESSION_STATE_ATTR: compression_ctrl.get_compression_state(),
                 "best_acc1": best_acc1,
                 "acc1": acc1,
                 "optimizer": optimizer.state_dict(),
@@ -375,6 +389,9 @@ def train(
 
             torch.save(checkpoint, checkpoint_path)
             make_additional_checkpoints(checkpoint_path, is_best, epoch + 1, config)
+
+            for key, value in prepare_for_tensorboard(statistics).items():
+                config.tb.add_scalar("compression/statistics/{0}".format(key), value, len(train_loader) * epoch)
 
 
 def get_dataset(dataset_config, config, transform, is_train):
@@ -542,6 +559,7 @@ def train_epoch(
     criterion,
     criterion_fn,
     optimizer,
+    compression_ctrl,
     epoch,
     config,
     train_iters=None,
@@ -558,6 +576,7 @@ def train_epoch(
     if train_iters is None:
         train_iters = len(train_loader)
 
+    compression_scheduler = compression_ctrl.scheduler
     casting = autocast if config.mixed_precision else NullContextManager
 
     # switch to train mode
@@ -568,6 +587,8 @@ def train_epoch(
         # measure data loading time
         data_time.update(time.time() - end)
 
+        compression_scheduler.step()
+
         input_ = input_.to(config.device)
         target = target.to(config.device)
 
@@ -577,13 +598,16 @@ def train_epoch(
             criterion_loss = criterion_fn(output, target, criterion)
 
             # compute compression loss
-            loss = criterion_loss
+            compression_loss = compression_ctrl.loss()
+            loss = criterion_loss + compression_loss
 
         if isinstance(output, InceptionOutputs):
             output = output.logits
         # measure accuracy and record loss
         acc1, acc5 = accuracy(output, target, topk=(1, 5))
         losses.update(loss.item(), input_.size(0))
+        comp_loss_val = compression_loss.item() if isinstance(compression_loss, torch.Tensor) else compression_loss
+        compression_losses.update(comp_loss_val, input_.size(0))
         criterion_losses.update(criterion_loss.item(), input_.size(0))
         top1.update(acc1, input_.size(0))
         top5.update(acc5, input_.size(0))
@@ -632,6 +656,10 @@ def train_epoch(
             config.tb.add_scalar("train/loss", losses.val, i + global_step)
             config.tb.add_scalar("train/top1", top1.val, i + global_step)
             config.tb.add_scalar("train/top5", top5.val, i + global_step)
+
+            statistics = compression_ctrl.statistics(quickly_collected_only=True)
+            for stat_name, stat_value in prepare_for_tensorboard(statistics).items():
+                config.tb.add_scalar("train/statistics/{}".format(stat_name), stat_value, i + global_step)
 
         if i >= train_iters:
             break
