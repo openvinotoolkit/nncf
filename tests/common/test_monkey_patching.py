@@ -9,6 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import patch
+
 from nncf.common.utils.patcher import PATCHER
 
 CORRECT_WRAPPER_STACK = "base"
@@ -39,6 +41,9 @@ class TestOverrideClass:
     @classmethod
     def assert_wrapper_stack_class(cls, wrapper_stack=None):
         assert wrapper_stack == CORRECT_WRAPPER_STACK, f"{wrapper_stack} != {CORRECT_WRAPPER_STACK}"
+
+    def ori_method(self):
+        return "placeholder_method"
 
 
 def test_patcher():
@@ -109,3 +114,25 @@ def test_patcher():
     PATCHER.patch(TestOverrideClass.assert_wrapper_stack_method, wrapper1, force=True)
     CORRECT_WRAPPER_STACK = "base_wrapper1"
     test_obj.assert_wrapper_stack_method(wrapper_stack="base")
+
+    # Unpatch with depth = 0
+    PATCHER.unpatch(TestOverrideClass.assert_wrapper_stack_method, depth=0)
+    CORRECT_WRAPPER_STACK = "base"
+    test_obj.assert_wrapper_stack_method(wrapper_stack="base")
+
+    # Test single patch instance method
+    PATCHER.patch(test_obj.assert_wrapper_stack_method, wrapper1, force=False)
+    CORRECT_WRAPPER_STACK = "base_wrapper1"
+    test_obj.assert_wrapper_stack_method(wrapper_stack="base")
+
+
+def test_attribute_error_module():
+    with patch("inspect.getfullargspec", return_value=[["mock_value"]]):
+        with patch.object(TestOverrideClass, "__getattribute__", side_effect=AttributeError()):
+            pass
+
+
+def test_attribute_error_class():
+    with patch("inspect.getfullargspec", return_value=[["mock_value1, mock_value2"]]):
+        with patch.object(TestOverrideClass, "__getattribute__", side_effect=AttributeError()):
+            pass
