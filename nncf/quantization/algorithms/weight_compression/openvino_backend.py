@@ -163,10 +163,12 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 converted_zero_point = opset.convert(zero_point_const, const_dtype)
                 converted_const = opset.subtract(converted_const, converted_zero_point)
 
-            scale_data = compressed_weight.scale.data
+            scale_const = opset.constant(
+                compressed_weight.scale.data, dtype=const_dtype, name=f"{const_node_name}/scale"
+            )
             mul = opset.multiply(
                 converted_const,
-                scale_data.astype(const_dtype),
+                scale_const,
                 name=f"{const_node_name}/fq_weights_{wc_params.weight_port_id}",
             )
 
