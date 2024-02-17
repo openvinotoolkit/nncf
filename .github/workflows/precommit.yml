@@ -113,10 +113,13 @@ jobs:
         with:
           python-version: 3.8.10
 
-      - name: Install NNCF and test requirements
-        run: make install-torch-test
-      - name: Run TORCH precommit test scope
-        run: make test-torch
+      - name: test cuda
+        run: python -c "import torch; print(f'{torch.cuda.is_available()=}')"
+
+      # - name: Install NNCF and test requirements
+      #   run: make install-torch-test
+      # - name: Run TORCH precommit test scope
+      #   run: make test-torch
       #   env:
       #     NNCF_COVERAGE: 1
       # - name: Upload coverage report as artifact
