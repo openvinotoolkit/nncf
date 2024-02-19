@@ -297,8 +297,13 @@ This modification applies only for patterns `MatMul-Multiply-MatMul` (for exampl
         <td>Mode</td>
         <td>Word Perplexity (↓)</td>
     </tr>
-    <tr>
+        <tr>
         <td>meta-llama/llama-7b-chat-hf</td>
+        <td>fp16</td>
+        <td>11.57</td>
+    </tr>
+    <tr>
+        <td></td>
         <td>int4_sym_g128_r80_data</td>
         <td>11.87</td>
     </tr>
@@ -319,6 +324,11 @@ This modification applies only for patterns `MatMul-Multiply-MatMul` (for exampl
     </tr>
     <tr>
         <td>stabilityai_stablelm-3b-4e1t</td>
+        <td>fp16</td>
+        <td>10.16</td>
+    </tr>
+    <tr>
+        <td></td>
         <td>int4_sym_g64_r80_data</td>
         <td>10.67</td>
     </tr>
@@ -364,6 +374,11 @@ This modification applies only for patterns `MatMul-Multiply-MatMul` (for exampl
     </tr>
     <tr>
         <td>HuggingFaceH4/zephyr-7b-beta</td>
+        <td>fp16</td>
+        <td>9.82</td>
+    </tr>
+    <tr>
+        <td></td>
         <td>int4_sym_g128_r80_data</td>
         <td>10.13</td>
     </tr>
