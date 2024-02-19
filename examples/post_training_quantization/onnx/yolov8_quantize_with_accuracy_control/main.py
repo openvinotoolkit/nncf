@@ -244,6 +244,14 @@ def run_example():
     metric_drop = fp_stats["metrics/mAP50-95(B)"] - q_stats["metrics/mAP50-95(B)"]
     print(f"Metric drop: {metric_drop}")
 
+    # fp32_box_mAP, fp32_mask_mAP, int8_box_mAP, int8_mask_mAP
+    return (
+        fp_stats["metrics/mAP50-95(B)"],
+        fp_stats["metrics/mAP50-95(M)"],
+        q_stats["metrics/mAP50-95(B)"],
+        q_stats["metrics/mAP50-95(M)"],
+    )
+
 
 if __name__ == "__main__":
     run_example()

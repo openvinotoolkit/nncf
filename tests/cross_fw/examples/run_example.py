@@ -87,6 +87,34 @@ def post_training_quantization_openvino_yolo8_quantize_with_accuracy_control() -
     return format_results(results)
 
 
+def post_training_quantization_onnx_yolo8_quantize_with_accuracy_control() -> Dict[str, float]:
+    from examples.post_training_quantization.onnx.yolov8_quantize_with_accuracy_control.main import (
+        run_example as yolo8_main,
+    )
+
+    onnx_fp32_box_mAP, onnx_fp32_mask_mAP, onnx_int8_box_mAP, onnx_int8_mask_mAP = yolo8_main()
+
+    import examples.post_training_quantization.onnx.yolov8_quantize_with_accuracy_control.deploy as yolov8_deploy
+
+    return {
+        "onnx_fp32_box_mAP": onnx_fp32_box_mAP,
+        "onnx_fp32_mask_mAP": onnx_fp32_mask_mAP,
+        "onnx_int8_box_mAP": onnx_int8_box_mAP,
+        "onnx_int8_mask_mAP": onnx_int8_mask_mAP,
+        "onnx_drop_box_mAP": onnx_fp32_box_mAP - onnx_int8_box_mAP,
+        "onnx_drop_mask_mAP": onnx_fp32_mask_mAP - onnx_int8_mask_mAP,
+        "ov_fp32_box_mAP": yolov8_deploy.fp32_stats["metrics/mAP50-95(B)"],
+        "ov_fp32_mask_mAP": yolov8_deploy.fp32_stats["metrics/mAP50-95(M)"],
+        "ov_int8_box_mAP": yolov8_deploy.int8_stats["metrics/mAP50-95(B)"],
+        "ov_int8_mask_mAP": yolov8_deploy.int8_stats["metrics/mAP50-95(M)"],
+        "ov_drop_box_mAP": yolov8_deploy.box_metric_drop,
+        "ov_drop_mask_mAP": yolov8_deploy.mask_metric_drop,
+        "ov_fp32_fps": yolov8_deploy.fp32_fps,
+        "ov_int8_fps": yolov8_deploy.int8_fps,
+        "performance_speed_up": yolov8_deploy.int8_fps / yolov8_deploy.fp32_fps,
+    }
+
+
 def post_training_quantization_openvino_anomaly_stfpm_quantize_with_accuracy_control() -> Dict[str, float]:
     sys.path.append(
         str(

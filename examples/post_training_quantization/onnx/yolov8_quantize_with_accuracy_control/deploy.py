@@ -16,14 +16,15 @@ from typing import Dict, Optional, Tuple
 
 import openvino as ov
 import torch
-from main import prepare_validation
-from main import print_statistics
 from tqdm import tqdm
 from ultralytics.cfg import get_cfg
 from ultralytics.engine.validator import BaseValidator as Validator
 from ultralytics.models.yolo import YOLO
 from ultralytics.utils import DEFAULT_CFG
 from ultralytics.utils.metrics import ConfusionMatrix
+
+from examples.post_training_quantization.onnx.yolov8_quantize_with_accuracy_control.main import prepare_validation
+from examples.post_training_quantization.onnx.yolov8_quantize_with_accuracy_control.main import print_statistics
 
 ROOT = Path(__file__).parent.resolve()
 MODEL_NAME = "yolov8n-seg"
