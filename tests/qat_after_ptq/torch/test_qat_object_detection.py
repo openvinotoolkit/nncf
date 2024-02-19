@@ -16,6 +16,11 @@ import pytest
 import torch
 import torch.utils.data
 import torch.utils.data.distributed
+from helpers import broadcast_initialized_parameters
+from helpers import get_advanced_ptq_parameters
+from helpers import get_mocked_compression_ctrl
+from helpers import get_num_samples
+from helpers import get_quantization_preset
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import nncf
@@ -40,11 +45,6 @@ from examples.torch.object_detection.main import get_argument_parser
 from examples.torch.object_detection.main import train_epoch
 from nncf import NNCFConfig
 from tests.shared.paths import PROJECT_ROOT
-from tests.torch.ptq.quantization_aware_training.helpers import broadcast_initialized_parameters
-from tests.torch.ptq.quantization_aware_training.helpers import get_advanced_ptq_parameters
-from tests.torch.ptq.quantization_aware_training.helpers import get_mocked_compression_ctrl
-from tests.torch.ptq.quantization_aware_training.helpers import get_num_samples
-from tests.torch.ptq.quantization_aware_training.helpers import get_quantization_preset
 
 CONFIGS = list((PROJECT_ROOT / Path("examples/torch/object_detection/configs")).glob("*"))
 

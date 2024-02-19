@@ -15,7 +15,7 @@ import pytest
 
 
 def pytest_addoption(parser):
-    pass
+    parser.addoption("--data", action="store", help="Path to omz training datasets director.")
     parser.addoption("--weights", action="store", help="Directory with nncf checkpoints for baseline checkopints.")
 
 
