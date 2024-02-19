@@ -18,9 +18,6 @@ from nncf.api.compression import CompressionAlgorithmController
 from nncf.torch.exporter import count_tensors
 from nncf.torch.exporter import generate_input_names_list
 from nncf.torch.exporter import get_export_args
-from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.quantization.strip import strip_quantized_model
-from nncf.torch.utils import is_tensor
 
 
 def export_model(ctrl: CompressionAlgorithmController, config: SampleConfig) -> None:
@@ -46,52 +43,6 @@ def export_model(ctrl: CompressionAlgorithmController, config: SampleConfig) -> 
     if len(input_tensor_list) == 1:
         input_tensor_list = input_tensor_list[0]
         input_shape_list = input_shape_list[0]
-
-    _export_model_common(model, config, input_tensor_list, input_shape_list, input_names)
-
-
-def export_model_after_ptq(model: NNCFNetwork, config: SampleConfig) -> None:
-    """
-    Export compressed model ot OpenVINO format.
-
-    :param model: The target model.
-    :param config: The sample config.
-    """
-    if not config.no_strip_on_export:
-        model = strip_quantized_model(model)
-
-    model = model.eval().cpu()
-
-    export_args = get_export_args(model, device="cpu")
-    input_names = generate_input_names_list(count_tensors(export_args))
-
-    input_tensor_list = []
-    input_shape_list = []
-    args, kwargs = model.nncf.input_infos.get_forward_inputs()
-    for c in [args, kwargs.values()]:
-        for info in c:
-            if not is_tensor(info):
-                continue
-            input_shape = tuple([1] + list(info.shape[1:]))
-            input_tensor_list.append(torch.rand(input_shape))
-            input_shape_list.append(input_shape)
-
-    if len(input_tensor_list) == 1:
-        input_tensor_list = input_tensor_list[0]
-        input_shape_list = input_shape_list[0]
-
-    _export_model_common(model, config, input_tensor_list, input_shape_list, input_names)
-
-
-def _export_model_common(
-    model: NNCFNetwork, config: SampleConfig, input_tensor_list, input_shape_list, input_names
-) -> None:
-    """
-    Export compressed model ot OpenVINO format.
-
-    :param model: The target model.
-    :param config: The sample config.
-    """
 
     model_path = Path(config.export_model_path)
     model_path.parent.mkdir(exist_ok=True, parents=True)
