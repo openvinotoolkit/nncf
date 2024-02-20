@@ -72,6 +72,36 @@ DEFAULT_QCONFIG = QuantizerConfig(
 )
 
 
+@dataclasses.dataclass
+class ModeBasedDefaults:
+    """
+    Contains default values that should be set in case of abscense.
+    """
+
+    overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER
+    activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = dataclasses.field(
+        default_factory=QuantizationParameters
+    )
+    weights_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = dataclasses.field(
+        default_factory=QuantizationParameters
+    )
+
+
+MODE_BASED_DEFAULTS = {
+    None: ModeBasedDefaults(),
+    QuantizationMode.FP8_E4M3: ModeBasedDefaults(
+        overflow_fix=OverflowFix.DISABLE,
+        activations_quantization_params=FP8QuantizationParameters(FP8Type.E4M3),
+        weights_quantization_params=FP8QuantizationParameters(FP8Type.E4M3),
+    ),
+    QuantizationMode.FP8_E5M2: ModeBasedDefaults(
+        overflow_fix=OverflowFix.DISABLE,
+        activations_quantization_params=FP8QuantizationParameters(FP8Type.E5M2),
+        weights_quantization_params=FP8QuantizationParameters(FP8Type.E5M2),
+    ),
+}
+
+
 def _filter_target_points_by_metatypes(
     quantization_target_points: Set[TargetPoint], metatypes: List[OperatorMetatype], nncf_graph: NNCFGraph
 ) -> Set[TargetPoint]:
@@ -108,7 +138,7 @@ class MinMaxQuantization(Algorithm):
         subset_size: int = 300,
         model_type: Optional[ModelType] = None,
         ignored_scope: Optional[IgnoredScope] = None,
-        overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER,
+        overflow_fix: Optional[OverflowFix] = None,
         quantize_outputs: bool = False,
         inplace_statistics: bool = True,
         activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None,
@@ -135,7 +165,7 @@ class MinMaxQuantization(Algorithm):
         :param ignored_scope: An ignored scope that defined the list of model control
             flow graph nodes to be ignored during quantization.
         :param overflow_fix: This option controls whether to apply the overflow issue
-            fix for the 8-bit quantization, defaults to OverflowFix.FIRST_LAYER.
+            fix for the 8-bit quantization.
         :param quantize_outputs: Whether to insert additional quantizers right before
             each of the model outputs.
         :param inplace_statistics: Defines wheather to calculate quantizers statistics
@@ -154,22 +184,16 @@ class MinMaxQuantization(Algorithm):
         self._subset_size = subset_size
         self._mode = mode
         self._model_type = model_type
-        self._ignored_scope = IgnoredScope() if ignored_scope is None else ignored_scope
         self._overflow_fix = overflow_fix
         self._quantize_outputs = quantize_outputs
         self._inplace_statistics = inplace_statistics
         self._backend_params = backend_params
+        self._activations_quantization_params = activations_quantization_params
+        self._weights_quantization_params = weights_quantization_params
+        self._activations_range_estimator_params = activations_range_estimator_params
+        self._weights_range_estimator_params = weights_range_estimator_params
         self._preset = preset
-
-        self._quantization_params = {
-            QuantizerGroup.WEIGHTS: weights_quantization_params,
-            QuantizerGroup.ACTIVATIONS: activations_quantization_params,
-        }
-
-        self._range_estimator_params = {
-            QuantizerGroup.WEIGHTS: weights_range_estimator_params,
-            QuantizerGroup.ACTIVATIONS: activations_range_estimator_params,
-        }
+        self._ignored_scope = IgnoredScope() if ignored_scope is None else ignored_scope
 
         # preset definition
         if self._preset is None:
@@ -178,9 +202,18 @@ class MinMaxQuantization(Algorithm):
             else:
                 self._preset = QuantizationPreset.PERFORMANCE
 
-        if self._mode is not None:
-            self._review_defaults_based_on_mode()
-            self._set_quantization_params_based_on_mode()
+        self._set_mode_based_defaults()
+        self._review_mode_based_defaults()
+
+        self._quantization_params = {
+            QuantizerGroup.WEIGHTS: self._weights_quantization_params,
+            QuantizerGroup.ACTIVATIONS: self._activations_quantization_params,
+        }
+
+        self._range_estimator_params = {
+            QuantizerGroup.WEIGHTS: self._weights_range_estimator_params,
+            QuantizerGroup.ACTIVATIONS: self._activations_range_estimator_params,
+        }
         # Calculates global quantizer constraints
         self._global_quantizer_constraints = {}
         for quantizer_group in QuantizerGroup:
@@ -191,60 +224,69 @@ class MinMaxQuantization(Algorithm):
         self._reset_cache()
         self._algorithm_key = f"MMQ_{hash(self)}"
 
-    def _review_defaults_based_on_mode(self):
+    def _set_mode_based_defaults(self) -> None:
+        """
+        Sets defaults for the algorithms based on the provided mode.
+        """
+        mode_based_defaults = MODE_BASED_DEFAULTS[self._mode]
+        for field in dataclasses.fields(mode_based_defaults):
+            self_name = "_" + field.name
+            default_value = getattr(mode_based_defaults, field.name)
+            if getattr(self, self_name) is None:
+                setattr(self, self_name, default_value)
+
+    def _review_mode_based_defaults(self):
         """
         Reviews default values because mode option doesn't support them.
         """
-        nncf_logger.warning(f"You're using experimental option mode with {self._mode} value.")
+        if self._mode in (QuantizationMode.FP8_E4M3, QuantizationMode.FP8_E5M2):
+            nncf_logger.warning(f"You're using experimental option mode with {self._mode} value.")
 
-        if self._preset != QuantizationPreset.PERFORMANCE:
-            raise nncf.ParameterNotSupportedError(
-                f"preset option with {self._preset} value is not supported with the mode option!"
-            )
+            if self._preset != QuantizationPreset.PERFORMANCE:
+                raise nncf.ParameterNotSupportedError(
+                    f"preset option with {self._preset} value is not supported with the mode option!"
+                )
 
-        if self._target_device not in [TargetDevice.CPU, TargetDevice.ANY]:
-            raise nncf.ParameterNotSupportedError(
-                f"target_device option with {self._target_device} value is not supported with the mode option!"
-            )
+            if self._target_device not in [TargetDevice.CPU, TargetDevice.ANY]:
+                raise nncf.ParameterNotSupportedError(
+                    f"target_device option with {self._target_device} value is not supported with the mode option!"
+                )
 
-        if self._overflow_fix != OverflowFix.DISABLE:
-            raise nncf.ParameterNotSupportedError(
-                f"overflow_fix option with {self._overflow_fix} value is not supported with the mode option!"
-            )
+            if self._overflow_fix != OverflowFix.DISABLE:
+                raise nncf.ParameterNotSupportedError(
+                    f"overflow_fix option with {self._overflow_fix} value is not supported with the mode option!"
+                )
 
-        if self._quantize_outputs:
-            raise nncf.ParameterNotSupportedError("quantize_outputs option is not supported with the mode option!")
+            if self._quantize_outputs:
+                raise nncf.ParameterNotSupportedError("quantize_outputs option is not supported with the mode option!")
 
-        if self._backend_params is not None:
-            raise nncf.ParameterNotSupportedError("backend_params option is not supported with the mode option!")
+            if isinstance(self._weights_quantization_params, QuantizationParameters):
+                raise nncf.ParameterNotSupportedError(
+                    "quantization_params option for weights with "
+                    f"{self._weights_quantization_params} "
+                    "value is not supported with the mode option!"
+                )
 
-        if isinstance(self._quantization_params[QuantizerGroup.WEIGHTS], QuantizationParameters):
-            raise nncf.ParameterNotSupportedError(
-                "quantization_params option for weights with "
-                f"{self._quantization_params[QuantizerGroup.WEIGHTS]} "
-                "value is not supported with the mode option!"
-            )
+            if isinstance(self._activations_quantization_params, QuantizationParameters):
+                raise nncf.ParameterNotSupportedError(
+                    "quantization_params option for activations with "
+                    f"{self._activations_quantization_params} "
+                    "value is not supported with the mode option!"
+                )
+        elif self._mode is None:
+            if isinstance(self._weights_quantization_params, FP8QuantizationParameters):
+                raise nncf.ParameterNotSupportedError(
+                    "quantization_params option for weights with "
+                    f"{self._weights_quantization_params} "
+                    "value is not supported with the mode: None option!"
+                )
 
-        if isinstance(self._quantization_params[QuantizerGroup.ACTIVATIONS], QuantizationParameters):
-            raise nncf.ParameterNotSupportedError(
-                "quantization_params option for activations with "
-                f"{self._quantization_params[QuantizerGroup.ACTIVATIONS]} "
-                "value is not supported with the mode option!"
-            )
-
-    def _set_quantization_params_based_on_mode(self):
-        """
-        Sets default quantization params based on the self._mode value.
-        """
-        mode_default_option_map = {
-            QuantizationMode.FP8_E4M3: FP8QuantizationParameters(destination_type=FP8Type.E4M3),
-            QuantizationMode.FP8_E5M2: FP8QuantizationParameters(destination_type=FP8Type.E5M2),
-        }
-        if self._quantization_params[QuantizerGroup.WEIGHTS] is None:
-            self._quantization_params[QuantizerGroup.WEIGHTS] = mode_default_option_map[self._mode]
-
-        if self._quantization_params[QuantizerGroup.ACTIVATIONS] is None:
-            self._quantization_params[QuantizerGroup.ACTIVATIONS] = mode_default_option_map[self._mode]
+            if isinstance(self._activations_quantization_params, FP8QuantizationParameters):
+                raise nncf.ParameterNotSupportedError(
+                    "quantization_params option for activations with "
+                    f"{self._activations_quantization_params} "
+                    "value is not supported with the mode: None option!"
+                )
 
     def _reset_cache(self):
         # It prevents the duplicate weight quantizers from being added.

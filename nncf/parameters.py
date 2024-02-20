@@ -14,8 +14,13 @@ from enum import Enum
 from nncf.common.utils.api_marker import api
 
 
+class StrEnum(str, Enum):
+    def __str__(self) -> str:
+        return self.value
+
+
 @api(canonical_alias="nncf.TargetDevice")
-class TargetDevice(Enum):
+class TargetDevice(StrEnum):
     """
     Target device architecture for compression.
 
@@ -31,7 +36,7 @@ class TargetDevice(Enum):
 
 
 @api(canonical_alias="nncf.ModelType")
-class ModelType(Enum):
+class ModelType(StrEnum):
     """
     Describes the model type the specificity of which will be taken into account during compression.
 
@@ -43,7 +48,7 @@ class ModelType(Enum):
 
 
 @api(canonical_alias="nncf.DropType")
-class DropType(Enum):
+class DropType(StrEnum):
     """
     Describes the accuracy drop type, which determines how the accuracy drop between
     the original model and the compressed model is calculated.
@@ -59,7 +64,7 @@ class DropType(Enum):
 
 
 @api(canonical_alias="nncf.CompressWeightsMode")
-class CompressWeightsMode(Enum):
+class CompressWeightsMode(StrEnum):
     """
     Defines a mode for weight compression.
     :param INT8_SYM: Stands for 8-bit integer symmetric quantization of all weights.
@@ -90,7 +95,7 @@ class CompressWeightsMode(Enum):
 
 
 @api(canonical_alias="nncf.SensitivityMetric")
-class SensitivityMetric(Enum):
+class SensitivityMetric(StrEnum):
     """
     Defines a sensitivity metric for assigning quantization precision to layers. In order to
         preserve the accuracy of the model, the more sensitive layers receives a higher precision.
@@ -117,7 +122,7 @@ class SensitivityMetric(Enum):
 
 
 @api(canonical_alias="nncf.QuantizationMode")
-class QuantizationMode(Enum):
+class QuantizationMode(StrEnum):
     """
     Defines special modes.
     Currently contains only FP8-related modes (https://arxiv.org/pdf/2209.05433.pdf).

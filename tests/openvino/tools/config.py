@@ -15,7 +15,11 @@ from pathlib import Path
 
 import yaml
 from addict import Dict
-from openvino.tools.accuracy_checker.config import ConfigReader
+
+try:
+    from openvino.tools.accuracy_checker.config import ConfigReader
+except ImportError:
+    from accuracy_checker.config import ConfigReader
 
 import nncf
 from nncf.common.logging import nncf_logger

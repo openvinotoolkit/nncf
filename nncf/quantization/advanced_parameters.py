@@ -178,7 +178,7 @@ class AdvancedQuantizationParameters:
     Contains advanced parameters for fine-tuning quantization algorithm.
 
     :param overflow_fix: This option controls whether to apply the overflow issue fix
-        for the 8-bit quantization, defaults to OverflowFix.FIRST_LAYER.
+        for the 8-bit quantization.
     :type overflow_fix: nncf.quantization.advanced_parameters.OverflowFix
     :param quantize_outputs: Whether to insert additional quantizers right before each
         of the model outputs.
@@ -212,7 +212,7 @@ class AdvancedQuantizationParameters:
     """
 
     # General parameters
-    overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER
+    overflow_fix: OverflowFix = None
     quantize_outputs: bool = False
     inplace_statistics: bool = True
     disable_channel_alignment: bool = True

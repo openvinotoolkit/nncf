@@ -88,10 +88,11 @@ def evaluate_model(
     group_size = optimized_model.get_rt_info()["nncf"]["weight_compression"]["group_size"].value
     ratio = float(optimized_model.get_rt_info()["nncf"]["weight_compression"]["ratio"].value)
     awq = optimized_model.get_rt_info()["nncf"]["weight_compression"]["awq"].value
-    nncf_logger.info(
-        "The similarity of model compressed with "
-        f"group_size={group_size}, ratio={ratio:.1f}, awq={awq} is {similarity:.3f}"
-    )
+    all_layers = optimized_model.get_rt_info()["nncf"]["weight_compression"]["all_layers"].value
+    params_info = f"The similarity of model compressed with group_size={group_size}, ratio={ratio:.1f}, awq={awq}"
+    if all_layers == "True":
+        params_info = params_info + ", all_layers=True"
+    nncf_logger.info(params_info + f" is {similarity:.3f}")
     return similarity
 
 
@@ -112,21 +113,25 @@ def get_nncf_dataset(
     return nncf.Dataset(data_source)
 
 
-def print_results(optimized_model: ov.Model, ratio: float, group_size: int, awq: bool, similarity: float) -> None:
+def print_results(optimized_model: ov.Model, similarity: float) -> None:
     """
     Print report with optimization details, memory footprint, and similarity score.
 
     :param optimized_model: The OpenVINO model with compressed weights.
-    :param ratio: The ratio between baseline and backup precisions
-    :param group_size: Number of weights (e.g. 128) in the channel dimension
-        that share quantization parameters (scale).
-    :param awq: Indicates whether use AWQ weights correction.
     :param similarity: The similarity score between the original and optimized models.
     """
     ov.save_model(optimized_model, MODEL_PATH)
-    footprint = Path(MODEL_PATH).with_suffix(".bin").stat().st_size
     print(f"Compressed model was saved to: {MODEL_PATH}")
-    print(f"Best parameters: group_size={group_size}, ratio={ratio:.1f}, awq={awq}")
+    group_size = optimized_model.get_rt_info()["nncf"]["weight_compression"]["group_size"].value
+    ratio = float(optimized_model.get_rt_info()["nncf"]["weight_compression"]["ratio"].value)
+    awq = optimized_model.get_rt_info()["nncf"]["weight_compression"]["awq"].value
+    all_layers = optimized_model.get_rt_info()["nncf"]["weight_compression"]["all_layers"].value
+    best_params_info = f"Best parameters: group_size={group_size}, ratio={ratio:.1f}, awq={awq}"
+    if all_layers == "True":
+        print(best_params_info + ", all_layers=True")
+    else:
+        print(best_params_info)
+    footprint = Path(MODEL_PATH).with_suffix(".bin").stat().st_size
     print(f"Memory footprint: {footprint / 2**20 :.2f} MB")
     print(f"Similarity: {similarity:.2f}")
 
@@ -155,7 +160,6 @@ def find_parameters(
     optimized_model = compress_model(original_ov_model, nncf_dataset, ratio, group_size, awq=use_awq)
     similarity = evaluate_fn(optimized_model=optimized_model)
     if similarity >= 1 - MAX_DROP:
-        nncf_logger.info(f"Compress embeddings and last layers to {COMPRESSION_MODE.value} precision")
         # If model with the maximum ratio and group_size is acceptable,
         # we try to compress embeddings and last MatMul layers to a primary precision
         full_optimized_model = nncf.compress_weights(
@@ -167,10 +171,9 @@ def find_parameters(
         )
         all_layers_similarity = evaluate_fn(optimized_model=full_optimized_model)
         if all_layers_similarity >= 1 - MAX_DROP:
-            print("Compressed embeddings and last layers to a primary precision.")
-            print_results(full_optimized_model, ratio, group_size, use_awq, all_layers_similarity)
+            print_results(full_optimized_model, all_layers_similarity)
         else:
-            print_results(optimized_model, ratio, group_size, use_awq, similarity)
+            print_results(optimized_model, similarity)
         return use_awq, ratio, group_size
 
     # If the best performing model is not acceptable, we try to use AWQ weights correction and compare similarity
@@ -178,7 +181,7 @@ def find_parameters(
     optimized_model = compress_model(original_ov_model, nncf_dataset, ratio, group_size, awq=use_awq)
     awq_similarity = evaluate_fn(optimized_model=optimized_model)
     if awq_similarity >= 1 - MAX_DROP:
-        print_results(optimized_model, ratio, group_size, use_awq, awq_similarity)
+        print_results(optimized_model, awq_similarity)
         return use_awq, ratio, group_size
     use_awq = awq_similarity > similarity
 
@@ -193,7 +196,7 @@ def find_parameters(
             "but it could not achieve the required accuracy drop. "
             "We recommend choosing a different mode for weight compression."
         )
-        print_results(optimized_model, ratio, group_size, use_awq, similarity)
+        print_results(optimized_model, similarity)
         return use_awq, ratio, group_size
 
     # If max drop criterion is achivable, we run a grid-search to find the best parameters
@@ -201,11 +204,11 @@ def find_parameters(
         optimized_model = compress_model(original_ov_model, nncf_dataset, ratio, group_size, awq=use_awq)
         similarity = evaluate_fn(optimized_model=optimized_model)
         if similarity >= 1 - MAX_DROP:
-            print_results(optimized_model, ratio, group_size, use_awq, similarity)
+            print_results(optimized_model, similarity)
             return use_awq, ratio, group_size
 
     optimized_model = compress_model(original_ov_model, nncf_dataset, MIN_RATIO, MIN_GROUP_SIZE, awq=use_awq)
-    print_results(optimized_model, MIN_RATIO, MIN_GROUP_SIZE, use_awq, similarity)
+    print_results(optimized_model, similarity)
     return use_awq, MIN_RATIO, MIN_GROUP_SIZE
 
 

@@ -15,9 +15,9 @@ import torch
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
-from nncf.torch.graph.operator_metatypes import OP_NAMES_QUANTIZE_NODE
 from nncf.torch.graph.operator_metatypes import OPERATORS_FUSED_METATYPES
 from nncf.torch.graph.operator_metatypes import OPERATORS_WITH_BIAS_METATYPES
+from nncf.torch.graph.operator_metatypes import QUANTIZE_NODE_TYPES
 from nncf.torch.nncf_network import NNCFNetwork
 
 
@@ -82,6 +82,6 @@ def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     :return bool: return `True` if the node is quantized.
     """
     for prev_node in nncf_graph.get_previous_nodes(node):
-        if prev_node.node_type in OP_NAMES_QUANTIZE_NODE:
+        if prev_node.node_type in QUANTIZE_NODE_TYPES:
             return True
     return False

@@ -96,9 +96,10 @@ class PTModelTransformer(ModelTransformer):
                 target_type=target_point.target_type,
                 op_address=node_to_op_address_mapping[target_node_name],
                 input_port_id=target_point.input_port_id,
+                replaced_modules=model.nncf.replace_modules,
             )
             fn = transformation_command.fn
-            if target_point.type is TargetType.OPERATION_WITH_WEIGHTS:
+            if model.nncf.replace_modules and target_point.type is TargetType.OPERATION_WITH_WEIGHTS:
                 fn = UpdateWeight(fn)
             tup = (fn, transformation_command)
             fns_grouped_by_points[pt_ip].append(tup)
@@ -248,7 +249,7 @@ def update_parameter(target_node_name: str, parameter_name: str, new_value: Tens
     Update parameter for target module.
 
     :param target_node_name: The target node name.
-    :param parmeter_name: The name of the parameter to update.
+    :param parameter_name: The name of the parameter to update.
     :param new_value: New parameter value.
     :param model: The model.
     """

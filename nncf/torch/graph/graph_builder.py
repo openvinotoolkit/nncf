@@ -13,6 +13,8 @@ from typing import Any, Callable, Dict, Optional, Set
 
 import torch
 
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.torch.dynamic_graph.context import TracingContext
@@ -22,6 +24,7 @@ from nncf.torch.dynamic_graph.layer_attributes_handlers import set_nodes_attribu
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
+from nncf.torch.graph.operator_metatypes import QUANTIZE_NODE_TYPES
 
 
 class GraphBuilder:
@@ -68,12 +71,12 @@ class GraphBuilder:
         :return: PTNNCFGraph constructed from given model.
         """
         dynamic_graph = self.build_dynamic_graph(model, context_to_use, as_eval, trace_parameters)
-        return GraphConverter.convert(dynamic_graph)
+        return GraphConverter.convert(dynamic_graph, trace_parameters)
 
 
 class GraphConverter:
     @staticmethod
-    def convert(dynamic_graph: DynamicGraph) -> PTNNCFGraph:
+    def convert(dynamic_graph: DynamicGraph, traced_parameters) -> PTNNCFGraph:
         module_id_vs_known_op_addrs_map: Dict[int, Set[Scope]] = defaultdict(set)
         for dynamic_graph_node in dynamic_graph.get_all_nodes():
             module_id_vs_known_op_addrs_map[dynamic_graph_node.calling_module_id].add(
@@ -102,7 +105,9 @@ class GraphConverter:
             if metatype in INPUT_NOOP_METATYPES:
                 is_integer_input = dynamic_graph.is_integer_input_node(dynamic_graph_node)
 
-            is_shared = len(module_id_vs_sorted_scopes_map[dynamic_graph_node.calling_module_id]) > 1
+            is_shared = False
+            if not traced_parameters:
+                is_shared = len(module_id_vs_sorted_scopes_map[dynamic_graph_node.calling_module_id]) > 1
             canonical_scope = module_id_vs_sorted_scopes_map[dynamic_graph_node.calling_module_id][0]
 
             node_name = str(op_address)
@@ -134,4 +139,35 @@ class GraphConverter:
             )
 
         set_nodes_attributes_in_nncf_graph(nncf_graph)
+        if traced_parameters:
+            propagate_is_shared_attribute_from_constant_nodes(nncf_graph)
         return nncf_graph
+
+
+def _propagate_true_for_is_shared_attribute(node: NNCFNode, graph: NNCFGraph, val: bool) -> None:
+    """
+    Propagates the is_shared attribute through specific nodes in an NNCFGraph.
+
+    :param node: The start NNCFNode to process.
+    :param graph: The NNCFGraph instance.
+    :param val: Propagated value for is_shared.
+    """
+    node.attributes[NNCFNode.IS_SHARED_ATTR] = val
+    if node.metatype in CONST_NOOP_METATYPES or node.node_type in QUANTIZE_NODE_TYPES:
+        for next_node in graph.get_next_nodes(node):
+            _propagate_true_for_is_shared_attribute(next_node, graph, val)
+
+
+def propagate_is_shared_attribute_from_constant_nodes(graph: NNCFGraph) -> None:
+    """
+    Detect shared constant nodes that used in several operations and propagate is_shared node attributes nodes.
+    For constant nodes the is_shared attribute set to True if constant used in multiple operations.
+    For other types of node with the is_shared attribute set to True if operation which associated
+    with node used shared constant.
+
+    :param graph: NNCGraph instance.
+    """
+    for const_node in graph.get_nodes_by_metatypes(CONST_NOOP_METATYPES):
+        next_nodes = graph.get_next_nodes(const_node)
+        if len(next_nodes) > 1:
+            _propagate_true_for_is_shared_attribute(const_node, graph, True)
