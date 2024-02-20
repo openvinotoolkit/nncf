@@ -17,6 +17,7 @@ from torch import nn
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
+from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.logging import nncf_logger
@@ -49,6 +50,7 @@ class BinarizationBuilder(PTCompressionAlgorithmBuilder):
     def __init__(self, config, should_init: bool = True):
         super().__init__(config, should_init)
         self.mode = self._algo_config.get("mode", BINARIZATION_MODE)
+        warning_deprecated("`binarization` algorithm is deprecated and will no longer be supported in the future.")
 
     def _get_transformation_layout(self, target_model: NNCFNetwork) -> PTTransformationLayout:
         layout = PTTransformationLayout()
