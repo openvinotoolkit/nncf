@@ -1,0 +1,33 @@
+name: 🚀 Feature request
+description: Submit a proposal/request for a new NNCF feature
+labels: ["enhancement"]
+body:
+  - type: textarea
+    attributes:
+      label: 🚀 Feature request
+      description: >
+        A clear and concise description of the feature proposal. Please provide a link to the paper and code in case they exist.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Feature Use Case
+      description: What is the use case of the feature you are proposing?
+      placeholder: What is the new feature use case? How will it be useful?
+    validations:
+      required: false
+      
+  - type: checkboxes
+    attributes:
+      label: Are you going to submit a PR?
+      description: >
+        (Optional) We'd love your help! If you have a good understanding of how to implement a fix or feature, you can submit a [Pull Request](https://github.com/openvinotoolkit/nncf/pulls) (PR).
+        See the NNCF [Contributing Guide](https://github.com/openvinotoolkit/nncf/blob/develop/CONTRIBUTING.md) to get started.
+      options:
+        - label: Yes I'd like to help by submitting a PR!
+
+  - type: markdown
+    attributes:
+      value: >
+        Thanks for contributing 🎉!
