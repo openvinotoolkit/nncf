@@ -463,8 +463,8 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             self.hw_config = PTHWConfig.from_json(hw_config_path)
 
         algo_config = self._get_algo_specific_config_section()
-        if self._target_device == "VPU" and "preset" in algo_config:
-            raise nncf.InternalError("The VPU target device does not support presets.")
+        if self._target_device == "NPU" and "preset" in algo_config:
+            raise nncf.InternalError("The NPU target device does not support presets.")
         if self._target_device == "CPU_SPR":
             raise nncf.InternalError("The CPU_SPR target device does not supported.")
 
@@ -552,10 +552,10 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                 ) from e
             precision_init_params = HAWQPrecisionInitParams.from_config(init_precision_config, precision_init_args)
         elif precision_init_type == "autoq":
-            if self.hw_config is not None and self.hw_config.target_device != HWConfigType.VPU.value:
+            if self.hw_config is not None and self.hw_config.target_device != HWConfigType.NPU.value:
                 raise ValueError(
                     "Unsupported device ({}). Automatic Precision Initialization only supports for "
-                    "target_device NONE or VPU".format(self.hw_config.target_device)
+                    "target_device NONE or NPU".format(self.hw_config.target_device)
                 )
             try:
                 precision_init_args = self.config.get_extra_struct(AutoQPrecisionInitArgs)

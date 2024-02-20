@@ -847,7 +847,7 @@ TEST_HW_MODELS_DESC = [
     ModelDesc("mobilenet_v2", test_models.MobileNetV2, [2, 3, 32, 32]),
 ]
 
-TYPE_HW = [(HWConfigType.CPU), (HWConfigType.GPU), (HWConfigType.VPU)]
+TYPE_HW = [(HWConfigType.CPU), (HWConfigType.GPU), (HWConfigType.NPU)]
 
 
 @pytest.fixture(scope="function", params=TYPE_HW)

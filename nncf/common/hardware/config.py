@@ -32,13 +32,13 @@ from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
 class HWConfigType(Enum):
     CPU = "CPU"
     GPU = "GPU"
-    VPU = "VPU"
+    NPU = "NPU"
 
 
 HW_CONFIG_TYPE_TARGET_DEVICE_MAP = {
     "ANY": HWConfigType.CPU.value,
     "CPU": HWConfigType.CPU.value,
-    "VPU": HWConfigType.VPU.value,
+    "NPU": HWConfigType.NPU.value,
     "GPU": HWConfigType.GPU.value,
     "CPU_SPR": HWConfigType.CPU.value,
 }
@@ -67,7 +67,7 @@ class HWConfig(list, ABC):
     UNIFIED_TYPE_NAME = "unified"
     ADJUST_PADDING_ATTRIBUTE_NAME = "adjust_padding"
 
-    TYPE_TO_CONF_NAME_DICT = {HWConfigType.CPU: "cpu.json", HWConfigType.VPU: "vpu.json", HWConfigType.GPU: "gpu.json"}
+    TYPE_TO_CONF_NAME_DICT = {HWConfigType.CPU: "cpu.json", HWConfigType.NPU: "npu.json", HWConfigType.GPU: "gpu.json"}
 
     def __init__(self):
         super().__init__()

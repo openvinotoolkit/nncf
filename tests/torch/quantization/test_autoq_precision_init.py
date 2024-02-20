@@ -45,7 +45,7 @@ class AutoQConfigBuilder(BaseConfigBuilder):
             self._config = self.create_autoq_test_config(
                 batch_size, image_size, num_channels, num_init_samples=num_init_samples
             )
-        self.for_vpu()
+        self.for_npu()
 
     def eval_subset_ratio(self, eval_subset_ratio):
         self._options["eval_subset_ratio"] = str(eval_subset_ratio)
@@ -90,8 +90,8 @@ class AutoQConfigBuilder(BaseConfigBuilder):
 
 class AutoQTestStruct(NamedTuple):
     model_creator: Callable[[], nn.Module] = mobilenet_v2
-    config_builder: AutoQConfigBuilder = AutoQConfigBuilder().for_vpu()
-    filename_suffix: str = "hw_config_vpu"
+    config_builder: AutoQConfigBuilder = AutoQConfigBuilder().for_npu()
+    filename_suffix: str = "hw_config_npu"
 
     def __str__(self):
         return "_".join([self.model_creator.__name__, str(self.config_builder)])

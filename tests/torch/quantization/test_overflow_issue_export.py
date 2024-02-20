@@ -107,7 +107,7 @@ def test_config_option_disable_overflow_fix():
     nncf_config = get_config_for_export_mode(True)
     nncf_config.update({"compression": {"algorithm": "quantization", "overflow_fix": "disable"}})
 
-    for device in ["CPU", "ANY", "VPU", "GPU", "TRIAL"]:
+    for device in ["CPU", "ANY", "NPU", "GPU", "TRIAL"]:
         helper_to_test_if_overflow_fix_wasnt_applied(nncf_config, device)
 
     nncf_config.update({"compression": {"algorithm": "quantization", "overflow_fix": "enable"}})
@@ -115,7 +115,7 @@ def test_config_option_disable_overflow_fix():
     for device in ["CPU", "ANY"]:
         helper_to_test_if_overflow_fix_was_applied(nncf_config, device)
 
-    for device in ["VPU", "GPU", "TRIAL"]:
+    for device in ["NPU", "GPU", "TRIAL"]:
         helper_to_test_if_overflow_fix_wasnt_applied(nncf_config, device)
 
     nncf_config.update({"compression": {"algorithm": "quantization", "overflow_fix": "first_layer_only"}})
@@ -123,7 +123,7 @@ def test_config_option_disable_overflow_fix():
     for device in ["CPU", "ANY"]:
         helper_to_test_if_overflow_fix_was_applied_only_to_first_conv_later(nncf_config, device)
 
-    for device in ["VPU", "GPU", "TRIAL"]:
+    for device in ["NPU", "GPU", "TRIAL"]:
         helper_to_test_if_overflow_fix_wasnt_applied(nncf_config, device)
 
 
@@ -133,7 +133,7 @@ def test_hw_config_overflow_fix_applied():
     for device in ["CPU", "ANY"]:
         helper_to_test_if_overflow_fix_was_applied(nncf_config, device)
 
-    for device in ["VPU", "GPU", "TRIAL"]:
+    for device in ["NPU", "GPU", "TRIAL"]:
         helper_to_test_if_overflow_fix_wasnt_applied(nncf_config, device)
 
 
