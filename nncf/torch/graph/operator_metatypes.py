@@ -1050,7 +1050,7 @@ OPERATORS_FUSED_METATYPES = [
     PTModuleBatchNormMetatype,
 ]
 
-OP_NAMES_QUANTIZE_NODE = ["symmetric_quantize", "asymmetric_quantize"]
+QUANTIZE_NODE_TYPES = ["symmetric_quantize", "asymmetric_quantize"]
 
 # These metatypes mix outputs for different samples into one axis.
 # If reducers and aggregators collect statistics at the output of the following operations,
