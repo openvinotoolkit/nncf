@@ -182,7 +182,7 @@ class AWQ(Algorithm):
             X = fns.stack([fns.mean(stat, axis=0) for stat in stats])
             X = fns.transpose(X)
 
-            s = fns.max(fns.abs(X), axis=1)
+            s = fns.quantile(fns.abs(X), q=0.95, axis=1)
 
             if X.shape[1] > self._subset_size:
                 lens = [stat.shape[0] for stat in stats]
