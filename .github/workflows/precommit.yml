@@ -119,10 +119,11 @@ jobs:
         with:
           python-version: 3.8.10
 
-      - name: Install NNCF and test requirements
-        run: make install-torch-test
+      # - name: Install NNCF and test requirements
+      #   run: make install-torch-test
 
       - name: test cuda
+        run: pip install torch
         run: python -c "import torch; print(f'{torch.cuda.is_available()=}'); torch.zeros(1).cuda()"
 
 
