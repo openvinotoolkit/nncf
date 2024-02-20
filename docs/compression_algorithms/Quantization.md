@@ -282,7 +282,7 @@ To evaluate the goodness of a policy, NNCF backend quantizes the workload accord
 
 ```json5
 {
-   "target_device": "VPU",
+   "target_device": "NPU",
    "compression": {
       "algorithm": "quantization",
       "initializer": {
