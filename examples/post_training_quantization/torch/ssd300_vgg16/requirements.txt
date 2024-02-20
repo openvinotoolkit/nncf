@@ -2,6 +2,6 @@ fastdownload==0.0.7
 onnx==1.13.1
 openvino-dev==2023.3
 pycocotools==2.0.7
-torch==2.0.1  # ssd300_vgg16 can not be exported with 2.1.0, reference: https://github.com/pytorch/pytorch/issues/113155
+torch==2.2.0
 torchmetrics==1.0.1
-torchvision==0.15.2
+torchvision==0.17.0

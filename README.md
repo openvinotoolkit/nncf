@@ -385,7 +385,7 @@ conda install -c conda-forge nncf
 - Ubuntu\* 18.04 or later (64-bit)
 - Python\* 3.7 or later
 - Supported frameworks:
-  - PyTorch\* >=2.0, <2.2
+  - PyTorch\* >=2.1, <2.3
   - TensorFlow\* >=2.8.4, <=2.12.1
   - ONNX\* ~=1.13.1
   - OpenVINO\* >=2022.3.0
