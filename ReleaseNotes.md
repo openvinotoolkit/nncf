@@ -1,5 +1,30 @@
 # Release Notes
 
+## New in Release 2.9.0
+
+Post-training Quantization:
+
+- Breaking changes:
+  - ...
+- General:
+  - ...
+- Features:
+  - ...
+- Fixes:
+  - ...
+- Improvements:
+  - ...
+- Deprecations/Removals:
+  - ...
+- Tutorials:
+  - ...
+- Known issues:
+  - ...
+
+Compression-aware training:
+
+- ...
+
 ## New in Release 2.8.1
 
 Post-training Quantization:
