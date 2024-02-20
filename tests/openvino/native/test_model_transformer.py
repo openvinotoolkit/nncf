@@ -23,6 +23,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.tensor import Tensor
 from nncf.openvino.graph.model_transformer import OVModelTransformer
+from nncf.openvino.graph.node_utils import get_inplace_batch_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_max_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_per_ch
@@ -147,13 +148,14 @@ INPLACE_OPS_TEST_CASES = [
         "abs_max", None, lambda r: get_inplace_max_op(r, True), ["Abs", "ReduceMax"], [None, (0, 1, 2, 3)]
     ),
     # Batch mean and mean per ch operations
-    InplaceOpTestCase("mean_per_ch", 1, get_inplace_mean_per_ch, ["Reshape", "ReduceMean"], [(1, 3, 16), (2)]),
+    InplaceOpTestCase("batch_mean", None, lambda r: get_inplace_batch_mean_op(), ["ReduceMean"], [0]),
+    InplaceOpTestCase("mean_per_ch", 1, get_inplace_mean_per_ch, ["Reshape", "ReduceMean"], [(1, 3, 16), (0, 2)]),
     InplaceOpTestCase(
         "mean_per_ch",
         2,
         get_inplace_mean_per_ch,
         ["Transpose", "Reshape", "ReduceMean"],
-        [(0, 2, 1, 3), (1, 4, 12), (2)],
+        [(0, 2, 1, 3), (1, 4, 12), (0, 2)],
     ),
     InplaceOpTestCase(
         "mean_per_ch",

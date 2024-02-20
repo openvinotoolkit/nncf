@@ -17,6 +17,7 @@ from nncf.common.tensor import TensorElementsType
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
+from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
 from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
 from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MeanPerChReducer
@@ -158,7 +159,7 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
             return ONNXNNCFTensor(np.mean(x.tensor, axis=0))
         x = np.moveaxis(x.tensor, axis, 1)
         t = x.reshape(x.shape[0], x.shape[1], -1)
-        return ONNXNNCFTensor(np.mean(t, axis=(2,)))
+        return ONNXNNCFTensor(np.mean(t, axis=(0, 2)))
 
     @staticmethod
     def transpose(x: ONNXNNCFTensor, axes: Tuple[int, ...]) -> ONNXNNCFTensor:
@@ -220,6 +221,10 @@ class ONNXAbsQuantileReducer(ONNXBasicReducer, AbsQuantileReducer):
     pass
 
 
+class ONNXBatchMeanReducer(ONNXBasicReducer, BatchMeanReducer):
+    pass
+
+
 class ONNXMeanPerChanelReducer(ONNXBasicReducer, MeanPerChReducer):
     pass
 
@@ -237,16 +242,17 @@ def get_mean_statistic_collector(
     :param inplace: Whether the mean reducer should be calculated inplace or out of place.
     :return: Mean statistic collector.
     """
-    reducer = ONNXMeanPerChanelReducer(channel_axis=channel_axis, inplace=inplace)
+    inplace = False
+    if channel_axis == 0:
+        reducer = ONNXBatchMeanReducer(inplace)
+    else:
+        reducer = ONNXMeanPerChanelReducer(channel_axis=channel_axis, inplace=inplace)
     noop_reducer = NoopReducer()
-    aggregation_axes = (
-        (0,) if channel_axis == -1 else (0, 1)
-    )  # Assume that batch is on 0-axis for Convolutions and No batch axis for MatMul
+
     kwargs = {
         "tensor_processor": ONNXNNCFCollectorTensorProcessor,
         "num_samples": num_samples,
         "window_size": window_size,
-        "aggregation_axes": aggregation_axes,
     }
 
     aggregate_mean = MeanAggregator(**kwargs)

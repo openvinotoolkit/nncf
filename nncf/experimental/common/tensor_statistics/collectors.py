@@ -555,6 +555,14 @@ class AbsQuantileReducer(QuantileReducerBase):
         return self._tensor_processor.quantile(x, self._quantile, reduction_axes, keepdims=self._keepdims)
 
 
+class BatchMeanReducer(TensorReducerBase):
+    def __init__(self, inplace: bool = False):
+        super().__init__(None, inplace)
+
+    def _reduce_out_of_place(self, x: List[NNCFTensor]) -> List[NNCFTensor]:
+        return [self._tensor_processor.batch_mean(x[0])]
+
+
 class MeanPerChReducer(TensorReducerBase):
     def __init__(self, channel_axis: int = 1, inplace: bool = False):
         super().__init__(inplace=inplace)

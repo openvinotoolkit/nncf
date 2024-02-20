@@ -225,6 +225,20 @@ class TemplateTestReducersAggreagtors:
         for i, ref_ in enumerate(ref):
             assert self.all_close(val[i].tensor, self.cast_tensor(ref_, Dtype.FLOAT))
 
+    @pytest.mark.parametrize(
+        "reducer_name,ref,kwargs",
+        [
+            ("batch_mean", [[[[-12.5, -11.5, -10.5], [-9.5, -8.5, -7.5], [-6.5, -5.5, -4.5]]]], {}),
+            ("mean_per_ch", [-22.0, -13.0, -4.0, 5.0], {"channel_axis": 0}),
+        ],
+    )
+    def test_batch_mean_mean_per_ch_reducers(self, reducer_name, ref, reducers, kwargs):
+        input_ = np.arange(-26, 10).reshape((4, 1, 3, 3))
+        reducer = reducers[reducer_name](inplace=False, **kwargs)
+        val = reducer([self.get_nncf_tensor(input_, Dtype.FLOAT)])
+        assert len(val) == 1
+        assert self.all_close(val[0].tensor, self.cast_tensor(ref, Dtype.FLOAT))
+
     def test_noop_aggregator(self):
         aggregator = NoopAggregator(None)
 
@@ -329,17 +343,7 @@ class TemplateTestReducersAggreagtors:
     ) -> Iterator[NNCFTensor]:
         input_ = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9])
         input_with_outliers = np.array(
-            [
-                100_000,
-                -100_000,
-                200_000,
-                -200_000,
-                300_000,
-                -300_000,
-                400_000,
-                -400_000,
-                500_000,
-            ]
+            [100_000, -100_000, 200_000, -200_000, 300_000, -300_000, 400_000, -400_000, 500_000]
         )
         if dims == 2:
             input_ = input_.reshape((3, 3))
@@ -510,7 +514,7 @@ class TemplateTestReducersAggreagtors:
 
     @pytest.mark.parametrize(
         "reducer_name",
-        ["min", "max", "abs_max", "mean", "quantile", "abs_quantile", "mean_per_ch"],
+        ["min", "max", "abs_max", "mean", "quantile", "abs_quantile", "batch_mean", "mean_per_ch"],
     )
     def test_reducers_name_hash_equal(self, reducer_name, reducers):
         params = {}
@@ -520,6 +524,8 @@ class TemplateTestReducersAggreagtors:
         elif reducer_name in ["quantile", "abs_quantile"]:
             params["reduction_axes"] = [None, (0, 1, 3), (1, 2, 3)]
             params["quantile"] = [[0.01, 0.99], [0.001, 0.999]]
+        elif reducer_name == "batch_mean":
+            params["inplace"] = [False, True]
         elif reducer_name == "mean_per_ch":
             params["inplace"] = [False, True]
             params["channel_axis"] = [1, 2]
