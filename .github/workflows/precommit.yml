@@ -106,7 +106,10 @@ jobs:
       - name: Install git
         run: |
           apt-get update
-          apt-get install --assume-yes --no-install-recommends git git-lfs ca-certificates make
+          apt-get install --assume-yes --no-install-recommends git git-lfs ca-certificates make ninja-build
+
+      - name: nvidia-smi
+        run: nvidia-smi
 
       - uses: actions/checkout@v4
         with:
@@ -120,7 +123,7 @@ jobs:
         run: make install-torch-test
 
       - name: test cuda
-        run: python -c "import torch; print(f'{torch.cuda.is_available()=}')"
+        run: python -c "import torch; print(f'{torch.cuda.is_available()=}'); torch.zeros(1).cuda()"
 
 
       # - name: Run TORCH precommit test scope
