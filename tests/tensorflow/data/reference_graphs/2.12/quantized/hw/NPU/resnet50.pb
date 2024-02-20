@@ -1,1 +1,1 @@
-../../../../2.11/quantized/hw/VPU/resnet50.pb
+../../../../2.11/quantized/hw/NPU/resnet50.pb

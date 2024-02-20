@@ -1,1 +1,1 @@
-../../../../2.11/quantized/hw/VPU/mobilenet_v2.pb
+../../../../2.11/quantized/hw/NPU/mobilenet_v2.pb
