@@ -109,7 +109,7 @@ jobs:
           apt-get install --assume-yes --no-install-recommends git git-lfs ca-certificates make ninja-build
 
       - name: nvidia-smi
-        run: nvidia-smi
+        run: cat /proc/driver/nvidia/gpus/*/information
 
       - uses: actions/checkout@v4
         with:
