@@ -220,3 +220,24 @@ def test_raise_error_with_not_int8_asym(mode):
     wrapped_model = wrap_model(dummy_torch_model, example_input=dummy_input, trace_parameters=True)
     with pytest.raises(AttributeError):
         compress_weights(wrapped_model, mode=mode)
+
+
+class DTypeModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.weight = torch.nn.Parameter(torch.ones(size=(3, 3), dtype=torch.float32))
+
+    def forward(self, x):
+        x = x.to(self.weight.dtype)
+        x = x @ self.weight
+        return x
+
+
+def test_get_dtype_attribute_of_parameter():
+    model = DTypeModel()
+    dummy_input = torch.randint(0, 10, [3, 3])
+    wrapped_model = wrap_model(model, example_input=dummy_input, trace_parameters=True)
+    compressed_model = compress_weights(wrapped_model)
+    assert compressed_model.weight.dtype == torch.uint8
+    compressed_model(dummy_input)
+    assert compressed_model.weight.dtype == torch.uint8

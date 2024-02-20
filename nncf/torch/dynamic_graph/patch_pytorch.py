@@ -12,7 +12,7 @@
 import functools
 import inspect
 from contextlib import contextmanager
-from typing import List, Tuple
+from typing import List
 
 import torch
 import torch.utils.cpp_extension
@@ -33,13 +33,15 @@ from nncf.torch.dynamic_graph.wrappers import wrap_module_call
 from nncf.torch.dynamic_graph.wrappers import wrap_operator
 
 
-def get_namespaces_to_patch(namespace_target: NamespaceTarget) -> Tuple[object, ...]:
+def get_namespaces_to_patch(namespace_target: NamespaceTarget) -> object:
     if namespace_target == NamespaceTarget.TORCH_NN_FUNCTIONAL:
-        return (torch.nn.functional,)
+        return torch.nn.functional
     if namespace_target == NamespaceTarget.TORCH_TENSOR:
-        return (TracedTensor, TracedParameter)
+        return TracedTensor
+    if namespace_target == NamespaceTarget.TORCH_NN_PARAMETER:
+        return TracedParameter
     if namespace_target == NamespaceTarget.TORCH:
-        return (torch,)
+        return torch
     raise nncf.ValidationError("{} namespace wasn't found in {}".format(namespace_target, NamespaceTarget))
 
 
@@ -48,6 +50,8 @@ def get_namespace_to_extract_functions_from(namespace_target: NamespaceTarget) -
         return torch.nn.functional
     if namespace_target == NamespaceTarget.TORCH_TENSOR:
         return torch.Tensor
+    if namespace_target == NamespaceTarget.TORCH_NN_PARAMETER:
+        return torch.nn.Parameter
     if namespace_target == NamespaceTarget.TORCH:
         return torch._C._VariableFunctions
     raise nncf.ValidationError("{} namespace wasn't found in {}".format(namespace_target, NamespaceTarget))
@@ -120,52 +124,54 @@ class FunctionsToPatchWithoutTracing:
 
 
 class MagicFunctionsToPatch:
+    TENSOR_MAGIC_FUNCTIONS = [
+        "__abs__",
+        "__add__",
+        "__and__",
+        "__div__",
+        "__eq__",
+        "__floordiv__",
+        "__ge__",
+        "__getitem__",
+        "__gt__",
+        "__iadd__",
+        "__iand__",
+        "__idiv__",
+        "__ifloordiv__",
+        "__imul__",
+        "__invert__",
+        "__ior__",
+        "__ipow__",
+        "__isub__",
+        "__itruediv__",
+        "__ixor__",
+        "__le__",
+        "__lt__",
+        "__matmul__",
+        "__mod__",
+        "__mul__",
+        "__ne__",
+        "__neg__",
+        "__or__",
+        "__pow__",
+        "__radd__",
+        "__rand__",
+        "__rdiv__",
+        "__rfloordiv__",
+        "__rmatmul__",
+        "__rmul__",
+        "__ror__",
+        "__rpow__",
+        "__rsub__",
+        "__rtruediv__",
+        "__rxor__",
+        "__sub__",
+        "__truediv__",
+        "__xor__",
+    ]
     MAGIC_FUNCTIONS_TO_PATCH = {
-        NamespaceTarget.TORCH_TENSOR: [
-            "__abs__",
-            "__add__",
-            "__and__",
-            "__div__",
-            "__eq__",
-            "__floordiv__",
-            "__ge__",
-            "__getitem__",
-            "__gt__",
-            "__iadd__",
-            "__iand__",
-            "__idiv__",
-            "__ifloordiv__",
-            "__imul__",
-            "__invert__",
-            "__ior__",
-            "__ipow__",
-            "__isub__",
-            "__itruediv__",
-            "__ixor__",
-            "__le__",
-            "__lt__",
-            "__matmul__",
-            "__mod__",
-            "__mul__",
-            "__ne__",
-            "__neg__",
-            "__or__",
-            "__pow__",
-            "__radd__",
-            "__rand__",
-            "__rdiv__",
-            "__rfloordiv__",
-            "__rmatmul__",
-            "__rmul__",
-            "__ror__",
-            "__rpow__",
-            "__rsub__",
-            "__rtruediv__",
-            "__rxor__",
-            "__sub__",
-            "__truediv__",
-            "__xor__",
-        ]
+        NamespaceTarget.TORCH_TENSOR: TENSOR_MAGIC_FUNCTIONS,
+        NamespaceTarget.TORCH_NN_PARAMETER: TENSOR_MAGIC_FUNCTIONS + ["get_dtype"],
     }
 
 
@@ -369,8 +375,8 @@ def patch_torch_operators():
     for namespace, function_names in functions_to_patch.items():
         for function_name in function_names:
             op_info = PatchedOperatorInfo(function_name, namespace)
-            for patched_namespace in get_namespaces_to_patch(namespace):
-                patch_namespace_opname(patched_namespace, op_info)
+            patched_namespace = get_namespaces_to_patch(namespace)
+            patch_namespace_opname(patched_namespace, op_info)
 
     # Patch operators without tracing so that
     # both they and any internal calls to otherwise traced functions do not appear into the model graph.
@@ -378,8 +384,8 @@ def patch_torch_operators():
     for namespace, function_names in functions_to_patch_without_tracing.items():
         for function_name in function_names:
             op_info = PatchedOperatorInfo(function_name, namespace, skip_trace=True)
-            for patched_namespace in get_namespaces_to_patch(namespace):
-                patch_namespace_opname(patched_namespace, op_info)
+            patched_namespace = get_namespaces_to_patch(namespace)
+            patch_namespace_opname(patched_namespace, op_info)
 
     # Patch __repr__ twice in 'torch.Tensor' and 'TracedTensor'.
     # This is done to not add operations behind print() operator for the both TracedTensor and torch.Tensor.
