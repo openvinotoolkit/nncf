@@ -79,8 +79,12 @@ class ModeBasedDefaults:
     """
 
     overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER
-    activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = QuantizationParameters()
-    weights_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = QuantizationParameters()
+    activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = dataclasses.field(
+        default_factory=QuantizationParameters
+    )
+    weights_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = dataclasses.field(
+        default_factory=QuantizationParameters
+    )
 
 
 MODE_BASED_DEFAULTS = {
