@@ -123,8 +123,9 @@ jobs:
       #   run: make install-torch-test
 
       - name: test cuda
-        run: pip install torch
-        run: python -c "import torch; print(f'{torch.cuda.is_available()=}'); torch.zeros(1).cuda()"
+        run: |
+          pip install torch
+          python -c "import torch; print(f'{torch.cuda.is_available()=}'); torch.zeros(1).cuda()"
 
 
       # - name: Run TORCH precommit test scope
