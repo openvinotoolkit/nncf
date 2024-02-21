@@ -89,13 +89,13 @@ class MultiBranchesModelDesc(GeneralModelDesc):
         self._config_update["compression"].update(trial_config)
         return self
 
-    def vpu(self):
-        self._config_update["target_device"] = "VPU"
+    def npu(self):
+        self._config_update["target_device"] = "NPU"
         return self
 
     def custom_hw(self):
         custom_hw_config_dict = {
-            "target_device": "VPU",
+            "target_device": "NPU",
             "config": {
                 "quantization": {
                     "q4": {"bits": 4, "mode": "symmetric", "granularity": "pertensor"},
@@ -131,26 +131,26 @@ class MultiBranchesModelDesc(GeneralModelDesc):
 
 
 ADJUST_PAD_DESC_LIST = [
-    MultiBranchesModelDesc(name="vpu_all_int8").vpu(),
-    MultiBranchesModelDesc(name="vpu_all_weights_int8").vpu().manual_precision([8, 8, 8, 8], [8, 4, 4, 4]),
-    MultiBranchesModelDesc(name="vpu_all_activations_int8").vpu().manual_precision([8, 4, 4, 4], [8, 8, 8, 4]),
-    MultiBranchesModelDesc(name="vpu_bd_int8").vpu().manual_precision([4, 4, 4, 4], [8, 8, 4, 8]),
-    MultiBranchesModelDesc(name="vpu_max_int4").vpu().manual_precision([4, 4, 4, 4], [8, 4, 4, 4]),
-    MultiBranchesModelDesc(name="vpu_all_int8_requnt").vpu().requant_prop_strategy(),
-    MultiBranchesModelDesc(name="vpu_all_weights_int8_requnt")
-    .vpu()
+    MultiBranchesModelDesc(name="npu_all_int8").npu(),
+    MultiBranchesModelDesc(name="npu_all_weights_int8").npu().manual_precision([8, 8, 8, 8], [8, 4, 4, 4]),
+    MultiBranchesModelDesc(name="npu_all_activations_int8").npu().manual_precision([8, 4, 4, 4], [8, 8, 8, 4]),
+    MultiBranchesModelDesc(name="npu_bd_int8").npu().manual_precision([4, 4, 4, 4], [8, 8, 4, 8]),
+    MultiBranchesModelDesc(name="npu_max_int4").npu().manual_precision([4, 4, 4, 4], [8, 4, 4, 4]),
+    MultiBranchesModelDesc(name="npu_all_int8_requnt").npu().requant_prop_strategy(),
+    MultiBranchesModelDesc(name="npu_all_weights_int8_requnt")
+    .npu()
     .manual_precision([8, 8, 8, 8], [8, 4, 4, 4])
     .requant_prop_strategy(),
-    MultiBranchesModelDesc(name="vpu_all_activations_int8_requnt")
-    .vpu()
+    MultiBranchesModelDesc(name="npu_all_activations_int8_requnt")
+    .npu()
     .manual_precision([8, 4, 4, 4], [8, 8, 8, 4])
     .requant_prop_strategy(),
-    MultiBranchesModelDesc(name="vpu_bd_int8_requnt")
-    .vpu()
+    MultiBranchesModelDesc(name="npu_bd_int8_requnt")
+    .npu()
     .manual_precision([4, 4, 4, 4], [8, 8, 4, 8])
     .requant_prop_strategy(),
-    MultiBranchesModelDesc(name="vpu_max_int4_requnt")
-    .vpu()
+    MultiBranchesModelDesc(name="npu_max_int4_requnt")
+    .npu()
     .manual_precision([4, 4, 4, 4], [8, 4, 4, 4])
     .requant_prop_strategy(),
     MultiBranchesModelDesc(name="custom").custom_hw(),
@@ -175,7 +175,7 @@ def test_adjust_padding_on_synthetic_models(desc: MultiBranchesModelDesc, mocker
 
 
 def test_onnx_export_to_fake_quantize_with_adjust_pad(tmp_path):
-    desc = MultiBranchesModelDesc(name="vpu_max_int4").vpu().manual_precision([4, 4, 4, 4], [8, 4, 4, 4])
+    desc = MultiBranchesModelDesc(name="npu_max_int4").npu().manual_precision([4, 4, 4, 4], [8, 4, 4, 4])
     model = desc.get_model()
     nncf_config = desc.get_config()
     register_bn_adaptation_init_args(nncf_config)

@@ -145,7 +145,7 @@ def test_shared_op_unified_scales(target_device):
     nncf_config["target_device"] = target_device
 
     non_weight_quantizers_ref = 8
-    if target_device == "VPU":
+    if target_device == "NPU":
         non_weight_quantizers_ref = 5
 
     model = get_shared_conv_test_model()
@@ -184,11 +184,11 @@ def get_eltwise_quantizer_linking_test_model(input_shapes):
     return tf.keras.Model(inputs=inputs, outputs=outputs)
 
 
-def test_eltwise_unified_scales_for_vpu():
+def test_eltwise_unified_scales_for_npu():
     nncf_config = get_basic_quantization_config()
     x_shape = [1, 1, 1, 1]
     y_shape = [1, 1, 1, 1]
-    nncf_config["target_device"] = "VPU"
+    nncf_config["target_device"] = "NPU"
 
     model = get_eltwise_quantizer_linking_test_model([x_shape, y_shape])
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, nncf_config, force_no_init=True)

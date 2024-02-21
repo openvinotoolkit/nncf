@@ -72,8 +72,6 @@ def create_ptq_pipeline(
         fine-tuning the quantization algorithm
     :return: A post-training quantization pipeline.
     """
-    if target_device is TargetDevice.VPU:
-        warning_deprecated("VPU device is deprecated and will no longer be supported in the future.")
 
     if advanced_parameters is None:
         advanced_parameters = AdvancedQuantizationParameters()

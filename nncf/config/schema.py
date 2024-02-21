@@ -78,7 +78,7 @@ SINGLE_INPUT_INFO_SCHEMA = {
     "additionalProperties": False,
 }
 
-TARGET_DEVICE_SCHEMA = {"type": "string", "enum": ["ANY", "CPU", "GPU", "VPU", "TRIAL", "CPU_SPR"]}
+TARGET_DEVICE_SCHEMA = {"type": "string", "enum": ["ANY", "CPU", "GPU", "NPU", "TRIAL", "CPU_SPR"]}
 
 
 NNCF_CONFIG_SCHEMA = {

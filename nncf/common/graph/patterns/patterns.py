@@ -358,7 +358,7 @@ class HWFusedPatternNames(Enum):
     # DEVICE PATTERNS
     HSWISH_ACTIVATION_CLAMP_MULTIPLY = PatternDesc(
         "hswish_activation_clamp_multiply",
-        devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU, TargetDevice.VPU],
+        devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU, TargetDevice.NPU],
     )
     LINEAR_SCALE_SHIFT = PatternDesc(
         "linear_scale_shift", devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU]
@@ -394,7 +394,7 @@ class IgnoredPatternNames(Enum):
     MULTIHEAD_ATTENTION_OUTPUT = PatternDesc(
         "multihead_attention_output",
         model_types=[ModelType.TRANSFORMER],
-        devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU, TargetDevice.VPU],
+        devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU, TargetDevice.NPU],
     )
     SE_BLOCK = PatternDesc("se_block")
     FC_BN_HSWISH_ACTIVATION = PatternDesc("fc_bn_hswish_activation")
