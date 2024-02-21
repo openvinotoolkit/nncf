@@ -249,7 +249,7 @@ class SanityTestCaseDescriptor(BaseSampleTestCaseDescriptor, ABC):
 
     def get_config_update(self) -> Dict:
         sample_params = self.get_sample_params()
-        return {**sample_params, "target_device": "VPU", "compression": self.get_compression_section()}
+        return {**sample_params, "target_device": "NPU", "compression": self.get_compression_section()}
 
     def get_sample_params(self) -> Dict:
         return {"dataset": self.dataset_name} if self.dataset_name else {}
