@@ -79,6 +79,8 @@ def test_ov_accuracy_control_algo_backend_static_methods_with_graph(ov_graph_and
         ov_graph
     ) == get_start_nodes_for_activation_path_tracing(ov_graph)
     conv_node: NNCFNode = ov_graph.get_node_by_key('4 Conv')
+    add_node: NNCFNode = ov_graph.get_node_by_key('3 Add')
+    
     assert(OVAccuracyControlAlgoBackend.is_node_with_bias(conv_node, ov_graph))
     assert(OVAccuracyControlAlgoBackend.is_node_with_weight(conv_node))
     assert(isinstance(OVAccuracyControlAlgoBackend.get_bias_value(conv_node, ov_graph, model), np.ndarray))
@@ -86,5 +88,7 @@ def test_ov_accuracy_control_algo_backend_static_methods_with_graph(ov_graph_and
     assert(isinstance(OVAccuracyControlAlgoBackend.get_weight_value(conv_node, model, 1), np.ndarray))
     assert(OVAccuracyControlAlgoBackend.get_model_size(model) == 116)
 
-       
-
+    assert(not OVAccuracyControlAlgoBackend.is_node_with_bias(add_node, ov_graph))   
+    assert(not OVAccuracyControlAlgoBackend.is_node_with_weight(add_node))  
+    
+     
