@@ -626,6 +626,7 @@ class PTBatchNormMetatype(PTOperatorMetatype):
     name = "BatchNormOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["batch_norm"]}
     subtypes = [PTModuleBatchNormMetatype]
+    hw_config_names = [HWConfigOpName.BATCH_NORM]
 
 
 @PT_OPERATOR_METATYPES.register()

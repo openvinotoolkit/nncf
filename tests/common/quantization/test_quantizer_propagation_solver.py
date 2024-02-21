@@ -8,24 +8,28 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
+import abc
 from collections import Counter
 from collections import namedtuple
+from dataclasses import dataclass
 from itertools import permutations
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, Type
 
 import networkx as nx
 import pytest
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
+from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.layer_attributes import Dtype
+from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.hardware.config import HWConfig
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.quantization.quantizer_propagation.graph import QuantizerPropagationStateGraph as QPSG
 from nncf.common.quantization.quantizer_propagation.solver import PropagationStrategy
@@ -37,15 +41,20 @@ from nncf.common.quantization.quantizer_propagation.structs import PropagationPa
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.quantization.quantizer_setup import ActivationQuantizationInsertionPoint
 from nncf.common.quantization.quantizer_setup import MultiConfigQuantizationPoint
+from nncf.common.quantization.quantizer_setup import MultiConfigQuantizerSetup
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
 from nncf.common.quantization.quantizer_setup import WeightQuantizationInsertionPoint
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.quantization.structs import UnifiedScaleType
 from tests.common.quantization.metatypes import DEFAULT_TEST_QUANT_TRAIT_MAP
 from tests.common.quantization.metatypes import BatchNormTestMetatype
+from tests.common.quantization.metatypes import CatTestMetatype
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import DropoutTestMetatype
 from tests.common.quantization.metatypes import GeluTestMetatype
+from tests.common.quantization.metatypes import GenericBinaryOpMetatype
+from tests.common.quantization.metatypes import GenericBinaryUnifiedScaleOpMetatype
 from tests.common.quantization.metatypes import MatMulTestMetatype
 from tests.common.quantization.metatypes import MaxPool2dTestMetatype
 from tests.common.quantization.metatypes import MinTestMetatype
@@ -58,7 +67,13 @@ from tests.common.quantization.mock_graphs import mark_input_ports_lexicographic
 from tests.common.quantization.test_quantizer_propagation_graph import get_edge_paths_for_propagation
 
 
-class TwoFcAfterDropout:
+class GraphProvider(abc.ABC):
+    @abc.abstractmethod
+    def get_graph(self) -> nx.DiGraph():
+        pass
+
+
+class TwoFcAfterDropout(GraphProvider):
     DROPOUT_OP_TYPE_STR = "dropout"
     DROPOUT_NODE_NAME = f"TwoFcAfterDropoutModel/{DROPOUT_OP_TYPE_STR}_0"
 
@@ -68,8 +83,7 @@ class TwoFcAfterDropout:
     FC_2_SCOPE_STR = "TwoFcAfterDropoutModel/NNCFLinear[branch2]"
     FC_2_NODE_NAME = f"{FC_2_SCOPE_STR}/linear_0"
 
-    @staticmethod
-    def get_graph():
+    def get_graph(self) -> nx.DiGraph:
         graph = nx.DiGraph()
         dropout_node_attrs = {
             NNCFNode.NODE_NAME_ATTR: TwoFcAfterDropout.DROPOUT_NODE_NAME,
@@ -93,6 +107,153 @@ class TwoFcAfterDropout:
         graph.add_edge("dropout", "fc_2")
 
         mark_input_ports_lexicographically_based_on_input_node_key(graph)
+        return graph
+
+
+class TwoInputModelWithQuantizableConcat(GraphProvider):
+    CONCAT_NODE_NAME = "concat"
+    CONV_NODE_NAME = "conv"
+
+    def get_graph(self) -> nx.DiGraph:
+        #  (I1)     (I2)
+        #   |        |
+        #   \       /
+        #    (concat)
+        #       |
+        #     (conv)
+        #
+
+        graph = nx.DiGraph()
+        input_1_attrs = {NNCFNode.NODE_NAME_ATTR: "I1", NNCFNode.NODE_TYPE_ATTR: NNCFGraphNodeType.INPUT_NODE}
+
+        input_2_attrs = {NNCFNode.NODE_NAME_ATTR: "I2", NNCFNode.NODE_TYPE_ATTR: NNCFGraphNodeType.INPUT_NODE}
+
+        graph.add_node("I1", **input_1_attrs)
+        graph.add_node("I2", **input_2_attrs)
+
+        concat_node_attrs = {
+            NNCFNode.NODE_NAME_ATTR: TwoInputModelWithQuantizableConcat.CONCAT_NODE_NAME,
+            NNCFNode.NODE_TYPE_ATTR: CatTestMetatype.name,
+        }
+
+        graph.add_node(TwoInputModelWithQuantizableConcat.CONCAT_NODE_NAME, **concat_node_attrs)
+
+        graph.add_edge("I1", TwoInputModelWithQuantizableConcat.CONCAT_NODE_NAME)
+        graph.add_edge("I2", TwoInputModelWithQuantizableConcat.CONCAT_NODE_NAME)
+
+        graph.add_node(
+            TwoInputModelWithQuantizableConcat.CONV_NODE_NAME,
+            **{
+                NNCFNode.NODE_NAME_ATTR: QuantizableConcatSharingInputWithBinaryOp.CONV_NODE_NAME,
+                NNCFNode.NODE_TYPE_ATTR: Conv2dTestMetatype.name,
+            },
+        )
+        graph.add_edge(
+            TwoInputModelWithQuantizableConcat.CONCAT_NODE_NAME, TwoInputModelWithQuantizableConcat.CONV_NODE_NAME
+        )
+
+        mark_input_ports_lexicographically_based_on_input_node_key(graph)
+        return graph
+
+
+class ThreeInputGraphWithConcatAndBinaryOp(GraphProvider, abc.ABC):
+    BINARY_OP_NAME = "binary_op"
+    CONCAT_NODE_NAME = "concat"
+
+    def __init__(self, use_unified_scale_binary_op: bool):
+        self._use_unified_scale_binary_op = use_unified_scale_binary_op
+
+    def _build_common_graph_part(self) -> nx.DiGraph:
+        graph = nx.DiGraph()
+        input_1_attrs = {NNCFNode.NODE_NAME_ATTR: "I1", NNCFNode.NODE_TYPE_ATTR: NNCFGraphNodeType.INPUT_NODE}
+
+        input_2_attrs = {NNCFNode.NODE_NAME_ATTR: "I2", NNCFNode.NODE_TYPE_ATTR: NNCFGraphNodeType.INPUT_NODE}
+
+        input_3_attrs = {NNCFNode.NODE_NAME_ATTR: "I3", NNCFNode.NODE_TYPE_ATTR: NNCFGraphNodeType.INPUT_NODE}
+
+        concat_node_attrs = {
+            NNCFNode.NODE_NAME_ATTR: ConcatBeforeBinaryOp.CONCAT_NODE_NAME,
+            NNCFNode.NODE_TYPE_ATTR: CatTestMetatype.name,
+        }
+
+        binary_op_type = (
+            GenericBinaryUnifiedScaleOpMetatype.name
+            if self._use_unified_scale_binary_op
+            else GenericBinaryOpMetatype.name
+        )
+        binary_op_attrs = {
+            NNCFNode.NODE_NAME_ATTR: ConcatBeforeBinaryOp.BINARY_OP_NAME,
+            NNCFNode.NODE_TYPE_ATTR: binary_op_type,
+        }
+
+        graph.add_node("I1", **input_1_attrs)
+        graph.add_node("I2", **input_2_attrs)
+        graph.add_node("I3", **input_3_attrs)
+        graph.add_node(ConcatBeforeBinaryOp.CONCAT_NODE_NAME, **concat_node_attrs)
+        graph.add_node(ConcatBeforeBinaryOp.BINARY_OP_NAME, **binary_op_attrs)
+        return graph
+
+
+class ConcatBeforeBinaryOp(ThreeInputGraphWithConcatAndBinaryOp):
+    def get_graph(self) -> nx.DiGraph:
+        #  (I1)  (I2)   (I3)
+        #    |    |      |
+        #    \    /      |
+        #   (concat)     |
+        #       \        /
+        #      (binary_op)
+        graph = self._build_common_graph_part()
+        graph.add_edge("I1", ThreeInputGraphWithConcatAndBinaryOp.CONCAT_NODE_NAME)
+        graph.add_edge("I2", ThreeInputGraphWithConcatAndBinaryOp.CONCAT_NODE_NAME)
+        graph.add_edge(
+            ThreeInputGraphWithConcatAndBinaryOp.CONCAT_NODE_NAME, ThreeInputGraphWithConcatAndBinaryOp.BINARY_OP_NAME
+        )
+        graph.add_edge("I3", ThreeInputGraphWithConcatAndBinaryOp.BINARY_OP_NAME)
+
+        mark_input_ports_lexicographically_based_on_input_node_key(graph)
+        return graph
+
+
+class ConcatSharingInputWithBinaryOp(ThreeInputGraphWithConcatAndBinaryOp):
+    def get_graph(self) -> nx.DiGraph:
+        #  (I1)     (I2)         (I3)
+        #   |        |            |
+        #   \       /\            /
+        #    (concat)  (binary_op)
+        #
+        graph = self._build_common_graph_part()
+        graph.add_edge("I1", ThreeInputGraphWithConcatAndBinaryOp.CONCAT_NODE_NAME)
+        graph.add_edge("I2", ThreeInputGraphWithConcatAndBinaryOp.CONCAT_NODE_NAME)
+        graph.add_edge("I2", ThreeInputGraphWithConcatAndBinaryOp.BINARY_OP_NAME)
+        graph.add_edge("I3", ThreeInputGraphWithConcatAndBinaryOp.BINARY_OP_NAME)
+
+        mark_input_ports_lexicographically_based_on_input_node_key(graph)
+        return graph
+
+
+class QuantizableConcatSharingInputWithBinaryOp(ConcatSharingInputWithBinaryOp):
+    CONV_NODE_NAME = "conv"
+
+    def get_graph(self) -> nx.DiGraph:
+        #  (I1)     (I2)         (I3)
+        #   |        |            |
+        #   \       /\            /
+        #    (concat)  (binary_op)
+        #       |
+        #     (conv)
+        #
+        graph = super().get_graph()
+        graph.add_node(
+            QuantizableConcatSharingInputWithBinaryOp.CONV_NODE_NAME,
+            **{
+                NNCFNode.NODE_NAME_ATTR: QuantizableConcatSharingInputWithBinaryOp.CONV_NODE_NAME,
+                NNCFNode.NODE_TYPE_ATTR: Conv2dTestMetatype.name,
+            },
+        )
+        graph.add_edge(
+            ThreeInputGraphWithConcatAndBinaryOp.CONCAT_NODE_NAME,
+            QuantizableConcatSharingInputWithBinaryOp.CONV_NODE_NAME,
+        )
         return graph
 
 
@@ -165,6 +326,29 @@ class MultiQPSerializedDataForTest:
             self.directly_quantized_op_node_names = directly_quantized_op_node_names
 
 
+@dataclass
+class TraitConfigTargetNodeStruct:
+    trait: QuantizationTrait
+    configs: List[QuantizerConfig]
+    target_node_name: Optional[NNCFNodeName]
+
+
+@dataclass
+class PathTransitionTestStruct:
+    init_node_to_trait_configs_and_target_node_dict: Dict[str, TraitConfigTargetNodeStruct]
+    starting_primary_quantizer_ip_node: str
+    primary_quantizer_qconfigs: List[QuantizerConfig]
+    target_node_for_primary_quantizer: str
+    expected_status: TransitionStatus
+
+
+@dataclass
+class InitNodeTestStruct:
+    quantization_trait: QuantizationTrait
+    qconfigs: List[QuantizerConfig]
+    op_meta: Type[OperatorMetatype] = UnknownMetatype
+
+
 class RunOnIpGraphTestStruct:
     def __init__(
         self,
@@ -174,7 +358,7 @@ class RunOnIpGraphTestStruct:
         retval_shared_input_operation_set_groups: List[Set[QuantizationPointId]],
         expected_count_finished_quant: int,
         expected_count_active_quant: int,
-        ignored_scopes: Optional[List[str]],
+        ignored_scopes: Optional[Dict[str, IgnoreReason]],
     ):
         self.base_graph = get_nncf_graph_from_mock_nx_graph(base_nx_graph)
         self.retval_unified_scale_qp_groups = retval_unified_scale_qp_groups
@@ -831,19 +1015,13 @@ class TestQuantizerPropagationSolver:
         ),
     )
 
-    class InitNodeTestStruct:
-        def __init__(self, quantization_trait, config, op_meta=UnknownMetatype):
-            self.quantization_trait = quantization_trait
-            self.config = config
-            self.op_meta = op_meta
-
     BRANCH_TRANSITION_TEST_CASES = [
         # Downward branches are quantization-agnostic
         BranchTransitionTestStruct(
             init_node_to_trait_and_configs_dict=
             {
                 '4 /D_0': InitNodeTestStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
-                                             QuantizerConfig()),
+                                             [QuantizerConfig()]),
             },
             starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('4 /D_0'),
             target_branching_node_for_primary_quantizer=InsertionPointGraph.get_post_hook_node_key('2 /B_0'),
@@ -1133,7 +1311,7 @@ class TestQuantizerPropagationSolver:
 
         primary_prop_quant = None
         for node_key, init_node_struct in init_node_to_trait_and_configs_dict.items():
-            qconfigs = init_node_struct.config
+            qconfigs = init_node_struct.qconfigs
             trait = init_node_struct.quantization_trait
             quant_prop_graph.nodes[node_key][QPSG.QUANTIZATION_TRAIT_NODE_ATTR] = trait
             if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
@@ -1157,21 +1335,10 @@ class TestQuantizerPropagationSolver:
         status = solver.check_branching_transition(quant_prop_graph, primary_prop_quant, target_node)
         assert status == expected_status
 
-    PathTransitionTestStruct = namedtuple(
-        "PathTransitionTestStruct",
-        (
-            "init_node_to_trait_configs_and_target_node_dict",
-            # Unspecified nodes are marked as quantization agnostic
-            "starting_primary_quantizer_ip_node",
-            "primary_quantizer_qconfigs",
-            "target_node_for_primary_quantizer",
-            "expected_status",
-        ),
-    )
-
     @staticmethod
     def prepare_propagation_graph_state(
-        ip_graph: InsertionPointGraph, init_node_to_trait_configs_and_target_node_dict: Dict[str, Tuple]
+        ip_graph: InsertionPointGraph,
+        init_node_to_trait_configs_and_target_node_dict: Dict[str, TraitConfigTargetNodeStruct],
     ) -> Tuple[List[PropagatingQuantizer], QPSG]:
         quant_prop_graph = QPSG(ip_graph)
         prop_quantizers = []
@@ -1179,9 +1346,9 @@ class TestQuantizerPropagationSolver:
             node[QPSG.QUANTIZATION_TRAIT_NODE_ATTR] = QuantizationTrait.QUANTIZATION_AGNOSTIC
 
         for node_key, trait_configs_and_target_tuple in init_node_to_trait_configs_and_target_node_dict.items():
-            trait = trait_configs_and_target_tuple[0]
-            qconfigs = trait_configs_and_target_tuple[1]
-            target_node = trait_configs_and_target_tuple[2]
+            trait = trait_configs_and_target_tuple.trait
+            qconfigs = trait_configs_and_target_tuple.configs
+            target_node = trait_configs_and_target_tuple.target_node_name
             quant_prop_graph.nodes[node_key][QPSG.QUANTIZATION_TRAIT_NODE_ATTR] = trait
             if trait == QuantizationTrait.INPUTS_QUANTIZABLE:
                 ip_node_key = InsertionPointGraph.get_pre_hook_node_key(node_key)
@@ -1212,7 +1379,7 @@ class TestQuantizerPropagationSolver:
         PathTransitionTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '4 /D_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '4 /D_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_post_hook_node_key('1 /A_0')),
             },
@@ -1226,10 +1393,10 @@ class TestQuantizerPropagationSolver:
         PathTransitionTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=6)],
                       InsertionPointGraph.get_pre_hook_node_key('3 /C_0')),
-                '7 /G_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '7 /G_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('5 /E_0'))
             },
@@ -1243,10 +1410,10 @@ class TestQuantizerPropagationSolver:
         PathTransitionTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=6), QuantizerConfig(num_bits=8)],
                       InsertionPointGraph.get_pre_hook_node_key('3 /C_0')),
-                '7 /G_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '7 /G_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=6), QuantizerConfig(num_bits=5,
                                                                     mode=QuantizationMode.ASYMMETRIC)],
                       InsertionPointGraph.get_pre_hook_node_key('5 /E_0'))
@@ -1261,7 +1428,7 @@ class TestQuantizerPropagationSolver:
         PathTransitionTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '5 /E_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '5 /E_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('1 /A_0'))
             },
@@ -1274,10 +1441,10 @@ class TestQuantizerPropagationSolver:
         PathTransitionTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '7 /G_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '7 /G_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('1 /A_0')),
-                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=2)],
                       InsertionPointGraph.get_pre_hook_node_key('3 /C_0'))
             },
@@ -1293,10 +1460,10 @@ class TestQuantizerPropagationSolver:
         PathTransitionTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '3 /C_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '3 /C_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('2 /B_0')),
-                '10 /J_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '10 /J_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=4)],
                       InsertionPointGraph.get_pre_hook_node_key('9 /I_0')),
             },
@@ -1310,10 +1477,10 @@ class TestQuantizerPropagationSolver:
         PathTransitionTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '10 /J_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '10 /J_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('8 /H_0')),
-                '3 /C_0': (QuantizationTrait.NON_QUANTIZABLE,
+                '3 /C_0': TraitConfigTargetNodeStruct(QuantizationTrait.NON_QUANTIZABLE,
                       [],
                       None)
             },
@@ -1328,10 +1495,10 @@ class TestQuantizerPropagationSolver:
         PathTransitionTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '7 /G_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '7 /G_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('5 /E_0')),
-                '4 /D_0': (QuantizationTrait.NON_QUANTIZABLE,
+                '4 /D_0': TraitConfigTargetNodeStruct(QuantizationTrait.NON_QUANTIZABLE,
                       [],
                       None)
             },
@@ -1345,7 +1512,7 @@ class TestQuantizerPropagationSolver:
         PathTransitionTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '5 /E_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '5 /E_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(6)],
                       InsertionPointGraph.get_post_hook_node_key('1 /A_0')),
             },
@@ -1358,7 +1525,7 @@ class TestQuantizerPropagationSolver:
         PathTransitionTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '5 /E_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '5 /E_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(6)],
                       InsertionPointGraph.get_post_hook_node_key('1 /A_0'))
             },
@@ -1372,10 +1539,10 @@ class TestQuantizerPropagationSolver:
         PathTransitionTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=6), QuantizerConfig(num_bits=8)],
                       InsertionPointGraph.get_pre_hook_node_key('3 /C_0')),
-                '7 /G_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '7 /G_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=6), QuantizerConfig(num_bits=5,
                                                                     mode=QuantizationMode.ASYMMETRIC)],
                       InsertionPointGraph.get_pre_hook_node_key('5 /E_0'))
@@ -1431,7 +1598,7 @@ class TestQuantizerPropagationSolver:
         PropagationStepTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_post_hook_node_key('0 /O_0'))
             },
@@ -1442,7 +1609,7 @@ class TestQuantizerPropagationSolver:
         PropagationStepTestStruct(
             init_node_to_trait_configs_and_target_node_dict=
             {
-                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('3 /C_0'))
             },
@@ -1452,13 +1619,13 @@ class TestQuantizerPropagationSolver:
         ),
         PropagationStepTestStruct(
             init_node_to_trait_configs_and_target_node_dict={
-                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('1 /A_0')),
-                '7 /G_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '7 /G_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('5 /E_0')),
-                '10 /J_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '10 /J_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('9 /I_0'))
             },
@@ -1471,13 +1638,13 @@ class TestQuantizerPropagationSolver:
         # (i.e. when passing through an upward branching node)
         PropagationStepTestStruct(
             init_node_to_trait_configs_and_target_node_dict={
-                '10 /J_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '10 /J_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_post_hook_node_key('9 /I_0')),
-                '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '6 /F_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('1 /A_0')),
-                '7 /G_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
+                '7 /G_0': TraitConfigTargetNodeStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('5 /E_0')),
             },
@@ -1543,8 +1710,8 @@ class TestQuantizerPropagationSolver:
         ip_graph = get_ip_graph_for_test(mock_graph)
         quant_prop_solver = QuantizerPropagationSolver()
         prep_data_dict = {
-            "9 /I_0": (QuantizationTrait.NON_QUANTIZABLE, [], None),
-            "10 /J_0": (
+            "9 /I_0": TraitConfigTargetNodeStruct(QuantizationTrait.NON_QUANTIZABLE, [], None),
+            "10 /J_0": TraitConfigTargetNodeStruct(
                 QuantizationTrait.INPUTS_QUANTIZABLE,
                 [QuantizerConfig()],
                 InsertionPointGraph.get_post_hook_node_key("9 /I_0"),
@@ -1641,7 +1808,7 @@ class TestQuantizerPropagationSolver:
             ignored_scopes={'/conv2d_0': IgnoreReason.USER_REQUESTED, '/matmul_0': IgnoreReason.USER_REQUESTED}
         ),
         RunOnIpGraphTestStruct(
-            base_nx_graph=TwoFcAfterDropout.get_graph(),
+            base_nx_graph=TwoFcAfterDropout().get_graph(),
             retval_qp_data={1: MultiQPSerializedDataForTest(TargetType.OPERATOR_PRE_HOOK,
                                                             TwoFcAfterDropout.FC_1_NODE_NAME, [QuantizerConfig()],
                                                             input_port_id=0,
@@ -1653,7 +1820,22 @@ class TestQuantizerPropagationSolver:
             expected_count_finished_quant=1,
             expected_count_active_quant=0,
             ignored_scopes={TwoFcAfterDropout.FC_2_NODE_NAME: IgnoreReason.USER_REQUESTED}
-        )
+        ),
+
+        RunOnIpGraphTestStruct(
+            base_nx_graph=TwoFcAfterDropout().get_graph(),
+            retval_qp_data={1: MultiQPSerializedDataForTest(TargetType.OPERATOR_PRE_HOOK,
+                                                            TwoFcAfterDropout.FC_1_NODE_NAME, [QuantizerConfig()],
+                                                            input_port_id=0,
+                                                            directly_quantized_op_node_names=[
+                                                                TwoFcAfterDropout.FC_1_NODE_NAME]
+                                                            )},
+            retval_unified_scale_qp_groups=[],
+            retval_shared_input_operation_set_groups=[{1}],
+            expected_count_finished_quant=1,
+            expected_count_active_quant=0,
+            ignored_scopes={TwoFcAfterDropout.FC_2_NODE_NAME: IgnoreReason.USER_REQUESTED}
+        ),
     ]  # fmt: skip
 
     @staticmethod
@@ -1794,7 +1976,7 @@ class TestQuantizerPropagationSolver:
     ):
         quant_prop_solver = QuantizerPropagationSolver()
         prep_data_dict = {
-            int_prop_test_struct.initial_node_name: (
+            int_prop_test_struct.initial_node_name: TraitConfigTargetNodeStruct(
                 QuantizationTrait.INPUTS_QUANTIZABLE,
                 [QuantizerConfig()],
                 int_prop_test_struct.target_node_name,
@@ -1837,6 +2019,117 @@ class TestQuantizerPropagationSolver:
         assert double_input_pq.current_location_node_key == InsertionPointGraph.get_pre_hook_node_key(
             "5 /E_0", input_port_id=1
         )
+
+    @dataclass
+    class GranularityBasedUnifiedScaleTestStruct:
+        graph_provider: GraphProvider
+        is_binary_op_per_channel: bool
+        ref_qp_vs_unified_scale_type: Optional[Dict[str, UnifiedScaleType]]
+
+    @pytest.mark.parametrize(
+        "test_struct",
+        [
+            GranularityBasedUnifiedScaleTestStruct(
+                graph_provider=TwoInputModelWithQuantizableConcat(),
+                is_binary_op_per_channel=False,
+                ref_qp_vs_unified_scale_type={
+                    "I1|OUTPUT": UnifiedScaleType.UNIFY_ONLY_PER_TENSOR,
+                    "I2|OUTPUT": UnifiedScaleType.UNIFY_ONLY_PER_TENSOR,
+                },
+            ),
+            GranularityBasedUnifiedScaleTestStruct(
+                graph_provider=ConcatBeforeBinaryOp(use_unified_scale_binary_op=True),
+                is_binary_op_per_channel=False,
+                ref_qp_vs_unified_scale_type={
+                    "I1|OUTPUT": UnifiedScaleType.UNIFY_ONLY_PER_TENSOR,
+                    "I2|OUTPUT": UnifiedScaleType.UNIFY_ONLY_PER_TENSOR,
+                    "I3|OUTPUT": UnifiedScaleType.UNIFY_ALWAYS,
+                },
+            ),
+            GranularityBasedUnifiedScaleTestStruct(
+                graph_provider=ConcatBeforeBinaryOp(use_unified_scale_binary_op=False),
+                is_binary_op_per_channel=False,
+                ref_qp_vs_unified_scale_type={
+                    "I1|OUTPUT": UnifiedScaleType.UNIFY_ONLY_PER_TENSOR,
+                    "I2|OUTPUT": UnifiedScaleType.UNIFY_ONLY_PER_TENSOR,
+                },
+            ),
+            GranularityBasedUnifiedScaleTestStruct(
+                graph_provider=ConcatBeforeBinaryOp(use_unified_scale_binary_op=True),
+                is_binary_op_per_channel=True,
+                ref_qp_vs_unified_scale_type=None,
+            ),  # should fail since per-channel-only ops cannot have unified scales
+            GranularityBasedUnifiedScaleTestStruct(
+                graph_provider=ConcatBeforeBinaryOp(use_unified_scale_binary_op=False),
+                is_binary_op_per_channel=True,
+                ref_qp_vs_unified_scale_type={
+                    "I1|OUTPUT": UnifiedScaleType.UNIFY_ONLY_PER_TENSOR,
+                    "I2|OUTPUT": UnifiedScaleType.UNIFY_ONLY_PER_TENSOR,
+                },
+            ),
+            GranularityBasedUnifiedScaleTestStruct(
+                graph_provider=ConcatSharingInputWithBinaryOp(use_unified_scale_binary_op=True),
+                is_binary_op_per_channel=False,
+                ref_qp_vs_unified_scale_type={
+                    # since concat does not have its other arg quantized,
+                    # the quantizer of binary op will stay at pre-hook
+                    f"{ConcatSharingInputWithBinaryOp.BINARY_OP_NAME}|INPUT0": UnifiedScaleType.UNIFY_ALWAYS,
+                    "I3|OUTPUT": UnifiedScaleType.UNIFY_ALWAYS,
+                },
+            ),
+            GranularityBasedUnifiedScaleTestStruct(
+                graph_provider=QuantizableConcatSharingInputWithBinaryOp(use_unified_scale_binary_op=True),
+                is_binary_op_per_channel=False,
+                ref_qp_vs_unified_scale_type={
+                    "I1|OUTPUT": UnifiedScaleType.UNIFY_ONLY_PER_TENSOR,
+                    "I2|OUTPUT": UnifiedScaleType.UNIFY_ONLY_PER_TENSOR,
+                    "I3|OUTPUT": UnifiedScaleType.UNIFY_ALWAYS,
+                },
+            ),
+        ],
+    )
+    def test_quantization_setup_has_unified_scale_groups_with_proper_types_based_on_granularity(
+        self, test_struct: GranularityBasedUnifiedScaleTestStruct, mocker
+    ):
+        class TestHWConfig(HWConfig):
+            def get_operations_with_unified_scales(self) -> Set[Type[OperatorMetatype]]:
+                return {CatTestMetatype, GenericBinaryUnifiedScaleOpMetatype}
+
+            def get_metatype_vs_quantizer_configs_map(
+                self, for_weights=False
+            ) -> Dict[Type[OperatorMetatype], Optional[List[QuantizerConfig]]]:
+                return {
+                    GenericBinaryUnifiedScaleOpMetatype: [
+                        QuantizerConfig(per_channel=test_struct.is_binary_op_per_channel)
+                    ],
+                    GenericBinaryOpMetatype: [QuantizerConfig(per_channel=test_struct.is_binary_op_per_channel)],
+                    Conv2dTestMetatype: [QuantizerConfig(per_channel=False)],
+                    CatTestMetatype: [],
+                }
+
+        quant_prop_solver = QuantizerPropagationSolver(
+            run_consistency_checks=True,
+            default_trait_to_metatype_map=DEFAULT_TEST_QUANT_TRAIT_MAP,
+            hw_config=TestHWConfig(),
+        )
+        nncf_graph = get_nncf_graph_from_mock_nx_graph(test_struct.graph_provider.get_graph())
+        ip_graph = get_ip_graph_for_test(nncf_graph)
+
+        register_us_group_w_t_spy = mocker.spy(MultiConfigQuantizerSetup, "register_unified_scale_group_with_types")
+        if test_struct.ref_qp_vs_unified_scale_type is None:
+            with pytest.raises(nncf.InternalError):
+                quant_proposal = quant_prop_solver.run_on_ip_graph(ip_graph)
+        else:
+            quant_proposal = quant_prop_solver.run_on_ip_graph(ip_graph)
+            assert register_us_group_w_t_spy.called
+
+            setup = quant_proposal.quantizer_setup
+            test_qp_vs_unified_scale_type = {
+                str(setup.quantization_points[qp_id].insertion_point): tp
+                for qp_id, tp in setup._unified_scale_qpid_vs_type.items()
+            }
+
+            assert test_qp_vs_unified_scale_type == test_struct.ref_qp_vs_unified_scale_type
 
 
 def test_metatypes_to_ignore(mocker):

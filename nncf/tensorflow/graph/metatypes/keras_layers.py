@@ -219,6 +219,7 @@ class TFBatchNormalizationLayerMetatype(TFLayerWithWeightsMetatype):
 
     weight_definitions = [WeightDef(weight_attr_name="gamma", channel_axes=0)]
     bias_attr_name = "beta"
+    hw_config_names = [HWConfigOpName.BATCH_NORM]
 
 
 @KERAS_LAYER_METATYPES.register()

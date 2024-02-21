@@ -59,3 +59,4 @@ class HWConfigOpName:
     GRUSEQUENCE = "GRUSequence"
     GROUPNORMALIZATION = "GroupNormalization"
     SCALED_DOT_PRODUCT_ATTENTION = "ScaledDotProductAttention"
+    BATCH_NORM = "BatchNorm"

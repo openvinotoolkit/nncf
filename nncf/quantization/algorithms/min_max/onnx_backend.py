@@ -93,10 +93,6 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return []
 
     @property
-    def scales_unification_map(self) -> Dict[OperatorMetatype, OperatorMetatype]:
-        return {om.ONNXConcatMetatype: self.overflow_fix_metatypes}
-
-    @property
     def hw_config(self) -> HWConfig:
         return ONNXHWConfig
 
