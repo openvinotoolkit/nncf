@@ -120,6 +120,7 @@ BATCH_NORMALIZATION_OPERATIONS = [
 OPERATIONS_WITH_BIAS = [
     onnx_metatypes.ONNXConvolutionMetatype,
     onnx_metatypes.ONNXDepthwiseConvolutionMetatype,
+    onnx_metatypes.ONNXConvolutionTransposeMetatype,
 ]
 
 
