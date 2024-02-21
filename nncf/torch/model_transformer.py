@@ -251,7 +251,6 @@ def update_fused_bias(target_node_name: str, new_bias: Tensor, model: NNCFNetwor
 
     new_bias = new_bias - target_module.bias * fused_module.weight
     update_parameter(target_node_name, "bias", new_bias, model)
-    return target_module.bias * fused_node.weight + fused_node.bis
 
 
 def update_parameter(target_node_name: str, parameter_name: str, new_value: Tensor, model: NNCFNetwork) -> None:
