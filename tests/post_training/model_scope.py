@@ -19,6 +19,7 @@ from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
+from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters
 from tests.post_training.pipelines.base import ALL_PTQ_BACKENDS
 from tests.post_training.pipelines.base import NNCF_PTQ_BACKENDS
 from tests.post_training.pipelines.base import BackendType
@@ -185,6 +186,9 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {
             "preset": QuantizationPreset.MIXED,
+            "advanced_parameters": AdvancedQuantizationParameters(
+                bias_correction_params=AdvancedBiasCorrectionParameters(threshold=1000)
+            )
         },
         "backends": ALL_PTQ_BACKENDS,
     },
