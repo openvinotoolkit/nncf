@@ -45,33 +45,20 @@ class ImageClassificationTimm(PTQTestPipeline):
         timm_model.eval()
         timm_model = replace_timm_custom_modules_with_torch_native(timm_model)
         self.model_cfg = timm_model.default_cfg
-        self.input_size = [1] + list(timm_model.default_cfg["input_size"])
-        self.dynamic_input_size = [-1] + list(timm_model.default_cfg["input_size"])
+        self.input_size = [self.batch_size] + list(timm_model.default_cfg["input_size"])
         self.dummy_tensor = torch.rand(self.input_size)
 
         if self.backend in PT_BACKENDS:
             self.model = timm_model
 
         if self.backend == BackendType.ONNX:
-            onnx_path = self.output_model_dir / "model_fp32.onnx"
-            torch.onnx.export(
-                timm_model,
-                self.dummy_tensor,
-                onnx_path,
-                export_params=True,
-                opset_version=13,
-                input_names=["image"],
-                dynamic_axes={
-                    "image": {0: "batch"},
-                },
-            )
             onnx_path = self.fp32_model_dir / "model_fp32.onnx"
             torch.onnx.export(timm_model, self.dummy_tensor, onnx_path, export_params=True, opset_version=13)
             self.model = onnx.load(onnx_path)
             self.input_name = self.model.graph.input[0].name
 
         if self.backend in OV_BACKENDS + [BackendType.FP32]:
-            self.model = ov.convert_model(timm_model, example_input=self.dummy_tensor, input=self.dynamic_input_size)
+            self.model = ov.convert_model(timm_model, example_input=self.dummy_tensor, input=self.input_size)
             self.input_name = list(inp.get_any_name() for inp in self.model.inputs)[0]
 
         self._dump_model_fp32()
