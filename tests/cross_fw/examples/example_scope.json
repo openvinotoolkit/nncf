@@ -89,23 +89,23 @@
         "requirements": "examples/post_training_quantization/onnx/yolov8_quantize_with_accuracy_control/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
-            "onnx_fp32_box_mAP": 0.44964819083938,
-            "onnx_fp32_mask_mAP": 0.36512711236268747,
-            "onnx_int8_box_mAP": 0.4421364938148124,
-            "onnx_int8_mask_mAP": 0.36669246002995326,
-            "onnx_drop_box_mAP": 0.00751169702456761,
-            "onnx_drop_mask_mAP": -0.0015653476672657929,
+            "onnx_fp32_box_mAP": 0.44964819166629366,
+            "onnx_fp32_mask_mAP": 0.36509415038708726,
+            "onnx_int8_box_mAP": 0.45071569411799683,
+            "onnx_int8_mask_mAP": 0.36805097120147484,
+            "onnx_drop_box_mAP": -0.0010675024517031728,
+            "onnx_drop_mask_mAP": -0.002956820814387584,
             "ov_fp32_box_mAP": 0.44964819083938,
-            "ov_fp32_mask_mAP": 0.3651327608484117,
-            "ov_int8_box_mAP": 0.4379932205872953,
-            "ov_int8_mask_mAP": 0.3611974414083801,
-            "ov_drop_box_mAP": 0.011654970252084729,
-            "ov_drop_mask_mAP": 0.003935319440031559
+            "ov_fp32_mask_mAP": 0.36509979887281135,
+            "ov_int8_box_mAP": 0.4462460126164857,
+            "ov_int8_mask_mAP": 0.3631361727753598,
+            "ov_drop_box_mAP": 0.003402178222894292,
+            "ov_drop_mask_mAP": 0.001963626097451543
         },
         "performance_metrics": {
-            "ov_fp32_fps": 137.79,
-            "ov_int8_fps": 269.65,
-            "performance_speed_up": 1.956963495173815
+            "ov_fp32_fps": 139.32,
+            "ov_int8_fps": 269.16,
+            "performance_speed_up": 1.9319552110249787
         }
     },
     "post_training_quantization_tensorflow_mobilenet_v2": {
