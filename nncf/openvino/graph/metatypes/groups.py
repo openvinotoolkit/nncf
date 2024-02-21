@@ -185,6 +185,7 @@ OPERATIONS_WITH_CONST_PORT_ID = [
 # Contains the operation metatypes for which bias can be applied.
 OPERATIONS_WITH_BIAS = [
     ov_metatypes.OVConvolutionMetatype,
+    ov_metatypes.OVDepthwiseConvolutionMetatype,
     # TODO: add all metatypes with bias
     ov_metatypes.OVMatMulMetatype,
 ]
