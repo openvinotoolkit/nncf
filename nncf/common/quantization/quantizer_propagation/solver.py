@@ -1316,6 +1316,11 @@ class QuantizerPropagationSolver:
         :return: The status of the transition determining how it should proceed.
         """
 
+        default_pq_qconfig = prop_quantizer.get_default_qconfig()
+
+        if default_pq_qconfig.per_channel:
+            return TransitionStatus.SHOULD_NOT_TRANSITION
+
         for from_node_key, to_node_key in path:
             from_node = quant_prop_graph.nodes[from_node_key]
 

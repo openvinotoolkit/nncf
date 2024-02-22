@@ -75,12 +75,21 @@ class PropagatingQuantizer:
         self.affected_operator_nodes = set()
         self.quantized_input_sink_operator_nodes = set()
         self.downstream_propagating_quantizers = set()
+        self.default_qconfig_pos = 0
 
     def __eq__(self, other):
         return self.id == other.id
 
     def __hash__(self):
         return hash(self.id)
+
+    def get_default_qconfig(self) -> QuantizerConfig:
+        """
+        Returns default potential quantization config absed on default_qconfig_pos attribute.
+
+        :return: QuantizerConfig instance.
+        """
+        return self.potential_quant_configs[self.default_qconfig_pos]
 
 
 class QuantizerPropagationStateGraphNodeType(Enum):
