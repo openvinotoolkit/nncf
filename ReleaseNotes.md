@@ -14,9 +14,6 @@ Post-training Quantization:
   - (PT) Added SmoothQuant algorithm for PyTorch backend in `nncf.quantize`.
   - ...
 - Fixes:
-  - (PyTorch) Fixed incorrect set `is_shared` attribute in case of wraping model with `trace_parameters=True`.
-  - (PyTorch) Fixed dtype handling for traced `torch.nn.Parameter`.
-  - (PyTorch) Fixed zero eps for fake quantizer module.
   - ...
 - Improvements:
   - ...
