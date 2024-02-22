@@ -95,8 +95,9 @@ def check_int8_node(op: ov.Node, mode: CompressWeightsMode = CompressWeightsMode
 
     mul_node = get_next_node(sub_node)
     assert mul_node.get_type_name() == "Multiply"
-    scale_convert_node = mul_node.input_value(1).get_node()
-    scale_node = scale_convert_node.input_value(0).get_node()
+    scale_node = mul_node.input_value(1).get_node()
+    if scale_node.get_type_name() == "Convert":
+        scale_node = scale_node.input_value(0).get_node()
     scale = get_const_value(scale_node)
 
     return {
@@ -132,8 +133,9 @@ def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int =
 
     mul_node = get_next_node(sub_node)
     assert mul_node.get_type_name() == "Multiply"
-    scale_convert_node = mul_node.input_value(1).get_node()
-    scale_node = scale_convert_node.input_value(0).get_node()
+    scale_node = mul_node.input_value(1).get_node()
+    if scale_node.get_type_name() == "Convert":
+        scale_node = scale_node.input_value(0).get_node()
     assert list(scale_node.shape) == reduced_weight_shape
 
     reshape_node = get_next_node(mul_node)
@@ -157,8 +159,9 @@ def check_nf4_grouped(op: ov.Node, group_size: int = 7):
 
     mul_node = get_next_node(convert_node)
     assert mul_node.get_type_name() == "Multiply"
-    scale_convert_node = mul_node.input_value(1).get_node()
-    scale_node = scale_convert_node.input_value(0).get_node()
+    scale_node = mul_node.input_value(1).get_node()
+    if scale_node.get_type_name() == "Convert":
+        scale_node = scale_node.input_value(0).get_node()
     assert list(scale_node.shape) == reduced_weight_shape
 
     reshape_node = get_next_node(mul_node)
