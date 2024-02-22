@@ -255,8 +255,8 @@ class QuantizationBuilder(TFCompressionAlgorithmBuilder):
         self._overflow_fix = self._algo_config.get("overflow_fix", QUANTIZATION_OVERFLOW_FIX)
         self._target_device = config.get("target_device", TARGET_DEVICE)
         algo_config = self._get_algo_specific_config_section()
-        if self._target_device == "VPU" and "preset" in algo_config:
-            raise nncf.ValidationError("The VPU target device does not support presets.")
+        if self._target_device == "NPU" and "preset" in algo_config:
+            raise nncf.ValidationError("The NPU target device does not support presets.")
         if self._target_device == "CPU_SPR":
             raise nncf.ValidationError("The CPU_SPR target device does not supported.")
 

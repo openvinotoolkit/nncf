@@ -489,7 +489,7 @@ def test_quantize_outputs(desc: ModelDesc, _quantization_case_config):
     )
 
 
-TYPE_HW = [(HWConfigType.CPU), (HWConfigType.GPU), (HWConfigType.VPU)]
+TYPE_HW = [(HWConfigType.CPU), (HWConfigType.GPU), (HWConfigType.NPU)]
 
 TEST_HW_MODELS_DESC = [
     ModelDesc("resnet50.pb", test_models.ResNet50, [1, 32, 32, 3]),

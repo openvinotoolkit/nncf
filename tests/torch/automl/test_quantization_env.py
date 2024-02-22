@@ -39,7 +39,7 @@ def create_test_quantization_env(model_creator=BasicConvTestModel, input_info_cf
 
     model = model_creator()
     nncf_network = NNCFNetwork(model, input_info=FillerInputInfo.from_nncf_config(input_info_cfg))
-    hw_config_type = HWConfigType.VPU
+    hw_config_type = HWConfigType.NPU
     hw_config_path = HWConfig.get_path_to_hw_config(hw_config_type)
     hw_config = PTHWConfig.from_json(hw_config_path)
     setup = PropagationBasedQuantizerSetupGenerator(NNCFConfig(), nncf_network, hw_config=hw_config).generate_setup()
@@ -69,7 +69,7 @@ def create_test_quantization_env(model_creator=BasicConvTestModel, input_info_cf
         constraints,
         data_loader,
         lambda *x: 0,
-        hw_config_type=HWConfigType.VPU,
+        hw_config_type=HWConfigType.NPU,
         params=QuantizationEnvParams(
             compression_ratio=0.15,
             eval_subset_ratio=1.0,
@@ -325,13 +325,13 @@ def test_align_bw_action_two_aq_one_wq(strategy, mocker):
     check_both_bw_assignment_modes(qenv, strategy)
 
 
-VPU_UMMAPPABLE_STRATEGY = [[2, 8], [2, 4], [2, 2]]
+NPU_UMMAPPABLE_STRATEGY = [[2, 8], [2, 4], [2, 2]]
 
 
 @pytest.mark.parametrize(
     "strategy",
-    VPU_UMMAPPABLE_STRATEGY,
-    ids=["_".join(["vpu_unmappable_strategy", str(s)]) for s in VPU_UMMAPPABLE_STRATEGY],
+    NPU_UMMAPPABLE_STRATEGY,
+    ids=["_".join(["npu_unmappable_strategy", str(s)]) for s in NPU_UMMAPPABLE_STRATEGY],
 )
 def test_select_config_for_actions(strategy):
     qenv = create_test_quantization_env()
