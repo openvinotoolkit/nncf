@@ -8,14 +8,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import re
-import subprocess
+
 from functools import partial
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
 import numpy as np
-import openvino as ov
+import onnx
+import onnxruntime
 import torch
 from tqdm import tqdm
 from ultralytics.cfg import get_cfg
@@ -34,31 +34,40 @@ ROOT = Path(__file__).parent.resolve()
 
 
 def validate(
-    model: ov.Model, data_loader: torch.utils.data.DataLoader, validator: Validator, num_samples: int = None
+    model: onnx.ModelProto, data_loader: torch.utils.data.DataLoader, validator: Validator, num_samples: int = None
 ) -> Tuple[Dict, int, int]:
     validator.seen = 0
     validator.jdict = []
     validator.stats = []
     validator.batch_i = 1
     validator.confusion_matrix = ConfusionMatrix(nc=validator.nc)
-    model.reshape({0: [1, 3, -1, -1]})
-    compiled_model = ov.compile_model(model)
-    num_outputs = len(model.outputs)
+
+    input_name = model.graph.input[0].name
+    serialized_model = model.SerializeToString()
+
+    session = onnxruntime.InferenceSession(serialized_model, providers=["CPUExecutionProvider"])
+    output_names = [output.name for output in session.get_outputs()]
+    num_outputs = len(output_names)
+
     for batch_i, batch in enumerate(data_loader):
         if num_samples is not None and batch_i == num_samples:
             break
         batch = validator.preprocess(batch)
-        results = compiled_model(batch["img"])
+
+        input_feed = {input_name: batch["img"].numpy()}
+        results = session.run(output_names, input_feed=input_feed)
+
         if num_outputs == 1:
-            preds = torch.from_numpy(results[compiled_model.output(0)])
+            preds = torch.from_numpy(results[0])
         else:
             preds = [
-                torch.from_numpy(results[compiled_model.output(0)]),
-                torch.from_numpy(results[compiled_model.output(1)]),
+                torch.from_numpy(results[0]),
+                torch.from_numpy(results[1]),
             ]
         preds = validator.postprocess(preds)
         validator.update_metrics(preds, batch)
     stats = validator.get_stats()
+
     return stats, validator.seen, validator.nt_per_class.sum()
 
 
@@ -94,8 +103,6 @@ def print_statistics(stats: np.ndarray, total_images: int, total_objects: int) -
 def prepare_validation(model: YOLO, args: Any) -> Tuple[Validator, torch.utils.data.DataLoader]:
     validator = model.smart_load("validator")(args)
     validator.data = check_det_dataset(args.data)
-    dataset = validator.data["val"]
-    print(f"{dataset}")
 
     data_loader = validator.get_dataloader(f"{DATASETS_DIR}/coco128-seg", 1)
 
@@ -113,31 +120,26 @@ def prepare_validation(model: YOLO, args: Any) -> Tuple[Validator, torch.utils.d
     return validator, data_loader
 
 
-def benchmark_performance(model_path, config) -> float:
-    command = f"benchmark_app -m {model_path} -d CPU -api async -t 30"
-    command += f' -shape "[1,3,{config.imgsz},{config.imgsz}]"'
-    cmd_output = subprocess.check_output(command, shell=True)  # nosec
-
-    match = re.search(r"Throughput\: (.+?) FPS", str(cmd_output))
-    return float(match.group(1))
-
-
-def prepare_openvino_model(model: YOLO, model_name: str) -> Tuple[ov.Model, Path]:
-    model_path = Path(f"{ROOT}/{model_name}_openvino_model/{model_name}.xml")
+def prepare_onnx_model(model: YOLO, model_name: str) -> Tuple[onnx.ModelProto, Path]:
+    model_path = ROOT / f"{model_name}.onnx"
     if not model_path.exists():
-        model.export(format="openvino", dynamic=True, half=False)
+        model.export(format="onnx", dynamic=True, half=False)
 
-    model = ov.Core().read_model(model_path)
+    model = onnx.load(model_path)
     return model, model_path
 
 
-def quantize_ac(model: ov.Model, data_loader: torch.utils.data.DataLoader, validator_ac: Validator) -> ov.Model:
+def quantize_ac(
+    model: onnx.ModelProto, data_loader: torch.utils.data.DataLoader, validator_ac: Validator
+) -> onnx.ModelProto:
+    input_name = model.graph.input[0].name
+
     def transform_fn(data_item: Dict):
         input_tensor = validator_ac.preprocess(data_item)["img"].numpy()
-        return input_tensor
+        return {input_name: input_tensor}
 
     def validation_ac(
-        compiled_model: ov.CompiledModel,
+        val_model: onnx.ModelProto,
         validation_loader: torch.utils.data.DataLoader,
         validator: Validator,
         num_samples: int = None,
@@ -147,20 +149,27 @@ def quantize_ac(model: ov.Model, data_loader: torch.utils.data.DataLoader, valid
         validator.stats = []
         validator.batch_i = 1
         validator.confusion_matrix = ConfusionMatrix(nc=validator.nc)
-        num_outputs = len(compiled_model.outputs)
+
+        rt_session_options = {"providers": ["CPUExecutionProvider"]}
+        serialized_model = val_model.SerializeToString()
+        session = onnxruntime.InferenceSession(serialized_model, **rt_session_options)
+        output_names = [output.name for output in session.get_outputs()]
+        num_outputs = len(output_names)
 
         counter = 0
         for batch_i, batch in enumerate(validation_loader):
             if num_samples is not None and batch_i == num_samples:
                 break
             batch = validator.preprocess(batch)
-            results = compiled_model(batch["img"])
+            input_feed = {input_name: batch["img"].numpy()}
+            results = session.run(output_names, input_feed=input_feed)
+
             if num_outputs == 1:
-                preds = torch.from_numpy(results[compiled_model.output(0)])
+                preds = torch.from_numpy(results[0])
             else:
                 preds = [
-                    torch.from_numpy(results[compiled_model.output(0)]),
-                    torch.from_numpy(results[compiled_model.output(1)]),
+                    torch.from_numpy(results[0]),
+                    torch.from_numpy(results[1]),
                 ]
             preds = validator.postprocess(preds)
             validator.update_metrics(preds, batch)
@@ -171,7 +180,7 @@ def quantize_ac(model: ov.Model, data_loader: torch.utils.data.DataLoader, valid
         else:
             stats_metrics = stats["metrics/mAP50-95(M)"]
         print(f"Validate: dataset length = {counter}, metric value = {stats_metrics:.3f}")
-        return stats_metrics
+        return stats_metrics, None
 
     quantization_dataset = nncf.Dataset(data_loader, transform_fn)
 
@@ -185,7 +194,7 @@ def quantize_ac(model: ov.Model, data_loader: torch.utils.data.DataLoader, valid
         max_drop=0.003,
         preset=nncf.QuantizationPreset.MIXED,
         ignored_scope=nncf.IgnoredScope(
-            types=["Multiply", "Subtract", "Sigmoid"],  # ignore operations
+            types=["Mul", "Sub", "Sigmoid"],  # ignore operations
             names=[
                 "/model.22/dfl/conv/Conv",  # in the post-processing subgraph
                 "/model.22/Add",
@@ -206,45 +215,44 @@ def quantize_ac(model: ov.Model, data_loader: torch.utils.data.DataLoader, valid
     return quantized_model_ac
 
 
-def main():
+def run_example():
     MODEL_NAME = "yolov8n-seg"
 
-    model = YOLO(f"{ROOT}/{MODEL_NAME}.pt")
+    model = YOLO(ROOT / f"{MODEL_NAME}.pt")
     args = get_cfg(cfg=DEFAULT_CFG)
     args.data = "coco128-seg.yaml"
 
-    # Prepare validation dataset and helper
     validator, data_loader = prepare_validation(model, args)
 
-    # Convert to OpenVINO model
-    ov_model, ov_model_path = prepare_openvino_model(model, MODEL_NAME)
+    fp32_model, fp32_model_path = prepare_onnx_model(model, MODEL_NAME)
+    print(f"[1/5] Save FP32 model: {fp32_model_path}")
 
-    # Quantize mode in OpenVINO representation
-    quantized_model = quantize_ac(ov_model, data_loader, validator)
+    int8_model = quantize_ac(fp32_model, data_loader, validator)
 
-    quantized_model_path = Path(f"{ROOT}/{MODEL_NAME}_openvino_model/{MODEL_NAME}_quantized.xml")
-    ov.save_model(quantized_model, str(quantized_model_path), compress_to_fp16=False)
+    int8_model_path = ROOT / f"{MODEL_NAME}_int8.onnx"
+    onnx.save(int8_model, int8_model_path)
+    print(f"[2/5] Save INT8 model: {int8_model_path}")
 
-    # Validate FP32 model
-    fp_stats, total_images, total_objects = validate(ov_model, tqdm(data_loader), validator)
-    print("Floating-point model validation results:")
+    print("[3/5] Validate ONNX FP32 model:")
+    fp_stats, total_images, total_objects = validate(fp32_model, tqdm(data_loader), validator)
     print_statistics(fp_stats, total_images, total_objects)
 
-    # Validate quantized model
-    q_stats, total_images, total_objects = validate(quantized_model, tqdm(data_loader), validator)
-    print("Quantized model validation results:")
+    print("[4/5] Validate ONNX INT8 model:")
+    q_stats, total_images, total_objects = validate(int8_model, tqdm(data_loader), validator)
     print_statistics(q_stats, total_images, total_objects)
 
-    # Benchmark performance of FP32 model
-    fp_model_perf = benchmark_performance(ov_model_path, args)
-    print(f"Floating-point model performance: {fp_model_perf} FPS")
+    print("[5/5] Report:")
+    metric_drop = fp_stats["metrics/mAP50-95(B)"] - q_stats["metrics/mAP50-95(B)"]
+    print(f"Metric drop: {metric_drop}")
 
-    # Benchmark performance of quantized model
-    quantized_model_perf = benchmark_performance(quantized_model_path, args)
-    print(f"Quantized model performance: {quantized_model_perf} FPS")
-
-    return fp_stats["metrics/mAP50-95(B)"], q_stats["metrics/mAP50-95(B)"], fp_model_perf, quantized_model_perf
+    # fp32_box_mAP, fp32_mask_mAP, int8_box_mAP, int8_mask_mAP
+    return (
+        fp_stats["metrics/mAP50-95(B)"],
+        fp_stats["metrics/mAP50-95(M)"],
+        q_stats["metrics/mAP50-95(B)"],
+        q_stats["metrics/mAP50-95(M)"],
+    )
 
 
 if __name__ == "__main__":
-    main()
+    run_example()
