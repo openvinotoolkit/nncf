@@ -81,7 +81,7 @@ def get_fused_bias_value(node: NNCFNode, model: NNCFNetwork) -> Optional[torch.T
         return fused_module.bias
 
     # Return bias value after fusing
-    return target_module.bias * fused_node.weight + fused_node.bis
+    return target_module.bias * fused_module.weight + fused_module.bias
 
 
 def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
