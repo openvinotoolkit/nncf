@@ -38,11 +38,15 @@ def convert_quantization_mode(mode: Optional[str]) -> QuantizationScheme:
 def convert_quantization_params(conf: Optional[dict]) -> QuantizationParameters:
     if conf is None:
         return QuantizationParameters()
+
     return QuantizationParameters(
         num_bits=conf.get("bits", None),
         mode=convert_quantization_mode(conf.get("mode", None)),
         signedness_to_force=conf.get("signed", None),
-        per_channel=conf.get("per_channel", None),
+        per_channel=None  # Always use default parameter for per_channel parameters to prevent
+        # accuracy degradation due to the fact that per_channel=False for activation will make
+        # deptwise convolutions activations quantizers work in the per tensor mode
+        # which does not make sence in case of the CPU target device.
     )
 
 
@@ -102,7 +106,7 @@ def get_num_samples(config_quantization_params: dict) -> int:
     if (
         "initializer" in config_quantization_params
         and "range" in config_quantization_params["initializer"]
-        and "type" in config_quantization_params["initializer"]["range"]
+        and "num_init_samples" in config_quantization_params["initializer"]["range"]
     ):
         num_samples = config_quantization_params["initializer"]["range"]["num_init_samples"]
         if isinstance(num_samples, int):

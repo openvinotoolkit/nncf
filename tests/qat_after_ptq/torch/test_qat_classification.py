@@ -58,7 +58,7 @@ def fixture_quantization_config(request):
 
 def get_sample_config(quantization_config_path: Path, data_dir: str) -> SampleConfig:
     parser = get_argument_parser()
-    data_dir = data_dir / "Imagenet"
+    data_dir = data_dir / "imagenet"
     args = parser.parse_args(["-c", str(quantization_config_path), "--data", str(data_dir), "--dataset", "imagenet"])
     sample_config = create_sample_config(args, parser)
     device = torch.device("cpu")
