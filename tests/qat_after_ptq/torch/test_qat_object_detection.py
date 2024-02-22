@@ -117,7 +117,9 @@ def get_datasets(config: SampleConfig) -> DatasetSet:
 
     calibration_dataset = nncf.Dataset(val_data_loader_batch_one, transform_fn)
     return DatasetSet(
-        train_data_loader=train_data_loader, test_data_loader=test_data_loader, calibration_dataset=calibration_dataset
+        train_data_loader=train_data_loader,
+        test_data_loader=test_data_loader,
+        calibration_dataset=calibration_dataset,
     )
 
 
@@ -184,6 +186,8 @@ def main_worker(current_gpu: int, config: SampleConfig):
 
     acc_drop = train(quantized_model, config, criterion, datasets, original_metric, get_mocked_compression_ctrl())
     assert accuracy_drop_is_acceptable(acc_drop)
+    check_training_correctness(config, model, datasets, criterion)
+    logger.info("Done!")
 
 
 def accuracy_drop_is_acceptable(acc_drop: float) -> bool:
@@ -197,6 +201,12 @@ def validate(net: torch.nn.Module, device, data_loader, distributed):
     with torch.no_grad():
         net.eval()
         return sample_validate(net, device, data_loader, distributed)
+
+
+def get_optimizer_and_lr_scheduler(config: SampleConfig, model: torch.nn.Module):
+    params_to_optimize = get_parameter_groups(model, config)
+    optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
+    return optimizer, lr_scheduler
 
 
 def train(
@@ -214,8 +224,7 @@ def train(
     if config.distributed:
         broadcast_initialized_parameters(model)
 
-    params_to_optimize = get_parameter_groups(model, config)
-    optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
+    optimizer, lr_scheduler = get_optimizer_and_lr_scheduler(config, model)
 
     best_metric = 0
     loc_loss = 0
@@ -261,3 +270,26 @@ def train(
 
         # Learning rate scheduling should be applied after optimizer’s update
         lr_scheduler.step(epoch if not isinstance(lr_scheduler, ReduceLROnPlateau) else best_metric)
+
+
+def check_training_correctness(
+    config: SampleConfig, model: torch.nn.Module, datasets: DatasetSet, criterion: torch.nn.Module
+):
+    logger.info("Check model is trainable...")
+    steps_to_check = 3
+    optimizer, _ = get_optimizer_and_lr_scheduler(config, model)
+    images, targets, *_ = next(iter(datasets.calibration_dataset.get_data()))
+    images = images.to(config.device)
+    targets = [t.to(config.device) for t in targets]
+    loss_list = []
+    model.train()
+    for _ in range(steps_to_check):
+        output = model(images)
+        loss_l, loss_c = criterion(output, targets)
+        loss = loss_l + loss_c
+        loss_list.append(loss.item())
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+    assert loss_list[-1] < loss_list[0]

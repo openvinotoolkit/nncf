@@ -45,6 +45,7 @@ from examples.torch.semantic_segmentation.main import test as sample_validate
 from examples.torch.semantic_segmentation.metric import IoU
 from examples.torch.semantic_segmentation.test import Test
 from examples.torch.semantic_segmentation.train import Train
+from examples.torch.semantic_segmentation.utils.loss_funcs import do_model_specific_postprocessing
 from nncf import NNCFConfig
 from nncf.torch.utils import is_main_process
 from tests.shared.paths import PROJECT_ROOT
@@ -198,6 +199,8 @@ def main_worker(current_gpu: int, config: SampleConfig):
         get_mocked_compression_ctrl(),
     )
     assert accuracy_drop_is_acceptable(acc_drop)
+    check_training_correctness(config, quantized_model, datasets, criterion)
+    logger.info("Done!")
 
 
 def accuracy_drop_is_acceptable(acc_drop: float) -> bool:
@@ -205,6 +208,16 @@ def accuracy_drop_is_acceptable(acc_drop: float) -> bool:
     Returns True in case acc_drop is less than 1 precent.
     """
     return acc_drop < 0.01
+
+
+def get_optimizer_and_lr_scheduler(config: SampleConfig, model_without_dp: torch.nn.Module):
+    optim_config = config.get("optimizer", {})
+    optim_params = optim_config.get("optimizer_params", {})
+    lr = optim_params.get("lr", 1e-4)
+
+    params_to_optimize = get_params_to_optimize(model_without_dp, lr * 10, config)
+    optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
+    return optimizer, lr_scheduler
 
 
 def train(
@@ -222,12 +235,7 @@ def train(
     """
     logger.info("\nTraining...\n")
 
-    optim_config = config.get("optimizer", {})
-    optim_params = optim_config.get("optimizer_params", {})
-    lr = optim_params.get("lr", 1e-4)
-
-    params_to_optimize = get_params_to_optimize(model_without_dp, lr * 10, config)
-    optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
+    optimizer, lr_scheduler = get_optimizer_and_lr_scheduler(config, model_without_dp)
 
     # Evaluation metric
 
@@ -272,3 +280,35 @@ def train(
         logger.info(">>>> [Epoch: {0:d}] Avg. loss: {1:.4f} | Mean IoU: {2:.4f}".format(epoch, epoch_loss, miou))
 
         lr_scheduler.step(epoch if not isinstance(lr_scheduler, ReduceLROnPlateau) else best_miou)
+
+
+def check_training_correctness(
+    config: SampleConfig,
+    model: torch.nn.Module,
+    datasets: DatasetSet,
+    criterion: torch.nn.Module,
+):
+    logger.info("Check model is trainable...")
+    steps_to_check = 3
+    model_without_dp = model
+    if hasattr(model_without_dp, "module"):
+        model_without_dp = model_without_dp.module
+
+    optimizer, _ = get_optimizer_and_lr_scheduler(config, model_without_dp)
+    input_, labels, *_ = next(iter(datasets.calibration_dataset.get_data()))
+    input_ = input_.to(config.device)
+    labels = labels.to(config.device)
+    loss_list = []
+    model.train()
+    for _ in range(steps_to_check):
+        outputs = model(input_)
+        labels, loss_outputs, _ = do_model_specific_postprocessing(config.model, labels, outputs)
+
+        # Loss computation
+        loss = criterion(loss_outputs, labels)
+        loss_list.append(loss.item())
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+    assert loss_list[-1] < loss_list[0]

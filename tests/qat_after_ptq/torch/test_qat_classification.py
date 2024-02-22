@@ -117,6 +117,12 @@ def test_compression_training(quantization_config_path: Path, data_dir: str, moc
     if "pretrained" not in config or not config["pretrained"]:
         pytest.skip("Test supports only pretrained models.")
 
+    if config.model == "mobilenet_v3_small":
+        # Use default range initializer for mobilenet_v3_small
+        # as due to PTQ advantages it works better for the model.
+        del config.nncf_config["compression"]["initializer"]["range"]
+        del config["compression"]["initializer"]["range"]
+
     start_worker(main_worker, config)
 
 
@@ -171,6 +177,8 @@ def main_worker(current_gpu: int, config: SampleConfig):
         get_mocked_compression_ctrl(),
     )
     assert accuracy_drop_is_acceptable(acc_drop)
+    check_training_correctness(config, model, datasets, criterion)
+    logger.info("Done!")
 
 
 def accuracy_drop_is_acceptable(acc_drop: float) -> bool:
@@ -186,6 +194,12 @@ def catch_nans_wrapper(fn):
             fn(*args, **kwargs)
 
     return wrapper
+
+
+def get_optimizer_and_lr_scheduler(config: SampleConfig, model: torch.nn.Module):
+    params_to_optimize = get_parameter_groups(model, config)
+    optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
+    return optimizer, lr_scheduler
 
 
 def train(
@@ -204,8 +218,9 @@ def train(
         broadcast_initialized_parameters(model)
     model_name = config["model"]
     train_criterion_fn = inception_criterion_fn if "inception" in model_name else default_criterion_fn
-    params_to_optimize = get_parameter_groups(model, config)
-    optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
+
+    optimizer, lr_scheduler = get_optimizer_and_lr_scheduler(config, model)
+
     best_acc1 = 0
     logger.info("Qantization aware training pipeline starts.")
     for epoch in range(config.start_epoch, config.epochs + 1):
@@ -234,3 +249,25 @@ def train(
 
         # Learning rate scheduling should be applied after optimizer’s update
         lr_scheduler.step(epoch if not isinstance(lr_scheduler, ReduceLROnPlateau) else best_acc1)
+
+
+def check_training_correctness(
+    config: SampleConfig, model: torch.nn.Module, datasets: DatasetSet, criterion: torch.nn.Module
+):
+    logger.info("Check model is trainable...")
+    steps_to_check = 3
+    optimizer, _ = get_optimizer_and_lr_scheduler(config, model)
+    input_, target = next(iter(datasets.calibration_dataset.get_data()))
+    input_ = input_.to(config.device)
+    target = target.to(config.device)
+    loss_list = []
+    model.train()
+    for _ in range(steps_to_check):
+        output = model(input_)
+        loss = criterion(output, target)
+        loss_list.append(loss.item())
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+    assert loss_list[-1] < loss_list[0]
