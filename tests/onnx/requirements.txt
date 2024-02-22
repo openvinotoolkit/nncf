@@ -2,8 +2,8 @@ pytest-mock>=3.3.1
 pytest-cov
 pytest-dependency>=0.5.1
 pytest-ordering>=0.6
-torch==2.1.0
-torchvision==0.16.0
+torch==2.2.0
+torchvision==0.17.0
 yattag>=1.14.0
 openvino-dev==2023.3
 fastdownload
