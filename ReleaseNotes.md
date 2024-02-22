@@ -11,12 +11,18 @@ Post-training Quantization:
 - Features:
   - (ONNX) Introduced support for the ONNX backend in the `nncf.quantize_with_accuracy_control()` method. Users can now perform quantization with accuracy control for `onnx.ModelProto`. By leveraging this feature, users can enhance the accuracy of quantized models while minimizing performance impact.
   - (ONNX) Added an example based on the YOLOv8n-seg model for demonstrating the usage of quantization with accuracy control for the ONNX backend.
+  - (PT) Added SmoothQuant algorithm for PyTorch backend in `nncf.quantize`.
   - ...
 - Fixes:
+  - (PyTorch) Fixed incorrect set `is_shared` attribute in case of wraping model with `trace_parameters=True`.
+  - (PyTorch) Fixed dtype handling for traced `torch.nn.Parameter`.
+  - (PyTorch) Fixed zero eps for fake quantizer module.
   - ...
 - Improvements:
   - ...
 - Deprecations/Removals:
+  - (PyTorch) Deprecated `binarization` algorithm
+  - Removed Dockerfiles
   - ...
 - Tutorials:
   - ...
