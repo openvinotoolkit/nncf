@@ -243,12 +243,11 @@ def update_fused_bias(target_node_name: str, new_bias: Tensor, model: NNCFNetwor
         update_parameter(target_node_name, "bias", new_bias, model)
         return
     target_module = model.nncf.get_containing_module(target_node_name)
-    fused_module = get_potential_fused_node(fused_node.node_name, nncf_graph)
+    fused_module = model.nncf.get_containing_module(fused_node.node_name)
 
     if target_module.bias is None:
         update_parameter(fused_node.node_name, "bias", new_bias, model)
         return
-
     new_bias = new_bias - target_module.bias * fused_module.weight
     update_parameter(fused_node.node_name, "bias", new_bias, model)
 
