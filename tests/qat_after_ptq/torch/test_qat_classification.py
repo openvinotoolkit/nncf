@@ -183,17 +183,9 @@ def main_worker(current_gpu: int, config: SampleConfig):
 
 def accuracy_drop_is_acceptable(acc_drop: float) -> bool:
     """
-    Returns True in case acc_drop is less than 1 precent.
+    Returns True in case acc_drop is less than 1 percent.
     """
     return acc_drop < 1.0
-
-
-def catch_nans_wrapper(fn):
-    def wrapper(*args, **kwargs):
-        with torch.autograd.set_detect_anomaly(True):
-            fn(*args, **kwargs)
-
-    return wrapper
 
 
 def get_optimizer_and_lr_scheduler(config: SampleConfig, model: torch.nn.Module):
@@ -222,7 +214,7 @@ def train(
     optimizer, lr_scheduler = get_optimizer_and_lr_scheduler(config, model)
 
     best_acc1 = 0
-    logger.info("Qantization aware training pipeline starts.")
+    logger.info("Quantization aware training pipeline starts.")
     for epoch in range(config.start_epoch, config.epochs + 1):
         current_accuracy, *_ = validate(datasets.val_data_loader, model, criterion, config, epoch - 1)
         best_acc1 = max(current_accuracy, best_acc1)

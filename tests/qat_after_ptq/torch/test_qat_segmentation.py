@@ -205,7 +205,7 @@ def main_worker(current_gpu: int, config: SampleConfig):
 
 def accuracy_drop_is_acceptable(acc_drop: float) -> bool:
     """
-    Returns True in case acc_drop is less than 1 precent.
+    Returns True in case acc_drop is less than 1 percent.
     """
     return acc_drop < 0.01
 
@@ -254,6 +254,7 @@ def train(
     )
     val_obj = Test(model, datasets.val_data_loader, criterion, metric, config.device, config.model)
 
+    logger.info("Quantization aware training pipeline starts.")
     for epoch in range(config.start_epoch, config.epochs):
         if config.distributed:
             datasets.train_data_loader.sampler.set_epoch(epoch)
