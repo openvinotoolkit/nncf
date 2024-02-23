@@ -281,6 +281,9 @@ def check_training_correctness(
     images, targets, *_ = next(iter(datasets.calibration_dataset.get_data()))
     images = images.to(config.device)
     targets = [t.to(config.device) for t in targets]
+    with torch.no_grad():
+        images = torch.cat([images, images], dim=0)
+        targets.append(targets[0])
     loss_list = []
     model.train()
     for _ in range(steps_to_check):

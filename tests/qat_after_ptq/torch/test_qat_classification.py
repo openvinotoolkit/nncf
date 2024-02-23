@@ -168,16 +168,18 @@ def main_worker(current_gpu: int, config: SampleConfig):
         subset_size=subset_size,
     )
 
+    train_criterion_fn = inception_criterion_fn if "inception" in model_name else default_criterion_fn
     acc_drop = train(
         quantized_model,
         config,
         criterion,
+        train_criterion_fn,
         datasets,
         original_accuracy,
         get_mocked_compression_ctrl(),
     )
     assert accuracy_drop_is_acceptable(acc_drop)
-    check_training_correctness(config, model, datasets, criterion)
+    check_training_correctness(config, model, datasets, criterion, train_criterion_fn)
     logger.info("Done!")
 
 
@@ -198,6 +200,7 @@ def train(
     model: torch.nn.Module,
     config: SampleConfig,
     criterion: torch.nn.Module,
+    train_criterion_fn: callable,
     datasets: DatasetSet,
     original_accuracy: float,
     compression_ctrl,
@@ -208,8 +211,6 @@ def train(
     model, _ = prepare_model_for_execution(model, config)
     if config.distributed:
         broadcast_initialized_parameters(model)
-    model_name = config["model"]
-    train_criterion_fn = inception_criterion_fn if "inception" in model_name else default_criterion_fn
 
     optimizer, lr_scheduler = get_optimizer_and_lr_scheduler(config, model)
 
@@ -244,7 +245,11 @@ def train(
 
 
 def check_training_correctness(
-    config: SampleConfig, model: torch.nn.Module, datasets: DatasetSet, criterion: torch.nn.Module
+    config: SampleConfig,
+    model: torch.nn.Module,
+    datasets: DatasetSet,
+    criterion: torch.nn.Module,
+    train_criterion_fn: callable,
 ):
     logger.info("Check model is trainable...")
     steps_to_check = 3
@@ -252,11 +257,15 @@ def check_training_correctness(
     input_, target = next(iter(datasets.calibration_dataset.get_data()))
     input_ = input_.to(config.device)
     target = target.to(config.device)
+    # Make batch_size==2 to make batchnorms work
+    with torch.no_grad():
+        input_ = torch.cat([input_, input_], dim=0)
+        target = torch.cat([target, target], dim=0)
     loss_list = []
     model.train()
     for _ in range(steps_to_check):
         output = model(input_)
-        loss = criterion(output, target)
+        loss = train_criterion_fn(output, target, criterion)
         loss_list.append(loss.item())
         optimizer.zero_grad()
         loss.backward()

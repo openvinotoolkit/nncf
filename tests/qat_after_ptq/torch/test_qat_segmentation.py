@@ -299,6 +299,10 @@ def check_training_correctness(
     input_, labels, *_ = next(iter(datasets.calibration_dataset.get_data()))
     input_ = input_.to(config.device)
     labels = labels.to(config.device)
+    # Make batch_size==2 to make batchnorms work
+    with torch.no_grad():
+        input_ = torch.cat([input_, input_], dim=0)
+        labels = torch.cat([labels, labels], dim=0)
     loss_list = []
     model.train()
     for _ in range(steps_to_check):
