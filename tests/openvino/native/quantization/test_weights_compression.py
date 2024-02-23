@@ -697,6 +697,24 @@ def test_data_type_for_num_weights(mocker):
     assert isinstance(params.num_weights, np.uint64)
 
 
+def test_weight_scale_datatype():
+    # When model weight is in fp32, there will be an extra convert node for weight scale f16 > f32
+    model_fp32 = IdentityMatmul(weights_dtype=np.float32).ov_model
+    compressed_model_fp32 = compress_weights(model_fp32)
+    name_to_node_map = {op.get_friendly_name(): op for op in compressed_model_fp32.get_ops()}
+    assert "weights/scale_convert" in name_to_node_map
+    scale_multiply_node = name_to_node_map["weights/fq_weights_1"]
+    assert scale_multiply_node.input_value(1).get_node().get_element_type() == ov.Type.f32
+
+    # When model weight is in fp16, there will be no extra convert node for weight scale
+    model_fp16 = IdentityMatmul(weights_dtype=np.float16).ov_model
+    compressed_model_fp16 = compress_weights(model_fp16)
+    name_to_node_map = {op.get_friendly_name(): op for op in compressed_model_fp16.get_ops()}
+    assert "weights/scale_convert" not in name_to_node_map
+    scale_multiply_node = name_to_node_map["weights/fq_weights_1"]
+    assert scale_multiply_node.input_value(1).get_node().get_element_type() == ov.Type.f16
+
+
 DATASET_SIZE = 129
 
 
