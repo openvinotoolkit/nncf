@@ -4,16 +4,14 @@ This is the test suite based on QAT examples training and validation code that t
 
 ## Installation
 
-For the Torch backend:
-
 ```bash
 make install-torch-test
 ```
 
 ## Usage
 
-Once the environment is installed use the following command to run all tests for the Torch backend:
+Once the environment is installed use the following command to run all tests:
 
 ```bash
-python -m pytest tests/qat_after_ptq/torch --data /path/to/omz/training/datasets --weights /path/to/nncf/checkpoints
+python -m pytest tests/torch/qat_after_ptq --sota-data-dir /path/to/omz/training/datasets --sota-checkpoints-dir /path/to/nncf/checkpoints
 ```

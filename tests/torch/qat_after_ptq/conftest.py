@@ -14,20 +14,15 @@ from pathlib import Path
 import pytest
 
 
-def pytest_addoption(parser):
-    parser.addoption("--data", action="store", help="Path to omz training datasets directory.")
-    parser.addoption("--weights", action="store", help="Directory with nncf checkpoints for baseline checkopints.")
-
-
 @pytest.fixture(scope="session", name="data_dir")
 def fixture_data(pytestconfig):
-    if pytestconfig.getoption("data") is None:
-        raise ValueError("This test requires the --data argument to be specified.")
-    return Path(pytestconfig.getoption("data"))
+    if pytestconfig.getoption("--sota-data-dir") is None:
+        raise ValueError("This test requires the --sota-data-dir argument to be specified.")
+    return Path(pytestconfig.getoption("--sota-data-dir"))
 
 
 @pytest.fixture(scope="session", name="weights_dir")
 def fixture_weights_dir(pytestconfig):
-    if pytestconfig.getoption("weights") is None:
-        raise ValueError("This test requires the --weights argument to be specified.")
-    return Path(pytestconfig.getoption("weights"))
+    if pytestconfig.getoption("--sota-checkpoints-dir") is None:
+        raise ValueError("This test requires the --sota-checkpoints-dir argument to be specified.")
+    return Path(pytestconfig.getoption("--sota-checkpoints-dir"))

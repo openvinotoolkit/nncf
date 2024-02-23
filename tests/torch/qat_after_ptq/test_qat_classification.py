@@ -21,32 +21,34 @@ from helpers import get_advanced_ptq_parameters
 from helpers import get_mocked_compression_ctrl
 from helpers import get_num_samples
 from helpers import get_quantization_preset
+from torch import nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import nncf
 from examples.common.sample_config import SampleConfig
 from examples.common.sample_config import create_sample_config
+from examples.torch.classification.main import create_data_loaders
+from examples.torch.classification.main import create_datasets
+from examples.torch.classification.main import get_argument_parser
+from examples.torch.classification.main import inception_criterion_fn
+from examples.torch.classification.main import train_epoch
+from examples.torch.classification.main import validate
 from examples.torch.common.example_logger import logger
 from examples.torch.common.execution import get_execution_mode
 from examples.torch.common.execution import prepare_model_for_execution
 from examples.torch.common.execution import start_worker
+from examples.torch.common.model_loader import load_model
 from examples.torch.common.optimizer import get_parameter_groups
 from examples.torch.common.optimizer import make_optimizer
 from examples.torch.common.utils import configure_device
 from examples.torch.common.utils import configure_logging
-from examples.torch.common.utils import is_on_first_rank
-from examples.torch.object_detection.dataset import detection_collate
-from examples.torch.object_detection.dataset import get_testing_dataset
-from examples.torch.object_detection.eval import test_net as sample_validate
-from examples.torch.object_detection.layers.modules import MultiBoxLoss
-from examples.torch.object_detection.main import create_dataloaders
-from examples.torch.object_detection.main import create_model
-from examples.torch.object_detection.main import get_argument_parser
-from examples.torch.object_detection.main import train_epoch
+from examples.torch.common.utils import is_pretrained_model_requested
 from nncf import NNCFConfig
+from nncf.torch.initialization import default_criterion_fn
+from nncf.torch.utils import is_main_process
 from tests.shared.paths import PROJECT_ROOT
 
-CONFIGS = list((PROJECT_ROOT / Path("examples/torch/object_detection/configs")).glob("*"))
+CONFIGS = list((PROJECT_ROOT / Path("examples/torch/classification/configs/quantization")).glob("*"))
 
 
 @pytest.fixture(name="quantization_config_path", params=CONFIGS, ids=[conf.stem for conf in CONFIGS])
@@ -54,21 +56,10 @@ def fixture_quantization_config(request):
     return request.param
 
 
-def get_sample_config(quantization_config_path: Path, data_dir: Path, weights_dir: Path) -> SampleConfig:
+def get_sample_config(quantization_config_path: Path, data_dir: str) -> SampleConfig:
     parser = get_argument_parser()
-    weights_path = weights_dir / (quantization_config_path.stem.split("_int8")[0] + ".pth")
-    args = parser.parse_args(
-        [
-            "-c",
-            str(quantization_config_path),
-            "--data",
-            str(data_dir),
-            "--dataset",
-            "voc",
-            "--weights",
-            str(weights_path),
-        ]
-    )
+    data_dir = data_dir / "imagenet"
+    args = parser.parse_args(["-c", str(quantization_config_path), "--data", str(data_dir), "--dataset", "imagenet"])
     sample_config = create_sample_config(args, parser)
     device = torch.device("cpu")
     if torch.cuda.is_available():
@@ -76,95 +67,92 @@ def get_sample_config(quantization_config_path: Path, data_dir: Path, weights_di
 
     sample_config.device = device
     sample_config.execution_mode = get_execution_mode(sample_config)
-
-    if sample_config.dataset_dir is not None:
-        sample_config.train_imgs = (
-            sample_config.train_anno
-        ) = sample_config.test_imgs = sample_config.test_anno = sample_config.dataset_dir
     return sample_config
 
 
 @dataclass
 class DatasetSet:
     train_data_loader: torch.utils.data.DataLoader
-    test_data_loader: torch.utils.data.DataLoader
+    val_data_loader: torch.utils.data.DataLoader
+    train_sampler: torch.utils.data.SequentialSampler
     calibration_dataset: nncf.Dataset
 
 
-def get_datasets(config: SampleConfig) -> DatasetSet:
-    test_data_loader, train_data_loader, _ = create_dataloaders(config)
-
-    test_dataset = get_testing_dataset(config.dataset, config.test_anno, config.test_imgs, config)
-    logger.info("Loaded {} testing images".format(len(test_dataset)))
-    if config.distributed:
-        test_sampler = torch.utils.data.DistributedSampler(test_dataset, config.rank, config.world_size)
-    else:
-        test_sampler = torch.utils.data.SequentialSampler(test_dataset)
-
-    def transform_fn(data_item):
-        return data_item[0].to(config.device)
-
-    val_data_loader_batch_one = torch.utils.data.DataLoader(
-        test_dataset,
-        batch_size=1,
-        num_workers=config.workers,
-        shuffle=False,
-        collate_fn=detection_collate,
-        pin_memory=True,
-        drop_last=False,
-        sampler=test_sampler,
+def get_datasets(sample_config: SampleConfig) -> DatasetSet:
+    train_dataset, val_dataset = create_datasets(sample_config)
+    train_data_lodaer, train_sampler, val_data_loader, _ = create_data_loaders(
+        sample_config, train_dataset, val_dataset
     )
 
+    def transform_fn(data_item):
+        return data_item[0].to(sample_config.device)
+
+    val_data_loader_batch_one = torch.utils.data.DataLoader(
+        val_dataset,
+        batch_size=1,
+        shuffle=False,
+        num_workers=1,
+    )
     calibration_dataset = nncf.Dataset(val_data_loader_batch_one, transform_fn)
     return DatasetSet(
-        train_data_loader=train_data_loader,
-        test_data_loader=test_data_loader,
+        train_data_loader=train_data_lodaer,
+        val_data_loader=val_data_loader,
+        train_sampler=train_sampler,
         calibration_dataset=calibration_dataset,
     )
 
 
-def test_compression_training(quantization_config_path: Path, data_dir: Path, weights_dir: Path, mocker):
+@pytest.mark.weekly
+def test_compression_training(quantization_config_path: Path, data_dir: str, mocker):
+    if "imagenet" not in quantization_config_path.stem:
+        pytest.skip("Test works only with imagenet models by far.")
+
     nncf_config = NNCFConfig.from_json(quantization_config_path)
-    if (
-        "compression" not in nncf_config
-        or isinstance(nncf_config["compression"], list)
-        or nncf_config["compression"]["algorithm"] != "quantization"
-    ):
+    if "compression" not in nncf_config or nncf_config["compression"]["algorithm"] != "quantization":
         pytest.skip("Config without compression")
 
-    config = get_sample_config(quantization_config_path, data_dir, weights_dir)
+    config = get_sample_config(quantization_config_path, data_dir)
     if "accuracy_aware_training" in config:
         pytest.skip("Accuracy Aware training is not supported yet for QAT with PTQ.")
+
+    if "pretrained" not in config or not config["pretrained"]:
+        pytest.skip("Test supports only pretrained models.")
+
+    if config.model == "mobilenet_v3_small":
+        # Use default range initializer for mobilenet_v3_small
+        # as due to PTQ advantages it works better for the model.
+        del config.nncf_config["compression"]["initializer"]["range"]
+        del config["compression"]["initializer"]["range"]
 
     start_worker(main_worker, config)
 
 
 def main_worker(current_gpu: int, config: SampleConfig):
     configure_device(current_gpu, config)
-    if is_on_first_rank(config):
+    if is_main_process():
         configure_logging(logger, config)
+    else:
+        config.tb = None
 
+    pretrained = is_pretrained_model_requested(config)
+    model_name = config["model"]
     # create model
     logger.info(f"\nCreating model from config: {config.config}")
-    model = create_model(config)
+    model = load_model(
+        model_name,
+        pretrained=pretrained,
+        num_classes=config.get("num_classes", 1000),
+        model_params=config.get("model_params"),
+        weights_path=config.get("weights"),
+    )
+    model.to(config.device)
 
     datasets = get_datasets(config)
-    criterion = MultiBoxLoss(
-        config,
-        config["num_classes"],
-        overlap_thresh=0.5,
-        prior_for_matching=True,
-        bkg_label=0,
-        neg_mining=True,
-        neg_pos=3,
-        neg_overlap=0.5,
-        encode_target=False,
-        device=config.device,
-    )
+    criterion = nn.CrossEntropyLoss()
     criterion = criterion.to(config.device)
 
     logger.info("Original model validation:")
-    original_metric = validate(model, config.device, datasets.test_data_loader, config.distributed)
+    original_accuracy, *_ = validate(datasets.val_data_loader, model, criterion, config)
 
     logger.info("Apply quantization to the model:")
     config_quantization_params = config["compression"]
@@ -180,13 +168,19 @@ def main_worker(current_gpu: int, config: SampleConfig):
         advanced_parameters=advanced_parameters,
         subset_size=subset_size,
     )
-    if config.distributed:
-        config.batch_size //= config.ngpus_per_node
-        config.workers //= config.ngpus_per_node
 
-    acc_drop = train(quantized_model, config, criterion, datasets, original_metric, get_mocked_compression_ctrl())
+    train_criterion_fn = inception_criterion_fn if "inception" in model_name else default_criterion_fn
+    acc_drop = train(
+        quantized_model,
+        config,
+        criterion,
+        train_criterion_fn,
+        datasets,
+        original_accuracy,
+        get_mocked_compression_ctrl(),
+    )
     assert accuracy_drop_is_acceptable(acc_drop)
-    check_training_correctness(config, model, datasets, criterion)
+    check_training_correctness(config, model, datasets, criterion, train_criterion_fn)
     logger.info("Done!")
 
 
@@ -194,13 +188,7 @@ def accuracy_drop_is_acceptable(acc_drop: float) -> bool:
     """
     Returns True in case acc_drop is less than 1 percent.
     """
-    return acc_drop < 0.01
-
-
-def validate(net: torch.nn.Module, device, data_loader, distributed):
-    with torch.no_grad():
-        net.eval()
-        return sample_validate(net, device, data_loader, distributed)
+    return acc_drop < 1.0
 
 
 def get_optimizer_and_lr_scheduler(config: SampleConfig, model: torch.nn.Module):
@@ -213,8 +201,9 @@ def train(
     model: torch.nn.Module,
     config: SampleConfig,
     criterion: torch.nn.Module,
+    train_criterion_fn: callable,
     datasets: DatasetSet,
-    original_metric: float,
+    original_accuracy: float,
     compression_ctrl,
 ) -> float:
     """
@@ -226,19 +215,13 @@ def train(
 
     optimizer, lr_scheduler = get_optimizer_and_lr_scheduler(config, model)
 
-    best_metric = 0
-    loc_loss = 0
-    conf_loss = 0
-
-    epoch_size = len(datasets.train_data_loader)
+    best_acc1 = 0
     logger.info("Quantization aware training pipeline starts.")
     for epoch in range(config.start_epoch, config.epochs + 1):
-        current_metric = validate(
-            model, config.device, datasets.test_data_loader, distributed=config.multiprocessing_distributed
-        )
-        best_metric = max(current_metric, best_metric)
-        acc_drop = original_metric - current_metric
-        logger.info(f"Metric: {current_metric}, FP32 diff: {acc_drop}")
+        current_accuracy, *_ = validate(datasets.val_data_loader, model, criterion, config, epoch - 1)
+        best_acc1 = max(current_accuracy, best_acc1)
+        acc_drop = original_accuracy - current_accuracy
+        logger.info(f"Metric: {current_accuracy}, FP32 diff: {acc_drop}")
         if accuracy_drop_is_acceptable(acc_drop):
             logger.info(f"Accuracy is within 1 percent drop," f" pipeline is making early exit on epoch {epoch - 1}")
             logger.info(
@@ -254,42 +237,36 @@ def train(
             datasets.train_sampler.set_epoch(epoch)
 
         # train for one epoch
-        model.train()
         train_epoch(
-            compression_ctrl,
-            model,
-            config,
-            datasets.train_data_loader,
-            criterion,
-            optimizer,
-            epoch_size,
-            epoch,
-            loc_loss,
-            conf_loss,
+            datasets.train_data_loader, model, criterion, train_criterion_fn, optimizer, compression_ctrl, epoch, config
         )
 
         # Learning rate scheduling should be applied after optimizer’s update
-        lr_scheduler.step(epoch if not isinstance(lr_scheduler, ReduceLROnPlateau) else best_metric)
+        lr_scheduler.step(epoch if not isinstance(lr_scheduler, ReduceLROnPlateau) else best_acc1)
 
 
 def check_training_correctness(
-    config: SampleConfig, model: torch.nn.Module, datasets: DatasetSet, criterion: torch.nn.Module
+    config: SampleConfig,
+    model: torch.nn.Module,
+    datasets: DatasetSet,
+    criterion: torch.nn.Module,
+    train_criterion_fn: callable,
 ):
     logger.info("Check model is trainable...")
     steps_to_check = 3
     optimizer, _ = get_optimizer_and_lr_scheduler(config, model)
-    images, targets, *_ = next(iter(datasets.calibration_dataset.get_data()))
-    images = images.to(config.device)
-    targets = [t.to(config.device) for t in targets]
+    input_, target = next(iter(datasets.calibration_dataset.get_data()))
+    input_ = input_.to(config.device)
+    target = target.to(config.device)
+    # Make batch_size==2 to make batchnorms work
     with torch.no_grad():
-        images = torch.cat([images, images], dim=0)
-        targets.append(targets[0])
+        input_ = torch.cat([input_, input_], dim=0)
+        target = torch.cat([target, target], dim=0)
     loss_list = []
     model.train()
     for _ in range(steps_to_check):
-        output = model(images)
-        loss_l, loss_c = criterion(output, targets)
-        loss = loss_l + loss_c
+        output = model(input_)
+        loss = train_criterion_fn(output, target, criterion)
         loss_list.append(loss.item())
         optimizer.zero_grad()
         loss.backward()

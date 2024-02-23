@@ -43,7 +43,7 @@ def convert_quantization_params(conf: Optional[dict]) -> QuantizationParameters:
         num_bits=conf.get("bits", None),
         mode=convert_quantization_mode(conf.get("mode", None)),
         signedness_to_force=conf.get("signed", None),
-        per_channel=None  # Always use default parameter for per_channel parameters to prevent
+        per_channel=None  # Always use the default parameter for per_channel parameters to prevent
         # accuracy degradation due to the fact that per_channel=False for activation will make
         # deptwise convolutions activations quantizers work in the per tensor mode
         # which does not make sence in case of the CPU target device.

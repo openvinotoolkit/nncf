@@ -126,6 +126,7 @@ def get_datasets(dataset, config: SampleConfig) -> DatasetSet:
     )
 
 
+@pytest.mark.weekly
 def test_compression_training(quantization_config_path: Path, data_dir: Path, weights_dir: Path, mocker):
     nncf_config = NNCFConfig.from_json(quantization_config_path)
     if (
