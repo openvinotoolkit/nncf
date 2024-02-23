@@ -241,7 +241,7 @@ class SmoothQuant(Algorithm):
             statistics_for_node.append(Tensor(statistic))
         return statistics_for_node
 
-    def get_statistic_points(self, model: TModel, graph: NNCFGraph, dataset: Dataset) -> StatisticPointsContainer:
+    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         statistic_container = StatisticPointsContainer()
 
         self._set_backend_entity(model)

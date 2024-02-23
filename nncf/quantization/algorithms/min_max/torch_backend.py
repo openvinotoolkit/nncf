@@ -163,9 +163,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return nncf_graph.get_input_shape_for_insertion_point(target_point)
 
     @staticmethod
-    def get_channel_axes(node: NNCFNode, target_point: PTTargetPoint, is_per_channel: bool) -> Tuple[int]:
-        if not is_per_channel:
-            return ()
+    def get_channel_axes(node: NNCFNode, target_point: PTTargetPoint) -> Tuple[int]:
         if target_point.is_weight_target_point():
             return (node.layer_attributes.get_target_dim_for_compression(),)
         return (1,)

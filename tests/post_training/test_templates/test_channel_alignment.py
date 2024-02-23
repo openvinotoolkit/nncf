@@ -511,7 +511,7 @@ class TemplateTestChannelAlignment:
         MockBackend.get_statistic_collector = mocker.MagicMock(return_value=ref_stat_collector)
         algorithm._backend_entity = MockBackend
 
-        statistic_container = algorithm.get_statistic_points(None, nncf_graph, None)
+        statistic_container = algorithm.get_statistic_points(None, nncf_graph)
 
         backend_cls = self.get_backend_cls()
         target_node_name = "/Add_1_0" if num_biases else "/Conv_1_0"

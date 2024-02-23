@@ -141,6 +141,7 @@ class MinMaxQuantization(Algorithm):
         overflow_fix: Optional[OverflowFix] = None,
         quantize_outputs: bool = False,
         inplace_statistics: bool = True,
+        statistics_per_sample: bool = False,
         activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None,
         weights_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None,
         activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
@@ -171,6 +172,7 @@ class MinMaxQuantization(Algorithm):
         :param inplace_statistics: Defines wheather to calculate quantizers statistics
             by backend graph operations or by default Python implementation, defaults
             to True.
+        :param statistics_per_sample: Whether calculate statistics regarding batch axis.
         :param activations_quantization_params: Quantization parameters for model
             activations.
         :param weights_quantization_params: Quantization parameters for model weights.
@@ -187,6 +189,7 @@ class MinMaxQuantization(Algorithm):
         self._overflow_fix = overflow_fix
         self._quantize_outputs = quantize_outputs
         self._inplace_statistics = inplace_statistics
+        self._statistics_per_sample = statistics_per_sample
         self._backend_params = backend_params
         self._activations_quantization_params = activations_quantization_params
         self._weights_quantization_params = weights_quantization_params
@@ -398,7 +401,7 @@ class MinMaxQuantization(Algorithm):
         graph: NNCFGraph,
         target_point: TargetPoint,
         qconfig: QuantizerConfig,
-        is_many_samples: bool,
+        is_per_sample: bool,
     ) -> TensorStatisticCollectorBase:
         """
         Creates and returns a statistic collector based on the quantizer's configuration.
@@ -407,22 +410,22 @@ class MinMaxQuantization(Algorithm):
         :param target_point: Target point indicates where statistics should be collected.
         :param qconfig: Configuration of a quantizer layer,
         defining the configuration of created statistic collector.
-        :param is_many_samples: True meaning that one data tensor consists of some samples.
-        False - data tnesor has onle one sample.
+        :param is_per_sample: True meaning that statistics is collected per sample. False - per tensor.
         :return: Statistic Collector.
         """
         is_weight = target_point.is_weight_target_point()
         node = graph.get_node_by_name(target_point.target_node_name)
-
         shape = self._backend_entity.get_target_point_shape(graph, node, target_point)
-        channel_axes = self._backend_entity.get_channel_axes(node, target_point, qconfig.per_channel)
-
         range_estimator_params = self._get_range_estimator_parameters(target_point, qconfig)
+
+        channel_axes = ()
+        if qconfig.per_channel:
+            channel_axes = self._backend_entity.get_channel_axes(node, target_point)
 
         # Weight statistics is constant, so only one collection is enough.
         num_samples = self._subset_size if not is_weight else 1
 
-        is_per_sample = is_many_samples and not is_weight
+        is_per_sample = is_per_sample and not is_weight
 
         collector_params = RangeInitCollectorParams(
             is_weights=is_weight, scheme=qconfig.mode, per_channel=qconfig.per_channel
@@ -920,19 +923,20 @@ class MinMaxQuantization(Algorithm):
         quantized_model = model_transformer.transform(transformation_layout)
         return quantized_model
 
-    def get_statistic_points(self, model: TModel, graph: NNCFGraph, dataset: Dataset) -> StatisticPointsContainer:
+    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         self._set_backend_entity(model)
         self._reset_cache()
         quantization_target_points, _ = self._get_quantization_target_points(model, graph)
         output = StatisticPointsContainer()
-        is_many_samples = dataset.get_batch_size() is not None and dataset.get_batch_size() > 1
-        if self._model_type == ModelType.TRANSFORMER and is_many_samples:
+        if self._model_type == ModelType.TRANSFORMER and self._statistics_per_sample:
             nncf_logger.warning(
                 "For transfomer-like models batch_size > 1 could result in inaccurate statistics. \
                 The recomendation is to use batch_size = 1."
             )
         for quantization_target_point, qconfig in quantization_target_points.items():
-            stat_collector = self._get_stat_collector(graph, quantization_target_point, qconfig, is_many_samples)
+            stat_collector = self._get_stat_collector(
+                graph, quantization_target_point, qconfig, self._statistics_per_sample
+            )
             output.add_statistic_point(
                 StatisticPoint(
                     target_point=quantization_target_point,

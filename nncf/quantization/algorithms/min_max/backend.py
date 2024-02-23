@@ -196,13 +196,12 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_channel_axes(node: NNCFNode, target_point: TargetPoint, is_per_channel: bool) -> Tuple[int]:
+    def get_channel_axes(node: NNCFNode, target_point: TargetPoint) -> Tuple[int]:
         """
         Returns axes for per-channel quantization.
 
         :param node: Quantized node.
         :param target_point: Corresponding target point.
-        :param is_per_channel: Is per-channel quantization or not.
         :return: Axes for per-channel quantization.
         """
 

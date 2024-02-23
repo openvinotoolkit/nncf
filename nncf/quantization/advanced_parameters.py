@@ -190,6 +190,8 @@ class AdvancedQuantizationParameters:
     :type disable_channel_alignment: bool
     :param disable_bias_correction: Whether to disable the bias correction.
     :type disable_bias_correction: bool
+    :param statistics_per_sample: Whether calculate statistics regarding batch axis.
+    :type statistics_per_sample: bool
     :param activations_quantization_params: Quantization parameters for activations.
     :type activations_quantization_params: nncf.quantization.advanced_parameters.QuantizationParameters
     :param weights_quantization_params: Quantization parameters for weights.
@@ -207,6 +209,7 @@ class AdvancedQuantizationParameters:
     :type smooth_quant_alpha: AdvancedSmoothQuantParameters
     :param smooth_quant_alpha: Deprecated SmoothQuant-related parameter.
     :type smooth_quant_alpha: float
+
     :param backend_params: Backend-specific parameters.
     :type backend_params: Dict[str, Any]
     """
@@ -217,6 +220,7 @@ class AdvancedQuantizationParameters:
     inplace_statistics: bool = True
     disable_channel_alignment: bool = True
     disable_bias_correction: bool = False
+    statistics_per_sample: bool = None
 
     # Advanced Quantization parameters
     activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None

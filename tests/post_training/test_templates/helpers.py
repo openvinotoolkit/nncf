@@ -58,7 +58,7 @@ def get_static_dataset(input_size: Tuple, transform_fn: Callable, fn_to_type: Ca
     :param input_size: Size of generated tensors,
     :param transform_fn: Function to transformation dataset.
     :param fn_to_type: Function, defaults to None.
-    :param lenght: The lenght of dataset.
+    :param length: The length of the dataset.
     :return: Instance of nncf.Dataset for StaticDatasetMock.
     """
     return Dataset(

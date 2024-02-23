@@ -215,7 +215,8 @@ class RangeInitCollectorParams:
         aggregation_axes: Union[Tuple[int], List[int]],
     ):
         """
-        Returns axes for a reducer.
+        Returns axes for a reducer regarding aggregation axes. As aggregator takes axes counting from stacked tensors,
+        from these axes only tensor related axes should be used for reducer.
 
         :param shape_to_reduce: Shape of a reduced tensor.
         :param quantization_axes: Axes of quantization.

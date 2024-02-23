@@ -77,7 +77,7 @@ class StatisticsAggregator(ABC):
         if self.batch_size > 1 and self.is_model_has_no_batch_axis(graph):
             nncf_logger.warning(
                 "For the particular model the batch size > 1 can lead to inaccurate collected statistics . \
-                The recomendation is to use batch_size = 1."
+                The recomendation is to provide dataloader instance with the batch_size = 1."
             )
         model_transformer = factory.ModelTransformerFactory.create(model)
         merged_statistics = self._get_merged_statistic_points(self.statistic_points, model, graph)

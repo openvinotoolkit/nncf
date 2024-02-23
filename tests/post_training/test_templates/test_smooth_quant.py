@@ -239,7 +239,7 @@ class TemplateTestSQAlgorithm:
 
         graph = NNCFGraphFactory.create(model)
         algo = SmoothQuant(subset_size=1, inplace_statistics=False)
-        algo_statistic_points = algo.get_statistic_points(model, graph, dataset)
+        algo_statistic_points = algo.get_statistic_points(model, graph)
         statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
         statistics_aggregator.register_statistic_points(algo_statistic_points)
         statistics_aggregator.collect_statistics(model, graph)

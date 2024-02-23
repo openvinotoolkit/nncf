@@ -118,12 +118,13 @@ class ImageClassificationTimm(PTQTestPipeline):
 
     def _validate(self):
         val_dataset = datasets.ImageFolder(root=self.data_dir / "imagenet" / "val", transform=self.transform)
-        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, num_workers=2, shuffle=False)
+        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=self.batch_size, num_workers=2, shuffle=False)
 
         dataset_size = len(val_loader)
 
-        predictions = [0] * dataset_size
-        references = [-1] * dataset_size
+        # Initialize result tensors for async inference support.
+        predictions = np.zeros((dataset_size * self.batch_size))
+        references = -1 * np.ones((dataset_size * self.batch_size))
 
         core = ov.Core()
 
@@ -143,7 +144,8 @@ class ImageClassificationTimm(PTQTestPipeline):
             def process_result(request, userdata):
                 output_data = request.get_output_tensor().data
                 predicted_label = np.argmax(output_data, axis=1)
-                predictions[userdata] = [predicted_label]
+                for j in range(self.batch_size):
+                    predictions[userdata * self.batch_size + j] = predicted_label[j]
                 pbar.progress.update(pbar.task, advance=1)
 
             infer_queue.set_callback(process_result)
@@ -152,12 +154,11 @@ class ImageClassificationTimm(PTQTestPipeline):
                 # W/A for memory leaks when using torch DataLoader and OpenVINO
                 image_copies = copy.deepcopy(images.numpy())
                 infer_queue.start_async(image_copies, userdata=i)
-                references[i] = target
+                for j in range(self.batch_size):
+                    references[i * self.batch_size + j] = target[j]
 
             infer_queue.wait_all()
 
-        predictions = np.concatenate(predictions, axis=0)
-        references = np.concatenate(references, axis=0)
         acc_top1 = accuracy_score(predictions, references)
 
         self.run_info.metric_name = "Acc@1"

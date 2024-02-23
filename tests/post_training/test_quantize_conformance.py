@@ -226,6 +226,7 @@ def test_ptq_quantization(
                 "data_dir": data_dir,
                 "no_eval": no_eval,
                 "run_benchmark_app": run_benchmark_app,
+                "batch_size": batch_size,
             }
         )
         pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)

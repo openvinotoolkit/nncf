@@ -1052,8 +1052,7 @@ def main():
     xml_path, bin_path = get_model_paths(config.model)
     accuracy_checker_config = get_accuracy_checker_config(config.engine)
     nncf_algorithms_config = get_nncf_algorithms_config(config.compression, args.output_dir)
-    if args.batch_size > 1:
-        update_config(accuracy_checker_config, args.batch_size)
+    update_config(accuracy_checker_config, args.batch_size)
 
     set_log_file(f"{args.output_dir}/log.txt")
     output_dir = os.path.join(args.output_dir, "optimized")

@@ -157,7 +157,7 @@ class Pipeline:
             # Collect statistics required to run current pipeline step
             step_statistics = step_index_to_statistics.get(step_index)
             if step_statistics is None:
-                statistic_points = self.get_statistic_points_for_step(step_index, step_model, step_graph, dataset)
+                statistic_points = self.get_statistic_points_for_step(step_index, step_model, step_graph)
                 step_statistics = collect_statistics(statistic_points, step_model, step_graph, dataset)
 
             # Run current pipeline step
@@ -168,7 +168,7 @@ class Pipeline:
         return step_model
 
     def get_statistic_points_for_step(
-        self, step_index: int, model: TModel, graph: NNCFGraph, dataset: Dataset
+        self, step_index: int, model: TModel, graph: NNCFGraph
     ) -> StatisticPointsContainer:
         """
         Returns statistics that should be collected to execute `step_index`-th pipeline step.
@@ -176,14 +176,13 @@ class Pipeline:
         :param step_index: Zero-based index of the pipeline step.
         :param model: A model.
         :param graph: A graph assosiated with a model.
-        :param dataset: A dataset that holds the data items for pipeline steps.
         :return: Statistics that should be collected to execute `step_index`-th pipeline step.
         """
         container = StatisticPointsContainer()
         pipeline_steps = self._remove_unsupported_algorithms(get_backend(model))
         pipeline_step = pipeline_steps[step_index]
         for algorithm in pipeline_step:
-            for statistic_points in algorithm.get_statistic_points(model, graph, dataset).values():
+            for statistic_points in algorithm.get_statistic_points(model, graph).values():
                 for statistic_point in statistic_points:
                     container.add_statistic_point(statistic_point)
 

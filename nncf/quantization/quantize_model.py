@@ -36,6 +36,16 @@ from nncf.scopes import IgnoredScope
 TTensor = TypeVar("TTensor")
 
 
+def _update_advanced_quantization_parameters(advanced_parameters, calibration_dataset):
+    batch_size = calibration_dataset.get_batch_size()
+    if batch_size is not None and batch_size > 1:
+        if advanced_parameters is None:
+            advanced_parameters = AdvancedQuantizationParameters(statistics_per_sample=True)
+        elif advanced_parameters.statistics_per_sample is None:
+            advanced_parameters.statistics_per_sample = True
+    return advanced_parameters
+
+
 @api(canonical_alias="nncf.quantize")
 def quantize(
     model: TModel,
@@ -89,6 +99,8 @@ def quantize(
 
     if subset_size < 1:
         raise ValueError("Subset size must be positive.")
+
+    advanced_parameters = _update_advanced_quantization_parameters(advanced_parameters, calibration_dataset)
 
     backend = get_backend(model)
     if backend == BackendType.OPENVINO:
@@ -223,6 +235,10 @@ def quantize_with_accuracy_control(
     :return: The quantized model.
     :rtype: TModel
     """
+    advanced_quantization_parameters = _update_advanced_quantization_parameters(
+        advanced_quantization_parameters, calibration_dataset
+    )
+
     backend = get_backend(model)
     if backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.quantize_model import quantize_with_accuracy_control_impl

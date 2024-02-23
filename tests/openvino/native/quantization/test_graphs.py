@@ -141,7 +141,7 @@ def smooth_quant_model(ov_model: ov.Model, q_params: Dict, quantize=True):
 
     smooth_quant_algo = SmoothQuant(subset_size=1)
     statistics_aggregator = OVStatisticsAggregator(dataset)
-    statistic_points = smooth_quant_algo.get_statistic_points(ov_model, graph, dataset)
+    statistic_points = smooth_quant_algo.get_statistic_points(ov_model, graph)
     statistics_aggregator.register_statistic_points(statistic_points)
     statistics_aggregator.collect_statistics(ov_model, graph)
     modified_model = smooth_quant_algo.apply(ov_model, graph, statistics_aggregator.statistic_points)

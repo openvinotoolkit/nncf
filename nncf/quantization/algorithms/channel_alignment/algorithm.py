@@ -381,7 +381,7 @@ class ChannelAlignment(Algorithm):
             node_in,
         )
 
-    def get_statistic_points(self, model: TModel, graph: NNCFGraph, dataset: Dataset) -> StatisticPointsContainer:
+    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
         self._set_backend_entity(model)
 
         statistic_container = StatisticPointsContainer()
