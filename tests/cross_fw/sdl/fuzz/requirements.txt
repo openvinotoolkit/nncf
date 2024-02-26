@@ -1,2 +1,2 @@
 atheris
-torchvision==0.17.0
+torchvision==0.17.1
