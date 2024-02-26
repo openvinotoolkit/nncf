@@ -790,10 +790,16 @@ class SequentialMatmulModel(OVReferenceModel):
 
 
 class IdentityMatmul(OVReferenceModel):
-    def _create_ov_model(self):
+    def _create_ov_model(self, weights_dtype=None):
+        """
+        :param: weights_dtype: precision of weights, should be either np.float32 or np.float16
+        """
+        weights_dtype = np.float32 if weights_dtype is None else weights_dtype
         input_node = opset.parameter([3, 3], name="Input_1")
         weights_data = np.eye(3) * 255
-        current_weights = opset.constant(weights_data, dtype=np.float32, name="weights")
+        current_weights = opset.constant(weights_data, dtype=weights_dtype, name="weights")
+        if weights_dtype != np.float32:
+            current_weights = opset.convert(current_weights, np.float32, name="weights/convert")
         matmul_node = opset.matmul(input_node, current_weights, transpose_a=False, transpose_b=True, name="MatMul")
         result = opset.result(matmul_node, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
