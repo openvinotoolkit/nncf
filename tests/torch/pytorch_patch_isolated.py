@@ -12,6 +12,7 @@
 import contextlib
 import inspect
 import os
+import re
 
 import pytest
 import torch
@@ -19,29 +20,32 @@ import torch
 from tests.shared.isolation_runner import ISOLATION_RUN_ENV_VAR
 
 
-def remove_comments_from_source(source):
-    lines = source.split("\n")
-    processed_lines = []
-    for line in lines:
-        hash_position = line.find("#")
-        if hash_position != -1:
-            line = line[:hash_position]
-        line = line.rstrip()
-        if len(line) > 0:
-            processed_lines.append(line)
-    processed_source = "\n".join(processed_lines)
-    return processed_source
+def clean_source_code(code_source):
+    # clean source code from comments and annotation
+    patterns = [
+        r"\s*#.*",
+        r": Callable\[P, R\]",
+        r" -> Callable\[P, R\]",
+        r": P.args",
+        r": P.kwargs",
+        r" -> R",
+    ]
+    for pattern in patterns:
+        code_source = re.sub(pattern, "", code_source)
+    # remove empty lines
+    code_source = re.sub(r"\n\s*\n", "\n", code_source, flags=re.MULTILINE)
+    return code_source
 
 
 @pytest.mark.skipif(ISOLATION_RUN_ENV_VAR not in os.environ, reason="Should be run via isolation proxy")
 def test_jit_if_tracing_script_source_equals():
     # Get original torch.jit._script_if_tracing source
-    torch_source = remove_comments_from_source(inspect.getsource(torch.jit._script_if_tracing))
+    torch_source = clean_source_code(inspect.getsource(torch.jit._script_if_tracing))
 
     import nncf.torch  # noqa: F401
 
     # Get torch.jit._script_if_tracing source after patching was performed
-    nncf_source = remove_comments_from_source(inspect.getsource(torch.jit._script_if_tracing))
+    nncf_source = clean_source_code(inspect.getsource(torch.jit._script_if_tracing))
 
     # Check that the two versions are essentially the same
     nncf_source_corrected = nncf_source.replace("def torch_jit_script_if_tracing", "def _script_if_tracing").replace(
