@@ -12,3 +12,4 @@ virtualenv
 # TODO: remove after upgrade to TF 2.13
 filelock<3.12.3
 openvino-dev==2023.3
+git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker
