@@ -8,3 +8,4 @@ yattag>=1.14.0
 openvino-dev==2023.3
 fastdownload
 scikit-learn
+git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker
