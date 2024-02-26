@@ -15,7 +15,7 @@ import os.path as osp
 import pathlib
 from abc import ABC
 from abc import abstractmethod
-from typing import Callable, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
 
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.api.compression import CompressionStage
@@ -127,8 +127,8 @@ class TrainingRunner(ABC):
         validate_fn: Callable[[TModel, Optional[int]], float],
         configure_optimizers_fn: Callable[[], Tuple[OptimizerType, LRSchedulerType]],
         dump_checkpoint_fn: Callable[[TModel, CompressionAlgorithmController, "TrainingRunner", str], None],
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """
         Register the user-supplied functions to be used to control the training process.
 
@@ -146,7 +146,7 @@ class TrainingRunner(ABC):
         self,
         log_dir: Optional[Union[str, pathlib.Path]] = None,
         tensorboard_writer: Optional[TensorboardWriterType] = None,
-    ):
+    ) -> None:
         """
         Initialize logging related variables
 
@@ -164,7 +164,7 @@ class TrainingRunner(ABC):
         """
 
     @abstractmethod
-    def is_model_fully_compressed(self, compression_controller) -> bool:
+    def is_model_fully_compressed(self, compression_controller: CompressionAlgorithmController) -> bool:
         """
         Check if model is fully compressed
 
@@ -213,8 +213,8 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.current_val_metric_value = 0
         self.current_loss = 0
 
-        self._compressed_training_history = []
-        self._best_checkpoint = None
+        self._compressed_training_histor: List[Tuple[float, float]] = []
+        self._best_checkpoint: Optional[Tuple[str, float]] = None
 
         self._train_epoch_fn = None
         self._validate_fn = None
@@ -224,11 +224,15 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self._early_stopping_fn = None
         self._update_learning_rate_fn = None
 
-        self._log_dir = None
-        self._checkpoint_save_dir = None
-        self._tensorboard_writer = None
+        self._log_dir: Optional[Union[str, pathlib.Path]] = None
+        self._checkpoint_save_dir: Optional[Union[str, pathlib.Path]] = None
+        self._tensorboard_writer: Optional[TensorboardWriterType] = None
 
-    def train_epoch(self, model, compression_controller):
+    def train_epoch(
+        self,
+        model: TModel,
+        compression_controller: CompressionAlgorithmController,
+    ) -> None:
         compression_controller.scheduler.epoch_step()
         # assuming that epoch number is only used for logging in train_fn:
         self.current_loss = self._train_epoch_fn(
@@ -241,7 +245,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.training_epoch_count += 1
         self.cumulative_epoch_count += 1
 
-    def dump_statistics(self, model, compression_controller):
+    def dump_statistics(self, model: TModel, compression_controller: CompressionAlgorithmController) -> None:
         statistics = compression_controller.statistics()
 
         if self.verbose:
@@ -259,7 +263,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
 
         self.dump_checkpoint(model, compression_controller)
 
-    def calculate_minimal_tolerable_accuracy(self, uncompressed_model_accuracy: float):
+    def calculate_minimal_tolerable_accuracy(self, uncompressed_model_accuracy: float) -> None:
         if self.maximal_absolute_accuracy_drop is not None:
             self.minimal_tolerable_accuracy = uncompressed_model_accuracy - self.maximal_absolute_accuracy_drop
         else:
@@ -267,7 +271,11 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
                 1 - 0.01 * self.maximal_relative_accuracy_drop
             )
 
-    def dump_checkpoint(self, model, compression_controller):
+    def dump_checkpoint(
+        self,
+        model: TModel,
+        compression_controller: CompressionAlgorithmController
+    ) -> None:
         is_best_checkpoint = (
             self.best_val_metric_value == self.current_val_metric_value
             and self.is_model_fully_compressed(compression_controller)
@@ -285,7 +293,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         if is_best_checkpoint:
             self._save_best_checkpoint(model, compression_controller)
 
-    def configure_optimizers(self):
+    def configure_optimizers(self) -> None:
         self.optimizer, self.lr_scheduler = self._configure_optimizers_fn()
 
     def initialize_training_loop_fns(
@@ -297,7 +305,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         load_checkpoint_fn=None,
         early_stopping_fn=None,
         update_learning_rate_fn=None,
-    ):
+    ) -> None:
         self._train_epoch_fn = train_epoch_fn
         self._validate_fn = validate_fn
         self._configure_optimizers_fn = configure_optimizers_fn
@@ -306,34 +314,34 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self._early_stopping_fn = early_stopping_fn
         self._update_learning_rate_fn = update_learning_rate_fn
 
-    def initialize_logging(self, log_dir=None, tensorboard_writer=None):
-        self._log_dir = log_dir if log_dir is not None else osp.join(os.getcwd(), "runs")
+    def initialize_logging(self, log_dir: Optional[Union[str, pathlib.Path]] = None, tensorboard_writer: Optional[TensorboardWriterType] = None) -> None:
+        self._log_dir = str(log_dir) if log_dir is not None else osp.join(os.getcwd(), "runs")
         self._log_dir = configure_accuracy_aware_paths(self._log_dir)
         self._checkpoint_save_dir = self._log_dir
         self._tensorboard_writer = tensorboard_writer
 
-    def stop_training(self, compression_controller):
+    def stop_training(self, compression_controller: CompressionAlgorithmController) -> bool:
         if self.is_model_fully_compressed(compression_controller) and self._early_stopping_fn is not None:
             return self._early_stopping_fn(self.current_val_metric_value)
         return False
 
-    def _save_best_checkpoint(self, model, compression_controller):
+    def _save_best_checkpoint(self, model: TModel, compression_controller: CompressionAlgorithmController) -> None:
         best_path = self._make_checkpoint_path(is_best=True)
         self._best_checkpoint = (best_path, compression_controller.compression_rate)
         self._save_checkpoint(model, compression_controller, best_path)
         nncf_logger.info(f"Saved the best model to {best_path}")
 
-    def load_best_checkpoint(self, model):
+    def load_best_checkpoint(self, model: TModel) -> float:
         resuming_checkpoint_path, compression_rate = self._best_checkpoint
         nncf_logger.info(f"Loading the best checkpoint found during training: {resuming_checkpoint_path}")
         self._load_checkpoint(model, resuming_checkpoint_path)
         return compression_rate
 
-    def is_model_fully_compressed(self, compression_controller) -> bool:
+    def is_model_fully_compressed(self, compression_controller: CompressionAlgorithmController) -> bool:
         return compression_controller.compression_stage() == CompressionStage.FULLY_COMPRESSED
 
     @abstractmethod
-    def add_tensorboard_scalar(self, key, data, step):
+    def add_tensorboard_scalar(self, key: str, data: float, step: int) -> None:
         """
         Add a scalar to tensorboard
 
@@ -343,7 +351,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         """
 
     @abstractmethod
-    def add_tensorboard_image(self, key, data, step):
+    def add_tensorboard_image(self, key: str, data: PIL.Image.Image, step: int) -> None:
         """
         Add an image to tensorboard
 
@@ -375,7 +383,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         """
 
     @abstractmethod
-    def _make_checkpoint_path(self, is_best, compression_rate=None):
+    def _make_checkpoint_path(self, is_best: bool, compression_rate: float = None) -> str:
         """
         Make a path to save the checkpoint there
 
@@ -423,15 +431,15 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
         self.maximal_compression_rate = maximal_compression_rate
 
         self._best_checkpoints = {}
-        self._compression_rate_target = None
+        self._compression_rate_target: Optional[float] = None
         self.adaptive_controller = None
         self.was_compression_increased_on_prev_step = None
 
-    def dump_statistics(self, model, compression_controller):
+    def dump_statistics(self, model: TModel, compression_controller: CompressionAlgorithmController) -> None:
         self.update_training_history(self.compression_rate_target, self.current_val_metric_value)
         super().dump_statistics(model, compression_controller)
 
-    def _save_best_checkpoint(self, model, compression_controller):
+    def _save_best_checkpoint(self, model: TModel, compression_controller: CompressionAlgorithmController) -> None:
         best_path = self._make_checkpoint_path(is_best=True, compression_rate=self.compression_rate_target)
 
         accuracy_budget = self.best_val_metric_value - self.minimal_tolerable_accuracy
@@ -445,7 +453,7 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
         self._save_checkpoint(model, compression_controller, best_path)
         nncf_logger.info(f"Saved the best model to {best_path}")
 
-    def load_best_checkpoint(self, model):
+    def load_best_checkpoint(self, model: TModel) -> float:
         # load checkpoint with the highest compression rate and positive acc budget
         possible_checkpoint_rates = self.get_compression_rates_with_positive_acc_budget()
         if len(possible_checkpoint_rates) == 0:
@@ -473,16 +481,16 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
         return best_checkpoint_compression_rate
 
     @property
-    def compression_rate_target(self):
+    def compression_rate_target(self) -> float:
         if self._compression_rate_target is None:
             return self.adaptive_controller.compression_rate
         return self._compression_rate_target
 
     @compression_rate_target.setter
-    def compression_rate_target(self, value):
+    def compression_rate_target(self, value: float) -> None:
         self._compression_rate_target = value
 
-    def update_training_history(self, compression_rate, metric_value):
+    def update_training_history(self, compression_rate: float, metric_value: float) -> None:
         accuracy_budget = metric_value - self.minimal_tolerable_accuracy
         self._compressed_training_history.append((compression_rate, accuracy_budget))
 
@@ -500,7 +508,7 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
                 plt.close(fig)
 
     @property
-    def compressed_training_history(self):
+    def compressed_training_history(self) -> Dict[float, float]:
         return dict(self._compressed_training_history)
 
     def get_compression_rates_with_positive_acc_budget(self) -> List[float]:
