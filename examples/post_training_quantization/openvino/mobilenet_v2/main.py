@@ -100,11 +100,11 @@ val_dataset = datasets.ImageFolder(
         ]
     ),
 )
-val_data_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, shuffle=False)
+val_data_loader = torch.utils.data.DataLoader(val_dataset, batch_size=128, shuffle=False)
 
 path_to_model = download(MODEL_URL, MODEL_PATH)
 ov_model = ov.Core().read_model(path_to_model / "mobilenet_v2_fp32.xml")
-
+ov_model.reshape([-1, 3, 224, 224])
 ###############################################################################
 # Quantize an OpenVINO model
 #

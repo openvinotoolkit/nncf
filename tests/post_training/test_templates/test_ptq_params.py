@@ -47,11 +47,6 @@ from tests.common.quantization.mock_graphs import create_mock_graph
 from tests.common.quantization.mock_graphs import get_nncf_graph_from_mock_nx_graph
 
 
-class MockedDataset:
-    def get_batch_size(self):
-        return 1
-
-
 class ModelToTestOverflowFix:
     #   Input_1       Input_2
     #      |             |
