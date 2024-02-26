@@ -14,8 +14,6 @@ import sys
 from argparse import ArgumentParser
 from typing import Dict, Tuple
 
-import pytest
-
 from tests.shared.paths import PROJECT_ROOT
 
 
@@ -169,7 +167,6 @@ def llm_compression() -> Dict[str, float]:
 
 
 def llm_tune_params() -> Dict[str, float]:
-    pytest.xfail("ticket 133681")
     from examples.llm_compression.openvino.tiny_llama_find_hyperparams.main import main as llm_tune_params_main
 
     awq, ratio, group_size = llm_tune_params_main()
