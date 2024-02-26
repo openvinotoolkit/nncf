@@ -194,7 +194,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.maximal_absolute_accuracy_drop = accuracy_aware_training_params.get(
             "maximal_absolute_accuracy_degradation"
         )
-        self.maximal_total_epochs = accuracy_aware_training_params.get("maximal_total_epochs", AA_MAXIMAL_TOTAL_EPOCHS)
+        self.maximal_total_epochs: int = accuracy_aware_training_params.get("maximal_total_epochs", AA_MAXIMAL_TOTAL_EPOCHS)
 
         self.verbose = verbose
         self.dump_checkpoints = dump_checkpoints
@@ -298,13 +298,13 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
 
     def initialize_training_loop_fns(
         self,
-        train_epoch_fn,
-        validate_fn,
-        configure_optimizers_fn,
-        dump_checkpoint_fn,
-        load_checkpoint_fn=None,
-        early_stopping_fn=None,
-        update_learning_rate_fn=None,
+        train_epoch_fn: Callable[[TModel, CompressionAlgorithmController], None],
+        validate_fn: Callable[[TModel, Optional[int]], float],
+        configure_optimizers_fn: Callable[[], Tuple[OptimizerType, LRSchedulerType]],
+        dump_checkpoint_fn: Callable[[TModel, CompressionAlgorithmController, "TrainingRunner", str], None],
+        load_checkpoint_fn: Callable[[TModel, str], None] = None,
+        early_stopping_fn: Callable[[float], bool] = None,
+        update_learning_rate_fn: Callable[[LRSchedulerType, float, float, float], None] = None,
     ) -> None:
         self._train_epoch_fn = train_epoch_fn
         self._validate_fn = validate_fn
@@ -432,8 +432,8 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
 
         self._best_checkpoints = {}
         self._compression_rate_target: Optional[float] = None
-        self.adaptive_controller = None
-        self.was_compression_increased_on_prev_step = None
+        self.adaptive_controller: Optional[CompressionAlgorithmController] = None
+        self.was_compression_increased_on_prev_step: Optional[bool] = None
 
     def dump_statistics(self, model: TModel, compression_controller: CompressionAlgorithmController) -> None:
         self.update_training_history(self.compression_rate_target, self.current_val_metric_value)

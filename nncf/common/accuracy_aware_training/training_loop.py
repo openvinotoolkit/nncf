@@ -15,14 +15,14 @@ import pathlib
 from abc import ABC
 from abc import abstractmethod
 from functools import partial
-from typing import Callable, Optional, TypeVar, Union
+from typing import Any, Callable, Dict, Optional, Tuple, TypeVar, Union
 
 import numpy as np
 from scipy.interpolate import interp1d
 
 import nncf
 from nncf.api.compression import CompressionAlgorithmController
-from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
+from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner, TrainingRunner
 from nncf.common.accuracy_aware_training.runner_factory import AdaptiveCompressionLevelTrainingRunnerCreator
 from nncf.common.accuracy_aware_training.runner_factory import EarlyExitTrainingRunnerCreator
 from nncf.common.accuracy_aware_training.statistics import TrainingLoopStatistics
@@ -34,6 +34,8 @@ from nncf.config.config import NNCFConfig
 from nncf.config.extractors import extract_accuracy_aware_training_params
 
 TModel = TypeVar("TModel")
+OptimizerType = TypeVar("OptimizerType")
+LRSchedulerType = TypeVar("LRSchedulerType")
 TensorboardWriterType = TypeVar("TensorboardWriterType")
 ADAPTIVE_COMPRESSION_CONTROLLERS = Registry("adaptive_compression_controllers")
 
@@ -48,16 +50,16 @@ class TrainingLoop(ABC):
     def run(
         self,
         model: TModel,
-        train_epoch_fn: Callable,
-        validate_fn: Callable,
-        configure_optimizers_fn: Callable = None,
-        dump_checkpoint_fn: Callable = None,
-        load_checkpoint_fn: Callable = None,
-        early_stopping_fn: Callable = None,
+        train_epoch_fn: Optional[Callable[[TModel, CompressionAlgorithmController], None]],
+        validate_fn: Optional[Callable[[TModel, Optional[int]], float]],
+        configure_optimizers_fn: Optional[Callable[[], Tuple[OptimizerType, LRSchedulerType]]] = None,
+        dump_checkpoint_fn: Optional[Callable[[TModel, CompressionAlgorithmController, "TrainingRunner", str], None]] = None,
+        load_checkpoint_fn: Optional[Callable[[TModel, str], None]] = None,
+        early_stopping_fn: Optional[Callable[[float], bool]] = None,
         tensorboard_writer: Optional[TensorboardWriterType] = None,
         log_dir: Union[pathlib.Path, str] = None,
-        update_learning_rate_fn: Callable = None,
-    ):
+        update_learning_rate_fn: Optional[Callable[[LRSchedulerType, float, float, float], None]] = None,
+    ) -> TModel:
         """
         Implements the custom logic to run a training loop for model fine-tuning by using the provided
         `train_epoch_fn`, `validate_fn` and `configure_optimizers_fn` methods.
@@ -91,23 +93,23 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
     """
 
     def __init__(self, compression_controller: CompressionAlgorithmController):
-        self.runner: BaseAccuracyAwareTrainingRunner = None
+        self.runner: Optional[BaseAccuracyAwareTrainingRunner] = None
         self.compression_controller = compression_controller
-        self._current_compression_rate = None
+        self._current_compression_rate: Optional[float] = None
 
     def run(
         self,
         model: TModel,
-        train_epoch_fn: Callable,
-        validate_fn: Callable,
-        configure_optimizers_fn: Callable = None,
-        dump_checkpoint_fn: Callable = None,
-        load_checkpoint_fn: Callable = None,
-        early_stopping_fn: Callable = None,
+        train_epoch_fn: Optional[Callable[[TModel, CompressionAlgorithmController], None]],
+        validate_fn: Optional[Callable[[TModel, Optional[int]], float]],
+        configure_optimizers_fn: Optional[Callable[[], Tuple[OptimizerType, LRSchedulerType]]] = None,
+        dump_checkpoint_fn: Optional[Callable[[TModel, CompressionAlgorithmController, "TrainingRunner", str], None]] = None,
+        load_checkpoint_fn: Optional[Callable[[TModel, str], None]] = None,
+        early_stopping_fn: Optional[Callable[[float], bool]] = None,
         tensorboard_writer: Optional[TensorboardWriterType] = None,
         log_dir: Union[pathlib.Path, str] = None,
-        update_learning_rate_fn: Callable = None,
-    ):
+        update_learning_rate_fn: Optional[Callable[[LRSchedulerType, float, float, float], None]] = None,
+    ) -> TModel:
         self.runner.initialize_training_loop_fns(
             train_epoch_fn,
             validate_fn,
@@ -120,7 +122,7 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
         self.runner.initialize_logging(log_dir, tensorboard_writer)
         return self._run_early_exit_training_loop(model)
 
-    def _run_early_exit_training_loop(self, model):
+    def _run_early_exit_training_loop(self, model: TModel) -> TModel:
         uncompressed_model_accuracy = self.runner.uncompressed_model_accuracy
         self.runner.calculate_minimal_tolerable_accuracy(uncompressed_model_accuracy)
 
@@ -159,7 +161,7 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
         self._current_compression_rate = self.runner.load_best_checkpoint(model)
         return model
 
-    def log_accuracy_statistics(self):
+    def log_accuracy_statistics(self) -> None:
         for log_str in self.statistics.to_str().split("\n"):
             nncf_logger.info(log_str)
 
@@ -182,15 +184,15 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
         return stats
 
     @staticmethod
-    def _calculate_accuracy_drop(uncompressed_model_accuracy, compressed_model_accuracy):
+    def _calculate_accuracy_drop(uncompressed_model_accuracy: float, compressed_model_accuracy: float) -> float:
         return uncompressed_model_accuracy - compressed_model_accuracy
 
     @staticmethod
-    def _calculate_accuracy_budget(minimal_tolerable_accuracy, compressed_model_accuracy):
+    def _calculate_accuracy_budget(minimal_tolerable_accuracy: float, compressed_model_accuracy: float) -> float:
         return compressed_model_accuracy - minimal_tolerable_accuracy
 
     @staticmethod
-    def _calculate_rel_accuracy_drop(uncompressed_model_accuracy, compressed_model_accuracy):
+    def _calculate_rel_accuracy_drop(uncompressed_model_accuracy: float, compressed_model_accuracy: float) -> float:
         try:
             rel_accuracy_drop = 100 * (1.0 - compressed_model_accuracy / uncompressed_model_accuracy)
         except ZeroDivisionError:
@@ -198,7 +200,7 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
 
         return rel_accuracy_drop
 
-    def _accuracy_criterion_satisfied(self):
+    def _accuracy_criterion_satisfied(self) -> bool:
         accuracy_budget = self._calculate_accuracy_budget(
             self.runner.minimal_tolerable_accuracy, self.runner.current_val_metric_value
         )
@@ -300,9 +302,9 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         self.runner = runner_factory.create_training_loop()
         self.runner.adaptive_controller = self.adaptive_controller
 
-    def _get_adaptive_compression_ctrl(self, compression_controller):
-        def _adaptive_compression_controllers():
-            def remove_registry_prefix(algo_name):
+    def _get_adaptive_compression_ctrl(self, compression_controller: CompressionAlgorithmController) -> CompressionAlgorithmController:
+        def _adaptive_compression_controllers() -> Dict[str, CompressionAlgorithmController]:
+            def remove_registry_prefix(algo_name: str) -> str:
                 for prefix in ("pt_", "tf_"):
                     if algo_name.startswith(prefix):
                         return algo_name[len(prefix) :]
@@ -337,16 +339,16 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
     def run(
         self,
         model: TModel,
-        train_epoch_fn: Callable,
-        validate_fn: Callable,
-        configure_optimizers_fn: Callable = None,
-        dump_checkpoint_fn: Callable = None,
-        load_checkpoint_fn: Callable = None,
-        early_stopping_fn: Callable = None,
+        train_epoch_fn: Optional[Callable[[TModel, CompressionAlgorithmController], None]],
+        validate_fn: Optional[Callable[[TModel, Optional[int]], float]],
+        configure_optimizers_fn: Optional[Callable[[], Tuple[OptimizerType, LRSchedulerType]]] = None,
+        dump_checkpoint_fn: Optional[Callable[[TModel, CompressionAlgorithmController, "TrainingRunner", str], None]] = None,
+        load_checkpoint_fn: Optional[Callable[[TModel, str], None]] = None,
+        early_stopping_fn: Optional[Callable[[float], bool]] = None,
         tensorboard_writer: Optional[TensorboardWriterType] = None,
         log_dir: Union[pathlib.Path, str] = None,
-        update_learning_rate_fn: Callable = None,
-    ):
+        update_learning_rate_fn: Optional[Callable[[LRSchedulerType, float, float, float], None]] = None,
+    ) -> TModel:
         self.runner.initialize_training_loop_fns(
             train_epoch_fn,
             validate_fn,
@@ -463,7 +465,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         )
         return model
 
-    def _run_initial_training_phase(self, model):
+    def _run_initial_training_phase(self, model: TModel) -> TModel:
         nncf_logger.info("Initial training phase started...")
 
         maximal_total_epochs = self.runner.maximal_total_epochs
@@ -474,7 +476,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         nncf_logger.info("Initial training phase finished.")
         return model
 
-    def _update_target_compression_rate(self, runner, force_update=False):
+    def _update_target_compression_rate(self, runner: Optional[BaseAccuracyAwareTrainingRunner], force_update: bool = False) -> bool:
         best_accuracy_budget = runner.best_val_metric_value - runner.minimal_tolerable_accuracy
         nncf_logger.info(
             f"Training epoch count: {runner.training_epoch_count}, patience epochs: {runner.patience_epochs}"
@@ -485,7 +487,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
             return True
         return False
 
-    def _determine_compression_rate_step_value(self, runner, stepping_mode="uniform_decrease", **kwargs):
+    def _determine_compression_rate_step_value(self, runner: Optional[BaseAccuracyAwareTrainingRunner], stepping_mode: str = "uniform_decrease", **kwargs: Any) -> float:
         if stepping_mode == "uniform_decrease":
             compression_step_updater = self._uniform_decrease_compression_step_update
         elif stepping_mode == "interpolate":
@@ -497,7 +499,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         return compression_step_updater(runner, **kwargs)
 
     @staticmethod
-    def _uniform_decrease_compression_step_update(runner):
+    def _uniform_decrease_compression_step_update(runner: Optional[BaseAccuracyAwareTrainingRunner]) -> float:
         best_accuracy_budget = runner.best_val_metric_value - runner.minimal_tolerable_accuracy
         best_accuracy_budget_sign = 1.0 if best_accuracy_budget >= 0.0 else -1.0
         # if we don't fit the accuracy budget now and before we did fit or vice versa, we reduce the compression rate
@@ -515,12 +517,12 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
     @staticmethod
     def _interpolate_compression_step_update(
         runner,
-        current_compression_rate,
-        num_curve_pts=1000,
-        full_compression_factor=20,
-        minimal_compression_rate=0.0,
-        maximal_compression_rate=1.0,
-    ):
+        current_compression_rate: float,
+        num_curve_pts: int = 1000,
+        full_compression_factor: int = 20,
+        minimal_compression_rate: float = 0.0,
+        maximal_compression_rate: float = 1.0,
+    ) -> float:
         training_history = runner.compressed_training_history
         nncf_logger.info(f"Compressed training history: {training_history}")
         training_history[minimal_compression_rate] = runner.maximal_accuracy_drop
@@ -553,7 +555,7 @@ def create_accuracy_aware_training_loop(
     nncf_config: NNCFConfig,
     compression_ctrl: CompressionAlgorithmController,
     uncompressed_model_accuracy: float,
-    **additional_runner_args,
+    **additional_runner_args: Any,
 ) -> BaseEarlyExitCompressionTrainingLoop:
     """
     Creates an accuracy aware training loop corresponding to NNCFConfig and CompressionAlgorithmController.
