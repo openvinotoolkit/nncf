@@ -34,7 +34,7 @@ from nncf.openvino.tensor import OVNNCFTensor
 
 class OVStatisticsAggregator(StatisticsAggregator):
     @property
-    def metatypes_output_has_no_batch_axis(self) -> List[OVOpMetatype]:
+    def metatypes_no_batch_support(self) -> List[OVOpMetatype]:
         return OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
 
     def collect_statistics(self, model: ov.Model, graph: NNCFGraph) -> None:

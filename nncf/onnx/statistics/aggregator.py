@@ -32,7 +32,7 @@ from nncf.onnx.tensor import ONNXNNCFTensor
 
 class ONNXStatisticsAggregator(StatisticsAggregator):
     @property
-    def metatypes_output_has_no_batch_axis(self) -> List[ONNXOpMetatype]:
+    def metatypes_no_batch_support(self) -> List[ONNXOpMetatype]:
         return OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
 
     def collect_statistics(self, model: onnx.ModelProto, graph: NNCFGraph) -> None:

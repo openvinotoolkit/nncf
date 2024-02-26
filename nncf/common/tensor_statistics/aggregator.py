@@ -126,11 +126,11 @@ class StatisticsAggregator(ABC):
         :return: True if NNCFGraph contains metatypes with no batch axis in output tensor.
         """
         unique_graph_metatypes = set(node.metatype for node in graph.get_all_nodes())
-        return any(metatype in self.metatypes_output_has_no_batch_axis for metatype in unique_graph_metatypes)
+        return any(metatype in self.metatypes_no_batch_support for metatype in unique_graph_metatypes)
 
     @property
     @abstractmethod
-    def metatypes_output_has_no_batch_axis(self) -> List[OperatorMetatype]:
+    def metatypes_no_batch_support(self) -> List[OperatorMetatype]:
         """
         These metatypes mix outputs for different samples into one axis.
         If reducers and aggregators collect statistics at the output of the following operations,

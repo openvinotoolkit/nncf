@@ -32,7 +32,7 @@ class PTStatisticsAggregator(StatisticsAggregator):
     HOOKS_GROUP_NAME = "statistics_hooks"
 
     @property
-    def metatypes_output_has_no_batch_axis(self) -> List[PTOperatorMetatype]:
+    def metatypes_no_batch_support(self) -> List[PTOperatorMetatype]:
         return OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
 
     def collect_statistics(self, model: NNCFNetwork, graph: NNCFGraph) -> None:

@@ -12,6 +12,6 @@ from nncf.onnx.statistics.aggregator import ONNXStatisticsAggregator
 from tests.post_training.test_templates.test_batch_size import TemplateTestBatchSize
 
 
-class TestOVBatchSize(TemplateTestBatchSize):
+class TestONNXBatchSize(TemplateTestBatchSize):
     def create_statistics_aggregator(self, dataset):
         return ONNXStatisticsAggregator(dataset)
