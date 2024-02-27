@@ -85,7 +85,9 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         quantile_reducer = OVQuantileReducer(reduction_axes, (q, 1 - q), inplace)
 
         for port_id, container_key in enumerate([OVMinMaxTensorStatistic.MIN_STAT, OVMinMaxTensorStatistic.MAX_STAT]):
-            aggregator = MedianAggregator(OVNNCFCollectorTensorProcessor, num_samples=num_samples)
+            aggregator = MedianAggregator(
+                OVNNCFCollectorTensorProcessor, num_samples=num_samples, aggregation_axes=(0, 1)
+            )
             tensor_collector.register_statistic_branch(container_key, quantile_reducer, aggregator, port_id)
         return tensor_collector
 

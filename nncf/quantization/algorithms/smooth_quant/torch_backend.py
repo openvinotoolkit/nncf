@@ -19,7 +19,6 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
@@ -86,10 +85,6 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         # Metatypes of linears and convolutions guarantee
         # all nodes with the metatypes have 0 activation port id.
         return 0
-
-    @staticmethod
-    def get_channel_agnostic_reduction_axes(channel_axis: int, shape: Tuple[int]) -> Tuple[int]:
-        return get_reduction_axes([channel_axis], shape)
 
     @staticmethod
     def get_abs_max_channel_collector(
