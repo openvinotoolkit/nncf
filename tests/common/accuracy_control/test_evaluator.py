@@ -19,7 +19,10 @@ import pytest
 import nncf
 from nncf.common.utils.backend import BackendType, get_available_backends
 from nncf.data.dataset import Dataset
-from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator, MetricResults
+from nncf.quantization.algorithms.accuracy_control.evaluator import (
+    Evaluator,
+    MetricResults,
+)
 from nncf.quantization.algorithms.accuracy_control.onnx_backend import ONNXPreparedModel
 from nncf.quantization.algorithms.accuracy_control.openvino_backend import (
     OVPreparedModel,
@@ -134,19 +137,30 @@ def test_determine_mode_2(mocker):
 
 
 @pytest.fixture
-def evaluator():
+def evaluator_returns_list_of_float():
     def _validation_fn(model, dataset):
-        len = 0
-        for i in dataset:
-            len += 1
+        for _ in dataset:
+            pass
 
-        return (0.1, [int(1)] * len)
+        return (0.1, [0.1])
+
+    evaluator = Evaluator(_validation_fn)
+    return evaluator
+
+@pytest.fixture
+def evaluator_returns_tensor():
+    def _validation_fn(model, dataset):
+        for _ in dataset:
+            pass
+
+        return (0.1, [[np.array([1.1])]])
 
     evaluator = Evaluator(_validation_fn)
     return evaluator
 
 
-def test_evaluator_init(evaluator):
+def test_evaluator_init(evaluator_returns_list_of_float):
+    evaluator = evaluator_returns_list_of_float
     assert evaluator.num_passed_iterations == 0
     assert evaluator.is_metric_mode() == None
 
@@ -170,12 +184,12 @@ class PrepareModeTestStruct:
         PrepareModeTestStruct(NxLinearModel().onnx_model, ONNXPreparedModel),
     ],
 )
-def test_prepare_mode_no_error(ts, evaluator, mocker):
+def test_prepare_mode_no_error(ts, evaluator_returns_list_of_float, mocker):
     mocker.patch(
         "nncf.common.utils.backend.get_available_backends",
         return_value=[BackendType.ONNX, BackendType.OPENVINO],
     )
-    result = evaluator.prepare_model(ts.model)
+    result = evaluator_returns_list_of_float.prepare_model(ts.model)
     assert isinstance(result, ts.type)
 
 
@@ -188,12 +202,13 @@ class PrepareModeErrorTestStruct:
 
 @pytest.mark.parametrize(
     "ts",
-    [
+    [  # given backend not supported
         PrepareModeErrorTestStruct(
             NxLinearModel().onnx_model,
             [BackendType.OPENVINO],
             nncf.UnsupportedBackendError,
         ),
+        # prepare model not implemented in TensorFlow backend
         PrepareModeErrorTestStruct(
             get_basic_conv_test_model(),
             [BackendType.OPENVINO, BackendType.TENSORFLOW, BackendType.ONNX],
@@ -201,75 +216,88 @@ class PrepareModeErrorTestStruct:
         ),
     ],
 )
-def test_prepare_mode_error(ts, evaluator, mocker):
+def test_prepare_mode_error(ts, evaluator_returns_list_of_float, mocker):
     mocker.patch(
         "nncf.common.utils.backend.get_available_backends",
         return_value=ts.available_backends,
     )
     with pytest.raises(ts.error):
-        evaluator.prepare_model(ts.model)
+        evaluator_returns_list_of_float.prepare_model(ts.model)
 
 
 @pytest.fixture
-def prepared_ov_model_and_data(evaluator, mocker):
+def prepared_ov_model_and_data(evaluator_returns_list_of_float, mocker):
     mocker.patch(
         "nncf.common.utils.backend.get_available_backends",
         return_value=[BackendType.OPENVINO],
     )
     model = OvLinearModel().ov_model
-    return evaluator.prepare_model(model), get_dataset_for_test(model)
+    return evaluator_returns_list_of_float.prepare_model(model), get_dataset_for_test(model)
 
 
-def test_validate_prepared_model_value_error(evaluator, prepared_ov_model_and_data):
+# `indices` parameter can be used only if Evaluator.is_metric_mode
+#  raise ValueError if Evaluator is not in metric mode and indices are passed to validate_prepared_model
+def test_validate_prepared_model_value_error(evaluator_returns_list_of_float, prepared_ov_model_and_data):
     prepared_ov_model, dataset = prepared_ov_model_and_data
-    evaluator._metric_mode = False
+    evaluator_returns_list_of_float._metric_mode = False
     with pytest.raises(ValueError):
-        evaluator.validate_prepared_model(prepared_ov_model, dataset, [0, 1])
-
+        evaluator_returns_list_of_float.validate_prepared_model(prepared_ov_model, dataset, [0, 1])
 
 @pytest.mark.parametrize(
-    "enable_iteration_count, metric_mode, expected_iterations, expected_item_types",
-    [(False, False, 0, int), (True, True, 1, float)],
+    "enable_iteration_count, expected_iterations",
+    [(False, 0), (True, 1)],
 )
-def test_validate(
-    evaluator,
-    mocker,
-    enable_iteration_count,
-    metric_mode,
-    expected_iterations,
-    expected_item_types,
-):
-    if enable_iteration_count:
-        evaluator.enable_iteration_count()
-    else:
-        evaluator.disable_iteration_count()
-    evaluator._metric_mode = metric_mode
+def test_validate_metric_mode(evaluator_returns_list_of_float, mocker, enable_iteration_count, expected_iterations):
     mocker.patch(
         "nncf.common.utils.backend.get_available_backends",
         return_value=[BackendType.ONNX, BackendType.OPENVINO],
     )
+    evaluator_returns_list_of_float._metric_mode = None
+    if (enable_iteration_count):
+        evaluator_returns_list_of_float.enable_iteration_count()
     model = OvLinearModel().ov_model
-    metric, values_for_each_item = evaluator.validate(
+    metric, values_for_each_item = evaluator_returns_list_of_float.validate(
         model, get_dataset_for_test(model)
     )
-    assert evaluator.num_passed_iterations == expected_iterations
+    assert all(isinstance(item, float) for item in values_for_each_item) 
+    assert evaluator_returns_list_of_float.num_passed_iterations == expected_iterations
+   
     assert isinstance(metric, float)
-    for f in values_for_each_item:
-        assert isinstance(f, expected_item_types)
 
+@pytest.mark.parametrize(
+    "enable_iteration_count, expected_iterations, metric_mode",
+    [(False, 0, None), (True, 1, None), (False, 0, False), (True, 1, False)],
+)
+def test_validate_metric_mode_none_or_false(enable_iteration_count, expected_iterations, metric_mode, mocker, evaluator_returns_tensor):
+    mocker.patch(
+        "nncf.common.utils.backend.get_available_backends",
+        return_value=[BackendType.ONNX, BackendType.OPENVINO],
+    )
+    evaluator_returns_tensor._metric_mode = metric_mode
+    if (enable_iteration_count):
+        evaluator_returns_tensor.enable_iteration_count()
+    model = OvLinearModel().ov_model
+    metric, values_for_each_item = evaluator_returns_tensor.validate(
+        model, get_dataset_for_test(model)
+    )
+    assert evaluator_returns_tensor.num_passed_iterations == expected_iterations
+    assert all(isinstance(item, List) for item in values_for_each_item) 
+    assert all(isinstance(item, np.ndarray) for item in values_for_each_item[0]) 
+    assert isinstance(metric, float)
 
 @pytest.mark.parametrize(
     "metric_mode, enable_iteration_count, expected_item_type, expected_iterations",
     [(False, True, list, 1), (True, False, float, 0)],
 )
 def test_collect_values_for_each_item(
-    evaluator,
+    evaluator_returns_list_of_float,
     metric_mode,
     enable_iteration_count,
     expected_item_type,
     expected_iterations,
     mocker,
 ):
+    evaluator = evaluator_returns_list_of_float
     if enable_iteration_count:
         evaluator.enable_iteration_count()
     else:
@@ -288,7 +316,7 @@ def test_collect_values_for_each_item(
     assert evaluator._num_passed_iterations == expected_iterations
 
 
-def test_collect_metric_results(evaluator, mocker, nncf_caplog):
+def test_collect_metric_results(evaluator_returns_list_of_float, mocker, nncf_caplog):
     mocker.patch(
         "nncf.common.utils.backend.get_available_backends",
         return_value=[BackendType.ONNX, BackendType.OPENVINO],
@@ -296,9 +324,10 @@ def test_collect_metric_results(evaluator, mocker, nncf_caplog):
 
     model = OvLinearModel().ov_model
 
-    result = evaluator.collect_metric_results(model, get_dataset_for_test(model), "test_model")
+    result = evaluator_returns_list_of_float.collect_metric_results(
+        model, get_dataset_for_test(model), "test_model"
+    )
     assert isinstance(result, MetricResults)
-
     with nncf_caplog.at_level(logging.INFO):
         assert "Validation of test_model model was started" in nncf_caplog.text
         assert "Metric of test_model model: 0.1" in nncf_caplog.text
