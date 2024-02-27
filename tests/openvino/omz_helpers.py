@@ -39,7 +39,7 @@ def calculate_metrics(
     model_path, config_path, data_dir, report_path, eval_size=None, framework="openvino", device="CPU"
 ):
     com_line = [
-        "accuracy_check",
+        "python -m accuracy_checker.main",
         "-c",
         str(config_path),
         "-m",
