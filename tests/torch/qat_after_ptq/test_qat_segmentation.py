@@ -47,15 +47,28 @@ from examples.torch.semantic_segmentation.test import Test
 from examples.torch.semantic_segmentation.train import Train
 from examples.torch.semantic_segmentation.utils.loss_funcs import do_model_specific_postprocessing
 from nncf import NNCFConfig
+from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.torch.utils import is_main_process
 from tests.shared.paths import PROJECT_ROOT
 
 CONFIGS = list((PROJECT_ROOT / Path("examples/torch/semantic_segmentation/configs")).glob("*"))
 
 
-@pytest.fixture(name="quantization_config_path", params=CONFIGS, ids=[conf.stem for conf in CONFIGS])
-def fixture_quantization_config(request):
-    return request.param
+@pytest.fixture(name="quantization_config", params=CONFIGS, ids=[conf.stem for conf in CONFIGS])
+def fixture_quantization_config(request, sota_data_dir, sota_checkpoints_dir):
+    quantization_config_path = request.param
+    nncf_config = NNCFConfig.from_json(quantization_config_path)
+    if (
+        "compression" not in nncf_config
+        or isinstance(nncf_config["compression"], list)
+        or nncf_config["compression"]["algorithm"] != "quantization"
+    ):
+        pytest.skip("Config without compression")
+
+    config = get_sample_config(quantization_config_path, sota_data_dir, sota_checkpoints_dir)
+    if "accuracy_aware_training" in config:
+        pytest.skip("Accuracy Aware training is not supported yet for QAT with PTQ.")
+    return config
 
 
 def get_sample_config(quantization_config_path: Path, data_dir: Path, weights_dir: Path) -> SampleConfig:
@@ -126,21 +139,130 @@ def get_datasets(dataset, config: SampleConfig) -> DatasetSet:
     )
 
 
+def accuracy_drop_is_acceptable(acc_drop: float) -> bool:
+    """
+    Returns True in case acc_drop is less than 1 percent.
+    """
+    return acc_drop < 0.01
+
+
+def get_optimizer_and_lr_scheduler(config: SampleConfig, model_without_dp: torch.nn.Module):
+    optim_config = config.get("optimizer", {})
+    optim_params = optim_config.get("optimizer_params", {})
+    lr = optim_params.get("lr", 1e-4)
+
+    params_to_optimize = get_params_to_optimize(model_without_dp, lr * 10, config)
+    optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
+    return optimizer, lr_scheduler
+
+
+def train(
+    model: torch.nn.Module,
+    model_without_dp: torch.nn.Module,
+    config: SampleConfig,
+    criterion: torch.nn.Module,
+    datasets: DatasetSet,
+    original_metric: float,
+    color_encoding: object,
+    compression_ctrl: BaseCompressionAlgorithmController,
+) -> float:
+    """
+    :return: Accuracy drop between original accuracy and trained quantized model accuracy.
+    """
+    logger.info("\nTraining...\n")
+
+    optimizer, lr_scheduler = get_optimizer_and_lr_scheduler(config, model_without_dp)
+
+    # Evaluation metric
+
+    ignore_index = None
+    ignore_unlabeled = config.get("ignore_unlabeled", True)
+    if ignore_unlabeled and ("unlabeled" in color_encoding):
+        ignore_index = list(color_encoding).index("unlabeled")
+
+    metric = IoU(len(color_encoding), ignore_index=ignore_index)
+
+    best_miou = -1
+
+    # Start Training
+    train_obj = Train(
+        model, datasets.train_data_loader, optimizer, criterion, compression_ctrl, metric, config.device, config.model
+    )
+    val_obj = Test(model, datasets.val_data_loader, criterion, metric, config.device, config.model)
+
+    logger.info("Quantization aware training pipeline starts.")
+    for epoch in range(config.start_epoch, config.epochs):
+        if config.distributed:
+            datasets.train_data_loader.sampler.set_epoch(epoch)
+
+        logger.info(">>>> [Epoch: {0:d}] Validation".format(epoch))
+        loss, (iou, current_miou) = val_obj.run_epoch(config.print_step)
+        # best_metric = max(current_miou, best_metric)
+        acc_drop = original_metric - current_miou
+        best_miou = max(current_miou, best_miou)
+        logger.info(f"Metric: {current_miou}, FP32 diff: {acc_drop}")
+        if accuracy_drop_is_acceptable(acc_drop):
+            logger.info(f"Accuracy is within 1 percent drop," f" pipeline is making early exit on epoch {epoch - 1}")
+            logger.info(
+                f"Epochs in config: {config.epochs}, epochs trained: {epoch}, epochs saved: {config.epochs - epoch}"
+            )
+            return acc_drop
+        if epoch == config.epochs:
+            logger.info("Training pipeline is finished, accuracy was not recovered.")
+            return acc_drop
+
+        logger.info(">>>> [Epoch: {0:d}] Training".format(epoch))
+        epoch_loss, (iou, miou) = train_obj.run_epoch(config.print_step)
+
+        logger.info(">>>> [Epoch: {0:d}] Avg. loss: {1:.4f} | Mean IoU: {2:.4f}".format(epoch, epoch_loss, miou))
+
+        lr_scheduler.step(epoch if not isinstance(lr_scheduler, ReduceLROnPlateau) else best_miou)
+
+
+def check_training_correctness(
+    config: SampleConfig,
+    model: torch.nn.Module,
+    datasets: DatasetSet,
+    criterion: torch.nn.Module,
+):
+    """
+    This function tries to run 3 training steps for one input and target pair and
+    checks loss decreases. This is needed to check model with compression could be
+    trained after the PTQ.
+    """
+    logger.info("Check model is trainable...")
+    steps_to_check = 3
+    model_without_dp = model
+    if hasattr(model_without_dp, "module"):
+        model_without_dp = model_without_dp.module
+
+    optimizer, _ = get_optimizer_and_lr_scheduler(config, model_without_dp)
+    input_, labels, *_ = next(iter(datasets.calibration_dataset.get_data()))
+    input_ = input_.to(config.device)
+    labels = labels.to(config.device)
+    # Make batch_size==2 to make batchnorms work
+    with torch.no_grad():
+        input_ = torch.cat([input_, input_], dim=0)
+        labels = torch.cat([labels, labels], dim=0)
+    loss_list = []
+    model.train()
+    for _ in range(steps_to_check):
+        outputs = model(input_)
+        labels, loss_outputs, _ = do_model_specific_postprocessing(config.model, labels, outputs)
+
+        # Loss computation
+        loss = criterion(loss_outputs, labels)
+        loss_list.append(loss.item())
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+    assert loss_list[-1] < loss_list[0]
+
+
 @pytest.mark.weekly
-def test_compression_training(quantization_config_path: Path, data_dir: Path, weights_dir: Path, mocker):
-    nncf_config = NNCFConfig.from_json(quantization_config_path)
-    if (
-        "compression" not in nncf_config
-        or isinstance(nncf_config["compression"], list)
-        or nncf_config["compression"]["algorithm"] != "quantization"
-    ):
-        pytest.skip("Config without compression")
-
-    config = get_sample_config(quantization_config_path, data_dir, weights_dir)
-    if "accuracy_aware_training" in config:
-        pytest.skip("Accuracy Aware training is not supported yet for QAT with PTQ.")
-
-    start_worker(main_worker, config)
+def test_compression_training(quantization_config: SampleConfig):
+    start_worker(main_worker, quantization_config)
 
 
 def main_worker(current_gpu: int, config: SampleConfig):
@@ -202,119 +324,3 @@ def main_worker(current_gpu: int, config: SampleConfig):
     assert accuracy_drop_is_acceptable(acc_drop)
     check_training_correctness(config, quantized_model, datasets, criterion)
     logger.info("Done!")
-
-
-def accuracy_drop_is_acceptable(acc_drop: float) -> bool:
-    """
-    Returns True in case acc_drop is less than 1 percent.
-    """
-    return acc_drop < 0.01
-
-
-def get_optimizer_and_lr_scheduler(config: SampleConfig, model_without_dp: torch.nn.Module):
-    optim_config = config.get("optimizer", {})
-    optim_params = optim_config.get("optimizer_params", {})
-    lr = optim_params.get("lr", 1e-4)
-
-    params_to_optimize = get_params_to_optimize(model_without_dp, lr * 10, config)
-    optimizer, lr_scheduler = make_optimizer(params_to_optimize, config)
-    return optimizer, lr_scheduler
-
-
-def train(
-    model: torch.nn.Module,
-    model_without_dp: torch.nn.Module,
-    config: SampleConfig,
-    criterion: torch.nn.Module,
-    datasets: DatasetSet,
-    original_metric: float,
-    color_encoding: object,
-    compression_ctrl,
-) -> float:
-    """
-    :return: Accuracy drop between original accuracy and trained quantized model accuracy.
-    """
-    logger.info("\nTraining...\n")
-
-    optimizer, lr_scheduler = get_optimizer_and_lr_scheduler(config, model_without_dp)
-
-    # Evaluation metric
-
-    ignore_index = None
-    ignore_unlabeled = config.get("ignore_unlabeled", True)
-    if ignore_unlabeled and ("unlabeled" in color_encoding):
-        ignore_index = list(color_encoding).index("unlabeled")
-
-    metric = IoU(len(color_encoding), ignore_index=ignore_index)
-
-    best_miou = -1
-
-    # Start Training
-    train_obj = Train(
-        model, datasets.train_data_loader, optimizer, criterion, compression_ctrl, metric, config.device, config.model
-    )
-    val_obj = Test(model, datasets.val_data_loader, criterion, metric, config.device, config.model)
-
-    logger.info("Quantization aware training pipeline starts.")
-    for epoch in range(config.start_epoch, config.epochs):
-        if config.distributed:
-            datasets.train_data_loader.sampler.set_epoch(epoch)
-
-        logger.info(">>>> [Epoch: {0:d}] Validation".format(epoch))
-        loss, (iou, current_miou) = val_obj.run_epoch(config.print_step)
-        # best_metric = max(current_miou, best_metric)
-        acc_drop = original_metric - current_miou
-        best_miou = max(current_miou, best_miou)
-        logger.info(f"Metric: {current_miou}, FP32 diff: {acc_drop}")
-        if accuracy_drop_is_acceptable(acc_drop):
-            logger.info(f"Accuracy is within 1 percent drop," f" pipeline is making early exit on epoch {epoch - 1}")
-            logger.info(
-                f"Epochs in config: {config.epochs}, epochs trained: {epoch}, epochs saved: {config.epochs - epoch}"
-            )
-            return acc_drop
-        if epoch == config.epochs:
-            logger.info("Training pipeline is finished, accuracy was not recovered.")
-            return acc_drop
-
-        logger.info(">>>> [Epoch: {0:d}] Training".format(epoch))
-        epoch_loss, (iou, miou) = train_obj.run_epoch(config.print_step)
-
-        logger.info(">>>> [Epoch: {0:d}] Avg. loss: {1:.4f} | Mean IoU: {2:.4f}".format(epoch, epoch_loss, miou))
-
-        lr_scheduler.step(epoch if not isinstance(lr_scheduler, ReduceLROnPlateau) else best_miou)
-
-
-def check_training_correctness(
-    config: SampleConfig,
-    model: torch.nn.Module,
-    datasets: DatasetSet,
-    criterion: torch.nn.Module,
-):
-    logger.info("Check model is trainable...")
-    steps_to_check = 3
-    model_without_dp = model
-    if hasattr(model_without_dp, "module"):
-        model_without_dp = model_without_dp.module
-
-    optimizer, _ = get_optimizer_and_lr_scheduler(config, model_without_dp)
-    input_, labels, *_ = next(iter(datasets.calibration_dataset.get_data()))
-    input_ = input_.to(config.device)
-    labels = labels.to(config.device)
-    # Make batch_size==2 to make batchnorms work
-    with torch.no_grad():
-        input_ = torch.cat([input_, input_], dim=0)
-        labels = torch.cat([labels, labels], dim=0)
-    loss_list = []
-    model.train()
-    for _ in range(steps_to_check):
-        outputs = model(input_)
-        labels, loss_outputs, _ = do_model_specific_postprocessing(config.model, labels, outputs)
-
-        # Loss computation
-        loss = criterion(loss_outputs, labels)
-        loss_list.append(loss.item())
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-    assert loss_list[-1] < loss_list[0]

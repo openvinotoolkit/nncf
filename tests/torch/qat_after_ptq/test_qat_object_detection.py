@@ -44,14 +44,28 @@ from examples.torch.object_detection.main import create_model
 from examples.torch.object_detection.main import get_argument_parser
 from examples.torch.object_detection.main import train_epoch
 from nncf import NNCFConfig
+from nncf.common.compression import BaseCompressionAlgorithmController
 from tests.shared.paths import PROJECT_ROOT
 
 CONFIGS = list((PROJECT_ROOT / Path("examples/torch/object_detection/configs")).glob("*"))
 
 
-@pytest.fixture(name="quantization_config_path", params=CONFIGS, ids=[conf.stem for conf in CONFIGS])
-def fixture_quantization_config(request):
-    return request.param
+@pytest.fixture(name="quantization_config", params=CONFIGS, ids=[conf.stem for conf in CONFIGS])
+def fixture_quantization_config(request, sota_data_dir, sota_checkpoints_dir):
+    quantization_config_path = request.param
+    nncf_config = NNCFConfig.from_json(quantization_config_path)
+    if (
+        "compression" not in nncf_config
+        or isinstance(nncf_config["compression"], list)
+        or nncf_config["compression"]["algorithm"] != "quantization"
+    ):
+        pytest.skip("Config without compression")
+
+    config = get_sample_config(quantization_config_path, sota_data_dir, sota_checkpoints_dir)
+    if "accuracy_aware_training" in config:
+        pytest.skip("Accuracy Aware training is not supported yet for QAT with PTQ.")
+
+    return config
 
 
 def get_sample_config(quantization_config_path: Path, data_dir: Path, weights_dir: Path) -> SampleConfig:
@@ -123,74 +137,6 @@ def get_datasets(config: SampleConfig) -> DatasetSet:
     )
 
 
-@pytest.mark.weekly
-def test_compression_training(quantization_config_path: Path, data_dir: Path, weights_dir: Path, mocker):
-    nncf_config = NNCFConfig.from_json(quantization_config_path)
-    if (
-        "compression" not in nncf_config
-        or isinstance(nncf_config["compression"], list)
-        or nncf_config["compression"]["algorithm"] != "quantization"
-    ):
-        pytest.skip("Config without compression")
-
-    config = get_sample_config(quantization_config_path, data_dir, weights_dir)
-    if "accuracy_aware_training" in config:
-        pytest.skip("Accuracy Aware training is not supported yet for QAT with PTQ.")
-
-    start_worker(main_worker, config)
-
-
-def main_worker(current_gpu: int, config: SampleConfig):
-    configure_device(current_gpu, config)
-    if is_on_first_rank(config):
-        configure_logging(logger, config)
-
-    # create model
-    logger.info(f"\nCreating model from config: {config.config}")
-    model = create_model(config)
-
-    datasets = get_datasets(config)
-    criterion = MultiBoxLoss(
-        config,
-        config["num_classes"],
-        overlap_thresh=0.5,
-        prior_for_matching=True,
-        bkg_label=0,
-        neg_mining=True,
-        neg_pos=3,
-        neg_overlap=0.5,
-        encode_target=False,
-        device=config.device,
-    )
-    criterion = criterion.to(config.device)
-
-    logger.info("Original model validation:")
-    original_metric = validate(model, config.device, datasets.test_data_loader, config.distributed)
-
-    logger.info("Apply quantization to the model:")
-    config_quantization_params = config["compression"]
-
-    preset = get_quantization_preset(config_quantization_params)
-    advanced_parameters = get_advanced_ptq_parameters(config_quantization_params)
-    subset_size = get_num_samples(config_quantization_params)
-
-    quantized_model = nncf.quantize(
-        model,
-        datasets.calibration_dataset,
-        preset=preset,
-        advanced_parameters=advanced_parameters,
-        subset_size=subset_size,
-    )
-    if config.distributed:
-        config.batch_size //= config.ngpus_per_node
-        config.workers //= config.ngpus_per_node
-
-    acc_drop = train(quantized_model, config, criterion, datasets, original_metric, get_mocked_compression_ctrl())
-    assert accuracy_drop_is_acceptable(acc_drop)
-    check_training_correctness(config, model, datasets, criterion)
-    logger.info("Done!")
-
-
 def accuracy_drop_is_acceptable(acc_drop: float) -> bool:
     """
     Returns True in case acc_drop is less than 1 percent.
@@ -216,7 +162,7 @@ def train(
     criterion: torch.nn.Module,
     datasets: DatasetSet,
     original_metric: float,
-    compression_ctrl,
+    compression_ctrl: BaseCompressionAlgorithmController,
 ) -> float:
     """
     :return: Accuracy drop between original accuracy and trained quantized model accuracy.
@@ -276,6 +222,11 @@ def train(
 def check_training_correctness(
     config: SampleConfig, model: torch.nn.Module, datasets: DatasetSet, criterion: torch.nn.Module
 ):
+    """
+    This function tries to run 3 training steps for one input and target pair and
+    checks loss decreases. This is needed to check model with compression could be
+    trained after the PTQ.
+    """
     logger.info("Check model is trainable...")
     steps_to_check = 3
     optimizer, _ = get_optimizer_and_lr_scheduler(config, model)
@@ -297,3 +248,59 @@ def check_training_correctness(
         optimizer.step()
 
     assert loss_list[-1] < loss_list[0]
+
+
+@pytest.mark.weekly
+def test_compression_training(quantization_config: SampleConfig):
+    start_worker(main_worker, quantization_config)
+
+
+def main_worker(current_gpu: int, config: SampleConfig):
+    configure_device(current_gpu, config)
+    if is_on_first_rank(config):
+        configure_logging(logger, config)
+
+    # create model
+    logger.info(f"\nCreating model from config: {config.config}")
+    model = create_model(config)
+
+    datasets = get_datasets(config)
+    criterion = MultiBoxLoss(
+        config,
+        config["num_classes"],
+        overlap_thresh=0.5,
+        prior_for_matching=True,
+        bkg_label=0,
+        neg_mining=True,
+        neg_pos=3,
+        neg_overlap=0.5,
+        encode_target=False,
+        device=config.device,
+    )
+    criterion = criterion.to(config.device)
+
+    logger.info("Original model validation:")
+    original_metric = validate(model, config.device, datasets.test_data_loader, config.distributed)
+
+    logger.info("Apply quantization to the model:")
+    config_quantization_params = config["compression"]
+
+    preset = get_quantization_preset(config_quantization_params)
+    advanced_parameters = get_advanced_ptq_parameters(config_quantization_params)
+    subset_size = get_num_samples(config_quantization_params)
+
+    quantized_model = nncf.quantize(
+        model,
+        datasets.calibration_dataset,
+        preset=preset,
+        advanced_parameters=advanced_parameters,
+        subset_size=subset_size,
+    )
+    if config.distributed:
+        config.batch_size //= config.ngpus_per_node
+        config.workers //= config.ngpus_per_node
+
+    acc_drop = train(quantized_model, config, criterion, datasets, original_metric, get_mocked_compression_ctrl())
+    assert accuracy_drop_is_acceptable(acc_drop)
+    check_training_correctness(config, model, datasets, criterion)
+    logger.info("Done!")

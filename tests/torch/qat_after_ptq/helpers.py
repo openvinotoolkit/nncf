@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
+from typing import Any, Dict, Optional
 from unittest.mock import MagicMock
 
 from examples.torch.common.example_logger import logger
@@ -35,7 +35,7 @@ def convert_quantization_mode(mode: Optional[str]) -> QuantizationScheme:
     raise RuntimeError(f"Unknown quantization mode: {mode}")
 
 
-def convert_quantization_params(conf: Optional[dict]) -> QuantizationParameters:
+def convert_quantization_params(conf: Optional[Dict[str, Any]]) -> QuantizationParameters:
     if conf is None:
         return QuantizationParameters()
 
@@ -70,7 +70,7 @@ def convert_quantization_preset(preset: str) -> QuantizationPreset:
     raise RuntimeError(f"Preset {preset} is unknown.")
 
 
-def get_range_init_type(config_quantization_params: dict) -> RangeEstimatorParameters:
+def get_range_init_type(config_quantization_params: Dict[str, Any]) -> RangeEstimatorParameters:
     if (
         "initializer" in config_quantization_params
         and "range" in config_quantization_params["initializer"]
@@ -83,13 +83,13 @@ def get_range_init_type(config_quantization_params: dict) -> RangeEstimatorParam
     return RangeEstimatorParametersSet.MINMAX
 
 
-def get_quantization_preset(config_quantization_params: dict) -> Optional[QuantizationPreset]:
+def get_quantization_preset(config_quantization_params: Dict[str, Any]) -> Optional[QuantizationPreset]:
     if "preset" not in config_quantization_params:
         return None
     return convert_quantization_preset(config_quantization_params["preset"])
 
 
-def get_advanced_ptq_parameters(config_quantization_params: dict) -> AdvancedQuantizationParameters:
+def get_advanced_ptq_parameters(config_quantization_params: Dict[str, Any]) -> AdvancedQuantizationParameters:
     range_estimator_params = get_range_init_type(config_quantization_params)
     return AdvancedQuantizationParameters(
         overflow_fix=convert_overflow_fix_param(config_quantization_params.get("overflow_fix", None)),
@@ -102,7 +102,7 @@ def get_advanced_ptq_parameters(config_quantization_params: dict) -> AdvancedQua
     )
 
 
-def get_num_samples(config_quantization_params: dict) -> int:
+def get_num_samples(config_quantization_params: Dict[str, Any]) -> int:
     if (
         "initializer" in config_quantization_params
         and "range" in config_quantization_params["initializer"]
