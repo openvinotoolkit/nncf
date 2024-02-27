@@ -153,7 +153,7 @@ def evaluator_returns_tensor():
         for _ in dataset:
             pass
 
-        return (0.1, [[np.array([1.1])]])
+        return (0.1, [[np.array([1.1],dtype=np.float32)]])
 
     evaluator = Evaluator(_validation_fn)
     return evaluator
@@ -287,7 +287,7 @@ def test_validate_metric_mode_none_or_false(enable_iteration_count, expected_ite
 
 @pytest.mark.parametrize(
     "metric_mode, enable_iteration_count, expected_item_type, expected_iterations",
-    [(False, True, list, 1), (True, False, float, 0)],
+    [(False, True, list, 1), (False, False, list, 0), (True, True, float, 1), (True, False, float, 0)],
 )
 def test_collect_values_for_each_item(
     evaluator_returns_list_of_float,
