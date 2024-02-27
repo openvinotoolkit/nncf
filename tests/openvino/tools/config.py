@@ -17,9 +17,9 @@ import yaml
 from addict import Dict
 
 try:
-    from openvino.tools.accuracy_checker.config import ConfigReader
-except ImportError:
     from accuracy_checker.config import ConfigReader
+except ImportError:
+    from openvino.tools.accuracy_checker.config import ConfigReader
 
 import nncf
 from nncf.common.logging import nncf_logger
