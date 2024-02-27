@@ -278,15 +278,10 @@ def wrap_parameters(model: torch.nn.Module):
 
     :param model: A model.
     """
-    from nncf.torch.external_hook import EXTERNAL_OP_STORAGE_PREFIX
-    from nncf.torch.quantization.external_quantizer import EXTERNAL_QUANTIZERS_STORAGE_PREFIX
-
-    # Ignore modules that will be added by NNCF
-    ignored_prefixes = [EXTERNAL_QUANTIZERS_STORAGE_PREFIX, EXTERNAL_OP_STORAGE_PREFIX]
-
     ctx = get_current_context()
     for name, param in model.named_parameters():
-        if any(name.startswith(ignore_prefix) for ignore_prefix in ignored_prefixes):
+        if name.startswith("_nncf"):
+            # Exclude parameters in modules which added by NNCF.
             continue
         is_reused = name in ctx.reused_parameters
         tt = TracedParameter.from_torch_parameter(param, name, is_reused)
