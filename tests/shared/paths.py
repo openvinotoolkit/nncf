@@ -24,7 +24,14 @@ def _get_site_packages_path() -> Path:
     return Path(next(x for x in site_packages if "lib" in x and "site-packages" in x))
 
 
-DATASET_DEFINITIONS_PATH = _get_site_packages_path() / "omz_tools" / "data" / "dataset_definitions.yml"
+DIRECT_DEFINITIONS_PATH = _get_site_packages_path() / "omz_tools" / "data" / "dataset_definitions.yml"
+OPENVINO_DEFINITIONS_PATH = _get_site_packages_path() / "openvino" / "model_zoo" / "data" / "dataset_definitions.yml"
+if os.path.isfile(DIRECT_DEFINITIONS_PATH):
+    DATASET_DEFINITIONS_PATH = DIRECT_DEFINITIONS_PATH
+elif os.path.isfile(OPENVINO_DEFINITIONS_PATH):
+    DATASET_DEFINITIONS_PATH = OPENVINO_DEFINITIONS_PATH
+else:
+    raise FileNotFoundError("dataset_definitions.yml was not found!")
 
 ROOT_PYTHONPATH_ENV = os.environ.copy().update({"PYTHONPATH": str(PROJECT_ROOT)})
 
