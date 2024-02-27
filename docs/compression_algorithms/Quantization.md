@@ -1,5 +1,12 @@
 # Uniform Quantization with Fine-Tuning
 
+**NOTE**
+
+[Post Training Quantization pipeline (PTQ)](./post_training/Quantization.md) is the recomended way for the uniform model quantization with NNCF.
+PTQ implements min max quantization pipeline with rich choise of range estimators and additional auxiliary post training algorithms such as SmoothQuant, ChannelAlignment and BiasCorrection.
+PTQ does not support mixed precision modes ([HAWQ](#hawq), [AutoQ](#autoq)) and composition with [sparsity](./Sparsity.md) and [filter pruning](./Pruning.md) algorithms.
+Please use NNCF `create_compressed_model` api with quantization configs described below in case you need this features.
+
 >_Scroll down for the examples of the JSON configuration files that can be used to apply this algorithm_.
 
 A uniform "fake" quantization method supports an arbitrary number of bits (>=2) which is used to represent weights and activations.
