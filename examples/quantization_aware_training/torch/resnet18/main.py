@@ -30,7 +30,6 @@ from fastdownload import FastDownload
 from torch.jit import TracerWarning
 
 import nncf
-from nncf.common.logging.track_progress import track
 
 warnings.filterwarnings("ignore", category=TracerWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -144,12 +143,13 @@ def train(
     epoch: int,
     device: torch.device,
 ):
+    print("Training:")
     # Switch to train mode.
     model.train()
 
     print_frequency = 50
     running_loss = 0.0
-    for i, (images, target) in track(enumerate(train_loader), total=len(train_loader), description="Training"):
+    for i, (images, target) in enumerate(train_loader):
         images = images.to(device)
         target = target.to(device)
 
@@ -171,6 +171,7 @@ def train(
 def validate(
     val_loader: torch.utils.data.DataLoader, model: torch.nn.Module, criterion: torch.nn.Module, device: torch.device
 ) -> float:
+    print("Validation:")
     running_loss = 0.0
     top1_sum = running_top1 = 0.0
     top5_sum = running_top5 = 0.0
@@ -180,7 +181,7 @@ def validate(
     model.eval()
 
     with torch.no_grad():
-        for i, (images, target) in track(enumerate(val_loader), total=len(val_loader), description="Validation"):
+        for i, (images, target) in enumerate(val_loader):
             images = images.to(device)
             target = target.to(device)
 
