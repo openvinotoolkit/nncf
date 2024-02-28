@@ -9,30 +9,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass
 import logging
-import numpy as np
+from dataclasses import dataclass
+
 import pytest
+
 import nncf
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.utils.backend import BackendType
-from nncf.openvino.quantization.backend_parameters import BackendParameters
-from nncf.quantization.algorithms.accuracy_control.algorithm import (
-    QuantizationAccuracyRestorer,
-    QuantizationAccuracyRestorerReport,
-    _create_message,
-    get_algo_backend,
-)
-from nncf.quantization.algorithms.accuracy_control.openvino_backend import (
-    OVAccuracyControlAlgoBackend,
-)
 from nncf.errors import UnsupportedBackendError
-from tests.onnx.models import LinearModel as NxLinearModel
+from nncf.openvino.quantization.backend_parameters import BackendParameters
+from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
+from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorerReport
+from nncf.quantization.algorithms.accuracy_control.algorithm import _create_message
+from nncf.quantization.algorithms.accuracy_control.algorithm import get_algo_backend
+from nncf.quantization.algorithms.accuracy_control.openvino_backend import OVAccuracyControlAlgoBackend
 from tests.openvino.native.common import get_dataset_for_test
-from tests.openvino.native.models import LinearModel as OvLinearModel
 from tests.openvino.native.models import ConvModel as OvConvModel
-from tests.shared.datasets import MockDataset
 
 
 def test_get_algo_backend():
@@ -76,24 +70,16 @@ def setup_quantization_accuracy_restorer_report():
             NNCFNode.NODE_NAME_ATTR: "node_name_2",
         }
     )
-    report.removed_groups = [
-        type("MockGroup", (), {"quantizers": [node1], "operations": [node2]})
-    ]
+    report.removed_groups = [type("MockGroup", (), {"quantizers": [node1], "operations": [node2]})]
     return report
 
 
 def test_removed_quantizers(setup_quantization_accuracy_restorer_report):
-    assert (
-        setup_quantization_accuracy_restorer_report.removed_quantizers[0].node_name
-        == "node_name_1"
-    )
+    assert setup_quantization_accuracy_restorer_report.removed_quantizers[0].node_name == "node_name_1"
 
 
 def test_reverted_operations(setup_quantization_accuracy_restorer_report):
-    assert (
-        setup_quantization_accuracy_restorer_report.reverted_operations[0].node_name
-        == "node_name_2"
-    )
+    assert setup_quantization_accuracy_restorer_report.reverted_operations[0].node_name == "node_name_2"
 
 
 @dataclass
@@ -148,20 +134,12 @@ class StructForPrintTest:
         ),
     ],
 )
-def test_print_report_parameterized(
-    ts: StructForPrintTest, setup_quantization_accuracy_restorer_report, nncf_caplog
-):
+def test_print_report_parameterized(ts: StructForPrintTest, setup_quantization_accuracy_restorer_report, nncf_caplog):
     setup_quantization_accuracy_restorer_report.removed_all = ts.removed_all
-    setup_quantization_accuracy_restorer_report.reached_required_drop = (
-        ts.reached_required_drop
-    )
+    setup_quantization_accuracy_restorer_report.reached_required_drop = ts.reached_required_drop
     setup_quantization_accuracy_restorer_report.num_iterations = ts.num_iterations
-    setup_quantization_accuracy_restorer_report.num_quantized_operations = (
-        ts.num_quantized_operations
-    )
-    QuantizationAccuracyRestorer._print_report(
-        setup_quantization_accuracy_restorer_report, ts.max_num_iterations
-    )
+    setup_quantization_accuracy_restorer_report.num_quantized_operations = ts.num_quantized_operations
+    QuantizationAccuracyRestorer._print_report(setup_quantization_accuracy_restorer_report, ts.max_num_iterations)
 
     with nncf_caplog.at_level(logging.INFO):
         assert ts.msg in nncf_caplog.text
@@ -193,13 +171,6 @@ def test_collect_original_biases_and_weights_openvino(ov_model_and_quantized_mod
         model,
         OVAccuracyControlAlgoBackend,
     )
-    conv_node = quantized_model_graph.get_node_by_name('Conv')
-    assert(conv_node.attributes["original_bias"] is not None)
-    assert(conv_node.attributes["original_weight.1"] is not None)
-
-
-
-
-
-
-  
+    conv_node = quantized_model_graph.get_node_by_name("Conv")
+    assert conv_node.attributes["original_bias"] is not None
+    assert conv_node.attributes["original_weight.1"] is not None

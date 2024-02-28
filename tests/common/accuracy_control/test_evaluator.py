@@ -9,24 +9,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 from typing import List, TypeVar, Union
 
 import numpy as np
 import pytest
 
 import nncf
-from nncf.common.utils.backend import BackendType, get_available_backends
+from nncf.common.utils.backend import BackendType
 from nncf.data.dataset import Dataset
-from nncf.quantization.algorithms.accuracy_control.evaluator import (
-    Evaluator,
-    MetricResults,
-)
+from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
+from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResults
 from nncf.quantization.algorithms.accuracy_control.onnx_backend import ONNXPreparedModel
-from nncf.quantization.algorithms.accuracy_control.openvino_backend import (
-    OVPreparedModel,
-)
+from nncf.quantization.algorithms.accuracy_control.openvino_backend import OVPreparedModel
 from tests.onnx.models import LinearModel as NxLinearModel
 from tests.openvino.native.common import get_dataset_for_test
 from tests.openvino.native.models import LinearModel as OvLinearModel
@@ -113,13 +109,9 @@ def test_determine_mode(ts: ModeTestStruct, mocker):
 
     if ts.raise_exception:
         with pytest.raises(nncf.InternalError):
-            _ = Evaluator.determine_mode(
-                prepared_model, Dataset([None]), _validation_fn
-            )
+            _ = Evaluator.determine_mode(prepared_model, Dataset([None]), _validation_fn)
     else:
-        is_metric_mode = Evaluator.determine_mode(
-            prepared_model, Dataset([None]), _validation_fn
-        )
+        is_metric_mode = Evaluator.determine_mode(prepared_model, Dataset([None]), _validation_fn)
         assert is_metric_mode == ts.expected_is_metric_mode
 
 
@@ -130,9 +122,7 @@ def test_determine_mode_2(mocker):
     prepared_model = mocker.Mock()
     prepared_model.model_for_inference = None
 
-    is_metric_mode = Evaluator.determine_mode(
-        prepared_model, Dataset([None]), _validation_fn_with_error
-    )
+    is_metric_mode = Evaluator.determine_mode(prepared_model, Dataset([None]), _validation_fn_with_error)
     assert not is_metric_mode
 
 
@@ -147,13 +137,14 @@ def evaluator_returns_list_of_float():
     evaluator = Evaluator(_validation_fn)
     return evaluator
 
+
 @pytest.fixture
 def evaluator_returns_tensor():
     def _validation_fn(model, dataset):
         for _ in dataset:
             pass
 
-        return (0.1, [[np.array([1.1],dtype=np.float32)]])
+        return (0.1, [[np.array([1.1], dtype=np.float32)]])
 
     evaluator = Evaluator(_validation_fn)
     return evaluator
@@ -162,13 +153,13 @@ def evaluator_returns_tensor():
 def test_evaluator_init(evaluator_returns_list_of_float):
     evaluator = evaluator_returns_list_of_float
     assert evaluator.num_passed_iterations == 0
-    assert evaluator.is_metric_mode() == None
+    assert evaluator.is_metric_mode() is None
 
     evaluator.enable_iteration_count()
-    assert evaluator._enable_iteration_count == True
+    assert evaluator._enable_iteration_count
 
     evaluator.disable_iteration_count()
-    assert evaluator._enable_iteration_count == False
+    assert not evaluator._enable_iteration_count
 
 
 @dataclass
@@ -243,6 +234,7 @@ def test_validate_prepared_model_value_error(evaluator_returns_list_of_float, pr
     with pytest.raises(ValueError):
         evaluator_returns_list_of_float.validate_prepared_model(prepared_ov_model, dataset, [0, 1])
 
+
 @pytest.mark.parametrize(
     "enable_iteration_count, expected_iterations",
     [(False, 0), (True, 1)],
@@ -253,37 +245,37 @@ def test_validate_metric_mode(evaluator_returns_list_of_float, mocker, enable_it
         return_value=[BackendType.ONNX, BackendType.OPENVINO],
     )
     evaluator_returns_list_of_float._metric_mode = None
-    if (enable_iteration_count):
+    if enable_iteration_count:
         evaluator_returns_list_of_float.enable_iteration_count()
     model = OvLinearModel().ov_model
-    metric, values_for_each_item = evaluator_returns_list_of_float.validate(
-        model, get_dataset_for_test(model)
-    )
-    assert all(isinstance(item, float) for item in values_for_each_item) 
+    metric, values_for_each_item = evaluator_returns_list_of_float.validate(model, get_dataset_for_test(model))
+    assert all(isinstance(item, float) for item in values_for_each_item)
     assert evaluator_returns_list_of_float.num_passed_iterations == expected_iterations
-   
+
     assert isinstance(metric, float)
+
 
 @pytest.mark.parametrize(
     "enable_iteration_count, expected_iterations, metric_mode",
     [(False, 0, None), (True, 1, None), (False, 0, False), (True, 1, False)],
 )
-def test_validate_metric_mode_none_or_false(enable_iteration_count, expected_iterations, metric_mode, mocker, evaluator_returns_tensor):
+def test_validate_metric_mode_none_or_false(
+    enable_iteration_count, expected_iterations, metric_mode, mocker, evaluator_returns_tensor
+):
     mocker.patch(
         "nncf.common.utils.backend.get_available_backends",
         return_value=[BackendType.ONNX, BackendType.OPENVINO],
     )
     evaluator_returns_tensor._metric_mode = metric_mode
-    if (enable_iteration_count):
+    if enable_iteration_count:
         evaluator_returns_tensor.enable_iteration_count()
     model = OvLinearModel().ov_model
-    metric, values_for_each_item = evaluator_returns_tensor.validate(
-        model, get_dataset_for_test(model)
-    )
+    metric, values_for_each_item = evaluator_returns_tensor.validate(model, get_dataset_for_test(model))
     assert evaluator_returns_tensor.num_passed_iterations == expected_iterations
-    assert all(isinstance(item, List) for item in values_for_each_item) 
-    assert all(isinstance(item, np.ndarray) for item in values_for_each_item[0]) 
+    assert all(isinstance(item, List) for item in values_for_each_item)
+    assert all(isinstance(item, np.ndarray) for item in values_for_each_item[0])
     assert isinstance(metric, float)
+
 
 @pytest.mark.parametrize(
     "metric_mode, enable_iteration_count, expected_item_type, expected_iterations",
@@ -324,9 +316,7 @@ def test_collect_metric_results(evaluator_returns_list_of_float, mocker, nncf_ca
 
     model = OvLinearModel().ov_model
 
-    result = evaluator_returns_list_of_float.collect_metric_results(
-        model, get_dataset_for_test(model), "test_model"
-    )
+    result = evaluator_returns_list_of_float.collect_metric_results(model, get_dataset_for_test(model), "test_model")
     assert isinstance(result, MetricResults)
     with nncf_caplog.at_level(logging.INFO):
         assert "Validation of test_model model was started" in nncf_caplog.text

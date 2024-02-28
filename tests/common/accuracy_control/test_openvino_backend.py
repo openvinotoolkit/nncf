@@ -10,27 +10,25 @@
 # limitations under the License.
 
 import numpy as np
+import openvino.runtime as ov
 import pytest
+
 from nncf.common.factory import NNCFGraphFactory
-from nncf.common.graph.graph import NNCFGraph, NNCFNode
+from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
 from nncf.openvino.engine import OVCompiledModelEngine
-from nncf.openvino.graph.metatypes.groups import (
-    CONSTANT_OPERATIONS,
-    FAKE_QUANTIZE_OPERATIONS,
-    INPUTS_QUANTIZABLE_OPERATIONS,
-    OPERATIONS_WITH_WEIGHTS,
-    QUANTIZE_AGNOSTIC_OPERATIONS,
-    SHAPEOF_OPERATIONS,
-)
+from nncf.openvino.graph.metatypes.groups import CONSTANT_OPERATIONS
+from nncf.openvino.graph.metatypes.groups import FAKE_QUANTIZE_OPERATIONS
+from nncf.openvino.graph.metatypes.groups import INPUTS_QUANTIZABLE_OPERATIONS
+from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
+from nncf.openvino.graph.metatypes.groups import QUANTIZE_AGNOSTIC_OPERATIONS
+from nncf.openvino.graph.metatypes.groups import SHAPEOF_OPERATIONS
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConcatMetatype
 from nncf.openvino.graph.model_utils import get_start_nodes_for_activation_path_tracing
-from nncf.quantization.algorithms.accuracy_control.openvino_backend import (
-    OVAccuracyControlAlgoBackend,
-    OVPreparedModel,
-)
-from tests.openvino.native.models import LinearModel as OvLinearModel
+from nncf.quantization.algorithms.accuracy_control.openvino_backend import OVAccuracyControlAlgoBackend
+from nncf.quantization.algorithms.accuracy_control.openvino_backend import OVPreparedModel
 from tests.openvino.native.models import ConvModel as OvConvModel
-import openvino.runtime as ov
+from tests.openvino.native.models import LinearModel as OvLinearModel
 
 
 @pytest.fixture
@@ -53,23 +51,13 @@ def testOvPreparedModelInit(ov_prepared_model: OVPreparedModel):
 
 
 def test_ov_accuracy_control_algo_backend_static_methods():
-    assert (
-        OVAccuracyControlAlgoBackend.get_op_with_weights_metatypes()
-        == OPERATIONS_WITH_WEIGHTS
-    )
-    assert (
-        OVAccuracyControlAlgoBackend.get_quantizer_metatypes()
-        == FAKE_QUANTIZE_OPERATIONS
-    )
+    assert OVAccuracyControlAlgoBackend.get_op_with_weights_metatypes() == OPERATIONS_WITH_WEIGHTS
+    assert OVAccuracyControlAlgoBackend.get_quantizer_metatypes() == FAKE_QUANTIZE_OPERATIONS
     assert OVAccuracyControlAlgoBackend.get_const_metatypes() == CONSTANT_OPERATIONS
-    assert (
-        OVAccuracyControlAlgoBackend.get_quantizable_metatypes()
-        == INPUTS_QUANTIZABLE_OPERATIONS
-    )
-    assert (
-        OVAccuracyControlAlgoBackend.get_quantize_agnostic_metatypes()
-        == QUANTIZE_AGNOSTIC_OPERATIONS + [OVConcatMetatype]
-    )
+    assert OVAccuracyControlAlgoBackend.get_quantizable_metatypes() == INPUTS_QUANTIZABLE_OPERATIONS
+    assert OVAccuracyControlAlgoBackend.get_quantize_agnostic_metatypes() == QUANTIZE_AGNOSTIC_OPERATIONS + [
+        OVConcatMetatype
+    ]
     assert OVAccuracyControlAlgoBackend.get_shapeof_metatypes() == SHAPEOF_OPERATIONS
 
 
@@ -78,17 +66,15 @@ def test_ov_accuracy_control_algo_backend_static_methods_with_graph(ov_graph_and
     assert OVAccuracyControlAlgoBackend.get_start_nodes_for_activation_path_tracing(
         ov_graph
     ) == get_start_nodes_for_activation_path_tracing(ov_graph)
-    conv_node: NNCFNode = ov_graph.get_node_by_key('4 Conv')
-    add_node: NNCFNode = ov_graph.get_node_by_key('3 Add')
-    
-    assert(OVAccuracyControlAlgoBackend.is_node_with_bias(conv_node, ov_graph))
-    assert(OVAccuracyControlAlgoBackend.is_node_with_weight(conv_node))
-    assert(isinstance(OVAccuracyControlAlgoBackend.get_bias_value(conv_node, ov_graph, model), np.ndarray))
-    assert(OVAccuracyControlAlgoBackend.get_weight_tensor_port_ids(conv_node) == [1])
-    assert(isinstance(OVAccuracyControlAlgoBackend.get_weight_value(conv_node, model, 1), np.ndarray))
-    assert(OVAccuracyControlAlgoBackend.get_model_size(model) == 116)
+    conv_node: NNCFNode = ov_graph.get_node_by_key("4 Conv")
+    add_node: NNCFNode = ov_graph.get_node_by_key("3 Add")
 
-    assert(not OVAccuracyControlAlgoBackend.is_node_with_bias(add_node, ov_graph))   
-    assert(not OVAccuracyControlAlgoBackend.is_node_with_weight(add_node))  
-    
-     
+    assert OVAccuracyControlAlgoBackend.is_node_with_bias(conv_node, ov_graph)
+    assert OVAccuracyControlAlgoBackend.is_node_with_weight(conv_node)
+    assert isinstance(OVAccuracyControlAlgoBackend.get_bias_value(conv_node, ov_graph, model), np.ndarray)
+    assert OVAccuracyControlAlgoBackend.get_weight_tensor_port_ids(conv_node) == [1]
+    assert isinstance(OVAccuracyControlAlgoBackend.get_weight_value(conv_node, model, 1), np.ndarray)
+    assert OVAccuracyControlAlgoBackend.get_model_size(model) == 116
+
+    assert not OVAccuracyControlAlgoBackend.is_node_with_bias(add_node, ov_graph)
+    assert not OVAccuracyControlAlgoBackend.is_node_with_weight(add_node)
