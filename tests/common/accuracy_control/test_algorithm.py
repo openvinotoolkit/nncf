@@ -11,10 +11,13 @@
 
 from dataclasses import dataclass
 import logging
+import numpy as np
 import pytest
+import nncf
+from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.utils.backend import BackendType
-from nncf.parameters import DropType
+from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.quantization.algorithms.accuracy_control.algorithm import (
     QuantizationAccuracyRestorer,
     QuantizationAccuracyRestorerReport,
@@ -25,6 +28,11 @@ from nncf.quantization.algorithms.accuracy_control.openvino_backend import (
     OVAccuracyControlAlgoBackend,
 )
 from nncf.errors import UnsupportedBackendError
+from tests.onnx.models import LinearModel as NxLinearModel
+from tests.openvino.native.common import get_dataset_for_test
+from tests.openvino.native.models import LinearModel as OvLinearModel
+from tests.openvino.native.models import ConvModel as OvConvModel
+from tests.shared.datasets import MockDataset
 
 
 def test_get_algo_backend():
@@ -158,3 +166,40 @@ def test_print_report_parameterized(
     with nncf_caplog.at_level(logging.INFO):
         assert ts.msg in nncf_caplog.text
 
+
+@pytest.fixture
+def ov_model_and_quantized_model():
+    model = OvConvModel().ov_model
+    initial_model_graph = NNCFGraphFactory.create(model)
+    dataset = get_dataset_for_test(model)
+    quantized_model = nncf.quantize(
+        model,
+        dataset,
+        advanced_parameters=nncf.AdvancedQuantizationParameters(
+            backend_params={BackendParameters.COMPRESS_WEIGHTS: False}
+        ),
+    )
+    quantized_model_graph = NNCFGraphFactory.create(quantized_model)
+    return model, initial_model_graph, quantized_model, quantized_model_graph
+
+
+def test_collect_original_biases_and_weights_openvino(ov_model_and_quantized_model):
+    model, initial_model_graph, quantized_model, quantized_model_graph = ov_model_and_quantized_model
+    quantization_acc_restorer = QuantizationAccuracyRestorer()
+
+    quantization_acc_restorer._collect_original_biases_and_weights(
+        initial_model_graph,
+        quantized_model_graph,
+        model,
+        OVAccuracyControlAlgoBackend,
+    )
+    conv_node = quantized_model_graph.get_node_by_name('Conv')
+    assert(conv_node.attributes["original_bias"] is not None)
+    assert(conv_node.attributes["original_weight.1"] is not None)
+
+
+
+
+
+
+  
