@@ -24,7 +24,7 @@ def _get_site_packages_path() -> Path:
     return Path(next(x for x in site_packages if "lib" in x and "site-packages" in x))
 
 
-DATASET_DEFINITIONS_PATH = _get_site_packages_path() / "openvino" / "model_zoo" / "data" / "dataset_definitions.yml"
+DATASET_DEFINITIONS_PATH = _get_site_packages_path() / "omz_tools" / "data" / "dataset_definitions.yml"
 
 ROOT_PYTHONPATH_ENV = os.environ.copy().update({"PYTHONPATH": str(PROJECT_ROOT)})
 
