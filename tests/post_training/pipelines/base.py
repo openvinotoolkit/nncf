@@ -336,9 +336,9 @@ class PTQTestPipeline(BaseTestPipeline):
         print("Quantization...")
 
         if self.backend in PT_BACKENDS:
-            enable_cpu_pinning = os.environ.get("ENABLE_CPU_PINNING")
-            if enable_cpu_pinning is not None:
-                torch.set_num_threads(int(enable_cpu_pinning))
+            inference_num_threads = os.environ.get("INFERENCE_NUM_THREADS")
+            if inference_num_threads is not None:
+                torch.set_num_threads(int(inference_num_threads))
 
         start_time = time.perf_counter()
         self.run_info.compression_memory_usage = memory_usage(self._compress, max_usage=True)
