@@ -38,16 +38,18 @@ class StatisticsAggregator(ABC):
         self.stat_subset_size = None
         self.batch_size = self.dataset.get_batch_size() or 1
         dataset_len = self.dataset.get_length()
-        self.dataset_sample_size = dataset_len * self.batch_size if dataset_len is not None else dataset_len
+        self.dataset_sample_size = (
+            dataset_len * self.batch_size if dataset_len is not None else dataset_len
+        )  # Number of samples in the dataset
         self.statistic_points = StatisticPointsContainer()
 
-    def _get_total_statistics_samples(
+    def _get_number_samples_for_statistics(
         self,
     ) -> Optional[int]:
         """
-        Returns total number of statistics samples used.
+        Returns number of samples for statistics collection.
 
-        :return: Total number of statistics samples used.
+        :return: Number of samples for statistics collection.
         """
         return (
             min(self.dataset_sample_size or self.stat_subset_size, self.stat_subset_size)
@@ -85,18 +87,28 @@ class StatisticsAggregator(ABC):
         model_with_outputs = model_transformer.transform(transformation_layout)
         engine = factory.EngineFactory.create(model_with_outputs)
 
-        calibration_samples_num = self._get_total_statistics_samples()
+        statistics_samples_num = self._get_number_samples_for_statistics()
         iterations_num = (
-            self._get_iterations_num(calibration_samples_num) if calibration_samples_num is not None else None
+            self._get_iterations_num(statistics_samples_num) if statistics_samples_num is not None else None
         )
         if iterations_num is not None and iterations_num == 0:
-            raise nncf.ValidationError("Batch size > length of dataset or batch size > stat_subset_size.")
-        with track(total=calibration_samples_num, description="Statistics collection") as pbar:
+            raise nncf.ValidationError(
+                "Provided dataset has a batch size value which is bigger than subset size for statistics collection. \
+                Please increase number of samples for statistics collection \
+                or decrease batch size value in the dataset."
+            )
+        empty_statistics = True
+        with track(total=statistics_samples_num, description="Statistics collection") as pbar:
             for input_data in islice(self.dataset.get_inference_data(), iterations_num):
                 outputs = engine.infer(input_data)
                 processed_outputs = self._process_outputs(outputs)
                 self._register_statistics(processed_outputs, merged_statistics)
                 pbar.progress.update(pbar.task, advance=self.batch_size)
+                empty_statistics = False
+        if empty_statistics:
+            raise nncf.ValidationError(
+                "Calibration dataset must not be empty. Please provide calibration dataset with at least one sample."
+            )
 
     def register_statistic_points(self, statistic_points: StatisticPointsContainer) -> None:
         """

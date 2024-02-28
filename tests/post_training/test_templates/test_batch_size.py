@@ -60,7 +60,7 @@ class TemplateTestBatchSize(ABC):
         dataset = self.create_dataset(dataset_length, batch_size)
         statistics_aggregator = self.create_statistics_aggregator(dataset)
         statistics_aggregator.stat_subset_size = stat_subset_size
-        total_calibration_samples = statistics_aggregator._get_total_statistics_samples()
+        total_calibration_samples = statistics_aggregator._get_number_samples_for_statistics()
         assert total_calibration_samples == ref_calibration_samples_num
         iterataions_num = statistics_aggregator._get_iterations_num(total_calibration_samples)
         assert iterataions_num == ref_iterations_num
