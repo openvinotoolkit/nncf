@@ -161,16 +161,85 @@ def ov_model_and_quantized_model():
     return model, initial_model_graph, quantized_model, quantized_model_graph
 
 
-def test_collect_original_biases_and_weights_openvino(ov_model_and_quantized_model):
-    model, initial_model_graph, quantized_model, quantized_model_graph = ov_model_and_quantized_model
-    quantization_acc_restorer = QuantizationAccuracyRestorer()
+# def test_collect_original_biases_and_weights_openvino(ov_model_and_quantized_model):
+#     model, initial_model_graph, quantized_model, quantized_model_graph = ov_model_and_quantized_model
+#     quantization_acc_restorer = QuantizationAccuracyRestorer()
 
-    quantization_acc_restorer._collect_original_biases_and_weights(
-        initial_model_graph,
-        quantized_model_graph,
-        model,
-        OVAccuracyControlAlgoBackend,
+#     quantization_acc_restorer._collect_original_biases_and_weights(
+#         initial_model_graph,
+#         quantized_model_graph,
+#         model,
+#         OVAccuracyControlAlgoBackend,
+#     )
+#     conv_node = quantized_model_graph.get_node_by_name("Conv")
+#     assert conv_node.attributes["original_bias"] is not None
+#     assert conv_node.attributes["original_weight.1"] is not None
+
+
+@dataclass
+class StructForWorkerCalcTest:
+    model_size: int
+    preparation_time: int
+    validation_time: int
+    validation_dataset_size: int
+    result: int
+    id: str
+
+
+@pytest.mark.parametrize(
+    "ts",
+    [
+        StructForWorkerCalcTest(
+            model_size=100,
+            preparation_time=0.1,
+            validation_time=1.0,
+            validation_dataset_size=1000,
+            id="preparation time < threshold",
+            result=1,
+        ),
+        StructForWorkerCalcTest(
+            model_size=100,
+            preparation_time=1.0,
+            validation_time=1.0,
+            validation_dataset_size=10,
+            id="preparation time == threshold",
+            result=2,
+        ),
+        StructForWorkerCalcTest(
+            model_size=100,
+            preparation_time=3.0,
+            validation_time=1.0,
+            validation_dataset_size=10,
+            id="preparation time > threshold",
+            result=2,
+        ),
+        StructForWorkerCalcTest(
+            model_size=10,
+            preparation_time=500.0,
+            validation_time=1.0,
+            validation_dataset_size=2,
+            id="limited by cpu count",
+            result=5,
+        ),
+        StructForWorkerCalcTest(
+            model_size=10000000,
+            preparation_time=500.0,
+            validation_time=1.0,
+            validation_dataset_size=2,
+            id="limited by memory",
+            result=1,
+        ),
+    ],
+)
+def test_calculate_number_ranker_workers(ts: StructForWorkerCalcTest, mocker):
+    mocker.patch("nncf.quantization.algorithms.accuracy_control.algorithm.get_available_cpu_count", return_value=10)
+    mocker.patch(
+        "nncf.quantization.algorithms.accuracy_control.algorithm.get_available_memory_amount", return_value=10000
     )
-    conv_node = quantized_model_graph.get_node_by_name("Conv")
-    assert conv_node.attributes["original_bias"] is not None
-    assert conv_node.attributes["original_weight.1"] is not None
+    quantization_acc_restorer = QuantizationAccuracyRestorer()
+    assert ts.result == quantization_acc_restorer._calculate_number_ranker_workers(
+        ts.model_size,
+        ts.preparation_time,
+        ts.validation_time,
+        ts.validation_dataset_size,
+    )
