@@ -30,6 +30,7 @@ from fastdownload import FastDownload
 from torch.jit import TracerWarning
 
 import nncf
+from nncf.common.logging.track_progress import track
 
 warnings.filterwarnings("ignore", category=TracerWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -90,7 +91,7 @@ def main():
     quantization_dataset = nncf.Dataset(calibration_dataset, transform_fn)
 
     quantized_model = nncf.quantize(model, quantization_dataset)
-    acc1_int8_init = validate(val_loader, quantized_model, criterion, device)
+    acc1_int8_init = validate(val_loader, quantized_model, device)
     print(f"Accuracy of initialized INT8 model: {acc1_int8_init:.3f}")
     print(f"Accuracy drop of initialized INT8 model over pre-trained FP32 model: {acc1_fp32 - acc1_int8_init:.3f}")
 
@@ -101,7 +102,7 @@ def main():
     train(train_loader, quantized_model, criterion, optimizer, epoch=0, device=device)
 
     # Evaluate on validation set after Quantization-Aware Training (QAT case).
-    acc1_int8 = validate(val_loader, quantized_model, criterion, device)
+    acc1_int8 = validate(val_loader, quantized_model, device)
 
     print(f"Accuracy of tuned INT8 model: {acc1_int8:.3f}")
     print(f"Accuracy drop of tuned INT8 model over pre-trained FP32 model: {acc1_fp32 - acc1_int8:.3f}")
@@ -143,13 +144,10 @@ def train(
     epoch: int,
     device: torch.device,
 ):
-    print("Training:")
     # Switch to train mode.
     model.train()
 
-    print_frequency = 50
-    running_loss = 0.0
-    for i, (images, target) in enumerate(train_loader):
+    for images, target in track(train_loader, total=len(train_loader), description=f"Training: epoch {epoch}"):
         images = images.to(device)
         target = target.to(device)
 
@@ -162,48 +160,26 @@ def train(
         loss.backward()
         optimizer.step()
 
-        running_loss += loss.item()
-        if i % print_frequency == print_frequency - 1:
-            print(f"[Epoch {epoch + 1}, step {i + 1:5d}] loss: {running_loss / print_frequency:.3f}")
-            running_loss = 0.0
 
-
-def validate(
-    val_loader: torch.utils.data.DataLoader, model: torch.nn.Module, criterion: torch.nn.Module, device: torch.device
-) -> float:
-    print("Validation:")
-    running_loss = 0.0
-    top1_sum = running_top1 = 0.0
-    top5_sum = running_top5 = 0.0
-    print_frequency = 10
+def validate(val_loader: torch.utils.data.DataLoader, model: torch.nn.Module, device: torch.device) -> float:
+    top1_sum = 0.0
+    top5_sum = 0.0
 
     # Switch to evaluate mode.
     model.eval()
 
     with torch.no_grad():
-        for i, (images, target) in enumerate(val_loader):
+        for images, target in track(val_loader, total=len(val_loader), description="Validation:"):
             images = images.to(device)
             target = target.to(device)
 
             # Compute output.
             output = model(images)
-            loss = criterion(output, target)
-            running_loss += loss.item()
 
             # Measure accuracy and record loss.
             acc1, acc5 = accuracy(output, target, topk=(1, 5))
-            running_top1 += acc1.item()
-            running_top5 += acc5.item()
             top1_sum += acc1.item()
             top5_sum += acc5.item()
-
-            if i % print_frequency == print_frequency - 1:
-                print(
-                    f"[Step {i}] acc1 {running_top1 / print_frequency },"
-                    f" acc5 {running_top5 / print_frequency },"
-                    f" loss {running_loss / print_frequency}"
-                )
-                running_loss = running_top1 = running_top5 = 0
 
         num_samples = len(val_loader)
         top1_avg = top1_sum / num_samples
