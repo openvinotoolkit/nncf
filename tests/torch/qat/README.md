@@ -13,5 +13,5 @@ make install-torch-test
 Once the environment is installed use the following command to run all tests:
 
 ```bash
-python -m pytest tests/torch/qat_after_ptq --sota-data-dir /path/to/omz/training/datasets --sota-checkpoints-dir /path/to/nncf/checkpoints
+python -m pytest tests/torch/qat --sota-data-dir /path/to/omz/training/datasets --sota-checkpoints-dir /path/to/nncf/checkpoints
 ```
