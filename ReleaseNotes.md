@@ -22,7 +22,10 @@ Post-training Quantization:
   - Removed Dockerfiles
   - ...
 - Tutorials:
-  - ...
+  - [Post-Training Optimization of Stable Diffusion v2 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/236-stable-diffusion-v2/236-stable-diffusion-v2-text-to-image.ipynb)
+  - [Post-Training Optimization of DeciDiffusion Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/259-decidiffusion-image-generation/259-decidiffusion-image-generation.ipynb)
+  - [Post-Training Optimization of DepthAnything Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/280-depth-anything/280-depth-anything.ipynb)
+  - [Post-Training Optimization of Stable Diffusion ControlNet Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/235-controlnet-stable-diffusion/235-controlnet-stable-diffusion.ipynb)
 - Known issues:
   - ...
 
