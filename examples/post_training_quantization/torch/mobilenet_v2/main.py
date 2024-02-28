@@ -107,7 +107,7 @@ val_dataset = datasets.ImageFolder(
         ]
     ),
 )
-val_data_loader = torch.utils.data.DataLoader(val_dataset)
+val_data_loader = torch.utils.data.DataLoader(val_dataset, batch_size=128)
 
 torch_model = models.mobilenet_v2(num_classes=DATASET_CLASSES)
 torch_model = load_checkpoint(torch_model)
