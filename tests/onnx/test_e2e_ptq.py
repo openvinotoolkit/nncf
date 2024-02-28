@@ -402,7 +402,7 @@ class TestBenchmark:
             anno_dir,
             output_dir,
             eval_size,
-            program="accuracy_checker.py",
+            program="ac_wrapper.py",
             is_quantized=False,
             is_ov_ep=False,
             is_cpu_ep=True,
@@ -445,7 +445,7 @@ class TestBenchmark:
             anno_dir,
             output_dir,
             eval_size,
-            program="accuracy_checker.py",
+            program="ac_wrapper.py",
             is_quantized=True,
             is_ov_ep=is_ov_ep,
             is_cpu_ep=is_cpu_ep,
@@ -474,7 +474,7 @@ class TestBenchmark:
             anno_dir,
             output_dir,
             eval_size,
-            program="accuracy_checker.py",
+            program="ac_wrapper.py",
             is_quantized=True,
         )
         run_command(command)

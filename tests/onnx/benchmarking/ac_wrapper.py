@@ -9,14 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-try:
-    from accuracy_checker.annotation_converters.ms_coco import COCO_TO_VOC
-    from accuracy_checker.annotation_converters.ms_coco import MSCocoSegmentationConverter
-    from accuracy_checker.main import main
-except ImportError:
-    from openvino.tools.accuracy_checker.annotation_converters.ms_coco import COCO_TO_VOC
-    from openvino.tools.accuracy_checker.annotation_converters.ms_coco import MSCocoSegmentationConverter
-    from openvino.tools.accuracy_checker.main import main
+from accuracy_checker.annotation_converters.ms_coco import COCO_TO_VOC
+from accuracy_checker.annotation_converters.ms_coco import MSCocoSegmentationConverter
+from accuracy_checker.main import main
 
 
 class MSCocoSegmentationToVOCConverter(MSCocoSegmentationConverter):
