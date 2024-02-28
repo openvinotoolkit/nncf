@@ -26,11 +26,16 @@ from typing import Any, Iterable, List, Optional, TypeVar
 
 import numpy as np
 import openvino.runtime as ov
-from accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator
-from accuracy_checker.evaluators.quantization_model_evaluator import create_model_evaluator
 from config import Config
 from openvino.runtime import Dimension
 from openvino.runtime import PartialShape
+
+try:
+    from accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator
+    from accuracy_checker.evaluators.quantization_model_evaluator import create_model_evaluator
+except ImportError:
+    from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator
+    from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import create_model_evaluator
 
 import nncf
 from nncf.common.deprecation import warning_deprecated

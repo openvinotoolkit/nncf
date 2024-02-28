@@ -14,8 +14,12 @@ from copy import deepcopy
 from pathlib import Path
 
 import yaml
-from accuracy_checker.config import ConfigReader
 from addict import Dict
+
+try:
+    from accuracy_checker.config import ConfigReader
+except ImportError:
+    from openvino.tools.accuracy_checker.config import ConfigReader
 
 import nncf
 from nncf.common.logging import nncf_logger
