@@ -30,6 +30,19 @@ TModel = TypeVar("TModel")
 EMPTY_DATASET_MESSAGE = (
     "Calibration dataset must not be empty. Please provide calibration dataset with at least one sample."
 )
+BATCH_SIZE_IS_BIGGER_THAN_SUBSET_SIZE_MESSAGE = (
+    "Provided dataset has a batch size value is bigger than subset size for statistics collection. "
+    "Please increase the number of samples for a statistics collection "
+    "or decrease the batch size value in the dataset."
+)
+BATCH_SIZE_MODEL_WARNING = (
+    "For the particular model the batch size > 1 can lead to inaccurate collected statistics. "
+    "The recomendation is to provide dataloader instance with the batch_size = 1."
+)
+DECREASING_SAMPLES_NUMBER_MESSAGE = (
+    "The number of samples for statistics collection is decreased "
+    "to align with the provided batch size value of the dataset."
+)
 
 
 class StatisticsAggregator(ABC):
@@ -83,12 +96,7 @@ class StatisticsAggregator(ABC):
         if not self.statistic_points:
             return
         if self.batch_size > 1 and self.is_model_has_no_batch_axis(graph):
-            nncf_logger.warning(
-                (
-                    "For the particular model the batch size > 1 can lead to inaccurate collected statistics. "
-                    "The recomendation is to provide dataloader instance with the batch_size = 1."
-                )
-            )
+            nncf_logger.warning(BATCH_SIZE_MODEL_WARNING)
         model_transformer = factory.ModelTransformerFactory.create(model)
         merged_statistics = self._get_merged_statistic_points(self.statistic_points, model, graph)
         transformation_layout = self._get_transformation_layout_extra_outputs(merged_statistics)
@@ -99,14 +107,13 @@ class StatisticsAggregator(ABC):
         iterations_num = (
             self._get_iterations_num(statistics_samples_num) if statistics_samples_num is not None else None
         )
-        if iterations_num is not None and iterations_num == 0:
-            raise nncf.ValidationError(
-                (
-                    "Provided dataset has a batch size value is bigger than subset size for statistics collection. "
-                    "Please increase the number of samples for a statistics collection "
-                    "or decrease the batch size value in the dataset."
-                )
-            )
+        if iterations_num is not None:
+            if iterations_num == 0:
+                raise nncf.ValidationError(BATCH_SIZE_IS_BIGGER_THAN_SUBSET_SIZE_MESSAGE)
+            samples_num = iterations_num * self.batch_size
+            if samples_num != statistics_samples_num:
+                nncf_logger.warning(DECREASING_SAMPLES_NUMBER_MESSAGE)
+                statistics_samples_num = samples_num
         empty_statistics = True
         with track(total=statistics_samples_num, description="Statistics collection") as pbar:
             for input_data in islice(self.dataset.get_inference_data(), iterations_num):
