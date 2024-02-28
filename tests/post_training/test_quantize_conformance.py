@@ -200,48 +200,48 @@ def test_ptq_quantization(
     run_torch_cuda_backend: bool,
     subset_size: Optional[int],
     run_benchmark_app: bool,
-    capsys: pytest.CaptureFixture,
+    capsys: None,
     extra_columns: bool,
 ):
     pipeline = None
     err_msg = None
     test_model_param = None
     start_time = time.perf_counter()
-    try:
-        if test_case_name not in ptq_reference_data:
-            raise nncf.ValidationError(f"{test_case_name} does not exist in 'reference_data.yaml'")
-        test_model_param = PTQ_TEST_CASES[test_case_name]
-        maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend)
-        pipeline_cls = test_model_param["pipeline_cls"]
-        pipeline_kwargs = create_pipeline_kwargs(test_model_param, subset_size, test_case_name, ptq_reference_data)
-        pipeline_kwargs.update(
-            {"output_dir": output_dir, "data_dir": data_dir, "no_eval": no_eval, "run_benchmark_app": run_benchmark_app}
-        )
-        pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)
-        pipeline.run()
-    except Exception as e:
-        err_msg = str(e)
-        traceback.print_exc()
+    # try:
+    if test_case_name not in ptq_reference_data:
+        raise nncf.ValidationError(f"{test_case_name} does not exist in 'reference_data.yaml'")
+    test_model_param = PTQ_TEST_CASES[test_case_name]
+    maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend)
+    pipeline_cls = test_model_param["pipeline_cls"]
+    pipeline_kwargs = create_pipeline_kwargs(test_model_param, subset_size, test_case_name, ptq_reference_data)
+    pipeline_kwargs.update(
+        {"output_dir": output_dir, "data_dir": data_dir, "no_eval": no_eval, "run_benchmark_app": run_benchmark_app}
+    )
+    pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)
+    pipeline.run()
+    # except Exception as e:
+    #     err_msg = str(e)
+    #     traceback.print_exc()
 
-    if pipeline is not None:
-        pipeline.cleanup_cache()
-        run_info = pipeline.run_info
-        if err_msg:
-            run_info.status = f"{run_info.status} | {err_msg}" if run_info.status else err_msg
+    # if pipeline is not None:
+    #     pipeline.cleanup_cache()
+    #     run_info = pipeline.run_info
+    #     if err_msg:
+    #         run_info.status = f"{run_info.status} | {err_msg}" if run_info.status else err_msg
 
-        captured = capsys.readouterr()
-        write_logs(captured, pipeline)
+    #     captured = capsys.readouterr()
+    #     write_logs(captured, pipeline)
 
-        if extra_columns:
-            pipeline.collect_data_from_stdout(captured.out)
-    else:
-        run_info = create_short_run_info(test_model_param, err_msg, test_case_name)
+    #     if extra_columns:
+    #         pipeline.collect_data_from_stdout(captured.out)
+    # else:
+    #     run_info = create_short_run_info(test_model_param, err_msg, test_case_name)
 
-    run_info.time_total = time.perf_counter() - start_time
-    ptq_result_data[test_case_name] = run_info
+    # run_info.time_total = time.perf_counter() - start_time
+    # ptq_result_data[test_case_name] = run_info
 
-    if err_msg:
-        pytest.fail(err_msg)
+    # if err_msg:
+    #     pytest.fail(err_msg)
 
 
 @pytest.mark.parametrize("test_case_name", WC_TEST_CASES.keys())
