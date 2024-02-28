@@ -194,13 +194,13 @@ SKIP_MAP = {
         "nasnet_mobile": pytest.mark.skip(reason="gitlab issue #18"),
         "mobilenet_v2_slim": pytest.mark.skip(reason="ticket #46349"),
         "xception": pytest.mark.skip(reason="gitlab issue #28"),
-        "mask_rcnn": pytest.mark.nightly()
+        "mask_rcnn": pytest.mark.nightly(),
     },
     "magnitude_sparsity": {
         "inception_resnet_v2": pytest.mark.skip(reason="gitlab issue #17"),
         "nasnet_mobile": pytest.mark.skip(reason="gitlab issue #18"),
         "xception": pytest.mark.skip(reason="gitlab issue #28"),
-        "mask_rcnn": pytest.mark.nightly()
+        "mask_rcnn": pytest.mark.nightly(),
     },
     "filter_pruning": {
         "densenet121": pytest.mark.skip(reason="ticket #50604"),
@@ -211,10 +211,7 @@ SKIP_MAP = {
         "resnet50v2": pytest.mark.skip(reason="Several masks on one weight"),
         "mobilenet_v2_slim": pytest.mark.skip(reason="ticket #46349"),
     },
-    "rb_sparsity": {
-        "mobilenet_v2_slim": pytest.mark.skip(reason="ticket #46349"),
-        "mask_rcnn": pytest.mark.nightly()
-    },
+    "rb_sparsity": {"mobilenet_v2_slim": pytest.mark.skip(reason="ticket #46349"), "mask_rcnn": pytest.mark.nightly()},
 }
 
 
