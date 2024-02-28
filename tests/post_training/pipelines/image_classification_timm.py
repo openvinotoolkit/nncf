@@ -127,13 +127,13 @@ class ImageClassificationTimm(PTQTestPipeline):
 
         core = ov.Core()
 
-        if os.environ.get("CPU_THREADS_NUM"):
-            # Set CPU_THREADS_NUM for OpenVINO inference
-            cpu_threads_num = os.environ.get("CPU_THREADS_NUM")
-            core.set_property("CPU", properties={"CPU_THREADS_NUM": str(cpu_threads_num)})
+        if os.environ.get("ENABLE_CPU_PINNING"):
+            # Set ENABLE_CPU_PINNING for OpenVINO inference
+            enable_cpu_pinning = os.environ.get("ENABLE_CPU_PINNING")
+            core.set_property("CPU", properties={"ENABLE_CPU_PINNING": str(enable_cpu_pinning)})
 
         ov_model = core.read_model(self.path_compressed_ir)
-        compiled_model = core.compile_model(ov_model, "CPU")
+        compiled_model = core.compile_model(ov_model)
 
         jobs = int(os.environ.get("NUM_VAL_THREADS", DEFAULT_VAL_THREADS))
         infer_queue = ov.AsyncInferQueue(compiled_model, jobs)

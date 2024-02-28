@@ -188,10 +188,10 @@ class LMWeightCompression(BaseTestPipeline):
         is_stateful = self.params.get("is_stateful", False)
         core = ov.Core()
 
-        if os.environ.get("CPU_THREADS_NUM"):
-            # Set CPU_THREADS_NUM for OpenVINO inference
-            cpu_threads_num = os.environ.get("CPU_THREADS_NUM")
-            core.set_property("CPU", properties={"CPU_THREADS_NUM": str(cpu_threads_num)})
+        if os.environ.get("ENABLE_CPU_PINNING"):
+            # Set ENABLE_CPU_PINNING for OpenVINO inference
+            enable_cpu_pinning = os.environ.get("ENABLE_CPU_PINNING")
+            core.set_property("CPU", properties={"ENABLE_CPU_PINNING": str(enable_cpu_pinning)})
 
         gt_data_path = TEST_ROOT / "post_training" / "data" / "wwb_ref_answers" / self.fp32_model_name / "ref_qa.csv"
         gt_data_path.parent.mkdir(parents=True, exist_ok=True)
