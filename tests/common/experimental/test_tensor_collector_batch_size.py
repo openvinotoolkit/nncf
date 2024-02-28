@@ -107,14 +107,12 @@ class TemplateTestTensorCollectorBatchSize(ABC):
 
         shape_batch_1 = [1, *tensor_shape]
         collector, reducer, _ = self._create_tensor_collector(shape_batch_1, inplace, reducers, aggregators)
-        # output_name = reducer.get_output_names(target_node_name, port_id)
         dataitems_batch_1 = self.add_batch_dim_to_dataitems(dataitems, batch_size=1)
         self._register_inputs(collector, dataitems_batch_1, reducer)
         aggregated_tensor_batch_1 = list(collector._aggregate().values())
 
         shape_batch_10 = [10, *tensor_shape]
         collector, reducer, _ = self._create_tensor_collector(shape_batch_10, inplace, reducers, aggregators)
-        # output_name = reducer.get_output_names(target_node_name, port_id)
         dataitems_batch_10 = self.add_batch_dim_to_dataitems(dataitems, batch_size=10)
         self._register_inputs(collector, dataitems_batch_10, reducer)
         aggregated_tensor_batch_10 = list(collector._aggregate().values())

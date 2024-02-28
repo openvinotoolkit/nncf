@@ -27,6 +27,10 @@ from nncf.data.dataset import Dataset
 TensorType = TypeVar("TensorType")
 TModel = TypeVar("TModel")
 
+EMPTY_DATASET_MESSAGE = (
+    "Calibration dataset must not be empty. Please provide calibration dataset with at least one sample."
+)
+
 
 class StatisticsAggregator(ABC):
     """
@@ -41,6 +45,8 @@ class StatisticsAggregator(ABC):
         self.dataset_sample_size = (
             dataset_len * self.batch_size if dataset_len is not None else dataset_len
         )  # Number of samples in the dataset
+        if self.dataset_sample_size == 0:
+            raise nncf.ValidationError(EMPTY_DATASET_MESSAGE)
         self.statistic_points = StatisticPointsContainer()
 
     def _get_number_samples_for_statistics(
@@ -78,8 +84,10 @@ class StatisticsAggregator(ABC):
             return
         if self.batch_size > 1 and self.is_model_has_no_batch_axis(graph):
             nncf_logger.warning(
-                "For the particular model the batch size > 1 can lead to inaccurate collected statistics . \
-                The recomendation is to provide dataloader instance with the batch_size = 1."
+                (
+                    "For the particular model the batch size > 1 can lead to inaccurate collected statistics. "
+                    "The recomendation is to provide dataloader instance with the batch_size = 1."
+                )
             )
         model_transformer = factory.ModelTransformerFactory.create(model)
         merged_statistics = self._get_merged_statistic_points(self.statistic_points, model, graph)
@@ -93,9 +101,11 @@ class StatisticsAggregator(ABC):
         )
         if iterations_num is not None and iterations_num == 0:
             raise nncf.ValidationError(
-                "Provided dataset has a batch size value which is bigger than subset size for statistics collection. \
-                Please increase number of samples for statistics collection \
-                or decrease batch size value in the dataset."
+                (
+                    "Provided dataset has a batch size value is bigger than subset size for statistics collection. "
+                    "Please increase the number of samples for a statistics collection "
+                    "or decrease the batch size value in the dataset."
+                )
             )
         empty_statistics = True
         with track(total=statistics_samples_num, description="Statistics collection") as pbar:
@@ -106,9 +116,7 @@ class StatisticsAggregator(ABC):
                 pbar.progress.update(pbar.task, advance=self.batch_size)
                 empty_statistics = False
         if empty_statistics:
-            raise nncf.ValidationError(
-                "Calibration dataset must not be empty. Please provide calibration dataset with at least one sample."
-            )
+            raise nncf.ValidationError(EMPTY_DATASET_MESSAGE)
 
     def register_statistic_points(self, statistic_points: StatisticPointsContainer) -> None:
         """

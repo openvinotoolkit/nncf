@@ -69,10 +69,7 @@ def convert_fq_params_to_onnx_params(
     scale = np.squeeze(scale)
     zero_point = np.squeeze(zero_point)
     # ONNX axis parameter format specification.
-    if not axis:
-        axis = None
-    else:
-        axis = axis[0]
+    axis = None if not axis else axis[0]
     return ONNXQuantizerLayerParameters(scale.data, zero_point.data, tensor_type, axis)
 
 

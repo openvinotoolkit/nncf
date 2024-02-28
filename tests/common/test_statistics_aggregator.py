@@ -24,6 +24,7 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.tensor_statistics.aggregator import EMPTY_DATASET_MESSAGE
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
@@ -38,6 +39,14 @@ from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from nncf.quantization.range_estimator import StatisticsCollectorParameters
 from nncf.quantization.range_estimator import StatisticsType
+
+
+class MockedDataset:
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        raise StopIteration
 
 
 class BiasCorrectionAlgos(Enum):
@@ -895,31 +904,32 @@ class TemplateTestStatisticsAggregator:
                 ref_subset_size = subset_size
         assert statistics_aggregator.stat_subset_size == ref_subset_size
 
-    def test_collect_with_empty_dataset(self, dataset_samples, mocker):
-        model = self.get_backend_model(dataset_samples)
-        dataset_samples = []
-        dataset = self.get_dataset(dataset_samples)
-        graph = NNCFGraphFactory.create(model)
+    def test_collect_with_empty_dataset(self):
+        """
+        Checks a correct raising of an error when dataset has len==0
+        """
+        dataset = nncf.Dataset([])
+        with pytest.raises(nncf.ValidationError) as e:
+            _ = self.get_statistics_aggregator(dataset)
+        assert EMPTY_DATASET_MESSAGE in str(e)
 
-        inplace_statistics = False
-        quantizer_config = QuantizerConfig(mode=QuantizationMode.ASYMMETRIC, per_channel=False)
-        target_point = self.get_target_point(TargetType.POST_LAYER_OPERATION)
-        algorithm_name = "TestAlgo"
-        statistic_point = self.create_statistics_point(
-            model,
-            quantizer_config,
-            target_point,
-            len(dataset_samples),
-            algorithm_name,
-            inplace_statistics,
-            RangeEstimatorParametersSet.MEAN_MINMAX,
-            mocker,
+    def test_collect_with_empty_dataset_no_len(self, dataset_samples):
+        """
+        Checks a correct raising of an error when dataset has no len() method implementation,
+        but has no elements.
+        """
+        model = self.get_backend_model(dataset_samples)
+        dummy_statistic_point = StatisticPoint(
+            target_point=self.get_target_point(TargetType.POST_LAYER_OPERATION),
+            tensor_collector=TensorCollector(),
+            algorithm="dummy",
         )
         statistics_points = StatisticPointsContainer()
-        statistics_points.add_statistic_point(statistic_point)
-
+        statistics_points.add_statistic_point(dummy_statistic_point)
+        dataset = nncf.Dataset(MockedDataset())
+        graph = NNCFGraphFactory.create(model)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
         with pytest.raises(nncf.ValidationError) as e:
             statistics_aggregator.collect_statistics(model, graph)
-            assert "Batch size > length of dataset or batch size > stat_subset_size." in e.info
+        assert EMPTY_DATASET_MESSAGE in str(e)
