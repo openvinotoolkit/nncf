@@ -81,12 +81,10 @@ def test_examples(
 
     measured_metrics = load_json(metrics_file_path)
 
-    accuracy_tolerance = ACCURACY_TOLERANCE
-    if "accuracy_tolerance" in example_params:
-        accuracy_tolerance = example_params["accuracy_tolerance"]
-
     for name, value in example_params[ACCURACY_METRICS].items():
-        assert measured_metrics[name] == pytest.approx(value, abs=accuracy_tolerance)
+        assert measured_metrics[name] == pytest.approx(
+            value, abs=example_params.get("accuracy_tolerance", ACCURACY_TOLERANCE)
+        )
 
     if MODEL_SIZE_METRICS in example_params:
         for name, value in example_params[MODEL_SIZE_METRICS].items():

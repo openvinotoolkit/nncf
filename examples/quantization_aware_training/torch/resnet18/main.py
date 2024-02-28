@@ -14,7 +14,7 @@ import re
 import subprocess
 import warnings
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 import openvino as ov
 import torch
@@ -30,6 +30,11 @@ from fastdownload import FastDownload
 from torch.jit import TracerWarning
 
 import nncf
+from nncf.common.logging.track_progress import track
+
+warnings.filterwarnings("ignore", category=TracerWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
+
 
 BASE_MODEL_NAME = "resnet18"
 IMAGE_SIZE = 64
@@ -55,22 +60,25 @@ def load_checkpoint(model: torch.nn.Module) -> torch.nn.Module:
     return model, checkpoint["acc1"]
 
 
+def get_resnet18_model(device: torch.device) -> torch.nn.Module:
+    num_classes = 200  # 200 is for Tiny ImageNet, default is 1000 for ImageNet
+    model = models.resnet18(weights=None)
+    # Update the last FC layer for Tiny ImageNet number of classes.
+    model.fc = nn.Linear(in_features=512, out_features=num_classes, bias=True)
+    model.to(device)
+    return model
+
+
 def main():
     torch.manual_seed(0)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using {device} device")
 
-    num_classes = 200  # 200 is for Tiny ImageNet, default is 1000 for ImageNet
     init_lr = 1e-4
-
-    model = models.resnet18(pretrained=False)
-    # Update the last FC layer for Tiny ImageNet number of classes.
-    model.fc = nn.Linear(in_features=512, out_features=num_classes, bias=True)
-    model.to(device)
+    model = get_resnet18_model(device)
 
     # Define loss function (criterion) and optimizer.
     criterion = nn.CrossEntropyLoss().to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=init_lr)
 
     model, acc1_fp32 = load_checkpoint(model)
     print(f"Accuracy of pre-trained FP32 model: {acc1_fp32:.3f}")
@@ -104,15 +112,13 @@ def main():
 
     # Export FP32 model to OpenVINO™ IR
     fp32_ir_path = f"{ROOT}/{BASE_MODEL_NAME}_fp32.xml"
-    ov_model = ov.convert_model(model.cpu(), example_input=example_input)
+    ov_model = ov.convert_model(model.cpu(), example_input=example_input, input=input_shape)
     ov.save_model(ov_model, fp32_ir_path, compress_to_fp16=False)
     print(f"FP32 model was exported to {fp32_ir_path}.")
 
     # Export INT8 model to OpenVINO™ IR
     int8_ir_path = f"{ROOT}/{BASE_MODEL_NAME}_int8.xml"
-    warnings.filterwarnings("ignore", category=TracerWarning)
-    warnings.filterwarnings("ignore", category=UserWarning)
-    ov_model = ov.convert_model(quantized_model.cpu(), example_input=example_input)
+    ov_model = ov.convert_model(quantized_model.cpu(), example_input=example_input, input=input_shape)
     ov.save_model(ov_model, int8_ir_path)
     print(f"INT8 model exported to {int8_ir_path}.")
 
@@ -138,13 +144,12 @@ def train(
     epoch: int,
     device: torch.device,
 ):
-    print("Training:")
     # Switch to train mode.
     model.train()
 
     print_frequency = 50
     running_loss = 0.0
-    for i, (images, target) in enumerate(train_loader):
+    for i, (images, target) in track(enumerate(train_loader), total=len(train_loader), description="Training"):
         images = images.to(device)
         target = target.to(device)
 
@@ -166,7 +171,6 @@ def train(
 def validate(
     val_loader: torch.utils.data.DataLoader, model: torch.nn.Module, criterion: torch.nn.Module, device: torch.device
 ) -> float:
-    print("Validation:")
     running_loss = 0.0
     top1_sum = running_top1 = 0.0
     top5_sum = running_top5 = 0.0
@@ -176,7 +180,7 @@ def validate(
     model.eval()
 
     with torch.no_grad():
-        for i, (images, target) in enumerate(val_loader):
+        for i, (images, target) in track(enumerate(val_loader), total=len(val_loader), description="Validation"):
             images = images.to(device)
             target = target.to(device)
 
@@ -294,10 +298,9 @@ def prepare_tiny_imagenet_200(dataset_dir: Path):
     val_images_dir.rmdir()
 
 
-def run_benchmark(model_path: str, shape: Optional[List[int]] = None, verbose: bool = True) -> float:
+def run_benchmark(model_path: str, shape: List[int], verbose: bool = True) -> float:
     command = f"benchmark_app -m {model_path} -d CPU -api async -t 15"
-    if shape is not None:
-        command += f' -shape "[{",".join(str(x) for x in shape)}]"'
+    command += f' -shape "[{",".join(str(x) for x in shape)}]"'
     cmd_output = subprocess.check_output(command, shell=True)  # nosec
     if verbose:
         print(*str(cmd_output).split("\\n")[-9:-1], sep="\n")
