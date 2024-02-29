@@ -138,7 +138,10 @@ def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int =
         scale_node = scale_node.input_value(0).get_node()
     assert list(scale_node.shape) == reduced_weight_shape
 
-    reshape_node = get_next_node(mul_node)
+    convert_node = get_next_node(mul_node)
+    assert convert_node.get_type_name() == "Convert"
+
+    reshape_node = get_next_node(convert_node)
     assert reshape_node.get_type_name() == "Reshape"
 
     return {
@@ -164,7 +167,10 @@ def check_nf4_grouped(op: ov.Node, group_size: int = 7):
         scale_node = scale_node.input_value(0).get_node()
     assert list(scale_node.shape) == reduced_weight_shape
 
-    reshape_node = get_next_node(mul_node)
+    convert_node = get_next_node(mul_node)
+    assert convert_node.get_type_name() == "Convert"
+
+    reshape_node = get_next_node(convert_node)
     assert reshape_node.get_type_name() == "Reshape"
 
     return {
@@ -697,22 +703,21 @@ def test_data_type_for_num_weights(mocker):
     assert isinstance(params.num_weights, np.uint64)
 
 
-def test_weight_scale_datatype():
-    # When model weight is in fp32, there will be an extra convert node for weight scale f16 > f32
-    model_fp32 = IdentityMatmul(weights_dtype=np.float32).ov_model
-    compressed_model_fp32 = compress_weights(model_fp32)
-    name_to_node_map = {op.get_friendly_name(): op for op in compressed_model_fp32.get_ops()}
-    assert "weights/scale_convert" in name_to_node_map
-    scale_multiply_node = name_to_node_map["weights/fq_weights_1"]
-    assert scale_multiply_node.input_value(1).get_node().get_element_type() == ov.Type.f32
+def test_compression_subgraph_for_different_weight_types():
+    for weight_dtype in [np.float32, np.float16]:
+        model_fp32 = IdentityMatmul(weights_dtype=weight_dtype).ov_model
+        compressed_model_fp32 = compress_weights(model_fp32)
+        name_to_node_map = {op.get_friendly_name(): op for op in compressed_model_fp32.get_ops()}
 
-    # When model weight is in fp16, there will be no extra convert node for weight scale
-    model_fp16 = IdentityMatmul(weights_dtype=np.float16).ov_model
-    compressed_model_fp16 = compress_weights(model_fp16)
-    name_to_node_map = {op.get_friendly_name(): op for op in compressed_model_fp16.get_ops()}
-    assert "weights/scale_convert" not in name_to_node_map
-    scale_multiply_node = name_to_node_map["weights/fq_weights_1"]
-    assert scale_multiply_node.input_value(1).get_node().get_element_type() == ov.Type.f16
+        # Weight scale should be in fp16 nevertheless the weight data type
+        scale_multiply_node = name_to_node_map["weights/fq_weights_1"]
+        assert scale_multiply_node.input_value(1).get_node().get_element_type() == ov.Type.f16
+
+        convert_node = get_next_node(scale_multiply_node)
+        assert convert_node.get_type_name() == "Convert"
+        # In case weight is in fp32, the convert node is manually inserted
+        if weight_dtype == np.float32:
+            assert convert_node.get_friendly_name() == "weights/fq_weights_1/convert"
 
 
 DATASET_SIZE = 129
