@@ -153,14 +153,14 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             compressed_const = opset.constant(
                 compressed_weight.tensor.data, dtype=compression_dtype, name=const_node_name
             )
-            converted_const = opset.convert(compressed_const, ov.Type.f16)
+            converted_const = opset.convert(compressed_const, ov.Type.f32)
             if compressed_weight.zero_point is not None:
                 zero_point_const = opset.constant(
                     compressed_weight.zero_point.data,
                     dtype=compression_dtype,
                     name=f"{const_node_name}/zero_point",
                 )
-                converted_zero_point = opset.convert(zero_point_const, ov.Type.f16)
+                converted_zero_point = opset.convert(zero_point_const, ov.Type.f32)
                 converted_const = opset.subtract(
                     converted_const, converted_zero_point, name=f"{const_node_name}/zero_point/subtract"
                 )
@@ -168,21 +168,23 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             scale_const = opset.constant(
                 compressed_weight.scale.data, dtype=ov.Type.f16, name=f"{const_node_name}/scale"
             )
+            scale_const = opset.convert(scale_const, ov.Type.f32, name=f"{const_node_name}/scale_convert")
             mul = opset.multiply(
                 converted_const,
                 scale_const,
                 name=f"{const_node_name}/fq_weights_{wc_params.weight_port_id}",
             )
-            if const_dtype != ov.Type.f16:
-                mul = opset.convert(
-                    mul, ov.Type.f32, name=f"{const_node_name}/fq_weights_{wc_params.weight_port_id}/convert"
-                )
 
             if compression_config.group_size != -1:
                 mul = opset.reshape(mul, output_shape=original_shape, special_zero=False)
 
+            const_node_output = const_node.output(0)
+            if const_dtype == ov.Type.f16:
+                # Bypass fp16 -> fp32 convert node
+                const_node_output = next(iter(const_node_output.get_target_inputs())).get_node().output(0)
+
             mul_output = mul.output(0)
-            for target_input in const_node.output(0).get_target_inputs():
+            for target_input in const_node_output.get_target_inputs():
                 target_input.replace_source_output(mul_output)
 
         # reset name_to_node_mapping
