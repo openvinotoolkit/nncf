@@ -314,7 +314,7 @@ class TestSotaCheckpoints:
         :return: A command line to run the accuracy_check tool.
         """
         cmd = [
-            "accuracy_check",
+            "python -m accuracy_checker.main",
             "--config", config_path.as_posix(),
             "--source", ov_data_dir.as_posix(),
             "--definitions", DATASET_DEFINITIONS_PATH.as_posix(),

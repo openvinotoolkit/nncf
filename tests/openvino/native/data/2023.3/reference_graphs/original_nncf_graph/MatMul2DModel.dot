@@ -1,0 +1,13 @@
+strict digraph  {
+"0 Input" [id=0, type=Parameter];
+"1 MatMul" [id=1, type=MatMul];
+"2 Add" [id=2, type=Add];
+"3 Result" [id=3, type=Result];
+"4 Constant_32" [id=4, type=Constant];
+"5 Constant_30" [id=5, type=Constant];
+"0 Input" -> "1 MatMul"  [label="[3, 5]", style=solid];
+"1 MatMul" -> "2 Add"  [label="[3, 2]", style=solid];
+"2 Add" -> "3 Result"  [label="[3, 2]", style=solid];
+"4 Constant_32" -> "2 Add"  [label="[1, 2]", style=solid];
+"5 Constant_30" -> "1 MatMul"  [label="[5, 2]", style=solid];
+}

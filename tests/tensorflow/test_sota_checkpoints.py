@@ -521,7 +521,7 @@ class TestSotaCheckpoints:
             self.make_ac_config(ac_config, eval_test_struct.reference)
 
         ac_cmd = (
-            f"accuracy_check"
+            f"python -m accuracy_checker.main"
             f" -c {ac_config}"
             f" -s {ov_data_dir}"
             " --progress print"
