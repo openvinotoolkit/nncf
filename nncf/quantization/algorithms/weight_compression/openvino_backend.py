@@ -180,7 +180,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
             const_node_output = const_node.output(0)
             if const_dtype == ov.Type.f16:
-                # Bypass fp16 -> fp32 convert node
+                # Bypass fp16 -> fp32 weight convert node
                 const_node_output = next(iter(const_node_output.get_target_inputs())).get_node().output(0)
 
             mul_output = mul.output(0)
