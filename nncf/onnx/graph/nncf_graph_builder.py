@@ -306,7 +306,7 @@ class GraphConverter:
                 node_metatype=OutputNoopMetatype,
                 layer_attributes=layer_attributes,
             )
-            if output_name in parents_node_mapping: # If no parent node, when output put on an edge of initializer.
+            if output_name in parents_node_mapping:  # If no parent node, when output put on an edge of initializer.
                 from_node = parents_node_mapping[output_name]
                 output_node_node_id = output_node.node_id
                 edge = edge_info_mapping[output_name]
@@ -324,7 +324,7 @@ class GraphConverter:
                     output_port_id=output_port_id,
                     dtype=nncf_dtype,
                 )
-                
+
     @staticmethod
     def convert_onnx_dtype_to_nncf_dtype(onnx_dtype: int) -> Dtype:
         """
