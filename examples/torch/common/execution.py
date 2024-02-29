@@ -119,4 +119,4 @@ def set_seed(config):
         manual_seed(config.seed)
         cudnn.deterministic = True
         cudnn.benchmark = False
-        # torch.use_deterministic_algorithms(True)
+        torch.use_deterministic_algorithms(True)
