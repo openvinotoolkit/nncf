@@ -9,6 +9,7 @@ Post-training Quantization:
 - General:
   - ...
 - Features:
+  - (OpenVINO) Added modified AWQ algorithm for 4-bit data-aware weights compression. This algorithm applied only for patterns `MatMul->Multiply->Matmul`. For that `awq` optional parameter has been added to `nncf.compress_weights()` and can be used to minimize accuracy degradation of compressed models (note that this option increases the compression time).
   - (ONNX) Introduced support for the ONNX backend in the `nncf.quantize_with_accuracy_control()` method. Users can now perform quantization with accuracy control for `onnx.ModelProto`. By leveraging this feature, users can enhance the accuracy of quantized models while minimizing performance impact.
   - (ONNX) Added an example based on the YOLOv8n-seg model for demonstrating the usage of quantization with accuracy control for the ONNX backend.
   - (PT) Added SmoothQuant algorithm for PyTorch backend in `nncf.quantize`.
