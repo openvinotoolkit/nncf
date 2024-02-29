@@ -106,7 +106,7 @@ class Ranker:
 
         input_nodes = [
             *quantized_model_graph.get_nodes_by_metatypes(self._algo_backend.get_op_with_weights_metatypes()),
-            *self._algo_backend.get_start_nodes_for_activation_path_tracing(quantized_model_graph)
+            *self._algo_backend.get_start_nodes_for_activation_path_tracing(quantized_model_graph),
         ]
 
         quantized_model_graph_without_shapeof = remove_shapeof_subgraphs(
