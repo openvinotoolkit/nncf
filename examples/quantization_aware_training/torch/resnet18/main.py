@@ -27,7 +27,7 @@ import torchvision.datasets as datasets
 import torchvision.models as models
 import torchvision.transforms as transforms
 from fastdownload import FastDownload
-from tabulate import tabulate
+from texttable import Texttable
 from torch.jit import TracerWarning
 
 import nncf
@@ -68,95 +68,6 @@ def get_resnet18_model(device: torch.device) -> torch.nn.Module:
     model.fc = nn.Linear(in_features=512, out_features=num_classes, bias=True)
     model.to(device)
     return model
-
-
-def main():
-    torch.manual_seed(0)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Using {device} device")
-
-    init_lr = 1e-4
-    model = get_resnet18_model(device)
-
-    # Define loss function (criterion) and optimizer.
-    criterion = nn.CrossEntropyLoss().to(device)
-
-    model, acc1_fp32 = load_checkpoint(model)
-
-    print("[Step 1] Prepare model and dataset")
-    train_loader, val_loader, calibration_dataset = create_data_loaders()
-
-    def transform_fn(data_item):
-        return data_item[0].to(device)
-
-    quantization_dataset = nncf.Dataset(calibration_dataset, transform_fn)
-
-    print(os.linesep + "[Step 2] Quantize model")
-
-    quantized_model = nncf.quantize(model, quantization_dataset)
-    acc1_int8_init = validate(val_loader, quantized_model, device)
-
-    print(f"Accuracy@1 of initialized INT8 model: {acc1_int8_init:.3f}")
-
-    compression_lr = init_lr / 10
-    optimizer = torch.optim.Adam(quantized_model.parameters(), lr=compression_lr)
-
-    # Train for one epoch with NNCF.
-    print(os.linesep + "[Step 3] Fine tune quantized model")
-    train(train_loader, quantized_model, criterion, optimizer, device=device)
-
-    # Evaluate on validation set after Quantization-Aware Training (QAT case).
-    acc1_int8 = validate(val_loader, quantized_model, device)
-    print(f"Accuracy@1 of fine-tuned INT8 model: {acc1_int8:.3f}")
-
-    input_shape = (1, 3, IMAGE_SIZE, IMAGE_SIZE)
-    example_input = torch.randn(*input_shape).cpu()
-
-    print(os.linesep + "[Step 4] Export models")
-    # Export FP32 model to OpenVINO™ IR
-    fp32_ir_path = f"{ROOT}/{BASE_MODEL_NAME}_fp32.xml"
-    ov_model = ov.convert_model(model.cpu(), example_input=example_input, input=input_shape)
-    ov.save_model(ov_model, fp32_ir_path, compress_to_fp16=False)
-    print(f"Original model path: {fp32_ir_path}.")
-
-    # Export INT8 model to OpenVINO™ IR
-    int8_ir_path = f"{ROOT}/{BASE_MODEL_NAME}_int8.xml"
-    ov_model = ov.convert_model(quantized_model.cpu(), example_input=example_input, input=input_shape)
-    ov.save_model(ov_model, int8_ir_path)
-    print(f"Quantized model path: {fp32_ir_path}.")
-
-    print(os.linesep + "[Step 5] Run benchmarks")
-    print("Run benchmark for FP32 model (IR)...")
-    fp32_fps = run_benchmark(fp32_ir_path, shape=input_shape)
-
-    print("Run benchmark for INT8 model (IR)...")
-    int8_fps = run_benchmark(int8_ir_path, shape=input_shape)
-
-    fp32_model_size = get_model_size(fp32_ir_path)
-    int8_model_size = get_model_size(int8_ir_path)
-    print(os.linesep + "[Step 6] Summary")
-    print(
-        tabulate(
-            headers=["", "FP32", "INT8", "Summary"],
-            tabular_data=[
-                [
-                    "Accuracy@1",
-                    f"{acc1_fp32:.3f}",
-                    f"{acc1_int8:.3f}",
-                    f"{acc1_int8_init:.3f} (init) + {acc1_int8 - acc1_int8_init:.3f} (tuned)",
-                ],
-                [
-                    "Model Size",
-                    f"{fp32_model_size:.3f} Mb",
-                    f"{int8_model_size:.3f} Mb",
-                    f"Compression rate is {fp32_model_size / int8_model_size:.3f}",
-                ],
-                ["Performance", f"{fp32_fps:.3f} FPS", f"{int8_fps:.3f} FPS", f"Speedup x{int8_fps / fp32_fps:.3f}"],
-            ],
-            tablefmt="rounded_outline",
-        )
-    )
-    return acc1_fp32, acc1_int8_init, acc1_int8, fp32_fps, int8_fps, fp32_model_size, int8_model_size
 
 
 def train(
@@ -311,6 +222,106 @@ def get_model_size(ir_path: str, m_type: str = "Mb") -> float:
         bin_size /= 1024
     model_size = xml_size + bin_size
     return model_size
+
+
+def main():
+    torch.manual_seed(0)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using {device} device")
+
+    ###############################################################################
+    # Step 1: Prepare model and dataset
+    print(os.linesep + "[Step 1] Prepare model and dataset")
+    model = get_resnet18_model(device)
+
+    # Define loss function (criterion) and optimizer.
+    criterion = nn.CrossEntropyLoss().to(device)
+
+    model, acc1_fp32 = load_checkpoint(model)
+
+    train_loader, val_loader, calibration_dataset = create_data_loaders()
+
+    def transform_fn(data_item):
+        return data_item[0].to(device)
+
+    quantization_dataset = nncf.Dataset(calibration_dataset, transform_fn)
+
+    ###############################################################################
+    # Step 2: Quantize model
+    print(os.linesep + "[Step 2] Quantize model")
+
+    quantized_model = nncf.quantize(model, quantization_dataset)
+    acc1_int8_init = validate(val_loader, quantized_model, device)
+
+    print(f"Accuracy@1 of initialized INT8 model: {acc1_int8_init:.3f}")
+
+    compression_lr = 1e-5
+    optimizer = torch.optim.Adam(quantized_model.parameters(), lr=compression_lr)
+
+    ###############################################################################
+    # Step 3: Fine tune quantized model
+    print(os.linesep + "[Step 3] Fine tune quantized model")
+    train(train_loader, quantized_model, criterion, optimizer, device=device)
+
+    # Evaluate on validation set after Quantization-Aware Training (QAT case).
+    acc1_int8 = validate(val_loader, quantized_model, device)
+    print(f"Accuracy@1 of fine-tuned INT8 model: {acc1_int8:.3f}")
+
+    input_shape = (1, 3, IMAGE_SIZE, IMAGE_SIZE)
+    example_input = torch.randn(*input_shape).cpu()
+
+    ###############################################################################
+    # Step 4: export models
+    print(os.linesep + "[Step 4] export models")
+    # Export FP32 model to OpenVINO™ IR
+    fp32_ir_path = f"{ROOT}/{BASE_MODEL_NAME}_fp32.xml"
+    ov_model = ov.convert_model(model.cpu(), example_input=example_input, input=input_shape)
+    ov.save_model(ov_model, fp32_ir_path, compress_to_fp16=False)
+    print(f"Original model path: {fp32_ir_path}")
+
+    # Export INT8 model to OpenVINO™ IR
+    int8_ir_path = f"{ROOT}/{BASE_MODEL_NAME}_int8.xml"
+    ov_model = ov.convert_model(quantized_model.cpu(), example_input=example_input, input=input_shape)
+    ov.save_model(ov_model, int8_ir_path)
+    print(f"Quantized model path: {int8_ir_path}")
+
+    ###############################################################################
+    # Step 5: Run benchmarks
+    print(os.linesep + "[Step 5] Run benchmarks")
+    print("Run benchmark for FP32 model (IR)...")
+    fp32_fps = run_benchmark(fp32_ir_path, shape=input_shape)
+
+    print("Run benchmark for INT8 model (IR)...")
+    int8_fps = run_benchmark(int8_ir_path, shape=input_shape)
+
+    fp32_model_size = get_model_size(fp32_ir_path)
+    int8_model_size = get_model_size(int8_ir_path)
+
+    ###############################################################################
+    # Step 6: Summary
+    print(os.linesep + "[Step 6] Summary")
+    table = Texttable()
+    table.header(["", "FP32", "INT8", "Summary"])
+    table.add_rows(
+        [
+            [
+                "Accuracy@1",
+                f"{acc1_fp32:.3f}",
+                f"{acc1_int8:.3f}",
+                f"{acc1_int8_init:.3f} (init) + {acc1_int8 - acc1_int8_init:.3f} (tuned)",
+            ],
+            [
+                "Model Size, Mb",
+                f"{fp32_model_size:.3f}",
+                f"{int8_model_size:.3f}",
+                f"Compression rate is {fp32_model_size / int8_model_size:.3f}",
+            ],
+            ["Performance, FPS", f"{fp32_fps:.3f}", f"{int8_fps:.3f}", f"Speedup x{int8_fps / fp32_fps:.3f}"],
+        ],
+        header=False,
+    )
+    print(table.draw())
+    return acc1_fp32, acc1_int8_init, acc1_int8, fp32_fps, int8_fps, fp32_model_size, int8_model_size
 
 
 if __name__ == "__main__":
