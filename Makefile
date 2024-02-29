@@ -10,6 +10,14 @@ ifdef DATA
 	DATA_ARG := --data $(DATA)
 endif
 
+ifdef SOTA_DATA_DIR
+	SOTA_DATA_DIR_ARG := --sota-data-dir $(SOTA_DATA_DIR)
+endif
+
+ifdef SOTA_CHKP_DIR
+	SOTA_CHKP_DIR_ARG := --sota-checkpoints-dir $(SOTA_CHKP_DIR)
+endif
+
 ifdef WEEKLY_MODELS
 	WEEKLY_MODELS_ARG := --weekly-models $(WEEKLY_MODELS)
 endif
@@ -128,7 +136,8 @@ test-torch-nightly:
 	pytest ${COVERAGE_ARGS} tests/torch -m nightly --junitxml ${JUNITXML_PATH} $(DATA_ARG)
 
 test-torch-weekly:
-	pytest ${COVERAGE_ARGS} tests/torch -m weekly --junitxml ${JUNITXML_PATH} $(DATA_ARG) ${WEEKLY_MODELS_ARG}
+	pytest ${COVERAGE_ARGS} tests/torch -m weekly \
+	    --junitxml ${JUNITXML_PATH} $(DATA_ARG) $(SOTA_DATA_DIR_ARG) $(SOTA_CHKP_DIR_ARG) ${WEEKLY_MODELS_ARG}
 
 test-install-torch-cpu:
 	pytest tests/cross_fw/install -s       \
