@@ -1,0 +1,15 @@
+strict digraph  {
+"0 Input_1" [id=0, type=Parameter];
+"1 Conv" [id=1, type=GroupConvolution];
+"2 Add" [id=2, type=Add];
+"3 Relu" [id=3, type=Relu];
+"4 Result" [id=4, type=Result];
+"5 Constant_4" [id=5, type=Constant];
+"6 Constant_2" [id=6, type=Constant];
+"0 Input_1" -> "1 Conv"  [label="[1, 3, 5, 5]", style=solid];
+"1 Conv" -> "2 Add"  [label="[1, 3, 3, 3]", style=solid];
+"2 Add" -> "3 Relu"  [label="[1, 3, 3, 3]", style=solid];
+"3 Relu" -> "4 Result"  [label="[1, 3, 3, 3]", style=solid];
+"5 Constant_4" -> "2 Add"  [label="[1, 3, 1, 1]", style=solid];
+"6 Constant_2" -> "1 Conv"  [label="[3, 1, 1, 3, 3]", style=solid];
+}

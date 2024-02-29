@@ -92,6 +92,24 @@ class ConvBNTestModel(nn.Module):
         return x
 
 
+class BiasConvBiasBNTestModel(torch.nn.Module):
+    INPUT_SIZE = [1, 1, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.conv = create_conv(1, 2, 2)
+        self.conv.bias.data = torch.Tensor([0.3, 1.3])
+        self.conv.weight.data = torch.Tensor([[[[0.1, -2.0], [1.0, 0.1]]], [[[0.1, 2.0], [-1.0, 0.1]]]])
+        self.bn = create_bn(2)
+        self.bn.bias.data = torch.Tensor([0.1, 1.0])
+        self.bn.weight.data = torch.Tensor([0.2, 2.0])
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.bn(x)
+        return x
+
+
 class FCTestModel(nn.Module):
     INPUT_SIZE = [1, 1, 4, 4]
 

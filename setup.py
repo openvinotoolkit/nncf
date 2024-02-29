@@ -128,7 +128,7 @@ TF_EXTRAS = [
 ]
 
 TORCH_EXTRAS = [
-    "torch==2.2.0;python_version < '3.11'",
+    "torch==2.2.1;python_version < '3.11'",
 ]
 
 ONNX_EXTRAS = ["onnx~=1.13.1", "onnxruntime~=1.14.1;python_version < '3.11'"]

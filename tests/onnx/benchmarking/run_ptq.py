@@ -17,13 +17,13 @@ import numpy as np
 import onnx
 
 try:
-    from openvino.tools.accuracy_checker.argparser import build_arguments_parser
-    from openvino.tools.accuracy_checker.config import ConfigReader
-    from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
-except ImportError:
     from accuracy_checker.argparser import build_arguments_parser
     from accuracy_checker.config import ConfigReader
     from accuracy_checker.evaluators import ModelEvaluator
+except ImportError:
+    from openvino.tools.accuracy_checker.argparser import build_arguments_parser
+    from openvino.tools.accuracy_checker.config import ConfigReader
+    from openvino.tools.accuracy_checker.evaluators import ModelEvaluator
 
 import nncf
 from nncf.scopes import IgnoredScope

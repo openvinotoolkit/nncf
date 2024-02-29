@@ -182,8 +182,8 @@
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {
             "awq": true,
-            "ratio": 0.9,
-            "group_size": 128
+            "ratio": 1.0,
+            "group_size": 64
         }
     }
 }
