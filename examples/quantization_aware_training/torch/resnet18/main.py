@@ -27,6 +27,7 @@ import torchvision.datasets as datasets
 import torchvision.models as models
 import torchvision.transforms as transforms
 from fastdownload import FastDownload
+from tabulate import tabulate
 from torch.jit import TracerWarning
 
 import nncf
@@ -81,8 +82,8 @@ def main():
     criterion = nn.CrossEntropyLoss().to(device)
 
     model, acc1_fp32 = load_checkpoint(model)
-    print(f"Accuracy of pre-trained FP32 model: {acc1_fp32:.3f}")
 
+    print("[Step 1] Prepare model and dataset")
     train_loader, val_loader, calibration_dataset = create_data_loaders()
 
     def transform_fn(data_item):
@@ -90,49 +91,71 @@ def main():
 
     quantization_dataset = nncf.Dataset(calibration_dataset, transform_fn)
 
+    print(os.linesep + "[Step 2] Quantize model")
+
     quantized_model = nncf.quantize(model, quantization_dataset)
     acc1_int8_init = validate(val_loader, quantized_model, device)
-    print(f"Accuracy of initialized INT8 model: {acc1_int8_init:.3f}")
-    print(f"Accuracy drop of initialized INT8 model over pre-trained FP32 model: {acc1_fp32 - acc1_int8_init:.3f}")
+
+    print(f"Accuracy@1 of initialized INT8 model: {acc1_int8_init:.3f}")
 
     compression_lr = init_lr / 10
     optimizer = torch.optim.Adam(quantized_model.parameters(), lr=compression_lr)
 
     # Train for one epoch with NNCF.
-    train(train_loader, quantized_model, criterion, optimizer, epoch=0, device=device)
+    print(os.linesep + "[Step 3] Fine tune quantized model")
+    train(train_loader, quantized_model, criterion, optimizer, device=device)
 
     # Evaluate on validation set after Quantization-Aware Training (QAT case).
     acc1_int8 = validate(val_loader, quantized_model, device)
-
-    print(f"Accuracy of tuned INT8 model: {acc1_int8:.3f}")
-    print(f"Accuracy drop of tuned INT8 model over pre-trained FP32 model: {acc1_fp32 - acc1_int8:.3f}")
+    print(f"Accuracy@1 of fine-tuned INT8 model: {acc1_int8:.3f}")
 
     input_shape = (1, 3, IMAGE_SIZE, IMAGE_SIZE)
     example_input = torch.randn(*input_shape).cpu()
 
+    print(os.linesep + "[Step 4] Export models")
     # Export FP32 model to OpenVINO™ IR
     fp32_ir_path = f"{ROOT}/{BASE_MODEL_NAME}_fp32.xml"
     ov_model = ov.convert_model(model.cpu(), example_input=example_input, input=input_shape)
     ov.save_model(ov_model, fp32_ir_path, compress_to_fp16=False)
-    print(f"FP32 model was exported to {fp32_ir_path}.")
+    print(f"Original model path: {fp32_ir_path}.")
 
     # Export INT8 model to OpenVINO™ IR
     int8_ir_path = f"{ROOT}/{BASE_MODEL_NAME}_int8.xml"
     ov_model = ov.convert_model(quantized_model.cpu(), example_input=example_input, input=input_shape)
     ov.save_model(ov_model, int8_ir_path)
-    print(f"INT8 model exported to {int8_ir_path}.")
+    print(f"Quantized model path: {fp32_ir_path}.")
 
-    print("Benchmark FP32 model (IR)")
-    fp32_fps = run_benchmark(fp32_ir_path, shape=input_shape, verbose=True)
+    print(os.linesep + "[Step 5] Run benchmarks")
+    print("Run benchmark for FP32 model (IR)...")
+    fp32_fps = run_benchmark(fp32_ir_path, shape=input_shape)
 
-    print("Benchmark INT8 model (IR)")
-    int8_fps = run_benchmark(int8_ir_path, shape=input_shape, verbose=True)
+    print("Run benchmark for INT8 model (IR)...")
+    int8_fps = run_benchmark(int8_ir_path, shape=input_shape)
 
-    print(f"Performance speed up (throughput mode): {int8_fps / fp32_fps:.3f}")
-
-    fp32_model_size = get_model_size(fp32_ir_path, verbose=True)
-    int8_model_size = get_model_size(int8_ir_path, verbose=True)
-    print(f"Model compression rate: {fp32_model_size / int8_model_size:.3f}")
+    fp32_model_size = get_model_size(fp32_ir_path)
+    int8_model_size = get_model_size(int8_ir_path)
+    print(os.linesep + "[Step 6] Summary")
+    print(
+        tabulate(
+            headers=["", "FP32", "INT8", "Summary"],
+            tabular_data=[
+                [
+                    "Accuracy@1",
+                    f"{acc1_fp32:.3f}",
+                    f"{acc1_int8:.3f}",
+                    f"{acc1_int8_init:.3f} (init) + {acc1_int8 - acc1_int8_init:.3f} (tuned)",
+                ],
+                [
+                    "Model Size",
+                    f"{fp32_model_size:.3f} Mb",
+                    f"{int8_model_size:.3f} Mb",
+                    f"Compression rate is {fp32_model_size / int8_model_size:.3f}",
+                ],
+                ["Performance", f"{fp32_fps:.3f} FPS", f"{int8_fps:.3f} FPS", f"Speedup x{int8_fps / fp32_fps:.3f}"],
+            ],
+            tablefmt="rounded_outline",
+        )
+    )
     return acc1_fp32, acc1_int8_init, acc1_int8, fp32_fps, int8_fps, fp32_model_size, int8_model_size
 
 
@@ -141,13 +164,12 @@ def train(
     model: torch.nn.Module,
     criterion: torch.nn.Module,
     optimizer: torch.optim.Optimizer,
-    epoch: int,
     device: torch.device,
 ):
     # Switch to train mode.
     model.train()
 
-    for images, target in track(train_loader, total=len(train_loader), description=f"Training: epoch {epoch}"):
+    for images, target in track(train_loader, total=len(train_loader), description="Fine tuning:"):
         images = images.to(device)
         target = target.to(device)
 
@@ -163,7 +185,6 @@ def train(
 
 def validate(val_loader: torch.utils.data.DataLoader, model: torch.nn.Module, device: torch.device) -> float:
     top1_sum = 0.0
-    top5_sum = 0.0
 
     # Switch to evaluate mode.
     model.eval()
@@ -177,14 +198,11 @@ def validate(val_loader: torch.utils.data.DataLoader, model: torch.nn.Module, de
             output = model(images)
 
             # Measure accuracy and record loss.
-            acc1, acc5 = accuracy(output, target, topk=(1, 5))
+            [acc1] = accuracy(output, target, topk=(1,))
             top1_sum += acc1.item()
-            top5_sum += acc5.item()
 
         num_samples = len(val_loader)
         top1_avg = top1_sum / num_samples
-        top5_avg = top5_sum / num_samples
-        print(f" * Acc@1 {top1_avg:.3f} Acc@5 {top5_avg:.3f}")
     return top1_avg
 
 
@@ -275,17 +293,15 @@ def prepare_tiny_imagenet_200(dataset_dir: Path):
     val_images_dir.rmdir()
 
 
-def run_benchmark(model_path: str, shape: List[int], verbose: bool = True) -> float:
+def run_benchmark(model_path: str, shape: List[int]) -> float:
     command = f"benchmark_app -m {model_path} -d CPU -api async -t 15"
     command += f' -shape "[{",".join(str(x) for x in shape)}]"'
     cmd_output = subprocess.check_output(command, shell=True)  # nosec
-    if verbose:
-        print(*str(cmd_output).split("\\n")[-9:-1], sep="\n")
     match = re.search(r"Throughput\: (.+?) FPS", str(cmd_output))
     return float(match.group(1))
 
 
-def get_model_size(ir_path: str, m_type: str = "Mb", verbose: bool = True) -> float:
+def get_model_size(ir_path: str, m_type: str = "Mb") -> float:
     xml_size = os.path.getsize(ir_path)
     bin_size = os.path.getsize(os.path.splitext(ir_path)[0] + ".bin")
     for t in ["bytes", "Kb", "Mb"]:
@@ -294,10 +310,6 @@ def get_model_size(ir_path: str, m_type: str = "Mb", verbose: bool = True) -> fl
         xml_size /= 1024
         bin_size /= 1024
     model_size = xml_size + bin_size
-    if verbose:
-        print(f"Model graph (xml):   {xml_size:.3f} {m_type}")
-        print(f"Model weights (bin): {bin_size:.3f} {m_type}")
-        print(f"Model size:          {model_size:.3f} {m_type}")
     return model_size
 
 
