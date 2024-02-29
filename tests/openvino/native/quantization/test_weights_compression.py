@@ -710,7 +710,7 @@ def test_weight_scale_datatype():
 
         # There should be no Convert node after scale multiply
         matmul_node = get_next_node(scale_multiply_node)
-        assert matmul_node.get_type_name() == 'MatMul'
+        assert matmul_node.get_type_name() == "MatMul"
 
 
 DATASET_SIZE = 129
