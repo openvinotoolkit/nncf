@@ -260,9 +260,9 @@ def _seed():
     import numpy as np
     from torch.backends import cudnn
 
-    deterministic = cudnn.deterministic
-    benchmark = cudnn.benchmark
-    seed = torch.seed()
+    # deterministic = cudnn.deterministic
+    # benchmark = cudnn.benchmark
+    # seed = torch.seed()
 
     cudnn.deterministic = True
     cudnn.benchmark = False
@@ -270,11 +270,11 @@ def _seed():
     np.random.seed(0)
     random.seed(0)
 
-    yield
+    # yield
 
-    cudnn.deterministic = deterministic
-    cudnn.benchmark = benchmark
-    torch.manual_seed(seed)
+    # cudnn.deterministic = deterministic
+    # cudnn.benchmark = benchmark
+    # torch.manual_seed(seed)
 
 
 @pytest.fixture
@@ -284,20 +284,23 @@ def _safe_deterministic_state():
     original states after each test to avoid unintended side effects
     caused by modifying these settings globally.
     """
-    import torch
-    from torch.backends import cudnn
+    pass
+    # import torch
+    # from torch.backends import cudnn
 
-    cudnn_deterministic = cudnn.deterministic
-    torch_deterministic = torch.are_deterministic_algorithms_enabled()
-    yield
-    cudnn.deterministic = cudnn_deterministic
-    torch.use_deterministic_algorithms(torch_deterministic)
+    # cudnn_deterministic = cudnn.deterministic
+    # torch_deterministic = torch.are_deterministic_algorithms_enabled()
+    # yield
+    # cudnn.deterministic = cudnn_deterministic
+    # torch.use_deterministic_algorithms(torch_deterministic)
 
 
 @pytest.fixture(autouse=True, scope="function")
 def _check_deterministic():
     yield
-    assert not torch.are_deterministic_algorithms_enabled()
+    determinate = torch.are_deterministic_algorithms_enabled()
+    torch.use_deterministic_algorithms(False)
+    assert not determinate
 
 
 # Custom markers specifying tests to be run only if a specific option
