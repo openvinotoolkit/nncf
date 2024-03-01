@@ -694,11 +694,11 @@ def test_data_type_for_num_weights(mocker):
     assert isinstance(params.num_weights, np.uint64)
 
 
-def test_weight_scale_datatype():
+def test_compression_for_different_weight_dtypes():
     for weight_dtype in [np.float32, np.float16]:
-        model_fp32 = IdentityMatmul(weights_dtype=weight_dtype).ov_model
-        compressed_model_fp32 = compress_weights(model_fp32)
-        name_to_node_map = {op.get_friendly_name(): op for op in compressed_model_fp32.get_ops()}
+        model = IdentityMatmul(weights_dtype=weight_dtype).ov_model
+        compressed_model = compress_weights(model)
+        name_to_node_map = {op.get_friendly_name(): op for op in compressed_model.get_ops()}
 
         # Scale should always be converted from f16 to f32
         assert "weights/scale_convert" in name_to_node_map
