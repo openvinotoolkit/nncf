@@ -902,7 +902,7 @@ class TemplateTestStatisticsAggregator:
                 ref_subset_size = max(ref_subset_size, subset_size)
             else:
                 ref_subset_size = subset_size
-        assert statistics_aggregator.stat_subset_size == ref_subset_size
+        assert statistics_aggregator.iterations_number == ref_subset_size
 
     def test_collect_with_empty_dataset(self):
         """

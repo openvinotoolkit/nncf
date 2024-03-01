@@ -27,21 +27,15 @@ from nncf.data.dataset import Dataset
 TensorType = TypeVar("TensorType")
 TModel = TypeVar("TModel")
 
-EMPTY_DATASET_MESSAGE = (
+EMPTY_DATASET_ERROR = (
     "Calibration dataset must not be empty. Please provide calibration dataset with at least one sample."
-)
-BATCH_SIZE_IS_BIGGER_THAN_SUBSET_SIZE_MESSAGE = (
-    "Provided dataset has a batch size value is bigger than subset size for statistics collection. "
-    "Please increase the number of samples for a statistics collection "
-    "or decrease the batch size value in the dataset."
 )
 BATCH_SIZE_MODEL_WARNING = (
     "For the particular model the batch size > 1 can lead to inaccurate collected statistics. "
     "The recomendation is to provide dataloader instance with the batch_size = 1."
 )
-DECREASING_SAMPLES_NUMBER_MESSAGE = (
-    "The number of samples for statistics collection is decreased "
-    "to align with the provided batch size value of the dataset."
+UPDATING_ITERATIONS_NUMBER_WARNING = (
+    "The number of iterations for statistics collection is bigger than the length of the dataset."
 )
 
 
@@ -52,38 +46,24 @@ class StatisticsAggregator(ABC):
 
     def __init__(self, dataset: Dataset):
         self.dataset = dataset
-        self.stat_subset_size = None
-        self.batch_size = self.dataset.get_batch_size() or 1
-        dataset_len = self.dataset.get_length()
-        self.dataset_sample_size = (
-            dataset_len * self.batch_size if dataset_len is not None else dataset_len
-        )  # Number of samples in the dataset
-        if self.dataset_sample_size == 0:
-            raise nncf.ValidationError(EMPTY_DATASET_MESSAGE)
+        self.iterations_number = None
         self.statistic_points = StatisticPointsContainer()
 
-    def _get_number_samples_for_statistics(
+    def _get_iterations_number(
         self,
     ) -> Optional[int]:
         """
-        Returns number of samples for statistics collection.
+        Returns number of iterations which in min(self.iterations_number, dataset_length).
 
-        :return: Number of samples for statistics collection.
+        :return: Number of iterations for statistics collection.
         """
-        return (
-            min(self.dataset_sample_size or self.stat_subset_size, self.stat_subset_size)
-            if self.stat_subset_size is not None
-            else None
-        )
-
-    def _get_iterations_num(self, total_statistics_samples: int) -> int:
-        """
-        Returns number of iterations to collect statistics.
-
-        :param total_statistics_samples: Number of statistics samples are used.
-        :return: Iterations number of statistics collection.
-        """
-        return total_statistics_samples // self.batch_size
+        dataset_length = self.dataset.get_length()
+        if dataset_length and self.iterations_number:
+            if self.iterations_number > dataset_length:
+                nncf_logger.warning(UPDATING_ITERATIONS_NUMBER_WARNING)
+                return dataset_length
+            return self.iterations_number
+        return dataset_length or self.iterations_number
 
     def collect_statistics(self, model: TModel, graph: NNCFGraph) -> None:
         """
@@ -95,7 +75,8 @@ class StatisticsAggregator(ABC):
         """
         if not self.statistic_points:
             return
-        if self.batch_size > 1 and self.is_model_has_no_batch_axis(graph):
+        batch_size = self.dataset.get_batch_size() or 1
+        if batch_size > 1 and self.is_model_has_no_batch_axis(graph):
             nncf_logger.warning(BATCH_SIZE_MODEL_WARNING)
         model_transformer = factory.ModelTransformerFactory.create(model)
         merged_statistics = self._get_merged_statistic_points(self.statistic_points, model, graph)
@@ -103,27 +84,19 @@ class StatisticsAggregator(ABC):
         model_with_outputs = model_transformer.transform(transformation_layout)
         engine = factory.EngineFactory.create(model_with_outputs)
 
-        statistics_samples_num = self._get_number_samples_for_statistics()
-        iterations_num = (
-            self._get_iterations_num(statistics_samples_num) if statistics_samples_num is not None else None
-        )
-        if iterations_num is not None:
-            if iterations_num == 0:
-                raise nncf.ValidationError(BATCH_SIZE_IS_BIGGER_THAN_SUBSET_SIZE_MESSAGE)
-            samples_num = iterations_num * self.batch_size
-            if samples_num != statistics_samples_num:
-                nncf_logger.warning(DECREASING_SAMPLES_NUMBER_MESSAGE)
-                statistics_samples_num = samples_num
+        iterations_number = self._get_iterations_number()
         empty_statistics = True
-        with track(total=statistics_samples_num, description="Statistics collection") as pbar:
-            for input_data in islice(self.dataset.get_inference_data(), iterations_num):
-                outputs = engine.infer(input_data)
-                processed_outputs = self._process_outputs(outputs)
-                self._register_statistics(processed_outputs, merged_statistics)
-                pbar.progress.update(pbar.task, advance=self.batch_size)
-                empty_statistics = False
+        for input_data in track(
+            islice(self.dataset.get_inference_data(), iterations_number),
+            total=self.iterations_number,
+            description="Statistics collection",
+        ):
+            outputs = engine.infer(input_data)
+            processed_outputs = self._process_outputs(outputs)
+            self._register_statistics(processed_outputs, merged_statistics)
+            empty_statistics = False
         if empty_statistics:
-            raise nncf.ValidationError(EMPTY_DATASET_MESSAGE)
+            raise nncf.ValidationError(EMPTY_DATASET_ERROR)
 
     def register_statistic_points(self, statistic_points: StatisticPointsContainer) -> None:
         """
@@ -140,10 +113,10 @@ class StatisticsAggregator(ABC):
             for _statistic_point in _statistic_points:
                 for _, tensor_collectors in _statistic_point.algorithm_to_tensor_collectors.items():
                     for tensor_collector in tensor_collectors:
-                        if self.stat_subset_size is None:
-                            self.stat_subset_size = tensor_collector.num_samples
+                        if self.iterations_number is None:
+                            self.iterations_number = tensor_collector.num_samples
                         elif tensor_collector.num_samples is not None:
-                            self.stat_subset_size = max(self.stat_subset_size, tensor_collector.num_samples)
+                            self.iterations_number = max(self.iterations_number, tensor_collector.num_samples)
 
     def is_model_has_no_batch_axis(self, graph: NNCFGraph) -> bool:
         """

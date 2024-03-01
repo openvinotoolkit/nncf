@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from dataclasses import replace
 from enum import Enum
 from itertools import islice
-from typing import Any, Iterable, List, Optional, TypeVar
+from typing import Any, Dict, Iterable, List, Optional, TypeVar
 
 import numpy as np
 import openvino.runtime as ov
@@ -1035,11 +1035,29 @@ def filter_configuration(config: Config) -> Config:
     return config
 
 
-def update_config(accuracy_checker_config: Config, batch_size: int) -> None:
+def update_accuracy_checker_config(accuracy_checker_config: Config, batch_size: int) -> None:
+    """
+    Updates batch section of accuracy checker configuration file by batch_size value.
+
+    :param accuracy_checker_config: Accuracy checker configuration file.
+    :param batch_size: Batch size value.
+    """
     for model in accuracy_checker_config["models"]:
         for dataset in model["datasets"]:
-            print(f"Updated batch size value to {batch_size}")
             dataset["batch"] = batch_size
+            print(f"Updated batch size value to {batch_size}")
+
+
+def update_nncf_algorithms_config(nncf_algorithms_config: Dict[str, Dict[str, Any]], batch_size: int) -> None:
+    """
+    Updates subset_size parameter depending on batch_size and subset_size from an algorithm config.
+
+    :param nncf_algorithms_config: Configuration file of an algorithm.
+    :param batch_size: Batch size value.
+    """
+    subset_size = nncf_algorithms_config.get("subset_size", 300)
+    nncf_algorithms_config["subset_size"] = subset_size // batch_size
+    print(f"Updated subset_size value to {nncf_algorithms_config['subset_size']}")
 
 
 def main():
@@ -1052,7 +1070,9 @@ def main():
     xml_path, bin_path = get_model_paths(config.model)
     accuracy_checker_config = get_accuracy_checker_config(config.engine)
     nncf_algorithms_config = get_nncf_algorithms_config(config.compression, args.output_dir)
-    update_config(accuracy_checker_config, args.batch_size)
+    if args.batch_size > 1:
+        update_accuracy_checker_config(accuracy_checker_config, args.batch_size)
+        update_nncf_algorithms_config(nncf_algorithms_config, args.batch_size)
 
     set_log_file(f"{args.output_dir}/log.txt")
     output_dir = os.path.join(args.output_dir, "optimized")
