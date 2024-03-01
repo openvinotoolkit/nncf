@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import List, Optional
 
 import numpy as np
-import pytest
 import torch
 from datasets import Dataset  # pylint: disable=no-name-in-module
 from transformers import TrainingArguments
@@ -30,11 +29,6 @@ from nncf.torch.nncf_network import NNCFNetwork
 
 CTRL_STATE_NAME = BaseCompressionAlgorithmController.CONTROLLER_STATE
 NNCF_COMPRESSION_STATE_NAME = "nncf_compression_state.pt"
-
-
-@pytest.fixture(scope="function", autouse=True)
-def safe_deterministic_state(_safe_deterministic_state):
-    pass
 
 
 class CompressionTrainer(Trainer):
