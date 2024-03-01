@@ -24,7 +24,7 @@ from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.tensor_statistics.aggregator import EMPTY_DATASET_MESSAGE
+from nncf.common.tensor_statistics.aggregator import EMPTY_DATASET_ERROR
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
@@ -904,19 +904,9 @@ class TemplateTestStatisticsAggregator:
                 ref_subset_size = subset_size
         assert statistics_aggregator.iterations_number == ref_subset_size
 
-    def test_collect_with_empty_dataset(self):
-        """
-        Checks a correct raising of an error when dataset has len==0
-        """
-        dataset = nncf.Dataset([])
-        with pytest.raises(nncf.ValidationError) as e:
-            _ = self.get_statistics_aggregator(dataset)
-        assert EMPTY_DATASET_MESSAGE in str(e)
-
     def test_collect_with_empty_dataset_no_len(self, dataset_samples):
         """
-        Checks a correct raising of an error when dataset has no len() method implementation,
-        but has no elements.
+        Checks a correct raising of an error when dataset has no elements to iterate.
         """
         model = self.get_backend_model(dataset_samples)
         dummy_statistic_point = StatisticPoint(
@@ -932,4 +922,4 @@ class TemplateTestStatisticsAggregator:
         statistics_aggregator.register_statistic_points(statistics_points)
         with pytest.raises(nncf.ValidationError) as e:
             statistics_aggregator.collect_statistics(model, graph)
-        assert EMPTY_DATASET_MESSAGE in str(e)
+        assert EMPTY_DATASET_ERROR in str(e)
