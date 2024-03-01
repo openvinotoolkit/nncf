@@ -263,7 +263,6 @@ def _seed():
     deterministic = cudnn.deterministic
     benchmark = cudnn.benchmark
     seed = torch.seed()
-    np_state = np.random.get_state()
 
     cudnn.deterministic = True
     cudnn.benchmark = False
@@ -276,7 +275,6 @@ def _seed():
     cudnn.deterministic = deterministic
     cudnn.benchmark = benchmark
     torch.manual_seed(seed)
-    np.random.seed(np_state)
 
 
 @pytest.fixture
