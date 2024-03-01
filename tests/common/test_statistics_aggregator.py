@@ -654,7 +654,7 @@ class TemplateTestStatisticsAggregator:
         algo._set_backend_entity(model)
         nncf_graph = NNCFGraphFactory.create(model)
         algo._subset_size = subset_size
-        tensor_collector = algo._get_stat_collector(nncf_graph, target_point, q_config, is_per_sample=False)
+        tensor_collector = algo._get_stat_collector(nncf_graph, target_point, q_config, False)
         return StatisticPoint(target_point=target_point, tensor_collector=tensor_collector, algorithm=algorithm_name)
 
     @pytest.mark.parametrize(
@@ -823,6 +823,7 @@ class TemplateTestStatisticsAggregator:
             StatisticsType.MEAN,
             StatisticsType.QUANTILE,
             StatisticsType.ABS_QUANTILE,
+            "batch_mean",
             "mean_per_ch",
         ],
     )

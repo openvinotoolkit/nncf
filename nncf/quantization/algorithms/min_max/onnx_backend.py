@@ -120,15 +120,11 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         parameters: FakeQuantizeParameters,
     ):
         tensor_type = np.int8 if np.any(parameters.input_low.data < 0) else np.uint8
-        is_weight = target_point.is_weight_target_point()
-        if is_weight:
+        if target_point.is_weight_target_point():
             tensor_type = np.int8  # The weight is restricted to have only signed range
         nncf_input_node_next_nodes = ONNXMinMaxAlgoBackend._get_input_edges_mapping(nncf_graph)
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        if quantizer_config.per_channel:
-            axis = ONNXMinMaxAlgoBackend.get_channel_axes(node, target_point)
-        else:
-            axis = ()
+        axis = ONNXMinMaxAlgoBackend.get_channel_axes(node, target_point) if quantizer_config.per_channel else ()
         onnx_parameters = convert_fq_params_to_onnx_params(parameters, quantizer_config.num_bits, tensor_type, axis)
         return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, onnx_parameters)
 

@@ -227,29 +227,31 @@ class RangeInitCollectorParams:
         axes_to_keep.update(quantization_axes)
         return get_reduction_axes(axes_to_keep, shape_to_reduce)
 
-    def _get_aggregation_axes(self, is_per_sample: bool) -> Tuple[int]:
+    def _get_aggregation_axes(self, batchwise_statistics: bool) -> Tuple[int]:
         """
         Returns axes for aggregator.
 
-        :param is_per_sample: Whether to aggreagate tensor statistics per batch axis.
+        :param batchwise_statistics: Determines whether quantizer statistics should be calculated
+            for each item of the batch or for the entire batch.
         :return Tuple[int]: Aggregation axes.
         """
-        return (0, 1) if is_per_sample else (0,)
+        return (0, 1) if batchwise_statistics else (0,)
 
     def get_reduction_aggregation_axes(
         self,
         shape_to_reduce: Union[Tuple[int], List[int]],
         quantization_axes: Union[Tuple[int], List[int]],
-        is_per_sample: bool,
+        batchwise_statistics: bool,
     ) -> Tuple[ReductionAxes, AggregationAxes]:
         """
         Calculates the reduction axes, aggregation axes for the tensor.
 
         :param shape_to_reduce: Shape of the tensor.
         :param quantization_axes: Quantization axes if per-channel quantization.
-        :param is_per_sample: Whether to calculate statistics per-sample (aggregate batch axis)
+        :param batchwise_statistics: Determines whether quantizer statistics should be calculated
+            for each item of the batch or for the entire batch.
         :return: Reduction axes and aggregation axes.
         """
-        aggregation_axes = self._get_aggregation_axes(is_per_sample)
+        aggregation_axes = self._get_aggregation_axes(batchwise_statistics)
         reduction_axes = self._get_reduction_axes(shape_to_reduce, quantization_axes, aggregation_axes)
         return reduction_axes, aggregation_axes

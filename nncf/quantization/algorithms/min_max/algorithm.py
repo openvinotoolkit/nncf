@@ -173,7 +173,7 @@ class MinMaxQuantization(Algorithm):
             by backend graph operations or by default Python implementation, defaults
             to True.
         :param batchwise_statistics: Determines whether quantizer statistics should be calculated
-            for each item of the batch or for the entire batch, default is None.
+            for each item of the batch or for the entire batch, default is False.
         :param activations_quantization_params: Quantization parameters for model
             activations.
         :param weights_quantization_params: Quantization parameters for model weights.
@@ -402,7 +402,7 @@ class MinMaxQuantization(Algorithm):
         graph: NNCFGraph,
         target_point: TargetPoint,
         qconfig: QuantizerConfig,
-        is_per_sample: bool,
+        batchwise_statistics: bool,
     ) -> TensorStatisticCollectorBase:
         """
         Creates and returns a statistic collector based on the quantizer's configuration.
@@ -411,7 +411,8 @@ class MinMaxQuantization(Algorithm):
         :param target_point: Target point indicates where statistics should be collected.
         :param qconfig: Configuration of a quantizer layer,
         defining the configuration of created statistic collector.
-        :param is_per_sample: True meaning that statistics is collected per sample. False - per tensor.
+        :param batchwise_statistics: Determines whether quantizer statistics should be calculated
+            for each item of the batch or for the entire batch.
         :return: Statistic Collector.
         """
         is_weight = target_point.is_weight_target_point()
@@ -426,7 +427,7 @@ class MinMaxQuantization(Algorithm):
         # Weight statistics is constant, so only one collection is enough.
         num_samples = self._subset_size if not is_weight else 1
 
-        is_per_sample = is_per_sample and not is_weight
+        batchwise_statistics = batchwise_statistics and not is_weight
 
         collector_params = RangeInitCollectorParams(
             is_weights=is_weight, scheme=qconfig.mode, per_channel=qconfig.per_channel
@@ -434,7 +435,7 @@ class MinMaxQuantization(Algorithm):
         reduction_axes, aggregation_axes = None, None
         if shape is not None:
             reduction_axes, aggregation_axes = collector_params.get_reduction_aggregation_axes(
-                shape, channel_axes, is_per_sample
+                shape, channel_axes, batchwise_statistics
             )
 
         return self._backend_entity.get_statistic_collector(
