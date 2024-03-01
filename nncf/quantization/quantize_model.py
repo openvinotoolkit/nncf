@@ -51,9 +51,9 @@ def _update_advanced_quantization_parameters(
     batch_size = calibration_dataset.get_batch_size()
     if batch_size is not None and batch_size > 1:
         if advanced_parameters is None:
-            advanced_parameters = AdvancedQuantizationParameters(statistics_per_sample=True)
-        elif advanced_parameters.statistics_per_sample is None:
-            advanced_parameters.statistics_per_sample = True
+            advanced_parameters = AdvancedQuantizationParameters(batchwise_statistics=True)
+        elif advanced_parameters.batchwise_statistics is None:
+            advanced_parameters.batchwise_statistics = True
     return advanced_parameters
 
 

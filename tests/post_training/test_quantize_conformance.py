@@ -268,6 +268,7 @@ def test_weight_compression(
     output_dir: Path,
     wc_result_data: Dict[str, RunInfo],
     no_eval: bool,
+    batch_size: int,
     run_fp32_backend: bool,
     run_torch_cuda_backend: bool,
     subset_size: Optional[int],
@@ -292,6 +293,7 @@ def test_weight_compression(
                 "data_dir": data_dir,
                 "no_eval": no_eval,
                 "run_benchmark_app": run_benchmark_app,
+                "batch_size": batch_size,
             }
         )
         pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)

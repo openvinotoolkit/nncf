@@ -141,7 +141,7 @@ class MinMaxQuantization(Algorithm):
         overflow_fix: Optional[OverflowFix] = None,
         quantize_outputs: bool = False,
         inplace_statistics: bool = True,
-        statistics_per_sample: bool = False,
+        batchwise_statistics: bool = False,
         activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None,
         weights_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None,
         activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
@@ -172,7 +172,8 @@ class MinMaxQuantization(Algorithm):
         :param inplace_statistics: Defines wheather to calculate quantizers statistics
             by backend graph operations or by default Python implementation, defaults
             to True.
-        :param statistics_per_sample: Whether calculate statistics regarding batch axis.
+        :param batchwise_statistics: Determines whether quantizer statistics should be calculated
+            for each item of the batch or for the entire batch, default is None.
         :param activations_quantization_params: Quantization parameters for model
             activations.
         :param weights_quantization_params: Quantization parameters for model weights.
@@ -189,7 +190,7 @@ class MinMaxQuantization(Algorithm):
         self._overflow_fix = overflow_fix
         self._quantize_outputs = quantize_outputs
         self._inplace_statistics = inplace_statistics
-        self._statistics_per_sample = statistics_per_sample
+        self._batchwise_statistics = batchwise_statistics
         self._backend_params = backend_params
         self._activations_quantization_params = activations_quantization_params
         self._weights_quantization_params = weights_quantization_params
@@ -928,14 +929,14 @@ class MinMaxQuantization(Algorithm):
         self._reset_cache()
         quantization_target_points, _ = self._get_quantization_target_points(model, graph)
         output = StatisticPointsContainer()
-        if self._model_type == ModelType.TRANSFORMER and self._statistics_per_sample:
+        if self._model_type == ModelType.TRANSFORMER and self._batchwise_statistics:
             nncf_logger.warning(
                 "For transfomer-like models batch_size > 1 could result in inaccurate statistics. \
                 The recomendation is to use batch_size = 1."
             )
         for quantization_target_point, qconfig in quantization_target_points.items():
             stat_collector = self._get_stat_collector(
-                graph, quantization_target_point, qconfig, self._statistics_per_sample
+                graph, quantization_target_point, qconfig, self._batchwise_statistics
             )
             output.add_statistic_point(
                 StatisticPoint(
