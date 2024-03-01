@@ -294,6 +294,12 @@ def _safe_deterministic_state():
     torch.use_deterministic_algorithms(torch_deterministic)
 
 
+@pytest.fixture(autouse=True, scope="function")
+def _check_deterministic():
+    yield
+    assert not torch.are_deterministic_algorithms_enabled()
+
+
 # Custom markers specifying tests to be run only if a specific option
 # is present on the pytest command line must be registered here.
 MARKS_VS_OPTIONS = {**COMMON_SCOPE_MARKS_VS_OPTIONS}
