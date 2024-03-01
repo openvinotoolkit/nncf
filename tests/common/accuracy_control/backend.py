@@ -20,10 +20,15 @@ from tests.common.quantization.metatypes import CONSTANT_METATYPES
 from tests.common.quantization.metatypes import QUANTIZABLE_METATYPES
 from tests.common.quantization.metatypes import QUANTIZE_AGNOSTIC_METATYPES
 from tests.common.quantization.metatypes import QUANTIZER_METATYPES
+from tests.common.quantization.metatypes import WEIGHT_LAYER_METATYPES
 from tests.common.quantization.metatypes import ShapeOfTestMetatype
 
 
 class AABackendForTests(AccuracyControlAlgoBackend):
+    @staticmethod
+    def get_op_with_weights_metatypes() -> List[OperatorMetatype]:
+        return WEIGHT_LAYER_METATYPES
+
     @staticmethod
     def get_quantizer_metatypes() -> List[OperatorMetatype]:
         return QUANTIZER_METATYPES
