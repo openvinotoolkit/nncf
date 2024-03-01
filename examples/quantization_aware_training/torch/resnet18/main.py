@@ -232,12 +232,11 @@ def main():
     ###############################################################################
     # Step 1: Prepare model and dataset
     print(os.linesep + "[Step 1] Prepare model and dataset")
+
     model = get_resnet18_model(device)
-
-    # Define loss function (criterion) and optimizer.
-    criterion = nn.CrossEntropyLoss().to(device)
-
     model, acc1_fp32 = load_checkpoint(model)
+
+    print(f"Accuracy@1 of original FP32 model: {acc1_fp32}")
 
     train_loader, val_loader, calibration_dataset = create_data_loaders()
 
@@ -255,24 +254,28 @@ def main():
 
     print(f"Accuracy@1 of initialized INT8 model: {acc1_int8_init:.3f}")
 
-    compression_lr = 1e-5
-    optimizer = torch.optim.Adam(quantized_model.parameters(), lr=compression_lr)
-
     ###############################################################################
     # Step 3: Fine tune quantized model
     print(os.linesep + "[Step 3] Fine tune quantized model")
+
+    # Define loss function (criterion) and optimizer.
+    criterion = nn.CrossEntropyLoss().to(device)
+    compression_lr = 1e-5
+    optimizer = torch.optim.Adam(quantized_model.parameters(), lr=compression_lr)
+
     train(train_loader, quantized_model, criterion, optimizer, device=device)
 
     # Evaluate on validation set after Quantization-Aware Training (QAT case).
     acc1_int8 = validate(val_loader, quantized_model, device)
     print(f"Accuracy@1 of fine-tuned INT8 model: {acc1_int8:.3f}")
 
+    ###############################################################################
+    # Step 4: Export models
+    print(os.linesep + "[Step 4] Export models")
+
     input_shape = (1, 3, IMAGE_SIZE, IMAGE_SIZE)
     example_input = torch.randn(*input_shape).cpu()
 
-    ###############################################################################
-    # Step 4: export models
-    print(os.linesep + "[Step 4] export models")
     # Export FP32 model to OpenVINO™ IR
     fp32_ir_path = f"{ROOT}/{BASE_MODEL_NAME}_fp32.xml"
     ov_model = ov.convert_model(model.cpu(), example_input=example_input, input=input_shape)
@@ -282,7 +285,7 @@ def main():
     # Export INT8 model to OpenVINO™ IR
     int8_ir_path = f"{ROOT}/{BASE_MODEL_NAME}_int8.xml"
     ov_model = ov.convert_model(quantized_model.cpu(), example_input=example_input, input=input_shape)
-    ov.save_model(ov_model, int8_ir_path)
+    ov.save_model(ov_model, int8_ir_path, compress_to_fp16=False)
     print(f"Quantized model path: {int8_ir_path}")
 
     ###############################################################################
@@ -300,6 +303,7 @@ def main():
     ###############################################################################
     # Step 6: Summary
     print(os.linesep + "[Step 6] Summary")
+
     table = Texttable()
     table.header(["", "FP32", "INT8", "Summary"])
     table.add_rows(
