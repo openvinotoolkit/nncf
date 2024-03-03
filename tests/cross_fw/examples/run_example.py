@@ -174,6 +174,25 @@ def llm_tune_params() -> Dict[str, float]:
     return {"awq": bool(awq), "ratio": ratio, "group_size": group_size}
 
 
+def quantization_aware_training_torch_resnet18():
+    from examples.quantization_aware_training.torch.resnet18.main import main as resnet18_main
+
+    results = resnet18_main()
+
+    return {
+        "fp32_top1": float(results[0]),
+        "int8_init_top1": float(results[1]),
+        "int8_top1": float(results[2]),
+        "accuracy_drop": float(results[0] - results[2]),
+        "fp32_fps": results[3],
+        "int8_fps": results[4],
+        "performance_speed_up": results[4] / results[3],
+        "fp32_model_size": results[5],
+        "int8_model_size": results[6],
+        "model_compression_rate": results[5] / results[6],
+    }
+
+
 def main(argv):
     parser = ArgumentParser()
     parser.add_argument("--name", help="Example name", required=True)
