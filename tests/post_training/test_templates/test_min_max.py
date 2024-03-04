@@ -38,12 +38,12 @@ class TemplateTestMinMaxAlgorithm:
     def conv_metatype(
         self,
     ):
-        """ """
+        pass
 
     @property
     @abstractmethod
     def create_target_point(self, target_point_type, name, port_id):
-        """ """
+        pass
 
 
 class TemplateTestGetTargetPointShape(TemplateTestMinMaxAlgorithm):
@@ -74,24 +74,24 @@ class TemplateTestGetChannelAxes(TemplateTestMinMaxAlgorithm):
     def depthwiseconv_metatype(
         self,
     ):
-        """ """
+        pass
 
     @property
     @abstractmethod
     def matmul_metatype(
         self,
     ):
-        """ """
+        pass
 
     @staticmethod
     @abstractmethod
     def get_conv_node_attrs(weight_port_id, shape):
-        """ """
+        pass
 
     @staticmethod
     @abstractmethod
     def get_matmul_node_attrs():
-        """ """
+        pass
 
     @pytest.mark.parametrize(
         "conv_shape, weight_port_id, ref_axes", ((CONV_WEIGHT_SHAPE, 0, (0,)), (CONV_WEIGHT_SHAPE, 1, (0,)))
@@ -102,7 +102,7 @@ class TemplateTestGetChannelAxes(TemplateTestMinMaxAlgorithm):
         """
         conv_node = NNCFNode({"metatype": self.conv_metatype})
         conv_node.layer_attributes = self.get_conv_node_attrs(weight_port_id, conv_shape)
-        target_point = self.create_target_point(None, None, weight_port_id)
+        target_point = self.create_target_point(TargetType.PRE_LAYER_OPERATION, None, weight_port_id)
         assert self.backend().get_weight_quantization_axes(conv_node, target_point) == ref_axes
 
     @pytest.mark.parametrize(
@@ -115,7 +115,7 @@ class TemplateTestGetChannelAxes(TemplateTestMinMaxAlgorithm):
         """
         conv_node = NNCFNode({"metatype": self.depthwiseconv_metatype})
         conv_node.layer_attributes = self.get_depthwiseconv_node_attrs(weight_port_id, conv_shape)
-        target_point = self.create_target_point(None, None, weight_port_id)
+        target_point = self.create_target_point(TargetType.PRE_LAYER_OPERATION, None, weight_port_id)
         assert self.backend().get_weight_quantization_axes(conv_node, target_point) == ref_axes
 
     @pytest.mark.parametrize(
@@ -128,7 +128,7 @@ class TemplateTestGetChannelAxes(TemplateTestMinMaxAlgorithm):
         """
         conv_node = NNCFNode({"metatype": self.depthwiseconv_metatype})
         conv_node.layer_attributes = self.get_depthwiseconv_node_attrs(weight_port_id, conv_shape)
-        target_point = self.create_target_point(None, None, weight_port_id)
+        target_point = self.create_target_point(TargetType.PRE_LAYER_OPERATION, None, weight_port_id)
         assert self.backend().get_weight_quantization_axes(conv_node, target_point) == ref_axes
 
     @pytest.mark.parametrize(
@@ -146,7 +146,7 @@ class TemplateTestGetChannelAxes(TemplateTestMinMaxAlgorithm):
         """
         matmul_node = NNCFNode({"metatype": self.matmul_metatype})
         matmul_node.layer_attributes = self.get_matmul_node_attrs(weight_port_id, transpose_weight, weight_shape)
-        target_point = self.create_target_point(None, None, weight_port_id)
+        target_point = self.create_target_point(TargetType.PRE_LAYER_OPERATION, None, weight_port_id)
         assert self.backend().get_weight_quantization_axes(matmul_node, target_point) == ref_axes
 
     @pytest.mark.parametrize(
