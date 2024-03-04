@@ -184,7 +184,7 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: TargetPoint) -> List[int]:
+    def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: TargetPoint) -> Tuple[int]:
         """
         Returns shape of a targer point tensor.
 
@@ -196,13 +196,13 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_channel_axes(node: NNCFNode, target_point: TargetPoint) -> Tuple[int]:
+    def get_weight_quantization_axes(node: NNCFNode, target_point: TargetPoint) -> Tuple[int]:
         """
-        Returns axes for per-channel quantization.
+        Returns axes for per-channel quantization of weights of the node placed on a input port_id.
 
-        :param node: Quantized node.
+        :param node: Quantized node with the wieght.
         :param target_point: Corresponding target point.
-        :return: Axes for per-channel quantization.
+        :return: Axes for per-channel quantization of weights.
         """
 
     @staticmethod

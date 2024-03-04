@@ -127,10 +127,10 @@ def transpose_axis(shape: List[int], axis: int) -> int:
     Returns transpose axis.
 
     :param shape: Tensor shape.
-    :param axis: Axis before transpose.
+    :param axis: Axis before transpose (only positive).
     :return: Axis after transpose.
     """
-    axis %= len(shape)  # Make axis positive
+    assert axis >= 0
     return range(len(shape) - 1, -1, -1)[axis]  # Iterate backward throug axis
 
 
@@ -145,6 +145,9 @@ def get_weight_quantization_axis(node: NNCFNode, port_id: int) -> int:
     weight_channel_axis = node.metatype.weight_channel_axis
     if node.layer_attributes.has_node_attrs() and node.metatype == om.ONNXGemmMetatype:
         weight_shape = node.layer_attributes.weight_attrs[port_id]["shape"]
+        weight_channel_axis %= len(weight_shape)  # Make axis positive
+        if port_id == 0:
+            weight_channel_axis -= 1
         if (
             port_id == 0
             and node.layer_attributes.node_attrs["transA"] == 1
@@ -157,7 +160,7 @@ def get_weight_quantization_axis(node: NNCFNode, port_id: int) -> int:
 
 def _get_activation_tensor_shape(
     nncf_graph: NNCFGraph, node: NNCFNode, target_point: ONNXTargetPoint
-) -> Optional[List[int]]:
+) -> Optional[Tuple[int]]:
     """
     Returns shape of an activation tensor which is correspond to the target point and node.
     ONNX model can not have a shape of a edge, even after shape inference.
@@ -193,7 +196,7 @@ def _get_activation_tensor_shape(
 
 def get_quantized_tensor_shape(
     nncf_graph: NNCFGraph, node: NNCFNode, target_point: ONNXTargetPoint
-) -> Optional[List[int]]:
+) -> Optional[Tuple[int]]:
     """
     Returns quantized tensor shape corresponding to a target point with a node if shape - info is existed.
     If there is no shape info - returns None.

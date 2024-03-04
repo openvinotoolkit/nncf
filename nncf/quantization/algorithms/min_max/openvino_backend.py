@@ -138,7 +138,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return OVMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     @staticmethod
-    def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: OVTargetPoint) -> List[int]:
+    def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: OVTargetPoint) -> Tuple[int]:
         if target_point.is_weight_target_point():
             return node.layer_attributes.constant_attributes[target_point.port_id]["shape"]
         if target_point.type == TargetType.PRE_LAYER_OPERATION:
@@ -148,10 +148,8 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
 
     @staticmethod
-    def get_channel_axes(node: NNCFNode, target_point: OVTargetPoint) -> Tuple[int]:
-        if target_point.is_weight_target_point():
-            return get_weight_channel_axes(node)
-        return (1,)
+    def get_weight_quantization_axes(node: NNCFNode, target_point: OVTargetPoint) -> Tuple[int]:
+        return tuple(get_weight_channel_axes(node))
 
     @staticmethod
     def get_statistic_collector(

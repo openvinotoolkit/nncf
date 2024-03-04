@@ -40,7 +40,14 @@ class NNCFGraphToTest:
             NodeWithType("Output_1", OutputNoopMetatype, layer_attributes=output_layer_attrs),
         ]
         node_edges = [("Input_1", "Conv_1"), ("Conv_1", "Output_1")]
-        original_mock_graph = create_mock_graph(nodes, node_edges)
+        original_mock_graph = create_mock_graph(
+            nodes,
+            node_edges,
+            (
+                {NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: (1, 3, 224, 224)},
+                {NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR: (1, 10, 224, 224)},
+            ),
+        )
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
 
 
@@ -374,3 +381,37 @@ class NNCFGraphToTestConstantFiltering:
 
         original_mock_graph = create_mock_graph(nodes, edges)
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
+
+
+class NNCFGraphToTestMinMax:
+    def __init__(
+        self,
+        conv_metatype,
+        sum_metatype,
+        conv_layer_attrs=None,
+        nncf_graph_cls=NNCFGraph,
+        sum_layer_attrs=None,
+        input_layer_attrs=None,
+        output_layer_attrs=None,
+    ):
+        #       Original graph
+        #          Input_1
+        #             |
+        #          Conv_1
+        #             |
+        #           Sum_1
+        #             |
+        #           Output_1
+        nodes = [
+            NodeWithType("Input_1", InputNoopMetatype, layer_attributes=input_layer_attrs),
+            NodeWithType("Conv_1", conv_metatype, layer_attributes=conv_layer_attrs),
+            NodeWithType("Sum_1", sum_metatype, layer_attributes=sum_layer_attrs),
+            NodeWithType("Output_1", OutputNoopMetatype, layer_attributes=output_layer_attrs),
+        ]
+        node_edges = [("Input_1", "Conv_1"), ("Conv_1", "Sum_1"), ("Sum_1", "Output_1")]
+        original_mock_graph = create_mock_graph(nodes, node_edges)
+        self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
+        # Hack output size of the Sum_1 operation
+        self.nncf_graph._nx_graph.out_edges[("2 /Sum_1_0", "3 /Output_1_0")][
+            self.nncf_graph.ACTIVATION_SHAPE_EDGE_ATTR
+        ] = [1, 1, 1]
