@@ -9,7 +9,7 @@ Post-training Quantization:
   - (ONNX) Introduced support for the ONNX backend in the `nncf.quantize_with_accuracy_control()` method. Users can now perform quantization with accuracy control for `onnx.ModelProto`. By leveraging this feature, users can enhance the accuracy of quantized models while minimizing performance impact.
   - (ONNX) Added an example based on the YOLOv8n-seg model for demonstrating the usage of quantization with accuracy control for the ONNX backend.
   - (PT) Added SmoothQuant algorithm for PyTorch backend in `nncf.quantize()`.
-  - (OpenVINO) Added an example with the hyperparameters tuning for the TinyLLama model.
+  - (OpenVINO) Added [an example](examples/llm_compression/openvino/tiny_llama_find_hyperparams) with the hyperparameters tuning for the TinyLLama model.
   - Introduced the `nncf.AdvancedAccuracyRestorerParameters`.
   - Introduced the `subset_size` option for the `nncf.compress_weights()`.
   - Introduced `TargetDevice.NPU` as the replacement for `TargetDevice.VPU`.
