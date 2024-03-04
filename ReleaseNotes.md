@@ -1,5 +1,53 @@
 # Release Notes
 
+## New in Release 2.9.0
+
+Post-training Quantization:
+
+- Features:
+  - (OpenVINO) Added modified AWQ algorithm for 4-bit data-aware weights compression. This algorithm applied only for patterns `MatMul->Multiply->Matmul`. For that `awq` optional parameter has been added to `nncf.compress_weights()` and can be used to minimize accuracy degradation of compressed models (note that this option increases the compression time).
+  - (ONNX) Introduced support for the ONNX backend in the `nncf.quantize_with_accuracy_control()` method. Users can now perform quantization with accuracy control for `onnx.ModelProto`. By leveraging this feature, users can enhance the accuracy of quantized models while minimizing performance impact.
+  - (ONNX) Added an example based on the YOLOv8n-seg model for demonstrating the usage of quantization with accuracy control for the ONNX backend.
+  - (PT) Added SmoothQuant algorithm for PyTorch backend in `nncf.quantize()`.
+  - (OpenVINO) Added [an example](examples/llm_compression/openvino/tiny_llama_find_hyperparams) with the hyperparameters tuning for the TinyLLama model.
+  - Introduced the `nncf.AdvancedAccuracyRestorerParameters`.
+  - Introduced the `subset_size` option for the `nncf.compress_weights()`.
+  - Introduced `TargetDevice.NPU` as the replacement for `TargetDevice.VPU`.
+- Fixes:
+  - Fixed API Enums serialization/deserialization issue.
+  - Fixed issue with required arguments for `revert_operations_to_floating_point_precision` method.
+- Improvements:
+  - (ONNX) Aligned statistics collection with OpenVINO and PyTorch backends.
+  - Extended `nncf.compress_weights()` with Convolution & Embeddings compression in order to reduce memory footprint.
+- Deprecations/Removals:
+  - (OpenVINO) Removed outdated examples with `nncf.quantize()` for BERT and YOLOv5 models.
+  - (OpenVINO) Removed outdated example with `nncf.quantize_with_accuracy_control()` for SSD MobileNetV1 FPN model.
+  - (PyTorch) Deprecated the `binarization` algorithm.
+  - Removed Post-training Optimization Tool as OpenVINO backend.
+  - Removed Dockerfiles.
+  - `TargetDevice.VPU` was replaced by `TargetDevice.NPU`.
+- Tutorials:
+  - [Post-Training Optimization of Stable Diffusion v2 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/236-stable-diffusion-v2/236-stable-diffusion-v2-text-to-image.ipynb)
+  - [Post-Training Optimization of DeciDiffusion Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/259-decidiffusion-image-generation/259-decidiffusion-image-generation.ipynb)
+  - [Post-Training Optimization of DepthAnything Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/280-depth-anything/280-depth-anything.ipynb)
+  - [Post-Training Optimization of Stable Diffusion ControlNet Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/235-controlnet-stable-diffusion/235-controlnet-stable-diffusion.ipynb)
+
+Compression-aware training:
+
+- Fixes
+  - (PyTorch) Fixed issue with `NNCFNetworkInterface.get_clean_shallow_copy` missed arguments.
+
+## New in Release 2.8.1
+
+Post-training Quantization:
+
+- Bugfixes:
+  - (Common) Fixed issue with `nncf.compress_weights()` to avoid overflows on 32-bit Windows systems.
+  - (Common) Fixed performance issue with `nncf.compress_weights()` on LLama models.
+  - (Common) Fixed `nncf.quantize_with_accuracy_control` pipeline with `tune_hyperparams=True` enabled option.
+  - (OpenVINO) Fixed issue for stateful LLM models and added state restoring after the inference for it.
+  - (PyTorch) Fixed issue with `nncf.compress_weights()` for LLM models with the executing `is_floating_point` with tracing.
+
 ## New in Release 2.8.0
 
 Post-training Quantization:
