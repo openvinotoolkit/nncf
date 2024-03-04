@@ -25,7 +25,7 @@ Post-training Quantization:
   - (PyTorch) Deprecated the `binarization` algorithm.
   - Removed Post-training Optimization Tool as OpenVINO backend.
   - Removed Dockerfiles.
-  - Removed the `TargetDevice.VPU` device.
+  - `TargetDevice.VPU` was replaced by `TargetDevice.NPU`.
 - Tutorials:
   - [Post-Training Optimization of Stable Diffusion v2 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/236-stable-diffusion-v2/236-stable-diffusion-v2-text-to-image.ipynb)
   - [Post-Training Optimization of DeciDiffusion Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/259-decidiffusion-image-generation/259-decidiffusion-image-generation.ipynb)
