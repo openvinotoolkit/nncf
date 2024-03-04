@@ -1,0 +1,291 @@
+# Copyright (c) 2024 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from copy import deepcopy
+from typing import Any, Dict, List, Optional, TypeVar
+
+from nncf import Dataset
+from nncf.common.graph.graph import NNCFGraph
+from nncf.common.graph.graph import NNCFNode
+from nncf.common.logging.track_progress import track
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import get_backend
+from nncf.experimental.tensor import functions as fns
+from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_dequantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
+from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
+
+TModel = TypeVar("TModel")
+TTensor = TypeVar("TTensor")
+TWeightType = TypeVar("TWeightType")
+
+
+class ScaleEstimation(Algorithm):
+    """
+    Modified AWQ algorithm implementation.
+    """
+
+    def __init__(
+        self,
+        model: TModel,
+        name_to_node_mapping: Dict[str, Any],
+        all_weight_params: List[WeightCompressionParameters],
+        nodes_to_compress: List[NNCFNode],
+        activations: Optional[Dict[str, TTensor]] = None,
+        subset_size: int = 32,
+        initial_steps: int = 5,
+    ):
+        """
+        :param model: Model for applying algorithm.
+        :param name_to_node_mapping: Name to node mapping for updating node weights.
+        :param all_weight_params: List of all weight parameters.
+        :param nodes_to_compress: List of nodes for processing.
+        :param activations: The input activations of the layers considered for compression.
+        :param subset_size: The number of samples for AWQ.
+        :param percent_to_apply: The percent of outliers for correction.
+        :param alpha_min: Minimum value of smoothness parameter for grid search.
+        :param alpha_max: Maximal value of smoothness parameter for grid search.
+        :param steps: The number of the steps in grid search.
+        """
+        super().__init__()
+        self.name_to_node_mapping = name_to_node_mapping
+        self._all_weight_params = all_weight_params
+        self._nodes_to_compress = nodes_to_compress
+        self._activations = activations
+        self._subset_size = subset_size
+        self._initial_steps = initial_steps
+
+        self._set_backend_entity(model)
+
+    @property
+    def available_backends(self) -> List[BackendType]:
+        return [BackendType.OPENVINO]
+
+    def _set_backend_entity(self, model: TModel) -> None:
+        """
+        Creates a helper class with a backed-specific logic of the algorithm.
+
+        :param model: Backend-specific input model.
+        :param all_weight_params: List of all weight parameters.
+        :param nodes_to_compress: List of nodes for processing.
+        :param activations: The input activations of the layers considered for compression.
+        """
+
+        model_backend = get_backend(model)
+        if model_backend == BackendType.OPENVINO:
+            from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
+
+            self._backend_entity = OVWeightCompressionAlgoBackend(model)
+        else:
+            raise RuntimeError(
+                "Cannot return backend-specific AWQ entity because {} is not supported!".format(model_backend.value)
+            )
+
+    def apply(
+        self,
+        model: TModel,
+        graph: NNCFGraph,
+        statistic_points: Optional[StatisticPointsContainer] = None,
+        dataset: Optional[Dataset] = None,
+    ) -> TModel:
+        """
+        Applies the algorithm to the model.
+
+        :param model: Model for applying algorithm.
+        :param graph: Model graph.
+        :param statistic_points: Statistic points with collected statistics values.
+        :param dataset: A representative dataset for the calibration process.
+        :return: A resulting model.
+        """
+        name_mapping = {wp.node_with_weight.node_name: idx for idx, wp in enumerate(self._all_weight_params)}
+
+        for k, stats in track(self._activations.items(), description="Applying Scale Estimation"):
+            wp = self._all_weight_params[name_mapping[k]]
+            reduction_axis = wp.reduction_axes[0]
+            config = wp.compression_config
+            if config.num_bits != 4:
+                continue
+
+            cur_config = deepcopy(config)
+            cur_config.group_size = -1
+
+            weight_data = self._backend_entity.get_weight_names_and_port_ids(wp.node_with_weight, graph)
+            if len(weight_data) != 1:  # not supported by the algorithm
+                continue
+            _, weight_port_id = weight_data[0]
+
+            X = fns.stack([fns.mean(stat, axis=0) for stat in stats])
+            X_full = fns.transpose(X)
+
+            if X_full.shape[1] > self._subset_size:
+                lens = [stat.shape[0] for stat in stats]
+                step = X_full.shape[1] // self._subset_size
+                idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][::step]
+                X = X_full[:, idxs]
+                idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][1::step]
+                X_cnt = X_full[:, idxs]
+            else:
+                X = X_full
+                X_cnt = X_full
+
+            s = fns.max(fns.abs(X_full), axis=1)
+
+            weight = self._backend_entity.get_weight(wp.node_with_weight, weight_port_id, model, graph)
+            eps = fns.finfo(weight).eps
+
+            if reduction_axis == 0:
+                weight = fns.transpose(weight)
+                reduction_axis = 1
+
+            original_weight = fns.zeros_like(weight) + weight
+
+            g_compressed_weighs, g_c_scale, g_c_zp = do_integer_quantization(original_weight, reduction_axis, config)
+            g_c_zp = g_c_zp.astype(g_c_scale.dtype)
+
+            q_weights = do_dequantization(g_compressed_weighs, g_c_scale, g_c_zp, reduction_axis)
+
+            fp_out_cnt = fns.matmul(original_weight, X_cnt)  # [d_out, seq_len]
+            q_out = fns.matmul(q_weights, X_cnt)
+            diff_before = fns.mean(fns.abs(fp_out_cnt - q_out))
+
+            s = fns.unsqueeze(s, 0)
+            s, _ = reshape_weight_for_grouped_quantization(s, reduction_axis, config.group_size)
+
+            original_weight, _ = reshape_weight_for_grouped_quantization(
+                original_weight, reduction_axis, config.group_size
+            )
+            importance = fns.ones_like(original_weight)
+            importance = importance * s
+
+            target = g_compressed_weighs.astype(dtype=g_c_scale.dtype) - g_c_zp
+            zero_mask = g_compressed_weighs == g_c_zp
+
+            importance = fns.where(zero_mask, 0.0, importance)  # ???????
+
+            denum = fns.sum(importance, axis=2, keepdims=True)
+            importance = importance / (denum + eps)
+
+            X, _ = reshape_weight_for_grouped_quantization(X, 0, config.group_size)
+            q_weights, _ = reshape_weight_for_grouped_quantization(q_weights, reduction_axis, config.group_size)
+            best_diffs = None
+            result_scale = None
+
+            fp_outs = fns.matmul(fns.transpose(original_weight, (1, 0, 2)), X)
+            q_outs = fns.matmul(fns.transpose(q_weights, (1, 0, 2)), X)
+            min_max_scale_diffs = fns.mean((fp_outs - q_outs) ** 2, axis=-1)
+            min_max_scale_diffs = fns.transpose(min_max_scale_diffs, (1, 0))
+            ideal_scale_diffs = fns.zeros_like(min_max_scale_diffs)
+
+            compress_decompress_model = self._backend_entity.get_compress_decompress_pipeline(
+                wp, q_weights.shape, g_c_scale.shape, g_c_zp.shape
+            )
+
+            compress_model = self._backend_entity.get_compress_pipeline(
+                wp, q_weights.shape, g_c_scale.shape, g_c_zp.shape
+            )
+            zero_scale = 0.001
+            zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
+
+            for _ in range(5):
+                ideal_scale = fns.abs(original_weight) / (fns.abs(target) + zero_mask)
+                weighted_scale = ideal_scale * importance
+
+                near_to_ideal_scale = fns.sum(weighted_scale, axis=2, keepdims=True)
+
+                out = compress_decompress_model([original_weight.data, near_to_ideal_scale.data, g_c_zp.data])
+                q_weights_ = fns.zeros_like(original_weight) + out["q_weights"]
+                q_outs = fns.matmul(fns.transpose(q_weights_, (1, 0, 2)), X)
+
+                ideal_scale_diffs = fns.mean((fp_outs - q_outs) ** 2, axis=-1)
+                ideal_scale_diffs = fns.transpose(ideal_scale_diffs, (1, 0))
+
+                if best_diffs is None:
+                    best_diffs = min_max_scale_diffs
+
+                mask = (ideal_scale_diffs > best_diffs).astype(best_diffs.dtype)
+
+                best_diffs = mask * best_diffs + (1.0 - mask) * ideal_scale_diffs
+
+                mask = fns.unsqueeze(mask, axis=2)
+
+                if result_scale is None:
+                    near_to_ideal_scale = mask * g_c_scale + (1.0 - mask) * near_to_ideal_scale
+                else:
+                    near_to_ideal_scale = mask * result_scale + (1.0 - mask) * near_to_ideal_scale
+                result_scale = near_to_ideal_scale
+
+                out = compress_model([original_weight.data, near_to_ideal_scale.data, g_c_zp.data])
+                compressed_weights = fns.zeros_like(original_weight) + out["compressed_weights"]
+                target = compressed_weights - g_c_zp
+                zero_mask = compressed_weights == g_c_zp
+                zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
+
+            for scale_steps in range(10):
+                scale = 1.0 - 0.05 * scale_steps
+                scaled_scale = scale * g_c_scale
+
+                out = compress_model([original_weight.data, scaled_scale.data, g_c_zp.data])
+                compressed_weights = fns.zeros_like(original_weight) + out["compressed_weights"]
+
+                target = compressed_weights - g_c_zp
+                zero_mask = compressed_weights == g_c_zp
+                zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
+
+                ideal_scale = fns.abs(original_weight) / (fns.abs(target) + zero_mask)
+                weighted_scale = ideal_scale * importance
+                near_to_ideal_scale = fns.sum(weighted_scale, axis=2, keepdims=True)
+
+                out = compress_decompress_model([original_weight.data, near_to_ideal_scale.data, g_c_zp.data])
+                q_weights_ = fns.zeros_like(original_weight) + out["q_weights"]
+
+                q_outs = fns.matmul(fns.transpose(q_weights_, (1, 0, 2)), X)
+                ideal_scale_diffs = fns.mean((fp_outs - q_outs) ** 2, axis=-1)
+                ideal_scale_diffs = fns.transpose(ideal_scale_diffs, (1, 0))
+
+                mask = (ideal_scale_diffs > best_diffs).astype(best_diffs.dtype)
+
+                best_diffs = mask * best_diffs + (1.0 - mask) * ideal_scale_diffs
+
+                mask = fns.unsqueeze(mask, axis=2)
+
+                if result_scale is None:
+                    near_to_ideal_scale = mask * g_c_scale + (1.0 - mask) * near_to_ideal_scale
+                else:
+                    near_to_ideal_scale = mask * result_scale + (1.0 - mask) * near_to_ideal_scale
+                result_scale = near_to_ideal_scale
+
+            g_compressed_weighs, g_c_scale, g_c_zp = do_integer_quantization(
+                original_weight, -1, cur_config, result_scale
+            )
+            q_weights = do_dequantization(g_compressed_weighs, g_c_scale, g_c_zp, reduction_axis)
+            q_out = fns.matmul(q_weights, X_cnt)
+            diff_after = fns.mean(fns.abs(fp_out_cnt - q_out))
+
+            # prevent overfitting
+            print(k, diff_before, diff_after)
+            if diff_before > diff_after:
+                wp.precomputed_scale = result_scale
+            else:
+                print("SKIP: ", k)
+        return model
+
+    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
+        """
+        Returns statistic points, for which StatisticsCollector should collect statistics.
+
+        :param model: Model for statistics collection.
+        :param graph: Model graph.
+        :return: Statistic points, for which StatisticsCollector should collect statistics.
+        """
+        return StatisticPointsContainer()

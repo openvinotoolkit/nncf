@@ -263,6 +263,12 @@ class AWQ(Algorithm):
                 merge_weight = merge_weight * a_scale
                 self._backend_entity.set_weight(merge_node, port_id, model, graph, merge_weight)
 
+            # update activations for next usage
+            a_scale_t = fns.transpose(a_scale)
+            for i, stat in enumerate(self._activations[k]):
+                stat = stat * a_scale_t
+                self._activations[k][i] = stat
+
         return model
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:

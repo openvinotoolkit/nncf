@@ -34,6 +34,7 @@ from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
+from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
 from nncf.quantization.algorithms.weight_compression.weight_lowering import WeightCompressionConfig
 from nncf.scopes import IgnoredScope
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
@@ -343,6 +344,15 @@ class WeightCompression(Algorithm):
                 model, self._backend_entity.name_to_node_mapping, all_weight_params, nodes_to_compress, activations
             )
             awq_algo.apply(model, graph)
+
+            scale_algo = ScaleEstimation(
+                model,
+                self._backend_entity.name_to_node_mapping,
+                all_weight_params,
+                nodes_to_compress,
+                awq_algo._activations,
+            )
+            scale_algo.apply(model, graph)
 
         # Compress model using weight compression parameters
         transformed_model = self._backend_entity.transform_model(
