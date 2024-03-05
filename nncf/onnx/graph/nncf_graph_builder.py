@@ -324,6 +324,7 @@ class GraphConverter:
                     output_port_id=output_port_id,
                     dtype=nncf_dtype,
                 )
+                input_port_id += 1
 
     @staticmethod
     def convert_onnx_dtype_to_nncf_dtype(onnx_dtype: int) -> Dtype:
