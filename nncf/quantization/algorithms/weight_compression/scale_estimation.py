@@ -45,6 +45,7 @@ class ScaleEstimation(Algorithm):
         activations: Optional[Dict[str, TTensor]] = None,
         subset_size: int = 32,
         initial_steps: int = 5,
+        scale_steps: int = 10,
     ):
         """
         :param model: Model for applying algorithm.
@@ -52,11 +53,10 @@ class ScaleEstimation(Algorithm):
         :param all_weight_params: List of all weight parameters.
         :param nodes_to_compress: List of nodes for processing.
         :param activations: The input activations of the layers considered for compression.
-        :param subset_size: The number of samples for AWQ.
-        :param percent_to_apply: The percent of outliers for correction.
-        :param alpha_min: Minimum value of smoothness parameter for grid search.
-        :param alpha_max: Maximal value of smoothness parameter for grid search.
-        :param steps: The number of the steps in grid search.
+        :param subset_size: The number of samples for scale estimation.
+        :param initial_steps: The number of the steps for absmax scale rectification.
+        :param scale_steps: The number of the steps for grid search scale rectification
+                            from 1.0 to 1.0 - 0.05 * scale_step.
         """
         super().__init__()
         self.name_to_node_mapping = name_to_node_mapping
@@ -65,6 +65,7 @@ class ScaleEstimation(Algorithm):
         self._activations = activations
         self._subset_size = subset_size
         self._initial_steps = initial_steps
+        self._scale_steps = scale_steps
 
         self._set_backend_entity(model)
 
@@ -197,7 +198,7 @@ class ScaleEstimation(Algorithm):
             zero_scale = 0.001
             zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
 
-            for _ in range(5):
+            for _ in range(self._initial_steps):
                 ideal_scale = fns.abs(original_weight) / (fns.abs(target) + zero_mask)
                 weighted_scale = ideal_scale * importance
 
@@ -231,7 +232,7 @@ class ScaleEstimation(Algorithm):
                 zero_mask = compressed_weights == g_c_zp
                 zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
 
-            for scale_steps in range(10):
+            for scale_steps in range(self._scale_steps):
                 scale = 1.0 - 0.05 * scale_steps
                 scaled_scale = scale * g_c_scale
 
@@ -273,11 +274,8 @@ class ScaleEstimation(Algorithm):
             diff_after = fns.mean(fns.abs(fp_out_cnt - q_out))
 
             # prevent overfitting
-            print(k, diff_before, diff_after)
             if diff_before > diff_after:
                 wp.precomputed_scale = result_scale
-            else:
-                print("SKIP: ", k)
         return model
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:

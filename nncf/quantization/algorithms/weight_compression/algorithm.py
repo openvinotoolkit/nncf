@@ -61,6 +61,7 @@ class WeightCompression(Algorithm):
         sensitivity_metric: SensitivityMetric,
         awq: bool,
         subset_size: int,
+        scale_estimation: bool,
     ):
         """
         :param mode: Defines a mode for weight compression.
@@ -89,6 +90,7 @@ class WeightCompression(Algorithm):
         :param awq: determines whether to use or not modified AWQ algorithm.
         :param subset_size: Number of data samples to calculate activation statistics used for assigning different
             quantization precision.
+        :param scale_estimation: determines whether to use or not scale estimation for 4 bit layers.
         """
         super().__init__()
         self._mode = mode
@@ -102,6 +104,7 @@ class WeightCompression(Algorithm):
         self._sensitivity_metric = sensitivity_metric
         self._awq = awq
         self._subset_size = subset_size
+        self._scale_estimation = scale_estimation
 
     @property
     def available_backends(self) -> List[BackendType]:
@@ -345,12 +348,13 @@ class WeightCompression(Algorithm):
             )
             awq_algo.apply(model, graph)
 
+        if self._scale_estimation:
             scale_algo = ScaleEstimation(
                 model,
                 self._backend_entity.name_to_node_mapping,
                 all_weight_params,
                 nodes_to_compress,
-                awq_algo._activations,
+                activations,
             )
             scale_algo.apply(model, graph)
 

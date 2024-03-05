@@ -279,6 +279,7 @@ def compress_weights(
     *,
     subset_size: Optional[int] = 128,
     awq: Optional[bool] = None,
+    scale_estimation: Optional[bool] = None,
 ) -> TModel:
     """
     Compress model weights.
@@ -332,7 +333,7 @@ def compress_weights(
                 f"but given {mode.value} mode."
             )
 
-        if awq is True:
+        if True in [awq, scale_estimation]:
             raise AttributeError("Torch backend doesn`t supports AWQ algorithm, but awq=True is specified.")
 
         if is_wrapped_model(model):
@@ -366,7 +367,7 @@ def compress_weights(
                 "INT8 mode assumes per-channel quantization of all layers in 8 bit. "
                 "Default values of `ratio` (1) and `group_size` (-1) parameters can not be overridden"
             )
-        options = [all_layers, sensitivity_metric, dataset, awq]
+        options = [all_layers, sensitivity_metric, dataset, awq, scale_estimation]
         if any(option is not None for option in options):
             raise AttributeError(
                 "INT8 modes do not support `all_layers`, `sensitivity_metric`, `awq` and `dataset` options. "
@@ -381,6 +382,8 @@ def compress_weights(
         all_layers = False
     if awq is None:
         awq = False
+    if scale_estimation is None:
+        scale_estimation = False
     if ignored_scope is None:
         ignored_scope = IgnoredScope()
     if sensitivity_metric is None:
@@ -403,7 +406,17 @@ def compress_weights(
         raise nncf.UnsupportedBackendError(f"Unsupported type of backend: {backend}")
 
     return compression_weights_impl(
-        model, dataset, mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric, awq, subset_size
+        model,
+        dataset,
+        mode,
+        ratio,
+        group_size,
+        ignored_scope,
+        all_layers,
+        sensitivity_metric,
+        awq,
+        subset_size,
+        scale_estimation,
     )
 
 
