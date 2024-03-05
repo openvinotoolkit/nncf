@@ -86,7 +86,7 @@ class ScaleEstimation(Algorithm):
         if model_backend == BackendType.OPENVINO:
             from nncf.quantization.algorithms.weight_compression.openvino_backend import OVWeightCompressionAlgoBackend
 
-            self._backend_entity = OVWeightCompressionAlgoBackend(model)
+            self._backend_entity = OVWeightCompressionAlgoBackend(model, self.name_to_node_mapping)
         else:
             raise RuntimeError(
                 "Cannot return backend-specific AWQ entity because {} is not supported!".format(model_backend.value)

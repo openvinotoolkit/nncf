@@ -35,8 +35,11 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import comp
 
 
 class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
-    def __init__(self, model: ov.Model):
-        self.name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
+    def __init__(self, model: ov.Model, name_to_node_mapping: Dict = None):
+        if name_to_node_mapping is None:
+            self.name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
+        else:
+            self.name_to_node_mapping = name_to_node_mapping
 
     @property
     def matmul_metatypes(self) -> List[OperatorMetatype]:

@@ -107,8 +107,7 @@ class AWQ(Algorithm):
         if model_backend == BackendType.OPENVINO:
             from nncf.quantization.algorithms.weight_compression.openvino_backend import OVAWQAlgoAlgoBackend
 
-            self._backend_entity = OVAWQAlgoAlgoBackend(model)
-            self._backend_entity.name_to_node_mapping = self.name_to_node_mapping
+            self._backend_entity = OVAWQAlgoAlgoBackend(model, self.name_to_node_mapping)
             self._patterns = self._backend_entity.get_awq_patterns()
         else:
             raise RuntimeError(
