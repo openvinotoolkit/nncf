@@ -92,7 +92,7 @@ class ConvBNTestModel(nn.Module):
         return x
 
 
-class BiasConvBiasBNTestModel(torch.nn.Module):
+class ConvBiasBNTestModel(torch.nn.Module):
     INPUT_SIZE = [1, 1, 4, 4]
 
     def __init__(self):
@@ -108,6 +108,49 @@ class BiasConvBiasBNTestModel(torch.nn.Module):
         x = self.conv(x)
         x = self.bn(x)
         return x
+
+
+class CustomConv(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.weight = nn.Parameter(torch.Tensor([[[[0.1, -2.0], [1.0, 0.1]]], [[[0.1, 2.0], [-1.0, 0.1]]]]))
+        self.bias = nn.Parameter(torch.Tensor([0.1, 1.0]))
+        self.act = nn.Identity()
+
+    def forward(self, x):
+        return self.act(F.conv2d(x, self.weight, self.bias))
+
+
+class CustomConvTestModel(nn.Module):
+    INPUT_SIZE = [1, 1, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.conv = CustomConv()
+        self.drop = nn.Dropout(0)
+
+    def forward(self, x):
+        return self.drop(self.conv(x))
+
+
+class CustomBN2d(nn.BatchNorm2d):
+    def __init__(self):
+        super().__init__(2)
+        self.bias.data = torch.Tensor([0.1, 1.0])
+        self.weight.data = torch.Tensor([0.2, 2.0])
+        self.act = nn.Identity()
+
+
+class CustomConvBNTestModel(nn.Module):
+    INPUT_SIZE = [1, 1, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.conv = CustomConv()
+        self.bn = CustomBN2d()
+
+    def forward(self, x):
+        return self.bn(self.conv(x))
 
 
 class FCTestModel(nn.Module):
