@@ -35,9 +35,7 @@ class TemplateTestMinMaxAlgorithm:
 
     @property
     @abstractmethod
-    def conv_metatype(
-        self,
-    ):
+    def conv_metatype(self):
         pass
 
     @property
@@ -49,7 +47,7 @@ class TemplateTestMinMaxAlgorithm:
 class TemplateTestGetTargetPointShape(TemplateTestMinMaxAlgorithm):
     @abstractmethod
     def get_nncf_graph(self, weight_port_id, weight_shape):
-        """ """
+        pass
 
     @pytest.mark.parametrize(
         "target_point_type, input_port_id, reference_shape",
@@ -71,16 +69,12 @@ class TemplateTestGetTargetPointShape(TemplateTestMinMaxAlgorithm):
 class TemplateTestGetChannelAxes(TemplateTestMinMaxAlgorithm):
     @property
     @abstractmethod
-    def depthwiseconv_metatype(
-        self,
-    ):
+    def depthwiseconv_metatype(self):
         pass
 
     @property
     @abstractmethod
-    def matmul_metatype(
-        self,
-    ):
+    def matmul_metatype(self):
         pass
 
     @staticmethod
