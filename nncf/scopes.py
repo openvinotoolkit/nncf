@@ -20,6 +20,42 @@ from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api
 
 
+@api(canonical_alias="nncf.Subgraph")
+@dataclass
+class Subgraph:
+    """
+    Defines the ignored subgraph as follows: A subgraph comprises all nodes along
+    all simple paths in the graph from input to output nodes.
+
+    :param inputs: Input node names.
+    :type inputs: List[str]
+    :param outputs: Output node names.
+    :type outputs: List[str]
+    """
+
+    inputs: List[str] = field(default_factory=list)
+    outputs: List[str] = field(default_factory=list)
+
+
+def get_ignored_node_names_from_subgraph(graph: NNCFGraph, subgraph: Subgraph) -> List[str]:
+    """
+    Returns all names that should be ignored according to given subgraph.
+
+    :param graph: Given NNCFGraph.
+    :param subgraph: Given subgraph instance.
+    :return: All names that should be ignored according to given subgraph.
+    """
+    ignored_names = set()
+    for start_node_name in subgraph.inputs:
+        for end_node_name in subgraph.outputs:
+            for path in graph.get_all_simple_paths(start_node_name, end_node_name):
+                for node_key in path:
+                    node = graph.get_node_by_key(node_key)
+                    ignored_names.add(node.node_name)
+
+    return list(sorted(ignored_names))
+
+
 @api(canonical_alias="nncf.IgnoredScope")
 @dataclass
 class IgnoredScope:
@@ -61,6 +97,8 @@ class IgnoredScope:
     :type patterns: List[str]
     :param types: List of ignored operation types.
     :type types: List[str]
+    :param subgraphs: List of ignored subgraphs.
+    :type subgraphs: List[Subgraph]
     :param validate: If set to True, then a RuntimeError will be raised if any ignored scope does not match
       in the model graph.
     :type types: bool
@@ -69,6 +107,7 @@ class IgnoredScope:
     names: List[str] = field(default_factory=list)
     patterns: List[str] = field(default_factory=list)
     types: List[str] = field(default_factory=list)
+    subgraphs: List[Subgraph] = field(default_factory=list)
     validate: bool = True
 
 
@@ -153,4 +192,16 @@ def get_ignored_node_names_from_ignored_scope(
             )
         nncf_logger.info(f"{len(matched_by_types)} ignored nodes were found by types in the NNCFGraph")
 
-    return set(matched_by_names + matched_by_types + matched_by_patterns)
+    matched_by_subgraphs = []
+    if ignored_scope.subgraphs:
+        for subgraph in ignored_scope.subgraphs:
+            names_from_subgraph = get_ignored_node_names_from_subgraph(nncf_graph, subgraph)
+            if strict and not names_from_subgraph:
+                raise nncf.ValidationError(
+                    f"Ignored subgraph with input names {subgraph.inputs} and output names {subgraph.outputs} "
+                    "was not found in the NNCFGraph. " + error_msg
+                )
+
+            matched_by_subgraphs.extend(names_from_subgraph)
+
+    return set(matched_by_names + matched_by_types + matched_by_patterns + matched_by_subgraphs)
