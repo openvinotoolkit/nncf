@@ -36,6 +36,16 @@ from tests.post_training.pipelines.base import PTQTestPipeline
 # Disable using aten::scaled_dot_product_attention
 set_fused_attn(False, False)
 
+BATCH_SIZE_NOT_A_DIVISOR_MESSAGE = (
+    "The model validation will be done with batch_size=1 because the provided batch_size value "
+    "is not a divisor of the length of the validation dataset. The compressed model also "
+    "will be reshaped to a shape with batch_size=1."
+)
+BATCH_SIZE_OPTION_RECOMMENDATION_MESSAGE = (
+    "To avoid model reshaping, please, provide the --batch_size option which "
+    "is a divisor of the length of the validation dataset."
+)
+
 
 class ImageClassificationTimm(PTQTestPipeline):
     """Pipeline for Image Classification model from timm repository"""
@@ -118,23 +128,32 @@ class ImageClassificationTimm(PTQTestPipeline):
 
     def _validate(self):
         val_dataset = datasets.ImageFolder(root=self.data_dir / "imagenet" / "val", transform=self.transform)
-        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=self.batch_size, num_workers=2, shuffle=False)
-
-        dataset_size = len(val_loader)
-
-        # Initialize result tensors for async inference support.
-        predictions = np.zeros((dataset_size * self.batch_size))
-        references = -1 * np.ones((dataset_size * self.batch_size))
-
+        dataset_size = len(val_dataset)
         core = ov.Core()
+        ov_model = core.read_model(self.path_compressed_ir)
+        compiled_model = core.compile_model(ov_model)
+        if dataset_size % self.batch_size != 0:
+            print(BATCH_SIZE_NOT_A_DIVISOR_MESSAGE)
+            self.batch_size = 1
+            try:
+                ov_model.reshape([self.batch_size, *self.input_size[1:]])
+            except Exception as e:
+                print(
+                    (
+                        f"During model reshaping the following error occurred: {os.linesep} {e} {os.linesep}"
+                        f"{BATCH_SIZE_OPTION_RECOMMENDATION_MESSAGE}"
+                    )
+                )
+                exit()
+        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=self.batch_size, num_workers=2, shuffle=False)
+        # Initialize result tensors for async inference support.
+        predictions = np.zeros((dataset_size))
+        references = -1 * np.ones((dataset_size))
 
         if os.environ.get("CPU_THREADS_NUM"):
             # Set CPU_THREADS_NUM for OpenVINO inference
             cpu_threads_num = os.environ.get("CPU_THREADS_NUM")
             core.set_property("CPU", properties={"CPU_THREADS_NUM": str(cpu_threads_num)})
-
-        ov_model = core.read_model(self.path_compressed_ir)
-        compiled_model = core.compile_model(ov_model)
 
         jobs = int(os.environ.get("NUM_VAL_THREADS", DEFAULT_VAL_THREADS))
         infer_queue = ov.AsyncInferQueue(compiled_model, jobs)
@@ -144,9 +163,8 @@ class ImageClassificationTimm(PTQTestPipeline):
             def process_result(request, userdata):
                 output_data = request.get_output_tensor().data
                 predicted_label = np.argmax(output_data, axis=1)
-                for j in range(self.batch_size):
-                    predictions[userdata * self.batch_size + j] = predicted_label[j]
-                pbar.progress.update(pbar.task, advance=1)
+                predictions[userdata * self.batch_size : (userdata + 1) * self.batch_size] = predicted_label
+                pbar.progress.update(pbar.task, advance=self.batch_size)
 
             infer_queue.set_callback(process_result)
 
@@ -154,8 +172,7 @@ class ImageClassificationTimm(PTQTestPipeline):
                 # W/A for memory leaks when using torch DataLoader and OpenVINO
                 image_copies = copy.deepcopy(images.numpy())
                 infer_queue.start_async(image_copies, userdata=i)
-                for j in range(self.batch_size):
-                    references[i * self.batch_size + j] = target[j]
+                references[i * self.batch_size : (i + 1) * self.batch_size] = target
 
             infer_queue.wait_all()
 
