@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,6 +15,7 @@ from collections import defaultdict
 from collections import deque
 from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
+import nncf
 from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.tensor_statistics.collectors import NNCFTensor
@@ -54,6 +55,10 @@ class TensorReducerBase(ABC):
 
     @property
     def output_port_id(self) -> int:
+        """
+        Port id of the last node of the reducer subgraph if statistic is inplace.
+        Port id of the reducer output return node if statistic is not inplace.
+        """
         return 0
 
     @property
@@ -74,17 +79,6 @@ class TensorReducerBase(ABC):
         """
 
     @abstractmethod
-    def get_output_names(self, target_node_name: str, port_id: int) -> List[str]:
-        """
-        Returns target output names from target model that is
-            modified for statistic collection.
-
-        :param target_node_name: Target node name for reducer.
-        :param port_id: Target port id for target node name for reducer.
-        :return: Target output names for reducer.
-        """
-
-    @abstractmethod
     def get_inplace_fn(self) -> Optional[InplaceInsertionFNType]:
         """
         Returns correspondent inplace operation builder if inplace operations are available in backend.
@@ -93,6 +87,9 @@ class TensorReducerBase(ABC):
         """
 
     def __call__(self, x: List[NNCFTensor]):
+        if any(t.is_empty() for t in x):
+            return None
+
         if self.inplace:
             return x
 
@@ -259,11 +256,11 @@ class TensorCollector:
         :reducer_output_port_id: Reducer target output port id.
         """
         if container_key in self._stat_container_kwargs_map:
-            raise RuntimeError(
+            raise nncf.InternalError(
                 f"Two different statistic branches for one container key {container_key} are encountered"
             )
         if any(aggr is aggregator for aggr in self._aggregators.values()):
-            raise RuntimeError(f"One aggregator instance {aggregator} for different branches is encountered")
+            raise nncf.InternalError(f"One aggregator instance {aggregator} for different branches is encountered")
 
         self._reducers.add(reducer)
         key = (hash(reducer), reducer_output_port_id, hash(aggregator))
@@ -299,9 +296,9 @@ class TensorCollector:
         for reducer in self._reducers:
             reducer_hash = hash(reducer)
             input_ = inputs[reducer_hash]
-            if any(tensor.is_empty() for tensor in input_):
-                continue
-            reduced_inputs[reducer_hash] = reducer(input_)
+            reduced_input = reducer(input_)
+            if reduced_input is not None:
+                reduced_inputs[reducer_hash] = reduced_input
 
         for (
             (reducer_hash, reducer_port_id, _),
@@ -430,7 +427,7 @@ class TensorCollector:
                 for (_, percentile), value in kwargs.items():
                     percentile_vs_values_dict[percentile] = value
             return statistic_container_cls(percentile_vs_values_dict=percentile_vs_values_dict)
-        raise RuntimeError(
+        raise nncf.InternalError(
             f"Statistic collector class {statistic_container_cls} is not supported by the TensorCollector class."
         )
 
@@ -480,6 +477,14 @@ class NoopReducer(TensorReducerBase):
 
     def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
         return x
+
+
+class RawReducer(NoopReducer):
+    def __init__(self):
+        super().__init__()
+
+    def __call__(self, x: List[NNCFTensor]):
+        return self._reduce_out_of_place(x)
 
 
 class MinReducer(TensorReducerBase):
@@ -621,9 +626,8 @@ class OnlineAggregatorBase(AggregatorBase, ABC):
             self._container.append(reduced)
 
     def _aggregate_impl(self) -> NNCFTensor:
-        if 0 in self._aggregation_axes:
-            if self._keepdims:
-                return self._container[0].tensor
+        if 0 in self._aggregation_axes and self._keepdims:
+            return self._container[0].tensor
         return self._tensor_processor.stack(self._container).tensor
 
     @abstractmethod
@@ -653,9 +657,30 @@ class OfflineAggregatorBase(AggregatorBase, ABC):
         self._container.append(x)
 
     def _aggregate_impl(self) -> NNCFTensor:
-        stacked_val = self._tensor_processor.stack(self._container)
-        aggregated = self._aggregation_fn(stacked_val, axis=self._aggregation_axes, keepdims=self._keepdims)
-        return self._tensor_processor.squeeze(aggregated, 0).tensor
+        # Case when all registered tensors have identical shape
+        if all(self._container[0].shape == x.shape for x in self._container):
+            stacked_value = self._tensor_processor.stack(self._container)
+            aggregated = self._aggregation_fn(stacked_value, axis=self._aggregation_axes, keepdims=self._keepdims)
+            return self._tensor_processor.squeeze(aggregated, 0).tensor
+        online_axes = tuple(x - 1 for x in self._aggregation_axes if x > 0)
+
+        # Case when some registered tensors have different shapes and
+        # 0 is present in the aggregation axes
+        if 0 in self._aggregation_axes:
+            stacked_value, shape_after_aggregation = _moveaxes_flatten_cat(
+                self._container, online_axes, self._tensor_processor
+            )
+            aggregated = self._aggregation_fn(stacked_value, axis=0, keepdims=False)
+            if self._keepdims:
+                aggregated = self._tensor_processor.reshape(aggregated, shape_after_aggregation)
+            return aggregated.tensor
+
+        # Case when some registered tensors have different shapes and
+        # 0 is not present in the aggregation axes
+        ret_val = []
+        for tensor in self._container:
+            ret_val.append(self._aggregation_fn(tensor, axis=online_axes, keepdims=self._keepdims))
+        return self._tensor_processor.stack(ret_val, axis=0).tensor
 
     @abstractmethod
     def _aggregation_fn(self, stacked_value: NNCFTensor, axis: AggregationAxes, keepdims: bool) -> NNCFTensor:
@@ -686,25 +711,22 @@ class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
         self._container = deque(maxlen=window_size)
         self._quantile = quantile
 
-    def _aggregate_impl(self) -> NNCFTensor:
-        stacked_samples = self._tensor_processor.stack(self._container)
+    def _aggregation_fn(self, stacked_value: NNCFTensor, axis: int, keepdims: bool) -> NNCFTensor:
         low_values, high_values = self._tensor_processor.quantile(
-            stacked_samples,
-            quantile=(self._quantile, 1 - self._quantile),
-            axis=self._aggregation_axes,
+            stacked_value, quantile=(self._quantile, 1 - self._quantile), axis=axis
         )
         tp = self._tensor_processor
-        outliers_mask = tp.logical_or(tp.less(stacked_samples, low_values), tp.less(high_values, stacked_samples))
-        aggregated = self._aggregation_fn(
-            stacked_samples=stacked_samples,
+        outliers_mask = tp.logical_or(tp.less(stacked_value, low_values), tp.less(high_values, stacked_value))
+        aggregated = self._masked_aggregation_fn(
+            stacked_samples=stacked_value,
             mask=outliers_mask,
-            axis=self._aggregation_axes,
-            keepdims=self._keepdims,
+            axis=axis,
+            keepdims=keepdims,
         )
-        return self._tensor_processor.squeeze(aggregated, 0).tensor
+        return aggregated
 
     @abstractmethod
-    def _aggregation_fn(
+    def _masked_aggregation_fn(
         self, stacked_samples: NNCFTensor, mask: NNCFTensor, axis: AggregationAxes, keepdims: bool
     ) -> NNCFTensor:
         pass
@@ -717,14 +739,14 @@ class NoOutliersAggregatorBase(OfflineAggregatorBase, ABC):
 
 
 class MeanNoOutliersAggregator(NoOutliersAggregatorBase):
-    def _aggregation_fn(
+    def _masked_aggregation_fn(
         self, stacked_samples: NNCFTensor, mask: NNCFTensor, axis: AggregationAxes, keepdims: bool
     ) -> NNCFTensor:
         return self._tensor_processor.masked_mean(stacked_samples, axis=axis, mask=mask, keepdims=keepdims)
 
 
 class MedianNoOutliersAggregator(NoOutliersAggregatorBase):
-    def _aggregation_fn(
+    def _masked_aggregation_fn(
         self, stacked_samples: NNCFTensor, mask: NNCFTensor, axis: AggregationAxes, keepdims: bool
     ) -> NNCFTensor:
         return self._tensor_processor.masked_median(stacked_samples, axis=axis, mask=mask, keepdims=keepdims)

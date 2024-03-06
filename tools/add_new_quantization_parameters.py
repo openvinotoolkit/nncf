@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -74,7 +74,7 @@ def main(argv):
         new_keys = {}
         for new_parameter in param_list:
             old_keys = list(sd.keys())
-            for k in sd.keys():
+            for k in sd:
                 for h in hooks:
                     new_key = k.replace(h, new_parameter.name)
                     if ("." + h in k) and ("." + new_parameter.name not in k) and (new_key not in old_keys):

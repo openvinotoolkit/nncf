@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,6 +18,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import torch
 from torch import nn
 
+import nncf
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
@@ -281,11 +282,11 @@ class ElasticOutputWidthOp(ElasticWidthOp):
         if fixed_width_list:
             fixed_width_list.sort(reverse=True)
             if fixed_width_list[0] > max_width:
-                raise RuntimeError(
+                raise nncf.InternalError(
                     f"Width list for {node_name} contains invalid values: {fixed_width_list}, {max_width}"
                 )
             if fixed_width_list[0] != max_width:
-                raise RuntimeError(f"Max width for {node_name} is not aligned with pre-trained model")
+                raise nncf.ValidationError(f"Max width for {node_name} is not aligned with pre-trained model")
             self._width_list = fixed_width_list
         else:
             self._width_list = self._generate_width_list(self._max_width, params)
@@ -359,7 +360,7 @@ class ElasticOutputWidthOp(ElasticWidthOp):
                 if p.max_num_widths == len(width_list):
                     break
                 if 0 >= multiplier > 1:
-                    raise RuntimeError(f"Wrong value for multiplier: {multiplier}")
+                    raise nncf.InternalError(f"Wrong value for multiplier: {multiplier}")
                 w = int(max_width * multiplier)
                 w = w - (w % ALIGNMENT_CONSTANT_FOR_MULTIPLIERS)
                 w = max(w, p.min_width)
@@ -578,7 +579,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
     @width_num_params_indicator.setter
     def width_num_params_indicator(self, width_num_params_indicator):
         if width_num_params_indicator == 0 or width_num_params_indicator < -1:
-            raise RuntimeError(f"Invalid width indicator: {width_num_params_indicator}")
+            raise nncf.InternalError(f"Invalid width indicator: {width_num_params_indicator}")
         self._width_num_params_indicator = width_num_params_indicator
 
     @property
@@ -709,35 +710,34 @@ class ElasticWidthHandler(SingleElasticityHandler):
             if not was_set and node_name not in names_of_processed_nodes:
                 nncf_logger.debug(f"input width was not set in scope={node.node_name}")
 
-            if self._add_dynamic_inputs:
-                if node_name in self._add_dynamic_inputs and not was_set:
-                    nncf_logger.debug(f"setting input width by user's request for scope={node_name}")
-                    nodes_to_check = [node]
-                    while any(elem is None for elem in input_masks):
-                        previous_nodes = []
-                        for node in nodes_to_check:
-                            previous_nodes.append(self._propagation_graph.get_previous_nodes(node))
-                        nodes_to_check.clear()
-                        previous_nodes = [item for nodes in previous_nodes for item in nodes]
-                        if not previous_nodes:
-                            break
-                        for previous in previous_nodes:
-                            if "output_mask" in previous.attributes:
-                                if previous.attributes["output_mask"] is not None:
-                                    input_masks.append(previous.attributes["output_mask"])
-                                    input_masks = [i for i in input_masks if i]
-                                else:
-                                    nodes_to_check.append(previous)
+            if self._add_dynamic_inputs and node_name in self._add_dynamic_inputs and not was_set:
+                nncf_logger.debug(f"setting input width by user's request for scope={node_name}")
+                nodes_to_check = [node]
+                while any(elem is None for elem in input_masks):
+                    previous_nodes = []
+                    for node in nodes_to_check:
+                        previous_nodes.append(self._propagation_graph.get_previous_nodes(node))
+                    nodes_to_check.clear()
+                    previous_nodes = [item for nodes in previous_nodes for item in nodes]
+                    if not previous_nodes:
+                        break
+                    for previous in previous_nodes:
+                        if "output_mask" in previous.attributes:
+                            if previous.attributes["output_mask"] is not None:
+                                input_masks.append(previous.attributes["output_mask"])
+                                input_masks = [i for i in input_masks if i]
                             else:
                                 nodes_to_check.append(previous)
-                    if input_masks:
-                        input_mask = input_masks[0]
-                        input_width = self.mask_to_width(input_mask)
-                        if input_width:
-                            dynamic_input_width_op.set_active_width(input_width)
-                            was_set = True
-                    if was_set:
-                        nncf_logger.debug(f"Success setting up user's request for dynamic input at scope={node_name}")
+                        else:
+                            nodes_to_check.append(previous)
+                if input_masks:
+                    input_mask = input_masks[0]
+                    input_width = self.mask_to_width(input_mask)
+                    if input_width:
+                        dynamic_input_width_op.set_active_width(input_width)
+                        was_set = True
+                if was_set:
+                    nncf_logger.debug(f"Success setting up user's request for dynamic input at scope={node_name}")
 
     def get_active_in_out_width_values(
         self,
@@ -909,7 +909,7 @@ class ElasticWidthHandler(SingleElasticityHandler):
         for cluster in self._pruned_module_groups_info.get_all_clusters():
             all_max_out_channels = {el.elastic_op.max_width for el in cluster.elements}
             if len(all_max_out_channels) != 1:
-                raise RuntimeError("Invalid grouping of layers with different number of output channels")
+                raise nncf.InternalError("Invalid grouping of layers with different number of output channels")
 
             first_elastic_width_info = next(iter(cluster.elements))
             op = first_elastic_width_info.elastic_op
@@ -1040,7 +1040,7 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
                 list_of_node_ids.append(node.node_id)
                 layer_attrs = node.layer_attributes
                 if metatype not in metatype_vs_elastic_op_creator:
-                    raise RuntimeError(f"Elastic width is not supported for {metatype}")
+                    raise nncf.InternalError(f"Elastic width is not supported for {metatype}")
                 elastic_op_creator = metatype_vs_elastic_op_creator[metatype]
 
                 elastic_width_operation = elastic_op_creator(
@@ -1130,7 +1130,7 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
             self._overwrite_groups_widths = params_from_state[self._state_names.OVERWRITE_GROUP_WIDTHS]
             self._overwriting_pruning_groups = True
             if len(self._grouped_node_names_to_prune) != len(self._overwrite_groups_widths):
-                raise RuntimeError("Mismatch between number of groups for pruning and their corresponding widths")
+                raise nncf.InternalError("Mismatch between number of groups for pruning and their corresponding widths")
         if params_from_state.get(self._state_names.ADD_DYNAMIC_INPUTS, None) is not None:
             self._add_dynamic_inputs = params_from_state[self._state_names.ADD_DYNAMIC_INPUTS]
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,6 +14,7 @@ from typing import NamedTuple
 import networkx as nx
 import torch
 
+import nncf
 from nncf.common.graph import NNCFNodeName
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.torch.layers import NNCFConv2d
@@ -32,18 +33,18 @@ class AdjustPaddingArgs(NamedTuple):
 
 class CalculatePaddingAdjustment:
     """
-    Calculates padding value to perform a workaround for U4 support on VPU.
-    VPU supports only i4 for weights and activations with zero-point=0 and padding=0. This imposes some limitations on
+    Calculates padding value to perform a workaround for U4 support on NPU.
+    NPU supports only i4 for weights and activations with zero-point=0 and padding=0. This imposes some limitations on
     the quantization scheme we can apply. In case of unsigned input for a quantizer (e.g. output of ReLU) half of
     i4 range (8 values) is insufficient to preserve the accuracy. To overcome the problem it is proposed
-    to transform u4 to i4 in the VPU plugin by shifting the input by half of the quantization range to left. Padding
+    to transform u4 to i4 in the NPU plugin by shifting the input by half of the quantization range to left. Padding
     value should be shifted as well. And to make it zero after the shift (non-zero padding values are not
     supported), the model should be trained with padding value equal to the half of the quantization range.
     """
 
     def __init__(self, activation_quantizer: SymmetricQuantizer):
         if not isinstance(activation_quantizer, SymmetricQuantizer):
-            raise RuntimeError("Padding adjustment is not supported for not symmetric quantization")
+            raise nncf.InternalError("Padding adjustment is not supported for not symmetric quantization")
         self._activation_quantizer = activation_quantizer
         self._is_enabled = True
 

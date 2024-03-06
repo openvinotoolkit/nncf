@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,6 +11,7 @@
 
 from typing import List, Union
 
+import nncf
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
 from nncf.common.tensor import NNCFTensor
 
@@ -109,7 +110,7 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
     def ones(cls, shape: Union[int, List[int]], device) -> SymbolicMask:
         if isinstance(shape, list):
             if len(shape) != 1:
-                raise RuntimeError(f"Unexpected shape = {shape} for 1D symbolic mask")
+                raise nncf.ValidationError(f"Unexpected shape = {shape} for 1D symbolic mask")
             shape = shape[0]
 
         return SymbolicMask(shape)
@@ -139,7 +140,7 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
         """
         producers = SymbolicMaskProducer.merge_producers(input_masks)
         for input_mask in input_masks[1:]:
-            if not input_masks[0].shape == input_mask.shape:
+            if input_masks[0].shape != input_mask.shape:
                 return AmbiguousSymbolicMask(producers)
 
         return SymbolicMask(input_masks[0].shape[0], producers)

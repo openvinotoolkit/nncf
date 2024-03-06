@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -26,6 +26,7 @@ from pymoo.operators.sampling.rnd import IntegerRandomSampling
 from pymoo.optimize import minimize
 from torch.utils.data.dataloader import DataLoader
 
+import nncf
 from nncf import NNCFConfig
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
 from nncf.common.logging import nncf_logger
@@ -333,7 +334,7 @@ class NSGA2SearchAlgorithm(BaseSearchAlgorithm):
 
         self._num_vars, self._vars_upper = self._elasticity_ctrl.multi_elasticity_handler.get_design_vars_info()
         if self._num_vars == 0 or self._vars_lower is None:
-            raise RuntimeError("Search space is empty")
+            raise nncf.InternalError("Search space is empty")
 
         self._result = None
         bn_adapt_params = search_config.get("batchnorm_adaptation", {})
@@ -353,7 +354,7 @@ class NSGA2SearchAlgorithm(BaseSearchAlgorithm):
         """
         if self._evaluator_handlers:
             return self._evaluator_handlers
-        raise RuntimeError("Evaluator handlers haven't been defined")
+        raise nncf.ValidationError("Evaluator handlers haven't been defined")
 
     @property
     def acc_delta(self) -> float:
@@ -739,17 +740,14 @@ class SearchProblem(Problem):
         """
         acc_within_tolerance = self._accuracy_evaluator_handler.current_value
         pair_objective = self._efficiency_evaluator_handler.current_value
-        if acc_within_tolerance < (self._lower_bound_acc * -1.0):
-            if pair_objective < self._search.best_pair_objective:
-                self._search.best_pair_objective = pair_objective
-                self._search.best_config = config
-                self._search.best_vals = [
-                    evaluator_handler.current_value for evaluator_handler in self._evaluator_handlers
-                ]
-                checkpoint_path = Path(self._search.checkpoint_save_dir, "subnetwork_best.pth")
-                checkpoint = {
-                    "best_acc1": acc_within_tolerance * -1.0,
-                    "best_efficiency": pair_objective,
-                    "subnet_config": config,
-                }
-                torch.save(checkpoint, checkpoint_path)
+        if acc_within_tolerance < (self._lower_bound_acc * -1.0) and pair_objective < self._search.best_pair_objective:
+            self._search.best_pair_objective = pair_objective
+            self._search.best_config = config
+            self._search.best_vals = [evaluator_handler.current_value for evaluator_handler in self._evaluator_handlers]
+            checkpoint_path = Path(self._search.checkpoint_save_dir, "subnetwork_best.pth")
+            checkpoint = {
+                "best_acc1": acc_within_tolerance * -1.0,
+                "best_efficiency": pair_objective,
+                "subnet_config": config,
+            }
+            torch.save(checkpoint, checkpoint_path)

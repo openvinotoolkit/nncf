@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,6 +18,7 @@ from typing import Any, Callable, List, Optional, TypeVar, Union
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.logging import nncf_logger
+from nncf.common.logging.track_progress import track
 from nncf.common.quantization.quantizer_removal import find_quantizer_nodes_to_cut
 from nncf.common.quantization.quantizer_removal import revert_operations_to_floating_point_precision
 from nncf.common.utils.backend import BackendType
@@ -93,13 +94,15 @@ class Ranker:
         :param quantized_model_graph: Graph for quantized model.
         :return: List of groups of quantizers to rank.
         """
+        quantizer_metatypes = self._algo_backend.get_quantizer_metatypes()
+
+        if len(quantizer_metatypes) == 2:  # Quantize-Dequantize case
+            # Use only Quantize metatype
+            quantizer_metatypes = quantizer_metatypes[:1]
+
         groups_to_rank = []
         processed = {}
-        quantizers = [
-            x
-            for x in quantized_model_graph.topological_sort()
-            if x.metatype in self._algo_backend.get_quantizer_metatypes()
-        ]
+        quantizers = [x for x in quantized_model_graph.topological_sort() if x.metatype in quantizer_metatypes]
 
         quantized_model_graph_without_shapeof = remove_shapeof_subgraphs(
             deepcopy(quantized_model_graph),
@@ -155,7 +158,6 @@ class Ranker:
             self._ranking_fn,
         )
 
-        nncf_logger.info("Calculating ranking score for groups of quantizers")
         with timer():
             # Calculate ranking score for groups of quantizers.
             if self._num_workers > 1:
@@ -190,7 +192,7 @@ class Ranker:
         reference_values_for_each_item: Union[List[float], List[List[TTensor]]],
     ):
         ranking_scores = []  # ranking_scores[i] is the ranking score for groups_to_rank[i]
-        for current_group in groups_to_rank:
+        for current_group in track(groups_to_rank, description="Calculating ranking scores"):
             modified_model = revert_operations_to_floating_point_precision(
                 current_group.operations,
                 current_group.quantizers,
@@ -198,6 +200,8 @@ class Ranker:
                 quantized_model_graph,
                 self._restore_mode,
                 self._algo_backend.get_op_with_weights_metatypes(),
+                self._algo_backend.is_node_with_weight,
+                self._algo_backend.get_weight_tensor_port_ids,
             )
 
             prepared_model = self._evaluator.prepare_model(modified_model)
@@ -219,6 +223,7 @@ class Ranker:
         ranking_scores = []  # ranking_scores[i] is the ranking score for groups_to_rank[i]
         prepared_model_queue = []
         executor = ThreadPoolExecutor(max_workers=self._num_workers)
+        nncf_logger.info("Calculating ranking scores")
         for idx, current_group in enumerate(groups_to_rank):
             modified_model = revert_operations_to_floating_point_precision(
                 current_group.operations,
@@ -227,6 +232,8 @@ class Ranker:
                 quantized_model_graph,
                 self._restore_mode,
                 self._algo_backend.get_op_with_weights_metatypes(),
+                self._algo_backend.is_node_with_weight,
+                self._algo_backend.get_weight_tensor_port_ids,
             )
 
             prepared_model_queue.append(executor.submit(self._evaluator.prepare_model, modified_model))

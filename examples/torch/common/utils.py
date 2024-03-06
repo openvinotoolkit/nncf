@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -19,13 +19,9 @@ from os import path as osp
 from pathlib import Path
 from shutil import copyfile
 from typing import Tuple
-from urllib.request import url2pathname
 
-import mlflow
 import torch
 from PIL import Image
-from returns.maybe import Maybe
-from returns.maybe import Nothing
 from torch.utils import data
 from torch.utils.tensorboard import SummaryWriter
 
@@ -34,9 +30,7 @@ from examples.torch.common.distributed import configure_distributed
 from examples.torch.common.example_logger import logger as default_logger
 from examples.torch.common.execution import ExecutionMode
 from examples.torch.common.execution import get_device
-from nncf.common.utils.os import is_linux
 from nncf.config.schemata.defaults import QUANTIZATION_BITS
-from nncf.torch.utils import is_main_process
 
 GENERAL_LOG_FILE_NAME = "output.log"
 NNCF_LOG_FILE_NAME = "nncf_output.log"
@@ -80,52 +74,6 @@ def write_metrics(acc, filename):
         json.dump(metrics, outfile)
 
 
-class SafeMLFLow:
-    """Wrapper to encapsulate safe access to mlflow methods without checking for None and with automatic closing"""
-
-    def __init__(self, config):
-        self.is_suitable_mode = "train" in config.mode
-        log_dir = Path(config.log_dir)
-        root_log_dir = log_dir.parent.parent
-        self.safe_call("set_tracking_uri", (root_log_dir / "mlruns").resolve().as_uri())
-
-        self.safe_call("get_experiment_by_name", config.name).or_else_call(
-            lambda: self.safe_call("create_experiment", config.name)
-        )
-
-        self.safe_call("set_experiment", config.name)
-        self.safe_call("start_run")
-
-        def create_symlink_fn(mlflow_active_run: mlflow.ActiveRun):
-            if is_linux():
-                artifact_path = Path(url2pathname(mlflow_active_run.info.artifact_uri.split("file:")[1]))
-                symlink_path = artifact_path / log_dir.name
-                symlink_path.symlink_to(config.log_dir, target_is_directory=True)
-            return Nothing
-
-        self.safe_call("active_run").bind(create_symlink_fn)
-
-    def __del__(self):
-        self.safe_call("end_run")
-
-    def safe_call(self, func: str, *args, **kwargs) -> Maybe:
-        """Calls mlflow method, if it's enabled and safely does nothing in the opposite case"""
-        return Maybe.from_optional(self._get_mlflow()).bind(
-            lambda obj: Maybe.from_value(getattr(obj, func)(*args, **kwargs))
-        )
-
-    def end_run(self):
-        self.safe_call("end_run")
-
-    def _is_enabled(self):
-        return self.is_suitable_mode and is_main_process()
-
-    def _get_mlflow(self):
-        if self._is_enabled():
-            return mlflow
-        return None
-
-
 def configure_device(current_gpu, config: SampleConfig):
     config.current_gpu = current_gpu
     config.distributed = config.execution_mode in (ExecutionMode.DISTRIBUTED, ExecutionMode.MULTIPROCESSING_DISTRIBUTED)
@@ -152,14 +100,6 @@ def configure_logging(sample_logger, config):
     from nncf.common.logging import nncf_logger
 
     nncf_logger.addHandler(nncf_log_file_handler)
-
-
-def log_common_mlflow_params(config):
-    optimizer = config.nncf_config.get("optimizer", {})
-    config.mlflow.safe_call("log_param", "epochs", config.get("epochs", "None"))
-    config.mlflow.safe_call("log_param", "schedule_type", optimizer.get("schedule_type", "None"))
-    config.mlflow.safe_call("log_param", "lr", optimizer.get("base_lr", "None"))
-    config.mlflow.safe_call("set_tag", "Log Dir Path", config.log_dir)
 
 
 def is_on_first_rank(config):

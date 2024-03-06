@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -22,6 +22,9 @@ from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.node_utils import get_bias_value
 from nncf.quantization.algorithms.bias_correction.onnx_backend import ONNXBiasCorrectionAlgoBackend
 from tests.onnx.quantization.common import compare_nncf_graph
+from tests.post_training.test_templates.helpers import ConvTestModel
+from tests.post_training.test_templates.helpers import MultipleConvTestModel
+from tests.post_training.test_templates.helpers import SplittedModel
 from tests.post_training.test_templates.test_bias_correction import TemplateTestBCAlgorithm
 from tests.shared.paths import TEST_ROOT
 
@@ -90,10 +93,12 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
             (
                 "/conv_1/Conv",
                 {
-                    "collected_inputs": {"/conv_1/Conv": ("input.1", 0)},
+                    "collected_inputs": {
+                        ("/Concat", 1): ("nncf_model_input_0", 0),
+                        ("/conv_1/Conv", 0): ("nncf_model_input_0", 0),
+                    },
                     "subgraph_data": {
-                        "subgraph_input_names": {"/conv_1/Conv"},
-                        "subgraph_output_names": {"/maxpool_1/MaxPool", "/Split"},
+                        "subgraph_input_ids": {("/conv_1/Conv", 0)},
                         "subgraph_output_ids": {("/Split", 0), ("/maxpool_1/MaxPool", 0), ("/Split", 1)},
                     },
                 },
@@ -102,14 +107,13 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
                 "/conv_2/Conv",
                 {
                     "collected_inputs": {
-                        "/conv_1/Conv": ("input.1", 0),
-                        "/conv_2/Conv": ("/maxpool_1/MaxPool", 0),
-                        "/conv_4/Conv": ("/Split", 0),
-                        "/conv_6/Conv": ("/Split", 1),
+                        ("/conv_1/Conv", 0): ("nncf_model_input_0", 0),
+                        ("/conv_2/Conv", 0): ("/maxpool_1/MaxPool", 0),
+                        ("/conv_4/Conv", 0): ("/Split", 0),
+                        ("/conv_6/Conv", 0): ("/Split", 1),
                     },
                     "subgraph_data": {
-                        "subgraph_input_names": {"/conv_2/Conv"},
-                        "subgraph_output_names": {"/Relu_1"},
+                        "subgraph_input_ids": {("/conv_2/Conv", 0)},
                         "subgraph_output_ids": {("/Relu_1", 0)},
                     },
                 },
@@ -118,15 +122,14 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
                 "/conv_3/Conv",
                 {
                     "collected_inputs": {
-                        "/conv_1/Conv": ("input.1", 0),
-                        "/conv_2/Conv": ("/maxpool_1/MaxPool", 0),
-                        "/conv_3/Conv": ("/Relu_1", 0),
-                        "/conv_4/Conv": ("/Split", 0),
-                        "/conv_6/Conv": ("/Split", 1),
+                        ("/conv_1/Conv", 0): ("nncf_model_input_0", 0),
+                        ("/conv_2/Conv", 0): ("/maxpool_1/MaxPool", 0),
+                        ("/conv_3/Conv", 0): ("/Relu_1", 0),
+                        ("/conv_4/Conv", 0): ("/Split", 0),
+                        ("/conv_6/Conv", 0): ("/Split", 1),
                     },
                     "subgraph_data": {
-                        "subgraph_input_names": {"/conv_1/Conv", "/conv_3/Conv"},
-                        "subgraph_output_names": {"/Split"},
+                        "subgraph_input_ids": {("/conv_1/Conv", 0), ("/conv_3/Conv", 0)},
                         "subgraph_output_ids": {("/Split", 0), ("/Split", 1)},
                     },
                 },
@@ -135,12 +138,11 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
                 "/conv_4/Conv",
                 {
                     "collected_inputs": {
-                        "/conv_4/Conv": ("/Split", 0),
-                        "/conv_6/Conv": ("/Split", 1),
+                        ("/conv_4/Conv", 0): ("/Split", 0),
+                        ("/conv_6/Conv", 0): ("/Split", 1),
                     },
                     "subgraph_data": {
-                        "subgraph_input_names": {"/conv_4/Conv"},
-                        "subgraph_output_names": {"/Relu_2"},
+                        "subgraph_input_ids": {("/conv_4/Conv", 0)},
                         "subgraph_output_ids": {("/Relu_2", 0)},
                     },
                 },
@@ -149,13 +151,12 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
                 "/conv_6/Conv",
                 {
                     "collected_inputs": {
-                        "/conv_5/Conv": ("/Relu_2", 0),
-                        "/conv_6/Conv": ("/Split", 1),
+                        ("/conv_5/Conv", 0): ("/Relu_2", 0),
+                        ("/conv_6/Conv", 0): ("/Split", 1),
                     },
                     "subgraph_data": {
-                        "subgraph_input_names": {"/conv_5/Conv", "/conv_6/Conv"},
-                        "subgraph_output_names": {"/Add_3", "/Concat"},
-                        "subgraph_output_ids": {("/Add_3", 0), ("/Concat", 0)},
+                        "subgraph_input_ids": {("/conv_5/Conv", 0), ("/conv_6/Conv", 0)},
+                        "subgraph_output_ids": {("/Add_3", 0), ("/Concat_1", 0)},
                     },
                 },
             ),
@@ -163,18 +164,17 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
                 "/conv_10/Conv",
                 {
                     "collected_inputs": {
-                        "/conv_8/Conv": ("/conv_7/Conv", 0),
-                        "/conv_9/Conv": ("/Add_3", 0),
-                        "/conv_10/Conv": ("/Concat", 0),
+                        ("/conv_8/Conv", 0): ("/conv_7/Conv", 0),
+                        ("/conv_9/Conv", 0): ("/Add_3", 0),
+                        ("/conv_10/Conv", 0): ("/Concat_1", 0),
                     },
                     "subgraph_data": {
-                        "subgraph_input_names": {
-                            "/conv_8/Conv",
-                            "/conv_9/Conv",
-                            "/conv_10/Conv",
+                        "subgraph_input_ids": {
+                            ("/conv_8/Conv", 0),
+                            ("/conv_9/Conv", 0),
+                            ("/conv_10/Conv", 0),
                         },
-                        "subgraph_output_names": {"/Concat_1"},
-                        "subgraph_output_ids": {("/Concat_1", 0)},
+                        "subgraph_output_ids": {("/Concat_2", 0)},
                     },
                 },
             ),
@@ -197,3 +197,26 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
     )
     def test__get_subgraph_data_for_node(self, quantized_test_model, layer_name, ref_data):
         return super().test__get_subgraph_data_for_node(quantized_test_model, layer_name, ref_data)
+
+    @pytest.mark.parametrize(
+        "model_cls, ref_stat_inputs_map",
+        (
+            (
+                SplittedModel,
+                {
+                    ("/conv_1/Conv", 0): ("/Concat", 0),
+                    ("/Concat", 1): ("nncf_model_input_0", 0),
+                },
+            ),
+            (
+                MultipleConvTestModel,
+                {
+                    ("/conv_1/Conv", 0): ("nncf_model_input_0", 0),
+                    ("/conv_3/Conv", 0): ("nncf_model_input_0", 1),
+                },
+            ),
+            (ConvTestModel, {("/conv/Conv", 0): ("nncf_model_input_0", 0)}),
+        ),
+    )
+    def test_verify_collected_stat_inputs_map(self, model_cls, ref_stat_inputs_map, tmpdir):
+        return super().test_verify_collected_stat_inputs_map(model_cls, ref_stat_inputs_map, tmpdir)

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -142,7 +142,7 @@ class AccuracyControlAlgoBackend(ABC):
 
         :param node: The node to check.
         :param nncf_graph: The NNCF graph.
-        :return: True` if `node` corresponds to the operation with weights, `False` otherwise.
+        :return: `True` if `node` corresponds to the operation with weights, `False` otherwise.
         """
 
     @staticmethod

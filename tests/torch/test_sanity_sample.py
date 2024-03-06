@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -185,7 +185,7 @@ class TestSanitySample:
         with config_path.open() as f:
             jconfig = json.load(f)
 
-        if "checkpoint_save_dir" in jconfig.keys():
+        if "checkpoint_save_dir" in jconfig:
             del jconfig["checkpoint_save_dir"]
 
         # Use a reduced number of BN adaptation samples for speed
@@ -459,9 +459,6 @@ class TestSanitySample:
             "--cpu-only": True,
         }
 
-        # to prevent starting a not closed mlflow session due to memory leak of config and SafeMLFLow happens with a
-        # mocked train function
-        mocker.patch("examples.torch.common.utils.SafeMLFLow")
         arg_list = arg_list_from_arg_dict(args)
         if config["sample_type"] == "classification":
             import examples.torch.classification.main as sample

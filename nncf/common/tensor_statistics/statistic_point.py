@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -58,7 +58,7 @@ class StatisticPointsContainer(UserDict):
         else:
             for _statistic_point in self.data[target_node_name]:
                 if _statistic_point.target_point == statistic_point.target_point:
-                    for algorithm in statistic_point.algorithm_to_tensor_collectors.keys():
+                    for algorithm in statistic_point.algorithm_to_tensor_collectors:
                         if algorithm in _statistic_point.algorithm_to_tensor_collectors:
                             _statistic_point.algorithm_to_tensor_collectors[algorithm].extend(
                                 statistic_point.algorithm_to_tensor_collectors[algorithm]

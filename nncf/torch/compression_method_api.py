@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Tuple, TypeVar
 import torch
 from torch import nn
 
+import nncf
 from nncf.api.compression import CompressionLoss
 from nncf.common.compression import BaseCompressionAlgorithmBuilder
 from nncf.common.compression import BaseCompressionAlgorithmController
@@ -166,7 +167,7 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
         """
         ctrl = self._build_controller(model)
         if not isinstance(ctrl, PTCompressionAlgorithmController):
-            raise RuntimeError(
+            raise nncf.InternalError(
                 "Internal error: builder must create controller inherited from "
                 "`PTCompressionAlgorithmController` class"
             )
@@ -195,9 +196,9 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
     def _handle_frozen_layers(self, target_model: NNCFNetwork):
         scopes_of_frozen_layers = []
         for weighted_node in target_model.nncf.get_weighted_original_graph_nodes():
-            if not weighted_node.layer_attributes.weight_requires_grad:
-                if self._should_consider_scope(weighted_node.node_name):
-                    scopes_of_frozen_layers.append(weighted_node.node_name)
+            should_be_considered = self._should_consider_scope(weighted_node.node_name)
+            if not weighted_node.layer_attributes.weight_requires_grad and should_be_considered:
+                scopes_of_frozen_layers.append(weighted_node.node_name)
         scopes_to_print = "\n".join(scopes_of_frozen_layers)
         if len(scopes_of_frozen_layers) > 0:
             is_allowed, reason = self._are_frozen_layers_allowed()
@@ -206,7 +207,7 @@ class PTCompressionAlgorithmBuilder(BaseCompressionAlgorithmBuilder):
                     f"{reason}, compressing them without tuning weights.\nFrozen layers:\n{scopes_to_print}"
                 )
             else:
-                raise RuntimeError(
+                raise nncf.InternalError(
                     f"{reason}.\n"
                     f"Please unfreeze them or put into the Ignored Scope.\n"
                     f"Frozen Layers:\n"

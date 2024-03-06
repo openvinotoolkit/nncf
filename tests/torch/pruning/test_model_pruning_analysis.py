@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -834,7 +834,7 @@ def test_model_analyzer(test_struct: GroupSpecialModulesTestStruct):
         nncf_model.nncf.get_original_graph(), PT_PRUNING_OPERATOR_METATYPES, prune_operations_types
     )
     can_prune_analysis = model_analyser.analyse_model_before_pruning()
-    for node_id in can_prune_analysis.keys():
+    for node_id in can_prune_analysis:
         assert can_prune_analysis[node_id].decision == test_struct.ref_can_prune[node_id], f"node id={node_id}"
 
 

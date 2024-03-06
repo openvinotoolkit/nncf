@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -65,15 +65,15 @@ class TFRangeInitParams(RangeInitParams):
     def get_init_config_for_scope_and_group(self, node_name: str, group: QuantizerGroup) -> RangeInitConfig:
         matches: List[RangeInitConfig] = []
         for pl_config in self.per_layer_range_init_configs:
-            if should_consider_scope(
+            should_be_considered = should_consider_scope(
                 node_name, ignored_scopes=pl_config.ignored_scopes, target_scopes=pl_config.target_scopes
-            ):
-                if group == pl_config.target_group or pl_config.target_group is None:
-                    matches.append(
-                        RangeInitConfig(
-                            pl_config.init_type, pl_config.num_init_samples, pl_config.init_type_specific_params
-                        )
+            )
+            if should_be_considered and (group == pl_config.target_group or pl_config.target_group is None):
+                matches.append(
+                    RangeInitConfig(
+                        pl_config.init_type, pl_config.num_init_samples, pl_config.init_type_specific_params
                     )
+                )
         if len(matches) > 1:
             raise ValueError(
                 "Location {} matches more than one per-layer initialization parameter "

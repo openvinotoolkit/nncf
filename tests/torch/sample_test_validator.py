@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -40,6 +40,7 @@ class SampleType(Enum):
     CLASSIFICATION = "classification"
     CLASSIFICATION_STAGED = "classification_staged"
     CLASSIFICATION_NAS = "classification_nas"
+    CLASSIFICATION_NAS_SEARCH = "classification_nas_search"
     SEMANTIC_SEGMENTATION = "semantic_segmentation"
     OBJECT_DETECTION = "object_detection"
 
@@ -82,10 +83,6 @@ class BaseSampleHandler(ABC):
         :return: path for importing train function.
         """
         return self.get_sample_location() + ".train"
-
-    def mock_mlflow(self, mocker):
-        mlflow_location = self.get_sample_location() + ".SafeMLFLow"
-        mocker.patch(mlflow_location)
 
     @staticmethod
     def get_checkpoint_path(
@@ -141,6 +138,12 @@ class ClassificationNASHandler(ClassificationHandler):
 
     def get_optimal_subnet_accuracy(self):
         pass
+
+
+@SAMPLE_HANDLERS.register(SampleType.CLASSIFICATION_NAS_SEARCH)
+class ClassificationNASSearchHandler(ClassificationNASHandler):
+    def _get_main_filename(self):
+        return "bootstrap_nas_search"
 
 
 @SAMPLE_HANDLERS.register(SampleType.OBJECT_DETECTION)
@@ -246,7 +249,7 @@ class SanityTestCaseDescriptor(BaseSampleTestCaseDescriptor, ABC):
 
     def get_config_update(self) -> Dict:
         sample_params = self.get_sample_params()
-        return {**sample_params, "target_device": "VPU", "compression": self.get_compression_section()}
+        return {**sample_params, "target_device": "NPU", "compression": self.get_compression_section()}
 
     def get_sample_params(self) -> Dict:
         return {"dataset": self.dataset_name} if self.dataset_name else {}

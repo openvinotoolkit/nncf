@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,7 +14,7 @@ import pytest
 
 from nncf.experimental.tensor import Tensor
 from nncf.onnx.quantization.quantizer_parameters import get_level_low_level_high
-from nncf.onnx.statistics.collectors import ONNXMinMaxTensorStatistic
+from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
 from tests.post_training.test_templates.test_calculate_quantizer_parameters import TemplateTestFQParams
 

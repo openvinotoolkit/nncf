@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import contextlib
 import os
 from collections import defaultdict
 from itertools import combinations
@@ -76,10 +77,9 @@ def calc_rb_mask_decorator(fn):
 @patch("nncf.tensorflow.sparsity.rb.operation.calc_rb_binary_mask", new=calc_rb_mask_decorator(calc_rb_binary_mask))
 def test_distributed_masks_are_equal(quantization):
     # Clean output file
-    try:
+    with contextlib.suppress(OSError):
         os.remove(MASKS_SEEDS_PATH)
-    except OSError:
-        pass
+
     # Fill file with seeds
     num_of_replicas = 3
     strategy = tf.distribute.MirroredStrategy([f"GPU:{i}" for i in range(num_of_replicas)])

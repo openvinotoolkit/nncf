@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,8 +16,11 @@ import numpy as np
 import pytest
 import torch
 
+import nncf
 from nncf.common.graph.layer_attributes import Dtype
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.torch.tensor import PTNNCFTensor
+from nncf.torch.tensor_statistics.algo import create_register_input_hook
 from nncf.torch.tensor_statistics.collectors import PTAbsMaxReducer
 from nncf.torch.tensor_statistics.collectors import PTAbsQuantileReducer
 from nncf.torch.tensor_statistics.collectors import PTBatchMeanReducer
@@ -26,7 +29,6 @@ from nncf.torch.tensor_statistics.collectors import PTMeanPerChanelReducer
 from nncf.torch.tensor_statistics.collectors import PTMeanReducer
 from nncf.torch.tensor_statistics.collectors import PTMinReducer
 from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
-from nncf.torch.tensor_statistics.collectors import PTNoopReducer
 from nncf.torch.tensor_statistics.collectors import PTQuantileReducer
 from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggreagtors
 
@@ -47,7 +49,6 @@ class BaseTestReducersAggregators(TemplateTestReducersAggreagtors, ABC):
     @pytest.fixture(scope="module")
     def reducers(self):
         return {
-            "noop": PTNoopReducer,
             "min": PTMinReducer,
             "max": PTMaxReducer,
             "abs_max": PTAbsMaxReducer,
@@ -74,14 +75,7 @@ class BaseTestReducersAggregators(TemplateTestReducersAggreagtors, ABC):
             return tensor.float()
         if dtype == Dtype.INTEGER:
             return tensor.int()
-        raise RuntimeError()
-
-    def expand_dims(self, tensor, dims: Tuple[int, ...]):
-        tensor_ = torch.tensor(tensor)
-        shape = list(tensor_.shape)
-        for dim in dims:
-            shape.insert(dim, 1)
-        return tensor_.view(shape)
+        raise nncf.ValidationError(f"Invalid dtype: {dtype}. Supported dtypes are {Dtype.FLOAT} and {Dtype.INTEGER}")
 
 
 class TestCPUReducersAggregators(BaseTestReducersAggregators):
@@ -126,3 +120,19 @@ def test_median_function(device, size, ref):
     res = PTNNCFCollectorTensorProcessor.median(tensor, axis=0)
     assert res.tensor == ref
     assert res.tensor.is_cuda == (device == "cuda")
+
+
+def test_create_register_input_hook_with_return_type(mocker):
+    collector = TensorCollector()
+    collector.register_input_for_all_reducers = mocker.MagicMock()
+    hook = create_register_input_hook(collector)
+    input_ = torch.return_types.max([torch.tensor((1,))] * 2)
+    output_ = hook(input_)
+    assert input_ is output_
+    mocker = collector.register_input_for_all_reducers
+    mocker.assert_called_once()
+    attr = mocker.call_args_list[0][0][0]
+    assert isinstance(attr, PTNNCFTensor)
+    assert attr.tensor == torch.tensor(
+        1,
+    )

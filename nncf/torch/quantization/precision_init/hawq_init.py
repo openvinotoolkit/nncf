@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -23,6 +23,7 @@ from torch import Tensor
 from torch import nn
 from torch.nn.modules.loss import _Loss
 
+import nncf
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
@@ -156,7 +157,7 @@ class TraceOrderBitwidthMatcher:
         optimized_observed_qconfs: List[List[QuantizerConfig]] = []
         for qconf_oset in observed_qconfs:
             variants: List[List[QuantizerConfig]] = []
-            for qconf in qconf_oset.keys():
+            for qconf in qconf_oset:
                 variants.append(list(filter(qconf.is_a_bitwidth_variant, qconf_oset.keys())))
             max_bw_varying_variant = max(variants, key=len)
             other_qconfs = list(filter(lambda x: x not in max_bw_varying_variant, qconf_oset.keys()))
@@ -265,7 +266,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
 
         traces_per_layer = self._calc_traces(self._criterion_fn, self._criterion, self._iter_number, self._tolerance)
         if not traces_per_layer:
-            raise RuntimeError("Failed to calculate hessian traces!")
+            raise nncf.InternalError("Failed to calculate hessian traces!")
 
         traces_order = traces_per_layer.traces_order
         (
@@ -381,7 +382,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
                 quantizer_ids.append(quantizer_id)
             minimal_set_bitwidths = set.intersection(*all_bitwidths_sets)
             if not minimal_set_bitwidths:
-                raise RuntimeError(
+                raise nncf.InternalError(
                     "No bitwidths configurations are left after removing inconsistent groups of weight quantizers"
                     " with adjacent activation quantizers!"
                 )
@@ -491,7 +492,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
             avg_traces = trace_estimator.get_average_traces(max_iter=iter_number, tolerance=tolerance)
         except RuntimeError as error:
             if "cuda out of memory" in error.args[0].lower():
-                raise RuntimeError(
+                raise nncf.InternalError(
                     "Failed to estimate average Hessian traces within precision initialization. Specify "
                     "a smaller batch size via --batch-size-init option in the NNCF samples or register "
                     "a data loader with a smaller batch size. Refer to "
@@ -728,7 +729,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         weight_bitwidth_set: Set[int],
     ) -> SingleConfigQuantizerSetup:
         if len(weight_bitwidth_set) > 1:
-            raise RuntimeError("Invalid grouping of weight quantizers")
+            raise nncf.InternalError("Invalid grouping of weight quantizers")
         all_constraints = set()
         original_quant_module_ids = [
             self._original_qp_id_vs_quantizer_module_id_dict[act_qp_id] for act_qp_id in act_qp_ids
@@ -742,7 +743,7 @@ class HAWQPrecisionInitializer(BasePrecisionInitializer):
         if weight_bitwidth_set:
             common_constraints = common_constraints.intersection(weight_bitwidth_set)
         if not common_constraints:
-            raise RuntimeError("No hardware compatible bitwidth for activation quantizers")
+            raise nncf.InternalError("No hardware compatible bitwidth for activation quantizers")
         for act_qp_id in act_qp_ids:
             quant_id = self._original_qp_id_vs_quantizer_module_id_dict[act_qp_id]
             target_bitwidth = sorted(list(common_constraints))[0]

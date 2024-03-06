@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -20,6 +20,7 @@ from typing import Callable, Optional, TypeVar, Union
 import numpy as np
 from scipy.interpolate import interp1d
 
+import nncf
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
 from nncf.common.accuracy_aware_training.runner_factory import AdaptiveCompressionLevelTrainingRunnerCreator
@@ -278,7 +279,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         super().__init__(compression_controller)
         self.adaptive_controller = self._get_adaptive_compression_ctrl(compression_controller)
         if self.adaptive_controller is None:
-            raise RuntimeError(
+            raise nncf.InternalError(
                 "No compression algorithm supported by the accuracy-aware training "
                 "runner was specified in the config"
             )
@@ -305,7 +306,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
                 for prefix in ("pt_", "tf_"):
                     if algo_name.startswith(prefix):
                         return algo_name[len(prefix) :]
-                raise RuntimeError(
+                raise nncf.ValidationError(
                     "Compression algorithm names in the adaptive controllers "
                     'registry should be prefixed with "pt_" or "tf_" depending on the '
                     "backend framework"
@@ -323,11 +324,13 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
                 for ctrl_type in adaptive_compression_controllers.values():
                     if isinstance(controller, ctrl_type):
                         return controller
-        elif isinstance(compression_controller, CompressionAlgorithmController):
-            if compression_controller.name in adaptive_compression_controllers:
-                return compression_controller
+        elif (
+            isinstance(compression_controller, CompressionAlgorithmController)
+            and compression_controller.name in adaptive_compression_controllers
+        ):
+            return compression_controller
 
-        raise RuntimeError(
+        raise nncf.InternalError(
             "No compression algorithm that supports adaptive compression accuracy-aware training was specified"
         )
 
@@ -570,4 +573,4 @@ def create_accuracy_aware_training_loop(
         return AdaptiveCompressionTrainingLoop(
             nncf_config, compression_ctrl, uncompressed_model_accuracy, **additional_runner_args
         )
-    raise RuntimeError("Incorrect accuracy aware mode in the config file")
+    raise nncf.InternalError("Incorrect accuracy aware mode in the config file")

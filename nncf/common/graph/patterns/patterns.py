@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,6 +18,7 @@ from typing import Dict, Hashable, List, Optional, Tuple
 import networkx as nx
 import networkx.algorithms.isomorphism as ism
 
+import nncf
 from nncf.common.utils.dot_file_rw import write_dot_graph
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -232,9 +233,8 @@ class GraphPattern:
             self._graph.add_edges_from(remapped_edges)
 
     def add_node(self, **attrs) -> int:
-        if GraphPattern.METATYPE_ATTR in attrs:
-            if not isinstance(attrs[GraphPattern.METATYPE_ATTR], list):
-                attrs[GraphPattern.METATYPE_ATTR] = [attrs[GraphPattern.METATYPE_ATTR]]
+        if GraphPattern.METATYPE_ATTR in attrs and not isinstance(attrs[GraphPattern.METATYPE_ATTR], list):
+            attrs[GraphPattern.METATYPE_ATTR] = [attrs[GraphPattern.METATYPE_ATTR]]
         self._graph.add_node(self._node_counter, **attrs)
         self._node_counter += 1
         return self._node_counter - 1
@@ -258,7 +258,7 @@ def merge_two_types_of_operations(first_op: Dict, second_op: Dict, label: str) -
         res[GraphPattern.METATYPE_ATTR].extend(second_op[GraphPattern.METATYPE_ATTR])
         res[GraphPattern.LABEL_ATTR] = label
         return res
-    raise RuntimeError("Incorrect dicts of operations")
+    raise nncf.InternalError("Incorrect dicts of operations")
 
 
 @dataclass
@@ -358,7 +358,7 @@ class HWFusedPatternNames(Enum):
     # DEVICE PATTERNS
     HSWISH_ACTIVATION_CLAMP_MULTIPLY = PatternDesc(
         "hswish_activation_clamp_multiply",
-        devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU, TargetDevice.VPU],
+        devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU, TargetDevice.NPU],
     )
     LINEAR_SCALE_SHIFT = PatternDesc(
         "linear_scale_shift", devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU]
@@ -394,7 +394,7 @@ class IgnoredPatternNames(Enum):
     MULTIHEAD_ATTENTION_OUTPUT = PatternDesc(
         "multihead_attention_output",
         model_types=[ModelType.TRANSFORMER],
-        devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU, TargetDevice.VPU],
+        devices=[TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU, TargetDevice.NPU],
     )
     SE_BLOCK = PatternDesc("se_block")
     FC_BN_HSWISH_ACTIVATION = PatternDesc("fc_bn_hswish_activation")

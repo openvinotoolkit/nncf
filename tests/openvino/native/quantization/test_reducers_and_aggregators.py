@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -23,7 +23,6 @@ from nncf.openvino.statistics.collectors import OVMeanPerChanelReducer
 from nncf.openvino.statistics.collectors import OVMeanReducer
 from nncf.openvino.statistics.collectors import OVMinReducer
 from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
-from nncf.openvino.statistics.collectors import OVNoopReducer
 from nncf.openvino.statistics.collectors import OVQuantileReducer
 from nncf.openvino.tensor import OVNNCFTensor
 from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggreagtors
@@ -44,7 +43,6 @@ class TestReducersAggregators(TemplateTestReducersAggreagtors):
     @pytest.fixture(scope="module")
     def reducers(self):
         return {
-            "noop": OVNoopReducer,
             "min": OVMinReducer,
             "max": OVMaxReducer,
             "abs_max": OVAbsMaxReducer,
@@ -65,6 +63,3 @@ class TestReducersAggregators(TemplateTestReducersAggreagtors):
 
     def cast_tensor(self, tensor, dtype: Dtype):
         return tensor
-
-    def expand_dims(self, tensor, dims: Tuple[int, ...]):
-        return np.expand_dims(np.array(tensor), dims)

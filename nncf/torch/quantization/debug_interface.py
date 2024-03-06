@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,6 +18,7 @@ import networkx as nx
 import numpy as np
 import torch
 
+import nncf
 from nncf.common.insertion_point_graph import InsertionPointGraph
 from nncf.common.insertion_point_graph import InsertionPointGraphNodeType
 from nncf.common.logging import nncf_logger
@@ -62,7 +63,7 @@ class QuantizationDebugInterface(DebugInterface):
 
         quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
         quantizers_in_nncf_modules = owner_model.nncf.get_modules_in_nncf_modules_by_type(quantization_types)
-        nncf_module_quantizations_id_list: List[str] = [str(scope) for scope in quantizers_in_nncf_modules.keys()]
+        nncf_module_quantizations_id_list: List[str] = [str(scope) for scope in quantizers_in_nncf_modules]
 
         activation_quantizer_id_list: List[str] = owner_model.nncf.get_compression_modules_by_type(
             ExtraCompressionModuleType.EXTERNAL_QUANTIZER
@@ -103,7 +104,9 @@ class QuantizationDebugInterface(DebugInterface):
                 if tracker.get_never_called_keys():
                     # This will always trigger for DataParallel - disregard or disable debug mode
                     # for DataParallel runs
-                    raise RuntimeError(f"{tracker.name} has never called modules: {tracker.get_never_called_keys()}!")
+                    raise nncf.InternalError(
+                        f"{tracker.name} has never called modules: {tracker.get_never_called_keys()}!"
+                    )
 
     def dump_scale(self, quantizer_scale_params: Dict[str, torch.Tensor], quantizer_name: str):
         import re
@@ -163,7 +166,7 @@ class QuantizationDebugInterface(DebugInterface):
             elif node[InsertionPointGraph.NODE_TYPE_NODE_ATTR] == InsertionPointGraphNodeType.OPERATOR:
                 out_graph.add_node(node_key)
             else:
-                raise RuntimeError("Invalid InsertionPointGraph node!")
+                raise nncf.InternalError("Invalid InsertionPointGraph node!")
         for u, v in insertion_point_graph.edges:
             out_graph.add_edge(u, v)
 

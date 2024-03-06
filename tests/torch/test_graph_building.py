@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,6 +18,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+import nncf
 from nncf import NNCFConfig
 from nncf.common.graph import NNCFGraphEdge
 from nncf.common.graph.definitions import MODEL_INPUT_OP_NAME
@@ -120,11 +121,11 @@ def test_forward_trace_function():
     assert outputs[1].tensor_meta == input_tensor2.tensor_meta
 
     # M -> N (2 -> 3)
-    with pytest.raises(RuntimeError):
+    with pytest.raises(nncf.ValidationError):
         outputs = forward_trace_only(lambda x: x + [torch.Tensor(shape2)], [input_tensor1, input_tensor2])
 
     # M -> N (2 -> 1)
-    with pytest.raises(RuntimeError):
+    with pytest.raises(nncf.ValidationError):
         outputs = forward_trace_only(lambda x: x[0], [input_tensor1, input_tensor2])
 
 

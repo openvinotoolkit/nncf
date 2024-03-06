@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -22,8 +22,8 @@ class SparseLoss(PTCompressionLoss):
         self.target = target
         self.p = p
         self.disabled = False
-        self.current_sparsity = 0
-        self.mean_sparse_prob = 0
+        self.current_sparsity: float = 0.0
+        self.mean_sparse_prob = 0.0
 
     def set_layers(self, sparse_layers):
         self._sparse_layers = sparse_layers

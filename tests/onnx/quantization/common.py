@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -53,7 +53,7 @@ def mock_collect_statistics(mocker):
         "nncf.common.tensor_statistics.aggregator.StatisticsAggregator.collect_statistics", return_value=None
     )
     _ = mocker.patch(
-        "nncf.common.tensor_statistics.collectors.TensorStatisticCollectorBase.get_statistics",
+        "nncf.experimental.common.tensor_statistics.collectors.TensorCollector.get_statistics",
         return_value=get_statistics_value,
     )
 
@@ -74,8 +74,9 @@ def get_random_dataset_for_test(model: onnx.ModelProto, has_batch_dim: bool, len
             input_dtype = get_edge_dtype(edge)
             input_np_dtype = onnx.helper.tensor_dtype_to_np_dtype(input_dtype)
             shape = get_edge_shape(edge)
+            static_shape = [axis if axis > 0 else 1 for axis in shape]
             rng = get_random_generator()
-            tensor = rng.uniform(-1, 1, shape).astype(input_np_dtype)
+            tensor = rng.uniform(-1, 1, static_shape).astype(input_np_dtype)
             if has_batch_dim:
                 tensor = np.squeeze(tensor, axis=0)
             output[key] = tensor
@@ -113,8 +114,9 @@ def min_max_quantize_model(
 
     advanced_parameters = quantization_params.get("advanced_parameters", AdvancedQuantizationParameters())
 
-    # ONNX backend does not support these algorithms
+    # Turn off bias correction to test only MinMax
     advanced_parameters.disable_bias_correction = True
+    # ONNX backend does not support these algorithms
     advanced_parameters.disable_channel_alignment = True
     advanced_parameters.smooth_quant_alphas = AdvancedSmoothQuantParameters(convolution=-1, matmul=-1)
     quantization_params["advanced_parameters"] = advanced_parameters

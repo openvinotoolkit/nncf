@@ -1,0 +1,8 @@
+tinyllama_data_free_backend_OV:
+  metric_value: 0.72119
+tinyllama_data_aware_backend_OV:
+  metric_value: 0.83084
+tinyllama_data_aware_awq_backend_OV:
+  metric_value: 0.81229
+tinyllama_data_aware_awq_stateful_backend_OV:
+  metric_value: 0.81229

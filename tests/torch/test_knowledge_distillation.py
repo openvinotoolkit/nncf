@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -64,7 +64,7 @@ def get_sparsity_config_with_sparsity_init(config: NNCFConfig, sparsity_init=0.5
 
 @pytest.mark.parametrize("inference_type", ["cpu", "single_GPU", "DP", "DDP"])
 def test_knowledge_distillation_training_process(inference_type: str):
-    if not torch.cuda.is_available() and not inference_type == "cpu":
+    if not torch.cuda.is_available() and inference_type != "cpu":
         pytest.skip("Skipping CUDA test cases for CPU only setups")
     torch.manual_seed(1)
     input_size = [1, 1, 8, 8]
@@ -89,9 +89,8 @@ def run_actual(
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     if inference_type == "DDP":
         model = post_compression_test_distr_init(compression_ctrl, config, ngpus_per_node, model)
-    elif inference_type in ("DP", "single_GPU"):
-        if inference_type == "DP":
-            model = torch.nn.DataParallel(model)
+    elif inference_type == "DP":
+        model = torch.nn.DataParallel(model)
     optimizer = SGD(model.parameters(), lr=1e-02, weight_decay=1e-02)
     model.train()
     output_storage = []
@@ -115,10 +114,9 @@ def run_reference(
     model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
     if inference_type == "DDP":
         model = post_compression_test_distr_init(compression_ctrl, config, ngpus_per_node, model)
-    elif inference_type in ("DP", "single_GPU"):
-        if inference_type == "DP":
-            model = torch.nn.DataParallel(model)
-            kd_model = torch.nn.DataParallel(kd_model)
+    elif inference_type == "DP":
+        model = torch.nn.DataParallel(model)
+        kd_model = torch.nn.DataParallel(kd_model)
     optimizer = SGD(model.parameters(), lr=1e-02, weight_decay=1e-02)
     model.train()
     kd_model.train()
@@ -315,7 +313,7 @@ def test_kd_sparsity_statistics(algo: str):
 @pytest.mark.parametrize("device_placing", ["before", "after"])
 @pytest.mark.parametrize("inference_type", ["cpu", "single_GPU", "DP", "DDP"])
 def test_model_device_before_create_compressed_model(device_placing, inference_type):
-    if not torch.cuda.is_available() and not inference_type == "cpu":
+    if not torch.cuda.is_available() and inference_type != "cpu":
         pytest.skip("Skipping CUDA test cases for CPU only setups")
     input_size = [1, 1, 8, 8]
     config = NNCFConfig()

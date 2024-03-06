@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -57,12 +57,16 @@ class FastBiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def model_extraction_command(inputs: List[str], outputs: List[str]) -> TransformationCommand:
+    def model_extraction_command(
+        input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]
+    ) -> TransformationCommand:
         """
         Returns backend-specific command to extract sub-model based on input & output names.
 
-        :param inputs: List of the input names for sub-model beginning.
-        :param outputs: List of the output names for sub-model end.
+        :param input_ids: List of the input IDs: pairs of node names and correspondent input port ids.
+            Each pair denotes the sub-graph beginning.
+        :param output_ids: List of the output IDs: pairs of node names and correspondent output port ids.
+            Each pair denotes the sub-graph ending.
         :return: Backend-specific TransformationCommand for the model extraction.
         """
 

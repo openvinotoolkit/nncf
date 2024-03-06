@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -23,6 +23,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 from torchvision.models import squeezenet1_1
 
+import nncf
 import nncf.torch.tensor_statistics.collectors as pt_collectors
 from nncf.common.graph import NNCFNodeName
 from nncf.common.quantization.initialization.range import PerLayerRangeInitConfig
@@ -171,7 +172,11 @@ def generate_qp(
     elif target is QuantizerGroup.ACTIVATIONS:
         qip = ActivationQuantizationInsertionPoint(target_node_name=node_name, input_port_id=input_port_id)
     else:
-        raise RuntimeError()
+        raise nncf.InvalidQuantizerGroupError(
+            f"Invalid quantizer group: {target}. "
+            f"Supported groups are {QuantizerGroup.WEIGHTS}"
+            f"and {QuantizerGroup.ACTIVATIONS}."
+        )
     return SingleConfigQuantizationPoint(qip, QuantizerConfig(), [node_name])
 
 

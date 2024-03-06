@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -30,3 +30,6 @@ class TFNNCFTensor(NNCFTensor):
     @property
     def device(self) -> tf.device:
         return self._tensor.device
+
+    def is_empty(self) -> bool:
+        return tf.equal(tf.size(self._tensor), 0)

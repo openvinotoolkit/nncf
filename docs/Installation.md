@@ -58,10 +58,6 @@ pip install git+https://github.com/openvinotoolkit/nncf@bd189e2#egg=nncf
 
 Note that in order for this to work for pip versions >= 21.3, your Git version must be at least 2.22.
 
-## As a Docker image
-
-Use one of the Dockerfiles in the [docker](../docker) directory to build an image with an environment already set up and ready for running NNCF [sample scripts](../README.md#model-compression-samples).
-
 ## Corresponding versions
 
 The following table lists the recommended corresponding versions of backend packages
@@ -69,7 +65,8 @@ as well as the supported versions of Python:
 
 | NNCF      | OpenVINO   | PyTorch  | ONNX     | TensorFlow | Python |
 |-----------|------------|----------|----------|------------|--------|
-| `develop` | `2023.3.0` | `2.1.2`  | `1.13.1` | `2.12.0`   | `3.8`  |
+| `develop` | `2024.4.0` | `2.1.2`  | `1.13.1` | `2.12.0`   | `3.8`  |
+| `2.9.0`   | `2024.4.0` | `2.1.2`  | `1.13.1` | `2.12.0`   | `3.8`  |
 | `2.8.1`   | `2023.3.0` | `2.1.2`  | `1.13.1` | `2.12.0`   | `3.8`  |
 | `2.8.0`   | `2023.3.0` | `2.1.2`  | `1.13.1` | `2.12.0`   | `3.8`  |
 | `2.7.0`   | `2023.2.0` | `2.1`    | `1.13.1` | `2.12.0`   | `3.8`  |

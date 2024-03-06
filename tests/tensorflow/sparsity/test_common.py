@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -115,6 +115,10 @@ def magnitude_algo_mock_(mocker):
         def __init__(self):
             self.set_sparsity_level = mocker.stub()
             self.freeze = mocker.stub()
+
+        @property
+        def current_sparsity_level(self) -> float:
+            return 0.0
 
     return MockSparsityAlgo()
 
@@ -244,6 +248,10 @@ def rb_algo_mock_(mocker):
 
         def set_sparsity_init(self, sparsity_init):
             self.sparsity_init = sparsity_init
+
+        @property
+        def current_sparsity_level(self) -> float:
+            return self.loss.current_sparsity
 
     return MockSparsityAlgo()
 

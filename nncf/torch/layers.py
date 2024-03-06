@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -19,6 +19,7 @@ from torch.nn import init
 from torch.nn.utils.rnn import PackedSequence
 from torch.nn.utils.weight_norm import WeightNorm
 
+import nncf
 from nncf import nncf_logger
 from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
 from nncf.common.utils.api_marker import api
@@ -508,20 +509,20 @@ class RNNCellBaseNNCF(nn.Module):
 
     def check_forward_input(self, input_):
         if input_.size(1) != self.input_size:
-            raise RuntimeError(
+            raise nncf.ValidationError(
                 "input_ has inconsistent input_size: got {}, expected {}".format(input_.size(1), self.input_size)
             )
 
     def check_forward_hidden(self, input_: torch.Tensor, hx: torch.Tensor, hidden_label: str = ""):
         if input_.size(0) != hx.size(0):
-            raise RuntimeError(
+            raise nncf.ValidationError(
                 "Input batch size {} doesn't match hidden{} batch size {}".format(
                     input_.size(0), hidden_label, hx.size(0)
                 )
             )
 
         if hx.size(1) != self.hidden_size:
-            raise RuntimeError(
+            raise nncf.ValidationError(
                 "hidden{} has inconsistent hidden_size: got {}, expected {}".format(
                     hidden_label, hx.size(1), self.hidden_size
                 )
@@ -855,9 +856,11 @@ class NNCF_RNN(nn.Module):
         is_input_packed = batch_sizes is not None
         expected_input_dim = 2 if is_input_packed else 3
         if input_.dim() != expected_input_dim:
-            raise RuntimeError("input_ must have {} dimensions, got {}".format(expected_input_dim, input_.dim()))
+            raise nncf.ValidationError(
+                "input_ must have {} dimensions, got {}".format(expected_input_dim, input_.dim())
+            )
         if self.input_size != input_.size(-1):
-            raise RuntimeError(
+            raise nncf.ValidationError(
                 "input_.size(-1) must be equal to input_size. Expected {}, got {}".format(
                     self.input_size, input_.size(-1)
                 )
@@ -873,10 +876,10 @@ class NNCF_RNN(nn.Module):
         def check_hidden_size(hx, expected_hidden_size, msg="Expected hidden size {}, got {}"):
             expected_size = self.num_layers * self.num_directions
             if expected_size != len(hx):
-                raise RuntimeError("Expected number of hidden states {}, got {}".format(expected_size, len(hx)))
+                raise nncf.InternalError("Expected number of hidden states {}, got {}".format(expected_size, len(hx)))
             for element in hx:
                 if tuple(element.size()) != expected_hidden_size:
-                    raise RuntimeError(msg.format(expected_hidden_size, tuple(element.size())))
+                    raise nncf.InternalError(msg.format(expected_hidden_size, tuple(element.size())))
 
         if self.mode == "LSTM":
             check_hidden_size(hidden[0], expected_hidden_size, "Expected hidden[0] size {}, got {}")

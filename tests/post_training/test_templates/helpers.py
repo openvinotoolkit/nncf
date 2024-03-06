@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -157,6 +157,14 @@ class LinearMultiShapeModel(nn.Module):
             self.matmul_7_data = torch.randn((6, 6), dtype=torch.float32)
             self.matmul_8_data = torch.randn((10, 6), dtype=torch.float32)
 
+            self.linear_3 = nn.Linear(4, 4)
+            self.linear_3.weight.data = torch.randn((4, 4), dtype=torch.float32)
+            self.linear_3.bias.data = torch.randn((1, 4), dtype=torch.float32)
+
+            self.linear_4 = nn.Linear(4, 4)
+            self.linear_4.weight.data = torch.randn((4, 4), dtype=torch.float32)
+            self.linear_4.bias.data = torch.randn((1, 4), dtype=torch.float32)
+
     def forward(self, x):
         x = torch.reshape(x, (1, 3, 2, 4))
 
@@ -164,6 +172,15 @@ class LinearMultiShapeModel(nn.Module):
         x_2 = torch.matmul(x, self.matmul_2_data)
 
         x = torch.add(x_1, x_2)
+
+        x_3 = self.linear_3(x)
+        x_4 = self.linear_4(x)
+
+        x_ = torch.add(x_3, x_4)
+
+        x = torch.add(x, x_)
+        x = torch.sub(x, x_)
+
         x_1 = torch.reshape(x, (1, 3, 8))
 
         x_1_1 = torch.matmul(x_1, self.matmul_3_data)
@@ -189,23 +206,34 @@ class LinearMultiShapeModel(nn.Module):
 class NonZeroLinearModel(nn.Module):
     INPUT_SIZE = [10]
 
+    def __init__(self):
+        super().__init__()
+        self.linear = nn.Linear(1, 5)
+        self.linear.weight.data = torch.ones((5, 1))
+        self.linear.bias.data = torch.zeros((1, 1))
+
+        self.linear1 = nn.Linear(10, 10)
+        self.linear1.weight.data = torch.ones((10, 10))
+        self.linear1.bias.data = torch.zeros((1, 1))
+
     def forward(self, x):
         zeros = (x > torch.inf).float()
         empty = torch.nonzero(zeros).reshape((-1, 1, 1)).float()
-        y = torch.matmul(empty, torch.ones((1, 5)))
+        y = self.linear(empty)
         y += 5
         y = torch.cat((torch.ones((1, 10)), y.reshape(1, -1)), dim=1)
-        y = torch.matmul(y, torch.ones(10, 10))
+        y = self.linear1(y)
         y += 5
         return y
 
 
 class SplittedModel(nn.Module):
-    INPUT_SIZE = [1, 3, 28, 28]
+    INPUT_SIZE = [1, 2, 28, 28]
 
     def __init__(self) -> None:
         super().__init__()
         with set_torch_seed():
+            self.concat_1_data = torch.randn((1, 1, 28, 28), dtype=torch.float32)
             self.conv_1 = self._build_conv(3, 12, 3)
             self.add_1_data = torch.randn((1, 12, 26, 26), dtype=torch.float32)
             self.maxpool_1 = torch.nn.MaxPool2d(1)
@@ -246,6 +274,7 @@ class SplittedModel(nn.Module):
         return conv
 
     def forward(self, x):
+        x = torch.concat([self.concat_1_data, x], 1)
         x = self.conv_1(x)
         x = F.relu(x)
         x = torch.add(x, self.add_1_data)
@@ -308,4 +337,22 @@ class EmbeddingModel(nn.Module):
         x = x.type(torch.int32)
         x = self.embedding(x)
         x = self.matmul(x)
+        return x
+
+
+class ShareWeghtsConvAndShareLinearModel(nn.Module):
+    INPUT_SIZE = [1, 1, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        with set_torch_seed():
+            self.conv = create_conv(1, 1, 1)
+            self.linear = nn.Linear(4, 4)
+            self.linear.weight.data = torch.randn((4, 4), dtype=torch.float32)
+            self.linear.bias.data = torch.randn((1, 4), dtype=torch.float32)
+
+    def forward(self, x):
+        for _ in range(2):
+            x = self.conv(x)
+            x = self.linear(x)
         return x

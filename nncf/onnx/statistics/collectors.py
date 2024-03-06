@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,17 +13,27 @@ from typing import Deque, List, Optional, Tuple, Union
 
 import numpy as np
 
-from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor import TensorElementsType
-from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
-from nncf.common.tensor_statistics.collectors import MeanStatisticCollector
-from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
-from nncf.common.tensor_statistics.collectors import RawStatisticCollector
+from nncf.experimental.common.tensor_statistics.collectors import AbsMaxReducer
+from nncf.experimental.common.tensor_statistics.collectors import AbsQuantileReducer
+from nncf.experimental.common.tensor_statistics.collectors import BatchMeanReducer
+from nncf.experimental.common.tensor_statistics.collectors import MaxReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
+from nncf.experimental.common.tensor_statistics.collectors import MeanPerChReducer
+from nncf.experimental.common.tensor_statistics.collectors import MeanReducer
+from nncf.experimental.common.tensor_statistics.collectors import MinReducer
+from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
+from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
+from nncf.experimental.common.tensor_statistics.collectors import QuantileReducer
+from nncf.experimental.common.tensor_statistics.collectors import RawReducer
+from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.onnx.statistics.statistics import ONNXMeanTensorStatistic
-from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
 from nncf.onnx.statistics.statistics import ONNXRawTensorStatistic
 from nncf.onnx.tensor import ONNXNNCFTensor
+from nncf.quantization.advanced_parameters import StatisticsType
 
 
 class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
@@ -32,106 +42,119 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
     """
 
     @staticmethod
-    def reduce_min(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
+    def reduce_min(
+        x: ONNXNNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False
+    ) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.amin(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
-    def reduce_max(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
+    def reduce_max(
+        x: ONNXNNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False
+    ) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.amax(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
-    def abs(x: NNCFTensor) -> NNCFTensor:
+    def abs(x: ONNXNNCFTensor) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.abs(x.tensor))
 
     @staticmethod
-    def min(x1: NNCFTensor, x2: NNCFTensor) -> NNCFTensor:
+    def min(x1: ONNXNNCFTensor, x2: ONNXNNCFTensor) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.minimum(x1.tensor, x2.tensor))
 
     @staticmethod
-    def max(x1: NNCFTensor, x2: NNCFTensor) -> NNCFTensor:
+    def max(x1: ONNXNNCFTensor, x2: ONNXNNCFTensor) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.maximum(x1.tensor, x2.tensor))
 
     @staticmethod
-    def mean(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> NNCFTensor:
+    def mean(x: ONNXNNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.mean(x.tensor, axis=axis, keepdims=keepdims))
 
     @staticmethod
-    def median(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> NNCFTensor:
+    def median(
+        x: ONNXNNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False
+    ) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.median(x.tensor, axis=axis, keepdims=keepdims))
 
     @classmethod
     def masked_mean(
         cls,
-        x: NNCFTensor,
+        x: ONNXNNCFTensor,
         axis: Optional[Union[int, Tuple[int, ...], List[int]]],
-        mask: Optional[NNCFTensor],
+        mask: Optional[ONNXNNCFTensor],
         keepdims: bool = False,
-    ) -> NNCFTensor:
+    ) -> ONNXNNCFTensor:
         if mask is None:
             return cls.mean(x, axis=axis, keepdims=keepdims)
         masked_x = np.ma.array(x.tensor, mask=mask.tensor)
-        return ONNXNNCFTensor(np.ma.mean(masked_x, axis=axis, keepdims=False).data)
+        result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims)
+        if isinstance(result, np.ma.MaskedArray):
+            return ONNXNNCFTensor(result.data)
+        return ONNXNNCFTensor(result)
 
     @classmethod
     def masked_median(
         cls,
-        x: NNCFTensor,
+        x: ONNXNNCFTensor,
         axis: Optional[Union[int, Tuple[int, ...], List[int]]],
-        mask: Optional[NNCFTensor],
+        mask: Optional[ONNXNNCFTensor],
         keepdims: bool = False,
-    ) -> NNCFTensor:
+    ) -> ONNXNNCFTensor:
         if mask is None:
             return cls.median(x, axis=axis, keepdims=keepdims)
         masked_x = np.ma.array(x.tensor, mask=mask.tensor)
-        return ONNXNNCFTensor(np.ma.median(masked_x, axis=axis, keepdims=keepdims).data)
+        result = np.ma.median(masked_x, axis=axis, keepdims=keepdims)
+        if isinstance(result, np.ma.MaskedArray):
+            return ONNXNNCFTensor(result.data)
+        return ONNXNNCFTensor(result)
 
     @staticmethod
-    def logical_or(input_: NNCFTensor, other: NNCFTensor) -> NNCFTensor:
+    def logical_or(input_: ONNXNNCFTensor, other: ONNXNNCFTensor) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.logical_or(input_.tensor, other.tensor))
 
     @staticmethod
-    def less(input_: NNCFTensor, other: NNCFTensor) -> NNCFTensor:
+    def less(input_: ONNXNNCFTensor, other: ONNXNNCFTensor) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(input_.tensor < other.tensor)
 
     @staticmethod
-    def stack(x: Union[List[NNCFTensor], Deque[NNCFTensor]], axis: int = 0) -> NNCFTensor:
+    def stack(x: Union[List[ONNXNNCFTensor], Deque[ONNXNNCFTensor]], axis: int = 0) -> ONNXNNCFTensor:
         x = [t.tensor for t in x]
         return ONNXNNCFTensor(np.stack(x, axis=axis))
 
     @staticmethod
-    def unstack(x: NNCFTensor, axis: int = 0) -> List[NNCFTensor]:
+    def unstack(x: ONNXNNCFTensor, axis: int = 0) -> List[ONNXNNCFTensor]:
         return [ONNXNNCFTensor(np.squeeze(e, axis)) for e in np.split(x.tensor, x.tensor.shape[axis], axis=axis)]
 
     @staticmethod
-    def squeeze(x: NNCFTensor, dim: Optional[Union[int, Tuple[int, ...]]] = None) -> NNCFTensor:
-        raise NotImplementedError()
+    def squeeze(x: ONNXNNCFTensor, dim: Optional[Union[int, Tuple[int, ...]]] = None) -> ONNXNNCFTensor:
+        return ONNXNNCFTensor(np.squeeze(x.tensor, axis=dim))
 
     @staticmethod
-    def sum(tensor: NNCFTensor) -> TensorElementsType:
-        return np.sum(tensor.tensor)
+    def sum(tensor: ONNXNNCFTensor) -> ONNXNNCFTensor:
+        return ONNXNNCFTensor(np.sum(tensor.tensor))
 
     @staticmethod
     def quantile(
-        tensor: NNCFTensor,
+        tensor: ONNXNNCFTensor,
         quantile: Union[float, List[float]],
         axis: Union[int, Tuple[int, ...], List[int]],
         keepdims: bool = False,
-    ) -> List[TensorElementsType]:
+    ) -> List[ONNXNNCFTensor]:
         result = np.quantile(tensor.tensor, quantile, axis, keepdims=keepdims)
         return [ONNXNNCFTensor(x) for x in result]
 
     @classmethod
     def percentile(
         cls,
-        tensor: NNCFTensor,
+        tensor: ONNXNNCFTensor,
         percentile: Union[float, List[float]],
         axis: Union[int, Tuple[int, ...], List[int]],
         keepdims: bool = False,
     ) -> List[TensorElementsType]:
-        raise NotImplementedError()
+        quantile = np.true_divide(percentile, 100)
+        return cls.quantile(tensor, quantile=quantile, axis=axis, keepdims=keepdims)
 
     @staticmethod
-    def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
+    def mean_per_channel(x: ONNXNNCFTensor, axis: int) -> ONNXNNCFTensor:
         if len(x.shape) < 3:
             return ONNXNNCFTensor(np.mean(x.tensor, axis=0))
         x = np.moveaxis(x.tensor, axis, 1)
@@ -139,83 +162,128 @@ class ONNXNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
         return ONNXNNCFTensor(np.mean(t, axis=(0, 2)))
 
     @staticmethod
-    def transpose(x: NNCFTensor, axes: Tuple[int, ...]) -> NNCFTensor:
+    def transpose(x: ONNXNNCFTensor, axes: Tuple[int, ...]) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.transpose(x.tensor, axes))
 
     @staticmethod
-    def reshape(x: NNCFTensor, shape: Tuple[int, ...]) -> NNCFTensor:
+    def reshape(x: ONNXNNCFTensor, shape: Tuple[int, ...]) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.reshape(x.tensor, shape))
 
     @staticmethod
-    def cat(x: List[NNCFTensor], axis: int) -> NNCFTensor:
+    def cat(x: List[ONNXNNCFTensor], axis: int) -> ONNXNNCFTensor:
         x = [t.tensor for t in x]
         return ONNXNNCFTensor(np.concatenate(x, axis))
 
     @staticmethod
-    def batch_mean(x: NNCFTensor) -> NNCFTensor:
+    def batch_mean(x: ONNXNNCFTensor) -> ONNXNNCFTensor:
         return ONNXNNCFTensor(np.mean(x.tensor, axis=0, keepdims=True))
 
     @staticmethod
-    def sub(a: NNCFTensor, b: NNCFTensor) -> NNCFTensor:
-        raise NotImplementedError()
+    def sub(a: ONNXNNCFTensor, b: ONNXNNCFTensor) -> ONNXNNCFTensor:
+        return ONNXNNCFTensor(a.tensor - b.tensor)
 
     @staticmethod
-    def zero_elements(x: NNCFTensor) -> NNCFTensor:
-        raise NotImplementedError()
+    def zero_elements(x: ONNXNNCFTensor) -> ONNXNNCFTensor:
+        np_tensor = x.tensor
+        eps = np.finfo(np_tensor.dtype).eps
+        return ONNXNNCFTensor(np.abs(np_tensor) < eps)
 
 
-class ONNXMinMaxStatisticCollector(MinMaxStatisticCollector):
-    @staticmethod
-    def _get_processor() -> NNCFCollectorTensorProcessor:
+class ONNXBasicReducer(TensorReducerBase):
+    def _get_processor(self):
         return ONNXNNCFCollectorTensorProcessor
 
-    def _register_input(self, x: ONNXNNCFTensor):
-        self._register_input_common(x)
-
-    def _get_statistics(self) -> ONNXMinMaxTensorStatistic:
-        return ONNXMinMaxTensorStatistic(
-            min_values=self._min_values.tensor,
-            max_values=self._max_values.tensor,
-        )
+    def get_inplace_fn(self):
+        raise NotImplementedError("ONNX backend has no support of inplace statistics yet.")
 
 
-class ONNXMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
-    @staticmethod
-    def _get_processor() -> NNCFCollectorTensorProcessor:
-        return ONNXNNCFCollectorTensorProcessor
-
-    def _register_input(self, x: ONNXNNCFTensor):
-        self._register_input_common(x)
-
-    def _get_statistics(self) -> ONNXMinMaxTensorStatistic:
-        return ONNXMinMaxTensorStatistic(
-            min_values=self._min_aggregate().tensor,
-            max_values=self._max_aggregate().tensor,
-        )
+class ONNXMinReducer(ONNXBasicReducer, MinReducer):
+    pass
 
 
-class ONNXMeanStatisticCollector(MeanStatisticCollector):
-    @staticmethod
-    def _get_processor() -> NNCFCollectorTensorProcessor:
-        return ONNXNNCFCollectorTensorProcessor
-
-    def _register_input(self, x: ONNXNNCFTensor):
-        self._register_input_common(x)
-
-    def _get_statistics(self) -> ONNXMeanTensorStatistic:
-        return ONNXMeanTensorStatistic(
-            mean_values=self._mean_aggregate().tensor,
-            shape=self._shape(),
-        )
+class ONNXMaxReducer(ONNXBasicReducer, MaxReducer):
+    pass
 
 
-class ONNXRawStatisticCollector(RawStatisticCollector):
-    @staticmethod
-    def _get_processor() -> NNCFCollectorTensorProcessor:
-        return ONNXNNCFCollectorTensorProcessor
+class ONNXAbsMaxReducer(ONNXBasicReducer, AbsMaxReducer):
+    pass
 
-    def _register_input(self, x: ONNXNNCFTensor):
-        self._register_input_common(x)
 
-    def _get_statistics(self) -> ONNXRawTensorStatistic:
-        return ONNXRawTensorStatistic(self._all_values)
+class ONNXMeanReducer(ONNXBasicReducer, MeanReducer):
+    pass
+
+
+class ONNXQuantileReducer(ONNXBasicReducer, QuantileReducer):
+    pass
+
+
+class ONNXAbsQuantileReducer(ONNXBasicReducer, AbsQuantileReducer):
+    pass
+
+
+class ONNXBatchMeanReducer(ONNXBasicReducer, BatchMeanReducer):
+    pass
+
+
+class ONNXMeanPerChanelReducer(ONNXBasicReducer, MeanPerChReducer):
+    pass
+
+
+def get_mean_statistic_collector(
+    num_samples: int, channel_axis: int, window_size: Optional[int] = None, inplace: bool = True
+) -> TensorCollector:
+    """
+    Mean statistic collector builder.
+
+    :param num_samples: Maximum number of samples to collect.
+    :param channel_axis: Channel axis to use during reduction phase.
+    :param window_size: Number of samples from the end of the list of collected samples to aggregate.
+        Aggregates all available collected statistics in case parameter is None.
+    :param inplace: Whether the mean reducer should be calculated inplace or out of place.
+    :return: Mean statistic collector.
+    """
+    inplace = False
+    if channel_axis == 0:
+        reducer = ONNXBatchMeanReducer(inplace)
+    else:
+        reducer = ONNXMeanPerChanelReducer(channel_axis=channel_axis, inplace=inplace)
+    noop_reducer = NoopReducer()
+
+    kwargs = {
+        "tensor_processor": ONNXNNCFCollectorTensorProcessor,
+        "num_samples": num_samples,
+        "window_size": window_size,
+    }
+
+    aggregate_mean = MeanAggregator(**kwargs)
+    aggregate_shape = ShapeAggregator()
+
+    collector = TensorCollector(ONNXMeanTensorStatistic)
+    collector.register_statistic_branch(ONNXMeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
+    collector.register_statistic_branch(ONNXMeanTensorStatistic.SHAPE_STAT, noop_reducer, aggregate_shape)
+    return collector
+
+
+def get_raw_stat_collector(num_samples: int) -> TensorCollector:
+    """
+    Raw statistic collector builder.
+
+    :param num_samples: Maximum number of samples to collect.
+    :return: Raw statistic collector.
+    """
+    reducer = RawReducer()
+    aggregator = NoopAggregator(num_samples)
+
+    collector = TensorCollector(ONNXRawTensorStatistic)
+    collector.register_statistic_branch(ONNXRawTensorStatistic.VALUES_STATS, reducer, aggregator)
+    return collector
+
+
+ONNX_REDUCERS_MAP = {
+    StatisticsType.MIN: ONNXMinReducer,
+    StatisticsType.MAX: ONNXMaxReducer,
+    StatisticsType.ABS_MAX: ONNXAbsMaxReducer,
+    StatisticsType.MEAN: ONNXMeanReducer,
+    StatisticsType.QUANTILE: ONNXQuantileReducer,
+    StatisticsType.ABS_QUANTILE: ONNXAbsQuantileReducer,
+}

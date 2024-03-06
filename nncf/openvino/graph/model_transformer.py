@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,10 +18,13 @@ import openvino.runtime as ov
 from openvino._pyopenvino import DescriptorTensor
 from openvino.runtime import opset13 as opset
 
+import nncf
 from nncf.common.graph.model_transformer import ModelTransformer
 from nncf.common.graph.model_transformer import TModel
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.openvino.graph.model_utils import copy_rt_info
+from nncf.openvino.graph.node_utils import get_parameter_node_name
 from nncf.openvino.graph.node_utils import get_result_node_name
 from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVBiasInsertionCommand
@@ -44,8 +47,9 @@ class OVModelTransformer(ModelTransformer):
     Applies transformations to an OpenVINO model.
     """
 
-    def __init__(self, model: TModel):
+    def __init__(self, model: TModel, inplace: bool = False):
         super().__init__(model)
+        self._inplace = inplace
         self._command_transformation_ordered_pairs = [
             (OVFQNodeRemovingCommand, self._apply_fq_nodes_removing_transformation),
             (OVQuantizerInsertionCommand, self._apply_quantizer_insertion_transformations),
@@ -124,7 +128,10 @@ class OVModelTransformer(ModelTransformer):
         for transformation in transformations:
             aggregated_transformations[transformation.__class__].append(transformation)
 
-        model = self._model.clone()
+        if self._inplace:
+            model = self._model
+        else:
+            model = self._model.clone()
         # Inplace transformations; Using deepcopy of model
         for transformation_cls, transformation_fn in self._command_transformation_ordered_pairs:
             transformations = aggregated_transformations[transformation_cls]
@@ -200,9 +207,11 @@ class OVModelTransformer(ModelTransformer):
             OVModelTransformer._update_tensor_name([result.get_output_tensor(0)], result_name)
             extra_model_outputs.append(result)
 
-        return ov.Model(
+        model_with_outputs = ov.Model(
             results=results + extra_model_outputs, sinks=assign_ops, parameters=params, name=model.friendly_name
         )
+        copy_rt_info(model, model_with_outputs, path=["nncf"])
+        return model_with_outputs
 
     @staticmethod
     def _apply_fq_nodes_removing_transformation(
@@ -407,7 +416,7 @@ class OVModelTransformer(ModelTransformer):
             for inp_node in target_inputs:
                 inp_node.replace_source_output(fq.output(0))
         else:
-            raise RuntimeError(f"Incorrect target point type {transform_type}")
+            raise nncf.InternalError(f"Incorrect target point type {transform_type}")
 
     @staticmethod
     def _insert_fake_convert_op(
@@ -461,7 +470,7 @@ class OVModelTransformer(ModelTransformer):
             for inp_node in target_inputs:
                 inp_node.replace_source_output(fc.output(0))
         else:
-            raise RuntimeError(f"Incorrect target point type {transform_type}")
+            raise nncf.InternalError(f"Incorrect target point type {transform_type}")
 
     @staticmethod
     def _apply_bias_correction_transformations(model, transformations: List[OVBiasCorrectionCommand]) -> ov.Model:
@@ -506,7 +515,7 @@ class OVModelTransformer(ModelTransformer):
             queue.append((curr_node.input(0), curr_node.input_value(0).get_node()))
 
         if const_node is None:
-            raise RuntimeError("Constant node was expected but could not find it.")
+            raise nncf.InternalError("Constant node was expected but could not find it.")
 
         const_shape = const_node.data.shape
         const_dtype = const_node.data.dtype
@@ -546,40 +555,42 @@ class OVModelTransformer(ModelTransformer):
         """
         transformation = transformations[-1]
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
-        activation_node_names = OVModelTransformer._get_activation_node_names(model)
+
         params, results = [], []
-        for input_name in transformation.inputs:
+        for input_name, input_port_id in transformation.input_ids:
             input_node = name_to_node_mapping[input_name]
             if input_name in [tensor.node.get_friendly_name() for tensor in model.inputs]:
                 params.append(input_node)
                 continue
-            for input_port in input_node.inputs():
-                if input_port.get_source_output().get_node().name not in activation_node_names:
-                    continue
-                input_node_output = input_port.get_source_output()
-                parameter_name = f"Parameter_{input_name}"
-                new_param = opset.parameter(
-                    shape=input_node_output.partial_shape,
-                    dtype=input_node_output.get_element_type(),
-                    name=parameter_name,
-                )
-                input_port.replace_source_output(new_param.output(0))
-                new_param_tensors = [o.get_tensor() for o in new_param.outputs()]
-                OVModelTransformer._update_tensor_name(new_param_tensors, parameter_name)
-                params.append(new_param)
 
-        for output_name in transformation.outputs:
+            input_port = input_node.input(input_port_id)
+            input_node_output = input_port.get_source_output()
+            parameter_name = get_parameter_node_name(input_name, input_port_id)
+            new_param = opset.parameter(
+                shape=input_node_output.partial_shape,
+                dtype=input_node_output.get_element_type(),
+                name=parameter_name,
+            )
+            input_port.replace_source_output(new_param.output(0))
+            new_param_tensors = [o.get_tensor() for o in new_param.outputs()]
+            OVModelTransformer._update_tensor_name(new_param_tensors, parameter_name)
+            params.append(new_param)
+
+        for output_name, output_port_id in transformation.output_ids:
             output_node = name_to_node_mapping[output_name]
-            for node_out in output_node.outputs():
-                result_name = get_result_node_name(output_name, 0)
-                new_result = opset.result(node_out, name=result_name)
-                OVModelTransformer._update_tensor_name([new_result.get_output_tensor(0)], result_name)
-                results.append(new_result)
+
+            output_port = output_node.output(output_port_id)
+            result_name = get_result_node_name(output_name, output_port_id)
+            new_result = opset.result(output_port, name=result_name)
+            OVModelTransformer._update_tensor_name([new_result.get_output_tensor(0)], result_name)
+            results.append(new_result)
 
         if not results:
             results = model.get_results()
 
-        return ov.Model(results, params)
+        extracted_model = ov.Model(results, params)
+        copy_rt_info(model, extracted_model, path=["nncf"])
+        return extracted_model
 
     @staticmethod
     def _apply_insert_operation(model: ov.Model, transformations: OVInplaceFnInsertionCommand) -> ov.Model:
@@ -613,13 +624,15 @@ class OVModelTransformer(ModelTransformer):
         port_id = transformation.target_point.port_id
         fn_output_port_id = transformation.fn_output_port_id
         if transform_type == TargetType.POST_LAYER_OPERATION:
-            new_node = transformation.inplace_op_fn(target_node, port_id)
+            new_node = transformation.inplace_op_fn(target_node, port_id, transformation.last_inplace_node_name)
             return (new_node.output(fn_output_port_id), fn_output_port_id)
         if transform_type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
             output = target_node.input_value(port_id)
-            new_node = transformation.inplace_op_fn(output.get_node(), output.get_index())
+            new_node = transformation.inplace_op_fn(
+                output.get_node(), output.get_index(), transformation.last_inplace_node_name
+            )
             return (new_node.output(fn_output_port_id), fn_output_port_id)
-        raise RuntimeError(f"Transform type {transform_type} is not supported")
+        raise nncf.InternalError(f"Transform type {transform_type} is not supported")
 
     @staticmethod
     def _apply_bias_insertion_transformations(

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,6 +17,7 @@ from typing import Dict, Optional, Tuple, Union
 
 import networkx as nx
 
+import nncf
 from nncf.common.utils.dot_file_rw import read_dot_graph
 from nncf.common.utils.dot_file_rw import write_dot_graph
 
@@ -40,13 +41,13 @@ def sort_dot(path):
         ):
             if node_id is not None:
                 if edge_start_id is not None or edge_end_id is not None:
-                    raise RuntimeError(
+                    raise nncf.ValidationError(
                         "Invalid node order parsed from graph line - "
                         "must specify either `node_id` or a pair of `edge_start_id`/`edge_end_id`!"
                     )
             else:
                 if edge_start_id is None or edge_end_id is None:
-                    raise RuntimeError(
+                    raise nncf.ValidationError(
                         "Invalid node order - must specify both `edge_start_id` and `edge_end_id` "
                         "if node_id is None!"
                     )
@@ -75,14 +76,14 @@ def sort_dot(path):
         extract_ids_regex = r'^"(\d+) '
         start_id_matches = re.search(extract_ids_regex, line)
         if start_id_matches is None:
-            raise RuntimeError(f"Could not parse first node ID in node name: {line}")
+            raise nncf.InternalError(f"Could not parse first node ID in node name: {line}")
         start_id = int(start_id_matches.group(1))
         edge_indicator = " -> "
         if edge_indicator in line:
             end_node_and_attrs_str = line.split(edge_indicator)[1]
             end_id_matches = re.search(extract_ids_regex, end_node_and_attrs_str)
             if end_id_matches is None:
-                raise RuntimeError(f"Could not parse end node ID in node name: {end_node_and_attrs_str}")
+                raise nncf.InternalError(f"Could not parse end node ID in node name: {end_node_and_attrs_str}")
             end_id = int(end_id_matches.group(1))
             return LineOrder(edge_start_id=start_id, edge_end_id=end_id)
         return LineOrder(node_id=int(start_id))

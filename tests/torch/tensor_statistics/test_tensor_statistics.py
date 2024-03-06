@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -115,7 +115,7 @@ class TestCollectedStatistics:
         collector: Type[TensorStatisticCollectorBase],
         reduction_axes_vs_ref_statistic: Dict[Tuple[ReductionAxes, ReductionAxes], TensorStatistic],
     ):
-        for shapes in reduction_axes_vs_ref_statistic.keys():
+        for shapes in reduction_axes_vs_ref_statistic:
             scale_shape, reducer_axes = shapes
             collector_obj = collector(
                 scale_shape=scale_shape,

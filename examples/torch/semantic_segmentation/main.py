@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -24,6 +24,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import examples.torch.semantic_segmentation.utils.data as data_utils
 import examples.torch.semantic_segmentation.utils.transforms as JT
+import nncf
 from examples.common.paths import configure_paths
 from examples.common.sample_config import create_sample_config
 from examples.torch.common.argparser import get_common_argument_parser
@@ -38,12 +39,10 @@ from examples.torch.common.model_loader import extract_model_and_compression_sta
 from examples.torch.common.model_loader import load_model
 from examples.torch.common.model_loader import load_resuming_checkpoint
 from examples.torch.common.optimizer import make_optimizer
-from examples.torch.common.utils import SafeMLFLow
 from examples.torch.common.utils import configure_device
 from examples.torch.common.utils import configure_logging
 from examples.torch.common.utils import get_run_name
 from examples.torch.common.utils import is_pretrained_model_requested
-from examples.torch.common.utils import log_common_mlflow_params
 from examples.torch.common.utils import make_additional_checkpoints
 from examples.torch.common.utils import print_args
 from examples.torch.common.utils import write_metrics
@@ -149,7 +148,7 @@ def get_dataset(dataset_name: str) -> torch.utils.data.Dataset:
         from examples.torch.semantic_segmentation.datasets import Mapillary as dataset
     else:
         # Should never happen...but just in case it does
-        raise RuntimeError('"{0}" is not a supported dataset.'.format(dataset_name))
+        raise nncf.UnsupportedDatasetError('"{0}" is not a supported dataset.'.format(dataset_name))
     return dataset
 
 
@@ -471,7 +470,6 @@ def predict(model, images, class_encoding, config):
 
 def main_worker(current_gpu, config):
     configure_device(current_gpu, config)
-    config.mlflow = SafeMLFLow(config)
     if is_main_process():
         configure_logging(logger, config)
         print_args(config)
@@ -544,8 +542,6 @@ def main_worker(current_gpu, config):
 
     if config.distributed:
         compression_ctrl.distributed()
-
-    log_common_mlflow_params(config)
 
     if is_export_only:
         export_model(compression_ctrl, config)

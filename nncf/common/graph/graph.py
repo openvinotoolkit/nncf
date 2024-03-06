@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,6 +15,7 @@ from typing import Any, Callable, Dict, Generator, KeysView, List, Optional, Tup
 import networkx as nx
 import networkx.algorithms.isomorphism as iso
 
+import nncf
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.graph.layer_attributes import Dtype
@@ -639,9 +640,9 @@ class NNCFGraph:
     def get_node_by_name(self, name: NNCFNodeName) -> NNCFNode:
         node_ids = self._node_name_to_node_id_map.get(name, None)
         if node_ids is None:
-            raise RuntimeError("Could not find a node {} in NNCFGraph!".format(name))
+            raise nncf.InternalError("Could not find a node {} in NNCFGraph!".format(name))
         if len(node_ids) > 1:
-            raise RuntimeError(f"More than one node in NNCFGraph matches name {name}")
+            raise nncf.InternalError(f"More than one node in NNCFGraph matches name {name}")
 
         node_key = f"{node_ids[0]} {name}"
         return self._nodes[node_key]
@@ -692,7 +693,7 @@ class NNCFGraph:
             elif to_node_key in match:
                 input_nncf_edges.append(nncf_edge)
             else:
-                raise RuntimeError("Invalid graph expression supplied!")
+                raise nncf.InternalError("Invalid graph expression supplied!")
 
         return NNCFGraphPatternIO(input_nncf_edges, output_nncf_edges)
 

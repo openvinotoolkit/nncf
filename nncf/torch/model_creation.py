@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,9 +16,9 @@ import torch
 from torch.distributed import barrier
 from torch.nn import Module
 
+import nncf
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
-from nncf.common.deprecation import warning_deprecated
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.debug import set_debug_log_dir
@@ -99,7 +99,7 @@ def create_compressed_model(
         as an object of NNCFNetwork.
     """
     if isinstance(model, NNCFNetwork):
-        raise RuntimeError(
+        raise nncf.InternalError(
             "The model object has already been compressed.\n"
             "NNCF for PyTorch modifies the model object in-place, and repeat calls to "
             "`nncf.torch.create_compressed_model` with the same model object passed as argument "
@@ -110,9 +110,6 @@ def create_compressed_model(
             "re-running cells involving `nncf.torch.create_compressed_model` the original model object "
             "is also re-created (via constructor call)."
         )
-
-    if config.get("target_device") == "VPU":
-        warning_deprecated("VPU device is deprecated and will no longer be supported in the future.")
 
     set_debug_log_dir(config.get("log_dir", "."))
 
@@ -171,7 +168,7 @@ def get_input_info_from_config(config: NNCFConfig) -> ModelInputInfo:
     exact_info = LoaderInputInfo.from_nncf_config_dataloaders(config)
     if exact_info is not None:
         return exact_info
-    raise RuntimeError(
+    raise nncf.ValidationError(
         "Could not determine tensor inputs for the model's forward call.\n"
         "If you are using the `nncf.quantize` API, make sure that you supply the "
         "calibration dataloader to the `nncf.quantize` call.\n"

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -158,10 +158,10 @@ class ManualSingleConvTestParams:
 
 MANUAL_SINGLE_CONV_TEST_PARAMS = [
     ManualSingleConvTestParams(name="manual_init_multiple_int8_qconfigs").for_device("CPU").num_bits_for_activation(8),
-    ManualSingleConvTestParams(name="manual_init_int4_sym_int8_asym").for_device("VPU").num_bits_for_activation(4),
+    ManualSingleConvTestParams(name="manual_init_int4_sym_int8_asym").for_device("NPU").num_bits_for_activation(4),
     ManualSingleConvTestParams(name="manual_init_trial").for_device("TRIAL").num_bits_for_activation(4),
     ManualSingleConvTestParams(name="incompatible_bitwidth")
-    .for_device("VPU")
+    .for_device("NPU")
     .num_bits_for_activation(2)
     .raises_error(),
 ]

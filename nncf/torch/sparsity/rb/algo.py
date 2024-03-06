@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -88,6 +88,10 @@ class RBSparsityController(BaseSparsityAlgoController):
         else:
             sparse_op = target_sparsified_module_info.operand
             self._loss.set_target_sparsity_loss(sparsity_level, sparse_op)
+
+    @property
+    def current_sparsity_level(self) -> float:
+        return self._loss.current_sparsity
 
     def compression_stage(self) -> CompressionStage:
         if self._mode == "local":

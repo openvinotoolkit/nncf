@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,6 +15,7 @@ from typing import Dict
 
 import pytest
 
+import nncf
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
@@ -26,6 +27,10 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
+from nncf.experimental.common.tensor_statistics.collectors import MeanAggregator
+from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.parameters import ModelType
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
@@ -91,13 +96,17 @@ class TemplateTestPTQParams:
     def get_algo_backend(self):
         pass
 
-    @abstractmethod
-    def check_is_min_max_statistic_collector(self, tensor_collector):
-        pass
+    def check_is_min_max_statistic_collector(self, tensor_collector: TensorCollector):
+        aggrs = [aggr.__class__ for aggr in tensor_collector.aggregators.values()]
+        assert len(aggrs) == 2
+        assert MinAggregator in aggrs
+        assert MaxAggregator in aggrs
 
-    @abstractmethod
-    def check_is_mean_min_max_statistic_collector(self, tensor_collector):
-        pass
+    def check_is_mean_min_max_statistic_collector(self, tensor_collector: TensorCollector):
+        aggrs = [aggr.__class__ for aggr in tensor_collector.aggregators.values()]
+        assert len(aggrs) == 2
+        assert MeanAggregator in aggrs
+        assert aggrs[0].__class__ == aggrs[1].__class__
 
     @abstractmethod
     def check_quantize_outputs_fq_num(self, quantize_outputs, act_num_q, weight_num_q):
@@ -288,7 +297,7 @@ class TemplateTestPTQParams:
         )
         algo._backend_entity = self.get_algo_backend()
         if validate_scopes:
-            with pytest.raises(RuntimeError, match="Ignored nodes with name"):
+            with pytest.raises(nncf.ValidationError, match="Ignored nodes with name"):
                 algo._get_ignored_names(nncf_graph, inference_nncf_graph, ignored_patterns)
         else:
             algo._get_ignored_names(nncf_graph, inference_nncf_graph, ignored_patterns)
@@ -322,7 +331,7 @@ class TemplateTestPTQParams:
             "nncf.quantization.algorithms.min_max.algorithm.MinMaxQuantization._get_quantization_points_overflow_fix",
             return_value=mocker.MagicMock(),
         )
-        with pytest.raises(RuntimeError) as exc_info:
+        with pytest.raises(nncf.InternalError) as exc_info:
             algo.apply(None, None, stat_points)
 
         assert str(exc_info.value) == "Statistics were not collected for the node A"

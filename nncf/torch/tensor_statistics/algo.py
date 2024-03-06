@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Callable, Dict, Set
+from typing import Callable, Dict, Set, Union
 
 import torch
 
@@ -28,6 +28,7 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.return_types import maybe_get_values_from_torch_return_type
 from nncf.torch.tensor import PTNNCFTensor
 
 
@@ -51,7 +52,7 @@ def create_register_input_hook(collector: TensorCollector) -> Callable[[torch.Te
     :return: Register inputs hook function.
     """
 
-    def register_inputs_hook(x: torch.Tensor) -> torch.Tensor:
+    def register_inputs_hook(x: Union[torch.Tensor, tuple]) -> torch.Tensor:
         """
         Register inputs hook function.
 
@@ -59,7 +60,8 @@ def create_register_input_hook(collector: TensorCollector) -> Callable[[torch.Te
         :return: tensor to register in hook.
         """
         with no_nncf_trace():
-            collector.register_input_for_all_reducers(PTNNCFTensor(x))
+            x_unwrapped = maybe_get_values_from_torch_return_type(x)
+            collector.register_input_for_all_reducers(PTNNCFTensor(x_unwrapped))
         return x
 
     return register_inputs_hook

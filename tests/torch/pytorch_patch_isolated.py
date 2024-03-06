@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import contextlib
 import inspect
 import os
 
@@ -66,10 +67,8 @@ def test_jit_script_exception_preserves_patching_isolated():
         ),
     )
 
-    try:
+    with contextlib.suppress(Exception):
         torch.jit.script(compressed_model)  # supposed to fail since torch.jit.script does not support NNCF models
-    except:  # noqa: E722
-        pass
 
     # torch.nn.Module.__call__ is one of the fundamental patched functions, if the code object points to NNCF code,
     # then it means patching is still present

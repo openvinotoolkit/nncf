@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,25 +9,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import importlib
 from copy import deepcopy
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
 
+from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
+from nncf.openvino.graph.model_utils import remove_friendly_name_duplicates
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.node_utils import get_number_if_op
 from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.openvino.quantization.backend_parameters import is_weight_compression_needed
 from nncf.openvino.quantization.quantize_ifmodel import apply_algorithm_if_bodies
 from nncf.openvino.rt_info import dump_parameters
+from nncf.parameters import CompressWeightsMode
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
+from nncf.parameters import SensitivityMetric
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -36,41 +39,14 @@ from nncf.quantization.algorithms.accuracy_control.algorithm import Quantization
 from nncf.quantization.algorithms.accuracy_control.algorithm import calculate_accuracy_drop
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
 from nncf.telemetry.decorator import tracked_function
 from nncf.telemetry.events import NNCF_OV_CATEGORY
 
-USE_POT_AS_DEFAULT = False
-
 TTensor = TypeVar("TTensor")
-
-
-def should_use_pot(advanced_parameters: Optional[AdvancedQuantizationParameters]) -> bool:
-    """
-    Returns True if POT should be used for quantization, False otherwise.
-
-    :param advanced_parameters: Advanced quantization parameters.
-    :return: True if POT should be used, False otherwise.
-    :raises ImportError if POT is not found in the Python environment.
-    """
-    use_pot = USE_POT_AS_DEFAULT
-    if advanced_parameters is not None and advanced_parameters.backend_params is not None:
-        use_pot = advanced_parameters.backend_params.get(BackendParameters.USE_POT, USE_POT_AS_DEFAULT)
-
-    if not use_pot:
-        return False
-
-    try:
-        importlib.import_module("openvino.tools.pot")
-    except ImportError:
-        nncf_logger.error(
-            "OpenVINO POT was not found in your Python environment.\n"
-            "Please install the openvino-dev package, e.g. via pypi: pip install openvino-dev.\n"
-        )
-
-    return True
 
 
 @tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
@@ -249,6 +225,7 @@ def native_quantize_with_accuracy_control_impl(
 
     # TODO(andrey-churkin): Collect statistics only once
     if advanced_accuracy_restorer_parameters.tune_hyperparams and not should_terminate:
+        model = remove_friendly_name_duplicates(model)
         tuned_quantized_model = quantize_with_tune_hyperparams(
             model,
             calibration_dataset,
@@ -337,14 +314,11 @@ def quantize_impl(
     """
     Implementation of the `quantize()` method for the OpenVINO backend.
     """
-    if should_use_pot(advanced_parameters):
-        from nncf.openvino.pot.quantization.quantize_model import quantize_impl as pot_quantize_impl
+    model = remove_friendly_name_duplicates(model)
 
-        quantize_fn = pot_quantize_impl
-    else:
-        quantize_fn = native_quantize_impl
-        if get_number_if_op(model) > 0:
-            quantize_fn = native_quantize_if_op_impl
+    quantize_fn = native_quantize_impl
+    if get_number_if_op(model) > 0:
+        quantize_fn = native_quantize_if_op_impl
 
     return quantize_fn(
         model=model,
@@ -396,14 +370,8 @@ def quantize_with_accuracy_control_impl(
     """
     Implementation of the `quantize_with_accuracy_control()` method for the OpenVINO backend.
     """
-    if should_use_pot(advanced_quantization_parameters):
-        from nncf.openvino.pot.quantization.quantize_model import (
-            quantize_with_accuracy_control_impl as pot_quantize_with_accuracy_control_impl,
-        )
 
-        quantize_with_accuracy_control_fn = pot_quantize_with_accuracy_control_impl
-    else:
-        quantize_with_accuracy_control_fn = native_quantize_with_accuracy_control_impl
+    quantize_with_accuracy_control_fn = native_quantize_with_accuracy_control_impl
 
     val_func = wrap_validation_fn(validation_fn)
 
@@ -423,3 +391,27 @@ def quantize_with_accuracy_control_impl(
         advanced_quantization_parameters,
         advanced_accuracy_restorer_parameters,
     )
+
+
+def compress_weights_impl(
+    model: ov.Model,
+    dataset: Dataset,
+    mode: CompressWeightsMode,
+    ratio: float,
+    group_size: int,
+    ignored_scope: IgnoredScope,
+    all_layers: bool,
+    sensitivity_metric: SensitivityMetric,
+    awq: bool,
+    subset_size: int,
+) -> ov.Model:
+    """
+    Implementation of the `compress_weights()` method for the OpenVINO backend.
+    """
+
+    model = remove_friendly_name_duplicates(model)
+    compression_algorithm = WeightCompression(
+        mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric, awq, subset_size
+    )
+    graph = NNCFGraphFactory.create(model)
+    return compression_algorithm.apply(model, graph, dataset=dataset)

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,6 +15,7 @@ from typing import Callable, List, Tuple
 import torch
 from torch.nn import DataParallel
 
+import nncf
 from nncf.common.graph.definitions import MODEL_CONST_OP_NAME
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
 from nncf.common.logging import nncf_logger
@@ -34,8 +35,6 @@ from nncf.torch.dynamic_graph.trace_functions import trace_tensors
 from nncf.torch.dynamic_graph.trace_tensor import TracedParameter
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.layers import ITERATION_MODULES
-from nncf.torch.return_types import maybe_unwrap_from_torch_return_type
-from nncf.torch.return_types import maybe_wrap_to_torch_return_type
 
 _IGNORED_SCOPES = []
 
@@ -61,7 +60,7 @@ def wrap_operator(operator, operator_info: PatchedOperatorInfo):
     Wraps the input callable object (`operator`) with the functionality that allows the calls to this object
     to be tracked by the currently set global TracingContext. The wrapped functions can be then intercepted,
     their arguments and return values modified arbitrarily and, for functions that correspond to operations on
-    tensors in a DNN,  their general position and address in the DNN's model control flow graph can be established.
+    tensors in a DNN, their general position and address in the DNN's model control flow graph can be established.
 
     :param: operator: A callable object to be wrapped.
     :param: operator_info (PatchedOperatorInfo): An informational struct containing the specifics of wrapping
@@ -195,10 +194,8 @@ def _execute_op(
         if is_debug() and node is not None:
             ctx.register_node_call(node)
 
-    unwrapped_result = maybe_unwrap_from_torch_return_type(result)
-    unwrapped_result = trace_tensors(unwrapped_result, node, ctx)
-    unwrapped_result = ctx.execute_post_hooks(op_address, unwrapped_result)
-    result = maybe_wrap_to_torch_return_type(unwrapped_result, result)
+    result = trace_tensors(result, node, ctx)
+    result = ctx.execute_post_hooks(op_address, result)
     return result
 
 
@@ -212,7 +209,7 @@ def _collect_module_attrs_and_ignored_algorithms(
     if op_name in OP_NAMES_WITH_WEIGHTS:
         curr_module = ctx.get_current_module()
         if curr_module is None:
-            raise RuntimeError(
+            raise nncf.ValidationError(
                 f"Operation {op_name} requires module attributes, but it was executed outside any module"
             )
         layer_attrs = get_layer_attributes_from_module(curr_module, op_name)

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -93,22 +93,17 @@ def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph, nncf_graph_cls=NNCFG
         else:
             node_name = "/" + curr_node_key + "_0"
 
-        if NNCFNode.NODE_TYPE_ATTR in node:
-            node_type = node[NNCFNode.NODE_TYPE_ATTR]
-        else:
-            node_type = curr_node_key
-
+        node_type = node.get(NNCFNode.NODE_TYPE_ATTR, curr_node_key)
         layer_attributes = node.get(NNCFNode.LAYER_ATTRIBUTES)
 
         if NNCFNode.METATYPE_ATTR in node:
             metatype = node[NNCFNode.METATYPE_ATTR]
         else:
             metatype = METATYPES_FOR_TEST.get_operator_metatype_by_op_name(node_type)
-            if metatype is not UnknownMetatype:
-                if metatype.get_subtypes():
-                    subtype = metatype.determine_subtype(layer_attributes=layer_attributes)
-                    if subtype is not None:
-                        metatype = subtype
+            if metatype is not UnknownMetatype and metatype.get_subtypes():
+                subtype = metatype.determine_subtype(layer_attributes=layer_attributes)
+                if subtype is not None:
+                    metatype = subtype
 
         node_id = idx
         node = mock_graph.add_nncf_node(
@@ -125,10 +120,7 @@ def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph, nncf_graph_cls=NNCFG
             in_edge = (pred, curr_node_key)
             out_idx, creator_id = edge_vs_output_idx_and_creator_id[in_edge]
             edge_data = nx_graph.edges[in_edge]
-            if NNCFGraph.DTYPE_EDGE_ATTR in edge_data:
-                dtype = edge_data[NNCFGraph.DTYPE_EDGE_ATTR]
-            else:
-                dtype = Dtype.FLOAT
+            dtype = edge_data.get(NNCFGraph.DTYPE_EDGE_ATTR, Dtype.FLOAT)
             mock_graph.add_edge_between_nncf_nodes(
                 creator_id, node_id, [1, 1, 1, 1], input_port_id=pred_idx, output_port_id=out_idx, dtype=dtype
             )

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -131,14 +131,12 @@ class PTAccuracyAwareTrainingRunner(BaseAccuracyAwareTrainingRunner):
         return osp.join(self._checkpoint_save_dir, f'acc_aware_checkpoint_{"best" if is_best else "last"}{extension}')
 
     def add_tensorboard_scalar(self, key, data, step):
-        if is_main_process():
-            if self.verbose and self._tensorboard_writer is not None:
-                self._tensorboard_writer.add_scalar(key, data, step)
+        if is_main_process() and self.verbose and self._tensorboard_writer is not None:
+            self._tensorboard_writer.add_scalar(key, data, step)
 
     def add_tensorboard_image(self, key, data, step):
-        if is_main_process():
-            if self.verbose and self._tensorboard_writer is not None:
-                self._tensorboard_writer.add_image(key, ToTensor()(data), step)
+        if is_main_process() and self.verbose and self._tensorboard_writer is not None:
+            self._tensorboard_writer.add_image(key, ToTensor()(data), step)
 
 
 class PTAdaptiveCompressionLevelTrainingRunner(

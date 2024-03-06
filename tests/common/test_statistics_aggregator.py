@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,9 +18,11 @@ from typing import Any, List, Type, Union
 import numpy as np
 import pytest
 
+import nncf
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
@@ -90,11 +92,6 @@ class TemplateTestStatisticsAggregator:
         Please make the same topologies with the same names as it
         presented in Openvino tests.
         """
-
-    @abstractmethod
-    @pytest.fixture
-    def is_stat_in_shape_of_scale(self) -> bool:
-        pass
 
     @abstractmethod
     @pytest.fixture
@@ -338,15 +335,13 @@ class TemplateTestStatisticsAggregator:
             ),
             # Weight collectors
             (
-                (
-                    MinMaxTestParameters(
-                        RangeEstimatorParametersSet.MINMAX,
-                        TargetType.OPERATION_WITH_WEIGHTS,
-                        QuantizationMode.SYMMETRIC,
-                        False,
-                        128,
-                        -128,
-                    )
+                MinMaxTestParameters(
+                    RangeEstimatorParametersSet.MINMAX,
+                    TargetType.OPERATION_WITH_WEIGHTS,
+                    QuantizationMode.SYMMETRIC,
+                    False,
+                    128,
+                    -128,
                 )
             ),
             (
@@ -385,7 +380,6 @@ class TemplateTestStatisticsAggregator:
         self,
         test_parameters: MinMaxTestParameters,
         dataset_samples,
-        is_stat_in_shape_of_scale,
         inplace_statistics,
         is_backend_support_custom_estimators,
     ):
@@ -436,7 +430,7 @@ class TemplateTestStatisticsAggregator:
             # Torch and Openvino backends tensor collectors return values in shape of scale
             # in comparison to ONNX backends.
             ref_min_val, ref_max_val = test_parameters.ref_min_val, test_parameters.ref_max_val
-            if isinstance(ref_min_val, np.ndarray) and is_stat_in_shape_of_scale:
+            if isinstance(ref_min_val, np.ndarray):
                 shape = (1, 3, 1, 1)
                 if test_parameters.target_type == TargetType.OPERATION_WITH_WEIGHTS:
                     shape = (3, 1, 1, 1)
@@ -448,7 +442,7 @@ class TemplateTestStatisticsAggregator:
                 assert stat.min_values.shape == ref_min_val.shape
                 assert stat.max_values.shape == ref_max_val.shape
             else:
-                ref_shape = (1, 1, 1, 1) if is_stat_in_shape_of_scale else ()
+                ref_shape = (1, 1, 1, 1)
                 assert stat.min_values.shape == ref_shape
                 assert stat.max_values.shape == ref_shape
 
@@ -575,7 +569,7 @@ class TemplateTestStatisticsAggregator:
         ],
     )
     def test_statistics_aggregator_bias_correction(
-        self, dataset_samples, test_params: BCTestParameters, inplace_statistics, is_stat_in_shape_of_scale
+        self, dataset_samples, test_params: BCTestParameters, inplace_statistics
     ):
         name_to_algo_backend_map = {
             BiasCorrectionAlgos.BIAS_CORRECTION: self.get_bias_correction_algo_backend_cls,
@@ -589,7 +583,7 @@ class TemplateTestStatisticsAggregator:
         elif test_params.collector_type == BCStatsCollectors.RAW:
             tensor_collector = algo_backend.raw_statistic_collector(len(dataset_samples))
         else:
-            raise RuntimeError()
+            raise nncf.InvalidCollectorTypeError(f"Invalid collector type: {test_params.collector_type}")
 
         target_point = self.get_target_point(test_params.target_type)
 
@@ -622,10 +616,8 @@ class TemplateTestStatisticsAggregator:
             elif test_params.collector_type == BCStatsCollectors.RAW:
                 ret_val = stat.values
                 test_params.ref_values = dataset_samples
-                if not is_stat_in_shape_of_scale:
-                    ret_val = [np.squeeze(x) for x in ret_val]
             else:
-                raise RuntimeError()
+                raise nncf.InvalidCollectorTypeError(f"Invalid collector type: {test_params.collector_type}")
 
             for val, ref in zip(ret_val, test_params.ref_values):
                 if isinstance(ref, np.ndarray):
@@ -638,11 +630,17 @@ class TemplateTestStatisticsAggregator:
     ):
         algo_backend = cls.get_min_max_algo_backend_cls()
         nncf_graph = NNCFGraphFactory.create(model)
+
+        collector_params = RangeInitCollectorParams(
+            is_weights=target_point.is_weight_target_point(),
+            scheme=q_config.mode,
+            per_channel=q_config.per_channel,
+        )
         tensor_collector = algo_backend.get_statistic_collector(
             range_estimator,
             nncf_graph=nncf_graph,
             target_point=target_point,
-            quantizer_config=q_config,
+            collector_params=collector_params,
             num_samples=subset_size,
             inplace=inplace_statistics,
         )
@@ -759,11 +757,16 @@ class TemplateTestStatisticsAggregator:
         target_point_cls = self.get_target_point_cls()
         for target_point_args, ref in self.MERGED_TARGET_POINT_AND_REFS[key]:
             target_point = target_point_cls(*target_point_args)
+            collector_params = RangeInitCollectorParams(
+                is_weights=target_point.is_weight_target_point(),
+                scheme=quantizer_config.mode,
+                per_channel=quantizer_config.per_channel,
+            )
             min_max_tensor_collector = algo_backend.get_statistic_collector(
                 RangeEstimatorParametersSet.MINMAX,
                 nncf_graph=nncf_graph,
                 target_point=target_point,
-                quantizer_config=quantizer_config,
+                collector_params=collector_params,
                 num_samples=len(dataset_samples),
                 inplace=inplace_statistics,
             )
@@ -771,7 +774,7 @@ class TemplateTestStatisticsAggregator:
                 RangeEstimatorParametersSet.MEAN_MINMAX,
                 nncf_graph=nncf_graph,
                 target_point=target_point,
-                quantizer_config=quantizer_config,
+                collector_params=collector_params,
                 num_samples=len(dataset_samples),
                 inplace=inplace_statistics,
             )
@@ -828,11 +831,9 @@ class TemplateTestStatisticsAggregator:
             params["reduction_axes"] = [None, (0, 1, 3), (1, 2, 3)]
             params["quantile"] = [[0.01, 0.99], [0.001, 0.999]]
         elif statistics_type == "batch_mean":
-            pytest.skip("Inplace statistic woun't work until openvino==2023.0.0 release")
             params["inplace"] = [False, True]
         elif statistics_type == "mean_per_ch":
-            # TODO(dlyakhov) uncoment when nncf will switch to openvino==2023.0.0
-            # params["inplace"] = [False, True]
+            params["inplace"] = [False, True]
             params["channel_axis"] = [1, 2]
 
         def product_dict(**kwargs):
@@ -921,6 +922,6 @@ class TemplateTestStatisticsAggregator:
 
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
-        with pytest.raises(RuntimeError) as e:
+        with pytest.raises(nncf.ValidationError) as e:
             statistics_aggregator.collect_statistics(model, graph)
             assert "Calibration dataset must not be empty" in e.info

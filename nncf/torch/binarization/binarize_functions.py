@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -127,10 +127,9 @@ class ActivationBinarizationScaleThresholdFn(torch.autograd.Function):
     @staticmethod
     def backward(ctx: Any, *grad_outputs: Any) -> Any:
         grad_output = grad_outputs[0]
-        if grad_output.is_cuda:
-            if not grad_output.is_contiguous():
-                nncf_logger.debug("grad_output is not contiguous!")
-                grad_output = grad_output.contiguous()
+        if grad_output.is_cuda and not grad_output.is_contiguous():
+            nncf_logger.debug("grad_output is not contiguous!")
+            grad_output = grad_output.contiguous()
 
         input_, scale, output = ctx.saved_variables
 

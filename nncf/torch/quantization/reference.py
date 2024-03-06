@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,6 +15,7 @@ from typing import List, Tuple, TypeVar
 import numpy as np
 import torch
 
+import nncf
 from nncf.torch.utils import sum_like
 
 GeneralizedTensor = TypeVar("GeneralizedTensor", torch.Tensor, np.ndarray)
@@ -32,7 +33,7 @@ class ReferenceQuantize:
         elif backend_type is ReferenceBackendType.TORCH:
             self.backend = torch
         else:
-            raise RuntimeError("Unknown backend for ReferenceQuantize")
+            raise nncf.UnsupportedBackendError("Unknown backend for ReferenceQuantize")
 
     def _astype(self, tensor: GeneralizedTensor, dtype) -> GeneralizedTensor:
         if self.backend is np:
@@ -88,7 +89,7 @@ class ReferenceQuantize:
         input_low[input_low > 0] = 0
         input_high[input_high < 0] = 0
         n = levels - 1
-        scale = levels / (input_high - input_low)
+        scale = n / (input_high - input_low)
         scale = self._astype(scale, input_high.dtype)
         zp = self.backend.round(-input_low * scale)
 

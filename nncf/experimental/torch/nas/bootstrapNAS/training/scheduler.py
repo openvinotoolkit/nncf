@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -175,11 +175,10 @@ class BootstrapNASScheduler(BaseCompressionScheduler):
         super().epoch_step(next_epoch)
         self._lr_scheduler.epoch_step(next_epoch)
         stage_desc, stage_desc_idx = self.get_current_stage_desc()
-        if stage_desc is not None:
-            if stage_desc_idx != self.current_stage_idx:
-                self._lr_scheduler.stage_step(stage_desc)
-                self._training_ctrl.set_stage(stage_desc)
-                self.current_stage_idx = stage_desc_idx
+        if stage_desc is not None and stage_desc_idx != self.current_stage_idx:
+            self._lr_scheduler.stage_step(stage_desc)
+            self._training_ctrl.set_stage(stage_desc)
+            self.current_stage_idx = stage_desc_idx
 
     def is_final_stage(self) -> bool:
         """

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,6 +11,7 @@
 
 from typing import Any, Callable, Dict, List, Tuple
 
+import nncf
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
@@ -168,7 +169,7 @@ class ShapePruningProcessor:
                 if mask_producer.id in cluster_nodes_idxs:
                     return mask_producer.sparse_multiplier
 
-        raise RuntimeError(f"Next node for cluster {cluster.elements} doesn't have closing mask")
+        raise nncf.ValidationError(f"Next node for cluster {cluster.elements} doesn't have closing mask")
 
     def get_next_nodes(
         self, graph: NNCFGraph, pruning_groups: Clusterization[PrunedLayerInfoBase]

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,14 +12,10 @@
 import pytest
 
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.tensor_statistics.collectors import ReductionAxes
-from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXAddLayerMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
 from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
-from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
-from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
 from tests.post_training.test_templates.models import NNCFGraphToTest
 from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseConv
@@ -32,15 +28,6 @@ ParamsCls = TemplateTestQuantizerConfig.TestGetStatisticsCollectorParameters
 class TestQuantizerConfig(TemplateTestQuantizerConfig):
     def get_algo_backend(self):
         return ONNXMinMaxAlgoBackend()
-
-    def check_is_min_max_statistic_collector(self, tensor_collector):
-        assert isinstance(tensor_collector, ONNXMinMaxStatisticCollector)
-
-    def check_is_mean_min_max_statistic_collector(self, tensor_collector):
-        assert isinstance(tensor_collector, ONNXMeanMinMaxStatisticCollector)
-
-    def get_reduction_axes(self, reducer: TensorStatisticCollectorBase) -> ReductionAxes:
-        return reducer._reduction_shape
 
     @pytest.fixture(
         params=[

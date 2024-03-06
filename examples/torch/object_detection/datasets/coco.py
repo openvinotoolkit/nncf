@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -157,6 +157,6 @@ class COCODataset(data.Dataset):
 
     def get_img_names(self):
         img_names = []
-        for full_name in self.annotation.keys():
+        for full_name in self.annotation:
             img_names.append(full_name[full_name.rfind("/") + 1 : full_name.rfind(".")])
         return img_names

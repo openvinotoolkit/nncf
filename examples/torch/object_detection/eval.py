@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -197,20 +197,19 @@ def extract_gt_bboxes(classname, dataset, gt, imagenames):
 def load_detection_annotations(cachedir, dataset):
     cachefile = os.path.join(cachedir, "annots_{}.json".format(dataset.name))
     imagenames = dataset.get_img_names()
-    if is_main_process():
-        if not os.path.isfile(cachefile):
-            # load annots
-            gt = {}
-            for i, imagename in enumerate(imagenames):
-                _, gt[imagename] = dataset.pull_anno(i)
+    if is_main_process() and not os.path.isfile(cachefile):
+        # load annots
+        gt = {}
+        for i, imagename in enumerate(imagenames):
+            _, gt[imagename] = dataset.pull_anno(i)
 
-                if i % 100 == 0:
-                    logger.info("Reading annotation for {:d}/{:d}".format(i + 1, len(imagenames)))
-            # save
-            logger.info("Saving cached annotations to {:s}".format(cachefile))
-            pathlib.Path(cachedir).mkdir(parents=True, exist_ok=True)
-            with open(cachefile, "w", encoding="utf8") as f:
-                json.dump(gt, f)
+            if i % 100 == 0:
+                logger.info("Reading annotation for {:d}/{:d}".format(i + 1, len(imagenames)))
+        # save
+        logger.info("Saving cached annotations to {:s}".format(cachefile))
+        pathlib.Path(cachedir).mkdir(parents=True, exist_ok=True)
+        with open(cachefile, "w", encoding="utf8") as f:
+            json.dump(gt, f)
     if is_dist_avail_and_initialized():
         dist.barrier()
     with open(cachefile, "r", encoding="utf8") as f:

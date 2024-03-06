@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -120,4 +120,10 @@ BATCH_NORMALIZATION_OPERATIONS = [
 OPERATIONS_WITH_BIAS = [
     onnx_metatypes.ONNXConvolutionMetatype,
     onnx_metatypes.ONNXDepthwiseConvolutionMetatype,
+]
+
+
+QUANTIZE_DEQUANTIZE_OPERATIONS = [
+    onnx_metatypes.ONNXQuantizeLinearMetatype,
+    onnx_metatypes.ONNXDequantizeLinearMetatype,
 ]

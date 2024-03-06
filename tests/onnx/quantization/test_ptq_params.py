@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -21,8 +21,6 @@ from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXSoftmaxMetatype
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
-from nncf.onnx.statistics.collectors import ONNXMeanMinMaxStatisticCollector
-from nncf.onnx.statistics.collectors import ONNXMinMaxStatisticCollector
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
@@ -55,12 +53,6 @@ def test_target_device(target_device):
 class TestPTQParams(TemplateTestPTQParams):
     def get_algo_backend(self):
         return ONNXMinMaxAlgoBackend()
-
-    def check_is_min_max_statistic_collector(self, tensor_collector):
-        assert isinstance(tensor_collector, ONNXMinMaxStatisticCollector)
-
-    def check_is_mean_min_max_statistic_collector(self, tensor_collector):
-        assert isinstance(tensor_collector, ONNXMeanMinMaxStatisticCollector)
 
     def check_quantize_outputs_fq_num(self, quantize_outputs, act_num_q, weight_num_q):
         if quantize_outputs:

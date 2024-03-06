@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,6 +12,7 @@
 from math import inf
 from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
 
+import nncf
 from nncf import Dataset
 from nncf.common.factory import EngineFactory
 from nncf.common.factory import ModelTransformerFactory
@@ -88,7 +89,7 @@ class FastBiasCorrection(Algorithm):
         self._algorithm_key = f"FBC_{hash(self)}"
 
         if self.apply_for_all_nodes:
-            raise RuntimeError("FastBiasCorrection algorithm does not support apply_for_all_nodes=True yet")
+            raise nncf.InternalError("FastBiasCorrection algorithm does not support apply_for_all_nodes=True yet")
 
     @property
     def available_backends(self) -> List[BackendType]:
@@ -116,7 +117,7 @@ class FastBiasCorrection(Algorithm):
 
             self._backend_entity = PTFastBiasCorrectionAlgoBackend()
         else:
-            raise RuntimeError(
+            raise nncf.UnsupportedBackendError(
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
             )
 
@@ -274,7 +275,7 @@ class FastBiasCorrection(Algorithm):
         :param node_name: Name of the node that should be a center of the sub-model.
         :return: Backend-specific sub-model.
         """
-        model_extraction_command = self._backend_entity.model_extraction_command([node_name], [node_name])
+        model_extraction_command = self._backend_entity.model_extraction_command([(node_name, 0)], [(node_name, 0)])
         me_transformation_layout = TransformationLayout()
         me_transformation_layout.register(model_extraction_command)
         extracted_model = model_transformer.transform(me_transformation_layout)

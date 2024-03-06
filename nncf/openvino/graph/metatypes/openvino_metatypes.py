@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,6 +14,7 @@ from typing import List, Optional, Type
 
 import openvino.runtime as ov
 
+import nncf
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OUTPUT_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import OperatorMetatype
@@ -47,7 +48,7 @@ class OVOpMetatype(OperatorMetatype):
             if subtype.matches(node):
                 matches.append(subtype)
         if len(matches) > 1:
-            raise RuntimeError("Multiple subtypes match operator call - can not determine single subtype.")
+            raise nncf.InternalError("Multiple subtypes match operator call - can not determine single subtype.")
         if not matches:
             return None
         return matches[0]
@@ -787,9 +788,8 @@ def get_node_metatype(node: ov.Node) -> Type[OperatorMetatype]:
     """
     node_type = node.get_type_name()
     metatype = OV_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
-    if metatype is not UnknownMetatype:
-        if metatype.get_subtypes():
-            subtype = metatype.determine_subtype(node)
-            if subtype is not None:
-                metatype = subtype
+    if metatype is not UnknownMetatype and metatype.get_subtypes():
+        subtype = metatype.determine_subtype(node)
+        if subtype is not None:
+            metatype = subtype
     return metatype

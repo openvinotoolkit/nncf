@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -75,13 +75,12 @@ class ArgMaxMatcher(matcher.Matcher):
                 raise ValueError("unmatched_threshold needs to be smaller or equal to matched_threshold")
             self._unmatched_threshold = unmatched_threshold
 
-        if not negatives_lower_than_unmatched:
-            if self._unmatched_threshold == self._matched_threshold:
-                raise ValueError(
-                    "When negatives are in between matched and "
-                    "unmatched thresholds, these cannot be of equal "
-                    "value. matched: {}, unmatched: {}".format(self._matched_threshold, self._unmatched_threshold)
-                )
+        if not negatives_lower_than_unmatched and self._unmatched_threshold == self._matched_threshold:
+            raise ValueError(
+                "When negatives are in between matched and "
+                "unmatched thresholds, these cannot be of equal "
+                "value. matched: {}, unmatched: {}".format(self._matched_threshold, self._unmatched_threshold)
+            )
 
         self._force_match_for_each_row = force_match_for_each_row
         self._negatives_lower_than_unmatched = negatives_lower_than_unmatched

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,6 +15,7 @@ from typing import List, Set
 
 import tensorflow as tf
 
+import nncf
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionStage
@@ -437,7 +438,7 @@ class FilterPruningController(BasePruningAlgoController):
                     if nncf_node.attributes["output_mask"] is not None:
                         self._set_operation_masks([layer], nncf_node.attributes["output_mask"].tensor)
                 return
-        raise RuntimeError(f"Unable to prune model to required flops pruning level: {target_flops_pruning_level}")
+        raise nncf.InternalError(f"Unable to prune model to required flops pruning level: {target_flops_pruning_level}")
 
     def _set_operation_masks(self, layers: List[NNCFWrapper], filter_mask):
         for layer in layers:
@@ -465,7 +466,7 @@ class FilterPruningController(BasePruningAlgoController):
             self.current_flops = flops
             self.current_params_num = params_num
             return right
-        raise RuntimeError(
+        raise nncf.ParameterNotSupportedError(
             f"Unable to prune the model to get the required pruning level in flops = {target_flops_pruning_level}"
         )
 
@@ -535,7 +536,7 @@ class FilterPruningController(BasePruningAlgoController):
     def _layer_filter_importance(self, layer: NNCFWrapper):
         layer_metatype = get_keras_layer_metatype(layer)
         if len(layer_metatype.weight_definitions) != 1:
-            raise RuntimeError(
+            raise nncf.InternalError(
                 f"The layer {layer.layer.name} does not support by the pruning "
                 f"algorithm because it contains several weight attributes."
             )

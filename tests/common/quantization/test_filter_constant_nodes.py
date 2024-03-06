@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -237,8 +237,8 @@ def test_constant_nodes_filter(model_to_test):
 
 
 def check_ip_graphs_are_equal(graph_1: InsertionPointGraph, graph_2: InsertionPointGraph):
-    graph_1_node_keys_without_index = [graph_1_node_key.split(" ")[-1] for graph_1_node_key in graph_1.nodes.keys()]
-    graph_2_node_keys_without_index = [graph_2_node_key.split(" ")[-1] for graph_2_node_key in graph_2.nodes.keys()]
+    graph_1_node_keys_without_index = [graph_1_node_key.split(" ")[-1] for graph_1_node_key in graph_1.nodes]
+    graph_2_node_keys_without_index = [graph_2_node_key.split(" ")[-1] for graph_2_node_key in graph_2.nodes]
     assert Counter(graph_1_node_keys_without_index) == Counter(graph_2_node_keys_without_index)
 
     graph_1_filtered_edges, graph_2_filtered_edges = [], []

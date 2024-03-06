@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -20,6 +20,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.onnx.graph.node_utils import get_input_edge
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
 from nncf.onnx.graph.onnx_helper import get_name_to_node_map
@@ -37,23 +38,31 @@ class ONNXStatisticsAggregator(StatisticsAggregator):
     def _register_statistics(
         self, outputs: Dict[str, ONNXNNCFTensor], statistic_points: StatisticPointsContainer
     ) -> None:
-        for _statistic_points in statistic_points.values():
-            for statistic_point in _statistic_points:
-                target_point = statistic_point.target_point
-                port_id = target_point.port_id
-                if target_point.target_node_name in self.input_edges_mapping:  # Input case
-                    edge_name = get_input_edge(
-                        target_point.target_node_name,
-                        self.input_edges_mapping,
-                        self.node_mapping,
-                    )
-                elif target_point.type == TargetType.POST_LAYER_OPERATION:
-                    node = self.node_mapping[target_point.target_node_name]
-                    edge_name = node.output[port_id]
-                elif target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
-                    node = self.node_mapping[target_point.target_node_name]
-                    edge_name = node.input[port_id]
-                statistic_point.register_tensor(outputs[edge_name])
+        for _, statistic_point, tensor_collector in statistic_points.get_tensor_collectors():
+            target_point = statistic_point.target_point
+            port_id = target_point.port_id
+
+            if target_point.target_node_name in self.input_edges_mapping:  # Input case
+                edge_name = get_input_edge(
+                    target_point.target_node_name,
+                    self.input_edges_mapping,
+                    self.node_mapping,
+                )
+            elif target_point.type == TargetType.POST_LAYER_OPERATION:
+                node = self.node_mapping[target_point.target_node_name]
+                edge_name = node.output[port_id]
+            elif target_point.type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
+                node = self.node_mapping[target_point.target_node_name]
+                edge_name = node.input[port_id]
+            else:
+                RuntimeError(f"Unsupported target point type for statistic aggregator: {target_point.type}")
+
+            input_info = []
+            for reducer in tensor_collector.reducers:
+                input_info.append((hash(reducer), [edge_name]))
+
+            target_inputs = TensorCollector.get_tensor_collector_inputs(outputs, input_info)
+            tensor_collector.register_inputs(target_inputs)
 
     def _get_transformation_layout_extra_outputs(
         self, statistic_points: StatisticPointsContainer

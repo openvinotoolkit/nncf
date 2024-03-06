@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 import openvino.runtime as ov
@@ -54,10 +54,17 @@ class OVOutputInsertionCommand(OVInsertionCommand):
 
 
 class OVInplaceFnInsertionCommand(OVInsertionCommand):
-    def __init__(self, target_point: OVTargetPoint, inplace_op_fn: InplaceInsertionFnType, fn_output_port_id: int):
+    def __init__(
+        self,
+        target_point: OVTargetPoint,
+        inplace_op_fn: InplaceInsertionFnType,
+        fn_output_port_id: int,
+        last_inplace_node_name: str,
+    ):
         super().__init__(target_point)
         self.inplace_op_fn = inplace_op_fn
         self.fn_output_port_id = fn_output_port_id
+        self.last_inplace_node_name = last_inplace_node_name
 
     def union(self, other: "TransformationCommand") -> "TransformationCommand":
         # Have a look at nncf/torch/graph/transformations/commands/PTInsertionCommand
@@ -121,14 +128,16 @@ class OVModelExtractionCommand(Command):
     Extracts sub-graph based on the sub-model input and output names.
     """
 
-    def __init__(self, inputs: List[str], outputs: List[str]):
+    def __init__(self, input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]):
         """
-        :param inputs: List of the input names that denote the sub-graph beginning.
-        :param outputs: List of the output names that denote the sub-graph ending.
+        :param input_ids: List of the input IDs: pairs of node names and correspondent input port ids.
+            Each pair denotes the sub-graph beginning.
+        :param output_ids: List of the output IDs: pairs of node names and correspondent output port ids.
+            Each pair denotes the sub-graph ending.
         """
         super().__init__(TransformationType.EXTRACT)
-        self.inputs = inputs
-        self.outputs = outputs
+        self.input_ids = input_ids
+        self.output_ids = output_ids
 
 
 class OVBiasInsertionCommand(TransformationCommand):

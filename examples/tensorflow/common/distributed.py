@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,6 +13,7 @@ import os
 
 import tensorflow as tf
 
+import nncf
 from examples.tensorflow.common.utils import set_memory_growth
 
 
@@ -27,7 +28,7 @@ def get_distribution_strategy(config):
         if "CUDA_VISIBLE_DEVICES" not in os.environ or _gpu_id in os.environ["CUDA_VISIBLE_DEVICES"].split(","):
             os.environ["CUDA_VISIBLE_DEVICES"] = _gpu_id
         else:
-            raise RuntimeError(
+            raise nncf.ValidationError(
                 "GPU with id = {id} was not found in the specified "
                 "CUDA_VISIBLE_DEVICES environment variable. "
                 "Please do not export the CUDA_VISIBLE_DEVICES environment variable "

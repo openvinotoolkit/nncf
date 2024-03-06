@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -119,7 +119,7 @@ def validate(model: torch.nn.Module, dataset: COCO128Dataset, device: torch.devi
     with torch.no_grad():
         for img, target in track(dataset, description="Validating"):
             prediction = model(img.to(device)[None])[0]
-            for k in prediction.keys():
+            for k in prediction:
                 prediction[k] = prediction[k].to(torch.device("cpu"))
             metric.update([prediction], [target])
     computed_metrics = metric.compute()

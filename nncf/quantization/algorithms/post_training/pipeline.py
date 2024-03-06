@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -72,8 +72,6 @@ def create_ptq_pipeline(
         fine-tuning the quantization algorithm
     :return: A post-training quantization pipeline.
     """
-    if target_device is TargetDevice.VPU:
-        warning_deprecated("VPU device is deprecated and will no longer be supported in the future.")
 
     if advanced_parameters is None:
         advanced_parameters = AdvancedQuantizationParameters()

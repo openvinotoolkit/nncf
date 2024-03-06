@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional, Set, Type
 
 import jstyleson as json
 
+import nncf
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization import quantizers as quant
@@ -31,13 +32,13 @@ from nncf.definitions import NNCF_PACKAGE_ROOT_DIR
 class HWConfigType(Enum):
     CPU = "CPU"
     GPU = "GPU"
-    VPU = "VPU"
+    NPU = "NPU"
 
 
 HW_CONFIG_TYPE_TARGET_DEVICE_MAP = {
     "ANY": HWConfigType.CPU.value,
     "CPU": HWConfigType.CPU.value,
-    "VPU": HWConfigType.VPU.value,
+    "NPU": HWConfigType.NPU.value,
     "GPU": HWConfigType.GPU.value,
     "CPU_SPR": HWConfigType.CPU.value,
 }
@@ -66,7 +67,7 @@ class HWConfig(list, ABC):
     UNIFIED_TYPE_NAME = "unified"
     ADJUST_PADDING_ATTRIBUTE_NAME = "adjust_padding"
 
-    TYPE_TO_CONF_NAME_DICT = {HWConfigType.CPU: "cpu.json", HWConfigType.VPU: "vpu.json", HWConfigType.GPU: "gpu.json"}
+    TYPE_TO_CONF_NAME_DICT = {HWConfigType.CPU: "cpu.json", HWConfigType.NPU: "npu.json", HWConfigType.GPU: "gpu.json"}
 
     def __init__(self):
         super().__init__()
@@ -140,7 +141,7 @@ class HWConfig(list, ABC):
             return QuantizationMode.SYMMETRIC
         if str_val == "asymmetric":
             return QuantizationMode.ASYMMETRIC
-        raise RuntimeError("Invalid quantization type specified in HW config")
+        raise nncf.ValidationError("Invalid quantization type specified in HW config")
 
     @staticmethod
     def get_is_per_channel_from_config_value(str_val: str):
@@ -148,7 +149,7 @@ class HWConfig(list, ABC):
             return True
         if str_val == "pertensor":
             return False
-        raise RuntimeError("Invalid quantization granularity specified in HW config")
+        raise nncf.ValidationError("Invalid quantization granularity specified in HW config")
 
     @staticmethod
     def get_qconf_from_hw_config_subdict(quantization_subdict: Dict):

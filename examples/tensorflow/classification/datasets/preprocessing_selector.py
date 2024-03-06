@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import nncf
 from examples.tensorflow.classification.datasets.preprocessing.cifar import cifar10_preprocess_image
 from examples.tensorflow.classification.datasets.preprocessing.cifar import cifar100_preprocess_image
 from examples.tensorflow.classification.datasets.preprocessing.imagenet import imagenet_1000_to_1001_classes
@@ -29,7 +30,7 @@ def get_preprocessing(dataset_name, model_name, preset=None):
     if not preset:
         preset = dataset_name
     if preset not in PREPROCESSING_FN_MAP:
-        raise ValueError(
+        raise nncf.ValidationError(
             "Preprocessing for dataset {} and model {} was not recognized".format(dataset_name, model_name)
         )
 

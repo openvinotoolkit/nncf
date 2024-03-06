@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -103,10 +103,6 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
             dataset_samples[0][0, i, 0, 0] = value["max"]
             dataset_samples[0][0, i, 0, 1] = value["min"]
         return dataset_samples
-
-    @pytest.fixture
-    def is_stat_in_shape_of_scale(self) -> bool:
-        return True
 
     @pytest.fixture
     def is_backend_support_custom_estimators(self) -> bool:

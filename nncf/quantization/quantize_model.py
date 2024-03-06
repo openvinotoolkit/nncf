@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,9 +11,9 @@
 
 from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
+import nncf
 from nncf.api.compression import TModel
 from nncf.common.deprecation import warning_deprecated
-from nncf.common.factory import NNCFGraphFactory
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
@@ -31,7 +31,6 @@ from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResult
 from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
 from nncf.quantization.algorithms.hyperparameter_tuner.param_grid import get_quantization_param_grids
 from nncf.quantization.algorithms.post_training.pipeline import create_ptq_pipeline
-from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.scopes import IgnoredScope
 
 TTensor = TypeVar("TTensor")
@@ -156,7 +155,7 @@ def quantize(
             advanced_parameters=advanced_parameters,
         )
 
-    raise RuntimeError(f"Unsupported type of backend: {backend}")
+    raise nncf.UnsupportedBackendError(f"Unsupported type of backend: {backend}")
 
 
 @api(canonical_alias="nncf.quantize_with_accuracy_control")
@@ -244,8 +243,27 @@ def quantize_with_accuracy_control(
             advanced_quantization_parameters,
             advanced_accuracy_restorer_parameters,
         )
+    if backend == BackendType.ONNX:
+        from nncf.onnx.quantization.quantize_model import quantize_with_accuracy_control_impl
 
-    raise RuntimeError(f"Unsupported type of backend: {backend}")
+        return quantize_with_accuracy_control_impl(
+            model,
+            calibration_dataset,
+            validation_dataset,
+            validation_fn,
+            max_drop,
+            drop_type,
+            preset,
+            target_device,
+            subset_size,
+            fast_bias_correction,
+            model_type,
+            ignored_scope,
+            advanced_quantization_parameters,
+            advanced_accuracy_restorer_parameters,
+        )
+
+    raise nncf.UnsupportedBackendError(f"Unsupported type of backend: {backend}")
 
 
 @api(canonical_alias="nncf.compress_weights")
@@ -258,6 +276,9 @@ def compress_weights(
     all_layers: Optional[bool] = None,
     dataset: Optional[Dataset] = None,
     sensitivity_metric: Optional[SensitivityMetric] = None,
+    *,
+    subset_size: Optional[int] = 128,
+    awq: Optional[bool] = None,
 ) -> TModel:
     """
     Compress model weights.
@@ -281,11 +302,14 @@ def compress_weights(
         The value -1 means no grouping.
     :param ignored_scope: An ignored scope that defined the list of model control
         flow graph nodes to be ignored during quantization.
-    :param all_layers: Indicates whether embeddings and last layers should be compressed to a primary
-        precision. By default, the backup precision is assigned for the embeddings and last layers.
+    :param all_layers: Indicates whether embeddings and last MatMul layers should be compressed to a primary
+        precision. By default, the backup precision is assigned for the embeddings and last MatMul layers.
     :param dataset: Dataset used for assigning different quantization precision by finding outliers in activations.
     :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
         preserve the accuracy of the model, the more sensitive layers receives a higher precision.
+    :param subset_size: Number of data samples to calculate activation statistics used for assigning different
+        quantization precision. Defaults to 128.
+    :param awq: Indicates whether use AWQ weights correction.
     :return: The non-trainable model with compressed weights.
     """
     if mode == CompressWeightsMode.INT8:
@@ -295,15 +319,21 @@ def compress_weights(
         mode = CompressWeightsMode.INT8_ASYM
 
     backend = get_backend(model)
+    compression_weights_impl = None
+
     if backend == BackendType.TORCH:
         from nncf.torch.model_creation import is_wrapped_model
         from nncf.torch.model_creation import wrap_model
+        from nncf.torch.quantization.quantize_model import compress_weights_impl as pt_compression_weights_impl
 
         if mode not in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
             raise AttributeError(
                 "Torch backend supports only INT8_ASYM, INT8_SYM modes for weight compression, "
                 f"but given {mode.value} mode."
             )
+
+        if awq is True:
+            raise AttributeError("Torch backend doesn`t supports AWQ algorithm, but awq=True is specified.")
 
         if is_wrapped_model(model):
             if not model.nncf.trace_parameters:
@@ -319,6 +349,12 @@ def compress_weights(
             example_input = next(iter(dataset.get_inference_data()))
             model = wrap_model(model, example_input=example_input, trace_parameters=True)
             dataset = None
+        compression_weights_impl = pt_compression_weights_impl
+
+    if backend == BackendType.OPENVINO:
+        from nncf.openvino.quantization.quantize_model import compress_weights_impl as ov_compress_weights_impl
+
+        compression_weights_impl = ov_compress_weights_impl
 
     if mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT8_SYM]:
         if ratio is None:
@@ -330,10 +366,10 @@ def compress_weights(
                 "INT8 mode assumes per-channel quantization of all layers in 8 bit. "
                 "Default values of `ratio` (1) and `group_size` (-1) parameters can not be overridden"
             )
-        options = [all_layers, sensitivity_metric, dataset]
+        options = [all_layers, sensitivity_metric, dataset, awq]
         if any(option is not None for option in options):
             raise AttributeError(
-                "INT8 modes do not support `all_layers`, `sensitivity_metric` and `dataset` options."
+                "INT8 modes do not support `all_layers`, `sensitivity_metric`, `awq` and `dataset` options. "
                 "Set them to None."
             )
 
@@ -343,6 +379,8 @@ def compress_weights(
         group_size = 128
     if all_layers is None:
         all_layers = False
+    if awq is None:
+        awq = False
     if ignored_scope is None:
         ignored_scope = IgnoredScope()
     if sensitivity_metric is None:
@@ -356,13 +394,17 @@ def compress_weights(
             f"Mixed precision selection based on the given sensitivity metric={sensitivity_metric.value} requires "
             "a dataset, but it's not provided."
         )
-
     if ratio < 0 or ratio > 1:
-        raise ValueError(f"The ratio should be between 0 and 1, but ration={ratio} is specified.")
+        raise ValueError(f"The ratio should be between 0 and 1, but ratio={ratio} is specified.")
+    if subset_size is None or subset_size <= 0:
+        raise ValueError(f"The subset_size value should be positive, but subset_size={subset_size} is given.")
 
-    compression_algorithm = WeightCompression(mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric)
-    graph = NNCFGraphFactory.create(model)
-    return compression_algorithm.apply(model, graph, dataset=dataset)
+    if compression_weights_impl is None:
+        raise nncf.UnsupportedBackendError(f"Unsupported type of backend: {backend}")
+
+    return compression_weights_impl(
+        model, dataset, mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric, awq, subset_size
+    )
 
 
 def quantize_with_tune_hyperparams(

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,13 +14,18 @@ from typing import Optional
 
 import torch
 
+import nncf
+from nncf.common.factory import NNCFGraphFactory
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
+from nncf.parameters import CompressWeightsMode
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
+from nncf.parameters import SensitivityMetric
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
 from nncf.scopes import IgnoredScope
 from nncf.torch.model_creation import wrap_model
 
@@ -45,7 +50,7 @@ def quantize_impl(
     if fast_bias_correction is False:
         raise ValueError(f"fast_bias_correction={fast_bias_correction} is not supported")
     if target_device == TargetDevice.CPU_SPR:
-        raise RuntimeError("target_device == CPU_SPR is not supported")
+        raise nncf.InternalError("target_device == CPU_SPR is not supported")
     if mode is not None:
         raise ValueError(f"mode={mode} is not supported")
 
@@ -71,3 +76,26 @@ def quantize_impl(
     quantized_model.nncf.disable_dynamic_graph_building()
 
     return quantized_model
+
+
+def compress_weights_impl(
+    model: torch.nn.Module,
+    dataset: Dataset,
+    mode: CompressWeightsMode,
+    ratio: float,
+    group_size: int,
+    ignored_scope: IgnoredScope,
+    all_layers: bool,
+    sensitivity_metric: SensitivityMetric,
+    awq: bool,
+    subset_size: int,
+) -> torch.nn.Module:
+    """
+    Implementation of the `compress_weights()` method for the PyTorch backend.
+    """
+
+    compression_algorithm = WeightCompression(
+        mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric, awq, subset_size
+    )
+    graph = NNCFGraphFactory.create(model)
+    return compression_algorithm.apply(model, graph, dataset=dataset)

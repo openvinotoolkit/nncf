@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -148,7 +148,7 @@ class QuantizationEnv:
 
         # Check and only proceed if target device is supported by Q.Env
         self.hw_cfg_type = hw_config_type
-        assert self.hw_cfg_type in [None, HWConfigType.VPU]
+        assert self.hw_cfg_type in [None, HWConfigType.NPU]
 
         # Set target compression ratio
         self.compression_ratio = params.compression_ratio
@@ -170,7 +170,7 @@ class QuantizationEnv:
         # Configure search space for precision according to target device
         if self.hw_cfg_type is None:
             self.model_bitwidth_space = params.bits
-        elif self.hw_cfg_type is HWConfigType.VPU:
+        elif self.hw_cfg_type is HWConfigType.NPU:
             self.model_bitwidth_space = self._hw_precision_constraints.get_all_unique_bitwidths()
         self.model_bitwidth_space = sorted(list(self.model_bitwidth_space))
 
@@ -179,7 +179,7 @@ class QuantizationEnv:
             self.qctrl.all_quantizations.keys()
         )
         if self.hw_cfg_type is None:
-            for qid in self.qconfig_space_map.keys():
+            for qid in self.qconfig_space_map:
                 conf = self.qctrl.all_quantizations[qid].get_quantizer_config()
                 conf_list_to_set = []
                 for bit in self.model_bitwidth_space:

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -54,8 +54,10 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
         return create_bias_correction_command(node, bias_value.data)
 
     @staticmethod
-    def model_extraction_command(inputs: List[str], outputs: List[str]) -> PTModelExtractionWithFusedBiasCommand:
-        return PTModelExtractionWithFusedBiasCommand(inputs[0])
+    def model_extraction_command(
+        input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]
+    ) -> PTModelExtractionWithFusedBiasCommand:
+        return PTModelExtractionWithFusedBiasCommand(input_ids[0][0])
 
     @staticmethod
     def mean_statistic_collector(

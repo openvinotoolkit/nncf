@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,6 +13,7 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
+import nncf
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionAlgorithmController
@@ -66,7 +67,7 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController, ABC):
     @property
     def name(self):
         if self._name is None:
-            raise RuntimeError("Internal error: name of the controller is not set!")
+            raise nncf.InternalError("Internal error: name of the controller is not set!")
         return self._name
 
     @property
@@ -177,7 +178,7 @@ class BaseCompressionAlgorithmController(CompressionAlgorithmController, ABC):
         :return: The compression state.
         """
         if self._builder_state is None:
-            raise RuntimeError("Internal error: builder state is not set for the controller")
+            raise nncf.InternalError("Internal error: builder state is not set for the controller")
 
         return {self.BUILDER_STATE: self._builder_state, self.CONTROLLER_STATE: self.get_state()}
 

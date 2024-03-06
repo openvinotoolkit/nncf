@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -847,7 +847,7 @@ TEST_HW_MODELS_DESC = [
     ModelDesc("mobilenet_v2", test_models.MobileNetV2, [2, 3, 32, 32]),
 ]
 
-TYPE_HW = [(HWConfigType.CPU), (HWConfigType.GPU), (HWConfigType.VPU)]
+TYPE_HW = [(HWConfigType.CPU), (HWConfigType.GPU), (HWConfigType.NPU)]
 
 
 @pytest.fixture(scope="function", params=TYPE_HW)

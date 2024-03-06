@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -94,7 +94,7 @@ class BaseEvaluator:
         :param subnet_config_repr: tuple representing the values for the associated design variables.
         :return: (True if the information is in cache, and corresponding value stored in cache, 0 otherwise)
         """
-        if subnet_config_repr in self.cache.keys():
+        if subnet_config_repr in self.cache:
             return True, self.cache[subnet_config_repr]
         return False, 0
 

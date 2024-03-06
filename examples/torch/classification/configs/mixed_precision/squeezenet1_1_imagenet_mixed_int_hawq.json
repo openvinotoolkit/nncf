@@ -21,7 +21,7 @@
         },
         "weight_decay": 1e-05
     },
-    "target_device": "VPU",
+    "target_device": "NPU",
     "compression": {
         "algorithm": "quantization",
         "initializer": {

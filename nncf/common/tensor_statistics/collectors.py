@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -21,7 +21,7 @@ from nncf.common.tensor import TensorElementsType
 from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.reduction import get_per_channel_history
 
-ReductionAxes = Tuple[int]
+ReductionAxes = Tuple[int, ...]
 
 
 class TensorStatisticCollectorBase(ABC):

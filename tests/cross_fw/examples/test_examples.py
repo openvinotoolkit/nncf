@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -52,6 +52,9 @@ def test_examples(
     is_check_performance: bool,
     ov_version_override: str,
 ):
+    if example_name == "llm_tune_params":
+        pytest.xfail("ticket 133681")
+
     backend = example_params["backend"]
     skip_if_backend_not_selected(backend, backends_list)
     venv_path = create_venv_with_nncf(tmp_path, "pip_e_local", "venv", set([backend]))

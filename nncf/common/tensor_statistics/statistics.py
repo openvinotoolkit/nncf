@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -87,7 +87,7 @@ class PercentileTensorStatistic(TensorStatistic):
     def __eq__(self, other: "PercentileTensorStatistic", rtol=1e-9) -> bool:
         if Counter(self.percentile_vs_values_dict.keys()) != Counter(other.percentile_vs_values_dict.keys()):
             return False
-        for pct in self.percentile_vs_values_dict.keys():
+        for pct in self.percentile_vs_values_dict:
             if not self.tensor_eq(self.percentile_vs_values_dict[pct], other.percentile_vs_values_dict[pct]):
                 return False
         return True

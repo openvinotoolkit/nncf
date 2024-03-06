@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,6 +15,7 @@ Base subpackage for NNCF TensorFlow functionality.
 import tensorflow
 from packaging import version
 
+import nncf
 from nncf import nncf_logger
 from nncf.common.logging.logger import warn_bkc_version_mismatch
 from nncf.version import BKC_TF_VERSION
@@ -30,7 +31,7 @@ tensorflow_version_major, tensorflow_version_minor = tuple(map(int, tensorflow_v
 if not tensorflow_version.startswith(BKC_TF_VERSION[:-2]):
     warn_bkc_version_mismatch("tensorflow", BKC_TF_VERSION, _tf_version)
 elif not (tensorflow_version_major == 2 and 8 <= tensorflow_version_minor <= 13):
-    raise RuntimeError(
+    raise nncf.UnsupportedVersionError(
         f"NNCF only supports 2.8.4 <= tensorflow <= 2.13.*, while current tensorflow version is {_tf_version}"
     )
 

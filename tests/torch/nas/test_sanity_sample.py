@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,19 +9,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import importlib
 from pathlib import Path
 from typing import Dict
 
 import pytest
 
 from nncf.common.initialization.batchnorm_adaptation import BatchnormAdaptationAlgorithm
+from nncf.experimental.torch.nas.bootstrapNAS import BaseSearchAlgorithm
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_depth import ElasticDepthHandler
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elastic_width import ElasticWidthHandler
+from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_controller import ElasticityController
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.multi_elasticity_handler import MultiElasticityHandler
+from nncf.experimental.torch.nas.bootstrapNAS.search.search import NSGA2SearchAlgorithm
 from nncf.experimental.torch.nas.bootstrapNAS.training.progressive_shrinking_controller import (
     ProgressiveShrinkingController,
 )
 from nncf.experimental.torch.nas.bootstrapNAS.training.scheduler import BootstrapNASScheduler
+from tests.shared.command import arg_list_from_arg_dict
 from tests.shared.paths import TEST_ROOT
 from tests.torch.sample_test_validator import SampleType
 from tests.torch.sample_test_validator import SanitySampleValidator
@@ -40,7 +45,9 @@ class NASSampleTestDescriptor(SanityTestCaseDescriptor):
         return TEST_ROOT / "torch" / "data" / "configs" / "nas"
 
     def get_validator(self) -> "NASSampleValidator":
-        return NASSampleValidator(self)
+        if self.sample_type_ == SampleType.CLASSIFICATION_NAS_SEARCH:
+            return NASSearchSampleValidator(self)
+        return NASTrainSampleValidator(self)
 
     def get_compression_section(self):
         pass
@@ -58,11 +65,14 @@ class NASSampleValidator(SanitySampleValidator):
         self._desc = desc
         self._all_spies = []
 
-    def setup_spy(self, mocker):
-        # Need to mock SafeMLFLow to prevent starting a not closed mlflow session due to memory leak of config and
-        # SafeMLFLow, which happens with a mocked train function
-        self._sample_handler.mock_mlflow(mocker)
+    def validate_spy(self):
+        for spy in self._all_spies:
+            spy.assert_called()
 
+
+class NASTrainSampleValidator(NASSampleValidator):
+    def setup_spy(self, mocker):
+        super().setup_spy(mocker)
         self._all_spies = [
             mocker.spy(ElasticWidthHandler, "get_random_config"),
             mocker.spy(ElasticWidthHandler, "reorganize_weights"),
@@ -77,9 +87,19 @@ class NASSampleValidator(SanitySampleValidator):
             mocker.spy(BatchnormAdaptationAlgorithm, "run"),
         ]
 
-    def validate_spy(self):
-        for spy in self._all_spies:
-            spy.assert_called()
+
+class NASSearchSampleValidator(NASSampleValidator):
+    def setup_spy(self, mocker):
+        super().setup_spy(mocker)
+        self._all_spies = [
+            mocker.spy(ElasticityController, "load_state"),
+            mocker.spy(BaseSearchAlgorithm, "from_config"),
+            mocker.spy(BaseSearchAlgorithm, "search_progression_to_csv"),
+            mocker.spy(NSGA2SearchAlgorithm, "run"),
+            mocker.spy(NSGA2SearchAlgorithm, "visualize_search_progression"),
+            mocker.spy(NSGA2SearchAlgorithm, "evaluators_to_csv"),
+            mocker.spy(MultiElasticityHandler, "activate_subnet_for_config"),
+        ]
 
 
 NAS_TEST_CASE_DESCRIPTORS = [
@@ -100,4 +120,26 @@ def fixture_nas_desc(request, dataset_dir):
 def test_e2e_supernet_training(nas_desc: NASSampleTestDescriptor, tmp_path, mocker):
     validator = nas_desc.get_validator()
     args = validator.get_default_args(tmp_path)
+    validator.validate_sample(args, mocker)
+
+
+@pytest.mark.nightly
+def test_e2e_supernet_search(nas_desc: NASSampleTestDescriptor, tmp_path, mocker):
+    # Train a supernet and save it to the specified path
+    validator = nas_desc.get_validator()
+    args = validator.get_default_args(tmp_path)
+    output_dir = tmp_path / "output_dir"
+    args["--checkpoint-save-dir"] = output_dir
+    arg_list = arg_list_from_arg_dict(args)
+    main_location = nas_desc.sample_handler.get_main_location()
+    sample = importlib.import_module(main_location)
+    sample.main(arg_list)
+
+    nas_desc.sample_type(SampleType.CLASSIFICATION_NAS_SEARCH)
+    validator = nas_desc.get_validator()
+    args = validator.get_default_args(tmp_path)
+    # Load the supernet to search
+    args["--supernet-weights"] = output_dir / "last_model_weights.pth"
+    args["--elasticity-state-path"] = output_dir / "last_elasticity.pth"
+    args["--search-mode"] = True
     validator.validate_sample(args, mocker)

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,14 +10,17 @@
 # limitations under the License.
 import json
 from copy import deepcopy
+from pathlib import Path
 from typing import Tuple
 
 import numpy as np
 import openvino.runtime as ov
 from packaging import version
 
+import nncf
 from nncf import Dataset
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
+from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.shared.nx_graph import compare_nx_graph_with_reference
 
 
@@ -80,3 +83,33 @@ def get_openvino_version() -> str:
     major_verison, minor_version = get_openvino_major_minor_version()
 
     return f"{major_verison}.{minor_version}"
+
+
+def get_actual_reference_for_current_openvino(rel_path: Path) -> Path:
+    """
+    Get path to actual reference file.
+
+    :param rel_path: Relative path to reference file.
+
+    :return: Path to reference file or raise RuntimeError.
+    """
+    root_dir = OPENVINO_NATIVE_TEST_ROOT / "data"
+    current_ov_version = version.parse(get_openvino_version())
+
+    def is_valid_version(dir_path: Path) -> bool:
+        try:
+            version.parse(dir_path.name)
+        except version.InvalidVersion:
+            return False
+        return True
+
+    ref_versions = filter(is_valid_version, root_dir.iterdir())
+    ref_versions = sorted(ref_versions, key=lambda x: version.parse(x.name), reverse=True)
+    ref_versions = filter(lambda x: version.parse(x.name) <= current_ov_version, ref_versions)
+
+    for root_version in ref_versions:
+        file_name = root_version / rel_path
+        if file_name.is_file():
+            return file_name
+
+    raise nncf.InternalError(f"Not found file {root_dir}/{current_ov_version}/{rel_path}")

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,6 +14,7 @@ from typing import Dict, List, Set, Tuple
 
 import torch
 
+import nncf
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.api_marker import api
@@ -109,7 +110,7 @@ class ProcessedKeys:
         for keys in self._keys.values():
             all_processed_keys.extend(keys)
 
-        for key in model_state_dict.keys():
+        for key in model_state_dict:
             if key not in all_processed_keys:
                 if key.endswith(params_to_skip) or key in optional_param_names:
                     self.add_key(key, ProcessedKeyStatus.SKIPPED)
@@ -140,7 +141,7 @@ class ProcessedKeys:
         if error_msgs:
             error_msg = "Error(s) when loading model parameters:\n\t{}".format("\n\t".join(error_msgs))
             if is_resume:
-                raise RuntimeError(error_msg)
+                raise nncf.InternalError(error_msg)
             nncf_logger.error(error_msg)
 
 

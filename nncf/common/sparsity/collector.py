@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -72,7 +72,9 @@ class WeightDescription:
         return self._is_sparse
 
 
-def _calculate_sparsity_level_for_model(weight_descriptions: List[WeightDescription]) -> float:
+def _calculate_sparsity_level_for_model(
+    weight_descriptions: List[WeightDescription],
+) -> float:
     """
     Calculates the sparsity level for the whole model.
 
@@ -121,7 +123,9 @@ class BaseSparseModelStatisticsCollector(StatisticsCollector):
             sparse_layers_summary.append(SparsifiedLayerSummary(w.name, w.shape, w.sparsity_level, weight_percentage))
 
         sparse_model_stats = SparsifiedModelStatistics(
-            sparsity_level_for_model, sparsity_level_for_sparse_layers, sparse_layers_summary
+            sparsity_level_for_model,
+            sparsity_level_for_sparse_layers,
+            sparse_layers_summary,
         )
 
         return sparse_model_stats

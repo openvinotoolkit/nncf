@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -283,7 +283,7 @@ class ShareEdgesQuantizedDataPathStatisticsCollector(StatisticsCollector):
                     node_name = str(node[NNCFNode.NODE_NAME_ATTR])
 
                     matched = False
-                    for aq_key in self._compressed_model.nncf.external_quantizers.keys():
+                    for aq_key in self._compressed_model.nncf.external_quantizers:
                         if node_name in aq_key:
                             matched = True
                             break
