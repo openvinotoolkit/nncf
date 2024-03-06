@@ -116,27 +116,22 @@ def post_training_quantization_onnx_yolo8_quantize_with_accuracy_control() -> Di
 
 
 def post_training_quantization_openvino_anomaly_stfpm_quantize_with_accuracy_control() -> Dict[str, float]:
-    sys.path.append(
-        str(
-            PROJECT_ROOT
-            / "examples"
-            / "post_training_quantization"
-            / "openvino"
-            / "anomaly_stfpm_quantize_with_accuracy_control"
-        )
+    from examples.post_training_quantization.openvino.anomaly_stfpm_quantize_with_accuracy_control.main import (
+        run_example as anomaly_stfpm_main,
     )
-    import main as stfpm
+
+    fp32_top1, int8_top1, fp32_fps, int8_fps, fp32_size, int8_size = anomaly_stfpm_main()
 
     return {
-        "fp32_top1": float(stfpm.fp32_top1),
-        "int8_top1": float(stfpm.int8_top1),
-        "accuracy_drop": float(stfpm.fp32_top1 - stfpm.int8_top1),
-        "fp32_fps": stfpm.fp32_fps,
-        "int8_fps": stfpm.int8_fps,
-        "performance_speed_up": stfpm.int8_fps / stfpm.fp32_fps,
-        "fp32_model_size": stfpm.fp32_size,
-        "int8_model_size": stfpm.int8_size,
-        "model_compression_rate": stfpm.fp32_size / stfpm.int8_size,
+        "fp32_top1": float(fp32_top1),
+        "int8_top1": float(int8_top1),
+        "accuracy_drop": float(fp32_top1 - int8_top1),
+        "fp32_fps": fp32_fps,
+        "int8_fps": int8_fps,
+        "performance_speed_up": int8_fps / fp32_fps,
+        "fp32_model_size": fp32_size,
+        "int8_model_size": int8_size,
+        "model_compression_rate": fp32_size / int8_size,
     }
 
 
