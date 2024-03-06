@@ -36,16 +36,6 @@ from tests.post_training.pipelines.base import PTQTestPipeline
 # Disable using aten::scaled_dot_product_attention
 set_fused_attn(False, False)
 
-BATCH_SIZE_NOT_A_DIVISOR_MESSAGE = (
-    "The model validation will be done with batch_size=1 because the provided batch_size value "
-    "is not a divisor of the length of the validation dataset. The compressed model also "
-    "will be reshaped to a shape with batch_size=1."
-)
-BATCH_SIZE_OPTION_RECOMMENDATION_MESSAGE = (
-    "To avoid model reshaping, please, provide the --batch_size option which "
-    "is a divisor of the length of the validation dataset."
-)
-
 
 class ImageClassificationTimm(PTQTestPipeline):
     """Pipeline for Image Classification model from timm repository"""
@@ -57,13 +47,21 @@ class ImageClassificationTimm(PTQTestPipeline):
         self.model_cfg = timm_model.default_cfg
         self.input_size = [self.batch_size] + list(timm_model.default_cfg["input_size"])
         self.dummy_tensor = torch.rand(self.input_size)
+        if self.dynamic_batch_shape:
+            self.input_size[0] = -1
 
         if self.backend in PT_BACKENDS:
             self.model = timm_model
 
         if self.backend == BackendType.ONNX:
             onnx_path = self.fp32_model_dir / "model_fp32.onnx"
-            torch.onnx.export(timm_model, self.dummy_tensor, onnx_path, export_params=True, opset_version=13)
+            additional_kwargs = {}
+            if self.dynamic_batch_shape:
+                additional_kwargs["input_names"] = ["image"]
+                additional_kwargs["dynamic_axes"] = {"image": {0: "batch"}}
+            torch.onnx.export(
+                timm_model, self.dummy_tensor, onnx_path, export_params=True, opset_version=13, **additional_kwargs
+            )
             self.model = onnx.load(onnx_path)
             self.input_name = self.model.graph.input[0].name
 
@@ -128,24 +126,20 @@ class ImageClassificationTimm(PTQTestPipeline):
 
     def _validate(self):
         val_dataset = datasets.ImageFolder(root=self.data_dir / "imagenet" / "val", transform=self.transform)
+        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=self.batch_size, num_workers=2, shuffle=False)
         dataset_size = len(val_dataset)
+        if dataset_size % self.batch_size != 0 and not self.dynamic_batch_shape:
+            raise ValueError(
+                (
+                    "Because the batch_size is not a divisor of the length of the dataset, "
+                    "the one of the data tensors has a shape incompatible with static model input. "
+                    "Use --dynamic_batch_shape option to export such model with dynamic shape."
+                )
+            )
+
         core = ov.Core()
         ov_model = core.read_model(self.path_compressed_ir)
         compiled_model = core.compile_model(ov_model)
-        if dataset_size % self.batch_size != 0:
-            print(BATCH_SIZE_NOT_A_DIVISOR_MESSAGE)
-            self.batch_size = 1
-            try:
-                ov_model.reshape([self.batch_size, *self.input_size[1:]])
-            except Exception as e:
-                print(
-                    (
-                        f"During model reshaping the following error occurred: {os.linesep} {e} {os.linesep}"
-                        f"{BATCH_SIZE_OPTION_RECOMMENDATION_MESSAGE}"
-                    )
-                )
-                exit()
-        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=self.batch_size, num_workers=2, shuffle=False)
         # Initialize result tensors for async inference support.
         predictions = np.zeros((dataset_size))
         references = -1 * np.ones((dataset_size))

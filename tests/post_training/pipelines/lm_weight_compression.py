@@ -71,6 +71,8 @@ class LMWeightCompression(BaseTestPipeline):
     OV_MODEL_NAME = "openvino_model.xml"
 
     def prepare_model(self) -> None:
+        if self.dynamic_batch_shape:
+            raise ValueError("The model does not support export with dynamic input shape")
         is_stateful = self.params.get("is_stateful", False)
         if is_stateful:
             self.fp32_model_dir = self.fp32_model_dir.parent / (self.fp32_model_dir.name + "_sf")
@@ -129,6 +131,9 @@ class LMWeightCompression(BaseTestPipeline):
         return transform_fn
 
     def prepare_calibration_dataset(self):
+        if self.batch_size > 1:
+            print("Batch size > 1 is not supported for causal language models. Batch size = 1 is set.")
+            self.batch_size = 1
         dataset = load_dataset("wikitext", "wikitext-2-v1", split="train", revision="b08601e")
         dataset = dataset.filter(lambda example: len(example["text"]) > 80)
         self.calibration_dataset = nncf.Dataset(dataset, self.get_transform_calibration_fn())

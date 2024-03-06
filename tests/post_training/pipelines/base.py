@@ -183,6 +183,7 @@ class BaseTestPipeline(ABC):
         reference_data: dict,
         no_eval: bool,
         run_benchmark_app: bool,
+        dynamic_batch_shape: bool,
         params: dict = None,
         batch_size: int = 1,
     ) -> None:
@@ -195,6 +196,7 @@ class BaseTestPipeline(ABC):
         self.reference_data = reference_data
         self.params = params or {}
         self.batch_size = batch_size
+        self.dynamic_batch_shape = dynamic_batch_shape
         self.no_eval = no_eval
         self.run_benchmark_app = run_benchmark_app
         self.output_model_dir: Path = self.output_dir / self.reported_name / self.backend.value

@@ -86,6 +86,8 @@ class MaskedLanguageModelingHF(PTQTestPipeline):
         return transform_func
 
     def prepare_calibration_dataset(self):
+        if self.dynamic_batch_shape:
+            raise ValueError("The model does not support export with dynamic input shape")
         if self.batch_size > 1:
             print("Batch size > 1 is not supported for masked language models. Batch size = 1 is set.")
             self.batch_size = 1

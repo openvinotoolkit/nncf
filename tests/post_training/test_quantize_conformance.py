@@ -50,6 +50,11 @@ def fixture_batch_size(pytestconfig):
     return pytestconfig.getoption("batch_size")
 
 
+@pytest.fixture(scope="session", name="dynamic_batch_shape")
+def fixture_dynamic_batch_shape(pytestconfig):
+    return pytestconfig.getoption("dynamic_batch_shape")
+
+
 @pytest.fixture(scope="session", name="subset_size")
 def fixture_subset_size(pytestconfig):
     return pytestconfig.getoption("subset_size")
@@ -202,6 +207,7 @@ def test_ptq_quantization(
     ptq_result_data: Dict[str, RunInfo],
     no_eval: bool,
     batch_size: int,
+    dynamic_batch_shape: bool,
     run_fp32_backend: bool,
     run_torch_cuda_backend: bool,
     subset_size: Optional[int],
@@ -231,6 +237,7 @@ def test_ptq_quantization(
                 "no_eval": no_eval,
                 "run_benchmark_app": run_benchmark_app,
                 "batch_size": batch_size,
+                "dynamic_batch_shape": dynamic_batch_shape,
             }
         )
         pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)
@@ -269,6 +276,7 @@ def test_weight_compression(
     wc_result_data: Dict[str, RunInfo],
     no_eval: bool,
     batch_size: int,
+    dynamic_batch_shape: bool,
     run_fp32_backend: bool,
     run_torch_cuda_backend: bool,
     subset_size: Optional[int],
@@ -294,6 +302,7 @@ def test_weight_compression(
                 "no_eval": no_eval,
                 "run_benchmark_app": run_benchmark_app,
                 "batch_size": batch_size,
+                "dynamic_batch_shape": dynamic_batch_shape,
             }
         )
         pipeline: BaseTestPipeline = pipeline_cls(**pipeline_kwargs)
