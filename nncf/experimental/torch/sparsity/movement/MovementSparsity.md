@@ -78,5 +78,5 @@ Following arguments have been defaulted to work well out of the box. However, yo
 
 ## References
 
-1. Victor Sanh, Thomas Wolf, and Alexander M. Rush. 2020. [Movement Pruning: Adaptive Sparsity by Fine-Tuning]((https://arxiv.org/pdf/2005.07683.pdf)). In Advances in Neural Information Processing Systems, 33, pp. 20378-20389.
-2. François Lagunas, Ella Charlaix, Victor Sanh, and Alexander M. Rush. 2021. [Block Pruning For Faster Transformers]((https://arxiv.org/pdf/2109.04838.pdf)). In Proceedings of the 2021 Conference on Empirical Methods in Natural Language Processing, pp. 10619–10629.
+1. Victor Sanh, Thomas Wolf, and Alexander M. Rush. 2020. [Movement Pruning: Adaptive Sparsity by Fine-Tuning](https://arxiv.org/pdf/2005.07683.pdf). In Advances in Neural Information Processing Systems, 33, pp. 20378-20389.
+2. François Lagunas, Ella Charlaix, Victor Sanh, and Alexander M. Rush. 2021. [Block Pruning For Faster Transformers](https://arxiv.org/pdf/2109.04838.pdf). In Proceedings of the 2021 Conference on Empirical Methods in Natural Language Processing, pp. 10619–10629.
