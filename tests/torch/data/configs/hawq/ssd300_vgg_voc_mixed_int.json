@@ -84,7 +84,7 @@
         "flip": true,
         "top_k": 200
     },
-    "target_device": "VPU",
+    "target_device": "NPU",
     "compression": {
         "algorithm": "quantization",
         "initializer": {

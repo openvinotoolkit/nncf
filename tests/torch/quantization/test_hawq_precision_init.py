@@ -146,8 +146,8 @@ class BaseConfigBuilder:
         self._options["device"] = config_type
         return self
 
-    def for_vpu(self):
-        return self._set_target_device(HWConfigType.VPU.value)
+    def for_npu(self):
+        return self._set_target_device(HWConfigType.NPU.value)
 
     def for_cpu(self):
         return self._set_target_device(HWConfigType.CPU.value)
@@ -207,8 +207,8 @@ class HAWQConfigBuilder(BaseConfigBuilder):
     def build(self):
         return self._config
 
-    def for_vpu(self):
-        super().for_vpu()
+    def for_npu(self):
+        super().for_npu()
         return self.strict_mode()
 
     def check_compression_ratio(self, compression_ratio=1.5):
@@ -281,8 +281,8 @@ def check_bitwidth_graph(algo_ctrl, model, path_to_dot, graph_dir, add_flops=Fal
 
 class HAWQTestStruct(NamedTuple):
     model_creator: Callable[[], nn.Module] = mobilenet_v2
-    config_builder: HAWQConfigBuilder = HAWQConfigBuilder().for_vpu()
-    filename_suffix: str = "hw_config_vpu"
+    config_builder: HAWQConfigBuilder = HAWQConfigBuilder().for_npu()
+    filename_suffix: str = "hw_config_npu"
     avg_traces_creator: Callable[[nn.Module, str], torch.Tensor] = get_avg_traces
 
     def __str__(self):
@@ -304,24 +304,24 @@ HAWQ_TEST_PARAMS = (
     HAWQTestStruct(config_builder=HAWQConfigBuilder().staged()),
     HAWQTestStruct(config_builder=HAWQConfigBuilder().for_trial()),
     HAWQTestStruct(config_builder=HAWQConfigBuilder().for_cpu()),
-    HAWQTestStruct(config_builder=HAWQConfigBuilder().for_vpu().liberal_mode().with_ratio(1.5)),
-    HAWQTestStruct(config_builder=HAWQConfigBuilder().with_ratio(1.02).for_vpu()),
+    HAWQTestStruct(config_builder=HAWQConfigBuilder().for_npu().liberal_mode().with_ratio(1.5)),
+    HAWQTestStruct(config_builder=HAWQConfigBuilder().with_ratio(1.02).for_npu()),
     HAWQTestStruct(
-        model_creator=squeezenet1_1, config_builder=HAWQConfigBuilder().with_sample_size([1, 3, 224, 224]).for_vpu()
+        model_creator=squeezenet1_1, config_builder=HAWQConfigBuilder().with_sample_size([1, 3, 224, 224]).for_npu()
     ),
-    HAWQTestStruct(model_creator=resnet50, config_builder=HAWQConfigBuilder().with_ratio(1.11).for_vpu()),
-    HAWQTestStruct(model_creator=resnet50, config_builder=HAWQConfigBuilder().for_vpu().liberal_mode().with_ratio(1.5)),
+    HAWQTestStruct(model_creator=resnet50, config_builder=HAWQConfigBuilder().with_ratio(1.11).for_npu()),
+    HAWQTestStruct(model_creator=resnet50, config_builder=HAWQConfigBuilder().for_npu().liberal_mode().with_ratio(1.5)),
     HAWQTestStruct(
         model_creator=inception_v3,
         avg_traces_creator=lambda x, y: get_avg_traces(x, y)[:95],
-        config_builder=HAWQConfigBuilder().with_sample_size([2, 3, 299, 299]).for_vpu().with_ratio(1),
+        config_builder=HAWQConfigBuilder().with_sample_size([2, 3, 299, 299]).for_npu().with_ratio(1),
     ),
     HAWQTestStruct(
         model_creator=inception_v3,
         avg_traces_creator=lambda x, y: get_avg_traces(x, y)[:94],
         config_builder=HAWQConfigBuilder()
         .with_sample_size([2, 3, 299, 299])
-        .for_vpu()
+        .for_npu()
         .liberal_mode()
         .with_ignored_scope(
             ["Inception3/BasicConv2d[Conv2d_2a_3x3]/NNCFConv2d[conv]/conv2d_0"], target_group=QuantizerGroup.WEIGHTS
@@ -333,7 +333,7 @@ HAWQ_TEST_PARAMS = (
         avg_traces_creator=lambda x, y: get_avg_traces(x, y)[:9],
         config_builder=HAWQConfigBuilder()
         .with_sample_size([2, 3, 299, 299])
-        .for_vpu()
+        .for_npu()
         .liberal_mode()
         .with_target_scope([r"{re}.*InceptionE\[Mixed_7c\].*"])
         .with_ratio(1.3)
@@ -343,15 +343,15 @@ HAWQ_TEST_PARAMS = (
     HAWQTestStruct(
         model_creator=inception_v3,
         avg_traces_creator=lambda x, y: get_avg_traces(x, y)[:95],
-        config_builder=HAWQConfigBuilder().with_sample_size([2, 3, 299, 299]).for_vpu().liberal_mode().with_ratio(1.5),
+        config_builder=HAWQConfigBuilder().with_sample_size([2, 3, 299, 299]).for_npu().liberal_mode().with_ratio(1.5),
     ),
     HAWQTestStruct(
         model_creator=ssd_vgg_512_test,
-        config_builder=HAWQConfigBuilder().with_sample_size([1, 3, 512, 512]).for_vpu().with_ratio(1.09),
+        config_builder=HAWQConfigBuilder().with_sample_size([1, 3, 512, 512]).for_npu().with_ratio(1.09),
     ),
     HAWQTestStruct(
         model_creator=ssd_vgg_512_test,
-        config_builder=HAWQConfigBuilder().with_sample_size([1, 3, 512, 512]).for_vpu().liberal_mode().with_ratio(1.5),
+        config_builder=HAWQConfigBuilder().with_sample_size([1, 3, 512, 512]).for_npu().liberal_mode().with_ratio(1.5),
     ),
 )
 
@@ -431,8 +431,8 @@ def test_can_choose_pareto_optimal_sequence(ratios):
     assert compression_ratio_per_qconfig[qconfig_sequence_index] == expected_ratio
 
 
-def test_hawq_hw_vpu_config_e2e(_seed, dataset_dir, tmp_path):
-    config = HAWQConfigBuilder().for_vpu().liberal_mode().with_ratio(1.5).build()
+def test_hawq_hw_npu_config_e2e(_seed, dataset_dir, tmp_path):
+    config = HAWQConfigBuilder().for_npu().liberal_mode().with_ratio(1.5).build()
     model = MobileNetV2(num_classes=10)
     criterion = nn.CrossEntropyLoss()
     if not dataset_dir:

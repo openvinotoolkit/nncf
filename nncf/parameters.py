@@ -31,7 +31,7 @@ class TargetDevice(StrEnum):
     ANY = "ANY"
     CPU = "CPU"
     GPU = "GPU"
-    VPU = "VPU"
+    NPU = "NPU"
     CPU_SPR = "CPU_SPR"
 
 

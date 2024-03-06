@@ -10,6 +10,14 @@ ifdef DATA
 	DATA_ARG := --data $(DATA)
 endif
 
+ifdef SOTA_DATA_DIR
+	SOTA_DATA_DIR_ARG := --sota-data-dir $(SOTA_DATA_DIR)
+endif
+
+ifdef SOTA_CHKP_DIR
+	SOTA_CHKP_DIR_ARG := --sota-checkpoints-dir $(SOTA_CHKP_DIR)
+endif
+
 ifdef WEEKLY_MODELS
 	WEEKLY_MODELS_ARG := --weekly-models $(WEEKLY_MODELS)
 endif
@@ -23,6 +31,8 @@ install-pre-commit:
 install-onnx-test:
 	pip install -U pip
 	pip install -e .[onnx]
+	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=omz-tools&subdirectory=tools/model_tools"
+	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
 	pip install -r tests/onnx/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/cross_fw/examples/requirements.txt
@@ -50,6 +60,8 @@ test-examples-onnx:
 install-openvino-test:
 	pip install -U pip
 	pip install -e .[openvino]
+	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=omz-tools&subdirectory=tools/model_tools"
+	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
 	pip install tensorflow==2.12.0
 	pip install -r tests/openvino/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
@@ -79,6 +91,8 @@ test-examples-openvino:
 install-tensorflow-test:
 	pip install -U pip
 	pip install -e .[tf]
+	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=omz-tools&subdirectory=tools/model_tools"
+	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
 	pip install -r tests/tensorflow/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/cross_fw/examples/requirements.txt
@@ -88,7 +102,12 @@ install-tensorflow-dev: install-tensorflow-test install-pre-commit
 	pip install -r examples/post_training_quantization/tensorflow/mobilenet_v2/requirements.txt
 
 test-tensorflow:
-	pytest ${COVERAGE_ARGS} tests/tensorflow    \
+	pytest ${COVERAGE_ARGS} tests/tensorflow -m "not nightly"   \
+		--junitxml ${JUNITXML_PATH}         \
+		$(DATA_ARG)
+
+test-tensorflow-nightly:
+	pytest ${COVERAGE_ARGS} tests/tensorflow -m 'nightly'  \
 		--junitxml ${JUNITXML_PATH}         \
 		$(DATA_ARG)
 
@@ -103,6 +122,8 @@ test-examples-tensorflow:
 install-torch-test:
 	pip install -U pip
 	pip install -e .[torch] --index-url https://download.pytorch.org/whl/cu118 --extra-index-url=https://pypi.org/simple  # ticket 119128
+	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=omz-tools&subdirectory=tools/model_tools"
+	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
 	pip install -r tests/torch/requirements.txt --index-url https://download.pytorch.org/whl/cu118 --extra-index-url=https://pypi.org/simple
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/cross_fw/examples/requirements.txt
@@ -128,7 +149,8 @@ test-torch-nightly:
 	pytest ${COVERAGE_ARGS} tests/torch -m nightly --junitxml ${JUNITXML_PATH} $(DATA_ARG)
 
 test-torch-weekly:
-	pytest ${COVERAGE_ARGS} tests/torch -m weekly --junitxml ${JUNITXML_PATH} $(DATA_ARG) ${WEEKLY_MODELS_ARG}
+	pytest ${COVERAGE_ARGS} tests/torch -m weekly \
+	    --junitxml ${JUNITXML_PATH} $(DATA_ARG) $(SOTA_DATA_DIR_ARG) $(SOTA_CHKP_DIR_ARG) ${WEEKLY_MODELS_ARG}
 
 test-install-torch-cpu:
 	pytest tests/cross_fw/install -s       \

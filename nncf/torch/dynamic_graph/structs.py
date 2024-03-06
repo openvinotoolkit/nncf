@@ -20,6 +20,7 @@ class NamespaceTarget(Enum):
 
     TORCH_NN_FUNCTIONAL = "torch.nn.functional"
     TORCH_TENSOR = "torch.tensor"
+    TORCH_NN_PARAMETER = "torch.nn.parameter"
     TORCH = "torch"
     EXTERNAL = "external_function"
 

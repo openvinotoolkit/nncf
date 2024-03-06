@@ -189,7 +189,7 @@ def asymmetric_range(
     :param max_values: Collected max values for the quantized insertion.
     :param quantizer_config: Config of the quantization configuration.
     :param unify_zp: Whether to unify the zero point.
-        It is `True` for the per-tensor zero point constrain on KMB (vpu2p0).
+        It is `True` for the per-tensor zero point constrain on KMB.
     :return: A Tuple
         level_low - the low quant number
         level_high - the high quant number

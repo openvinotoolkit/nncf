@@ -22,8 +22,8 @@ We provide two types of tests.
 
     You should give three arguments to run this test.
 
-    1. `--model-dir`: The directory path which includes ONNX Model ZOO models (.onnx files). See [#prepare-models](benchmarking/README.md#prepare-models) for details.
-    2. `--data-dir`: The directory path which includes datasets (ImageNet2012, COCO, Cityscapes, and VOC) [#prepare-models](benchmarking/README.md#prepare-models).
+    1. `--model-dir`: The directory path which includes ONNX Model ZOO models (.onnx files). See [#prepare-models](benchmarking/README.md#benchmark-for-onnx-models-vision) for details.
+    2. `--data-dir`: The directory path which includes datasets (ImageNet2012, COCO, Cityscapes, and VOC) [#prepare-dataset](benchmarking/README.md#1-prepare-dataset).
     3. `--output-dir`: The directory path where the test results will be saved.
     4. (Optional) `--model-names`: String containing model names to test. Model name is the prefix of the name of AccuracyChecker config before the '.' symbol. Please, provide the model names using ' ' as a separator.
     5. (Optional) `--ckpt-dir`: Directory path to save quantized models.

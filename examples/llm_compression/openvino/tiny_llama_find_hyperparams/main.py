@@ -220,8 +220,8 @@ def tiny_llama_transform_func(item, tokenizer, ov_model):  # <YOUR_TRANSFORMATIO
     position_ids = np.cumsum(attention_mask, axis=1) - 1
     position_ids[attention_mask == 0] = 1
     res = {
-        "input_ids": ov.Tensor(input_ids, input_ids.shape, input_dtypes["input_ids"]),
-        "attention_mask": ov.Tensor(attention_mask, attention_mask.shape, input_dtypes["attention_mask"]),
+        "input_ids": input_ids,
+        "attention_mask": attention_mask,
         "position_ids": position_ids.reshape(*attention_mask.shape),
     }
 

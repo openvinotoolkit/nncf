@@ -14,7 +14,7 @@
     "workers": 6,
     "multiprocessing_distributed": true,
     "epochs": 30,
-    "target_device": "VPU",
+    "target_device": "NPU",
     "compression": {
         "algorithm": "quantization",
         "initializer": {

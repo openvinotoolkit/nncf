@@ -20,11 +20,11 @@ import torch
 from addict import Dict
 from datasets import Dataset
 from onnx import numpy_helper
+from openvino._offline_transformations import apply_fused_names_cleanup
+from openvino._offline_transformations import apply_moc_transformations
+from openvino._offline_transformations import apply_pruning_transformation
 from openvino.runtime import Core
 from openvino.runtime import serialize
-from openvino.tools.mo.back.offline_transformations import apply_fused_names_cleanup
-from openvino.tools.mo.back.offline_transformations import apply_moc_transformations
-from openvino.tools.mo.back.offline_transformations import apply_user_transformations
 from packaging import version
 from scipy.special import softmax
 from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
@@ -246,14 +246,14 @@ class TestONNXExport:
         ov_model = core.read_model(onnx_model_path)
 
         # Convert to IR without pruning
-        apply_moc_transformations(ov_model)
+        apply_moc_transformations(ov_model, cf=False)
         apply_fused_names_cleanup(ov_model)
         not_pruned_file = str(tmp_path / "ov_not_pruned.xml")
         serialize(ov_model, not_pruned_file)
 
         # Convert to IR with pruning
-        apply_moc_transformations(ov_model)
-        apply_user_transformations(ov_model, [("Pruning", {})])
+        apply_moc_transformations(ov_model, cf=False)
+        apply_pruning_transformation(ov_model)
         apply_fused_names_cleanup(ov_model)
         pruned_file = str(tmp_path / "ov_pruned.xml")
         serialize(ov_model, pruned_file)

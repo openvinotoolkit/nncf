@@ -144,10 +144,10 @@ class ImageClassificationTimm(PTQTestPipeline):
         predictions = np.zeros((dataset_size))
         references = -1 * np.ones((dataset_size))
 
-        if os.environ.get("CPU_THREADS_NUM"):
+        if os.environ.get("INFERENCE_NUM_THREADS"):
             # Set CPU_THREADS_NUM for OpenVINO inference
-            cpu_threads_num = os.environ.get("CPU_THREADS_NUM")
-            core.set_property("CPU", properties={"CPU_THREADS_NUM": str(cpu_threads_num)})
+            inference_num_threads = os.environ.get("INFERENCE_NUM_THREADS")
+            core.set_property("CPU", properties={"INFERENCE_NUM_THREADS": str(inference_num_threads)})
 
         jobs = int(os.environ.get("NUM_VAL_THREADS", DEFAULT_VAL_THREADS))
         infer_queue = ov.AsyncInferQueue(compiled_model, jobs)

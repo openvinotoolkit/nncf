@@ -6,7 +6,7 @@ The sample receives a configuration file where the training schedule, hyper-para
 
 ## Features
 
-- Mask R-CNN from the official [TF repository](https://github.com/tensorflow/models/tree/master/official/vision/detection) with minor modifications (custom implementation of upsampling is replaced with equivalent tf.keras.layers.UpSampling2D).
+- Mask R-CNN from the official [TF repository](https://github.com/tensorflow/models/tree/master/official/legacy/detection) with minor modifications (custom implementation of upsampling is replaced with equivalent tf.keras.layers.UpSampling2D).
 - Support TFRecords for COCO2017 dataset.
 - Configuration file examples for sparsity, quantization, and quantization with sparsity.
 - Export to Frozen Graph or TensorFlow SavedModel that is supported by the OpenVINO™ toolkit.
