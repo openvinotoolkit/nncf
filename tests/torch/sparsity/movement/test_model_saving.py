@@ -46,6 +46,11 @@ from tests.torch.sparsity.movement.helpers import force_update_sparsifier_binary
 from tests.torch.sparsity.movement.helpers import initialize_sparsifier_parameters_by_linspace
 
 
+@pytest.fixture(scope="function", autouse=True)
+def safe_deterministic_state(_safe_deterministic_state):
+    pass
+
+
 class TestONNXExport:
     @pytest.mark.parametrize(
         "recipe",
