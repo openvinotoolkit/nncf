@@ -186,6 +186,7 @@ OPERATIONS_WITH_CONST_PORT_ID = [
 OPERATIONS_WITH_BIAS = [
     ov_metatypes.OVConvolutionMetatype,
     ov_metatypes.OVMatMulMetatype,
+    ov_metatypes.OVDepthwiseConvolutionMetatype,
 ]
 
 

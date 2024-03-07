@@ -35,7 +35,7 @@ OMZ_MODELS = [
     (
         "mobilenet-v3-small-1.0-224-tf",
         "imagenette2-320",
-        {"accuracy@top1": 0.735, "accuracy@top5": 0.919},
+        {"accuracy@top1": 0.735, "accuracy@top5": 0.925},
         AdvancedQuantizationParameters(disable_channel_alignment=False),
     ),
     ("googlenet-v3-pytorch", "imagenette2-320", {"accuracy@top1": 0.911, "accuracy@top5": 0.994}, None),

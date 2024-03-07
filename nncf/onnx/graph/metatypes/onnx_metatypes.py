@@ -14,7 +14,6 @@ from typing import Dict, List, Optional, Type
 
 import onnx
 
-import nncf
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
