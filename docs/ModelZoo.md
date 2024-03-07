@@ -2,7 +2,7 @@
 
 Here we present the results achieved using our sample scripts, example patches to third-party repositories and NNCF configuration files.
 
-The applied quantization compression algorithms are divided into two broad categories: Quantization-Aware Training ([QAT](../README.md#training-time-compression)) and Post-Training Quantization ([PTQ](../README.md#post-training-quantization)). Here we mainly report the QAT results and the PTQ results may be found on an OpenVino Performance Benchmarks [page](https://docs.openvino.ai/latest/openvino_docs_performance_benchmarks.html).
+The applied quantization compression algorithms are divided into two broad categories: Quantization-Aware Training ([QAT](../README.md#training-time-compression)) and Post-Training Quantization ([PTQ](../README.md#post-training-quantization)). Here we mainly report the QAT results and the PTQ results may be found on an OpenVino Performance Benchmarks [page](https://docs.openvino.ai/2024/about-openvino/performance-benchmarks.html).
 
 - [PyTorch](#pytorch)
   - [Classification](#pytorch-classification)

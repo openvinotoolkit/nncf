@@ -5,9 +5,9 @@ torchvision==0.17.1
 transformers==4.36.0
 onnx==1.13.1
 onnxruntime==1.14.1
-pytest==7.4.4
+pytest==8.0.2
 pytest-cov
-openvino-dev==2023.3.0
+openvino-dev==2024.0.0
 optimum[onnxruntime,openvino]==1.16.0
 optimum-intel @ git+https://github.com/huggingface/optimum-intel@622f585962e5e0ff5f927fd1a96fbc02b60a2e65
 whowhatbench @ git+https://github.com/andreyanufr/who_what_benchmark@456d3584ce628f6c8605f37cd9a3ab2db1ebf933
