@@ -35,7 +35,6 @@ if version.parse(BKC_TORCH_VERSION).base_version != torch_version:
 
 
 # Required for correct COMPRESSION_ALGORITHMS registry functioning
-from nncf.torch.binarization import algo as binarization_algo
 from nncf.torch.quantization import algo as quantization_algo
 from nncf.torch.sparsity.const import algo as const_sparsity_algo
 from nncf.torch.sparsity.magnitude import algo as magnitude_sparsity_algo

@@ -42,7 +42,6 @@ learning frameworks.
 | :--- | :---: | :---: |
 |[Quantization Aware Training](./docs/compression_algorithms/Quantization.md) | Supported | Supported |
 |[Mixed-Precision Quantization](./docs/compression_algorithms/Quantization.md#mixed-precision-quantization) | Supported | Not supported |
-|[Binarization](./docs/compression_algorithms/Binarization.md) | Supported | Not supported |
 |[Sparsity](./docs/compression_algorithms/Sparsity.md) | Supported | Supported |
 |[Filter pruning](./docs/compression_algorithms/Pruning.md) | Supported | Supported |
 |[Movement pruning](./nncf/experimental/torch/sparsity/movement/MovementSparsity.md) | Experimental | Not supported |
