@@ -189,6 +189,16 @@ QUANTIZATION_MODELS = [
         "backends": ALL_PTQ_BACKENDS,
     },
     {
+        "reported_name": "timm/mobilenetv3_small_050_BC",
+        "model_id": "mobilenetv3_small_050",
+        "pipeline_cls": ImageClassificationTimm,
+        "compression_params": {
+            "preset": QuantizationPreset.MIXED,
+            "fast_bias_correction": False,
+        },
+        "backends": [BackendType.ONNX, BackendType.OV],
+    },
+    {
         "reported_name": "timm/regnetx_002",
         "model_id": "regnetx_002",
         "pipeline_cls": ImageClassificationTimm,
