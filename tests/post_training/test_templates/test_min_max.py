@@ -9,10 +9,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from abc import abstractmethod
+from typing import Tuple
 
 import pytest
 
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.layer_attributes import BaseLayerAttributes
+from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 
@@ -24,9 +28,7 @@ MATMUL_WEIGHT_SHAPE = (2, 4)
 class TemplateTestMinMaxAlgorithm:
     @property
     @abstractmethod
-    def backend(
-        self,
-    ) -> MinMaxAlgoBackend:
+    def backend(self) -> MinMaxAlgoBackend:
         """
         Get backend specific BiasCorrectionAlgoBackend
 
@@ -36,18 +38,18 @@ class TemplateTestMinMaxAlgorithm:
     @property
     @abstractmethod
     def conv_metatype(self):
-        pass
+        "Backend specific Convolution metatype."
 
     @property
     @abstractmethod
-    def create_target_point(self, target_point_type, name, port_id):
-        pass
+    def create_target_point(self, target_point_type: TargetType, name: str, port_id: int) -> TargetPoint:
+        "Creates backend specific TargetPoint."
 
 
 class TemplateTestGetTargetPointShape(TemplateTestMinMaxAlgorithm):
     @abstractmethod
-    def get_nncf_graph(self, weight_port_id, weight_shape):
-        pass
+    def get_nncf_graph(self, weight_port_id: int, weight_shape: Tuple[int]) -> NNCFGraph:
+        "Returns backend specific NNCFGraph having a single Convloution."
 
     @pytest.mark.parametrize(
         "target_point_type, input_port_id, reference_shape",
@@ -57,7 +59,9 @@ class TemplateTestGetTargetPointShape(TemplateTestMinMaxAlgorithm):
             (TargetType.OPERATION_WITH_WEIGHTS, 1, (3, 10, 4, 4)),
         ),
     )
-    def test_get_target_point_shape(self, target_point_type, input_port_id, reference_shape):
+    def test_get_target_point_shape(
+        self, target_point_type: TargetType, input_port_id: int, reference_shape: Tuple[int]
+    ):
         nncf_graph = self.get_nncf_graph(input_port_id, CONV_WEIGHT_SHAPE)
         nodes = nncf_graph.get_nodes_by_metatypes((self.conv_metatype,))
         assert len(nodes) == 1
@@ -70,22 +74,29 @@ class TemplateTestGetChannelAxes(TemplateTestMinMaxAlgorithm):
     @property
     @abstractmethod
     def depthwiseconv_metatype(self):
-        pass
+        "Backend specific Depthwise convolution metatype."
 
     @property
     @abstractmethod
     def matmul_metatype(self):
-        pass
+        "Backend specific MatMul metatype."
 
     @staticmethod
     @abstractmethod
-    def get_conv_node_attrs(weight_port_id, shape):
-        pass
+    def get_conv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> BaseLayerAttributes:
+        "Returns backend specific layer attributes for Convolution."
 
     @staticmethod
     @abstractmethod
-    def get_matmul_node_attrs():
-        pass
+    def get_depthwiseconv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> BaseLayerAttributes:
+        "Returns backend specific layer attributes for Convolution."
+
+    @staticmethod
+    @abstractmethod
+    def get_matmul_node_attrs(
+        weight_port_id: int, transpose_weight: Tuple[int], weight_shape: Tuple[int]
+    ) -> BaseLayerAttributes:
+        "Returns backend specific layer attributes for MatMul."
 
     @pytest.mark.parametrize(
         "conv_shape, weight_port_id, ref_axes", ((CONV_WEIGHT_SHAPE, 0, (0,)), (CONV_WEIGHT_SHAPE, 1, (0,)))
@@ -153,5 +164,5 @@ class TemplateTestGetChannelAxes(TemplateTestMinMaxAlgorithm):
         Checks MatMul quantization axes in MinMax for Torch.
         """
         matmul_node = NNCFNode({"metatype": self.matmul_metatype})
-        matmul_node.layer_attributes = self.get_matmul_node_attrs(weight_shape)
+        matmul_node.layer_attributes = self.get_matmul_node_attrs(None, None, weight_shape)
         assert self.backend().get_weight_quantization_axes(matmul_node, "dummy") == ref_axes
