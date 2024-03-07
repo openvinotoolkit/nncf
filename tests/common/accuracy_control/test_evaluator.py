@@ -12,7 +12,8 @@
 import logging
 from dataclasses import dataclass
 from typing import List, TypeVar, Union
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock
+from unittest.mock import Mock
 
 import numpy as np
 import pytest
@@ -23,6 +24,7 @@ from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResults
 
 TModel = TypeVar("TModel")
+
 
 @dataclass
 class ModeTestStruct:
@@ -175,13 +177,15 @@ def test_validate_prepared_model_value_error(evaluator_returns_list_of_float, mo
     "enable_iteration_count, expected_iterations",
     [(False, 0), (True, 4)],
 )
-def test_validate_metric_mode(evaluator_returns_list_of_float, model_and_data, mocker, enable_iteration_count, expected_iterations):
+def test_validate_metric_mode(
+    evaluator_returns_list_of_float, model_and_data, mocker, enable_iteration_count, expected_iterations
+):
     evaluator_returns_list_of_float._metric_mode = None
     if enable_iteration_count:
         evaluator_returns_list_of_float.enable_iteration_count()
-    
+
     model, dataset = model_and_data
-    mocker.patch('nncf.quantization.algorithms.accuracy_control.evaluator.Evaluator.prepare_model', return_value=model)
+    mocker.patch("nncf.quantization.algorithms.accuracy_control.evaluator.Evaluator.prepare_model", return_value=model)
     metric, values_for_each_item = evaluator_returns_list_of_float.validate(model, dataset)
     assert all(isinstance(item, float) for item in values_for_each_item)
     assert evaluator_returns_list_of_float.num_passed_iterations == expected_iterations
@@ -201,7 +205,7 @@ def test_validate_metric_mode_none_or_false(
         evaluator_returns_tensor.enable_iteration_count()
 
     model, dataset = model_and_data
-    mocker.patch('nncf.quantization.algorithms.accuracy_control.evaluator.Evaluator.prepare_model', return_value=model)
+    mocker.patch("nncf.quantization.algorithms.accuracy_control.evaluator.Evaluator.prepare_model", return_value=model)
 
     metric, values_for_each_item = evaluator_returns_tensor.validate(model, dataset)
     assert evaluator_returns_tensor.num_passed_iterations == expected_iterations
@@ -221,7 +225,7 @@ def test_collect_values_for_each_item(
     expected_item_type,
     expected_iterations,
     mocker,
-    model_and_data
+    model_and_data,
 ):
     evaluator = evaluator_returns_list_of_float
     if enable_iteration_count:
@@ -233,7 +237,7 @@ def test_collect_values_for_each_item(
     model, dataset = model_and_data
     model.model_for_inference = Mock()
     model.__call__ = Mock(return_value=2)
-    mocker.patch('nncf.quantization.algorithms.accuracy_control.evaluator.Evaluator.prepare_model', return_value=model)
+    mocker.patch("nncf.quantization.algorithms.accuracy_control.evaluator.Evaluator.prepare_model", return_value=model)
 
     result = evaluator.collect_values_for_each_item(model, dataset)
     assert all(isinstance(e, expected_item_type) for e in result)
@@ -242,7 +246,7 @@ def test_collect_values_for_each_item(
 
 def test_collect_metric_results(model_and_data, evaluator_returns_list_of_float, mocker, nncf_caplog):
     model, dataset = model_and_data
-    mocker.patch('nncf.quantization.algorithms.accuracy_control.evaluator.Evaluator.prepare_model', return_value=model)
+    mocker.patch("nncf.quantization.algorithms.accuracy_control.evaluator.Evaluator.prepare_model", return_value=model)
 
     result = evaluator_returns_list_of_float.collect_metric_results(model, dataset, "test_model")
     assert isinstance(result, MetricResults)
