@@ -19,10 +19,8 @@ import numpy as np
 import pytest
 
 import nncf
-from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.utils.backend import BackendType
-from nncf.quantization.algorithms.accuracy_control.openvino_backend import OVAccuracyControlAlgoBackend
 from nncf.quantization.algorithms.accuracy_control.rank_functions import normalized_mse
 from nncf.quantization.algorithms.accuracy_control.ranker import GroupToRank
 from nncf.quantization.algorithms.accuracy_control.ranker import Ranker
@@ -30,7 +28,6 @@ from nncf.quantization.algorithms.accuracy_control.subset_selection import get_s
 from tests.common.accuracy_control.backend import AABackendForTests
 from tests.common.quantization.test_quantizer_removal import GRAPHS as AA_GRAPHS_DESCR
 from tests.common.quantization.test_quantizer_removal import create_nncf_graph as aa_create_nncf_graph
-from tests.openvino.native.models import LinearQuantizedModel
 
 
 def create_fp32_tensor_1d(items):
@@ -161,7 +158,7 @@ def evaluator_and_ranker():
     evaluator = Mock()
     evaluator.validate_prepared_model = _validation_fn
     evaluator.collect_values_for_each_item_using_prepared_model = collect_logits
-    ranker = Ranker(1, tuple(), OVAccuracyControlAlgoBackend, evaluator=evaluator, ranking_fn=None)
+    ranker = Ranker(1, tuple(), AABackendForTests, evaluator=evaluator, ranking_fn=None)
     return evaluator, ranker
 
 
@@ -196,8 +193,8 @@ def ranking_subset_indices_and_ref_values():
 
 @pytest.fixture
 def quantized_model_and_graph():
-    quantized_model = LinearQuantizedModel().ov_model
-    quantized_model_graph = NNCFGraphFactory.create(quantized_model)
+    quantized_model_graph =  aa_create_nncf_graph(AA_GRAPHS_DESCR['simple_graph'])
+    quantized_model = Mock()
     return quantized_model, quantized_model_graph
 
 
@@ -219,13 +216,21 @@ def test_calculate_ranking_score(
     )
 
 
+
 def test_sequential_calculation_ranking_score(
     evaluator_and_ranker,
     ranking_subset_indices_and_ref_values,
-    quantized_model_and_graph,
+    mocker,
+    quantized_model_and_graph
 ):
     quantized_model, quantized_model_graph = quantized_model_and_graph
+    
     evaluator, ranker = evaluator_and_ranker
+
+    # mock prepare_model and revert_operations_to_floating_point to simply return the passed model
+    mocker.patch('nncf.quantization.algorithms.accuracy_control.evaluator.Evaluator.prepare_model', return_value=quantized_model)
+    mocker.patch('nncf.quantization.algorithms.accuracy_control.ranker.revert_operations_to_floating_point_precision', return_value=quantized_model)
+    
     ranking_subset_indices, reference_values_for_each_item = ranking_subset_indices_and_ref_values
 
     evaluator.is_metric_mode.return_value = False
@@ -248,9 +253,10 @@ def test_rank_groups_of_quantizers_score_all_same(
     evaluator_and_ranker,
     ranking_subset_indices_and_ref_values,
     mocker,
-    quantized_model_and_graph,
+    quantized_model_and_graph
 ):
     quantized_model, quantized_model_graph = quantized_model_and_graph
+    
     evaluator, ranker = evaluator_and_ranker
     ranking_subset_indices, reference_values_for_each_item = ranking_subset_indices_and_ref_values
     approximate_values_for_each_item = [[create_fp32_tensor_1d([2, 1, -1])]]
@@ -260,6 +266,10 @@ def test_rank_groups_of_quantizers_score_all_same(
 
     mock_subset_selection = mocker.patch("nncf.quantization.algorithms.accuracy_control.subset_selection.select_subset")
     mock_subset_selection.return_value = ranking_subset_indices
+    
+    # mock prepare_model and revert_operations_to_floating_point to simply return the passed model
+    mocker.patch('nncf.quantization.algorithms.accuracy_control.evaluator.Evaluator.prepare_model', return_value=quantized_model)
+    mocker.patch('nncf.quantization.algorithms.accuracy_control.ranker.revert_operations_to_floating_point_precision', return_value=quantized_model)
 
     ranked_groups: GroupToRank = ranker.rank_groups_of_quantizers(
         groups_to_rank,
@@ -275,7 +285,7 @@ def test_rank_groups_of_quantizers_score_different(
     evaluator_and_ranker,
     ranking_subset_indices_and_ref_values,
     mocker,
-    quantized_model_and_graph,
+    quantized_model_and_graph
 ):
     quantized_model, quantized_model_graph = quantized_model_and_graph
     evaluator, ranker = evaluator_and_ranker
@@ -287,8 +297,12 @@ def test_rank_groups_of_quantizers_score_different(
 
     mock_subset_selection = mocker.patch("nncf.quantization.algorithms.accuracy_control.subset_selection.select_subset")
     mock_subset_selection.return_value = ranking_subset_indices
+    
+    # mock prepare_model and revert_operations_to_floating_point to simply return the passed model
+    mocker.patch('nncf.quantization.algorithms.accuracy_control.evaluator.Evaluator.prepare_model', return_value=quantized_model)
+    mocker.patch('nncf.quantization.algorithms.accuracy_control.ranker.revert_operations_to_floating_point_precision', return_value=quantized_model)
 
-    mock_scores = [1.0, 2.0]
+    mock_scores = [1.0, 2.0, 3.0]
     with patch.object(ranker, "_sequential_calculation_ranking_score", return_value=mock_scores):
         ranked_groups: GroupToRank = ranker.rank_groups_of_quantizers(
             groups_to_rank,
@@ -299,7 +313,7 @@ def test_rank_groups_of_quantizers_score_different(
         )
         assert ranked_groups == groups_to_rank
 
-    mock_scores = [2.0, 1.0]
+    mock_scores = [3.0, 2.0, 1.0]
     with patch.object(ranker, "_sequential_calculation_ranking_score", return_value=mock_scores):
         ranked_groups: GroupToRank = ranker.rank_groups_of_quantizers(
             groups_to_rank,
