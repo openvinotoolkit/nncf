@@ -19,17 +19,27 @@ from torch import nn
 import tests.post_training.test_templates.helpers as helpers
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.torch import wrap_model
+from nncf.torch.graph.transformations.commands import PTQuantizerInsertionCommand
+from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import get_const_data
 from nncf.torch.model_graph_manager import get_const_data_on_port
 from nncf.torch.model_graph_manager import get_const_node
+from nncf.torch.model_graph_manager import get_fake_quantizer
 from nncf.torch.model_graph_manager import get_module_by_name
 from nncf.torch.model_graph_manager import get_potential_fused_node
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
 from nncf.torch.model_graph_manager import is_node_with_fused_bias
+from nncf.torch.model_graph_manager import is_quantized_weights
 from nncf.torch.model_graph_manager import set_const_data
 from nncf.torch.model_graph_manager import split_const_name
+from nncf.torch.model_transformer import PTModelTransformer
+from nncf.torch.model_transformer import PTTransformationLayout
 from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.quantization.layers import PTQuantizerSpec
+from nncf.torch.quantization.layers import QuantizationMode
+from nncf.torch.quantization.layers import SymmetricQuantizer
 from tests.torch.helpers import create_conv
 
 
@@ -229,3 +239,75 @@ def test_get_set_const_data():
     assert torch.all(model.conv.bias.data == data)
     set_const_data(torch.ones_like(data), const_node, model)
     assert torch.all(model.conv.bias.data == torch.ones_like(data))
+
+
+@pytest.mark.parametrize(
+    "target_type, port_id",
+    (
+        (TargetType.OPERATOR_POST_HOOK, None),
+        (TargetType.OPERATOR_PRE_HOOK, 1),
+    ),
+    ids=["post_hook", "pre_hook"],
+)
+def test_get_fake_quantizer(target_type, port_id):
+    model = wrap_model(
+        helpers.CustomConvTestModel().eval(),
+        example_input=torch.ones(helpers.CustomConvTestModel.INPUT_SIZE),
+        trace_parameters=True,
+    )
+    node_name = "CustomConvTestModel/CustomConv[conv]/conv2d_0"
+    transformer = PTModelTransformer(model)
+    qspec = PTQuantizerSpec(
+        num_bits=8,
+        mode=QuantizationMode.SYMMETRIC,
+        signedness_to_force=None,
+        scale_shape=(1,),
+        narrow_range=False,
+        half_range=False,
+        logarithm_scale=False,
+    )
+
+    fq = SymmetricQuantizer(qspec)
+    command = PTQuantizerInsertionCommand(PTTargetPoint(target_type, node_name, input_port_id=port_id), fq)
+    layout = PTTransformationLayout()
+    layout.register(command)
+    q_model = transformer.transform(layout)
+
+    graph = q_model.nncf.get_graph()
+    q_node = graph.get_node_by_name("CustomConvTestModel/CustomConv[conv]/conv2d_0")
+
+    found_fq = get_fake_quantizer(q_node, port_id, q_model)
+    assert fq is found_fq
+
+
+def test_is_quantized_weights():
+    model = wrap_model(
+        helpers.CustomConvTestModel().eval(),
+        example_input=torch.ones(helpers.CustomConvTestModel.INPUT_SIZE),
+        trace_parameters=True,
+    )
+    node_name = "CustomConvTestModel/CustomConv[conv]/conv2d_0"
+    graph = model.nncf.get_graph()
+    node = graph.get_node_by_name(node_name)
+    assert not is_quantized_weights(node, graph)
+
+    transformer = PTModelTransformer(model)
+    qspec = PTQuantizerSpec(
+        num_bits=8,
+        mode=QuantizationMode.SYMMETRIC,
+        signedness_to_force=None,
+        scale_shape=(1,),
+        narrow_range=False,
+        half_range=False,
+        logarithm_scale=False,
+    )
+
+    fq = SymmetricQuantizer(qspec)
+    command = PTQuantizerInsertionCommand(PTTargetPoint(TargetType.OPERATOR_PRE_HOOK, node_name, input_port_id=1), fq)
+    layout = PTTransformationLayout()
+    layout.register(command)
+    q_model = transformer.transform(layout)
+
+    q_graph = q_model.nncf.get_graph()
+    q_node = graph.get_node_by_name(node_name)
+    assert is_quantized_weights(q_node, q_graph)

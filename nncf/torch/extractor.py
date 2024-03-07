@@ -170,7 +170,7 @@ def extract_bn(node: NNCFNode, model: NNCFNetwork) -> Optional[Union[nn.BatchNor
     # Copy named parameters and buffer that exists in native BatchNorm module from module in the module.
     for name, _ in chain(extracted_bn.named_parameters(), extracted_bn.named_buffers()):
         setattr(extracted_bn, name, deepcopy(getattr(bn_module, name)))
-
+    extracted_bn.eval()
     return extracted_bn
 
 
@@ -216,5 +216,4 @@ def extract_fused_subgraph_for_node(node: NNCFNode, model: NNCFNetwork) -> Optio
     else:
         nncf_logger.debug(f"Can`t extract module for {node.node_name}")
         return None
-
     return extracted_module

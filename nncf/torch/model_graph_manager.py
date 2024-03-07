@@ -17,11 +17,10 @@ import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
-from nncf.common.quantization.structs import NonWeightQuantizerId
-from nncf.torch.dynamic_graph.scope import Scope
+from nncf.torch.dynamic_graph.context import PreHookId
 from nncf.torch.graph import operator_metatypes as om
-from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.quantization.external_quantizer import ExternalQuantizerCallHook
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import SymmetricQuantizer
 
@@ -266,7 +265,7 @@ def _find_fq_node_in_constant_subgraph(node: NNCFNode, graph: NNCFGraph) -> Opti
         if len(prev_nodes) != 1:
             return None
         return find_const_node_in_constant_subgraph(prev_nodes[0], graph)
-    if node.node_type in om.OP_NAMES_QUANTIZE_NODE:
+    if node.node_type in om.QUANTIZE_NODE_TYPES:
         return node
     return None
 
@@ -287,36 +286,29 @@ def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     return False
 
 
-def get_fq_node(node: NNCFNode, port_id: int, graph: NNCFGraph) -> Optional[NNCFNode]:
-    """
-    Finds the fake quantize node associated with a given  input.
-
-    :param node: Node associated with FQ.
-    :param port_id: _description_ #TODO
-    :param graph: The NNCF graph.
-    :return: _description_ #TODO
-    """
-    for edge in graph.get_input_edges(node):
-        if edge.input_port_id == port_id:
-            return _find_fq_node_in_constant_subgraph(edge.from_node, graph)
-    return None
-
-
 def get_fake_quantizer(
-    node: NNCFNode, port_id: int, model: NNCFNetwork
+    node: NNCFNode, port_id: Optional[int], model: NNCFNetwork
 ) -> Union[SymmetricQuantizer, AsymmetricQuantizer, torch.quantization.FakeQuantize]:
     """
     Retrieves the fake quantizer associated with a specific node and input port id.
 
     :param node: The NNCFNode representing the node for which to retrieve the quantizer.
-    :param port_id: The port id number for which to retrieve the quantizer module.
+    :param port_id: The port id number for which to retrieve the quantizer module, None means output port.
     :param model: The NNCFNetwork instance.
     :return: Fake Quantizer module if exists, overwise None.
     """
-    # TODO: need rework it, find module by node
-    if not model.nncf.is_compression_module_registered(ExtraCompressionModuleType.EXTERNAL_QUANTIZER):
-        return None
-    model.nncf.get_module_by_scope(Scope.from_str(node.layer_name))
-    storage = model.nncf.get_compression_modules_by_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
-    storage_key = str(NonWeightQuantizerId(node.node_name, port_id))
-    return getattr(storage, storage_key, None)
+
+    address_map = model.nncf.get_node_to_op_address_mapping()
+    op_addr = address_map[node.node_name]
+    if port_id is not None:
+        id = PreHookId(op_address=op_addr, input_port_id=port_id)
+        for call_hook in model.nncf._compressed_context._pre_hooks.get(id, {}).values():
+            if isinstance(call_hook, ExternalQuantizerCallHook):
+                storage = getattr(model.nncf, call_hook._storage_name)
+                return storage[call_hook._storage_key]
+    else:
+        for call_hook in model.nncf._compressed_context._post_hooks.get(op_addr, {}).values():
+            if isinstance(call_hook, ExternalQuantizerCallHook):
+                storage = getattr(model.nncf, call_hook._storage_name)
+                return storage[call_hook._storage_key]
+    return None
