@@ -11,33 +11,17 @@
 
 import logging
 from dataclasses import dataclass
+from unittest.mock import Mock
+import numpy as np
 
 import pytest
 
-import nncf
-from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.graph import NNCFNode
-from nncf.common.utils.backend import BackendType
-from nncf.errors import UnsupportedBackendError
-from nncf.openvino.quantization.backend_parameters import BackendParameters
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorer
 from nncf.quantization.algorithms.accuracy_control.algorithm import QuantizationAccuracyRestorerReport
 from nncf.quantization.algorithms.accuracy_control.algorithm import _create_message
-from nncf.quantization.algorithms.accuracy_control.algorithm import get_algo_backend
-from nncf.quantization.algorithms.accuracy_control.openvino_backend import OVAccuracyControlAlgoBackend
-from tests.openvino.native.common import get_dataset_for_test
-from tests.openvino.native.models import ConvModel as OvConvModel
-
-
-def test_get_algo_backend():
-    result = get_algo_backend(BackendType.OPENVINO)
-    assert isinstance(result, OVAccuracyControlAlgoBackend)
-
-
-def test_get_algo_backend_error():
-    with pytest.raises(UnsupportedBackendError):
-        get_algo_backend(BackendType.TORCH)
-
+from tests.common.accuracy_control.backend import AABackendForTests
+from tests.common.quantization.mock_graphs import get_mock_model_graph_with_mergeable_pattern
 
 def test_create_message():
     nodes = [
@@ -147,33 +131,57 @@ def test_print_report_parameterized(ts: StructForPrintTest, setup_quantization_a
 
 @pytest.fixture
 def ov_model_and_quantized_model():
-    model = OvConvModel().ov_model
-    initial_model_graph = NNCFGraphFactory.create(model)
-    dataset = get_dataset_for_test(model)
-    quantized_model = nncf.quantize(
-        model,
-        dataset,
-        advanced_parameters=nncf.AdvancedQuantizationParameters(
-            backend_params={BackendParameters.COMPRESS_WEIGHTS: False}
-        ),
-    )
-    quantized_model_graph = NNCFGraphFactory.create(quantized_model)
+    model = Mock()
+    quantized_model = Mock()
+    initial_model_graph = get_mock_model_graph_with_mergeable_pattern()
+    quantized_model_graph = get_mock_model_graph_with_mergeable_pattern()
+    for g in [initial_model_graph, quantized_model_graph]:
+        for nd in g.get_all_nodes():
+            nd: NNCFNode = nd
+            nd.NODE_NAME_ATTR = nd.KEY_NODE_ATTR
+            g._node_id_to_key_dict[nd.node_name] = [0]
+    
+    print(initial_model_graph._node_id_to_key_dict.keys())
+        
+    #   (A)
+    #    |
+    #  (conv2d)
+    #    |
+    # (batch_norm)
+    #    |
+    #  (RELU)
+    #    |
+    #   (B)
+
     return model, initial_model_graph, quantized_model, quantized_model_graph
 
+def test_collect_original_biases_and_weights_openvino(ov_model_and_quantized_model, mocker):
+    model, initial_model_graph, quantized_model, quantized_model_graph = ov_model_and_quantized_model
+    quantization_acc_restorer = QuantizationAccuracyRestorer()
 
-# def test_collect_original_biases_and_weights_openvino(ov_model_and_quantized_model):
-#     model, initial_model_graph, quantized_model, quantized_model_graph = ov_model_and_quantized_model
-#     quantization_acc_restorer = QuantizationAccuracyRestorer()
+    def isConv2dBias(node: NNCFNode, initial_model_graph):
+        return node.node_id == 1
+    
+    def isConv2dWeight(node: NNCFNode):
+        return node.node_id == 1
 
-#     quantization_acc_restorer._collect_original_biases_and_weights(
-#         initial_model_graph,
-#         quantized_model_graph,
-#         model,
-#         OVAccuracyControlAlgoBackend,
-#     )
-#     conv_node = quantized_model_graph.get_node_by_name("Conv")
-#     assert conv_node.attributes["original_bias"] is not None
-#     assert conv_node.attributes["original_weight.1"] is not None
+    mocker.patch('tests.common.accuracy_control.backend.AABackendForTests.is_node_with_bias', side_effect=isConv2dBias)
+    mocker.patch('tests.common.accuracy_control.backend.AABackendForTests.is_node_with_weight', side_effect=isConv2dWeight)
+    mocker.patch('tests.common.accuracy_control.backend.AABackendForTests.get_bias_value', return_value=np.array([[1, 2, 3], [4, 5, 6]]))
+    mocker.patch('tests.common.accuracy_control.backend.AABackendForTests.get_weight_value', return_value=np.array([[1, 2, 3], [4, 5, 6]]))
+    mocker.patch('tests.common.accuracy_control.backend.AABackendForTests.get_weight_tensor_port_ids', return_value=[1])
+
+    quantization_acc_restorer._collect_original_biases_and_weights(
+        initial_model_graph,
+        quantized_model_graph,
+        model,
+        AABackendForTests,
+    )
+
+    conv_node = quantized_model_graph.get_node_by_id(1)
+    print(conv_node.attributes)
+    assert conv_node.attributes["original_bias"] is not None
+    assert conv_node.attributes["original_weight.1"] is not None
 
 
 @dataclass
