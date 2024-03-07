@@ -1055,9 +1055,11 @@ def update_nncf_algorithms_config(nncf_algorithms_config: Dict[str, Dict[str, An
     :param nncf_algorithms_config: Configuration file of an algorithm.
     :param batch_size: Batch size value.
     """
-    subset_size = nncf_algorithms_config.get("subset_size", 300)
-    nncf_algorithms_config["subset_size"] = subset_size // batch_size
-    print(f"Updated subset_size value to {nncf_algorithms_config['subset_size']}")
+    for nncf_method, config in nncf_algorithms_config.items():
+        subset_size = config.get("subset_size", 300)
+        new_subset_size = subset_size // batch_size
+        config["subset_size"] = new_subset_size
+        print(f"Updated subset_size value for {nncf_method} method to {new_subset_size} ")
 
 
 def main():
@@ -1070,6 +1072,7 @@ def main():
     xml_path, bin_path = get_model_paths(config.model)
     accuracy_checker_config = get_accuracy_checker_config(config.engine)
     nncf_algorithms_config = get_nncf_algorithms_config(config.compression, args.output_dir)
+    assert args.batch_size >= 0
     if args.batch_size > 1:
         update_accuracy_checker_config(accuracy_checker_config, args.batch_size)
         update_nncf_algorithms_config(nncf_algorithms_config, args.batch_size)
