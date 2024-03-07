@@ -314,6 +314,8 @@ def get_fake_quantizer(
     :return: Fake Quantizer module if exists, overwise None.
     """
     # TODO: need rework it, find module by node
+    if not model.nncf.is_compression_module_registered(ExtraCompressionModuleType.EXTERNAL_QUANTIZER):
+        return None
     model.nncf.get_module_by_scope(Scope.from_str(node.layer_name))
     storage = model.nncf.get_compression_modules_by_type(ExtraCompressionModuleType.EXTERNAL_QUANTIZER)
     storage_key = str(NonWeightQuantizerId(node.node_name, port_id))

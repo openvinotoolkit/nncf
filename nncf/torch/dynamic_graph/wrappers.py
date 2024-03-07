@@ -186,7 +186,17 @@ def _execute_op(
         tensor_metas = make_tensor_metas(processed_input)
         node = ctx.find_operator_node(tensor_metas, op_address)
         if node is None:
-            layer_attrs, ignored_algos = _collect_module_attrs_and_ignored_algorithms(ctx, op_name, args, kwargs)
+            from nncf.torch.nncf_network import NNCFNetwork
+
+            if (
+                isinstance(ctx._threading.thread_local.base_module_replica, NNCFNetwork)
+                and ctx._threading.thread_local.base_module_replica.nncf.trace_parameters
+            ):
+                layer_attrs = get_layer_attributes_from_args_and_kwargs(op_name, args, kwargs)
+                ignored_algos = []  # Ignored args is not defined for not replaced modules
+            else:
+                layer_attrs, ignored_algos = _collect_module_attrs_and_ignored_algorithms(ctx, op_name, args, kwargs)
+
             is_called_inside_nncf_module = isinstance(ctx.get_current_module(), _NNCFModuleMixin)
             node = ctx.maybe_add_node(
                 processed_input, tensor_metas, op_address, layer_attrs, ignored_algos, is_called_inside_nncf_module
