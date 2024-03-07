@@ -104,6 +104,7 @@ class PostTrainingQuantization(Algorithm):
                 "A dataset is required for the post-training quantization "
                 "algorithm to collect statistics for intermediate models."
             )
+
         step_index_to_statistics = None
         if statistic_points:
             step_index_to_statistics = {0: statistic_points}

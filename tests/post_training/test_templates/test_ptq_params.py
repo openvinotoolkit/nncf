@@ -140,7 +140,6 @@ class TemplateTestPTQParams:
         assert min_max_algo._range_estimator_params[QuantizerGroup.ACTIVATIONS] == range_estimator_params
 
         params = test_params["test_range_estimator_per_tensor"]
-
         stat_points = min_max_algo.get_statistic_points(params["model"], params["nncf_graph"])
         assert len(stat_points) == params["stat_points_num"]
 

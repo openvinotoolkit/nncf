@@ -82,7 +82,7 @@ class TemplateTestQuantizerConfig:
     class TestGetStatisticsCollectorParameters:
         target_type: TargetType
         target_node_name: str
-        is_per_sample: bool
+        batchwise_statistics: bool
         ref_per_ch_reduction_axes: List[int]
         ref_per_tensor_reduction_axes: List[int]
 
@@ -284,7 +284,7 @@ class TemplateTestQuantizerConfig:
 
         target_point = list(min_max_algo._quantization_target_points_to_qconfig.keys())[0]
         tensor_collector = min_max_algo._get_stat_collector(
-            conv_sum_aggregation_nncf_graph.nncf_graph, target_point, q_config, params.is_per_sample
+            conv_sum_aggregation_nncf_graph.nncf_graph, target_point, q_config, params.batchwise_statistics
         )
 
         is_weight_tp = target_point.is_weight_target_point()
