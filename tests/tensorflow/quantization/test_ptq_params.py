@@ -105,7 +105,7 @@ def test_create_nncf_config(params):
 
 
 @pytest.mark.parametrize("preset", (QuantizationPreset.MIXED, QuantizationPreset.PERFORMANCE))
-@pytest.mark.parametrize("advancde_quantization_params", (AdvancedQuantizationParameters(),))
-def test_apply_advanced_parameters_to_config(preset, advancde_quantization_params):
+@pytest.mark.parametrize("advanced_quantization_params", (AdvancedQuantizationParameters(),))
+def test_apply_advanced_parameters_to_config(preset, advanced_quantization_params):
     compression_config = _get_default_quantization_config(preset, 1)
-    assert apply_advanced_parameters_to_config(compression_config, advancde_quantization_params)
+    assert apply_advanced_parameters_to_config(compression_config, advanced_quantization_params)
