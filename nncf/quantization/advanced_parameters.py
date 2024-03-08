@@ -192,7 +192,7 @@ class AdvancedQuantizationParameters:
     :type disable_bias_correction: bool
     :param batchwise_statistics: Determines whether quantizer statistics should be calculated
         for each item of the batch or for the entire batch, default is None.
-    "None" means that if torch.DataLoader or tensorflow.Dataset was passed as a data source for the calibration
+        "None" means that if torch.DataLoader or tensorflow.Dataset was passed as a data source for the calibration
         dataset, then if batch_size > 1 of the data source then batchwise_statistics = True, otherwise False.
     :type batchwise_statistics: Optional[bool]
     :param activations_quantization_params: Quantization parameters for activations.
@@ -212,7 +212,6 @@ class AdvancedQuantizationParameters:
     :type smooth_quant_alpha: AdvancedSmoothQuantParameters
     :param smooth_quant_alpha: Deprecated SmoothQuant-related parameter.
     :type smooth_quant_alpha: float
-
     :param backend_params: Backend-specific parameters.
     :type backend_params: Dict[str, Any]
     """
