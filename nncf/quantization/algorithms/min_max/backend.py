@@ -184,7 +184,7 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: TargetPoint) -> Tuple[int]:
+    def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: TargetPoint) -> Tuple[int, ...]:
         """
         Returns shape of a targer point tensor.
 
@@ -196,7 +196,7 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_quantization_axes(node: NNCFNode, target_point: TargetPoint) -> Tuple[int]:
+    def get_weight_quantization_axes(node: NNCFNode, target_point: TargetPoint) -> Tuple[int, ...]:
         """
         Returns axes for per-channel quantization of weights of the node placed on a input port_id.
 
@@ -210,8 +210,8 @@ class MinMaxAlgoBackend(ABC):
     def get_statistic_collector(
         range_estimator_params: RangeEstimatorParameters,
         use_abs_max: bool,
-        reduction_axes: Optional[Tuple[int]],
-        aggregation_axes: Optional[Tuple[int]],
+        reduction_axes: Optional[Tuple[int, ...]],
+        aggregation_axes: Optional[Tuple[int, ...]],
         inplace: bool,
         num_samples: Optional[int] = None,
     ) -> TensorStatisticCollectorBase:

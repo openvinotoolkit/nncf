@@ -116,7 +116,9 @@ def get_number_of_quantized_ops(
     return len(quantized_ops)
 
 
-def get_reduction_axes(channel_axes: Union[List[int], Tuple[int]], shape: Union[List[int], Tuple[int]]) -> Tuple[int]:
+def get_reduction_axes(
+    channel_axes: Union[List[int], Tuple[int, ...]], shape: Union[List[int], Tuple[int, ...]]
+) -> Tuple[int, ...]:
     """
     Returns filtered reduction axes without axes that corresponds channels.
 

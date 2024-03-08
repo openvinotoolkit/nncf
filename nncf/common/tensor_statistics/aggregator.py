@@ -44,9 +44,7 @@ class StatisticsAggregator(ABC):
         self.iterations_number = None
         self.statistic_points = StatisticPointsContainer()
 
-    def _get_iterations_number(
-        self,
-    ) -> Optional[int]:
+    def _get_iterations_number(self) -> Optional[int]:
         """
         Returns number of iterations which in min(self.iterations_number, dataset_length).
 

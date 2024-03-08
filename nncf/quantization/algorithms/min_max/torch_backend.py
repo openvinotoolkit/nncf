@@ -157,7 +157,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return PTMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     @staticmethod
-    def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: PTTargetPoint) -> Tuple[int]:
+    def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: PTTargetPoint) -> Tuple[int, ...]:
         if target_point.is_weight_target_point():
             return tuple(node.layer_attributes.get_weight_shape())
         return nncf_graph.get_input_shape_for_insertion_point(target_point)
@@ -170,8 +170,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def get_statistic_collector(
         range_estimator_params: RangeEstimatorParameters,
         use_abs_max: bool,
-        reduction_axes: Optional[Tuple[int]],
-        aggregation_axes: Optional[Tuple[int]],
+        reduction_axes: Optional[Tuple[int, ...]],
+        aggregation_axes: Optional[Tuple[int, ...]],
         inplace: bool,
         num_samples: Optional[int] = None,
     ) -> TensorCollector:

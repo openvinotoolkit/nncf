@@ -138,7 +138,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return OVMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     @staticmethod
-    def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: OVTargetPoint) -> Tuple[int]:
+    def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: OVTargetPoint) -> Tuple[int, ...]:
         if target_point.is_weight_target_point():
             return node.layer_attributes.constant_attributes[target_point.port_id]["shape"]
         if target_point.type == TargetType.PRE_LAYER_OPERATION:
@@ -155,8 +155,8 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     def get_statistic_collector(
         range_estimator_params: RangeEstimatorParameters,
         use_abs_max: bool,
-        reduction_axes: Optional[Tuple[int]],
-        aggregation_axes: Optional[Tuple[int]],
+        reduction_axes: Optional[Tuple[int, ...]],
+        aggregation_axes: Optional[Tuple[int, ...]],
         inplace: bool,
         num_samples: Optional[int] = None,
     ) -> TensorCollector:

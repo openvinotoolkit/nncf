@@ -210,9 +210,9 @@ class RangeInitCollectorParams:
 
     def _get_reduction_axes(
         self,
-        shape_to_reduce: Union[Tuple[int], List[int]],
-        quantization_axes: Union[Tuple[int], List[int]],
-        aggregation_axes: Union[Tuple[int], List[int]],
+        shape_to_reduce: Union[Tuple[int, ...], List[int]],
+        quantization_axes: Union[Tuple[int, ...], List[int]],
+        aggregation_axes: Union[Tuple[int, ...], List[int]],
     ):
         """
         Returns axes for a reducer regarding aggregation axes. As aggregator takes axes counting from stacked tensors,
@@ -227,7 +227,7 @@ class RangeInitCollectorParams:
         axes_to_keep.update(quantization_axes)
         return get_reduction_axes(axes_to_keep, shape_to_reduce)
 
-    def _get_aggregation_axes(self, batchwise_statistics: bool) -> Tuple[int]:
+    def _get_aggregation_axes(self, batchwise_statistics: bool) -> Tuple[int, ...]:
         """
         Returns axes for aggregator.
 
@@ -239,8 +239,8 @@ class RangeInitCollectorParams:
 
     def get_reduction_aggregation_axes(
         self,
-        shape_to_reduce: Union[Tuple[int], List[int]],
-        quantization_axes: Union[Tuple[int], List[int]],
+        shape_to_reduce: Union[Tuple[int, ...], List[int]],
+        quantization_axes: Union[Tuple[int, ...], List[int]],
         batchwise_statistics: bool,
     ) -> Tuple[ReductionAxes, AggregationAxes]:
         """

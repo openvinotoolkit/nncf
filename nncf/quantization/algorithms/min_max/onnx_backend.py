@@ -155,7 +155,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return get_input_edges_mapping(nncf_graph)
 
     @staticmethod
-    def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: ONNXTargetPoint) -> Tuple[int]:
+    def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: ONNXTargetPoint) -> Tuple[int, ...]:
         return get_quantized_tensor_shape(nncf_graph, node, target_point)
 
     @staticmethod
@@ -166,8 +166,8 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
     def get_statistic_collector(
         range_estimator_params: RangeEstimatorParameters,
         use_abs_max: bool,
-        reduction_axes: Optional[Tuple[int]],
-        aggregation_axes: Optional[Tuple[int]],
+        reduction_axes: Optional[Tuple[int, ...]],
+        aggregation_axes: Optional[Tuple[int, ...]],
         inplace: bool,
         num_samples: Optional[int] = None,
     ) -> TensorCollector:
