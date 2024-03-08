@@ -71,7 +71,7 @@ class StatisticPointsContainer(UserDict):
 
             self.data[target_node_name].append(statistic_point)
 
-    def remove_statistic_point(self, algorithm: str) -> None:
+    def remove_statistic_points(self, algorithm_name: str) -> None:
         """
         Method to remove statistic point associated with a given algorithm
         from statistic point container.
