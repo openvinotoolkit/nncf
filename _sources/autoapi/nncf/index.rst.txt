@@ -39,6 +39,7 @@ Classes
    nncf.TargetDevice
    nncf.QuantizationPreset
    nncf.IgnoredScope
+   nncf.Subgraph
 
 
 
@@ -433,8 +434,21 @@ Functions
    :type patterns: List[str]
    :param types: List of ignored operation types.
    :type types: List[str]
+   :param subgraphs: List of ignored subgraphs.
+   :type subgraphs: List[Subgraph]
    :param validate: If set to True, then a RuntimeError will be raised if any ignored scope does not match
      in the model graph.
    :type types: bool
+
+
+.. py:class:: Subgraph
+
+   Defines the ignored subgraph as follows: A subgraph comprises all nodes along
+   all simple paths in the graph from input to output nodes.
+
+   :param inputs: Input node names.
+   :type inputs: List[str]
+   :param outputs: Output node names.
+   :type outputs: List[str]
 
 

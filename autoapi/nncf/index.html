@@ -425,6 +425,9 @@
 <tr class="row-even"><td><p><a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></p></td>
 <td><p>Provides an option to specify portions of model to be excluded from compression.</p></td>
 </tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.Subgraph" title="nncf.Subgraph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Subgraph</span></code></a></p></td>
+<td><p>Defines the ignored subgraph as follows: A subgraph comprises all nodes along</p></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -944,8 +947,24 @@ quantization, pruning and etc.</p>
 <li><p><strong>names</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – List of ignored node names.</p></li>
 <li><p><strong>patterns</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – List of regular expressions that define patterns for names of ignored nodes.</p></li>
 <li><p><strong>types</strong> (<em>bool</em>) – List of ignored operation types.</p></li>
+<li><p><strong>subgraphs</strong> (<em>List</em><em>[</em><a class="reference internal" href="#nncf.Subgraph" title="nncf.Subgraph"><em>Subgraph</em></a><em>]</em>) – List of ignored subgraphs.</p></li>
 <li><p><strong>validate</strong> – If set to True, then a RuntimeError will be raised if any ignored scope does not match
 in the model graph.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="nncf.Subgraph">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">Subgraph</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/scopes.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.Subgraph" title="Permalink to this definition">#</a></dt>
+<dd><p>Defines the ignored subgraph as follows: A subgraph comprises all nodes along
+all simple paths in the graph from input to output nodes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>inputs</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – Input node names.</p></li>
+<li><p><strong>outputs</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – Output node names.</p></li>
 </ul>
 </dd>
 </dl>
@@ -1039,6 +1058,7 @@ in the model graph.</p></li>
 <li><a class="reference internal" href="#nncf.quantize"><code class="docutils literal notranslate"><span class="pre">quantize()</span></code></a></li>
 <li><a class="reference internal" href="#nncf.quantize_with_accuracy_control"><code class="docutils literal notranslate"><span class="pre">quantize_with_accuracy_control()</span></code></a></li>
 <li><a class="reference internal" href="#nncf.IgnoredScope"><code class="docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></li>
+<li><a class="reference internal" href="#nncf.Subgraph"><code class="docutils literal notranslate"><span class="pre">Subgraph</span></code></a></li>
 </ul>
 </li>
 </ul>
