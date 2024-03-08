@@ -16,6 +16,7 @@ import torch
 
 import nncf
 from nncf.common.factory import NNCFGraphFactory
+from nncf.common.logging.logger import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.parameters import CompressWeightsMode
@@ -26,7 +27,9 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
+from nncf.quantization.quantize_model import BATCHWISE_STATISTICS_WARNING
 from nncf.scopes import IgnoredScope
+from nncf.torch.graph.operator_metatypes import OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
 from nncf.torch.model_creation import wrap_model
 
 DEFAULT_RANGE_TYPE = "mean_min_max"
@@ -68,10 +71,10 @@ def quantize_impl(
         ignored_scope=ignored_scope,
         advanced_parameters=advanced_parameters,
     )
-
-    quantized_model = quantization_algorithm.apply(
-        nncf_network, nncf_network.nncf.get_graph(), dataset=calibration_dataset
-    )
+    graph = nncf_network.nncf.get_graph()
+    if advanced_parameters.batchwise_statistics and graph.get_nodes_by_metatypes(OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS):
+        nncf_logger.warning(BATCHWISE_STATISTICS_WARNING)
+    quantized_model = quantization_algorithm.apply(nncf_network, graph, dataset=calibration_dataset)
 
     quantized_model.nncf.disable_dynamic_graph_building()
 

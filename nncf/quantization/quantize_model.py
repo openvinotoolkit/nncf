@@ -35,6 +35,13 @@ from nncf.scopes import IgnoredScope
 
 TTensor = TypeVar("TTensor")
 
+BATCHWISE_STATISTICS_WARNING = (
+    "For the particular model the batchwise statistics collection can lead to inaccurate statistics. "
+    "If the accuracy degradation after compression is unsatisfactory, then "
+    "the recomendation is to turn off batchwise statistics. If the results are still unsatisfactory, "
+    "provide a dataloader with batch_size = 1 to the calibration dataset."
+)
+
 
 def _update_advanced_quantization_parameters(
     advanced_parameters: Optional[AdvancedQuantizationParameters], calibration_dataset: Dataset
