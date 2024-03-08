@@ -113,88 +113,98 @@ def get_model_size(ir_path: str, m_type: str = "Mb", verbose: bool = True) -> fl
     return model_size
 
 
-###############################################################################
-# Create an OpenVINO model and dataset
+def run_example():
+    ###############################################################################
+    # Create an OpenVINO model and dataset
 
-download_and_extract(DATASET_PATH, DATASET_INFO)
+    download_and_extract(DATASET_PATH, DATASET_INFO)
 
-datamodule = MVTec(
-    root=DATASET_PATH, category="capsule", image_size=(256, 256), train_batch_size=1, eval_batch_size=1, num_workers=1
-)
-datamodule.setup()
-test_loader = datamodule.test_dataloader()
+    datamodule = MVTec(
+        root=DATASET_PATH,
+        category="capsule",
+        image_size=(256, 256),
+        train_batch_size=1,
+        eval_batch_size=1,
+        num_workers=1,
+    )
+    datamodule.setup()
+    test_loader = datamodule.test_dataloader()
 
-download_and_extract(MODEL_PATH, MODEL_INFO)
-ov_model = ov.Core().read_model(MODEL_PATH / "stfpm_capsule.xml")
+    download_and_extract(MODEL_PATH, MODEL_INFO)
+    ov_model = ov.Core().read_model(MODEL_PATH / "stfpm_capsule.xml")
 
-with open(MODEL_PATH / "meta_data_stfpm_capsule.json", "r", encoding="utf-8") as f:
-    validation_params = json.load(f)
+    with open(MODEL_PATH / "meta_data_stfpm_capsule.json", "r", encoding="utf-8") as f:
+        validation_params = json.load(f)
 
-###############################################################################
-# Quantize an OpenVINO model with accuracy control
-#
-# The transformation function transforms a data item into model input data.
-#
-# To validate the transform function use the following code:
-# >> for data_item in val_loader:
-# >>    model(transform_fn(data_item))
+    ###############################################################################
+    # Quantize an OpenVINO model with accuracy control
+    #
+    # The transformation function transforms a data item into model input data.
+    #
+    # To validate the transform function use the following code:
+    # >> for data_item in val_loader:
+    # >>    model(transform_fn(data_item))
+
+    def transform_fn(data_item):
+        return data_item["image"]
+
+    # Uses only anomaly images for calibration process
+    anomaly_images = get_anomaly_images(test_loader)
+    calibration_dataset = nncf.Dataset(anomaly_images, transform_fn)
+
+    # Whole test dataset is used for validation
+    validation_fn = partial(validate, val_params=validation_params)
+    validation_dataset = nncf.Dataset(test_loader, transform_fn)
+
+    ov_quantized_model = nncf.quantize_with_accuracy_control(
+        model=ov_model,
+        calibration_dataset=calibration_dataset,
+        validation_dataset=validation_dataset,
+        validation_fn=validation_fn,
+        max_drop=max_accuracy_drop,
+    )
+
+    ###############################################################################
+    # Benchmark performance, calculate compression rate and validate accuracy
+
+    fp32_ir_path = f"{ROOT}/stfpm_fp32.xml"
+    ov.save_model(ov_model, fp32_ir_path, compress_to_fp16=False)
+    print(f"[1/7] Save FP32 model: {fp32_ir_path}")
+    fp32_size = get_model_size(fp32_ir_path, verbose=True)
+
+    # To avoid an accuracy drop when saving a model due to compression of unquantized
+    # weights to FP16, compress_to_fp16=False should be used. This is necessary because
+    # nncf.quantize_with_accuracy_control(...) keeps the most impactful operations within
+    # the model in the original precision to achieve the specified model accuracy.
+    int8_ir_path = f"{ROOT}/stfpm_int8.xml"
+    ov.save_model(ov_quantized_model, int8_ir_path, compress_to_fp16=False)
+    print(f"[2/7] Save INT8 model: {int8_ir_path}")
+    int8_size = get_model_size(int8_ir_path, verbose=True)
+
+    print("[3/7] Benchmark FP32 model:")
+    fp32_fps = run_benchmark(fp32_ir_path, shape=[1, 3, 256, 256], verbose=True)
+    print("[4/7] Benchmark INT8 model:")
+    int8_fps = run_benchmark(int8_ir_path, shape=[1, 3, 256, 256], verbose=True)
+
+    print("[5/7] Validate OpenVINO FP32 model:")
+    compiled_model = ov.compile_model(ov_model)
+    fp32_top1, _ = validate(compiled_model, test_loader, validation_params)
+    print(f"Accuracy @ top1: {fp32_top1:.3f}")
+
+    print("[6/7] Validate OpenVINO INT8 model:")
+    quantized_compiled_model = ov.compile_model(ov_quantized_model)
+    int8_top1, _ = validate(quantized_compiled_model, test_loader, validation_params)
+    print(f"Accuracy @ top1: {int8_top1:.3f}")
+
+    print("[7/7] Report:")
+    print(f"Maximum accuracy drop:                  {max_accuracy_drop}")
+    print(f"Accuracy drop:                          {fp32_top1 - int8_top1:.3f}")
+    print(f"Model compression rate:                 {fp32_size / int8_size:.3f}")
+    # https://docs.openvino.ai/latest/openvino_docs_optimization_guide_dldt_optimization_guide.html
+    print(f"Performance speed up (throughput mode): {int8_fps / fp32_fps:.3f}")
+
+    return fp32_top1, int8_top1, fp32_fps, int8_fps, fp32_size, int8_size
 
 
-def transform_fn(data_item):
-    return data_item["image"]
-
-
-# Uses only anomaly images for calibration process
-anomaly_images = get_anomaly_images(test_loader)
-calibration_dataset = nncf.Dataset(anomaly_images, transform_fn)
-
-# Whole test dataset is used for validation
-validation_fn = partial(validate, val_params=validation_params)
-validation_dataset = nncf.Dataset(test_loader, transform_fn)
-
-ov_quantized_model = nncf.quantize_with_accuracy_control(
-    model=ov_model,
-    calibration_dataset=calibration_dataset,
-    validation_dataset=validation_dataset,
-    validation_fn=validation_fn,
-    max_drop=max_accuracy_drop,
-)
-
-###############################################################################
-# Benchmark performance, calculate compression rate and validate accuracy
-
-fp32_ir_path = f"{ROOT}/stfpm_fp32.xml"
-ov.save_model(ov_model, fp32_ir_path, compress_to_fp16=False)
-print(f"[1/7] Save FP32 model: {fp32_ir_path}")
-fp32_size = get_model_size(fp32_ir_path, verbose=True)
-
-# To avoid an accuracy drop when saving a model due to compression of unquantized
-# weights to FP16, compress_to_fp16=False should be used. This is necessary because
-# nncf.quantize_with_accuracy_control(...) keeps the most impactful operations within
-# the model in the original precision to achieve the specified model accuracy.
-int8_ir_path = f"{ROOT}/stfpm_int8.xml"
-ov.save_model(ov_quantized_model, int8_ir_path, compress_to_fp16=False)
-print(f"[2/7] Save INT8 model: {int8_ir_path}")
-int8_size = get_model_size(int8_ir_path, verbose=True)
-
-print("[3/7] Benchmark FP32 model:")
-fp32_fps = run_benchmark(fp32_ir_path, shape=[1, 3, 256, 256], verbose=True)
-print("[4/7] Benchmark INT8 model:")
-int8_fps = run_benchmark(int8_ir_path, shape=[1, 3, 256, 256], verbose=True)
-
-print("[5/7] Validate OpenVINO FP32 model:")
-compiled_model = ov.compile_model(ov_model)
-fp32_top1, _ = validate(compiled_model, test_loader, validation_params)
-print(f"Accuracy @ top1: {fp32_top1:.3f}")
-
-print("[6/7] Validate OpenVINO INT8 model:")
-quantized_compiled_model = ov.compile_model(ov_quantized_model)
-int8_top1, _ = validate(quantized_compiled_model, test_loader, validation_params)
-print(f"Accuracy @ top1: {int8_top1:.3f}")
-
-print("[7/7] Report:")
-print(f"Maximum accuracy drop:                  {max_accuracy_drop}")
-print(f"Accuracy drop:                          {fp32_top1 - int8_top1:.3f}")
-print(f"Model compression rate:                 {fp32_size / int8_size:.3f}")
-# https://docs.openvino.ai/latest/openvino_docs_optimization_guide_dldt_optimization_guide.html
-print(f"Performance speed up (throughput mode): {int8_fps / fp32_fps:.3f}")
+if __name__ == "__main__":
+    run_example()
