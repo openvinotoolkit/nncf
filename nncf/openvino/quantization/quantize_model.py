@@ -83,9 +83,7 @@ def native_quantize_if_op_impl(
     )
 
     graph = GraphConverter.create_nncf_graph(model)
-    warning_model_no_batchwise_support(
-        graph, advanced_parameters.batchwise_statistics, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
-    )
+    warning_model_no_batchwise_support(graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS)
     if_ops_number = get_number_if_op(model)
     all_models_number = if_ops_number * 2 + 1
     nncf_logger.info(
@@ -141,9 +139,7 @@ def native_quantize_impl(
         advanced_parameters=advanced_parameters,
     )
     graph = GraphConverter.create_nncf_graph(model)
-    warning_model_no_batchwise_support(
-        graph, advanced_parameters.batchwise_statistics, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
-    )
+    warning_model_no_batchwise_support(graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS)
     quantized_model = quantization_algorithm.apply(model, graph, dataset=calibration_dataset)
 
     if is_weight_compression_needed(advanced_parameters):
