@@ -931,6 +931,10 @@ class MinMaxQuantization(Algorithm):
         quantization_target_points, _ = self._get_quantization_target_points(model, graph)
         output = StatisticPointsContainer()
         for quantization_target_point, qconfig in quantization_target_points.items():
+            nncf_logger.debug(
+                f"Adding target point {quantization_target_point.target_node_name}"
+                f" with type {quantization_target_point.type} for statistics collection"
+            )
             stat_collector = self._get_stat_collector(
                 graph, quantization_target_point, qconfig, self._batchwise_statistics
             )
