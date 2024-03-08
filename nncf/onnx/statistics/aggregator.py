@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List
+from typing import Dict
 
 import numpy as np
 import onnx
@@ -21,8 +21,6 @@ from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.onnx.graph.metatypes.groups import OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
-from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXOpMetatype
 from nncf.onnx.graph.node_utils import get_input_edge
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
 from nncf.onnx.graph.onnx_helper import get_name_to_node_map
@@ -31,10 +29,6 @@ from nncf.onnx.tensor import ONNXNNCFTensor
 
 
 class ONNXStatisticsAggregator(StatisticsAggregator):
-    @property
-    def metatypes_no_batch_support(self) -> List[ONNXOpMetatype]:
-        return OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
-
     def collect_statistics(self, model: onnx.ModelProto, graph: NNCFGraph) -> None:
         self.input_edges_mapping = get_input_edges_mapping(graph)
         self.node_mapping = get_name_to_node_map(model)

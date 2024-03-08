@@ -11,12 +11,11 @@
 from abc import ABC
 from abc import abstractmethod
 from itertools import islice
-from typing import Any, Dict, List, Optional, TypeVar
+from typing import Any, Dict, Optional, TypeVar
 
 import nncf
 from nncf.common import factory
 from nncf.common.graph.graph import NNCFGraph
-from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging.logger import nncf_logger
 from nncf.common.logging.track_progress import track
@@ -30,11 +29,7 @@ TModel = TypeVar("TModel")
 EMPTY_DATASET_ERROR = (
     "Calibration dataset must not be empty. Please provide calibration dataset with at least one sample."
 )
-BATCH_SIZE_MODEL_WARNING = (
-    "For the particular model the batch size > 1 can lead to inaccurate collected statistics. "
-    "The recomendation is to provide dataloader instance with the batch_size = 1."
-)
-UPDATING_ITERATIONS_NUMBER_WARNING = (
+ITERATIONS_NUMBER_WARNING = (
     "The number of iterations for statistics collection is bigger than the length of the dataset."
 )
 
@@ -60,7 +55,7 @@ class StatisticsAggregator(ABC):
         dataset_length = self.dataset.get_length()
         if dataset_length and self.iterations_number:
             if self.iterations_number > dataset_length:
-                nncf_logger.warning(UPDATING_ITERATIONS_NUMBER_WARNING)
+                nncf_logger.warning(ITERATIONS_NUMBER_WARNING)
                 return dataset_length
             return self.iterations_number
         return dataset_length or self.iterations_number
@@ -75,9 +70,6 @@ class StatisticsAggregator(ABC):
         """
         if not self.statistic_points:
             return
-        batch_size = self.dataset.get_batch_size() or 1
-        if batch_size > 1 and self.is_model_has_no_batch_axis(graph):
-            nncf_logger.warning(BATCH_SIZE_MODEL_WARNING)
         model_transformer = factory.ModelTransformerFactory.create(model)
         merged_statistics = self._get_merged_statistic_points(self.statistic_points, model, graph)
         transformation_layout = self._get_transformation_layout_extra_outputs(merged_statistics)
@@ -117,26 +109,6 @@ class StatisticsAggregator(ABC):
                             self.iterations_number = tensor_collector.num_samples
                         elif tensor_collector.num_samples is not None:
                             self.iterations_number = max(self.iterations_number, tensor_collector.num_samples)
-
-    def is_model_has_no_batch_axis(self, graph: NNCFGraph) -> bool:
-        """
-        Returns True if NNCFGraph contains metatypes with no batch axis in output tensor.
-
-        :param graph: NNCFGraph.
-        :return: True if NNCFGraph contains metatypes with no batch axis in output tensor.
-        """
-        unique_graph_metatypes = set(node.metatype for node in graph.get_all_nodes())
-        return any(metatype in self.metatypes_no_batch_support for metatype in unique_graph_metatypes)
-
-    @property
-    @abstractmethod
-    def metatypes_no_batch_support(self) -> List[OperatorMetatype]:
-        """
-        These metatypes mix outputs for different samples into one axis.
-        If reducers and aggregators collect statistics at the output of the following operations,
-        assuming that 0-axis is batch axis, they get only 1 value instead of batch_size values.
-        It could lead to inaccurate/incorrect statistics result.
-        """
 
     @abstractmethod
     def _register_statistics(self, outputs: Dict[str, NNCFTensor], statistic_points: StatisticPointsContainer) -> None:

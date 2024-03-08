@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List
+from typing import Dict
 
 import numpy as np
 import torch
@@ -20,8 +20,6 @@ from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticPointsContainer
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
-from nncf.torch.graph.operator_metatypes import OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
-from nncf.torch.graph.operator_metatypes import PTOperatorMetatype
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.tensor import PTNNCFTensor
@@ -30,10 +28,6 @@ from nncf.torch.tensor_statistics.algo import create_register_input_hook
 
 class PTStatisticsAggregator(StatisticsAggregator):
     HOOKS_GROUP_NAME = "statistics_hooks"
-
-    @property
-    def metatypes_no_batch_support(self) -> List[PTOperatorMetatype]:
-        return OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
 
     def collect_statistics(self, model: NNCFNetwork, graph: NNCFGraph) -> None:
         with torch.no_grad():
