@@ -309,5 +309,5 @@ def test_is_quantized_weights():
     q_model = transformer.transform(layout)
 
     q_graph = q_model.nncf.get_graph()
-    q_node = graph.get_node_by_name(node_name)
+    q_node = q_graph.get_node_by_name(node_name)
     assert is_quantized_weights(q_node, q_graph)
