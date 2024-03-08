@@ -71,12 +71,6 @@ DEFAULT_QCONFIG = QuantizerConfig(
     num_bits=8, mode=QuantizationScheme.SYMMETRIC, signedness_to_force=None, per_channel=False
 )
 
-BATCHWISE_STATISTICS_TRANSFORMERS_WARNING = (
-    "For transformer-like models, batchwise_statistics option could result in inaccurate statistics. "
-    "The recommendation is to collect statistics with dataloader "
-    "having batch_size = 1 and turn off batchwise_statistics option."
-)
-
 
 @dataclasses.dataclass
 class ModeBasedDefaults:
@@ -936,8 +930,6 @@ class MinMaxQuantization(Algorithm):
         self._reset_cache()
         quantization_target_points, _ = self._get_quantization_target_points(model, graph)
         output = StatisticPointsContainer()
-        if self._model_type == ModelType.TRANSFORMER and self._batchwise_statistics:
-            nncf_logger.warning(BATCHWISE_STATISTICS_TRANSFORMERS_WARNING)
         for quantization_target_point, qconfig in quantization_target_points.items():
             stat_collector = self._get_stat_collector(
                 graph, quantization_target_point, qconfig, self._batchwise_statistics

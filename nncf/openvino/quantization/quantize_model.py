@@ -41,8 +41,8 @@ from nncf.quantization.algorithms.accuracy_control.algorithm import calculate_ac
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
-from nncf.quantization.quantize_model import BATCHWISE_STATISTICS_WARNING
 from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
+from nncf.quantization.quantize_model import warning_model_no_batchwise_support
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
 from nncf.telemetry.decorator import tracked_function
@@ -83,8 +83,9 @@ def native_quantize_if_op_impl(
     )
 
     graph = GraphConverter.create_nncf_graph(model)
-    if advanced_parameters.batchwise_statistics and graph.get_nodes_by_metatypes(OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS):
-        nncf_logger.warning(BATCHWISE_STATISTICS_WARNING)
+    warning_model_no_batchwise_support(
+        graph, advanced_parameters.batchwise_statistics, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
+    )
     if_ops_number = get_number_if_op(model)
     all_models_number = if_ops_number * 2 + 1
     nncf_logger.info(
@@ -139,10 +140,10 @@ def native_quantize_impl(
         ignored_scope=ignored_scope,
         advanced_parameters=advanced_parameters,
     )
-
     graph = GraphConverter.create_nncf_graph(model)
-    if advanced_parameters.batchwise_statistics and graph.get_nodes_by_metatypes(OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS):
-        nncf_logger.warning(BATCHWISE_STATISTICS_WARNING)
+    warning_model_no_batchwise_support(
+        graph, advanced_parameters.batchwise_statistics, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
+    )
     quantized_model = quantization_algorithm.apply(model, graph, dataset=calibration_dataset)
 
     if is_weight_compression_needed(advanced_parameters):

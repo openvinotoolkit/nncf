@@ -14,6 +14,9 @@ from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Unio
 import nncf
 from nncf.api.compression import TModel
 from nncf.common.deprecation import warning_deprecated
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.logging.logger import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
@@ -41,6 +44,26 @@ BATCHWISE_STATISTICS_WARNING = (
     "the recomendation is to turn off batchwise statistics. If the results are still unsatisfactory, "
     "provide a dataloader with batch_size = 1 to the calibration dataset."
 )
+
+
+def warning_model_no_batchwise_support(
+    graph: NNCFGraph,
+    batchwise_statistics: bool,
+    model_type: ModelType,
+    no_batchwise_support_metatypes: List[OperatorMetatype],
+) -> None:
+    """
+    Prints a warning message if batchwise statistics could lead to a significant accuracy drop.
+
+    :param graph: Model's NNCFGraph.
+    :param batchwise_statistics: Is turned on or turned off batchwise statistics.
+    :param model_type: Model type algorithm option.
+    :param no_batchwise_support_metatypes: Meatypes having no batchwise statistics support.
+    """
+    if batchwise_statistics and (
+        graph.get_nodes_by_metatypes(no_batchwise_support_metatypes) or model_type == ModelType.TRANSFORMER
+    ):
+        nncf_logger.warning(BATCHWISE_STATISTICS_WARNING)
 
 
 def _update_advanced_quantization_parameters(
