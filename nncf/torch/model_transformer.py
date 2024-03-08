@@ -96,9 +96,10 @@ class PTModelTransformer(ModelTransformer):
                 target_type=target_point.target_type,
                 op_address=node_to_op_address_mapping[target_node_name],
                 input_port_id=target_point.input_port_id,
+                replaced_modules=model.nncf.replace_modules,
             )
             fn = transformation_command.fn
-            if target_point.type is TargetType.OPERATION_WITH_WEIGHTS:
+            if model.nncf.replace_modules and target_point.type is TargetType.OPERATION_WITH_WEIGHTS:
                 fn = UpdateWeight(fn)
             tup = (fn, transformation_command)
             fns_grouped_by_points[pt_ip].append(tup)
@@ -238,9 +239,17 @@ def update_fused_bias(target_node_name: str, new_bias: Tensor, model: NNCFNetwor
     """
     nncf_graph = model.nncf.get_graph()
     fused_node = get_potential_fused_node(target_node_name, nncf_graph)
-    if fused_node:
-        target_node_name = fused_node.node_name
-    update_parameter(target_node_name, "bias", new_bias, model)
+    if fused_node is None:
+        update_parameter(target_node_name, "bias", new_bias, model)
+        return
+    target_module = model.nncf.get_containing_module(target_node_name)
+    fused_module = model.nncf.get_containing_module(fused_node.node_name)
+
+    if target_module.bias is None:
+        update_parameter(fused_node.node_name, "bias", new_bias, model)
+        return
+    new_bias = new_bias - target_module.bias * fused_module.weight
+    update_parameter(fused_node.node_name, "bias", new_bias, model)
 
 
 def update_parameter(target_node_name: str, parameter_name: str, new_value: Tensor, model: NNCFNetwork) -> None:
@@ -248,7 +257,7 @@ def update_parameter(target_node_name: str, parameter_name: str, new_value: Tens
     Update parameter for target module.
 
     :param target_node_name: The target node name.
-    :param parmeter_name: The name of the parameter to update.
+    :param parameter_name: The name of the parameter to update.
     :param new_value: New parameter value.
     :param model: The model.
     """

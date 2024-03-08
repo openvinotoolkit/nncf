@@ -280,6 +280,9 @@ def wrap_parameters(model: torch.nn.Module):
     """
     ctx = get_current_context()
     for name, param in model.named_parameters():
+        if name.startswith("_nncf"):
+            # Exclude parameters in modules which added by NNCF.
+            continue
         is_reused = name in ctx.reused_parameters
         tt = TracedParameter.from_torch_parameter(param, name, is_reused)
         ctx.register_traced_tensor(tt)

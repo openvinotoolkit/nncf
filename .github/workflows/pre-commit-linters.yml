@@ -19,3 +19,8 @@ jobs:
       run: make install-pre-commit
     - name: Run pre-commit linter suite
       run: make pre-commit
+  md-dead-link-check:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: AlexanderDokuchaev/md-dead-link-check@0.4

@@ -59,6 +59,7 @@ class WeightCompression(Algorithm):
         all_layers: bool,
         sensitivity_metric: SensitivityMetric,
         awq: bool,
+        subset_size: int,
     ):
         """
         :param mode: Defines a mode for weight compression.
@@ -85,6 +86,8 @@ class WeightCompression(Algorithm):
         :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
             preserve the accuracy of the model, the more sensitive layers receives a higher precision.
         :param awq: determines whether to use or not modified AWQ algorithm.
+        :param subset_size: Number of data samples to calculate activation statistics used for assigning different
+            quantization precision.
         """
         super().__init__()
         self._mode = mode
@@ -97,6 +100,7 @@ class WeightCompression(Algorithm):
         self._all_layers = all_layers
         self._sensitivity_metric = sensitivity_metric
         self._awq = awq
+        self._subset_size = subset_size
 
     @property
     def available_backends(self) -> List[BackendType]:
@@ -279,7 +283,7 @@ class WeightCompression(Algorithm):
 
         activations = {}
         if dataset is not None and self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR:
-            activations = self._get_activations(dataset, nodes_to_compress, graph, model)
+            activations = self._get_activations(dataset, self._subset_size, nodes_to_compress, graph, model)
 
         transformed_model = self.do_compression(model, graph, nodes_to_compress, activations)
         return transformed_model
@@ -411,19 +415,19 @@ class WeightCompression(Algorithm):
         return self._fp_inputs[input_id]
 
     def _get_activations(
-        self, dataset: Dataset, nodes_to_compress: List[NNCFNode], graph: NNCFGraph, model: TModel
+        self, dataset: Dataset, subset_size: int, nodes_to_compress: List[NNCFNode], graph: NNCFGraph, model: TModel
     ) -> Dict[str, List[Tensor]]:
         """
         Collects input activations for the given nodes on the dataset.
 
         :param dataset: Dataset to collect values.
+        :param subset_size: Number of data samples to calculate activation statistics used for assigning different
+            quantization precision.
         :param nodes_to_compress: List of nodes, whose inputs are collected.
         :param model: Model for statistics collection.
         :param graph: Model graph.
         :return: statistics values itself per node name.
         """
-        subset_size = 128
-
         activations = {}
         _collected_stat_inputs_map = {}
         statistic_container = StatisticPointsContainer()

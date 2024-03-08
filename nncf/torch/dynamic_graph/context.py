@@ -192,7 +192,7 @@ class TracingContext:
 
     def get_processed_parameter(self, param_name: str) -> Union[torch.Tensor, None]:
         """
-        Rerturn the processed parameter by name.
+        Return the processed parameter by name.
 
         :param param_name: The parameter name.
         :return: The processed parameter by name if found, otherwise None.

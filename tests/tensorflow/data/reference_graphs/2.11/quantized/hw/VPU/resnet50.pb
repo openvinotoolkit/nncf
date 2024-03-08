@@ -1,1 +1,0 @@
-../../../../2.8/quantized/hw/VPU/resnet50.pb

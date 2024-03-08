@@ -87,6 +87,34 @@ def post_training_quantization_openvino_yolo8_quantize_with_accuracy_control() -
     return format_results(results)
 
 
+def post_training_quantization_onnx_yolo8_quantize_with_accuracy_control() -> Dict[str, float]:
+    from examples.post_training_quantization.onnx.yolov8_quantize_with_accuracy_control.main import (
+        run_example as yolo8_main,
+    )
+
+    onnx_fp32_box_mAP, onnx_fp32_mask_mAP, onnx_int8_box_mAP, onnx_int8_mask_mAP = yolo8_main()
+
+    import examples.post_training_quantization.onnx.yolov8_quantize_with_accuracy_control.deploy as yolov8_deploy
+
+    return {
+        "onnx_fp32_box_mAP": onnx_fp32_box_mAP,
+        "onnx_fp32_mask_mAP": onnx_fp32_mask_mAP,
+        "onnx_int8_box_mAP": onnx_int8_box_mAP,
+        "onnx_int8_mask_mAP": onnx_int8_mask_mAP,
+        "onnx_drop_box_mAP": onnx_fp32_box_mAP - onnx_int8_box_mAP,
+        "onnx_drop_mask_mAP": onnx_fp32_mask_mAP - onnx_int8_mask_mAP,
+        "ov_fp32_box_mAP": yolov8_deploy.fp32_stats["metrics/mAP50-95(B)"],
+        "ov_fp32_mask_mAP": yolov8_deploy.fp32_stats["metrics/mAP50-95(M)"],
+        "ov_int8_box_mAP": yolov8_deploy.int8_stats["metrics/mAP50-95(B)"],
+        "ov_int8_mask_mAP": yolov8_deploy.int8_stats["metrics/mAP50-95(M)"],
+        "ov_drop_box_mAP": yolov8_deploy.box_metric_drop,
+        "ov_drop_mask_mAP": yolov8_deploy.mask_metric_drop,
+        "ov_fp32_fps": yolov8_deploy.fp32_fps,
+        "ov_int8_fps": yolov8_deploy.int8_fps,
+        "performance_speed_up": yolov8_deploy.int8_fps / yolov8_deploy.fp32_fps,
+    }
+
+
 def post_training_quantization_openvino_anomaly_stfpm_quantize_with_accuracy_control() -> Dict[str, float]:
     sys.path.append(
         str(
@@ -141,9 +169,28 @@ def llm_compression() -> Dict[str, float]:
 def llm_tune_params() -> Dict[str, float]:
     from examples.llm_compression.openvino.tiny_llama_find_hyperparams.main import main as llm_tune_params_main
 
-    ratio, group_size = llm_tune_params_main()
+    awq, ratio, group_size = llm_tune_params_main()
 
-    return {"ratio": ratio, "group_size": group_size}
+    return {"awq": bool(awq), "ratio": ratio, "group_size": group_size}
+
+
+def quantization_aware_training_torch_resnet18():
+    from examples.quantization_aware_training.torch.resnet18.main import main as resnet18_main
+
+    results = resnet18_main()
+
+    return {
+        "fp32_top1": float(results[0]),
+        "int8_init_top1": float(results[1]),
+        "int8_top1": float(results[2]),
+        "accuracy_drop": float(results[0] - results[2]),
+        "fp32_fps": results[3],
+        "int8_fps": results[4],
+        "performance_speed_up": results[4] / results[3],
+        "fp32_model_size": results[5],
+        "int8_model_size": results[6],
+        "model_compression_rate": results[5] / results[6],
+    }
 
 
 def main(argv):

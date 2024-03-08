@@ -436,13 +436,13 @@ CV_DESCS = [
 AUDIO_DESCS = [
     GroupTestDesc(
         model_desc=GeneralModelDesc(
-            model_name="Wave2Vec 2.0",
+            model_name="Wave2Vec_2.0",
             input_info=dict(sample_size=[1, 400]),
             model_builder=partial(
                 AutoModelForAudioClassification.from_config,
                 Wav2Vec2Config(
                     vocab_size=2,
-                    hidden_size=16,
+                    hidden_size=48,
                     num_hidden_layers=1,
                     num_attention_heads=2,
                     intermediate_size=4,
@@ -452,7 +452,7 @@ AUDIO_DESCS = [
         ),
         ref_groups=[
             PruningGroup(
-                block=PruningBlock(size=8, offset=0),
+                block=PruningBlock(size=24, offset=0),
                 producers={ProducerInfo(31), ProducerInfo(29), ProducerInfo(35)},
                 consumers={ConsumerInfo(53)},
             ),

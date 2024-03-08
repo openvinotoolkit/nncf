@@ -116,6 +116,10 @@ def magnitude_algo_mock_(mocker):
             self.set_sparsity_level = mocker.stub()
             self.freeze = mocker.stub()
 
+        @property
+        def current_sparsity_level(self) -> float:
+            return 0.0
+
     return MockSparsityAlgo()
 
 
@@ -244,6 +248,10 @@ def rb_algo_mock_(mocker):
 
         def set_sparsity_init(self, sparsity_init):
             self.sparsity_init = sparsity_init
+
+        @property
+        def current_sparsity_level(self) -> float:
+            return self.loss.current_sparsity
 
     return MockSparsityAlgo()
 

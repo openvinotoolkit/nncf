@@ -40,12 +40,16 @@ from nncf.torch.tensor_statistics.collectors import get_raw_stat_collector
 
 def split_weight_name(weight_name: str) -> Tuple[str, str]:
     index = weight_name.rfind(".")
+    if index == -1:
+        return str(), weight_name
     module_name = weight_name[:index]
     weight_attr_name = weight_name[index + 1 :]
     return module_name, weight_attr_name
 
 
 def get_module_by_name(module_name: str, model: torch.nn.Module) -> torch.nn.Module:
+    if not module_name:
+        return model
     curr_module = model
     for name in module_name.split("."):
         for child_name, child_module in curr_module.named_children():
@@ -155,16 +159,18 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 reduction_axes = [ndims - 1]
             elif weight_port_id == 1:
                 reduction_axes = [max(0, ndims - 2)]
-            reduction_axes = [max(0, reduction_axes)]
         elif node_with_weight.metatype == om.PTAddmmMetatype:
             if weight_port_id == 1:
                 reduction_axes = [ndims - 1]
             elif weight_port_id == 2:
                 reduction_axes = [max(0, ndims - 2)]
-            reduction_axes = [max(0, reduction_axes)]
         elif node_with_weight.metatype in PTWeightCompressionAlgoBackend.CONVOLUTION_METATYPES:
-            layer_attributes = node_with_weight.layer_attributes
-            channel_idx = layer_attributes.get_target_dim_for_compression()
+            channel_idx = (
+                1
+                if node_with_weight.metatype
+                in [om.PTConvTranspose1dMetatype, om.PTConvTranspose2dMetatype, om.PTConvTranspose3dMetatype]
+                else 0
+            )
             reduction_axes = [i for i in range(ndims) if i != channel_idx]
         return tuple(reduction_axes)
 

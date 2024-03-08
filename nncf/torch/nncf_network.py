@@ -87,28 +87,45 @@ class PTInsertionType(IntEnum):
     OPERATOR_POST_HOOK = 3
 
 
+TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT_FOR_REPLACED_MODULES = {
+    TargetType.PRE_LAYER_OPERATION: PTInsertionType.NNCF_MODULE_PRE_OP,
+    TargetType.POST_LAYER_OPERATION: PTInsertionType.NNCF_MODULE_POST_OP,
+    TargetType.OPERATION_WITH_WEIGHTS: PTInsertionType.NNCF_MODULE_PRE_OP,
+    TargetType.OPERATOR_PRE_HOOK: PTInsertionType.OPERATOR_PRE_HOOK,
+    TargetType.OPERATOR_POST_HOOK: PTInsertionType.OPERATOR_POST_HOOK,
+}
+
+TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT_FOR_NOT_REPLACED_MODULES = {
+    TargetType.PRE_LAYER_OPERATION: PTInsertionType.OPERATOR_PRE_HOOK,
+    TargetType.POST_LAYER_OPERATION: PTInsertionType.OPERATOR_POST_HOOK,
+    TargetType.OPERATION_WITH_WEIGHTS: PTInsertionType.OPERATOR_PRE_HOOK,
+    TargetType.OPERATOR_PRE_HOOK: PTInsertionType.OPERATOR_PRE_HOOK,
+    TargetType.OPERATOR_POST_HOOK: PTInsertionType.OPERATOR_POST_HOOK,
+}
+
+
 class PTInsertionPoint:
-    TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT = {
-        TargetType.PRE_LAYER_OPERATION: PTInsertionType.NNCF_MODULE_PRE_OP,
-        TargetType.POST_LAYER_OPERATION: PTInsertionType.NNCF_MODULE_POST_OP,
-        TargetType.OPERATION_WITH_WEIGHTS: PTInsertionType.NNCF_MODULE_PRE_OP,
-        TargetType.OPERATOR_PRE_HOOK: PTInsertionType.OPERATOR_PRE_HOOK,
-        TargetType.OPERATOR_POST_HOOK: PTInsertionType.OPERATOR_POST_HOOK,
-    }
-
-    def _get_pt_insertion_type(self, target_type: TargetType) -> PTInsertionType:
-        if (
-            not isinstance(target_type, TargetType)
-            or target_type not in PTInsertionPoint.TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT
-        ):
-            raise nncf.InternalError("Unsupported target type for PyTorch: {}".format(target_type))
-        return PTInsertionPoint.TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT[target_type]
-
-    def __init__(self, target_type: TargetType, op_address: OperationAddress, input_port_id: int = None):
-        self.insertion_type = self._get_pt_insertion_type(target_type)
+    def __init__(
+        self,
+        target_type: TargetType,
+        op_address: OperationAddress,
+        input_port_id: int = None,
+        replaced_modules: bool = True,
+    ):
+        self.insertion_type = self._get_pt_insertion_type(target_type, replaced_modules)
         self.op_address = op_address
         self.module_scope = op_address.scope_in_model
         self.input_port_id = input_port_id
+
+    @staticmethod
+    def _get_pt_insertion_type(target_type: TargetType, replaced_modules: bool) -> PTInsertionType:
+        map_target_types = TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT_FOR_NOT_REPLACED_MODULES
+        if replaced_modules:
+            map_target_types = TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT_FOR_REPLACED_MODULES
+
+        if not isinstance(target_type, TargetType) or target_type not in map_target_types:
+            raise nncf.InternalError("Unsupported target type for PyTorch: {}".format(target_type))
+        return map_target_types[target_type]
 
     def __eq__(self, other: "PTInsertionPoint"):
         return (
@@ -297,7 +314,7 @@ class NNCFNetworkInterface(torch.nn.Module):
             original_dynamic_graph = GraphTracer(_orig_graph_build_forward_fn).trace_graph(
                 model, _orig_context, as_eval=True, trace_parameters=self.trace_parameters
             )
-            original_graph = GraphConverter.convert(original_dynamic_graph)
+            original_graph = GraphConverter.convert(original_dynamic_graph, trace_parameters)
             self._original_graphs_pair = PTGraphPair(dynamic_graph=original_dynamic_graph, nncf_graph=original_graph)
         self._compressed_graphs_pair: PTGraphPair = None
 
@@ -414,7 +431,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         """
         Inserts given function to the point in the NNCFNetwork, creates hook handle for the inserted function and
         stores created hook handle in a group with the given name. A group name could be used late
-        to remove all hooks from the NNCFNewtork which belongs to the group.
+        to remove all hooks from the NNCFNetwork which belongs to the group.
 
         :param point: Target point to insert function.
         :param fn: Function to insert to the NNCFNetwork.
@@ -543,7 +560,7 @@ class NNCFNetworkInterface(torch.nn.Module):
             compressed_traced_graph = builder.build_dynamic_graph(
                 self._model_ref, self._compressed_context, trace_parameters=self.trace_parameters
             )
-            compressed_graph = GraphConverter.convert(compressed_traced_graph)
+            compressed_graph = GraphConverter.convert(compressed_traced_graph, self.trace_parameters)
             self._compressed_graphs_pair = PTGraphPair(
                 dynamic_graph=compressed_traced_graph, nncf_graph=compressed_graph
             )
@@ -824,8 +841,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         ret = []
         graph = self._original_graphs_pair.nncf_graph
         for node in graph.get_nodes_by_metatypes(CONST_NOOP_METATYPES):
-            next_nodes = graph.get_next_nodes(node)
-            if len(next_nodes) > 1:
+            if node.is_shared():
                 ret.append(node.layer_attributes.name)
         return ret
 

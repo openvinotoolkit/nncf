@@ -16,7 +16,6 @@ from typing import List
 import torch
 
 from nncf.api.compression import CompressionLoss
-from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
 from nncf.common.graph import NNCFNode
 from nncf.common.graph import NNCFNodeName
@@ -25,6 +24,7 @@ from nncf.common.logging import nncf_logger
 from nncf.common.schedulers import BaseCompressionScheduler
 from nncf.common.schedulers import StubCompressionScheduler
 from nncf.common.sparsity.controller import SparsityController
+from nncf.common.sparsity.schedulers import SparsityScheduler
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import copy_model
 from nncf.torch.algo_selector import ZeroCompressionLoss
@@ -108,11 +108,15 @@ class BaseSparsityAlgoController(PTCompressionAlgorithmController, SparsityContr
         self.sparsified_module_info = sparsified_module_info
 
     @property
+    def current_sparsity_level(self) -> float:
+        return self._scheduler.current_sparsity_level
+
+    @property
     def loss(self) -> CompressionLoss:
         return self._loss
 
     @property
-    def scheduler(self) -> CompressionScheduler:
+    def scheduler(self) -> SparsityScheduler:
         return self._scheduler
 
     def disable_scheduler(self):

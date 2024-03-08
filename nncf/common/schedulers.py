@@ -161,7 +161,7 @@ class BaseCompressionScheduler(CompressionScheduler):
     ```
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initializes the internal state of the compression scheduler specified by:
             - `current_step` is the index of the global training step, counted

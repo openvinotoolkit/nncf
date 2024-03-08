@@ -790,10 +790,16 @@ class SequentialMatmulModel(OVReferenceModel):
 
 
 class IdentityMatmul(OVReferenceModel):
-    def _create_ov_model(self):
+    def _create_ov_model(self, weights_dtype=None):
+        """
+        :param: weights_dtype: precision of weights, should be either np.float32 or np.float16
+        """
+        weights_dtype = np.float32 if weights_dtype is None else weights_dtype
         input_node = opset.parameter([3, 3], name="Input_1")
         weights_data = np.eye(3) * 255
-        current_weights = opset.constant(weights_data, dtype=np.float32, name="weights")
+        current_weights = opset.constant(weights_data, dtype=weights_dtype, name="weights")
+        if weights_dtype != np.float32:
+            current_weights = opset.convert(current_weights, np.float32, name="weights/convert")
         matmul_node = opset.matmul(input_node, current_weights, transpose_a=False, transpose_b=True, name="MatMul")
         result = opset.result(matmul_node, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
@@ -934,4 +940,77 @@ class AWQMatmulModel(OVReferenceModel):
         result = opset.result(node6, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
         model = ov.Model([result], [input_node])
+        return model
+
+
+class DuplicatedNamesModel(OVReferenceModel):
+    """
+    Model with duplicated node names (friendly_name field).
+    """
+
+    def _create_ov_model(self):
+        main_shape = [1, 2]
+        input_1 = opset.parameter(main_shape, name="Parameter")
+
+        add_1_data = self._rng.random(main_shape).astype(np.float32)
+        add_1 = opset.add(input_1, add_1_data, name="Duplicate")
+
+        matmul_1_data = self._rng.random(main_shape).astype(np.float32)
+        matmul_1 = opset.matmul(add_1, matmul_1_data, transpose_a=False, transpose_b=True, name="Duplicate")
+
+        result = opset.result(matmul_1, name="Result")
+        model = ov.Model([result], [input_1])
+        return model
+
+
+class ModelNamedConsts(OVReferenceModel):
+    """
+    Model with named constant nodes (friendly_name field).
+    """
+
+    def _create_ov_model(self):
+        main_shape = [1, 2]
+        input_1 = opset.parameter(main_shape, name="Parameter")
+
+        add_1_data = self._rng.random(main_shape).astype(np.float32)
+        add_1_const = opset.constant(add_1_data, name="Constant_16")
+        add_1 = opset.add(input_1, add_1_const, name="Add_1")
+
+        matmul_1_data = self._rng.random(main_shape).astype(np.float32)
+        matmul_1_const = opset.constant(matmul_1_data, name="Constant_1")
+        matmul_1 = opset.matmul(add_1, matmul_1_const, transpose_a=False, transpose_b=True, name="MatMul_1")
+
+        result = opset.result(matmul_1, name="Result")
+        model = ov.Model([result], [input_1])
+        return model
+
+
+class StatefulModel(OVReferenceModel):
+    """
+    Stateful model for testing.
+    Borrowed from https://github.com/openvinotoolkit/openvino/blob/0c552b7b152c341b5e545d131bd032fcb3cb6b86/src/bindings/python/tests/utils/helpers.py#L212
+    """
+
+    def __init__(self, stateful=True):
+        super().__init__(stateful=stateful)
+
+    def _create_ov_model(self, stateful=True):
+        input_shape = [1, 8]
+        data_type = np.float32
+        input_data = opset.parameter(input_shape, name="input_data", dtype=data_type)
+        init_val = opset.constant(np.zeros(input_shape), data_type)
+        if stateful:
+            rv = opset.read_value(init_val, "var_id_667", data_type, input_shape)
+            add = opset.add(rv, input_data, name="MemoryAdd")
+            node = opset.assign(add, "var_id_667")
+            result = opset.result(add, name="Result")
+            result.get_output_tensor(0).set_names(set(["Result"]))
+            model = ov.Model(results=[result], sinks=[node], parameters=[input_data], name="TestModel")
+        else:
+            bias = opset.constant(init_val, data_type)
+            add = opset.add(input_data, bias, name="Add")
+            result = opset.result(add, name="Result")
+            result.get_output_tensor(0).set_names(set(["Result"]))
+            model = ov.Model(results=[result], parameters=[input_data], name="TestModel")
+
         return model

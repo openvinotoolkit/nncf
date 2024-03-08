@@ -22,10 +22,10 @@ import nncf
 from tests.post_training.pipelines.base import OV_BACKENDS
 from tests.post_training.pipelines.base import PT_BACKENDS
 from tests.post_training.pipelines.base import BackendType
-from tests.post_training.pipelines.base import BaseTestPipeline
+from tests.post_training.pipelines.base import PTQTestPipeline
 
 
-class MaskedLanguageModelingHF(BaseTestPipeline):
+class MaskedLanguageModelingHF(PTQTestPipeline):
     """Pipeline for masked language models from Hugging Face repository"""
 
     def prepare_model(self) -> None:
@@ -53,16 +53,16 @@ class MaskedLanguageModelingHF(BaseTestPipeline):
         """Dump IRs of fp32 models, to help debugging."""
         if self.backend in PT_BACKENDS:
             ov_model = ov.convert_model(self.model, example_input=self.dummy_tensor)
-            ov.serialize(ov_model, self.output_model_dir / "model_fp32.xml")
+            ov.serialize(ov_model, self.fp32_model_dir / "model_fp32.xml")
 
         if self.backend == BackendType.ONNX:
-            onnx_path = self.output_model_dir / "model_fp32.onnx"
+            onnx_path = self.fp32_model_dir / "model_fp32.onnx"
             onnx.save(self.model, onnx_path)
             ov_model = ov.convert_model(onnx_path)
-            ov.serialize(ov_model, self.output_model_dir / "model_fp32.xml")
+            ov.serialize(ov_model, self.fp32_model_dir / "model_fp32.xml")
 
         if self.backend in OV_BACKENDS + [BackendType.FP32]:
-            ov.serialize(self.model, self.output_model_dir / "model_fp32.xml")
+            ov.serialize(self.model, self.fp32_model_dir / "model_fp32.xml")
 
     def prepare_preprocessor(self) -> None:
         self.preprocessor = transformers.AutoTokenizer.from_pretrained(self.model_id)
@@ -88,7 +88,7 @@ class MaskedLanguageModelingHF(BaseTestPipeline):
     def prepare_calibration_dataset(self):
         quantizer = OVQuantizer.from_pretrained(self.model_hf)
 
-        num_samples = self.ptq_params.get("subset_size", 300)
+        num_samples = self.compression_params.get("subset_size", 300)
 
         def preprocess_function(examples):
             return self.preprocessor(examples["sentence"], padding=True, truncation=True, max_length=128)

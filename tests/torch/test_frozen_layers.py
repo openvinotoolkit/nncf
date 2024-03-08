@@ -69,7 +69,7 @@ class AlgoBuilder:
 class FrozenLayersTestStruct:
     def __init__(self, name="No_name"):
         self.name = name
-        self.config_update = {"target_device": "VPU", "compression": []}
+        self.config_update = {"target_device": "NPU", "compression": []}
         self.raising_error = False
         self.printing_warning = False
         self._freeze_all = False

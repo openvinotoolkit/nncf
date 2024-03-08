@@ -89,6 +89,10 @@ class RBSparsityController(BaseSparsityAlgoController):
             sparse_op = target_sparsified_module_info.operand
             self._loss.set_target_sparsity_loss(sparsity_level, sparse_op)
 
+    @property
+    def current_sparsity_level(self) -> float:
+        return self._loss.current_sparsity
+
     def compression_stage(self) -> CompressionStage:
         if self._mode == "local":
             return CompressionStage.FULLY_COMPRESSED

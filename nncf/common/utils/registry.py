@@ -13,7 +13,7 @@
 class Registry:
     REGISTERED_NAME_ATTR = "_registered_name"
 
-    def __init__(self, name, add_name_as_attr=False):
+    def __init__(self, name: str, add_name_as_attr: bool = False):
         self._name = name
         self._registry_dict = {}
         self._add_name_as_attr = add_name_as_attr
@@ -30,7 +30,7 @@ class Registry:
             raise KeyError("{} is already registered in {}".format(name, self._name))
         self._registry_dict[name] = obj
 
-    def register(self, name=None):
+    def register(self, name: str = None):
         def wrap(obj):
             cls_name = name
             if cls_name is None:
