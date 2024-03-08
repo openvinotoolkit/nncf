@@ -78,7 +78,7 @@ class StatisticPointsContainer(UserDict):
 
         :param algorithm: Algorithm name
         """
-        for target_node_name, statistic_points in list(self.data.items()):
+        for target_node_name, statistic_points in self.data.items():
             # Reassign every target node name IF it doesn't contain the given algorithm
             self.data[target_node_name] = [
                 _statistic_point for _statistic_point in statistic_points if algorithm not in _statistic_point.algorithm_to_tensor_collectors
