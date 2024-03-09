@@ -10,12 +10,14 @@
 # limitations under the License.
 import pytest
 
-from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer, StatisticPoint
+from nncf.common.graph.transformations.commands import TargetPoint
+from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
-from nncf.common.graph.transformations.commands import TargetPoint, TargetType
+from nncf.common.tensor_statistics.statistic_point import StatisticPoint
+from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
+
 
 class TestStatisticPointsContainer:
-
     @pytest.fixture
     def container_with_statistics(self):
         container = StatisticPointsContainer()
@@ -41,4 +43,3 @@ class TestStatisticPointsContainer:
 
         # Verify that removing statistics from an empty container has no effect
         assert not empty_container.data
-
