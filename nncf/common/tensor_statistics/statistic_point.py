@@ -78,7 +78,9 @@ class StatisticPointsContainer(UserDict):
 
         :param algorithm: Algorithm name
         """
-        for target_node_name, statistic_points in self.data.items():
+        data_copy = dict(self.data)
+
+        for target_node_name, statistic_points in data_copy.items():
             # Reassign every target node name IF it doesn't contain the given algorithm
             self.data[target_node_name] = [
                 _statistic_point

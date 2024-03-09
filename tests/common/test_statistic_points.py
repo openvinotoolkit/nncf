@@ -19,8 +19,9 @@ class TestStatisticPointsContainer:
     @pytest.fixture
     def container_with_statistics(self):
         container = StatisticPointsContainer()
-        target_type = TargetType.OPERATOR_POST_HOOK
+        target_type = TargetType.LAYER
         target_point = TargetPoint(target_type)
+        target_point.target_node_name = "Node"
         # tensor_collector = TensorStatisticCollectorBase()
         statistic_point = StatisticPoint(target_point, TensorStatisticCollectorBase, "minimax")
         container.add_statistic_point(statistic_point)
