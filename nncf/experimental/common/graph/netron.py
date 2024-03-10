@@ -70,7 +70,7 @@ class NodeDesc:
         node_id (str): The identifier of the node.
         name (str): The name of the node.
         type (str): The type of the node.
-        attrs (Optional[Dict[str, str]]): Additional attributes of the node. Defaults to an empty dictionary if not provided.
+        attrs (Optional[Dict[str, str]]): Additional attributes of the node. Default empty dictionary.
         inputs (Optional[List[PortDesc]]): List of input ports for the node.
         outputs (Optional[List[PortDesc]]): List of output ports for the node.
 
