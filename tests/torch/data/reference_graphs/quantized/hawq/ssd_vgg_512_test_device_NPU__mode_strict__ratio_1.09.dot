@@ -73,7 +73,7 @@ strict digraph  {
 "54 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[21]/conv2d_0" [color=lightblue, id=54, label="conv2d_k3x3_PAD_#54", style=filled, type=conv2d];
 "54 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[21]/conv2d_0_apad" [color=yellow, label=adjust_padding_value, style=filled, type=""];
 "55 SSD_VGG/MultiOutputSequential[basenet]/ReLU[22]/relu__0" [id=55, label="relu__#55", style=filled, type=relu_];
-"56 SSD_VGG/MultiOutputSequential[basenet]/ReLU[22]/AsymmetricQuantizer/asymmetric_quantize_0" [color=green, id=56, label="AFQ_[B:8 M:A SGN:S PC:N]_#56_G26", style=filled, type=asymmetric_quantize];
+"56 SSD_VGG/MultiOutputSequential[basenet]/ReLU[22]/SymmetricQuantizer/symmetric_quantize_0" [color=green, id=56, label="AFQ_[B:8 M:S SGN:U PC:N]_#56_G26", style=filled, type=symmetric_quantize];
 "57 SSD_VGG/MultiOutputSequential[basenet]/MaxPool2d[23]/max_pool2d_0" [id=57, label="max_pool2d_#57", style=filled, type=max_pool2d];
 "58 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[24]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" [color=green, id=58, label="WFQ_[B:8 M:S SGN:S PC:Y]_#58_G26", style=filled, type=symmetric_quantize];
 "59 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[24]/conv2d_0" [color=lightblue, id=59, label="conv2d_k3x3_PAD_#59", style=filled, type=conv2d];
@@ -359,10 +359,10 @@ strict digraph  {
 "53 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[21]/pad_0" -> "54 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[21]/conv2d_0";
 "54 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[21]/conv2d_0_apad" -> "54 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[21]/conv2d_0";
 "54 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[21]/conv2d_0" -> "55 SSD_VGG/MultiOutputSequential[basenet]/ReLU[22]/relu__0";
-"55 SSD_VGG/MultiOutputSequential[basenet]/ReLU[22]/relu__0" -> "56 SSD_VGG/MultiOutputSequential[basenet]/ReLU[22]/AsymmetricQuantizer/asymmetric_quantize_0";
-"56 SSD_VGG/MultiOutputSequential[basenet]/ReLU[22]/AsymmetricQuantizer/asymmetric_quantize_0" -> "57 SSD_VGG/MultiOutputSequential[basenet]/MaxPool2d[23]/max_pool2d_0";
-"56 SSD_VGG/MultiOutputSequential[basenet]/ReLU[22]/AsymmetricQuantizer/asymmetric_quantize_0" -> "83 SSD_VGG/NNCFUserL2Norm[L2Norm]/pow_0";
-"56 SSD_VGG/MultiOutputSequential[basenet]/ReLU[22]/AsymmetricQuantizer/asymmetric_quantize_0" -> "87 SSD_VGG/NNCFUserL2Norm[L2Norm]/div_0";
+"55 SSD_VGG/MultiOutputSequential[basenet]/ReLU[22]/relu__0" -> "56 SSD_VGG/MultiOutputSequential[basenet]/ReLU[22]/SymmetricQuantizer/symmetric_quantize_0";
+"56 SSD_VGG/MultiOutputSequential[basenet]/ReLU[22]/SymmetricQuantizer/symmetric_quantize_0" -> "57 SSD_VGG/MultiOutputSequential[basenet]/MaxPool2d[23]/max_pool2d_0";
+"56 SSD_VGG/MultiOutputSequential[basenet]/ReLU[22]/SymmetricQuantizer/symmetric_quantize_0" -> "83 SSD_VGG/NNCFUserL2Norm[L2Norm]/pow_0";
+"56 SSD_VGG/MultiOutputSequential[basenet]/ReLU[22]/SymmetricQuantizer/symmetric_quantize_0" -> "87 SSD_VGG/NNCFUserL2Norm[L2Norm]/div_0";
 "57 SSD_VGG/MultiOutputSequential[basenet]/MaxPool2d[23]/max_pool2d_0" -> "59 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[24]/conv2d_0";
 "58 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[24]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "59 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[24]/conv2d_0";
 "59 SSD_VGG/MultiOutputSequential[basenet]/NNCFConv2d[24]/conv2d_0" -> "60 SSD_VGG/MultiOutputSequential[basenet]/ReLU[25]/relu__0";
