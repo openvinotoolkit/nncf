@@ -33,19 +33,16 @@ class Tags:
 
 class PortDesc:
     """
-    Represents a port description for a node in the computational graph.
+    Represents a port description in the computational graph.
 
-    Attributes:
-        port_id (str): The identifier of the port.
-        shape (Optional[List[int]]): The shape of the port. Defaults to an empty list if not provided.
-        precision (str): precision of the port expressed as ov dtype.
-
-    Methods:
-        as_xml_element() -> ET.Element:
-            Converts the PortDesc object into an XML element.
     """
 
     def __init__(self, port_id: str, precision: str, shape: Optional[List[int]] = None):
+        """
+        :param port_id: The identifier of the port.
+        :param shape: The shape of the port. Defaults to an empty list if not provided.
+        :param precision: precision of the port expressed as ov dtype.
+        """
         self.port_id = port_id
         if shape is None:
             shape = []
@@ -53,6 +50,11 @@ class PortDesc:
         self.precision = precision
 
     def as_xml_element(self) -> ET.Element:
+        """
+        Converts the PortDesc object into an XML element.
+
+        :return: the Element representing the port in XML 
+        """
         port = ET.Element(Tags.PORT, id=self.port_id, precision=self.precision)
 
         for i in self.shape:
@@ -65,18 +67,7 @@ class PortDesc:
 class NodeDesc:
     """
     Represents a node description in the computational graph.
-
-    Attributes:
-        node_id (str): The identifier of the node.
-        name (str): The name of the node.
-        type (str): The type of the node.
-        attrs (Optional[Dict[str, str]]): Additional attributes of the node. Default empty dictionary.
-        inputs (Optional[List[PortDesc]]): List of input ports for the node.
-        outputs (Optional[List[PortDesc]]): List of output ports for the node.
-
-    Methods:
-        as_xml_element() -> ET.Element:
-            Converts the NodeDesc object into an XML element.
+    
     """
 
     def __init__(
@@ -88,6 +79,14 @@ class NodeDesc:
         inputs: Optional[List[PortDesc]] = None,
         outputs: Optional[List[PortDesc]] = None,
     ):
+        """
+        :param node_id: The identifier of the node.
+        :param name: The name of the node.
+        :param type: The type of the node.
+        :param attrs: Additional attributes of the node. Default empty dictionary.
+        :param inputs: List of input ports for the node.
+        :param outputs: List of output ports for the node.
+        """
         self.node_id = node_id
         self.name = name
         self.type = node_type
@@ -98,6 +97,11 @@ class NodeDesc:
         self.outputs = outputs
 
     def as_xml_element(self) -> ET.Element:
+        """
+        Converts the NodeDesc object into an XML element.
+
+        :return: the Element representing the node in XML 
+        """
         node = ET.Element(Tags.NODE, id=self.node_id, name=self.name, type=self.type)
         ET.SubElement(node, Tags.DATA, self.attrs)
 
@@ -118,29 +122,32 @@ class EdgeDesc:
     """
     Represents an edge description in the computational graph.
 
-    Attributes:
-        from_node (str): The identifier of the source node.
-        from_port (str): The identifier of the output port of the source node.
-        to_node (str): The identifier of the target node.
-        to_port (str): The identifier of the input port of the target node.
-
-    Methods:
-        as_xml_element() -> ET.Element:
-            Converts the EdgeDesc object into an XML element.
     """
 
     def __init__(
-        self, from_node: str,
+        self, 
+        from_node: str,
         from_port: str,
         to_node: str,
         to_port: str
     ):
+        """
+        :param from_node: The identifier of the source node.
+        :param from_port: The identifier of the output port of the source node.
+        :param to_node: The identifier of the target node.
+        :param to_port: The identifier of the input port of the target node.
+        """
         self.from_node = from_node
         self.from_port = from_port
         self.to_node = to_node
         self.to_port = to_port
 
     def as_xml_element(self) -> ET.Element:
+        """
+        Converts the EdgeDesc object into an XML element.
+
+        :return: the Element representing the edge in XML 
+        """
         attrs = {
             "from-layer": self.from_node,
             "from-port": self.from_port,
@@ -154,15 +161,12 @@ class EdgeDesc:
 GET_ATTRIBUTES_FN_TYPE = Callable[[NNCFNode], Dict[str, str]]
 
 
-def convert_dummy_precision(dtype: Dtype) -> str:
+def convert_nncf_dtype_to_ov_dtype(dtype: Dtype) -> str:
     """
-    Converts a nncf dtype to a dummy openvino dtype string.
+    Converts a nncf dtype to an openvino dtype string.
 
-    Parameters:
-    - dtype (Dtype): The data type to be converted. Should be one of the nncf Dtype.
-
-    Returns:
-    - str: The dummy openvino dtype string corresponding to the given data type.
+    :param dtype: The data type to be converted. Should be one of the nncf Dtype.
+    :return: The openvino dtype string corresponding to the given data type.
     """
 
     dummy_precision_map: Dict[Dtype, str] = {
@@ -181,21 +185,13 @@ def get_graph_desc(
     """
     Retrieves descriptions of nodes and edges from an NNCFGraph.
 
-    Args:
-        graph (NNCFGraph): The NNCFGraph instance to extract descriptions from.
-        include_fq_params (bool): Whether to include FakeQuantize parameters in the description.
-        get_attributes_fn (Optional[GET_ATTRIBUTES_FN_TYPE]): A function to retrieve additional attributes for nodes.
-            Defaults to a function returning {"metatype": str(x.metatype.name)}.
-
-    Returns:
-        Tuple[List[NodeDesc], List[EdgeDesc]]: A tuple containing lists of NodeDesc and EdgeDesc objects
+    :param graph: The NNCFGraph instance to extract descriptions from.
+    :param include_fq_params: Whether to include FakeQuantize parameters in the description.
+    :param get_attributes_fn: A function to retrieve additional attributes for nodes.
+        Defaults to a function returning {"metatype": str(x.metatype.name)}.
+    :return: A tuple containing lists of NodeDesc and EdgeDesc objects
         representing the nodes and edges of the NNCFGraph.
 
-    Notes:
-        The NodeDesc and EdgeDesc objects contain detailed information about nodes and edges, respectively.
-
-    Example:
-        nodes, edges = get_graph_desc(graph_instance)
     """
     
     if get_attributes_fn is None:
@@ -230,7 +226,7 @@ def get_graph_desc(
             inputs.append(
                 PortDesc(
                     port_id=str(edge.input_port_id),
-                    precision=convert_dummy_precision(edge.dtype),
+                    precision=convert_nncf_dtype_to_ov_dtype(edge.dtype),
                     shape=edge.tensor_shape
                 )
             )
@@ -240,7 +236,7 @@ def get_graph_desc(
             outputs.append(
                 PortDesc(
                     port_id=str(edge.output_port_id),
-                    precision=convert_dummy_precision(edge.dtype),
+                    precision=convert_nncf_dtype_to_ov_dtype(edge.dtype),
                     shape=edge.tensor_shape
                 )
             )
@@ -267,22 +263,14 @@ def save_for_netron(
     get_attributes_fn: Optional[GET_ATTRIBUTES_FN_TYPE] = None,
 ):
     """
-    Save the NNCFGraph information in an onnx file suitable for visualization with Netron.
+    Save the NNCFGraph information in an XML file suitable for visualization with Netron.
 
-    Args:
-        graph (NNCFGraph): The NNCFGraph instance to visualize.
-        save_path (str): The path to save the Netron-compatible file.
-        graph_name (str): The name of the graph. Defaults to "Graph".
-        include_fq_params (bool): Whether to include FakeQuantize parameters in the visualization.
-        get_attributes_fn (Optional[GET_ATTRIBUTES_FN_TYPE]): A function to retrieve additional attributes for nodes.
-            Defaults to a function returning {"metatype": str(x.metatype.name)}.
-
-    Notes:
-        This function uses the provided NNCFGraph instance to generate node and edge descriptions,
-        and then creates an XML representation suitable for Netron visualization.
-
-    Example:
-        save_for_netron(graph_instance, save_path="path/to/save/file.onnx", graph_name="MyGraph", include_fq_params=True)
+    :param graph: The NNCFGraph instance to visualize.
+    :param save_path: The path to save the Netron-compatible file.
+    :param graph_name: The name of the graph. Defaults to "Graph".
+    :param include_fq_params: Whether to include FakeQuantize parameters in the visualization.
+    :param get_attributes_fn: A function to retrieve additional attributes for nodes.
+        Defaults to a function returning {"metatype": str(x.metatype.name)}.
     """
 
     node_descs, edge_descs = get_graph_desc(graph, include_fq_params, get_attributes_fn)

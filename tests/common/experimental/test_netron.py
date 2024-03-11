@@ -13,7 +13,7 @@ import xml.etree.ElementTree as ET  # nosec
 from dataclasses import dataclass
 from typing import Optional
 
-from nncf.experimental.common.graph.netron import get_graph_desc, convert_dummy_precision, EdgeDesc, NodeDesc, PortDesc, Tags, GET_ATTRIBUTES_FN_TYPE
+from nncf.experimental.common.graph.netron import get_graph_desc, convert_nncf_dtype_to_ov_dtype, EdgeDesc, NodeDesc, PortDesc, Tags, GET_ATTRIBUTES_FN_TYPE
 from tests.common.quantization.mock_graphs import get_two_branch_mock_model_graph
 
 import pytest
@@ -116,7 +116,7 @@ def test_port_desc():
     for edge in nncf_graph.get_all_edges():
         portDesc = PortDesc(
             port_id=str(edge.input_port_id),
-            precision=convert_dummy_precision(edge.dtype),
+            precision=convert_nncf_dtype_to_ov_dtype(edge.dtype),
             shape=edge.tensor_shape
         )
 
@@ -124,7 +124,7 @@ def test_port_desc():
 
         assert xmlElement.tag == Tags.PORT
         assert xmlElement.attrib["id"] == str(edge.input_port_id)
-        assert xmlElement.attrib["precision"] == convert_dummy_precision(edge.dtype)
+        assert xmlElement.attrib["precision"] == convert_nncf_dtype_to_ov_dtype(edge.dtype)
         assert all([child.tag == Tags.DIM for child in xmlElement])
         assert all([str(edge_shape) == port_shape.text for edge_shape, port_shape in zip(edge.tensor_shape, xmlElement)])
         
