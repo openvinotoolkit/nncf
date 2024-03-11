@@ -89,7 +89,7 @@
         {
             "type": "DepthWiseConvolution",
             "quantization": {
-                "activations": ["q8_a_ch", "q8_a"],
+                "activations": "q8_a_ch",
                 "weights": ["q8_w_sym", "q8_w_asym", "q4_w", "q2_w"]
             }
         },
