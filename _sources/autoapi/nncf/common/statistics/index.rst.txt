@@ -86,7 +86,6 @@ Classes
           * const_sparsity
           * quantization
           * filter_pruning
-          * binarization
 
       :param stats: Statistics of the algorithm.
 
