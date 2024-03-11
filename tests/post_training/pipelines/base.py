@@ -131,6 +131,8 @@ class RunInfo:
     metric_value: Optional[float] = None
     metric_diff: Optional[float] = None
     num_fq_nodes: Optional[float] = None
+    num_int8: Optional[float] = None
+    num_int4: Optional[float] = None
     compression_memory_usage: Optional[int] = None
     status: Optional[str] = None
     fps: Optional[float] = None
@@ -158,6 +160,8 @@ class RunInfo:
             "Metric value": self.metric_value,
             "Metric diff": self.metric_diff,
             "Num FQ": self.num_fq_nodes,
+            "Num int4": self.num_int4,
+            "Num int8": self.num_int8,
             "RAM MiB": self.format_memory_usage(self.compression_memory_usage),
             "Compr. time": self.format_time(self.time_compression),
             **self.stats_from_output.get_stats(),
@@ -376,12 +380,21 @@ class PTQTestPipeline(BaseTestPipeline):
         model = ie.read_model(model=self.path_compressed_ir)
 
         num_fq = 0
+        num_int8 = 0
+        num_int4 = 0
         for node in model.get_ops():
             node_type = node.type_info.name
             if node_type == "FakeQuantize":
                 num_fq += 1
+            for i in range(node.get_output_size()):
+                if "8" in node.get_output_element_type(i).get_type_name():
+                    num_int8 += 1
+                if "4" in node.get_output_element_type(i).get_type_name():
+                    num_int4 += 1
 
         self.run_info.num_fq_nodes = num_fq
+        self.run_info.num_int8 = num_int8
+        self.run_info.num_int4 = num_int4
 
     def run_bench(self) -> None:
         """
