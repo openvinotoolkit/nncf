@@ -25,7 +25,7 @@ class TestStatisticPointsContainer:
         target_point = TargetPoint(target_type)
         target_point.target_node_name = "Node"
         # tensor_collector = TensorStatisticCollectorBase()
-        statistic_point = StatisticPoint(target_point, TensorStatisticCollectorBase, "minimax")
+        statistic_point = StatisticPoint(target_point, TensorStatisticCollectorBase, "minmax")
         container.add_statistic_point(statistic_point)
         return container
 
