@@ -34,7 +34,6 @@ if _torch_version not in SpecifierSet(BKC_TORCH_SPEC):
 
 
 # Required for correct COMPRESSION_ALGORITHMS registry functioning
-from nncf.torch.binarization import algo as binarization_algo
 from nncf.torch.quantization import algo as quantization_algo
 from nncf.torch.sparsity.const import algo as const_sparsity_algo
 from nncf.torch.sparsity.magnitude import algo as magnitude_sparsity_algo
