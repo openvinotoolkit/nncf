@@ -118,7 +118,7 @@ class Pipeline:
             current_graph = NNCFGraphFactory.create(current_model)
         current_model = pipeline_step[-1].apply(current_model, current_graph, step_statistics)
 
-        step_statistics.remove_statistic_points(algorithm)
+        step_statistics.remove_statistic_points(algorithm._algorithm_key)
 
         return current_model
 
