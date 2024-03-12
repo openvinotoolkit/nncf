@@ -348,7 +348,7 @@ class WeightCompression(Algorithm):
             )
             awq_algo.apply(model, graph)
 
-        if self._scale_estimation:
+        if self._scale_estimation and activations is not None and self._mode != CompressWeightsMode.NF4:
             scale_algo = ScaleEstimation(
                 model,
                 self._backend_entity.name_to_node_mapping,
