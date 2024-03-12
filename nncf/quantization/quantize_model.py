@@ -44,7 +44,7 @@ def quantize(
     preset: Optional[QuantizationPreset] = None,
     target_device: TargetDevice = TargetDevice.ANY,
     subset_size: int = 300,
-    fast_bias_correction: bool = False,
+    fast_bias_correction: bool = True,
     model_type: Optional[ModelType] = None,
     ignored_scope: Optional[IgnoredScope] = None,
     advanced_parameters: Optional[AdvancedQuantizationParameters] = None,
