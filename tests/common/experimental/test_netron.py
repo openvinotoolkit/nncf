@@ -7,41 +7,36 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License
+# limitations under the License.
 
 import xml.etree.ElementTree as ET  # nosec
 from dataclasses import dataclass
 from typing import Optional
 
-from nncf.experimental.common.graph.netron import get_graph_desc, convert_nncf_dtype_to_ov_dtype, EdgeDesc, NodeDesc, PortDesc, Tags, GET_ATTRIBUTES_FN_TYPE
+import pytest
+
+from nncf.experimental.common.graph.netron import GET_ATTRIBUTES_FN_TYPE
+from nncf.experimental.common.graph.netron import EdgeDesc
+from nncf.experimental.common.graph.netron import NodeDesc
+from nncf.experimental.common.graph.netron import PortDesc
+from nncf.experimental.common.graph.netron import Tags
+from nncf.experimental.common.graph.netron import convert_nncf_dtype_to_ov_dtype
+from nncf.experimental.common.graph.netron import get_graph_desc
 from tests.common.quantization.mock_graphs import get_two_branch_mock_model_graph
 
-import pytest
 
 @dataclass
 class GraphDescTestCase:
     include_fq_params: Optional[bool]
     get_attributes_fn: GET_ATTRIBUTES_FN_TYPE
 
+
 GRAPH_DESC_TEST_CASES = [
-    GraphDescTestCase(
-        include_fq_params = False,
-        get_attributes_fn = None
-    ),
-
-    GraphDescTestCase(
-        include_fq_params = True,
-        get_attributes_fn = None
-    ),
-
-    GraphDescTestCase(
-        include_fq_params = True,
-        get_attributes_fn = lambda x: {
-            "name": x.node_name,
-            "type": x.node_type
-        } 
-    )
+    GraphDescTestCase(include_fq_params=False, get_attributes_fn=None),
+    GraphDescTestCase(include_fq_params=True, get_attributes_fn=None),
+    GraphDescTestCase(include_fq_params=True, get_attributes_fn=lambda x: {"name": x.node_name, "type": x.node_type}),
 ]
+
 
 @pytest.mark.parametrize(
     "graph_desc_test_case",
@@ -50,7 +45,7 @@ GRAPH_DESC_TEST_CASES = [
 def test_get_graph_desc(graph_desc_test_case: GraphDescTestCase):
     include_fq_params = graph_desc_test_case.include_fq_params
     get_attributes_fn = graph_desc_test_case.get_attributes_fn
-    
+
     nncf_graph = get_two_branch_mock_model_graph()
 
     edges = list(nncf_graph.get_all_edges())
@@ -72,7 +67,6 @@ def test_edge_desc():
     nncf_graph = get_two_branch_mock_model_graph()
 
     for edge in nncf_graph.get_all_edges():
-
         edgeDesc = EdgeDesc(
             from_node=str(edge.from_node.node_id),
             from_port=str(edge.output_port_id),
@@ -117,7 +111,7 @@ def test_port_desc():
         portDesc = PortDesc(
             port_id=str(edge.input_port_id),
             precision=convert_nncf_dtype_to_ov_dtype(edge.dtype),
-            shape=edge.tensor_shape
+            shape=edge.tensor_shape,
         )
 
         xmlElement = portDesc.as_xml_element()
@@ -126,5 +120,6 @@ def test_port_desc():
         assert xmlElement.attrib["id"] == str(edge.input_port_id)
         assert xmlElement.attrib["precision"] == convert_nncf_dtype_to_ov_dtype(edge.dtype)
         assert all([child.tag == Tags.DIM for child in xmlElement])
-        assert all([str(edge_shape) == port_shape.text for edge_shape, port_shape in zip(edge.tensor_shape, xmlElement)])
-        
+        assert all(
+            [str(edge_shape) == port_shape.text for edge_shape, port_shape in zip(edge.tensor_shape, xmlElement)]
+        )
