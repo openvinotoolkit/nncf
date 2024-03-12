@@ -113,13 +113,14 @@ class Pipeline:
 
         pipeline_steps = self._remove_unsupported_algorithms(get_backend(model))
         pipeline_step = pipeline_steps[step_index]
+
         for algorithm in pipeline_step[:-1]:
             current_model = algorithm.apply(current_model, current_graph, step_statistics)
             current_graph = NNCFGraphFactory.create(current_model)
-        current_model = pipeline_step[-1].apply(current_model, current_graph, step_statistics)
-
-        for algorithm in pipeline_step[:-1]:
             step_statistics.remove_statistic_points(algorithm._algorithm_key)
+
+        current_model = pipeline_step[-1].apply(current_model, current_graph, step_statistics)
+        step_statistics.remove_statistic_points(pipeline_step[-1]._algorithm_key)
 
         return current_model
 
