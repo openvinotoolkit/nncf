@@ -34,14 +34,13 @@ class Tags:
 class PortDesc:
     """
     Represents a port description in the computational graph.
-
     """
 
     def __init__(self, port_id: str, precision: str, shape: Optional[List[int]] = None):
         """
         :param port_id: The identifier of the port.
-        :param shape: The shape of the port. Defaults to an empty list if not provided.
-        :param precision: precision of the port expressed as ov dtype.
+        :param precision: Precision of the tensor corresponding to the port, either "fp32" or "i32".
+        :param shape: The shape of the tensor. Defaults to an empty list if not provided.
         """
         self.port_id = port_id
         if shape is None:
@@ -53,7 +52,7 @@ class PortDesc:
         """
         Converts the PortDesc object into an XML element.
 
-        :return: the Element representing the port in XML 
+        :return: The Element representing the port in XML
         """
         port = ET.Element(Tags.PORT, id=self.port_id, precision=self.precision)
 
@@ -67,7 +66,6 @@ class PortDesc:
 class NodeDesc:
     """
     Represents a node description in the computational graph.
-    
     """
 
     def __init__(
@@ -100,7 +98,7 @@ class NodeDesc:
         """
         Converts the NodeDesc object into an XML element.
 
-        :return: the Element representing the node in XML 
+        :return: The Element representing the node in XML
         """
         node = ET.Element(Tags.NODE, id=self.node_id, name=self.name, type=self.type)
         ET.SubElement(node, Tags.DATA, self.attrs)
@@ -121,16 +119,9 @@ class NodeDesc:
 class EdgeDesc:
     """
     Represents an edge description in the computational graph.
-
     """
 
-    def __init__(
-        self, 
-        from_node: str,
-        from_port: str,
-        to_node: str,
-        to_port: str
-    ):
+    def __init__(self, from_node: str, from_port: str, to_node: str, to_port: str):
         """
         :param from_node: The identifier of the source node.
         :param from_port: The identifier of the output port of the source node.
@@ -146,7 +137,7 @@ class EdgeDesc:
         """
         Converts the EdgeDesc object into an XML element.
 
-        :return: the Element representing the edge in XML 
+        :return: The Element representing the edge in XML
         """
         attrs = {
             "from-layer": self.from_node,
@@ -165,22 +156,17 @@ def convert_nncf_dtype_to_ov_dtype(dtype: Dtype) -> str:
     """
     Converts a nncf dtype to an openvino dtype string.
 
-    :param dtype: The data type to be converted. Should be one of the nncf Dtype.
+    :param dtype: The data type to be converted.
     :return: The openvino dtype string corresponding to the given data type.
     """
 
-    dummy_precision_map: Dict[Dtype, str] = {
-        Dtype.INTEGER: "i32",
-        Dtype.FLOAT: "f32"
-    }
+    dummy_precision_map: Dict[Dtype, str] = {Dtype.INTEGER: "i32", Dtype.FLOAT: "f32"}
 
     return dummy_precision_map[dtype]
 
 
 def get_graph_desc(
-    graph: NNCFGraph,
-    include_fq_params: bool = False,
-    get_attributes_fn: Optional[GET_ATTRIBUTES_FN_TYPE] = None
+    graph: NNCFGraph, include_fq_params: bool = False, get_attributes_fn: Optional[GET_ATTRIBUTES_FN_TYPE] = None
 ) -> Tuple[List[NodeDesc], List[EdgeDesc]]:
     """
     Retrieves descriptions of nodes and edges from an NNCFGraph.
@@ -191,9 +177,8 @@ def get_graph_desc(
         Defaults to a function returning {"metatype": str(x.metatype.name)}.
     :return: A tuple containing lists of NodeDesc and EdgeDesc objects
         representing the nodes and edges of the NNCFGraph.
-
     """
-    
+
     if get_attributes_fn is None:
         get_attributes_fn = lambda x: {
             "metatype": str(x.metatype.name),
@@ -227,7 +212,7 @@ def get_graph_desc(
                 PortDesc(
                     port_id=str(edge.input_port_id),
                     precision=convert_nncf_dtype_to_ov_dtype(edge.dtype),
-                    shape=edge.tensor_shape
+                    shape=edge.tensor_shape,
                 )
             )
 
@@ -237,7 +222,7 @@ def get_graph_desc(
                 PortDesc(
                     port_id=str(edge.output_port_id),
                     precision=convert_nncf_dtype_to_ov_dtype(edge.dtype),
-                    shape=edge.tensor_shape
+                    shape=edge.tensor_shape,
                 )
             )
 
