@@ -19,6 +19,7 @@ from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.experimental.tensor import TensorDataType
 from nncf.experimental.tensor import functions as fns
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
@@ -111,6 +112,8 @@ class ScaleEstimation(Algorithm):
         """
         name_mapping = {wp.node_with_weight.node_name: idx for idx, wp in enumerate(self._all_weight_params)}
 
+        compress_decompress_cashe = {}
+
         for k, stats in track(self._activations.items(), description="Applying Scale Estimation"):
             wp = self._all_weight_params[name_mapping[k]]
             reduction_axis = wp.reduction_axes[0]
@@ -134,15 +137,13 @@ class ScaleEstimation(Algorithm):
                 step = X_full.shape[1] // self._subset_size
                 idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][::step]
                 X = X_full[:, idxs]
-                idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][1::step]
-                X_cnt = X_full[:, idxs]
             else:
                 X = X_full
-                X_cnt = X_full
 
             s = fns.max(fns.abs(X_full), axis=1)
 
             weight = self._backend_entity.get_weight(wp.node_with_weight, weight_port_id, model, graph)
+            weight = weight.astype(TensorDataType.float32)
             eps = fns.finfo(weight).eps
 
             if reduction_axis == 0:
@@ -156,10 +157,6 @@ class ScaleEstimation(Algorithm):
 
             q_weights = do_dequantization(g_compressed_weighs, g_c_scale, g_c_zp, reduction_axis)
 
-            fp_out_cnt = fns.matmul(original_weight, X_cnt)  # [d_out, seq_len]
-            q_out = fns.matmul(q_weights, X_cnt)
-            diff_before = fns.mean(fns.abs(fp_out_cnt - q_out))
-
             s = fns.unsqueeze(s, 0)
             s, _ = reshape_weight_for_grouped_quantization(s, reduction_axis, config.group_size)
 
@@ -169,7 +166,7 @@ class ScaleEstimation(Algorithm):
             importance = fns.ones_like(original_weight)
             importance = importance * s
 
-            target = g_compressed_weighs.astype(dtype=g_c_scale.dtype) - g_c_zp
+            target = g_compressed_weighs.astype(dtype=g_c_zp.dtype) - g_c_zp
             zero_mask = g_compressed_weighs == g_c_zp
 
             importance = fns.where(zero_mask, 0.0, importance)  # ???????
@@ -188,17 +185,31 @@ class ScaleEstimation(Algorithm):
             min_max_scale_diffs = fns.transpose(min_max_scale_diffs, (1, 0))
             ideal_scale_diffs = fns.zeros_like(min_max_scale_diffs)
 
-            compress_decompress_model = self._backend_entity.get_compress_decompress_pipeline(
-                wp, q_weights.shape, g_c_scale.shape, g_c_zp.shape
+            k = (
+                (wp.compression_config.mode, wp.compression_config.num_bits)
+                + q_weights.shape
+                + g_c_scale.shape
+                + g_c_zp.shape
             )
+            if k in compress_decompress_cashe:
+                compress_decompress_model = compress_decompress_cashe[k]["compress_decompress_model"]
+                compress_model = compress_decompress_cashe[k]["compress_model"]
+            else:
+                compress_decompress_model = self._backend_entity.get_compress_decompress_pipeline(
+                    wp, q_weights.shape, g_c_scale.shape, g_c_zp.shape
+                )
+                compress_model = self._backend_entity.get_compress_pipeline(
+                    wp, q_weights.shape, g_c_scale.shape, g_c_zp.shape
+                )
+                compress_decompress_cashe[k] = {
+                    "compress_decompress_model": compress_decompress_model,
+                    "compress_model": compress_model,
+                }
 
-            compress_model = self._backend_entity.get_compress_pipeline(
-                wp, q_weights.shape, g_c_scale.shape, g_c_zp.shape
-            )
             zero_scale = 0.001
             zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
 
-            for _ in range(self._initial_steps):
+            for i in range(self._initial_steps):
                 ideal_scale = fns.abs(original_weight) / (fns.abs(target) + zero_mask)
                 weighted_scale = ideal_scale * importance
 
@@ -226,11 +237,12 @@ class ScaleEstimation(Algorithm):
                     near_to_ideal_scale = mask * result_scale + (1.0 - mask) * near_to_ideal_scale
                 result_scale = near_to_ideal_scale
 
-                out = compress_model([original_weight.data, near_to_ideal_scale.data, g_c_zp.data])
-                compressed_weights = fns.zeros_like(original_weight) + out["compressed_weights"]
-                target = compressed_weights - g_c_zp
-                zero_mask = compressed_weights == g_c_zp
-                zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
+                if i < self._initial_steps - 1:
+                    out = compress_model([original_weight.data, near_to_ideal_scale.data, g_c_zp.data])
+                    compressed_weights = fns.zeros_like(original_weight) + out["compressed_weights"]
+                    target = compressed_weights - g_c_zp
+                    zero_mask = compressed_weights == g_c_zp
+                    zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
 
             for scale_steps in range(self._scale_steps):
                 scale = 1.0 - 0.05 * scale_steps
@@ -269,13 +281,8 @@ class ScaleEstimation(Algorithm):
             g_compressed_weighs, g_c_scale, g_c_zp = do_integer_quantization(
                 original_weight, -1, cur_config, result_scale
             )
-            q_weights = do_dequantization(g_compressed_weighs, g_c_scale, g_c_zp, reduction_axis)
-            q_out = fns.matmul(q_weights, X_cnt)
-            diff_after = fns.mean(fns.abs(fp_out_cnt - q_out))
 
-            # prevent overfitting
-            if diff_before > diff_after:
-                wp.precomputed_scale = result_scale
+            wp.precomputed_scale = result_scale
         return model
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
