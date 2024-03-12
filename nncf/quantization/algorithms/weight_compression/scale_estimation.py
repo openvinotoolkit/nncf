@@ -152,10 +152,10 @@ class ScaleEstimation(Algorithm):
 
             original_weight = fns.zeros_like(weight) + weight
 
-            g_compressed_weighs, g_c_scale, g_c_zp = do_integer_quantization(original_weight, reduction_axis, config)
-            g_c_zp = g_c_zp.astype(g_c_scale.dtype)
+            compressed_weighs, scale, zp = do_integer_quantization(original_weight, reduction_axis, config)
+            zp = zp.astype(scale.dtype)
 
-            q_weights = do_dequantization(g_compressed_weighs, g_c_scale, g_c_zp, reduction_axis)
+            q_weights = do_dequantization(compressed_weighs, scale, zp, reduction_axis)
 
             s = fns.unsqueeze(s, 0)
             s, _ = reshape_weight_for_grouped_quantization(s, reduction_axis, config.group_size)
@@ -166,8 +166,8 @@ class ScaleEstimation(Algorithm):
             importance = fns.ones_like(original_weight)
             importance = importance * s
 
-            target = g_compressed_weighs.astype(dtype=g_c_zp.dtype) - g_c_zp
-            zero_mask = g_compressed_weighs == g_c_zp
+            target = compressed_weighs.astype(dtype=zp.dtype) - zp
+            zero_mask = compressed_weighs == zp
 
             importance = fns.where(zero_mask, 0.0, importance)  # ???????
 
@@ -185,22 +185,15 @@ class ScaleEstimation(Algorithm):
             min_max_scale_diffs = fns.transpose(min_max_scale_diffs, (1, 0))
             ideal_scale_diffs = fns.zeros_like(min_max_scale_diffs)
 
-            k = (
-                (wp.compression_config.mode, wp.compression_config.num_bits)
-                + q_weights.shape
-                + g_c_scale.shape
-                + g_c_zp.shape
-            )
+            k = (wp.compression_config.mode, wp.compression_config.num_bits) + q_weights.shape + scale.shape + zp.shape
             if k in compress_decompress_cashe:
                 compress_decompress_model = compress_decompress_cashe[k]["compress_decompress_model"]
                 compress_model = compress_decompress_cashe[k]["compress_model"]
             else:
                 compress_decompress_model = self._backend_entity.get_compress_decompress_pipeline(
-                    wp, q_weights.shape, g_c_scale.shape, g_c_zp.shape
+                    wp, q_weights.shape, scale.shape, zp.shape
                 )
-                compress_model = self._backend_entity.get_compress_pipeline(
-                    wp, q_weights.shape, g_c_scale.shape, g_c_zp.shape
-                )
+                compress_model = self._backend_entity.get_compress_pipeline(wp, q_weights.shape, scale.shape, zp.shape)
                 compress_decompress_cashe[k] = {
                     "compress_decompress_model": compress_decompress_model,
                     "compress_model": compress_model,
@@ -215,7 +208,7 @@ class ScaleEstimation(Algorithm):
 
                 near_to_ideal_scale = fns.sum(weighted_scale, axis=2, keepdims=True)
 
-                out = compress_decompress_model([original_weight.data, near_to_ideal_scale.data, g_c_zp.data])
+                out = compress_decompress_model([original_weight.data, near_to_ideal_scale.data, zp.data])
                 q_weights_ = fns.zeros_like(original_weight) + out["q_weights"]
                 q_outs = fns.matmul(fns.transpose(q_weights_, (1, 0, 2)), X)
 
@@ -232,34 +225,34 @@ class ScaleEstimation(Algorithm):
                 mask = fns.unsqueeze(mask, axis=2)
 
                 if result_scale is None:
-                    near_to_ideal_scale = mask * g_c_scale + (1.0 - mask) * near_to_ideal_scale
+                    near_to_ideal_scale = mask * scale + (1.0 - mask) * near_to_ideal_scale
                 else:
                     near_to_ideal_scale = mask * result_scale + (1.0 - mask) * near_to_ideal_scale
                 result_scale = near_to_ideal_scale
 
                 if i < self._initial_steps - 1:
-                    out = compress_model([original_weight.data, near_to_ideal_scale.data, g_c_zp.data])
+                    out = compress_model([original_weight.data, near_to_ideal_scale.data, zp.data])
                     compressed_weights = fns.zeros_like(original_weight) + out["compressed_weights"]
-                    target = compressed_weights - g_c_zp
-                    zero_mask = compressed_weights == g_c_zp
+                    target = compressed_weights - zp
+                    zero_mask = compressed_weights == zp
                     zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
 
             for scale_steps in range(self._scale_steps):
-                scale = 1.0 - 0.05 * scale_steps
-                scaled_scale = scale * g_c_scale
+                factor = 1.0 - 0.05 * scale_steps
+                scaled_scale = factor * scale
 
-                out = compress_model([original_weight.data, scaled_scale.data, g_c_zp.data])
+                out = compress_model([original_weight.data, scaled_scale.data, zp.data])
                 compressed_weights = fns.zeros_like(original_weight) + out["compressed_weights"]
 
-                target = compressed_weights - g_c_zp
-                zero_mask = compressed_weights == g_c_zp
+                target = compressed_weights - zp
+                zero_mask = compressed_weights == zp
                 zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
 
                 ideal_scale = fns.abs(original_weight) / (fns.abs(target) + zero_mask)
                 weighted_scale = ideal_scale * importance
                 near_to_ideal_scale = fns.sum(weighted_scale, axis=2, keepdims=True)
 
-                out = compress_decompress_model([original_weight.data, near_to_ideal_scale.data, g_c_zp.data])
+                out = compress_decompress_model([original_weight.data, near_to_ideal_scale.data, zp.data])
                 q_weights_ = fns.zeros_like(original_weight) + out["q_weights"]
 
                 q_outs = fns.matmul(fns.transpose(q_weights_, (1, 0, 2)), X)
@@ -273,14 +266,10 @@ class ScaleEstimation(Algorithm):
                 mask = fns.unsqueeze(mask, axis=2)
 
                 if result_scale is None:
-                    near_to_ideal_scale = mask * g_c_scale + (1.0 - mask) * near_to_ideal_scale
+                    near_to_ideal_scale = mask * scale + (1.0 - mask) * near_to_ideal_scale
                 else:
                     near_to_ideal_scale = mask * result_scale + (1.0 - mask) * near_to_ideal_scale
                 result_scale = near_to_ideal_scale
-
-            g_compressed_weighs, g_c_scale, g_c_zp = do_integer_quantization(
-                original_weight, -1, cur_config, result_scale
-            )
 
             wp.precomputed_scale = result_scale
         return model
