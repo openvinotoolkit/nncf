@@ -186,17 +186,7 @@ def _execute_op(
         tensor_metas = make_tensor_metas(processed_input)
         node = ctx.find_operator_node(tensor_metas, op_address)
         if node is None:
-            from nncf.torch.nncf_network import NNCFNetwork
-
-            if (
-                isinstance(ctx._threading.thread_local.base_module_replica, NNCFNetwork)
-                and ctx._threading.thread_local.base_module_replica.nncf.trace_parameters
-            ):
-                layer_attrs = get_layer_attributes_from_args_and_kwargs(op_name, args, kwargs)
-                ignored_algos = []  # Ignored args is not defined for not replaced modules
-            else:
-                layer_attrs, ignored_algos = _collect_module_attrs_and_ignored_algorithms(ctx, op_name, args, kwargs)
-
+            layer_attrs, ignored_algos = _collect_module_attrs_and_ignored_algorithms(ctx, op_name, args, kwargs)
             is_called_inside_nncf_module = isinstance(ctx.get_current_module(), _NNCFModuleMixin)
             node = ctx.maybe_add_node(
                 processed_input, tensor_metas, op_address, layer_attrs, ignored_algos, is_called_inside_nncf_module
@@ -215,18 +205,25 @@ def _collect_module_attrs_and_ignored_algorithms(
     layer_attrs = None
     ignored_algos = []
     from nncf.torch.graph.operator_metatypes import OP_NAMES_WITH_WEIGHTS
+    from nncf.torch.nncf_network import NNCFNetwork
 
-    if op_name in OP_NAMES_WITH_WEIGHTS:
-        curr_module = ctx.get_current_module()
-        if curr_module is None:
-            raise nncf.ValidationError(
-                f"Operation {op_name} requires module attributes, but it was executed outside any module"
-            )
-        layer_attrs = get_layer_attributes_from_module(curr_module, op_name)
-        if isinstance(curr_module, _NNCFModuleMixin):
-            ignored_algos = deepcopy(curr_module.ignored_algorithms)
-    elif op_name in OP_NAMES_REQUIRING_ATTRS_FROM_ARGS_KWARGS:
+    if (
+        isinstance(ctx._threading.thread_local.base_module_replica, NNCFNetwork)
+        and ctx._threading.thread_local.base_module_replica.nncf.trace_parameters
+    ):
         layer_attrs = get_layer_attributes_from_args_and_kwargs(op_name, args, kwargs)
+    else:
+        if op_name in OP_NAMES_WITH_WEIGHTS:
+            curr_module = ctx.get_current_module()
+            if curr_module is None:
+                raise nncf.ValidationError(
+                    f"Operation {op_name} requires module attributes, but it was executed outside any module"
+                )
+            layer_attrs = get_layer_attributes_from_module(curr_module, op_name)
+            if isinstance(curr_module, _NNCFModuleMixin):
+                ignored_algos = deepcopy(curr_module.ignored_algorithms)
+        elif op_name in OP_NAMES_REQUIRING_ATTRS_FROM_ARGS_KWARGS:
+            layer_attrs = get_layer_attributes_from_args_and_kwargs(op_name, args, kwargs)
     return layer_attrs, ignored_algos
 
 
