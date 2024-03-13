@@ -87,6 +87,7 @@ def get_layer_attributes_from_module(module: TorchModule, operator_name: str) ->
             transpose=False,
             padding_values=module.padding,
             with_bias=with_bias,
+            output_padding_values=module.output_padding,
         )
     if isinstance(module, (ConvTranspose1d, ConvTranspose2d, ConvTranspose3d)):
         return ConvolutionLayerAttributes(
@@ -322,6 +323,7 @@ def _get_conv_transpose_attrs_from_args_kwargs(args: List[Any], kwargs: Dict[str
         transpose=True,
         padding_values=args_dict["padding"],
         with_bias=args_dict["bias"] is not None,
+        output_padding_values=args_dict["output_padding"],
     )
 
 

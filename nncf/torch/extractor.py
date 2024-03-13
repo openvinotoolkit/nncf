@@ -103,6 +103,7 @@ class ExtractedConvTranspose(nn.Module):
             bias=self.bias,
             stride=self.layer_attributes.stride,
             padding=self.layer_attributes.padding_values,
+            output_padding=self.layer_attributes.output_padding_values,
             dilation=self.layer_attributes.dilations,
         )
 
