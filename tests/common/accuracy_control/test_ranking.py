@@ -26,6 +26,7 @@ from nncf.quantization.algorithms.accuracy_control.ranker import GroupToRank
 from nncf.quantization.algorithms.accuracy_control.ranker import Ranker
 from nncf.quantization.algorithms.accuracy_control.subset_selection import get_subset_indices
 from nncf.quantization.algorithms.accuracy_control.subset_selection import get_subset_indices_pot_version
+from nncf.quantization.algorithms.accuracy_control.subset_selection import select_subset
 from tests.common.accuracy_control.backend import AABackendForTests
 from tests.common.quantization.test_quantizer_removal import GRAPHS as AA_GRAPHS_DESCR
 from tests.common.quantization.test_quantizer_removal import create_nncf_graph as aa_create_nncf_graph
@@ -365,3 +366,19 @@ def test_rank_groups_of_quantizers_score_different(
             approximate_values_for_each_item,
         )
         assert ranked_groups == groups_to_rank[::-1]
+
+
+@pytest.mark.parametrize(
+    "subset_size, reference_values, approximate_values, expected_indices",
+    [
+        (5, [], [], []),
+        (0, [5, 4, 3, 2, 1], [10, 20, 30, 2], []),
+        (10, [1, 2, 3, 4, 5], [1, 1, 1, 1, 1], [0, 1, 2, 3, 4]),
+        (3, [5, 4, 3, 2, 1], [10, 20, 30, 2], [0, 1, 2]),
+        (1, [5, 4, 3, 2, 1], [10, 20, 30, 2], [2]),
+    ],
+)
+def test_select_subset(subset_size, reference_values, approximate_values, expected_indices):
+    error_fn = lambda x, y: abs(x - y)
+    subset_indices = select_subset(subset_size, reference_values, approximate_values, error_fn)
+    assert subset_indices == expected_indices
