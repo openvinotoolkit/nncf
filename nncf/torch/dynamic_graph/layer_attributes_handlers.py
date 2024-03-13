@@ -87,7 +87,7 @@ def get_layer_attributes_from_module(module: TorchModule, operator_name: str) ->
             transpose=False,
             padding_values=module.padding,
             with_bias=with_bias,
-            output_padding_values=module.output_padding,
+            output_padding_values=None,
         )
     if isinstance(module, (ConvTranspose1d, ConvTranspose2d, ConvTranspose3d)):
         return ConvolutionLayerAttributes(
@@ -101,6 +101,7 @@ def get_layer_attributes_from_module(module: TorchModule, operator_name: str) ->
             transpose=True,
             padding_values=module.padding,
             with_bias=with_bias,
+            output_padding_values=module.output_padding,
         )
     if isinstance(module, Linear):
         return LinearLayerAttributes(
@@ -238,7 +239,7 @@ def apply_args_defaults(
     :return: A dictionary combining arguments from `args` and `kwargs` according to the `args_signature`.
     """
     # Manual defines function signature neccecery because inspection of torch function is not available
-    #  https://github.com/pytorch/pytorch/issues/74539
+    # https://github.com/pytorch/pytorch/issues/74539
 
     args_dict: Dict[str, Any] = dict()
     for idx, arg_desc in enumerate(args_signature):
