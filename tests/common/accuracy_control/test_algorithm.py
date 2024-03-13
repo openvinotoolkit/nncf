@@ -177,7 +177,6 @@ def test_collect_original_biases_and_weights_openvino(model_and_quantized_model,
     )
 
     conv_node = quantized_model_graph.get_node_by_id(1)
-    print(conv_node.attributes)
     assert conv_node.attributes["original_bias"] is not None
     assert conv_node.attributes["original_weight.1"] is not None
 
