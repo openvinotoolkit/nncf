@@ -233,7 +233,7 @@ def extract_fused_subgraph_for_node(node: NNCFNode, model: NNCFNetwork) -> Optio
     return extracted_module
 
 
-def extract_sub_model(model: NNCFNetwork, input_nodes: List[str], output_nodes: List[str]) -> Optional[nn.Module]:
+def extract_model(model: NNCFNetwork, input_nodes: List[str], output_nodes: List[str]) -> Optional[nn.Module]:
     """
     Extracts a submodule from a given NNCF network containing only the nodes from the input to the output node.
 

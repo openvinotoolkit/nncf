@@ -16,7 +16,7 @@ from torch import nn
 import tests.post_training.test_templates.helpers as helpers
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.torch import wrap_model
-from nncf.torch.extractor import extract_sub_model
+from nncf.torch.extractor import extract_model
 from nncf.torch.graph.transformations.commands import PTQuantizerInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_transformer import PTModelTransformer
@@ -56,11 +56,11 @@ from nncf.torch.quantization.layers import SymmetricQuantizer
         ),
     ),
 )
-def test_extract_sub_model(model_cls, input_node_name, output_node_name):
+def test_extract_model(model_cls, input_node_name, output_node_name):
     example_input = torch.ones(model_cls.INPUT_SIZE)
 
     model = wrap_model(model_cls().eval(), example_input=example_input, trace_parameters=True)
-    extracted_module = extract_sub_model(model, [input_node_name], [output_node_name])
+    extracted_module = extract_model(model, [input_node_name], [output_node_name])
     with torch.no_grad():
         ret1 = model(example_input)
         ret2 = extracted_module(example_input)
@@ -97,7 +97,7 @@ def test_extract_sub_model(model_cls, input_node_name, output_node_name):
         ),
     ),
 )
-def tes_extract_sub_model_for_node_with_fq(model_cls, input_node_name, output_node_name):
+def tes_extract_model_for_node_with_fq(model_cls, input_node_name, output_node_name):
     example_input = torch.ones(model_cls.INPUT_SIZE)
 
     model = wrap_model(model_cls().eval(), example_input=example_input, trace_parameters=True)
@@ -121,7 +121,7 @@ def tes_extract_sub_model_for_node_with_fq(model_cls, input_node_name, output_no
     layout.register(command)
     q_model = transformer.transform(layout)
 
-    extracted_module = extract_sub_model(model, [input_node_name], [output_node_name])
+    extracted_module = extract_model(model, [input_node_name], [output_node_name])
     with torch.no_grad():
         ret1 = q_model(example_input)
         ret2 = extracted_module(example_input)
