@@ -211,28 +211,6 @@ def try_to_fuse_conv(input_node: NNCFNode, output_node: NNCFNode, model: NNCFNet
     return extracted_module
 
 
-def extract_fused_subgraph_for_node(node: NNCFNode, model: NNCFNetwork) -> Optional[nn.Sequential]:
-    """
-    Extract submodule with fused nodes to inference.
-    If FQ exists for weights, FQ will be apply to weights.
-    Supported submodules:
-      - Conv
-      - Conv+BN
-    :param node: Target node.
-    :param model: Source model.
-    :return: nn.Sequential of fused subgraph for target node, overwise return None.
-    """
-
-    extracted_module: Optional[nn.Module] = None
-
-    if node.metatype in CONV_METATYPES + CONV_TRANSPOSE_METATYPES:
-        extracted_module = extract_conv(node, model)
-    else:
-        nncf_logger.debug(f"Can`t extract module for {node.node_name}")
-        return None
-    return extracted_module
-
-
 def extract_model(model: NNCFNetwork, input_nodes: List[str], output_nodes: List[str]) -> Optional[nn.Module]:
     """
     Extracts a submodule from a given NNCF network containing only the nodes from the input to the output node.
