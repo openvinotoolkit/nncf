@@ -26,6 +26,7 @@ from nncf.parameters import QuantizationMode
 from nncf.parameters import SensitivityMetric
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedAccuracyRestorerParameters
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.algorithms.accuracy_control.evaluator import MetricResults
 from nncf.quantization.algorithms.hyperparameter_tuner.algorithm import HyperparameterTuner
@@ -280,6 +281,7 @@ def compress_weights(
     subset_size: Optional[int] = 128,
     awq: Optional[bool] = None,
     scale_estimation: Optional[bool] = None,
+    advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> TModel:
     """
     Compress model weights.

@@ -30,6 +30,7 @@ from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor.definitions import TensorDataType
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
+from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
@@ -62,6 +63,7 @@ class WeightCompression(Algorithm):
         awq: bool,
         subset_size: int,
         scale_estimation: bool,
+        advanced_parameters: Optional[AdvancedCompressionParameters] = None,
     ):
         """
         :param mode: Defines a mode for weight compression.
@@ -105,6 +107,9 @@ class WeightCompression(Algorithm):
         self._awq = awq
         self._subset_size = subset_size
         self._scale_estimation = scale_estimation
+        self._advanced_parameters = (
+            advanced_parameters if advanced_parameters is not None else AdvancedCompressionParameters()
+        )
 
     @property
     def available_backends(self) -> List[BackendType]:
@@ -343,18 +348,32 @@ class WeightCompression(Algorithm):
         nncf_logger.info(self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params))
 
         if self._awq and activations is not None and self._mode != CompressWeightsMode.NF4:
+            awq_params = self._advanced_parameters.awq_params
             awq_algo = AWQ(
-                model, self._backend_entity.name_to_node_mapping, all_weight_params, nodes_to_compress, activations
+                model,
+                self._backend_entity.name_to_node_mapping,
+                all_weight_params,
+                nodes_to_compress,
+                activations,
+                awq_params.subset_size,
+                awq_params.percent_to_apply,
+                awq_params.alpha_min,
+                awq_params.alpha_max,
+                awq_params.steps,
             )
             awq_algo.apply(model, graph)
 
         if self._scale_estimation and activations is not None and self._mode != CompressWeightsMode.NF4:
+            scale_estimation_params = self._advanced_parameters.scale_estimation_params
             scale_algo = ScaleEstimation(
                 model,
                 self._backend_entity.name_to_node_mapping,
                 all_weight_params,
                 nodes_to_compress,
                 activations,
+                scale_estimation_params.subset_size,
+                scale_estimation_params.initial_steps,
+                scale_estimation_params.scale_steps,
             )
             scale_algo.apply(model, graph)
 
