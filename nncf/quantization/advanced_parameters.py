@@ -22,6 +22,7 @@ from typing import Any, Dict, Optional, Union
 import nncf
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.utils.api_marker import api
+from nncf.parameters import SensitivityMetric
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import StatisticsType
@@ -236,6 +237,80 @@ class AdvancedQuantizationParameters:
 
     # Backend specific parameters
     backend_params: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class AdvancedAWQParameters:
+    """
+    Contains advanced parameters for AWQ algorithm.
+    It regulates the calculation of the smooth scale for different node types.
+    A negative value switches off the algorithm for current node type. In case of inaccurate results,
+    this parameter may be adjusted in the range from 0 to 1 or set -1 to disable SmoothQuant algorithm.
+
+    :param subset_size: The number of samples for AWQ.
+    :param percent_to_apply: The percent of outliers for correction.
+    :param alpha_min: Minimum value of smoothness parameter for grid search.
+    :param alpha_max: Maximal value of smoothness parameter for grid search.
+    :param steps: The number of the steps in grid search.
+    """
+
+    subset_size: int = 32
+    percent_to_apply: float = 0.002
+    alpha_min: float = 0.01
+    alpha_max: float = 1.0
+    steps: int = 100
+
+
+@dataclass
+class AdvancedScaleEstimationParameters:
+    """
+    Contains advanced parameters for scale estimation algorithm.
+    It regulates the calculation of the smooth scale for different node types.
+    A negative value switches off the algorithm for current node type. In case of inaccurate results,
+    this parameter may be adjusted in the range from 0 to 1 or set -1 to disable SmoothQuant algorithm.
+
+    :param subset_size: The number of samples for scale estimation.
+    :param initial_steps: The number of the steps for absmax scale rectification.
+    :param scale_steps: The number of the steps for grid search scale rectification
+                        from 1.0 to 1.0 - 0.05 * scale_step.
+    """
+
+    subset_size: int = 32
+    initial_steps: int = 5
+    scale_steps: int = 10
+
+
+@dataclass
+class AdvancedSensitivityParameters:
+    """
+    Contains advanced parameters for scale estimation algorithm.
+    It regulates the calculation of the smooth scale for different node types.
+    A negative value switches off the algorithm for current node type. In case of inaccurate results,
+    this parameter may be adjusted in the range from 0 to 1 or set -1 to disable SmoothQuant algorithm.
+
+    :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
+            preserve the accuracy of the model, the more sensitive layers receives a higher precision.
+    :param subset_size: Number of data samples to calculate activation statistics used for assigning different
+            quantization precision.
+    """
+
+    sensitivity_metric: SensitivityMetric = SensitivityMetric.WEIGHT_QUANTIZATION_ERROR
+    subset_size: int = 128
+
+
+@api()
+@dataclass
+class AdvancedCompressionParameters:
+    # Advanced sensitivity algorithm parameters
+    sensitivity_params: AdvancedSensitivityParameters = field(default_factory=AdvancedSensitivityParameters)
+
+    # Advanced AWQ algorithm parameters
+    awq_params: AdvancedAWQParameters = field(default_factory=AdvancedAWQParameters)
+
+    # Advanced scale estimation algorithm parameters
+    scale_estimation_params: AdvancedScaleEstimationParameters = field(
+        default_factory=AdvancedScaleEstimationParameters
+    )
 
 
 @api()
