@@ -1038,8 +1038,7 @@ OPERATORS_WITH_BIAS_METATYPES = [
     PTModuleConv1dMetatype,
     PTModuleConv2dMetatype,
     PTModuleConv3dMetatype,
-    # Need to verify that Linear handles correctly
-    PTModuleLinearMetatype,
+    # TODO: Need to add Linear support (CVS-111111)
 ]
 
 OPERATORS_FUSED_METATYPES = [
