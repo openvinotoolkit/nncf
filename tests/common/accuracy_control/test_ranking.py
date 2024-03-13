@@ -111,15 +111,15 @@ def test_get_subset_indices(errors: List[float], subset_size: int, expected_indi
         # all_different
         [[-0.1, 0.02, 0.2, 0.1, 0.05], 4, [1, 2, 3, 4]],
         # sort_stable
-        [[1.0, 2.0, 1.0, 2.0, 3.0, 1.0], 4, [0, 1, 3, 4]],
+        [[1.0, 2.0, 1.0, 2.0, 3.0, 1.0], 4, [1, 3, 4, 5]],
         # all_equal
-        [[0.1, 0.1, 0.1, 0.1], 3, [0, 1, 2]],
+        [[0.1, 0.1, 0.1, 0.1], 3, [1, 2, 3]],
         # subset_size_equals_zero
         [[0.1, 0.2, 0.3, 0.4], 0, []],
         # simple
         [[5, 5, 3, 3, 2, 2, 1, 1], 6, [0, 1, 2, 3, 4, 5]],
         # all_negative
-        [[-10, -0.1, -5, -5, -0.1, -0.001], 4, [1, 2, 4, 5]],
+        [[-10, -0.1, -5, -5, -0.1, -0.001], 4, [1, 3, 4, 5]],
         # subset_size_equals_num_errors
         [[0, 1, 2, 3, 4, 5], 6, [0, 1, 2, 3, 4, 5]],
         # subset_size_greater_than_num_errors

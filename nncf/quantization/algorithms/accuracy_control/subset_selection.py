@@ -36,10 +36,7 @@ def get_subset_indices_pot_version(errors: List[float], subset_size: int) -> Lis
     """
     POT implementation of the `get_subset_indices()` method.
     """
-    descending_indices = np.arange(len(errors), -1, -1)
-    zipped = np.array(list(zip(errors, descending_indices)), dtype=[("errors", "f4"), ("descending_indices", "f4")])
-    ordered_indices = np.flip(np.argsort(zipped, kind="stable", order=["errors", "descending_indices"])).tolist()
-
+    ordered_indices = np.flip(np.argsort(errors)).tolist()
     end_index = min(subset_size, len(ordered_indices))
     return sorted(ordered_indices[:end_index])
 
