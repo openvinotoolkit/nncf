@@ -16,7 +16,7 @@ from torch import nn
 import tests.post_training.test_templates.helpers as helpers
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.torch import wrap_model
-from nncf.torch.extractor import extract_fused_subgraph_for_node
+from nncf.torch.extractor import extract_sub_model
 from nncf.torch.graph.transformations.commands import PTQuantizerInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_transformer import PTModelTransformer
@@ -27,23 +27,40 @@ from nncf.torch.quantization.layers import SymmetricQuantizer
 
 
 @pytest.mark.parametrize(
-    "model_cls, node_name",
+    "model_cls, input_node_name, output_node_name",
     (
-        (helpers.ConvBiasBNTestModel, "ConvBiasBNTestModel/Conv2d[conv]/conv2d_0"),
-        (helpers.ConvBNTestModel, "ConvBNTestModel/Conv2d[conv]/conv2d_0"),
-        (helpers.ConvTestModel, "ConvTestModel/Conv2d[conv]/conv2d_0"),
-        (helpers.CustomConvBNTestModel, "CustomConvBNTestModel/CustomConv[conv]/conv2d_0"),
-        (helpers.CustomConvTestModel, "CustomConvTestModel/CustomConv[conv]/conv2d_0"),
+        (
+            helpers.ConvBiasBNTestModel,
+            "ConvBiasBNTestModel/Conv2d[conv]/conv2d_0",
+            "ConvBiasBNTestModel/BatchNorm2d[bn]/batch_norm_0",
+        ),
+        (
+            helpers.ConvBNTestModel,
+            "ConvBNTestModel/Conv2d[conv]/conv2d_0",
+            "ConvBNTestModel/BatchNorm2d[bn]/batch_norm_0",
+        ),
+        (
+            helpers.ConvTestModel,
+            "ConvTestModel/Conv2d[conv]/conv2d_0",
+            "ConvTestModel/Conv2d[conv]/conv2d_0",
+        ),
+        (
+            helpers.CustomConvBNTestModel,
+            "CustomConvBNTestModel/CustomConv[conv]/conv2d_0",
+            "CustomConvBNTestModel/CustomBN2d[bn]/batch_norm_0",
+        ),
+        (
+            helpers.CustomConvTestModel,
+            "CustomConvTestModel/CustomConv[conv]/conv2d_0",
+            "CustomConvTestModel/CustomConv[conv]/conv2d_0",
+        ),
     ),
 )
-def test_extract_fused_subgraph_for_node(model_cls, node_name):
+def test_extract_sub_model(model_cls, input_node_name, output_node_name):
     example_input = torch.ones(model_cls.INPUT_SIZE)
 
     model = wrap_model(model_cls().eval(), example_input=example_input, trace_parameters=True)
-    graph = model.nncf.get_graph()
-    node = graph.get_node_by_name(node_name)
-    extracted_module = extract_fused_subgraph_for_node(node, model)
-
+    extracted_module = extract_sub_model(model, [input_node_name], [output_node_name])
     with torch.no_grad():
         ret1 = model(example_input)
         ret2 = extracted_module(example_input)
@@ -51,16 +68,36 @@ def test_extract_fused_subgraph_for_node(model_cls, node_name):
 
 
 @pytest.mark.parametrize(
-    "model_cls, node_name",
+    "model_cls, input_node_name, output_node_name",
     (
-        (helpers.ConvBiasBNTestModel, "ConvBiasBNTestModel/Conv2d[conv]/conv2d_0"),
-        (helpers.ConvBNTestModel, "ConvBNTestModel/Conv2d[conv]/conv2d_0"),
-        (helpers.ConvTestModel, "ConvTestModel/Conv2d[conv]/conv2d_0"),
-        (helpers.CustomConvBNTestModel, "CustomConvBNTestModel/CustomConv[conv]/conv2d_0"),
-        (helpers.CustomConvTestModel, "CustomConvTestModel/CustomConv[conv]/conv2d_0"),
+        (
+            helpers.ConvBiasBNTestModel,
+            "ConvBiasBNTestModel/Conv2d[conv]/conv2d_0",
+            "ConvBiasBNTestModel/BatchNorm2d[bn]/batch_norm_0",
+        ),
+        (
+            helpers.ConvBNTestModel,
+            "ConvBNTestModel/Conv2d[conv]/conv2d_0",
+            "ConvBNTestModel/BatchNorm2d[bn]/batch_norm_0",
+        ),
+        (
+            helpers.ConvTestModel,
+            "ConvTestModel/Conv2d[conv]/conv2d_0",
+            "ConvTestModel/Conv2d[conv]/conv2d_0",
+        ),
+        (
+            helpers.CustomConvBNTestModel,
+            "CustomConvBNTestModel/CustomConv[conv]/conv2d_0",
+            "CustomConvBNTestModel/CustomBN2d[bn]/batch_norm_0",
+        ),
+        (
+            helpers.CustomConvTestModel,
+            "CustomConvTestModel/CustomConv[conv]/conv2d_0",
+            "CustomConvTestModel/CustomConv[conv]/conv2d_0",
+        ),
     ),
 )
-def test_extract_fused_subgraph_for_node_with_fq(model_cls, node_name):
+def tes_extract_sub_model_for_node_with_fq(model_cls, input_node_name, output_node_name):
     example_input = torch.ones(model_cls.INPUT_SIZE)
 
     model = wrap_model(model_cls().eval(), example_input=example_input, trace_parameters=True)
@@ -77,14 +114,14 @@ def test_extract_fused_subgraph_for_node_with_fq(model_cls, node_name):
     )
 
     fq = SymmetricQuantizer(qspec)
-    command = PTQuantizerInsertionCommand(PTTargetPoint(TargetType.OPERATOR_PRE_HOOK, node_name, input_port_id=1), fq)
+    command = PTQuantizerInsertionCommand(
+        PTTargetPoint(TargetType.OPERATOR_PRE_HOOK, input_node_name, input_port_id=1), fq
+    )
     layout = PTTransformationLayout()
     layout.register(command)
     q_model = transformer.transform(layout)
 
-    graph = q_model.nncf.get_graph()
-    q_node = graph.get_node_by_name(node_name)
-    extracted_module = extract_fused_subgraph_for_node(q_node, q_model)
+    extracted_module = extract_sub_model(model, [input_node_name], [output_node_name])
     with torch.no_grad():
         ret1 = q_model(example_input)
         ret2 = extracted_module(example_input)
