@@ -58,7 +58,7 @@ class AWQ(Algorithm):
         activations: Optional[Dict[str, TTensor]] = None,
         subset_size: int = 32,
         percent_to_apply=0.002,
-        alpha_min=0.01,
+        alpha_min=0.0,
         alpha_max=1.0,
         steps=100,
     ):
@@ -180,10 +180,15 @@ class AWQ(Algorithm):
             stats = self._activations[k]
             X = fns.stack([fns.mean(stat, axis=0) for stat in stats])
             X = fns.transpose(X)
-            if X.shape[1] > self._subset_size:
-                X = X[:, : self._subset_size]
 
             s = fns.max(fns.abs(X), axis=1)
+
+            if X.shape[1] > self._subset_size:
+                # X = X[:, : self._subset_size]
+                lens = [stat.shape[0] for stat in stats]
+                step = X.shape[1] // self._subset_size
+                idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][::step]
+                X = X[:, idxs]
 
             top_k = max(int(s.shape[0] * self._percent_to_apply), 1)
             topk_idxs = fns.argsort(-s)[:top_k]

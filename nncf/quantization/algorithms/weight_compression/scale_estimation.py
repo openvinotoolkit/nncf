@@ -115,6 +115,8 @@ class ScaleEstimation(Algorithm):
         compress_decompress_cashe = {}
 
         for k, stats in track(self._activations.items(), description="Applying Scale Estimation"):
+            if k not in name_mapping:
+                continue
             wp = self._all_weight_params[name_mapping[k]]
             reduction_axis = wp.reduction_axes[0]
             config = wp.compression_config
