@@ -302,9 +302,11 @@ def test_collect_original_biases_and_weights_openvino(model_and_quantized_model,
     )
     mocker.patch(
         "tests.common.accuracy_control.backend.AABackendForTests.get_weight_value",
-        return_value=np.array([[1, 2, 3], [4, 5, 6]]),
+        return_value=np.array([[8, 9, 10], [11, 12, 13]]),
     )
-    mocker.patch("tests.common.accuracy_control.backend.AABackendForTests.get_weight_tensor_port_ids", return_value=[1])
+    mocker.patch(
+        "tests.common.accuracy_control.backend.AABackendForTests.get_weight_tensor_port_ids", return_value=[1, 2]
+    )
 
     quantization_acc_restorer._collect_original_biases_and_weights(
         initial_model_graph,
@@ -313,9 +315,20 @@ def test_collect_original_biases_and_weights_openvino(model_and_quantized_model,
         AABackendForTests,
     )
 
+    # original attributes stored for node with bias and weights
     conv_node = quantized_model_graph.get_node_by_id(1)
     assert (conv_node.attributes["original_bias"] == np.array([[1, 2, 3], [4, 5, 6]])).all()
-    assert (conv_node.attributes["original_weight.1"] == np.array([[1, 2, 3], [4, 5, 6]])).all()
+    assert (conv_node.attributes["original_weight.1"] == np.array([[8, 9, 10], [11, 12, 13]])).all()
+    assert (conv_node.attributes["original_weight.2"] == np.array([[8, 9, 10], [11, 12, 13]])).all()
+    with pytest.raises(KeyError):
+        assert conv_node.attributes["original_weight.3"] is None
+
+    # original attributes not stored for node with no bias and weights
+    non_conv_node = quantized_model_graph.get_node_by_id(2)
+    with pytest.raises(KeyError):
+        non_conv_node.attributes["original_bias"]
+    with pytest.raises(KeyError):
+        non_conv_node.attributes["original_weight"]
 
 
 @dataclass
