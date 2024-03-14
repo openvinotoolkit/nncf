@@ -276,14 +276,13 @@ def test_print_report_parameterized(ts: StructForPrintTest, nncf_caplog):
 @pytest.fixture
 def model_and_quantized_model():
     model = Mock()
-    quantized_model = Mock()
     initial_model_graph = get_mock_model_graph_with_mergeable_pattern()
     quantized_model_graph = get_mock_model_graph_with_mergeable_pattern()
-    return model, initial_model_graph, quantized_model, quantized_model_graph
+    return model, initial_model_graph, quantized_model_graph
 
 
 def test_collect_original_biases_and_weights_openvino(model_and_quantized_model, mocker):
-    model, initial_model_graph, quantized_model, quantized_model_graph = model_and_quantized_model
+    model, initial_model_graph, quantized_model_graph = model_and_quantized_model
     quantization_acc_restorer = QuantizationAccuracyRestorer()
 
     def isConv2dBias(node: NNCFNode, initial_model_graph):
