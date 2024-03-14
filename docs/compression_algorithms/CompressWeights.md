@@ -400,7 +400,8 @@ This modification applies only for patterns `MatMul-Multiply-MatMul` (for exampl
 #### Additional resources
 
 - [LLM Weight Compression](https://docs.openvino.ai/2024/openvino-workflow/model-optimization-guide/weight-compression.html)
-- [Optimize and Deploy Generative AI Models using Hugging Face Optimum Intel](https://docs.openvino.ai/2024/openvino-workflow/generative-ai-models-guide.html)
+- [Large Language Model Inference Guide](https://docs.openvino.ai/2024/learn-openvino/llm_inference_guide.html)
+- [Inference with Hugging Face and Optimum Intel](https://docs.openvino.ai/2024/learn-openvino/llm_inference_guide/llm-inference-hf.html)
 - [Optimum Intel documentation](https://huggingface.co/docs/optimum/intel/inference)
 - [Large Language Models Weight Compression Example](https://github.com/openvinotoolkit/nncf/blob/develop/examples/llm_compression/openvino/tiny_llama)
 - [Tuning Ratio and Group Size Example](https://github.com/openvinotoolkit/nncf/blob/develop/examples/llm_compression/openvino/tiny_llama_find_hyperparams)
