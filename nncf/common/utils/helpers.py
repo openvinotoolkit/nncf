@@ -32,7 +32,10 @@ def create_table(
     :param max_col_widths: Max widths of columns.
     :return: A string which represents a table with a header and rows.
     """
-    return tabulate(tabular_data=rows, headers=header, tablefmt=table_fmt, maxcolwidths=max_col_widths)
+    if not rows:
+        # For empty rows max_col_widths raises IndexError
+        max_col_widths = None
+    return tabulate(tabular_data=rows, headers=header, tablefmt=table_fmt, maxcolwidths=max_col_widths, floatfmt=".3f")
 
 
 def configure_accuracy_aware_paths(log_dir: str) -> str:
