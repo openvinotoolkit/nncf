@@ -38,33 +38,153 @@ def test_create_message():
         ),
     ]
     result = _create_message(nodes)
-    assert isinstance(result, str)
-    assert result == "\n".join(["\t" + node.node_name for node in nodes])
+    assert result == "\tnode_name_1\n\tnode_name_2"
 
 
-@pytest.fixture
-def setup_quantization_accuracy_restorer_report():
+@pytest.mark.parametrize(
+    "removed_groups, expected_removed_quantizers, expected_reverted_operations",
+    [
+        # all empty
+        [
+            [
+                type(
+                    "MockGroup",
+                    (),
+                    {
+                        "quantizers": [],
+                        "operations": [],
+                    },
+                )
+            ],
+            [],
+            [],
+        ],
+        # one of each
+        [
+            [
+                type(
+                    "MockGroup",
+                    (),
+                    {
+                        "quantizers": [
+                            NNCFNode(
+                                {
+                                    NNCFNode.NODE_NAME_ATTR: "node_name_1",
+                                }
+                            )
+                        ],
+                        "operations": [
+                            NNCFNode(
+                                {
+                                    NNCFNode.NODE_NAME_ATTR: "node_name_2",
+                                }
+                            )
+                        ],
+                    },
+                )
+            ],
+            ["node_name_1"],
+            ["node_name_2"],
+        ],
+        # multiple reverted ops
+        [
+            [
+                type(
+                    "MockGroup",
+                    (),
+                    {
+                        "quantizers": [
+                            NNCFNode(
+                                {
+                                    NNCFNode.NODE_NAME_ATTR: "node_name_1",
+                                }
+                            )
+                        ],
+                        "operations": [
+                            NNCFNode(
+                                {
+                                    NNCFNode.NODE_NAME_ATTR: "node_name_2",
+                                }
+                            ),
+                            NNCFNode(
+                                {
+                                    NNCFNode.NODE_NAME_ATTR: "node_name_3",
+                                }
+                            ),
+                        ],
+                    },
+                )
+            ],
+            ["node_name_1"],
+            ["node_name_2", "node_name_3"],
+        ],
+        # multiple quantizer groups
+        [
+            [
+                type(
+                    "MockGroup",
+                    (),
+                    {
+                        "quantizers": [
+                            NNCFNode(
+                                {
+                                    NNCFNode.NODE_NAME_ATTR: "node_name_1",
+                                }
+                            )
+                        ],
+                        "operations": [
+                            NNCFNode(
+                                {
+                                    NNCFNode.NODE_NAME_ATTR: "node_name_2",
+                                }
+                            ),
+                            NNCFNode(
+                                {
+                                    NNCFNode.NODE_NAME_ATTR: "node_name_3",
+                                }
+                            ),
+                        ],
+                    },
+                ),
+                type(
+                    "MockGroup",
+                    (),
+                    {
+                        "quantizers": [
+                            NNCFNode(
+                                {
+                                    NNCFNode.NODE_NAME_ATTR: "node_name_4",
+                                }
+                            )
+                        ],
+                        "operations": [
+                            NNCFNode(
+                                {
+                                    NNCFNode.NODE_NAME_ATTR: "node_name_5",
+                                }
+                            ),
+                            NNCFNode(
+                                {
+                                    NNCFNode.NODE_NAME_ATTR: "node_name_6",
+                                }
+                            ),
+                        ],
+                    },
+                ),
+            ],
+            ["node_name_1", "node_name_4"],
+            ["node_name_2", "node_name_3", "node_name_5", "node_name_6"],
+        ],
+    ],
+    ids=["all empty", "one of each", "amultiple reverted ops", "multiple quantizer groups"],
+)
+def test_quantization_accuracy_restorer_report_properties(
+    removed_groups, expected_removed_quantizers, expected_reverted_operations
+):
     report = QuantizationAccuracyRestorerReport()
-    node1 = NNCFNode(
-        {
-            NNCFNode.NODE_NAME_ATTR: "node_name_1",
-        }
-    )
-    node2 = NNCFNode(
-        {
-            NNCFNode.NODE_NAME_ATTR: "node_name_2",
-        }
-    )
-    report.removed_groups = [type("MockGroup", (), {"quantizers": [node1], "operations": [node2]})]
-    return report
-
-
-def test_removed_quantizers(setup_quantization_accuracy_restorer_report):
-    assert setup_quantization_accuracy_restorer_report.removed_quantizers[0].node_name == "node_name_1"
-
-
-def test_reverted_operations(setup_quantization_accuracy_restorer_report):
-    assert setup_quantization_accuracy_restorer_report.reverted_operations[0].node_name == "node_name_2"
+    report.removed_groups = removed_groups
+    assert [n.node_name for n in report.removed_quantizers] == expected_removed_quantizers
+    assert [n.node_name for n in report.reverted_operations] == expected_reverted_operations
 
 
 @dataclass
@@ -119,7 +239,30 @@ class StructForPrintTest:
         ),
     ],
 )
-def test_print_report_parameterized(ts: StructForPrintTest, setup_quantization_accuracy_restorer_report, nncf_caplog):
+def test_print_report_parameterized(ts: StructForPrintTest, nncf_caplog):
+    setup_quantization_accuracy_restorer_report = QuantizationAccuracyRestorerReport()
+    setup_quantization_accuracy_restorer_report.removed_groups = [
+        type(
+            "MockGroup",
+            (),
+            {
+                "quantizers": [
+                    NNCFNode(
+                        {
+                            NNCFNode.NODE_NAME_ATTR: "node_name_1",
+                        }
+                    )
+                ],
+                "operations": [
+                    NNCFNode(
+                        {
+                            NNCFNode.NODE_NAME_ATTR: "node_name_2",
+                        }
+                    )
+                ],
+            },
+        )
+    ]
     setup_quantization_accuracy_restorer_report.removed_all = ts.removed_all
     setup_quantization_accuracy_restorer_report.reached_required_drop = ts.reached_required_drop
     setup_quantization_accuracy_restorer_report.num_iterations = ts.num_iterations
@@ -155,6 +298,7 @@ def test_collect_original_biases_and_weights_openvino(model_and_quantized_model,
     def isConv2dWeight(node: NNCFNode):
         return node.node_id == 1
 
+    # patch properties of AABackendForTests
     mocker.patch("tests.common.accuracy_control.backend.AABackendForTests.is_node_with_bias", side_effect=isConv2dBias)
     mocker.patch(
         "tests.common.accuracy_control.backend.AABackendForTests.is_node_with_weight", side_effect=isConv2dWeight
