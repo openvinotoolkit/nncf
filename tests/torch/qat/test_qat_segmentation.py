@@ -73,7 +73,6 @@ def fixture_quantization_config(request, sota_data_dir, sota_checkpoints_dir):
 
 def get_sample_config(quantization_config_path: Path, data_dir: Path, weights_dir: Path) -> SampleConfig:
     parser = get_arguments_parser()
-    weights_path = weights_dir / (quantization_config_path.stem.split("_int8")[0] + ".pth")
     meta = None
     datasets_meta = [{"name": "mapillary", "dir_name": "mapillary_vistas"}, {"name": "camvid", "dir_name": "camvid"}]
     for datset_meta in datasets_meta:
@@ -83,6 +82,9 @@ def get_sample_config(quantization_config_path: Path, data_dir: Path, weights_di
     else:
         raise RuntimeError(f"Dataset for the config {str(quantization_config_path)} is unknown.")
 
+    weights_path = (
+        weights_dir / "segmentation" / meta["name"] / (quantization_config_path.stem.split("_int8")[0] + ".pth")
+    )
     data_dir = data_dir / meta["dir_name"]
     args = parser.parse_args(
         [

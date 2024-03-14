@@ -70,7 +70,7 @@ def fixture_quantization_config(request, sota_data_dir, sota_checkpoints_dir):
 
 def get_sample_config(quantization_config_path: Path, data_dir: Path, weights_dir: Path) -> SampleConfig:
     parser = get_argument_parser()
-    weights_path = weights_dir / (quantization_config_path.stem.split("_int8")[0] + ".pth")
+    weights_path = weights_dir / "object_detection" / "voc" / (quantization_config_path.stem.split("_int8")[0] + ".pth")
     args = parser.parse_args(
         [
             "-c",
