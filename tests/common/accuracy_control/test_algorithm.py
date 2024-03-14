@@ -279,12 +279,6 @@ def model_and_quantized_model():
     quantized_model = Mock()
     initial_model_graph = get_mock_model_graph_with_mergeable_pattern()
     quantized_model_graph = get_mock_model_graph_with_mergeable_pattern()
-    for g in [initial_model_graph, quantized_model_graph]:
-        for nd in g.get_all_nodes():
-            nd: NNCFNode = nd
-            nd.NODE_NAME_ATTR = nd.KEY_NODE_ATTR
-            g._node_id_to_key_dict[nd.node_name] = [0]
-
     return model, initial_model_graph, quantized_model, quantized_model_graph
 
 
@@ -321,8 +315,8 @@ def test_collect_original_biases_and_weights_openvino(model_and_quantized_model,
     )
 
     conv_node = quantized_model_graph.get_node_by_id(1)
-    assert conv_node.attributes["original_bias"] is not None
-    assert conv_node.attributes["original_weight.1"] is not None
+    assert (conv_node.attributes["original_bias"] == np.array([[1, 2, 3], [4, 5, 6]])).all()
+    assert (conv_node.attributes["original_weight.1"] == np.array([[1, 2, 3], [4, 5, 6]])).all()
 
 
 @dataclass
