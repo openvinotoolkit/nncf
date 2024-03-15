@@ -11,7 +11,7 @@
 
 from copy import deepcopy
 from itertools import chain
-from typing import Iterable, List, Optional, Union
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 import torch
 import torch.nn.functional as F
@@ -21,13 +21,11 @@ from torch.nn.modules.batchnorm import _BatchNorm
 import nncf
 from nncf import nncf_logger
 from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.model_graph_manager import get_const_data
 from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.model_graph_manager import get_fake_quantizer
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.quantization.layers import BaseQuantizer
 
 BATCH_NORM_CLASSES = (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)
 
@@ -48,76 +46,30 @@ CONV_TRANSPOSE_METATYPES = (
 )
 
 
-class ExtractedConv(nn.Module):
+class ExtractedFunc(nn.Module):
     def __init__(
         self,
         fn_name: str,
-        weight: torch.Tensor,
-        bias: Optional[torch.Tensor],
-        w_fq: Optional[BaseQuantizer],
-        layer_attributes: ConvolutionLayerAttributes,
-    ) -> None:
-        super().__init__()
-        assert fn_name in ["conv1d", "conv2d", "conv3d"]
-        self.fn_name = fn_name
-        self.layer_attributes = layer_attributes
-        self.weight = weight.clone()
-        self.w_fq = w_fq if w_fq is None else deepcopy(w_fq)
-        self.bias = bias if bias is None else deepcopy(bias)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        w = self.w_fq(self.weight) if self.w_fq is not None else self.weight
-        return getattr(F, self.fn_name)(
-            input=x,
-            weight=w,
-            bias=self.bias,
-            stride=self.layer_attributes.stride,
-            padding=self.layer_attributes.padding_values,
-            dilation=self.layer_attributes.dilations,
-            groups=self.layer_attributes.groups,
-        )
-
-
-class ExtractedConvTranspose(nn.Module):
-    def __init__(
-        self,
-        fn_name: str,
-        weight: torch.Tensor,
-        bias: Optional[torch.Tensor],
-        w_fq: Optional[BaseQuantizer],
-        layer_attributes: ConvolutionLayerAttributes,
+        kwargs: Dict[str, Any],
     ) -> None:
         super().__init__()
         self.fn_name = fn_name
-        assert fn_name in ["conv_transpose1d", "conv_transpose2d", "conv_transpose3d"]
-        self.layer_attributes = layer_attributes
-        self.weight = weight.clone()
-        self.w_fq = w_fq if w_fq is None else deepcopy(w_fq)
-        self.bias = bias if bias is None else deepcopy(bias)
+        self.kwargs = kwargs
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        w = self.w_fq(self.weight) if self.w_fq is not None else self.weight
-        return getattr(F, self.fn_name)(
-            input=x,
-            weight=w,
-            bias=self.bias,
-            stride=self.layer_attributes.stride,
-            padding=self.layer_attributes.padding_values,
-            output_padding=self.layer_attributes.output_padding_values,
-            dilation=self.layer_attributes.dilations,
-        )
+        return getattr(F, self.fn_name)(input=x, **self.kwargs)
 
 
 def extract_conv(
     input_node: NNCFNode,
     output_node: NNCFNode,
     model: NNCFNetwork,
-) -> ExtractedConv:
+) -> ExtractedFunc:
     """
     Extracts a convolutional layer from an NNCF graph and constructs an ExtractedConv module.
     :param node: The NNCF node representing the convolutional layer to extract.
     :param model: The NNCF network containing the layer.
-    :return: The extracted convolutional layer as an ExtractedConv module.
+    :return: The extracted convolutional layer as an ExtractedFunc module.
     """
     graph = model.nncf.get_graph()
     weight_node = get_const_node(input_node, input_node.metatype.weight_port_ids[0], graph)
@@ -126,14 +78,29 @@ def extract_conv(
     bias_node = get_const_node(input_node, input_node.metatype.bias_port_id, graph)
     bias = get_const_data(bias_node, model) if bias_node is not None else None
 
+    with torch.no_grad():
+        e_weight = w_fq(weight) if w_fq else weight
+
     if input_node.metatype in CONV_METATYPES:
-        extracted_module = ExtractedConv(
-            input_node.node_type, weight=weight, bias=bias, w_fq=w_fq, layer_attributes=input_node.layer_attributes
-        )
+        kwargs = {
+            "weight": e_weight.clone(),
+            "bias": bias.clone() if bias is not None else bias,
+            "stride": input_node.layer_attributes.stride,
+            "padding": input_node.layer_attributes.padding_values,
+            "dilation": input_node.layer_attributes.dilations,
+            "groups": input_node.layer_attributes.groups,
+        }
+        extracted_module = ExtractedFunc(input_node.node_type, kwargs)
     elif input_node.metatype in CONV_TRANSPOSE_METATYPES:
-        extracted_module = ExtractedConvTranspose(
-            input_node.node_type, weight=weight, bias=bias, w_fq=w_fq, layer_attributes=input_node.layer_attributes
-        )
+        kwargs = {
+            "weight": e_weight.clone(),
+            "bias": bias.clone() if bias is not None else bias,
+            "stride": input_node.layer_attributes.stride,
+            "padding": input_node.layer_attributes.padding_values,
+            "output_padding": input_node.layer_attributes.output_padding_values,
+            "dilation": input_node.layer_attributes.dilations,
+        }
+        extracted_module = ExtractedFunc(input_node.node_type, kwargs)
 
     if input_node != output_node:
         extracted_module = try_to_fuse_conv(input_node, output_node, model, extracted_module)
