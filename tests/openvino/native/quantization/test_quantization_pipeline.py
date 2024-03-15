@@ -103,6 +103,9 @@ def test_meta_information(model_creator_func, ignored_options):
             if isinstance(value, IgnoredScope):
                 check_parameters(quantized_model, value.__dict__, rt_path)
                 continue
+            if "ignored_scope" in rt_path:
+                assert key != "validate"  # key validate shouldn't be dumped
+                assert value  # empty values shouldn't be dumped
             assert quantized_model.get_rt_info(rt_path) == str(value)
 
     model = model_creator_func().ov_model
