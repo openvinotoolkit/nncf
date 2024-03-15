@@ -21,9 +21,9 @@ from nncf.quantization.algorithms.smooth_quant.torch_backend import PTSmoothQuan
 from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
+from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.model_creation import wrap_model
-from nncf.torch.nncf_network import ExtraCompressionModuleType
 from tests.post_training.test_templates.helpers import ConvTestModel
 from tests.post_training.test_templates.helpers import LinearMultiShapeModel
 from tests.post_training.test_templates.helpers import ShareWeghtsConvAndShareLinearModel

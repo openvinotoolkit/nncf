@@ -17,7 +17,6 @@ from collections import defaultdict
 from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass
-from enum import Enum
 from enum import IntEnum
 from typing import Callable, Dict, Iterator, List, Optional, Tuple, TypeVar
 
@@ -67,6 +66,7 @@ from nncf.torch.graph.graph_builder import GraphConverter
 from nncf.torch.graph.operator_metatypes import OPERATORS_WITH_WEIGHTS_METATYPES
 from nncf.torch.graph.operator_metatypes import PTSplitMetatype
 from nncf.torch.graph.transformations.commands import DEFAULT_HOOKS_GROUP_NAME
+from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.knowledge_distillation.knowledge_distillation_handler import KnowledgeDistillationLossHandler
 from nncf.torch.layer_utils import _NNCFModuleMixin
@@ -140,11 +140,6 @@ class PTInsertionPoint:
 
     def __hash__(self):
         return hash(str(self))
-
-
-class ExtraCompressionModuleType(Enum):
-    EXTERNAL_QUANTIZER = 0
-    EXTERNAL_OP = 1
 
 
 @dataclass
@@ -576,7 +571,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         return False
 
     def register_compression_module_type(self, compression_module_type: ExtraCompressionModuleType):
-        attr_name = self._compression_module_type_to_attr_name(compression_module_type)
+        attr_name = compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type in self._extra_module_types:
             raise nncf.ValidationError(f"Module type {compression_module_type} is already registered")
 
@@ -586,7 +581,7 @@ class NNCFNetworkInterface(torch.nn.Module):
     def add_compression_module(
         self, module_key: str, module: nn.Module, compression_module_type: ExtraCompressionModuleType
     ):
-        attr_name = self._compression_module_type_to_attr_name(compression_module_type)
+        attr_name = compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type not in self._extra_module_types:
             raise nncf.InternalError(f"Module type {compression_module_type} was not registered")
         storage = self.__getattr__(attr_name)
@@ -595,7 +590,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         storage[module_key] = module
 
     def get_compression_modules_by_type(self, compression_module_type: ExtraCompressionModuleType) -> nn.ModuleDict:
-        attr_name = self._compression_module_type_to_attr_name(compression_module_type)
+        attr_name = compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type not in self._extra_module_types:
             raise nncf.InternalError(f"Module type {compression_module_type} was not registered")
         return self.__getattr__(attr_name)
@@ -610,7 +605,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         return compression_module_type in self._extra_module_types
 
     @staticmethod
-    def _compression_module_type_to_attr_name(compression_module_type: ExtraCompressionModuleType):
+    def compression_module_type_to_attr_name(compression_module_type: ExtraCompressionModuleType):
         """
         Required for backward compatibility with checkpoints that store function and activation
         quantizers directly under corresponding attributes of NNCFNetwork.
@@ -622,7 +617,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         raise nncf.ValidationError("Unknown extra module type")
 
     def sort_compression_modules(self, compression_module_type: ExtraCompressionModuleType):
-        attr_name = self._compression_module_type_to_attr_name(compression_module_type)
+        attr_name = compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type not in self._extra_module_types:
             raise nncf.InternalError("Module type {} was not registered".format(compression_module_type))
         module_dict = self.__getattr__(attr_name)
@@ -1137,3 +1132,15 @@ class LoadStateListener:
 
     def close(self):
         self.hook.remove()
+
+
+def compression_module_type_to_attr_name(compression_module_type: ExtraCompressionModuleType):
+    """
+    Required for backward compatibility with checkpoints that store function and activation
+    quantizers directly under corresponding attributes of NNCFNetwork.
+    """
+    if compression_module_type == ExtraCompressionModuleType.EXTERNAL_QUANTIZER:
+        return EXTERNAL_QUANTIZERS_STORAGE_NAME
+    if compression_module_type == ExtraCompressionModuleType.EXTERNAL_OP:
+        return EXTERNAL_OP_STORAGE_NAME
+    raise nncf.ValidationError("Unknown extra module type")
