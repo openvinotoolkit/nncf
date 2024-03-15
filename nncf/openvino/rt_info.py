@@ -17,6 +17,22 @@ from nncf.common.logging import nncf_logger
 from nncf.scopes import IgnoredScope
 
 
+def handle_ignored_scope(value: IgnoredScope) -> IgnoredScope:
+    """
+    Dump Ignored Scope parameters more gracefully.
+    https://github.com/openvinotoolkit/nncf/issues/2564
+    Remove keys where value is empty and key is `validate`
+
+    :param value: IgnoredScope instance, based on the quantization parameters
+    """
+    value.__dict__.pop("validate")
+    keys = list(value.__dict__.keys())
+    for key in keys:
+        if not value.__dict__[key]:
+            value.__dict__.pop(key)
+    return value
+
+
 def dump_parameters(
     model: ov.Model, parameters: Dict, algo_name: Optional[str] = "quantization", path: Optional[List] = None
 ) -> None:
@@ -33,8 +49,14 @@ def dump_parameters(
         for key, value in parameters.items():
             # Special condition for composed fields like IgnoredScope
             if isinstance(value, IgnoredScope):
-                dump_parameters(model, value.__dict__, algo_name, [key])
-                continue
+                value = handle_ignored_scope(value)
+                if bool(value.__dict__):
+                    dump_parameters(model, value.__dict__, algo_name, [key])
+                    continue
+                else:
+                    # The default value in case empty ignored_scope parameter passed
+                    value = []
+
             rt_path = ["nncf", algo_name] + path + [key]
             model.set_rt_info(str(value), rt_path)
     except RuntimeError as e:
