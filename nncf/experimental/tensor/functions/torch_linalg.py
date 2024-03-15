@@ -15,7 +15,7 @@ import torch
 from nncf.experimental.tensor.functions import linalg
 
 
-@linalg.norm.register(torch.Tensor)
+@linalg.norm.register
 def _(
     a: torch.Tensor,
     ord: Optional[Union[str, float, int]] = None,

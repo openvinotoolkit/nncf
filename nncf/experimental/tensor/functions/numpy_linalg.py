@@ -14,10 +14,9 @@ from typing import Optional, Tuple, Union
 import numpy as np
 
 from nncf.experimental.tensor.functions import linalg
-from nncf.experimental.tensor.functions.dispatcher import register_numpy_types
 
 
-@register_numpy_types(linalg.norm)
+@linalg.norm.register
 def _(
     a: Union[np.ndarray, np.generic],
     ord: Optional[Union[str, float, int]] = None,

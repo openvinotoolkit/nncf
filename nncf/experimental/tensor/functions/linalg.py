@@ -9,15 +9,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import functools
 from typing import Optional, Tuple, Union
 
 from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor.functions.dispatcher import tensor_guard
+from nncf.experimental.tensor.functions.dispatcher import tensor_dispatch
 
 
-@functools.singledispatch
-@tensor_guard
+@tensor_dispatch
 def norm(
     a: Tensor,
     ord: Optional[Union[str, float, int]] = None,
@@ -61,4 +59,3 @@ def norm(
         as dimensions with size one. Default: False.
     :return: Norm of the matrix or vector.
     """
-    return Tensor(norm(a.data, ord, axis, keepdims))

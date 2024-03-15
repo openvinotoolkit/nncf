@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -17,7 +17,6 @@ from nncf.experimental.tensor.definitions import TensorDataType
 from nncf.experimental.tensor.definitions import TensorDeviceType
 from nncf.experimental.tensor.definitions import TypeInfo
 from nncf.experimental.tensor.functions import numeric as numeric
-from nncf.experimental.tensor.functions.dispatcher import register_numpy_types
 
 DTYPE_MAP = {
     TensorDataType.float16: np.dtype(np.float16),
@@ -32,63 +31,63 @@ DTYPE_MAP = {
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
 
 
-@register_numpy_types(numeric.device)
+@numeric.device.register
 def _(a: Union[np.ndarray, np.generic]) -> TensorDeviceType:
     return TensorDeviceType.CPU
 
 
-@register_numpy_types(numeric.squeeze)
+@numeric.squeeze.register
 def _(
     a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None
 ) -> Union[np.ndarray, np.generic]:
     return np.squeeze(a, axis=axis)
 
 
-@register_numpy_types(numeric.flatten)
+@numeric.flatten.register
 def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
     return a.flatten()
 
 
-@register_numpy_types(numeric.max)
+@numeric.max.register
 def _(
     a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False
 ) -> np.ndarray:
     return np.array(np.max(a, axis=axis, keepdims=keepdims))
 
 
-@register_numpy_types(numeric.min)
+@numeric.min.register
 def _(
     a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False
 ) -> Union[np.ndarray, np.generic]:
     return np.array(np.min(a, axis=axis, keepdims=keepdims))
 
 
-@register_numpy_types(numeric.abs)
+@numeric.abs.register
 def _(a: Union[np.ndarray, np.generic]) -> Union[np.ndarray, np.generic]:
     return np.absolute(a)
 
 
-@register_numpy_types(numeric.astype)
+@numeric.astype.register
 def _(a: Union[np.ndarray, np.generic], dtype: TensorDataType) -> Union[np.ndarray, np.generic]:
     return a.astype(DTYPE_MAP[dtype])
 
 
-@register_numpy_types(numeric.dtype)
+@numeric.dtype.register
 def _(a: Union[np.ndarray, np.generic]) -> TensorDataType:
     return DTYPE_MAP_REV[np.dtype(a.dtype)]
 
 
-@register_numpy_types(numeric.reshape)
+@numeric.reshape.register
 def _(a: Union[np.ndarray, np.generic], shape: Union[int, Tuple[int, ...]]) -> np.ndarray:
     return a.reshape(shape)
 
 
-@register_numpy_types(numeric.all)
+@numeric.all.register
 def _(a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None) -> np.ndarray:
     return np.array(np.all(a, axis=axis))
 
 
-@register_numpy_types(numeric.allclose)
+@numeric.allclose.register
 def _(
     a: Union[np.ndarray, np.generic],
     b: Union[np.ndarray, np.generic, float],
@@ -99,22 +98,22 @@ def _(
     return np.allclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 
-@register_numpy_types(numeric.any)
+@numeric.any.register
 def _(a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None) -> np.ndarray:
     return np.array(np.any(a, axis=axis))
 
 
-@register_numpy_types(numeric.count_nonzero)
+@numeric.count_nonzero.register
 def _(a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None) -> np.ndarray:
     return np.array(np.count_nonzero(a, axis=axis))
 
 
-@register_numpy_types(numeric.isempty)
+@numeric.isempty.register
 def _(a: Union[np.ndarray, np.generic]) -> bool:
     return a.size == 0
 
 
-@register_numpy_types(numeric.isclose)
+@numeric.isclose.register
 def _(
     a: Union[np.ndarray, np.generic],
     b: Union[np.ndarray, np.generic, float],
@@ -125,22 +124,22 @@ def _(
     return np.isclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 
-@register_numpy_types(numeric.maximum)
+@numeric.maximum.register
 def _(x1: Union[np.ndarray, np.generic], x2: Union[np.ndarray, np.generic, float]) -> np.ndarray:
     return np.maximum(x1, x2)
 
 
-@register_numpy_types(numeric.minimum)
+@numeric.minimum.register
 def _(x1: Union[np.ndarray, np.generic], x2: Union[np.ndarray, np.generic, float]) -> np.ndarray:
     return np.minimum(x1, x2)
 
 
-@register_numpy_types(numeric.ones_like)
+@numeric.ones_like.register
 def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
     return np.ones_like(a)
 
 
-@register_numpy_types(numeric.where)
+@numeric.where.register
 def _(
     condition: Union[np.ndarray, np.generic],
     x: Union[np.ndarray, np.generic, float],
@@ -149,42 +148,42 @@ def _(
     return np.where(condition, x, y)
 
 
-@register_numpy_types(numeric.zeros_like)
+@numeric.zeros_like.register
 def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
     return np.zeros_like(a)
 
 
-@register_numpy_types(numeric.stack)
+@numeric.stack.register
 def _(x: Union[np.ndarray, np.generic], axis: int = 0) -> List[np.ndarray]:
     return np.stack(x, axis=axis)
 
 
-@register_numpy_types(numeric.unstack)
+@numeric.unstack.register
 def _(x: Union[np.ndarray, np.generic], axis: int = 0) -> List[np.ndarray]:
     return [np.squeeze(e, axis) for e in np.split(x, x.shape[axis], axis=axis)]
 
 
-@register_numpy_types(numeric.moveaxis)
+@numeric.moveaxis.register
 def _(a: np.ndarray, source: Union[int, Tuple[int, ...]], destination: Union[int, Tuple[int, ...]]) -> np.ndarray:
     return np.moveaxis(a, source, destination)
 
 
-@register_numpy_types(numeric.mean)
+@numeric.mean.register
 def _(a: Union[np.ndarray, np.generic], axis: Union[int, Tuple[int, ...]] = None, keepdims: bool = False) -> np.ndarray:
     return np.array(np.mean(a, axis=axis, keepdims=keepdims))
 
 
-@register_numpy_types(numeric.round)
+@numeric.round.register
 def _(a: Union[np.ndarray, np.generic], decimals: int = 0) -> np.ndarray:
     return np.round(a, decimals=decimals)
 
 
-@register_numpy_types(numeric.power)
+@numeric.power.register
 def _(a: Union[np.ndarray, np.generic], exponent: Union[np.ndarray, float]) -> Union[np.ndarray, np.generic]:
     return np.power(a, exponent)
 
 
-@register_numpy_types(numeric.quantile)
+@numeric.quantile.register
 def _(
     a: Union[np.ndarray, np.generic],
     q: Union[float, List[float]],
@@ -194,31 +193,13 @@ def _(
     return np.array(np.quantile(a, q=q, axis=axis, keepdims=keepdims))
 
 
-@register_numpy_types(numeric._binary_op_nowarn)
-def _(
-    a: Union[np.ndarray, np.generic], b: Union[np.ndarray, np.generic, float], operator_fn: Callable
-) -> Union[np.ndarray, np.generic]:
-    # Run operator with disabled warning
-    with np.errstate(invalid="ignore", divide="ignore"):
-        return operator_fn(a, b)
-
-
-@register_numpy_types(numeric._binary_reverse_op_nowarn)
-def _(
-    a: Union[np.ndarray, np.generic], b: Union[np.ndarray, np.generic, float], operator_fn: Callable
-) -> Union[np.ndarray, np.generic]:
-    # Run operator with disabled warning
-    with np.errstate(invalid="ignore", divide="ignore"):
-        return operator_fn(b, a)
-
-
-@register_numpy_types(numeric.finfo)
-def _(a: np.ndarray) -> TypeInfo:
+@numeric.finfo.register
+def _(a: Union[np.ndarray, np.generic]) -> TypeInfo:
     ti = np.finfo(a.dtype)
     return TypeInfo(ti.eps, ti.max, ti.min)
 
 
-@register_numpy_types(numeric.clip)
+@numeric.clip.register
 def _(
     a: Union[np.ndarray, np.generic],
     a_min: Union[np.ndarray, np.generic, float],
@@ -227,29 +208,29 @@ def _(
     return np.clip(a, a_min, a_max)
 
 
-@register_numpy_types(numeric.as_tensor_like)
+@numeric.as_tensor_like.register
 def _(a: Union[np.ndarray, np.generic], data: Any) -> Union[np.ndarray, np.generic]:
     return np.array(data)
 
 
-@register_numpy_types(numeric.item)
+@numeric.item.register
 def _(a: Union[np.ndarray, np.generic]) -> Union[int, float, bool]:
     return a.item()
 
 
-@register_numpy_types(numeric.sum)
+@numeric.sum.register
 def _(
     a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False
 ) -> np.ndarray:
     return np.array(np.sum(a, axis=axis, keepdims=keepdims))
 
 
-@register_numpy_types(numeric.multiply)
+@numeric.multiply.register
 def _(x1: Union[np.ndarray, np.generic], x2: Union[np.ndarray, np.generic, float]) -> np.ndarray:
     return np.multiply(x1, x2)
 
 
-@register_numpy_types(numeric.var)
+@numeric.var.register
 def _(
     a: Union[np.ndarray, np.generic],
     axis: Optional[Union[int, Tuple[int, ...]]] = None,
@@ -259,29 +240,29 @@ def _(
     return np.array(np.var(a, axis=axis, keepdims=keepdims, ddof=ddof))
 
 
-@register_numpy_types(numeric.size)
+@numeric.size.register
 def _(a: Union[np.ndarray, np.generic]) -> int:
     return a.size
 
 
-@register_numpy_types(numeric.matmul)
+@numeric.matmul.register
 def _(x1: Union[np.ndarray, np.generic], x2: Union[np.ndarray, np.generic, float]) -> np.ndarray:
     return np.matmul(x1, x2)
 
 
-@register_numpy_types(numeric.unsqueeze)
+@numeric.unsqueeze.register
 def _(
     a: Union[np.ndarray, np.generic], axis: Optional[Union[int, Tuple[int, ...]]] = None
 ) -> Union[np.ndarray, np.generic]:
     return np.expand_dims(a, axis=axis)
 
 
-@register_numpy_types(numeric.transpose)
+@numeric.transpose.register
 def _(a: Union[np.ndarray, np.generic], axes: Optional[Tuple[int, ...]] = None) -> Union[np.ndarray, np.generic]:
     return np.transpose(a, axes=axes)
 
 
-@register_numpy_types(numeric.argsort)
+@numeric.argsort.register
 def _(
     a: Union[np.ndarray, np.generic], axis: Optional[int] = None, descending=False, stable=False
 ) -> Union[np.ndarray, np.generic]:
