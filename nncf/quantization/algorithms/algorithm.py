@@ -26,6 +26,9 @@ class Algorithm(ABC):
     Base class for all Post-Training algorithms.
     """
 
+    def __init__(self):
+        self._algorithm_key = f"BA_{hash(self)}"
+
     @property
     @abstractmethod
     def available_backends(self) -> List[BackendType]:
