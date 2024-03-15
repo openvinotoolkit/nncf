@@ -26,6 +26,7 @@ class TestStatisticPointsContainer:
         target_point.target_node_name = "Node"
         # tensor_collector = TensorStatisticCollectorBase()
         statistic_point = StatisticPoint(target_point, TensorStatisticCollectorBase, "minmax")
+        statistic_point = StatisticPoint(target_point, TensorStatisticCollectorBase, "post_training")
         container.add_statistic_point(statistic_point)
         return container
 
@@ -35,7 +36,10 @@ class TestStatisticPointsContainer:
         # Verify that the statistics for the specified algorithm are removed
         for target_node_name, statistic_points in container_with_statistics.data.items():
             for statistic_point in statistic_points:
-                assert "minmax" not in statistic_point.algorithm_to_tensor_collectors
+                assert (
+                    "minmax" not in statistic_point.algorithm_to_tensor_collectors
+                    and "post_training" in statistic_point.algorithm_to_tensor_collectors
+                )
 
     def test_remove_statistic_points_empty_container(self):
         empty_container = StatisticPointsContainer()
