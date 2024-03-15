@@ -604,18 +604,6 @@ class NNCFNetworkInterface(torch.nn.Module):
         """
         return compression_module_type in self._extra_module_types
 
-    @staticmethod
-    def compression_module_type_to_attr_name(compression_module_type: ExtraCompressionModuleType):
-        """
-        Required for backward compatibility with checkpoints that store function and activation
-        quantizers directly under corresponding attributes of NNCFNetwork.
-        """
-        if compression_module_type == ExtraCompressionModuleType.EXTERNAL_QUANTIZER:
-            return EXTERNAL_QUANTIZERS_STORAGE_NAME
-        if compression_module_type == ExtraCompressionModuleType.EXTERNAL_OP:
-            return EXTERNAL_OP_STORAGE_NAME
-        raise nncf.ValidationError("Unknown extra module type")
-
     def sort_compression_modules(self, compression_module_type: ExtraCompressionModuleType):
         attr_name = compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type not in self._extra_module_types:

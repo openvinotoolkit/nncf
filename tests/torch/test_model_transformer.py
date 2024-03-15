@@ -68,6 +68,7 @@ from nncf.torch.nncf_network import PTInsertionType
 from nncf.torch.nncf_network import compression_module_type_to_attr_name
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
+from nncf.torch.utils import get_model_device
 from tests.common.quantization.mock_graphs import get_ip_graph_for_test
 from tests.common.quantization.mock_graphs import get_mock_model_graph_with_broken_output_edge_pattern
 from tests.common.quantization.mock_graphs import get_mock_model_graph_with_mergeable_pattern
@@ -157,7 +158,10 @@ class TestInsertionCommands:
             not trace_parameters,
         )
         if insertion_point.insertion_type in [PTInsertionType.OPERATOR_PRE_HOOK, PTInsertionType.OPERATOR_POST_HOOK]:
-            hook = lambda x: x
+
+            def hook(x):
+                return x
+
         else:
             hook = BaseOp(lambda x: x)
 
@@ -180,6 +184,75 @@ class TestInsertionCommands:
             assert module.post_ops["0"] is hook
         else:
             raise Exception(f"Not check order for {insertion_point.insertion_type}")
+
+        assert len(model.nncf._groups_vs_hooks_handlers[test_hook_group]) == 1
+
+    class BaseOpWithParam(BaseOp):
+        def __init__(self, op):
+            super().__init__(op)
+            self.param1 = torch.nn.Parameter(torch.zeros((1,)))
+            self.param2 = torch.nn.Parameter(torch.zeros((1,)))
+            self.to_device = None
+
+        def to(self, device):
+            super().to(device)
+            self.to_device = device
+
+    @pytest.mark.parametrize("target_point", available_points)
+    @pytest.mark.parametrize("multidevice", (False, True))
+    @pytest.mark.parametrize("hook", (lambda x: x, BaseOpWithParam(lambda x: x).cpu()))
+    def test_pt_insertion_command(self, target_point: PTTargetPoint, multidevice: bool, hook):
+        model = wrap_model(InsertionPointTestModel(), torch.ones([1, 1, 10, 10]))
+
+        if multidevice:
+            if not torch.cuda.is_available():
+                pytest.skip("Cuda is not available, could not run multidevice test case")
+            model.conv2.to("cuda")
+
+        test_hook_group = "test_hook_group"
+        insertion_command = PTInsertionCommand(target_point, hook, hooks_group_name=test_hook_group)
+        layout = PTTransformationLayout()
+        layout.register(insertion_command)
+        transformer = PTModelTransformer(model)
+
+        if target_point.target_type in [
+            TargetType.PRE_LAYER_OPERATION,
+            TargetType.POST_LAYER_OPERATION,
+        ] and not isinstance(hook, nn.Module):
+            with pytest.raises(TypeError):
+                transformer.transform(layout)
+            return
+        transformer.transform(layout)
+
+        insertion_point = PTInsertionPoint(
+            target_point.target_type,
+            model.nncf.get_node_to_op_address_mapping()[target_point.target_node_name],
+            target_point.input_port_id,
+        )
+
+        if target_point.target_type == TargetType.OPERATOR_PRE_HOOK:
+            ctx = model.nncf.get_tracing_context()
+            pre_hook_id = PreHookId(insertion_point.op_address, input_port_id=insertion_point.input_port_id)
+            assert ctx._pre_hooks[pre_hook_id]["0"] is hook
+        elif target_point.target_type == TargetType.OPERATOR_POST_HOOK:
+            ctx = model.nncf.get_tracing_context()
+            assert ctx._post_hooks[insertion_point.op_address]["0"] is hook
+        elif target_point.target_type == TargetType.OPERATION_WITH_WEIGHTS:
+            module = model.nncf.get_module_by_scope(insertion_point.module_scope)
+            w_hook = module.pre_ops["0"]
+            assert isinstance(w_hook, UpdateWeight)
+            assert w_hook.op is hook
+        elif target_point.target_type == TargetType.PRE_LAYER_OPERATION:
+            module = model.nncf.get_module_by_scope(insertion_point.module_scope)
+            assert module.pre_ops["0"] is hook
+        elif target_point.target_type == TargetType.POST_LAYER_OPERATION:
+            module = model.nncf.get_module_by_scope(insertion_point.module_scope)
+            assert module.post_ops["0"] is hook
+        else:
+            raise Exception(f"Not check order for {insertion_point.insertion_type}")
+
+        if isinstance(hook, nn.Module) and not multidevice:
+            assert hook.to_device == get_model_device(model)
 
         assert len(model.nncf._groups_vs_hooks_handlers[test_hook_group]) == 1
 
@@ -560,19 +633,28 @@ class Hook(torch.nn.Module):
 
 
 @pytest.mark.parametrize(
-    "target_type, node_name, input_port_id, ref_name",
+    "target_type, node_name, input_port_id, ref_name, compression_module_registered",
     (
-        (TargetType.OPERATOR_POST_HOOK, "/nncf_model_input_0", None, "/nncf_model_input_0|OUTPUT"),
+        (
+            TargetType.OPERATOR_POST_HOOK,
+            "/nncf_model_input_0",
+            None,
+            "/nncf_model_input_0|OUTPUT",
+            True,
+        ),
         (
             TargetType.OPERATOR_PRE_HOOK,
             "InsertionPointTestModel/linear_0",
             0,
             "InsertionPointTestModel/linear_0|INPUT0",
+            True,
         ),
-        (TargetType.OPERATION_WITH_WEIGHTS, "InsertionPointTestModel/NNCFConv2d[conv1]/conv2d_0", None, None),
+        (TargetType.OPERATION_WITH_WEIGHTS, "InsertionPointTestModel/NNCFConv2d[conv1]/conv2d_0", None, None, False),
     ),
 )
-def test_quantizer_insertion_transformations(target_type, node_name, input_port_id, ref_name):
+def test_quantizer_insertion_transformations(
+    target_type, node_name, input_port_id, ref_name, compression_module_registered
+):
     hook = Hook()
 
     def _insert_quantizer_to_model():
@@ -589,7 +671,9 @@ def test_quantizer_insertion_transformations(target_type, node_name, input_port_
     transformed_model = _insert_quantizer_to_model()
 
     compression_module_type = ExtraCompressionModuleType.EXTERNAL_QUANTIZER
-    assert transformed_model.nncf.is_compression_module_registered(compression_module_type)
+    assert compression_module_registered == transformed_model.nncf.is_compression_module_registered(
+        compression_module_type
+    )
     assert hook in transformed_model.modules()
 
     if target_type == TargetType.OPERATION_WITH_WEIGHTS:
@@ -681,7 +765,7 @@ def test_shared_fn_insertion_point(priority, compression_module_registered, comp
     mock = PTModelTransformer._apply_insertion_transformations
     mock.assert_called_once()
 
-    _, commands, _ = mock.call_args.args
+    _, commands = mock.call_args.args
     assert len(commands) == len(tps)
     for command in commands:
         assert command.target_point in tps

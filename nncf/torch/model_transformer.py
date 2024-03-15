@@ -11,7 +11,7 @@
 
 import copy
 from collections import defaultdict
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Tuple
 
 import torch
 from torch import Tensor
@@ -47,20 +47,10 @@ class PTModelTransformer(ModelTransformer):
     def __init__(self, model: NNCFNetwork):
         super().__init__(model)
 
-        device = None
-        if not is_multidevice(model):
-            device = get_model_device(model)
-
         self._command_transformation_ordered_pairs = [
             (PTModelExtractionWithFusedBiasCommand, self._apply_extraction_with_fused_bias_transformations),
-            (
-                PTInsertionCommand,
-                lambda model, transformations: self._apply_insertion_transformations(model, transformations, device),
-            ),
-            (
-                PTSharedFnInsertionCommand,
-                lambda model, transformations: self._apply_shared_nodes_insertion(model, transformations, device),
-            ),
+            (PTInsertionCommand, self._apply_insertion_transformations),
+            (PTSharedFnInsertionCommand, self._apply_shared_nodes_insertion),
             (PTBiasCorrectionCommand, self._apply_bias_correction_transformations),
             (PTWeightUpdateCommand, self._apply_weights_update_transformations),
         ]
@@ -85,9 +75,7 @@ class PTModelTransformer(ModelTransformer):
         return model
 
     @staticmethod
-    def _apply_insertion_transformations(
-        model: NNCFNetwork, transformations: List[PTInsertionCommand], device: Optional[torch.device] = None
-    ) -> NNCFNetwork:
+    def _apply_insertion_transformations(model: NNCFNetwork, transformations: List[PTInsertionCommand]) -> NNCFNetwork:
         """
         Applies insertion transformations to the model.
 
@@ -97,6 +85,10 @@ class PTModelTransformer(ModelTransformer):
         """
         node_to_op_address_mapping = model.nncf.get_node_to_op_address_mapping()
         fns_grouped_by_points: Dict[PTInsertionPoint, List[Tuple[Callable, TransformationPriority]]] = defaultdict(list)
+
+        device = None
+        if not is_multidevice(model):
+            device = get_model_device(model)
 
         for transformation_command in transformations:
             target_point: PTTargetPoint = transformation_command.target_point
@@ -129,7 +121,6 @@ class PTModelTransformer(ModelTransformer):
         model: NNCFNetwork,
         transformations: List[PTSharedFnInsertionCommand],
         compression_module_type: ExtraCompressionModuleType,
-        device: torch.device,
     ):
         if not model.nncf.is_compression_module_registered(compression_module_type):
             model.nncf.register_compression_module_type(compression_module_type)
@@ -152,13 +143,12 @@ class PTModelTransformer(ModelTransformer):
                     )
                 )
 
-        return PTModelTransformer._apply_insertion_transformations(model, insertion_commands, device)
+        return PTModelTransformer._apply_insertion_transformations(model, insertion_commands)
 
     @staticmethod
     def _apply_shared_nodes_insertion(
         model: NNCFNetwork,
         transformations: List[PTSharedFnInsertionCommand],
-        device: torch.device,
     ) -> NNCFNetwork:
         compression_type_vs_transformations = defaultdict(list)
         for transformation in transformations:
@@ -166,7 +156,7 @@ class PTModelTransformer(ModelTransformer):
 
         for compression_module_type, transformations in compression_type_vs_transformations.items():
             model = PTModelTransformer._apply_shared_node_insertion_with_compression_type(
-                model, transformations, compression_module_type, device
+                model, transformations, compression_module_type
             )
         return model
 
