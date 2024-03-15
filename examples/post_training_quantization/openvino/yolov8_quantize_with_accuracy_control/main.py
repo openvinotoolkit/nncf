@@ -182,7 +182,7 @@ def quantize_ac(model: ov.Model, data_loader: torch.utils.data.DataLoader, valid
         quantization_dataset,
         quantization_dataset,
         validation_fn=validation_fn,
-        max_drop=0.005,
+        max_drop=0.003,
         preset=nncf.QuantizationPreset.MIXED,
         ignored_scope=nncf.IgnoredScope(
             types=["Multiply", "Subtract", "Sigmoid"],  # ignore operations
@@ -199,6 +199,7 @@ def quantize_ac(model: ov.Model, data_loader: torch.utils.data.DataLoader, valid
                 "/model.22/Add_8",
                 "/model.22/Add_9",
                 "/model.22/Add_10",
+                "/model.22/Add_11",
             ],
         ),
     )

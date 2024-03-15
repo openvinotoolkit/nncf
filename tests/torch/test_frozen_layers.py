@@ -69,7 +69,7 @@ class AlgoBuilder:
 class FrozenLayersTestStruct:
     def __init__(self, name="No_name"):
         self.name = name
-        self.config_update = {"target_device": "VPU", "compression": []}
+        self.config_update = {"target_device": "NPU", "compression": []}
         self.raising_error = False
         self.printing_warning = False
         self._freeze_all = False
@@ -225,7 +225,6 @@ TEST_PARAMS = [
     FrozenLayersTestStruct(name="filter_pruning_with_frozen_in_ignored_scope")
     .add_algo(AlgoBuilder().name("filter_pruning"))
     .expects_error(),
-    FrozenLayersTestStruct(name="binarization").add_algo(AlgoBuilder().name("binarization")).expects_error(),
 ]
 
 

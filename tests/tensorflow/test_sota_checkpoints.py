@@ -250,7 +250,6 @@ def metrics_dump_dir(request: FixtureRequest):
     return dump_path
 
 
-@pytest.mark.nightly
 class TestSotaCheckpoints:
     @pytest.fixture(scope="class")
     def collected_data(self, metrics_dump_dir: Path):
@@ -521,7 +520,7 @@ class TestSotaCheckpoints:
             self.make_ac_config(ac_config, eval_test_struct.reference)
 
         ac_cmd = (
-            f"accuracy_check"
+            f"python -m accuracy_checker.main"
             f" -c {ac_config}"
             f" -s {ov_data_dir}"
             " --progress print"

@@ -10,7 +10,7 @@
     },
     "num_classes": 10,
     "pretrained": false,
-    "target_device": "VPU",
+    "target_device": "NPU",
     "compression": [
         {
             "algorithm": "quantization",
