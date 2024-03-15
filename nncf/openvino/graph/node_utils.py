@@ -44,7 +44,9 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
 InplaceInsertionFnType = Callable[[ov.Node, int], ov.Node]
 
 
-def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph, metatypes_with_bias: Optional[List[OVOpMetatype]]) -> bool:
+def is_node_with_bias(
+    node: NNCFNode, nncf_graph: NNCFGraph, metatypes_with_bias: Optional[List[OVOpMetatype]] = None
+) -> bool:
     """
     Checks if the node has a bias or not.
 
