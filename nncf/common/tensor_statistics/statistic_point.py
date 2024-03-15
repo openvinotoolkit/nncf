@@ -75,6 +75,7 @@ class StatisticPointsContainer(UserDict):
         """
         Method to remove statistic point associated with a given algorithm
         from statistic point container.
+
         :param algorithm_key: Algorithm key.
         """
         reduced_data = {}
@@ -87,6 +88,9 @@ class StatisticPointsContainer(UserDict):
                     for algorithm in statistic_point.algorithm_to_tensor_collectors
                     if algorithm != algorithm_key
                 ]
+
+                if statistic_point.algorithm_to_tensor_collectors:
+                    reduced_statistics.append(statistic_point)
 
             if reduced_statistics:
                 reduced_data[target_node_name] = reduced_statistics
