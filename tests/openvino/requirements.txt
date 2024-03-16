@@ -1,7 +1,10 @@
-pytest==8.0.2
-virtualenv
-pytest-cov
-pytest-mock>=3.3.1
-openvino-dev[onnx,pytorch,tensorflow2]==2023.3
-torch==2.2.1
+-c ../../constraints.txt
 fastdownload
+openvino-dev
+pytest
+pytest-cov
+pytest-mock
+onnx
+torch
+torchvision
+virtualenv

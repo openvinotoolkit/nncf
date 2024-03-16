@@ -372,6 +372,9 @@ pip install nncf[torch]
 
 Other viable options besides `[torch]` are `[tf]`, `[onnx]` and `[openvino]`.
 
+> [!WARN]
+> The way to install the module package with the extra dependency like `pip install nncf[torch]` will be deprecated in a future release.
+
 NNCF is also available via [conda](https://anaconda.org/conda-forge/nncf):
 
 ```bash
@@ -381,7 +384,7 @@ conda install -c conda-forge nncf
 ### System requirements
 
 - Ubuntu\* 18.04 or later (64-bit)
-- Python\* 3.7 or later
+- Python\* 3.8 or later
 - Supported frameworks:
   - PyTorch\* >=2.1, <2.3
   - TensorFlow\* >=2.8.4, <=2.12.1

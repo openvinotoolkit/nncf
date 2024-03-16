@@ -1,7 +1,9 @@
+-c ../../constraints.txt
 addict
 absl-py==1.0.0
-tensorflow_datasets==4.2.0
+tensorflow
+tensorflow_datasets
 tensorflow_hub
-tensorflow_addons~=0.20.0
+tensorflow_addons
 opencv-python
 pycocotools==2.0.6
