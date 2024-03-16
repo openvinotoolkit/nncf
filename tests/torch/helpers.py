@@ -357,6 +357,14 @@ class MockModel(nn.Module):
         return None
 
 
+class EmptyModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, *input_, **kwargs):
+        return None
+
+
 def check_correct_nncf_modules_replacement(
     model: torch.nn.Module, compressed_model: NNCFNetwork
 ) -> Tuple[Dict[Scope, Module], Dict[Scope, Module]]:

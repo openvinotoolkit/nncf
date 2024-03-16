@@ -413,6 +413,14 @@ def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, An
 
 
 def get_model_device(model: torch.nn.Module) -> torch.device:
+    """
+    Get the device on which the model's parameters reside.
+
+    :param model: The PyTorch model.
+    :return: The device where the model's parameters reside.
+        Default cpu if the model has no parameters.
+    """
+
     try:
         device = next(model.parameters()).device
     except StopIteration:
@@ -427,6 +435,14 @@ def get_all_model_devices_generator(model: torch.nn.Module) -> Generator[torch.d
 
 
 def is_multidevice(model: torch.nn.Module) -> bool:
+    """
+    Checks if the model's parameters are distributed across multiple devices.
+
+    :param model: The PyTorch model.
+    :return: True if the parameters reside on multiple devices, False otherwise.
+        Default False if the models has no parameters
+    """
+
     device_generator = get_all_model_devices_generator(model)
     try:
         curr_device = next(device_generator)
@@ -440,6 +456,14 @@ def is_multidevice(model: torch.nn.Module) -> bool:
 
 
 def get_model_dtype(model: torch.nn.Module) -> torch.dtype:
+    """
+    Get the datatype of the model's parameters.
+
+    :param model: The PyTorch model.
+    :return: The datatype of the model's parameters.
+        Defaults to torch.float32 if the model has no parameters.
+    """
+
     try:
         dtype = next(model.parameters()).dtype
     except StopIteration:
