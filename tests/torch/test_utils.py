@@ -14,7 +14,6 @@ import torch
 from torch import nn
 
 from nncf.torch.initialization import DataLoaderBNAdaptationRunner
-from nncf.torch.layer_utils import CompressionParameter
 from nncf.torch.utils import _ModuleState
 from nncf.torch.utils import get_model_device
 from nncf.torch.utils import get_model_dtype
@@ -37,20 +36,21 @@ def compare_saved_model_state_and_current_model_state(model: nn.Module, model_st
         assert param.requires_grad == model_state.requires_grad_state[name]
 
 
-def change_model_state(module: nn.Module, compression_params_only: bool = False):
+def change_model_state(module: nn.Module, trainable_paramaters: bool = True):
     for i, ch in enumerate(module.modules()):
         ch.training = i % 2 == 0
 
     for i, p in enumerate(module.parameters()):
-        if compression_params_only and not (isinstance(p, CompressionParameter) and torch.is_floating_point(p)):
-            break
-        p.requires_grad = i % 2 == 0
+        if trainable_paramaters:
+            p.requires_grad = i % 2 == 0
+        else:
+            p.requires_grad = False
 
 
 @pytest.mark.parametrize(
     "model", [BasicConvTestModel(), TwoConvTestModel(), MockModel(), DepthWiseConvTestModel(), EightConvTestModel()]
 )
-def test_training_mode_switcher(_seed, model: nn.Module):
+def test_training_mode_switcher(model: nn.Module):
     change_model_state(model)
     saved_state = save_module_state(model)
     with training_mode_switcher(model, True):
@@ -62,7 +62,7 @@ def test_training_mode_switcher(_seed, model: nn.Module):
 @pytest.mark.parametrize(
     "model", [BasicConvTestModel(), TwoConvTestModel(), MockModel(), DepthWiseConvTestModel(), EightConvTestModel()]
 )
-def test_bn_training_state_switcher(_seed, model: nn.Module):
+def test_bn_training_state_switcher(model: nn.Module):
     def check_were_only_bn_training_state_changed(model: nn.Module, saved_state: _ModuleState):
         for name, module in model.named_modules():
             if isinstance(module, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)):
@@ -72,7 +72,7 @@ def test_bn_training_state_switcher(_seed, model: nn.Module):
 
     runner = DataLoaderBNAdaptationRunner(model, "cuda")
 
-    change_model_state(model)
+    change_model_state(model, trainable_paramaters=False)
     saved_state = save_module_state(model)
 
     with runner._bn_training_state_switcher():
