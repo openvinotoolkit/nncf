@@ -414,10 +414,10 @@ def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, An
 
 def get_model_device(model: torch.nn.Module) -> torch.device:
     """
-    Get the device on which the model's parameters reside.
+    Get the device on which the first model parameters reside.
 
     :param model: The PyTorch model.
-    :return: The device where the model's parameters reside.
+    :return: The device where the first model parameter reside.
         Default cpu if the model has no parameters.
     """
 
@@ -457,10 +457,10 @@ def is_multidevice(model: torch.nn.Module) -> bool:
 
 def get_model_dtype(model: torch.nn.Module) -> torch.dtype:
     """
-    Get the datatype of the model's parameters.
+    Get the datatype of the first model parameter.
 
     :param model: The PyTorch model.
-    :return: The datatype of the model's parameters.
+    :return: The datatype of the first model parameter.
         Defaults to torch.float32 if the model has no parameters.
     """
 

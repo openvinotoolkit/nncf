@@ -55,35 +55,6 @@ def randomly_change_model_state(module: nn.Module, compression_params_only: bool
             p.requires_grad = True
 
 
-def randomly_change_model_device(module: nn.Module):
-    import random
-
-    if not torch.cuda.is_available():
-        return False
-
-    cuda = torch.device("cuda")
-
-    num_params = 0
-    num_cuda = 0
-
-    for p in module.parameters():
-        num_params += 1
-        if random.uniform(0, 1) > 0.5:
-            p.data = p.data.to(cuda)
-            num_cuda += 1
-
-    is_multidevice = 0 < num_cuda < num_params
-    return is_multidevice
-
-
-def is_model_empty(module: nn.Module):
-    try:
-        next(module.parameters())
-        return False
-    except StopIteration:
-        return True
-
-
 @pytest.mark.parametrize(
     "model", [BasicConvTestModel(), TwoConvTestModel(), MockModel(), DepthWiseConvTestModel(), EightConvTestModel()]
 )
@@ -118,50 +89,44 @@ def test_bn_training_state_switcher(_seed, model: nn.Module):
     compare_saved_model_state_and_current_model_state(model, saved_state)
 
 
-@pytest.mark.parametrize(
-    "model",
-    [
-        BasicConvTestModel(),
-        TwoConvTestModel(),
-        MockModel(),
-        DepthWiseConvTestModel(),
-        EightConvTestModel(),
-        EmptyModel(),
-    ],
-)
-def test_model_device(model: nn.Module):
+def test_model_device():
+    if not torch.cuda.is_available():
+        return
+
+    model = TwoConvTestModel()
+    cuda = torch.device("cuda")
+
     assert not is_multidevice(model)
     assert get_model_device(model).type == "cpu"
 
-    multidevice = randomly_change_model_device(model)
-    assert is_multidevice(model) == multidevice
+    model.features[0][0].to(cuda)
 
-    is_empty = is_model_empty(model)
+    assert is_multidevice(model)
+    assert get_model_device(model).type == "cuda"
 
-    if torch.cuda.is_available() and not is_empty:
-        cuda = torch.device("cuda")
-        model = model.to(cuda)
-        assert not is_multidevice(model)
-        assert get_model_device(model).type == "cuda"
+    model.to(cuda)
+
+    assert not is_multidevice(model)
+    assert get_model_device(model).type == "cuda"
 
 
-@pytest.mark.parametrize(
-    "model",
-    [
-        BasicConvTestModel(),
-        TwoConvTestModel(),
-        MockModel(),
-        DepthWiseConvTestModel(),
-        EightConvTestModel(),
-        EmptyModel(),
-    ],
-)
-def test_model_dtype(model: nn.Module):
-    is_empty = is_model_empty(model)
+def test_empty_model_device():
+    model = EmptyModel()
 
+    assert not is_multidevice(model)
+    assert get_model_device(model).type == "cpu"
+
+
+def test_model_dtype():
+    model = BasicConvTestModel()
     model.to(torch.float16)
-    assert is_empty or get_model_dtype(model) == torch.float16
+    assert get_model_dtype(model) == torch.float16
     model.to(torch.float32)
     assert get_model_dtype(model) == torch.float32
     model.to(torch.float64)
-    assert is_empty or get_model_dtype(model) == torch.float64
+    assert get_model_dtype(model) == torch.float64
+
+
+def test_empty_model_dtype():
+    model = EmptyModel()
+    assert get_model_dtype(model) == torch.float32
