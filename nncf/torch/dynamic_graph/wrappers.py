@@ -17,6 +17,7 @@ from torch.nn import DataParallel
 
 from nncf.common.graph.definitions import MODEL_CONST_OP_NAME
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
+from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.debug import is_debug
 from nncf.torch.dynamic_graph.context import TracingContext
@@ -203,8 +204,17 @@ def _collect_module_attrs_and_ignored_algorithms(
     layer_attrs = get_layer_attributes_from_args_and_kwargs(op_name, args, kwargs)
 
     curr_module = ctx.get_current_module()
-    if curr_module is not None and isinstance(curr_module, _NNCFModuleMixin):
-        ignored_algos = deepcopy(curr_module.ignored_algorithms)
+    if curr_module is not None:
+        if isinstance(curr_module, _NNCFModuleMixin):
+            ignored_algos = deepcopy(curr_module.ignored_algorithms)
+
+        if (
+            isinstance(layer_attrs, WeightedLayerAttributes)
+            and hasattr(curr_module, "weight_g")
+            and hasattr(curr_module, "weight_v")
+        ):
+            # torch.nn.utils.weight_norm replaces weight with weight_g and weight_v
+            layer_attrs.weight_requires_grad = curr_module.weight_g.requires_grad
 
     return layer_attrs, ignored_algos
 

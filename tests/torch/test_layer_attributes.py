@@ -45,6 +45,7 @@ from nncf.torch.graph.operator_metatypes import PTEmbeddingMetatype
 from nncf.torch.graph.operator_metatypes import PTGatherMetatype
 from nncf.torch.graph.operator_metatypes import PTGroupNormMetatype
 from nncf.torch.graph.operator_metatypes import PTInputNoopMetatype
+from nncf.torch.graph.operator_metatypes import PTLayerNormMetatype
 from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from nncf.torch.graph.operator_metatypes import PTOutputNoopMetatype
 from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
@@ -317,6 +318,14 @@ LIST_TEST_DESCS = [
             weight_requires_grad=True, weight_shape=Size([1, 1]), filter_dimension_idx=0
         ),
         metatype_cls=PTEmbeddingBagMetatype,
+    ),
+    LayerAttributesTestDesc(
+        module_fn=lambda: nn.LayerNorm(1, 1),
+        model_input_info=FillerInputInfo([FillerInputElement([1, 1])]),
+        layer_attributes=GenericWeightedLayerAttributes(
+            weight_requires_grad=True, weight_shape=Size([1]), filter_dimension_idx=0, with_bias=True
+        ),
+        metatype_cls=PTLayerNormMetatype,
     ),
 ]
 

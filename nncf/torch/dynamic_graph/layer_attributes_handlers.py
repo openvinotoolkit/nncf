@@ -47,6 +47,7 @@ LINEAR_OP_NAMES = get_all_aliases(om.PTLinearMetatype)
 BATCHNORM_OP_NAMES = get_all_aliases(om.PTBatchNormMetatype)
 EMBEDDING_OP_NAMES = get_all_aliases(om.PTEmbeddingMetatype, om.PTEmbeddingBagMetatype)
 GROUP_NORM_OP_NAMES = get_all_aliases(om.PTGroupNormMetatype)
+LAYER_NORM_OP_NAMES = get_all_aliases(om.PTLayerNormMetatype)
 PAD_OP_NAMES = om.PTPadMetatype.get_all_aliases()
 CONCAT_OP_NAMES = om.PTCatMetatype.get_all_aliases()
 CONST_OP_NAMES = ConstNoopMetatype.get_all_aliases()
@@ -67,6 +68,8 @@ def get_layer_attributes_from_args_and_kwargs(op_name: str, args, kwargs) -> Bas
         layer_attrs = _get_group_norm_attrs_from_args_kwargs(args, kwargs)
     elif op_name in BATCHNORM_OP_NAMES:
         layer_attrs = _get_batchnorm_attrs_from_args_kwargs(args, kwargs)
+    elif op_name in LAYER_NORM_OP_NAMES:
+        layer_attrs = _get_layer_norm_attrs_from_args_kwargs(args, kwargs)
     elif op_name in EMBEDDING_OP_NAMES:
         layer_attrs = _get_embedding_attrs_from_args_kwargs(args, kwargs)
     elif op_name in TRANSPOSE_OP_NAMES:
@@ -217,6 +220,14 @@ GROUP_NORM_FUNC_SIGNATURE = [
     ("bias", None),
     ("eps", None),
 ]
+LAYER_NORM_FUNC_SIGNATURE = [
+    "input",
+    "normalized_shape",
+    ("weight", None),
+    ("bias", None),
+    ("eps", 1e-05),
+    ("cudnn_enable", True),
+]
 
 
 def _get_conv_attrs_from_args_kwargs(args: List[Any], kwargs: Dict[str, Any]) -> ConvolutionLayerAttributes:
@@ -298,4 +309,14 @@ def _get_group_norm_attrs_from_args_kwargs(args, kwargs):
         weight_requires_grad=args_dict["weight"].requires_grad,
         num_channels=args_dict["weight"].shape[0],
         num_groups=args_dict["num_groups"],
+    )
+
+
+def _get_layer_norm_attrs_from_args_kwargs(args, kwargs):
+    args_dict = apply_args_defaults(args, kwargs, LAYER_NORM_FUNC_SIGNATURE)
+    return GenericWeightedLayerAttributes(
+        weight_requires_grad=args_dict["weight"].requires_grad,
+        weight_shape=args_dict["weight"].shape,
+        filter_dimension_idx=0,
+        with_bias=args_dict["bias"] is not None,
     )
