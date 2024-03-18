@@ -461,7 +461,7 @@ def get_model_dtype(model: torch.nn.Module) -> torch.dtype:
 
     :param model: The PyTorch model.
     :return: The datatype of the first model parameter.
-        Defaults to torch.float32 if the model has no parameters.
+        Default to torch.float32 if the model has no parameters.
     """
 
     try:
