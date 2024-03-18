@@ -184,7 +184,6 @@ class AWQ(Algorithm):
             s = fns.max(fns.abs(X), axis=1)
 
             if X.shape[1] > self._subset_size:
-                # X = X[:, : self._subset_size]
                 lens = [stat.shape[0] for stat in stats]
                 step = X.shape[1] // self._subset_size
                 idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][::step]
