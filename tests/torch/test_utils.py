@@ -36,15 +36,12 @@ def compare_saved_model_state_and_current_model_state(model: nn.Module, model_st
         assert param.requires_grad == model_state.requires_grad_state[name]
 
 
-def change_model_state(module: nn.Module, trainable_paramaters: bool = True):
+def change_model_state(module: nn.Module):
     for i, ch in enumerate(module.modules()):
         ch.training = i % 2 == 0
 
     for i, p in enumerate(module.parameters()):
-        if trainable_paramaters:
-            p.requires_grad = i % 2 == 0
-        else:
-            p.requires_grad = False
+        p.requires_grad = i % 2 == 0
 
 
 @pytest.mark.parametrize(
@@ -72,7 +69,9 @@ def test_bn_training_state_switcher(model: nn.Module):
 
     runner = DataLoaderBNAdaptationRunner(model, "cuda")
 
-    change_model_state(model, trainable_paramaters=False)
+    for p in model.parameters():
+        p.requires_grad = False
+
     saved_state = save_module_state(model)
 
     with runner._bn_training_state_switcher():
