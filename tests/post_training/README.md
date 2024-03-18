@@ -60,6 +60,7 @@ Additional arguments:
 - `--fp32` to run validation of not quantized model
 - `--cuda` to enable CUDA_TORCH backend
 - `--subset-size=N` to force subset_size of calibration dataset
+- `--batch-size=N` to use batch_size for calibration
 - `--benchmark` to collect throughput statistics, add `FPS` column to result.csv
 - `--extra-columns` to add additional columns to reports.csv:
   - `Stat. collection time` - time of statistic collection

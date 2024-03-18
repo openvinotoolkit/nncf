@@ -47,7 +47,7 @@ class ImageClassificationTimm(PTQTestPipeline):
         self.model_cfg = timm_model.default_cfg
         self.input_size = [self.batch_size] + list(timm_model.default_cfg["input_size"])
         self.dummy_tensor = torch.rand(self.input_size)
-        if self.dynamic_batch_shape:
+        if self.batch_size > 1:  # Dynamic batch_size shape export
             self.input_size[0] = -1
 
         if self.backend in PT_BACKENDS:
@@ -56,7 +56,7 @@ class ImageClassificationTimm(PTQTestPipeline):
         if self.backend == BackendType.ONNX:
             onnx_path = self.fp32_model_dir / "model_fp32.onnx"
             additional_kwargs = {}
-            if self.dynamic_batch_shape:
+            if self.batch_size > 1:
                 additional_kwargs["input_names"] = ["image"]
                 additional_kwargs["dynamic_axes"] = {"image": {0: "batch"}}
             torch.onnx.export(
@@ -126,28 +126,23 @@ class ImageClassificationTimm(PTQTestPipeline):
 
     def _validate(self):
         val_dataset = datasets.ImageFolder(root=self.data_dir / "imagenet" / "val", transform=self.transform)
-        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=self.batch_size, num_workers=2, shuffle=False)
-        dataset_size = len(val_dataset)
-        if dataset_size % self.batch_size != 0 and not self.dynamic_batch_shape:
-            raise ValueError(
-                (
-                    "Because the batch_size is not a divisor of the length of the dataset, "
-                    "the one of the data tensors has a shape incompatible with static model input. "
-                    "Use --dynamic_batch_shape option to export such model with dynamic shape."
-                )
-            )
+        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, num_workers=2, shuffle=False)
 
-        core = ov.Core()
-        ov_model = core.read_model(self.path_compressed_ir)
-        compiled_model = core.compile_model(ov_model)
+        dataset_size = len(val_loader)
+
         # Initialize result tensors for async inference support.
         predictions = np.zeros((dataset_size))
         references = -1 * np.ones((dataset_size))
+
+        core = ov.Core()
 
         if os.environ.get("INFERENCE_NUM_THREADS"):
             # Set CPU_THREADS_NUM for OpenVINO inference
             inference_num_threads = os.environ.get("INFERENCE_NUM_THREADS")
             core.set_property("CPU", properties={"INFERENCE_NUM_THREADS": str(inference_num_threads)})
+
+        ov_model = core.read_model(self.path_compressed_ir)
+        compiled_model = core.compile_model(ov_model)
 
         jobs = int(os.environ.get("NUM_VAL_THREADS", DEFAULT_VAL_THREADS))
         infer_queue = ov.AsyncInferQueue(compiled_model, jobs)
@@ -157,8 +152,8 @@ class ImageClassificationTimm(PTQTestPipeline):
             def process_result(request, userdata):
                 output_data = request.get_output_tensor().data
                 predicted_label = np.argmax(output_data, axis=1)
-                predictions[userdata * self.batch_size : (userdata + 1) * self.batch_size] = predicted_label
-                pbar.progress.update(pbar.task, advance=self.batch_size)
+                predictions[userdata] = predicted_label
+                pbar.progress.update(pbar.task, advance=1)
 
             infer_queue.set_callback(process_result)
 
@@ -166,7 +161,7 @@ class ImageClassificationTimm(PTQTestPipeline):
                 # W/A for memory leaks when using torch DataLoader and OpenVINO
                 image_copies = copy.deepcopy(images.numpy())
                 infer_queue.start_async(image_copies, userdata=i)
-                references[i * self.batch_size : (i + 1) * self.batch_size] = target
+                references[i] = target
 
             infer_queue.wait_all()
 
