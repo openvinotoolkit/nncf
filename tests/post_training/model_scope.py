@@ -310,7 +310,7 @@ WEIGHT_COMPRESSION_MODELS = [
         "backends": [BackendType.OV],
     },
     {
-        "reported_name": "tinyllama_data_aware_awq_stateful",
+        "reported_name": "tinyllama_data_aware_awq_scale_estimation_stateful",
         "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
         "pipeline_cls": LMWeightCompression,
         "compression_params": {
