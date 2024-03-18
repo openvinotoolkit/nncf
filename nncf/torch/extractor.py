@@ -67,6 +67,7 @@ def extract_conv(
 ) -> ExtractedFunc:
     """
     Extracts a convolutional layer from an NNCF graph and constructs an ExtractedConv module.
+
     :param node: The NNCF node representing the convolutional layer to extract.
     :param model: The NNCF network containing the layer.
     :return: The extracted convolutional layer as an ExtractedFunc module.
@@ -111,6 +112,7 @@ def extract_conv(
 def _find_parent_class(cls: type, parent_classes: Iterable[type]) -> Optional[type]:
     """
     Finds the first parent class of the given class that is present in the list of possible parent classes.
+
     :param cls: The class whose parent to find.
     :param parent_classes: A list of potential parent classes.
     :return: The first matching parent class, or None if no match is found.
@@ -124,7 +126,8 @@ def _find_parent_class(cls: type, parent_classes: Iterable[type]) -> Optional[ty
 def extract_bn(node: NNCFNode, model: NNCFNetwork) -> Optional[Union[nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d]]:
     """
     Extract batch_norm operation.
-    If source modules inhered from nn.BatchNorm1d, nn.BatchNorm2d, or nn.BatchNorm3d return module that
+    If source modules inhered from nn.BatchNorm1d, nn.BatchNorm2d, or nn.BatchNorm3d return torch BatchNorm module.
+
     :param node: Target batch_norm node.
     :param model: Source model.
     :return: BatchNorm module with same attributes and parameters from source module or None.
@@ -185,7 +188,6 @@ def extract_model(model: NNCFNetwork, input_nodes: List[str], output_nodes: List
     :param model: The NNCF network to extract the submodule from.
     :param input_nodes: List containing the name of input nodes for the submodule.
     :param output_nodes: List containing the name of output nodes for the submodule.
-
     :return: An nn.Module containing the extracted submodel, or None if extraction is not supported.
     """
 

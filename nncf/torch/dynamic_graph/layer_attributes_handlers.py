@@ -11,15 +11,6 @@
 
 from typing import Any, Dict, List, Tuple, Union
 
-from torch.nn import Conv1d
-from torch.nn import Conv2d
-from torch.nn import Conv3d
-from torch.nn import ConvTranspose1d
-from torch.nn import ConvTranspose2d
-from torch.nn import ConvTranspose3d
-from torch.nn import Linear
-from torch.nn import Module as TorchModule
-
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
@@ -62,63 +53,6 @@ CONST_OP_NAMES = ConstNoopMetatype.get_all_aliases()
 OP_NAMES_REQUIRING_ATTRS_FROM_ARGS_KWARGS = list(
     TRANSPOSE_OP_NAMES + PERMUTE_OP_NAMES + GETITEM_OP_NAMES + PAD_OP_NAMES + CONCAT_OP_NAMES + CONST_OP_NAMES
 )
-
-
-def get_layer_attributes_from_module(module: TorchModule, operator_name: str) -> BaseLayerAttributes:
-    if operator_name == "group_norm":
-        return GroupNormLayerAttributes(
-            weight_requires_grad=module.weight.requires_grad,
-            num_channels=module.num_channels,
-            num_groups=module.num_groups,
-        )
-    # torch.nn.utils.weight_norm replaces weight with weight_g and weight_v
-    is_weight_norm_applied = hasattr(module, "weight_g") and hasattr(module, "weight_v")
-    weight_attr = "weight_g" if is_weight_norm_applied else "weight"
-    with_bias = hasattr(module, "bias") and module.bias is not None
-    if isinstance(module, (Conv1d, Conv2d, Conv3d)):
-        return ConvolutionLayerAttributes(
-            weight_requires_grad=getattr(module, weight_attr).requires_grad,
-            in_channels=module.in_channels,
-            out_channels=module.out_channels,
-            kernel_size=module.kernel_size,
-            stride=module.stride,
-            dilations=module.dilation,
-            groups=module.groups,
-            transpose=False,
-            padding_values=module.padding,
-            with_bias=with_bias,
-            output_padding_values=None,
-        )
-    if isinstance(module, (ConvTranspose1d, ConvTranspose2d, ConvTranspose3d)):
-        return ConvolutionLayerAttributes(
-            weight_requires_grad=getattr(module, weight_attr).requires_grad,
-            in_channels=module.in_channels,
-            out_channels=module.out_channels,
-            kernel_size=module.kernel_size,
-            stride=module.stride,
-            dilations=module.dilation,
-            groups=module.groups,
-            transpose=True,
-            padding_values=module.padding,
-            with_bias=with_bias,
-            output_padding_values=module.output_padding,
-        )
-    if isinstance(module, Linear):
-        return LinearLayerAttributes(
-            weight_requires_grad=getattr(module, weight_attr).requires_grad,
-            in_features=module.in_features,
-            out_features=module.out_features,
-            with_bias=with_bias,
-        )
-
-    if hasattr(module, "weight"):
-        return GenericWeightedLayerAttributes(
-            weight_requires_grad=getattr(module, weight_attr).requires_grad,
-            weight_shape=module.weight.shape,
-            with_bias=with_bias,
-        )
-
-    return GenericWeightedLayerAttributes(weight_requires_grad=False, weight_shape=[1, 1])
 
 
 def get_layer_attributes_from_args_and_kwargs(op_name: str, args, kwargs) -> BaseLayerAttributes:
