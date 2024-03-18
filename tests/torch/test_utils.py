@@ -37,29 +37,21 @@ def compare_saved_model_state_and_current_model_state(model: nn.Module, model_st
         assert param.requires_grad == model_state.requires_grad_state[name]
 
 
-def randomly_change_model_state(module: nn.Module, compression_params_only: bool = False):
-    import random
+def change_model_state(module: nn.Module, compression_params_only: bool = False):
+    for i, ch in enumerate(module.modules()):
+        ch.training = i % 2 == 0
 
-    for ch in module.modules():
-        if random.uniform(0, 1) > 0.5:
-            ch.training = False
-        else:
-            ch.training = True
-
-    for p in module.parameters():
+    for i, p in enumerate(module.parameters()):
         if compression_params_only and not (isinstance(p, CompressionParameter) and torch.is_floating_point(p)):
             break
-        if random.uniform(0, 1) > 0.5:
-            p.requires_grad = False
-        else:
-            p.requires_grad = True
+        p.requires_grad = i % 2 == 0
 
 
 @pytest.mark.parametrize(
     "model", [BasicConvTestModel(), TwoConvTestModel(), MockModel(), DepthWiseConvTestModel(), EightConvTestModel()]
 )
 def test_training_mode_switcher(_seed, model: nn.Module):
-    randomly_change_model_state(model)
+    change_model_state(model)
     saved_state = save_module_state(model)
     with training_mode_switcher(model, True):
         pass
@@ -80,7 +72,7 @@ def test_bn_training_state_switcher(_seed, model: nn.Module):
 
     runner = DataLoaderBNAdaptationRunner(model, "cuda")
 
-    randomly_change_model_state(model)
+    change_model_state(model)
     saved_state = save_module_state(model)
 
     with runner._bn_training_state_switcher():
