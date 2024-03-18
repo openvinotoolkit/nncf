@@ -1,0 +1,2 @@
+anomalib
+torch
