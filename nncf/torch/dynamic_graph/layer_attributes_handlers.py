@@ -244,8 +244,8 @@ def _get_conv_transpose_attrs_from_args_kwargs(args: List[Any], kwargs: Dict[str
     args_dict = apply_args_defaults(args, kwargs, CONV_TRANSPOSE_FUNC_SIGNATURE)
 
     kernel_size = tuple(args_dict["weight"].shape[2:])
-    in_channels = args_dict["weight"].shape[1] * args_dict["groups"]
-    out_channels = args_dict["weight"].shape[0]
+    in_channels = args_dict["weight"].shape[0]
+    out_channels = args_dict["weight"].shape[1] * args_dict["groups"]
 
     return ConvolutionLayerAttributes(
         weight_requires_grad=args_dict["weight"].requires_grad,

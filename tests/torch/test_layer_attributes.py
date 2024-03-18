@@ -149,11 +149,11 @@ LIST_TEST_DESCS = [
         metatype_cls=PTBatchNormMetatype,
     ),
     LayerAttributesTestDesc(
-        module_fn=lambda: nn.Conv2d(1, 1, 1),
-        model_input_info=FillerInputInfo([FillerInputElement([1, 1, 1, 1])]),
+        module_fn=lambda: nn.Conv2d(2, 1, 1),
+        model_input_info=FillerInputInfo([FillerInputElement([1, 2, 1, 1])]),
         layer_attributes=ConvolutionLayerAttributes(
             weight_requires_grad=True,
-            in_channels=1,
+            in_channels=2,
             out_channels=1,
             kernel_size=(1, 1),
             stride=(1, 1),
@@ -166,12 +166,12 @@ LIST_TEST_DESCS = [
         metatype_cls=PTConv2dMetatype,
     ),
     LayerAttributesTestDesc(
-        module_fn=lambda: nn.Conv2d(2, 2, 1, groups=2),
+        module_fn=lambda: nn.Conv2d(2, 4, 1, groups=2),
         model_input_info=FillerInputInfo([FillerInputElement([1, 2, 1, 1])]),
         layer_attributes=ConvolutionLayerAttributes(
             weight_requires_grad=True,
             in_channels=2,
-            out_channels=2,
+            out_channels=4,
             kernel_size=(1, 1),
             stride=(1, 1),
             dilations=(1, 1),
@@ -183,12 +183,12 @@ LIST_TEST_DESCS = [
         metatype_cls=PTConv2dMetatype,
     ),
     LayerAttributesTestDesc(
-        module_fn=lambda: nn.Conv1d(1, 1, 1),
+        module_fn=lambda: nn.Conv1d(1, 2, 1),
         model_input_info=FillerInputInfo([FillerInputElement([1, 1, 1])]),
         layer_attributes=ConvolutionLayerAttributes(
             weight_requires_grad=True,
             in_channels=1,
-            out_channels=1,
+            out_channels=2,
             kernel_size=(1,),
             stride=(1,),
             dilations=(1,),
@@ -200,12 +200,12 @@ LIST_TEST_DESCS = [
         metatype_cls=PTConv1dMetatype,
     ),
     LayerAttributesTestDesc(
-        module_fn=lambda: nn.Conv3d(1, 1, 1),
+        module_fn=lambda: nn.Conv3d(1, 2, 1),
         model_input_info=FillerInputInfo([FillerInputElement([1, 1, 1, 1, 1])]),
         layer_attributes=ConvolutionLayerAttributes(
             weight_requires_grad=True,
             in_channels=1,
-            out_channels=1,
+            out_channels=2,
             kernel_size=(1, 1, 1),
             stride=(1, 1, 1),
             dilations=(1, 1, 1),
@@ -217,12 +217,12 @@ LIST_TEST_DESCS = [
         metatype_cls=PTConv3dMetatype,
     ),
     LayerAttributesTestDesc(
-        module_fn=lambda: nn.ConvTranspose1d(1, 1, 1),
+        module_fn=lambda: nn.ConvTranspose1d(1, 2, 1),
         model_input_info=FillerInputInfo([FillerInputElement([1, 1, 1])]),
         layer_attributes=ConvolutionLayerAttributes(
             weight_requires_grad=True,
             in_channels=1,
-            out_channels=1,
+            out_channels=2,
             kernel_size=(1,),
             stride=(1,),
             dilations=(1,),
@@ -235,12 +235,12 @@ LIST_TEST_DESCS = [
         metatype_cls=PTConvTranspose1dMetatype,
     ),
     LayerAttributesTestDesc(
-        module_fn=lambda: nn.ConvTranspose2d(1, 1, 1),
+        module_fn=lambda: nn.ConvTranspose2d(1, 2, 1),
         model_input_info=FillerInputInfo([FillerInputElement([1, 1, 1, 1])]),
         layer_attributes=ConvolutionLayerAttributes(
             weight_requires_grad=True,
             in_channels=1,
-            out_channels=1,
+            out_channels=2,
             kernel_size=(1, 1),
             stride=(1, 1),
             dilations=(1, 1),
@@ -253,12 +253,12 @@ LIST_TEST_DESCS = [
         metatype_cls=PTConvTranspose2dMetatype,
     ),
     LayerAttributesTestDesc(
-        module_fn=lambda: nn.ConvTranspose2d(2, 2, 1, groups=2),
+        module_fn=lambda: nn.ConvTranspose2d(2, 4, 1, groups=2),
         model_input_info=FillerInputInfo([FillerInputElement([1, 2, 1, 1])]),
         layer_attributes=ConvolutionLayerAttributes(
             weight_requires_grad=True,
             in_channels=2,
-            out_channels=2,
+            out_channels=4,
             kernel_size=(1, 1),
             stride=(1, 1),
             dilations=(1, 1),
@@ -271,12 +271,12 @@ LIST_TEST_DESCS = [
         metatype_cls=PTConvTranspose2dMetatype,
     ),
     LayerAttributesTestDesc(
-        module_fn=lambda: nn.ConvTranspose3d(1, 1, 1),
+        module_fn=lambda: nn.ConvTranspose3d(1, 2, 1),
         model_input_info=FillerInputInfo([FillerInputElement([1, 1, 1, 1, 1])]),
         layer_attributes=ConvolutionLayerAttributes(
             weight_requires_grad=True,
             in_channels=1,
-            out_channels=1,
+            out_channels=2,
             kernel_size=(1, 1, 1),
             stride=(1, 1, 1),
             dilations=(1, 1, 1),
