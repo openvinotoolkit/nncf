@@ -258,43 +258,24 @@ def set_const_data_to_port_id(data: torch.Tensor, node: NNCFNode, port_id: int, 
         setattr(module, const_attr_name, data)
 
 
-def _find_fq_node_in_constant_subgraph(start_node: NNCFNode, graph: NNCFGraph) -> Optional[NNCFNode]:
-    """
-    Finds a fake quantize node within a constant subgraph.
-
-    :param start_node: The starting node within the subgraph.
-    :param graph: The NNCFGraph containing the subgraph
-    :return: The founded fake quantize node, or None if not found.
-    """
-    if start_node.metatype == om.PTNoopMetatype:
-        prev_nodes = graph.get_previous_nodes(start_node)
-        if len(prev_nodes) != 1:
-            return None
-        return _find_fq_node_in_constant_subgraph(prev_nodes[0], graph)
-    if start_node.node_type in om.QUANTIZE_NODE_TYPES:
-        return start_node
-    return None
-
-
 def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     """
-    Check that module have fake_quantizer for its weights.
+    Check that module have fake_quantizer for its weights (supports only metatypes with only one weight port).
 
     :param node: The target node.
     :param nncf_graph: The NNCF graph.
     :return bool: return `True` if the node is quantized.
     """
+    assert len(node.metatype.weight_port_ids) == 1, "Support only metatype with only 1 weighted port"
     for edge in nncf_graph.get_input_edges(node):
-        if edge.input_port_id in node.metatype.weight_port_ids and _find_fq_node_in_constant_subgraph(
-            edge.from_node, nncf_graph
-        ):
+        if edge.input_port_id in node.metatype.weight_port_ids and edge.from_node.node_type in om.QUANTIZE_NODE_TYPES:
             return True
     return False
 
 
 def get_fake_quantizer(
     node: NNCFNode, port_id: Optional[int], model: NNCFNetwork
-) -> Union[SymmetricQuantizer, AsymmetricQuantizer, torch.quantization.FakeQuantize]:
+) -> Union[SymmetricQuantizer, AsymmetricQuantizer]:
     """
     Retrieves the fake quantizer associated with a specific node and input port id.
 
