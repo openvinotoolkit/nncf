@@ -183,8 +183,10 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 target_input_node = target_input.get_node()
                 if const_dtype == ov.Type.f16:
                     target_input_node_attrs = target_input_node.get_attributes()
-                    if (target_input_node.get_type_name() == "Convert" and
-                            target_input_node_attrs["destination_type"] == "f32"):
+                    if (
+                        target_input_node.get_type_name() == "Convert"
+                        and target_input_node_attrs["destination_type"] == "f32"
+                    ):
                         # Before compression, there was a f16 -> f32 Convert node after the weight. Now, scale multiply
                         # node is in f32, and this Convert node is not needed.
                         next_node_target_input = next(iter(target_input_node.output(0).get_target_inputs()))
