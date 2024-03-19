@@ -162,7 +162,7 @@ class PTSharedFnInsertionCommand(PTTransformationCommand):
         target_points: List[PTTargetPoint],
         fn: Callable,
         op_unique_name: str,
-        compression_module_type: ExtraCompressionModuleType,
+        compression_module_type: ExtraCompressionModuleType = ExtraCompressionModuleType.EXTERNAL_OP,
         priority: TransformationPriority = TransformationPriority.DEFAULT_PRIORITY,
         hooks_group_name: str = DEFAULT_HOOKS_GROUP_NAME,
     ):

@@ -127,8 +127,16 @@ class PTModelTransformer(ModelTransformer):
 
         insertion_commands: List[PTInsertionCommand] = []
 
+        device = None
+        if not is_multidevice(model):
+            device = get_model_device(model)
+
         for shared_command in transformations:
-            model.nncf.add_compression_module(shared_command.op_name, shared_command.fn, compression_module_type)
+            fn = shared_command.fn
+            if device is not None:
+                fn.to(device)
+
+            model.nncf.add_compression_module(shared_command.op_name, fn, compression_module_type)
 
             for target_point in shared_command.target_points:
                 fn = ExternalOpCallHook(
