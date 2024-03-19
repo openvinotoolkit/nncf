@@ -199,25 +199,15 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def get_compress_decompress_pipeline(
         weight_compression_parameter: WeightCompressionParameters, w_shape, s_shape, z_p_shape
     ):
-        config = weight_compression_parameter.compression_config
-        mode = config.mode
-        assert mode in [CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM]
-        num_bits = config.num_bits
-
-        level_low = 0
-        level_high = 2**num_bits - 1
-
-        input_node_w = opset.parameter(w_shape, name="w")
-        input_node_s = opset.parameter(s_shape, name="s")
-        input_node_zp = opset.parameter(z_p_shape, name="zp")
-
-        node_compression_div = opset.divide(input_node_w, input_node_s)
-        node_compression_add = opset.add(node_compression_div, input_node_zp)
-        node_compression_round = opset.round(node_compression_add)
-        node_compression_clamp = opset.clamp(node_compression_round, level_low, level_high)
-
-        result1 = opset.result(node_compression_clamp, name="compressed_weights")
-        result1.get_output_tensor(0).set_names(set(["compressed_weights"]))
+        (
+            input_node_w,
+            input_node_s,
+            input_node_zp,
+            node_compression_clamp,
+            result1,
+        ) = OVWeightCompressionAlgoBackend.get_compress_pipeline(
+            weight_compression_parameter, w_shape, s_shape, z_p_shape, True
+        )
 
         node_decompression_add = opset.subtract(node_compression_clamp, input_node_zp)
         node_decompression_mul = opset.multiply(node_decompression_add, input_node_s)
@@ -231,7 +221,9 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return compiled_model
 
     @staticmethod
-    def get_compress_pipeline(weight_compression_parameter: WeightCompressionParameters, w_shape, s_shape, z_p_shape):
+    def get_compress_pipeline(
+        weight_compression_parameter: WeightCompressionParameters, w_shape, s_shape, z_p_shape, return_nodes=False
+    ):
         config = weight_compression_parameter.compression_config
         mode = config.mode
         assert mode in [CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM]
@@ -251,6 +243,9 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
         result1 = opset.result(node_compression_clamp, name="compressed_weights")
         result1.get_output_tensor(0).set_names(set(["compressed_weights"]))
+
+        if return_nodes:
+            return input_node_w, input_node_s, input_node_zp, node_compression_clamp, result1
 
         model = ov.Model([result1], [input_node_w, input_node_s, input_node_zp])
 
