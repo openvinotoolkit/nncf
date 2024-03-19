@@ -11,7 +11,6 @@
 from typing import Dict, List
 
 import torch
-from texttable import Texttable
 from torch import nn
 
 from nncf import NNCFConfig
@@ -21,6 +20,7 @@ from nncf.common.pruning.clusterization import Cluster
 from nncf.common.pruning.clusterization import Clusterization
 from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
+from nncf.common.utils.helpers import create_table
 from nncf.config.extractors import extract_algo_specific_config
 from nncf.config.schemata.defaults import PRUNE_BATCH_NORMS
 from nncf.config.schemata.defaults import PRUNE_DOWNSAMPLE_CONVS
@@ -264,17 +264,16 @@ class BasePruningAlgoController(PTCompressionAlgorithmController):
         """
         Creates a table with layer pruning level statistics
         """
-        table = Texttable()
-        table.set_cols_width([33, 20, 6, 8])
         header = ["Name", "Weight's shape", "Bias shape", "Layer PR"]
-        data = [header]
+        rows_data = []
         for minfo in self.pruned_module_groups_info.get_all_nodes():
-            drow = {h: 0 for h in header}
-            drow["Name"] = str(minfo.module_scope)
-            drow["Weight's shape"] = list(minfo.module.weight.size())
-            drow["Bias shape"] = list(minfo.module.bias.size()) if minfo.module.bias is not None else []
-            drow["Layer PR"] = self.pruning_level_for_mask(minfo)
-            row = [drow[h] for h in header]
-            data.append(row)
-        table.add_rows(data)
-        return table
+            rows_data.append(
+                [
+                    str(minfo.module_scope),
+                    list(minfo.module.weight.size()),
+                    list(minfo.module.bias.size()) if minfo.module.bias is not None else [],
+                    self.pruning_level_for_mask(minfo),
+                ]
+            )
+
+        return create_table(header, rows_data, max_col_widths=[33, 20, 6, 8])

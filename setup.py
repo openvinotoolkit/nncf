@@ -116,7 +116,7 @@ INSTALL_REQUIRES = [
     "rich>=13.5.2",
     "scikit-learn>=0.24.0",
     "scipy>=1.3.2",
-    "texttable>=1.6.3",
+    "tabulate>=0.9.0",
     "tqdm>=4.54.1",
 ]
 
