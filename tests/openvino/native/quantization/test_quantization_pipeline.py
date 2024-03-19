@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 
 import numpy as np
 import openvino.runtime as ov
@@ -21,6 +22,7 @@ from tests.openvino.native.common import get_dataset_for_test
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import MatMul2DModel
+from tests.openvino.native.models import QuantizedModel
 from tests.openvino.native.test_model_transformer import get_nodes_by_type
 
 REF_FQ_NODES = [
@@ -103,9 +105,6 @@ def test_meta_information(model_creator_func, ignored_options):
             if isinstance(value, IgnoredScope):
                 check_parameters(quantized_model, value.__dict__, rt_path)
                 continue
-            if "ignored_scope" in rt_path:
-                assert key != "validate"  # key validate shouldn't be dumped
-                assert value  # empty values shouldn't be dumped
             assert quantized_model.get_rt_info(rt_path) == str(value)
 
     model = model_creator_func().ov_model
@@ -123,3 +122,49 @@ def test_meta_information(model_creator_func, ignored_options):
     assert quantized_model.has_rt_info(base_path)
 
     check_parameters(quantized_model, quantize_parameters, base_path)
+
+
+@pytest.mark.parametrize(
+    "id, ignored_options",
+    zip(
+        [1, 2, 3],
+        [IgnoredScope(names=["Conv_1", "Conv_2"]), IgnoredScope(names=["Transpose"], types=["Add"]), IgnoredScope()],
+    ),
+)
+def test_ignored_scope_dump(id, ignored_options):
+    dumped_model_path = "testing_quantized_model.xml"
+    ignored_scpoe_path = ["nncf", "quantization", "ignored_scope"]
+    names_path = ["nncf", "quantization", "ignored_scope", "names"]
+    types_path = ["nncf", "quantization", "ignored_scope", "types"]
+    validate_path = ["nncf", "quantization", "ignored_scope", "validate"]
+    subgraphs_path = ["nncf", "quantization", "ignored_scope", "subgraphs"]
+    patterns_path = ["nncf", "quantization", "ignored_scope", "patterns"]
+
+    model = QuantizedModel().ov_model
+    dataset = get_dataset_for_test(model)
+    quantize_parameters = {
+        "preset": QuantizationPreset.PERFORMANCE,
+        "target_device": TargetDevice.CPU,
+        "subset_size": 1,
+        "fast_bias_correction": True,
+        "ignored_scope": ignored_options,
+    }
+    quantized_model = quantize_impl(model, dataset, **quantize_parameters)
+    ov.save_model(quantized_model, f"{dumped_model_path}")
+    core = ov.Core()
+    dumped_model = core.read_model(f"{dumped_model_path}")
+    os.remove(f"{dumped_model_path}")
+    if id == 1:
+        assert dumped_model.has_rt_info(validate_path) is False
+        assert dumped_model.has_rt_info(types_path) is False
+        assert dumped_model.has_rt_info(subgraphs_path) is False
+        assert dumped_model.has_rt_info(patterns_path) is False
+        assert dumped_model.get_rt_info(names_path) == "['Conv_1', 'Conv_2']"
+    if id == 2:
+        assert dumped_model.has_rt_info(validate_path) is False
+        assert dumped_model.has_rt_info(subgraphs_path) is False
+        assert dumped_model.has_rt_info(patterns_path) is False
+        assert dumped_model.get_rt_info(names_path) == "['Transpose']"
+        assert dumped_model.get_rt_info(types_path) == "['Add']"
+    if id == 3:
+        assert dumped_model.get_rt_info(ignored_scpoe_path) == "[]"
