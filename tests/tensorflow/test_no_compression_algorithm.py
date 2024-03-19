@@ -17,9 +17,7 @@ from tests.tensorflow.helpers import get_basic_two_conv_test_model
 EPS = 1e-9
 INPUT_SIZE = [4, 4, 1]
 
-NO_COMPRESSION_NNCF_CONFIG = NNCFConfig(
-    {"model": "basic_binarization_config", "input_info": {"sample_size": [1] + INPUT_SIZE}}
-)
+NO_COMPRESSION_NNCF_CONFIG = NNCFConfig({"model": "basic_config", "input_info": {"sample_size": [1] + INPUT_SIZE}})
 
 
 def test_no_compression_algo_not_change_model_params():

@@ -15,7 +15,6 @@ from typing import Dict
 import jsonschema
 
 from nncf.config.definitions import ALGO_NAME_VS_README_URL
-from nncf.config.definitions import BINARIZATION_ALGO_NAME_IN_CONFIG
 from nncf.config.definitions import CONST_SPARSITY_ALGO_NAME_IN_CONFIG
 from nncf.config.definitions import FILTER_PRUNING_ALGO_NAME_IN_CONFIG
 from nncf.config.definitions import KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG
@@ -25,7 +24,6 @@ from nncf.config.definitions import RB_SPARSITY_ALGO_NAME_IN_CONFIG
 from nncf.config.definitions import SCHEMA_VISUALIZATION_URL
 from nncf.config.schemata.accuracy_aware import ACCURACY_AWARE_MODES_VS_SCHEMA
 from nncf.config.schemata.accuracy_aware import ACCURACY_AWARE_TRAINING_SCHEMA
-from nncf.config.schemata.algo.binarization import BINARIZATION_SCHEMA
 from nncf.config.schemata.algo.const_sparsity import CONST_SPARSITY_SCHEMA
 from nncf.config.schemata.algo.filter_pruning import FILTER_PRUNING_SCHEMA
 from nncf.config.schemata.algo.knowledge_distillation import KNOWLEDGE_DISTILLATION_SCHEMA
@@ -50,7 +48,6 @@ REF_VS_ALGO_SCHEMA = {
     RB_SPARSITY_ALGO_NAME_IN_CONFIG: RB_SPARSITY_SCHEMA,
     KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG: KNOWLEDGE_DISTILLATION_SCHEMA,
     CONST_SPARSITY_ALGO_NAME_IN_CONFIG: CONST_SPARSITY_SCHEMA,
-    BINARIZATION_ALGO_NAME_IN_CONFIG: BINARIZATION_SCHEMA,
     **EXPERIMENTAL_REF_VS_ALGO_SCHEMA,
 }
 

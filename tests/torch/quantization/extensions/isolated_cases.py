@@ -31,7 +31,7 @@ def test_reference_quantization_on_cpu_isolated(mocker):
 
     def side_effect_fn(name, *args, **kwargs):
         # simulating failure to find a compiler during extension load
-        if name in ["quantized_functions_cpu", "binarized_functions_cpu"]:
+        if name in ["quantized_functions_cpu"]:
             raise subprocess.CalledProcessError(returncode=-1, cmd="where cl.exe")
 
     load_stub.side_effect = side_effect_fn

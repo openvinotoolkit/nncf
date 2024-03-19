@@ -14,26 +14,26 @@ Base subpackage for NNCF TensorFlow functionality.
 
 import tensorflow
 from packaging import version
+from packaging.specifiers import SpecifierSet
 
 import nncf
 from nncf import nncf_logger
 from nncf.common.logging.logger import warn_bkc_version_mismatch
-from nncf.version import BKC_TF_VERSION
+from nncf.version import BKC_TF_SPEC
+from nncf.version import STRICT_TF_SPEC
 
 try:
-    _tf_version = tensorflow.__version__
-    tensorflow_version = version.parse(_tf_version).base_version
+    tensorflow_version = version.parse(version.parse(tensorflow.__version__).base_version)
 except:
     nncf_logger.debug("Could not parse tensorflow version")
-    _tf_version = "0.0.0"
-    tensorflow_version = version.parse(_tf_version).base_version
-tensorflow_version_major, tensorflow_version_minor = tuple(map(int, tensorflow_version.split(".")))[:2]
-if not tensorflow_version.startswith(BKC_TF_VERSION[:-2]):
-    warn_bkc_version_mismatch("tensorflow", BKC_TF_VERSION, _tf_version)
-elif not (tensorflow_version_major == 2 and 8 <= tensorflow_version_minor <= 13):
+    tensorflow_version = version.parse("0.0.0")
+
+if tensorflow_version not in SpecifierSet(STRICT_TF_SPEC):
     raise nncf.UnsupportedVersionError(
-        f"NNCF only supports 2.8.4 <= tensorflow <= 2.13.*, while current tensorflow version is {_tf_version}"
+        f"NNCF only supports tensorflow{STRICT_TF_SPEC}, while current tensorflow version is {tensorflow_version}"
     )
+if tensorflow_version not in SpecifierSet(BKC_TF_SPEC):
+    warn_bkc_version_mismatch("torch", BKC_TF_SPEC, tensorflow.__version__)
 
 
 from nncf.common.accuracy_aware_training.training_loop import (

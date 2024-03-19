@@ -94,10 +94,6 @@ class NNCFStatistics(Statistics):
         """
         return self._storage.get("filter_pruning")
 
-    @property
-    def binarization(self) -> None:
-        raise NotImplementedError
-
     def register(self, algorithm_name: str, stats: Statistics):
         """
         Registers statistics for the algorithm.
@@ -108,7 +104,6 @@ class NNCFStatistics(Statistics):
             * const_sparsity
             * quantization
             * filter_pruning
-            * binarization
 
         :param stats: Statistics of the algorithm.
         """
@@ -120,7 +115,6 @@ class NNCFStatistics(Statistics):
             "const_sparsity",
             "quantization",
             "filter_pruning",
-            "binarization",
         ]
         if algorithm_name not in available_algorithms:
             raise ValueError(

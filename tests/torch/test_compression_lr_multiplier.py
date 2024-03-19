@@ -34,7 +34,6 @@ from tests.torch.sparsity.rb.test_algo import get_basic_sparsity_config
 ALGO_NAME_TO_PATH_MAP = {
     "quantization": "nncf.torch.quantization",
     "rb_sparsity": "nncf.torch.sparsity.rb",
-    "binarization": "nncf.torch.binarization",
 }
 
 
@@ -46,24 +45,6 @@ def get_quantization_config() -> NNCFConfig:
 
 def get_sparsity_config() -> NNCFConfig:
     config = get_basic_sparsity_config([1, *LeNet.INPUT_SIZE])
-    return config
-
-
-def get_binarization_config() -> NNCFConfig:
-    config = NNCFConfig()
-    config.update(
-        {
-            "model": "resnet18",
-            "input_info": {"sample_size": [1, *LeNet.INPUT_SIZE]},
-            "compression": [
-                {
-                    "algorithm": "binarization",
-                    "mode": "xnor",
-                    "params": {"activations_quant_start_epoch": 0, "weights_quant_start_epoch": 0},
-                }
-            ],
-        }
-    )
     return config
 
 
@@ -131,7 +112,7 @@ def merge_configs(configs: List[NNCFConfig], use_algo_list: bool = True) -> NNCF
 
 def get_configs_building_params() -> List[Dict]:
     res = []
-    get_orig_config_fns = [get_quantization_config, get_sparsity_config, get_binarization_config]
+    get_orig_config_fns = [get_quantization_config, get_sparsity_config]
     num_orig_configs = len(get_orig_config_fns)
 
     for global_multiplier in [0, 1, 10]:
@@ -339,12 +320,6 @@ def perform_model_training_steps(model: nn.Module, train_loader: DataLoader, num
     with set_torch_seed():
         train_loader = iter(train_loader)
         optimizer = SGD(model.parameters(), lr=0.1)
-
-        # This block of code is needed to initialize scale in the binarization algorithm
-        # TODO: perform binarization scale init in the same way as for quantization
-        with torch.no_grad():
-            x, y_gt = next(train_loader)
-            model(x)
 
         for _ in range(num_steps):
             optimizer.zero_grad()

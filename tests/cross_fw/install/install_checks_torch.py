@@ -36,31 +36,21 @@ threshold_tensor = torch.zeros([1, 1, 1, 1])
 levels = 256
 
 if execution_type == "cpu":
-    from nncf.torch.binarization.extensions import BinarizedFunctionsCPU
     from nncf.torch.quantization.extensions import QuantizedFunctionsCPU
 
     output_tensor = QuantizedFunctionsCPU.get("Quantize_forward")(
         input_tensor, input_low_tensor, input_high_tensor, levels
     )
-    output_tensor = BinarizedFunctionsCPU.get("ActivationBinarize_forward")(
-        output_tensor, scale_tensor, threshold_tensor
-    )
-    output_tensor = BinarizedFunctionsCPU.get("WeightBinarize_forward")(output_tensor, True)
 elif execution_type == "gpu":
     input_tensor = input_tensor.cuda()
     input_low_tensor = input_low_tensor.cuda()
     input_high_tensor = input_high_tensor.cuda()
     scale_tensor = scale_tensor.cuda()
     threshold_tensor = threshold_tensor.cuda()
-    from nncf.torch.binarization.extensions import BinarizedFunctionsCUDA
     from nncf.torch.quantization.extensions import QuantizedFunctionsCUDA
 
     output_tensor = QuantizedFunctionsCUDA.get("Quantize_forward")(
         input_tensor, input_low_tensor, input_high_tensor, levels
     )
-    output_tensor = BinarizedFunctionsCUDA.get("ActivationBinarize_forward")(
-        output_tensor, scale_tensor, threshold_tensor
-    )
-    output_tensor = BinarizedFunctionsCUDA.get("WeightBinarize_forward")(output_tensor, True)
 else:
     raise nncf.ValidationError(f"Invalid execution type {execution_type} (expected 'cpu' or 'gpu')!")

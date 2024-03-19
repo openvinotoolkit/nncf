@@ -245,15 +245,6 @@ MATCH_KEY_DESC_LIST = [
         .keys_to_load(['pre_ops.0.op.1', 'pre_ops.1.op.2'])
         .model_keys(['pre_ops.1.op.1', 'pre_ops.0.op.2'])
         .all_matched(),
-    # binarization of activation and weight may have the identical parameter (e.g. enabled)
-    MatchKeyDesc(num_loaded=2)
-        .keys_to_load(['pre_ops.0.op.1', 'pre_ops.1.op.1'])
-        .model_keys(['pre_ops.0.op.1', 'pre_ops.1.op.1'])
-        .all_matched(),
-    MatchKeyDesc(num_loaded=2)
-        .keys_to_load(['module.pre_ops.1.op.1', 'module.pre_ops.0.op.1'])
-        .model_keys(['module.module.pre_ops.1.op.1', 'module.module.pre_ops.0.op.1'])
-        .all_matched(),
     # quantization -> quantization + sparsity: op.1 was first, than
     MatchKeyDesc(num_loaded=2)
         .keys_to_load(['pre_ops.0.op.1', 'pre_ops.1.op.2'])

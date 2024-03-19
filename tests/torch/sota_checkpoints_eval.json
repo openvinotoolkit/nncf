@@ -240,40 +240,11 @@
                 "diff_target_pt_max": 0.3
             },
             "resnet18_imagenet": {
-                "config": "examples/torch/classification/configs/binarization/resnet18_imagenet.json",
+                "config": "examples/torch/classification/configs/pruning/resnet18_imagenet.json",
                 "target_ov": 69.77,
                 "target_pt": 69.76,
                 "metric_type": "Acc@1",
                 "model_description": "ResNet-18"
-            },
-            "resnet18_imagenet_binarization_xnor": {
-                "config": "examples/torch/classification/configs/binarization/resnet18_imagenet_binarization_xnor.json",
-                "reference": "resnet18_imagenet",
-                "target_ov": 61.82,
-                "target_pt": 61.88,
-                "metric_type": "Acc@1",
-                "resume": "resnet18_imagenet_binarization_xnor.pth",
-                "model_description": "ResNet-18",
-                "compression_description": "XNOR (weights), scale/threshold (activations)",
-                "diff_fp32_min": -8.5,
-                "diff_fp32_max": 0.1,
-                "diff_target_pt_min": -0.3,
-                "diff_target_pt_max": 0.3
-            },
-            "resnet18_imagenet_binarization_dorefa": {
-                "config": "examples/torch/classification/configs/binarization/resnet18_imagenet_binarization_dorefa.json",
-                "reference": "resnet18_imagenet",
-                "target_ov": null,
-                "target_pt": 61.6,
-                "metric_type": "Acc@1",
-                "resume": "resnet18_imagenet_binarization_dorefa.pth",
-                "model_description": "ResNet-18",
-                "compression_description": "DoReFa (weights), scale/threshold (activations)",
-                "diff_fp32_min": -8.33,
-                "diff_fp32_max": 0.1,
-                "diff_target_pt_min": -0.3,
-                "diff_target_pt_max": 0.3,
-                "skip_ov": "Issue-22543"
             },
             "resnet18_imagenet_pruning_magnitude": {
                 "config": "examples/torch/classification/configs/pruning/resnet18_imagenet_pruning_magnitude.json",

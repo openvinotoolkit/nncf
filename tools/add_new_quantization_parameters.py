@@ -63,9 +63,6 @@ def main(argv):
     files_to_copy = []
     for pair in pth_files:
         src_file, dst_file = pair
-        if "binarization" in src_file:
-            files_to_copy.append(pair)
-            continue
         sd = pth = torch.load(src_file)
         if "state_dict" in pth:
             sd = pth["state_dict"]

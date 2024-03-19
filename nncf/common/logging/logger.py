@@ -82,7 +82,7 @@ def extension_is_loading_info_log(extension_name: str):
 
 def warn_bkc_version_mismatch(backend: str, bkc_version: str, current_version: str):
     nncf_logger.warning(
-        f"NNCF provides best results with {backend}=={bkc_version}, "
+        f"NNCF provides best results with {backend}{bkc_version}, "
         f"while current {backend} version is {current_version}. "
-        f"If you encounter issues, consider switching to {backend}=={bkc_version}"
+        f"If you encounter issues, consider switching to {backend}{bkc_version}"
     )
