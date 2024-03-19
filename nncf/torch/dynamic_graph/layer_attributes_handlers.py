@@ -286,8 +286,8 @@ def _get_linear_attrs_from_args_kwargs(args, kwargs) -> LinearLayerAttributes:
 def _get_batchnorm_attrs_from_args_kwargs(args, kwargs):
     args_dict = apply_args_defaults(args, kwargs, BATCH_NORM_FUNC_SIGNATURE)
     return GenericWeightedLayerAttributes(
-        weight_requires_grad=args_dict["weight"].requires_grad,
-        weight_shape=args_dict["weight"].shape,
+        weight_requires_grad=False if args_dict["weight"] is None else args_dict["weight"].requires_grad,
+        weight_shape=[] if args_dict["weight"] is None else args_dict["weight"].shape,
         filter_dimension_idx=0,
         with_bias=args_dict["bias"] is not None,
     )
