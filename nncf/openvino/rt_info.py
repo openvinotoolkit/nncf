@@ -25,12 +25,13 @@ def handle_ignored_scope(value: IgnoredScope) -> IgnoredScope:
 
     :param value: IgnoredScope instance, based on the quantization parameters
     """
-    value.__dict__.pop("validate")
-    keys = list(value.__dict__.keys())
+    new_value = IgnoredScope(**(value.__dict__))
+    new_value.__dict__.pop("validate")
+    keys = list(new_value.__dict__.keys())
     for key in keys:
-        if not value.__dict__[key]:
-            value.__dict__.pop(key)
-    return value
+        if not new_value.__dict__[key]:
+            new_value.__dict__.pop(key)
+    return new_value
 
 
 def dump_parameters(
