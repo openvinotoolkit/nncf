@@ -66,9 +66,10 @@ def extract_conv(
     model: NNCFNetwork,
 ) -> ExtractedFunc:
     """
-    Extracts a convolutional layer from an NNCF graph and constructs an ExtractedConv module.
+    Extracts a convolutional layer from an NNCF graph and constructs an ExtractedFunc module.
 
-    :param node: The NNCF node representing the convolutional layer to extract.
+    :param input_nodes: The name of input node.
+    :param output_nodes: The name of output node.
     :param model: The NNCF network containing the layer.
     :return: The extracted convolutional layer as an ExtractedFunc module.
     """
@@ -91,7 +92,6 @@ def extract_conv(
             "dilation": input_node.layer_attributes.dilations,
             "groups": input_node.layer_attributes.groups,
         }
-        extracted_module = ExtractedFunc(input_node.node_type, kwargs)
     elif input_node.metatype in CONV_TRANSPOSE_METATYPES:
         kwargs = {
             "weight": e_weight.clone(),
@@ -101,7 +101,8 @@ def extract_conv(
             "output_padding": input_node.layer_attributes.output_padding_values,
             "dilation": input_node.layer_attributes.dilations,
         }
-        extracted_module = ExtractedFunc(input_node.node_type, kwargs)
+
+    extracted_module = ExtractedFunc(input_node.node_type, kwargs)
 
     if input_node != output_node:
         extracted_module = try_to_fuse_conv(input_node, output_node, model, extracted_module)
@@ -155,9 +156,11 @@ def extract_bn(node: NNCFNode, model: NNCFNetwork) -> Optional[Union[nn.BatchNor
     return extracted_bn
 
 
-def try_to_fuse_conv(input_node: NNCFNode, output_node: NNCFNode, model: NNCFNetwork, extracted_module: nn.Module):
+def try_to_fuse_conv(
+    input_node: NNCFNode, output_node: NNCFNode, model: NNCFNetwork, extracted_module: nn.Module
+) -> nn.Module:
     """
-    Fused convolution operation with next batch if possible,
+    Fused convolution operation with the next batch norm node if possible,
 
     :param input_node: Input subgraph node.
     :param output_node: Output subgraph node (fused with input node).
@@ -165,20 +168,24 @@ def try_to_fuse_conv(input_node: NNCFNode, output_node: NNCFNode, model: NNCFNet
     :param extracted_module: Extracted module.
     """
     next_nodes = model.nncf.get_graph().get_next_nodes(input_node)
-    if len(next_nodes) == 1:
-        if output_node != next_nodes[0]:
-            raise nncf.InternalError(f"Output node {output_node} not found after {input_node}")
-        extracted_bn = extract_bn(next_nodes[0], model)
-        if next_nodes[0].metatype == om.PTBatchNormMetatype:
-            extracted_bn = extract_bn(next_nodes[0], model)
-            if extracted_bn is None:
-                nncf_logger.debug(
-                    f"Can`t extract fused batchnorm module for {input_node.node_name},"
-                    " module that contain batchnorm operator should be inhered from one of {BATCH_NORM_CLASSES}."
-                )
-                return None
-            return nn.Sequential(extracted_module, extracted_bn)
-    return extracted_module
+
+    if len(next_nodes) != 1:
+        return extracted_module
+
+    if output_node != next_nodes[0]:
+        raise nncf.InternalError(f"Output node {output_node} not found after {input_node}")
+
+    if next_nodes[0].metatype != om.PTBatchNormMetatype:
+        raise nncf.InternalError("Supported only BatchNorm layers")
+
+    extracted_bn = extract_bn(next_nodes[0], model)
+    if extracted_bn is None:
+        nncf_logger.debug(
+            f"Can`t extract fused batchnorm module for {input_node.node_name},"
+            " module that contain batchnorm operator should be inhered from one of {BATCH_NORM_CLASSES}."
+        )
+        return None
+    return nn.Sequential(extracted_module, extracted_bn)
 
 
 def extract_model(model: NNCFNetwork, input_nodes: List[str], output_nodes: List[str]) -> Optional[nn.Module]:
@@ -186,8 +193,8 @@ def extract_model(model: NNCFNetwork, input_nodes: List[str], output_nodes: List
     Extracts a submodule from a given NNCF network containing only the nodes from the input to the output node.
 
     :param model: The NNCF network to extract the submodule from.
-    :param input_nodes: List containing the name of input nodes for the submodule.
-    :param output_nodes: List containing the name of output nodes for the submodule.
+    :param input_nodes: List containing names of the input nodes for the submodule.
+    :param output_nodes: List containing names of the output nodes for the submodule.
     :return: An nn.Module containing the extracted submodel, or None if extraction is not supported.
     """
 
@@ -198,11 +205,8 @@ def extract_model(model: NNCFNetwork, input_nodes: List[str], output_nodes: List
     input_node = graph.get_node_by_name(input_nodes[0])
     output_node = graph.get_node_by_name(output_nodes[0])
 
-    extracted_module: Optional[nn.Module] = None
-
     if input_node.metatype in CONV_METATYPES + CONV_TRANSPOSE_METATYPES:
-        extracted_module = extract_conv(input_node, output_node, model)
-    else:
-        nncf_logger.debug(f"Can`t extract module for {input_node.node_name}")
-        return None
-    return extracted_module
+        return extract_conv(input_node, output_node, model)
+
+    nncf_logger.debug(f"Can`t extract module for {input_node.node_name}")
+    return None

@@ -65,7 +65,6 @@ def get_const_node(node: NNCFNode, port_id: int, graph: NNCFGraph) -> Optional[N
     :param node: The NNCF node for which to find the constant input node.
     :param port_id: The ID of the input port to consider.
     :param graph: The NNCF graph containing the nodes.
-
     :return: The NNCF node providing the constant input to the specified port, or None if no such node is found.
     """
     for prev_node in graph.get_previous_nodes(node):
@@ -79,9 +78,9 @@ def get_const_node(node: NNCFNode, port_id: int, graph: NNCFGraph) -> Optional[N
 
 def split_const_name(const_name: str) -> Tuple[str, str]:
     """
-    Splits a constant name into module and attribute names.
+    Splits the constant name into module and attribute names.
 
-    :param weight_name: The full name of the constant, including module and attribute.
+    :param const_name: The full name of the constant, including module and attribute.
     :return:
         - module_name: The name of the module containing the constant.
         - weight_attr_name: The name of the constant attribute within the module.
@@ -115,7 +114,7 @@ def get_module_by_name(module_name: str, model: torch.nn.Module) -> torch.nn.Mod
     return curr_module
 
 
-def get_const_data(const_node: NNCFNode, model: NNCFNetwork):
+def get_const_data(const_node: NNCFNode, model: NNCFNetwork) -> torch.Tensor:
     """
     Retrieves a constant tensor associated with a given node.
 
@@ -134,7 +133,7 @@ def get_const_data(const_node: NNCFNode, model: NNCFNetwork):
 
 def get_const_data_on_port(node: NNCFNode, port_id: int, model: NNCFNetwork) -> torch.Tensor:
     """
-    Retrieves a constant tensor associated with a given node and port in an NNCF graph.
+    Retrieves a constant tensor associated with a given node and input port in an NNCF graph.
 
     :param node: The node to retrieve the constant from.
     :param port_id:  The port id within the node that holds the constant.
@@ -150,11 +149,11 @@ def get_const_data_on_port(node: NNCFNode, port_id: int, model: NNCFNetwork) -> 
 
 def get_potential_fused_node(node_name: str, nncf_graph: NNCFGraph) -> Optional[NNCFNode]:
     """
-    Get next node that can contain fused bias in runtime.
+    Retrieves the next node in the NNCF graph that could be fused with the provided node during runtime optimization.
 
     :param node_name: The node name.
     :param nncf_graph: The NNCF graph.
-    :return: The node that can be fused or None.
+    :return: The node that can be fused or None if no suitable node is found.
     """
     target_node = nncf_graph.get_node_by_name(node_name)
 
@@ -188,7 +187,7 @@ def is_node_with_fused_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
 
 def get_fused_bias_value(node: NNCFNode, model: NNCFNetwork) -> Optional[torch.Tensor]:
     """
-    Returns the bias tensor for the node or potential fused node.
+    Returns the bias tensor for the node or for potential fused node.
 
     :param node: The node that corresponds to the operation with bias.
     :param model: The model that contains this operation.
@@ -219,6 +218,13 @@ def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[int]:
 
 
 def set_const_data(data: torch.Tensor, const_node: NNCFNode, model: NNCFNetwork) -> None:
+    """
+    Sets the constant data associated with a specific constant node in an NNCF network model.
+
+    :param data: The constant data tensor to be set.
+    :param const_node: The NNCF node representing the constant data.
+    :param model: The NNCF network model.
+    """
     const_name = const_node.layer_attributes.name
     module_name, const_attr_name = split_const_name(const_name)
     module = get_module_by_name(module_name, model)
@@ -252,27 +258,27 @@ def set_const_data_to_port_id(data: torch.Tensor, node: NNCFNode, port_id: int, 
         setattr(module, const_attr_name, data)
 
 
-def _find_fq_node_in_constant_subgraph(node: NNCFNode, graph: NNCFGraph) -> Optional[NNCFNode]:
+def _find_fq_node_in_constant_subgraph(start_node: NNCFNode, graph: NNCFGraph) -> Optional[NNCFNode]:
     """
     Finds a fake quantize node within a constant subgraph.
 
-    :param node: The starting node within the subgraph.
+    :param start_node: The starting node within the subgraph.
     :param graph: The NNCFGraph containing the subgraph
-    :return: The found fake quantize node, or None if not found.
+    :return: The founded fake quantize node, or None if not found.
     """
-    if node.metatype == om.PTNoopMetatype:
-        prev_nodes = graph.get_previous_nodes(node)
+    if start_node.metatype == om.PTNoopMetatype:
+        prev_nodes = graph.get_previous_nodes(start_node)
         if len(prev_nodes) != 1:
             return None
-        return find_const_node_in_constant_subgraph(prev_nodes[0], graph)
-    if node.node_type in om.QUANTIZE_NODE_TYPES:
-        return node
+        return _find_fq_node_in_constant_subgraph(prev_nodes[0], graph)
+    if start_node.node_type in om.QUANTIZE_NODE_TYPES:
+        return start_node
     return None
 
 
 def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     """
-    Check that module have fake_quantizer for weight.
+    Check that module have fake_quantizer for its weights.
 
     :param node: The target node.
     :param nncf_graph: The NNCF graph.
@@ -300,15 +306,15 @@ def get_fake_quantizer(
 
     address_map = model.nncf.get_node_to_op_address_mapping()
     op_addr = address_map[node.node_name]
+
     if port_id is not None:
         id = PreHookId(op_address=op_addr, input_port_id=port_id)
-        for call_hook in model.nncf._compressed_context._pre_hooks.get(id, {}).values():
-            if isinstance(call_hook, ExternalQuantizerCallHook):
-                storage = getattr(model.nncf, call_hook._storage_name)
-                return storage[call_hook._storage_key]
+        hook_container = model.nncf._compressed_context._pre_hooks.get(id, {})
     else:
-        for call_hook in model.nncf._compressed_context._post_hooks.get(op_addr, {}).values():
-            if isinstance(call_hook, ExternalQuantizerCallHook):
-                storage = getattr(model.nncf, call_hook._storage_name)
-                return storage[call_hook._storage_key]
+        hook_container = model.nncf._compressed_context._post_hooks.get(op_addr, {})
+
+    for call_hook in hook_container.values():
+        if isinstance(call_hook, ExternalQuantizerCallHook):
+            storage = getattr(model.nncf, call_hook._storage_name)
+            return storage[call_hook._storage_key]
     return None
