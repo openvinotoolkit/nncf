@@ -694,23 +694,32 @@ def test_data_type_for_num_weights(mocker):
     assert isinstance(params.num_weights, np.uint64)
 
 
-def test_compression_for_different_weight_dtypes():
-    for weight_dtype in [np.float32, np.float16]:
-        model = IdentityMatmul(weights_dtype=weight_dtype).ov_model
-        compressed_model = compress_weights(model)
-        name_to_node_map = {op.get_friendly_name(): op for op in compressed_model.get_ops()}
+def test_compression_for_different_dtypes():
+    for activation_dtype in [np.float32, np.float16]:
+        for weight_dtype in [np.float32, np.float16]:
+            if activation_dtype == np.float16 and weight_dtype == np.float32:
+                # Activations can be in f16 only if weights are in f16
+                continue
 
-        # Scale should always be converted from f16 to f32
-        assert "weights/scale_convert" in name_to_node_map
-        scale_multiply_node = name_to_node_map["weights/fq_weights_1"]
-        convert_node = scale_multiply_node.input_value(1).get_node()
-        scale_node = convert_node.input_value(0).get_node()
-        assert scale_node.get_element_type() == ov.Type.f16
-        assert convert_node.get_element_type() == ov.Type.f32
+            model = IdentityMatmul(weights_dtype=weight_dtype, activation_dtype=activation_dtype).ov_model
+            compressed_model = compress_weights(model)
+            name_to_node_map = {op.get_friendly_name(): op for op in compressed_model.get_ops()}
 
-        # There should be no Convert node after scale multiply
-        matmul_node = get_next_node(scale_multiply_node)
-        assert matmul_node.get_type_name() == "MatMul"
+            # Scale should always be converted from f16 to f32
+            assert "weights/scale_convert" in name_to_node_map
+            scale_multiply_node = name_to_node_map["weights/fq_weights_1"]
+            convert_node = scale_multiply_node.input_value(1).get_node()
+            scale_node = convert_node.input_value(0).get_node()
+            assert scale_node.get_element_type() == ov.Type.f16
+            assert convert_node.get_element_type() == ov.Type.f32
+
+            node_after_scale = get_next_node(scale_multiply_node)
+            if activation_dtype == np.float16 and weight_dtype == np.float16:
+                # If both weights and activations are in f16, there should be a f32 -> f16 convert after scale multiply
+                assert node_after_scale.get_type_name() == "Convert"
+            else:
+                # Otherwise there should be no Convert node after scale multiply
+                assert node_after_scale.get_type_name() == "MatMul"
 
 
 DATASET_SIZE = 129

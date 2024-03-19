@@ -178,14 +178,24 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             if compression_config.group_size != -1:
                 mul = opset.reshape(mul, output_shape=original_shape, special_zero=False)
 
-            const_node_output = const_node.output(0)
-            if const_dtype == ov.Type.f16:
-                # Bypass fp16 -> fp32 weight convert node
-                const_node_output = next(iter(const_node_output.get_target_inputs())).get_node().output(0)
-
             mul_output = mul.output(0)
-            for target_input in const_node_output.get_target_inputs():
-                target_input.replace_source_output(mul_output)
+            for target_input in const_node.output(0).get_target_inputs():
+                target_input_node = target_input.get_node()
+                if const_dtype == ov.Type.f16:
+                    target_input_node_attrs = target_input_node.get_attributes()
+                    if (target_input_node.get_type_name() == "Convert" and
+                            target_input_node_attrs["destination_type"] == "f32"):
+                        # Before compression, there was a f16 -> f32 Convert node after the weight. Now, scale multiply
+                        # node is in f32, and this Convert node is not needed.
+                        next_node_target_input = next(iter(target_input_node.output(0).get_target_inputs()))
+                        next_node_target_input.replace_source_output(mul_output)
+                    else:
+                        # Both weight and activation are in f16. After the addition of f32 scale multiply node we have
+                        # to add a Convert node.
+                        mul_converted = opset.convert(mul, ov.Type.f16, name=f"{mul.get_friendly_name()}/convert")
+                        target_input.replace_source_output(mul_converted.output(0))
+                else:
+                    target_input.replace_source_output(mul_output)
 
         # reset name_to_node_mapping
         self.name_to_node_mapping = None
