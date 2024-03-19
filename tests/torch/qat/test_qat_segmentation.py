@@ -21,6 +21,7 @@ from helpers import get_advanced_ptq_parameters
 from helpers import get_mocked_compression_ctrl
 from helpers import get_num_samples
 from helpers import get_quantization_preset
+from helpers import memory_cleaning_wrapper
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import nncf
@@ -267,6 +268,7 @@ def test_compression_training(quantization_config: SampleConfig):
     start_worker(main_worker, quantization_config)
 
 
+@memory_cleaning_wrapper
 def main_worker(current_gpu: int, config: SampleConfig):
     configure_device(current_gpu, config)
     if is_main_process():

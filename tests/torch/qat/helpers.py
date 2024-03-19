@@ -9,8 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import gc
 from typing import Any, Dict, Optional
 from unittest.mock import MagicMock
+
+import torch
 
 from examples.torch.common.example_logger import logger
 from nncf.common.quantization.structs import QuantizationPreset
@@ -125,3 +128,13 @@ def get_mocked_compression_ctrl():
     compression_ctrl.loss = lambda: 0.0
     compression_ctrl.statistics = lambda *args, **kwargs: []
     return compression_ctrl
+
+
+def memory_cleaning_wrapper(fn):
+    def fn_with_clean_after_run(*args, **kwargs):
+        result = fn(*args, **kwargs)
+        gc.collect()
+        torch.cuda.empty_cache()
+        return result
+
+    return fn_with_clean_after_run
