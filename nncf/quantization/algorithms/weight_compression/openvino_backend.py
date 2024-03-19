@@ -192,7 +192,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                         next_node_target_input = next(iter(target_input_node.output(0).get_target_inputs()))
                         next_node_target_input.replace_source_output(mul_output)
                     else:
-                        # Both weight and activation are in f16. After the addition of f32 scale multiply node we have
+                        # Both weight and activation are in f16. Because f32 scale multiply node was added, we have
                         # to add a Convert node.
                         mul_converted = opset.convert(mul, ov.Type.f16, name=f"{mul.get_friendly_name()}/convert")
                         target_input.replace_source_output(mul_converted.output(0))
