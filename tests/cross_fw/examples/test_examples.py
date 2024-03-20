@@ -58,7 +58,7 @@ def test_examples(
     if "requirements" in example_params:
         pip_with_venv = get_pip_executable_with_venv(venv_path)
         requirements = PROJECT_ROOT / example_params["requirements"]
-        run_cmd_line = f"{pip_with_venv} install -r {requirements}"
+        run_cmd_line = f"{pip_with_venv} install -r {requirements} --extra-index-url https://download.pytorch.org/whl/cpu"
         subprocess.run(run_cmd_line, check=True, shell=True)
 
     if ov_version_override is not None:
