@@ -336,7 +336,10 @@ def compress_weights(
             )
 
         if True in [awq, scale_estimation]:
-            raise AttributeError("Torch backend doesn`t supports AWQ algorithm, but awq=True is specified.")
+            raise AttributeError(
+                "Torch backend doesn`t supports scale estimation and AWQ algorithm, "
+                "but awq=True or scale_estimation=True is specified."
+            )
 
         if is_wrapped_model(model):
             if not model.nncf.trace_parameters:
@@ -419,6 +422,7 @@ def compress_weights(
         awq,
         subset_size,
         scale_estimation,
+        advanced_parameters,
     )
 
 

@@ -93,6 +93,7 @@ class WeightCompression(Algorithm):
         :param subset_size: Number of data samples to calculate activation statistics used for assigning different
             quantization precision.
         :param scale_estimation: determines whether to use or not scale estimation for 4 bit layers.
+        :param advanced_parameters: advanced parameters for algorithms in compression pipeline.
         """
         super().__init__()
         self._mode = mode

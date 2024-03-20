@@ -90,6 +90,7 @@ def compress_weights_impl(
     sensitivity_metric: SensitivityMetric,
     awq: bool,
     subset_size: int,
+    scale_estimation: bool,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> torch.nn.Module:
     """
@@ -97,7 +98,16 @@ def compress_weights_impl(
     """
 
     compression_algorithm = WeightCompression(
-        mode, ratio, group_size, ignored_scope, all_layers, sensitivity_metric, awq, subset_size, advanced_parameters
+        mode,
+        ratio,
+        group_size,
+        ignored_scope,
+        all_layers,
+        sensitivity_metric,
+        awq,
+        subset_size,
+        scale_estimation,
+        advanced_parameters,
     )
     graph = NNCFGraphFactory.create(model)
     return compression_algorithm.apply(model, graph, dataset=dataset)
