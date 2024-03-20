@@ -41,22 +41,22 @@ class StatisticsAggregator(ABC):
 
     def __init__(self, dataset: Dataset):
         self.dataset = dataset
-        self.iterations_number = None
+        self.stat_subset_size = None
         self.statistic_points = StatisticPointsContainer()
 
     def _get_iterations_number(self) -> Optional[int]:
         """
-        Returns number of iterations, output number is less than min(self.iterations_number, dataset_length).
+        Returns number of iterations, output number is less than min(self.stat_subset_size, dataset_length).
 
         :return: Number of iterations for statistics collection.
         """
         dataset_length = self.dataset.get_length()
-        if dataset_length and self.iterations_number:
-            if self.iterations_number > dataset_length:
+        if dataset_length and self.stat_subset_size:
+            if self.stat_subset_size > dataset_length:
                 nncf_logger.warning(ITERATIONS_NUMBER_WARNING)
                 return dataset_length
-            return self.iterations_number
-        return dataset_length or self.iterations_number
+            return self.stat_subset_size
+        return dataset_length or self.stat_subset_size
 
     def collect_statistics(self, model: TModel, graph: NNCFGraph) -> None:
         """
@@ -78,7 +78,7 @@ class StatisticsAggregator(ABC):
         empty_statistics = True
         for input_data in track(
             islice(self.dataset.get_inference_data(), iterations_number),
-            total=self.iterations_number,
+            total=self.stat_subset_size,
             description="Statistics collection",
         ):
             outputs = engine.infer(input_data)
@@ -103,10 +103,10 @@ class StatisticsAggregator(ABC):
             for _statistic_point in _statistic_points:
                 for _, tensor_collectors in _statistic_point.algorithm_to_tensor_collectors.items():
                     for tensor_collector in tensor_collectors:
-                        if self.iterations_number is None:
-                            self.iterations_number = tensor_collector.num_samples
+                        if self.stat_subset_size is None:
+                            self.stat_subset_size = tensor_collector.num_samples
                         elif tensor_collector.num_samples is not None:
-                            self.iterations_number = max(self.iterations_number, tensor_collector.num_samples)
+                            self.stat_subset_size = max(self.stat_subset_size, tensor_collector.num_samples)
 
     @abstractmethod
     def _register_statistics(self, outputs: Dict[str, NNCFTensor], statistic_points: StatisticPointsContainer) -> None:
