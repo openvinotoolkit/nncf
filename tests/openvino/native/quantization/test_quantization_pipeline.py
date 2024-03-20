@@ -8,7 +8,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
 
 import numpy as np
 import openvino.runtime as ov
@@ -125,20 +124,27 @@ def test_meta_information(model_creator_func, ignored_options):
 
 
 @pytest.mark.parametrize(
-    "id, ignored_options",
-    zip(
-        [1, 2, 3],
-        [IgnoredScope(names=["Conv_1", "Conv_2"]), IgnoredScope(names=["Transpose"], types=["Add"]), IgnoredScope()],
-    ),
+    "ignored_options, expected_dump",
+    [
+        (
+            IgnoredScope(names=["Conv_1", "Conv_2"]),
+            {"validate": None, "types": None, "subgraphs": None, "patterns": None, "names": "['Conv_1', 'Conv_2']"},
+        ),
+        (
+            IgnoredScope(names=["Transpose"], types=["Add"]),
+            {
+                "validate": None,
+                "types": "['Add']",
+                "subgraphs": None,
+                "patterns": None,
+                "names": "['Transpose']",
+            },
+        ),
+        (IgnoredScope(), {"": "[]"}),
+    ],
 )
-def test_ignored_scope_dump(id, ignored_options):
-    dumped_model_path = "testing_quantized_model.xml"
+def test_ignored_scope_dump(ignored_options, expected_dump, tmp_path):
     ignored_scpoe_path = ["nncf", "quantization", "ignored_scope"]
-    names_path = ["nncf", "quantization", "ignored_scope", "names"]
-    types_path = ["nncf", "quantization", "ignored_scope", "types"]
-    validate_path = ["nncf", "quantization", "ignored_scope", "validate"]
-    subgraphs_path = ["nncf", "quantization", "ignored_scope", "subgraphs"]
-    patterns_path = ["nncf", "quantization", "ignored_scope", "patterns"]
 
     model = QuantizedModel().ov_model
     dataset = get_dataset_for_test(model)
@@ -150,21 +156,12 @@ def test_ignored_scope_dump(id, ignored_options):
         "ignored_scope": ignored_options,
     }
     quantized_model = quantize_impl(model, dataset, **quantize_parameters)
-    ov.save_model(quantized_model, f"{dumped_model_path}")
+    ov.save_model(quantized_model, f"{tmp_path}_ov_model.xml")
     core = ov.Core()
-    dumped_model = core.read_model(f"{dumped_model_path}")
-    os.remove(f"{dumped_model_path}")
-    if id == 1:
-        assert dumped_model.has_rt_info(validate_path) is False
-        assert dumped_model.has_rt_info(types_path) is False
-        assert dumped_model.has_rt_info(subgraphs_path) is False
-        assert dumped_model.has_rt_info(patterns_path) is False
-        assert dumped_model.get_rt_info(names_path) == "['Conv_1', 'Conv_2']"
-    if id == 2:
-        assert dumped_model.has_rt_info(validate_path) is False
-        assert dumped_model.has_rt_info(subgraphs_path) is False
-        assert dumped_model.has_rt_info(patterns_path) is False
-        assert dumped_model.get_rt_info(names_path) == "['Transpose']"
-        assert dumped_model.get_rt_info(types_path) == "['Add']"
-    if id == 3:
-        assert dumped_model.get_rt_info(ignored_scpoe_path) == "[]"
+    dumped_model = core.read_model(f"{tmp_path}_ov_model.xml")
+    for key, value in expected_dump.items():
+        rt_path = ignored_scpoe_path + [key] if key else ignored_scpoe_path
+        if value:
+            assert dumped_model.get_rt_info(rt_path) == value
+        else:
+            assert dumped_model.has_rt_info(rt_path) is False
