@@ -58,7 +58,7 @@ def test_examples(
     if "requirements" in example_params:
         pip_with_venv = get_pip_executable_with_venv(venv_path)
         requirements = PROJECT_ROOT / example_params["requirements"]
-        run_cmd_line = f"{pip_with_venv} install -r {requirements} --extra-index-url https://download.pytorch.org/whl/cpu"
+        run_cmd_line = f"{pip_with_venv} install -r {requirements}"
         subprocess.run(run_cmd_line, check=True, shell=True)
 
     if ov_version_override is not None:
@@ -72,7 +72,7 @@ def test_examples(
     metrics_file_path = tmp_path / "metrics.json"
     python_executable_with_venv = get_python_executable_with_venv(venv_path)
     run_example_py = EXAMPLE_TEST_ROOT / "run_example.py"
-    run_cmd_line = f"{python_executable_with_venv} {run_example_py} --name {example_name} --output {metrics_file_path}"
+    run_cmd_line = f"CUDA_VISIBLE_DEVICES=-1 {python_executable_with_venv} {run_example_py} --name {example_name} --output {metrics_file_path}"
     cmd = Command(run_cmd_line, cwd=PROJECT_ROOT, env=env)
     cmd.run()
 
