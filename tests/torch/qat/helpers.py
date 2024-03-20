@@ -16,6 +16,7 @@ from unittest.mock import MagicMock
 import torch
 
 from examples.torch.common.example_logger import logger
+from examples.torch.common.execution import start_worker
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
@@ -130,11 +131,8 @@ def get_mocked_compression_ctrl():
     return compression_ctrl
 
 
-def memory_cleaning_wrapper(fn):
-    def fn_with_clean_after_run(*args, **kwargs):
-        result = fn(*args, **kwargs)
-        gc.collect()
-        torch.cuda.empty_cache()
-        return result
-
-    return fn_with_clean_after_run
+def start_worker_clean_memory(*args, **kwargs):
+    result = start_worker(*args, **kwargs)
+    gc.collect()
+    torch.cuda.empty_cache()
+    return result

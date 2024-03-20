@@ -21,7 +21,7 @@ from helpers import get_advanced_ptq_parameters
 from helpers import get_mocked_compression_ctrl
 from helpers import get_num_samples
 from helpers import get_quantization_preset
-from helpers import memory_cleaning_wrapper
+from helpers import start_worker_clean_memory
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import nncf
@@ -30,7 +30,6 @@ from examples.common.sample_config import create_sample_config
 from examples.torch.common.example_logger import logger
 from examples.torch.common.execution import get_execution_mode
 from examples.torch.common.execution import prepare_model_for_execution
-from examples.torch.common.execution import start_worker
 from examples.torch.common.optimizer import get_parameter_groups
 from examples.torch.common.optimizer import make_optimizer
 from examples.torch.common.utils import configure_device
@@ -224,12 +223,12 @@ def check_training_correctness(
     config: SampleConfig, model: torch.nn.Module, datasets: DatasetSet, criterion: torch.nn.Module
 ):
     """
-    This function tries to run 3 training steps for one input and target pair and
+    This function tries to run 50 training steps for one input and target pair and
     checks loss decreases. This is needed to check model with compression could be
     trained after the PTQ.
     """
     logger.info("Check model is trainable...")
-    steps_to_check = 3
+    steps_to_check = 50
     optimizer, _ = get_optimizer_and_lr_scheduler(config, model)
     images, targets, *_ = next(iter(datasets.calibration_dataset.get_data()))
     images = images.to(config.device)
@@ -253,10 +252,9 @@ def check_training_correctness(
 
 @pytest.mark.weekly
 def test_compression_training(quantization_config: SampleConfig):
-    start_worker(main_worker, quantization_config)
+    start_worker_clean_memory(main_worker, quantization_config)
 
 
-@memory_cleaning_wrapper
 def main_worker(current_gpu: int, config: SampleConfig):
     configure_device(current_gpu, config)
     if is_on_first_rank(config):

@@ -21,7 +21,7 @@ from helpers import get_advanced_ptq_parameters
 from helpers import get_mocked_compression_ctrl
 from helpers import get_num_samples
 from helpers import get_quantization_preset
-from helpers import memory_cleaning_wrapper
+from helpers import start_worker_clean_memory
 from torch import nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
@@ -37,7 +37,6 @@ from examples.torch.classification.main import validate
 from examples.torch.common.example_logger import logger
 from examples.torch.common.execution import get_execution_mode
 from examples.torch.common.execution import prepare_model_for_execution
-from examples.torch.common.execution import start_worker
 from examples.torch.common.model_loader import load_model
 from examples.torch.common.optimizer import get_parameter_groups
 from examples.torch.common.optimizer import make_optimizer
@@ -188,12 +187,12 @@ def check_training_correctness(
     train_criterion_fn: callable,
 ):
     """
-    This function tries to run 3 training steps for one input and target pair and
+    This function tries to run 50 training steps for one input and target pair and
     checks loss decreases. This is needed to check model with compression could be
     trained after the PTQ.
     """
     logger.info("Check model is trainable...")
-    steps_to_check = 3
+    steps_to_check = 50
     optimizer, _ = get_optimizer_and_lr_scheduler(config, model)
     input_, target = next(iter(datasets.calibration_dataset.get_data()))
     input_ = input_.to(config.device)
@@ -223,10 +222,9 @@ def test_compression_training(quantization_config: SampleConfig):
         del quantization_config.nncf_config["compression"]["initializer"]["range"]
         del quantization_config["compression"]["initializer"]["range"]
 
-    start_worker(main_worker, quantization_config)
+    start_worker_clean_memory(main_worker, quantization_config)
 
 
-@memory_cleaning_wrapper
 def main_worker(current_gpu: int, config: SampleConfig):
     configure_device(current_gpu, config)
     if is_main_process():
