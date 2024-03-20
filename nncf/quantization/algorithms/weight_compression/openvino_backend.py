@@ -174,9 +174,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 name=f"{const_node_name}/fq_weights_{wc_params.weight_port_id}",
             )
             if const_dtype == ov.Type.f32:
-                mul = opset.convert(
-                    mul, ov.Type.f32, name=f"{mul.get_friendly_name()}/convert"
-                )
+                mul = opset.convert(mul, ov.Type.f32, name=f"{mul.get_friendly_name()}/convert")
 
             if compression_config.group_size != -1:
                 mul = opset.reshape(mul, output_shape=original_shape, special_zero=False)
