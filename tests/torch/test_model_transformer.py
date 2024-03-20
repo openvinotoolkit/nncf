@@ -757,7 +757,7 @@ def test_shared_fn_insertion_point(
     mock = PTModelTransformer._apply_insertion_transformations
     mock.assert_called_once()
 
-    _, commands = mock.call_args.args
+    _, commands, device = mock.call_args.args
     assert len(commands) == len(tps)
     for command in commands:
         assert command.target_point in tps
@@ -769,8 +769,11 @@ def test_shared_fn_insertion_point(
 
     if multidevice_model:
         assert hook_instance.to_device is None
+        assert device is None
     else:
-        assert hook_instance.to_device == get_model_device(transformed_model)
+        actual_model_device = get_model_device(transformed_model)
+        assert hook_instance.to_device == actual_model_device
+        assert device == actual_model_device
 
     # Check torch can correctly save and load model state dict with an external quantizer
     state_dict = transformed_model.state_dict()

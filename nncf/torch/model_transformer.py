@@ -11,7 +11,8 @@
 
 import copy
 from collections import defaultdict
-from typing import Callable, Dict, List, Tuple
+from functools import partial
+from typing import Callable, Dict, List, Optional, Tuple
 
 import torch
 from torch import Tensor
@@ -47,10 +48,14 @@ class PTModelTransformer(ModelTransformer):
     def __init__(self, model: NNCFNetwork):
         super().__init__(model)
 
+        device = None
+        if not is_multidevice(model):
+            device = get_model_device(model)
+
         self._command_transformation_ordered_pairs = [
             (PTModelExtractionWithFusedBiasCommand, self._apply_extraction_with_fused_bias_transformations),
-            (PTInsertionCommand, self._apply_insertion_transformations),
-            (PTSharedFnInsertionCommand, self._apply_shared_nodes_insertion),
+            (PTInsertionCommand, partial(self._apply_insertion_transformations, device=device)),
+            (PTSharedFnInsertionCommand, partial(self._apply_shared_nodes_insertion, device=device)),
             (PTBiasCorrectionCommand, self._apply_bias_correction_transformations),
             (PTWeightUpdateCommand, self._apply_weights_update_transformations),
         ]
@@ -75,20 +80,20 @@ class PTModelTransformer(ModelTransformer):
         return model
 
     @staticmethod
-    def _apply_insertion_transformations(model: NNCFNetwork, transformations: List[PTInsertionCommand]) -> NNCFNetwork:
+    def _apply_insertion_transformations(
+        model: NNCFNetwork, transformations: List[PTInsertionCommand], device: Optional[torch.device]
+    ) -> NNCFNetwork:
         """
         Applies insertion transformations to the model.
 
         :param model: Model to apply transformations.
         :param transformations: List of the bias correction transformations.
+        :param device: Target device for the insertion functions. Applies only to
+            functions which are subclassed from torch.nn.Module. Do nothing in case device is None.
         :return: A modified NNCFNetwork.
         """
         node_to_op_address_mapping = model.nncf.get_node_to_op_address_mapping()
         fns_grouped_by_points: Dict[PTInsertionPoint, List[Tuple[Callable, TransformationPriority]]] = defaultdict(list)
-
-        device = None
-        if not is_multidevice(model):
-            device = get_model_device(model)
 
         for transformation_command in transformations:
             target_point: PTTargetPoint = transformation_command.target_point
@@ -117,19 +122,53 @@ class PTModelTransformer(ModelTransformer):
         return model
 
     @staticmethod
+    def _apply_shared_nodes_insertion(
+        model: NNCFNetwork,
+        transformations: List[PTSharedFnInsertionCommand],
+        device: Optional[torch.device],
+    ) -> NNCFNetwork:
+        """
+        Applies insertion of PTSharedFnInsertionCommand commands. For each command method inserts
+        a torch module to the NNCFNetwork and inserts call hooks for each command target points.
+
+        :param model: Model to apply transformations.
+        :param transformations: List of the bias correction transformations.
+        :param device: Target device for the insertion functions. Applies only to
+            functions which are subclassed from torch.nn.Module. Do nothing in case device is None.
+        :return: A modified NNCFNetwork.
+        """
+        compression_type_vs_transformations = defaultdict(list)
+        for transformation in transformations:
+            compression_type_vs_transformations[transformation.compression_module_type].append(transformation)
+
+        for compression_module_type, transformations in compression_type_vs_transformations.items():
+            model = PTModelTransformer._apply_shared_node_insertion_with_compression_type(
+                model, transformations, device, compression_module_type
+            )
+        return model
+
+    @staticmethod
     def _apply_shared_node_insertion_with_compression_type(
         model: NNCFNetwork,
         transformations: List[PTSharedFnInsertionCommand],
+        device: Optional[torch.device],
         compression_module_type: ExtraCompressionModuleType,
     ):
+        """
+        Does _apply_shared_nodes_insertion with specified compression model type which will be
+        used for each transformation command.
+
+        :param model: Model to apply transformations.
+        :param transformations: List of the bias correction transformations.
+        :param device: Target device for the insertion functions. Applies only to
+            functions which are subclassed from torch.nn.Module. Do nothing in case device is None.
+        :param compression_module_type: Common compression module type for all commands.
+        :return: A modified NNCFNetwork.
+        """
         if not model.nncf.is_compression_module_registered(compression_module_type):
             model.nncf.register_compression_module_type(compression_module_type)
 
         insertion_commands: List[PTInsertionCommand] = []
-
-        device = None
-        if not is_multidevice(model):
-            device = get_model_device(model)
 
         for shared_command in transformations:
             fn = shared_command.fn
@@ -151,22 +190,7 @@ class PTModelTransformer(ModelTransformer):
                     )
                 )
 
-        return PTModelTransformer._apply_insertion_transformations(model, insertion_commands)
-
-    @staticmethod
-    def _apply_shared_nodes_insertion(
-        model: NNCFNetwork,
-        transformations: List[PTSharedFnInsertionCommand],
-    ) -> NNCFNetwork:
-        compression_type_vs_transformations = defaultdict(list)
-        for transformation in transformations:
-            compression_type_vs_transformations[transformation.compression_module_type].append(transformation)
-
-        for compression_module_type, transformations in compression_type_vs_transformations.items():
-            model = PTModelTransformer._apply_shared_node_insertion_with_compression_type(
-                model, transformations, compression_module_type
-            )
-        return model
+        return PTModelTransformer._apply_insertion_transformations(model, insertion_commands, device)
 
     @staticmethod
     def _apply_extraction_with_fused_bias_transformations(
