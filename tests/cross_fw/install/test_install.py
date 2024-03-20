@@ -49,14 +49,8 @@ def run_install_checks(venv_path: Path, tmp_path: Path, package_type: str, backe
             package_path = find_file_by_extension(PROJECT_ROOT / "dist", ".tar.gz")
         elif package_type == "build_w":
             package_path = find_file_by_extension(PROJECT_ROOT / "dist", ".whl")
-        # Currently CI runs on RTX3090s, which require CUDA 11 to work.
-        # Current torch, however (v1.12), is installed via pip using .whl packages
-        # compiled for CUDA 10.2. Thus need to direct pip installation specifically for
-        # torch, otherwise the NNCF will only work in CPU mode.
-        torch_extra_index = " --extra-index-url https://download.pytorch.org/whl/cu116"
+
         run_cmd_line = f"{pip_with_venv} install {package_path}[{backend}]"
-        if backend == "torch":
-            run_cmd_line += torch_extra_index
         subprocess.run(run_cmd_line, check=True, shell=True)
 
     run_path = tmp_path / "run"

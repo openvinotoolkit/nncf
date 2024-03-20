@@ -372,7 +372,7 @@ pip install nncf[torch]
 
 Other viable options besides `[torch]` are `[tf]`, `[onnx]` and `[openvino]`.
 
-> [!WARN]
+> [!WARNING]
 > The way to install the module package with the extra dependency like `pip install nncf[torch]` will be deprecated in a future release.
 
 NNCF is also available via [conda](https://anaconda.org/conda-forge/nncf):
@@ -391,7 +391,7 @@ conda install -c conda-forge nncf
   - ONNX\* ~=1.13.1
   - OpenVINO\* >=2022.3.0
 
-This repository is tested on Python* 3.8.10, PyTorch* 2.2.1 (NVidia CUDA\* Toolkit 11.8) and TensorFlow* 2.12.1 (NVidia CUDA\* Toolkit 11.8).
+This repository is tested on Python* 3.8.10, PyTorch* 2.2.1 (NVidia CUDA\* Toolkit 12.1) and TensorFlow* 2.12.1 (NVidia CUDA\* Toolkit 11.8).
 
 ## NNCF Compressed Model Zoo
 
