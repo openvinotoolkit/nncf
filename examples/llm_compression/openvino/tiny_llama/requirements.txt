@@ -1,4 +1,5 @@
 -c ../../../../constraints.txt
-transformers
 datasets
-optimum-intel[openvino]
+openvino
+optimum-intel
+transformers
