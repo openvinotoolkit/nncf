@@ -153,14 +153,14 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             compressed_const = opset.constant(
                 compressed_weight.tensor.data, dtype=compression_dtype, name=const_node_name
             )
-            converted_const = opset.convert(compressed_const, ov.Type.f32)
+            converted_const = opset.convert(compressed_const, ov.Type.f16)
             if compressed_weight.zero_point is not None:
                 zero_point_const = opset.constant(
                     compressed_weight.zero_point.data,
                     dtype=compression_dtype,
                     name=f"{const_node_name}/zero_point",
                 )
-                converted_zero_point = opset.convert(zero_point_const, ov.Type.f32)
+                converted_zero_point = opset.convert(zero_point_const, ov.Type.f16)
                 converted_const = opset.subtract(
                     converted_const, converted_zero_point, name=f"{const_node_name}/zero_point/subtract"
                 )
@@ -168,36 +168,22 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             scale_const = opset.constant(
                 compressed_weight.scale.data, dtype=ov.Type.f16, name=f"{const_node_name}/scale"
             )
-            scale_const = opset.convert(scale_const, ov.Type.f32, name=f"{const_node_name}/scale_convert")
             mul = opset.multiply(
                 converted_const,
                 scale_const,
                 name=f"{const_node_name}/fq_weights_{wc_params.weight_port_id}",
             )
+            if const_dtype == ov.Type.f32:
+                mul = opset.convert(
+                    mul, ov.Type.f32, name=f"{mul.get_friendly_name()}/convert"
+                )
 
             if compression_config.group_size != -1:
                 mul = opset.reshape(mul, output_shape=original_shape, special_zero=False)
 
             mul_output = mul.output(0)
             for target_input in const_node.output(0).get_target_inputs():
-                target_input_node = target_input.get_node()
-                if const_dtype == ov.Type.f16:
-                    target_input_node_attrs = target_input_node.get_attributes()
-                    if (
-                        target_input_node.get_type_name() == "Convert"
-                        and target_input_node_attrs["destination_type"] == "f32"
-                    ):
-                        # Before compression, there was a f16 -> f32 Convert node after the weight. Now, scale multiply
-                        # node is in f32, and this Convert node is not needed.
-                        next_node_target_input = next(iter(target_input_node.output(0).get_target_inputs()))
-                        next_node_target_input.replace_source_output(mul_output)
-                    else:
-                        # Both weight and activation are in f16. Because f32 scale multiply node was added, we have
-                        # to add a Convert node.
-                        mul_converted = opset.convert(mul, ov.Type.f16, name=f"{mul.get_friendly_name()}/convert")
-                        target_input.replace_source_output(mul_converted.output(0))
-                else:
-                    target_input.replace_source_output(mul_output)
+                target_input.replace_source_output(mul_output)
 
         # reset name_to_node_mapping
         self.name_to_node_mapping = None
