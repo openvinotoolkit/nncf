@@ -102,9 +102,15 @@ def test_meta_information(model_creator_func, ignored_options):
             if isinstance(value, TargetDevice):
                 value = value.value
             if isinstance(value, IgnoredScope):
+                if value == IgnoredScope():
+                    check_parameters(quantized_model, {"ignored_scope": []}, path)
+                    continue
                 check_parameters(quantized_model, value.__dict__, rt_path)
                 continue
-            assert quantized_model.get_rt_info(rt_path) == str(value)
+            if "ignored_scope" in path and (not value or key == "validate"):
+                assert quantized_model.has_rt_info(rt_path) is False
+            else:
+                assert quantized_model.get_rt_info(rt_path) == str(value)
 
     model = model_creator_func().ov_model
     dataset = get_dataset_for_test(model)
