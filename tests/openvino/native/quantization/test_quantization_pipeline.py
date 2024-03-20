@@ -156,9 +156,9 @@ def test_ignored_scope_dump(ignored_options, expected_dump, tmp_path):
         "ignored_scope": ignored_options,
     }
     quantized_model = quantize_impl(model, dataset, **quantize_parameters)
-    ov.save_model(quantized_model, tmp_path+"/ov_model.xml")
+    ov.save_model(quantized_model, tmp_path + "/ov_model.xml")
     core = ov.Core()
-    dumped_model = core.read_model(tmp_path+"/ov_model.xml")
+    dumped_model = core.read_model(tmp_path + "/ov_model.xml")
     for key, value in expected_dump.items():
         rt_path = ignored_scope_path + [key] if key else ignored_scope_path
         if value:
