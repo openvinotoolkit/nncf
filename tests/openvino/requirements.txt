@@ -1,10 +1,11 @@
 -c ../../constraints.txt
 fastdownload
+onnx
 openvino-dev
 pytest
 pytest-cov
 pytest-mock
-onnx
+tensorflow
 torch
 torchvision
 virtualenv
