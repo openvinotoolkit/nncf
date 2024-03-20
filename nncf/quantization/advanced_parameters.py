@@ -192,8 +192,9 @@ class AdvancedQuantizationParameters:
     :type disable_bias_correction: bool
     :param batchwise_statistics: Determines whether quantizer statistics should be calculated
         for each item of the batch or for the entire batch, default is None.
-        "None" means that if torch.DataLoader or tensorflow.Dataset was passed as a data source for the calibration
-        dataset, then if batch_size > 1 of the data source then batchwise_statistics = True, otherwise False.
+        "None" means that if torch.DataLoader or tensorflow.Dataset was passed as a data source for
+        the calibration dataset, then in case batch_size of the data source > 1 batchwise_statistics sets to True,
+        otherwise sets to False.
     :type batchwise_statistics: Optional[bool]
     :param activations_quantization_params: Quantization parameters for activations.
     :type activations_quantization_params: nncf.quantization.advanced_parameters.QuantizationParameters

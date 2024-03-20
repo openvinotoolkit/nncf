@@ -120,7 +120,7 @@ def get_reduction_axes(
     channel_axes: Union[List[int], Tuple[int, ...]], shape: Union[List[int], Tuple[int, ...]]
 ) -> Tuple[int, ...]:
     """
-    Returns filtered reduction axes without axes that corresponds channels.
+    Returns filtered reduction axes without axes that correspond to channels.
 
     :param channel_axes: Channel axes.
     :param shape: Shape that need to be filtered.

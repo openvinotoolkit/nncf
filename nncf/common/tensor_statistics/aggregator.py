@@ -46,7 +46,7 @@ class StatisticsAggregator(ABC):
 
     def _get_iterations_number(self) -> Optional[int]:
         """
-        Returns number of iterations which in min(self.iterations_number, dataset_length).
+        Returns number of iterations, output number is less than min(self.iterations_number, dataset_length).
 
         :return: Number of iterations for statistics collection.
         """
