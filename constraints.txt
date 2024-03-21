@@ -12,10 +12,6 @@ onnxruntime==1.14.1
 
 # TensorFlow
 tensorflow==2.12.1
-tensorflow-metadata==1.13.0
-tensorflow_datasets==4.2.0
-tensorflow_hub==0.16.1
-tensorflow_addons==0.20.0
 
 # Tests and examples
 pytest==8.0.2
@@ -29,6 +25,5 @@ datasets==2.14.7
 evaluate==0.3.0
 fastdownload==0.0.7
 scikit-learn==1.2.2
-timm==0.9.2
 transformers==4.36.0
 ultralytics==8.0.170

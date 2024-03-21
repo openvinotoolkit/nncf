@@ -17,4 +17,4 @@ transformers
 datasets
 evaluate
 openvino-dev
-timm
+timm==0.9.2

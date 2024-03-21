@@ -6,7 +6,6 @@ onnxruntime
 openvino-dev
 pytest
 transformers
-timm
 scikit-learn
 
 soundfile==0.12.1
@@ -17,4 +16,5 @@ optimum==1.17.1
 soundfile==0.12.1
 tensorboard==2.13.0
 tensorflow-io==0.32.0
+timm==0.9.2
 whowhatbench @ git+https://github.com/andreyanufr/who_what_benchmark@456d3584ce628f6c8605f37cd9a3ab2db1ebf933
