@@ -12,6 +12,7 @@
 from typing import Optional, Tuple, Union
 
 import numpy as np
+import scipy
 
 from nncf.experimental.tensor.functions import linalg
 from nncf.experimental.tensor.functions.dispatcher import register_numpy_types
@@ -25,3 +26,25 @@ def _(
     keepdims: bool = False,
 ) -> np.ndarray:
     return np.array(np.linalg.norm(a, ord=ord, axis=axis, keepdims=keepdims))
+
+
+@register_numpy_types(linalg.cholesky)
+def _(a: Union[np.ndarray, np.generic], upper: bool = False) -> np.ndarray:
+    if a.ndim != 2:
+        raise ValueError(f"Input tensor needs to be 2D but received a {a.ndim}d-tensor.")
+    return scipy.linalg.cholesky(a, lower=not upper)
+
+
+@register_numpy_types(linalg.cholesky_inverse)
+def _(a: Union[np.ndarray, np.generic], upper: bool = False) -> np.ndarray:
+    if a.ndim != 2:
+        raise ValueError(f"Input tensor needs to be 2D but received a {a.ndim}d-tensor.")
+    c = np.linalg.inv(a)
+    if upper:
+        return np.dot(c, c.T)
+    return np.dot(c.T, c)
+
+
+@register_numpy_types(linalg.inv)
+def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
+    return np.linalg.inv(a)
