@@ -95,58 +95,11 @@ jobs:
       run:
         shell: bash
     runs-on: aks-linux-4-cores-28gb-gpu-testla-t4
-    # container:
-    #   image: openvinogithubactions.azurecr.io/dockerhub/nvidia/cuda:11.8.0-devel-ubuntu20.04
-    #   volumes:
-    #     - /mount:/mount
-    # env:
-    #   DEBIAN_FRONTEND: noninteractive # to prevent apt-get from waiting user input
-    #   PIP_CACHE_PATH: /mount/caches/pip/linux
-    # steps:
-    #   - name: Set apt retries
-    #     run: echo 'Acquire::Retries "10";' > /etc/apt/apt.conf.d/80-retries
 
-    #   - name: Install git
-    #     run: |
-    #       apt-get update
-    #       apt-get install --assume-yes --no-install-recommends git git-lfs ca-certificates make ninja-build
-
-    #   - name: nvidia-smi
-    #     run: cat /proc/driver/nvidia/gpus/*/information
-
-    #   - uses: actions/checkout@v4
-    #     with:
-    #       lfs: true
-
-    #   - uses: actions/setup-python@v4
-    #     with:
-    #       python-version: 3.8.10
-
-      # - name: Install NNCF and test requirements
-      #   run: make install-torch-test
     steps:
       - uses: actions/setup-python@v4
         with:
           python-version: 3.8.10
       - name: test cuda
         run: |
-          pip install torch
-          python -c "import torch; print(f'{torch.cuda.is_available()=}'); torch.zeros(1).cuda()"
           nvidia-smi
-
-
-      # - name: Run TORCH precommit test scope
-      #   run: make test-torch
-      #   env:
-      #     NNCF_COVERAGE: 1
-      # - name: Upload coverage report as artifact
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: coverage_torch
-      #     path: ./coverage.xml
-      # - name: Upload coverage report to codecov
-      #   uses: codecov/codecov-action@v3
-      #   with:
-      #     token: ${{ secrets.CODECOV_TOKEN }}
-      #     name: coverage_torch
-      #     flags: TORCH
