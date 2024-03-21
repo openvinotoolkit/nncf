@@ -41,8 +41,7 @@ learning frameworks.
 |Compression algorithm|PyTorch|TensorFlow|
 | :--- | :---: | :---: |
 |[Quantization Aware Training](./docs/compression_algorithms/Quantization.md) | Supported | Supported |
-|[Mixed-Precision Quantization](./docs/compression_algorithms/Quantization.md#mixed_precision_quantization) | Supported | Not supported |
-|[Binarization](./docs/compression_algorithms/Binarization.md) | Supported | Not supported |
+|[Mixed-Precision Quantization](./docs/compression_algorithms/Quantization.md#mixed-precision-quantization) | Supported | Not supported |
 |[Sparsity](./docs/compression_algorithms/Sparsity.md) | Supported | Supported |
 |[Filter pruning](./docs/compression_algorithms/Pruning.md) | Supported | Supported |
 |[Movement pruning](./nncf/experimental/torch/sparsity/movement/MovementSparsity.md) | Experimental | Not supported |
@@ -280,7 +279,6 @@ A collection of ready-to-run Jupyter* notebooks tutorials and demos are availabl
 | [MONAI Segmentation Model Quantization](https://github.com/openvinotoolkit/openvino_notebooks/blob/main/notebooks/110-ct-segmentation-quantize)<br>[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/openvinotoolkit/openvino_notebooks/HEAD?filepath=notebooks%2F110-ct-segmentation-quantize%2F110-ct-scan-live-inference.ipynb)                                 |                               Post-Training Quantization                                |  OpenVINO  |            Segmentation             |
 | [PyTorch Model Quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/112-pytorch-post-training-quantization-nncf)                                                                                                                                                                                                                                          |                               Post-Training Quantization                                |  PyTorch   |        Image Classification         |
 | [TensorFlow Model Quantization](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/301-tensorflow-training-openvino)                                                                                                                                                                                                                                                  |                               Post-Training Quantization                                | Tensorflow |        Image Classification         |
-| [Migrating from POT to NNCF](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/111-yolov5-quantization-migration)<br>[![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/openvinotoolkit/openvino_notebooks/blob/main/notebooks/111-yolov5-quantization-migration/111-yolov5-quantization-migration.ipynb) |                               Post-Training Quantization                                |  OpenVINO  |          Object detection           |
 | [Quantization with Accuracy Control](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/122-quantizing-model-with-accuracy-control)                                                                                                                                                                                                                                   |                    Post-Training Quantization with Accuracy Control                     |  OpenVINO  | Speech-to-Text,<br>Object Detection |
 | [PyTorch Training-Time Compression](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/302-pytorch-quantization-aware-training)                                                                                                                                                                                                                                       |                                Training-Time Compression                                |  PyTorch   |        Image Classification         |
 | [TensorFlow Training-Time Compression](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/301-tensorflow-training-openvino)                                                                                                                                                                                                                                           |                                Training-Time Compression                                | Tensorflow |        Image Classification         |
@@ -385,12 +383,12 @@ conda install -c conda-forge nncf
 - Ubuntu\* 18.04 or later (64-bit)
 - Python\* 3.7 or later
 - Supported frameworks:
-  - PyTorch\* >=2.0, <2.2
+  - PyTorch\* >=2.1, <2.3
   - TensorFlow\* >=2.8.4, <=2.12.1
   - ONNX\* ~=1.13.1
   - OpenVINO\* >=2022.3.0
 
-This repository is tested on Python* 3.8.10, PyTorch* 2.1.2 (NVidia CUDA\* Toolkit 11.8) and TensorFlow* 2.12.1 (NVidia CUDA\* Toolkit 11.8).
+This repository is tested on Python* 3.8.10, PyTorch* 2.2.1 (NVidia CUDA\* Toolkit 12.1) and TensorFlow* 2.12.1 (NVidia CUDA\* Toolkit 11.8).
 
 ## NNCF Compressed Model Zoo
 

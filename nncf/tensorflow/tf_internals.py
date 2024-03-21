@@ -18,7 +18,7 @@ from tensorflow.python.eager import context as eager_context  # noqa: F401
 
 from nncf.tensorflow import tensorflow_version
 
-if version.parse(tensorflow_version) < version.parse("2.13"):
+if tensorflow_version < version.parse("2.13"):
     from keras import engine as keras_engine  # noqa: F401
     from keras.applications import imagenet_utils as imagenet_utils
     from keras.engine.keras_tensor import KerasTensor as KerasTensor

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional, Type
+from typing import List, Optional, Set, Type
 
 import nncf
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -187,3 +187,13 @@ class ConstNoopMetatype(OperatorMetatype):
     @classmethod
     def get_all_aliases(cls) -> List[str]:
         return [NNCFGraphNodeType.CONST_NODE]
+
+
+def get_all_aliases(*metatypes: OperatorMetatype) -> Set[str]:
+    """
+    Returns a set of all unique aliases from the provided metatypes.
+
+    :param *metatypes: A list of operator metatypes.
+    :return: A set containing all unique aliases for metatypes.
+    """
+    return set(a for m in metatypes for a in m.get_all_aliases())

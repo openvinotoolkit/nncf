@@ -376,7 +376,7 @@ def test_quantizer_scale_linking(mocker):
         assert non_shared_spy.call_count == 1
 
 
-def test_eltwise_unified_scales_for_vpu():
+def test_eltwise_unified_scales_for_npu():
     nncf_config = get_quantization_config_without_range_init(model_size=1)
     nncf_config["input_info"] = [
         {
@@ -386,7 +386,7 @@ def test_eltwise_unified_scales_for_vpu():
             "sample_size": [1, 1, 1, 1],
         },
     ]
-    nncf_config["target_device"] = "VPU"
+    nncf_config["target_device"] = "NPU"
     register_bn_adaptation_init_args(nncf_config)
 
     _, compression_ctrl = create_compressed_model_and_algo_for_test(EltwiseQuantizerLinkingTestModel(), nncf_config)
@@ -578,7 +578,7 @@ class TestsWithONNXInspection:
                 "sample_size": [1, 1, 1, 2],
             },
         ]
-        nncf_config["target_device"] = "VPU"
+        nncf_config["target_device"] = "NPU"
         register_bn_adaptation_init_args(nncf_config)
 
         compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(
@@ -633,7 +633,7 @@ class TestsWithONNXInspection:
         nncf_config["input_info"] = [
             {"sample_size": [1, 5], "type": "long", "filler": "zeros"},
         ]
-        nncf_config["target_device"] = "VPU"
+        nncf_config["target_device"] = "NPU"
         register_bn_adaptation_init_args(nncf_config)
 
         compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(
@@ -702,7 +702,7 @@ def test_unified_scales_with_shared_nodes():
     nncf_config["input_info"] = [
         {"sample_size": [1, 5], "type": "long", "filler": "zeros"},
     ]
-    nncf_config["target_device"] = "VPU"
+    nncf_config["target_device"] = "NPU"
     register_bn_adaptation_init_args(nncf_config)
 
     _, compression_ctrl = create_compressed_model_and_algo_for_test(

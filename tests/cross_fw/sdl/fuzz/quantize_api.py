@@ -89,7 +89,7 @@ def TestOneInput(data):
         nncf.TargetDevice.ANY,
         nncf.TargetDevice.CPU,
         nncf.TargetDevice.GPU,
-        nncf.TargetDevice.VPU,
+        nncf.TargetDevice.NPU,
         nncf.TargetDevice.CPU_SPR,
     ]
     subset_size_list = [10, 11, 17]

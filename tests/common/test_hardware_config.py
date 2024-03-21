@@ -15,7 +15,7 @@ from nncf.common.hardware.config import get_hw_config_type
 from nncf.parameters import TargetDevice
 
 
-@pytest.mark.parametrize("target_device", [TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU, TargetDevice.VPU])
+@pytest.mark.parametrize("target_device", [TargetDevice.ANY, TargetDevice.CPU, TargetDevice.GPU, TargetDevice.NPU])
 def test_get_hw_config_type(target_device):
     expected = HW_CONFIG_TYPE_TARGET_DEVICE_MAP[target_device.value]
     mesured = get_hw_config_type(target_device.value)

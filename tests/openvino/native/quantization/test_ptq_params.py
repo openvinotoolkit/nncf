@@ -42,7 +42,7 @@ def get_ignored_patterns(device: TargetDevice = TargetDevice.ANY) -> GraphPatter
     return PatternsManager.get_full_ignored_pattern_graph(backend=BackendType.OPENVINO, device=device)
 
 
-@pytest.mark.parametrize("target_device", [TargetDevice.CPU, TargetDevice.GPU, TargetDevice.VPU])
+@pytest.mark.parametrize("target_device", [TargetDevice.CPU, TargetDevice.GPU, TargetDevice.NPU])
 def test_target_device(target_device):
     min_max_algo = MinMaxQuantization(target_device=target_device)
     min_max_algo._backend_entity = OVMinMaxAlgoBackend()

@@ -228,6 +228,32 @@ class LeNet(nn.Module):
         return num_features
 
 
+class SharedConv(nn.Module):
+    INPUT_SIZE = [1, 1, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.conv = create_conv(1, 1, 2, 2)
+
+    def forward(self, x):
+        a = self.conv(x)
+        b = self.conv(x + 1)
+        return a + b
+
+
+class SharedCustomConv(nn.Module):
+    INPUT_SIZE = [1, 1, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.weight = nn.Parameter(torch.ones((1, 1, 2, 2)))
+
+    def forward(self, x):
+        a = F.conv2d(x, self.weight)
+        b = F.conv2d(x + 1, self.weight)
+        return a + b
+
+
 def get_empty_config(
     model_size=4, input_sample_sizes: Union[Tuple[List[int]], List[int]] = None, input_info: Dict = None
 ) -> NNCFConfig:
@@ -326,6 +352,14 @@ class MockModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.field = nn.Linear(1, 1)
+
+    def forward(self, *input_, **kwargs):
+        return None
+
+
+class EmptyModel(nn.Module):
+    def __init__(self):
+        super().__init__()
 
     def forward(self, *input_, **kwargs):
         return None
@@ -511,7 +545,7 @@ HookType = TypeVar("HookType")
 class HookChecker:
     """
     Class to check pre/post hooks and pre ops are placed correctly.
-    Suports check for one wrapped NNCFModule for now.
+    Supports check for one wrapped NNCFModule for now.
     """
 
     def __init__(self, target_model: torch.nn.Module, nncf_module_attr_name: str):

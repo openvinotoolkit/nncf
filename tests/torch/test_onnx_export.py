@@ -188,6 +188,8 @@ def test_preserves_onnx_node_name_format(tmp_path, compression_section):
 
         compressed_model_onnx_node_names = {node.name for node in compressed_model_proto.graph.node}
         for node in original_model_proto.graph.node:
-            assert node.name in compressed_model_onnx_node_names
+            if not node.name.startswith("Identity_"):
+                # Since torch==2.2.0 identity nodes have different indexes
+                assert node.name in compressed_model_onnx_node_names
     finally:
         patch_torch_operators()

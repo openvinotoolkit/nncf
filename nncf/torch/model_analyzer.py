@@ -15,9 +15,9 @@ import torch
 
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
-from nncf.torch.graph.operator_metatypes import OP_NAMES_QUANTIZE_NODE
 from nncf.torch.graph.operator_metatypes import OPERATORS_FUSED_METATYPES
 from nncf.torch.graph.operator_metatypes import OPERATORS_WITH_BIAS_METATYPES
+from nncf.torch.graph.operator_metatypes import QUANTIZE_NODE_TYPES
 from nncf.torch.nncf_network import NNCFNetwork
 
 
@@ -65,12 +65,23 @@ def get_fused_bias_value(node: NNCFNode, model: NNCFNetwork) -> Optional[torch.T
     :return: The bias value that is applied to the output tensor of the node's operation.
     """
     nncf_graph = model.nncf.get_graph()
+
+    target_module = model.nncf.get_containing_module(node.node_name)
     fused_node = get_potential_fused_node(node.node_name, nncf_graph)
-    target_node_name = fused_node.node_name if fused_node else node.node_name
-    node_module = model.nncf.get_containing_module(target_node_name)
-    if node_module.bias is None:
-        return None
-    return node_module.bias.data
+    bias = target_module.bias
+
+    if fused_node is None:
+        # No fused layer
+        return bias
+
+    fused_module = model.nncf.get_containing_module(fused_node.node_name)
+
+    if bias is None:
+        # No bias in target module, return bias from fused module
+        return fused_module.bias
+
+    # Return bias value after fusing
+    return target_module.bias * fused_module.weight + fused_module.bias
 
 
 def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
@@ -82,6 +93,6 @@ def is_quantized_weights(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
     :return bool: return `True` if the node is quantized.
     """
     for prev_node in nncf_graph.get_previous_nodes(node):
-        if prev_node.node_type in OP_NAMES_QUANTIZE_NODE:
+        if prev_node.node_type in QUANTIZE_NODE_TYPES:
             return True
     return False

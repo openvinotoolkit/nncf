@@ -101,7 +101,7 @@ class Evaluator:
         """
         self._enable_iteration_count = False
 
-    def is_metric_mode(self) -> bool:
+    def is_metric_mode(self) -> Optional[bool]:
         """
         Returns mode of `Evaluator`.
 

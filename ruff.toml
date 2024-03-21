@@ -18,7 +18,7 @@ exclude = ["nncf/tensorflow/__init__.py"]
 
 [per-file-ignores]
 "nncf/experimental/torch/nas/bootstrapNAS/__init__.py" = ["F401"]
-"nncf/torch/__init__.py" = ["F401"]
+"nncf/torch/__init__.py" = ["F401", "E402"]
 "tests/**/*.py" = ["F403"]
 "tests/**/__init__.py" = ["F401"]
 "examples/**/*.py" = ["F403"]

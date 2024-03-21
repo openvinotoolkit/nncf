@@ -64,26 +64,26 @@ def remove_shapeof_subgraphs(
         if node.metatype in shapeof_metatypes:
             shape_of_nodes.append(node)
             continue
-        if node in infer_nodes:
+        if node.node_name in infer_nodes:
             continue
-        infer_nodes.append(node)
+        infer_nodes.append(node.node_name)
         nodes_queue.extend(nncf_graph.get_next_nodes(node))
 
     for shape_of_node in shape_of_nodes:
-        nodes_to_drop.add(shape_of_node)
+        nodes_to_drop.add(shape_of_node.node_name)
 
         shape_of_queue = collections.deque()
         shape_of_queue.extend(nncf_graph.get_next_nodes(shape_of_node))
         while shape_of_queue:
             node = shape_of_queue.pop()
-            if node in nodes_to_drop or node in infer_nodes:
+            if node.node_name in nodes_to_drop or node.node_name in infer_nodes:
                 continue
-            nodes_to_drop.add(node)
+            nodes_to_drop.add(node.node_name)
             # traverse forward and backward to exclude full shape of subgraph
             # recursion excluded due to infer_nodes list around subgraph shape
             shape_of_queue.extend(nncf_graph.get_next_nodes(node) + nncf_graph.get_previous_nodes(node))
 
-    nncf_graph.remove_nodes_from(nodes_to_drop)
+    nncf_graph.remove_nodes_from([nncf_graph.get_node_by_name(name) for name in nodes_to_drop])
     return nncf_graph
 
 

@@ -391,7 +391,7 @@ class MockInitDataLoader(PTInitializingDataLoader):
         return dataloader_output[0], dataloader_output[1]
 
     def get_target(self, dataloader_output: Any) -> Any:
-        return torch.empty([1])
+        return torch.ones([1])
 
 
 class MockDataset(torch.utils.data.Dataset):

@@ -104,19 +104,19 @@ INSTALL_REQUIRES = [
     "jsonschema>=3.2.0",
     "jstyleson>=0.0.2",
     "natsort>=7.1.0",
-    "networkx>=2.6, <=3.1",  # see ticket 94048 or https://github.com/networkx/networkx/issues/5962
-    "ninja>=1.10.0.post2, <1.11",
+    "networkx>=2.6, <=3.3",
+    "ninja>=1.10.0.post2, <1.12",
     "numpy>=1.19.1, <1.27",
     "openvino-telemetry>=2023.2.0",
     "packaging>=20.0",
-    "pandas>=1.1.5,<2.2",
+    "pandas>=1.1.5,<2.3",
     "psutil",
     "pydot>=1.4.1",
     "pymoo>=0.6.0.1",
     "rich>=13.5.2",
     "scikit-learn>=0.24.0",
     "scipy>=1.3.2",
-    "texttable>=1.6.3",
+    "tabulate>=0.9.0",
     "tqdm>=4.54.1",
 ]
 
@@ -128,12 +128,12 @@ TF_EXTRAS = [
 ]
 
 TORCH_EXTRAS = [
-    "torch>=2.0,<2.2;python_version < '3.11'",
+    "torch==2.2.1;python_version < '3.11'",
 ]
 
 ONNX_EXTRAS = ["onnx~=1.13.1", "onnxruntime~=1.14.1;python_version < '3.11'"]
 
-OPENVINO_EXTRAS = ["openvino==2023.3"]
+OPENVINO_EXTRAS = ["openvino==2024.0"]
 
 
 EXTRAS_REQUIRE = {

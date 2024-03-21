@@ -9,11 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import deque
 from typing import Dict, List, Optional, Type
 
 import onnx
 
-import nncf
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatypeRegistry
 from nncf.common.hardware.opset import HWConfigOpName
@@ -44,14 +44,15 @@ class ONNXOpMetatype(OperatorMetatype):
     @classmethod
     def determine_subtype(cls, model: onnx.ModelProto, node: onnx.NodeProto) -> Optional[Type[OperatorMetatype]]:
         matches = []
-        for subtype in cls.get_subtypes():
+        subtypes_list = deque(cls.get_subtypes())
+        while subtypes_list:
+            subtype = subtypes_list.popleft()
             if subtype.matches(model, node):
+                subtypes_list.extend(subtype.get_subtypes())
                 matches.append(subtype)
-        if len(matches) > 1:
-            raise nncf.InternalError("Multiple subtypes match operator call - cannot determine single subtype.")
         if not matches:
             return None
-        return matches[0]
+        return matches[-1]
 
 
 class ONNXOpWithWeightsMetatype(ONNXOpMetatype):
@@ -86,6 +87,22 @@ class ONNXDepthwiseConvolutionMetatype(ONNXOpWithWeightsMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
+class ONNXGroupConvolutionMetatype(ONNXOpWithWeightsMetatype):
+    name = "GroupConvOp"
+    op_names = ["Conv"]
+    hw_config_names = [HWConfigOpName.CONVOLUTION]
+    weight_channel_axis = 0
+    weight_port_ids = [1]
+    bias_port_id = 2
+    output_channel_axis = 1
+    subtypes = [ONNXDepthwiseConvolutionMetatype]
+
+    @classmethod
+    def matches(cls, model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
+        return _is_group_conv(node)
+
+
+@ONNX_OPERATION_METATYPES.register()
 class ONNXConvolutionMetatype(ONNXOpWithWeightsMetatype):
     name = "ConvOp"
     op_names = ["Conv"]
@@ -94,7 +111,7 @@ class ONNXConvolutionMetatype(ONNXOpWithWeightsMetatype):
     weight_port_ids = [1]
     bias_port_id = 2
     output_channel_axis = 1
-    subtypes = [ONNXDepthwiseConvolutionMetatype]
+    subtypes = [ONNXGroupConvolutionMetatype]
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -699,6 +716,23 @@ def get_tensor_edge_name(
     return None
 
 
+def _is_group_conv(node: onnx.NodeProto) -> bool:
+    """
+    Returns True if the convolution is group, False - otherwise.
+    Group convolution is a convolution with the group attribute.
+
+    :param node: Convolution node to check whether it is depthwise.
+    :return: True if the convolution is group, False - otherwise.
+    """
+    conv_group = None
+    for attribute in node.attribute:
+        if attribute.name == "group":
+            conv_group = onnx.helper.get_attribute_value(attribute)
+    if conv_group is None or conv_group == 1:
+        return False
+    return True
+
+
 def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
     """
     Returns True if the convolution is depthwise, False - otherwise.
@@ -711,12 +745,9 @@ def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
     :param node: Convolution node to check whether it is depthwise.
     :return: True if the convolution is depthwise, False - otherwise.
     """
-    conv_group = None
     for attribute in node.attribute:
         if attribute.name == "group":
             conv_group = onnx.helper.get_attribute_value(attribute)
-    if conv_group is None:
-        return False
     weight_tensor_value = None
     initializer_name = node.input[1]
     for init in model.graph.initializer:
