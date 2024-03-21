@@ -102,7 +102,7 @@ jobs:
           python-version: 3.8.10
       - name: test cuda
         run: |
-          apt install pciutils kmod
+          sudo apt install pciutils kmod
           lspci -k | grep -A 2 -i "VGA"
           modinfo nvidia
           nvidia-smi
