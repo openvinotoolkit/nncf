@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.torch.model_graph_manager`
+========================================
+
+.. py:module:: nncf.torch.model_graph_manager
+
+
