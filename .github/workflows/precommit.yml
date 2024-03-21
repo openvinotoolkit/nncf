@@ -106,17 +106,12 @@ jobs:
         continue-on-error: true
         run: |
           cat /proc/driver/nvidia/version
-      - name: lspci
-        continue-on-error: true
-        run: |
-          apt-get update
-          apt-get install --assume-yes pciutils
-          lspci -k | grep -A 2 -i "VGA"
+
 
       - name: lspci sudo
         continue-on-error: true
         run: |
           sudo apt-get update
           sudo apt-get install --assume-yes pciutils kmod
-          lspci -k | grep -A 2 -i "VGA"
-          modinfo nvidia
+          sudo lspci -k | grep -A 2 -i "VGA"
+          sudo modinfo nvidia
