@@ -155,7 +155,7 @@
         "accuracy_metrics": {
             "fp32_mAP": 0.5228869318962097,
             "int8_mAP": 0.5148677825927734,
-            "accuracy_drop": 0.009263157844543457
+            "accuracy_drop": 0.0080191493
         },
         "performance_metrics": {
             "fp32_fps": 33.7,
