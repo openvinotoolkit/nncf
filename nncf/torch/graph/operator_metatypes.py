@@ -1055,12 +1055,7 @@ OPERATORS_WITH_BIAS_METATYPES = [
     PTModuleConv1dMetatype,
     PTModuleConv2dMetatype,
     PTModuleConv3dMetatype,
-    PTDepthwiseConv1dSubtype,
-    PTDepthwiseConv2dSubtype,
-    PTDepthwiseConv3dSubtype,
-    PTModuleConvTranspose1dMetatype,
-    PTModuleConvTranspose2dMetatype,
-    PTModuleConvTranspose3dMetatype,
+    # TODO: Need to add Linear support (CVS-111111)
 ]
 
 OPERATORS_FUSED_METATYPES = [
