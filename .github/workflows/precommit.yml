@@ -102,4 +102,6 @@ jobs:
           python-version: 3.8.10
       - name: test cuda
         run: |
+          lspci -k | grep -A 2 -i "VGA"
+          modinfo nvidia
           nvidia-smi
