@@ -97,13 +97,22 @@ jobs:
     runs-on: aks-linux-4-cores-28gb-gpu-testla-t4
 
     steps:
-      - uses: actions/setup-python@v4
-        with:
-          python-version: 3.8.10
-      - name: test cuda
+      - name: nvidia-smi
+        continue-on-error: true
+        run: |
+            nvidia-smi
+      - name: lspci
+        continue-on-error: true
         run: |
           apt-get update
           apt-get install --assume-yes pciutils kmod
           lspci -k | grep -A 2 -i "VGA"
           modinfo nvidia
-          nvidia-smi
+
+      - name: lspci sudo
+        continue-on-error: true
+        run: |
+          sudo apt-get update
+          sudo apt-get install --assume-yes pciutils kmod
+          lspci -k | grep -A 2 -i "VGA"
+          modinfo nvidia
