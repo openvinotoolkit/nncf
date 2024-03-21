@@ -20,7 +20,7 @@ from tabulate import tabulate
 def create_table(
     header: List[str],
     rows: List[List[Any]],
-    table_fmt: str = "mixed_grid",
+    table_fmt: str = "simple_grid",
     max_col_widths: Optional[Union[int, Iterable[int]]] = None,
 ) -> str:
     """
