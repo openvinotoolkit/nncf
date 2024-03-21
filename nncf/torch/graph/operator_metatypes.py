@@ -175,6 +175,7 @@ class PTDepthwiseConv1dSubtype(PTDepthwiseConvOperatorSubtype):
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
+    bias_port_id = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -186,6 +187,7 @@ class PTModuleConv1dMetatype(PTModuleOperatorSubtype):
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
+    bias_port_id = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -197,6 +199,7 @@ class PTConv1dMetatype(PTOperatorMetatype):
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
+    bias_port_id = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -207,6 +210,7 @@ class PTDepthwiseConv2dSubtype(PTDepthwiseConvOperatorSubtype):
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
+    bias_port_id = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -218,6 +222,7 @@ class PTModuleConv2dMetatype(PTModuleOperatorSubtype):
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
+    bias_port_id = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -229,6 +234,7 @@ class PTConv2dMetatype(PTOperatorMetatype):
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
+    bias_port_id = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -239,6 +245,7 @@ class PTDepthwiseConv3dSubtype(PTDepthwiseConvOperatorSubtype):
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
+    bias_port_id = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -250,6 +257,7 @@ class PTModuleConv3dMetatype(PTModuleOperatorSubtype):
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
+    bias_port_id = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -261,6 +269,7 @@ class PTConv3dMetatype(PTOperatorMetatype):
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
+    bias_port_id = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -271,6 +280,7 @@ class PTModuleConvTranspose1dMetatype(PTModuleOperatorSubtype):
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
+    bias_port_id = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -282,6 +292,7 @@ class PTConvTranspose1dMetatype(PTOperatorMetatype):
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
+    bias_port_id = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -292,6 +303,7 @@ class PTModuleConvTranspose2dMetatype(PTModuleOperatorSubtype):
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
+    bias_port_id = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -303,6 +315,7 @@ class PTConvTranspose2dMetatype(PTOperatorMetatype):
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
+    bias_port_id = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -313,6 +326,7 @@ class PTModuleConvTranspose3dMetatype(PTModuleOperatorSubtype):
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
+    bias_port_id = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -324,6 +338,7 @@ class PTConvTranspose3dMetatype(PTOperatorMetatype):
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
+    bias_port_id = 2
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -626,6 +641,8 @@ class PTBatchNormMetatype(PTOperatorMetatype):
     name = "BatchNormOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["batch_norm"]}
     subtypes = [PTModuleBatchNormMetatype]
+    weight_port_ids = [3]
+    bias_port_id = 4
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -1038,12 +1055,7 @@ OPERATORS_WITH_BIAS_METATYPES = [
     PTModuleConv1dMetatype,
     PTModuleConv2dMetatype,
     PTModuleConv3dMetatype,
-    PTDepthwiseConv1dSubtype,
-    PTDepthwiseConv2dSubtype,
-    PTDepthwiseConv3dSubtype,
-    PTModuleConvTranspose1dMetatype,
-    PTModuleConvTranspose2dMetatype,
-    PTModuleConvTranspose3dMetatype,
+    # TODO: Need to add Linear support (CVS-111111)
 ]
 
 OPERATORS_FUSED_METATYPES = [

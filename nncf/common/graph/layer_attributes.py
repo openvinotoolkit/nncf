@@ -150,21 +150,23 @@ class ConvolutionLayerAttributes(WeightedLayerAttributes):
         dilations: Tuple[int, ...],
         groups: int,
         transpose: bool,
-        padding_values: Tuple[int, ...],
+        padding_values: Union[Tuple[int, ...], int],
         with_bias: bool = False,
+        output_padding_values: Optional[Union[Tuple[int, ...], int]] = None,
     ):
         """
 
         :param weight_requires_grad: Is True if gradients need to be computed for the corresponding Tensor,
         False otherwise.
-        :param in_channels: number of input channels in the layer's input.
-        :param out_channels: number of channels produced by the layer.
-        :param kernel_size: size of the convolving kernel.
-        :param stride: stride of the convolution.
-        :param groups: number of blocked connections from input channels to output channels.
+        :param in_channels: Number of input channels in the layer's input.
+        :param out_channels: Number of channels produced by the layer.
+        :param kernel_size: Size of the convolving kernel.
+        :param stride: Stride of the convolution.
+        :param groups: Number of blocked connections from input channels to output channels.
         :param transpose: If set to `True`, the layer is an ordinary convolution, otherwise - transpose one.
-        :param padding_values: defines the amount of padding applied to the layer's input.
+        :param padding_values: Defines the amount of padding applied to the layer's input.
         :param with_bias: Operation include bias.
+        :param output_padding_values: Defines the amount of output padding applied to the layer's output, for transpose.
         """
         super().__init__(weight_requires_grad=weight_requires_grad, with_bias=with_bias)
         self.in_channels = in_channels
@@ -175,6 +177,7 @@ class ConvolutionLayerAttributes(WeightedLayerAttributes):
         self.groups = groups
         self.transpose = transpose
         self.padding_values = padding_values
+        self.output_padding_values = output_padding_values
 
     def get_weight_shape(self) -> List[int]:
         if not self.transpose:
