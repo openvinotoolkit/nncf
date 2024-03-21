@@ -225,7 +225,6 @@ TEST_PARAMS = [
     FrozenLayersTestStruct(name="filter_pruning_with_frozen_in_ignored_scope")
     .add_algo(AlgoBuilder().name("filter_pruning"))
     .expects_error(),
-    FrozenLayersTestStruct(name="binarization").add_algo(AlgoBuilder().name("binarization")).expects_error(),
 ]
 
 

@@ -176,7 +176,7 @@
         "accuracy_metrics": {
             "fp32_top1": 55.52000045776367,
             "int8_init_top1": 55.279998779296875,
-            "int8_top1": 56.869998931884766,
+            "int8_top1": 56.7721,
             "accuracy_drop": -1.3499984741210938
         },
         "performance_metrics": {

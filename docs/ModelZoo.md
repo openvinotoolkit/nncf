@@ -129,30 +129,6 @@ The applied quantization compression algorithms are divided into two broad categ
     </tr>
     <tr>
       <td align="left">ResNet-18</td>
-      <td align="left">-</td>
-      <td>ImageNet</td>
-      <td>69.76</td>
-      <td><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet.json">Config</a></td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td align="left">ResNet-18</td>
-      <td align="left">• Binarization: XNOR (weights), scale/threshold (activations)</td>
-      <td>ImageNet</td>
-      <td>61.67 (8.09)</td>
-      <td><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet_binarization_xnor.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_binarization_xnor.pth">Download</a></td>
-    </tr>
-    <tr>
-      <td align="left">ResNet-18</td>
-      <td align="left">• Binarization: DoReFa (weights), scale/threshold (activations)</td>
-      <td>ImageNet</td>
-      <td>61.63 (8.13)</td>
-      <td><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet_binarization_dorefa.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_binarization_dorefa.pth">Download</a></td>
-    </tr>
-    <tr>
-      <td align="left">ResNet-18</td>
       <td align="left">• Filter pruning: 40%, magnitude criterion</td>
       <td>ImageNet</td>
       <td>69.27 (0.49)</td>
