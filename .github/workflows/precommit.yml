@@ -101,13 +101,17 @@ jobs:
         continue-on-error: true
         run: |
             nvidia-smi
+
+      - name: cat /proc/driver/nvidia/version
+        continue-on-error: true
+        run: |
+          cat /proc/driver/nvidia/version
       - name: lspci
         continue-on-error: true
         run: |
           apt-get update
-          apt-get install --assume-yes pciutils kmod
+          apt-get install --assume-yes pciutils
           lspci -k | grep -A 2 -i "VGA"
-          modinfo nvidia
 
       - name: lspci sudo
         continue-on-error: true
