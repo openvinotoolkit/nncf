@@ -9,29 +9,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 import openvino.runtime as ov
 
 from nncf.common.logging import nncf_logger
 from nncf.scopes import IgnoredScope
+from dataclasses import asdict
 
 
-def handle_ignored_scope(value: IgnoredScope) -> IgnoredScope:
+def exclude_empty_fields(value: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Dump Ignored Scope parameters more gracefully.
-    https://github.com/openvinotoolkit/nncf/issues/2564
     Remove keys where value is empty and key is `validate`
 
     :param value: IgnoredScope instance, based on the quantization parameters
     """
-    new_value = IgnoredScope(**(value.__dict__))
-    new_value.__dict__.pop("validate")
-    keys = list(new_value.__dict__.keys())
+    value.pop("validate")
+    keys = list(value.keys())
     for key in keys:
-        if not new_value.__dict__[key]:
-            new_value.__dict__.pop(key)
-    return new_value
+        if not value[key]:
+            value.pop(key)
+    return value
 
 
 def dump_parameters(
@@ -50,9 +48,9 @@ def dump_parameters(
         for key, value in parameters.items():
             # Special condition for composed fields like IgnoredScope
             if isinstance(value, IgnoredScope):
-                value = handle_ignored_scope(value)
-                if bool(value.__dict__):
-                    dump_parameters(model, value.__dict__, algo_name, [key])
+                value = exclude_empty_fields(asdict(value))
+                if bool(value):
+                    dump_parameters(model, value, algo_name, [key])
                     continue
                 else:
                     # The default value in case empty ignored_scope parameter passed
