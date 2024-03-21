@@ -118,5 +118,15 @@ jobs:
 
       - name: cuda
         run: |
-          wget https://developer.download.nvidia.com/compute/cuda/12.1.1/local_installers/cuda_12.1.1_530.30.02_linux.run
+          sudo apt-get update
+          supo apt-get install gcc
+          sudo apt-get install linux-headers-$(uname -r)
+          wget -q https://developer.download.nvidia.com/compute/cuda/12.1.1/local_installers/cuda_12.1.1_530.30.02_linux.run
           sudo sh cuda_12.1.1_530.30.02_linux.run --silent
+          cat /var/log/cuda-installer.log
+
+      - name: nvidia-smi
+        continue-on-error: true
+        run: |
+            nvidia-smi
+            nvcc --version
