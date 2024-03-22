@@ -22,6 +22,7 @@ from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
@@ -389,7 +390,7 @@ class ChannelAlignment(Algorithm):
 
             channel_axis = conv_in.metatype.output_channel_axis
             activation_shape = list(range(len(graph.get_output_edges(node_in)[0].tensor_shape)))
-            reduction_axes = self._backend_entity.get_channel_agnostic_reduction_axes([channel_axis], activation_shape)
+            reduction_axes = get_reduction_axes([0, channel_axis], activation_shape)
 
             statistic_collector = self._backend_entity.get_statistic_collector(
                 reduction_axes, self._quantile, self.subset_size, self.inplace_statistics

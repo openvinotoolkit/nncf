@@ -14,6 +14,9 @@ from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Unio
 import nncf
 from nncf.api.compression import TModel
 from nncf.common.deprecation import warning_deprecated
+from nncf.common.graph import NNCFGraph
+from nncf.common.graph.operator_metatypes import OperatorMetatype
+from nncf.common.logging.logger import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
@@ -34,6 +37,56 @@ from nncf.quantization.algorithms.post_training.pipeline import create_ptq_pipel
 from nncf.scopes import IgnoredScope
 
 TTensor = TypeVar("TTensor")
+
+BATCHWISE_STATISTICS_WARNING = (
+    "For the particular model the batchwise statistics collection can lead to inaccurate statistics. "
+    "If the accuracy degradation after compression is unsatisfactory, then "
+    "the recomendation is to turn off batchwise statistics. If the results are still unsatisfactory, "
+    "provide a dataloader with batch_size = 1 to the calibration dataset."
+)
+
+
+def warning_model_no_batchwise_support(
+    graph: NNCFGraph,
+    advanced_quantization_parameters: Optional[AdvancedQuantizationParameters],
+    model_type: ModelType,
+    no_batchwise_support_metatypes: List[OperatorMetatype],
+) -> None:
+    """
+    Prints the warning message if batchwise statistics could lead to a significant accuracy drop.
+
+    :param graph: Model's NNCFGraph.
+    :param advanced_quantization_parameters: AdvancedQuantizationParameters.
+    :param model_type: Model type algorithm option.
+    :param no_batchwise_support_metatypes: Meatypes having no batchwise statistics support.
+    """
+    if (
+        advanced_quantization_parameters
+        and advanced_quantization_parameters.batchwise_statistics
+        and (graph.get_nodes_by_metatypes(no_batchwise_support_metatypes) or model_type == ModelType.TRANSFORMER)
+    ):
+        nncf_logger.warning(BATCHWISE_STATISTICS_WARNING)
+
+
+def _update_advanced_quantization_parameters(
+    advanced_parameters: Optional[AdvancedQuantizationParameters], calibration_dataset: Dataset
+) -> AdvancedQuantizationParameters:
+    """
+    Updates AdvancedQuantizationParameters depending on batch_size.
+
+    :param advanced_parameters: Advanced quantization parameters for
+        fine-tuning the quantization algorithm.
+    :param calibration_dataset: A representative dataset for the
+        calibration process.
+    :return: Updated AdvancedQuantizationParameters.
+    """
+    batch_size = calibration_dataset.get_batch_size()
+    if batch_size is not None and batch_size > 1:
+        if advanced_parameters is None:
+            advanced_parameters = AdvancedQuantizationParameters(batchwise_statistics=True)
+        elif advanced_parameters.batchwise_statistics is None:
+            advanced_parameters.batchwise_statistics = True
+    return advanced_parameters
 
 
 @api(canonical_alias="nncf.quantize")
@@ -86,9 +139,10 @@ def quantize(
     :return: The quantized model.
     :rtype: TModel
     """
-
     if subset_size < 1:
         raise ValueError("Subset size must be positive.")
+
+    advanced_parameters = _update_advanced_quantization_parameters(advanced_parameters, calibration_dataset)
 
     backend = get_backend(model)
     if backend == BackendType.OPENVINO:
@@ -223,6 +277,10 @@ def quantize_with_accuracy_control(
     :return: The quantized model.
     :rtype: TModel
     """
+    advanced_quantization_parameters = _update_advanced_quantization_parameters(
+        advanced_quantization_parameters, calibration_dataset
+    )
+
     backend = get_backend(model)
     if backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.quantize_model import quantize_with_accuracy_control_impl

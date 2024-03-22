@@ -184,6 +184,7 @@ class BaseTestPipeline(ABC):
         no_eval: bool,
         run_benchmark_app: bool,
         params: dict = None,
+        batch_size: int = 1,
     ) -> None:
         self.reported_name = reported_name
         self.model_id = model_id
@@ -193,6 +194,7 @@ class BaseTestPipeline(ABC):
         self.data_dir = data_dir
         self.reference_data = reference_data
         self.params = params or {}
+        self.batch_size = batch_size
         self.no_eval = no_eval
         self.run_benchmark_app = run_benchmark_app
         self.output_model_dir: Path = self.output_dir / self.reported_name / self.backend.value

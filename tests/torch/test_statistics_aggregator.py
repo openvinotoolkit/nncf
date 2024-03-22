@@ -168,6 +168,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         dataset_samples,
         inplace_statistics,
         is_backend_support_custom_estimators,
+        mocker,
     ):
         is_stat_in_shape_of_scale = True
         model = self.get_backend_model(dataset_samples)
@@ -194,7 +195,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
 
         ### Register and collect statistics after inserted operations
         statistic_points = self.__get_statistic_points(
-            test_parameters, model, quantizer_config, dataset_samples, inplace_statistics
+            test_parameters, model, quantizer_config, dataset_samples, inplace_statistics, mocker
         )
         tensor_collector = self.__collect_statistics_get_collector(statistic_points, model, dataset_samples)
         ### Check values are changed because of the inserted operation
@@ -254,6 +255,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         dataset_samples,
         inplace_statistics,
         is_backend_support_custom_estimators,
+        mocker,
     ):
         is_stat_in_shape_of_scale = True
         model = self.get_backend_model(dataset_samples)
@@ -283,11 +285,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
 
         ### Register and collect statistics after inserted operations
         statistic_points = self.__get_statistic_points(
-            test_parameters,
-            model,
-            quantizer_config,
-            dataset_samples,
-            inplace_statistics,
+            test_parameters, model, quantizer_config, dataset_samples, inplace_statistics, mocker
         )
         tensor_collector = self.__collect_statistics_get_collector(statistic_points, model, dataset_samples)
         ### Check values are changed because of the inserted operation
@@ -312,7 +310,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
 
     @classmethod
     def __get_statistic_points(
-        cls, test_parameters: MinMaxTestParameters, model, quantizer_config, dataset_samples, inplace_statistics
+        cls, test_parameters: MinMaxTestParameters, model, quantizer_config, dataset_samples, inplace_statistics, mocker
     ) -> StatisticPointsContainer:
         statistics_points = StatisticPointsContainer()
         for target_type in [test_parameters.target_type]:
@@ -325,6 +323,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
                 "TEST_ALGO",
                 inplace_statistics,
                 test_parameters.range_estimator_params,
+                mocker,
             )
             statistics_points.add_statistic_point(statistic_point)
         return statistics_points
