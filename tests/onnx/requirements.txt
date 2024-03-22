@@ -5,6 +5,6 @@ pytest-ordering>=0.6
 torch==2.2.1
 torchvision==0.17.1
 yattag>=1.14.0
-openvino-dev==2023.3
+openvino-dev==2024.0
 fastdownload
 scikit-learn

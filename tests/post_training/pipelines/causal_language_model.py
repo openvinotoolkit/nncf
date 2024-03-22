@@ -25,7 +25,9 @@ class CausalLMHF(PTQTestPipeline):
 
     def prepare_model(self) -> None:
         if self.backend in OV_BACKENDS + [BackendType.FP32]:
-            self.model_hf = OVModelForCausalLM.from_pretrained(self.model_id, export=True, compile=False)
+            self.model_hf = OVModelForCausalLM.from_pretrained(
+                self.model_id, export=True, compile=False, stateful=False
+            )
             self.model = self.model_hf.model
             ov.serialize(self.model, self.fp32_model_dir / "model_fp32.xml")
 

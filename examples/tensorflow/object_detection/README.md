@@ -6,7 +6,7 @@ The sample receives a configuration file where the training schedule, hyper-para
 
 ## Features
 
-- RetinaNet from the official [TF repository](https://github.com/tensorflow/models/tree/master/official/vision/detection) with minor modifications (custom implementation of upsampling is replaced with equivalent tf.keras.layers.UpSampling2D). YOLOv4 from the [keras-YOLOv3-model-set](https://github.com/david8862/keras-YOLOv3-model-set) repository.
+- RetinaNet from the official [TF repository](https://github.com/tensorflow/models/tree/master/official/legacy/detection) with minor modifications (custom implementation of upsampling is replaced with equivalent tf.keras.layers.UpSampling2D). YOLOv4 from the [keras-YOLOv3-model-set](https://github.com/david8862/keras-YOLOv3-model-set) repository.
 - Support [TensorFlow Datasets (TFDS)](https://www.tensorflow.org/datasets) and TFRecords for COCO2017 dataset.
 - Configuration file examples for sparsity, quantization, filter pruning and quantization with sparsity.
 - Export to Frozen Graph or TensorFlow SavedModel that is supported by the OpenVINO™ toolkit.

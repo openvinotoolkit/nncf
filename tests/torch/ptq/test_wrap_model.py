@@ -59,9 +59,9 @@ class KeyWordArgumentsModel(nn.Module):
 @pytest.mark.parametrize(
     ("example_input", "model_cls"),
     [
-        (torch.empty(1), ArgumentModel),
-        ((torch.empty(1), torch.empty(1)), NonKeyWordArgumentsModel),
-        ({"x": torch.empty(1), "y": torch.empty(1)}, KeyWordArgumentsModel),
+        (torch.ones(1), ArgumentModel),
+        ((torch.ones(1), torch.ones(1)), NonKeyWordArgumentsModel),
+        ({"x": torch.ones(1), "y": torch.ones(1)}, KeyWordArgumentsModel),
     ],
     ids=("tensor", "tuple", "dict"),
 )

@@ -471,7 +471,7 @@ def apply_advanced_parameters_to_config(
     :param params: Advanced quantization parameters
     :return: advanced quantization parameters as dict in the legacy format
     """
-    config["overflow_fix"] = params.overflow_fix.value
+    config["overflow_fix"] = params.overflow_fix if params.overflow_fix is None else params.overflow_fix.value
     config["quantize_outputs"] = params.quantize_outputs
 
     if params.disable_bias_correction:

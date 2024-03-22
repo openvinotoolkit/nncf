@@ -303,7 +303,7 @@ In the example above, the NNCF-compressed models that contain instances of `MyMo
 
 ### Accuracy-Aware model training
 
-NNCF has the capability to apply the model compression algorithms while satisfying the user-defined accuracy constraints. This is done by executing an internal custom accuracy-aware training loop, which also helps to automate away some of the manual hyperparameter search related to model training such as setting the total number of epochs, the target compression rate for the model, etc. There are two supported training loops. The first one is called [Early Exit Training](./accuracy_aware_model_training/EarlyExitTraining.md), which aims to finish fine-tuning when the accuracy drop criterion is reached. The second one is more sophisticated. It is targeted for the automated discovery of the compression rate for the model given that it satisfies the user-specified maximal tolerable accuracy drop due to compression. Its name is [Adaptive Compression Level Training](./accuracy_aware_model_training/AdaptiveCompressionTraining.md). Both training loops could be run with either PyTorch or TensorFlow backend with the same user interface(except for the TF case where the Keras API is used for training).
+NNCF has the capability to apply the model compression algorithms while satisfying the user-defined accuracy constraints. This is done by executing an internal custom accuracy-aware training loop, which also helps to automate away some of the manual hyperparameter search related to model training such as setting the total number of epochs, the target compression rate for the model, etc. There are two supported training loops. The first one is called [Early Exit Training](./accuracy_aware_model_training/EarlyExitTraining.md), which aims to finish fine-tuning when the accuracy drop criterion is reached. The second one is more sophisticated. It is targeted for the automated discovery of the compression rate for the model given that it satisfies the user-specified maximal tolerable accuracy drop due to compression. Its name is [Adaptive Compression Level Training](./accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md). Both training loops could be run with either PyTorch or TensorFlow backend with the same user interface(except for the TF case where the Keras API is used for training).
 
 The following function is required to create the accuracy-aware training loop. One has to pass the `NNCFConfig` object and the compression controller (that is returned upon compressed model creation, see above).
 
@@ -314,7 +314,7 @@ training_loop = create_accuracy_aware_training_loop(nncf_config, compression_ctr
 
 In order to properly instantiate the accuracy-aware training loop, the user has to specify the 'accuracy_aware_training' section.
 This section fully depends on what Accuracy-Aware Training loop is being used.
-For more details about config of Adaptive Compression Level Training refer to [Adaptive Compression Level Training documentation](./accuracy_aware_model_training/AdaptiveCompressionTraining.md) and Early Exit Training refer to [Early Exit Training documentation](./accuracy_aware_model_training/EarlyExitTraining.md).
+For more details about config of Adaptive Compression Level Training refer to [Adaptive Compression Level Training documentation](./accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md) and Early Exit Training refer to [Early Exit Training documentation](./accuracy_aware_model_training/EarlyExitTraining.md).
 
 The training loop is launched by calling its `run` method. Before the start of the training loop, the user is expected to define several functions related to the training of the model and pass them as arguments to the `run` method of the training loop instance:
 
@@ -378,6 +378,6 @@ model = training_loop.run(
     dump_checkpoint_fn=dump_checkpoint_fn)
 ```
 
-The above call executes the accuracy-aware training loop and return the compressed model. For more details on how to use the accuracy-aware training loop functionality of NNCF, please refer to its [documentation](./accuracy_aware_model_training/AdaptiveCompressionTraining.md).
+The above call executes the accuracy-aware training loop and return the compressed model. For more details on how to use the accuracy-aware training loop functionality of NNCF, please refer to its [documentation](./accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md).
 
-See a PyTorch [example](../../examples/torch/classification/main.py) for **Quantization** + **Filter Pruning** Adaptive Compression scenario on CIFAR10 and ResNet18 [config](../../examples/torch/classification/configs/pruning/resnet18_cifar10_accuracy_aware.json).
+See a PyTorch [example](/examples/torch/classification/main.py) for **Quantization** + **Filter Pruning** Adaptive Compression scenario on CIFAR10 and ResNet18 [config](/examples/torch/classification/configs/pruning/resnet18_cifar10_accuracy_aware.json).

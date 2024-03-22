@@ -116,7 +116,7 @@ INSTALL_REQUIRES = [
     "rich>=13.5.2",
     "scikit-learn>=0.24.0",
     "scipy>=1.3.2",
-    "texttable>=1.6.3",
+    "tabulate>=0.9.0",
     "tqdm>=4.54.1",
 ]
 
@@ -133,7 +133,7 @@ TORCH_EXTRAS = [
 
 ONNX_EXTRAS = ["onnx~=1.13.1", "onnxruntime~=1.14.1;python_version < '3.11'"]
 
-OPENVINO_EXTRAS = ["openvino==2023.3"]
+OPENVINO_EXTRAS = ["openvino==2024.0"]
 
 
 EXTRAS_REQUIRE = {
