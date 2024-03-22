@@ -441,6 +441,11 @@ of the model outputs.</p></li>
 backend graph operations or by default Python implementation, defaults to True.</p></li>
 <li><p><strong>disable_channel_alignment</strong> (<em>bool</em>) – Whether to disable the channel alignment.</p></li>
 <li><p><strong>disable_bias_correction</strong> (<em>bool</em>) – Whether to disable the bias correction.</p></li>
+<li><p><strong>batchwise_statistics</strong> (<em>Optional</em><em>[</em><em>bool</em><em>]</em>) – Determines whether quantizer statistics should be calculated
+for each item of the batch or for the entire batch, default is None.
+“None” means that if torch.DataLoader or tensorflow.Dataset was passed as a data source for
+the calibration dataset, then in case batch_size of the data source &gt; 1 batchwise_statistics sets to True,
+otherwise sets to False.</p></li>
 <li><p><strong>activations_quantization_params</strong> (<a class="reference internal" href="#nncf.quantization.advanced_parameters.QuantizationParameters" title="nncf.quantization.advanced_parameters.QuantizationParameters"><em>nncf.quantization.advanced_parameters.QuantizationParameters</em></a>) – Quantization parameters for activations.</p></li>
 <li><p><strong>weights_quantization_params</strong> (<a class="reference internal" href="#nncf.quantization.advanced_parameters.QuantizationParameters" title="nncf.quantization.advanced_parameters.QuantizationParameters"><em>nncf.quantization.advanced_parameters.QuantizationParameters</em></a>) – Quantization parameters for weights.</p></li>
 <li><p><strong>activations_range_estimator_params</strong> (<a class="reference internal" href="../range_estimator/index.html#nncf.quantization.range_estimator.RangeEstimatorParameters" title="nncf.quantization.range_estimator.RangeEstimatorParameters"><em>nncf.quantization.range_estimator.RangeEstimatorParameters</em></a>) – Range estimator parameters for activations.</p></li>

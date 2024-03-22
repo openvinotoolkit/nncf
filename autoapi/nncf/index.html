@@ -597,6 +597,18 @@ the transformation function was applied.</p>
 </dl>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="nncf.Dataset.get_batch_size">
+<span class="sig-name descname"><span class="pre">get_batch_size</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/data/dataset.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.Dataset.get_batch_size" title="Permalink to this definition">#</a></dt>
+<dd><p>Tries to fetch batch size of the underlying dataset.
+:return: The value of batch_size or _batch_size attributes of the data_source if exist, and None otherwise.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Optional[int]</p>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -1002,6 +1014,7 @@ all simple paths in the graph from input to output nodes.</p>
 <li><a class="reference internal" href="#nncf.Dataset.get_data"><code class="docutils literal notranslate"><span class="pre">Dataset.get_data()</span></code></a></li>
 <li><a class="reference internal" href="#nncf.Dataset.get_inference_data"><code class="docutils literal notranslate"><span class="pre">Dataset.get_inference_data()</span></code></a></li>
 <li><a class="reference internal" href="#nncf.Dataset.get_length"><code class="docutils literal notranslate"><span class="pre">Dataset.get_length()</span></code></a></li>
+<li><a class="reference internal" href="#nncf.Dataset.get_batch_size"><code class="docutils literal notranslate"><span class="pre">Dataset.get_batch_size()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#nncf.CompressWeightsMode"><code class="docutils literal notranslate"><span class="pre">CompressWeightsMode</span></code></a></li>
