@@ -97,10 +97,21 @@ jobs:
     runs-on: aks-linux-4-cores-28gb-gpu-testla-t4
 
     steps:
+      - name: uname -a
+        continue-on-error: true
+        run: |
+            uname -a
+            ls -l /usr/local/
+            ll /dev/nvidia*
+
       - name: nvidia-smi
         continue-on-error: true
         run: |
             nvidia-smi
+      - name: nvidia-smi
+        continue-on-error: true
+        run: |
+            nvcc --version
 
       - name: cat /proc/driver/nvidia/version
         continue-on-error: true
@@ -116,15 +127,14 @@ jobs:
           sudo lspci -k | grep -A 2 -i "VGA"
           sudo modinfo nvidia
 
-      - name: cuda
-        continue-on-error: true
-        run: |
-          sudo apt-get --assume-yes update
-          sudo apt-get --assume-yes install gcc
-          sudo apt-get --assume-yes install linux-headers-$(uname -r)
-          wget -q https://developer.download.nvidia.com/compute/cuda/12.1.1/local_installers/cuda_12.1.1_530.30.02_linux.run
-          sudo sh cuda_12.1.1_530.30.02_linux.run --silent
-
+      # - name: cuda
+      #   continue-on-error: true
+      #   run: |
+      #     # sudo apt-get --assume-yes update
+      #     # sudo apt-get --assume-yes install gcc
+      #     # sudo apt-get --assume-yes install linux-headers-$(uname -r)
+      #     # wget -q https://developer.download.nvidia.com/compute/cuda/12.1.1/local_installers/cuda_12.1.1_530.30.02_linux.run
+      #     # sudo sh cuda_12.1.1_530.30.02_linux.run --silent
 
       - name: nvidia-smi
         continue-on-error: true
