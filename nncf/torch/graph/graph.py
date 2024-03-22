@@ -60,6 +60,13 @@ class PTNNCFGraph(NNCFGraph):
                 matching_graph_op_nodes.extend(nodes_in_module)
         return matching_graph_op_nodes
 
+    def get_op_node_in_scope(self, scope: Scope) -> List[NNCFNode]:
+        for scope_str, nodes_in_module in self._layer_name_vs_shared_nodes.items():
+            module_scope = Scope.from_str(scope_str)
+            if module_scope == scope:
+                return nodes_in_module
+        return []
+
     def get_scope_by_node_name(self, node_name: NNCFNodeName) -> Scope:
         matches = []
         for node_id, scope_str in self._node_ids_vs_layer_names.items():
