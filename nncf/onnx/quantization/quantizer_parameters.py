@@ -37,7 +37,7 @@ class ONNXQuantizerLayerParameters:
 
 
 def convert_fq_params_to_onnx_params(
-    parameters: FakeQuantizeParameters, num_bits: int, tensor_type: np.dtype, axis: Optional[int] = None
+    parameters: FakeQuantizeParameters, num_bits: int, tensor_type: np.dtype, axis: Tuple[int]
 ) -> ONNXQuantizerLayerParameters:
     """
     Converts common FakeQuantizeParameters to ONNXQuantizerLayerParameters.
@@ -45,7 +45,7 @@ def convert_fq_params_to_onnx_params(
     :param parameters: FakeQuantizeParameters representation.
     :param num_bits: Number of quantizer bits.
     :param tensor_type: Value type of the tensor. Could be INT8 or UINT8.
-    :param axis: Axis for per-channel quantization. Should be none in case of per-tensor.
+    :param axis: Axis for per-channel quantization.
     :return: Quantizer layer attributes.
     """
     if num_bits != 8:
@@ -68,6 +68,8 @@ def convert_fq_params_to_onnx_params(
     # ONNX demands parameters to be a scalar or 1-D Tensor.
     scale = np.squeeze(scale)
     zero_point = np.squeeze(zero_point)
+    # ONNX axis parameter format specification.
+    axis = None if not axis else axis[0]
     return ONNXQuantizerLayerParameters(scale.data, zero_point.data, tensor_type, axis)
 
 

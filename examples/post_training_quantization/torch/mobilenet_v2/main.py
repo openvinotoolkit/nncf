@@ -107,7 +107,8 @@ val_dataset = datasets.ImageFolder(
         ]
     ),
 )
-val_data_loader = torch.utils.data.DataLoader(val_dataset)
+batch_size = 128
+val_data_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size)
 
 torch_model = models.mobilenet_v2(num_classes=DATASET_CLASSES)
 torch_model = load_checkpoint(torch_model)
@@ -140,8 +141,10 @@ def transform_fn(data_item: Tuple[torch.Tensor, int], device: torch.device) -> t
 # item and prepare model input data. The quantize method uses a small subset
 # (default: 300 samples) of the calibration dataset.
 
+# Recalculation default subset_size parameter based on batch_size.
+subset_size = 300 // batch_size
 calibration_dataset = nncf.Dataset(val_data_loader, partial(transform_fn, device=device))
-torch_quantized_model = nncf.quantize(torch_model, calibration_dataset)
+torch_quantized_model = nncf.quantize(torch_model, calibration_dataset, subset_size=subset_size)
 
 ###############################################################################
 # Benchmark performance, calculate compression rate and validate accuracy

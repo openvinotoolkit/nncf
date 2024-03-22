@@ -130,7 +130,7 @@ class ONNXGemmMetatype(ONNXOpWithWeightsMetatype):
     name = "GemmOp"
     op_names = ["Gemm"]
     hw_config_names = [HWConfigOpName.MATMUL]
-    weight_channel_axis = -1
+    weight_channel_axis = -1  # For port_id=1
     weight_port_ids = None
     bias_port_id = 2
     possible_weight_ports = [0, 1]
@@ -142,7 +142,7 @@ class ONNXMatMulMetatype(ONNXOpMetatype):
     name = "MatMulOp"
     op_names = ["MatMul"]
     hw_config_names = [HWConfigOpName.MATMUL]
-    weight_channel_axis = -1
+    weight_channel_axis = -1  # For port_id=1
     weight_port_ids = None
     bias_port_id = 2
     possible_weight_ports = [0, 1]
@@ -463,8 +463,8 @@ class ONNXScatterNDMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
-class ONNXRoiAlignMetatype(ONNXOpMetatype):
-    name = "RoiAlignOp"
+class ONNXROIAlignMetatype(ONNXOpMetatype):
+    name = "ROIAlignOp"
     op_names = ["RoiAlign"]
 
 

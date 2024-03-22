@@ -107,32 +107,10 @@ class PTRangeInitCollectorParams(RangeInitCollectorParams):
         self._input_shape = input_shape
         self._channel_idx = channel_idx
 
-    def get_reduction_axes(self, per_sample_stats: bool) -> ReductionAxes:
-        """
-        Calculates the reduction axes of the tensor.
-
-        :param per_sample_stats: Boolean flag that indicated whether statistics are collected per-sample or per-batch.
-        :return: Shape to reduce to.
-        """
-        ndims = len(self._input_shape)
-        reduction_axes: List[int] = list(range(ndims))
+    def get_reduction_aggregation_axes(self, is_per_sample: bool) -> Tuple[ReductionAxes, AggregationAxes]:
         if self.is_per_channel:
-            val = (ndims + self._channel_idx) % ndims
-            reduction_axes.remove(val)
-            if not val and self.use_per_sample_stats(per_sample_stats):
-                raise nncf.InternalError("Batch dimension should be equal to zero")
-        if self.use_per_sample_stats(per_sample_stats):
-            reduction_axes = reduction_axes[1:]  # Assumes batch is the first dimension
-        return tuple(reduction_axes)
-
-    def get_aggregation_axes(self, per_sample_stats: bool) -> AggregationAxes:
-        """
-        Calculates the aggregation axes of the tensor.
-
-        :param per_sample_stats: Boolean flag that indicated whether statistics are collected per-sample or per-batch.
-        :return: Shape to aggregate to.
-        """
-        return (0, 1) if self.use_per_sample_stats(per_sample_stats) else (0,)
+            return super().get_reduction_aggregation_axes(self._input_shape, (self._channel_idx,), is_per_sample)
+        return super().get_reduction_aggregation_axes(self._input_shape, (), is_per_sample)
 
 
 class StatCollectorGenerator:
@@ -180,9 +158,7 @@ class StatCollectorGenerator:
             raise nncf.InternalError("Unknown range init type: {}".format(init_config.init_type))
 
         use_per_sample_stats = collector_params.use_per_sample_stats(init_config.init_type == "mixed_min_max")
-        reduction_axes = collector_params.get_reduction_axes(use_per_sample_stats)
-        aggregation_axes = collector_params.get_aggregation_axes(use_per_sample_stats)
-
+        reduction_axes, aggregation_axes = collector_params.get_reduction_aggregation_axes(use_per_sample_stats)
         if init_config.init_type == "min_max":
             return get_min_max_statistic_collector(
                 use_abs_max=collector_params.use_abs_max,

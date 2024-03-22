@@ -183,8 +183,14 @@ def _(a: torch.Tensor, source: Union[int, Tuple[int, ...]], destination: Union[i
 
 
 @numeric.mean.register(torch.Tensor)
-def _(a: torch.Tensor, axis: Union[int, Tuple[int, ...]] = None, keepdims: bool = False) -> torch.Tensor:
-    return torch.mean(a, dim=axis, keepdim=keepdims)
+def _(
+    a: torch.Tensor,
+    axis: Union[int, Tuple[int, ...]] = None,
+    keepdims: bool = False,
+    dtype: Optional[TensorDataType] = None,
+) -> torch.Tensor:
+    dtype = DTYPE_MAP[dtype] if dtype else None
+    return torch.mean(a, dim=axis, keepdim=keepdims, dtype=dtype)
 
 
 @numeric.round.register(torch.Tensor)

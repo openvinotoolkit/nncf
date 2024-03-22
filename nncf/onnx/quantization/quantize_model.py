@@ -17,6 +17,7 @@ import nncf
 from nncf.common.logging.logger import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
+from nncf.onnx.graph.metatypes.groups import OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.parameters import DropType
 from nncf.parameters import ModelType
@@ -30,6 +31,7 @@ from nncf.quantization.algorithms.accuracy_control.algorithm import calculate_ac
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
+from nncf.quantization.quantize_model import warning_model_no_batchwise_support
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
 from nncf.telemetry import tracked_function
@@ -81,6 +83,7 @@ def quantize_impl(
     )
 
     graph = GraphConverter.create_nncf_graph(model)
+    warning_model_no_batchwise_support(graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS)
     quantized_model = quantization_algorithm.apply(model, graph, dataset=calibration_dataset)
 
     return quantized_model
