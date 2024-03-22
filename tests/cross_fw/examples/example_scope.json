@@ -189,7 +189,6 @@
             "int8_model_size": 11.01035213470459,
             "model_compression_rate": 3.9117704505711512
         }
-
     },
     "llm_compression": {
         "backend": "openvino",
