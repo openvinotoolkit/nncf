@@ -1,5 +1,7 @@
 -c ../../../../constraints.txt
 datasets
+onnx
 openvino
 optimum-intel
+torch
 transformers

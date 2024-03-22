@@ -2,6 +2,8 @@
 datasets
 numpy>=1.23.5
 openvino
-optimum-intel[openvino]>=1.13.0
+torch
+onnx
+optimum-intel>=1.13.0
 transformers
 whowhatbench @ git+https://github.com/andreyanufr/who_what_benchmark.git
