@@ -102,7 +102,7 @@ jobs:
         run: |
             uname -a
             ls -l /usr/local/
-            ll /dev/nvidia*
+            ls -l /dev/nvidia*
 
       - name: nvidia-smi
         continue-on-error: true
