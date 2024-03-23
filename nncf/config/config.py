@@ -17,6 +17,7 @@ from typing import List
 from typing import Optional
 from typing import Type
 
+from jsonschema.exceptions import ValidationError as JsonSchemaValidationError
 import jsonschema
 import jstyleson as json
 
@@ -105,14 +106,14 @@ class NNCFConfig(dict):
     def validate(loaded_json):
         try:
             jsonschema.validate(loaded_json, NNCFConfig.schema())
-        except jsonschema.ValidationError as e:
+        except JsonSchemaValidationError as e:
             logger.error('Invalid NNCF config supplied!')
             absolute_path_parts = [str(x) for x in e.absolute_path]
             if not NNCFConfig._is_path_to_algorithm_name(absolute_path_parts):
                 e.message += f"\nRefer to the NNCF config schema documentation at " \
                              f"{SCHEMA_VISUALIZATION_URL}"
                 e.schema = "*schema too long for stdout display*"
-                raise e
+                raise jsonschema.ValidationError("Additional properties are not allowed ('{}' was unexpected)".format(absolute_path_parts[-1]))
 
             # Need to make the error more algo-specific in case the config was so bad that no
             # scheme could be matched
@@ -125,3 +126,5 @@ class NNCFConfig(dict):
                 # Passed a list of dicts
                 for compression_algo_dict in compression_section:
                     validate_single_compression_algo_schema(compression_algo_dict, REF_VS_ALGO_SCHEMA)
+        except Exception as e:
+            raise e
