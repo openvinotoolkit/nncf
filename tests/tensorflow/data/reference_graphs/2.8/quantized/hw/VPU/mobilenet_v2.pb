@@ -1,1 +1,0 @@
-../../../../2.5/quantized/hw/VPU/mobilenet_v2.pb

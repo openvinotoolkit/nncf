@@ -7,7 +7,7 @@ strict digraph  {
 "5 ShuffleNetV2/NNCFConv2d[conv1]/conv2d_0" [id=5, type=conv2d];
 "6 ShuffleNetV2/NNCFBatchNorm2d[bn1]/batch_norm_0" [id=6, type=batch_norm];
 "7 ShuffleNetV2/relu_0" [id=7, type=relu];
-"8 ShuffleNetV2/SymmetricQuantizer/symmetric_quantize_0" [id=8, type=symmetric_quantize];
+"8 ShuffleNetV2/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ShuffleNetV2/relu_0|OUTPUT]/symmetric_quantize_0" [id=8, type=symmetric_quantize];
 "9 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" [id=9, type=calc_rb_binary_mask];
 "10 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" [id=10, type=apply_binary_mask];
 "11 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" [id=11, type=symmetric_quantize];
@@ -463,9 +463,9 @@ strict digraph  {
 "461 ShuffleNetV2/NNCFConv2d[conv2]/conv2d_0" [id=461, type=conv2d];
 "462 ShuffleNetV2/NNCFBatchNorm2d[bn2]/batch_norm_0" [id=462, type=batch_norm];
 "463 ShuffleNetV2/relu_1" [id=463, type=relu];
-"464 ShuffleNetV2/SymmetricQuantizer/symmetric_quantize_1" [id=464, type=symmetric_quantize];
+"464 ShuffleNetV2/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ShuffleNetV2/relu_1|OUTPUT]/symmetric_quantize_0" [id=464, type=symmetric_quantize];
 "465 ShuffleNetV2/avg_pool2d_0" [id=465, type=avg_pool2d];
-"466 ShuffleNetV2/SymmetricQuantizer/symmetric_quantize_2" [id=466, type=symmetric_quantize];
+"466 ShuffleNetV2/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ShuffleNetV2/avg_pool2d_0|OUTPUT]/symmetric_quantize_0" [id=466, type=symmetric_quantize];
 "467 ShuffleNetV2/view_0" [id=467, type=view];
 "468 ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" [id=468, type=calc_rb_binary_mask];
 "469 ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" [id=469, type=apply_binary_mask];
@@ -479,9 +479,9 @@ strict digraph  {
 "4 ShuffleNetV2/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "5 ShuffleNetV2/NNCFConv2d[conv1]/conv2d_0";
 "5 ShuffleNetV2/NNCFConv2d[conv1]/conv2d_0" -> "6 ShuffleNetV2/NNCFBatchNorm2d[bn1]/batch_norm_0";
 "6 ShuffleNetV2/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "7 ShuffleNetV2/relu_0";
-"7 ShuffleNetV2/relu_0" -> "8 ShuffleNetV2/SymmetricQuantizer/symmetric_quantize_0";
-"8 ShuffleNetV2/SymmetricQuantizer/symmetric_quantize_0" -> "12 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv1]/conv2d_0";
-"8 ShuffleNetV2/SymmetricQuantizer/symmetric_quantize_0" -> "25 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv3]/conv2d_0";
+"7 ShuffleNetV2/relu_0" -> "8 ShuffleNetV2/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ShuffleNetV2/relu_0|OUTPUT]/symmetric_quantize_0";
+"8 ShuffleNetV2/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ShuffleNetV2/relu_0|OUTPUT]/symmetric_quantize_0" -> "12 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv1]/conv2d_0";
+"8 ShuffleNetV2/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ShuffleNetV2/relu_0|OUTPUT]/symmetric_quantize_0" -> "25 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv3]/conv2d_0";
 "9 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "10 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "10 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "11 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";
 "11 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "12 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/NNCFConv2d[conv1]/conv2d_0";
@@ -951,10 +951,10 @@ strict digraph  {
 "460 ShuffleNetV2/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "461 ShuffleNetV2/NNCFConv2d[conv2]/conv2d_0";
 "461 ShuffleNetV2/NNCFConv2d[conv2]/conv2d_0" -> "462 ShuffleNetV2/NNCFBatchNorm2d[bn2]/batch_norm_0";
 "462 ShuffleNetV2/NNCFBatchNorm2d[bn2]/batch_norm_0" -> "463 ShuffleNetV2/relu_1";
-"463 ShuffleNetV2/relu_1" -> "464 ShuffleNetV2/SymmetricQuantizer/symmetric_quantize_1";
-"464 ShuffleNetV2/SymmetricQuantizer/symmetric_quantize_1" -> "465 ShuffleNetV2/avg_pool2d_0";
-"465 ShuffleNetV2/avg_pool2d_0" -> "466 ShuffleNetV2/SymmetricQuantizer/symmetric_quantize_2";
-"466 ShuffleNetV2/SymmetricQuantizer/symmetric_quantize_2" -> "467 ShuffleNetV2/view_0";
+"463 ShuffleNetV2/relu_1" -> "464 ShuffleNetV2/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ShuffleNetV2/relu_1|OUTPUT]/symmetric_quantize_0";
+"464 ShuffleNetV2/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ShuffleNetV2/relu_1|OUTPUT]/symmetric_quantize_0" -> "465 ShuffleNetV2/avg_pool2d_0";
+"465 ShuffleNetV2/avg_pool2d_0" -> "466 ShuffleNetV2/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ShuffleNetV2/avg_pool2d_0|OUTPUT]/symmetric_quantize_0";
+"466 ShuffleNetV2/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[ShuffleNetV2/avg_pool2d_0|OUTPUT]/symmetric_quantize_0" -> "467 ShuffleNetV2/view_0";
 "467 ShuffleNetV2/view_0" -> "471 ShuffleNetV2/NNCFLinear[linear]/linear_0";
 "468 ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "469 ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "469 ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "470 ShuffleNetV2/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";

@@ -1,0 +1,21 @@
+strict digraph  {
+"0 Identity" [id=0, type=Identity];
+"1 QuantizeLinear_Identity_Y_1" [id=1, type=QuantizeLinear];
+"2 DequantizeLinear_Identity_Y_1" [id=2, type=DequantizeLinear];
+"3 Embedding" [id=3, type=Gather];
+"4 Gather" [id=4, type=Gather];
+"5 QuantizeLinear_W_1" [id=5, type=QuantizeLinear];
+"6 DequantizeLinear_W_1" [id=6, type=DequantizeLinear];
+"7 MatMul" [id=7, type=MatMul];
+"8 nncf_model_input_0" [id=8, type=nncf_model_input];
+"9 nncf_model_output_0" [id=9, type=nncf_model_output];
+"0 Identity" -> "1 QuantizeLinear_Identity_Y_1"  [label="[10, 20]", style=solid];
+"1 QuantizeLinear_Identity_Y_1" -> "2 DequantizeLinear_Identity_Y_1"  [label="[10, 20]", style=dashed];
+"2 DequantizeLinear_Identity_Y_1" -> "3 Embedding"  [label="[10, 20]", style=solid];
+"3 Embedding" -> "4 Gather"  [label="[1, 10, 20]", style=solid];
+"4 Gather" -> "7 MatMul"  [label="[10, 20]", style=solid];
+"5 QuantizeLinear_W_1" -> "6 DequantizeLinear_W_1"  [label="[20, 10]", style=dashed];
+"6 DequantizeLinear_W_1" -> "7 MatMul"  [label="[20, 10]", style=solid];
+"7 MatMul" -> "9 nncf_model_output_0"  [label="[10, 10]", style=solid];
+"8 nncf_model_input_0" -> "3 Embedding"  [label="[1, 10]", style=dashed];
+}

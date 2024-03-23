@@ -1,10 +1,22 @@
+# Copyright (c) 2024 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import math
 
 import torch
-from torch import nn
 import torch.nn.functional as F
-from nncf.torch.dynamic_graph.context import no_nncf_trace
+from torch import nn
 from torch.nn.parameter import Parameter
+
+from nncf.torch.dynamic_graph.context import no_nncf_trace
 
 
 class BahdanauAttention(nn.Module):
@@ -13,8 +25,7 @@ class BahdanauAttention(nn.Module):
     Implementation is very similar to tf.contrib.seq2seq.BahdanauAttention
     """
 
-    def __init__(self, query_size, key_size, num_units, normalize=False,
-                 batch_first=False, init_weight=0.1):
+    def __init__(self, query_size, key_size, num_units, normalize=False, batch_first=False, init_weight=0.1):
         """
         Constructor for the BahdanauAttention.
 
@@ -46,8 +57,8 @@ class BahdanauAttention(nn.Module):
             self.normalize_scalar = Parameter(torch.Tensor(1))
             self.normalize_bias = Parameter(torch.Tensor(num_units))
         else:
-            self.register_parameter('normalize_scalar', None)
-            self.register_parameter('normalize_bias', None)
+            self.register_parameter("normalize_scalar", None)
+            self.register_parameter("normalize_bias", None)
 
         self.reset_parameters(init_weight)
 
@@ -55,7 +66,7 @@ class BahdanauAttention(nn.Module):
         """
         Sets initial random values for trainable parameters.
         """
-        stdv = 1. / math.sqrt(self.num_units)
+        stdv = 1.0 / math.sqrt(self.num_units)
         self.linear_att.data.uniform_(-init_weight, init_weight)
 
         if self.normalize:
@@ -78,8 +89,7 @@ class BahdanauAttention(nn.Module):
         else:
             max_len = context.size(0)
 
-        indices = torch.arange(0, max_len, dtype=torch.int64,
-                               device=context.device)
+        indices = torch.arange(0, max_len, dtype=torch.int64, device=context.device)
         with no_nncf_trace():  # TODO: remove once tensor type is stored in NNCF graph and is accessible to quant algo
             self.mask = indices >= (context_len.unsqueeze(1))
 

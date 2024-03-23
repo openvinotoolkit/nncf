@@ -1,13 +1,14 @@
 PyYAML
-tensorflow_addons==0.14.0
-pytest
+tensorflow_addons~=0.20.0
+pytest==8.0.2
+pytest-cov
 pytest-mock
 pytest-dependency
-yattag>=1.14.0
-prettytable>=2.0.0
 pydot
 tensorflow_hub
 virtualenv
 
-# Ticket 69520
-pyparsing<3.0
+# filelock 3.12.3 requires typing-extensions>=4.7.1, but tensorflow 2.12.1 requires typing-extensions<4.6.0,>=3.6.6
+# TODO: remove after upgrade to TF 2.13
+filelock<3.12.3
+openvino-dev==2024.0

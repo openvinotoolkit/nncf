@@ -439,9 +439,9 @@ strict digraph  {
 "94 Inception3/InceptionA[Mixed_5d]/BasicConv2d[branch_pool]/relu__0" -> "95 Inception3/InceptionA[Mixed_5d]/cat_0";
 "95 Inception3/InceptionA[Mixed_5d]/cat_0" -> "96 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3]/Conv2d[conv]/conv2d_0";
 "95 Inception3/InceptionA[Mixed_5d]/cat_0" -> "99 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3dbl_1]/Conv2d[conv]/conv2d_0";
+"95 Inception3/InceptionA[Mixed_5d]/cat_0" -> "108 Inception3/InceptionB[Mixed_6a]/max_pool2d_0";
 "96 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3]/Conv2d[conv]/conv2d_0" -> "97 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3]/BatchNorm2d[bn]/batch_norm_0";
 "97 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3]/BatchNorm2d[bn]/batch_norm_0" -> "98 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3]/relu__0";
-"95 Inception3/InceptionA[Mixed_5d]/cat_0" -> "108 Inception3/InceptionB[Mixed_6a]/max_pool2d_0";
 "98 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3]/relu__0" -> "109 Inception3/InceptionB[Mixed_6a]/cat_0";
 "99 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3dbl_1]/Conv2d[conv]/conv2d_0" -> "100 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3dbl_1]/BatchNorm2d[bn]/batch_norm_0";
 "100 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3dbl_1]/BatchNorm2d[bn]/batch_norm_0" -> "101 Inception3/InceptionB[Mixed_6a]/BasicConv2d[branch3x3dbl_1]/relu__0";

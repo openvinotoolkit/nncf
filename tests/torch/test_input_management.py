@@ -1,10 +1,25 @@
+# Copyright (c) 2024 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import inspect
+from dataclasses import dataclass
+from typing import Dict, List, Tuple
 
 import pytest
 import torch
 
-from nncf.torch.dynamic_graph.graph_tracer import ModelInputInfo
+from nncf.torch.dynamic_graph.io_handling import FillerInputElement
+from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.io_handling import InputInfoWrapManager
+from nncf.torch.dynamic_graph.io_handling import ModelInputInfo
 from tests.torch.helpers import MockModel
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
@@ -24,122 +39,138 @@ def forward(arg1=None, arg2=None, arg3=None, arg4=None, arg5=TENSOR_DEFAULT):
     pass
 
 
+@dataclass
 class InputWrappingTestStruct:
-    def __init__(self, input_infos, model_args, model_kwargs, ref_wrapping_sequence):
-        self.input_infos = input_infos
-        self.model_args = model_args
-        self.model_kwargs = model_kwargs
-        self.ref_wrapping_sequence = ref_wrapping_sequence
+    input_info: ModelInputInfo
+    model_args: Tuple
+    model_kwargs: Dict
+    ref_wrapping_sequence: List[torch.Tensor]
+    case_id: str
+
+    def get_case_id(self) -> str:
+        return self.case_id + "-" + "filler" if isinstance(self.input_info, FillerInputInfo) else "exact"
 
 
 INPUT_WRAPPING_TEST_CASES = [
-    InputWrappingTestStruct(input_infos=[ModelInputInfo([1])],
-                            model_args=(TENSOR_1, ),
-                            model_kwargs={},
-                            ref_wrapping_sequence=[TENSOR_1],
-                            ),
-    InputWrappingTestStruct(input_infos=[ModelInputInfo([1], keyword="arg2")],
-                            model_args=(),
-                            model_kwargs={"arg2": TENSOR_2},
-                            ref_wrapping_sequence=[TENSOR_2],
-                            ),
-    InputWrappingTestStruct(input_infos=[ModelInputInfo([1]),
-                                         ModelInputInfo([1]),
-                                         ModelInputInfo([1], keyword="arg3"),
-                                         ModelInputInfo([1], keyword="arg5")],
-                            model_args=(TENSOR_1, TENSOR_2),
-                            model_kwargs={"arg3": TENSOR_3, "arg5": TENSOR_4},
-                            ref_wrapping_sequence=[TENSOR_1,
-                                                   TENSOR_2,
-                                                   TENSOR_3,
-                                                   TENSOR_4],
-                            ),
-
+    InputWrappingTestStruct(
+        input_info=FillerInputInfo([FillerInputElement([1])]),
+        model_args=(TENSOR_1,),
+        model_kwargs={},
+        ref_wrapping_sequence=[TENSOR_1],
+        case_id="single_arg",
+    ),
+    InputWrappingTestStruct(
+        input_info=FillerInputInfo([FillerInputElement([1], keyword="arg2")]),
+        model_args=(),
+        model_kwargs={"arg2": TENSOR_2},
+        ref_wrapping_sequence=[TENSOR_2],
+        case_id="single_kwarg",
+    ),
+    InputWrappingTestStruct(
+        input_info=FillerInputInfo(
+            [
+                FillerInputElement([1]),
+                FillerInputElement([1]),
+                FillerInputElement([1], keyword="arg3"),
+                FillerInputElement([1], keyword="arg5"),
+            ]
+        ),
+        model_args=(TENSOR_1, TENSOR_2),
+        model_kwargs={"arg3": TENSOR_3, "arg5": TENSOR_4},
+        ref_wrapping_sequence=[TENSOR_1, TENSOR_2, TENSOR_3, TENSOR_4],
+        case_id="args_and_kwargs",
+    ),
     # More args supplied than what is specified by input_infos - ignore the unspecified args
-    InputWrappingTestStruct(input_infos=[ModelInputInfo([1]),
-                                         ModelInputInfo([1], keyword="arg3"),
-                                         ModelInputInfo([1], keyword="arg5")],
-                            model_args=(TENSOR_1, TENSOR_2),
-                            model_kwargs={"arg3": TENSOR_3, "arg5": TENSOR_4},
-                            ref_wrapping_sequence=[TENSOR_1,
-                                                   TENSOR_3,
-                                                   TENSOR_4],
-                            ),
-
+    InputWrappingTestStruct(
+        input_info=FillerInputInfo(
+            [FillerInputElement([1]), FillerInputElement([1], keyword="arg3"), FillerInputElement([1], keyword="arg5")]
+        ),
+        model_args=(TENSOR_1, TENSOR_2),
+        model_kwargs={"arg3": TENSOR_3, "arg5": TENSOR_4},
+        ref_wrapping_sequence=[TENSOR_1, TENSOR_3, TENSOR_4],
+        case_id="more_args_than_specified",
+    ),
     # More args and kwargs supplied than what is specified by input_infos - ignore the unspecified args and kwargs
-    InputWrappingTestStruct(input_infos=[ModelInputInfo([1]),
-                                         ModelInputInfo([1], keyword="arg4")],
-                            model_args=(TENSOR_1, TENSOR_2),
-                            model_kwargs={"arg4": TENSOR_3, "arg5": TENSOR_4},
-                            ref_wrapping_sequence=[TENSOR_1,
-                                                   TENSOR_3],
-                            ),
-
+    InputWrappingTestStruct(
+        input_info=FillerInputInfo([FillerInputElement([1]), FillerInputElement([1], keyword="arg4")]),
+        model_args=(TENSOR_1, TENSOR_2),
+        model_kwargs={"arg4": TENSOR_3, "arg5": TENSOR_4},
+        ref_wrapping_sequence=[TENSOR_1, TENSOR_3],
+        case_id="more_args_and_kwargs_than_specified",
+    ),
     # arg specified, but kwarg supplied
-    InputWrappingTestStruct(input_infos=[ModelInputInfo([1])],
-                            model_args=(),
-                            model_kwargs={"arg3": TENSOR_1},
-                            ref_wrapping_sequence=[TENSOR_FROM_INPUT_INFO_1],
-                            ),
-
-    InputWrappingTestStruct(input_infos=[ModelInputInfo([1], keyword="arg5")],
-                            model_args=(),
-                            model_kwargs={"arg1": TENSOR_1},
-                            ref_wrapping_sequence=[TENSOR_DEFAULT],
-                            ),
-
+    InputWrappingTestStruct(
+        input_info=FillerInputInfo([FillerInputElement([1])]),
+        model_args=(),
+        model_kwargs={"arg3": TENSOR_1},
+        ref_wrapping_sequence=[TENSOR_FROM_INPUT_INFO_1],
+        case_id="kwarg_instead_of_arg",
+    ),
+    InputWrappingTestStruct(
+        input_info=FillerInputInfo([FillerInputElement([1], keyword="arg5")]),
+        model_args=(),
+        model_kwargs={"arg1": TENSOR_1},
+        ref_wrapping_sequence=[TENSOR_DEFAULT],
+        case_id="arg_as_kwarg",
+    ),
     # kwarg specified, but missing in supplied kwargs
-    InputWrappingTestStruct(input_infos=[ModelInputInfo([1]),
-                                         ModelInputInfo([2], keyword="arg3")],
-                            model_args=(TENSOR_1, TENSOR_2),
-                            model_kwargs={"arg4": TENSOR_3, "arg5": TENSOR_4},
-                            ref_wrapping_sequence=[TENSOR_1, TENSOR_FROM_INPUT_INFO_2],
-                            ),
-
-
+    InputWrappingTestStruct(
+        input_info=FillerInputInfo([FillerInputElement([1]), FillerInputElement([2], keyword="arg3")]),
+        model_args=(TENSOR_1, TENSOR_2),
+        model_kwargs={"arg4": TENSOR_3, "arg5": TENSOR_4},
+        ref_wrapping_sequence=[TENSOR_1, TENSOR_FROM_INPUT_INFO_2],
+        case_id="missing_kwarg",
+    ),
     # More args specified than supplied
-    InputWrappingTestStruct(input_infos=[ModelInputInfo([1]),
-                                         ModelInputInfo([2]),
-                                         ModelInputInfo([3], keyword="arg3")],
-                            model_args=(TENSOR_1, ),
-                            model_kwargs={"arg3": TENSOR_2},
-                            ref_wrapping_sequence=[TENSOR_1, TENSOR_FROM_INPUT_INFO_2, TENSOR_2],
-                            ),
-
+    InputWrappingTestStruct(
+        input_info=FillerInputInfo(
+            [FillerInputElement([1]), FillerInputElement([2]), FillerInputElement([3], keyword="arg3")]
+        ),
+        model_args=(TENSOR_1,),
+        model_kwargs={"arg3": TENSOR_2},
+        ref_wrapping_sequence=[TENSOR_1, TENSOR_FROM_INPUT_INFO_2, TENSOR_2],
+        case_id="less_args_supplied",
+    ),
     # More kwargs specified than supplied
-    InputWrappingTestStruct(input_infos=[ModelInputInfo([1]),
-                                         ModelInputInfo([2], keyword="arg2"),
-                                         ModelInputInfo([3], keyword="arg3")],
-                            model_args=(TENSOR_1,),
-                            model_kwargs={"arg2": TENSOR_2},
-                            ref_wrapping_sequence=[TENSOR_1, TENSOR_2, TENSOR_FROM_INPUT_INFO_3],
-                            ),
-
+    InputWrappingTestStruct(
+        input_info=FillerInputInfo(
+            [FillerInputElement([1]), FillerInputElement([2], keyword="arg2"), FillerInputElement([3], keyword="arg3")]
+        ),
+        model_args=(TENSOR_1,),
+        model_kwargs={"arg2": TENSOR_2},
+        ref_wrapping_sequence=[TENSOR_1, TENSOR_2, TENSOR_FROM_INPUT_INFO_3],
+        case_id="less_kwargs_supplied",
+    ),
 ]
 
 
-@pytest.fixture(params=INPUT_WRAPPING_TEST_CASES, name='inputs_test_struct')
+@pytest.fixture(
+    params=INPUT_WRAPPING_TEST_CASES,
+    name="inputs_test_struct",
+    ids=[x.get_case_id() for x in INPUT_WRAPPING_TEST_CASES],
+)
 def inputs_test_struct_(request):
     return request.param
 
 
 def test_input_wrapper_wrap_inputs(mocker, inputs_test_struct: InputWrappingTestStruct):
-    input_infos = inputs_test_struct.input_infos
+    input_info = inputs_test_struct.input_info
     model_args = inputs_test_struct.model_args
     model_kwargs = inputs_test_struct.model_kwargs
     ref_wrapping_sequence = inputs_test_struct.ref_wrapping_sequence
     stub_cpu_model = MockModel()
 
-    mocker.patch('nncf.torch.dynamic_graph.io_handling.nncf_model_input')
+    mocker.patch("nncf.torch.dynamic_graph.io_handling.nncf_model_input")
     from nncf.torch.dynamic_graph.io_handling import nncf_model_input
 
-    mgr = InputInfoWrapManager(input_infos, inspect.signature(forward), stub_cpu_model)
+    mgr = InputInfoWrapManager(input_info, inspect.signature(forward), stub_cpu_model)
     mgr.wrap_inputs(model_args, model_kwargs)
     test_wrapping_sequence = [cl[0][0] for cl in nncf_model_input.call_args_list]
 
     test_identical_to_ref = all(map(torch.equal, ref_wrapping_sequence, test_wrapping_sequence))
 
     assert test_identical_to_ref
+
 
 class CatModel(torch.nn.Module):
     def __init__(self):
@@ -151,15 +182,12 @@ class CatModel(torch.nn.Module):
 
 
 def test_same_input_tensor_replication(mocker):
-    config = get_basic_quantization_config(input_info=[
-        {
-            "sample_size": [1, 1]
-        },
-        {
-            "sample_size": [1, 1]
-        },
-
-    ])
+    config = get_basic_quantization_config(
+        input_info=[
+            {"sample_size": [1, 1]},
+            {"sample_size": [1, 1]},
+        ]
+    )
     register_bn_adaptation_init_args(config)
     model = CatModel()
     model, _ = create_compressed_model_and_algo_for_test(model, config)

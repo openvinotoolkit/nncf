@@ -1,23 +1,21 @@
-"""
- Copyright (c) 2022 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
-from typing import List
-from typing import Optional
+# Copyright (c) 2024 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+from typing import List, Optional
 
 import numpy as np
 import onnx
 import onnxruntime as rt
 import pytest
 import torch
+from packaging import version
 from torch import nn
 
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
@@ -65,16 +63,16 @@ class DepthBasicConvTestModel(nn.Module):
         super().__init__()
         self._depth = depth
         self._skipped_layers = []
-        self.conv1 = create_conv(1, 3, 3, weight_init=1, bias_init=1)
+        self.conv1 = create_conv(1, 3, 3, weight_init=1, bias_init=1, padding=1)
         self.branch_with_blocks = nn.Sequential()
         for idx in range(depth):
-            conv = create_conv(3, 3, 5, weight_init=idx + 1, bias_init=idx + 1)
-            self.branch_with_blocks.add_module('conv{}'.format(idx), conv)
+            conv = create_conv(3, 3, 5, weight_init=idx + 1, bias_init=idx + 1, padding=2)
+            self.branch_with_blocks.add_module("conv{}".format(idx), conv)
         self.last_conv = create_conv(3, 1, 1)
 
     def forward(self, x):
         output = self.conv1(x)
-        # pylint: disable=protected-access
+
         for name, module in self.branch_with_blocks._modules.items():
             if name not in self._skipped_layers:
                 output = module(output)
@@ -86,17 +84,24 @@ class DepthBasicConvTestModel(nn.Module):
             skipped_layers = []
         self._skipped_layers = skipped_layers
 
+    def get_skipped_layers(self):
+        return self._skipped_layers
+
 
 BASIC_ELASTIC_DEPTH_PARAMS = {
-    'skipped_blocks': [['DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv0]/conv2d_0',
-                        'DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv1]/conv2d_0']],
-    'skipped_blocks_dependencies': {0: [0]},
-    'skipped_blocks_state': [
+    "skipped_blocks": [
+        [
+            "DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv0]/conv2d_0",
+            "DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv1]/conv2d_0",
+        ]
+    ],
+    "skipped_blocks_dependencies": {0: [0]},
+    "skipped_blocks_state": [
         {
-            'start_node_name': 'DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv0]/conv2d_0',
-            'end_node_name': 'DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv1]/conv2d_0'
+            "start_node_name": "DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv0]/conv2d_0",
+            "end_node_name": "DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv1]/conv2d_0",
         }
-    ]
+    ],
 }
 
 
@@ -123,22 +128,23 @@ def reset_bn_stats(m):
 # Behavior
 ###########################
 
+
 def test_not_matched_add_node():
     model = BasicTestSuperNet()
     device = move_model_to_cuda_if_available(model)
     nncf_config = get_empty_config(input_sample_sizes=model.INPUT_SIZE)
     model, _ = create_compressed_model_and_algo_for_test(model, nncf_config)
-    skipped_blocks = [BuildingBlock('BasicTestSuperNet/NNCFConv2d[conv1]/conv2d_0', '/nncf_model_output_0')]
-    ctx = model.get_tracing_context()
+    skipped_blocks = [BuildingBlock("BasicTestSuperNet/NNCFConv2d[conv1]/conv2d_0", "/nncf_model_output_0")]
+    ctx = model.nncf.get_tracing_context()
     ctx.set_elastic_blocks(skipped_blocks)
     ctx.elastic_depth = True
     ctx.set_active_skipped_block(list(range(0, len(ctx.skipped_blocks))))
 
-    input_ = torch.ones(model.get_nncf_wrapped_model().INPUT_SIZE).to(device)
+    input_ = torch.ones(model.INPUT_SIZE).to(device)
     model(input_)
 
 
-@pytest.mark.parametrize('model_creator', (DepthBasicConvTestModel, BasicTestSuperNet))
+@pytest.mark.parametrize("model_creator", (DepthBasicConvTestModel, BasicTestSuperNet))
 def test_reproduce_error_with_parsing_node_id(model_creator):
     model = model_creator()
     move_model_to_cuda_if_available(model)
@@ -151,21 +157,29 @@ def test_reproduce_error_with_parsing_node_id(model_creator):
 # Check outputs
 ###########################
 
+
 def test_skip_one_block_resnet18(mocker):
     model = ResNet18()
     device = move_model_to_cuda_if_available(model)
     nncf_config = get_empty_config(input_sample_sizes=RESNET50_INPUT_SIZE)
-    nncf_config['bootstrapNAS'] = {'training': {'elasticity': {
-        'available_elasticity_dims': [ElasticityDim.DEPTH.value],
-        'depth': {
-            'skipped_blocks': [[
-                'ResNet/Sequential[layer1]/BasicBlock[0]/relu_0',  # 1
-                'ResNet/Sequential[layer1]/BasicBlock[0]/NNCFBatchNorm2d[bn2]/batch_norm_0'
-            ]],
-        }}}}
+    nncf_config["bootstrapNAS"] = {
+        "training": {
+            "elasticity": {
+                "available_elasticity_dims": [ElasticityDim.DEPTH.value],
+                "depth": {
+                    "skipped_blocks": [
+                        [
+                            "ResNet/Sequential[layer1]/BasicBlock[0]/relu_0",  # 1
+                            "ResNet/Sequential[layer1]/BasicBlock[0]/NNCFBatchNorm2d[bn2]/batch_norm_0",
+                        ]
+                    ],
+                },
+            }
+        }
+    }
     compressed_model, _ = create_bootstrap_training_model_and_ctrl(model, nncf_config)
 
-    ctx = compressed_model.get_tracing_context()
+    ctx = compressed_model.nncf.get_tracing_context()
     spy_agent_conv2d = mocker.spy(NNCFConv2d, "__call__")
     spy_agent_bn = mocker.spy(torch.nn.BatchNorm2d, "__call__")
 
@@ -177,7 +191,8 @@ def test_skip_one_block_resnet18(mocker):
 
     # check torch.tensor.data by element
     assert (spy_agent_conv2d.call_args_list[2][0][1] == spy_agent_bn.call_args_list[2][0][1]).sum() == np.prod(
-        spy_agent_bn.call_args_list[2][0][1].shape)
+        spy_agent_bn.call_args_list[2][0][1].shape
+    )
 
     spy_agent_conv2d.reset_mock()
     spy_agent_bn.reset_mock()
@@ -192,32 +207,45 @@ def test_can_export_model_with_one_skipped_block_resnet18(tmp_path):
     move_model_to_cuda_if_available(model)
 
     nncf_config = get_empty_config(input_sample_sizes=RESNET50_INPUT_SIZE)
-    skipped_blocks = [BuildingBlock('ResNet/Sequential[layer1]/BasicBlock[0]/relu_0',
-                                    'ResNet/Sequential[layer1]/BasicBlock[0]/NNCFBatchNorm2d[bn2]/batch_norm_0')]
+    skipped_blocks = [
+        BuildingBlock(
+            "ResNet/Sequential[layer1]/BasicBlock[0]/relu_0",
+            "ResNet/Sequential[layer1]/BasicBlock[0]/NNCFBatchNorm2d[bn2]/batch_norm_0",
+        )
+    ]
     orig_onnx_model_path = tmp_path / "resnet18.onnx"
     onnx_model_without_block_path = tmp_path / "resnet18_with_one_skipped_block.onnx"
 
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
-    compressed_model.get_tracing_context().set_elastic_blocks(skipped_blocks)
+    compressed_model, ctrl = create_compressed_model_and_algo_for_test(model, nncf_config)
+    compressed_model.nncf.get_tracing_context().set_elastic_blocks(skipped_blocks)
     # export model to onnx
-    ctx = compressed_model.get_tracing_context()
-    compression_ctrl.export_model(orig_onnx_model_path)
+    ctx = compressed_model.nncf.get_tracing_context()
+    ctrl.export_model(str(orig_onnx_model_path))
 
     ctx.elastic_depth = True  # activate mode with elastic depth
     ctx.set_active_skipped_block([0])
-    compression_ctrl.export_model(onnx_model_without_block_path)
+    ctrl.export_model(str(onnx_model_without_block_path))
 
     # load onnx graphs
-    # pylint:disable=no-member
+
     load_model_fn = onnx.load_model
     onnx_resnet18_without_one_block = load_model_fn(onnx_model_without_block_path)
     onnx_resnet18_orig = load_model_fn(orig_onnx_model_path)
 
-    # count of node in skipped block  == 5
-    assert len(onnx_resnet18_orig.graph.node) == 69
-    assert len(onnx_resnet18_without_one_block.graph.node) == 67
+    # Temporary variable for number of nodes is required to avoid hang. When assertion happens on calculation of number
+    # of nodes it tries to output the whole expression (onnx node), and sometimes it causes pytest to freeze.
+    num_all_nodes = len(onnx_resnet18_orig.graph.node)
+    num_not_skipped_nodes = len(onnx_resnet18_without_one_block.graph.node)
+    ref_num_nodes = 65
+    ref_not_skipped_nodes = 63
+    if version.parse(torch.__version__) < version.parse("1.12"):
+        # different ONNX format for older pytorch version - no Identity nodes
+        ref_num_nodes = 49
+        ref_not_skipped_nodes = 48
+    assert num_all_nodes == ref_num_nodes
+    assert num_not_skipped_nodes == ref_not_skipped_nodes
 
-    input_tensor = np.ones(nncf_config['input_info'][0]['sample_size'])
+    input_tensor = np.ones(nncf_config["input_info"][0]["sample_size"])
     device = get_model_device(compressed_model)
     torch_input = torch.tensor(input_tensor, dtype=torch.float32).to(device)
     with torch.no_grad():
@@ -227,30 +255,37 @@ def test_can_export_model_with_one_skipped_block_resnet18(tmp_path):
     sess = rt.InferenceSession(str(onnx_model_without_block_path))
     input_name = sess.get_inputs()[0].name
     onnx_model_output = sess.run(None, {input_name: input_tensor.astype(np.float32)})[0]
-    assert np.allclose(torch_model_output.cpu().numpy(), onnx_model_output)
+    assert np.allclose(torch_model_output.cpu().numpy(), onnx_model_output, atol=1.0e-5)
 
 
 def test_skip_one_block_resnet50(mocker):
     model = ResNet50()
     device = move_model_to_cuda_if_available(model)
     nncf_config = get_empty_config(input_sample_sizes=RESNET50_INPUT_SIZE)
-    skipped_blocks = [BuildingBlock('ResNet/Sequential[layer1]/Bottleneck[1]/relu_2',
-                                    'ResNet/Sequential[layer1]/Bottleneck[2]/relu_2')]
+    skipped_blocks = [
+        BuildingBlock(
+            "ResNet/Sequential[layer1]/Bottleneck[1]/relu_2", "ResNet/Sequential[layer1]/Bottleneck[2]/relu_2"
+        )
+    ]
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, nncf_config)
 
-    ctx = compressed_model.get_tracing_context()
+    ctx = compressed_model.nncf.get_tracing_context()
     ctx.set_elastic_blocks(skipped_blocks)
     spy_agent = mocker.spy(NNCFConv2d, "__call__")
     ctx.elastic_depth = True  # activate mode with elastic depth
     ctx.set_active_skipped_block([0])
     compressed_model(torch.ones(RESNET50_INPUT_SIZE).to(device))
 
-    assert id(spy_agent.call_args_list[8][0][1]) == id(spy_agent.call_args_list[9][0][1]) \
-           == id(spy_agent.call_args_list[10][0][1])  # TracedTensor
+    assert (
+        id(spy_agent.call_args_list[8][0][1])
+        == id(spy_agent.call_args_list[9][0][1])
+        == id(spy_agent.call_args_list[10][0][1])
+    )  # TracedTensor
 
     # check torch.tensor.data by element
     assert (spy_agent.call_args_list[8][0][1] == spy_agent.call_args_list[9][0][1]).sum() == np.prod(
-        spy_agent.call_args_list[9][0][1].shape)
+        spy_agent.call_args_list[9][0][1].shape
+    )
 
     spy_agent.reset_mock()
 
@@ -268,7 +303,7 @@ def get_ref_output_model_after_backward__with_manual_skipping():
     optimizer_for_model = torch.optim.Adam(model.parameters(), lr=0.01)
 
     # set skipped layer
-    model.set_skipped_layers(['conv1'])
+    model.set_skipped_layers(["conv1"])
 
     return do_training_step(model, optimizer_for_model, torch.ones(model.INPUT_SIZE).to(device))
 
@@ -277,7 +312,7 @@ def get_model_with_elastic_depth(model, input_sample_sizes, skipped_blocks):
     nncf_config = get_empty_config(input_sample_sizes=input_sample_sizes)
 
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, nncf_config)
-    ctx = compressed_model.get_tracing_context()
+    ctx = compressed_model.nncf.get_tracing_context()
     ctx.set_elastic_blocks(skipped_blocks)
     ctx.elastic_depth = True
     ctx.set_active_skipped_block([0])
@@ -288,13 +323,17 @@ def get_ref_output_model_after_backward__with_elastic_depth():
     # forward and backward with elastic_depth
     target_model = DepthBasicConvTestModel(depth=3)
     device = move_model_to_cuda_if_available(target_model)
-    skipped_block = [BuildingBlock('DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv0]/conv2d_0',
-                                   'DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv1]/conv2d_0')]
+    skipped_block = [
+        BuildingBlock(
+            "DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv0]/conv2d_0",
+            "DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv1]/conv2d_0",
+        )
+    ]
     compressed_model = get_model_with_elastic_depth(target_model, target_model.INPUT_SIZE, skipped_block)
 
     optimizer = torch.optim.Adam(compressed_model.parameters(), lr=0.01)
 
-    ctx = compressed_model.get_tracing_context()
+    ctx = compressed_model.nncf.get_tracing_context()
     ctx.elastic_depth = True
     ctx.set_active_skipped_block([0])
 
@@ -307,8 +346,11 @@ def get_ref_output_resnet50_after_backward__with_elastic_depth():
     device = move_model_to_cuda_if_available(target_model)
     with torch.no_grad():
         target_model.apply(init_weight)
-    skipped_block = [BuildingBlock('ResNet/Sequential[layer2]/Bottleneck[0]/relu_2',
-                                   'ResNet/Sequential[layer2]/Bottleneck[1]/relu_2')]
+    skipped_block = [
+        BuildingBlock(
+            "ResNet/Sequential[layer2]/Bottleneck[0]/relu_2", "ResNet/Sequential[layer2]/Bottleneck[1]/relu_2"
+        )
+    ]
 
     compressed_model = get_model_with_elastic_depth(target_model, RESNET50_INPUT_SIZE, skipped_block)
 
@@ -317,7 +359,7 @@ def get_ref_output_resnet50_after_backward__with_elastic_depth():
     compressed_model.train()
     optimizer = torch.optim.Adam(compressed_model.parameters(), lr=0.01)
 
-    ctx = compressed_model.get_tracing_context()
+    ctx = compressed_model.nncf.get_tracing_context()
     ctx.elastic_depth = True
     ctx.set_active_skipped_block([0])
 
@@ -326,15 +368,19 @@ def get_ref_output_resnet50_after_backward__with_elastic_depth():
 
 def get_output_model__with_manual_skipping():
     model = DepthBasicConvTestModel(depth=3)
-    model.set_skipped_layers(['conv1'])
+    model.set_skipped_layers(["conv1"])
     output = model(torch.ones(model.INPUT_SIZE))
     return output
 
 
 def get_output_model__with_elastic_depth():
     target_model = DepthBasicConvTestModel(depth=3)
-    skipped_block = [BuildingBlock('DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv0]/conv2d_0',
-                                   'DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv1]/conv2d_0')]
+    skipped_block = [
+        BuildingBlock(
+            "DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv0]/conv2d_0",
+            "DepthBasicConvTestModel/Sequential[branch_with_blocks]/NNCFConv2d[conv1]/conv2d_0",
+        )
+    ]
     compressed_model = get_model_with_elastic_depth(target_model, target_model.INPUT_SIZE, skipped_block)
     output = compressed_model(torch.ones(target_model.INPUT_SIZE))
 
@@ -369,8 +415,9 @@ def test_correct_output_with_active_skipped_block():
 
 
 def test_correct_grad_when_block_skipped__resnet50():
-    from nncf.torch.utils import manual_seed
     from torch.backends import cudnn
+
+    from nncf.torch.utils import manual_seed
 
     manual_seed(0)
     cudnn.deterministic = True
@@ -436,25 +483,21 @@ class TwoBranchesAfterInput(nn.Module):
         return x * self.dummy + x
 
 
-@pytest.mark.parametrize('model_creator', (
-        TwoPermute, ChunkConcat, TwoBranchesBeforeInput, TwoBranchesAfterInput))
+@pytest.mark.parametrize("model_creator", (TwoPermute, ChunkConcat, TwoBranchesBeforeInput, TwoBranchesAfterInput))
 def test_can_skip_trivial_block(model_creator):
     model = model_creator()
     input_sample_sizes = model.INPUT_SIZE
     nncf_config = get_empty_config(input_sample_sizes=input_sample_sizes)
-    nncf_config['bootstrapNAS'] = {'training': {
-        'elasticity': {
-            'available_elasticity_dims': [ElasticityDim.DEPTH.value],
-            'depth': {
-                'min_block_size': 1
-            }
+    nncf_config["bootstrapNAS"] = {
+        "training": {
+            "elasticity": {"available_elasticity_dims": [ElasticityDim.DEPTH.value], "depth": {"min_block_size": 1}}
         }
-    }}
+    }
     input_ = torch.ones(input_sample_sizes)
     compressed_model, _ = create_bootstrap_training_model_and_ctrl(model, nncf_config)
 
     # activate elastic depth to skip the only one possible block
-    ctx = compressed_model.get_tracing_context()
+    ctx = compressed_model.nncf.get_tracing_context()
     ctx.elastic_depth = True
     ctx.set_active_skipped_block([0])
 
@@ -470,23 +513,28 @@ def test_can_skip_trivial_block(model_creator):
 # Dynamic Graph
 ###########################
 
+
 def test_check_dinamic_graph_not_grow():
     model = ResNet50()
     device = move_model_to_cuda_if_available(model)
     nncf_config = get_empty_config(input_sample_sizes=RESNET50_INPUT_SIZE)
-    skipped_blocks = [BuildingBlock('ResNet/Sequential[layer1]/Bottleneck[1]/relu_2',
-                                    'ResNet/Sequential[layer1]/Bottleneck[2]/relu_2'),
-                      BuildingBlock('ResNet/Sequential[layer2]/Bottleneck[2]/relu_2',
-                                    'ResNet/Sequential[layer2]/Bottleneck[3]/relu_2'),
-                      BuildingBlock('ResNet/Sequential[layer3]/Bottleneck[4]/relu_2',
-                                    'ResNet/Sequential[layer3]/Bottleneck[5]/relu_2'),
-                      BuildingBlock('ResNet/Sequential[layer4]/Bottleneck[1]/relu_2',
-                                    'ResNet/Sequential[layer4]/Bottleneck[2]/relu_2')
-                      ]
+    skipped_blocks = [
+        BuildingBlock(
+            "ResNet/Sequential[layer1]/Bottleneck[1]/relu_2", "ResNet/Sequential[layer1]/Bottleneck[2]/relu_2"
+        ),
+        BuildingBlock(
+            "ResNet/Sequential[layer2]/Bottleneck[2]/relu_2", "ResNet/Sequential[layer2]/Bottleneck[3]/relu_2"
+        ),
+        BuildingBlock(
+            "ResNet/Sequential[layer3]/Bottleneck[4]/relu_2", "ResNet/Sequential[layer3]/Bottleneck[5]/relu_2"
+        ),
+        BuildingBlock(
+            "ResNet/Sequential[layer4]/Bottleneck[1]/relu_2", "ResNet/Sequential[layer4]/Bottleneck[2]/relu_2"
+        ),
+    ]
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, nncf_config)
 
-    # pylint: disable=protected-access
-    ctx = compressed_model.get_tracing_context()
+    ctx = compressed_model.nncf.get_tracing_context()
     ctx.set_elastic_blocks(skipped_blocks)
     nodes_count = ctx.graph.get_nodes_count()
     ctx.elastic_depth = True  # activate mode with elastic depth
@@ -501,19 +549,20 @@ def test_check_dinamic_graph_not_grow():
 # Depth Indicator
 ###########################
 
+
 def test_validate_depth_config():
     model = ResNet50()
     move_model_to_cuda_if_available(model)
     nncf_config = get_empty_config(input_sample_sizes=RESNET50_INPUT_SIZE)
-    nncf_config['bootstrapNAS'] = {'training': {'elasticity': {
-        'available_elasticity_dims': [ElasticityDim.DEPTH.value]
-    }}}
+    nncf_config["bootstrapNAS"] = {
+        "training": {"elasticity": {"available_elasticity_dims": [ElasticityDim.DEPTH.value]}}
+    }
     _, controller = create_bootstrap_training_model_and_ctrl(model, nncf_config)
     depth_handler = controller.multi_elasticity_handler.depth_handler
 
     check = [[1, 4], [1, 3], [2], [0], [1, 9], [1], [2], [3], [2, 3], [5, 6, 7, 8, 9]]
     valid_1 = [[1, 4], [1], [], [], [1, 9], [1], [], [], [], [9]]
-    # pylint: disable=protected-access
+
     for i, valid_value in enumerate(valid_1):
         assert valid_value == depth_handler._remove_inconsistent_blocks(check[i])
 
@@ -531,8 +580,8 @@ def test_change_depth_indicator():
     model = ResNet50()
     move_model_to_cuda_if_available(model)
     nncf_config = get_empty_config(input_sample_sizes=RESNET50_INPUT_SIZE)
-    nncf_config['bootstrapNAS'] = {
-        'training': {'elasticity': {'available_elasticity_dims': [ElasticityDim.DEPTH.value]}}
+    nncf_config["bootstrapNAS"] = {
+        "training": {"elasticity": {"available_elasticity_dims": [ElasticityDim.DEPTH.value]}}
     }
     _, ctrl = create_bootstrap_training_model_and_ctrl(model, nncf_config)
 

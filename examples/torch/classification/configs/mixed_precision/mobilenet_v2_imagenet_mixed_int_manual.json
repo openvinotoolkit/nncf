@@ -1,5 +1,5 @@
 {
-    "model": "mobilenet_v2",
+    "model": "mobilenet_v2_tv_092",
     "pretrained": true,
     "input_info": {
         "sample_size": [

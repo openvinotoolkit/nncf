@@ -87,12 +87,12 @@ strict digraph  {
 "1 ResNeXt/NNCFConv2d[conv1]/conv2d_0" -> "2 ResNeXt/NNCFBatchNorm2d[bn1]/batch_norm_0"  [label="(1, 64, 32, 32)", style=solid];
 "2 ResNeXt/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "3 ResNeXt/relu_0"  [label="(1, 64, 32, 32)", style=solid];
 "3 ResNeXt/relu_0" -> "4 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/conv2d_0"  [label="(1, 64, 32, 32)", style=solid];
+"3 ResNeXt/relu_0" -> "12 ResNeXt/Sequential[layer1]/Block[0]/Sequential[shortcut]/NNCFConv2d[0]/conv2d_0"  [label="(1, 64, 32, 32)", style=solid];
 "4 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/conv2d_0" -> "5 ResNeXt/Sequential[layer1]/Block[0]/NNCFBatchNorm2d[bn1]/batch_norm_0"  [label="(1, 128, 32, 32)", style=solid];
 "5 ResNeXt/Sequential[layer1]/Block[0]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "6 ResNeXt/Sequential[layer1]/Block[0]/relu_0"  [label="(1, 128, 32, 32)", style=solid];
 "6 ResNeXt/Sequential[layer1]/Block[0]/relu_0" -> "7 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv2]/conv2d_0"  [label="(1, 128, 32, 32)", style=solid];
 "7 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv2]/conv2d_0" -> "8 ResNeXt/Sequential[layer1]/Block[0]/NNCFBatchNorm2d[bn2]/batch_norm_0"  [label="(1, 128, 32, 32)", style=solid];
 "8 ResNeXt/Sequential[layer1]/Block[0]/NNCFBatchNorm2d[bn2]/batch_norm_0" -> "9 ResNeXt/Sequential[layer1]/Block[0]/relu_1"  [label="(1, 128, 32, 32)", style=solid];
-"3 ResNeXt/relu_0" -> "12 ResNeXt/Sequential[layer1]/Block[0]/Sequential[shortcut]/NNCFConv2d[0]/conv2d_0"  [label="(1, 64, 32, 32)", style=solid];
 "9 ResNeXt/Sequential[layer1]/Block[0]/relu_1" -> "10 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv3]/conv2d_0"  [label="(1, 128, 32, 32)", style=solid];
 "10 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv3]/conv2d_0" -> "11 ResNeXt/Sequential[layer1]/Block[0]/NNCFBatchNorm2d[bn3]/batch_norm_0"  [label="(1, 256, 32, 32)", style=solid];
 "11 ResNeXt/Sequential[layer1]/Block[0]/NNCFBatchNorm2d[bn3]/batch_norm_0" -> "14 ResNeXt/Sequential[layer1]/Block[0]/__iadd___0"  [label="(1, 256, 32, 32)", style=solid];

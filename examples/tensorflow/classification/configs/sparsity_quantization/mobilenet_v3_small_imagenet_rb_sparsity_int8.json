@@ -52,14 +52,6 @@
         },
         {
             "algorithm": "quantization",
-            "preset": "mixed",
-            "weights": {
-                "bits": 8,
-                "per_channel": true
-            },
-            "activations": {
-                "bits": 8,
-                "per_channel": false
-            }
+            "preset": "mixed"
         }]
 }

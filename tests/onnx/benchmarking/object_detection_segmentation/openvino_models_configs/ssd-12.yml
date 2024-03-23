@@ -1,0 +1,32 @@
+models:
+  - name:  ssd-12
+    launchers:
+      - framework: openvino
+        device: CPU
+        tags: ['OpenVINO']
+        adapter:
+          type: ssd_onnx
+          scores_out: '.*scores*'
+          labels_out: '.*labels*'
+          bboxes_out: '.*bboxes*'
+
+    datasets:
+      - name: ms_coco_detection_80_class_with_background
+        preprocessing:
+          - type: bgr_to_rgb
+          - type: resize
+            size: 1200
+            interpolation: LINEAR
+          # Scale to [0, 1]
+          - type: normalization
+            std: 255.0
+          - type: normalization
+            mean: (0.485, 0.456, 0.406)
+            std: (0.229, 0.224, 0.225)
+
+        postprocessing:
+          - type: resize_prediction_boxes
+
+        metrics:
+          - type: coco_precision
+            threshold: .5:.05:.95

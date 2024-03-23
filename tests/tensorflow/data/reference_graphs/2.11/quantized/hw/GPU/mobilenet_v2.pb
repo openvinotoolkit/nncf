@@ -1,0 +1,1 @@
+../../../../2.8/quantized/hw/GPU/mobilenet_v2.pb

@@ -3,6 +3,20 @@ models:
     launchers:
       - framework: onnx_runtime
         execution_providers: ['OpenVINOExecutionProvider']
+        tags: ['OpenVINOExecutionProvider']
+        adapter:
+          type: tf_object_detection
+          scores_out: detection_scores
+          classes_out: detection_classes
+          boxes_out: detection_boxes
+          num_detections_out: num_detections
+        inputs:
+          - name: inputs
+            type: INPUT
+            layout: "NHWC"
+      - framework: onnx_runtime
+        execution_providers: ['CPUExecutionProvider']
+        tags: ['CPUExecutionProvider']
         adapter:
           type: tf_object_detection
           scores_out: detection_scores

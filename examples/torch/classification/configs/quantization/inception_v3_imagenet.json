@@ -1,20 +1,10 @@
 {
     "model": "inception_v3",
     "pretrained": true,
+    "eval_only": true,
     "input_info": {
       "sample_size": [2, 3, 299, 299]
     },
     "num_classes": 1000,
-    "batch_size" : 144,
-    "epochs": 5,
-    "multiprocessing_distributed" : true,
-
-    "optimizer": {
-        "type": "Adam",
-        "schedule_type": "multistep",
-        "base_lr": 1e-6,
-        "steps": [
-            1
-        ]
-    }
+    "batch_size" : 144
 }

@@ -3,9 +3,14 @@ models:
     launchers:
       - framework: onnx_runtime
         execution_providers: ['OpenVINOExecutionProvider']
+        tags: ['OpenVINOExecutionProvider']
         adapter:
           type: segmentation
-
+      - framework: onnx_runtime
+        execution_providers: ['CPUExecutionProvider']
+        tags: ['CPUExecutionProvider']
+        adapter:
+          type: segmentation
     datasets:
       - name: mscoco_segmentation_to_voc
         annotation_conversion:
@@ -14,6 +19,7 @@ models:
           has_background: True
           sort_annotations: True
           semantic_only: True
+          convert_mask: False
           # Do not change masks_dir path
           masks_dir: mscoco_to_voc_seg_masks
           # Only evaluate on VOC labels

@@ -1,29 +1,26 @@
-"""
- Copyright (c) 2022 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2024 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from copy import deepcopy
-from typing import Dict
-from typing import List
+from typing import Dict, List
 
 from nncf.common.graph import NNCFNode
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizationConstraints
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.utils.helpers import matches_any
+from nncf.common.scopes import matches_any
 
 
-def get_scoped_quantizer_config(base_config: QuantizerConfig,
-                                scope_str: str,
-                                scope_overrides: Dict = None) -> QuantizerConfig:
+def get_scoped_quantizer_config(
+    base_config: QuantizerConfig, scope_str: str, scope_overrides: Dict = None
+) -> QuantizerConfig:
     """
     Returns a QuantizerConfig which is based on a given config, which will have overrides
     applied on top of it according to the dictionary of per-scope overrides.
@@ -39,7 +36,7 @@ def get_scoped_quantizer_config(base_config: QuantizerConfig,
     qconfig = deepcopy(base_config)
     if scope_overrides is None:
         scope_overrides = {}
-    for overridden_scope in scope_overrides.keys():
+    for overridden_scope in scope_overrides:
         if matches_any(scope_str, overridden_scope):
             config_overrides = scope_overrides[overridden_scope]
             if config_overrides.get("bits") is not None:
@@ -53,12 +50,13 @@ def get_scoped_quantizer_config(base_config: QuantizerConfig,
     return qconfig
 
 
-def assign_qconfig_lists_to_modules(nodes_with_weights: List[NNCFNode],
-                                    default_weight_qconfig: QuantizerConfig,
-                                    global_weight_constraints: QuantizationConstraints = None,
-                                    scope_overrides_dict: Dict = None,
-                                    hw_config: HWConfig = None) -> Dict[NNCFNode,
-                                                                        List[QuantizerConfig]]:
+def assign_qconfig_lists_to_modules(
+    nodes_with_weights: List[NNCFNode],
+    default_weight_qconfig: QuantizerConfig,
+    global_weight_constraints: QuantizationConstraints = None,
+    scope_overrides_dict: Dict = None,
+    hw_config: HWConfig = None,
+) -> Dict[NNCFNode, List[QuantizerConfig]]:
     """
     Assigns a list of possible quantizer configurations (as determined by HW config, defaults and overrides)
     to each weighted node that was passed.
@@ -74,7 +72,7 @@ def assign_qconfig_lists_to_modules(nodes_with_weights: List[NNCFNode],
     :return: A dict of each weighted node vs. the list of quantizer configs allowed for quantizing the associated
       weights
     """
-    retval = {}  # type: Dict[NNCFNode, List[QuantizerConfig]]
+    retval: Dict[NNCFNode, List[QuantizerConfig]] = {}
     default_qconfig = deepcopy(default_weight_qconfig)
     if global_weight_constraints is not None:
         default_qconfig = global_weight_constraints.apply_constraints_to(default_qconfig)
@@ -84,9 +82,9 @@ def assign_qconfig_lists_to_modules(nodes_with_weights: List[NNCFNode],
     if hw_config is not None:
         meta_vs_qconfig_map = hw_config.get_metatype_vs_quantizer_configs_map(for_weights=True)
     for node in nodes_with_weights:
-        qconfig_for_current_scope = get_scoped_quantizer_config(default_qconfig,
-                                                                node.node_name,
-                                                                weight_scope_overrides_dict)
+        qconfig_for_current_scope = get_scoped_quantizer_config(
+            default_qconfig, node.node_name, weight_scope_overrides_dict
+        )
         if hw_config is None:
             qconfig_list = [qconfig_for_current_scope]
         else:
@@ -96,19 +94,15 @@ def assign_qconfig_lists_to_modules(nodes_with_weights: List[NNCFNode],
                 qconfig_list = [default_qconfig]
             elif HWConfig.is_qconf_list_corresponding_to_unspecified_op(qconfig_list):
                 continue  # The module will not have its weights quantized
-            try:
-                local_constraints = global_weight_constraints
-                for overridden_scope, scoped_override_dict in scope_overrides_dict.items():
-                    if matches_any(node.node_name, overridden_scope):
-                        scope_constraints = QuantizationConstraints.from_config_dict(scoped_override_dict)
-                        local_constraints = local_constraints.get_updated_constraints(scope_constraints)
-                qconfig_list = local_constraints.constrain_qconfig_list(qconfig_list)
 
-            except RuntimeError as e:
-                err_msg = "Quantization parameter constraints specified in NNCF config are incompatible with HW "
-                err_msg += "capabilities as specified in HW config type '{}'. ".format(hw_config.target_device)
-                err_msg += "First conflicting quantizer location: {}".format(str(node.node_name))
-                raise RuntimeError(err_msg) from e
+            local_constraints = global_weight_constraints
+            for overridden_scope, scoped_override_dict in scope_overrides_dict.items():
+                if matches_any(node.node_name, overridden_scope):
+                    scope_constraints = QuantizationConstraints.from_config_dict(scoped_override_dict)
+                    local_constraints = local_constraints.get_updated_constraints(scope_constraints)
+            qconfig_list = local_constraints.constrain_qconfig_list(
+                node.node_name, hw_config.target_device, qconfig_list
+            )
 
         retval[node] = qconfig_list
     return retval

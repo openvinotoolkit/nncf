@@ -1,24 +1,24 @@
-"""
- Copyright (c) 2022 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2024 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from abc import ABC
 from abc import abstractmethod
+from dataclasses import dataclass
 from enum import Enum
-from typing import List, Tuple, Any, Union
+from typing import Any, List, Optional, Tuple, Union
 
 
 class Dtype(Enum):
-    FLOAT = 'float'
-    INTEGER = 'int'
+    FLOAT = "float"
+    INTEGER = "int"
 
 
 class BaseLayerAttributes(ABC):
@@ -27,50 +27,44 @@ class BaseLayerAttributes(ABC):
     of modules/layers.
     """
 
+    def __eq__(self, __o: object) -> bool:
+        return isinstance(__o, self.__class__) and self.__dict__ == __o.__dict__
+
 
 class MultipleInputLayerAttributes(BaseLayerAttributes):
-    """
-    Represents a layer with multiple inputs.
-    """
+    def __init__(self, axis: int, num_inputs: Optional[int] = None):
+        """
 
-    def __init__(self,
-                 axis: int):
+        :param axis: the dimension over which the inputs are combined (e.g. concatenated).
+        :param num_inputs: Number of inputs.
+        """
         self.axis = axis
-
-    def __eq__(self, other: Any):
-        return isinstance(other, MultipleInputLayerAttributes) \
-               and self.axis == other.axis
+        self.num_inputs = num_inputs
 
 
 class MultipleOutputLayerAttributes(BaseLayerAttributes):
-    """
-    Represents a layer with multiple outputs.
-    """
+    def __init__(self, chunks: Union[int, List], axis: int):
+        """
 
-    def __init__(self,
-                 chunks: Union[int, List],
-                 axis: int):
+        :param chunks: Number of chunks (outputs).
+        :param axis: The dimension along which to make multiple outputs (e.g. split the tensor).
+        """
         self.chunks = chunks
         self.axis = axis
 
-    def __eq__(self, other: Any):
-        return isinstance(other, MultipleOutputLayerAttributes) \
-               and self.chunks == other.chunks \
-               and self.axis == other.axis
-
 
 class WeightedLayerAttributes(BaseLayerAttributes):
-    """
-    Represents a layer with weights.
-    """
+    def __init__(self, weight_requires_grad: bool, dtype: Dtype = Dtype.FLOAT, with_bias: bool = False):
+        """
 
-    def __init__(self, weight_requires_grad: bool, dtype: Dtype = Dtype.FLOAT):
+        :param weight_requires_grad: Is True if gradients need to be computed for the corresponding Tensor,
+        False otherwise.
+        :param dtype: is an object that represents the type of data.
+        :param with_bias: Operation include bias.
+        """
         self.weight_requires_grad = weight_requires_grad
         self.dtype = dtype
-
-    def __eq__(self, other: Any):
-        return isinstance(other, WeightedLayerAttributes) \
-               and self.weight_requires_grad == other.weight_requires_grad
+        self.with_bias = with_bias
 
     @abstractmethod
     def get_weight_shape(self) -> List[int]:
@@ -91,9 +85,21 @@ class GenericWeightedLayerAttributes(WeightedLayerAttributes):
     of the exact meaning of the weight indices.
     """
 
-    def __init__(self, weight_requires_grad: bool, weight_shape: List[int],
-                 filter_dimension_idx: int = 0):
-        super().__init__(weight_requires_grad)
+    def __init__(
+        self,
+        weight_requires_grad: bool,
+        weight_shape: List[int],
+        filter_dimension_idx: int = 0,
+        with_bias: bool = False,
+    ):
+        """
+
+        :param weight_requires_grad: Is True if gradients need to be computed for the corresponding Tensor,
+        False otherwise.
+        :param weight_shape: shape of weight tensor.
+        :param filter_dimension_idx: the axis, along which the filters are stored.
+        """
+        super().__init__(weight_requires_grad=weight_requires_grad, with_bias=with_bias)
         self.weight_shape = weight_shape
         self.filter_dimension_idx = filter_dimension_idx
 
@@ -105,54 +111,73 @@ class GenericWeightedLayerAttributes(WeightedLayerAttributes):
 
 
 class LinearLayerAttributes(WeightedLayerAttributes):
-    def __init__(self,
-                 weight_requires_grad: bool,
-                 in_features: int,
-                 out_features: int):
-        super().__init__(weight_requires_grad)
+    def __init__(
+        self,
+        weight_requires_grad: bool,
+        in_features: int,
+        out_features: int,
+        with_bias: bool = True,
+    ):
+        """
+
+        :param weight_requires_grad: Is True if gradients need to be computed for the corresponding Tensor,
+        False otherwise.
+        :param in_features: number of input channels in the layer's input.
+        :param out_features: number of channels produced by the layer.
+        """
+        super().__init__(weight_requires_grad, with_bias=with_bias)
         self.in_features = in_features
         self.out_features = out_features
 
     def get_weight_shape(self) -> List[int]:
         return [self.out_features, self.in_features]
 
+    def get_bias_shape(self) -> int:
+        return self.out_features if self.with_bias is True else 0
+
     def get_target_dim_for_compression(self) -> int:
         return 0
 
 
 class ConvolutionLayerAttributes(WeightedLayerAttributes):
-    """
-    This class stores attributes of convolution modules/layers
-    that are useful for some algorithms.
-    """
+    def __init__(
+        self,
+        weight_requires_grad: bool,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: Tuple[int, ...],
+        stride: Tuple[int, ...],
+        dilations: Tuple[int, ...],
+        groups: int,
+        transpose: bool,
+        padding_values: Union[Tuple[int, ...], int],
+        with_bias: bool = False,
+        output_padding_values: Optional[Union[Tuple[int, ...], int]] = None,
+    ):
+        """
 
-    def __init__(self,
-                 weight_requires_grad: bool,
-                 in_channels: int,
-                 out_channels: int,
-                 kernel_size: Tuple[int, ...],
-                 stride: Tuple[int, ...],
-                 groups: int,
-                 transpose: bool,
-                 padding_values: Tuple[int, ...]):
-        super().__init__(weight_requires_grad)
+        :param weight_requires_grad: Is True if gradients need to be computed for the corresponding Tensor,
+        False otherwise.
+        :param in_channels: Number of input channels in the layer's input.
+        :param out_channels: Number of channels produced by the layer.
+        :param kernel_size: Size of the convolving kernel.
+        :param stride: Stride of the convolution.
+        :param groups: Number of blocked connections from input channels to output channels.
+        :param transpose: If set to `True`, the layer is an ordinary convolution, otherwise - transpose one.
+        :param padding_values: Defines the amount of padding applied to the layer's input.
+        :param with_bias: Operation include bias.
+        :param output_padding_values: Defines the amount of output padding applied to the layer's output, for transpose.
+        """
+        super().__init__(weight_requires_grad=weight_requires_grad, with_bias=with_bias)
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = kernel_size
         self.stride = stride
+        self.dilations = dilations
         self.groups = groups
         self.transpose = transpose
         self.padding_values = padding_values
-
-    def __eq__(self, other: Any):
-        return isinstance(other, ConvolutionLayerAttributes) \
-               and super().__eq__(other) \
-               and self.in_channels == other.in_channels \
-               and self.out_channels == other.out_channels \
-               and self.kernel_size == other.kernel_size \
-               and self.stride == other.stride \
-               and self.groups == other.groups \
-               and self.transpose == other.transpose
+        self.output_padding_values = output_padding_values
 
     def get_weight_shape(self) -> List[int]:
         if not self.transpose:
@@ -167,24 +192,17 @@ class ConvolutionLayerAttributes(WeightedLayerAttributes):
 
 
 class GroupNormLayerAttributes(WeightedLayerAttributes):
-    """
-    This class stores attributes of group normalization modules/layers
-    that are useful for some algorithms.
-    """
+    def __init__(self, weight_requires_grad: bool, num_channels: int, num_groups: int):
+        """
 
-    def __init__(self,
-                 weight_requires_grad: bool,
-                 num_channels: int,
-                 num_groups: int):
+        :param weight_requires_grad: Is True if gradients need to be computed for the corresponding Tensor,
+        False otherwise.
+        :param num_channels: number of channels expected in the layer's input.
+        :param num_groups: number of groups to separate the channels into.
+        """
         super().__init__(weight_requires_grad)
         self.num_channels = num_channels
         self.num_groups = num_groups
-
-    def __eq__(self, other: Any):
-        return isinstance(other, GroupNormLayerAttributes) \
-               and super().__eq__(other) \
-               and self.num_channels == other.num_channels \
-               and self.num_groups == other.num_groups
 
     def get_weight_shape(self) -> List[int]:
         return [self.num_channels]
@@ -193,14 +211,74 @@ class GroupNormLayerAttributes(WeightedLayerAttributes):
         return 0
 
 
+@dataclass
 class ReshapeLayerAttributes(BaseLayerAttributes):
     """
-    This class stores attributes of reshape modules/layers
-    that are useful for some algorithms.
+    :param input_shape: number of elements of each of the axes of a input tensor.
+    :param output_shape: number of elements of each of the axes of a output tensor.
     """
 
-    def __init__(self,
-                 input_shape: List[int],
-                 output_shape: List[int]):
-        self.input_shape = input_shape
-        self.output_shape = output_shape
+    input_shape: List[int]
+    output_shape: List[int]
+
+
+@dataclass
+class TransposeLayerAttributes(BaseLayerAttributes):
+    """
+    :param dim0: the first dimension to be transposed.
+    :param dim1: the second dimension to be transposed.
+    """
+
+    dim0: int
+    dim1: int
+
+
+@dataclass
+class PermuteLayerAttributes(BaseLayerAttributes):
+    """
+    :param permutation: the desired ordering of dimensions.
+    """
+
+    permutation: Tuple[int, ...]
+
+
+@dataclass
+class GetItemLayerAttributes(BaseLayerAttributes):
+    """
+    :param key: usually int, tuple of int or slice.
+    """
+
+    key: Any
+
+
+@dataclass
+class PadLayerAttributes(BaseLayerAttributes):
+    """
+    :param mode: mode of the padding operation.
+    :param value: fill value of the padding operation.
+    """
+
+    mode: str = "constant"
+    value: float = 0
+
+
+@dataclass
+class ConvertDtypeLayerAttributes(BaseLayerAttributes):
+    """
+    :param src_dtype: node input data type.
+    :param dst_dtype: node output data type.
+    """
+
+    src_dtype: Any
+    dst_dtype: Any
+
+
+@dataclass
+class ConstantLayerAttributes(BaseLayerAttributes):
+    """
+    :param name: Constant name.
+    :param shape: Constant shape.
+    """
+
+    name: str
+    shape: List[int]

@@ -4,7 +4,6 @@
   "input_info": {
     "sample_size":  [2, 3, 300, 300]
   },
-  "pretrained": true,
   "basenet": "./vgg16_bn-6c64b313.pth", // Download this from https://download.pytorch.org/models/vgg16_bn-6c64b313.pth if you want to pretrain your own FP32 net
   "num_classes": 21,
   "dataset": "voc",
@@ -32,5 +31,6 @@
     "steps": [8, 16, 32, 64, 100, 300],
     "aspect_ratios": [[2], [2, 3], [2, 3], [2, 3], [2], [2]],
     "flip": true
-  }
+  },
+  "export_to_ir_via_onnx": true
 }

@@ -1,22 +1,22 @@
-"""
- Copyright (c) 2022 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2024 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from typing import Dict, Any
 import json
+from typing import Any, Dict
 
 import tensorflow as tf
 
 from nncf.common.compression import BaseCompressionAlgorithmController
+
+# TODO(achurkin): remove pylint ignore after 120296 ticked is fixed
 
 
 class TFCompressionState(tf.train.experimental.PythonState):
@@ -75,8 +75,9 @@ class TFCompressionStateLoader(tf.train.experimental.PythonState):
         return self._state
 
     def serialize(self) -> str:
-        raise NotImplementedError('Use an instance of the `TFCompressionState` class to '
-                                  'serialize the compression state.')
+        raise NotImplementedError(
+            "Use an instance of the `TFCompressionState` class to serialize the compression state."
+        )
 
     def deserialize(self, string_value: str) -> None:
         """

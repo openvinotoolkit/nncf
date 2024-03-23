@@ -3,6 +3,18 @@ models:
     launchers:
       - framework: onnx_runtime
         execution_providers: ['OpenVINOExecutionProvider']
+        tags: ['OpenVINOExecutionProvider']
+        adapter:
+          type: yolo_v3_onnx
+          boxes_out: yolonms_layer_1/ExpandDims_1:0
+          scores_out: yolonms_layer_1/ExpandDims_3:0
+          indices_out: yolonms_layer_1/concat_2:0
+        inputs:
+          - name: image_shape
+            type: ORIG_IMAGE_INFO
+      - framework: onnx_runtime
+        execution_providers: ['CPUExecutionProvider']
+        tags: ['CPUExecutionProvider']
         adapter:
           type: yolo_v3_onnx
           boxes_out: yolonms_layer_1/ExpandDims_1:0

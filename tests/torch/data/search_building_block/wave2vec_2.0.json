@@ -1,0 +1,710 @@
+[
+    {
+        "basic_block": {
+            "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/__add___0",
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/Dropout[dropout]/dropout_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Dropout[dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/NNCFLinear[k_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/NNCFLinear[out_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/NNCFLinear[q_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/NNCFLinear[v_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/__mul___0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/bmm_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/bmm_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/contiguous_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/contiguous_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/contiguous_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/reshape_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/reshape_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/reshape_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/softmax_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/transpose_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/transpose_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/transpose_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/transpose_3",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/transpose_4",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/view_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/view_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/view_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/view_3",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2Attention[attention]/view_4",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/__add___0"
+        ],
+        "ordinal_ids": [
+            28,
+            55
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/__add___1",
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/NNCFLayerNorm[layer_norm]/layer_norm_0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2FeedForward[feed_forward]/Dropout[intermediate_dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2FeedForward[feed_forward]/Dropout[output_dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2FeedForward[feed_forward]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2FeedForward[feed_forward]/NNCFLinear[intermediate_dense]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/Wav2Vec2FeedForward[feed_forward]/NNCFLinear[output_dense]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/__add___1"
+        ],
+        "ordinal_ids": [
+            56,
+            62
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/__add___0",
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[0]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Dropout[dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/NNCFLinear[k_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/NNCFLinear[out_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/NNCFLinear[q_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/NNCFLinear[v_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/__mul___0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/bmm_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/bmm_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/contiguous_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/contiguous_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/contiguous_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/reshape_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/reshape_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/reshape_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/softmax_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/transpose_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/transpose_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/transpose_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/transpose_3",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/transpose_4",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/view_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/view_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/view_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/view_3",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2Attention[attention]/view_4",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/__add___0"
+        ],
+        "ordinal_ids": [
+            63,
+            90
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/__add___1",
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/NNCFLayerNorm[layer_norm]/layer_norm_0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2FeedForward[feed_forward]/Dropout[intermediate_dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2FeedForward[feed_forward]/Dropout[output_dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2FeedForward[feed_forward]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2FeedForward[feed_forward]/NNCFLinear[intermediate_dense]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/Wav2Vec2FeedForward[feed_forward]/NNCFLinear[output_dense]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/__add___1"
+        ],
+        "ordinal_ids": [
+            91,
+            97
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/__add___0",
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[1]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Dropout[dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/NNCFLinear[k_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/NNCFLinear[out_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/NNCFLinear[q_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/NNCFLinear[v_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/__mul___0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/bmm_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/bmm_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/contiguous_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/contiguous_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/contiguous_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/reshape_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/reshape_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/reshape_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/softmax_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/transpose_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/transpose_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/transpose_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/transpose_3",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/transpose_4",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/view_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/view_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/view_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/view_3",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2Attention[attention]/view_4",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/__add___0"
+        ],
+        "ordinal_ids": [
+            98,
+            125
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/__add___1",
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/NNCFLayerNorm[layer_norm]/layer_norm_0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2FeedForward[feed_forward]/Dropout[intermediate_dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2FeedForward[feed_forward]/Dropout[output_dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2FeedForward[feed_forward]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2FeedForward[feed_forward]/NNCFLinear[intermediate_dense]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/Wav2Vec2FeedForward[feed_forward]/NNCFLinear[output_dense]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/__add___1"
+        ],
+        "ordinal_ids": [
+            126,
+            132
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/__add___0",
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[2]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Dropout[dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/NNCFLinear[k_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/NNCFLinear[out_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/NNCFLinear[q_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/NNCFLinear[v_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/__mul___0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/bmm_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/bmm_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/contiguous_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/contiguous_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/contiguous_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/reshape_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/reshape_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/reshape_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/softmax_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/transpose_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/transpose_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/transpose_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/transpose_3",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/transpose_4",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/view_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/view_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/view_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/view_3",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2Attention[attention]/view_4",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/__add___0"
+        ],
+        "ordinal_ids": [
+            133,
+            160
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/__add___1",
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/NNCFLayerNorm[layer_norm]/layer_norm_0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2FeedForward[feed_forward]/Dropout[intermediate_dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2FeedForward[feed_forward]/Dropout[output_dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2FeedForward[feed_forward]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2FeedForward[feed_forward]/NNCFLinear[intermediate_dense]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/Wav2Vec2FeedForward[feed_forward]/NNCFLinear[output_dense]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/__add___1"
+        ],
+        "ordinal_ids": [
+            161,
+            167
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/__add___0",
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[3]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Dropout[dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/NNCFLinear[k_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/NNCFLinear[out_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/NNCFLinear[q_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/NNCFLinear[v_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/__mul___0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/bmm_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/bmm_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/contiguous_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/contiguous_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/contiguous_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/reshape_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/reshape_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/reshape_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/softmax_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/transpose_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/transpose_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/transpose_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/transpose_3",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/transpose_4",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/view_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/view_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/view_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/view_3",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2Attention[attention]/view_4",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/__add___0"
+        ],
+        "ordinal_ids": [
+            168,
+            195
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/__add___1",
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/NNCFLayerNorm[layer_norm]/layer_norm_0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2FeedForward[feed_forward]/Dropout[intermediate_dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2FeedForward[feed_forward]/Dropout[output_dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2FeedForward[feed_forward]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2FeedForward[feed_forward]/NNCFLinear[intermediate_dense]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/Wav2Vec2FeedForward[feed_forward]/NNCFLinear[output_dense]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/__add___1"
+        ],
+        "ordinal_ids": [
+            196,
+            202
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/__add___0",
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[4]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Dropout[dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/NNCFLinear[k_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/NNCFLinear[out_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/NNCFLinear[q_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/NNCFLinear[v_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/__mul___0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/bmm_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/bmm_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/contiguous_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/contiguous_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/contiguous_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/reshape_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/reshape_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/reshape_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/softmax_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/transpose_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/transpose_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/transpose_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/transpose_3",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/transpose_4",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/view_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/view_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/view_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/view_3",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2Attention[attention]/view_4",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/__add___0"
+        ],
+        "ordinal_ids": [
+            203,
+            230
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/__add___1",
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/NNCFLayerNorm[layer_norm]/layer_norm_0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2FeedForward[feed_forward]/Dropout[intermediate_dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2FeedForward[feed_forward]/Dropout[output_dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2FeedForward[feed_forward]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2FeedForward[feed_forward]/NNCFLinear[intermediate_dense]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/Wav2Vec2FeedForward[feed_forward]/NNCFLinear[output_dense]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/__add___1"
+        ],
+        "ordinal_ids": [
+            231,
+            237
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/__add___0",
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[5]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Dropout[dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/NNCFLinear[k_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/NNCFLinear[out_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/NNCFLinear[q_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/NNCFLinear[v_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/__mul___0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/bmm_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/bmm_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/contiguous_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/contiguous_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/contiguous_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/reshape_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/reshape_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/reshape_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/softmax_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/transpose_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/transpose_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/transpose_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/transpose_3",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/transpose_4",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/view_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/view_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/view_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/view_3",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2Attention[attention]/view_4",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/__add___0"
+        ],
+        "ordinal_ids": [
+            238,
+            265
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/__add___1",
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/NNCFLayerNorm[layer_norm]/layer_norm_0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2FeedForward[feed_forward]/Dropout[intermediate_dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2FeedForward[feed_forward]/Dropout[output_dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2FeedForward[feed_forward]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2FeedForward[feed_forward]/NNCFLinear[intermediate_dense]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/Wav2Vec2FeedForward[feed_forward]/NNCFLinear[output_dense]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/__add___1"
+        ],
+        "ordinal_ids": [
+            266,
+            272
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/__add___0",
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[6]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Dropout[dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/NNCFLinear[k_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/NNCFLinear[out_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/NNCFLinear[q_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/NNCFLinear[v_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/__mul___0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/bmm_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/bmm_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/contiguous_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/contiguous_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/contiguous_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/reshape_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/reshape_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/reshape_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/softmax_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/transpose_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/transpose_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/transpose_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/transpose_3",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/transpose_4",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/view_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/view_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/view_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/view_3",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2Attention[attention]/view_4",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/__add___0"
+        ],
+        "ordinal_ids": [
+            273,
+            300
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/__add___1",
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/NNCFLayerNorm[layer_norm]/layer_norm_0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2FeedForward[feed_forward]/Dropout[intermediate_dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2FeedForward[feed_forward]/Dropout[output_dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2FeedForward[feed_forward]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2FeedForward[feed_forward]/NNCFLinear[intermediate_dense]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/Wav2Vec2FeedForward[feed_forward]/NNCFLinear[output_dense]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/__add___1"
+        ],
+        "ordinal_ids": [
+            301,
+            307
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/__add___0",
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[7]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Dropout[dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/NNCFLinear[k_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/NNCFLinear[out_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/NNCFLinear[q_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/NNCFLinear[v_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/__mul___0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/bmm_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/bmm_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/contiguous_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/contiguous_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/contiguous_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/reshape_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/reshape_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/reshape_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/softmax_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/transpose_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/transpose_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/transpose_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/transpose_3",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/transpose_4",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/view_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/view_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/view_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/view_3",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2Attention[attention]/view_4",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/__add___0"
+        ],
+        "ordinal_ids": [
+            308,
+            335
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/__add___1",
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/NNCFLayerNorm[layer_norm]/layer_norm_0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2FeedForward[feed_forward]/Dropout[intermediate_dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2FeedForward[feed_forward]/Dropout[output_dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2FeedForward[feed_forward]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2FeedForward[feed_forward]/NNCFLinear[intermediate_dense]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/Wav2Vec2FeedForward[feed_forward]/NNCFLinear[output_dense]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/__add___1"
+        ],
+        "ordinal_ids": [
+            336,
+            342
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/__add___0",
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[8]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Dropout[dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/NNCFLinear[k_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/NNCFLinear[out_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/NNCFLinear[q_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/NNCFLinear[v_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/__mul___0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/bmm_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/bmm_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/contiguous_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/contiguous_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/contiguous_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/reshape_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/reshape_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/reshape_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/softmax_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/transpose_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/transpose_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/transpose_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/transpose_3",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/transpose_4",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/view_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/view_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/view_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/view_3",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2Attention[attention]/view_4",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/__add___0"
+        ],
+        "ordinal_ids": [
+            343,
+            370
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/__add___1",
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/NNCFLayerNorm[layer_norm]/layer_norm_0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2FeedForward[feed_forward]/Dropout[intermediate_dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2FeedForward[feed_forward]/Dropout[output_dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2FeedForward[feed_forward]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2FeedForward[feed_forward]/NNCFLinear[intermediate_dense]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/Wav2Vec2FeedForward[feed_forward]/NNCFLinear[output_dense]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/__add___1"
+        ],
+        "ordinal_ids": [
+            371,
+            377
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/__add___0",
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[9]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Dropout[dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/NNCFLinear[k_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/NNCFLinear[out_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/NNCFLinear[q_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/NNCFLinear[v_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/__mul___0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/bmm_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/bmm_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/contiguous_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/contiguous_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/contiguous_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/reshape_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/reshape_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/reshape_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/softmax_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/transpose_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/transpose_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/transpose_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/transpose_3",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/transpose_4",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/view_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/view_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/view_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/view_3",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2Attention[attention]/view_4",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/__add___0"
+        ],
+        "ordinal_ids": [
+            378,
+            405
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/__add___1",
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/NNCFLayerNorm[layer_norm]/layer_norm_0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2FeedForward[feed_forward]/Dropout[intermediate_dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2FeedForward[feed_forward]/Dropout[output_dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2FeedForward[feed_forward]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2FeedForward[feed_forward]/NNCFLinear[intermediate_dense]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/Wav2Vec2FeedForward[feed_forward]/NNCFLinear[output_dense]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/__add___1"
+        ],
+        "ordinal_ids": [
+            406,
+            412
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/__add___0",
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[10]/NNCFLayerNorm[final_layer_norm]/layer_norm_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Dropout[dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/NNCFLinear[k_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/NNCFLinear[out_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/NNCFLinear[q_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/NNCFLinear[v_proj]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/__mul___0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/bmm_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/bmm_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/contiguous_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/contiguous_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/contiguous_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/reshape_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/reshape_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/reshape_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/softmax_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/transpose_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/transpose_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/transpose_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/transpose_3",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/transpose_4",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/view_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/view_1",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/view_2",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/view_3",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2Attention[attention]/view_4",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/__add___0"
+        ],
+        "ordinal_ids": [
+            413,
+            440
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/__add___1",
+            "start_node_name": "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/NNCFLayerNorm[layer_norm]/layer_norm_0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2FeedForward[feed_forward]/Dropout[intermediate_dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2FeedForward[feed_forward]/Dropout[output_dropout]/dropout_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2FeedForward[feed_forward]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2FeedForward[feed_forward]/NNCFLinear[intermediate_dense]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/Wav2Vec2FeedForward[feed_forward]/NNCFLinear[output_dense]/linear_0",
+            "Wav2Vec2ForSequenceClassification/Wav2Vec2Model[wav2vec2]/Wav2Vec2Encoder[encoder]/ModuleList[layers]/Wav2Vec2EncoderLayer[11]/__add___1"
+        ],
+        "ordinal_ids": [
+            441,
+            447
+        ]
+    }
+]

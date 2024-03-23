@@ -1,31 +1,27 @@
-"""
- Copyright (c) 2022 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2024 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
+import nncf
 from nncf import NNCFConfig
 from nncf.api.compression import CompressionAlgorithmBuilder
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.api.compression import CompressionLoss
 from nncf.api.compression import CompressionScheduler
 from nncf.api.compression import CompressionStage
-from nncf.api.compression import ModelType
+from nncf.api.compression import TModel
 from nncf.common.statistics import NNCFStatistics
 from nncf.common.utils.backend import BackendType
+from nncf.common.utils.backend import copy_model
 from nncf.common.utils.backend import get_backend
 
 
@@ -81,7 +77,7 @@ class CompositeCompressionLoss(CompressionLoss):
         """
 
         if len(self._child_losses) == 0:
-            raise RuntimeError('Cannot calculate the loss value because the number of child loss is 0.')
+            raise nncf.InternalError("Cannot calculate the loss value because the number of child loss is 0.")
 
         result_loss = 0
         for loss in self._child_losses:
@@ -163,10 +159,10 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
     treated the same way as a single `CompressionAlgorithmController` instance.
     """
 
-    BUILDER_STATE = 'builder_state'
-    CONTROLLER_STATE = 'ctrl_state'
+    BUILDER_STATE = "builder_state"
+    CONTROLLER_STATE = "ctrl_state"
 
-    def __init__(self, target_model: ModelType):
+    def __init__(self, target_model: TModel):
         """
         Initializes the internal state of the composite compression algorithm
         controller.
@@ -205,8 +201,9 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         :param child_ctrl: A `CompressionAlgorithmController` instance.
         """
         if child_ctrl.model is not self.model:
-            raise RuntimeError('Cannot create a composite controller '
-                               'from controllers belonging to different models!')
+            raise nncf.InternalError(
+                "Cannot create a composite controller from controllers belonging to different models!"
+            )
 
         self._child_ctrls.append(child_ctrl)
         self._loss.add(child_ctrl.loss)
@@ -225,7 +222,7 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         result = None
         for ctrl in self.child_ctrls:
             current_level = ctrl.compression_stage()
-            if not result:
+            if result is None:
                 result = current_level
             else:
                 result += current_level
@@ -280,6 +277,14 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
             stripped_model = ctrl.strip_model(stripped_model)
         self._model = stripped_model
 
+    def strip(self, do_copy: bool = True) -> TModel:
+        model = self.model
+        if do_copy:
+            model = copy_model(model)
+        for ctrl in self.child_ctrls:
+            model = ctrl.strip_model(model, do_copy=False)
+        return model
+
     @property
     def compression_rate(self) -> float:
         raise NotImplementedError
@@ -288,12 +293,18 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
     def compression_rate(self, compression_rate: float) -> None:
         raise NotImplementedError
 
-    def export_model(self,
-                     save_path: str,
-                     save_format: Optional[str] = None,
-                     input_names: Optional[List[str]] = None,
-                     output_names: Optional[List[str]] = None,
-                     model_args: Optional[Tuple[Any, ...]] = None) -> None:
+    @property
+    def maximal_compression_rate(self) -> float:
+        return min(child_ctrl.maximal_compression_rate for child_ctrl in self.child_ctrls)
+
+    def export_model(
+        self,
+        save_path: str,
+        save_format: Optional[str] = None,
+        input_names: Optional[List[str]] = None,
+        output_names: Optional[List[str]] = None,
+        model_args: Optional[Tuple[Any, ...]] = None,
+    ) -> None:
         """
         Exports the compressed model to the specified format for deployment.
 
@@ -316,13 +327,18 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
         self.prepare_for_export()
         backend = get_backend(self.model)
         if backend is BackendType.TENSORFLOW:
-            from nncf.tensorflow.exporter import TFExporter #pylint: disable=cyclic-import
+            from nncf.tensorflow.exporter import TFExporter
+
             exporter = TFExporter(self.model, input_names, output_names, model_args)
         else:
             assert backend is BackendType.TORCH
-            from nncf.torch.exporter import PTExporter #pylint: disable=cyclic-import
+            from nncf.torch.exporter import PTExporter
+
             exporter = PTExporter(self.model, input_names, output_names, model_args)
-        exporter.export_model(save_path, save_format)
+        if save_format is not None:
+            exporter.export_model(save_path, save_format)
+        else:
+            exporter.export_model(save_path)
 
     def disable_scheduler(self) -> None:
         self._scheduler = CompositeCompressionScheduler()
@@ -332,12 +348,9 @@ class CompositeCompressionAlgorithmController(CompressionAlgorithmController):
 
     def get_compression_state(self) -> Dict[str, Any]:
         if self._builder_state is None:
-            raise RuntimeError('Internal error: builder state is not set for the controller')
+            raise nncf.InternalError("Internal error: builder state is not set for the controller")
 
-        return {
-            self.BUILDER_STATE: self._builder_state,
-            self.CONTROLLER_STATE: self.get_state()
-        }
+        return {self.BUILDER_STATE: self._builder_state, self.CONTROLLER_STATE: self.get_state()}
 
     def set_builder_state_with_name(self, name: str, builder_state: Dict):
         """

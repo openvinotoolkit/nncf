@@ -7,7 +7,6 @@
     "num_classes": 1000,
     "batch_size" : 32,
     "epochs": 1,
-    "multiprocessing_distributed" : true,
     "optimizer": {
         "type": "Adam",
         "base_lr": 1e-5,

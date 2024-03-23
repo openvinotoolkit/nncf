@@ -1,0 +1,1 @@
+../../../../2.11/quantized/hw/CPU/mobilenet_v2.pb

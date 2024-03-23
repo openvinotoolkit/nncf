@@ -440,12 +440,12 @@ strict digraph  {
 "2 PNASNet/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "3 PNASNet/relu_0"  [label="(1, 32, 32, 32)", style=solid];
 "3 PNASNet/relu_0" -> "7 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/conv2d_0"  [label="(1, 32, 32, 32)", style=solid];
 "3 PNASNet/relu_0" -> "9 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv2]/NNCFConv2d[conv1]/conv2d_0"  [label="(1, 32, 32, 32)", style=solid];
+"3 PNASNet/relu_0" -> "11 PNASNet/Sequential[layer1]/CellB[0]/max_pool2d_0"  [label="(1, 32, 32, 32)", style=solid];
+"3 PNASNet/relu_0" -> "15 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv3]/NNCFConv2d[conv1]/conv2d_0"  [label="(1, 32, 32, 32)", style=solid];
 "4 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[3]/ElasticKernelConv2DOp[op]/linear_0" -> "5 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[3]/ElasticKernelConv2DOp[op]/view_0"  [label="(32, 25)", style=solid];
 "5 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[3]/ElasticKernelConv2DOp[op]/view_0" -> "6 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[3]/ElasticKernelConv2DOp[op]/view_1"  [label="(32, 1, 25)", style=solid];
 "6 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[3]/ElasticKernelConv2DOp[op]/view_1" -> "7 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/conv2d_0"  [label="(32, 1, 5, 5)", style=solid];
 "7 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFConv2d[conv1]/conv2d_0" -> "8 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFBatchNorm2d[bn1]/batch_norm_0"  [label="(1, 32, 32, 32)", style=solid];
-"3 PNASNet/relu_0" -> "11 PNASNet/Sequential[layer1]/CellB[0]/max_pool2d_0"  [label="(1, 32, 32, 32)", style=solid];
-"3 PNASNet/relu_0" -> "15 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv3]/NNCFConv2d[conv1]/conv2d_0"  [label="(1, 32, 32, 32)", style=solid];
 "8 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv1]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "17 PNASNet/Sequential[layer1]/CellB[0]/__add___0"  [label="(1, 32, 32, 32)", style=solid];
 "9 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv2]/NNCFConv2d[conv1]/conv2d_0" -> "10 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv2]/NNCFBatchNorm2d[bn1]/batch_norm_0"  [label="(1, 32, 32, 32)", style=solid];
 "10 PNASNet/Sequential[layer1]/CellB[0]/SepConv[sep_conv2]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "17 PNASNet/Sequential[layer1]/CellB[0]/__add___0"  [label="(1, 32, 32, 32)", style=solid];
@@ -546,8 +546,8 @@ strict digraph  {
 "93 PNASNet/Sequential[layer1]/CellB[4]/SepConv[sep_conv1]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "99 PNASNet/Sequential[layer1]/CellB[4]/__add___0"  [label="(1, 32, 32, 32)", style=solid];
 "94 PNASNet/Sequential[layer1]/CellB[4]/SepConv[sep_conv2]/NNCFConv2d[conv1]/conv2d_0" -> "95 PNASNet/Sequential[layer1]/CellB[4]/SepConv[sep_conv2]/NNCFBatchNorm2d[bn1]/batch_norm_0"  [label="(1, 32, 32, 32)", style=solid];
 "95 PNASNet/Sequential[layer1]/CellB[4]/SepConv[sep_conv2]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "99 PNASNet/Sequential[layer1]/CellB[4]/__add___0"  [label="(1, 32, 32, 32)", style=solid];
-"97 PNASNet/Sequential[layer1]/CellB[4]/SepConv[sep_conv3]/NNCFConv2d[conv1]/conv2d_0" -> "98 PNASNet/Sequential[layer1]/CellB[4]/SepConv[sep_conv3]/NNCFBatchNorm2d[bn1]/batch_norm_0"  [label="(1, 32, 32, 32)", style=solid];
 "96 PNASNet/Sequential[layer1]/CellB[4]/max_pool2d_0" -> "101 PNASNet/Sequential[layer1]/CellB[4]/__add___1"  [label="(1, 32, 32, 32)", style=solid];
+"97 PNASNet/Sequential[layer1]/CellB[4]/SepConv[sep_conv3]/NNCFConv2d[conv1]/conv2d_0" -> "98 PNASNet/Sequential[layer1]/CellB[4]/SepConv[sep_conv3]/NNCFBatchNorm2d[bn1]/batch_norm_0"  [label="(1, 32, 32, 32)", style=solid];
 "98 PNASNet/Sequential[layer1]/CellB[4]/SepConv[sep_conv3]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "101 PNASNet/Sequential[layer1]/CellB[4]/__add___1"  [label="(1, 32, 32, 32)", style=solid];
 "99 PNASNet/Sequential[layer1]/CellB[4]/__add___0" -> "100 PNASNet/Sequential[layer1]/CellB[4]/relu_0"  [label="(1, 32, 32, 32)", style=solid];
 "100 PNASNet/Sequential[layer1]/CellB[4]/relu_0" -> "103 PNASNet/Sequential[layer1]/CellB[4]/cat_0"  [label="(1, 32, 32, 32)", style=solid];

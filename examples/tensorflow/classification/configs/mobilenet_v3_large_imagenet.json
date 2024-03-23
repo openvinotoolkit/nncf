@@ -1,0 +1,11 @@
+{
+    "model": "MobileNetV3Large",
+    "pretrained": true,
+    "eval_only": true,
+    "input_info": {
+        "sample_size": [1, 224, 224, 3]
+    },
+    "batch_size": 256,
+    "dataset": "imagenet2012",
+    "dataset_type": "tfds"
+}

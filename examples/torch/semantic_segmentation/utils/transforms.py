@@ -1,25 +1,22 @@
-"""
- Copyright (c) 2022 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2024 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-import random
 import math
+import random
 
 import numpy as np
-from PIL import Image
 import torch
 from torchvision import transforms as T
+from torchvision.transforms import InterpolationMode
 from torchvision.transforms import functional as F
-
 
 
 def pad_if_smaller(img, size, fill=0):
@@ -52,7 +49,7 @@ class RandomResize:
     def __call__(self, image, target):
         size = random.randint(self.min_size, self.max_size)  # nosec
         image = F.resize(image, size)
-        target = F.resize(target, size, interpolation=Image.NEAREST)
+        target = F.resize(target, size, interpolation=InterpolationMode.NEAREST)
         return image, target
 
 
@@ -68,7 +65,7 @@ class RandomScaleAligned:
         w_aligned = math.ceil(w * scale / self.alignment) * self.alignment
         h_aligned = math.ceil(h * scale / self.alignment) * self.alignment
         image = F.resize(image, (w_aligned, h_aligned))
-        target = F.resize(target, (w_aligned, h_aligned), interpolation=Image.NEAREST)
+        target = F.resize(target, (w_aligned, h_aligned), interpolation=InterpolationMode.NEAREST)
         return image, target
 
 
@@ -78,7 +75,7 @@ class Resize:
 
     def __call__(self, image, target):
         image = F.resize(image, self.size)
-        target = F.resize(target, self.size, interpolation=Image.NEAREST)
+        target = F.resize(target, self.size, interpolation=InterpolationMode.NEAREST)
         return image, target
 
 
@@ -87,7 +84,7 @@ class RandomHorizontalFlip:
         self.flip_prob = flip_prob
 
     def __call__(self, image, target):
-        if random.random() < self.flip_prob:   # nosec
+        if random.random() < self.flip_prob:  # nosec
             image = F.hflip(image)
             target = F.hflip(target)
         return image, target
@@ -122,6 +119,7 @@ class RandomSizedCrop:
         image = F.crop(image, *crop_params)
         target = F.crop(target, *crop_params)
         return image, target
+
 
 class CenterCrop:
     def __init__(self, size):

@@ -1,42 +1,53 @@
-"""
- Copyright (c) 2019-2022 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2024 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import threading
+import weakref
+from collections import OrderedDict
+from collections import defaultdict
 from collections import deque
 from contextlib import contextmanager
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
+from typing import Callable, DefaultDict, Dict, List, Optional, Union
 
 import torch
 
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
+from nncf.common.hook_handle import HookHandle
+from nncf.common.hook_handle import add_op_to_registry
+from nncf.common.utils.api_marker import api
 from nncf.common.utils.debug import is_debug
+from nncf.common.utils.patcher import PATCHER
 from nncf.torch.dynamic_graph.graph import DynamicGraph
 from nncf.torch.dynamic_graph.graph import DynamicGraphNode
+from nncf.torch.dynamic_graph.graph import DynamicGraphNodeParameters
+from nncf.torch.dynamic_graph.graph import TensorMetaComparator
 from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope import ScopeElement
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
+from nncf.torch.dynamic_graph.trace_tensor import TracedTensorMixin
 
-_CURRENT_CONTEXT = None
+
+class ThreadLocalGlobalContext(threading.local):
+    def __init__(self):
+        super().__init__()
+        self.context = None
+
+
+_CURRENT_CONTEXT = ThreadLocalGlobalContext()
 
 
 class PreHookId:
-    def __init__(self, op_address: OperationAddress,
-                 input_port_id: int):
+    def __init__(self, op_address: OperationAddress, input_port_id: int):
         self.op_address = op_address
         self.input_port_id = input_port_id
 
@@ -49,26 +60,47 @@ class PreHookId:
     def __hash__(self):
         return hash(str(self))
 
+
+class TracingThreadLocals(threading.local):
+    def __init__(self):
+        super().__init__()
+        self.reset()
+
+    def reset(self):
+        self.scopes = []
+        self.module_call_stack = []
+        self.in_operator = False
+        self.in_parameter_trace = False
+        self.num_nested_hooks = 0
+        self.base_module_replica = None
+        self.operator_counters = {}
+        self.node_call_tracker = {}
+        self.traced_tensor_weakrefs = []
+        self.nested_contexts_stack = []
+        self.processed_parameters = {}
+
+
 class CopySafeThreadingVars:
-    """ A class holding variables that are related to threading and
+    """A class holding variables that are related to threading and
     thus impossible to deepcopy. The deepcopy will simply return a
     new object without copying, but won't fail."""
+
     def __init__(self):
-        self.thread_local = threading.local()
+        self.thread_local = TracingThreadLocals()
         self.cond = threading.Condition()
 
     def __deepcopy__(self, memo):
         return CopySafeThreadingVars()
 
-# pylint: disable=too-many-public-methods
+
 class TracingContext:
     def __init__(self):
         self.graph = DynamicGraph()
 
-        self._save_context = None
-        self._post_hooks = {}
-        self._pre_hooks = {}  # type: Dict[PreHookId, List[Callable]]
+        self._post_hooks: DefaultDict[OperationAddress, Dict[str, Callable]] = defaultdict(OrderedDict)
+        self._pre_hooks: DefaultDict[PreHookId, Dict[str, Callable]] = defaultdict(OrderedDict)
         self._num_nested_hooks = 0
+        self.reused_parameters = []
 
         self._threading = CopySafeThreadingVars()
 
@@ -93,24 +125,37 @@ class TracingContext:
         self._ordinals_ids = None
 
     def __enter__(self):
-        global _CURRENT_CONTEXT
-        self._save_context = _CURRENT_CONTEXT
-        _CURRENT_CONTEXT = self
-        self._reset_thread_local()
-        if is_debug():
-            self.reset_node_call_counters()
+        # For DataParallel, this relies on having the same compressed context for
+        # all replicas. Otherwise we will have data races on setting and reading the global _CURRENT_CONTEXT
+        # variable, which will in turn lead to DP-specific runtime errors such as
+        # "'_thread._local' object has no attribute 'scopes'"
+        self._threading.thread_local.nested_contexts_stack.append(get_current_context())
+        set_current_context(self)
 
         return self
 
     def __exit__(self, *args):
-        self._reset_thread_local()
+        previous_context = self._threading.thread_local.nested_contexts_stack.pop(-1)
+        for traced_tensor_weakref in self._threading.thread_local.traced_tensor_weakrefs:
+            tt = traced_tensor_weakref()
+            if tt is None or not isinstance(tt, TracedTensorMixin):
+                continue
+            if previous_context is None:
+                tt.strip()
+            elif previous_context is not self:
+                previous_context.register_traced_tensor(tt)
 
-        global _CURRENT_CONTEXT
-        _CURRENT_CONTEXT = self._save_context
-        self._save_context = None
+        if previous_context is not self:
+            self._reset_thread_local()
 
-    def find_operator_node(self, tensor_metas: List[Optional[TensorMeta]],
-                           op_address: OperationAddress) -> Optional[DynamicGraphNode]:
+            if is_debug():
+                self.reset_node_call_counters()
+
+        set_current_context(previous_context)
+
+    def find_operator_node(
+        self, tensor_metas: List[Optional[TensorMeta]], op_address: OperationAddress
+    ) -> Optional[DynamicGraphNode]:
         with self._threading.cond:
             self._n_instances_searching_graph += 1
 
@@ -124,12 +169,45 @@ class TracingContext:
     def register_global_buffer(self, name: str, buffer):
         self.global_buffer_store[name] = buffer
 
-    def maybe_add_node(self,
-                       inputs: OperatorInput,
-                       tensor_metas: List[Optional[TensorMeta]],
-                       op_address: OperationAddress,
-                       module_attrs: BaseLayerAttributes = None,
-                       ignored_algorithms: List[str] = None) -> Optional[DynamicGraphNode]:
+    def register_traced_tensor(self, tt: torch.Tensor):
+        """
+        Registers a weak reference to a traced tensor in the context so that in case
+        the block under context retains a reference to an intermediate tensor somewhere,
+        the context strips this traced tensor upon context exit.
+
+        :param tt: A tensor with TracedTensorMixin tracing capabilities to be registered.
+        """
+        wr = weakref.ref(tt)
+        self._threading.thread_local.traced_tensor_weakrefs.append(wr)
+
+    def register_processed_parameter(self, param_name: str, tensor: torch.Tensor) -> None:
+        """
+        Registers the processed parameter in the context to avoid double calculation of hooks
+        for the same parameters.
+
+        :param param_name: The parameter name.
+        :param tensor: The processed parameter.
+        """
+        self._threading.thread_local.processed_parameters[param_name] = tensor
+
+    def get_processed_parameter(self, param_name: str) -> Union[torch.Tensor, None]:
+        """
+        Return the processed parameter by name.
+
+        :param param_name: The parameter name.
+        :return: The processed parameter by name if found, otherwise None.
+        """
+        return self._threading.thread_local.processed_parameters.get(param_name, None)
+
+    def maybe_add_node(
+        self,
+        inputs: OperatorInput,
+        tensor_metas: List[Optional[TensorMeta]],
+        op_address: OperationAddress,
+        module_attrs: BaseLayerAttributes = None,
+        ignored_algorithms: List[str] = None,
+        is_called_inside_nncf_module: bool = False,
+    ) -> Optional[DynamicGraphNode]:
         if not self._may_add_nodes:
             return None
         with self._threading.cond:
@@ -139,8 +217,16 @@ class TracingContext:
             # so we need to check again if a node is already added.
             node = self.graph.find_node(op_address, tensor_metas, self._input_comparators_per_scope)
             if node is None:
-                node = self.graph.add_node(op_address, tensor_metas, self._input_comparators_per_scope,
-                                           inputs, module_attrs, ignored_algorithms)
+                mid = id(self.get_current_module())
+                node = self.graph.add_node(
+                    op_address,
+                    tensor_metas,
+                    self._input_comparators_per_scope,
+                    inputs,
+                    DynamicGraphNodeParameters(
+                        module_attrs, ignored_algorithms, is_called_inside_nncf_module, calling_module_id=mid
+                    ),
+                )
         return node
 
     def get_caller_context(self, operator_name: str) -> OperationAddress:
@@ -157,9 +243,7 @@ class TracingContext:
 
         call_order = self.get_operator_call_count_in_scope(operator_name, self.scope)
 
-        op_address = OperationAddress(operator_name,
-                                      self.scope,
-                                      call_order)
+        op_address = OperationAddress(operator_name, self.scope, call_order)
         return op_address
 
     def reset_scope_operator_call_counters(self):
@@ -188,7 +272,7 @@ class TracingContext:
 
     def reset_operator_call_count_in_scope(self, scope):
         scoped_op_name = str(scope)
-        for key in self._threading.thread_local.operator_counters.keys():
+        for key in self._threading.thread_local.operator_counters:
             if scoped_op_name in key:
                 self._threading.thread_local.operator_counters[key] = 0
 
@@ -201,23 +285,19 @@ class TracingContext:
         self.relative_scopes_stack.pop()
         self.module_call_stack.pop()
 
-    def register_pre_hooks(self, fn_list: List[Callable], op_address: OperationAddress,
-                           input_port_id: int):
+    def register_pre_hook(self, fn: Callable, op_address: OperationAddress, input_port_id: int) -> HookHandle:
         pre_hook_id = PreHookId(op_address, input_port_id)
-        if pre_hook_id in self._pre_hooks:
-            raise KeyError("Pre hook for context {} is already registered".format(str(pre_hook_id)))
-        self._pre_hooks[pre_hook_id] = fn_list
+        return add_op_to_registry(self._pre_hooks[pre_hook_id], fn)
 
-    def execute_pre_hooks(self, op_address: OperationAddress,
-                          op_inputs: OperatorInput) -> OperatorInput:
-        in_op = getattr(self, 'in_operator', False)
+    def execute_pre_hooks(self, op_address: OperationAddress, op_inputs: OperatorInput) -> OperatorInput:
+        in_op = getattr(self, "in_operator", False)
         self.in_operator = False
         self._threading.thread_local.num_nested_hooks += 1
 
         pre_hook_ids_for_curr_op = [x for x in self._pre_hooks if x.op_address == op_address]
         pre_hook_ids_for_curr_op = sorted(pre_hook_ids_for_curr_op, key=lambda x: x.input_port_id)
         for pre_hook_id in pre_hook_ids_for_curr_op:
-            hook_list_for_current_input_port = self._pre_hooks[pre_hook_id]
+            hook_list_for_current_input_port = self._pre_hooks[pre_hook_id].values()
             input_arg_to_process = pre_hook_id.input_port_id
             for hook in hook_list_for_current_input_port:
                 op_inputs[input_arg_to_process] = hook(op_inputs[input_arg_to_process])
@@ -225,17 +305,15 @@ class TracingContext:
         self.in_operator = in_op
         return op_inputs
 
-    def register_post_hooks(self, fn_list: List[Callable], op_address: OperationAddress):
-        if op_address in self._post_hooks:
-            raise KeyError("Post hook for context {} is already registered".format(str(op_address)))
-        self._post_hooks[op_address] = fn_list
+    def register_post_hook(self, fn: Callable, op_address: OperationAddress) -> HookHandle:
+        return add_op_to_registry(self._post_hooks[op_address], fn)
 
     def execute_post_hooks(self, op_address: OperationAddress, outputs):
-        in_op = getattr(self, 'in_operator', False)
+        in_op = getattr(self, "in_operator", False)
         self.in_operator = False
         self._threading.thread_local.num_nested_hooks += 1
         if op_address in self._post_hooks:
-            for hook in self._post_hooks[op_address]:
+            for hook in self._post_hooks[op_address].values():
                 outputs = hook(outputs)
         self._threading.thread_local.num_nested_hooks -= 1
         self.in_operator = in_op
@@ -267,8 +345,7 @@ class TracingContext:
     def disable_node_additions(self):
         self._may_add_nodes = False
 
-    def add_node_comparators(self, scopes_to_apply: List[str],
-                             node_input_comparator: 'TensorMetaComparator' = None):
+    def add_node_comparators(self, scopes_to_apply: List[str], node_input_comparator: TensorMetaComparator = None):
         self._input_comparators_per_scope.append((node_input_comparator, scopes_to_apply))
 
     @property
@@ -286,6 +363,14 @@ class TracingContext:
     @in_operator.setter
     def in_operator(self, val):
         self._threading.thread_local.in_operator = val
+
+    @property
+    def in_parameter_trace(self):
+        return self._threading.thread_local.in_parameter_trace
+
+    @in_parameter_trace.setter
+    def in_parameter_trace(self, val):
+        self._threading.thread_local.in_parameter_trace = val
 
     @property
     def module_call_stack(self) -> List[torch.nn.Module]:
@@ -312,15 +397,7 @@ class TracingContext:
         self._trace_dynamic_graph = True
 
     def _reset_thread_local(self):
-        tl = self._threading.thread_local
-        tl.scopes = []
-        tl.module_call_stack = []
-        tl.in_operator = False
-        tl.num_nested_hooks = 0
-        tl.base_module_replica = None
-        tl.operator_counters = {}
-        tl.node_call_tracker = {}
-
+        self._threading.thread_local.reset()
 
     def register_node_call(self, node: DynamicGraphNode):
         if node.node_id in self._threading.thread_local.node_call_tracker:
@@ -338,7 +415,11 @@ class TracingContext:
     def _get_scope_relative_to_last_registered_module_call(self, module) -> Scope:
         module_class = module.__class__.__name__
         if not self.module_call_stack:
-            return Scope([ScopeElement(module_class), ])
+            return Scope(
+                [
+                    ScopeElement(module_class),
+                ]
+            )
         q = deque([(tuple(), self.module_call_stack[-1])])
         while q:
             scope_parts, top = q.popleft()
@@ -347,7 +428,11 @@ class TracingContext:
             for name, child in top.named_children():
                 scope_element = ScopeElement(child.__class__.__name__, name)
                 q.append((scope_parts + (scope_element,), child))
-        return Scope([ScopeElement(module_class), ])
+        return Scope(
+            [
+                ScopeElement(module_class),
+            ]
+        )
 
     @property
     def scope(self) -> Scope:
@@ -371,17 +456,21 @@ class TracingContext:
                 self.start_node_name_of_skipped_block.append(self.skipped_blocks[block_index].start_node_name)
                 self.end_node_name_of_skipped_block.append(self.skipped_blocks[block_index].end_node_name)
 
-    def set_elastic_blocks(self, blocks: List['BuildingBlock'] = None):
-        if blocks is not None:
-            if isinstance(blocks, list):
-                if len(blocks) == 0:
-                    self.skipped_blocks = []
-                elif isinstance(blocks[0], str):
-                    self.skipped_blocks = [blocks]
-                else:
-                    self.skipped_blocks = blocks
+    def set_elastic_blocks(self, blocks: List["BuildingBlock"] = None):  # noqa: F821
+        if blocks is not None and isinstance(blocks, list):
+            if len(blocks) == 0:
+                self.skipped_blocks = []
+            elif isinstance(blocks[0], str):
+                self.skipped_blocks = [blocks]
+            else:
+                self.skipped_blocks = blocks
 
 
+def set_current_context(c: TracingContext):
+    _CURRENT_CONTEXT.context = c
+
+
+@api(canonical_alias="nncf.torch.no_nncf_trace")
 @contextmanager
 def no_nncf_trace():
     ctx = get_current_context()
@@ -393,6 +482,7 @@ def no_nncf_trace():
         yield
 
 
+@api(canonical_alias="nncf.torch.forward_nncf_trace")
 @contextmanager
 def forward_nncf_trace():
     ctx = get_current_context()
@@ -405,4 +495,18 @@ def forward_nncf_trace():
 
 
 def get_current_context() -> TracingContext:
-    return _CURRENT_CONTEXT
+    return _CURRENT_CONTEXT.context
+
+
+@api(canonical_alias="nncf.torch.disable_tracing")
+def disable_tracing(method):
+    """
+    Patch a method so that it will be executed within no_nncf_trace context
+    :param method: A method to patch.
+    """
+
+    def no_nncf_trace_wrapper(self, fn, *args, **kwargs):
+        with no_nncf_trace():
+            return fn(*args, **kwargs)
+
+    PATCHER.patch(method, no_nncf_trace_wrapper)

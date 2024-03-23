@@ -1,13 +1,22 @@
-from typing import NoReturn
-from typing import Optional
-from typing import Tuple
-from typing import TypeVar
+# Copyright (c) 2024 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from nncf.common.utils.logger import logger as nncf_logger
+from typing import NoReturn, Optional, Tuple, TypeVar
 
-BaseEvaluatorType = TypeVar('BaseEvaluatorType')
-ElasticControllerType = TypeVar('ElasticControllerType')
-SearchParametersType = TypeVar('SearchParametersType')
+from nncf.common.logging import nncf_logger
+
+BaseEvaluatorType = TypeVar("BaseEvaluatorType")
+ElasticControllerType = TypeVar("ElasticControllerType")
+SearchParametersType = TypeVar("SearchParametersType")
+
 
 class BaseEvaluatorHandler:
     """
@@ -15,6 +24,7 @@ class BaseEvaluatorHandler:
     evaluator and can be used to update the evaluator's properties.
 
     """
+
     def __init__(self, evaluator: BaseEvaluatorType, elasticity_ctr: ElasticControllerType):
         """
         Initializes the evaluator handler
@@ -56,6 +66,7 @@ class AccuracyEvaluatorHandler(BaseEvaluatorHandler):
     An interface for handling accuracy evaluators
 
     """
+
     def __init__(self, accuracy_evaluator, elasticity_ctrl, ref_acc: Optional[float] = 100):
         super().__init__(accuracy_evaluator, elasticity_ctrl)
         self._ref_acc = ref_acc
@@ -84,16 +95,16 @@ class AccuracyEvaluatorHandler(BaseEvaluatorHandler):
         """
         self.ref_acc = search_params.ref_acc
         if self.input_model_value > self.ref_acc - 0.01 or self.input_model_value < self.ref_acc + 0.01:
-            nncf_logger.warning("Accuracy obtained from evaluation {value} differs from "
-                                        "reference accuracy {ref_acc}".format(value=self.input_model_value,
-                                                                              ref_acc=self.ref_acc))
+            nncf_logger.warning(
+                f"Accuracy obtained from evaluation {self.input_model_value} "
+                f"differs from reference accuracy {self.ref_acc}"
+            )
             if self.ref_acc == -1:
                 nncf_logger.info("Adjusting reference accuracy to accuracy obtained from evaluation")
                 self.ref_acc = self.input_model_value
             else:
                 if self.ref_acc >= 100:
-                    nncf_logger.error("Reference accuracy value is invalid: {val}".format(
-                        val=self.ref_acc))
+                    nncf_logger.error(f"Reference accuracy value is invalid: {self.ref_acc}")
                 nncf_logger.info("Using reference accuracy.")
                 self.input_model_value = self.ref_acc
         search_params.ref_acc = self.ref_acc

@@ -1,20 +1,17 @@
-"""
- Copyright (c) 2022 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2024 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from typing import List
-from typing import Optional
-from typing import Type
+from typing import List, Optional, Set, Type
 
+import nncf
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.utils.registry import Registry
 
@@ -22,10 +19,18 @@ from nncf.common.utils.registry import Registry
 class OperatorMetatype:
     """
     Base class for grouping framework operators based on their semantic meaning.
+
+    :param name: The name of the operator.
+    :param hw_config_names: The names of the hardware configurations.
+    :param output_channel_axis: The axis, along which the output channels of the operator are arranged.
+    :param ignored_input_ports: Input ports of the operations that should not be considered for purposes of compression.
     """
 
-    name = ''  # type: str
-    hw_config_names = []  # type: List[str]
+    name: str = ""
+    hw_config_names: List[str] = []
+    output_channel_axis: Optional[int] = None
+    ignored_input_ports: List[int] = []
+    target_input_ports: Optional[List[int]] = None
 
     @classmethod
     def get_all_aliases(cls) -> List[str]:
@@ -37,7 +42,7 @@ class OperatorMetatype:
         return []
 
     @classmethod
-    def get_subtypes(cls) -> List[Type['OperatorMetatype']]:
+    def get_subtypes(cls) -> List[Type["OperatorMetatype"]]:
         """
         Returns a list of 'OperatorMetatype' that are subtypes.
 
@@ -46,7 +51,7 @@ class OperatorMetatype:
         return []
 
     @classmethod
-    def subtype_check(cls, metatype: Type['OperatorMetatype']) -> bool:
+    def subtype_check(cls, metatype: Type["OperatorMetatype"]) -> bool:
         """
         Check if a metatype is a subtype.
 
@@ -97,11 +102,11 @@ class OperatorMetatypeRegistry(Registry):
             super_register(obj, cls_name)
             op_names = obj.get_all_aliases()
             for name in op_names:
-                if name in self._op_name_to_op_meta_dict \
-                        and not obj.subtype_check(self._op_name_to_op_meta_dict[name]):
-                    raise RuntimeError(
-                        'Inconsistent operator metatype registry - single patched '
-                        'op name maps to multiple metatypes!')
+                if name in self._op_name_to_op_meta_dict and not obj.subtype_check(self._op_name_to_op_meta_dict[name]):
+                    raise nncf.InternalError(
+                        "Inconsistent operator metatype registry - single patched "
+                        "op name maps to multiple metatypes!"
+                    )
 
                 self._op_name_to_op_meta_dict[name] = obj
             return obj
@@ -120,9 +125,10 @@ class OperatorMetatypeRegistry(Registry):
         return self._op_name_to_op_meta_dict[op_name]
 
 
-NOOP_METATYPES = Registry('noop_metatypes')
-INPUT_NOOP_METATYPES = Registry('input_noop_metatypes')
-OUTPUT_NOOP_METATYPES = Registry('output_noop_metatypes')
+NOOP_METATYPES = Registry("noop_metatypes")
+INPUT_NOOP_METATYPES = Registry("input_noop_metatypes")
+OUTPUT_NOOP_METATYPES = Registry("output_noop_metatypes")
+CONST_NOOP_METATYPES = Registry("const_noop_metatypes")
 
 
 class UnknownMetatype(OperatorMetatype):
@@ -131,6 +137,7 @@ class UnknownMetatype(OperatorMetatype):
     typically these are the operations that haven't been discovered before.
     Algorithms should avoid processing graph nodes with this metatype.
     """
+
     name = "unknown"
 
     @classmethod
@@ -144,6 +151,7 @@ class NoopMetatype(OperatorMetatype):
     NoopMetatype is mapped to operations in NNCFGraph, that doesn't influence an input tensor.
     The compression algorithms can safely ignore this node.
     """
+
     name = "noop"
 
     @classmethod
@@ -169,3 +177,23 @@ class OutputNoopMetatype(OperatorMetatype):
     @classmethod
     def get_all_aliases(cls) -> List[str]:
         return [NNCFGraphNodeType.OUTPUT_NODE]
+
+
+@NOOP_METATYPES.register()
+@CONST_NOOP_METATYPES.register()
+class ConstNoopMetatype(OperatorMetatype):
+    name = "const_noop"
+
+    @classmethod
+    def get_all_aliases(cls) -> List[str]:
+        return [NNCFGraphNodeType.CONST_NODE]
+
+
+def get_all_aliases(*metatypes: OperatorMetatype) -> Set[str]:
+    """
+    Returns a set of all unique aliases from the provided metatypes.
+
+    :param *metatypes: A list of operator metatypes.
+    :return: A set containing all unique aliases for metatypes.
+    """
+    return set(a for m in metatypes for a in m.get_all_aliases())

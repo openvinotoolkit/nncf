@@ -1,27 +1,27 @@
-"""
- Copyright (c) 2022 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
-import torch
-import torch.nn.functional as F
+# Copyright (c) 2024 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from abc import abstractmethod
 
-from torch.nn import BatchNorm2d
-
-from tests.torch.helpers import create_conv
+import torch
+import torch.nn.functional as F
 from torch import nn
+from torch.nn import BatchNorm2d
 from torch.nn import Dropout
 from torch.nn import Parameter
+from torchvision.transforms.functional import normalize
 
+from nncf.torch import nncf_model_input
 from nncf.torch import register_module
+from nncf.torch.dynamic_graph.io_handling import wrap_nncf_model_outputs_with_objwalk
+from tests.torch.helpers import create_conv
 
 
 class ModelWithDummyParameter(nn.Module):
@@ -209,9 +209,10 @@ class EmbeddingCatLinearModel(nn.Module):
         z = torch.cat([y1, y2])
         return self.linear(z)
 
+
 class MultiOutputSameTensorModel(torch.nn.Module):
     def forward(self, x):
-        return x, x*x, x
+        return x, x * x, x
 
 
 #       fq_2
@@ -259,14 +260,13 @@ class ConvRelu6HSwishHSigmoid(nn.Module):
         super().__init__()
         self.conv1 = create_conv(1, 2, 2, 2)
         self.conv2 = create_conv(2, 2, 2, 2)
+        self.relu6 = torch.nn.ReLU6()
 
-    @staticmethod
-    def _hswish(x: torch.Tensor) -> torch.Tensor:
-        return x * torch.nn.functional.relu6(x + 3) / 6
+    def _hswish(self, x: torch.Tensor) -> torch.Tensor:
+        return x * self.relu6(x + 3) / 6
 
-    @staticmethod
-    def _hsigmoid(x: torch.Tensor) -> torch.Tensor:
-        return torch.nn.functional.relu6(x + 3) / 6
+    def _hsigmoid(self, x: torch.Tensor) -> torch.Tensor:
+        return self.relu6(x + 3) / 6
 
     def forward(self, x: torch.Tensor):
         z = self.conv1(x)
@@ -306,6 +306,7 @@ class ConvBNLeakyReLU(nn.Module):
         z = torch.nn.functional.leaky_relu(z)
         return z
 
+
 class FC_ConstMul(torch.nn.Module):
     def __init__(self):
         super().__init__()
@@ -317,3 +318,176 @@ class FC_ConstMul(torch.nn.Module):
         x1 = self.fc1(x)
         x1 = x1 * 2
         return x + x1
+
+
+class Baddbmm(torch.nn.Module):
+    def forward(self, x, y, z):
+        return torch.baddbmm(x, y, z)
+
+
+class MHA_single_input(torch.nn.Module):
+    EMBED_DIM = 4
+    INPUT_SIZES = [2, 1, EMBED_DIM]
+
+    def __init__(self):
+        super().__init__()
+        self.mha = nn.MultiheadAttention(embed_dim=self.EMBED_DIM, num_heads=2)
+
+    def forward(self, x):
+        return self.mha(x, x, x)
+
+
+class OrdinaryModelWithRecurrentInName(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = create_conv(1, 1, 1)
+
+    def forward(self, x):
+        quantize_agnostic = x[:2]
+        return self.conv(quantize_agnostic)
+
+
+class ShiftScaleParametrized(torch.nn.Module):
+    NUM_CHANNELS = 3
+    INPUT_SIZES = [1, NUM_CHANNELS, 2, 2]
+
+    def __init__(self, is_single_input: bool, use_normalize: bool):
+        super().__init__()
+        self.conv = create_conv(self.NUM_CHANNELS, 1, 1)
+        self.is_single_input = is_single_input
+        self.use_normalize = use_normalize
+
+    @classmethod
+    def get_name(cls, is_single_input: bool, use_normalize: bool):
+        suffix_1 = "single" if is_single_input else "multi"
+        suffix_2 = "__normalize" if use_normalize else ""
+        return f"ShiftScale{suffix_2}__{suffix_1}_input_branch"
+
+    def forward(self, x):
+        values = [1] * self.NUM_CHANNELS
+        if self.use_normalize:
+            pre_proc = normalize(x, values, values, inplace=False)
+        else:
+            vector = torch.Tensor(values).unsqueeze(dim=0).unsqueeze(dim=2).unsqueeze(dim=3)
+            pre_proc = (x - vector) / vector
+
+        output = self.conv(pre_proc)
+        if self.is_single_input:
+            return output
+        return output, self.conv(x)
+
+
+class ModelForGraphBuildingTest(torch.nn.Module):
+    IN_CHANNELS = 3
+    OUT_CHANNELS = 10
+    CONV1_OUT_CHANNELS = 15
+    CONV2_IN_CHANNELS = CONV1_OUT_CHANNELS + IN_CHANNELS
+    MAXPOOL_SIZE = 2
+    INPUT_SHAPES = [(1, 3, 224, 224), (2, 3, 224, 224), (1, 3, 500, 500)]
+
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(self.IN_CHANNELS, self.CONV1_OUT_CHANNELS, kernel_size=3, padding=1)
+        self.bn1 = nn.BatchNorm2d(15)
+        self.relu1 = nn.ReLU()
+        self.convt1 = nn.ConvTranspose2d(self.CONV1_OUT_CHANNELS, self.IN_CHANNELS, kernel_size=2, stride=2)
+        self.conv2 = nn.Conv2d(self.CONV2_IN_CHANNELS, self.OUT_CHANNELS, kernel_size=1)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu1(x)
+        x_prev = x
+        x = F.max_pool2d(x, self.MAXPOOL_SIZE)
+        x = self.convt1(x)
+        x = torch.cat([x, x_prev], 1)
+        x = self.conv2(x)
+        return x
+
+    @staticmethod
+    def simple_wrap_fn(args, kwargs):
+        arglist = list(args)
+        arglist[0] = nncf_model_input(arglist[0])
+        args = tuple(arglist)
+        return args, kwargs
+
+    @classmethod
+    def simple_user_dummy_forward(cls, model):
+        mock_tensor = torch.zeros(cls.INPUT_SHAPES[0])
+        args = (mock_tensor,)
+        kwargs = {}
+        args, kwargs = cls.simple_wrap_fn(args, kwargs)
+        return wrap_nncf_model_outputs_with_objwalk(model(*args, **kwargs))
+
+
+class ModelForGraphBuildingTestWithConcat(nn.Module):
+    INPUT_SHAPE = (1, 1, 1, 1)
+
+    def forward(self, x):
+        outputs = []
+        outputs.append(torch.stack([x, x]))
+        outputs.append(torch.stack(tensors=[x, x, x]))
+        outputs.append(torch.stack([x, x, x, x], dim=3))
+        outputs.append(torch.stack(tensors=[x, x, x, x, x], dim=2))
+        outputs.append(torch.cat([x, x]))
+        outputs.append(torch.cat(tensors=[x, x, x]))
+        outputs.append(torch.cat([x, x, x, x], dim=3))
+        outputs.append(torch.cat(tensors=[x, x, x, x, x], dim=2))
+        return outputs
+
+
+class ModelForGraphBuildingTestWithReshapeFlattenAndConcat(ModelForGraphBuildingTest):
+    def forward(self, x):
+        y = super().forward(x)
+        size = y.size()
+        y = y.view(size + (1, 1))
+
+        y_copy = torch.ones_like(y)
+        y = torch.stack([y, y_copy])
+
+        y_copy = torch.ones_like(y)
+        y = torch.cat([y, y_copy], -1)
+
+        y = torch.flatten(y)
+        _ = y.view(-1)
+
+        y_copy = torch.ones_like(y)
+        y = torch.stack([y, y_copy])
+
+        y_copy = torch.ones_like(y)
+        y = torch.cat([y, y_copy], -1)
+        return y
+
+
+class ModelWithPermute(nn.Module):
+    def forward(self, x: torch.Tensor):
+        # x.shape == [1, 10, 20, 10]
+        # without kwargs
+        x = x.transpose(1, 3)
+        x = x.permute(3, 2, 1, 0)
+        # with kwargs
+        x = x.transpose(1, dim1=3)
+        x = x.transpose(dim0=1, dim1=3)
+        x = x.permute(dims=[3, 2, 1, 0])
+        return x
+
+
+class ModelForGraphBuildingTestWithSplit(ModelForGraphBuildingTest):
+    def __init__(self, input_shape):
+        super().__init__()
+        self.conv3 = nn.Conv2d(5, 10, kernel_size=3, padding=1)
+        self.conv4 = nn.Conv2d(input_shape[0], 1, kernel_size=1, padding=0)
+
+    def forward(self, x):
+        y = super().forward(x)
+        y1, y2 = torch.chunk(y, chunks=2, dim=1)
+
+        y1 = self.conv3(y1)
+        y2 = self.conv3(y2)
+        y = torch.cat([y1, y2], axis=1)
+
+        y_unbinded = torch.unbind(y, dim=1)
+        unbinded_processed = list(y_unbinded)
+        unbinded_processed[0] = self.conv4(y_unbinded[0])
+        y = torch.cat(unbinded_processed, axis=0)
+        return y

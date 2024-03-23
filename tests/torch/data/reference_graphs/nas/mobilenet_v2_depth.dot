@@ -141,7 +141,7 @@ strict digraph  {
 "139 MobileNetV2/Sequential[features]/ConvBNActivation[18]/NNCFBatchNorm2d[1]/batch_norm_0" [id=139, label="batch_norm_IW1280_OW1280_#148", style=filled, type=batch_norm];
 "140 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh_0" [id=140, label="hardtanh_IW1280_OW1280_#149", style=filled, type=hardtanh];
 "141 MobileNetV2/adaptive_avg_pool2d_0" [id=141, label="adaptive_avg_pool2d_IW1280_OW1280_#150", style=filled, type=adaptive_avg_pool2d];
-"142 MobileNetV2/flatten_0" [id=142, label="flatten_IW1280_OW1280_#151", style=filled, type=flatten];
+"142 MobileNetV2/reshape_0" [id=142, label="reshape_IW1280_OW1280_#151", style=filled, type=reshape];
 "143 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout_0" [id=143, label="dropout_IW1280_OW1280_#152", style=filled, type=dropout];
 "144 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear_0" [id=144, label="linear_IW1280_#153", style=filled, type=linear];
 "145 /nncf_model_output_0" [id=145, label="nncf_model_output_#154", style=filled, type=nncf_model_output];
@@ -246,11 +246,11 @@ strict digraph  {
 "92 MobileNetV2/Sequential[features]/InvertedResidual[12]/Sequential[conv]/NNCFConv2d[2]/conv2d_0" -> "93 MobileNetV2/Sequential[features]/InvertedResidual[12]/Sequential[conv]/NNCFBatchNorm2d[3]/batch_norm_0"  [label="(1, 96, 2, 2)", style=solid];
 "93 MobileNetV2/Sequential[features]/InvertedResidual[12]/Sequential[conv]/NNCFBatchNorm2d[3]/batch_norm_0" -> "94 MobileNetV2/Sequential[features]/InvertedResidual[12]/__add___0"  [label="(1, 96, 2, 2)", style=solid];
 "94 MobileNetV2/Sequential[features]/InvertedResidual[12]/__add___0" -> "95 MobileNetV2/Sequential[features]/InvertedResidual[13]/Sequential[conv]/ConvBNActivation[0]/NNCFConv2d[0]/conv2d_0"  [label="(1, 96, 2, 2)", style=solid];
+"94 MobileNetV2/Sequential[features]/InvertedResidual[12]/__add___0" -> "103 MobileNetV2/Sequential[features]/InvertedResidual[13]/__add___0"  [label="(1, 96, 2, 2)", style=solid];
 "95 MobileNetV2/Sequential[features]/InvertedResidual[13]/Sequential[conv]/ConvBNActivation[0]/NNCFConv2d[0]/conv2d_0" -> "96 MobileNetV2/Sequential[features]/InvertedResidual[13]/Sequential[conv]/ConvBNActivation[0]/NNCFBatchNorm2d[1]/batch_norm_0"  [label="(1, 576, 2, 2)", style=solid];
 "96 MobileNetV2/Sequential[features]/InvertedResidual[13]/Sequential[conv]/ConvBNActivation[0]/NNCFBatchNorm2d[1]/batch_norm_0" -> "97 MobileNetV2/Sequential[features]/InvertedResidual[13]/Sequential[conv]/ConvBNActivation[0]/ReLU6[2]/hardtanh_0"  [label="(1, 576, 2, 2)", style=solid];
 "97 MobileNetV2/Sequential[features]/InvertedResidual[13]/Sequential[conv]/ConvBNActivation[0]/ReLU6[2]/hardtanh_0" -> "98 MobileNetV2/Sequential[features]/InvertedResidual[13]/Sequential[conv]/ConvBNActivation[1]/NNCFConv2d[0]/conv2d_0"  [label="(1, 576, 2, 2)", style=solid];
 "98 MobileNetV2/Sequential[features]/InvertedResidual[13]/Sequential[conv]/ConvBNActivation[1]/NNCFConv2d[0]/conv2d_0" -> "99 MobileNetV2/Sequential[features]/InvertedResidual[13]/Sequential[conv]/ConvBNActivation[1]/NNCFBatchNorm2d[1]/batch_norm_0"  [label="(1, 576, 2, 2)", style=solid];
-"94 MobileNetV2/Sequential[features]/InvertedResidual[12]/__add___0" -> "103 MobileNetV2/Sequential[features]/InvertedResidual[13]/__add___0"  [label="(1, 96, 2, 2)", style=solid];
 "99 MobileNetV2/Sequential[features]/InvertedResidual[13]/Sequential[conv]/ConvBNActivation[1]/NNCFBatchNorm2d[1]/batch_norm_0" -> "100 MobileNetV2/Sequential[features]/InvertedResidual[13]/Sequential[conv]/ConvBNActivation[1]/ReLU6[2]/hardtanh_0"  [label="(1, 576, 2, 2)", style=solid];
 "100 MobileNetV2/Sequential[features]/InvertedResidual[13]/Sequential[conv]/ConvBNActivation[1]/ReLU6[2]/hardtanh_0" -> "101 MobileNetV2/Sequential[features]/InvertedResidual[13]/Sequential[conv]/NNCFConv2d[2]/conv2d_0"  [label="(1, 576, 2, 2)", style=solid];
 "101 MobileNetV2/Sequential[features]/InvertedResidual[13]/Sequential[conv]/NNCFConv2d[2]/conv2d_0" -> "102 MobileNetV2/Sequential[features]/InvertedResidual[13]/Sequential[conv]/NNCFBatchNorm2d[3]/batch_norm_0"  [label="(1, 96, 2, 2)", style=solid];
@@ -295,8 +295,8 @@ strict digraph  {
 "138 MobileNetV2/Sequential[features]/ConvBNActivation[18]/NNCFConv2d[0]/conv2d_0" -> "139 MobileNetV2/Sequential[features]/ConvBNActivation[18]/NNCFBatchNorm2d[1]/batch_norm_0"  [label="(1, 1280, 1, 1)", style=solid];
 "139 MobileNetV2/Sequential[features]/ConvBNActivation[18]/NNCFBatchNorm2d[1]/batch_norm_0" -> "140 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh_0"  [label="(1, 1280, 1, 1)", style=solid];
 "140 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh_0" -> "141 MobileNetV2/adaptive_avg_pool2d_0"  [label="(1, 1280, 1, 1)", style=solid];
-"141 MobileNetV2/adaptive_avg_pool2d_0" -> "142 MobileNetV2/flatten_0"  [label="(1, 1280, 1, 1)", style=solid];
-"142 MobileNetV2/flatten_0" -> "143 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout_0"  [label="(1, 1280)", style=solid];
+"141 MobileNetV2/adaptive_avg_pool2d_0" -> "142 MobileNetV2/reshape_0"  [label="(1, 1280, 1, 1)", style=solid];
+"142 MobileNetV2/reshape_0" -> "143 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout_0"  [label="(1, 1280)", style=solid];
 "143 MobileNetV2/Sequential[classifier]/Dropout[0]/dropout_0" -> "144 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear_0"  [label="(1, 1280)", style=solid];
 "144 MobileNetV2/Sequential[classifier]/NNCFLinear[1]/linear_0" -> "145 /nncf_model_output_0"  [label="(1, 1000)", style=solid];
 }

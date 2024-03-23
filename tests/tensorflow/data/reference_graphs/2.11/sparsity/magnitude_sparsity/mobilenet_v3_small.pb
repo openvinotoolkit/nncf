@@ -1,0 +1,1 @@
+../../../2.8/sparsity/magnitude_sparsity/mobilenet_v3_small.pb

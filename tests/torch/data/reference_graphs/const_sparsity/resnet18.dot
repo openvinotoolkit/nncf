@@ -97,10 +97,10 @@ strict digraph  {
 "3 ResNet/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "4 ResNet/relu_0";
 "4 ResNet/relu_0" -> "5 ResNet/MaxPool2d[maxpool]/max_pool2d_0";
 "5 ResNet/MaxPool2d[maxpool]/max_pool2d_0" -> "7 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFConv2d[conv1]/conv2d_0";
+"5 ResNet/MaxPool2d[maxpool]/max_pool2d_0" -> "13 ResNet/Sequential[layer1]/BasicBlock[0]/__iadd___0";
 "6 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask_0" -> "7 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFConv2d[conv1]/conv2d_0";
 "7 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFConv2d[conv1]/conv2d_0" -> "8 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFBatchNorm2d[bn1]/batch_norm_0";
 "8 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "9 ResNet/Sequential[layer1]/BasicBlock[0]/relu_0";
-"5 ResNet/MaxPool2d[maxpool]/max_pool2d_0" -> "13 ResNet/Sequential[layer1]/BasicBlock[0]/__iadd___0";
 "9 ResNet/Sequential[layer1]/BasicBlock[0]/relu_0" -> "11 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFConv2d[conv2]/conv2d_0";
 "10 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask_0" -> "11 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFConv2d[conv2]/conv2d_0";
 "11 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFConv2d[conv2]/conv2d_0" -> "12 ResNet/Sequential[layer1]/BasicBlock[0]/NNCFBatchNorm2d[bn2]/batch_norm_0";

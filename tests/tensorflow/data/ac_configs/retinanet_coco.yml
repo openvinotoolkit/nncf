@@ -1,0 +1,38 @@
+models:
+  - name: retinanet_coco
+    launchers:
+      - framework: dlsdk
+        device: CPU
+        adapter:
+          type: retinanet_tf2
+          boxes_outputs:
+            - Identity:0
+            - Identity_1:0
+            - Identity_2:0
+            - Identity_3:0
+            - Identity_4:0
+          class_outputs:
+            - Identity_5:0
+            - Identity_6:0
+            - Identity_7:0
+            - Identity_8:0
+            - Identity_9:0
+    datasets:
+      - name: ms_coco_detection_90_class_without_background
+        preprocessing:
+          - type: resize
+            size: 640
+            aspect_ratio_scale: fit_to_window
+            use_pillow: True
+          - type: padding
+            size: 640
+            pad_type: right_bottom
+          - type: rgb_to_bgr
+          - type: normalization
+            mean: 123.675, 116.28, 103.53
+            std: 58.395, 57.12, 57.375
+        postprocessing:
+          - type: faster_rcnn_postprocessing_resize
+        metrics:
+          - type: coco_precision
+            max_detections: 100

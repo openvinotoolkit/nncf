@@ -249,8 +249,8 @@ strict digraph  {
 "4 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/BatchNorm2d[bn1]/batch_norm_0" -> "5 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/Conv2d[conv2]/conv2d_0";
 "5 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/Conv2d[conv2]/conv2d_0" -> "6 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/BatchNorm2d[bn2]/batch_norm_0";
 "6 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/BatchNorm2d[bn2]/batch_norm_0" -> "7 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/relu_0";
-"8 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/Conv2d[conv3]/conv2d_0" -> "9 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/BatchNorm2d[bn3]/batch_norm_0";
 "7 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/relu_0" -> "16 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/cat_0";
+"8 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/Conv2d[conv3]/conv2d_0" -> "9 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/BatchNorm2d[bn3]/batch_norm_0";
 "9 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/BatchNorm2d[bn3]/batch_norm_0" -> "10 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/relu_1";
 "10 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/relu_1" -> "11 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/Conv2d[conv4]/conv2d_0";
 "11 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/Conv2d[conv4]/conv2d_0" -> "12 ShuffleNetV2/Sequential[layer1]/DownBlock[0]/BatchNorm2d[bn4]/batch_norm_0";
@@ -341,12 +341,12 @@ strict digraph  {
 "91 ShuffleNetV2/Sequential[layer2]/BasicBlock[1]/ShuffleBlock[shuffle]/permute_0" -> "92 ShuffleNetV2/Sequential[layer2]/BasicBlock[1]/ShuffleBlock[shuffle]/reshape_0";
 "92 ShuffleNetV2/Sequential[layer2]/BasicBlock[1]/ShuffleBlock[shuffle]/reshape_0" -> "93 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/SplitBlock[split]/__getitem___0";
 "92 ShuffleNetV2/Sequential[layer2]/BasicBlock[1]/ShuffleBlock[shuffle]/reshape_0" -> "94 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/SplitBlock[split]/__getitem___1";
+"93 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/SplitBlock[split]/__getitem___0" -> "103 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/cat_0";
 "94 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/SplitBlock[split]/__getitem___1" -> "95 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/Conv2d[conv1]/conv2d_0";
 "95 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/Conv2d[conv1]/conv2d_0" -> "96 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/BatchNorm2d[bn1]/batch_norm_0";
 "96 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/BatchNorm2d[bn1]/batch_norm_0" -> "97 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/relu_0";
 "97 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/relu_0" -> "98 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/Conv2d[conv2]/conv2d_0";
 "98 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/Conv2d[conv2]/conv2d_0" -> "99 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/BatchNorm2d[bn2]/batch_norm_0";
-"93 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/SplitBlock[split]/__getitem___0" -> "103 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/cat_0";
 "99 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/BatchNorm2d[bn2]/batch_norm_0" -> "100 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/Conv2d[conv3]/conv2d_0";
 "100 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/Conv2d[conv3]/conv2d_0" -> "101 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/BatchNorm2d[bn3]/batch_norm_0";
 "101 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/BatchNorm2d[bn3]/batch_norm_0" -> "102 ShuffleNetV2/Sequential[layer2]/BasicBlock[2]/relu_1";

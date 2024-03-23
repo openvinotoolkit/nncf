@@ -1,15 +1,13 @@
-"""
- Copyright (c) 2022 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2024 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from typing import List, Union
 
@@ -27,7 +25,6 @@ class TFNNCFPruningTensorProcessor(NNCFPruningBaseTensorProcessor):
 
     @classmethod
     def concatenate(cls, tensors: List[NNCFTensor], axis: int) -> NNCFTensor:
-        # pylint: disable=E1120,E1123
         ret_tensor = tf.concat([t.tensor for t in tensors], axis=axis)
         return TFNNCFTensor(ret_tensor)
 
@@ -53,7 +50,6 @@ class TFNNCFPruningTensorProcessor(NNCFPruningBaseTensorProcessor):
 
     @classmethod
     def split(cls, tensor: NNCFTensor, output_shapes: List[int]) -> List[NNCFTensor]:
-        # pylint: disable=E1120
         chunks = len(output_shapes)
         ret_tensors = tf.split(tensor.tensor, chunks)
         return [TFNNCFTensor(ret_tensor) for ret_tensor in ret_tensors]

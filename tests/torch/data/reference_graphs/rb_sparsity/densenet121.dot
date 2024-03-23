@@ -671,12 +671,12 @@ strict digraph  {
 "1 DenseNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "2 DenseNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "2 DenseNet/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "3 DenseNet/NNCFConv2d[conv1]/conv2d_0";
 "3 DenseNet/NNCFConv2d[conv1]/conv2d_0" -> "4 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFBatchNorm2d[bn1]/batch_norm_0";
+"3 DenseNet/NNCFConv2d[conv1]/conv2d_0" -> "14 DenseNet/Sequential[dense1]/Bottleneck[0]/cat_0";
 "4 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "5 DenseNet/Sequential[dense1]/Bottleneck[0]/relu_0";
 "5 DenseNet/Sequential[dense1]/Bottleneck[0]/relu_0" -> "8 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFConv2d[conv1]/conv2d_0";
 "6 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "7 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "7 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "8 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFConv2d[conv1]/conv2d_0";
 "8 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFConv2d[conv1]/conv2d_0" -> "9 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFBatchNorm2d[bn2]/batch_norm_0";
-"3 DenseNet/NNCFConv2d[conv1]/conv2d_0" -> "14 DenseNet/Sequential[dense1]/Bottleneck[0]/cat_0";
 "9 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFBatchNorm2d[bn2]/batch_norm_0" -> "10 DenseNet/Sequential[dense1]/Bottleneck[0]/relu_1";
 "10 DenseNet/Sequential[dense1]/Bottleneck[0]/relu_1" -> "13 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFConv2d[conv2]/conv2d_0";
 "11 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "12 DenseNet/Sequential[dense1]/Bottleneck[0]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
@@ -773,8 +773,8 @@ strict digraph  {
 "95 DenseNet/Sequential[dense2]/Bottleneck[1]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "96 DenseNet/Sequential[dense2]/Bottleneck[1]/NNCFConv2d[conv2]/conv2d_0";
 "96 DenseNet/Sequential[dense2]/Bottleneck[1]/NNCFConv2d[conv2]/conv2d_0" -> "97 DenseNet/Sequential[dense2]/Bottleneck[1]/cat_0";
 "97 DenseNet/Sequential[dense2]/Bottleneck[1]/cat_0" -> "98 DenseNet/Sequential[dense2]/Bottleneck[2]/NNCFBatchNorm2d[bn1]/batch_norm_0";
-"98 DenseNet/Sequential[dense2]/Bottleneck[2]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "99 DenseNet/Sequential[dense2]/Bottleneck[2]/relu_0";
 "97 DenseNet/Sequential[dense2]/Bottleneck[1]/cat_0" -> "108 DenseNet/Sequential[dense2]/Bottleneck[2]/cat_0";
+"98 DenseNet/Sequential[dense2]/Bottleneck[2]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "99 DenseNet/Sequential[dense2]/Bottleneck[2]/relu_0";
 "99 DenseNet/Sequential[dense2]/Bottleneck[2]/relu_0" -> "102 DenseNet/Sequential[dense2]/Bottleneck[2]/NNCFConv2d[conv1]/conv2d_0";
 "100 DenseNet/Sequential[dense2]/Bottleneck[2]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "101 DenseNet/Sequential[dense2]/Bottleneck[2]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "101 DenseNet/Sequential[dense2]/Bottleneck[2]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "102 DenseNet/Sequential[dense2]/Bottleneck[2]/NNCFConv2d[conv1]/conv2d_0";

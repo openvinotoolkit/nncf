@@ -104,13 +104,13 @@ strict digraph  {
 "0 ResNeXt/Conv2d[conv1]/conv2d_0" -> "1 ResNeXt/BatchNorm2d[bn1]/batch_norm_0";
 "1 ResNeXt/BatchNorm2d[bn1]/batch_norm_0" -> "2 ResNeXt/relu_0";
 "2 ResNeXt/relu_0" -> "3 ResNeXt/Sequential[layer1]/Block[0]/Conv2d[conv1]/conv2d_0";
+"2 ResNeXt/relu_0" -> "11 ResNeXt/Sequential[layer1]/Block[0]/Sequential[shortcut]/Conv2d[0]/conv2d_0";
 "3 ResNeXt/Sequential[layer1]/Block[0]/Conv2d[conv1]/conv2d_0" -> "4 ResNeXt/Sequential[layer1]/Block[0]/BatchNorm2d[bn1]/batch_norm_0";
 "4 ResNeXt/Sequential[layer1]/Block[0]/BatchNorm2d[bn1]/batch_norm_0" -> "5 ResNeXt/Sequential[layer1]/Block[0]/relu_0";
 "5 ResNeXt/Sequential[layer1]/Block[0]/relu_0" -> "6 ResNeXt/Sequential[layer1]/Block[0]/Conv2d[conv2]/conv2d_0";
 "6 ResNeXt/Sequential[layer1]/Block[0]/Conv2d[conv2]/conv2d_0" -> "7 ResNeXt/Sequential[layer1]/Block[0]/BatchNorm2d[bn2]/batch_norm_0";
 "7 ResNeXt/Sequential[layer1]/Block[0]/BatchNorm2d[bn2]/batch_norm_0" -> "8 ResNeXt/Sequential[layer1]/Block[0]/relu_1";
 "8 ResNeXt/Sequential[layer1]/Block[0]/relu_1" -> "9 ResNeXt/Sequential[layer1]/Block[0]/Conv2d[conv3]/conv2d_0";
-"2 ResNeXt/relu_0" -> "11 ResNeXt/Sequential[layer1]/Block[0]/Sequential[shortcut]/Conv2d[0]/conv2d_0";
 "9 ResNeXt/Sequential[layer1]/Block[0]/Conv2d[conv3]/conv2d_0" -> "10 ResNeXt/Sequential[layer1]/Block[0]/BatchNorm2d[bn3]/batch_norm_0";
 "10 ResNeXt/Sequential[layer1]/Block[0]/BatchNorm2d[bn3]/batch_norm_0" -> "13 ResNeXt/Sequential[layer1]/Block[0]/__iadd___0";
 "11 ResNeXt/Sequential[layer1]/Block[0]/Sequential[shortcut]/Conv2d[0]/conv2d_0" -> "12 ResNeXt/Sequential[layer1]/Block[0]/Sequential[shortcut]/BatchNorm2d[1]/batch_norm_0";

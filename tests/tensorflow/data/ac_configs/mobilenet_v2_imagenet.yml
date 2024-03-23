@@ -1,0 +1,20 @@
+models:
+  - name: mobilenet_v2_imagenet
+    launchers:
+      - framework: dlsdk
+        device: CPU
+        adapter: classification
+    datasets:
+      - name: imagenet_1000_classes
+        preprocessing:
+          - type: crop_image_with_padding
+            size: 224
+            crop_padding: 32
+          - type: rgb_to_bgr
+          - type: normalization
+            mean: 127.5, 127.5, 127.5
+            std: 127.5
+        metrics:
+          - name: accuracy@top1
+            type: accuracy
+            top_k: 1

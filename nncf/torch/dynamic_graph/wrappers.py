@@ -1,57 +1,50 @@
-"""
- Copyright (c) 2022 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
-
-import warnings
+# Copyright (c) 2024 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+import functools
 from copy import deepcopy
-from typing import Callable
-from typing import List
-from typing import Tuple
+from typing import Callable, List, Tuple
 
-from torch.nn import Conv1d
-from torch.nn import Conv2d
-from torch.nn import Conv3d
-from torch.nn import ConvTranspose1d
-from torch.nn import ConvTranspose2d
-from torch.nn import ConvTranspose3d
+import torch
 from torch.nn import DataParallel
-from torch.nn import Linear
-from torch.nn import Module as TorchModule
 
+from nncf.common.graph.definitions import MODEL_CONST_OP_NAME
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
-from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
-from nncf.common.graph.layer_attributes import GenericWeightedLayerAttributes
-from nncf.common.graph.layer_attributes import GroupNormLayerAttributes
-from nncf.common.graph.layer_attributes import LinearLayerAttributes
+from nncf.common.graph.layer_attributes import WeightedLayerAttributes
+from nncf.common.logging import nncf_logger
 from nncf.common.utils.debug import is_debug
-from nncf.common.utils.logger import logger as nncf_logger
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.context import get_current_context
+from nncf.torch.dynamic_graph.layer_attributes_handlers import get_layer_attributes_from_args_and_kwargs
 from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
-from nncf.torch.dynamic_graph.trace_tensor import make_tensor_metas
-from nncf.torch.dynamic_graph.trace_tensor import trace_tensors
+from nncf.torch.dynamic_graph.operation_address import OperationAddress
+from nncf.torch.dynamic_graph.structs import NamespaceTarget
+from nncf.torch.dynamic_graph.structs import PatchedOperatorInfo
+from nncf.torch.dynamic_graph.trace_functions import forward_trace_only
+from nncf.torch.dynamic_graph.trace_functions import make_tensor_metas
+from nncf.torch.dynamic_graph.trace_functions import trace_tensors
+from nncf.torch.dynamic_graph.trace_tensor import TracedParameter
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.layers import ITERATION_MODULES
-from nncf.torch.layers import NNCF_MODULES_DICT
 
 _IGNORED_SCOPES = []
 
 
 def _warn_data_parallel():
-    if getattr(_warn_data_parallel, 'warned_once', False):
+    if getattr(_warn_data_parallel, "warned_once", False):
         return
     _warn_data_parallel.warned_once = True
-    warnings.warn("You are using DataParallel, which may cause significant performance issues with dynamic graph "
-                  "building. Consider using distributed training (DistributedDataParallel) instead")
+    nncf_logger.warning(
+        "You are using DataParallel, which may cause significant performance issues with dynamic graph "
+        "building. Consider using distributed training (DistributedDataParallel) instead."
+    )
 
 
 def ignore_scope(cls):
@@ -60,15 +53,12 @@ def ignore_scope(cls):
     return cls
 
 
-OP_NAMES_REQUIRING_MODULE_ATTRS = [v.op_func_name for v in NNCF_MODULES_DICT] + ['group_norm']
-
-
-def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
+def wrap_operator(operator, operator_info: PatchedOperatorInfo):
     """
     Wraps the input callable object (`operator`) with the functionality that allows the calls to this object
     to be tracked by the currently set global TracingContext. The wrapped functions can be then intercepted,
     their arguments and return values modified arbitrarily and, for functions that correspond to operations on
-    tensors in a DNN,  their general position and address in the DNN's model control flow graph can be established.
+    tensors in a DNN, their general position and address in the DNN's model control flow graph can be established.
 
     :param: operator: A callable object to be wrapped.
     :param: operator_info (PatchedOperatorInfo): An informational struct containing the specifics of wrapping
@@ -78,14 +68,15 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
              the unwrapped version, but within a TracingContext is able to be tracked and hooked.
     """
     # do not wrap function twice
-    _orig_op = getattr(operator, '_original_op', None)
+    _orig_op = getattr(operator, "_original_op", None)
     if _orig_op is not None:
-        nncf_logger.debug("Operator: {} is already wrapped".format(_orig_op.__name__))
+        nncf_logger.debug(f"Operator: {_orig_op.__name__} is already wrapped")
         return operator
 
+    @functools.wraps(operator)
     def wrapped(*args, **kwargs):
         ctx = get_current_context()
-        if not ctx or getattr(ctx, 'in_operator', False) or not ctx.is_tracing:
+        if not ctx or getattr(ctx, "in_operator", False) or not ctx.is_tracing:
             op1 = operator(*args, **kwargs)
             return op1
 
@@ -95,7 +86,6 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
             if operator_info.skip_trace:
                 result = operator(*args, **kwargs)
             elif ctx.is_forwarding:
-                from nncf.torch.dynamic_graph.trace_functions import forward_trace_only #pylint: disable=cyclic-import
                 result = forward_trace_only(operator, *args, **kwargs)
             else:
                 op_name = operator_info.name
@@ -112,7 +102,7 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
                     assert ctx.in_skipped_block is True
                     ctx.in_skipped_block = False
                 if str_op_address in ctx.start_node_name_of_skipped_block:
-                    assert ctx.in_skipped_block is False, 'skipping of overlapping blocks'
+                    assert ctx.in_skipped_block is False, "skipping of overlapping blocks"
                     ctx.in_skipped_block = True
                     ctx.tensor_cache = result
         except:
@@ -125,16 +115,17 @@ def wrap_operator(operator, operator_info: 'PatchedOperatorInfo'):
         ctx.in_operator = False
         return result
 
-    # pylint: disable=protected-access
     wrapped._original_op = operator
     wrapped._operator_namespace = operator_info.operator_namespace
     return wrapped
 
 
 def wrap_module_call(module_call):
-    from nncf.torch.dynamic_graph.patch_pytorch import ORIGINAL_OPERATORS #pylint: disable=cyclic-import
+    from nncf.torch.dynamic_graph.patch_pytorch import ORIGINAL_OPERATORS
+
     NAMES_ORIGINAL_OPERATORS = [op.name for op in ORIGINAL_OPERATORS]
 
+    @functools.wraps(module_call)
     def wrapped(self, *args, **kwargs):
         ctx = get_current_context()
         if not ctx or self.__class__ in _IGNORED_SCOPES:
@@ -157,7 +148,7 @@ def wrap_module_call(module_call):
                 assert ctx.in_skipped_block is True
                 ctx.in_skipped_block = False
             if str_op_address in ctx.start_node_name_of_skipped_block:
-                assert ctx.in_skipped_block is False, 'skipping of overlapping blocks'
+                assert ctx.in_skipped_block is False, "skipping of overlapping blocks"
                 ctx.in_skipped_block = True
         else:
             retval = module_call(self, *args, **kwargs)
@@ -170,15 +161,18 @@ def wrap_module_call(module_call):
     return wrapped
 
 
-def _execute_op(op_address: 'OperationAddress',
-                operator_info: 'PatchedOperatorInfo',
-                operator: Callable,
-                ctx: 'TracingContext',
-                *args,
-                **kwargs):
+def _execute_op(
+    op_address: OperationAddress,
+    operator_info: PatchedOperatorInfo,
+    operator: Callable,
+    ctx: TracingContext,
+    *args,
+    **kwargs,
+):
     op_name = operator_info.name
 
     op_input = OperatorInput(list(args), kwargs)
+    op_input = _process_parameters(op_input, ctx)
     processed_input = ctx.execute_pre_hooks(op_address, op_input)
     args = tuple(processed_input.op_args)
     kwargs = processed_input.op_kwargs
@@ -190,66 +184,104 @@ def _execute_op(op_address: 'OperationAddress',
         tensor_metas = make_tensor_metas(processed_input)
         node = ctx.find_operator_node(tensor_metas, op_address)
         if node is None:
-            layer_attrs, ignored_algos = _collect_module_attrs_and_ignored_algorithms(ctx, op_name)
-            node = ctx.maybe_add_node(processed_input, tensor_metas, op_address, layer_attrs, ignored_algos)
+            layer_attrs, ignored_algos = _collect_module_attrs_and_ignored_algorithms(ctx, op_name, args, kwargs)
+            is_called_inside_nncf_module = isinstance(ctx.get_current_module(), _NNCFModuleMixin)
+            node = ctx.maybe_add_node(
+                processed_input, tensor_metas, op_address, layer_attrs, ignored_algos, is_called_inside_nncf_module
+            )
         if is_debug() and node is not None:
             ctx.register_node_call(node)
 
-    result = trace_tensors(result, node)
+    result = trace_tensors(result, node, ctx)
     result = ctx.execute_post_hooks(op_address, result)
     return result
 
 
-def _collect_module_attrs_and_ignored_algorithms(ctx: TracingContext,
-                                                 op_name: str) -> Tuple[BaseLayerAttributes, List[str]]:
-    layer_attrs = None
+def _collect_module_attrs_and_ignored_algorithms(
+    ctx: TracingContext, op_name: str, args, kwargs
+) -> Tuple[BaseLayerAttributes, List[str]]:
     ignored_algos = []
-    if op_name in OP_NAMES_REQUIRING_MODULE_ATTRS:
-        curr_module = ctx.get_current_module()
-        if curr_module is None:
-            raise RuntimeError("Operation {} requires module attributes, "
-                               "but it was executed outside any module".format(op_name))
-        layer_attrs = _get_layer_attributes(curr_module, op_name)
+    layer_attrs = get_layer_attributes_from_args_and_kwargs(op_name, args, kwargs)
+
+    curr_module = ctx.get_current_module()
+    if curr_module is not None:
         if isinstance(curr_module, _NNCFModuleMixin):
             ignored_algos = deepcopy(curr_module.ignored_algorithms)
+
+        if (
+            isinstance(layer_attrs, WeightedLayerAttributes)
+            and hasattr(curr_module, "weight_g")
+            and hasattr(curr_module, "weight_v")
+        ):
+            # torch.nn.utils.weight_norm replaces weight with weight_g and weight_v
+            layer_attrs.weight_requires_grad = curr_module.weight_g.requires_grad
+
     return layer_attrs, ignored_algos
 
 
-def _get_layer_attributes(module: TorchModule, operator_name: str) -> BaseLayerAttributes:
-    if operator_name == "group_norm":
-        return GroupNormLayerAttributes(
-            module.weight.requires_grad,
-            module.num_channels,
-            module.num_groups
-        )
-    # torch.nn.utils.weight_norm replaces weight with weight_g and weight_v
-    is_weight_norm_applied = hasattr(module, 'weight_g') and hasattr(module, 'weight_v')
-    weight_attr = 'weight_g' if is_weight_norm_applied else 'weight'
-    if isinstance(module, (Conv1d, Conv2d, Conv3d)):
-        return ConvolutionLayerAttributes(weight_requires_grad=getattr(module, weight_attr).requires_grad,
-                                          in_channels=module.in_channels,
-                                          out_channels=module.out_channels,
-                                          kernel_size=module.kernel_size,
-                                          stride=module.stride,
-                                          groups=module.groups,
-                                          transpose=False,
-                                          padding_values=module.padding)
-    if isinstance(module, (ConvTranspose1d, ConvTranspose2d, ConvTranspose3d)):
-        return ConvolutionLayerAttributes(weight_requires_grad=getattr(module, weight_attr).requires_grad,
-                                          in_channels=module.in_channels,
-                                          out_channels=module.out_channels,
-                                          kernel_size=module.kernel_size,
-                                          stride=module.stride,
-                                          groups=module.groups,
-                                          transpose=True,
-                                          padding_values=module.padding)
-    if isinstance(module, Linear):
-        return LinearLayerAttributes(weight_requires_grad=getattr(module, weight_attr).requires_grad,
-                                     in_features=module.in_features,
-                                     out_features=module.out_features)
-    if hasattr(module, 'weight') or is_weight_norm_applied:
-        return GenericWeightedLayerAttributes(weight_requires_grad=getattr(module, weight_attr).requires_grad,
-                                              weight_shape=module.weight.shape)
+@functools.partial(wrap_operator, operator_info=PatchedOperatorInfo(MODEL_CONST_OP_NAME, NamespaceTarget.EXTERNAL))
+def process_parameter_fn(x: torch.nn.Parameter) -> torch.nn.Parameter:
+    """
+    The identity binding function to trace and apply hooks to parameters.
 
-    return GenericWeightedLayerAttributes(weight_requires_grad=False,
-                                          weight_shape=[1, 1])
+    :param x: A parameter.
+    :return: A parameter.
+    """
+    return x
+
+
+def _process_parameters(operator_inputs: OperatorInput, ctx: TracingContext) -> OperatorInput:
+    """
+    Process model parameters into operator inputs applying registered hooks to them. The function guarantees
+    that the parameter is processed once.
+
+    :param operator_inputs: The operator inputs.
+    :param ctx: The compression context.
+    :return: The operator inputs with processed parameters.
+    """
+    if ctx.in_parameter_trace:
+        return operator_inputs
+
+    in_op = getattr(ctx, "in_operator", False)
+    ctx.in_operator = False
+
+    for idx in range(len(operator_inputs)):
+        traced_parameter = operator_inputs[idx]
+        if not isinstance(traced_parameter, TracedParameter):
+            continue
+
+        processed_parameter = ctx.get_processed_parameter(traced_parameter.name)
+        if processed_parameter is not None:
+            operator_inputs[idx] = processed_parameter
+            continue
+
+        if traced_parameter.tensor_meta is not None:
+            continue
+
+        in_parameter_trace = getattr(ctx, "in_parameter_trace", False)
+        ctx.in_parameter_trace = True
+        is_reused = traced_parameter.is_reused
+        processed_parameter = process_parameter_fn(traced_parameter)
+        operator_inputs[idx] = processed_parameter
+        if is_reused:
+            ctx.register_processed_parameter(traced_parameter.name, processed_parameter)
+        ctx.in_parameter_trace = in_parameter_trace
+
+    ctx.in_operator = in_op
+    return operator_inputs
+
+
+def wrap_parameters(model: torch.nn.Module):
+    """
+    Wrap model parameters inplace by adding tracing capabilities.
+
+    :param model: A model.
+    """
+    ctx = get_current_context()
+    for name, param in model.named_parameters():
+        if name.startswith("_nncf"):
+            # Exclude parameters in modules which added by NNCF.
+            continue
+        is_reused = name in ctx.reused_parameters
+        tt = TracedParameter.from_torch_parameter(param, name, is_reused)
+        ctx.register_traced_tensor(tt)

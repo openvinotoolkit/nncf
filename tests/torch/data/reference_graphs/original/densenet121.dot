@@ -432,8 +432,8 @@ strict digraph  {
 "5 DenseNet/Sequential[dense1]/Bottleneck[0]/relu_1" -> "6 DenseNet/Sequential[dense1]/Bottleneck[0]/Conv2d[conv2]/conv2d_0";
 "6 DenseNet/Sequential[dense1]/Bottleneck[0]/Conv2d[conv2]/conv2d_0" -> "7 DenseNet/Sequential[dense1]/Bottleneck[0]/cat_0";
 "7 DenseNet/Sequential[dense1]/Bottleneck[0]/cat_0" -> "8 DenseNet/Sequential[dense1]/Bottleneck[1]/BatchNorm2d[bn1]/batch_norm_0";
-"8 DenseNet/Sequential[dense1]/Bottleneck[1]/BatchNorm2d[bn1]/batch_norm_0" -> "9 DenseNet/Sequential[dense1]/Bottleneck[1]/relu_0";
 "7 DenseNet/Sequential[dense1]/Bottleneck[0]/cat_0" -> "14 DenseNet/Sequential[dense1]/Bottleneck[1]/cat_0";
+"8 DenseNet/Sequential[dense1]/Bottleneck[1]/BatchNorm2d[bn1]/batch_norm_0" -> "9 DenseNet/Sequential[dense1]/Bottleneck[1]/relu_0";
 "9 DenseNet/Sequential[dense1]/Bottleneck[1]/relu_0" -> "10 DenseNet/Sequential[dense1]/Bottleneck[1]/Conv2d[conv1]/conv2d_0";
 "10 DenseNet/Sequential[dense1]/Bottleneck[1]/Conv2d[conv1]/conv2d_0" -> "11 DenseNet/Sequential[dense1]/Bottleneck[1]/BatchNorm2d[bn2]/batch_norm_0";
 "11 DenseNet/Sequential[dense1]/Bottleneck[1]/BatchNorm2d[bn2]/batch_norm_0" -> "12 DenseNet/Sequential[dense1]/Bottleneck[1]/relu_1";
@@ -532,10 +532,10 @@ strict digraph  {
 "93 DenseNet/Sequential[dense2]/Bottleneck[6]/relu_1" -> "94 DenseNet/Sequential[dense2]/Bottleneck[6]/Conv2d[conv2]/conv2d_0";
 "94 DenseNet/Sequential[dense2]/Bottleneck[6]/Conv2d[conv2]/conv2d_0" -> "95 DenseNet/Sequential[dense2]/Bottleneck[6]/cat_0";
 "95 DenseNet/Sequential[dense2]/Bottleneck[6]/cat_0" -> "96 DenseNet/Sequential[dense2]/Bottleneck[7]/BatchNorm2d[bn1]/batch_norm_0";
+"95 DenseNet/Sequential[dense2]/Bottleneck[6]/cat_0" -> "102 DenseNet/Sequential[dense2]/Bottleneck[7]/cat_0";
 "96 DenseNet/Sequential[dense2]/Bottleneck[7]/BatchNorm2d[bn1]/batch_norm_0" -> "97 DenseNet/Sequential[dense2]/Bottleneck[7]/relu_0";
 "97 DenseNet/Sequential[dense2]/Bottleneck[7]/relu_0" -> "98 DenseNet/Sequential[dense2]/Bottleneck[7]/Conv2d[conv1]/conv2d_0";
 "98 DenseNet/Sequential[dense2]/Bottleneck[7]/Conv2d[conv1]/conv2d_0" -> "99 DenseNet/Sequential[dense2]/Bottleneck[7]/BatchNorm2d[bn2]/batch_norm_0";
-"95 DenseNet/Sequential[dense2]/Bottleneck[6]/cat_0" -> "102 DenseNet/Sequential[dense2]/Bottleneck[7]/cat_0";
 "99 DenseNet/Sequential[dense2]/Bottleneck[7]/BatchNorm2d[bn2]/batch_norm_0" -> "100 DenseNet/Sequential[dense2]/Bottleneck[7]/relu_1";
 "100 DenseNet/Sequential[dense2]/Bottleneck[7]/relu_1" -> "101 DenseNet/Sequential[dense2]/Bottleneck[7]/Conv2d[conv2]/conv2d_0";
 "101 DenseNet/Sequential[dense2]/Bottleneck[7]/Conv2d[conv2]/conv2d_0" -> "102 DenseNet/Sequential[dense2]/Bottleneck[7]/cat_0";

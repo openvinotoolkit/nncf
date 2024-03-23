@@ -98,5 +98,7 @@
                 "type": "min_max"
             }
         }
-    }
+    },
+    "no_strip_on_export": true,
+    "export_to_ir_via_onnx": true
 }

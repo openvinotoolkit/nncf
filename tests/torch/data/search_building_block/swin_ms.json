@@ -1,0 +1,641 @@
+[
+    {
+        "basic_block": {
+            "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0",
+            "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/view_3"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/Dropout[dropout]/dropout_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[key]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[query]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[value]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/__add___0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/__truediv___0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/contiguous_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/matmul_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/matmul_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/permute_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/permute_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/permute_2",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/permute_3",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/softmax_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/transpose_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/view_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/view_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/view_2",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/view_3",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0"
+        ],
+        "ordinal_ids": [
+            13,
+            33
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/__add___1",
+            "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/__add___0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinOutput[output]/Dropout[dropout]/dropout_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/SwinOutput[output]/NNCFLinear[dense]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[0]/__add___1"
+        ],
+        "ordinal_ids": [
+            41,
+            47
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0",
+            "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/view_3"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/Dropout[dropout]/dropout_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[key]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[query]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[value]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/__add___0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/__add___1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/__truediv___0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/contiguous_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/matmul_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/matmul_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/permute_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/permute_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/permute_2",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/permute_3",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/softmax_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/transpose_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/view_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/view_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/view_2",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/view_3",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/view_4",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/view_5",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0"
+        ],
+        "ordinal_ids": [
+            56,
+            79
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/__add___1",
+            "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/__add___0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinOutput[output]/Dropout[dropout]/dropout_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/SwinOutput[output]/NNCFLinear[dense]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[0]/ModuleList[blocks]/SwinLayer[1]/__add___1"
+        ],
+        "ordinal_ids": [
+            88,
+            94
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0",
+            "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/view_3"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/Dropout[dropout]/dropout_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[key]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[query]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[value]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/__add___0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/__truediv___0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/contiguous_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/matmul_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/matmul_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/permute_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/permute_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/permute_2",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/permute_3",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/softmax_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/transpose_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/view_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/view_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/view_2",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/view_3",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0"
+        ],
+        "ordinal_ids": [
+            111,
+            131
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/__add___1",
+            "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/__add___0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinOutput[output]/Dropout[dropout]/dropout_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/SwinOutput[output]/NNCFLinear[dense]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[0]/__add___1"
+        ],
+        "ordinal_ids": [
+            139,
+            145
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0",
+            "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/view_3"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/Dropout[dropout]/dropout_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[key]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[query]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[value]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/__add___0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/__add___1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/__truediv___0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/contiguous_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/matmul_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/matmul_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/permute_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/permute_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/permute_2",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/permute_3",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/softmax_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/transpose_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/view_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/view_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/view_2",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/view_3",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/view_4",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/view_5",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0"
+        ],
+        "ordinal_ids": [
+            154,
+            177
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/__add___1",
+            "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/__add___0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinOutput[output]/Dropout[dropout]/dropout_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/SwinOutput[output]/NNCFLinear[dense]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[1]/ModuleList[blocks]/SwinLayer[1]/__add___1"
+        ],
+        "ordinal_ids": [
+            186,
+            192
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0",
+            "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/view_3"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/Dropout[dropout]/dropout_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[key]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[query]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[value]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/__add___0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/__truediv___0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/contiguous_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/matmul_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/matmul_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/permute_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/permute_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/permute_2",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/permute_3",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/softmax_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/transpose_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/view_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/view_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/view_2",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/view_3",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0"
+        ],
+        "ordinal_ids": [
+            209,
+            229
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/__add___1",
+            "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/__add___0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinOutput[output]/Dropout[dropout]/dropout_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/SwinOutput[output]/NNCFLinear[dense]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[0]/__add___1"
+        ],
+        "ordinal_ids": [
+            237,
+            243
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0",
+            "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/view_3"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/Dropout[dropout]/dropout_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[key]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[query]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[value]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/__add___0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/__add___1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/__truediv___0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/contiguous_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/matmul_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/matmul_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/permute_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/permute_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/permute_2",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/permute_3",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/softmax_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/transpose_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/view_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/view_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/view_2",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/view_3",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/view_4",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/view_5",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0"
+        ],
+        "ordinal_ids": [
+            252,
+            275
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/__add___1",
+            "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/__add___0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinOutput[output]/Dropout[dropout]/dropout_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/SwinOutput[output]/NNCFLinear[dense]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[1]/__add___1"
+        ],
+        "ordinal_ids": [
+            284,
+            290
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0",
+            "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/view_3"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinAttention[attention]/SwinSelfAttention[self]/Dropout[dropout]/dropout_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[key]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[query]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[value]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinAttention[attention]/SwinSelfAttention[self]/__add___0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinAttention[attention]/SwinSelfAttention[self]/__truediv___0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinAttention[attention]/SwinSelfAttention[self]/contiguous_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinAttention[attention]/SwinSelfAttention[self]/matmul_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinAttention[attention]/SwinSelfAttention[self]/matmul_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinAttention[attention]/SwinSelfAttention[self]/permute_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinAttention[attention]/SwinSelfAttention[self]/permute_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinAttention[attention]/SwinSelfAttention[self]/permute_2",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinAttention[attention]/SwinSelfAttention[self]/permute_3",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinAttention[attention]/SwinSelfAttention[self]/softmax_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinAttention[attention]/SwinSelfAttention[self]/transpose_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinAttention[attention]/SwinSelfAttention[self]/view_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinAttention[attention]/SwinSelfAttention[self]/view_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinAttention[attention]/SwinSelfAttention[self]/view_2",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinAttention[attention]/SwinSelfAttention[self]/view_3",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0"
+        ],
+        "ordinal_ids": [
+            298,
+            318
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/__add___1",
+            "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/__add___0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinOutput[output]/Dropout[dropout]/dropout_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/SwinOutput[output]/NNCFLinear[dense]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[2]/__add___1"
+        ],
+        "ordinal_ids": [
+            326,
+            332
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0",
+            "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/view_3"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfAttention[self]/Dropout[dropout]/dropout_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[key]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[query]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[value]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfAttention[self]/__add___0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfAttention[self]/__add___1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfAttention[self]/__truediv___0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfAttention[self]/contiguous_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfAttention[self]/matmul_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfAttention[self]/matmul_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfAttention[self]/permute_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfAttention[self]/permute_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfAttention[self]/permute_2",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfAttention[self]/permute_3",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfAttention[self]/softmax_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfAttention[self]/transpose_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfAttention[self]/view_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfAttention[self]/view_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfAttention[self]/view_2",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfAttention[self]/view_3",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfAttention[self]/view_4",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfAttention[self]/view_5",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0"
+        ],
+        "ordinal_ids": [
+            341,
+            364
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/__add___1",
+            "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/__add___0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinOutput[output]/Dropout[dropout]/dropout_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/SwinOutput[output]/NNCFLinear[dense]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[3]/__add___1"
+        ],
+        "ordinal_ids": [
+            373,
+            379
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0",
+            "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/view_3"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinAttention[attention]/SwinSelfAttention[self]/Dropout[dropout]/dropout_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[key]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[query]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[value]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinAttention[attention]/SwinSelfAttention[self]/__add___0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinAttention[attention]/SwinSelfAttention[self]/__truediv___0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinAttention[attention]/SwinSelfAttention[self]/contiguous_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinAttention[attention]/SwinSelfAttention[self]/matmul_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinAttention[attention]/SwinSelfAttention[self]/matmul_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinAttention[attention]/SwinSelfAttention[self]/permute_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinAttention[attention]/SwinSelfAttention[self]/permute_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinAttention[attention]/SwinSelfAttention[self]/permute_2",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinAttention[attention]/SwinSelfAttention[self]/permute_3",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinAttention[attention]/SwinSelfAttention[self]/softmax_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinAttention[attention]/SwinSelfAttention[self]/transpose_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinAttention[attention]/SwinSelfAttention[self]/view_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinAttention[attention]/SwinSelfAttention[self]/view_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinAttention[attention]/SwinSelfAttention[self]/view_2",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinAttention[attention]/SwinSelfAttention[self]/view_3",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0"
+        ],
+        "ordinal_ids": [
+            387,
+            407
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/__add___1",
+            "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/__add___0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinOutput[output]/Dropout[dropout]/dropout_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/SwinOutput[output]/NNCFLinear[dense]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[4]/__add___1"
+        ],
+        "ordinal_ids": [
+            415,
+            421
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0",
+            "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/view_3"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfAttention[self]/Dropout[dropout]/dropout_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[key]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[query]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[value]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfAttention[self]/__add___0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfAttention[self]/__add___1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfAttention[self]/__truediv___0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfAttention[self]/contiguous_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfAttention[self]/matmul_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfAttention[self]/matmul_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfAttention[self]/permute_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfAttention[self]/permute_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfAttention[self]/permute_2",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfAttention[self]/permute_3",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfAttention[self]/softmax_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfAttention[self]/transpose_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfAttention[self]/view_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfAttention[self]/view_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfAttention[self]/view_2",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfAttention[self]/view_3",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfAttention[self]/view_4",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfAttention[self]/view_5",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0"
+        ],
+        "ordinal_ids": [
+            430,
+            453
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/__add___1",
+            "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/__add___0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinOutput[output]/Dropout[dropout]/dropout_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/SwinOutput[output]/NNCFLinear[dense]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[2]/ModuleList[blocks]/SwinLayer[5]/__add___1"
+        ],
+        "ordinal_ids": [
+            462,
+            468
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0",
+            "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/view_3"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/Dropout[dropout]/dropout_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[key]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[query]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[value]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/__add___0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/__truediv___0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/contiguous_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/matmul_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/matmul_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/permute_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/permute_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/permute_2",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/permute_3",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/softmax_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/transpose_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/view_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/view_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/view_2",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfAttention[self]/view_3",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0"
+        ],
+        "ordinal_ids": [
+            485,
+            505
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/__add___1",
+            "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/__add___0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinOutput[output]/Dropout[dropout]/dropout_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/SwinOutput[output]/NNCFLinear[dense]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[0]/__add___1"
+        ],
+        "ordinal_ids": [
+            513,
+            519
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0",
+            "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/view_3"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/Dropout[dropout]/dropout_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[key]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[query]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/NNCFLinear[value]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/__add___0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/__truediv___0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/contiguous_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/matmul_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/matmul_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/permute_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/permute_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/permute_2",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/permute_3",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/softmax_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/transpose_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/view_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/view_1",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/view_2",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfAttention[self]/view_3",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinAttention[attention]/SwinSelfOutput[output]/NNCFLinear[dense]/linear_0"
+        ],
+        "ordinal_ids": [
+            527,
+            547
+        ]
+    },
+    {
+        "basic_block": {
+            "end_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/__add___1",
+            "start_node_name": "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/__add___0"
+        },
+        "block_type": "FF",
+        "op_addresses": [
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/NNCFLayerNorm[layernorm_after]/layer_norm_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinIntermediate[intermediate]/GELUActivation[intermediate_act_fn]/gelu_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinIntermediate[intermediate]/NNCFLinear[dense]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinOutput[output]/Dropout[dropout]/dropout_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/SwinOutput[output]/NNCFLinear[dense]/linear_0",
+            "SwinForImageClassification/SwinModel[swin]/SwinEncoder[encoder]/ModuleList[layers]/SwinStage[3]/ModuleList[blocks]/SwinLayer[1]/__add___1"
+        ],
+        "ordinal_ids": [
+            555,
+            561
+        ]
+    }
+]

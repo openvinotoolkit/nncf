@@ -1,0 +1,9 @@
+strict digraph  {
+"0 /nncf_model_input_0" [id=0, type=nncf_model_input];
+"1 /nncf_model_input_1" [id=1, type=nncf_model_input];
+"2 TestModel/__floordiv___0" [id=2, type=__floordiv__];
+"3 /nncf_model_output_0" [id=3, type=nncf_model_output];
+"0 /nncf_model_input_0" -> "2 TestModel/__floordiv___0";
+"1 /nncf_model_input_1" -> "2 TestModel/__floordiv___0";
+"2 TestModel/__floordiv___0" -> "3 /nncf_model_output_0";
+}

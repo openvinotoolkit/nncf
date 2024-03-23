@@ -1,11 +1,11 @@
+# Non-Structured Sparsity
 
 >_Scroll down for the examples of the JSON configuration files that can be used to apply this algorithm_.
 
-### Non-Structured Sparsity
 Sparsity algorithm zeros weights in Convolutional and Fully-Connected layers in a non-structured way,
 so that zero values are randomly distributed inside the tensor. Most of the sparsity algorithms set the less important weights to zero but the criteria of how they do it is different. The framework contains several implementations of sparsity methods.
 
-#### RB-Sparsity
+## RB-Sparsity
 
 This section describes the Regularization-Based Sparsity (RB-Sparsity) algorithm implemented in this framework. The method is based on $L_0$-regularization, with which parameters of the model tend to zero:
 
@@ -33,7 +33,7 @@ The method requires a long schedule of the training process in order to minimize
 
 > **NOTE**: The known limitation of the method is that the sparsified CNN must include Batch Normalization layers which make the training process more stable.
 
-#### Batch-norm statistics adaptation
+## Batch-norm statistics adaptation
 
 After the compression-related changes in the model have been committed, the statistics of the batchnorm layers
 (per-channel rolling means and variances of activation tensors) can be updated by passing several batches of data
@@ -44,14 +44,15 @@ sparsity and filter pruning algorithms. It can be enabled by setting a non-zero 
 
 > **NOTE**: In all our sparsity experiments, we used the Adam optimizer and initial learning rate `0.001` for model weights and sparsity mask.
 
-#### Magnitude Sparsity
+## Magnitude Sparsity
 
 The magnitude sparsity method implements a naive approach that is based on the assumption that the contribution of lower weights is lower so that they can be pruned. After each training epoch the method calculates a threshold based on the current sparsity ratio and uses it to zero weights which are lower than this threshold. And here there are two options:
+
 - Weights are used as is during the threshold calculation procedure.
 - Weights are normalized before the threshold calculation.
 
+## Constant Sparsity
 
-#### Constant Sparsity
 This special algorithm takes no additional parameters and is used when you want to load a checkpoint already trained with another sparsity algorithm and do other compression without changing the sparsity mask.
 
 ### Example configuration files
@@ -70,6 +71,7 @@ This special algorithm takes no additional parameters and is used when you want 
 ```
 
 - Apply magnitude sparsity, increasing sparsity level step-wise from 0 to 70% in 3 steps at given training epoch indices:
+
 ```json5
 {
     "input_info": { "sample_size": [1, 3, 224, 224] }, // the input shape of your model may vary
@@ -87,6 +89,7 @@ This special algorithm takes no additional parameters and is used when you want 
 ```
 
 - Apply magnitude sparsity, immediately setting sparsity level to 10%, performing [batch-norm adaptation](./BatchnormAdaptation.md) to potentially recover accuracy, and exponentially increasing sparsity to 50% over 30 epochs of training:
+
 ```json5
 {
     "input_info": { "sample_size": [1, 3, 224, 224] }, // the input shape of your model may vary
@@ -108,6 +111,7 @@ This special algorithm takes no additional parameters and is used when you want 
 ```
 
 - Apply RB-sparsity to UNet, increasing sparsity level exponentially from 1% to 60% over 100 epochs, keeping the sparsity mask trainable until epoch 110 (after which the mask is frozen and the model is allowed to fine-tune with a fixed sparsity level), and excluding parts of the model from sparsification:
+
 ```json5
 {
     "input_info": { "sample_size": [1, 3, 224, 224] }, // the input shape of your model may vary

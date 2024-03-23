@@ -1,17 +1,20 @@
-"""
- Copyright (c) 2022 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2024 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+from pathlib import Path
+
 import pytest
-from tests.common.helpers import create_venv_with_nncf
+
+from tests.shared.case_collection import COMMON_SCOPE_MARKS_VS_OPTIONS
+from tests.shared.case_collection import skip_marked_cases_if_options_not_specified
+
 try:
     import tensorflow as tf
 except ImportError:
@@ -32,38 +35,29 @@ def clear_session():
 
 
 def pytest_addoption(parser):
+    parser.addoption("--data", type=Path, default=None, help="Path to test datasets")
     parser.addoption(
-        "--data", type=str, default=None,
-        help="Path to test datasets"
+        "--sota-checkpoints-dir", type=Path, default=None, help="Path to checkpoints directory for sota accuracy test"
     )
     parser.addoption(
-        "--sota-checkpoints-dir", type=str, default=None, help="Path to checkpoints directory for sota accuracy test"
+        "--sota-data-dir", type=Path, default=None, help="Path to datasets directory for sota accuracy test"
     )
     parser.addoption(
-        "--sota-data-dir", type=str, default=None, help="Path to datasets directory for sota accuracy test"
+        "--metrics-dump-path",
+        type=Path,
+        default=None,
+        help="Path to directory to store metrics. "
+        "Directory must be empty or should not exist."
+        "Metric keeps in "
+        "PROJECT_ROOT/test_results/metrics_dump_timestamp "
+        "if param not specified",
     )
     parser.addoption(
-        "--metrics-dump-path", type=str, default=None, help="Path to directory to store metrics. "
-                                                            "Directory must be empty or should not exist."
-                                                            "Metric keeps in "
-                                                            "PROJECT_ROOT/test_results/metrics_dump_timestamp "
-                                                            "if param not specified"
+        "--ov-data-dir", type=str, default=None, help="Path to datasets directory for OpenVINO accuracy test"
     )
-    parser.addoption(
-        "--ov-data-dir", type=str, default=None, help="Path to datasets directory for OpenVino accuracy test"
-    )
-    parser.addoption(
-        "--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVino"
-    )
-    parser.addoption(
-        "--run-weekly-tests", action="store_true", default=False, help="To run weekly tests"
-    )
-    parser.addoption(
-        "--models-dir", type=str, default=None, help="Path to checkpoints directory for weekly tests"
-    )
-    parser.addoption(
-        "--run-install-tests", action="store_true", default=False, help="To run installation tests"
-    )
+    parser.addoption("--run-openvino-eval", action="store_true", default=False, help="To run eval models via OpenVINO")
+    parser.addoption("--run-weekly-tests", action="store_true", default=False, help="To run weekly tests")
+    parser.addoption("--models-dir", type=str, default=None, help="Path to checkpoints directory for weekly tests")
 
 
 @pytest.fixture(scope="module")
@@ -108,12 +102,13 @@ def models_dir(request):
 
 @pytest.fixture(scope="module")
 def install_tests(request):
-    return request.config.getoption("--run-install-tests")
+    return request.config.getoption("--run-install-tests", skip=True)
 
 
-@pytest.fixture(scope="function")
-def tmp_venv_with_nncf(tmp_path, package_type, venv_type, install_tests):  # pylint:disable=redefined-outer-name
-    if not install_tests:
-        pytest.skip('To test the installation, use --run-install-tests option.')
-    venv_path = create_venv_with_nncf(tmp_path, package_type, venv_type, extra_reqs='tf')
-    return venv_path
+# Custom markers specifying tests to be run only if a specific option
+# is present on the pytest command line must be registered here.
+MARKS_VS_OPTIONS = {**COMMON_SCOPE_MARKS_VS_OPTIONS}
+
+
+def pytest_collection_modifyitems(config, items):
+    skip_marked_cases_if_options_not_specified(config, items, MARKS_VS_OPTIONS)

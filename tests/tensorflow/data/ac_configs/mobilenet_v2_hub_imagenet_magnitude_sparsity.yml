@@ -1,0 +1,22 @@
+models:
+  - name: mobilenet_v2_hub_imagenet_magnitude_sparsity
+    launchers:
+      - framework: dlsdk
+        device: CPU
+        tags:
+          - FP32
+        adapter: classification
+    datasets:
+      - name: imagenet_1001_classes
+        preprocessing:
+          - type: crop
+            central_fraction: 0.875
+          - type: resize
+            size: 224
+          - type: rgb_to_bgr
+          - type: normalization
+            std: 255
+        metrics:
+          - name: accuracy@top1
+            type: accuracy
+            top_k: 1

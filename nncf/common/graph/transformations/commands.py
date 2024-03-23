@@ -1,24 +1,21 @@
-"""
- Copyright (c) 2022 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2024 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from typing import Any
-from typing import Dict
+from enum import IntEnum
+from typing import Any, Dict
 
-from nncf.common.utils.ordered_enum import OrderedEnum
 from nncf.common.stateful_classes_registry import CommonStatefulClassesRegistry
 
 
-class TransformationPriority(OrderedEnum):
+class TransformationPriority(IntEnum):
     """
     Defines priorities for compression and service operations that are
     added as modifications to the original model graph in order to turn it into a
@@ -41,10 +38,10 @@ class TransformationPriority(OrderedEnum):
     QUANTIZATION_PRIORITY = 11
 
 
-TARGET_TYPE_STATE_ATTR = 'name'
+TARGET_TYPE_STATE_ATTR = "name"
 
 
-class TargetType(OrderedEnum):
+class TargetType(IntEnum):
     """
     Describes the types of locations in the model that can be modified using NNCF
     in order to create a compressed model.
@@ -93,7 +90,7 @@ class TargetType(OrderedEnum):
         return {TARGET_TYPE_STATE_ATTR: self.name}
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> 'TargetType':
+    def from_state(cls, state: Dict[str, Any]) -> "TargetType":
         """
         Creates the object from its state.
 
@@ -102,7 +99,7 @@ class TargetType(OrderedEnum):
         return TargetType[state[TARGET_TYPE_STATE_ATTR]]
 
 
-class TransformationType(OrderedEnum):
+class TransformationType(IntEnum):
     """
     Defines the types of transformations that can be applied to a location in the control
      flow graph of the model.
@@ -118,7 +115,7 @@ class TransformationType(OrderedEnum):
 
 
 class TargetPointStateNames:
-    TARGET_TYPE = 'target_type'
+    TARGET_TYPE = "target_type"
 
 
 @CommonStatefulClassesRegistry.register()
@@ -133,6 +130,7 @@ class TargetPoint:
     the target point in the model graph to which the transformation command
     will be applied.
     """
+
     _state_names = TargetPointStateNames
 
     def __init__(self, target_type: TargetType):
@@ -148,8 +146,7 @@ class TargetPoint:
         return self._target_type
 
     def __eq__(self, other: Any) -> bool:
-        return isinstance(other, TargetPoint) and \
-            self.type == other.type
+        return isinstance(other, TargetPoint) and self.type == other.type
 
     def __str__(self) -> str:
         return str(self.type)
@@ -166,16 +163,17 @@ class TargetPoint:
         """
         return {self._state_names.TARGET_TYPE: self._target_type.get_state()}
 
+    def is_weight_target_point(self):
+        return self._target_type == TargetType.OPERATION_WITH_WEIGHTS
+
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> 'TargetPoint':
+    def from_state(cls, state: Dict[str, Any]) -> "TargetPoint":
         """
         Creates the object from its state.
 
         :param state: Output of `get_state()` method.
         """
-        kwargs = {
-            cls._state_names.TARGET_TYPE: TargetType.from_state(state[cls._state_names.TARGET_TYPE])
-        }
+        kwargs = {cls._state_names.TARGET_TYPE: TargetType.from_state(state[cls._state_names.TARGET_TYPE])}
         return cls(**kwargs)
 
 
@@ -216,14 +214,3 @@ class TransformationCommand(Command):
     @property
     def target_point(self) -> TargetPoint:
         return self._target_point
-
-    def check_command_compatibility(self, command: 'TransformationCommand') -> bool:
-        return isinstance(command, TransformationCommand) and \
-               self.type == command.type and \
-               self.target_point == command.target_point
-
-    def union(self, other: 'TransformationCommand') -> 'TransformationCommand':
-        raise NotImplementedError()
-
-    def __add__(self, other: 'TransformationCommand') -> 'TransformationCommand':
-        return self.union(other)

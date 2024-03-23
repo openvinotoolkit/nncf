@@ -542,12 +542,14 @@ strict digraph  {
 "59 GoogLeNet/Inception[a3]/cat_0" -> "63 GoogLeNet/Inception[b3]/Sequential[b1]/NNCFConv2d[0]/conv2d_0";
 "59 GoogLeNet/Inception[a3]/cat_0" -> "70 GoogLeNet/Inception[b3]/Sequential[b2]/NNCFConv2d[0]/conv2d_0";
 "59 GoogLeNet/Inception[a3]/cat_0" -> "84 GoogLeNet/Inception[b3]/Sequential[b3]/NNCFConv2d[0]/conv2d_0";
+"59 GoogLeNet/Inception[a3]/cat_0" -> "102 GoogLeNet/Inception[b3]/Sequential[b4]/MaxPool2d[0]/max_pool2d_0";
 "60 GoogLeNet/Inception[b3]/Sequential[b1]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "61 GoogLeNet/Inception[b3]/Sequential[b1]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "61 GoogLeNet/Inception[b3]/Sequential[b1]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "62 GoogLeNet/Inception[b3]/Sequential[b1]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";
 "62 GoogLeNet/Inception[b3]/Sequential[b1]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "63 GoogLeNet/Inception[b3]/Sequential[b1]/NNCFConv2d[0]/conv2d_0";
 "63 GoogLeNet/Inception[b3]/Sequential[b1]/NNCFConv2d[0]/conv2d_0" -> "64 GoogLeNet/Inception[b3]/Sequential[b1]/NNCFBatchNorm2d[1]/batch_norm_0";
 "64 GoogLeNet/Inception[b3]/Sequential[b1]/NNCFBatchNorm2d[1]/batch_norm_0" -> "65 GoogLeNet/Inception[b3]/Sequential[b1]/ReLU[2]/relu__0";
 "65 GoogLeNet/Inception[b3]/Sequential[b1]/ReLU[2]/relu__0" -> "66 GoogLeNet/Inception[b3]/Sequential[b1]/ReLU[2]/SymmetricQuantizer/symmetric_quantize_0";
+"66 GoogLeNet/Inception[b3]/Sequential[b1]/ReLU[2]/SymmetricQuantizer/symmetric_quantize_0" -> "110 GoogLeNet/Inception[b3]/cat_0";
 "67 GoogLeNet/Inception[b3]/Sequential[b2]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "68 GoogLeNet/Inception[b3]/Sequential[b2]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "68 GoogLeNet/Inception[b3]/Sequential[b2]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "69 GoogLeNet/Inception[b3]/Sequential[b2]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";
 "69 GoogLeNet/Inception[b3]/Sequential[b2]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "70 GoogLeNet/Inception[b3]/Sequential[b2]/NNCFConv2d[0]/conv2d_0";
@@ -561,6 +563,7 @@ strict digraph  {
 "77 GoogLeNet/Inception[b3]/Sequential[b2]/NNCFConv2d[3]/conv2d_0" -> "78 GoogLeNet/Inception[b3]/Sequential[b2]/NNCFBatchNorm2d[4]/batch_norm_0";
 "78 GoogLeNet/Inception[b3]/Sequential[b2]/NNCFBatchNorm2d[4]/batch_norm_0" -> "79 GoogLeNet/Inception[b3]/Sequential[b2]/ReLU[5]/relu__0";
 "79 GoogLeNet/Inception[b3]/Sequential[b2]/ReLU[5]/relu__0" -> "80 GoogLeNet/Inception[b3]/Sequential[b2]/ReLU[5]/SymmetricQuantizer/symmetric_quantize_0";
+"80 GoogLeNet/Inception[b3]/Sequential[b2]/ReLU[5]/SymmetricQuantizer/symmetric_quantize_0" -> "110 GoogLeNet/Inception[b3]/cat_0";
 "81 GoogLeNet/Inception[b3]/Sequential[b3]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "82 GoogLeNet/Inception[b3]/Sequential[b3]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "82 GoogLeNet/Inception[b3]/Sequential[b3]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "83 GoogLeNet/Inception[b3]/Sequential[b3]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";
 "83 GoogLeNet/Inception[b3]/Sequential[b3]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "84 GoogLeNet/Inception[b3]/Sequential[b3]/NNCFConv2d[0]/conv2d_0";
@@ -579,9 +582,6 @@ strict digraph  {
 "96 GoogLeNet/Inception[b3]/Sequential[b3]/NNCFConv2d[6]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "97 GoogLeNet/Inception[b3]/Sequential[b3]/NNCFConv2d[6]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";
 "97 GoogLeNet/Inception[b3]/Sequential[b3]/NNCFConv2d[6]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "98 GoogLeNet/Inception[b3]/Sequential[b3]/NNCFConv2d[6]/conv2d_0";
 "98 GoogLeNet/Inception[b3]/Sequential[b3]/NNCFConv2d[6]/conv2d_0" -> "99 GoogLeNet/Inception[b3]/Sequential[b3]/NNCFBatchNorm2d[7]/batch_norm_0";
-"59 GoogLeNet/Inception[a3]/cat_0" -> "102 GoogLeNet/Inception[b3]/Sequential[b4]/MaxPool2d[0]/max_pool2d_0";
-"66 GoogLeNet/Inception[b3]/Sequential[b1]/ReLU[2]/SymmetricQuantizer/symmetric_quantize_0" -> "110 GoogLeNet/Inception[b3]/cat_0";
-"80 GoogLeNet/Inception[b3]/Sequential[b2]/ReLU[5]/SymmetricQuantizer/symmetric_quantize_0" -> "110 GoogLeNet/Inception[b3]/cat_0";
 "99 GoogLeNet/Inception[b3]/Sequential[b3]/NNCFBatchNorm2d[7]/batch_norm_0" -> "100 GoogLeNet/Inception[b3]/Sequential[b3]/ReLU[8]/relu__0";
 "100 GoogLeNet/Inception[b3]/Sequential[b3]/ReLU[8]/relu__0" -> "101 GoogLeNet/Inception[b3]/Sequential[b3]/ReLU[8]/SymmetricQuantizer/symmetric_quantize_0";
 "101 GoogLeNet/Inception[b3]/Sequential[b3]/ReLU[8]/SymmetricQuantizer/symmetric_quantize_0" -> "110 GoogLeNet/Inception[b3]/cat_0";

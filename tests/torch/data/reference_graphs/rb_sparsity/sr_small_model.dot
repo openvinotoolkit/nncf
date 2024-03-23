@@ -67,6 +67,7 @@ strict digraph  {
 "65 /nncf_model_output_0" [id=65, type=nncf_model_output];
 "0 /nncf_model_input_0" -> "12 SmallModel/NNCFConv2d[conv_input]/conv2d_0";
 "1 /nncf_model_input_1" -> "4 SmallModel/NNCFConv2d[conv_cubic1]/conv2d_0";
+"1 /nncf_model_input_1" -> "64 SmallModel/add_0";
 "2 SmallModel/NNCFConv2d[conv_cubic1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "3 SmallModel/NNCFConv2d[conv_cubic1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "3 SmallModel/NNCFConv2d[conv_cubic1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "4 SmallModel/NNCFConv2d[conv_cubic1]/conv2d_0";
 "4 SmallModel/NNCFConv2d[conv_cubic1]/conv2d_0" -> "5 SmallModel/ReLU[relu]/relu_0";
@@ -74,7 +75,6 @@ strict digraph  {
 "6 SmallModel/NNCFConv2d[conv_cubic2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "7 SmallModel/NNCFConv2d[conv_cubic2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "7 SmallModel/NNCFConv2d[conv_cubic2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "8 SmallModel/NNCFConv2d[conv_cubic2]/conv2d_0";
 "8 SmallModel/NNCFConv2d[conv_cubic2]/conv2d_0" -> "9 SmallModel/Sigmoid[sigmoid]/sigmoid_0";
-"1 /nncf_model_input_1" -> "64 SmallModel/add_0";
 "9 SmallModel/Sigmoid[sigmoid]/sigmoid_0" -> "63 SmallModel/__mul___0";
 "10 SmallModel/NNCFConv2d[conv_input]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "11 SmallModel/NNCFConv2d[conv_input]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "11 SmallModel/NNCFConv2d[conv_input]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "12 SmallModel/NNCFConv2d[conv_input]/conv2d_0";

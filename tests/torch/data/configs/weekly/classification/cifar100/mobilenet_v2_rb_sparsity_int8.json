@@ -36,7 +36,7 @@
                 "sparsity_freeze_epoch": 45
             },
             "ignored_scopes": [
-                "MobileNetV2/Sequential[features]/Sequential[0]/Conv2d[0]"
+                "MobileNetV2For32x32/Sequential[features]/Conv2dNormActivation[0]/NNCFConv2d[0]/conv2d_0"
             ]
         },
         {

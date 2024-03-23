@@ -32,5 +32,6 @@
     "variance": [0.1, 0.1, 0.2, 0.2],
     "clip": false,
     "flip": true
-  }
+  },
+  "export_to_ir_via_onnx": true
 }

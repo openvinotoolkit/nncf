@@ -3,6 +3,18 @@ models:
     launchers:
       - framework: onnx_runtime
         execution_providers: ['OpenVINOExecutionProvider']
+        tags: ['OpenVINOExecutionProvider']
+        adapter:
+          type: retinanet_multihead
+          boxes_outputs: [output6, output7, output8, output9, output10]
+          class_outputs: [output1, output2, output3, output4, output5]
+        inputs:
+          - name: input
+            type: INPUT
+            layout: "NCHW"
+      - framework: onnx_runtime
+        execution_providers: ['CPUExecutionProvider']
+        tags: ['CPUExecutionProvider']
         adapter:
           type: retinanet_multihead
           boxes_outputs: [output6, output7, output8, output9, output10]

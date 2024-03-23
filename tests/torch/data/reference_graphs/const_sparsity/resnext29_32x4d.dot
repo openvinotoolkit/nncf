@@ -140,10 +140,10 @@ strict digraph  {
 "2 ResNeXt/NNCFConv2d[conv1]/conv2d_0" -> "3 ResNeXt/NNCFBatchNorm2d[bn1]/batch_norm_0";
 "3 ResNeXt/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "4 ResNeXt/relu_0";
 "4 ResNeXt/relu_0" -> "6 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/conv2d_0";
+"4 ResNeXt/relu_0" -> "17 ResNeXt/Sequential[layer1]/Block[0]/Sequential[shortcut]/NNCFConv2d[0]/conv2d_0";
 "5 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask_0" -> "6 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/conv2d_0";
 "6 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv1]/conv2d_0" -> "7 ResNeXt/Sequential[layer1]/Block[0]/NNCFBatchNorm2d[bn1]/batch_norm_0";
 "7 ResNeXt/Sequential[layer1]/Block[0]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "8 ResNeXt/Sequential[layer1]/Block[0]/relu_0";
-"4 ResNeXt/relu_0" -> "17 ResNeXt/Sequential[layer1]/Block[0]/Sequential[shortcut]/NNCFConv2d[0]/conv2d_0";
 "8 ResNeXt/Sequential[layer1]/Block[0]/relu_0" -> "10 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv2]/conv2d_0";
 "9 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask_0" -> "10 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv2]/conv2d_0";
 "10 ResNeXt/Sequential[layer1]/Block[0]/NNCFConv2d[conv2]/conv2d_0" -> "11 ResNeXt/Sequential[layer1]/Block[0]/NNCFBatchNorm2d[bn2]/batch_norm_0";
@@ -230,6 +230,7 @@ strict digraph  {
 "86 ResNeXt/Sequential[layer2]/Block[2]/NNCFBatchNorm2d[bn3]/batch_norm_0" -> "87 ResNeXt/Sequential[layer2]/Block[2]/__iadd___0";
 "87 ResNeXt/Sequential[layer2]/Block[2]/__iadd___0" -> "88 ResNeXt/Sequential[layer2]/Block[2]/relu_2";
 "88 ResNeXt/Sequential[layer2]/Block[2]/relu_2" -> "90 ResNeXt/Sequential[layer3]/Block[0]/NNCFConv2d[conv1]/conv2d_0";
+"88 ResNeXt/Sequential[layer2]/Block[2]/relu_2" -> "101 ResNeXt/Sequential[layer3]/Block[0]/Sequential[shortcut]/NNCFConv2d[0]/conv2d_0";
 "89 ResNeXt/Sequential[layer3]/Block[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask_0" -> "90 ResNeXt/Sequential[layer3]/Block[0]/NNCFConv2d[conv1]/conv2d_0";
 "90 ResNeXt/Sequential[layer3]/Block[0]/NNCFConv2d[conv1]/conv2d_0" -> "91 ResNeXt/Sequential[layer3]/Block[0]/NNCFBatchNorm2d[bn1]/batch_norm_0";
 "91 ResNeXt/Sequential[layer3]/Block[0]/NNCFBatchNorm2d[bn1]/batch_norm_0" -> "92 ResNeXt/Sequential[layer3]/Block[0]/relu_0";
@@ -240,7 +241,6 @@ strict digraph  {
 "96 ResNeXt/Sequential[layer3]/Block[0]/relu_1" -> "98 ResNeXt/Sequential[layer3]/Block[0]/NNCFConv2d[conv3]/conv2d_0";
 "97 ResNeXt/Sequential[layer3]/Block[0]/NNCFConv2d[conv3]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask_0" -> "98 ResNeXt/Sequential[layer3]/Block[0]/NNCFConv2d[conv3]/conv2d_0";
 "98 ResNeXt/Sequential[layer3]/Block[0]/NNCFConv2d[conv3]/conv2d_0" -> "99 ResNeXt/Sequential[layer3]/Block[0]/NNCFBatchNorm2d[bn3]/batch_norm_0";
-"88 ResNeXt/Sequential[layer2]/Block[2]/relu_2" -> "101 ResNeXt/Sequential[layer3]/Block[0]/Sequential[shortcut]/NNCFConv2d[0]/conv2d_0";
 "99 ResNeXt/Sequential[layer3]/Block[0]/NNCFBatchNorm2d[bn3]/batch_norm_0" -> "103 ResNeXt/Sequential[layer3]/Block[0]/__iadd___0";
 "100 ResNeXt/Sequential[layer3]/Block[0]/Sequential[shortcut]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/BinaryMask[op]/apply_binary_mask_0" -> "101 ResNeXt/Sequential[layer3]/Block[0]/Sequential[shortcut]/NNCFConv2d[0]/conv2d_0";
 "101 ResNeXt/Sequential[layer3]/Block[0]/Sequential[shortcut]/NNCFConv2d[0]/conv2d_0" -> "102 ResNeXt/Sequential[layer3]/Block[0]/Sequential[shortcut]/NNCFBatchNorm2d[1]/batch_norm_0";

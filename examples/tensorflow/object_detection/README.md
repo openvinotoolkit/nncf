@@ -6,7 +6,7 @@ The sample receives a configuration file where the training schedule, hyper-para
 
 ## Features
 
-- RetinaNet from the official [TF repository](https://github.com/tensorflow/models/tree/master/official/vision/detection) with minor modifications (custom implementation of upsamling is replaced with equivalent tf.keras.layers.UpSampling2D). YOLOv4 from the [keras-YOLOv3-model-set](https://github.com/david8862/keras-YOLOv3-model-set) repository.
+- RetinaNet from the official [TF repository](https://github.com/tensorflow/models/tree/master/official/legacy/detection) with minor modifications (custom implementation of upsampling is replaced with equivalent tf.keras.layers.UpSampling2D). YOLOv4 from the [keras-YOLOv3-model-set](https://github.com/david8862/keras-YOLOv3-model-set) repository.
 - Support [TensorFlow Datasets (TFDS)](https://www.tensorflow.org/datasets) and TFRecords for COCO2017 dataset.
 - Configuration file examples for sparsity, quantization, filter pruning and quantization with sparsity.
 - Export to Frozen Graph or TensorFlow SavedModel that is supported by the OpenVINO™ toolkit.
@@ -14,11 +14,11 @@ The sample receives a configuration file where the training schedule, hyper-para
 
 ## Installation
 
-At this point it is assumed that you have already installed nncf. You can find information on downloading nncf [here](https://github.com/openvinotoolkit/nncf#user-content-installation).  
+At this point it is assumed that you have already installed nncf. You can find information on downloading nncf [here](https://github.com/openvinotoolkit/nncf#user-content-installation).
 
 To work with the sample you should install the corresponding Python package dependencies:
 
-```
+```bash
 pip install -r examples/tensorflow/requirements.txt
 ```
 
@@ -66,33 +66,35 @@ The [COCO2017](https://cocodataset.org/) dataset in TFRecords format should be s
 
 - If you did not install the package, add the repository root folder to the `PYTHONPATH` environment variable.
 - Go to the `examples/tensorflow/object_detection` folder.
-- Download the pre-trained weights in H5 format and provide the path to them using `--weights` flag. The link to the 
-archive with pre-trained weights can be found in the `TensorFlow checkpoint` column of the [results](#results) table. 
-Select the checkpoint corresponding to the `None` compression algorithm, which includes the pre-trained weights for the 
-FP32 model, without applying any compression algorithms.
-- (Optional) Before compressing a model, it is highly recommended checking the accuracy of the pretrained model, use the following command: 
-  ```bash
-  python main.py \
-  --mode=test \
-  --config=configs/quantization/retinanet_coco_int8.json \
-  --weights=<path_to_H5_file_with_pretrained_weights>
-  --data=<path_to_dataset> \
-  --disable-compression 
-  ```
+- Download the pre-trained weights in H5 format for either [RetinaNet](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_coco.tar.gz) or [YOLOv4](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/yolo_v4_coco.tar.gz) and provide the path to them using `--weights` flag.
+- (Optional) Before compressing a model, it is highly recommended checking the accuracy of the pretrained model, use the following command:
+
+    ```bash
+    python main.py \
+    --mode=test \
+    --config=configs/quantization/retinanet_coco_int8.json \
+    --weights=<path_to_H5_file_with_pretrained_weights> \
+    --data=<path_to_dataset> \
+    --disable-compression
+    ```
+
 - Run the following command to start compression with fine-tuning on all available GPUs on the machine:
+
     ```bash
     python main.py \
     --mode=train \
     --config=configs/quantization/retinanet_coco_int8.json \
-    --weights=<path_to_H5_file_with_pretrained_weights>
+    --weights=<path_to_H5_file_with_pretrained_weights> \
     --data=<path_to_dataset> \
     --log-dir=../../results/quantization/retinanet_coco_int8
     ```
+
 - Use the `--resume` flag with the path to the checkpoint to resume training from the defined checkpoint or folder with checkpoints to resume training from the last checkpoint.
 
 ### Validate Your Model Checkpoint
 
 To estimate the test scores of your trained model checkpoint, use the following command:
+
 ```bash
 python main.py \
 --mode=test \
@@ -104,6 +106,7 @@ python main.py \
 ### Export Compressed Model
 
 To export trained model to the **Frozen Graph**, use the following command:
+
 ```bash
 python main.py \
 --mode=export \
@@ -113,6 +116,7 @@ python main.py \
 ```
 
 To export trained model to the **SavedModel**, use the following command:
+
 ```bash
 python main.py \
 --mode=export \
@@ -122,6 +126,7 @@ python main.py \
 ```
 
 To export trained model to the **Keras H5**, use the following command:
+
 ```bash
 python main.py \
 --mode=export \
@@ -131,7 +136,9 @@ python main.py \
 ```
 
 ### Save Checkpoint without Optimizer
+
 To reduce memory footprint (if no further training is scheduled) it is useful to save the checkpoint without optimizer. Use the following command:
+
 ```bash
 python ../common/prepare_checkpoint.py \
 --config=configs/quantization/retinanet_coco_int8.json \
@@ -144,10 +151,12 @@ python ../common/prepare_checkpoint.py \
 To export a model to the OpenVINO IR and run it using the Intel® Deep Learning Deployment Toolkit, refer to this [tutorial](https://software.intel.com/en-us/openvino-toolkit).
 
 ## Train RetinaNet from scratch
+
 - Download pre-trained ResNet-50 checkpoint from [here](https://storage.cloud.google.com/cloud-tpu-checkpoints/model-garden-vision/detection/resnet50-2018-02-07.tar.gz).
 - If you did not install the package, add the repository root folder to the `PYTHONPATH` environment variable.
 - Go to the `examples/tensorflow/object_detection` folder.
 - Run the following command to start training RetinaNet from scratch on all available GPUs on the machine:
+
     ```bash
     python main.py \
     --mode=train \
@@ -155,24 +164,10 @@ To export a model to the OpenVINO IR and run it using the Intel® Deep Learning 
     --data=<path_to_dataset> \
     --log-dir=../../results/quantization/retinanet_coco_baseline \
     --backbone-checkpoint=<path_to_resnet50-2018-02-07_folder>
-- Export trained model to the Keras H5 format.
+    ```
 
-<a name='results'></a>
+- Export trained model to the Keras H5 format.
 
 ## Results
 
-|**Model**|**Compression algorithm**|**Dataset**|**mAP (drop) %**|**NNCF config file**|**TensorFlow checkpoint**|
-| :---: | :---: | :---: | :---: | :---: | :---: |
-|RetinaNet|None|COCO2017|33.44|[retinanet_coco.json](configs/retinanet_coco.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet.tar.gz)|
-|RetinaNet|INT8 (per-tensor, symmetric for weights; per-tensor, symmetric for activations)|COCO2017|33.18 (0.26)|[retinanet_coco_int8.json](configs/quantization/retinanet_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_int8_w_sym_t_half_a_sym_t.tar.gz)|
-|RetinaNet|Sparsity 50% (Magnitude)|COCO2017|33.13 (0.31)|[retinanet_coco_magnitude_sparsity.json](configs/sparsity/retinanet_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_sparsity_50.tar.gz)|
-|YOLOv4|None|COCO2017|47.04|[yolo_v4_coco.json](configs/yolo_v4_coco.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/yolo_v4.tar.gz)|
-|YOLOv4|INT8 (per-channel, symmetric for weights; per-tensor, asymmetric for activations)|COCO2017|46.30 (0.74)|[yolo_v4_coco_int8.json](configs/quantization/yolo_v4_coco_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/yolo_v4_int8_w_sym_ch_half_a_asym_t.tar.gz)|
-|YOLOv4|Sparsity 50% (Magnitude)|COCO2017|46.54 (0.50)|[yolo_v4_coco_magnitude_sparsity.json](configs/sparsity/yolo_v4_coco_magnitude_sparsity.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/yolo_v4_sparsity_50.tar.gz)|
-
-#### Results for filter pruning
-|**Model**|**Compression algorithm**|**Dataset**|**mAP (drop) %**|**GFLOPS**|**MParams**|**NNCF config file**|**TensorFlow checkpoint**|
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-|RetinaNet|None|COCO2017|33.44|194.1 (100%)|60.8 (100%)|[retinanet_coco.json](configs/retinanet_coco.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet.tar.gz)|
-|RetinaNet|Filter Pruning 40%, geometric_median criterion|COCO2017|32.7 (0.74)|107.7 (55.49%)|34.7 (57.07%)|[retinanet_coco_pruning.json](configs/pruning/retinanet_coco_pruning.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_pruning_40.tar.gz)|
-|RetinaNet|Filter Pruning 40%, geometric_median criterion + INT8 (per-tensor, symmetric for weights; per-tensor, symmetric for activations)|COCO2017|32.68 (0.76)|102.6 (52.86%)|33.6 (55.26%)|[retinanet_coco_pruning_int8.json](configs/pruning_quantization/retinanet_coco_pruning_int8.json)|[Link](https://storage.openvinotoolkit.org/repositories/nncf/models/develop/tensorflow/retinanet_int8_w_sym_t_half_a_sym_t_pruning_40.tar.gz)|
+Please see compression results for Tensorflow object detection at our [Model Zoo page](../../../docs/ModelZoo.md#tensorflow-object-detection).

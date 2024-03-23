@@ -1,0 +1,1 @@
+../../../2.11/quantized/w_sym_ch_a_asym_t/resnet50v2.pb

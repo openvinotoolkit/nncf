@@ -1,22 +1,22 @@
-"""
- Copyright (c) 2022 Intel Corporation
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-      http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-"""
+# Copyright (c) 2024 Intel Corporation
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#      http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from nncf.common.quantization.quantizer_propagation.structs import QuantizationTrait
+from nncf.tensorflow.graph.metatypes import common
 from nncf.tensorflow.graph.metatypes import keras_layers as layer_metatypes
 from nncf.tensorflow.graph.metatypes import tf_ops as op_metatypes
-from nncf.tensorflow.graph.metatypes import common
-from nncf.common.graph.operator_metatypes import UnknownMetatype
+from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS
+from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS
+from nncf.tensorflow.graph.metatypes.common import LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT
 
-# If there are no some metatypes it means that they are considered as QuantizationTrait.QuantizationAgnostic
+# If a metatype is not in this list, then it is considered to be QuantizationTrait.NON_QUANTIZABLE.
 
 DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT = {
     QuantizationTrait.INPUTS_QUANTIZABLE: [
@@ -52,15 +52,12 @@ DEFAULT_TF_QUANT_TRAIT_TO_OP_DICT = {
         op_metatypes.TFRelu6OpMetatype,
         op_metatypes.TFBatchMatMulV2OpMetatype,
     ],
-    QuantizationTrait.NON_QUANTIZABLE: [layer_metatypes.TFSoftmaxLayerMetatype,
-                                        op_metatypes.TFSigmoidOpMetatype,
-                                        op_metatypes.TFExpOpMetatype,
-                                        op_metatypes.TFLogOpMetatype,
-                                        op_metatypes.TFSoftmaxOpMetatype,
-                                        UnknownMetatype],
+    QuantizationTrait.QUANTIZATION_AGNOSTIC: LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_ONE_INPUT
+    + LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_INPUTS
+    + LAYER_METATYPES_AGNOSTIC_TO_DATA_PRECISION_WITH_MULTIPLE_OUTPUTS,
     QuantizationTrait.CONCAT: [
         layer_metatypes.TFConcatenateLayerMetatype,
         op_metatypes.TFConcatOpMetatype,
     ],
-    QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [layer_metatypes.TFEmbeddingLayerMetatype]
+    QuantizationTrait.OUTPUT_QUANTIZATION_AS_WEIGHTS: [layer_metatypes.TFEmbeddingLayerMetatype],
 }

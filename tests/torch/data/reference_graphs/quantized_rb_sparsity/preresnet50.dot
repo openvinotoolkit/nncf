@@ -407,7 +407,7 @@ strict digraph  {
 "405 PreActResNet/Sequential[layer4]/PreActBottleneck[2]/__iadd___0" [id=405, type=__iadd__];
 "406 PreActResNet/Sequential[layer4]/PreActBottleneck[2]/SymmetricQuantizer/symmetric_quantize_3" [id=406, type=symmetric_quantize];
 "407 PreActResNet/avg_pool2d_0" [id=407, type=avg_pool2d];
-"408 PreActResNet/SymmetricQuantizer/symmetric_quantize_0" [id=408, type=symmetric_quantize];
+"408 PreActResNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[PreActResNet/avg_pool2d_0|OUTPUT]/symmetric_quantize_0" [id=408, type=symmetric_quantize];
 "409 PreActResNet/view_0" [id=409, type=view];
 "410 PreActResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" [id=410, type=calc_rb_binary_mask];
 "411 PreActResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" [id=411, type=apply_binary_mask];
@@ -507,16 +507,16 @@ strict digraph  {
 "86 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/Sequential[shortcut]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "87 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/Sequential[shortcut]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";
 "87 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/Sequential[shortcut]/NNCFConv2d[0]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "88 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/Sequential[shortcut]/NNCFConv2d[0]/conv2d_0";
 "88 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/Sequential[shortcut]/NNCFConv2d[0]/conv2d_0" -> "89 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/Sequential[shortcut]/NNCFConv2d[0]/SymmetricQuantizer/symmetric_quantize_0";
+"89 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/Sequential[shortcut]/NNCFConv2d[0]/SymmetricQuantizer/symmetric_quantize_0" -> "109 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/__iadd___0";
 "90 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "91 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "91 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "92 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";
 "92 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/NNCFConv2d[conv1]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "93 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/NNCFConv2d[conv1]/conv2d_0";
 "93 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/NNCFConv2d[conv1]/conv2d_0" -> "94 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/NNCFBatchNorm2d[bn2]/batch_norm_0";
 "94 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/NNCFBatchNorm2d[bn2]/batch_norm_0" -> "95 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/relu_1";
 "95 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/relu_1" -> "96 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/SymmetricQuantizer/symmetric_quantize_1";
+"96 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/SymmetricQuantizer/symmetric_quantize_1" -> "100 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/NNCFConv2d[conv2]/conv2d_0";
 "97 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "98 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "98 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "99 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";
-"89 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/Sequential[shortcut]/NNCFConv2d[0]/SymmetricQuantizer/symmetric_quantize_0" -> "109 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/__iadd___0";
-"96 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/SymmetricQuantizer/symmetric_quantize_1" -> "100 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/NNCFConv2d[conv2]/conv2d_0";
 "99 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/NNCFConv2d[conv2]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0" -> "100 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/NNCFConv2d[conv2]/conv2d_0";
 "100 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/NNCFConv2d[conv2]/conv2d_0" -> "101 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/NNCFBatchNorm2d[bn3]/batch_norm_0";
 "101 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/NNCFBatchNorm2d[bn3]/batch_norm_0" -> "102 PreActResNet/Sequential[layer2]/PreActBottleneck[0]/relu_2";
@@ -837,8 +837,8 @@ strict digraph  {
 "404 PreActResNet/Sequential[layer4]/PreActBottleneck[2]/NNCFConv2d[conv3]/SymmetricQuantizer/symmetric_quantize_0" -> "405 PreActResNet/Sequential[layer4]/PreActBottleneck[2]/__iadd___0";
 "405 PreActResNet/Sequential[layer4]/PreActBottleneck[2]/__iadd___0" -> "406 PreActResNet/Sequential[layer4]/PreActBottleneck[2]/SymmetricQuantizer/symmetric_quantize_3";
 "406 PreActResNet/Sequential[layer4]/PreActBottleneck[2]/SymmetricQuantizer/symmetric_quantize_3" -> "407 PreActResNet/avg_pool2d_0";
-"407 PreActResNet/avg_pool2d_0" -> "408 PreActResNet/SymmetricQuantizer/symmetric_quantize_0";
-"408 PreActResNet/SymmetricQuantizer/symmetric_quantize_0" -> "409 PreActResNet/view_0";
+"407 PreActResNet/avg_pool2d_0" -> "408 PreActResNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[PreActResNet/avg_pool2d_0|OUTPUT]/symmetric_quantize_0";
+"408 PreActResNet/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[PreActResNet/avg_pool2d_0|OUTPUT]/symmetric_quantize_0" -> "409 PreActResNet/view_0";
 "409 PreActResNet/view_0" -> "413 PreActResNet/NNCFLinear[linear]/linear_0";
 "410 PreActResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/calc_rb_binary_mask_0" -> "411 PreActResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0";
 "411 PreActResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[0]/RBSparsifyingWeight[op]/apply_binary_mask_0" -> "412 PreActResNet/NNCFLinear[linear]/ModuleDict[pre_ops]/UpdateWeight[1]/SymmetricQuantizer[op]/symmetric_quantize_0";

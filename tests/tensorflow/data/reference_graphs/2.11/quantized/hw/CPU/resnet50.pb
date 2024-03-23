@@ -1,0 +1,1 @@
+../../../../2.8/quantized/hw/CPU/resnet50.pb

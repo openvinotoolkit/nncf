@@ -3,6 +3,15 @@ models:
     launchers:
       - framework: onnx_runtime
         execution_providers: ['OpenVINOExecutionProvider']
+        tags: ['OpenVINOExecutionProvider']
+        adapter:
+          type: ssd_onnx
+          scores_out: '.*scores*'
+          labels_out: '.*labels*'
+          bboxes_out: '.*bboxes*'
+      - framework: onnx_runtime
+        execution_providers: ['CPUExecutionProvider']
+        tags: ['CPUExecutionProvider']
         adapter:
           type: ssd_onnx
           scores_out: '.*scores*'

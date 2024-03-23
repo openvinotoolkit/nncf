@@ -1,0 +1,32 @@
+[
+    {
+        "basic_block": {
+            "end_node_name": "SelfAttention/NNCFLinear[o]/linear_0",
+            "start_node_name": "/nncf_model_input_0"
+        },
+        "block_type": "MHSA",
+        "op_addresses": [
+            "SelfAttention/NNCFLinear[k]/linear_0",
+            "SelfAttention/NNCFLinear[o]/linear_0",
+            "SelfAttention/NNCFLinear[q]/linear_0",
+            "SelfAttention/NNCFLinear[v]/linear_0",
+            "SelfAttention/Softmax[sm]/softmax_0",
+            "SelfAttention/__truediv___0",
+            "SelfAttention/contiguous_0",
+            "SelfAttention/matmul_0",
+            "SelfAttention/matmul_1",
+            "SelfAttention/permute_0",
+            "SelfAttention/permute_1",
+            "SelfAttention/permute_2",
+            "SelfAttention/permute_3",
+            "SelfAttention/view_0",
+            "SelfAttention/view_1",
+            "SelfAttention/view_2",
+            "SelfAttention/view_3"
+        ],
+        "ordinal_ids": [
+            0,
+            17
+        ]
+    }
+]

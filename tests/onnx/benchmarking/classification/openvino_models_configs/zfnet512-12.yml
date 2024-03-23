@@ -1,0 +1,32 @@
+models:
+- name: zfnet512-12
+  launchers:
+  - framework: openvino
+    device: CPU
+    adapter: classification
+    tags: ['OpenVINO']
+  datasets:
+  - name: imagenet_1000_classes
+    # read in RGB format
+    reader: pillow_imread
+    preprocessing:
+      - type: rgb_to_bgr
+
+      - type: resize
+        size: 256
+        aspect_ratio_scale: greater
+        use_pillow: true
+        interpolation: BILINEAR
+
+      - type: crop
+        size: 224
+        use_pillow: true
+
+      # BGR format
+      - type: normalization
+        mean: (103.939, 116.779, 123.68)
+
+    metrics:
+    - name: accuracy@top1
+      type: accuracy
+      top_k: 1

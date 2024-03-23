@@ -20,6 +20,8 @@
     "dataset": "imagenet2012",
     "dataset_type": "tfds",
 
+    "disable_tensor_float_32_execution": true,
+
     "compression":[
         {
             "algorithm": "rb_sparsity",

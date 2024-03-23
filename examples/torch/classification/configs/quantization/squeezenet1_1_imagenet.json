@@ -1,6 +1,7 @@
 {
     "model": "squeezenet1_1",
     "pretrained": true,
+    "eval_only": true,
 
     "input_info": {
       "sample_size": [1, 3, 224, 224]

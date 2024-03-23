@@ -1,0 +1,5 @@
+torchvision
+tqdm
+scikit-learn
+fastdownload
+openvino-dev==2024.0

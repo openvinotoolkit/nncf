@@ -21,7 +21,7 @@
         },
         "weight_decay": 1e-05
     },
-    "target_device": "VPU",
+    "target_device": "NPU",
     "compression": {
         "algorithm": "quantization",
         "initializer": {
@@ -34,5 +34,7 @@
                 "type": "min_max"
             }
         }
-    }
+    },
+    "no_strip_on_export": true,
+    "export_to_ir_via_onnx": true
 }

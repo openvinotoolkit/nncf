@@ -1,4 +1,4 @@
-## Implemented Compression Methods
+# Implemented Compression Methods
 
 Each compression method receives its own hyperparameters that are organized as a dictionary and basically stored in a JSON file that is deserialized when the training starts. Compression methods can be applied separately or together producing sparse, quantized, or both sparse and quantized models. For more information about the configuration, refer to the samples.
 
@@ -12,9 +12,6 @@ Each compression method receives its own hyperparameters that are organized as a
   - Automatic bitwidth assignment based on HAWQ
   - Automatic quantization parameter selection and activation quantizer setup based on HW config preset
   - Automatic bitwidth assignment mode AutoQ, based on HAQ, a Deep Reinforcement Learning algorithm to select best mixed precision given quality metric and HW type.
-- [Binarization](./compression_algorithms/Binarization.md)
-  - XNOR, DoReFa weight binarization
-  - Scale/threshold based per-channel activation binarization
 - [Sparsity](./compression_algorithms/Sparsity.md)
   - Magnitude sparsity
   - Regularization-based (RB) sparsity

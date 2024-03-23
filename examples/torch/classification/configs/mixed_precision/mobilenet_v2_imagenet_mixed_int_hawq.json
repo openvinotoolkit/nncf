@@ -23,7 +23,7 @@
         },
         "weight_decay": 1e-05
     },
-    "target_device": "VPU",
+    "target_device": "NPU",
     "compression": {
         "algorithm": "quantization",
         "quantize_inputs": true,
@@ -34,5 +34,7 @@
                 "compression_ratio": 1.5
             }
         }
-    }
+    },
+    "no_strip_on_export": true,
+    "export_to_ir_via_onnx": true
 }

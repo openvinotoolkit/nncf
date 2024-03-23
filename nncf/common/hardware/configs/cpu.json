@@ -2,6 +2,13 @@
     "target_device": "CPU",
     "config": {
         "quantization": {
+            "q8_a_sym": {
+                "bits": 8,
+                "mode": [
+                    "symmetric"
+                ],
+                "granularity": "pertensor"
+            },
             "q8_a": {
                 "bits": 8,
                 "mode": [
@@ -231,13 +238,45 @@
                 "activations": "q8_a"
             }
         },
-        {"type": "Reshape"},
         {
             "type": "Concat",
             "attributes": {
                 "scales": "unified"
             }
         },
+        {
+            "type": "LSTMSequence",
+            "quantization": {
+                "activations": "q8_a",
+                "weights": "q8_w_sym"
+            }
+        },
+        {
+            "type": "GRUSequence",
+            "quantization": {
+                "activations": "q8_a",
+                "weights": "q8_w_sym"
+            }
+        },
+        {
+            "type": "ReduceSum",
+            "quantization": {
+                "activations": "q8_a"
+            }
+        },
+        {
+            "type": "GroupNormalization",
+            "quantization": {
+                "activations": "q8_a"
+            }
+        },
+        {
+            "type": "ScaledDotProductAttention",
+            "quantization": {
+                "activations": "q8_a_sym"
+            }
+        },
+        {"type": "Reshape"},
         {"type": "Flatten"},
         {"type": "Squeeze"},
         {"type": "Unsqueeze"},
@@ -252,7 +291,12 @@
         {"type": "Pad"},
         {"type": "ConvertLike"},
         // NNCF-specific extensions are below:
-        {"type": "Embedding"}, // relying on the rule to use default config for weighted ops with unspecified quantization
+        {
+            "type": "Embedding",
+            "quantization": {
+                "weights": ["q8_w_sym", "q8_w_asym"]
+            }
+        },
         {"type": "EmbeddingBag"}
     ]
 }
