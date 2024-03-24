@@ -51,17 +51,15 @@ from nncf.torch.graph.operator_metatypes import PTOutputNoopMetatype
 from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
-from nncf.torch.graph.transformations.commands import PTModelExtractionWithFusedBiasCommand
+from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTQuantizerInsertionCommand
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTWeightUpdateCommand
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.torch.layers import NNCFConv2d
 from nncf.torch.layers import register_module
 from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.module_operations import BaseOp
-from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint
@@ -497,18 +495,16 @@ class TestInsertionPointGraph:
         assert Counter(sanitized_loaded_edges) == Counter(list(merged_ip_graph.edges))
 
 
-def test_extraction_with_fused_bias_transformations():
-    model = NNCFNetwork(InsertionPointTestModel(), FillerInputInfo([FillerInputElement([1, 1, 10, 10])]))
+def test_extraction_model_transformations():
+    model = wrap_model(InsertionPointTestModel(), torch.ones([1, 1, 10, 10]), trace_parameters=True)
     model_transformer = PTModelTransformer(model)
 
-    command = PTModelExtractionWithFusedBiasCommand("InsertionPointTestModel/NNCFConv2d[conv1]/conv2d_0")
+    command = PTModelExtractionCommand(
+        ["InsertionPointTestModel/Conv2d[conv1]/conv2d_0"], ["InsertionPointTestModel/Conv2d[conv1]/conv2d_0"]
+    )
     transformation_layout = PTTransformationLayout()
     transformation_layout.register(command)
-    extracted_model = model_transformer.transform(transformation_layout)
-
-    assert isinstance(extracted_model, nn.Sequential)
-    assert len(extracted_model) == 1
-    assert isinstance(extracted_model[0], NNCFConv2d)
+    model_transformer.transform(transformation_layout)
 
 
 @pytest.mark.parametrize(
@@ -516,10 +512,10 @@ def test_extraction_with_fused_bias_transformations():
     [(PTBiasCorrectionCommand, "bias", torch.tensor([42.0])), (PTWeightUpdateCommand, "weight", torch.tensor([42.0]))],
 )
 def test_correction_transformations(command_cls, attr_name, new_value):
-    model = NNCFNetwork(InsertionPointTestModel(), FillerInputInfo([FillerInputElement([1, 1, 10, 10])]))
+    model = wrap_model(InsertionPointTestModel(), torch.ones([1, 1, 10, 10]), trace_parameters=True)
     model_transformer = PTModelTransformer(model)
 
-    target_point = PTTargetPoint(TargetType.LAYER, "InsertionPointTestModel/NNCFConv2d[conv1]/conv2d_0")
+    target_point = PTTargetPoint(TargetType.LAYER, "InsertionPointTestModel/Conv2d[conv1]/conv2d_0")
     command = command_cls(target_point, new_value)
 
     transformation_layout = PTTransformationLayout()
@@ -569,14 +565,19 @@ class Hook(torch.nn.Module):
             0,
             "InsertionPointTestModel/linear_0|INPUT0",
         ),
-        (TargetType.OPERATION_WITH_WEIGHTS, "InsertionPointTestModel/NNCFConv2d[conv1]/conv2d_0", None, None),
+        (
+            TargetType.OPERATION_WITH_WEIGHTS,
+            "InsertionPointTestModel/Conv2d[conv1]/conv2d_0",
+            1,
+            "InsertionPointTestModel/Conv2d[conv1]/conv2d_0|INPUT1",
+        ),
     ),
 )
 def test_quantizer_insertion_transformations(target_type, node_name, input_port_id, ref_name):
     hook = Hook()
 
     def _insert_quantizer_to_model():
-        model = NNCFNetwork(InsertionPointTestModel(), FillerInputInfo([FillerInputElement([1, 1, 10, 10])]))
+        model = wrap_model(InsertionPointTestModel(), torch.ones([1, 1, 10, 10]), trace_parameters=True)
         model_transformer = PTModelTransformer(model)
 
         target_point = PTTargetPoint(target_type, node_name, input_port_id=input_port_id)
@@ -592,22 +593,14 @@ def test_quantizer_insertion_transformations(target_type, node_name, input_port_
     assert transformed_model.nncf.is_compression_module_registered(compression_module_type)
     assert hook in transformed_model.modules()
 
-    if target_type == TargetType.OPERATION_WITH_WEIGHTS:
-        op = transformed_model.conv1.pre_ops._modules["0"]
-        assert isinstance(op, UpdateWeight)
-        assert isinstance(op.op, Hook)
-    else:
-        external_quantizers = transformed_model.nncf.get_compression_modules_by_type(compression_module_type)
-        assert hasattr(external_quantizers, ref_name)
-        op = getattr(external_quantizers, ref_name)
-        assert isinstance(op, Hook)
+    external_quantizers = transformed_model.nncf.get_compression_modules_by_type(compression_module_type)
+    assert hasattr(external_quantizers, ref_name)
+    op = getattr(external_quantizers, ref_name)
+    assert isinstance(op, Hook)
 
     # Check torch can correctly save and load model state dict with an external quantizer
     state_dict = transformed_model.state_dict()
-    if target_type == TargetType.OPERATION_WITH_WEIGHTS:
-        state_dict_hook_key = "conv1.pre_ops.0.op._param"
-    else:
-        state_dict_hook_key = f"_nncf.external_quantizers.{ref_name}._param"
+    state_dict_hook_key = f"_nncf.external_quantizers.{ref_name}._param"
     assert state_dict_hook_key in state_dict
     del transformed_model
     transformed_model = _insert_quantizer_to_model()

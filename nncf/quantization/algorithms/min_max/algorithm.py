@@ -12,7 +12,7 @@
 import collections
 import dataclasses
 from copy import deepcopy
-from typing import Any, Dict, List, Optional, OrderedDict, Set, TypeVar, Union
+from typing import Any, Dict, List, Optional, OrderedDict, Set, Tuple, TypeVar, Union
 
 import numpy as np
 
@@ -681,7 +681,7 @@ class MinMaxQuantization(Algorithm):
 
     def _get_quantization_target_points(
         self, model: TModel, nncf_graph: NNCFGraph
-    ) -> OrderedDict[TargetPoint, QuantizerConfig]:
+    ) -> Tuple[OrderedDict[TargetPoint, QuantizerConfig], List[List[TargetPoint]]]:
         """
         Returns Quantization Target Points.
         In the Compression Pipeline logic NNCF assumes that the compression pipeline works only on the single model.
@@ -1049,7 +1049,7 @@ class MinMaxQuantization(Algorithm):
                     quantizer_setup.discard(fq_2_q_key, True)
                     continue
 
-                # In the case of the two quantizers without the brancking after them,
+                # In the case of the two quantizers without the branching after them,
                 # it needs to check that all quantizers follows after producer nodes.
                 if _is_node_after_producers(fq_1_producer) and _is_node_after_producers(fq_2_producer):
                     fq_1_prod_shape = np.prod(nncf_graph.get_output_edges(fq_1_producer)[0].tensor_shape)

@@ -15,6 +15,7 @@ import torch
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
+from nncf.common.graph.definitions import MODEL_CONST_OP_NAME
 from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.common.graph.operator_metatypes import INPUT_NOOP_METATYPES
 from nncf.torch.dynamic_graph.context import TracingContext
@@ -79,9 +80,11 @@ class GraphConverter:
     def convert(dynamic_graph: DynamicGraph, traced_parameters) -> PTNNCFGraph:
         module_id_vs_known_op_addrs_map: Dict[int, Set[Scope]] = defaultdict(set)
         for dynamic_graph_node in dynamic_graph.get_all_nodes():
-            module_id_vs_known_op_addrs_map[dynamic_graph_node.calling_module_id].add(
-                dynamic_graph_node.op_exec_context.op_address
-            )
+            # Skip const nodes to detect shared nodes
+            if dynamic_graph_node.op_exec_context.operator_name != MODEL_CONST_OP_NAME:
+                module_id_vs_known_op_addrs_map[dynamic_graph_node.calling_module_id].add(
+                    dynamic_graph_node.op_exec_context.op_address
+                )
 
         module_id_vs_sorted_scopes_map = {
             k: list(sorted([s.scope_in_model for s in v], key=str)) for k, v in module_id_vs_known_op_addrs_map.items()

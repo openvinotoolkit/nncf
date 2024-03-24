@@ -58,7 +58,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:
-        return [om.PTModuleLinearMetatype, om.PTLinearMetatype, om.PTMatMulMetatype]
+        return [om.PTLinearMetatype, om.PTLinearMetatype, om.PTMatMulMetatype]
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
@@ -78,18 +78,18 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def conv_metatypes(self) -> List[OperatorMetatype]:
-        return [om.PTModuleConv1dMetatype, om.PTModuleConv2dMetatype, om.PTModuleConv3dMetatype]
+        return [om.PTConv1dMetatype, om.PTConv2dMetatype, om.PTConv3dMetatype]
 
     @property
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
         return [
-            om.PTModuleConv1dMetatype,
-            om.PTModuleConv2dMetatype,
-            om.PTModuleConv3dMetatype,
-            om.PTModuleLinearMetatype,
-            om.PTModuleConvTranspose1dMetatype,
-            om.PTModuleConvTranspose2dMetatype,
-            om.PTModuleConvTranspose3dMetatype,
+            om.PTConv1dMetatype,
+            om.PTConv2dMetatype,
+            om.PTConv3dMetatype,
+            om.PTLinearMetatype,
+            om.PTConvTranspose1dMetatype,
+            om.PTConvTranspose2dMetatype,
+            om.PTConvTranspose3dMetatype,
         ]
 
     @property
@@ -214,7 +214,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
-        return [None]
+        return node.metatype.weight_port_ids
 
     @staticmethod
     def get_weight_name(nncf_graph: NNCFGraph, target_point: PTTargetPoint) -> str:

@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import copy
 from collections import defaultdict
 from typing import Callable, Dict, List, Tuple
 
@@ -22,15 +21,20 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.quantization.structs import NonWeightQuantizerId
 from nncf.torch.external_hook import EXTERNAL_OP_STORAGE_NAME
+from nncf.torch.extractor import extract_model
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
-from nncf.torch.graph.transformations.commands import PTModelExtractionWithFusedBiasCommand
+from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTQuantizerInsertionCommand
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTWeightUpdateCommand
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.torch.model_analyzer import get_potential_fused_node
+from nncf.torch.model_graph_manager import get_const_data
+from nncf.torch.model_graph_manager import get_const_node
+from nncf.torch.model_graph_manager import get_potential_fused_node
+from nncf.torch.model_graph_manager import set_const_data
+from nncf.torch.model_graph_manager import set_const_data_to_port_id
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.nncf_network import NNCFNetwork
@@ -50,7 +54,7 @@ class PTModelTransformer(ModelTransformer):
         super().__init__(model)
 
         self._command_transformation_ordered_pairs = [
-            (PTModelExtractionWithFusedBiasCommand, self._apply_extraction_with_fused_bias_transformations),
+            (PTModelExtractionCommand, self._apply_extraction_with_fused_bias_transformations),
             (PTInsertionCommand, self._apply_insertion_transformations),
             (PTQuantizerInsertionCommand, self._apply_quantizer_insertion_transformations),
             (PTBiasCorrectionCommand, self._apply_bias_correction_transformations),
@@ -168,11 +172,10 @@ class PTModelTransformer(ModelTransformer):
                 quantizer_module = quantizer_module.to(device)
             fn = quantizer_module
 
-            if target_point.type is not TargetType.OPERATION_WITH_WEIGHTS:
-                quantizer_id = NonWeightQuantizerId(target_point.target_node_name, target_point.input_port_id)
-                storage_key = str(quantizer_id)
-                model.nncf.add_compression_module(storage_key, quantizer_module, compression_model_type)
-                fn = ExternalQuantizerCallHook(model.nncf.get_tracing_context(), storage_key)
+            quantizer_id = NonWeightQuantizerId(target_point.target_node_name, target_point.input_port_id)
+            storage_key = str(quantizer_id)
+            model.nncf.add_compression_module(storage_key, quantizer_module, compression_model_type)
+            fn = ExternalQuantizerCallHook(model.nncf.get_tracing_context(), storage_key)
 
             insertion_commands.append(
                 PTInsertionCommand(target_point, fn, TransformationPriority.QUANTIZATION_PRIORITY)
@@ -182,7 +185,7 @@ class PTModelTransformer(ModelTransformer):
 
     @staticmethod
     def _apply_extraction_with_fused_bias_transformations(
-        model: NNCFNetwork, transformations: List[PTModelExtractionWithFusedBiasCommand]
+        model: NNCFNetwork, transformations: List[PTModelExtractionCommand]
     ) -> nn.Sequential:
         """
         Extracts copy of sub-modules from the original base on node name and potential fused nodes.
@@ -192,7 +195,7 @@ class PTModelTransformer(ModelTransformer):
         :return: Extracted sub-modules.
         """
         transformation = transformations[-1]
-        return extraction_potential_fused_modules(transformation.node_name, model)
+        return extract_model(model, transformation.input_node_names, transformation.output_node_names)
 
     @staticmethod
     def _apply_bias_correction_transformations(
@@ -238,18 +241,22 @@ def update_fused_bias(target_node_name: str, new_bias: Tensor, model: NNCFNetwor
     :param model: The model.
     """
     nncf_graph = model.nncf.get_graph()
+    target_node = nncf_graph.get_node_by_name(target_node_name)
     fused_node = get_potential_fused_node(target_node_name, nncf_graph)
     if fused_node is None:
-        update_parameter(target_node_name, "bias", new_bias, model)
+        set_const_data_to_port_id(new_bias, target_node, target_node.metatype.bias_port_id, model)
         return
-    target_module = model.nncf.get_containing_module(target_node_name)
-    fused_module = model.nncf.get_containing_module(fused_node.node_name)
 
-    if target_module.bias is None:
-        update_parameter(fused_node.node_name, "bias", new_bias, model)
+    target_bias_node = get_const_node(target_node, target_node.metatype.bias_port_id, nncf_graph)
+    fused_bias_node = get_const_node(fused_node, fused_node.metatype.bias_port_id, nncf_graph)
+    fused_weight_node = get_const_node(target_node, target_node.metatype.weight_port_ids[0], nncf_graph)
+
+    if target_bias_node is None:
+        set_const_data(new_bias, fused_bias_node, model)
         return
-    new_bias = new_bias - target_module.bias * fused_module.weight
-    update_parameter(fused_node.node_name, "bias", new_bias, model)
+
+    new_bias = new_bias - get_const_node(target_bias_node) * get_const_data(fused_weight_node)
+    set_const_data(new_bias, fused_bias_node, model)
 
 
 def update_parameter(target_node_name: str, parameter_name: str, new_value: Tensor, model: NNCFNetwork) -> None:
@@ -264,23 +271,3 @@ def update_parameter(target_node_name: str, parameter_name: str, new_value: Tens
     module = model.nncf.get_containing_module(target_node_name)
     parameter: Parameter = getattr(module, parameter_name)
     parameter.data = new_value
-
-
-def extraction_potential_fused_modules(node_name: str, model: NNCFNetwork) -> nn.Sequential:
-    """
-    Return Sequential from the copy of module by node_name and potential fused node if exists.
-
-    :param node_name: The node name.
-    :param model: The model.
-    :return nn.Sequential: Copy of the modules.
-    """
-    extracted_node_names = [node_name]
-    nncf_graph = model.nncf.get_graph()
-    fused_node = get_potential_fused_node(node_name, nncf_graph)
-    if fused_node:
-        extracted_node_names.append(fused_node.node_name)
-
-    extracted_modules = [
-        copy.deepcopy(model.nncf.get_containing_module(node_name)) for node_name in extracted_node_names
-    ]
-    return nn.Sequential(*extracted_modules)
