@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional, Set, Type, Callable, Dict
+from typing import Callable, Dict, List, Optional, Set, Type
 
 import nncf
 from nncf.common.graph.definitions import NNCFGraphNodeType

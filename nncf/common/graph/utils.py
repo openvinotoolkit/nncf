@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from functools import partial
-from typing import List, Set, Tuple, Union
+from typing import List, Set, Tuple, Type, Union
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
