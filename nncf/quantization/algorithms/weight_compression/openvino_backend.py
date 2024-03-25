@@ -231,7 +231,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         s = opset.parameter(s_shape, name="s")
         zp = opset.parameter(z_p_shape, name="zp")
 
-        result = opset.clamp(opset.round(w/s + zp), level_low, level_high, name="compressed_weights")
+        result = opset.clamp(opset.round(w / s + zp), level_low, level_high, name="compressed_weights")
 
         if return_nodes:
             return w, s, zp, result

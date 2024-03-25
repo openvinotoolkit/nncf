@@ -188,7 +188,9 @@ class ScaleEstimation(Algorithm):
             min_max_scale_diffs = fns.transpose(min_max_scale_diffs, (1, 0))
             ideal_scale_diffs = fns.zeros_like(min_max_scale_diffs)
 
-            key = (wp.compression_config.mode, wp.compression_config.num_bits) + q_weights.shape + scale.shape + zp.shape
+            key = (
+                (wp.compression_config.mode, wp.compression_config.num_bits) + q_weights.shape + scale.shape + zp.shape
+            )
             if key in compress_decompress_cashe:
                 compress_decompress_model = compress_decompress_cashe[key]["compress_decompress_model"]
                 compress_model = compress_decompress_cashe[key]["compress_model"]
