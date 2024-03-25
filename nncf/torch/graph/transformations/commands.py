@@ -178,25 +178,6 @@ class PTSharedFnInsertionCommand(PTTransformationCommand):
         return True
 
 
-class PTQuantizerInsertionCommand(PTTransformationCommand):
-    """
-    Insertion quantizer operation to the models.
-    """
-
-    def __init__(
-        self,
-        point: PTTargetPoint,
-        quantizer: "BaseQuantizer",  # noqa: F821
-        hooks_group_name: str = DEFAULT_HOOKS_GROUP_NAME,
-    ):
-        super().__init__(TransformationType.INSERT, point)
-        self.quantizer = quantizer
-        self.hooks_group_name = hooks_group_name
-
-    def requires_graph_rebuild(self):
-        return True
-
-
 class PTModelExtractionWithFusedBiasCommand(PTCommand):
     """
     Extracts sequence by name with node that contain fused bias.
