@@ -114,9 +114,7 @@ class NNCFNode:
         return hash(str(self))
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, NNCFNode):
-            return False
-        return self.attributes == other.attributes
+        return isinstance(other, NNCFNode) and self.attributes == other.attributes
 
 
 class NNCFGraphEdge:
