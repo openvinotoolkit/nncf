@@ -30,9 +30,14 @@ class StaticDatasetMock:
     to convert data to backend specific type.
     """
 
-    def __init__(self, input_size: Tuple, fn_to_type: Callable = None):
+    def __init__(
+        self,
+        input_size: Tuple,
+        fn_to_type: Callable = None,
+        length: int = 1,
+    ):
         super().__init__()
-        self._len = 1
+        self._len = length
         self._input_size = input_size
         self._fn_to_type = fn_to_type
 
@@ -47,19 +52,19 @@ class StaticDatasetMock:
         return self._len
 
 
-def get_static_dataset(
-    input_size: Tuple,
-    transform_fn: Callable,
-    fn_to_type: Callable,
-) -> Dataset:
+def get_static_dataset(input_size: Tuple, transform_fn: Callable, fn_to_type: Callable, length: int = 1) -> Dataset:
     """
     Create nncf.Dataset for StaticDatasetMock.
     :param input_size: Size of generated tensors,
     :param transform_fn: Function to transformation dataset.
     :param fn_to_type: Function, defaults to None.
+    :param length: The length of the dataset.
     :return: Instance of nncf.Dataset for StaticDatasetMock.
     """
-    return Dataset(StaticDatasetMock(input_size, fn_to_type), transform_fn)
+    return Dataset(
+        StaticDatasetMock(input_size, fn_to_type, length),
+        transform_fn,
+    )
 
 
 class ConvTestModel(nn.Module):
@@ -92,7 +97,7 @@ class ConvBNTestModel(nn.Module):
         return x
 
 
-class BiasConvBiasBNTestModel(torch.nn.Module):
+class ConvBiasBNTestModel(torch.nn.Module):
     INPUT_SIZE = [1, 1, 4, 4]
 
     def __init__(self):
@@ -108,6 +113,49 @@ class BiasConvBiasBNTestModel(torch.nn.Module):
         x = self.conv(x)
         x = self.bn(x)
         return x
+
+
+class CustomConv(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.weight = nn.Parameter(torch.Tensor([[[[0.1, -2.0], [1.0, 0.1]]], [[[0.1, 2.0], [-1.0, 0.1]]]]))
+        self.bias = nn.Parameter(torch.Tensor([0.1, 1.0]))
+        self.act = nn.Identity()
+
+    def forward(self, x):
+        return self.act(F.conv2d(x, self.weight, self.bias))
+
+
+class CustomConvTestModel(nn.Module):
+    INPUT_SIZE = [1, 1, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.conv = CustomConv()
+        self.drop = nn.Dropout(0)
+
+    def forward(self, x):
+        return self.drop(self.conv(x))
+
+
+class CustomBN2d(nn.BatchNorm2d):
+    def __init__(self):
+        super().__init__(2)
+        self.bias.data = torch.Tensor([0.1, 1.0])
+        self.weight.data = torch.Tensor([0.2, 2.0])
+        self.act = nn.Identity()
+
+
+class CustomConvBNTestModel(nn.Module):
+    INPUT_SIZE = [1, 1, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.conv = CustomConv()
+        self.bn = CustomBN2d()
+
+    def forward(self, x):
+        return self.bn(self.conv(x))
 
 
 class FCTestModel(nn.Module):

@@ -8,8 +8,8 @@ onnxruntime==1.14.1
 pytest==8.0.2
 pytest-cov
 openvino-dev==2024.0.0
-optimum[onnxruntime,openvino]==1.16.0
-optimum-intel @ git+https://github.com/huggingface/optimum-intel@622f585962e5e0ff5f927fd1a96fbc02b60a2e65
+optimum[onnxruntime,openvino]==1.17.1
+optimum-intel==1.15.2
 whowhatbench @ git+https://github.com/andreyanufr/who_what_benchmark@456d3584ce628f6c8605f37cd9a3ab2db1ebf933
 soundfile==0.12.1
 librosa==0.10.0

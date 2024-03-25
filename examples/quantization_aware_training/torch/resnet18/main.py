@@ -27,11 +27,11 @@ import torchvision.datasets as datasets
 import torchvision.models as models
 import torchvision.transforms as transforms
 from fastdownload import FastDownload
-from texttable import Texttable
 from torch.jit import TracerWarning
 
 import nncf
 from nncf.common.logging.track_progress import track
+from nncf.common.utils.helpers import create_table
 
 warnings.filterwarnings("ignore", category=TracerWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -303,28 +303,23 @@ def main():
     ###############################################################################
     # Step 6: Summary
     print(os.linesep + "[Step 6] Summary")
-
-    table = Texttable()
-    table.header(["", "FP32", "INT8", "Summary"])
-    table.add_rows(
+    tabular_data = [
         [
-            [
-                "Accuracy@1",
-                f"{acc1_fp32:.3f}",
-                f"{acc1_int8:.3f}",
-                f"{acc1_int8_init:.3f} (init) + {acc1_int8 - acc1_int8_init:.3f} (tuned)",
-            ],
-            [
-                "Model Size, Mb",
-                f"{fp32_model_size:.3f}",
-                f"{int8_model_size:.3f}",
-                f"Compression rate is {fp32_model_size / int8_model_size:.3f}",
-            ],
-            ["Performance, FPS", f"{fp32_fps:.3f}", f"{int8_fps:.3f}", f"Speedup x{int8_fps / fp32_fps:.3f}"],
+            "Accuracy@1",
+            acc1_fp32,
+            acc1_int8,
+            f"{acc1_int8_init:.3f} (init) + {acc1_int8 - acc1_int8_init:.3f} (tuned)",
         ],
-        header=False,
-    )
-    print(table.draw())
+        [
+            "Model Size, Mb",
+            fp32_model_size,
+            int8_model_size,
+            f"Compression rate is {fp32_model_size / int8_model_size:.3f}",
+        ],
+        ["Performance, FPS", fp32_fps, int8_fps, f"Speedup x{int8_fps / fp32_fps:.3f}"],
+    ]
+    print(create_table(["", "FP32", "INT8", "Summary"], tabular_data))
+
     return acc1_fp32, acc1_int8_init, acc1_int8, fp32_fps, int8_fps, fp32_model_size, int8_model_size
 
 

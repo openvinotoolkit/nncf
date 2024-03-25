@@ -11,12 +11,13 @@
 from abc import ABC
 from abc import abstractmethod
 from itertools import islice
-from typing import Any, Dict, TypeVar
+from typing import Any, Dict, Optional, TypeVar
 
 import nncf
 from nncf.common import factory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.logging.logger import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -24,6 +25,13 @@ from nncf.data.dataset import Dataset
 
 TensorType = TypeVar("TensorType")
 TModel = TypeVar("TModel")
+
+EMPTY_DATASET_ERROR = (
+    "Calibration dataset must not be empty. Please provide calibration dataset with at least one sample."
+)
+ITERATIONS_NUMBER_WARNING = (
+    "The number of iterations for statistics collection is bigger than the length of the dataset."
+)
 
 
 class StatisticsAggregator(ABC):
@@ -36,6 +44,20 @@ class StatisticsAggregator(ABC):
         self.stat_subset_size = None
         self.statistic_points = StatisticPointsContainer()
 
+    def _get_iterations_number(self) -> Optional[int]:
+        """
+        Returns number of iterations, output number is less than min(self.stat_subset_size, dataset_length).
+
+        :return: Number of iterations for statistics collection.
+        """
+        dataset_length = self.dataset.get_length()
+        if dataset_length and self.stat_subset_size:
+            if self.stat_subset_size > dataset_length:
+                nncf_logger.warning(ITERATIONS_NUMBER_WARNING)
+                return dataset_length
+            return self.stat_subset_size
+        return dataset_length or self.stat_subset_size
+
     def collect_statistics(self, model: TModel, graph: NNCFGraph) -> None:
         """
         Collects statistics for registered StatisticPoints.
@@ -46,24 +68,17 @@ class StatisticsAggregator(ABC):
         """
         if not self.statistic_points:
             return
-
         model_transformer = factory.ModelTransformerFactory.create(model)
-
         merged_statistics = self._get_merged_statistic_points(self.statistic_points, model, graph)
         transformation_layout = self._get_transformation_layout_extra_outputs(merged_statistics)
         model_with_outputs = model_transformer.transform(transformation_layout)
         engine = factory.EngineFactory.create(model_with_outputs)
 
-        dataset_length = self.dataset.get_length()
-        total = (
-            min(dataset_length or self.stat_subset_size, self.stat_subset_size)
-            if self.stat_subset_size is not None
-            else None
-        )
+        iterations_number = self._get_iterations_number()
         empty_statistics = True
         for input_data in track(
-            islice(self.dataset.get_inference_data(), self.stat_subset_size),
-            total=total,
+            islice(self.dataset.get_inference_data(), iterations_number),
+            total=self.stat_subset_size,
             description="Statistics collection",
         ):
             outputs = engine.infer(input_data)
@@ -71,9 +86,7 @@ class StatisticsAggregator(ABC):
             self._register_statistics(processed_outputs, merged_statistics)
             empty_statistics = False
         if empty_statistics:
-            raise nncf.ValidationError(
-                "Calibration dataset must not be empty. Please provide calibration dataset with at least one sample."
-            )
+            raise nncf.ValidationError(EMPTY_DATASET_ERROR)
 
     def register_statistic_points(self, statistic_points: StatisticPointsContainer) -> None:
         """

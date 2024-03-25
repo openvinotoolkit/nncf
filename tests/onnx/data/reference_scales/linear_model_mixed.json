@@ -1,6 +1,6 @@
 {
     "QuantizeLinear_X_1": {
-        "scale": 0.00786584708839655,
+        "scale": 0.007865846157073975,
         "zero_point": -1
     },
     "QuantizeLinear_Conv1_W_1": {

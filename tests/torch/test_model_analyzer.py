@@ -15,7 +15,7 @@ import torch
 from nncf.torch import wrap_model
 from nncf.torch.model_analyzer import get_fused_bias_value
 from nncf.torch.model_transformer import update_fused_bias
-from tests.post_training.test_templates.helpers import BiasConvBiasBNTestModel
+from tests.post_training.test_templates.helpers import ConvBiasBNTestModel
 from tests.post_training.test_templates.helpers import ConvBNTestModel
 from tests.post_training.test_templates.helpers import ConvTestModel
 
@@ -25,7 +25,7 @@ from tests.post_training.test_templates.helpers import ConvTestModel
     (
         (ConvTestModel, [0.1000, 1.0000]),  # conv.bias
         (ConvBNTestModel, [0.1000, 1.0000]),  # bn.bias
-        (BiasConvBiasBNTestModel, [0.1600, 3.6000]),  # conv.bias*bn.weight + bn.bias
+        (ConvBiasBNTestModel, [0.1600, 3.6000]),  # conv.bias*bn.weight + bn.bias
     ),
 )
 def test_get_fused_bias_value(model_cls, ref):
@@ -43,7 +43,7 @@ def test_get_fused_bias_value(model_cls, ref):
     (
         (ConvTestModel),  # conv.bias
         (ConvBNTestModel),  # bn.bias
-        (BiasConvBiasBNTestModel),  # conv.bias*bn.weight + bn.bias
+        (ConvBiasBNTestModel),  # conv.bias*bn.weight + bn.bias
     ),
 )
 def test_update_fused_bias(model_cls):
@@ -61,7 +61,7 @@ def test_update_fused_bias(model_cls):
     if model_cls == ConvBNTestModel:
         assert model.conv.bias is None
         assert torch.all(torch.isclose(model.bn.bias, ref_new_bias))
-    if model_cls == BiasConvBiasBNTestModel:
+    if model_cls == ConvBiasBNTestModel:
         assert torch.all(torch.isclose(model.conv.bias, torch.tensor([0.3000, 1.3000])))
         assert torch.all(torch.isclose(model.bn.bias, torch.tensor([-1.0600, -3.6000])))
         assert torch.all(torch.isclose(model.conv.bias * model.bn.weight + model.bn.bias, ref_new_bias))
