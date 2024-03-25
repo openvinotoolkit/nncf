@@ -56,48 +56,30 @@ REF_METATYPES_COUNTERS = [
     [InputNoopMetatype, ONNXDepthwiseConvolutionMetatype, OutputNoopMetatype],
 ]
 QUANTIZED_REF_METATYPES_COUNTERS = [
-    [
-        InputNoopMetatype,
+    REF_METATYPES_COUNTERS[0]
+    + [
         ONNXQuantizeLinearMetatype,
         ONNXDequantizeLinearMetatype,
+    ]
+    * 5,
+    REF_METATYPES_COUNTERS[1]
+    + [
         ONNXQuantizeLinearMetatype,
         ONNXDequantizeLinearMetatype,
+    ]
+    * 2,
+    REF_METATYPES_COUNTERS[2]
+    + [
         ONNXQuantizeLinearMetatype,
         ONNXDequantizeLinearMetatype,
-        ONNXConvolutionMetatype,
-        ONNXBatchNormMetatype,
-        ONNXReluMetatype,
+    ]
+    * 0,
+    REF_METATYPES_COUNTERS[3]
+    + [
         ONNXQuantizeLinearMetatype,
         ONNXDequantizeLinearMetatype,
-        ONNXGlobalAveragePoolMetatype,
-        ONNXQuantizeLinearMetatype,
-        ONNXDequantizeLinearMetatype,
-        ONNXConvolutionMetatype,
-        OutputNoopMetatype,
-    ],
-    [
-        InputNoopMetatype,
-        InputNoopMetatype,
-        InputNoopMetatype,
-        ONNXConcatMetatype,
-        ONNXQuantizeLinearMetatype,
-        ONNXDequantizeLinearMetatype,
-        ONNXQuantizeLinearMetatype,
-        ONNXDequantizeLinearMetatype,
-        ONNXAddLayerMetatype,
-        OutputNoopMetatype,
-        OutputNoopMetatype,
-    ],
-    [InputNoopMetatype, ONNXConstantOfShapeMetatype, ONNXShapeMetatype, OutputNoopMetatype],
-    [
-        InputNoopMetatype,
-        ONNXQuantizeLinearMetatype,
-        ONNXDequantizeLinearMetatype,
-        ONNXQuantizeLinearMetatype,
-        ONNXDequantizeLinearMetatype,
-        ONNXDepthwiseConvolutionMetatype,
-        OutputNoopMetatype,
-    ],
+    ]
+    * 2,
 ]
 
 
@@ -106,11 +88,12 @@ QUANTIZED_REF_METATYPES_COUNTERS = [
     zip(TEST_MODELS, REF_METATYPES_COUNTERS, QUANTIZED_REF_METATYPES_COUNTERS),
 )
 def test_mapping_onnx_metatypes(model_creator_func, ref_metatypes, q_ref_metatypes):
+    def _check_metatypes(model, ref_metatypes):
+        nncf_graph = GraphConverter.create_nncf_graph(model)
+        actual_metatypes = [node.metatype for node in nncf_graph.get_all_nodes()]
+        assert Counter(ref_metatypes) == Counter(actual_metatypes)
+
     model = model_creator_func().onnx_model
-    nncf_graph = GraphConverter.create_nncf_graph(model)
-    actual_metatypes = [node.metatype for node in nncf_graph.get_all_nodes()]
-    assert Counter(ref_metatypes) == Counter(actual_metatypes)
     q_model = min_max_quantize_model(model)
-    nncf_graph = GraphConverter.create_nncf_graph(q_model)
-    actual_metatypes = [node.metatype for node in nncf_graph.get_all_nodes()]
-    assert Counter(q_ref_metatypes) == Counter(actual_metatypes)
+    _check_metatypes(model, ref_metatypes)
+    _check_metatypes(q_model, q_ref_metatypes)
