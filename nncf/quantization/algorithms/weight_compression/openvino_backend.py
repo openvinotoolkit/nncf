@@ -200,25 +200,20 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         weight_compression_parameter: WeightCompressionParameters, w_shape, s_shape, z_p_shape
     ):
         (
-            input_node_w,
-            input_node_s,
-            input_node_zp,
-            node_compression_clamp,
-            result1,
+            w,
+            s,
+            zp,
+            clamp,
         ) = OVWeightCompressionAlgoBackend.get_compress_pipeline(
             weight_compression_parameter, w_shape, s_shape, z_p_shape, True
         )
 
-        node_decompression_add = opset.subtract(node_compression_clamp, input_node_zp)
-        node_decompression_mul = opset.multiply(node_decompression_add, input_node_s)
-        result2 = opset.result(node_decompression_mul, name="q_weights")
-        result2.get_output_tensor(0).set_names(set(["q_weights"]))
-
-        model = ov.Model([result1, result2], [input_node_w, input_node_s, input_node_zp])
+        result = (clamp - zp) * s
+        model = ov.Model([result], [w, s, zp])
 
         compiled_model = ov.compile_model(model)
 
-        return compiled_model
+        return lambda w, s, zp: compiled_model([w, s, zp])[0]
 
     @staticmethod
     def get_compress_pipeline(
@@ -232,26 +227,20 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         level_low = 0
         level_high = 2**num_bits - 1
 
-        input_node_w = opset.parameter(w_shape, name="w")
-        input_node_s = opset.parameter(s_shape, name="s")
-        input_node_zp = opset.parameter(z_p_shape, name="zp")
+        w = opset.parameter(w_shape, name="w")
+        s = opset.parameter(s_shape, name="s")
+        zp = opset.parameter(z_p_shape, name="zp")
 
-        node_compression_div = opset.divide(input_node_w, input_node_s)
-        node_compression_add = opset.add(node_compression_div, input_node_zp)
-        node_compression_round = opset.round(node_compression_add)
-        node_compression_clamp = opset.clamp(node_compression_round, level_low, level_high)
-
-        result1 = opset.result(node_compression_clamp, name="compressed_weights")
-        result1.get_output_tensor(0).set_names(set(["compressed_weights"]))
+        result = opset.clamp(opset.round(w/s + zp), level_low, level_high, name="compressed_weights")
 
         if return_nodes:
-            return input_node_w, input_node_s, input_node_zp, node_compression_clamp, result1
+            return w, s, zp, result
 
-        model = ov.Model([result1], [input_node_w, input_node_s, input_node_zp])
+        model = ov.Model([result], [w, s, zp])
 
         compiled_model = ov.compile_model(model)
 
-        return compiled_model
+        return lambda w, s, zp: compiled_model([w, s, zp])[0]
 
 
 class OVAWQAlgoAlgoBackend(OVWeightCompressionAlgoBackend):

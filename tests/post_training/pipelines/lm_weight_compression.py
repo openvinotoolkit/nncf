@@ -91,10 +91,10 @@ class LMWeightCompression(BaseTestPipeline):
         self.preprocessor = AutoTokenizer.from_pretrained(self.model_id)
 
     def get_transform_calibration_fn(self):
-        def transform_fn(data):
+        def transform_fn(data, max_tokens=128):
             tokenized_text = self.preprocessor(data["text"], return_tensors="np")
-            input_ids = tokenized_text["input_ids"]
-            attention_mask = tokenized_text["attention_mask"]
+            input_ids = tokenized_text["input_ids"][:max_tokens]
+            attention_mask = tokenized_text["attention_mask"][:max_tokens]
 
             inputs = {}
             inputs["input_ids"] = input_ids
