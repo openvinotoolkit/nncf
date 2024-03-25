@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Callable, Dict, Optional, Union
+from typing import Callable, Dict, Optional, Union, cast
 
 from nncf.common.graph.patterns.patterns import GraphPattern
 from nncf.common.graph.patterns.patterns import HWFusedPatternNames
@@ -34,18 +34,22 @@ class PatternsManager:
         :param backend: BackendType instance.
         :return: Dictionary with the HWFusedPatternNames instance as keys and creator function as a value.
         """
+        registry: Dict[HWFusedPatternNames, Callable[[], GraphPattern]] = dict()
         if backend == BackendType.ONNX:
             from nncf.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
 
-            return ONNX_HW_FUSED_PATTERNS.registry_dict
+            registry = ONNX_HW_FUSED_PATTERNS.registry_dict
+            return registry
         if backend == BackendType.OPENVINO:
             from nncf.openvino.hardware.fused_patterns import OPENVINO_HW_FUSED_PATTERNS
 
-            return OPENVINO_HW_FUSED_PATTERNS.registry_dict
+            registry = OPENVINO_HW_FUSED_PATTERNS.registry_dict
+            return registry
         if backend == BackendType.TORCH:
             from nncf.torch.hardware.fused_patterns import PT_HW_FUSED_PATTERNS
 
-            return PT_HW_FUSED_PATTERNS.registry_dict
+            registry = PT_HW_FUSED_PATTERNS.registry_dict
+            return registry
         raise ValueError(f"Hardware-fused patterns not implemented for {backend} backend.")
 
     @staticmethod
@@ -58,18 +62,22 @@ class PatternsManager:
         :param backend: BackendType instance.
         :return: Dictionary with the HWFusedPatternNames instance as keys and creator function as a value.
         """
+        registry: Dict[IgnoredPatternNames, Callable[[], GraphPattern]] = dict()
         if backend == BackendType.ONNX:
             from nncf.onnx.quantization.ignored_patterns import ONNX_IGNORED_PATTERNS
 
-            return ONNX_IGNORED_PATTERNS.registry_dict
+            registry = ONNX_IGNORED_PATTERNS.registry_dict
+            return registry
         if backend == BackendType.OPENVINO:
             from nncf.openvino.quantization.ignored_patterns import OPENVINO_IGNORED_PATTERNS
 
-            return OPENVINO_IGNORED_PATTERNS.registry_dict
+            registry = OPENVINO_IGNORED_PATTERNS.registry_dict
+            return registry
         if backend == BackendType.TORCH:
             from nncf.torch.quantization.ignored_patterns import PT_IGNORED_PATTERNS
 
-            return PT_IGNORED_PATTERNS.registry_dict
+            registry = PT_IGNORED_PATTERNS.registry_dict
+            return registry
         raise ValueError(f"Ignored patterns not implemented for {backend} backend.")
 
     @staticmethod
@@ -127,7 +135,9 @@ class PatternsManager:
         :param model_type: ModelType instance.
         :return: Completed GraphPattern based on the backend, device & model_type.
         """
-        backend_patterns_map = PatternsManager._get_backend_hw_patterns_map(backend)
+        backend_patterns_map = cast(
+            Dict[PatternNames, Callable[[], GraphPattern]], PatternsManager._get_backend_hw_patterns_map(backend)
+        )
         return PatternsManager._get_full_pattern_graph(backend_patterns_map, device, model_type)
 
     @staticmethod
@@ -143,5 +153,7 @@ class PatternsManager:
         :param model_type: ModelType instance.
         :return: Completed GraphPattern with registered value based on the backend, device & model_type.
         """
-        backend_patterns_map = PatternsManager._get_backend_ignored_patterns_map(backend)
+        backend_patterns_map = cast(
+            Dict[PatternNames, Callable[[], GraphPattern]], PatternsManager._get_backend_ignored_patterns_map(backend)
+        )
         return PatternsManager._get_full_pattern_graph(backend_patterns_map, device, model_type)

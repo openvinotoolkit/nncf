@@ -43,7 +43,7 @@ class MultipleInputLayerAttributes(BaseLayerAttributes):
 
 
 class MultipleOutputLayerAttributes(BaseLayerAttributes):
-    def __init__(self, chunks: Union[int, List], axis: int):
+    def __init__(self, chunks: Union[int, List[Any]], axis: int):
         """
 
         :param chunks: Number of chunks (outputs).
