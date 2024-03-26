@@ -117,11 +117,13 @@ BATCH_NORMALIZATION_OPERATIONS = [
 
 
 # Contains the operation metatypes for which bias can be applied.
-OPERATIONS_WITH_BIAS = [
+OPERATIONS_WITH_BIAS_REDUCED = [
     onnx_metatypes.ONNXConvolutionMetatype,
     onnx_metatypes.ONNXGemmMetatype,
     # TODO: Need to add MatMul with the separate bias support (CVS-135433)
 ]
+
+OPERATIONS_WITH_BIAS = [*OPERATIONS_WITH_BIAS_REDUCED, onnx_metatypes.ONNXDepthwiseConvolutionMetatype]
 
 
 QUANTIZE_DEQUANTIZE_OPERATIONS = [
