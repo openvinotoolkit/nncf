@@ -749,7 +749,7 @@ def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
         if attribute.name == "group":
             conv_group = onnx.helper.get_attribute_value(attribute)
     weight_tensor_value = None
-    initializer_name = node.input[1]
+    initializer_name = get_tensor_edge_name(model, node, 1, get_parents_node_mapping(model))
     for init in model.graph.initializer:
         if init.name == initializer_name:
             weight_tensor_value = onnx.numpy_helper.to_array(init)
