@@ -11,6 +11,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import List
 
 import pytest
 import torch
@@ -54,21 +55,31 @@ from tests.shared.paths import PROJECT_ROOT
 CONFIGS = list((PROJECT_ROOT / Path("examples/torch/semantic_segmentation/configs")).glob("*"))
 
 
-@pytest.fixture(name="quantization_config", params=CONFIGS, ids=[conf.stem for conf in CONFIGS])
-def fixture_quantization_config(request, sota_data_dir, sota_checkpoints_dir):
-    quantization_config_path = request.param
-    nncf_config = NNCFConfig.from_json(quantization_config_path)
-    if (
-        "compression" not in nncf_config
-        or isinstance(nncf_config["compression"], list)
-        or nncf_config["compression"]["algorithm"] != "quantization"
-    ):
-        pytest.skip("Config without compression")
+def _get_filtered_quantization_configs() -> List[Path]:
+    configs = []
+    for quantization_config_path in CONFIGS:
+        nncf_config = NNCFConfig.from_json(quantization_config_path)
+        if (
+            "compression" not in nncf_config
+            or isinstance(nncf_config["compression"], list)
+            or nncf_config["compression"]["algorithm"] != "quantization"
+        ):
+            # Config without compression
+            continue
 
-    config = get_sample_config(quantization_config_path, sota_data_dir, sota_checkpoints_dir)
-    if "accuracy_aware_training" in config:
-        pytest.skip("Accuracy Aware training is not supported yet for QAT with PTQ.")
-    return config
+        if "accuracy_aware_training" in nncf_config:
+            # Accuracy Aware training is not supported yet for QAT with PTQ.
+            continue
+        configs.append(quantization_config_path)
+    return configs
+
+
+FILTERED_CONFIGS = _get_filtered_quantization_configs()
+
+
+@pytest.fixture(name="quantization_config_path", params=FILTERED_CONFIGS, ids=[conf.stem for conf in FILTERED_CONFIGS])
+def fixture_quantization_config_path(request):
+    return request.param
 
 
 def get_sample_config(quantization_config_path: Path, data_dir: Path, weights_dir: Path) -> SampleConfig:
@@ -262,11 +273,6 @@ def check_training_correctness(
     assert loss_list[-1] < loss_list[0]
 
 
-@pytest.mark.weekly
-def test_compression_training(quantization_config: SampleConfig):
-    start_worker_clean_memory(main_worker, quantization_config)
-
-
 def main_worker(current_gpu: int, config: SampleConfig):
     configure_device(current_gpu, config)
     if is_main_process():
@@ -326,3 +332,9 @@ def main_worker(current_gpu: int, config: SampleConfig):
     assert accuracy_drop_is_acceptable(acc_drop)
     check_training_correctness(config, quantized_model, datasets, criterion)
     logger.info("Done!")
+
+
+@pytest.mark.weekly
+def test_compression_training(quantization_config_path: Path, sota_data_dir, sota_checkpoints_dir):
+    sample_config = get_sample_config(quantization_config_path, sota_data_dir, sota_checkpoints_dir)
+    start_worker_clean_memory(main_worker, sample_config)
