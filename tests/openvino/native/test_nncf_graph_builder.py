@@ -126,7 +126,7 @@ def test_convert_to_nncf_dtype_supported_types(ov_type: ov.Type, expected_nncf_d
 
 
 @pytest.mark.parametrize(
-    "ov_type,expected_nncf_dtype",
+    "ov_type",
     [
         ov.Type.bf16,
         ov.Type.nf4,
