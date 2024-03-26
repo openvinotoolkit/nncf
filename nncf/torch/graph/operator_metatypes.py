@@ -195,7 +195,7 @@ class PTConv1dMetatype(PTOperatorMetatype):
     name = "Conv1DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv1d"]}
-    subtypes = [PTModuleConv1dMetatype]
+    subtypes = [PTModuleConv1dMetatype, PTDepthwiseConv1dSubtype]
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
@@ -230,7 +230,7 @@ class PTConv2dMetatype(PTOperatorMetatype):
     name = "Conv2DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv2d"]}
-    subtypes = [PTModuleConv2dMetatype]
+    subtypes = [PTModuleConv2dMetatype, PTDepthwiseConv2dSubtype]
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
@@ -253,7 +253,7 @@ class PTModuleConv3dMetatype(PTModuleOperatorSubtype):
     name = "Conv3DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv3d"]}
-    subtypes = [PTDepthwiseConv3dSubtype]
+    subtypes = [PTDepthwiseConv3dSubtype, PTDepthwiseConv3dSubtype]
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
