@@ -34,7 +34,7 @@ class PatternsManager:
         :param backend: BackendType instance.
         :return: Dictionary with the HWFusedPatternNames instance as keys and creator function as a value.
         """
-        registry: Dict[HWFusedPatternNames, Callable[[], GraphPattern]] = dict()
+        registry: Dict[HWFusedPatternNames, Callable[[], GraphPattern]] = {}
         if backend == BackendType.ONNX:
             from nncf.onnx.hardware.fused_patterns import ONNX_HW_FUSED_PATTERNS
 
@@ -62,7 +62,7 @@ class PatternsManager:
         :param backend: BackendType instance.
         :return: Dictionary with the HWFusedPatternNames instance as keys and creator function as a value.
         """
-        registry: Dict[IgnoredPatternNames, Callable[[], GraphPattern]] = dict()
+        registry: Dict[IgnoredPatternNames, Callable[[], GraphPattern]] = {}
         if backend == BackendType.ONNX:
             from nncf.onnx.quantization.ignored_patterns import ONNX_IGNORED_PATTERNS
 

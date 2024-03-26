@@ -57,11 +57,11 @@ class NNCFNode:
 
     @property
     def node_id(self) -> int:
-        return int(self._attributes[NNCFNode.ID_NODE_ATTR])
+        return cast(int, self._attributes[NNCFNode.ID_NODE_ATTR])
 
     @property
     def node_key(self) -> str:
-        return str(self._attributes[NNCFNode.KEY_NODE_ATTR])
+        return cast(str, self._attributes[NNCFNode.KEY_NODE_ATTR])
 
     @property
     def node_name(self) -> NNCFNodeName:
@@ -73,7 +73,7 @@ class NNCFNode:
 
     @property
     def node_type(self) -> str:
-        return str(self._attributes[NNCFNode.NODE_TYPE_ATTR])
+        return cast(str, self._attributes[NNCFNode.NODE_TYPE_ATTR])
 
     @property
     def layer_name(self) -> Optional[LayerName]:
@@ -96,13 +96,13 @@ class NNCFNode:
         return cast(List[str], self._attributes[NNCFNode.IGNORED_ALGOS_ATTR])
 
     def is_in_iteration_scope(self) -> bool:
-        return bool(self._attributes[NNCFNode.IS_IN_ITERATION_SCOPE_NODE_ATTR])
+        return cast(bool, self._attributes[NNCFNode.IS_IN_ITERATION_SCOPE_NODE_ATTR])
 
     def is_integer_input(self) -> bool:
-        return bool(self._attributes[NNCFNode.IS_INTEGER_INPUT_NODE_ATTR])
+        return cast(bool, self._attributes[NNCFNode.IS_INTEGER_INPUT_NODE_ATTR])
 
     def is_shared(self) -> bool:
-        return bool(self._attributes[NNCFNode.IS_SHARED_ATTR])
+        return cast(bool, self._attributes[NNCFNode.IS_SHARED_ATTR])
 
     def __repr__(self) -> str:
         return str(self)
