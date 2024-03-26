@@ -11,7 +11,6 @@
 
 import os
 import subprocess
-import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -37,15 +36,11 @@ ACCURACY_METRICS = "accuracy_metrics"
 MODEL_SIZE_METRICS = "model_size_metrics"
 PERFORMANCE_METRICS = "performance_metrics"
 
-XFAILS = {
-    "quantization_aware_training_torch_resnet18": pytest.mark.xfail(sys.platform == "win32", reason="Ticket 136331"),
-}
-
 
 def example_test_cases():
     example_scope = load_json(EXAMPLE_SCOPE_PATH)
     for example_name, example_params in example_scope.items():
-        yield pytest.param(example_name, example_params, id=example_name, marks=XFAILS.get(example_name, ()))
+        yield pytest.param(example_name, example_params, id=example_name)
 
 
 @pytest.mark.parametrize("example_name, example_params", example_test_cases())
