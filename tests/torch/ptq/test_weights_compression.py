@@ -53,7 +53,7 @@ class ShortTransformer(torch.nn.Module):
         return res
 
 
-class NestedMatMul(torch.nn.Module):
+class MatMulModel(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.w = torch.nn.Parameter(torch.ones(size=(300, 300), dtype=torch.float32))
@@ -68,7 +68,7 @@ class FunctionalModel(torch.nn.Module):
         self.conv_w = torch.nn.Parameter(torch.ones(size=(5, 3, 3, 3), dtype=torch.float32))
         self.matmul_w = torch.nn.Parameter(torch.ones(size=(1, 3, 300, 300), dtype=torch.float32))
         self.conv_tr_w = torch.nn.Parameter(torch.rand(size=(5, 4, 3, 3)))
-        self.nested_matmul = NestedMatMul()
+        self.nested_matmul = MatMulModel()
 
     def forward(self, input_):
         x = input_.to(torch.float32)
@@ -241,3 +241,24 @@ def test_get_dtype_attribute_of_parameter():
     assert compressed_model.weight.dtype == torch.uint8
     compressed_model(dummy_input)
     assert compressed_model.weight.dtype == torch.uint8
+
+
+@pytest.mark.parametrize("device", ("cpu", "cuda"))
+@pytest.mark.parametrize("dtype", ("float16", "float32"))
+def test_model_devices_and_precisions(device, dtype):
+    device = torch.device(device)
+    dtype = torch.float16 if dtype == "float16" else torch.float32
+
+    model = MatMulModel().to(device)
+    if dtype == torch.float16:
+        model.half()
+
+    dummy_input = torch.rand((1, 300), dtype=dtype, device=device)
+    wrapped_model = wrap_model(model, example_input=dummy_input, trace_parameters=True)
+    compressed_model = compress_weights(wrapped_model)
+    result = compressed_model(dummy_input)
+
+    # Scale should always be in float16
+    assert compressed_model.state_dict()["_nncf.external_op.weights_decompressor_w._scale"].dtype == torch.float16
+    # Result should be in the precision of the model
+    assert result.dtype == dtype
