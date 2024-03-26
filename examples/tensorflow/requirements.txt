@@ -1,5 +1,7 @@
+-c ../../constraints.txt
 addict
 absl-py==1.0.0
+tensorflow
 tensorflow_datasets==4.2.0
 tensorflow_hub
 tensorflow_addons~=0.20.0

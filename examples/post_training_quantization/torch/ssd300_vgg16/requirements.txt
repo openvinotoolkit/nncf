@@ -1,7 +1,8 @@
-fastdownload==0.0.7
-onnx==1.13.1
-openvino-dev==2024.0
+-c ../../../../constraints.txt
+fastdownload
+onnx
+openvino-dev
 pycocotools==2.0.7
-torch==2.2.1
+torch
 torchmetrics==1.0.1
-torchvision==0.17.1
+torchvision

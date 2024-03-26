@@ -1,2 +1,5 @@
+-c ../../../constraints.txt
+onnx
+onnxruntime
 pycocotools
-openvino-dev==2024.0
+openvino-dev

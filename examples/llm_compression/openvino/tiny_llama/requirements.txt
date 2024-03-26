@@ -1,3 +1,7 @@
+-c ../../../../constraints.txt
+datasets
+onnx
+openvino
+optimum-intel
+torch
 transformers
-datasets==2.14.7
-optimum-intel[openvino]

@@ -1,4 +1,5 @@
-fastdownload==0.0.7
-openvino-dev==2024.0.0
-torch==2.2.1
-torchvision==0.17.1
+-c ../../../../constraints.txt
+fastdownload
+openvino-dev
+torch
+torchvision

@@ -1,5 +1,6 @@
+-c ../../../../constraints.txt
 torchvision
 tqdm
 scikit-learn
 fastdownload
-openvino-dev==2024.0
+openvino-dev

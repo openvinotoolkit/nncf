@@ -1,10 +1,13 @@
-pytest-mock>=3.3.1
-pytest-cov
-pytest-dependency>=0.5.1
-pytest-ordering>=0.6
-torch==2.2.1
-torchvision==0.17.1
-yattag>=1.14.0
-openvino-dev==2024.0
+-c ../../constraints.txt
 fastdownload
+onnx
+onnxruntime
+openvino-dev
+pytest-cov
+pytest-dependency
+pytest-mock
+pytest-ordering
 scikit-learn
+torch
+torchvision
+yattag>=1.14.0

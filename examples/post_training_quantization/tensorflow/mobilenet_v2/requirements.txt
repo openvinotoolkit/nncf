@@ -1,4 +1,5 @@
-tensorflow~=2.12.0
-tensorflow-datasets
+-c ../../../../constraints.txt
+tensorflow
 tqdm
-openvino-dev==2024.0
+openvino-dev
+tensorflow-datasets==4.9.2
