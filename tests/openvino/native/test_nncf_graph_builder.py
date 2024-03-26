@@ -130,9 +130,10 @@ def test_convert_to_nncf_dtype_supported_types(ov_type: ov.Type, expected_nncf_d
     [
         ov.Type.bf16,
         ov.Type.nf4,
-        ov.Type.f8e4m3,
-        ov.Type.f8e5m2,
         ov.Type.undefined,
+        # TODO(andrey-churkin): Add in OV 2024.0
+        # ov.Type.f8e4m3,
+        # ov.Type.f8e5m2,
     ],
 )
 def test_convert_to_nncf_dtype_unsupported_types(ov_type: ov.Type):
