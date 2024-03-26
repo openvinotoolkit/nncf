@@ -155,7 +155,6 @@ class ScaleEstimation(Algorithm):
             original_weight = fns.zeros_like(weight) + weight
 
             compressed_weighs, scale, zp = do_integer_quantization(original_weight, reduction_axis, config)
-            th = 5.0 * fns.max(scale)
             zp = zp.astype(scale.dtype)
 
             q_weights = do_dequantization(compressed_weighs, scale, zp, reduction_axis)
@@ -275,7 +274,6 @@ class ScaleEstimation(Algorithm):
                 else:
                     near_to_ideal_scale = mask * result_scale + (1.0 - mask) * near_to_ideal_scale
                 result_scale = near_to_ideal_scale
-            result_scale = fns.clip(result_scale, a_min=None, a_max=th)
             wp.precomputed_scale = result_scale
         return model
 

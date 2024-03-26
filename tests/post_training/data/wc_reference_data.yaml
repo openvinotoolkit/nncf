@@ -3,10 +3,10 @@ tinyllama_data_free_backend_OV:
 tinyllama_data_aware_backend_OV:
   metric_value: 0.83084
 tinyllama_data_aware_awq_backend_OV:
-  metric_value: 0.81237
+  metric_value: 0.84439
 tinyllama_data_aware_awq_stateful_backend_OV:
-  metric_value: 0.81237
+  metric_value: 0.84439
 tinyllama_data_aware_awq_scale_estimation_backend_OV:
-  metric_value: 0.765396
+  metric_value: 0.78801
 tinyllama_data_aware_awq_scale_estimation_stateful_backend_OV:
-  metric_value: 0.765396
+  metric_value: 0.78801
