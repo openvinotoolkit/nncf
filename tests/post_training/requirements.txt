@@ -3,8 +3,8 @@ torch==2.2.1
 --extra-index-url https://download.pytorch.org/whl/cpu
 torchvision==0.17.1
 transformers==4.36.0
-onnx==1.13.1
-onnxruntime==1.14.1
+onnx~=1.16.0
+onnxruntime~=1.17.1
 pytest==8.0.2
 pytest-cov
 openvino-dev==2024.0.0
