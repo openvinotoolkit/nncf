@@ -82,7 +82,9 @@ class PatternsManager:
 
     @staticmethod
     def _filter_patterns(
-        patterns_to_filter: Dict[PatternNames, Callable[[], GraphPattern]], device: TargetDevice, model_type: ModelType
+        patterns_to_filter: Dict[PatternNames, Callable[[], GraphPattern]],
+        device: TargetDevice,
+        model_type: Optional[ModelType] = None,
     ) -> Dict[PatternNames, Callable[[], GraphPattern]]:
         """
         Returns all patterns from patterns_to_filter that are satisfied device and model_type parameters.
@@ -106,7 +108,7 @@ class PatternsManager:
     def _get_full_pattern_graph(
         backend_patterns_map: Dict[PatternNames, Callable[[], GraphPattern]],
         device: TargetDevice,
-        model_type: ModelType,
+        model_type: Optional[ModelType] = None,
     ) -> GraphPattern:
         """
         Filters patterns and returns GraphPattern with registered filtered patterns.

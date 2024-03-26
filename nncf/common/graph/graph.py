@@ -297,7 +297,7 @@ class NNCFGraph:
     @staticmethod
     def _get_edge_boundaries(
         match: List[str], graph: nx.DiGraph
-    ) -> Tuple[List[Tuple[str, str]], List[Tuple[str, str]]]:
+    ) -> Tuple[List[Tuple[str, str, Dict[str, Any]]], List[Tuple[str, str, Dict[str, Any]]]]:
         out_edge_boundary = list(nx.edge_boundary(graph, match, data=True))
         complement = list(filter(lambda x: x not in match, graph.nodes.keys()))
         in_edge_boundary = list(nx.edge_boundary(graph, complement, data=True))
