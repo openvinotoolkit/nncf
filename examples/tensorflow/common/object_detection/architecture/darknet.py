@@ -25,12 +25,17 @@ class CSPDarknet53:
         """Darknet Convolution2D followed by SyncBatchNormalization and Mish."""
         no_bias_kwargs = {"use_bias": False}
         no_bias_kwargs.update(kwargs)
+
+        try:
+            mish = tf.keras.layers.Activation("mish")
+        except ValueError:
+            mish = tf.keras.layers.Activation(self.mish)
+
         return nn_ops.compose(
             nn_ops.DarknetConv2D(*args, **no_bias_kwargs),
             # TODO(nsavelyev) replace by BatchNormalization(synchronized=True) once support for TF < 2.12 is dropped
             tf.keras.layers.experimental.SyncBatchNormalization(),
-            # TODO(nsavelyev) change to tf.keras.activations.mish after upgrade to TF 2.13
-            tf.keras.layers.Activation(self.mish),
+            mish
         )
 
     def csp_resblock_body(self, x, num_filters, num_blocks, all_narrow=True):
