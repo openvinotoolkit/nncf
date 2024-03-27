@@ -16,8 +16,8 @@ import torch
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.torch import wrap_model
 from nncf.torch.graph.graph import PTNNCFGraph
-from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
 from nncf.torch.graph.operator_metatypes import PTSumMetatype
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
@@ -53,7 +53,7 @@ def get_depthwise_conv_nncf_graph() -> NNCFGraphToTestDepthwiseConv:
         transpose=False,
         padding_values=(1, 1),
     )
-    return NNCFGraphToTestDepthwiseConv(PTDepthwiseConv2dSubtype, conv_layer_attrs, nncf_graph_cls=PTNNCFGraph)
+    return NNCFGraphToTestDepthwiseConv(PTModuleDepthwiseConv2dSubtype, conv_layer_attrs, nncf_graph_cls=PTNNCFGraph)
 
 
 def get_single_no_weight_matmul_nncf_graph() -> NNCFGraphToTest:

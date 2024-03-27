@@ -79,11 +79,12 @@ class OperatorMetatypeRegistry(Registry):
         super().__init__(name)
         self._op_name_to_op_meta_dict = {}
 
-    def register(self, name: Optional[str] = None):
+    def register(self, name: Optional[str] = None, is_subtype: bool = False):
         """
         Decorator for registering operator metatypes.
 
         :param name: The registration name.
+        :param is_subtype: Whether the decorated metatype is a subtype of another registered operator.
         :return: The inner function for registering operator metatypes.
         """
         name_ = name
@@ -100,15 +101,18 @@ class OperatorMetatypeRegistry(Registry):
             if cls_name is None:
                 cls_name = obj.__name__
             super_register(obj, cls_name)
-            op_names = obj.get_all_aliases()
-            for name in op_names:
-                if name in self._op_name_to_op_meta_dict and not obj.subtype_check(self._op_name_to_op_meta_dict[name]):
-                    raise nncf.InternalError(
-                        "Inconsistent operator metatype registry - single patched "
-                        "op name maps to multiple metatypes!"
-                    )
+            if not is_subtype:
+                op_names = obj.get_all_aliases()
+                for name in op_names:
+                    if name in self._op_name_to_op_meta_dict and not obj.subtype_check(
+                        self._op_name_to_op_meta_dict[name]
+                    ):
+                        raise nncf.InternalError(
+                            "Inconsistent operator metatype registry - single patched "
+                            "op name maps to multiple metatypes!"
+                        )
 
-                self._op_name_to_op_meta_dict[name] = obj
+                    self._op_name_to_op_meta_dict[name] = obj
             return obj
 
         return wrap

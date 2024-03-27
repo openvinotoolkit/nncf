@@ -44,7 +44,6 @@ from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.patch_pytorch import register_operator
 from nncf.torch.external_hook import EXTERNAL_OP_STORAGE_NAME
 from nncf.torch.external_hook import ExternalOpCallHook
-from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTInputNoopMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTOutputNoopMetatype
@@ -397,6 +396,7 @@ class TestInsertionPointGraph:
         from nncf.torch.graph.operator_metatypes import PTMaxPool2dMetatype
         from nncf.torch.graph.operator_metatypes import PTModuleBatchNormMetatype
         from nncf.torch.graph.operator_metatypes import PTModuleConvTranspose2dMetatype
+        from nncf.torch.graph.operator_metatypes import PTModuleDepthwiseConv2dSubtype
         from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
         from nncf.torch.graph.operator_metatypes import PTRELUMetatype
         from nncf.torch.graph.operator_metatypes import PTTransposeMetatype
@@ -414,8 +414,8 @@ class TestInsertionPointGraph:
             ),
             "ModelForMetatypeTesting/conv_transpose2d_0": PTConvTranspose2dMetatype,
             "ModelForMetatypeTesting/__add___0": PTAddMetatype,
-            "ModelForMetatypeTesting/NNCFConv2d[conv_depthwise]/conv2d_0": PTDepthwiseConv2dSubtype,
-            "ModelForMetatypeTesting/conv2d_0": PTConv2dMetatype,
+            "ModelForMetatypeTesting/NNCFConv2d[conv_depthwise]/conv2d_0": PTModuleDepthwiseConv2dSubtype,
+            "ModelForMetatypeTesting/conv2d_0": PTDepthwiseConv2dSubtype,
             "ModelForMetatypeTesting/__iadd___0": PTAddMetatype,
             "ModelForMetatypeTesting/AdaptiveAvgPool2d[adaptive_avg_pool]/adaptive_avg_pool2d_0": PTAvgPool2dMetatype,
             "ModelForMetatypeTesting/flatten_0": PTReshapeMetatype,
