@@ -31,6 +31,7 @@ from nncf.torch.dynamic_graph.graph_tracer import create_dummy_forward_fn
 from nncf.torch.dynamic_graph.io_handling import FillerInputElement
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.io_handling import ModelInputInfo
+from nncf.torch.dynamic_graph.layer_attributes_handlers import apply_args_defaults
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.operator_metatypes import PTBatchNormMetatype
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
@@ -549,3 +550,31 @@ def test_can_set_valid_layer_attributes_wrap_model(desc: LayerAttributesTestDesc
         RefNodeDesc(node.metatype, node.layer_attributes) for node in graph.get_nodes_by_metatypes([desc.metatype_cls])
     ]
     assert ref_values == actual_values
+
+
+@pytest.mark.parametrize(
+    "signature, args, kwargs",
+    (
+        (["a", "b"], [1, 2], {}),
+        (["a", "b"], [], {"a": 1, "b": 2}),
+        (["a", "b"], [1], {"b": 2}),
+        (["a", ("b", 2)], [1], {"b": 2}),
+        ([("a", 1), ("b", 2)], [], {"b": 2}),
+        ([("a", 1), ("b", 2)], [], {}),
+    ),
+)
+def test_apply_args_defaults(signature, args, kwargs):
+    ret = apply_args_defaults(args, kwargs, signature)
+    assert ret == {"a": 1, "b": 2}
+
+
+@pytest.mark.parametrize(
+    "signature, args, kwargs",
+    (
+        (["a", "b"], [1], {}),
+        ([1, 2], [], {}),
+    ),
+)
+def test_apply_args_defaults_errors(signature, args, kwargs):
+    with pytest.raises(ValueError):
+        apply_args_defaults(args, kwargs, signature)

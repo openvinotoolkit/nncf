@@ -16,6 +16,8 @@ from typing import Any, Dict, Hashable, Iterable, List, Optional, Union
 
 from tabulate import tabulate
 
+from nncf.common.utils.os import is_windows
+
 
 def create_table(
     header: List[str],
@@ -35,6 +37,9 @@ def create_table(
     if not rows:
         # For empty rows max_col_widths raises IndexError
         max_col_widths = None
+    if is_windows():
+        # Not all terminals on Windows supports any format of table
+        table_fmt = "grid"
     return tabulate(tabular_data=rows, headers=header, tablefmt=table_fmt, maxcolwidths=max_col_widths, floatfmt=".3f")
 
 

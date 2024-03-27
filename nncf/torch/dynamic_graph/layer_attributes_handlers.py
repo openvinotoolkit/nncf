@@ -175,13 +175,18 @@ def apply_args_defaults(
 
     :return: A dictionary combining arguments from `args` and `kwargs` according to the `args_signature`.
     """
-    # Manual defines function signature neccecery because inspection of torch function is not available
+    # Manual defines function signature necessary because inspection of torch function is not available
     # https://github.com/pytorch/pytorch/issues/74539
 
     args_dict: Dict[str, Any] = dict()
     for idx, arg_desc in enumerate(args_signature):
         if isinstance(arg_desc, str):
-            args_dict[arg_desc] = kwargs.get(arg_desc, args[idx])
+            if arg_desc in kwargs:
+                args_dict[arg_desc] = kwargs[arg_desc]
+            elif idx < len(args):
+                args_dict[arg_desc] = args[idx]
+            else:
+                raise ValueError("Incorrect args_signature, can not by applied to function arguments.")
         elif isinstance(arg_desc, Tuple):
             arg_name, default = arg_desc
             args_dict[arg_name] = kwargs.get(arg_name, args[idx] if idx < len(args) else default)

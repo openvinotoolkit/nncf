@@ -11,7 +11,6 @@
 
 import os
 import subprocess
-import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -34,18 +33,15 @@ PERFORMANCE_RELATIVE_TOLERANCE = 0.05
 MODEL_SIZE_RELATIVE_TOLERANCE = 0.05
 
 ACCURACY_METRICS = "accuracy_metrics"
+ACCURACY_METRICS_AFTER_TRAINING = "accuracy_metrics_after_training"
 MODEL_SIZE_METRICS = "model_size_metrics"
 PERFORMANCE_METRICS = "performance_metrics"
-
-XFAILS = {
-    "quantization_aware_training_torch_resnet18": pytest.mark.xfail(sys.platform == "win32", reason="Ticket 136331"),
-}
 
 
 def example_test_cases():
     example_scope = load_json(EXAMPLE_SCOPE_PATH)
     for example_name, example_params in example_scope.items():
-        yield pytest.param(example_name, example_params, id=example_name, marks=XFAILS.get(example_name, ()))
+        yield pytest.param(example_name, example_params, id=example_name)
 
 
 @pytest.mark.parametrize("example_name, example_params", example_test_cases())
@@ -87,6 +83,12 @@ def test_examples(
         assert measured_metrics[name] == pytest.approx(
             value, abs=example_params.get("accuracy_tolerance", ACCURACY_TOLERANCE)
         )
+
+    if ACCURACY_METRICS_AFTER_TRAINING in example_params:
+        for name, value in example_params[ACCURACY_METRICS_AFTER_TRAINING].items():
+            assert measured_metrics[name] == pytest.approx(
+                value, abs=example_params.get("accuracy_tolerance_after_training", ACCURACY_TOLERANCE)
+            )
 
     if MODEL_SIZE_METRICS in example_params:
         for name, value in example_params[MODEL_SIZE_METRICS].items():
