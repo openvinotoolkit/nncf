@@ -17,7 +17,6 @@ import nncf
 from nncf.common import factory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.common.logging.logger import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
@@ -28,9 +27,6 @@ TModel = TypeVar("TModel")
 
 EMPTY_DATASET_ERROR = (
     "Calibration dataset must not be empty. Please provide calibration dataset with at least one sample."
-)
-ITERATIONS_NUMBER_WARNING = (
-    "The number of iterations for statistics collection is bigger than the length of the dataset."
 )
 
 
@@ -46,16 +42,13 @@ class StatisticsAggregator(ABC):
 
     def _get_iterations_number(self) -> Optional[int]:
         """
-        Returns number of iterations, output number is less than min(self.stat_subset_size, dataset_length).
+        Returns number of iterations.
 
         :return: Number of iterations for statistics collection.
         """
         dataset_length = self.dataset.get_length()
         if dataset_length and self.stat_subset_size:
-            if self.stat_subset_size > dataset_length:
-                nncf_logger.warning(ITERATIONS_NUMBER_WARNING)
-                return dataset_length
-            return self.stat_subset_size
+            return min(dataset_length, self.stat_subset_size)
         return dataset_length or self.stat_subset_size
 
     def collect_statistics(self, model: TModel, graph: NNCFGraph) -> None:
@@ -78,7 +71,7 @@ class StatisticsAggregator(ABC):
         empty_statistics = True
         for input_data in track(
             islice(self.dataset.get_inference_data(), iterations_number),
-            total=self.stat_subset_size,
+            total=iterations_number,
             description="Statistics collection",
         ):
             outputs = engine.infer(input_data)
