@@ -9,6 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from abc import ABC
+from abc import abstractclassmethod
+from abc import abstractmethod
+from typing import Any, Dict
+
 import torch
 from torch import nn
 
@@ -17,6 +22,30 @@ from nncf.common.hook_handle import add_op_to_registry
 from nncf.common.utils.registry import Registry
 
 COMPRESSION_MODULES = Registry("compression modules")
+
+
+class StatefullTorchModuleInterface(ABC):
+    """
+    Interface that should be implemented for every registered compression module to make it possible
+    to save an compression modules state and create an compression module from the saved state.
+    State of the module should be json serializable, no python objects except
+    standart (str, list and etc.) should be present in a compression module state.
+    The state for attributes with type torch.nn.Parameter
+    is recovered from the model `state_dict`, so there is no need to keep them in the module state.
+
+    """
+
+    @abstractmethod
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Returns the compression module state.
+        """
+
+    @abstractclassmethod
+    def from_state(cls, state: Dict[str, Any]) -> object:
+        """
+        Creates a compression module instance from the given state.
+        """
 
 
 class ProxyModule:
@@ -117,7 +146,12 @@ class CompressionParameter(nn.Parameter):
         """
         super().__init__()
 
+        self._compression_lr_multiplier = compression_lr_multiplier
         if compression_lr_multiplier is not None and self.dtype.is_floating_point:
             self.requires_grad = True
             self.register_hook(lambda grad: compression_lr_multiplier * grad)
             self.requires_grad = requires_grad
+
+    @property
+    def compression_lr_multiplier(self):
+        return self._compression_lr_multiplier

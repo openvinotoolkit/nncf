@@ -122,6 +122,7 @@ class FillerInputElement:
         """
         self.shape = shape
         self.type = self._string_to_torch_type(type_str)
+        self._type_str = type_str
         self.keyword = keyword
         if filler is None:
             self.filler = self.FILLER_TYPE_ONES
@@ -156,6 +157,15 @@ class FillerInputElement:
         if self.filler == FillerInputElement.FILLER_TYPE_RANDOM:
             return torch.rand(size=self.shape, dtype=self.type)
         raise NotImplementedError
+
+    def get_state(self) -> Dict[str, Any]:
+        return {"shape": self.shape, "type_str": self._type_str, "keyword": self.keyword, "filler": self.filler}
+
+    @classmethod
+    def from_state(cls, state: Dict[str, Any]) -> "FillerInputElement":
+        return FillerInputElement(
+            shape=state["shape"], type_str=state["type_str"], keyword=state["keyword"], filler=state["filler"]
+        )
 
 
 class FillerInputInfo(ModelInputInfo):
@@ -219,6 +229,16 @@ class FillerInputInfo(ModelInputInfo):
             else:
                 kwargs[fe.keyword] = tensor
         return tuple(args_list), kwargs
+
+    def get_state(self) -> Dict[str, Any]:
+        return {"elements": [elem.get_state() for elem in self.elements]}
+
+    @classmethod
+    def from_state(cls, state) -> "FillerInputInfo":
+        return FillerInputInfo([FillerInputElement.from_state(s) for s in state["elements"]])
+
+    def __eq__(self, other: "FillerInputInfo") -> bool:
+        return self.elements == other.elements
 
 
 class ExactInputsInfo(ModelInputInfo):
