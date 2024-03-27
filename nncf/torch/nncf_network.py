@@ -823,20 +823,23 @@ class NNCFNetworkInterface(torch.nn.Module):
                     nodes_in_scope = nncf_graph.get_op_node_in_scope(module_scope)
                     assert len(nodes_in_scope) == 1
                     nncf_node = nodes_in_scope[0]
+                    command_target_type = target_type
                     if isinstance(module, UpdateWeight):
-                        target_type = TargetType.OPERATION_WITH_WEIGHTS
+                        command_target_type = TargetType.OPERATION_WITH_WEIGHTS
                         module = module.op
                     if not isinstance(module, ExternalOpCallHook):
-                        command = _create_pt_insert_command(module, target_type, nncf_node.node_name, priority, None)
+                        command = _create_pt_insert_command(
+                            module, command_target_type, nncf_node.node_name, priority, None
+                        )
                         transformation_layout.register(command)
                         continue
 
-                    info = f"TargetType: {target_type}, nncf node name: {nncf_node.node_name},"
+                    info = f"TargetType: {command_target_type}, nncf node name: {nncf_node.node_name},"
                     f" priority: {priority}, fn: {module}"
                     _check_external_call_hook_is_valid(module, info)
 
                     context_hooks[module._storage_name][module._storage_key].append(
-                        (target_type, nncf_node.node_name, priority, module, None)
+                        (command_target_type, nncf_node.node_name, priority, module, None)
                     )
 
         # Collect all pre/post hooks commands
