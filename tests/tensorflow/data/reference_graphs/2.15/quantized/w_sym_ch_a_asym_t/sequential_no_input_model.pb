@@ -1,0 +1,1 @@
+../../../2.12/quantized/w_sym_ch_a_asym_t/sequential_no_input_model.pb

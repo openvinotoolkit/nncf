@@ -1,0 +1,1 @@
+../../../2.12/pruning/filter_pruning/mobilenet_v3_small.pb
