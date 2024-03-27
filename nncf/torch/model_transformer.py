@@ -249,13 +249,13 @@ def update_fused_bias(target_node_name: str, new_bias: Tensor, model: NNCFNetwor
 
     target_bias_node = get_const_node(target_node, target_node.metatype.bias_port_id, nncf_graph)
     fused_bias_node = get_const_node(fused_node, fused_node.metatype.bias_port_id, nncf_graph)
-    fused_weight_node = get_const_node(target_node, target_node.metatype.weight_port_ids[0], nncf_graph)
+    fused_weight_node = get_const_node(fused_node, fused_node.metatype.weight_port_ids[0], nncf_graph)
 
     if target_bias_node is None:
         set_const_data(new_bias, fused_bias_node, model)
         return
 
-    new_bias = new_bias - get_const_node(target_bias_node) * get_const_data(fused_weight_node)
+    new_bias = new_bias - get_const_data(target_bias_node, model) * get_const_data(fused_weight_node, model)
     set_const_data(new_bias, fused_bias_node, model)
 
 
