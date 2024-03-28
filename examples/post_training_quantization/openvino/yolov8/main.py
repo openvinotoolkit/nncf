@@ -95,8 +95,8 @@ def benchmark_performance(model_path, config) -> float:
 
 def prepare_openvino_model(model: YOLO, model_name: str) -> Tuple[ov.Model, Path]:
     model_path = Path(f"{ROOT}/{model_name}_openvino_model/{model_name}.xml")
-    # if not model_path.exists():
-    model.export(format="openvino", dynamic=False, half=False)
+    if not model_path.exists():
+        model.export(format="openvino", dynamic=False, half=False)
 
     model = ov.Core().read_model(model_path)
     return model, model_path
