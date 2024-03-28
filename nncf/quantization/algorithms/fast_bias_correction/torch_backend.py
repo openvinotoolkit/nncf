@@ -23,12 +23,12 @@ from nncf.experimental.tensor import Tensor
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.torch.graph.transformations.command_creation import create_bias_correction_command
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
-from nncf.torch.graph.transformations.commands import PTModelExtractionWithFusedBiasCommand
+from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
-from nncf.torch.model_analyzer import get_fused_bias_value
-from nncf.torch.model_analyzer import get_potential_fused_node
-from nncf.torch.model_analyzer import is_node_with_fused_bias
-from nncf.torch.model_analyzer import is_quantized_weights
+from nncf.torch.model_graph_manager import get_fused_bias_value
+from nncf.torch.model_graph_manager import get_potential_fused_node
+from nncf.torch.model_graph_manager import is_node_with_fused_bias
+from nncf.torch.model_graph_manager import is_quantized_weights
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.tensor_statistics.collectors import get_mean_statistic_collector
 
@@ -56,8 +56,8 @@ class PTFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     @staticmethod
     def model_extraction_command(
         input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]
-    ) -> PTModelExtractionWithFusedBiasCommand:
-        return PTModelExtractionWithFusedBiasCommand(input_ids[0][0])
+    ) -> PTModelExtractionCommand:
+        return PTModelExtractionCommand([input_ids[0][0]], [output_ids[0][0]])
 
     @staticmethod
     def mean_statistic_collector(

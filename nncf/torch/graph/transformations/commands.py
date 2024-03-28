@@ -189,17 +189,18 @@ class PTQuantizerInsertionCommand(PTTransformationCommand):
         return True
 
 
-class PTModelExtractionWithFusedBiasCommand(PTCommand):
+class PTModelExtractionCommand(PTCommand):
     """
-    Extracts sequence by name with node that contain fused bias.
+    Extracts submodel based on the sub-model input and output names
     """
 
-    def __init__(self, node_name: str):
+    def __init__(self, input_node_names: List[str], output_node_names: List[str]):
         """
         :param node_name: Node name that will be extracted.
         """
         super().__init__(TransformationType.EXTRACT)
-        self.node_name = node_name
+        self.input_node_names = input_node_names
+        self.output_node_names = output_node_names
 
 
 class PTBiasCorrectionCommand(PTTransformationCommand):

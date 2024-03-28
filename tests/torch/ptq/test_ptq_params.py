@@ -21,8 +21,8 @@ from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from nncf.scopes import IgnoredScope
 from nncf.torch.graph.graph import PTTargetPoint
-from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
-from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
+from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
+from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from nncf.torch.graph.operator_metatypes import PTSoftmaxMetatype
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
@@ -103,8 +103,8 @@ class TestPTQParams(TemplateTestPTQParams):
     @property
     def metatypes_mapping(self):
         return {
-            Conv2dTestMetatype: PTModuleConv2dMetatype,
-            LinearTestMetatype: PTModuleLinearMetatype,
+            Conv2dTestMetatype: PTConv2dMetatype,
+            LinearTestMetatype: PTLinearMetatype,
             SoftmaxTestMetatype: PTSoftmaxMetatype,
         }
 

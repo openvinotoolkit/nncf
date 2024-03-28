@@ -29,6 +29,8 @@ DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT: Dict[QuantizationTrait, List[PTOperatorMetaty
         operator_metatypes.PTModuleConvTranspose3dMetatype,
         operator_metatypes.PTDepthwiseConv2dSubtype,
         operator_metatypes.PTDepthwiseConv3dSubtype,
+        operator_metatypes.PTModuleDepthwiseConv2dSubtype,
+        operator_metatypes.PTModuleDepthwiseConv3dSubtype,
         operator_metatypes.PTLinearMetatype,
         operator_metatypes.PTModuleLinearMetatype,
         operator_metatypes.PTLayerNormMetatype,

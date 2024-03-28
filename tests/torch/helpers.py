@@ -566,20 +566,33 @@ class HookChecker:
         """
         Adds references hooks.
         """
-        op_address = self._convert_to_op_address(target_type, target_node_name, input_port_id)
+        op_address = self._convert_to_op_address(
+            target_type, target_node_name, input_port_id, self._target_model.nncf.replace_modules
+        )
         self._ref_hooks[target_type].update({op_address: ref_hooks})
 
-    def _convert_to_op_address(self, target_type: TargetType, target_node_name: str, input_port_id: int) -> Any:
+    def _convert_to_op_address(
+        self, target_type: TargetType, target_node_name: str, input_port_id: int, replace_modules: bool
+    ) -> Any:
         address_map = self._target_model.nncf.get_node_to_op_address_mapping()
         address = address_map[target_node_name]
-        if target_type == TargetType.OPERATOR_PRE_HOOK:
-            address = PreHookId(address, input_port_id)
-        elif target_type in [
-            TargetType.OPERATION_WITH_WEIGHTS,
-            TargetType.PRE_LAYER_OPERATION,
-            TargetType.POST_LAYER_OPERATION,
-        ]:
-            address = getattr(self._target_model, self._nncf_module_attr_name)
+        if replace_modules:
+            if target_type == TargetType.OPERATOR_PRE_HOOK:
+                address = PreHookId(address, input_port_id)
+            elif target_type in [
+                TargetType.OPERATION_WITH_WEIGHTS,
+                TargetType.PRE_LAYER_OPERATION,
+                TargetType.POST_LAYER_OPERATION,
+            ]:
+                address = getattr(self._target_model, self._nncf_module_attr_name)
+        else:
+            if target_type in [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATION_WITH_WEIGHTS]:
+                address = PreHookId(address, input_port_id)
+            elif target_type in [
+                TargetType.PRE_LAYER_OPERATION,
+                TargetType.POST_LAYER_OPERATION,
+            ]:
+                address = getattr(self._target_model, self._nncf_module_attr_name)
         return address
 
     def check_with_reference(self):

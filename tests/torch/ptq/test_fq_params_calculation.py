@@ -20,8 +20,8 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
+from nncf.torch import wrap_model
 from nncf.torch.dynamic_graph.scope import Scope
-from nncf.torch.model_creation import create_nncf_network
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
 from nncf.torch.utils import get_all_modules_by_type
@@ -57,7 +57,7 @@ def min_max_quantize_model(
     post_training_quantization = PostTrainingQuantization(subset_size=1, **quantization_params)
 
     original_model.eval()
-    nncf_network = create_nncf_network(original_model, config)
+    nncf_network = wrap_model(original_model, torch.ones([1, 1, 10, 10]), trace_parameters=True)
     quantized_model = post_training_quantization.apply(nncf_network, nncf_network.nncf.get_graph(), dataset=dataset)
     return quantized_model
 
@@ -97,7 +97,7 @@ def test_overflow_fix_scales(_seed, overflow_fix):
     ref_stats_name = "TwoConvTestModel" + f"_overflow_fix_{overflow_fix.value}.json"
     ref_stats_path = REFERENCE_SCALES_DIR / ref_stats_name
 
-    # Unkomment lines below to generate reference for new models.
+    # Uncomment lines below to generate reference for new models.
     # from tests.shared.helpers import dump_to_json
     # dump_to_json(ref_stats_path, fq_nodes_params)
 
