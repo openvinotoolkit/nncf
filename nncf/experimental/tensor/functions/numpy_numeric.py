@@ -292,3 +292,8 @@ def _(
     a: Union[np.ndarray, np.generic], axis: Optional[int] = None, descending=False, stable=False
 ) -> Union[np.ndarray, np.generic]:
     return np.argsort(a, axis=axis)
+
+
+@register_numpy_types(numeric.diag)
+def _(a: Union[np.ndarray, np.generic], k: int = 0) -> np.ndarray:
+    return np.diag(a, k=k)
