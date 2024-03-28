@@ -27,7 +27,7 @@ from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import StatisticsType
 
 
-@api()
+@api(canonical_alias="nncf.OverflowFix")
 class OverflowFix(Enum):
     """
     This option controls whether to apply the overflow issue fix for the 8-bit
