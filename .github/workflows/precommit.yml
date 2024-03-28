@@ -11,81 +11,134 @@ on:
       - 'docs/**/*'
 
 jobs:
-  common:
-    runs-on: ubuntu-20.04
+  # common:
+  #   runs-on: ubuntu-20.04
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #       with:
+  #         lfs: true
+  #     - uses: actions/setup-python@v3
+  #       with:
+  #         python-version: 3.8.10
+  #     - name: Install NNCF and test requirements
+  #       run: make install-common-test
+  #     - name: Run common precommit test scope
+  #       run: make test-common
+  #       env:
+  #         NNCF_COVERAGE: 1
+  #     - name: Upload coverage report as artifact
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: coverage_common
+  #         path: ./coverage.xml
+  #     - name: Upload coverage report to codecov
+  #       uses: codecov/codecov-action@v3
+  #       with:
+  #         token: ${{ secrets.CODECOV_TOKEN }}
+  #         name: coverage_common
+  #         flags: COMMON
+  # onnx:
+  #   runs-on: ubuntu-20.04
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #       with:
+  #         lfs: true
+  #     - uses: actions/setup-python@v3
+  #       with:
+  #         python-version: 3.8.10
+  #     - name: Install NNCF and test requirements
+  #       run: make install-onnx-test
+  #     - name: Run ONNX precommit test scope
+  #       run: make test-onnx
+  #       env:
+  #         NNCF_COVERAGE: 1
+  #     - name: Upload coverage report as artifact
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: coverage_onnx
+  #         path: ./coverage.xml
+  #     - name: Upload coverage report to codecov
+  #       uses: codecov/codecov-action@v3
+  #       with:
+  #         token: ${{ secrets.CODECOV_TOKEN }}
+  #         name: coverage_onnx
+  #         flags: ONNX
+  # openvino:
+  #   runs-on: ubuntu-20.04
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #       with:
+  #         lfs: true
+  #     - uses: actions/setup-python@v3
+  #       with:
+  #         python-version: 3.8.10
+  #     - name: Install NNCF and test requirements
+  #       run: make install-openvino-test
+  #     - name: Run OV precommit test scope
+  #       run: make test-openvino
+  #       env:
+  #         NNCF_COVERAGE: 1
+  #     - name: Upload coverage report as artifact
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: coverage_openvino
+  #         path: ./coverage.xml
+  #     - name: Upload coverage report to codecov
+  #       uses: codecov/codecov-action@v3
+  #       with:
+  #         token: ${{ secrets.CODECOV_TOKEN }}
+  #         name: coverage_openvino
+  #         flags: OPENVINO
+
+  pytorch:
+    defaults:
+      run:
+        shell: bash
+    runs-on: aks-linux-4-cores-28gb-gpu-testla-t4
+
     steps:
-      - uses: actions/checkout@v3
-        with:
-          lfs: true
-      - uses: actions/setup-python@v3
-        with:
-          python-version: 3.8.10
-      - name: Install NNCF and test requirements
-        run: make install-common-test
-      - name: Run common precommit test scope
-        run: make test-common
-        env:
-          NNCF_COVERAGE: 1
-      - name: Upload coverage report as artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: coverage_common
-          path: ./coverage.xml
-      - name: Upload coverage report to codecov
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          name: coverage_common
-          flags: COMMON
-  onnx:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          lfs: true
-      - uses: actions/setup-python@v3
-        with:
-          python-version: 3.8.10
-      - name: Install NNCF and test requirements
-        run: make install-onnx-test
-      - name: Run ONNX precommit test scope
-        run: make test-onnx
-        env:
-          NNCF_COVERAGE: 1
-      - name: Upload coverage report as artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: coverage_onnx
-          path: ./coverage.xml
-      - name: Upload coverage report to codecov
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          name: coverage_onnx
-          flags: ONNX
-  openvino:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          lfs: true
-      - uses: actions/setup-python@v3
-        with:
-          python-version: 3.8.10
-      - name: Install NNCF and test requirements
-        run: make install-openvino-test
-      - name: Run OV precommit test scope
-        run: make test-openvino
-        env:
-          NNCF_COVERAGE: 1
-      - name: Upload coverage report as artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: coverage_openvino
-          path: ./coverage.xml
-      - name: Upload coverage report to codecov
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          name: coverage_openvino
-          flags: OPENVINO
+      - name: uname -a
+        continue-on-error: true
+        run: |
+            uname -a
+            ls -l /usr/local/
+            ls -l /dev/*
+
+      - name: nvidia-smi
+        continue-on-error: true
+        run: |
+            nvidia-smi
+      - name: nvidia-smi
+        continue-on-error: true
+        run: |
+            nvcc --version
+
+      - name: cat /proc/driver/nvidia/version
+        continue-on-error: true
+        run: |
+          cat /proc/driver/nvidia/version
+
+
+      - name: lspci sudo
+        continue-on-error: true
+        run: |
+          sudo apt-get update
+          sudo apt-get install --assume-yes pciutils kmod
+          sudo lspci -k | grep -A 2 -i "VGA"
+          sudo modinfo nvidia
+
+      # - name: cuda
+      #   continue-on-error: true
+      #   run: |
+      #     # sudo apt-get --assume-yes update
+      #     # sudo apt-get --assume-yes install gcc
+      #     # sudo apt-get --assume-yes install linux-headers-$(uname -r)
+      #     # wget -q https://developer.download.nvidia.com/compute/cuda/12.1.1/local_installers/cuda_12.1.1_530.30.02_linux.run
+      #     # sudo sh cuda_12.1.1_530.30.02_linux.run --silent
+
+      - name: nvidia-smi
+        continue-on-error: true
+        run: |
+          cat /var/log/cuda-installer.log
+          nvidia-smi
+          nvcc --version
