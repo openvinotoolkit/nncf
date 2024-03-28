@@ -34,7 +34,7 @@ TWeightType = TypeVar("TWeightType")
 
 class ScaleEstimation(Algorithm):
     """
-    Modified AWQ algorithm implementation.
+    Scale estimation algorithm implementation.
     """
 
     def __init__(
