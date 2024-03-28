@@ -188,8 +188,14 @@ def quantize_ac(model: ov.Model, data_loader: torch.utils.data.DataLoader, valid
             types=["Multiply", "Subtract", "Sigmoid"],  # ignore operations
             subgraphs=[
                 nncf.Subgraph(
-                    inputs=["/model.22/Concat", "/model.22/Concat_1", "/model.22/Concat_2"],
-                    outputs=["output0/sink_port_0"],
+                    inputs=[
+                        "/model.22/Concat_3",
+                        "/model.22/Concat_6",
+                        "/model.22/Concat_24",
+                        "/model.22/Concat_5",
+                        "/model.22/Concat_4",
+                    ],
+                    outputs=["output0"],
                 )
             ],
         ),

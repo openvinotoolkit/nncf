@@ -197,8 +197,14 @@ def quantize_ac(
             types=["Mul", "Sub", "Sigmoid"],  # ignore operations
             subgraphs=[
                 nncf.Subgraph(
-                    inputs=["/model.22/Concat", "/model.22/Concat_1", "/model.22/Concat_2"],
-                    outputs=["output0/sink_port_0"],
+                    inputs=[
+                        "/model.22/Concat_3",
+                        "/model.22/Concat_6",
+                        "/model.22/Concat_24",
+                        "/model.22/Concat_5",
+                        "/model.22/Concat_4",
+                    ],
+                    outputs=["/model.22/Concat_29"],
                 )
             ],
         ),
