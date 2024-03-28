@@ -35,7 +35,7 @@ class CSPDarknet53:
             nn_ops.DarknetConv2D(*args, **no_bias_kwargs),
             # TODO(nsavelyev) replace by BatchNormalization(synchronized=True) once support for TF < 2.12 is dropped
             tf.keras.layers.experimental.SyncBatchNormalization(),
-            mish
+            mish,
         )
 
     def csp_resblock_body(self, x, num_filters, num_blocks, all_narrow=True):
