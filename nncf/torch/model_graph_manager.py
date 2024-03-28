@@ -18,10 +18,11 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.torch.dynamic_graph.context import PreHookId
+from nncf.torch.external_hook import ExternalOpCallHook
 from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.quantization.external_quantizer import ExternalQuantizerCallHook
 from nncf.torch.quantization.layers import AsymmetricQuantizer
+from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import SymmetricQuantizer
 
 CONV_META_TYPES = [
@@ -295,7 +296,9 @@ def get_fake_quantizer(
         hook_container = model.nncf._compressed_context._post_hooks.get(op_addr, {})
 
     for call_hook in hook_container.values():
-        if isinstance(call_hook, ExternalQuantizerCallHook):
+        if isinstance(call_hook, ExternalOpCallHook):
             storage = getattr(model.nncf, call_hook._storage_name)
-            return storage[call_hook._storage_key]
+            module = storage[call_hook._storage_key]
+            if isinstance(module, BaseQuantizer):
+                return module
     return None

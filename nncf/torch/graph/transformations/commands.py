@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import Enum
 from typing import Any, Callable, Dict, List
 
 import torch
@@ -150,12 +151,18 @@ class PTInsertionCommand(PTTransformationCommand):
         return self.priority == TransformationPriority.QUANTIZATION_PRIORITY
 
 
+class ExtraCompressionModuleType(Enum):
+    EXTERNAL_QUANTIZER = 0
+    EXTERNAL_OP = 1
+
+
 class PTSharedFnInsertionCommand(PTTransformationCommand):
     def __init__(
         self,
         target_points: List[PTTargetPoint],
         fn: Callable,
         op_unique_name: str,
+        compression_module_type: ExtraCompressionModuleType = ExtraCompressionModuleType.EXTERNAL_OP,
         priority: TransformationPriority = TransformationPriority.DEFAULT_PRIORITY,
         hooks_group_name: str = DEFAULT_HOOKS_GROUP_NAME,
     ):
@@ -163,26 +170,8 @@ class PTSharedFnInsertionCommand(PTTransformationCommand):
         self.target_points = target_points
         self.fn = fn
         self.op_name = op_unique_name
+        self.compression_module_type = compression_module_type
         self.priority = priority
-        self.hooks_group_name = hooks_group_name
-
-    def requires_graph_rebuild(self):
-        return True
-
-
-class PTQuantizerInsertionCommand(PTTransformationCommand):
-    """
-    Insertion quantizer operation to the models.
-    """
-
-    def __init__(
-        self,
-        point: PTTargetPoint,
-        quantizer: "BaseQuantizer",  # noqa: F821
-        hooks_group_name: str = DEFAULT_HOOKS_GROUP_NAME,
-    ):
-        super().__init__(TransformationType.INSERT, point)
-        self.quantizer = quantizer
         self.hooks_group_name = hooks_group_name
 
     def requires_graph_rebuild(self):
