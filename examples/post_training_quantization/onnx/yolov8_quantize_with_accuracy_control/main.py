@@ -195,20 +195,17 @@ def quantize_ac(
         preset=nncf.QuantizationPreset.MIXED,
         ignored_scope=nncf.IgnoredScope(
             types=["Mul", "Sub", "Sigmoid"],  # ignore operations
-            names=[
-                "/model.22/dfl/conv/Conv",  # in the post-processing subgraph
-                "/model.22/Add",
-                "/model.22/Add_1",
-                "/model.22/Add_2",
-                "/model.22/Add_3",
-                "/model.22/Add_4",
-                "/model.22/Add_5",
-                "/model.22/Add_6",
-                "/model.22/Add_7",
-                "/model.22/Add_8",
-                "/model.22/Add_9",
-                "/model.22/Add_10",
-                "/model.22/Add_11",
+            subgraphs=[
+                nncf.Subgraph(
+                    inputs=[
+                        "/model.22/Concat_3",
+                        "/model.22/Concat_6",
+                        "/model.22/Concat_24",
+                        "/model.22/Concat_5",
+                        "/model.22/Concat_4",
+                    ],
+                    outputs=["/model.22/Concat_29"],
+                )
             ],
         ),
     )
