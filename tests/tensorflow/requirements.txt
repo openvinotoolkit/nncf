@@ -8,7 +8,7 @@ pytest-mock
 pytest-dependency
 pytest-xdist
 pydot
-tensorflow_hub
+tensorflow_hub==0.15.0
 virtualenv
 
 openvino
