@@ -11,7 +11,7 @@
 
 from typing import Any
 
-from nncf.torch.dynamic_graph.context import TracingContext
+from nncf.torch.dynamic_graph.context import get_current_context
 
 EXTERNAL_OP_STORAGE_NAME = "external_op"
 
@@ -26,17 +26,15 @@ class ExternalOpCallHook:
     the base module execution.
     """
 
-    def __init__(self, storage_name: str, context: TracingContext, storage_key: str):
+    def __init__(self, storage_name: str, storage_key: str):
         """
         :param storage_name: Attribute name of a model NNCFInterface.
-        :param context: Current tracing context.
         :param storage_key: Key to retrieve callable hook
         """
         self._storage_name = storage_name
-        self._compressed_context = context
         self._storage_key = storage_key
 
     def __call__(self, *args: Any, **kwargs) -> Any:
-        replica = self._compressed_context.base_module_thread_local_replica
+        replica = get_current_context().base_module_thread_local_replica
         storage = getattr(replica.nncf, self._storage_name)
         return storage[self._storage_key](*args, **kwargs)

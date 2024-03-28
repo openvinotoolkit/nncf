@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 import torch
 
@@ -36,7 +36,9 @@ from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph import PTTargetPoint
-from nncf.torch.graph.transformations.commands import PTQuantizerInsertionCommand
+from nncf.torch.graph.transformations.command_creation import create_quantizer_insertion_command
+from nncf.torch.graph.transformations.commands import PTInsertionCommand
+from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
@@ -127,17 +129,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         if target_type in PTMinMaxAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP:
             target_type = PTMinMaxAlgoBackend.TARGET_TYPE_TO_PT_INS_TYPE_MAP[target_type]
         return PTTargetPoint(target_type, target_node_name, input_port_id=port_id)
-
-    @staticmethod
-    def create_quantizer_insertion_command(
-        nncf_graph: NNCFGraph,
-        target_point: PTTargetPoint,
-        quantizer_config: QuantizerConfig,
-        parameters: FakeQuantizeParameters,
-    ) -> PTQuantizerInsertionCommand:
-        return PTMinMaxAlgoBackend._create_quantizer_insertion_command(
-            nncf_graph, target_point, quantizer_config, parameters
-        )
 
     @staticmethod
     def create_convert_insertion_command(
@@ -272,30 +263,30 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer = quantizer_cls(quantizer_spec)
 
         # Fill it with minmax
-        PTMinMaxAlgoBackend._fill_quantizer_parameters(quantizer, parameters)
+        PTMinMaxAlgoBackend._fill_quantizer_parameters(quantizer, parameters, quantizer_spec.scale_shape)
         return quantizer
 
     @staticmethod
-    def _fill_quantizer_parameters(quantizer: BaseQuantizer, parameters: FakeQuantizeParameters) -> None:
+    def _fill_quantizer_parameters(quantizer: BaseQuantizer, parameters: FakeQuantizeParameters, scale_shape) -> None:
         if isinstance(quantizer, AsymmetricQuantizer):
-            quantizer.input_low = torch.nn.Parameter(parameters.input_low.data)
+            quantizer.input_low = torch.nn.Parameter(parameters.input_low.data.reshape(scale_shape))
             input_range = parameters.input_high - parameters.input_low
             # Subtract eps from the input_range to make quantizer parameters equal to
             # original parameters on the forward call.
-            quantizer.input_range = torch.nn.Parameter(input_range.data - quantizer.eps)
+            quantizer.input_range = torch.nn.Parameter((input_range.data - quantizer.eps).reshape(scale_shape))
         else:
             quantizer.signed = bool(torch.any(parameters.input_low.data < 0))
             # Subtract eps from the scale to make quantizer parameters equal to
             # original parameters on the forward call.
-            quantizer.scale = torch.nn.Parameter(parameters.input_high.data - quantizer.eps)
+            quantizer.scale = torch.nn.Parameter((parameters.input_high.data - quantizer.eps).reshape(scale_shape))
 
     @staticmethod
-    def _create_quantizer_insertion_command(
+    def create_quantizer_insertion_command(
         nncf_graph: NNCFGraph,
         target_point: PTTargetPoint,
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
-    ) -> PTQuantizerInsertionCommand:
+    ) -> Union[PTInsertionCommand, PTSharedFnInsertionCommand]:
         _, scale_shape, _ = PTMinMaxAlgoBackend._get_input_scale_shape(
             nncf_graph, target_point, quantizer_config.per_channel
         )
@@ -303,7 +294,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer = PTMinMaxAlgoBackend._create_quantizer(
             quantizer_config, scale_shape, parameters, target_point.target_type
         )
-        return PTQuantizerInsertionCommand(target_point, quantizer)
+        return create_quantizer_insertion_command(target_point, quantizer)
 
     @staticmethod
     def get_ignored_metatypes(model_type: ModelType, device: TargetDevice) -> List[OperatorMetatype]:

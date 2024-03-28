@@ -17,7 +17,7 @@ from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.trace_tensor import TracedParameter
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.wrappers import wrap_parameters
-from nncf.torch.nncf_network import ExtraCompressionModuleType
+from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from tests.torch.helpers import BasicConvTestModel
 
 

@@ -8,7 +8,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import contextlib
+import functools
+import itertools
 import numbers
 from abc import ABC
 from abc import abstractmethod
@@ -29,6 +32,8 @@ from torch.utils.data import Dataset
 
 import nncf
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.config import NNCFConfig
 from nncf.config.extractors import extract_algorithm_names
 from nncf.config.structures import BNAdaptationInitArgs
@@ -38,8 +43,13 @@ from nncf.torch.dynamic_graph.context import PreHookId
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
+from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
+from nncf.torch.graph.transformations.commands import PTInsertionCommand
+from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
+from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.initialization import PTInitializingDataLoader
 from nncf.torch.initialization import register_default_init_args
+from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.torch.layers import NNCF_MODULES_MAP
 from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.module_operations import UpdateWeight
@@ -172,6 +182,12 @@ class BasicConvTestModel(nn.Module):
 
 
 class TwoConvTestModel(nn.Module):
+    INPUT_SHAPE = [1, 1, 4, 4]
+    NNCF_CONV_NODES_NAMES = [
+        "TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0",
+        "TwoConvTestModel/Sequential[features]/Sequential[1]/NNCFConv2d[0]/conv2d_0",
+    ]
+
     def __init__(self):
         super().__init__()
         self.features = []
@@ -197,6 +213,114 @@ class TwoConvTestModel(nn.Module):
     @property
     def nz_bias_num(self):
         return 2
+
+    @staticmethod
+    def create_pt_insertion_command(
+        target_type: TargetType, priority: TransformationPriority, fn=None, group: str = "default_group"
+    ):
+        target_point = PTTargetPoint(
+            target_type=target_type, target_node_name=TwoConvTestModel.NNCF_CONV_NODES_NAMES[0], input_port_id=0
+        )
+        if fn is None:
+            fn = DummyOpWithState("DUMMY_STATE")
+        return PTInsertionCommand(point=target_point, fn=fn, priority=priority, hooks_group_name=group)
+
+    @staticmethod
+    def create_pt_shared_fn_insertion_command(
+        target_type: TargetType,
+        priority: TransformationPriority,
+        compression_module_type: ExtraCompressionModuleType,
+        fn=None,
+        group: str = "default_group",
+        op_unique_name: str = "UNIQUE_NAME",
+    ):
+        target_points = []
+
+        for node_name in TwoConvTestModel.NNCF_CONV_NODES_NAMES:
+            target_points.append(PTTargetPoint(target_type=target_type, target_node_name=node_name, input_port_id=0))
+        if fn is None:
+            fn = DummyOpWithState("DUMMY_STATE")
+        return PTSharedFnInsertionCommand(
+            target_points=target_points,
+            fn=fn,
+            compression_module_type=compression_module_type,
+            op_unique_name=op_unique_name,
+            priority=priority,
+            hooks_group_name=group,
+        )
+
+    AVAILABLE_TARGET_TYPES = (
+        TargetType.OPERATION_WITH_WEIGHTS,
+        TargetType.OPERATOR_PRE_HOOK,
+        TargetType.OPERATOR_POST_HOOK,
+        TargetType.PRE_LAYER_OPERATION,
+        TargetType.POST_LAYER_OPERATION,
+    )
+
+    @staticmethod
+    def get_command_builders():
+        return (
+            TwoConvTestModel.create_pt_insertion_command,
+            functools.partial(
+                TwoConvTestModel.create_pt_shared_fn_insertion_command,
+                compression_module_type=ExtraCompressionModuleType.EXTERNAL_OP,
+            ),
+            functools.partial(
+                TwoConvTestModel.create_pt_shared_fn_insertion_command,
+                compression_module_type=ExtraCompressionModuleType.EXTERNAL_QUANTIZER,
+            ),
+        )
+
+    COMMAND_TYPES = [PTInsertionCommand, PTSharedFnInsertionCommand, PTSharedFnInsertionCommand]
+    PRIORITIES = (TransformationPriority.QUANTIZATION_PRIORITY, TransformationPriority.QUANTIZATION_PRIORITY.value + 1)
+
+    @classmethod
+    def get_all_available_commands(cls, skip_model_transformer_unsupported=False) -> TransformationLayout:
+        """
+        Returns all possible commands to insert:
+        all target types x all command class x all compression module types x different priorities.
+        DummyOpWithState is used as insertion module. DummyOpWithState states are unique for each
+        unique command.
+        """
+        layout = TransformationLayout()
+        for idx, (target_type, (command_builder, command_type), priority) in enumerate(
+            itertools.product(
+                cls.AVAILABLE_TARGET_TYPES, zip(cls.get_command_builders(), cls.COMMAND_TYPES), cls.PRIORITIES
+            )
+        ):
+            dummy_op_state = f"DUMMY_OP_STATE_{idx}"
+            if command_type is PTSharedFnInsertionCommand:
+                if skip_model_transformer_unsupported and target_type in [
+                    TargetType.PRE_LAYER_OPERATION,
+                    TargetType.POST_LAYER_OPERATION,
+                ]:
+                    continue
+                command = cls.create_one_command(
+                    command_builder, target_type, priority, dummy_op_state, op_unique_name=f"UNIQUE_NAME_{idx}"
+                )
+            else:
+                command = cls.create_one_command(command_builder, target_type, priority, dummy_op_state)
+
+            layout.register(command)
+        return layout
+
+    @staticmethod
+    def create_one_command(command_builder, target_type, priority, dummy_op_state, op_unique_name=None):
+        group_name = "CUSTOM_HOOKS_GROUP_NAME"
+
+        if DummyOpWithState.__name__ not in COMPRESSION_MODULES.registry_dict:
+            registered_dummy_op_cls = COMPRESSION_MODULES.register()(DummyOpWithState)
+        else:
+            registered_dummy_op_cls = DummyOpWithState
+        dummy_op = registered_dummy_op_cls(dummy_op_state)
+        if op_unique_name is None:
+            command = command_builder(target_type, priority, fn=dummy_op, group=group_name)
+        else:
+            command = command_builder(
+                target_type, priority, fn=dummy_op, group=group_name, op_unique_name=op_unique_name
+            )
+
+        return command
 
 
 class LeNet(nn.Module):
@@ -228,6 +352,37 @@ class LeNet(nn.Module):
         return num_features
 
 
+def are_commands_equal(
+    command, applied_command, check_priority: bool = True, check_hooks_group_name: bool = True, check_fn_ref=True
+):
+    if type(applied_command) is not type(command):
+        return False
+
+    # Check reference to functions are equal.
+    if check_fn_ref and applied_command.fn is not command.fn:
+        return False
+    if check_hooks_group_name and applied_command.hooks_group_name != command.hooks_group_name:
+        return False
+    if check_priority and applied_command.priority != command.priority:
+        return False
+
+    if isinstance(applied_command, PTInsertionCommand):
+        if not target_points_are_equal(command.target_point, applied_command.target_point):
+            return False
+    elif isinstance(applied_command, PTSharedFnInsertionCommand):
+        if not all(target_points_are_equal(a, b) for a, b in zip(command.target_points, applied_command.target_points)):
+            return False
+        if (
+            applied_command.target_points != command.target_points
+            or applied_command.op_name != command.op_name
+            or applied_command.compression_module_type != command.compression_module_type
+        ):
+            return False
+    else:
+        raise RuntimeError()
+    return True
+
+
 class SharedConv(nn.Module):
     INPUT_SIZE = [1, 1, 4, 4]
 
@@ -252,6 +407,58 @@ class SharedCustomConv(nn.Module):
         a = F.conv2d(x, self.weight)
         b = F.conv2d(x + 1, self.weight)
         return a + b
+
+
+class DummyOpWithState(torch.nn.Module):
+    def __init__(self, state: str):
+        super().__init__()
+        self._state = state
+
+    def __call__(self, *args):
+        if len(args) == 1:
+            return args[0]
+        # To work correctly with
+        # TargetType.PRE_LAYER_OPERATION
+        # TargetType.POST_LAYER_OPERATION
+        return None
+
+    def get_state(self):
+        return self._state
+
+    @classmethod
+    def from_state(cls, state: str):
+        return cls(state)
+
+
+def target_points_are_equal(tp_original: PTTargetPoint, tp_recovered: PTTargetPoint):
+    if tp_original != tp_recovered:
+        return False
+    if tp_original.target_type == TargetType.OPERATOR_PRE_HOOK:
+        return tp_original.input_port_id == tp_recovered.input_port_id
+    return True
+
+
+def check_commands_are_equal(
+    command, applied_command, check_priority: bool = True, check_hooks_group_name: bool = True, check_fn_ref=True
+):
+    assert type(applied_command) is type(command)
+    # Check reference to functions are equal.
+    if check_fn_ref:
+        assert applied_command.fn is command.fn
+    if check_hooks_group_name:
+        assert applied_command.hooks_group_name == command.hooks_group_name
+    if check_priority:
+        assert applied_command.priority == command.priority
+
+    if isinstance(applied_command, PTInsertionCommand):
+        assert target_points_are_equal(command.target_point, applied_command.target_point)
+    elif isinstance(applied_command, PTSharedFnInsertionCommand):
+        all(target_points_are_equal(a, b) for a, b in zip(command.target_points, applied_command.target_points))
+        assert applied_command.target_points == command.target_points
+        assert applied_command.op_name == command.op_name
+        assert applied_command.compression_module_type == command.compression_module_type
+    else:
+        raise RuntimeError()
 
 
 def get_empty_config(

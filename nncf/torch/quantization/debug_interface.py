@@ -59,7 +59,7 @@ class QuantizationDebugInterface(DebugInterface):
         self._strict_forward = False
 
     def init_actual(self, owner_model: NNCFNetwork):
-        from nncf.torch.nncf_network import ExtraCompressionModuleType
+        from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 
         quantization_types = [class_type.__name__ for class_type in QUANTIZATION_MODULES.registry_dict.values()]
         quantizers_in_nncf_modules = owner_model.nncf.get_modules_in_nncf_modules_by_type(quantization_types)

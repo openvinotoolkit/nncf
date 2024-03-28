@@ -27,6 +27,7 @@ from nncf import nncf_logger
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.hook_handle import HookHandle
 from nncf.torch import register_module
 from nncf.torch.dynamic_graph.io_handling import ExampleInputInfo
@@ -39,11 +40,14 @@ from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
+from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
+from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
+from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.model_creation import wrap_model
+from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
-from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint
 from nncf.torch.nncf_network import PTInsertionType
@@ -52,6 +56,7 @@ from tests.torch.composite.test_sparsity_quantization import get_basic_sparsity_
 from tests.torch.helpers import BasicConvTestModel
 from tests.torch.helpers import HookChecker
 from tests.torch.helpers import TwoConvTestModel
+from tests.torch.helpers import are_commands_equal
 from tests.torch.helpers import check_correct_nncf_modules_replacement
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
@@ -1024,3 +1029,82 @@ class TestHookHandles:
 
             del ref_hooks[-2]
             _check(ref_hooks)
+
+
+@pytest.mark.parametrize("target_type", TwoConvTestModel.AVAILABLE_TARGET_TYPES)
+@pytest.mark.parametrize("command_builder", TwoConvTestModel.get_command_builders())
+def test_get_applied_modification_commands(command_builder, target_type):
+    command = command_builder(target_type, TransformationPriority.DEFAULT_PRIORITY)
+    if isinstance(command, PTSharedFnInsertionCommand) and target_type in [
+        TargetType.PRE_LAYER_OPERATION,
+        TargetType.POST_LAYER_OPERATION,
+    ]:
+        pytest.skip(f"PTSharedFnInsertionCommand is not supporting target type {target_type}")
+
+    model = TwoConvTestModel()
+    nncf_model = NNCFNetwork(deepcopy(model), input_info=FillerInputInfo([FillerInputElement([1, 1, 4, 4])]))
+    model_tranformer = PTModelTransformer(nncf_model)
+
+    layout = PTTransformationLayout()
+    layout.register(command)
+    model_tranformer.transform(layout)
+
+    applied_commands = nncf_model.nncf.get_applied_transformation_layout()
+
+    assert len(applied_commands.transformations) == 1
+    applied_command = applied_commands.transformations[0]
+    are_commands_equal(command, applied_command, check_priority=False, check_hooks_group_name=False)
+
+
+@pytest.mark.parametrize("target_type", TwoConvTestModel.AVAILABLE_TARGET_TYPES)
+@pytest.mark.parametrize(
+    "command_builder,command_type", tuple(zip(TwoConvTestModel.get_command_builders(), TwoConvTestModel.COMMAND_TYPES))
+)
+def test_priority_of_get_applied_modification_commands(command_builder, target_type, command_type):
+    layout = PTTransformationLayout()
+    commands = dict()
+    for priority in (0, 3, 2, 4, 1):
+        if command_type is PTSharedFnInsertionCommand:
+            command = command_builder(target_type, priority, op_unique_name=f"UNIQUE_NAME_{priority}")
+        else:
+            command = command_builder(target_type, priority)
+        layout.register(command)
+        commands[priority] = command
+    else:
+        if isinstance(command, PTSharedFnInsertionCommand) and target_type in [
+            TargetType.PRE_LAYER_OPERATION,
+            TargetType.POST_LAYER_OPERATION,
+        ]:
+            pytest.skip(f"PTSharedFnInsertionCommand is not supporting target type {target_type}")
+
+    model = TwoConvTestModel()
+    nncf_model = NNCFNetwork(deepcopy(model), input_info=FillerInputInfo([FillerInputElement([1, 1, 4, 4])]))
+    model_tranformer = PTModelTransformer(nncf_model)
+
+    model_tranformer.transform(layout)
+
+    applied_commands = nncf_model.nncf.get_applied_transformation_layout()
+    assert len(applied_commands.transformations) == len(commands)
+    for applied_command in applied_commands.transformations:
+        command = commands[applied_command.priority]
+        are_commands_equal(command, applied_command, check_priority=False, check_hooks_group_name=False)
+
+
+def test_all_possible_combinations_of_commands_for_get_applied_commands():
+    commands = TwoConvTestModel.get_all_available_commands(skip_model_transformer_unsupported=True)
+
+    model = TwoConvTestModel()
+    nncf_model = NNCFNetwork(deepcopy(model), input_info=FillerInputInfo([FillerInputElement([1, 1, 4, 4])]))
+    model_tranformer = PTModelTransformer(nncf_model)
+
+    model_tranformer.transform(commands)
+
+    applied_commands = nncf_model.nncf.get_applied_transformation_layout()
+    assert len(applied_commands.transformations) == len(commands.transformations)
+    for command in commands.transformations:
+        eq_commands = (
+            are_commands_equal(command, applied_command, check_priority=False, check_hooks_group_name=False)
+            for applied_command in applied_commands.transformations
+        )
+        if sum(map(int, eq_commands)) != 1:
+            raise RuntimeError(f"Command {command} has no pair in recovered commands")
