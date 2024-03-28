@@ -102,7 +102,11 @@ class ScaleEstimation(Algorithm):
         dataset: Optional[Dataset] = None,
     ) -> TModel:
         """
-        Applies the algorithm to the model.
+        Estimates better scale for the int4 nodes in the model.
+        Minimazes per group differnece between floating point MatMul and
+        MatMal with compressed weights.
+        Algorith computes weighted scale for the group of weights in MatMul which
+        shared the same scale.
 
         :param model: Model for applying algorithm.
         :param graph: Model graph.
@@ -134,6 +138,7 @@ class ScaleEstimation(Algorithm):
             X = fns.stack([fns.mean(stat, axis=0) for stat in stats])
             X_full = fns.transpose(X)
 
+            # prevent high memory and time consumption
             if X_full.shape[1] > self._subset_size:
                 lens = [stat.shape[0] for stat in stats]
                 step = X_full.shape[1] // self._subset_size
@@ -165,14 +170,17 @@ class ScaleEstimation(Algorithm):
             original_weight, _ = reshape_weight_for_grouped_quantization(
                 original_weight, reduction_axis, config.group_size
             )
+
+            # all weight in group has importance based on corresponding input activations
             importance = fns.ones_like(original_weight)
             importance = importance * s
 
             target = compressed_weighs.astype(dtype=zp.dtype) - zp
             zero_mask = compressed_weighs == zp
 
-            importance = fns.where(zero_mask, 0.0, importance)  # ???????
+            importance = fns.where(zero_mask, 0.0, importance)
 
+            # normalize importances for every group of weights to make sum of them equal to 1.0
             denum = fns.sum(importance, axis=2, keepdims=True)
             importance = importance / (denum + eps)
 
@@ -183,9 +191,10 @@ class ScaleEstimation(Algorithm):
 
             fp_outs = fns.matmul(fns.transpose(original_weight, (1, 0, 2)), X)
             q_outs = fns.matmul(fns.transpose(q_weights, (1, 0, 2)), X)
+
+            # metric for minimization with shape [C_OUT, N_GROUPS], N_GROUPS = C_IN / GROUP_SIZE
             min_max_scale_diffs = fns.mean((fp_outs - q_outs) ** 2, axis=-1)
             min_max_scale_diffs = fns.transpose(min_max_scale_diffs, (1, 0))
-            ideal_scale_diffs = fns.zeros_like(min_max_scale_diffs)
 
             key = (
                 (wp.compression_config.mode, wp.compression_config.num_bits) + q_weights.shape + scale.shape + zp.shape
@@ -206,6 +215,7 @@ class ScaleEstimation(Algorithm):
             zero_scale = 0.001
             zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
 
+            # iterative rectification of initial scale
             for i in range(self._initial_steps):
                 ideal_scale = fns.abs(original_weight) / (fns.abs(target) + zero_mask)
                 weighted_scale = ideal_scale * importance
@@ -241,6 +251,7 @@ class ScaleEstimation(Algorithm):
                     zero_mask = compressed_weights == zp
                     zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
 
+            # iterative rectification of scale based on grid search
             for scale_steps in range(self._scale_steps):
                 factor = 1.0 - 0.05 * scale_steps
                 scaled_scale = factor * scale
