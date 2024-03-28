@@ -17,7 +17,7 @@ import tests.post_training.test_templates.helpers as helpers
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.torch import wrap_model
 from nncf.torch.extractor import extract_model
-from nncf.torch.graph.transformations.commands import PTQuantizerInsertionCommand
+from nncf.torch.graph.transformations.command_creation import create_quantizer_insertion_command
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.model_transformer import PTTransformationLayout
@@ -97,7 +97,7 @@ def test_extract_model(model_cls, input_node_name, output_node_name):
         ),
     ),
 )
-def tes_extract_model_for_node_with_fq(model_cls, input_node_name, output_node_name):
+def test_extract_model_for_node_with_fq(model_cls, input_node_name, output_node_name):
     example_input = torch.ones(model_cls.INPUT_SIZE)
 
     model = wrap_model(model_cls().eval(), example_input=example_input, trace_parameters=True)
@@ -114,7 +114,7 @@ def tes_extract_model_for_node_with_fq(model_cls, input_node_name, output_node_n
     )
 
     fq = SymmetricQuantizer(qspec)
-    command = PTQuantizerInsertionCommand(
+    command = create_quantizer_insertion_command(
         PTTargetPoint(TargetType.OPERATOR_PRE_HOOK, input_node_name, input_port_id=1), fq
     )
     layout = PTTransformationLayout()
@@ -125,9 +125,10 @@ def tes_extract_model_for_node_with_fq(model_cls, input_node_name, output_node_n
     with torch.no_grad():
         ret1 = q_model(example_input)
         ret2 = extracted_module(example_input)
-        assert torch.any(torch.isclose(ret1, ret2))
+        assert torch.all(torch.isclose(ret1, ret2))
 
-    if isinstance(extracted_module, nn.Sequential):
-        assert extracted_module[0].w_fq is not None
-    else:
-        assert extracted_module.w_fq is not None
+    extracted_fn = extracted_module
+    if isinstance(extracted_fn, nn.Sequential):
+        extracted_fn = extracted_module[0]
+
+    assert extracted_fn.fn_name is not None
