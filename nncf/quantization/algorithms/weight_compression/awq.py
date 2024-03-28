@@ -181,8 +181,11 @@ class AWQ(Algorithm):
             stats = self._activations[k]
             X = fns.stack([fns.mean(stat, axis=0) for stat in stats])
             X = fns.transpose(X)
+
             if X.shape[1] > self._subset_size:
-                X = X[:, : self._subset_size]
+                lens = [stat.shape[0] for stat in stats]
+                idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][: self._subset_size]
+                X = X[:, idxs]
 
             s = fns.max(fns.abs(X), axis=1)
 
@@ -223,8 +226,12 @@ class AWQ(Algorithm):
                 gacts = X[offset : offset + config.group_size, :]
 
                 fp32_out = fns.matmul(gweight, gacts)
-                min_diff = fns.max(fns.abs(fp32_out))
                 best_scale = None
+
+                g_compressed_weighs, g_c_scale, g_c_zp = do_integer_quantization(gweight, reduction_axis, awq_config)
+                g_decompressed_weighs = do_dequantization(g_compressed_weighs, g_c_scale, g_c_zp)
+                cur_out = fns.matmul(g_decompressed_weighs, gacts)
+                min_diff = fns.mean(fns.abs(cur_out - fp32_out))
 
                 alpha = self._alpha_min
                 for _ in range(self._steps):
