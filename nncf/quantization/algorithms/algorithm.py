@@ -26,6 +26,18 @@ class Algorithm(ABC):
     Base class for all Post-Training algorithms.
     """
 
+    def __init__(self):
+        self._algorithm_key = ""
+
+    @property
+    def algorithm_key(self) -> str:
+        """
+        Returns algorithm key.
+
+        :return: Algorithm key as string.
+        """
+        return self._algorithm_key
+
     @property
     @abstractmethod
     def available_backends(self) -> List[BackendType]:

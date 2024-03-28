@@ -71,6 +71,32 @@ class StatisticPointsContainer(UserDict):
 
             self.data[target_node_name].append(statistic_point)
 
+    def remove_statistic_points(self, algorithm_key: str) -> None:
+        """
+        Method to remove statistic point associated with a given algorithm
+        from statistic point container.
+
+        :param algorithm_key: Algorithm key.
+        """
+        reduced_data = {}
+        for target_node_name, statistic_points in self.data.items():
+            # Reassign every target node name IF it doesn't contain the given algorithm
+            reduced_statistics = []
+            for statistic_point in statistic_points:
+                statistic_point.algorithm_to_tensor_collectors = [
+                    algorithm
+                    for algorithm in statistic_point.algorithm_to_tensor_collectors
+                    if algorithm != algorithm_key
+                ]
+
+                if statistic_point.algorithm_to_tensor_collectors:
+                    reduced_statistics.append(statistic_point)
+
+            if reduced_statistics:
+                reduced_data[target_node_name] = reduced_statistics
+
+        self.data = reduced_data
+
     def iter_through_statistic_points_in_target_node(
         self, target_node_name: str, filter_fn: Callable[[StatisticPoint], bool]
     ) -> StatisticPoint:
