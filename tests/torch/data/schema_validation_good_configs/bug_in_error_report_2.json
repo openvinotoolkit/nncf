@@ -1,0 +1,10 @@
+{
+  "input_info": {},
+  "compression": {
+    "algorithm": "rb_sparsity",
+    "params": {
+      "schedule": "polynomial"
+    },
+    "unknown_field": []
+  }
+}
