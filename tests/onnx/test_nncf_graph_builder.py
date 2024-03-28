@@ -16,9 +16,11 @@ import pytest
 import torch
 from torchvision import models
 
+from nncf.onnx.graph.model_transformer import ONNXModelTransformer
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from tests.onnx.conftest import ONNX_TEST_ROOT
 from tests.onnx.models import ALL_SYNTHETIC_MODELS
+from tests.onnx.models import OneConvolutionalModel
 from tests.onnx.opset_converter import convert_opset_version
 from tests.onnx.quantization.common import ModelToTest
 from tests.onnx.weightless_model import load_model_topology_with_zeros_weights
@@ -98,4 +100,14 @@ def test_compare_nncf_graph_detection_real_models(tmp_path, model_to_test):
     nncf_graph = GraphConverter.create_nncf_graph(original_model)
     nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
 
+    compare_nx_graph_with_reference(nx_graph, path_to_dot, check_edge_attrs=True)
+
+
+def test_add_output_nodes_with_no_parents_node():
+    model_to_test = OneConvolutionalModel().onnx_model
+    model_outputs = (value_info.name for value_info in model_to_test.graph.output)
+    model_with_output = ONNXModelTransformer._insert_outputs(model_to_test, (*model_outputs, "Conv1_W"))
+    nncf_graph = GraphConverter.create_nncf_graph(model_with_output)
+    nx_graph = nncf_graph.get_graph_for_structure_analysis(extended=True)
+    path_to_dot = REFERENCE_GRAPHS_DIR / "synthetic" / "output_with_no_parents_model.dot"
     compare_nx_graph_with_reference(nx_graph, path_to_dot, check_edge_attrs=True)
