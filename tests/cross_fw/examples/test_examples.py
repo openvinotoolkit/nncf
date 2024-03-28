@@ -12,6 +12,7 @@
 import os
 import subprocess
 from pathlib import Path
+import sys
 from typing import Any, Dict, List
 
 import pytest
@@ -53,6 +54,11 @@ def test_examples(
     is_check_performance: bool,
     ov_version_override: str,
 ):
+    python_version = sys.version_info
+    example_python_version = tuple(example_params.get("python_version", python_version))
+    if python_version < example_python_version:
+        pytest.skip(f"The test is skipped because python >= {example_python_version} is required.")
+
     backend = example_params["backend"]
     skip_if_backend_not_selected(backend, backends_list)
     venv_path = create_venv_with_nncf(tmp_path, "pip_e_local", "venv", set([backend]))
