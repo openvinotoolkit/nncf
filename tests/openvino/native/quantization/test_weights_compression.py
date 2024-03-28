@@ -757,3 +757,11 @@ def test_duplicate_names_generation():
         name = op.get_friendly_name()
         assert name not in op_names
         op_names.add(name)
+
+
+@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+def test_call_max_var_criterion_with_dataset_by_default_scale_estimation(mode):
+    model = AWQMatmulModel().ov_model
+    dataset = Dataset([np.ones([8, 8])])
+
+    compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, scale_estimation=True)

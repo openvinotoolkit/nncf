@@ -58,7 +58,7 @@ class AWQ(Algorithm):
         activations: Optional[Dict[str, TTensor]] = None,
         subset_size: int = 32,
         percent_to_apply=0.002,
-        alpha_min=0.01,
+        alpha_min=0.0,
         alpha_max=1.0,
         steps=100,
     ):
@@ -107,8 +107,7 @@ class AWQ(Algorithm):
         if model_backend == BackendType.OPENVINO:
             from nncf.quantization.algorithms.weight_compression.openvino_backend import OVAWQAlgoAlgoBackend
 
-            self._backend_entity = OVAWQAlgoAlgoBackend(model)
-            self._backend_entity.name_to_node_mapping = self.name_to_node_mapping
+            self._backend_entity = OVAWQAlgoAlgoBackend(model, self.name_to_node_mapping)
             self._patterns = self._backend_entity.get_awq_patterns()
         else:
             raise RuntimeError(
@@ -181,10 +180,14 @@ class AWQ(Algorithm):
             stats = self._activations[k]
             X = fns.stack([fns.mean(stat, axis=0) for stat in stats])
             X = fns.transpose(X)
-            if X.shape[1] > self._subset_size:
-                X = X[:, : self._subset_size]
 
             s = fns.max(fns.abs(X), axis=1)
+
+            if X.shape[1] > self._subset_size:
+                lens = [stat.shape[0] for stat in stats]
+                step = X.shape[1] // self._subset_size
+                idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][::step]
+                X = X[:, idxs]
 
             top_k = max(int(s.shape[0] * self._percent_to_apply), 1)
             topk_idxs = fns.argsort(-s)[:top_k]
@@ -262,6 +265,12 @@ class AWQ(Algorithm):
                 merge_weight = self._backend_entity.get_weight(merge_node, port_id, model, graph)
                 merge_weight = merge_weight * a_scale
                 self._backend_entity.set_weight(merge_node, port_id, model, graph, merge_weight)
+
+            # update activations for next usage
+            a_scale_t = fns.transpose(a_scale)
+            for i, stat in enumerate(self._activations[k]):
+                stat = stat * a_scale_t
+                self._activations[k][i] = stat
 
         return model
 
