@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import nncf
 from nncf.api.compression import TModel
@@ -540,34 +540,3 @@ def quantize_with_tune_hyperparams(
     quantized_model = hyperparameter_tuner.apply(model, validation_dataset)
 
     return quantized_model
-
-
-@api(canonical_alias="nncf.apply_serialized_transformations")
-def apply_serialized_transformations(
-    model: TModel,
-    serialized_transformations,
-) -> TModel:
-    """
-    Applies transformation layout to the model.
-    """
-    backend = get_backend(model)
-    if backend == BackendType.TORCH:
-        from nncf.torch.quantization.quantize_model import apply_serialized_transformations_impl
-
-        return apply_serialized_transformations_impl(model, serialized_transformations)
-    raise nncf.UnsupportedBackendError(f"Unsupported type of backend: {backend}")
-
-
-@api(canonical_alias="nncf.serialize_transformations")
-def serialize_transformations(
-    model: TModel,
-) -> Dict[str, Any]:
-    """
-    Applies transformation layout to the model.
-    """
-    backend = get_backend(model)
-    if backend == BackendType.TORCH:
-        from nncf.torch.quantization.quantize_model import serialize_transformations_impl
-
-        return serialize_transformations_impl(model)
-    raise nncf.UnsupportedBackendError(f"Unsupported type of backend: {backend}")

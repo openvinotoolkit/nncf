@@ -39,11 +39,9 @@ from nncf.parameters import QuantizationMode as QuantizationMode
 from nncf.parameters import SensitivityMetric as SensitivityMetric
 from nncf.parameters import TargetDevice as TargetDevice
 from nncf.quantization import QuantizationPreset as QuantizationPreset
-from nncf.quantization import apply_serialized_transformations as apply_serialized_transformations
 from nncf.quantization import compress_weights as compress_weights
 from nncf.quantization import quantize as quantize
 from nncf.quantization import quantize_with_accuracy_control as quantize_with_accuracy_control
-from nncf.quantization import serialize_transformations as serialize_transformations
 from nncf.quantization.advanced_parameters import (
     AdvancedAccuracyRestorerParameters as AdvancedAccuracyRestorerParameters,
 )

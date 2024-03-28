@@ -15,12 +15,12 @@ from copy import deepcopy
 import pytest
 import torch
 
-import nncf
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
 from nncf.torch.dynamic_graph.io_handling import FillerInputElement
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
+from nncf.torch.dynamic_graph.io_handling import ModelInputInfo
 from nncf.torch.graph.transformations.serialization import load_command
 from nncf.torch.graph.transformations.serialization import load_transformations
 from nncf.torch.graph.transformations.serialization import serialize_command
@@ -56,39 +56,56 @@ def test_serialize_load_command(target_type, command_builder, priority):
     _check_commands_after_serialization(command, recovered_command, dummy_op_state)
 
 
-def test_serialize_transformations(mocker):
+def test_serialize_transformations():
     layout = TwoConvTestModel.get_all_available_commands()
-    model = mocker.MagicMock()
-    input_info_ref = FillerInputInfo([FillerInputElement([1, 1, 4, 4])])
-    model.nncf._input_info = input_info_ref
 
-    serialized_transformations = serialize_transformations(model, layout)
+    serialized_transformations = serialize_transformations(layout)
 
     # Check serialized transformation are json compatible
     j_str = json.dumps(serialized_transformations)
     serialized_transformations = json.loads(j_str)
 
-    recovered_layout, input_info = load_transformations(serialized_transformations)
-    assert input_info == input_info_ref
+    recovered_layout = load_transformations(serialized_transformations)
     assert len(layout.transformations) == len(recovered_layout.transformations)
     # Can zip layouts because the order should not be altered
     for command, recovered_command in zip(layout.transformations, recovered_layout.transformations):
         _check_commands_after_serialization(command, recovered_command)
 
 
+def apply_serialized_transformations_impl(
+    model: torch.nn.Module, input_info: ModelInputInfo, serialized_transformations
+):
+    transformations_layout = load_transformations(serialized_transformations)
+
+    nncf_network = NNCFNetwork(deepcopy(model), input_info=input_info)
+    model_transformer = ModelTransformerFactory.create(nncf_network)
+    transformed_model = model_transformer.transform(transformations_layout)
+
+    transformed_model.nncf.disable_dynamic_graph_building()
+    return transformed_model
+
+
+def serialize_transformations_impl(
+    model: NNCFNetwork,
+):
+    layout = model.nncf.get_applied_transformation_layout()
+    return serialize_transformations(layout)
+
+
 def test_get_apply_serialization_from_a_model():
     layout = TwoConvTestModel.get_all_available_commands(skip_model_transformer_unsupported=True)
     model = TwoConvTestModel()
-    nncf_model = NNCFNetwork(deepcopy(model), input_info=FillerInputInfo([FillerInputElement([1, 1, 4, 4])]))
+    input_info = FillerInputInfo([FillerInputElement([1, 1, 4, 4])])
+    nncf_model = NNCFNetwork(deepcopy(model), input_info=input_info)
     modified_model = ModelTransformerFactory.create(nncf_model).transform(layout)
 
-    serialized_transformations = nncf.serialize_transformations(modified_model)
+    serialized_transformations = serialize_transformations_impl(modified_model)
 
     # Check serialized transformation are json compatible
     j_str = json.dumps(serialized_transformations)
     serialized_transformations = json.loads(j_str)
 
-    recovered_model = nncf.apply_serialized_transformations(model, serialized_transformations)
+    recovered_model = apply_serialized_transformations_impl(model, input_info, serialized_transformations)
     for conv, recovered_conv in zip(modified_model.features, recovered_model.features):
         for hooks_attr in ["pre_ops", "post_ops"]:
             hooks = getattr(conv[0], hooks_attr)

@@ -10,13 +10,10 @@
 # limitations under the License.
 
 from enum import Enum
-from typing import Any, Dict, Tuple, Union
-
-import torch
+from typing import Any, Dict, Union
 
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
-from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
@@ -25,7 +22,6 @@ from nncf.torch.graph.transformations.commands import PTTransformationCommand
 from nncf.torch.layer_utils import COMPRESSION_MODULES
 
 COMPRESSION_STATE_ATTR = "compression_state"
-INPUT_INFO_ATTR = "example_input"
 
 
 class CompressionKeys(Enum):
@@ -33,28 +29,23 @@ class CompressionKeys(Enum):
     INSERTION_COMMAND = "INSERTION_COMMAND"
 
 
-def serialize_transformations(model: torch.nn.Module, transformations_layout: TransformationLayout) -> Dict[str, Any]:
-    input_info = model.nncf._input_info
-    if not isinstance(input_info, FillerInputInfo):
-        raise RuntimeError("Could not serialize model inputs input: {input_info}")
-
+def serialize_transformations(transformations_layout: TransformationLayout) -> Dict[str, Any]:
     transformation_commands = []
     for command in transformations_layout.transformations:
         serialized_command = serialize_command(command)
         if serialized_command:
             transformation_commands.append(serialized_command)
 
-    return {COMPRESSION_STATE_ATTR: transformation_commands, INPUT_INFO_ATTR: input_info.get_state()}
+    return {COMPRESSION_STATE_ATTR: transformation_commands}
 
 
-def load_transformations(transformations_state: Dict[str, Any]) -> Tuple[TransformationLayout, FillerInputInfo]:
+def load_transformations(transformations_state: Dict[str, Any]) -> TransformationLayout:
     transformation_layout = TransformationLayout()
     for serialized_command in transformations_state[COMPRESSION_STATE_ATTR]:
         command = load_command(serialized_command)
         transformation_layout.register(command)
 
-    input_info = FillerInputInfo.from_state(transformations_state[INPUT_INFO_ATTR])
-    return transformation_layout, input_info
+    return transformation_layout
 
 
 def serialize_command(command: PTTransformationCommand) -> Dict[str, Any]:

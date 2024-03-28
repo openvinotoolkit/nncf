@@ -15,7 +15,6 @@ from typing import Optional
 import torch
 
 import nncf
-from nncf.common.factory import ModelTransformerFactory
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
@@ -30,10 +29,7 @@ from nncf.quantization.algorithms.weight_compression.algorithm import WeightComp
 from nncf.quantization.quantize_model import warning_model_no_batchwise_support
 from nncf.scopes import IgnoredScope
 from nncf.torch.graph.operator_metatypes import OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
-from nncf.torch.graph.transformations.serialization import load_transformations
-from nncf.torch.graph.transformations.serialization import serialize_transformations
 from nncf.torch.model_creation import wrap_model
-from nncf.torch.nncf_network import NNCFNetwork
 
 DEFAULT_RANGE_TYPE = "mean_min_max"
 
@@ -104,21 +100,3 @@ def compress_weights_impl(
     )
     graph = NNCFGraphFactory.create(model)
     return compression_algorithm.apply(model, graph, dataset=dataset)
-
-
-def apply_serialized_transformations_impl(model: torch.nn.Module, serialized_transformations):
-    transformations_layout, input_info = load_transformations(serialized_transformations)
-
-    nncf_network = NNCFNetwork(deepcopy(model), input_info=input_info)
-    model_transformer = ModelTransformerFactory.create(nncf_network)
-    transformed_model = model_transformer.transform(transformations_layout)
-
-    transformed_model.nncf.disable_dynamic_graph_building()
-    return transformed_model
-
-
-def serialize_transformations_impl(
-    model: NNCFNetwork,
-):
-    layout = model.nncf.get_applied_transformation_layout()
-    return serialize_transformations(model, layout)
