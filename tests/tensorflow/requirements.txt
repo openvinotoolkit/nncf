@@ -5,7 +5,7 @@ pytest-cov
 pytest-mock
 pytest-dependency
 pydot
-tensorflow_hub
+tensorflow_hub==0.15.0
 virtualenv
 
 openvino-dev==2024.0
