@@ -39,6 +39,7 @@ QUANTIZATION_MODELS = [
             "subset_size": 2,
         },
         "backends": ALL_PTQ_BACKENDS + [BackendType.OPTIMUM],
+        "is_batch_size_supported": False,
     },
     {
         "reported_name": "hf/hf-internal-testing/tiny-random-GPTNeoXForCausalLM",
@@ -50,6 +51,7 @@ QUANTIZATION_MODELS = [
             "subset_size": 2,
         },
         "backends": [BackendType.OPTIMUM],
+        "is_batch_size_supported": False,
     },
     # Timm models
     {
@@ -159,6 +161,7 @@ QUANTIZATION_MODELS = [
             ),
         },
         "backends": NNCF_PTQ_BACKENDS,
+        "is_batch_size_supported": False,  # Issue is raised during export with dynamich shape.
     },
     {
         "reported_name": "timm/mobilenetv2_050",
@@ -187,6 +190,16 @@ QUANTIZATION_MODELS = [
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
+    },
+    {
+        "reported_name": "timm/mobilenetv3_small_050_BC",
+        "model_id": "mobilenetv3_small_050",
+        "pipeline_cls": ImageClassificationTimm,
+        "compression_params": {
+            "preset": QuantizationPreset.MIXED,
+            "fast_bias_correction": False,
+        },
+        "backends": [BackendType.ONNX, BackendType.OV],
     },
     {
         "reported_name": "timm/regnetx_002",
@@ -286,6 +299,7 @@ WEIGHT_COMPRESSION_MODELS = [
             "sensitivity_metric": SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,
         },
         "backends": [BackendType.OV],
+        "is_batch_size_supported": False,
     },
     {
         "reported_name": "tinyllama_data_aware",
@@ -293,6 +307,7 @@ WEIGHT_COMPRESSION_MODELS = [
         "pipeline_cls": LMWeightCompression,
         "compression_params": {"group_size": 64, "ratio": 0.8, "mode": CompressWeightsMode.INT4_SYM},
         "backends": [BackendType.OV],
+        "is_batch_size_supported": False,
     },
     {
         "reported_name": "tinyllama_data_aware_awq",
@@ -300,6 +315,7 @@ WEIGHT_COMPRESSION_MODELS = [
         "pipeline_cls": LMWeightCompression,
         "compression_params": {"group_size": 64, "ratio": 0.8, "mode": CompressWeightsMode.INT4_SYM, "awq": True},
         "backends": [BackendType.OV],
+        "is_batch_size_supported": False,
     },
     {
         "reported_name": "tinyllama_data_aware_awq_stateful",
@@ -308,6 +324,7 @@ WEIGHT_COMPRESSION_MODELS = [
         "compression_params": {"group_size": 64, "ratio": 0.8, "mode": CompressWeightsMode.INT4_SYM, "awq": True},
         "params": {"is_stateful": True},
         "backends": [BackendType.OV],
+        "is_batch_size_supported": False,
     },
 ]
 
@@ -322,6 +339,8 @@ def generate_tests_scope(models_list: List[Dict]) -> Dict[str, dict]:
     for test_model_param in models_list:
         for backend in test_model_param["backends"] + [BackendType.FP32]:
             model_param = copy.deepcopy(test_model_param)
+            if "is_batch_size_supported" not in model_param:  # Set default value of is_batch_size_supported.
+                model_param["is_batch_size_supported"] = True
             reported_name = model_param["reported_name"]
             model_id = reported_name_to_model_id_mapping[reported_name]
             if backend == BackendType.FP32:

@@ -23,11 +23,11 @@ class TransformationLayout:
     addresses these issues.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initialize Transformation Layout.
         """
-        self._transformations = []
+        self._transformations: List[TransformationCommand] = []
 
     @property
     def transformations(self) -> List[TransformationCommand]:

@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional, Type
+from typing import Callable, Dict, List, Optional, Set, Type
 
 import nncf
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -77,9 +77,9 @@ class OperatorMetatypeRegistry(Registry):
         :param name: The registry name.
         """
         super().__init__(name)
-        self._op_name_to_op_meta_dict = {}
+        self._op_name_to_op_meta_dict: Dict[str, Type[OperatorMetatype]] = {}
 
-    def register(self, name: Optional[str] = None):
+    def register(self, name: Optional[str] = None) -> Callable[..., Type[OperatorMetatype]]:
         """
         Decorator for registering operator metatypes.
 
@@ -89,7 +89,7 @@ class OperatorMetatypeRegistry(Registry):
         name_ = name
         super_register = super()._register
 
-        def wrap(obj: Type[OperatorMetatype]):
+        def wrap(obj: Type[OperatorMetatype]) -> Type[OperatorMetatype]:
             """
             Inner function for registering operator metatypes.
 
@@ -187,3 +187,13 @@ class ConstNoopMetatype(OperatorMetatype):
     @classmethod
     def get_all_aliases(cls) -> List[str]:
         return [NNCFGraphNodeType.CONST_NODE]
+
+
+def get_all_aliases(*metatypes: OperatorMetatype) -> Set[str]:
+    """
+    Returns a set of all unique aliases from the provided metatypes.
+
+    :param *metatypes: A list of operator metatypes.
+    :return: A set containing all unique aliases for metatypes.
+    """
+    return set(a for m in metatypes for a in m.get_all_aliases())

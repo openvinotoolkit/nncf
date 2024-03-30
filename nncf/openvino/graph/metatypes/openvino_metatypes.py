@@ -469,9 +469,15 @@ class OVLogMetatype(OVOpMetatype):
 
 
 @OV_OPERATOR_METATYPES.register()
-class OVRoiAlignMetatype(OVOpMetatype):
-    name = "RoiAlignOp"
+class OVROIAlignMetatype(OVOpMetatype):
+    name = "ROIAlignOp"
     op_names = ["ROIAlign"]
+
+
+@OV_OPERATOR_METATYPES.register()
+class OVROIPoolingMetatype(OVOpMetatype):
+    name = "ROIPoolingOp"
+    op_names = ["ROIPooling"]
 
 
 @OV_OPERATOR_METATYPES.register()

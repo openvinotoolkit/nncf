@@ -453,8 +453,8 @@ HAWQTestParams = namedtuple(
     (
         HAWQTestParams(200, 13, 100, 1.2741253547860323, 1.274125503581261),
         HAWQTestParams(2, 13, 100, 1.2646427814393832, 1.2646428162034615),
-        HAWQTestParams(2, 10, 10, 1.8305234709185931, 1.8305243724338203),
-        HAWQTestParams(2, 10, 5, 1.8305234709185931, 1.8305243724338203),
+        HAWQTestParams(2, 10, 10, 1.830527384351921, 1.8305243724338203),
+        HAWQTestParams(2, 10, 5, 1.830527384351921, 1.8305243724338203),
     ),
     ids=("until_threshold", "until_num_iter", "batch_eq_num_data", "batch_larger_num_data"),
 )

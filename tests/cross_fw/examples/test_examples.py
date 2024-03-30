@@ -33,6 +33,7 @@ PERFORMANCE_RELATIVE_TOLERANCE = 0.05
 MODEL_SIZE_RELATIVE_TOLERANCE = 0.05
 
 ACCURACY_METRICS = "accuracy_metrics"
+ACCURACY_METRICS_AFTER_TRAINING = "accuracy_metrics_after_training"
 MODEL_SIZE_METRICS = "model_size_metrics"
 PERFORMANCE_METRICS = "performance_metrics"
 
@@ -82,6 +83,12 @@ def test_examples(
         assert measured_metrics[name] == pytest.approx(
             value, abs=example_params.get("accuracy_tolerance", ACCURACY_TOLERANCE)
         )
+
+    if ACCURACY_METRICS_AFTER_TRAINING in example_params:
+        for name, value in example_params[ACCURACY_METRICS_AFTER_TRAINING].items():
+            assert measured_metrics[name] == pytest.approx(
+                value, abs=example_params.get("accuracy_tolerance_after_training", ACCURACY_TOLERANCE)
+            )
 
     if MODEL_SIZE_METRICS in example_params:
         for name, value in example_params[MODEL_SIZE_METRICS].items():

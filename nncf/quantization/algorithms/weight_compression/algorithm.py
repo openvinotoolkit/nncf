@@ -310,7 +310,7 @@ class WeightCompression(Algorithm):
                 weight = self._backend_entity.get_weight(node, weight_port_id, model, graph)
                 if weight.dtype not in [TensorDataType.float32, TensorDataType.float16, TensorDataType.float64]:
                     continue
-                reduction_axes = self._backend_entity.get_channel_agnostic_reduction_axes(node, weight_port_id, graph)
+                reduction_axes = self._backend_entity.get_reduction_axes(node, weight_port_id, graph)
                 if (
                     self._group_size != -1
                     and self._all_layers
