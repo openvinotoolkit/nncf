@@ -116,7 +116,9 @@ class PruningNodeSelector:
                         all_pruned_inputs[source_node.node_id] = source_node
 
             if all_pruned_inputs:
-                cluster = Cluster[NNCFNode](i, all_pruned_inputs.values(), all_pruned_inputs.keys())
+                all_pruned_nodes = list(all_pruned_inputs.values())
+                all_pruned_node_ids = list(all_pruned_inputs.keys())
+                cluster = Cluster[NNCFNode](i, all_pruned_nodes, all_pruned_node_ids)
                 clusters_to_merge.append(cluster.id)
                 pruned_nodes_clusterization.add_cluster(cluster)
 
@@ -202,8 +204,8 @@ class PruningNodeSelector:
     def _pruning_dimensions_analysis(
         self,
         graph: NNCFGraph,
-        pruned_nodes_clusterization: Clusterization,
-        can_prune_after_check: Dict[int, PruningAnalysisDecision],
+        pruned_nodes_clusterization: Clusterization[NNCFNode] = Clusterization[NNCFNode](lambda x: x.node_id),
+        can_prune_after_check: Dict[int, PruningAnalysisDecision] = {},
     ) -> Dict[int, PruningAnalysisDecision]:
         """
         Checks:
@@ -251,7 +253,7 @@ class PruningNodeSelector:
         return can_prune_updated
 
     def _check_internal_groups_dim(
-        self, pruned_nodes_clusterization: Clusterization
+        self, pruned_nodes_clusterization: Clusterization[NNCFNode] = Clusterization[NNCFNode](lambda x: x.node_id)
     ) -> Dict[int, PruningAnalysisDecision]:
         """
         Checks pruning dimensions of all nodes in each cluster group are equal and
@@ -278,8 +280,8 @@ class PruningNodeSelector:
     def _should_prune_groups_analysis(
         self,
         graph: NNCFGraph,
-        pruned_nodes_clusterization: Clusterization,
-        can_prune: Dict[int, PruningAnalysisDecision],
+        pruned_nodes_clusterization: Clusterization[NNCFNode] = Clusterization[NNCFNode](lambda x: x.node_id),
+        can_prune: Dict[int, PruningAnalysisDecision] = {},
     ) -> Dict[int, PruningAnalysisDecision]:
         """
         Check whether all nodes in group can be pruned based on user-defined constraints and
@@ -312,7 +314,9 @@ class PruningNodeSelector:
         return can_prune_updated
 
     def _filter_groups(
-        self, pruned_nodes_clusterization: Clusterization, can_prune: Dict[int, PruningAnalysisDecision]
+        self,
+        pruned_nodes_clusterization: Clusterization[NNCFNode] = Clusterization[NNCFNode](lambda x: x.node_id),
+        can_prune: Dict[int, PruningAnalysisDecision] = {},
     ) -> None:
         """
         Check whether all nodes in group can be pruned based on user-defined constraints and
@@ -355,7 +359,7 @@ class PruningNodeSelector:
         input_non_pruned_nodes = get_first_nodes_of_type(graph, types_to_track)
         node_name = node.node_name
 
-        if not should_consider_scope(node_name, self._ignored_scopes, self._target_scopes):
+        if not should_consider_scope(node_name, self._ignored_scopes or [], self._target_scopes):
             return PruningAnalysisDecision(False, PruningAnalysisReason.IGNORED_SCOPE)
 
         if not self._prune_first and node in input_non_pruned_nodes:

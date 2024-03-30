@@ -12,7 +12,7 @@
 import math
 from enum import Enum
 from functools import partial
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 
@@ -67,7 +67,7 @@ def get_sources_of_node(nncf_node: NNCFNode, graph: NNCFGraph, sources_types: Li
     :param graph: NNCF graph to work with.
     :return: List of all sources nodes.
     """
-    visited = {node_id: False for node_id in graph.get_all_node_ids()}
+    visited: Dict[str, bool] = {str(node_id): False for node_id in graph.get_all_node_ids()}
     partial_traverse_function = partial(traverse_function, type_check_fn=lambda x: x in sources_types, visited=visited)
     nncf_nodes = [nncf_node]
     if nncf_node.node_type in sources_types:
@@ -142,7 +142,9 @@ def get_rounded_pruned_element_number(total: int, sparsity_rate: float, multiple
     return max(total - remaining_elems, 0)
 
 
-def traverse_function(node: NNCFNode, output: List[NNCFNode], type_check_fn, visited) -> Tuple[bool, List[NNCFNode]]:
+def traverse_function(
+    node: NNCFNode, output: List[NNCFNode], type_check_fn: Callable[[str], bool], visited: Dict[Any, bool]
+) -> Tuple[bool, List[NNCFNode]]:
     if visited[node.node_id]:
         return True, output
     visited[node.node_id] = True
@@ -166,7 +168,7 @@ def get_last_nodes_of_type(graph: NNCFGraph, op_types: List[str]) -> List[NNCFNo
     """
     graph_outputs = graph.get_output_nodes()  # NNCFNodes here
 
-    visited = {node_id: False for node_id in graph.get_all_node_ids()}
+    visited: Dict[str, bool] = {str(node_id): False for node_id in graph.get_all_node_ids()}
     partial_traverse_function = partial(traverse_function, type_check_fn=lambda x: x in op_types, visited=visited)
     last_nodes_of_type = []
     for output in graph_outputs:
@@ -210,20 +212,20 @@ def get_prunable_layers_in_out_channels(graph: NNCFGraph) -> Tuple[Dict[NNCFNode
 
 
 class PruningOperationsMetatypeRegistry(Registry):
-    def __init__(self, name):
+    def __init__(self, name: str) -> None:
         super().__init__(name)
-        self._op_name_to_op_class = {}
+        self._op_name_to_op_class: Dict[str, Type[object]] = {}
 
-    def register(self, name=None):
-        name_ = name
+    def register(self, name: Optional[str] = None) -> Callable[[Type[object]], Type[object]]:
+        name_: Optional[str] = name
         super_register = super()._register
 
-        def wrap(obj):
+        def wrap(obj):  # type:ignore
             cls_name = name_
             if cls_name is None:
                 cls_name = obj.__name__
 
-            super_register(obj, cls_name)
+            super_register(obj, cls_name)  # type:ignore
             op_names = obj.get_all_op_aliases()
             for name in op_names:
                 if name not in self._op_name_to_op_class:
@@ -236,7 +238,7 @@ class PruningOperationsMetatypeRegistry(Registry):
 
         return wrap
 
-    def get_operator_metatype_by_op_name(self, op_name: str):
+    def get_operator_metatype_by_op_name(self, op_name: str) -> Optional[Type[object]]:
         if op_name in self._op_name_to_op_class:
             return self._op_name_to_op_class[op_name]
         return None
@@ -269,7 +271,7 @@ class PruningAnalysisReason(Enum):
         :return: Pruning analysis decision in a human-readable format.
         """
         prefix = f"ignored adding Weight Pruner in: {node_name}"
-        reasons = decision.reasons
+        reasons = decision.reasons  # type:ignore
         if not reasons:
             return prefix
         # Filter messages
@@ -295,7 +297,7 @@ class PruningAnalysisDecision:
     ):
         self.decision = decision
         if not isinstance(possible_reasons, list):
-            possible_reasons = [possible_reasons]
+            possible_reasons = [possible_reasons]  # type:ignore
         self._reasons: Optional[List[PruningAnalysisReason]] = (
             possible_reasons if not decision and possible_reasons else None
         )
@@ -306,7 +308,7 @@ class PruningAnalysisDecision:
             representation += "; Reasons: " + str(self._reasons)
         return representation
 
-    def __eq__(self, other: "PruningAnalysisDecision") -> bool:
+    def __eq__(self, other: "PruningAnalysisDecision") -> bool:  # type:ignore
         eq = self.decision == other.decision
         if self._reasons is None:
             return eq and other._reasons is None
@@ -368,7 +370,7 @@ def get_input_masks(node: NNCFNode, graph: NNCFGraph) -> List[Optional[NNCFTenso
     :return: Input masks.
     """
     retval = []
-    input_masks = [input_edge.from_node.attributes["output_mask"] for input_edge in graph.get_input_edges(node)]
+    input_masks = [input_edge.from_node.attributes.get("output_mask") for input_edge in graph.get_input_edges(node)]
     for input_mask in input_masks:
         retval.append(input_mask[node.node_name] if isinstance(input_mask, dict) else input_mask)
     return retval
@@ -381,7 +383,7 @@ def get_input_channels(node: NNCFNode) -> int:
     :param node: Given prunable node.
     :return: Count of input channels of the given node.
     """
-    layer_attrs: Union[ConvolutionLayerAttributes, LinearLayerAttributes] = node.layer_attributes
+    layer_attrs = node.layer_attributes
     if isinstance(layer_attrs, ConvolutionLayerAttributes):
         return layer_attrs.in_channels
     if isinstance(layer_attrs, LinearLayerAttributes):
@@ -396,7 +398,7 @@ def get_output_channels(node: NNCFNode) -> int:
     :param node: Given prunable node.
     :return: Count of output channels of the given node.
     """
-    layer_attrs: Union[ConvolutionLayerAttributes, LinearLayerAttributes] = node.layer_attributes
+    layer_attrs = node.layer_attributes
     if isinstance(layer_attrs, ConvolutionLayerAttributes):
         return layer_attrs.out_channels
     if isinstance(layer_attrs, LinearLayerAttributes):

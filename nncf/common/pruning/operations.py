@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Type
+from typing import Dict, List, Optional, Type, Any
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFGraphEdge
@@ -30,8 +30,8 @@ class BasePruningOp:
     properties of interaction with pruning masks
     """
 
-    subtypes = []
-    additional_types = []
+    subtypes: List[Any] = []
+    additional_types: List[Any] = []
 
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode) -> bool:
@@ -204,7 +204,7 @@ class LayerNormPruningOp(BasePruningOp):
 
 class ConcatPruningOp(BasePruningOp):
     @classmethod
-    def accept_pruned_input(cls, node: NNCFNode):
+    def accept_pruned_input(cls, node: NNCFNode) -> bool:
         return True
 
     @classmethod
@@ -237,7 +237,8 @@ class ConcatPruningOp(BasePruningOp):
         filled_input_masks = []
         for i, mask in enumerate(input_masks):
             if mask is None:
-                concat_axis = node.layer_attributes.axis
+                concat_axis = node.layer_attributes.axis if node.layer_attributes is not None else None    # type:ignore
+            if concat_axis is not None:
                 concat_dim = input_edges[i].tensor_shape[concat_axis]
                 mask = tensor_processor.ones(concat_dim, device)
             filled_input_masks.append(mask)
@@ -277,7 +278,7 @@ class SplitPruningOp(BasePruningOp):
         return result_masks
 
     @classmethod
-    def accept_pruned_input(cls, node: NNCFNode):
+    def accept_pruned_input(cls, node: NNCFNode) -> bool:
         if node.layer_attributes is not None:
             return True
         return False
@@ -305,7 +306,7 @@ class SplitPruningOp(BasePruningOp):
         if not input_mask:
             return None
 
-        chunk_axis = node.layer_attributes.axis
+        chunk_axis = node.layer_attributes.axis                                                    # type:ignore
 
         output_edges = graph.get_output_edges(node)
         output_shapes = [edge.tensor_shape[chunk_axis] for edge in output_edges]
@@ -319,9 +320,9 @@ class SplitPruningOp(BasePruningOp):
             return None
 
         split_masks = tensor_processor.split(input_mask, output_shapes)
-        result_masks = cls.match_multiple_output_masks(split_masks, output_edges, chunk_axis)
+        result_masks = cls.match_multiple_output_masks(split_masks, output_edges, chunk_axis)      # type:ignore
 
-        return result_masks
+        return result_masks                                                                        # type:ignore
 
     @classmethod
     def mask_propagation(
@@ -334,7 +335,7 @@ class SplitPruningOp(BasePruningOp):
 class PadPruningOp(IdentityMaskForwardPruningOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode) -> bool:
-        mode, value = node.layer_attributes.mode, node.layer_attributes.value
+        mode, value = node.layer_attributes.mode, node.layer_attributes.value                     # type:ignore
         if mode == "constant" and value != 0:
             return False
         return True
@@ -352,7 +353,7 @@ class ElementwisePruningOp(BasePruningOp):
         input_masks = get_input_masks(node, graph)
         output_mask = input_masks[0]
         if output_mask is not None:
-            output_mask = tensor_processor.elementwise_mask_propagation(input_masks)
+            output_mask = tensor_processor.elementwise_mask_propagation(input_masks)             # type:ignore
 
         node.attributes["output_mask"] = output_mask
 
@@ -360,16 +361,16 @@ class ElementwisePruningOp(BasePruningOp):
 class ReshapePruningOp(BasePruningOp):
     @staticmethod
     def _is_flatten(node: NNCFNode) -> bool:
-        return len(node.layer_attributes.output_shape) == 2
+        return len(node.layer_attributes.output_shape) == 2                                     # type:ignore
 
     @staticmethod
     def _is_not_mixing_dim(node: NNCFNode) -> bool:
-        input_shape = node.layer_attributes.input_shape
-        output_shape = node.layer_attributes.output_shape
+        input_shape = node.layer_attributes.input_shape                                          # type:ignore
+        output_shape = node.layer_attributes.output_shape                                        # type:ignore
 
         # TODO(dlyakhov): Cover all corner cases that appear here (ticket 90976)
         if len(input_shape) == len(output_shape) and set(input_shape) == set(output_shape):
-            return input_shape == output_shape
+            return input_shape == output_shape                                                   # type:ignore
         return True
 
     @classmethod
@@ -394,12 +395,10 @@ class ReshapePruningOp(BasePruningOp):
 class FlattenPruningOp(BasePruningOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode) -> bool:
-        if node.layer_attributes is not None:
-            return True
-        return False
+        return node.layer_attributes is not None
 
     @classmethod
-    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph, tensor_processor: Type[NNCFPruningBaseTensorProcessor]):
+    def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph, tensor_processor: Type[NNCFPruningBaseTensorProcessor]):  # type:ignore
         output_mask = None
         input_masks = get_input_masks(node, graph)
         assert len(input_masks) == 1
@@ -410,7 +409,7 @@ class FlattenPruningOp(BasePruningOp):
             # Besides, since input_mask is not None thus no StopMaskForwardOp operations
             # was in the path from mask producer node to this node. As all
             # known nodes have input/output batch dim == 0 previous has too.
-            flatten_channels = node.layer_attributes.output_shape[1]
+            flatten_channels = node.layer_attributes.output_shape[1]           # type:ignore
             mask_len = input_mask.shape[0]
             assert flatten_channels % mask_len == 0
             output_mask = tensor_processor.repeat(input_mask, repeats=flatten_channels // mask_len)

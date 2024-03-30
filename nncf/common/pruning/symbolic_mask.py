@@ -9,11 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Union
+from typing import Dict, List, Union
 
 import nncf
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
-from nncf.common.tensor import NNCFTensor
+from nncf.common.tensor import DeviceType, NNCFTensor
 
 
 class SymbolicMaskProducer:
@@ -37,7 +37,7 @@ class SymbolicMaskProducer:
 
     @classmethod
     def merge_producers(cls, masks: List["SymbolicMask"]) -> List["SymbolicMaskProducer"]:
-        merged_producers = {}
+        merged_producers: Dict[int, SymbolicMaskProducer] = {}
         for mask in masks:
             for mask_producer in mask.mask_producers:
                 if mask_producer.id in merged_producers:
@@ -74,10 +74,10 @@ class SymbolicMask(NNCFTensor):
 
     @property
     def mask_producers(self) -> List[SymbolicMaskProducer]:
-        return self._mask_producers
+        return self._mask_producers  # type:ignore
 
     @property
-    def device(self) -> None:
+    def device(self) -> None:  # type:ignore
         return None
 
 
@@ -101,13 +101,13 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
     """
 
     @classmethod
-    def concatenate(cls, tensors: List[SymbolicMask], axis: int) -> SymbolicMask:
+    def concatenate(cls, tensors: List[NNCFTensor], axis: int) -> SymbolicMask:
         ret_shape = sum([t.shape[0] for t in tensors])
-        producers = SymbolicMaskProducer.merge_producers(tensors)
+        producers = SymbolicMaskProducer.merge_producers([t for t in tensors if isinstance(t, SymbolicMask)])
         return SymbolicMask(ret_shape, producers)
 
     @classmethod
-    def ones(cls, shape: Union[int, List[int]], device) -> SymbolicMask:
+    def ones(cls, shape: Union[int, List[int]], device: DeviceType) -> SymbolicMask:
         if isinstance(shape, list):
             if len(shape) != 1:
                 raise nncf.ValidationError(f"Unexpected shape = {shape} for 1D symbolic mask")
@@ -116,12 +116,12 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
         return SymbolicMask(shape)
 
     @classmethod
-    def assert_allclose(cls, tensors: List[SymbolicMask]) -> None:
+    def assert_allclose(cls, tensors: List[NNCFTensor]) -> None:
         for input_mask in tensors[1:]:
             assert tensors[0].shape == input_mask.shape
 
     @classmethod
-    def repeat(cls, tensor: SymbolicMask, repeats: int) -> SymbolicMask:
+    def repeat(cls, tensor: SymbolicMask, repeats: int) -> SymbolicMask:  # type:ignore
         updated_mask_producers = []
         for mask_producer in tensor.mask_producers:
             updated_mask_producers.append(
@@ -130,7 +130,7 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
         return SymbolicMask(tensor.shape[0] * repeats, updated_mask_producers)
 
     @classmethod
-    def elementwise_mask_propagation(cls, input_masks: List[SymbolicMask]) -> SymbolicMask:
+    def elementwise_mask_propagation(cls, input_masks: List[SymbolicMask]) -> SymbolicMask:  # type:ignore
         """
         Assemble output mask for elementwise pruning operation from given input masks.
         In case input_masks have different shape don't propagate any masks.
@@ -146,7 +146,7 @@ class SymbolicMaskProcessor(NNCFPruningBaseTensorProcessor):
         return SymbolicMask(input_masks[0].shape[0], producers)
 
     @classmethod
-    def split(cls, tensor: SymbolicMask, output_shapes: List[int]) -> List[SymbolicMask]:
+    def split(cls, tensor: SymbolicMask, output_shapes: List[int]) -> List[SymbolicMask]:  # type:ignore
         if any(shape <= 0 for shape in output_shapes) or tensor.shape[0] != sum(output_shapes):
             raise AssertionError(
                 "Symbolic mask split was called with"

@@ -9,10 +9,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
+from typing import Any, Optional, Tuple, cast
 
 import numpy as np
-import scipy.optimize
+import scipy.optimize  # type: ignore
 
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.schedulers import BaseCompressionScheduler
@@ -42,12 +42,12 @@ class PruningScheduler(BaseCompressionScheduler):
       section of the NNCF config file .json section (https://openvinotoolkit.github.io/nncf/schema).
     """
 
-    def __init__(self, controller: CompressionAlgorithmController, params: dict):
+    def __init__(self, controller: CompressionAlgorithmController, params: dict[str, Any]):
         super().__init__()
         self._controller = controller
-        self.initial_level = self._controller.pruning_init
+        self.initial_level = getattr(self._controller, "pruning_init", 0.0)
 
-        if self._controller.prune_flops:
+        if hasattr(self._controller, "prune_flops") and self._controller.prune_flops:
             self.target_level = params.get("pruning_flops_target")
         else:
             self.target_level = params.get("pruning_target", PRUNING_TARGET)
@@ -74,9 +74,9 @@ class PruningScheduler(BaseCompressionScheduler):
             will update the state of the pruning method.
         """
         super().epoch_step(next_epoch)
-        self._controller.set_pruning_level(self.current_pruning_level)
+        self._controller.set_pruning_level(self.current_pruning_level)        # type:ignore
         if self.current_epoch >= self.freeze_epoch:
-            self._controller.freeze()
+            self._controller.freeze()                                         # type:ignore
 
     def step(self, next_step: Optional[int] = None) -> None:
         """
@@ -87,7 +87,7 @@ class PruningScheduler(BaseCompressionScheduler):
             will update the state of the pruning method.
         """
         super().step(next_step)
-        self._controller.step(next_step)
+        self._controller.step(next_step)                                      # type:ignore
 
     @property
     def current_pruning_level(self) -> float:
@@ -110,11 +110,11 @@ class BaselinePruningScheduler(PruningScheduler):
     Then scheduler sets `target_level` and freezes the algorithm.
     """
 
-    def __init__(self, controller: CompressionAlgorithmController, params: dict):
+    def __init__(self, controller: CompressionAlgorithmController, params: dict[str, Any]):
         super().__init__(controller, params)
         self.freeze_epoch = self.num_warmup_epochs
 
-    def _calculate_pruning_level(self) -> float:
+    def _calculate_pruning_level(self) -> Any:
         return self.target_level
 
 
@@ -130,7 +130,7 @@ class ExponentialPruningScheduler(PruningScheduler):
         current_density = 1.0 - current_level
     """
 
-    def __init__(self, controller: CompressionAlgorithmController, params: dict):
+    def __init__(self, controller: CompressionAlgorithmController, params: dict[str, Any]):
         """
         Initializes a pruning scheduler with an exponential decay schedule.
 
@@ -138,15 +138,15 @@ class ExponentialPruningScheduler(PruningScheduler):
         :param params: Parameters of the scheduler.
         """
         super().__init__(controller, params)
-        initial_density = 1.0 - self.initial_level
-        target_density = 1.0 - self.target_level
-        target_epoch = self.num_pruning_epochs - 1
+        initial_density = 1.0 - (self.initial_level or 0.0)
+        target_density = 1.0 - (self.target_level or 0.0)
+        target_epoch = (self.num_pruning_epochs or 0) - 1
         self.schedule = ExponentialDecaySchedule(initial_density, target_density, target_epoch)
 
     def _calculate_pruning_level(self) -> float:
         current_density = self.schedule(self.current_epoch - self.num_warmup_epochs)
         current_level = 1.0 - current_density
-        return min(current_level, self.target_level)
+        return min(float(current_level or 0.0), float(self.target_level or 0.0))
 
 
 @PRUNING_SCHEDULERS.register("exponential_with_bias")
@@ -160,7 +160,7 @@ class ExponentialWithBiasPruningScheduler(PruningScheduler):
     where a, b, k is a params.
     """
 
-    def __init__(self, controller: CompressionAlgorithmController, params: dict):
+    def __init__(self, controller: CompressionAlgorithmController, params: dict[str, Any]):
         """
         Initializes a pruning scheduler with an exponential (with bias) decay schedule.
 
@@ -168,15 +168,17 @@ class ExponentialWithBiasPruningScheduler(PruningScheduler):
         :param params: Parameters of the scheduler.
         """
         super().__init__(controller, params)
-        target_epoch = self.num_pruning_epochs - 1
-        self.a, self.b, self.k = self._init_exp(target_epoch, self.initial_level, self.target_level)
+        target_epoch: int = int(self.num_pruning_epochs or 0) - 1
+        initial_level: float = float(self.initial_level or 0.0)
+        target_level: float = float(self.target_level or 0.0)
+        self.a, self.b, self.k = self._init_exp(target_epoch, initial_level, target_level)
 
     def _calculate_pruning_level(self) -> float:
-        current_level = self.a * np.exp(-self.k * (self.current_epoch - self.num_warmup_epochs)) + self.b
-        return min(current_level, self.target_level)
+        current_level: float = self.a * np.exp(-self.k * (self.current_epoch - self.num_warmup_epochs)) + self.b
+        return min(current_level or 0.0, float(self.target_level or 0.0))
 
     @staticmethod
-    def _init_exp(epoch_idx, p_min, p_max, factor=0.125):
+    def _init_exp(epoch_idx: int, p_min: float, p_max: float, factor: float = 0.125) -> Tuple[float, float, float]:
         """
         Finds parameters a, b, k from the system:
             p_min = a + b
@@ -190,18 +192,18 @@ class ExponentialWithBiasPruningScheduler(PruningScheduler):
         :param factor: Hyperparameter.
         """
 
-        def get_b(a):
-            return p_min - a
+        def get_b(a: float) -> float:
+            return float(p_min - a)
 
-        def get_a(k):
-            return (p_max - p_min) / (np.exp(-k * epoch_idx) - 1)
+        def get_a(k: float) -> float:
+            return float((p_max - p_min) / (np.exp(-k * epoch_idx) - 1))
 
-        def f_to_solve(x):
-            c = (0.75 * p_max - p_min) / (p_max - p_min)
+        def f_to_solve(x: Any) -> Any:
+            c: float = (0.75 * p_max - p_min) / (p_max - p_min)
             y = np.exp(-x * epoch_idx)
-            return y**factor - c * y + c - 1
+            return cast(float, y**factor - c * y + c - 1)
 
-        k = scipy.optimize.fsolve(f_to_solve, [1])[0]
-        a = get_a(k)
-        b = get_b(a)
+        k: float = scipy.optimize.fsolve(f_to_solve, [1])[0]
+        a: float = get_a(k)
+        b: float = get_b(a)
         return a, b, k

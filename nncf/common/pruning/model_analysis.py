@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List
+from typing import Any, Dict, List, Type, cast
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -23,14 +23,14 @@ from nncf.common.pruning.utils import find_next_nodes_not_of_types
 from nncf.common.pruning.utils import is_prunable_depthwise_conv
 
 
-def get_position(nodes_list: List[NNCFNode], idx: int):
+def get_position(nodes_list: List[NNCFNode], idx: int) -> int:
     for i, node in enumerate(nodes_list):
         if node.node_id == idx:
             return i
-    return None
+    return -1
 
 
-def merge_clusters_for_nodes(nodes_to_merge: List[NNCFNode], clusterization: Clusterization):
+def merge_clusters_for_nodes(nodes_to_merge: List[NNCFNode], clusterization: Clusterization[NNCFNode]) -> None:
     """
     Merges clusters to which nodes from nodes_to_merge belongs.
 
@@ -151,7 +151,7 @@ class ModelAnalyzer:
         """
         return nncf_node.node_type in self._concat_op_metatype.get_all_op_aliases()
 
-    def get_meta_operation_by_type_name(self, type_name: str) -> BasePruningOp:
+    def get_meta_operation_by_type_name(self, type_name: str) -> Type[BasePruningOp]:
         """
         Returns class of metaop that corresponds to `type_name` type.
 
@@ -160,9 +160,9 @@ class ModelAnalyzer:
         cls = self._pruning_operator_metatypes.get_operator_metatype_by_op_name(type_name)
         if cls is None:
             cls = self._stop_propagation_op_metatype
-        return cls
+        return cast(Type[BasePruningOp], cls)
 
-    def propagate_can_prune_attr_up(self):
+    def propagate_can_prune_attr_up(self) -> None:
         """
         Propagating can_prune attribute in reversed topological order.
         This attribute depends on accept_pruned_input and can_prune attributes of output nodes.
@@ -181,7 +181,7 @@ class ModelAnalyzer:
             )
             self.can_prune[node.node_id] = outputs_accept_pruned_input and outputs_will_be_pruned
 
-    def propagate_can_prune_attr_down(self):
+    def propagate_can_prune_attr_down(self) -> None:
         """
         Propagating can_prune attribute down to fix all branching cases with one pruned and one not pruned
         branches.
@@ -199,7 +199,7 @@ class ModelAnalyzer:
                 ):
                     self.can_prune[node.node_id] = can_prune
 
-    def set_accept_pruned_input_attr(self):
+    def set_accept_pruned_input_attr(self) -> None:
         for nncf_node in self.graph.get_all_nodes():
             cls = self.get_meta_operation_by_type_name(nncf_node.node_type)
             self.accept_pruned_input[nncf_node.node_id] = cls.accept_pruned_input(nncf_node)
