@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Type, Union
+from typing import Dict, List, Optional, Type
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.pruning.operations import BasePruningOp
@@ -61,7 +61,7 @@ class MaskPropagationAlgorithm:
         cls = self._pruning_operator_metatypes.get_operator_metatype_by_op_name(type_name)
         if cls is None:
             cls = self._pruning_operator_metatypes.registry_dict["stop_propagation_ops"]
-        return cls                                                                         # type:ignore
+        return cls  # type:ignore
 
     def mask_propagation(self) -> None:
         """
@@ -70,7 +70,7 @@ class MaskPropagationAlgorithm:
         """
         for node in self._graph.topological_sort():
             cls = self.get_meta_operation_by_type_name(node.node_type)
-            cls.mask_propagation(node, self._graph, self._tensor_processor)                # type:ignore
+            cls.mask_propagation(node, self._graph, self._tensor_processor)  # type:ignore
 
     def symbolic_mask_propagation(
         self, prunable_layers_types: List[str], can_prune_after_analysis: Dict[int, PruningAnalysisDecision]
@@ -96,9 +96,11 @@ class MaskPropagationAlgorithm:
         """
 
         can_be_closing_convs = self._get_can_closing_convs(prunable_layers_types)
-        can_prune_by_dim: Dict[int, PruningAnalysisDecision] = {k: PruningAnalysisDecision(False, PruningAnalysisReason.CLOSING_CONV_MISSING) for k in can_be_closing_convs}
+        can_prune_by_dim: Dict[int, PruningAnalysisDecision] = {
+            k: PruningAnalysisDecision(False, PruningAnalysisReason.CLOSING_CONV_MISSING) for k in can_be_closing_convs
+        }
         for node in self._graph.topological_sort():
-            if node.node_id in can_be_closing_convs and can_prune_after_analysis.get(node.node_id, None):   # type:ignore
+            if node.node_id in can_be_closing_convs and can_prune_after_analysis.get(node.node_id, None):  # type:ignore
                 # Set output mask
                 node.attributes["output_mask"] = SymbolicMask(get_output_channels(node), node.node_id)
             # Propagate masks
@@ -110,11 +112,15 @@ class MaskPropagationAlgorithm:
                 input_masks = get_input_masks(node, self._graph)
                 if any(input_masks):
                     assert len(input_masks) == 1
-                    input_mask: SymbolicMask = input_masks[0]                                               # type:ignore
+                    input_mask: SymbolicMask = input_masks[0]  # type:ignore
 
                     for producer in input_mask.mask_producers:
                         previously_dims_equal = (
-                            True if can_prune_by_dim[producer.id].decision else False if can_prune_by_dim[producer.id] is not None else False
+                            True
+                            if can_prune_by_dim[producer.id].decision
+                            else False
+                            if can_prune_by_dim[producer.id] is not None
+                            else False
                         )
 
                         is_dims_equal = get_input_channels(node) == input_mask.shape[0]
@@ -125,13 +131,13 @@ class MaskPropagationAlgorithm:
         # Remove all convolutions with masks
         # that were propagated to output node
         for out_node in self._graph.get_output_nodes():
-            for input_mask in get_input_masks(out_node, self._graph):                            # type:ignore
+            for input_mask in get_input_masks(out_node, self._graph):  # type:ignore
                 if input_mask:
                     for producer in input_mask.mask_producers:
                         can_prune_by_dim[producer.id] = PruningAnalysisDecision(False, PruningAnalysisReason.LAST_CONV)
         # Update decision for nodes which
         # have no closing convolution
-        convs_without_closing_conv = {}                                                          # type:ignore
+        convs_without_closing_conv = {}  # type:ignore
         for k, v in can_prune_by_dim.items():
             if v is None:
                 convs_without_closing_conv[k] = PruningAnalysisDecision(

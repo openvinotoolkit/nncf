@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Callable, Dict, List, Set, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 
 import nncf
 from nncf.common.graph import NNCFGraph
@@ -21,7 +21,7 @@ from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.structs import PrunedLayerInfoBase
 from nncf.common.pruning.symbolic_mask import SymbolicMask
 from nncf.common.pruning.symbolic_mask import SymbolicMaskProcessor
-from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry, get_input_masks
+from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import get_next_nodes_of_types
 from nncf.common.pruning.utils import get_output_channels
 from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
@@ -48,7 +48,7 @@ class ShapePruningProcessor:
     def calculate_in_out_channels_by_masks(
         self,
         graph: NNCFGraph,
-        pruning_groups: 'Clusterization[PrunedLayerInfoBase]',
+        pruning_groups: "Clusterization[PrunedLayerInfoBase]",
         pruning_groups_next_nodes: Dict[int, List[Dict[str, Any]]],
         num_of_sparse_elements_by_node: Dict[NNCFNodeName, int],
     ) -> Tuple[Dict[str, int], Dict[str, int]]:
@@ -74,7 +74,7 @@ class ShapePruningProcessor:
     def calculate_in_out_channels_in_uniformly_pruned_model(
         self,
         graph: NNCFGraph,
-        pruning_groups: 'Clusterization[PrunedLayerInfoBase]',
+        pruning_groups: "Clusterization[PrunedLayerInfoBase]",
         pruning_groups_next_nodes: Dict[int, List[Dict[str, Any]]],
         pruning_level: float,
     ) -> Tuple[Dict[str, int], Dict[str, int]]:
@@ -135,7 +135,7 @@ class ShapePruningProcessor:
         self,
         sparse_elements_counter_getter: Callable[[Dict[NNCFNodeName, int]], Callable[[NNCFNodeName], int]],
         graph: NNCFGraph,
-        pruning_groups: 'Clusterization[PrunedLayerInfoBase]',
+        pruning_groups: "Clusterization[PrunedLayerInfoBase]",
         pruning_groups_next_nodes: Dict[int, List[Dict[str, Any]]],
     ) -> Tuple[Dict[str, int], Dict[str, int]]:
         full_input_channels, full_output_channels = get_prunable_layers_in_out_channels(graph)
@@ -161,18 +161,18 @@ class ShapePruningProcessor:
     def _get_next_node_sparse_multiplier(
         self, graph: NNCFGraph, next_node: NNCFNode, cluster: Clusterization[PrunedLayerInfoBase]
     ) -> int:
-        cluster_nodes_idxs = {node.nncf_node_id for node in cluster.elements}                             # type:ignore
+        cluster_nodes_idxs = {node.nncf_node_id for node in cluster.elements}  # type:ignore
         for input_mask in get_input_masks(next_node, graph):
             if not input_mask:
                 continue
-            for mask_producer in input_mask.mask_producers:                                               # type:ignore
+            for mask_producer in input_mask.mask_producers:  # type:ignore
                 if mask_producer.id in cluster_nodes_idxs:
-                    return mask_producer.sparse_multiplier                                                # type:ignore
+                    return mask_producer.sparse_multiplier  # type:ignore
 
-        raise nncf.ValidationError(f"Next node for cluster {cluster.elements} doesn't have closing mask") # type:ignore
+        raise nncf.ValidationError(f"Next node for cluster {cluster.elements} doesn't have closing mask")  # type:ignore
 
     def get_next_nodes(
-        self, graph: NNCFGraph, pruning_groups: 'Clusterization[PrunedLayerInfoBase]'
+        self, graph: NNCFGraph, pruning_groups: "Clusterization[PrunedLayerInfoBase]"
     ) -> Dict[int, Dict[str, Any]]:
         """
         Finds nodes of `prunable_types` types that receive the output of a pruned cluster as input
@@ -187,12 +187,14 @@ class ShapePruningProcessor:
             node = graph.get_node_by_id(pruned_layer_info.nncf_node_id)
             node.attributes["output_mask"] = SymbolicMask(get_output_channels(node), node.node_id)
 
-        MaskPropagationAlgorithm(graph, self._pruning_operations_metatype, SymbolicMaskProcessor).mask_propagation()  # type:ignore
+        MaskPropagationAlgorithm(
+            graph, self._pruning_operations_metatype, SymbolicMaskProcessor
+        ).mask_propagation()  # type:ignore
 
         # 2. Find next nodes and correspondent sparse multipliers
-        next_nodes = {}                                                      # type:ignore
+        next_nodes = {}  # type:ignore
         for cluster in pruning_groups.get_all_clusters():
-            next_nodes_cluster = set()                                       # type:ignore
+            next_nodes_cluster = set()  # type:ignore
             cluster_nodes = set()
             for pruned_layer_info in cluster.elements:
                 nncf_cluster_node = graph.get_node_by_id(pruned_layer_info.nncf_node_id)
@@ -203,7 +205,7 @@ class ShapePruningProcessor:
             next_nodes_cluster = next_nodes_cluster - cluster_nodes
             next_nodes[cluster.id] = []
             for next_node in next_nodes_cluster:
-                sparse_multiplier = self._get_next_node_sparse_multiplier(graph, next_node, cluster)          # type:ignore
+                sparse_multiplier = self._get_next_node_sparse_multiplier(graph, next_node, cluster)  # type:ignore
                 next_nodes[cluster.id].append(
                     {"node_name": next_node.node_name, "sparse_multiplier": sparse_multiplier}
                 )

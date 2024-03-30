@@ -74,9 +74,9 @@ class PruningScheduler(BaseCompressionScheduler):
             will update the state of the pruning method.
         """
         super().epoch_step(next_epoch)
-        self._controller.set_pruning_level(self.current_pruning_level)        # type:ignore
+        self._controller.set_pruning_level(self.current_pruning_level)  # type:ignore
         if self.current_epoch >= self.freeze_epoch:
-            self._controller.freeze()                                         # type:ignore
+            self._controller.freeze()  # type:ignore
 
     def step(self, next_step: Optional[int] = None) -> None:
         """
@@ -87,7 +87,7 @@ class PruningScheduler(BaseCompressionScheduler):
             will update the state of the pruning method.
         """
         super().step(next_step)
-        self._controller.step(next_step)                                      # type:ignore
+        self._controller.step(next_step)  # type:ignore
 
     @property
     def current_pruning_level(self) -> float:

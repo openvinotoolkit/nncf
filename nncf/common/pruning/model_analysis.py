@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, List, Type, cast
+from typing import Dict, List, Type, cast
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode

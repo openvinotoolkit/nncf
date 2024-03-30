@@ -13,7 +13,8 @@ from typing import Dict, List, Union
 
 import nncf
 from nncf.common.pruning.tensor_processor import NNCFPruningBaseTensorProcessor
-from nncf.common.tensor import DeviceType, NNCFTensor
+from nncf.common.tensor import DeviceType
+from nncf.common.tensor import NNCFTensor
 
 
 class SymbolicMaskProducer:
