@@ -83,11 +83,11 @@ class StatisticPointsContainer(UserDict):
             # Reassign every target node name IF it doesn't contain the given algorithm
             reduced_statistics = []
             for statistic_point in statistic_points:
-                statistic_point.algorithm_to_tensor_collectors = [
-                    algorithm
-                    for algorithm in statistic_point.algorithm_to_tensor_collectors.items()
+                statistic_point.algorithm_to_tensor_collectors = {
+                    algorithm: value
+                    for algorithm, value in statistic_point.algorithm_to_tensor_collectors.items()
                     if algorithm != algorithm_key
-                ]
+                }
 
                 if statistic_point.algorithm_to_tensor_collectors:
                     reduced_statistics.append(statistic_point)
