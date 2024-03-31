@@ -85,8 +85,8 @@ class StatisticPointsContainer(UserDict):
             for statistic_point in statistic_points:
                 statistic_point.algorithm_to_tensor_collectors = [
                     algorithm
-                    for algorithm in statistic_point.algorithm_to_tensor_collectors
-                    if algorithm.algorithm_key() != algorithm_key
+                    for algorithm in statistic_point.algorithm_to_tensor_collectors.items()
+                    if algorithm != algorithm_key
                 ]
 
                 if statistic_point.algorithm_to_tensor_collectors:
