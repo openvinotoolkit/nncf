@@ -385,6 +385,13 @@
                 ]
             }
         },
-        {"type": "EmbeddingBag"}
+        {
+            "type": "EmbeddingBag",
+            "quantization": {
+                "weights": [
+                    "q8_w_sym", "q8_w_asym"
+                ]
+            }
+        },
     ]
 }
