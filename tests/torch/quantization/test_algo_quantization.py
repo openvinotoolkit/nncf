@@ -36,11 +36,11 @@ from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.compression_method_api import PTCompressionLoss
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.dynamic_graph.scope import ScopeElement
+from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.model_creation import create_compression_algorithm_builder
 from nncf.torch.module_operations import UpdateInputs
 from nncf.torch.module_operations import UpdateWeight
-from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.quantization.algo import QuantizationBuilder
 from nncf.torch.quantization.algo import QuantizationController
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
