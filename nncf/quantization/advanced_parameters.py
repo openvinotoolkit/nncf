@@ -17,6 +17,7 @@ from dataclasses import field
 from dataclasses import fields
 from dataclasses import is_dataclass
 from enum import Enum
+from enum import StrEnum
 from typing import Any, Dict, Optional, Union
 
 import nncf
@@ -28,7 +29,7 @@ from nncf.quantization.range_estimator import StatisticsType
 
 
 @api(canonical_alias="nncf.OverflowFix")
-class OverflowFix(Enum):
+class OverflowFix(StrEnum):
     """
     This option controls whether to apply the overflow issue fix for the 8-bit
     quantization.
