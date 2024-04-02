@@ -20,7 +20,6 @@ from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
 from nncf.torch.graph.operator_metatypes import PTSumMetatype
-from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 from tests.post_training.test_templates.models import NNCFGraphToTest
 from tests.post_training.test_templates.models import NNCFGraphToTestDepthwiseConv
 from tests.post_training.test_templates.models import NNCFGraphToTestSumAggregation
@@ -81,15 +80,3 @@ def get_nncf_network(model: torch.nn.Module, input_shape: Optional[List[int]] = 
     model = model.eval()
     device = next(model.named_parameters())[1].device
     return wrap_model(model, torch.ones(input_shape).to(device=device), trace_parameters=True)
-
-
-def mock_collect_statistics(mocker):
-    _ = mocker.patch(
-        "nncf.common.tensor_statistics.aggregator.StatisticsAggregator.collect_statistics", return_value=None
-    )
-    min_, max_ = 0.0, 1.0
-    min_, max_ = torch.tensor(min_), torch.tensor(max_)
-    _ = mocker.patch(
-        "nncf.experimental.common.tensor_statistics.collectors.TensorCollector.get_statistics",
-        return_value=PTMinMaxTensorStatistic(min_values=min_, max_values=max_),
-    )
