@@ -29,6 +29,7 @@ class Algorithm(ABC):
     def __init__(self):
         self._algorithm_key = ""
 
+    @property
     def algorithm_key(self) -> str:
         """
         Returns algorithm key.
