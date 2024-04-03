@@ -281,62 +281,30 @@
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.OverflowFix" title="nncf.quantization.advanced_parameters.OverflowFix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OverflowFix</span></code></a></p></td>
-<td><p>This option controls whether to apply the overflow issue fix for the 8-bit</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.FP8Type" title="nncf.quantization.advanced_parameters.FP8Type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FP8Type</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.FP8Type" title="nncf.quantization.advanced_parameters.FP8Type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FP8Type</span></code></a></p></td>
 <td><p>Defines FP8 special types (<a class="reference external" href="https://arxiv.org/pdf/2209.05433.pdf">https://arxiv.org/pdf/2209.05433.pdf</a>).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.QuantizationParameters" title="nncf.quantization.advanced_parameters.QuantizationParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">QuantizationParameters</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.QuantizationParameters" title="nncf.quantization.advanced_parameters.QuantizationParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">QuantizationParameters</span></code></a></p></td>
 <td><p>Contains quantization parameters for weights or activations.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.FP8QuantizationParameters" title="nncf.quantization.advanced_parameters.FP8QuantizationParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FP8QuantizationParameters</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.FP8QuantizationParameters" title="nncf.quantization.advanced_parameters.FP8QuantizationParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FP8QuantizationParameters</span></code></a></p></td>
 <td><p>Contains convert parameters for weights or activations.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedBiasCorrectionParameters" title="nncf.quantization.advanced_parameters.AdvancedBiasCorrectionParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedBiasCorrectionParameters</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedBiasCorrectionParameters" title="nncf.quantization.advanced_parameters.AdvancedBiasCorrectionParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedBiasCorrectionParameters</span></code></a></p></td>
 <td><p>Contains advanced parameters for fine-tuning bias correction algorithm.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedSmoothQuantParameters" title="nncf.quantization.advanced_parameters.AdvancedSmoothQuantParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedSmoothQuantParameters</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedSmoothQuantParameters" title="nncf.quantization.advanced_parameters.AdvancedSmoothQuantParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedSmoothQuantParameters</span></code></a></p></td>
 <td><p>Contains advanced alpha parameters for SmoothQuant algorithm.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedQuantizationParameters" title="nncf.quantization.advanced_parameters.AdvancedQuantizationParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedQuantizationParameters</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedQuantizationParameters" title="nncf.quantization.advanced_parameters.AdvancedQuantizationParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedQuantizationParameters</span></code></a></p></td>
 <td><p>Contains advanced parameters for fine-tuning quantization algorithm.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters" title="nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedAccuracyRestorerParameters</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters" title="nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedAccuracyRestorerParameters</span></code></a></p></td>
 <td><p>Contains advanced parameters for fine-tuning the accuracy restorer algorithm.</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<dl class="py class">
-<dt class="sig sig-object py" id="nncf.quantization.advanced_parameters.OverflowFix">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.quantization.advanced_parameters.</span></span><span class="sig-name descname"><span class="pre">OverflowFix</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/quantization/advanced_parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.quantization.advanced_parameters.OverflowFix" title="Permalink to this definition">#</a></dt>
-<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
-<p>This option controls whether to apply the overflow issue fix for the 8-bit
-quantization.</p>
-<p>8-bit instructions of older Intel CPU generations (based on SSE, AVX-2, and AVX-512
-instruction sets) suffer from the so-called saturation (overflow) issue: in some
-configurations, the output does not fit into an intermediate buffer and has to be
-clamped. This can lead to an accuracy drop on the aforementioned architectures.
-The fix set to use only half a quantization range to avoid overflow for specific
-operations.</p>
-<p>If you are going to infer the quantized model on the architectures with AVX-2, and
-AVX-512 instruction sets, we recommend using FIRST_LAYER option as lower aggressive
-fix of the overflow issue. If you still face significant accuracy drop, try using
-ENABLE, but this may get worse the accuracy.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>ENABLE</strong> – All weights of all types of Convolutions and MatMul operations
-are be quantized using a half of the 8-bit quantization range.</p></li>
-<li><p><strong>FIRST_LAYER</strong> – Weights of the first Convolutions of each model inputs
-are quantized using a half of the 8-bit quantization range.</p></li>
-<li><p><strong>DISABLE</strong> – All weights are quantized using the full 8-bit quantization range.</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.quantization.advanced_parameters.FP8Type">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.quantization.advanced_parameters.</span></span><span class="sig-name descname"><span class="pre">FP8Type</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/quantization/advanced_parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.quantization.advanced_parameters.FP8Type" title="Permalink to this definition">#</a></dt>
@@ -433,7 +401,7 @@ this parameter may be adjusted in the range from 0 to 1 or set -1 to disable Smo
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>overflow_fix</strong> (<a class="reference internal" href="#nncf.quantization.advanced_parameters.OverflowFix" title="nncf.quantization.advanced_parameters.OverflowFix"><em>nncf.quantization.advanced_parameters.OverflowFix</em></a>) – This option controls whether to apply the overflow issue fix
+<li><p><strong>overflow_fix</strong> (<em>nncf.quantization.advanced_parameters.OverflowFix</em>) – This option controls whether to apply the overflow issue fix
 for the 8-bit quantization.</p></li>
 <li><p><strong>quantize_outputs</strong> (<em>bool</em>) – Whether to insert additional quantizers right before each
 of the model outputs.</p></li>
@@ -548,7 +516,6 @@ quantized with initial parameters, should be saved.</p></li>
             <ul>
 <li><a class="reference internal" href="#"><code class="xref py py-mod docutils literal notranslate"><span class="pre">nncf.quantization.advanced_parameters</span></code></a><ul>
 <li><a class="reference internal" href="#classes">Classes</a><ul>
-<li><a class="reference internal" href="#nncf.quantization.advanced_parameters.OverflowFix"><code class="docutils literal notranslate"><span class="pre">OverflowFix</span></code></a></li>
 <li><a class="reference internal" href="#nncf.quantization.advanced_parameters.FP8Type"><code class="docutils literal notranslate"><span class="pre">FP8Type</span></code></a></li>
 <li><a class="reference internal" href="#nncf.quantization.advanced_parameters.QuantizationParameters"><code class="docutils literal notranslate"><span class="pre">QuantizationParameters</span></code></a></li>
 <li><a class="reference internal" href="#nncf.quantization.advanced_parameters.FP8QuantizationParameters"><code class="docutils literal notranslate"><span class="pre">FP8QuantizationParameters</span></code></a></li>

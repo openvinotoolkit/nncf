@@ -379,10 +379,13 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="#nncf.QuantizationPreset" title="nncf.QuantizationPreset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">QuantizationPreset</span></code></a></p></td>
 <td><p>An enum with values corresponding to the available quantization presets.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.OverflowFix" title="nncf.OverflowFix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OverflowFix</span></code></a></p></td>
+<td><p>This option controls whether to apply the overflow issue fix for the 8-bit</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></p></td>
 <td><p>Provides an option to specify portions of model to be excluded from compression.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.Subgraph" title="nncf.Subgraph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Subgraph</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.Subgraph" title="nncf.Subgraph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Subgraph</span></code></a></p></td>
 <td><p>Defines the ignored subgraph as follows: A subgraph comprises all nodes along</p></td>
 </tr>
 </tbody>
@@ -730,7 +733,7 @@ for this type of device.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="nncf.QuantizationPreset">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">QuantizationPreset</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/common/quantization/structs.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.QuantizationPreset" title="Permalink to this definition">#</a></dt>
-<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">enum.Enum</span></code></p>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">nncf.parameters.StrEnum</span></code></p>
 <p>An enum with values corresponding to the available quantization presets.</p>
 </dd></dl>
 
@@ -882,6 +885,35 @@ the accuracy restorer algorithm.</p></li>
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="nncf.OverflowFix">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">OverflowFix</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/quantization/advanced_parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.OverflowFix" title="Permalink to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">nncf.parameters.StrEnum</span></code></p>
+<p>This option controls whether to apply the overflow issue fix for the 8-bit
+quantization.</p>
+<p>8-bit instructions of older Intel CPU generations (based on SSE, AVX-2, and AVX-512
+instruction sets) suffer from the so-called saturation (overflow) issue: in some
+configurations, the output does not fit into an intermediate buffer and has to be
+clamped. This can lead to an accuracy drop on the aforementioned architectures.
+The fix set to use only half a quantization range to avoid overflow for specific
+operations.</p>
+<p>If you are going to infer the quantized model on the architectures with AVX-2, and
+AVX-512 instruction sets, we recommend using FIRST_LAYER option as lower aggressive
+fix of the overflow issue. If you still face significant accuracy drop, try using
+ENABLE, but this may get worse the accuracy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ENABLE</strong> – All weights of all types of Convolutions and MatMul operations
+are be quantized using a half of the 8-bit quantization range.</p></li>
+<li><p><strong>FIRST_LAYER</strong> – Weights of the first Convolutions of each model inputs
+are quantized using a half of the 8-bit quantization range.</p></li>
+<li><p><strong>DISABLE</strong> – All weights are quantized using the full 8-bit quantization range.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="nncf.IgnoredScope">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.</span></span><span class="sig-name descname"><span class="pre">IgnoredScope</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/scopes.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.IgnoredScope" title="Permalink to this definition">#</a></dt>
 <dd><p>Provides an option to specify portions of model to be excluded from compression.</p>
@@ -1027,6 +1059,7 @@ all simple paths in the graph from input to output nodes.</p>
 <li><a class="reference internal" href="#nncf.compress_weights"><code class="docutils literal notranslate"><span class="pre">compress_weights()</span></code></a></li>
 <li><a class="reference internal" href="#nncf.quantize"><code class="docutils literal notranslate"><span class="pre">quantize()</span></code></a></li>
 <li><a class="reference internal" href="#nncf.quantize_with_accuracy_control"><code class="docutils literal notranslate"><span class="pre">quantize_with_accuracy_control()</span></code></a></li>
+<li><a class="reference internal" href="#nncf.OverflowFix"><code class="docutils literal notranslate"><span class="pre">OverflowFix</span></code></a></li>
 <li><a class="reference internal" href="#nncf.IgnoredScope"><code class="docutils literal notranslate"><span class="pre">IgnoredScope</span></code></a></li>
 <li><a class="reference internal" href="#nncf.Subgraph"><code class="docutils literal notranslate"><span class="pre">Subgraph</span></code></a></li>
 </ul>
