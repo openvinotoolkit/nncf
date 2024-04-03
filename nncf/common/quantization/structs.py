@@ -19,6 +19,7 @@ from nncf.common.graph import NNCFNodeName
 from nncf.common.utils.api_marker import api
 from nncf.config.schemata.defaults import QUANTIZATION_BITS
 from nncf.config.schemata.defaults import QUANTIZATION_PER_CHANNEL
+from nncf.parameters import StrEnum
 from nncf.parameters import TargetDevice
 
 
@@ -327,7 +328,7 @@ class UnifiedScaleType(Enum):
 
 
 @api(canonical_alias="nncf.QuantizationPreset")
-class QuantizationPreset(Enum):
+class QuantizationPreset(StrEnum):
     """
     An enum with values corresponding to the available quantization presets.
     """
