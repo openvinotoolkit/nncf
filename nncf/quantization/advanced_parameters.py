@@ -190,6 +190,12 @@ class AdvancedQuantizationParameters:
     :type disable_channel_alignment: bool
     :param disable_bias_correction: Whether to disable the bias correction.
     :type disable_bias_correction: bool
+    :param batchwise_statistics: Determines whether quantizer statistics should be calculated
+        for each item of the batch or for the entire batch, default is None.
+        "None" means that if torch.DataLoader or tensorflow.Dataset was passed as a data source for
+        the calibration dataset, then in case batch_size of the data source > 1 batchwise_statistics sets to True,
+        otherwise sets to False.
+    :type batchwise_statistics: Optional[bool]
     :param activations_quantization_params: Quantization parameters for activations.
     :type activations_quantization_params: nncf.quantization.advanced_parameters.QuantizationParameters
     :param weights_quantization_params: Quantization parameters for weights.
@@ -217,6 +223,7 @@ class AdvancedQuantizationParameters:
     inplace_statistics: bool = True
     disable_channel_alignment: bool = True
     disable_bias_correction: bool = False
+    batchwise_statistics: Optional[bool] = None
 
     # Advanced Quantization parameters
     activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None
@@ -396,7 +403,7 @@ def apply_advanced_parameters_to_config(
     :param params: Advanced quantization parameters
     :return: advanced quantization parameters as dict in the legacy format
     """
-    config["overflow_fix"] = params.overflow_fix.value
+    config["overflow_fix"] = params.overflow_fix if params.overflow_fix is None else params.overflow_fix.value
     config["quantize_outputs"] = params.quantize_outputs
 
     if params.disable_bias_correction:

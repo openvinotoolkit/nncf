@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
 
 import numpy as np
 
@@ -20,16 +20,14 @@ from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
-from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
-from nncf.onnx.graph.node_utils import get_quantization_axis
 from nncf.onnx.graph.node_utils import get_quantized_tensor_shape
-from nncf.onnx.graph.node_utils import get_reduction_shape
+from nncf.onnx.graph.node_utils import get_weight_quantization_axis
 from nncf.onnx.graph.transformations.commands import ONNXQuantizerInsertionCommand
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
 from nncf.onnx.hardware.config import ONNXHWConfig
@@ -122,11 +120,14 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         parameters: FakeQuantizeParameters,
     ):
         tensor_type = np.int8 if np.any(parameters.input_low.data < 0) else np.uint8
-        if target_point.is_weight_target_point():
+        is_weight = target_point.is_weight_target_point()
+        if is_weight:
             tensor_type = np.int8  # The weight is restricted to have only signed range
         nncf_input_node_next_nodes = ONNXMinMaxAlgoBackend._get_input_edges_mapping(nncf_graph)
         node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        axis = get_quantization_axis(quantizer_config.per_channel, node, target_point)
+        axis = ()
+        if quantizer_config.per_channel:
+            axis = ONNXMinMaxAlgoBackend.get_weight_quantization_axes(node, target_point) if is_weight else (1,)
         onnx_parameters = convert_fq_params_to_onnx_params(parameters, quantizer_config.num_bits, tensor_type, axis)
         return ONNXQuantizerInsertionCommand(target_point, nncf_input_node_next_nodes, onnx_parameters)
 
@@ -154,22 +155,22 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return get_input_edges_mapping(nncf_graph)
 
     @staticmethod
+    def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: ONNXTargetPoint) -> Tuple[int, ...]:
+        return get_quantized_tensor_shape(nncf_graph, node, target_point)
+
+    @staticmethod
+    def get_weight_quantization_axes(node: NNCFNode, target_point: ONNXTargetPoint) -> Tuple[int]:
+        return (get_weight_quantization_axis(node, target_point.port_id),)
+
+    @staticmethod
     def get_statistic_collector(
         range_estimator_params: RangeEstimatorParameters,
-        nncf_graph: NNCFGraph,
-        target_point: ONNXTargetPoint,
-        collector_params: RangeInitCollectorParams,
+        use_abs_max: bool,
+        reduction_axes: Optional[Tuple[int, ...]],
+        aggregation_axes: Optional[Tuple[int, ...]],
         inplace: bool,
-        num_samples: int = None,
+        num_samples: Optional[int] = None,
     ) -> TensorCollector:
-        is_per_channel = collector_params.is_per_channel
-        node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        use_abs_max = collector_params.use_abs_max
-        quantization_axis = get_quantization_axis(is_per_channel, node, target_point)
-        quantized_tensor_shape = get_quantized_tensor_shape(nncf_graph, node, target_point)
-        reduction_axes = None  # Per-Tensor
-        if quantization_axis is not None and quantized_tensor_shape is not None:  # Per-Channel
-            reduction_axes = get_reduction_shape(quantized_tensor_shape, quantization_axis)
         collector = TensorCollector(ONNXMinMaxTensorStatistic)
         for params, container_key in zip(
             [range_estimator_params.min, range_estimator_params.max],
@@ -179,29 +180,26 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 raise nncf.InternalError(
                     f"Statistic type: {params.statistics_type} is not supported for ONNX PTQ backend yet."
                 )
-
             if params.aggregator_type not in AGGREGATORS_MAP:
                 raise nncf.InternalError(
                     f"Aggregator type: {params.aggregator_type} is not supported for ONNX PTQ backend yet."
                 )
-
-            statistic_type = params.statistics_type
-            kwargs = {"reduction_axes": reduction_axes, "inplace": inplace}
-            if statistic_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
-                # TODO(dlyakhov): merge two quantile aggregators in one
+            kwargs = {"reduction_axes": reduction_axes, "inplace": False}
+            if params.statistics_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
                 if container_key == ONNXMinMaxTensorStatistic.MIN_STAT:
                     quantile = params.quantile_outlier_prob
                 else:
                     quantile = 1 - params.quantile_outlier_prob
                 kwargs.update({"quantile": [quantile]})
+            # TODO(dlyakhov): merge two quantile aggregators in one
+            statistic_type = params.statistics_type
             if use_abs_max and statistic_type == StatisticsType.MAX:
                 statistic_type = StatisticsType.ABS_MAX
-            reducer = ONNX_REDUCERS_MAP[statistic_type](reduction_axes=reduction_axes)
+            reducer = ONNX_REDUCERS_MAP[statistic_type](**kwargs)
 
-            aggregation_axes = (0,)
             aggregator = AGGREGATORS_MAP[params.aggregator_type](
-                aggregation_axes=aggregation_axes,
                 num_samples=num_samples,
+                aggregation_axes=aggregation_axes,
                 tensor_processor=ONNXNNCFCollectorTensorProcessor,
             )
 

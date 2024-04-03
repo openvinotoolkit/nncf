@@ -19,7 +19,6 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.experimental.common.tensor_statistics.collectors import MedianAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
@@ -35,7 +34,6 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSubtractMetatype
 from nncf.openvino.graph.node_utils import create_bias_tensor
 from nncf.openvino.graph.node_utils import get_bias_value
-from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_node_with_bias_value
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
@@ -87,7 +85,9 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         quantile_reducer = OVQuantileReducer(reduction_axes, (q, 1 - q), inplace)
 
         for port_id, container_key in enumerate([OVMinMaxTensorStatistic.MIN_STAT, OVMinMaxTensorStatistic.MAX_STAT]):
-            aggregator = MedianAggregator(OVNNCFCollectorTensorProcessor, num_samples=num_samples)
+            aggregator = MedianAggregator(
+                OVNNCFCollectorTensorProcessor, num_samples=num_samples, aggregation_axes=(0, 1)
+            )
             tensor_collector.register_statistic_branch(container_key, quantile_reducer, aggregator, port_id)
         return tensor_collector
 
@@ -136,7 +136,3 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
     @staticmethod
     def create_bias_tensor(node: NNCFNode, nncf_graph: NNCFGraph, value: Any) -> np.ndarray:
         return create_bias_tensor(node, nncf_graph, value)
-
-    @staticmethod
-    def get_channel_agnostic_reduction_axes(channel_axis: int, shape: Tuple[int]) -> ReductionAxes:
-        return get_channel_agnostic_reduction_axes(channel_axes=channel_axis, shape=shape)

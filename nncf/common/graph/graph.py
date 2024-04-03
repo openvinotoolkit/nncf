@@ -8,12 +8,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import pathlib
 from collections import defaultdict
 from copy import deepcopy
-from typing import Any, Callable, Dict, Generator, KeysView, List, Optional, Tuple, Type, ValuesView
+from typing import Any, Callable, Dict, Generator, KeysView, List, Optional, Tuple, Type, ValuesView, cast
 
-import networkx as nx
-import networkx.algorithms.isomorphism as iso
+import networkx as nx  # type:ignore
+import networkx.algorithms.isomorphism as iso  # type:ignore
+from networkx.classes.reportviews import OutEdgeView  # type:ignore
 
 import nncf
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
@@ -46,7 +48,7 @@ class NNCFNode:
     IS_INTEGER_INPUT_NODE_ATTR = "is_integer_input"
     IS_SHARED_ATTR = "is_shared"
 
-    def __init__(self, attributes: Dict[str, Any]):
+    def __init__(self, attributes: Dict[str, Any]) -> None:
         self._attributes = attributes
 
     @property
@@ -55,23 +57,23 @@ class NNCFNode:
 
     @property
     def node_id(self) -> int:
-        return self._attributes[NNCFNode.ID_NODE_ATTR]
+        return cast(int, self._attributes[NNCFNode.ID_NODE_ATTR])
 
     @property
     def node_key(self) -> str:
-        return self._attributes[NNCFNode.KEY_NODE_ATTR]
+        return cast(str, self._attributes[NNCFNode.KEY_NODE_ATTR])
 
     @property
     def node_name(self) -> NNCFNodeName:
-        return self._attributes[NNCFNode.NODE_NAME_ATTR]
+        return cast(NNCFNodeName, self._attributes[NNCFNode.NODE_NAME_ATTR])
 
     @property
     def metatype(self) -> Type[OperatorMetatype]:
-        return self._attributes[NNCFNode.METATYPE_ATTR]
+        return cast(Type[OperatorMetatype], self._attributes[NNCFNode.METATYPE_ATTR])
 
     @property
     def node_type(self) -> str:
-        return self._attributes[NNCFNode.NODE_TYPE_ATTR]
+        return cast(str, self._attributes[NNCFNode.NODE_TYPE_ATTR])
 
     @property
     def layer_name(self) -> Optional[LayerName]:
@@ -91,27 +93,27 @@ class NNCFNode:
 
     @property
     def ignored_algorithms(self) -> List[str]:
-        return self._attributes[NNCFNode.IGNORED_ALGOS_ATTR]
+        return cast(List[str], self._attributes[NNCFNode.IGNORED_ALGOS_ATTR])
 
     def is_in_iteration_scope(self) -> bool:
-        return self._attributes[NNCFNode.IS_IN_ITERATION_SCOPE_NODE_ATTR]
+        return cast(bool, self._attributes[NNCFNode.IS_IN_ITERATION_SCOPE_NODE_ATTR])
 
     def is_integer_input(self) -> bool:
-        return self._attributes[NNCFNode.IS_INTEGER_INPUT_NODE_ATTR]
+        return cast(bool, self._attributes[NNCFNode.IS_INTEGER_INPUT_NODE_ATTR])
 
     def is_shared(self) -> bool:
-        return self._attributes[NNCFNode.IS_SHARED_ATTR]
+        return cast(bool, self._attributes[NNCFNode.IS_SHARED_ATTR])
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return " ".join([str(self.node_id), self.node_name, self.node_type])
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(str(self))
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return isinstance(other, NNCFNode) and self.attributes == other.attributes
 
 
@@ -131,7 +133,7 @@ class NNCFGraphEdge:
         tensor_shape: List[int],
         dtype: Dtype,
         parallel_input_port_ids: List[int],
-    ):
+    ) -> None:
         """
         :param from_node: An NNCFNode that sources the directed edge.
         :param to_node: An NNCFNode that sinks the directed edge.
@@ -144,14 +146,14 @@ class NNCFGraphEdge:
         self.to_node = to_node
         self.input_port_id = input_port_id
         self.output_port_id = output_port_id
-        self.tensor_shape: Tuple[int] = tuple(tensor_shape)
+        self.tensor_shape: Tuple[int, ...] = tuple(tensor_shape)
         self.dtype = dtype
         self.parallel_input_port_ids = parallel_input_port_ids
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.from_node}:{self.output_port_id} -> {self.tensor_shape} -> {self.to_node}:{self.input_port_id}"
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(
             (
                 self.from_node,
@@ -164,7 +166,7 @@ class NNCFGraphEdge:
             )
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return isinstance(other, NNCFGraphEdge) and self.__dict__ == other.__dict__
 
 
@@ -190,9 +192,9 @@ class NNCFGraph:
     DTYPE_EDGE_ATTR = "dtype"
     PARALLEL_INPUT_PORT_IDS_ATTR = "parallel_input_ports"
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._nx_graph = nx.DiGraph()
-        self._node_id_to_key_dict = {}
+        self._node_id_to_key_dict: Dict[int, str] = {}
         self._nodes: Dict[str, NNCFNode] = {}
         self._input_nncf_nodes: Dict[int, NNCFNode] = {}
         self._output_nncf_nodes: Dict[int, NNCFNode] = {}
@@ -288,18 +290,20 @@ class NNCFGraph:
         end_node = self.get_node_by_name(end_node_name)
         start_node_key = self.get_node_key_by_id(start_node.node_id)
         end_node_key = self.get_node_key_by_id(end_node.node_id)
-        return nx.all_simple_paths(self._nx_graph, start_node_key, end_node_key)
+        return cast(
+            Generator[List[NNCFNodeName], None, None], nx.all_simple_paths(self._nx_graph, start_node_key, end_node_key)
+        )
 
     @staticmethod
     def _get_edge_boundaries(
         match: List[str], graph: nx.DiGraph
-    ) -> Tuple[List[Tuple[str, str]], List[Tuple[str, str]]]:
+    ) -> Tuple[List[Tuple[str, str, Dict[str, Any]]], List[Tuple[str, str, Dict[str, Any]]]]:
         out_edge_boundary = list(nx.edge_boundary(graph, match, data=True))
         complement = list(filter(lambda x: x not in match, graph.nodes.keys()))
         in_edge_boundary = list(nx.edge_boundary(graph, complement, data=True))
         return sorted(in_edge_boundary), sorted(out_edge_boundary)  # must be sorted for determinism
 
-    def get_node_key_by_id(self, node_id: id) -> str:
+    def get_node_key_by_id(self, node_id: int) -> str:
         """
         Returns node key (node_name) by provided id.
 
@@ -369,7 +373,7 @@ class NNCFGraph:
                     to_node=edge.to_node,
                     input_port_id=input_port_id,
                     output_port_id=edge.output_port_id,
-                    tensor_shape=edge.tensor_shape,
+                    tensor_shape=list(edge.tensor_shape),
                     dtype=edge.dtype,
                     parallel_input_port_ids=[],
                 )
@@ -381,7 +385,7 @@ class NNCFGraph:
         curr_node: NNCFNode,
         traverse_function: Callable[[NNCFNode, List[Any]], Tuple[bool, List[Any]]],
         traverse_forward: bool = True,
-    ):
+    ) -> List[Any]:
         """
         Traverses graph up or down starting form `curr_node` node.
 
@@ -390,7 +394,7 @@ class NNCFGraph:
         :param traverse_forward: Flag specifying direction of traversal.
         :return:
         """
-        output = []
+        output: List[Any] = []
         return self._traverse_graph_recursive_helper(curr_node, traverse_function, output, traverse_forward)
 
     def _traverse_graph_recursive_helper(
@@ -399,7 +403,7 @@ class NNCFGraph:
         traverse_function: Callable[[NNCFNode, List[Any]], Tuple[bool, List[Any]]],
         output: List[Any],
         traverse_forward: bool,
-    ):
+    ) -> List[Any]:
         is_finished, output = traverse_function(curr_node, output)
         get_nodes_fn = self.get_next_nodes if traverse_forward else self.get_previous_nodes
         if not is_finished:
@@ -450,7 +454,7 @@ class NNCFGraph:
         if node_id_override is not None:
             node_id = node_id_override
         else:
-            node_ids = self.get_all_node_ids()
+            node_ids = list(self.get_all_node_ids())
             if node_ids:
                 node_id = max(self.get_all_node_ids()) + 1
             else:
@@ -508,7 +512,7 @@ class NNCFGraph:
         output_port_id: int,
         dtype: Dtype,
         parallel_input_port_ids: Optional[List[int]] = None,
-    ):
+    ) -> None:
         """
         Adds a directed edge between two `NNCFNode`s that are already present in the graph.
         The edge represents an activation tensor, produced or consumed by an operation (which is represented by a node)
@@ -559,12 +563,12 @@ class NNCFGraph:
             )
         ]
 
-    def dump_graph(self, path: str):
-        write_dot_graph(self.get_graph_for_structure_analysis(), path)
+    def dump_graph(self, path: str) -> None:
+        write_dot_graph(self.get_graph_for_structure_analysis(), pathlib.Path(path))
 
-    def visualize_graph(self, path: str):
+    def visualize_graph(self, path: str) -> None:
         out_graph = self._get_graph_for_visualization()
-        write_dot_graph(out_graph, path)
+        write_dot_graph(out_graph, pathlib.Path(path))
 
     def get_graph_for_structure_analysis(self, extended: bool = False) -> nx.DiGraph:
         """
@@ -633,7 +637,7 @@ class NNCFGraph:
         mapping = {k: v["label"] for k, v in out_graph.nodes.items()}
         out_graph = nx.relabel_nodes(out_graph, mapping)
         for node in out_graph.nodes.values():
-            node.pop("label")
+            node.pop("label")  # type: ignore
 
         return out_graph
 
@@ -647,14 +651,16 @@ class NNCFGraph:
         node_key = f"{node_ids[0]} {name}"
         return self._nodes[node_key]
 
-    def __eq__(self, other: "NNCFGraph"):
+    def __eq__(self, other: object) -> bool:
         nm = iso.categorical_node_match(
             [NNCFNode.ID_NODE_ATTR, NNCFNode.KEY_NODE_ATTR, NNCFNode.LAYER_ATTRIBUTES], [None, None, None]
         )
         em = iso.categorical_edge_match(
             [NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR, NNCFGraph.INPUT_PORT_ID_EDGE_ATTR], [None, None]
         )
-        return nx.is_isomorphic(self._nx_graph, other._nx_graph, node_match=nm, edge_match=em)
+        return isinstance(other, NNCFGraph) and bool(
+            nx.is_isomorphic(self._nx_graph, other._nx_graph, node_match=nm, edge_match=em)
+        )
 
     def get_nx_graph_copy(self) -> nx.DiGraph:
         return deepcopy(self._nx_graph)
@@ -697,13 +703,13 @@ class NNCFGraph:
 
         return NNCFGraphPatternIO(input_nncf_edges, output_nncf_edges)
 
-    def get_nx_edge(self, node_u: NNCFNode, node_v: NNCFNode):
+    def get_nx_edge(self, node_u: NNCFNode, node_v: NNCFNode) -> OutEdgeView:
         nx_node_u = self._nx_graph.nodes[self._node_id_to_key_dict[node_u.node_id]]
         nx_node_v = self._nx_graph.nodes[self._node_id_to_key_dict[node_v.node_id]]
         return self._nx_graph.edges[nx_node_u["key"], nx_node_v["key"]]
 
-    def get_nodes_count(self):
-        return self._nx_graph.number_of_nodes()
+    def get_nodes_count(self) -> int:
+        return int(self._nx_graph.number_of_nodes())
 
     def get_edge(self, from_node: NNCFNode, to_node: NNCFNode) -> NNCFGraphEdge:
         """
@@ -741,7 +747,7 @@ class NNCFGraph:
 
         self._node_id_to_key_dict = {}
         for node_key, node in self._nx_graph.nodes.items():
-            self._node_id_to_key_dict[node["id"]] = node_key
+            self._node_id_to_key_dict[node["id"]] = node_key  # type:ignore
 
     def find_matching_subgraphs(self, patterns: GraphPattern, strict: bool = True) -> List[List[NNCFNode]]:
         """

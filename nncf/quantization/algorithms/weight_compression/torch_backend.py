@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Iterable, List, Optional, Tuple, Union
+from typing import Iterable, List, Optional, Tuple
 
 import torch
 
@@ -32,54 +32,14 @@ from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.model_graph_manager import find_const_node_in_constant_subgraph
+from nncf.torch.model_graph_manager import get_const_node
+from nncf.torch.model_graph_manager import get_module_by_name
+from nncf.torch.model_graph_manager import split_const_name
 from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import WeightsDecompressor
 from nncf.torch.tensor_statistics.collectors import get_raw_stat_collector
-
-
-def split_weight_name(weight_name: str) -> Tuple[str, str]:
-    index = weight_name.rfind(".")
-    if index == -1:
-        return str(), weight_name
-    module_name = weight_name[:index]
-    weight_attr_name = weight_name[index + 1 :]
-    return module_name, weight_attr_name
-
-
-def get_module_by_name(module_name: str, model: torch.nn.Module) -> torch.nn.Module:
-    if not module_name:
-        return model
-    curr_module = model
-    for name in module_name.split("."):
-        for child_name, child_module in curr_module.named_children():
-            if child_name == name:
-                curr_module = child_module
-                break
-        else:
-            raise nncf.ModuleNotFoundError(f"Could not find the {module_name} module in the model.")
-    return curr_module
-
-
-def find_weight_node_in_constant_subgraph(node: NNCFNode, graph: NNCFGraph) -> Union[NNCFNode, None]:
-    if node.metatype == om.PTNoopMetatype:
-        prev_nodes = graph.get_previous_nodes(node)
-        if len(prev_nodes) != 1:
-            return None
-        return find_weight_node_in_constant_subgraph(prev_nodes[0], graph)
-    if node.metatype in CONST_NOOP_METATYPES:
-        return node
-    return None
-
-
-def get_weight_node(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> NNCFNode:
-    for prev_node in graph.get_previous_nodes(node_with_weight):
-        edge = graph.get_edge(prev_node, node_with_weight)
-        if edge.input_port_id == weight_port_id:
-            weight_node = find_weight_node_in_constant_subgraph(prev_node, graph)
-            if weight_node is None:
-                raise nncf.InternalError("Could not find a constant node in the model graph.")
-            return weight_node
 
 
 class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
@@ -125,7 +85,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             edge = graph.get_edge(prev_node, node)
             if edge.input_port_id not in node.metatype.weight_port_ids:
                 continue
-            weight_node = find_weight_node_in_constant_subgraph(prev_node, graph)
+            weight_node = find_const_node_in_constant_subgraph(prev_node, graph)
             if weight_node is not None:
                 return True
         return False
@@ -134,7 +94,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def get_weight_names_and_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Tuple[str, int]]:
         weight_port_ids = []
         for prev_node in graph.get_previous_nodes(node):
-            weight_node = find_weight_node_in_constant_subgraph(prev_node, graph)
+            weight_node = find_const_node_in_constant_subgraph(prev_node, graph)
             if weight_node is None:
                 continue
             edge = graph.get_edge(prev_node, node)
@@ -143,10 +103,8 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return weight_port_ids
 
     @staticmethod
-    def get_channel_agnostic_reduction_axes(
-        node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph
-    ) -> Optional[Tuple[int]]:
-        weight_node = get_weight_node(node_with_weight, weight_port_id, graph)
+    def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[Tuple[int]]:
+        weight_node = get_const_node(node_with_weight, weight_port_id, graph)
 
         ndims = len(weight_node.layer_attributes.shape)
         reduction_axes = None
@@ -200,9 +158,9 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def get_weight(
         self, node_with_weight: NNCFNode, weight_port_id: int, model: torch.nn.Module, graph: NNCFGraph
     ) -> Tensor:
-        weight_node = get_weight_node(node_with_weight, weight_port_id, graph)
+        weight_node = get_const_node(node_with_weight, weight_port_id, graph)
         weight_name = weight_node.layer_attributes.name
-        module_name, weight_attr_name = split_weight_name(weight_name)
+        module_name, weight_attr_name = split_const_name(weight_name)
         module = get_module_by_name(module_name, model)
         weight = getattr(module, weight_attr_name)
         if weight is None or not isinstance(weight, torch.nn.Parameter):
@@ -229,9 +187,9 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             ]:
                 raise ValueError(f"{compression_config.mode.value} is not supported.")
 
-            weight_node = get_weight_node(wc_params.node_with_weight, wc_params.weight_port_id, graph)
+            weight_node = get_const_node(wc_params.node_with_weight, wc_params.weight_port_id, graph)
             weight_name = weight_node.layer_attributes.name
-            module_name, weight_attr_name = split_weight_name(weight_name)
+            module_name, weight_attr_name = split_const_name(weight_name)
             module = get_module_by_name(module_name, model)
             weight = getattr(module, weight_attr_name)
             if weight is None or not isinstance(weight, torch.nn.Parameter):
@@ -239,6 +197,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
             # calculates compressed weights and decompression parameters
             compressed_weight = compress_weight(Tensor(weight), wc_params.reduction_axes, compression_config)
+            compressed_weight.scale = compressed_weight.scale.astype(dtype=TensorDataType.float16)
 
             # pack compressed tensor
             packed_tensor = compressed_weight.tensor.astype(TensorDataType.uint8)
@@ -259,7 +218,9 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             packed_zero_point = compressed_weight.zero_point.astype(TensorDataType.uint8)
 
             # creates weight decompressor
-            decompressor = WeightsDecompressor(compressed_weight.scale.data, packed_zero_point.data)
+            decompressor = WeightsDecompressor(
+                compressed_weight.scale.data, packed_zero_point.data, result_dtype=weight.dtype
+            )
 
             # registry weight decompression module in the model
             decompressor_name = f"weights_decompressor_{weight_node.node_name.replace('.', '_')}"

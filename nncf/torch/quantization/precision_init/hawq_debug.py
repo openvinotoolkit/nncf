@@ -20,7 +20,7 @@ from torch import Tensor
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.decorators import skip_if_dependency_unavailable
 from nncf.common.utils.dot_file_rw import write_dot_graph
-from nncf.torch.nncf_network import ExtraCompressionModuleType
+from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.adjust_padding import add_adjust_padding_nodes
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
