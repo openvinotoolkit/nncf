@@ -127,6 +127,8 @@ quantized_model = nncf.quantize(model, calibration_dataset)
 
 ```
 
+**NOTE**  In case the Post-Training Quantization algorithm could not reach quality requirements you can fine-tune the quantized pytorch model. Example of the Quantization-Aware training pipeline for a pytorch model could be found [here](examples/quantization_aware_training/torch/resnet18/README.md).
+
 </details>
 
 <details><summary><b>TensorFlow</b></summary>
