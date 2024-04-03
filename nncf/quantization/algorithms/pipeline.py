@@ -166,7 +166,6 @@ class Pipeline:
 
             # Run current pipeline step
             step_model = self.run_step(step_index, step_statistics, step_model, step_graph)
-
             step_graph = None  # We should rebuild the graph for the next pipeline step
 
         return step_model
