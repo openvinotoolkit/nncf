@@ -82,13 +82,48 @@ class TemplateTestQuantizerConfig:
     class TestGetStatisticsCollectorParameters:
         target_type: TargetType
         target_node_name: str
+        batchwise_statistics: bool
         ref_per_ch_reduction_axes: List[int]
         ref_per_tensor_reduction_axes: List[int]
 
-    @abstractmethod
-    @pytest.fixture
+    @pytest.fixture(
+        params=[
+            pytest.param(
+                TestGetStatisticsCollectorParameters(TargetType.PRE_LAYER_OPERATION, "/Sum_1_0", True, (2,), (1, 2)),
+            ),
+            TestGetStatisticsCollectorParameters(
+                TargetType.POST_LAYER_OPERATION,
+                "/Conv_1_0",
+                True,
+                (2, 3),
+                (1, 2, 3),
+            ),
+            TestGetStatisticsCollectorParameters(
+                TargetType.OPERATION_WITH_WEIGHTS,
+                "/Conv_1_0",
+                True,
+                (1, 2, 3),
+                (0, 1, 2, 3),
+            ),
+            TestGetStatisticsCollectorParameters(TargetType.PRE_LAYER_OPERATION, "/Sum_1_0", False, (0, 2), (0, 1, 2)),
+            TestGetStatisticsCollectorParameters(
+                TargetType.POST_LAYER_OPERATION,
+                "/Conv_1_0",
+                False,
+                (0, 2, 3),
+                (0, 1, 2, 3),
+            ),
+            TestGetStatisticsCollectorParameters(
+                TargetType.OPERATION_WITH_WEIGHTS,
+                "/Conv_1_0",
+                False,
+                (1, 2, 3),
+                (0, 1, 2, 3),
+            ),
+        ]
+    )
     def statistic_collector_parameters(self, request) -> TestGetStatisticsCollectorParameters:
-        pass
+        return request.param
 
     def test_default_quantizer_config(self, single_conv_nncf_graph):
         min_max_algo = MinMaxQuantization()
@@ -231,7 +266,9 @@ class TemplateTestQuantizerConfig:
         statistic_collector_parameters: TestGetStatisticsCollectorParameters,
     ):
         params = statistic_collector_parameters
-        min_max_algo = MinMaxQuantization(activations_range_estimator_params=range_estimator_params)
+        min_max_algo = MinMaxQuantization(
+            subset_size=num_samples, activations_range_estimator_params=range_estimator_params
+        )
         min_max_algo._backend_entity = self.get_algo_backend()
         q_config = QuantizerConfig(num_bits=8, mode=q_config_mode, per_channel=q_config_per_channel)
 
@@ -247,7 +284,7 @@ class TemplateTestQuantizerConfig:
 
         target_point = list(min_max_algo._quantization_target_points_to_qconfig.keys())[0]
         tensor_collector = min_max_algo._get_stat_collector(
-            conv_sum_aggregation_nncf_graph.nncf_graph, target_point, q_config, num_samples
+            conv_sum_aggregation_nncf_graph.nncf_graph, target_point, q_config, params.batchwise_statistics
         )
 
         is_weight_tp = target_point.is_weight_target_point()
@@ -284,5 +321,7 @@ class TemplateTestQuantizerConfig:
                 assert self.get_reduction_axes(reducer) == params.ref_per_ch_reduction_axes
             else:
                 assert self.get_reduction_axes(reducer) == params.ref_per_tensor_reduction_axes
-
-        assert tensor_collector.num_samples == num_samples
+        if is_weight_tp:
+            assert tensor_collector.num_samples == 1
+        else:
+            assert tensor_collector.num_samples == num_samples

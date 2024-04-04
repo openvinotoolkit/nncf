@@ -17,11 +17,11 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.utils import get_reduction_axes
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.tensor.tensor import Tensor
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.model_transformer import OVModelTransformer
-from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
@@ -61,12 +61,10 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return node.layer_attributes and node.layer_attributes.constant_attributes
 
     @staticmethod
-    def get_channel_agnostic_reduction_axes(
-        node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph
-    ) -> Optional[Tuple[int]]:
+    def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[Tuple[int]]:
         channel_axes = get_weight_channel_axes(node_with_weight)
         const_shape = node_with_weight.layer_attributes.constant_attributes[weight_port_id]["shape"]
-        return get_channel_agnostic_reduction_axes(channel_axes, const_shape)
+        return get_reduction_axes(channel_axes, const_shape)
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:

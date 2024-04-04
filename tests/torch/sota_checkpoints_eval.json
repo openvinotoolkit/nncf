@@ -24,13 +24,15 @@
                 "config": "examples/torch/classification/configs/quantization/resnet50_imagenet_int8_per_tensor.json",
                 "reference": "resnet50_imagenet",
                 "target_ov": 76.35,
-                "target_pt": 76.38,
+                "target_pt": 76.36,
                 "metric_type": "Acc@1",
                 "resume": "resnet50_imagenet_int8_per_tensor.pth",
                 "model_description": "ResNet-50",
                 "compression_description": "INT8 (per-tensor only)",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.5
+                "diff_fp32_max": 0.5,
+                "diff_target_pt_min": -0.15,
+                "diff_target_pt_max": 0.15
             },
             "resnet50_imagenet_int4_int8": {
                 "config": "examples/torch/classification/configs/mixed_precision/resnet50_imagenet_mixed_int_hawq.json",
@@ -123,15 +125,15 @@
                 "config": "examples/torch/classification/configs/quantization/mobilenet_v2_imagenet_int8.json",
                 "reference": "mobilenet_v2_imagenet",
                 "target_ov": 71.01,
-                "target_pt": 71.24,
+                "target_pt": 71.3,
                 "metric_type": "Acc@1",
                 "resume": "mobilenet_v2_imagenet_int8.pth",
                 "model_description": "MobileNet V2",
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
                 "diff_fp32_max": 0.15,
-                "diff_target_pt_min": -0.3,
-                "diff_target_pt_max": 0.3
+                "diff_target_pt_min": -0.2,
+                "diff_target_pt_max": 0.2
             },
             "mobilenet_v2_imagenet_int8_per_tensor": {
                 "config": "examples/torch/classification/configs/quantization/mobilenet_v2_imagenet_int8_per_tensor.json",
@@ -144,8 +146,8 @@
                 "compression_description": "INT8 (per-tensor only)",
                 "diff_fp32_min": -1,
                 "diff_fp32_max": 0.15,
-                "diff_target_pt_min": -0.3,
-                "diff_target_pt_max": 0.3
+                "diff_target_pt_min": -0.2,
+                "diff_target_pt_max": 0.2
             },
             "mobilenet_v2_imagenet_int4_int8": {
                 "config": "examples/torch/classification/configs/mixed_precision/mobilenet_v2_imagenet_mixed_int_hawq.json",
@@ -186,13 +188,15 @@
                 "config": "examples/torch/classification/configs/quantization/mobilenet_v3_small_imagenet_int8.json",
                 "reference": "mobilenet_v3_small_imagenet",
                 "target_ov": 66.92,
-                "target_pt": 66.97,
+                "target_pt": 66.87,
                 "metric_type": "Acc@1",
                 "resume": "mobilenet_v3_small_imagenet_int8.pth",
                 "model_description": "MobileNet V3 small",
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.15
+                "diff_fp32_max": 0.15,
+                "diff_target_pt_min": -0.2,
+                "diff_target_pt_max": 0.2
             },
             "squeezenet1_1_imagenet": {
                 "config": "examples/torch/classification/configs/quantization/squeezenet1_1_imagenet.json",
@@ -205,75 +209,50 @@
                 "config": "examples/torch/classification/configs/quantization/squeezenet1_1_imagenet_int8.json",
                 "reference": "squeezenet1_1_imagenet",
                 "target_ov": 58.15,
-                "target_pt": 58.3,
+                "target_pt": 58.28,
                 "metric_type": "Acc@1",
                 "resume": "squeezenet1_1_imagenet_int8.pth",
                 "model_description": "SqueezeNet V1.1",
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.15
+                "diff_fp32_max": 0.15,
+                "diff_target_pt_min": -0.2,
+                "diff_target_pt_max": 0.2
             },
             "squeezenet1_1_imagenet_int8_per_tensor": {
                 "config": "examples/torch/classification/configs/quantization/squeezenet1_1_imagenet_int8_per_tensor.json",
                 "reference": "squeezenet1_1_imagenet",
                 "target_ov": 58.06,
-                "target_pt": 58.15,
+                "target_pt": 58.14,
                 "metric_type": "Acc@1",
                 "resume": "squeezenet1_1_imagenet_int8_per_tensor.pth",
                 "model_description": "SqueezeNet V1.1",
                 "compression_description": "INT8 (per-tensor only)",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.15
+                "diff_fp32_max": 0.15,
+                "diff_target_pt_min": -0.2,
+                "diff_target_pt_max": 0.2
             },
             "squeezenet1_1_imagenet_int4_int8": {
                 "config": "examples/torch/classification/configs/mixed_precision/squeezenet1_1_imagenet_mixed_int_hawq_old_eval.json",
                 "reference": "squeezenet1_1_imagenet",
                 "target_ov": 57.53,
-                "target_pt": 57.59,
+                "target_pt": 57.63,
                 "metric_type": "Acc@1",
                 "resume": "squeezenet1_1_imagenet_int4_int8.pth",
                 "model_description": "SqueezeNet V1.1",
                 "compression_description": "Mixed, 52.83% INT8 / 47.17% INT4",
                 "diff_fp32_min": -0.7,
                 "diff_fp32_max": 0.7,
-                "diff_target_pt_min": -0.3,
-                "diff_target_pt_max": 0.3
+                "diff_target_pt_min": -0.2,
+                "diff_target_pt_max": 0.2
             },
             "resnet18_imagenet": {
-                "config": "examples/torch/classification/configs/binarization/resnet18_imagenet.json",
+                "config": "examples/torch/classification/configs/pruning/resnet18_imagenet.json",
                 "target_ov": 69.77,
                 "target_pt": 69.76,
                 "metric_type": "Acc@1",
                 "model_description": "ResNet-18"
-            },
-            "resnet18_imagenet_binarization_xnor": {
-                "config": "examples/torch/classification/configs/binarization/resnet18_imagenet_binarization_xnor.json",
-                "reference": "resnet18_imagenet",
-                "target_ov": 61.82,
-                "target_pt": 61.88,
-                "metric_type": "Acc@1",
-                "resume": "resnet18_imagenet_binarization_xnor.pth",
-                "model_description": "ResNet-18",
-                "compression_description": "XNOR (weights), scale/threshold (activations)",
-                "diff_fp32_min": -8.5,
-                "diff_fp32_max": 0.1,
-                "diff_target_pt_min": -0.3,
-                "diff_target_pt_max": 0.3
-            },
-            "resnet18_imagenet_binarization_dorefa": {
-                "config": "examples/torch/classification/configs/binarization/resnet18_imagenet_binarization_dorefa.json",
-                "reference": "resnet18_imagenet",
-                "target_ov": null,
-                "target_pt": 61.6,
-                "metric_type": "Acc@1",
-                "resume": "resnet18_imagenet_binarization_dorefa.pth",
-                "model_description": "ResNet-18",
-                "compression_description": "DoReFa (weights), scale/threshold (activations)",
-                "diff_fp32_min": -8.33,
-                "diff_fp32_max": 0.1,
-                "diff_target_pt_min": -0.3,
-                "diff_target_pt_max": 0.3,
-                "skip_ov": "Issue-22543"
             },
             "resnet18_imagenet_pruning_magnitude": {
                 "config": "examples/torch/classification/configs/pruning/resnet18_imagenet_pruning_magnitude.json",
@@ -367,13 +346,15 @@
                 "config": "examples/torch/object_detection/configs/ssd300_vgg_voc_int8.json",
                 "reference": "ssd300_vgg_voc",
                 "target_ov": 77.94,
-                "target_pt": 77.89,
+                "target_pt": 77.9,
                 "metric_type": "Mean AP",
                 "resume": "ssd300_vgg_voc_int8.pth",
                 "model_description": "SSD300-VGG-BN",
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.1
+                "diff_fp32_max": 0.1,
+                "diff_target_pt_min": -0.2,
+                "diff_target_pt_max": 0.2
             },
             "ssd300_vgg_voc_magnitude_sparsity_int8": {
                 "config": "examples/torch/object_detection/configs/ssd300_vgg_voc_magnitude_sparsity_int8.json",
@@ -411,14 +392,16 @@
                 "config": "examples/torch/object_detection/configs/ssd512_vgg_voc_int8.json",
                 "reference": "ssd512_vgg_voc",
                 "target_ov": 80.19,
-                "target_pt": 80.09,
+                "target_pt": 80.14,
                 "metric_type": "Mean AP",
                 "resume": "ssd512_vgg_voc_int8.pth",
                 "batch": 32,
                 "model_description": "SSD512-VGG-BN",
                 "compression_description": "INT8",
                 "diff_fp32_min": -1,
-                "diff_fp32_max": 0.2
+                "diff_fp32_max": 0.2,
+                "diff_target_pt_min": -0.15,
+                "diff_target_pt_max": 0.15
             },
             "ssd512_vgg_voc_magnitude_sparsity_int8": {
                 "config": "examples/torch/object_detection/configs/ssd512_vgg_voc_magnitude_sparsity_int8.json",

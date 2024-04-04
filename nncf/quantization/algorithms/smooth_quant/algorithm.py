@@ -21,6 +21,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.layout import TransformationLayout
+from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
@@ -369,7 +370,7 @@ class SmoothQuant(Algorithm):
         reduction_axes = tuple([])
         if len(shape) > 1:
             channel_axis = self._backend_entity.get_activation_channel_axis(node, input_port)
-            reduction_axes = self._backend_entity.get_channel_agnostic_reduction_axes(channel_axis, shape)
+            reduction_axes = get_reduction_axes((channel_axis,), shape)
         return reduction_axes
 
     def _process_weight_statistics(self, node: NNCFNode, weights: Tensor) -> Tensor:

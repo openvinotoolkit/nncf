@@ -141,6 +141,7 @@ class MinMaxQuantization(Algorithm):
         overflow_fix: Optional[OverflowFix] = None,
         quantize_outputs: bool = False,
         inplace_statistics: bool = True,
+        batchwise_statistics: bool = False,
         activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None,
         weights_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None,
         activations_range_estimator_params: Optional[RangeEstimatorParameters] = None,
@@ -171,6 +172,8 @@ class MinMaxQuantization(Algorithm):
         :param inplace_statistics: Defines wheather to calculate quantizers statistics
             by backend graph operations or by default Python implementation, defaults
             to True.
+        :param batchwise_statistics: Determines whether quantizer statistics should be calculated
+            for each item of the batch or for the entire batch, default is False.
         :param activations_quantization_params: Quantization parameters for model
             activations.
         :param weights_quantization_params: Quantization parameters for model weights.
@@ -187,6 +190,7 @@ class MinMaxQuantization(Algorithm):
         self._overflow_fix = overflow_fix
         self._quantize_outputs = quantize_outputs
         self._inplace_statistics = inplace_statistics
+        self._batchwise_statistics = batchwise_statistics
         self._backend_params = backend_params
         self._activations_quantization_params = activations_quantization_params
         self._weights_quantization_params = weights_quantization_params
@@ -395,34 +399,51 @@ class MinMaxQuantization(Algorithm):
 
     def _get_stat_collector(
         self,
-        nncf_graph: NNCFGraph,
+        graph: NNCFGraph,
         target_point: TargetPoint,
-        quantizer_config: QuantizerConfig,
-        num_samples: int,
+        qconfig: QuantizerConfig,
+        batchwise_statistics: bool,
     ) -> TensorStatisticCollectorBase:
         """
         Creates and returns a statistic collector based on the quantizer's configuration.
 
-        :param nncf_graph: NNCFGraph instance.
+        :param graph: NNCFGraph instance.
         :param target_point: Target point indicates where statistics should be collected.
-        :param quantizer_config: Configuration of a quantizer layer,
+        :param qconfig: Configuration of a quantizer layer,
         defining the configuration of created statistic collector.
-        :param num_samples: Number of samples to collect from the 'target_point'.
+        :param batchwise_statistics: Determines whether quantizer statistics should be calculated
+            for each item of the batch or for the entire batch.
         :return: Statistic Collector.
         """
-        range_estimator_params = self._get_range_estimator_parameters(target_point, quantizer_config)
+        is_weight = target_point.is_weight_target_point()
+        node = graph.get_node_by_name(target_point.target_node_name)
+        shape = self._backend_entity.get_target_point_shape(graph, node, target_point)
+        range_estimator_params = self._get_range_estimator_parameters(target_point, qconfig)
+
+        channel_axes = ()
+        if qconfig.per_channel:
+            channel_axes = self._backend_entity.get_weight_quantization_axes(node, target_point) if is_weight else (1,)
+
+        # Weight statistics is constant, so only one collection is enough.
+        num_samples = self._subset_size if not is_weight else 1
+
+        batchwise_statistics = batchwise_statistics and not is_weight
 
         collector_params = RangeInitCollectorParams(
-            is_weights=target_point.is_weight_target_point(),
-            scheme=quantizer_config.mode,
-            per_channel=quantizer_config.per_channel,
+            is_weights=is_weight, scheme=qconfig.mode, per_channel=qconfig.per_channel
         )
+        reduction_axes, aggregation_axes = None, None
+        if shape is not None:
+            reduction_axes, aggregation_axes = collector_params.get_reduction_aggregation_axes(
+                shape, channel_axes, batchwise_statistics
+            )
+
         return self._backend_entity.get_statistic_collector(
             range_estimator_params,
-            nncf_graph,
-            target_point,
-            collector_params,
-            inplace=self._inplace_statistics,
+            collector_params.use_abs_max,
+            reduction_axes,
+            aggregation_axes,
+            self._inplace_statistics,
             num_samples=num_samples,
         )
 
@@ -914,11 +935,9 @@ class MinMaxQuantization(Algorithm):
                 f"Adding target point {quantization_target_point.target_node_name}"
                 f" with type {quantization_target_point.type} for statistics collection"
             )
-            num_samples = self._subset_size
-            if quantization_target_point.is_weight_target_point():
-                # Weight statistics is constant, so only one collection is enough.
-                num_samples = 1
-            stat_collector = self._get_stat_collector(graph, quantization_target_point, qconfig, num_samples)
+            stat_collector = self._get_stat_collector(
+                graph, quantization_target_point, qconfig, self._batchwise_statistics
+            )
             output.add_statistic_point(
                 StatisticPoint(
                     target_point=quantization_target_point,

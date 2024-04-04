@@ -99,17 +99,6 @@ class SmoothQuantAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_channel_agnostic_reduction_axes(channel_axis: int, shape: Tuple[int]) -> Tuple[int]:
-        """
-        Returns filtered reduction axes without axes that corresponds channels.
-
-        :param channel_axes: List of the channel axes.
-        :param shape: Shape that need to be filtered.
-        :return: Reduction axes in tuple format.
-        """
-
-    @staticmethod
-    @abstractmethod
     def get_abs_max_channel_collector(
         num_samples: int, stats_reduction_axes: Tuple[int], inplace: bool, branch_key: str
     ) -> TensorCollector:

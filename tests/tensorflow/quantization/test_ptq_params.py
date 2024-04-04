@@ -19,9 +19,11 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.advanced_parameters import QuantizationParameters
+from nncf.quantization.advanced_parameters import apply_advanced_parameters_to_config
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from nncf.scopes import IgnoredScope
 from nncf.tensorflow.quantization.quantize_model import _create_nncf_config
+from nncf.tensorflow.quantization.quantize_model import _get_default_quantization_config
 
 
 @pytest.mark.parametrize(
@@ -100,3 +102,10 @@ def test_create_nncf_config(params):
     # To validate NNCFConfig requared input_info
     config["input_info"] = {"sample_size": [1, 2, 224, 224]}
     NNCFConfig.validate(config)
+
+
+@pytest.mark.parametrize("preset", (QuantizationPreset.MIXED, QuantizationPreset.PERFORMANCE))
+@pytest.mark.parametrize("advanced_quantization_params", (AdvancedQuantizationParameters(),))
+def test_apply_advanced_parameters_to_config(preset, advanced_quantization_params):
+    compression_config = _get_default_quantization_config(preset, 1)
+    assert apply_advanced_parameters_to_config(compression_config, advanced_quantization_params)

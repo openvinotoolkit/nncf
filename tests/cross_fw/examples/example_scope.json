@@ -155,7 +155,7 @@
         "accuracy_metrics": {
             "fp32_mAP": 0.5228869318962097,
             "int8_mAP": 0.5148677825927734,
-            "accuracy_drop": 0.009263157844543457
+            "accuracy_drop": 0.0080191493
         },
         "performance_metrics": {
             "fp32_fps": 33.7,
@@ -166,6 +166,31 @@
             "fp32_model_size": 137.3418207168579,
             "int8_model_size": 35.55147361755371,
             "model_compression_rate": 3.8631822183889652
+        }
+    },
+    "quantization_aware_training_torch_resnet18": {
+        "backend": "torch",
+        "requirements": "examples/quantization_aware_training/torch/resnet18/requirements.txt",
+        "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
+        "accuracy_tolerance_after_training": 1.0,
+        "accuracy_tolerance": 0.2,
+        "accuracy_metrics": {
+            "fp32_top1": 55.52000045776367,
+            "int8_init_top1": 55.279998779296875
+        },
+        "accuracy_metrics_after_training":{
+            "int8_top1": 56.74446202531646,
+            "accuracy_drop": -1.2244606018066406
+        },
+        "performance_metrics": {
+            "fp32_fps": 3646.13,
+            "int8_fps": 15301.98,
+            "performance_speed_up": 4.196773016869941
+        },
+        "model_size_metrics": {
+            "fp32_model_size": 43.06997013092041,
+            "int8_model_size": 11.01035213470459,
+            "model_compression_rate": 3.9117704505711512
         }
     },
     "llm_compression": {

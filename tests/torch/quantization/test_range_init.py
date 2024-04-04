@@ -497,7 +497,7 @@ class SingleConv2dIdentityModel(torch.nn.Module):
 
 
 def _get_init_tensor_for_range_init_test() -> torch.Tensor:
-    test_input_sample = torch.empty([3, 100, 100])
+    test_input_sample = torch.ones([3, 100, 100])
     test_input_sample[0] = torch.range(1, 10_000).view((100, 100))
     test_input_sample[1] = test_input_sample[0] * -2
     test_input_sample[2] = test_input_sample[0] * 3

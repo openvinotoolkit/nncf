@@ -457,6 +457,8 @@ class FilterPruningController(BasePruningAlgoController):
             num_of_sparse_elems = get_rounded_pruned_element_number(
                 cumulative_filters_importance.size(0), group_pruning_level
             )
+            if num_of_sparse_elems == 0:
+                nncf_logger.warning("Binary masks are identity matrix, please check your config.")
             threshold = sorted(cumulative_filters_importance)[min(num_of_sparse_elems, filters_num[0] - 1)]
             mask = calculate_binary_mask(cumulative_filters_importance, threshold)
 
@@ -620,7 +622,7 @@ class FilterPruningController(BasePruningAlgoController):
         self._propagate_masks()
 
         pruned_layers_stats = self.get_stats_for_pruned_modules()
-        nncf_logger.info(f"Pruned layers statistics: \n{pruned_layers_stats.draw()}")
+        nncf_logger.info(f"Pruned layers statistics: \n{pruned_layers_stats}")
 
     def compression_stage(self) -> CompressionStage:
         target_pruning_level = self.scheduler.target_level

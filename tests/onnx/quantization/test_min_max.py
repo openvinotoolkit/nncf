@@ -8,215 +8,74 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from dataclasses import dataclass
-from typing import List
+from typing import Tuple
 
 import pytest
 
-import nncf.onnx.graph.metatypes.onnx_metatypes as om
-from nncf.common.graph.graph import NNCFNode
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXConvolutionMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDepthwiseConvolutionMetatype
+from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXGemmMetatype
 from nncf.onnx.graph.nncf_graph_builder import ONNXLayerAttributes
-from nncf.onnx.graph.node_utils import get_quantization_axis
-from nncf.onnx.graph.node_utils import get_reduction_shape
 from nncf.onnx.graph.transformations.commands import ONNXTargetPoint
+from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
+from nncf.quantization.algorithms.min_max.onnx_backend import ONNXMinMaxAlgoBackend
+from tests.post_training.test_templates.models import NNCFGraphToTest
+from tests.post_training.test_templates.test_min_max import TemplateTestGetChannelAxes
+from tests.post_training.test_templates.test_min_max import TemplateTestGetTargetPointShape
+from tests.post_training.test_templates.test_min_max import TemplateTestMinMaxAlgorithm
 
 
-@dataclass
-class TestCase:
-    nncf_node: NNCFNode
-    target_point: ONNXTargetPoint
-    per_channel: bool
-    ref_reduction_shape: List[int]
+class TestONNXMinMaxAlgorithm(TemplateTestMinMaxAlgorithm):
+    @property
+    def backend(self) -> MinMaxAlgoBackend:
+        return ONNXMinMaxAlgoBackend
+
+    @property
+    def conv_metatype(self):
+        return ONNXConvolutionMetatype
+
+    def create_target_point(self, target_point_type: TargetType, name: str, port_id: int) -> ONNXTargetPoint:
+        return ONNXTargetPoint(target_point_type, name, port_id)
 
 
-test_cases = (
-    TestCase(
-        nncf_node=NNCFNode(
-            {
-                NNCFNode.ID_NODE_ATTR: 0,
-                NNCFNode.NODE_NAME_ATTR: "conv_with_weight_per_tensor",
-                NNCFNode.METATYPE_ATTR: om.ONNXConvolutionMetatype,
-                NNCFNode.LAYER_ATTRIBUTES: ONNXLayerAttributes(weight_attrs={1: {"shape": [3, 5, 8]}}),
-            }
-        ),
-        target_point=ONNXTargetPoint(
-            target_type=TargetType.OPERATION_WITH_WEIGHTS,
-            target_node_name="conv_with_weight_per_tensor",
-            port_id=1,
-        ),
-        per_channel=False,
-        ref_reduction_shape=None,
-    ),
-    TestCase(
-        nncf_node=NNCFNode(
-            {
-                NNCFNode.ID_NODE_ATTR: 0,
-                NNCFNode.NODE_NAME_ATTR: "conv_with_weight_per_channel",
-                NNCFNode.METATYPE_ATTR: om.ONNXConvolutionMetatype,
-                NNCFNode.LAYER_ATTRIBUTES: ONNXLayerAttributes(weight_attrs={1: {"shape": [3, 5, 8]}}),
-            }
-        ),
-        target_point=ONNXTargetPoint(
-            target_type=TargetType.OPERATION_WITH_WEIGHTS,
-            target_node_name="gemm_with_weight_per_channel_0_port",
-            port_id=1,
-        ),
-        per_channel=True,
-        ref_reduction_shape=(1, 2),
-    ),
-    TestCase(
-        nncf_node=NNCFNode(
-            {
-                NNCFNode.ID_NODE_ATTR: 0,
-                NNCFNode.NODE_NAME_ATTR: "gemm_with_weight_per_tensor",
-                NNCFNode.METATYPE_ATTR: om.ONNXGemmMetatype,
-                NNCFNode.LAYER_ATTRIBUTES: ONNXLayerAttributes(weight_attrs={1: {"shape": [5, 8]}}),
-            }
-        ),
-        target_point=ONNXTargetPoint(
-            target_type=TargetType.OPERATION_WITH_WEIGHTS,
-            target_node_name="gemm_with_weight_per_tensor",
-            port_id=1,
-        ),
-        per_channel=False,
-        ref_reduction_shape=None,
-    ),
-    TestCase(
-        nncf_node=NNCFNode(
-            {
-                NNCFNode.ID_NODE_ATTR: 0,
-                NNCFNode.NODE_NAME_ATTR: "gemm_with_weight_per_channel",
-                NNCFNode.METATYPE_ATTR: om.ONNXGemmMetatype,
-                NNCFNode.LAYER_ATTRIBUTES: ONNXLayerAttributes(weight_attrs={1: {"shape": [5, 8]}}),
-            }
-        ),
-        target_point=ONNXTargetPoint(
-            target_type=TargetType.OPERATION_WITH_WEIGHTS,
-            target_node_name="gemm_with_weight_per_channel_0_port",
-            port_id=1,
-        ),
-        per_channel=True,
-        ref_reduction_shape=(0,),
-    ),
-    TestCase(
-        nncf_node=NNCFNode(
-            {
-                NNCFNode.ID_NODE_ATTR: 0,
-                NNCFNode.NODE_NAME_ATTR: "gemm_with_weight_per_channel_extra_attrs",
-                NNCFNode.METATYPE_ATTR: om.ONNXGemmMetatype,
-                NNCFNode.LAYER_ATTRIBUTES: ONNXLayerAttributes(
-                    weight_attrs={1: {"shape": [5, 8]}}, node_attrs={"transA": 0, "transB": 0}
-                ),
-            }
-        ),
-        target_point=ONNXTargetPoint(
-            target_type=TargetType.OPERATION_WITH_WEIGHTS,
-            target_node_name="gemm_with_weight_per_channel_extra_attrs",
-            port_id=1,
-        ),
-        per_channel=True,
-        ref_reduction_shape=(0,),
-    ),
-    TestCase(
-        nncf_node=NNCFNode(
-            {
-                NNCFNode.ID_NODE_ATTR: 0,
-                NNCFNode.NODE_NAME_ATTR: "gemm_with_weight_per_channel_extra_attrs",
-                NNCFNode.METATYPE_ATTR: om.ONNXGemmMetatype,
-                NNCFNode.LAYER_ATTRIBUTES: ONNXLayerAttributes(
-                    weight_attrs={1: {"shape": [5, 8]}}, node_attrs={"transA": 1, "transB": 0}
-                ),
-            }
-        ),
-        target_point=ONNXTargetPoint(
-            target_type=TargetType.OPERATION_WITH_WEIGHTS,
-            target_node_name="gemm_with_weight_per_channel_extra_attrs",
-            port_id=1,
-        ),
-        per_channel=True,
-        ref_reduction_shape=(0,),
-    ),
-    TestCase(
-        nncf_node=NNCFNode(
-            {
-                NNCFNode.ID_NODE_ATTR: 0,
-                NNCFNode.NODE_NAME_ATTR: "gemm_with_weight_per_channel_transpose",
-                NNCFNode.METATYPE_ATTR: om.ONNXGemmMetatype,
-                NNCFNode.LAYER_ATTRIBUTES: ONNXLayerAttributes(
-                    weight_attrs={1: {"shape": [5, 8]}}, node_attrs={"transA": 0, "transB": 1}
-                ),
-            }
-        ),
-        target_point=ONNXTargetPoint(
-            target_type=TargetType.OPERATION_WITH_WEIGHTS,
-            target_node_name="gemm_with_weight_per_channel_transpose",
-            port_id=1,
-        ),
-        per_channel=True,
-        ref_reduction_shape=(1,),
-    ),
-    TestCase(
-        nncf_node=NNCFNode(
-            {
-                NNCFNode.ID_NODE_ATTR: 0,
-                NNCFNode.NODE_NAME_ATTR: "gemm_with_weight_per_channel_transpose_one_dim",
-                NNCFNode.METATYPE_ATTR: om.ONNXGemmMetatype,
-                NNCFNode.LAYER_ATTRIBUTES: ONNXLayerAttributes(
-                    weight_attrs={1: {"shape": [5]}}, node_attrs={"transA": 0, "transB": 1}
-                ),
-            }
-        ),
-        target_point=ONNXTargetPoint(
-            target_type=TargetType.OPERATION_WITH_WEIGHTS,
-            target_node_name="gemm_with_weight_per_channel_0_port",
-            port_id=1,
-        ),
-        per_channel=True,
-        ref_reduction_shape=(0,),
-    ),
-    TestCase(
-        nncf_node=NNCFNode(
-            {
-                NNCFNode.ID_NODE_ATTR: 0,
-                NNCFNode.NODE_NAME_ATTR: "gemm_with_weight_per_channel_0_port",
-                NNCFNode.METATYPE_ATTR: om.ONNXGemmMetatype,
-                NNCFNode.LAYER_ATTRIBUTES: ONNXLayerAttributes(
-                    weight_attrs={0: {"shape": [10, 10, 5]}}, node_attrs={"transA": 0, "transB": 1}
-                ),
-            }
-        ),
-        target_point=ONNXTargetPoint(
-            target_type=TargetType.OPERATION_WITH_WEIGHTS,
-            target_node_name="gemm_with_weight_per_channel_0_port",
-            port_id=0,
-        ),
-        per_channel=True,
-        ref_reduction_shape=(0, 1),
-    ),
-)
+class TestONNXGetTargetPointShape(TemplateTestGetTargetPointShape, TestONNXMinMaxAlgorithm):
+    def get_nncf_graph(self, weight_port_id: int, weight_shape: Tuple[int]) -> NNCFGraph:
+        conv_layer_attrs = ONNXLayerAttributes(weight_attrs={weight_port_id: {"shape": weight_shape}}, bias_attrs={})
+        return NNCFGraphToTest(ONNXConvolutionMetatype, conv_layer_attrs).nncf_graph
 
 
-@pytest.mark.parametrize(
-    "test_case",
-    (test_cases),
-    ids=[test_case.nncf_node.node_name for test_case in test_cases],
-)
-def test_get_reduction_shape(test_case):
-    """Checks the correct return reduction shape in ONNXMinMaxAlgo.
-    Edge cases:
-    1) per-tensor.
-    2) transpose axis of GEMM node.
-    3) one dimensional weight tensor.
-    """
-    quantization_axis = get_quantization_axis(
-        is_per_channel=test_case.per_channel, node=test_case.nncf_node, target_point=test_case.target_point
-    )
-    if quantization_axis is not None:  # Per-Channel
-        reduction_shape = get_reduction_shape(
-            test_case.nncf_node.layer_attributes.weight_attrs[test_case.target_point.port_id]["shape"],
-            quantization_axis,
-        )
-        assert reduction_shape == test_case.ref_reduction_shape
-    else:
-        assert not test_case.per_channel
+class TestONNXGetChannelAxesMinMaxAlgorithm(TemplateTestGetChannelAxes, TestONNXMinMaxAlgorithm):
+    @property
+    def depthwiseconv_metatype(self):
+        return ONNXDepthwiseConvolutionMetatype
+
+    @property
+    def matmul_metatype(self):
+        return ONNXGemmMetatype
+
+    @staticmethod
+    def get_conv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> ONNXLayerAttributes:
+        return ONNXLayerAttributes(weight_attrs={weight_port_id: {"shape": weight_shape}}, bias_attrs={})
+
+    @staticmethod
+    def get_depthwiseconv_node_attrs(weight_port_id: int, weight_shape: Tuple[int]) -> ONNXLayerAttributes:
+        return TestONNXGetChannelAxesMinMaxAlgorithm.get_conv_node_attrs(weight_port_id, weight_shape)
+
+    @staticmethod
+    def get_matmul_node_attrs(
+        weight_port_id: int, transpose_weight: Tuple[int], weight_shape: Tuple[int]
+    ) -> ONNXLayerAttributes:
+        weight_attrs = {weight_port_id: {"name": "dummy", "shape": weight_shape}}
+        if weight_port_id == 0:
+            gemm_attrs = {"transA": int(transpose_weight), "transB": 0}
+        elif weight_port_id == 1:
+            gemm_attrs = {"transA": 0, "transB": int(transpose_weight)}
+        return ONNXLayerAttributes(weight_attrs=weight_attrs, node_attrs=gemm_attrs)
+
+    def test_get_channel_axes_deptwiseconv_node_ov(self):
+        pytest.skip("Test is not applied for ONNX backend.")
+
+    def test_get_channel_axes_matmul_torch(self):
+        pytest.skip("Test is not applied for ONNX backend.")
