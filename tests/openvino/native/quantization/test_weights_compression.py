@@ -134,11 +134,11 @@ def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int =
     scale_node = mul_node.input_value(1).get_node()
     assert list(scale_node.shape) == reduced_weight_shape
 
-    convert_node = get_next_node(mul_node)
-    assert convert_node.get_type_name() == "Convert"
-
-    reshape_node = get_next_node(convert_node)
+    reshape_node = get_next_node(mul_node)
     assert reshape_node.get_type_name() == "Reshape"
+
+    convert_node = get_next_node(reshape_node)
+    assert convert_node.get_type_name() == "Convert"
 
     return {
         "scale": get_const_value(scale_node),
@@ -161,11 +161,11 @@ def check_nf4_grouped(op: ov.Node, group_size: int = 7):
     scale_node = mul_node.input_value(1).get_node()
     assert list(scale_node.shape) == reduced_weight_shape
 
-    convert_node = get_next_node(mul_node)
-    assert convert_node.get_type_name() == "Convert"
-
-    reshape_node = get_next_node(convert_node)
+    reshape_node = get_next_node(mul_node)
     assert reshape_node.get_type_name() == "Reshape"
+
+    convert_node = get_next_node(reshape_node)
+    assert convert_node.get_type_name() == "Convert"
 
     return {
         "scale": get_const_value(scale_node),
@@ -705,14 +705,19 @@ def test_compression_for_different_dtypes():
                 continue
 
             model = IdentityMatmul(weights_dtype=weight_dtype, activation_dtype=activation_dtype).ov_model
-            compressed_model = compress_weights(model)
+            compressed_model = compress_weights(
+                model, mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=1, all_layers=True
+            )
             name_to_node_map = {op.get_friendly_name(): op for op in compressed_model.get_ops()}
 
             # Weight scale should be in fp16 nevertheless the weight data type
             scale_multiply_node = name_to_node_map["weights/fq_weights_1"]
             assert scale_multiply_node.input_value(1).get_node().get_element_type() == ov.Type.f16
 
-            next_node = get_next_node(scale_multiply_node)
+            reshape_node = get_next_node(scale_multiply_node)
+            assert reshape_node.get_type_name() == "Reshape"
+
+            next_node = get_next_node(reshape_node)
             if activation_dtype == np.float16:
                 # There should be no convert node after multiply if both weights and activations are in f16
                 assert next_node.get_type_name() != "Convert"
