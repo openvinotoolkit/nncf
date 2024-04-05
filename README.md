@@ -375,7 +375,8 @@ pip install nncf[torch]
 Other viable options besides `[torch]` are `[tf]`, `[onnx]` and `[openvino]`.
 
 > [!WARNING]
-> The way to install the module package with the extra dependency like `pip install nncf[torch]` is deprecated and will be removed in next release.
+> The way to install the module package with the extra dependency like `pip install nncf[torch]` is deprecated and will be removed in a future release.
+> Instead, it is recommended to install additional dependencies separately using the pip install command (e.g., `pip install torch`) or by explicitly specifying the dependency in your requirements file.
 
 NNCF is also available via [conda](https://anaconda.org/conda-forge/nncf):
 
