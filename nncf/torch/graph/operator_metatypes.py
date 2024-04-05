@@ -1103,18 +1103,6 @@ UNIFICATION_PRODUCING_METATYPES = [
 
 OP_NAMES_WITH_WEIGHTS = [x for meta in OPERATORS_WITH_WEIGHTS_METATYPES for x in meta.get_all_aliases()]
 
-# Contains the operation metatypes for which bias can be applied.
-OPERATORS_WITH_BIAS_METATYPES = [
-    PTModuleConv1dMetatype,
-    PTModuleConv2dMetatype,
-    PTModuleConv3dMetatype,
-    # TODO: Need to add Linear support (CVS-111111)
-]
-
-OPERATORS_FUSED_METATYPES = [
-    PTModuleBatchNormMetatype,
-]
-
 QUANTIZE_NODE_TYPES = ["symmetric_quantize", "asymmetric_quantize"]
 
 # These metatypes mix outputs for different samples into one axis.
@@ -1127,11 +1115,3 @@ OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS = [
     PTModuleEmbeddingBagMetatype,
     PTModuleEmbeddingMetatype,
 ]
-
-
-for name, metatype in PT_OPERATOR_METATYPES._op_name_to_op_meta_dict.items():
-    print(metatype)
-    for x in metatype.subtypes:
-        print(f"  - {x}")
-        for x1 in x.subtypes:
-            print(f"    - {x1}")
