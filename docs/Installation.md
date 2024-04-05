@@ -12,34 +12,12 @@ NNCF can be installed as a regular PyPI package via pip:
 pip install nncf
 ```
 
-If you want to install both NNCF and the supported PyTorch version in one line, you can do this by simply running:
-
-```bash
-pip install nncf[torch]
-```
-
-Other viable options besides `[torch]` are `[tf]`, `[onnx]` and `[openvino]`.
-
 ## As a package built from a checked-out repository
 
 Install the package and its dependencies by running the following command in the repository root directory:
 
 ```bash
 pip install .
-```
-
-Use the same `pip install` syntax as above to install NNCF along with the backend package version in one go:
-
-```bash
-pip install .[<BACKEND>]
-```
-
-List of supported backends: `torch`, `tf`, `onnx` and `openvino`.
-
-For development purposes install extra packages by
-
-```bash
-pip install .[dev,tests]
 ```
 
 _NB_: For launching example scripts in this repository, we recommend setting the `PYTHONPATH` variable to the root of the checked-out repository once the installation is completed.
