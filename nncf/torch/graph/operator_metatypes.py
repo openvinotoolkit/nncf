@@ -411,7 +411,7 @@ class PTDeformConv2dMetatype(PTOperatorMetatype):
     weight_port_ids = [2]
 
 
-@PT_OPERATOR_METATYPES.register()
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTModuleLinearMetatype(PTModuleOperatorSubtype):
     name = "LinearOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["linear"]}
@@ -481,7 +481,7 @@ class PTLeakyRELUMetatype(PTOperatorMetatype):
     num_expected_input_edges = 1
 
 
-@PT_OPERATOR_METATYPES.register()
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTModuleLayerNormMetatype(PTModuleOperatorSubtype):
     name = "LayerNormOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["layer_norm"]}
@@ -498,7 +498,7 @@ class PTLayerNormMetatype(PTOperatorMetatype):
     num_expected_input_edges = 1
 
 
-@PT_OPERATOR_METATYPES.register()
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTModuleGroupNormMetatype(PTModuleOperatorSubtype):
     name = "GroupNormOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["group_norm"]}
@@ -683,7 +683,7 @@ class PTThresholdMetatype(PTOperatorMetatype):
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["threshold"]}
 
 
-@PT_OPERATOR_METATYPES.register()
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTModuleBatchNormMetatype(PTModuleOperatorSubtype):
     name = "BatchNormOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["batch_norm"]}
@@ -874,7 +874,7 @@ class PTExpandAsMetatype(PTOperatorMetatype):
     module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["expand_as"]}
 
 
-@PT_OPERATOR_METATYPES.register()
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTModuleEmbeddingMetatype(PTModuleOperatorSubtype):
     name = "EmbeddingOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["embedding"]}
@@ -891,7 +891,7 @@ class PTEmbeddingMetatype(PTOperatorMetatype):
     weight_port_ids = [1]
 
 
-@PT_OPERATOR_METATYPES.register()
+@PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTModuleEmbeddingBagMetatype(PTModuleOperatorSubtype):
     name = "EmbeddingBagOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["embedding_bag"]}
@@ -1127,3 +1127,11 @@ OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS = [
     PTModuleEmbeddingBagMetatype,
     PTModuleEmbeddingMetatype,
 ]
+
+
+for name, metatype in PT_OPERATOR_METATYPES._op_name_to_op_meta_dict.items():
+    print(metatype)
+    for x in metatype.subtypes:
+        print(f"  - {x}")
+        for x1 in x.subtypes:
+            print(f"    - {x1}")

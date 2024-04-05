@@ -104,14 +104,11 @@ class OperatorMetatypeRegistry(Registry):
             if not is_subtype:
                 op_names = obj.get_all_aliases()
                 for name in op_names:
-                    if name in self._op_name_to_op_meta_dict and not obj.subtype_check(
-                        self._op_name_to_op_meta_dict[name]
-                    ):
+                    if name in self._op_name_to_op_meta_dict:
                         raise nncf.InternalError(
                             "Inconsistent operator metatype registry - single patched "
-                            "op name maps to multiple metatypes!"
+                            f"op name `{name}` maps to multiple metatypes!"
                         )
-
                     self._op_name_to_op_meta_dict[name] = obj
             return obj
 
