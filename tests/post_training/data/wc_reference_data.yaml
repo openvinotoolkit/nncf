@@ -1,5 +1,7 @@
 tinyllama_data_free_backend_OV:
   metric_value: 0.72057
+  num_int4: 228
+  num_int8: 84
 tinyllama_data_aware_backend_OV:
   metric_value: 0.83084
 tinyllama_data_aware_awq_backend_OV:
