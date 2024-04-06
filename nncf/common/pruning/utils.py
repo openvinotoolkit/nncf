@@ -225,7 +225,7 @@ class PruningOperationsMetatypeRegistry(Registry):
             if cls_name is None:
                 cls_name = obj.__name__
 
-            super_register(obj, cls_name)  
+            super_register(obj, cls_name)
             op_names = obj.get_all_op_aliases()
             for name in op_names:
                 if name not in self._op_name_to_op_class:

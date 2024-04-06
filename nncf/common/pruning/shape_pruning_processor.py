@@ -21,7 +21,8 @@ from nncf.common.pruning.mask_propagation import MaskPropagationAlgorithm
 from nncf.common.pruning.structs import PrunedLayerInfoBase
 from nncf.common.pruning.symbolic_mask import SymbolicMask
 from nncf.common.pruning.symbolic_mask import SymbolicMaskProcessor
-from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry, get_input_masks
+from nncf.common.pruning.utils import PruningOperationsMetatypeRegistry
+from nncf.common.pruning.utils import get_input_masks
 from nncf.common.pruning.utils import get_next_nodes_of_types
 from nncf.common.pruning.utils import get_output_channels
 from nncf.common.pruning.utils import get_prunable_layers_in_out_channels
@@ -187,9 +188,7 @@ class ShapePruningProcessor:
             node = graph.get_node_by_id(pruned_layer_info.nncf_node_id)
             node.attributes["output_mask"] = SymbolicMask(get_output_channels(node), node.node_id)
 
-        MaskPropagationAlgorithm(
-            graph, self._pruning_operations_metatype, SymbolicMaskProcessor
-        ).mask_propagation() 
+        MaskPropagationAlgorithm(graph, self._pruning_operations_metatype, SymbolicMaskProcessor).mask_propagation()
 
         # 2. Find next nodes and correspondent sparse multipliers
         next_nodes = {}  # type:ignore
