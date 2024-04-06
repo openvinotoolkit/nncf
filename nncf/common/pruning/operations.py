@@ -400,7 +400,7 @@ class FlattenPruningOp(BasePruningOp):
     @classmethod
     def mask_propagation(
         cls, node: NNCFNode, graph: NNCFGraph, tensor_processor: Type[NNCFPruningBaseTensorProcessor]
-    ):  # type:ignore
+    ) -> None:  
         output_mask = None
         input_masks = get_input_masks(node, graph)
         assert len(input_masks) == 1
