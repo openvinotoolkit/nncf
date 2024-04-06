@@ -648,18 +648,14 @@ def test_create_quantizer_insertion_command(target_type, node_name, input_port_i
 
     target_point = PTTargetPoint(target_type, node_name, input_port_id=input_port_id)
     command = create_quantizer_insertion_command(target_point, hook)
-
     assert command.fn is hook
-    if target_point.type is TargetType.OPERATION_WITH_WEIGHTS:
-        assert isinstance(command, PTInsertionCommand)
-    else:
-        quantizer_id = NonWeightQuantizerId(target_point.target_node_name, target_point.input_port_id)
-        assert isinstance(command, PTSharedFnInsertionCommand)
-        assert command.target_points == [target_point]
-        assert command.fn is hook
-        storage_key = str(quantizer_id)
-        assert command.op_name == storage_key
-        assert command.compression_module_type is ExtraCompressionModuleType.EXTERNAL_QUANTIZER
+    quantizer_id = NonWeightQuantizerId(target_point.target_node_name, target_point.input_port_id)
+    assert isinstance(command, PTSharedFnInsertionCommand)
+    assert command.target_points == [target_point]
+    assert command.fn is hook
+    storage_key = str(quantizer_id)
+    assert command.op_name == storage_key
+    assert command.compression_module_type is ExtraCompressionModuleType.EXTERNAL_QUANTIZER
 
 
 SHARED_FN_TARGET_POINTS = [
