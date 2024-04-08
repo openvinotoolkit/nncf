@@ -87,7 +87,7 @@ for data_item in val_loader:
 
 </details>
 
-## Data loader usage
+## Dataloader usage
 
 Batch_size is a parameter of a dataloader refers to the number of samples or data points that are propagated through the neural network in a single pass.
 
