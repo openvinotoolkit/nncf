@@ -47,6 +47,7 @@ class ScaleEstimation(Algorithm):
         subset_size: int = 32,
         initial_steps: int = 5,
         scale_steps: int = 10,
+        weight_penalty: float = -1.0,
     ):
         """
         :param model: Model for applying algorithm.
@@ -58,6 +59,7 @@ class ScaleEstimation(Algorithm):
         :param initial_steps: The number of the steps for absmax scale rectification.
         :param scale_steps: The number of the steps for grid search scale rectification
                             from 1.0 to 1.0 - 0.05 * scale_step.
+        :param weight_penalty: coefficient for penalty between fp and compressed weights. If -1 then doesn't apply.
         """
         super().__init__()
         self.name_to_node_mapping = name_to_node_mapping
@@ -67,6 +69,7 @@ class ScaleEstimation(Algorithm):
         self._subset_size = subset_size
         self._initial_steps = initial_steps
         self._scale_steps = scale_steps
+        self._weight_penalty = weight_penalty
 
         self._set_backend_entity(model)
 
@@ -195,6 +198,8 @@ class ScaleEstimation(Algorithm):
             # metric for minimization with shape [C_OUT, N_GROUPS], N_GROUPS = C_IN / GROUP_SIZE
             min_max_scale_diffs = fns.mean((fp_outs - q_outs) ** 2, axis=-1)
             min_max_scale_diffs = fns.transpose(min_max_scale_diffs, (1, 0))
+            if self._weight_penalty > 0.0:
+                min_max_scale_diffs += self._weight_penalty * fns.mean((q_weights - original_weight) ** 2, axis=-1)
 
             key = (
                 (wp.compression_config.mode, wp.compression_config.num_bits) + q_weights.shape + scale.shape + zp.shape
@@ -228,6 +233,8 @@ class ScaleEstimation(Algorithm):
 
                 ideal_scale_diffs = fns.mean((fp_outs - q_outs) ** 2, axis=-1)
                 ideal_scale_diffs = fns.transpose(ideal_scale_diffs, (1, 0))
+                if self._weight_penalty > 0.0:
+                    ideal_scale_diffs += self._weight_penalty * fns.mean((q_weights_ - original_weight) ** 2, axis=-1)
 
                 if best_diffs is None:
                     best_diffs = min_max_scale_diffs
@@ -273,6 +280,8 @@ class ScaleEstimation(Algorithm):
                 q_outs = fns.matmul(fns.transpose(q_weights_, (1, 0, 2)), X)
                 ideal_scale_diffs = fns.mean((fp_outs - q_outs) ** 2, axis=-1)
                 ideal_scale_diffs = fns.transpose(ideal_scale_diffs, (1, 0))
+                if self._weight_penalty > 0.0:
+                    ideal_scale_diffs += self._weight_penalty * fns.mean((q_weights_ - original_weight) ** 2, axis=-1)
 
                 mask = (ideal_scale_diffs > best_diffs).astype(best_diffs.dtype)
 

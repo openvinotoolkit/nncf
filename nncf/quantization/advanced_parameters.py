@@ -274,11 +274,13 @@ class AdvancedScaleEstimationParameters:
     :param initial_steps: The number of the steps for absmax scale rectification.
     :param scale_steps: The number of the steps for grid search scale rectification
                         from 1.0 to 1.0 - 0.05 * scale_step.
+    :param weight_penalty: coefficient for penalty between fp and compressed weights. If -1 then doesn't apply.
     """
 
     subset_size: int = 32
     initial_steps: int = 5
     scale_steps: int = 10
+    weight_penalty: float = -1.0
 
 
 @api()

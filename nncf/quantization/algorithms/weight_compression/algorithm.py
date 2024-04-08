@@ -375,6 +375,7 @@ class WeightCompression(Algorithm):
                 scale_estimation_params.subset_size,
                 scale_estimation_params.initial_steps,
                 scale_estimation_params.scale_steps,
+                scale_estimation_params.weight_penalty,
             )
             scale_algo.apply(model, graph)
 
