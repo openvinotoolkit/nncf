@@ -408,7 +408,7 @@ This modification applies only for patterns `MatMul-Multiply-MatMul` (for exampl
 
 List of notebooks demonstrating OpenVINO conversion and inference together with NNCF weight compression for models from various domains:
 
-- [LLM Instruction Following](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/275-llm-question-answering)
-- [Dolly 2.0](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/240-dolly-2-instruction-following)
-- [Stable-Zephyr-3b](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/273-stable-zephyr-3b-chatbot)
-- [LLM Chat Bots](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/254-llm-chatbot)
+- [LLM Instruction Following](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-question-answering)
+- [Dolly 2.0](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/dolly-2-instruction-following)
+- [Stable-Zephyr-3b](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/stable-zephyr-3b-chatbot)
+- [LLM Chat Bots](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-chatbot)
