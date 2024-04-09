@@ -487,6 +487,7 @@ class PTModuleLayerNormMetatype(PTModuleOperatorSubtype):
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["layer_norm"]}
     hw_config_names = [HWConfigOpName.MVN]
     num_expected_input_edges = 1
+    weight_port_ids = [2]
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -496,6 +497,7 @@ class PTLayerNormMetatype(PTOperatorMetatype):
     hw_config_names = [HWConfigOpName.MVN]
     subtypes = [PTModuleLayerNormMetatype]
     num_expected_input_edges = 1
+    weight_port_ids = [2]
 
 
 @PT_OPERATOR_METATYPES.register(is_subtype=True)
@@ -503,6 +505,7 @@ class PTModuleGroupNormMetatype(PTModuleOperatorSubtype):
     name = "GroupNormOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["group_norm"]}
     hw_config_names = [HWConfigOpName.MVN]
+    weight_port_ids = [2]
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -511,6 +514,7 @@ class PTGroupNormMetatype(PTOperatorMetatype):
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["group_norm"]}
     hw_config_names = [HWConfigOpName.MVN]
     subtypes = [PTModuleGroupNormMetatype]
+    weight_port_ids = [2]
 
 
 @PT_OPERATOR_METATYPES.register()
