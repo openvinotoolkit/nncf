@@ -139,24 +139,26 @@ def remove_disabled_quantizers(model: NNCFNetwork) -> NNCFNetwork:
             if isinstance(op, BaseQuantizer) and not op.is_enabled_quantization():
                 external_quantizers.pop(key)
 
-    if model.nncf.replace_modules:
-        for node in model.nncf.get_original_graph().get_all_nodes():
-            if node.node_type in ["nncf_model_input", "nncf_model_output"]:
-                continue
+    if not model.nncf.replace_modules:
+        return model
 
-            nncf_module = model.nncf.get_containing_module(node.node_name)
+    for node in model.nncf.get_original_graph().get_all_nodes():
+        if node.node_type in ["nncf_model_input", "nncf_model_output"]:
+            continue
 
-            if hasattr(nncf_module, "pre_ops"):
-                for key in list(nncf_module.pre_ops.keys()):
-                    op = nncf_module.get_pre_op(key)
-                    if isinstance(op, BaseQuantizer) and not op.is_enabled_quantization():
-                        nncf_module.remove_pre_forward_operation(key)
+        nncf_module = model.nncf.get_containing_module(node.node_name)
 
-            if hasattr(nncf_module, "post_ops"):
-                for key in list(nncf_module.post_ops.keys()):
-                    op = nncf_module.post_ops(key)
-                    if isinstance(op, BaseQuantizer) and not op.is_enabled_quantization():
-                        nncf_module.remove_post_forward_operation(key)
+        if hasattr(nncf_module, "pre_ops"):
+            for key in list(nncf_module.pre_ops.keys()):
+                op = nncf_module.get_pre_op(key)
+                if isinstance(op, BaseQuantizer) and not op.is_enabled_quantization():
+                    nncf_module.remove_pre_forward_operation(key)
+
+        if hasattr(nncf_module, "post_ops"):
+            for key in list(nncf_module.post_ops.keys()):
+                op = nncf_module.post_ops(key)
+                if isinstance(op, BaseQuantizer) and not op.is_enabled_quantization():
+                    nncf_module.remove_post_forward_operation(key)
 
     return model
 
