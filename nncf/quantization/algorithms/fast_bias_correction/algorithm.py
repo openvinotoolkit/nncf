@@ -275,8 +275,8 @@ class FastBiasCorrection(Algorithm):
         Extracts sub-model using backend-specific ModelTransformer.
 
         :param model_transformer: Backend-specific ModelTransformer.
-        :param in_node_name: Name of the node that should be a center of the sub-model.
-        :param out_node_name: Name of the node that should be a center of the sub-model.
+        :param in_node_name: Name of the start node.
+        :param out_node_name: Name of the output node.
         :return: Backend-specific sub-model.
         """
         model_extraction_command = self._backend_entity.model_extraction_command(

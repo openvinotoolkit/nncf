@@ -57,7 +57,7 @@ class PTModelTransformer(ModelTransformer):
             device = get_model_device(model)
 
         self._command_transformation_ordered_pairs = [
-            (PTModelExtractionCommand, self._apply_extraction_with_fused_bias_transformations),
+            (PTModelExtractionCommand, self._apply_extraction_transformations),
             (PTInsertionCommand, partial(self._apply_insertion_transformations, device=device)),
             (PTSharedFnInsertionCommand, partial(self._apply_shared_nodes_insertion, device=device)),
             (PTBiasCorrectionCommand, self._apply_bias_correction_transformations),
@@ -197,11 +197,11 @@ class PTModelTransformer(ModelTransformer):
         return PTModelTransformer._apply_insertion_transformations(model, insertion_commands, device)
 
     @staticmethod
-    def _apply_extraction_with_fused_bias_transformations(
+    def _apply_extraction_transformations(
         model: NNCFNetwork, transformations: List[PTModelExtractionCommand]
     ) -> nn.Sequential:
         """
-        Extracts copy of sub-modules from the original base on node name and potential fused nodes.
+        Extracts copy of sub-modules.
 
         :param model: Model to apply transformations.
         :param transformation: Model extraction transformation.
