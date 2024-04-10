@@ -195,19 +195,17 @@ def get_fused_bias_value(node: NNCFNode, model: NNCFNetwork) -> Optional[torch.T
     :return: The bias value that is applied to the output tensor of the node's operation.
     """
     nncf_graph = model.nncf.get_graph()
-
     fused_node = get_potential_fused_node(node.node_name, nncf_graph)
-
     bias = get_const_data_on_port(node, node.metatype.bias_port_id, model)
 
     if fused_node is None:
         return bias
 
     fused_bias = get_const_data_on_port(fused_node, fused_node.metatype.bias_port_id, model)
-    fused_weight = get_const_data_on_port(fused_node, fused_node.metatype.weight_port_ids[0], model)
     if bias is None:
         return fused_bias
 
+    fused_weight = get_const_data_on_port(fused_node, fused_node.metatype.weight_port_ids[0], model)
     return bias * fused_weight + fused_bias
 
 
