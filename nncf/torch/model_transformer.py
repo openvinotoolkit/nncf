@@ -30,11 +30,7 @@ from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import PTWeightUpdateCommand
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
-from nncf.torch.model_graph_manager import get_const_data
-from nncf.torch.model_graph_manager import get_const_node
-from nncf.torch.model_graph_manager import get_potential_fused_node
-from nncf.torch.model_graph_manager import set_const_data
-from nncf.torch.model_graph_manager import set_const_data_to_port_id
+from nncf.torch.model_graph_manager import update_fused_bias
 from nncf.torch.module_operations import UpdateWeight
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint
@@ -243,33 +239,6 @@ class PTModelTransformer(ModelTransformer):
         for transformation in transformations:
             update_parameter(transformation.target_point.target_node_name, "weight", transformation.weight_value, model)
         return model
-
-
-def update_fused_bias(target_node_name: str, new_bias: Tensor, model: NNCFNetwork) -> None:
-    """
-    Update bias for target module or potential fused module.
-
-    :param target_node_name: The target node name.
-    :param new_bias: New bias value.
-    :param model: The model.
-    """
-    nncf_graph = model.nncf.get_graph()
-    target_node = nncf_graph.get_node_by_name(target_node_name)
-    fused_node = get_potential_fused_node(target_node_name, nncf_graph)
-    if fused_node is None:
-        set_const_data_to_port_id(new_bias, target_node, target_node.metatype.bias_port_id, model)
-        return
-
-    target_bias_node = get_const_node(target_node, target_node.metatype.bias_port_id, nncf_graph)
-    fused_bias_node = get_const_node(fused_node, fused_node.metatype.bias_port_id, nncf_graph)
-    fused_weight_node = get_const_node(fused_node, fused_node.metatype.weight_port_ids[0], nncf_graph)
-
-    if target_bias_node is None:
-        set_const_data(new_bias, fused_bias_node, model)
-        return
-
-    new_bias = new_bias - get_const_data(target_bias_node, model) * get_const_data(fused_weight_node, model)
-    set_const_data(new_bias, fused_bias_node, model)
 
 
 def update_parameter(target_node_name: str, parameter_name: str, new_value: Tensor, model: NNCFNetwork) -> None:
