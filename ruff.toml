@@ -1,3 +1,4 @@
+preview = true
 line-length = 120
 ignore-init-module-imports = true
 ignore = [
