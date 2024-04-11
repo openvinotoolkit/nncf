@@ -129,9 +129,7 @@ class PTDepthwiseConvOperatorSubtype(PTOperatorSubtype):
     ) -> bool:
         if not isinstance(layer_attributes, ConvolutionLayerAttributes):
             return False
-        if layer_attributes.groups == layer_attributes.in_channels and layer_attributes.in_channels > 1:
-            return True
-        return False
+        return bool(layer_attributes.groups == layer_attributes.in_channels and layer_attributes.in_channels > 1)
 
 
 @PT_OPERATOR_METATYPES.register()

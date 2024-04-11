@@ -54,10 +54,9 @@ def test_can_create_magnitude_sparse_algo__with_defaults():
 
     assert isinstance(compression_ctrl._weight_importance_fn, type(normed_magnitude))
 
-    for sparse_module in sparse_model_conv.values():
+    for i, sparse_module in enumerate(sparse_model_conv.values()):
         store = []
         ref_mask = torch.ones_like(sparse_module.weight) if i == 0 else ref_mask_2
-        i += 1
         for op in sparse_module.pre_ops.values():
             if isinstance(op, UpdateWeight) and isinstance(op.operand, BinaryMask):
                 assert torch.allclose(op.operand.binary_mask, ref_mask)

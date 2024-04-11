@@ -728,9 +728,7 @@ def _is_group_conv(node: onnx.NodeProto) -> bool:
     for attribute in node.attribute:
         if attribute.name == "group":
             conv_group = onnx.helper.get_attribute_value(attribute)
-    if conv_group is None or conv_group == 1:
-        return False
-    return True
+    return not (conv_group is None or conv_group == 1)
 
 
 def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
@@ -757,13 +755,11 @@ def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
         return False
     conv_out_channels = weight_tensor_value.shape[0]
     conv_in_channels = weight_tensor_value.shape[1] * conv_group
-    if (
+    return bool(
         conv_out_channels % conv_in_channels == 0
         and conv_out_channels // conv_in_channels > 0
         and conv_group == conv_in_channels
-    ):
-        return True
-    return False
+    )
 
 
 def _is_embedding(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:

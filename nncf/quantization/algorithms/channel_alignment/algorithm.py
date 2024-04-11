@@ -274,9 +274,7 @@ class ChannelAlignment(Algorithm):
         if any(elem != 1 for elem in attrs.stride):
             return False
         # Check Node has valid dilation
-        if any(elem != 1 for elem in attrs.dilations):
-            return False
-        return True
+        return not any(elem != 1 for elem in attrs.dilations)
 
     def _check_producer_conv_node(self, conv_node: NNCFNode):
         return conv_node.layer_attributes is not None

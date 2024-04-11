@@ -500,13 +500,11 @@ class TFMultipleInsertionCommands(TFTransformationCommand):
         return self._commands
 
     def check_insertion_command(self, command: TFTransformationCommand) -> bool:
-        if (
+        return bool(
             isinstance(command, TFTransformationCommand)
             and command.type == TransformationType.INSERT
             and self.check_target_points_fn(self.target_point, command.target_point)
-        ):
-            return True
-        return False
+        )
 
     def add_insertion_command(self, command: TFTransformationCommand) -> None:
         if not self.check_insertion_command(command):

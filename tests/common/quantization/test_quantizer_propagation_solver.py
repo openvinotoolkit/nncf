@@ -840,8 +840,7 @@ class TestQuantizerPropagationSolver:
     BRANCH_TRANSITION_TEST_CASES = [
         # Downward branches are quantization-agnostic
         BranchTransitionTestStruct(
-            init_node_to_trait_and_configs_dict=
-            {
+            init_node_to_trait_and_configs_dict={
                 '4 /D_0': InitNodeTestStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                                              QuantizerConfig()),
             },
@@ -852,8 +851,7 @@ class TestQuantizerPropagationSolver:
 
         # Downward branches have quantizers that are still propagating
         BranchTransitionTestStruct(
-            init_node_to_trait_and_configs_dict=
-            {
+            init_node_to_trait_and_configs_dict={
                 '6 /F_0': InitNodeTestStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                                              [QuantizerConfig()]),
                 '4 /D_0': InitNodeTestStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
@@ -867,8 +865,7 @@ class TestQuantizerPropagationSolver:
         ),
 
         BranchTransitionTestStruct(
-            init_node_to_trait_and_configs_dict=
-            {
+            init_node_to_trait_and_configs_dict={
                 '6 /F_0': InitNodeTestStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=7)]),
                 '4 /D_0': InitNodeTestStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
@@ -882,8 +879,7 @@ class TestQuantizerPropagationSolver:
         ),
 
         BranchTransitionTestStruct(
-            init_node_to_trait_and_configs_dict=
-            {
+            init_node_to_trait_and_configs_dict={
                 '6 /F_0': InitNodeTestStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=7, mode=QuantizationMode.ASYMMETRIC)]),
                 '4 /D_0': InitNodeTestStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
@@ -897,8 +893,7 @@ class TestQuantizerPropagationSolver:
         ),
 
         BranchTransitionTestStruct(
-            init_node_to_trait_and_configs_dict=
-            {
+            init_node_to_trait_and_configs_dict={
                 '4 /D_0': InitNodeTestStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=4), QuantizerConfig(num_bits=6)]),
 
@@ -921,8 +916,7 @@ class TestQuantizerPropagationSolver:
         ),
 
         BranchTransitionTestStruct(
-            init_node_to_trait_and_configs_dict=
-            {
+            init_node_to_trait_and_configs_dict={
                 '6 /F_0': InitNodeTestStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=5)]),
                 '4 /D_0': InitNodeTestStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
@@ -936,8 +930,7 @@ class TestQuantizerPropagationSolver:
         ),
 
         BranchTransitionTestStruct(
-            init_node_to_trait_and_configs_dict=
-            {
+            init_node_to_trait_and_configs_dict={
                 '6 /F_0': InitNodeTestStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=7, mode=QuantizationMode.ASYMMETRIC)]),
                 '4 /D_0': InitNodeTestStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
@@ -952,8 +945,7 @@ class TestQuantizerPropagationSolver:
 
         # A branch has a non-quantizable op
         BranchTransitionTestStruct(
-            init_node_to_trait_and_configs_dict=
-            {
+            init_node_to_trait_and_configs_dict={
                 '6 /F_0': InitNodeTestStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()]),
                 '4 /D_0': InitNodeTestStruct(QuantizationTrait.NON_QUANTIZABLE,
@@ -967,8 +959,7 @@ class TestQuantizerPropagationSolver:
         ),
 
         BranchTransitionTestStruct(
-            init_node_to_trait_and_configs_dict=
-            {
+            init_node_to_trait_and_configs_dict={
                 '6 /F_0': InitNodeTestStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()]),
                 '4 /D_0': InitNodeTestStruct(QuantizationTrait.NON_QUANTIZABLE,
@@ -983,8 +974,7 @@ class TestQuantizerPropagationSolver:
 
 
         BranchTransitionTestStruct(
-            init_node_to_trait_and_configs_dict=
-            {
+            init_node_to_trait_and_configs_dict={
                 '6 /F_0': InitNodeTestStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()]),
                 '4 /D_0': InitNodeTestStruct(QuantizationTrait.NON_QUANTIZABLE,
@@ -998,8 +988,7 @@ class TestQuantizerPropagationSolver:
         ),
 
         BranchTransitionTestStruct(
-            init_node_to_trait_and_configs_dict=
-            {
+            init_node_to_trait_and_configs_dict={
                 '6 /F_0': InitNodeTestStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()]),
                 '4 /D_0': InitNodeTestStruct(QuantizationTrait.NON_QUANTIZABLE,
@@ -1014,8 +1003,7 @@ class TestQuantizerPropagationSolver:
 
         # Transition impacts a concat node that won't be quantized
         BranchTransitionTestStruct(
-            init_node_to_trait_and_configs_dict=
-            {
+            init_node_to_trait_and_configs_dict={
                 '7 /G_0': InitNodeTestStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()]),
                 '8 /H_0': InitNodeTestStruct(QuantizationTrait.QUANTIZATION_AGNOSTIC,
@@ -1030,8 +1018,7 @@ class TestQuantizerPropagationSolver:
 
         # Transition impacts a concat node that is, by this point in time, quantized
         BranchTransitionTestStruct(
-            init_node_to_trait_and_configs_dict=
-            {
+            init_node_to_trait_and_configs_dict={
                 '7 /G_0': InitNodeTestStruct(QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()]),
                 '8 /H_0': InitNodeTestStruct(QuantizationTrait.QUANTIZATION_AGNOSTIC,
@@ -1044,8 +1031,7 @@ class TestQuantizerPropagationSolver:
             expected_status=TransitionStatus.SHOULD_WAIT_FOR_MERGE
         ),
         BranchTransitionTestStruct(
-            init_node_to_trait_and_configs_dict=
-            {
+            init_node_to_trait_and_configs_dict={
                 '6 /F_0': InitNodeTestStruct(QuantizationTrait.QUANTIZATION_AGNOSTIC,
                       []),
                 '11 /K_0': InitNodeTestStruct(QuantizationTrait.QUANTIZATION_AGNOSTIC,
@@ -1058,8 +1044,7 @@ class TestQuantizerPropagationSolver:
             expected_status=TransitionStatus.SHOULD_TRANSITION
         ),
         BranchTransitionTestStruct(
-            init_node_to_trait_and_configs_dict=
-            {
+            init_node_to_trait_and_configs_dict={
                 '6 /F_0': InitNodeTestStruct(QuantizationTrait.QUANTIZATION_AGNOSTIC,
                       []),
                 '11 /K_0': InitNodeTestStruct(QuantizationTrait.NON_QUANTIZABLE,
@@ -1072,8 +1057,7 @@ class TestQuantizerPropagationSolver:
             expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
         ),
         BranchTransitionTestStruct(
-            init_node_to_trait_and_configs_dict=
-            {
+            init_node_to_trait_and_configs_dict={
                 '6 /F_0': InitNodeTestStruct(QuantizationTrait.QUANTIZATION_AGNOSTIC,
                       []),
                 '13 /M_0': InitNodeTestStruct(QuantizationTrait.QUANTIZATION_AGNOSTIC,
@@ -1088,8 +1072,7 @@ class TestQuantizerPropagationSolver:
             expected_status=TransitionStatus.SHOULD_NOT_TRANSITION
         ),
         BranchTransitionTestStruct(
-            init_node_to_trait_and_configs_dict=
-            {
+            init_node_to_trait_and_configs_dict={
                 '6 /F_0': InitNodeTestStruct(QuantizationTrait.QUANTIZATION_AGNOSTIC,
                       []),
                 '13 /M_0': InitNodeTestStruct(QuantizationTrait.QUANTIZATION_AGNOSTIC,
@@ -1199,8 +1182,7 @@ class TestQuantizerPropagationSolver:
 
         # Single propagating quantizer
         PathTransitionTestStruct(
-            init_node_to_trait_configs_and_target_node_dict=
-            {
+            init_node_to_trait_configs_and_target_node_dict={
             },
             starting_primary_quantizer_ip_node=InsertionPointGraph.get_pre_hook_node_key('10 /J_0'),
             primary_quantizer_qconfigs=[QuantizerConfig()],
@@ -1210,8 +1192,7 @@ class TestQuantizerPropagationSolver:
 
         # Non-intersecting paths, no branch influence
         PathTransitionTestStruct(
-            init_node_to_trait_configs_and_target_node_dict=
-            {
+            init_node_to_trait_configs_and_target_node_dict={
                 '4 /D_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_post_hook_node_key('1 /A_0')),
@@ -1224,8 +1205,7 @@ class TestQuantizerPropagationSolver:
 
         # Non-intersecting paths, branch influence
         PathTransitionTestStruct(
-            init_node_to_trait_configs_and_target_node_dict=
-            {
+            init_node_to_trait_configs_and_target_node_dict={
                 '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=6)],
                       InsertionPointGraph.get_pre_hook_node_key('3 /C_0')),
@@ -1241,8 +1221,7 @@ class TestQuantizerPropagationSolver:
 
         # Non-intersecting paths, branch influence with downward branch config narrowing
         PathTransitionTestStruct(
-            init_node_to_trait_configs_and_target_node_dict=
-            {
+            init_node_to_trait_configs_and_target_node_dict={
                 '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=6), QuantizerConfig(num_bits=8)],
                       InsertionPointGraph.get_pre_hook_node_key('3 /C_0')),
@@ -1259,8 +1238,7 @@ class TestQuantizerPropagationSolver:
 
         # Merge cases
         PathTransitionTestStruct(
-            init_node_to_trait_configs_and_target_node_dict=
-            {
+            init_node_to_trait_configs_and_target_node_dict={
                 '5 /E_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('1 /A_0'))
@@ -1272,8 +1250,7 @@ class TestQuantizerPropagationSolver:
         ),
 
         PathTransitionTestStruct(
-            init_node_to_trait_configs_and_target_node_dict=
-            {
+            init_node_to_trait_configs_and_target_node_dict={
                 '7 /G_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('1 /A_0')),
@@ -1291,8 +1268,7 @@ class TestQuantizerPropagationSolver:
 
         # Path blocked by a quantizer
         PathTransitionTestStruct(
-            init_node_to_trait_configs_and_target_node_dict=
-            {
+            init_node_to_trait_configs_and_target_node_dict={
                 '3 /C_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('2 /B_0')),
@@ -1308,8 +1284,7 @@ class TestQuantizerPropagationSolver:
 
         # Path blocked by a non-quantizable node
         PathTransitionTestStruct(
-            init_node_to_trait_configs_and_target_node_dict=
-            {
+            init_node_to_trait_configs_and_target_node_dict={
                 '10 /J_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('8 /H_0')),
@@ -1326,8 +1301,7 @@ class TestQuantizerPropagationSolver:
 
         # A downward branch node was marked as non-quantizable
         PathTransitionTestStruct(
-            init_node_to_trait_configs_and_target_node_dict=
-            {
+            init_node_to_trait_configs_and_target_node_dict={
                 '7 /G_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('5 /E_0')),
@@ -1343,8 +1317,7 @@ class TestQuantizerPropagationSolver:
 
         # Incompatible upstream quantizer
         PathTransitionTestStruct(
-            init_node_to_trait_configs_and_target_node_dict=
-            {
+            init_node_to_trait_configs_and_target_node_dict={
                 '5 /E_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(6)],
                       InsertionPointGraph.get_post_hook_node_key('1 /A_0')),
@@ -1356,8 +1329,7 @@ class TestQuantizerPropagationSolver:
         ),
 
         PathTransitionTestStruct(
-            init_node_to_trait_configs_and_target_node_dict=
-            {
+            init_node_to_trait_configs_and_target_node_dict={
                 '5 /E_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(6)],
                       InsertionPointGraph.get_post_hook_node_key('1 /A_0'))
@@ -1370,8 +1342,7 @@ class TestQuantizerPropagationSolver:
 
         # Incompatible downstream quantizers
         PathTransitionTestStruct(
-            init_node_to_trait_configs_and_target_node_dict=
-            {
+            init_node_to_trait_configs_and_target_node_dict={
                 '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig(num_bits=6), QuantizerConfig(num_bits=8)],
                       InsertionPointGraph.get_pre_hook_node_key('3 /C_0')),
@@ -1429,8 +1400,7 @@ class TestQuantizerPropagationSolver:
     )
     PROPAGATION_STEP_TEST_CASES = [
         PropagationStepTestStruct(
-            init_node_to_trait_configs_and_target_node_dict=
-            {
+            init_node_to_trait_configs_and_target_node_dict={
                 '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_post_hook_node_key('0 /O_0'))
@@ -1440,8 +1410,7 @@ class TestQuantizerPropagationSolver:
             added_quantizer_location_node_keys=[]
         ),
         PropagationStepTestStruct(
-            init_node_to_trait_configs_and_target_node_dict=
-            {
+            init_node_to_trait_configs_and_target_node_dict={
                 '6 /F_0': (QuantizationTrait.INPUTS_QUANTIZABLE,
                       [QuantizerConfig()],
                       InsertionPointGraph.get_pre_hook_node_key('3 /C_0'))

@@ -383,8 +383,7 @@ GROUP_PRUNING_MODULES_TEST_CASES = [
     GroupPruningModulesTestStruct(
         model=partial(MobilenetV3BlockSEReshape, mode='linear_mean'),
         name='MobilenetV3BlockSEReshape with linear mean',
-        non_pruned_module_nodes=
-            ['MobilenetV3BlockSEReshape/NNCFConv2d[last_conv]/conv2d_0'],
+        non_pruned_module_nodes=['MobilenetV3BlockSEReshape/NNCFConv2d[last_conv]/conv2d_0'],
         pruned_groups=[
             ['MobilenetV3BlockSEReshape/NNCFConv2d[first_conv]/conv2d_0',
              'MobilenetV3BlockSEReshape/InvertedResidual[inverted_residual]/Sequential[conv]/'

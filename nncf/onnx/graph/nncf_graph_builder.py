@@ -148,9 +148,7 @@ def _is_node_with_bias(node: onnx.NodeProto, model: onnx.ModelProto) -> bool:
     """
     metatype = get_metatype(model, node)
     bias_tensor_port_id = get_bias_tensor_port_id(metatype)
-    if bias_tensor_port_id is not None and len(node.input) > bias_tensor_port_id:
-        return True
-    return False
+    return bool(bias_tensor_port_id is not None and len(node.input) > bias_tensor_port_id)
 
 
 def _get_gemm_attrs(node: onnx.NodeProto) -> Dict[str, int]:

@@ -1424,9 +1424,7 @@ class QuantizerPropagationSolver:
             return True
 
         def compatible_wo_requant(qconf: QuantizerConfig, other_qconf_list: List[QuantizerConfig]) -> bool:
-            if qconf in other_qconf_list:
-                return True
-            return False
+            return qconf in other_qconf_list
 
         if self._propagation_strategy == PropagationStrategy.MERGE_WITH_POTENTIAL_REQUANTIZATION:
             compatible_fn = compatible_with_requant

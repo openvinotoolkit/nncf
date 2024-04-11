@@ -59,18 +59,14 @@ def sort_dot(path):
             if self.node_id is not None:
                 if other.node_id is None:
                     return True
-                if self.node_id < other.node_id:
-                    return True
-                return False
+                return self.node_id < other.node_id
             if other.node_id is not None:
                 return False
             if self.edge_start_id < other.edge_start_id:
                 return True
             if self.edge_start_id > other.edge_start_id:
                 return False
-            if self.edge_end_id < other.edge_end_id:
-                return True
-            return False
+            return self.edge_end_id < other.edge_end_id
 
     def graph_key(line: str) -> LineOrder:
         extract_ids_regex = r'^"(\d+) '

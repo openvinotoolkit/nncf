@@ -110,10 +110,10 @@ def test_traced_tensors_are_stripped_on_context_exit():
         assert isinstance(module.weight, TracedParameter)
         assert isinstance(module.conv2d.weight, TracedParameter)
         assert isinstance(result, TracedTensor)
-    assert type(module.cached_tensor) == torch.Tensor
-    assert type(result) == torch.Tensor
-    assert type(module.weight) == torch.nn.Parameter
-    assert type(module.conv2d.weight) == torch.nn.Parameter
+    assert module.cached_tensor is torch.Tensor
+    assert result is torch.Tensor
+    assert module.weight is torch.nn.Parameter
+    assert module.conv2d.weight is torch.nn.Parameter
 
 
 def test_no_cross_forward_run_dependency():

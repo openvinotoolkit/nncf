@@ -354,11 +354,9 @@ class TemplateTestNNCFTensorOperators:
     def test_iter(self):
         arr = [0, 1, 2]
         nncf_tensor = Tensor(self.to_tensor(arr))
-        i = 0
-        for x in nncf_tensor:
+        for i, x in enumerate(nncf_tensor):
             assert x == arr[i]
             assert isinstance(x, Tensor)
-            i += 1
 
     # Math
 

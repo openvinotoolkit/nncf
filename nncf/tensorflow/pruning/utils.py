@@ -58,9 +58,7 @@ def get_filters_num(layer: NNCFWrapper):
 def is_valid_shape(shape):
     if shape is None:
         return False
-    if None in shape:
-        return False
-    return True
+    return None not in shape
 
 
 def broadcast_filter_mask(filter_mask, shape, dim):

@@ -553,8 +553,7 @@ class FunctionalConverter(BaseFunctionalSequentialConverter):
                     node_name = layer_name
                 input_shapes = self._node_info[node_name]["input_shapes"]
 
-                layer_instance_input_port_id = 0
-                for inbound_node in inbound_nodes:
+                for layer_instance_input_port_id, inbound_node in enumerate(inbound_nodes):
                     producer_layer_name, producer_layer_instance, producer_layer_instance_output_port, _ = inbound_node
 
                     if self._is_layer_shared(producer_layer_name):
@@ -573,7 +572,6 @@ class FunctionalConverter(BaseFunctionalSequentialConverter):
                         "to_node_input_port_id": layer_instance_input_port_id,
                         "from_node_output_port_id": producer_layer_instance_output_port,
                     }
-                    layer_instance_input_port_id += 1
 
     def convert(self) -> NNCFGraph:
         nncf_graph = NNCFGraph()
