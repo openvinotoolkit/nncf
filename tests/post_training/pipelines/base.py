@@ -142,8 +142,8 @@ class RunInfo:
     fps: Optional[float] = None
     time_total: Optional[float] = None
     time_compression: Optional[float] = None
+    num_compress_nodes: Optional[NumCompressNodes] = None
     stats_from_output = StatsFromOutput()
-    num_compress_nodes = NumCompressNodes()
 
     @staticmethod
     def format_time(time_elapsed):
@@ -219,7 +219,7 @@ class BaseTestPipeline(ABC):
         self.dummy_tensor = None
         self.input_size = None
 
-        self.run_info = RunInfo(model=reported_name, backend=self.backend)
+        self.run_info = RunInfo(model=reported_name, backend=self.backend, num_compress_nodes=NumCompressNodes())
 
     @abstractmethod
     def prepare_preprocessor(self) -> None:
