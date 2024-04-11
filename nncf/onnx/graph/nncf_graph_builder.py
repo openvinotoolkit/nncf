@@ -297,14 +297,15 @@ class GraphConverter:
         """
         for i, _output in enumerate(model.graph.output):
             output_name = _output.name
-            layer_attributes = ONNXLayerAttributes()
-            output_node = nncf_graph.add_nncf_node(
-                node_name=MODEL_OUTPUT_OP_NAME + "_" + str(i),
-                node_type=NNCFGraphNodeType.OUTPUT_NODE,
-                node_metatype=OutputNoopMetatype,
-                layer_attributes=layer_attributes,
-            )
             if output_name in parents_node_mapping:
+                layer_attributes = ONNXLayerAttributes()
+                output_node = nncf_graph.add_nncf_node(
+                    node_name=MODEL_OUTPUT_OP_NAME + "_" + str(i),
+                    node_type=NNCFGraphNodeType.OUTPUT_NODE,
+                    node_metatype=OutputNoopMetatype,
+                    layer_attributes=layer_attributes,
+                )
+
                 from_node = parents_node_mapping[output_name]
 
                 output_node_node_id = output_node.node_id
