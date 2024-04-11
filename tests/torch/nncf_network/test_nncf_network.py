@@ -14,7 +14,7 @@ import inspect
 from abc import ABCMeta
 from abc import abstractmethod
 from copy import deepcopy
-from typing import Callable, List, Tuple, Type
+from typing import Callable, Type
 
 import pytest
 import torch
@@ -27,8 +27,6 @@ from nncf import nncf_logger
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import UnknownMetatype
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.graph.transformations.commands import TransformationPriority
-from nncf.common.hook_handle import HookHandle
 from nncf.torch import register_module
 from nncf.torch.dynamic_graph.io_handling import ExampleInputInfo
 from nncf.torch.dynamic_graph.io_handling import FillerInputElement
@@ -41,12 +39,9 @@ from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
-from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
-from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.layer_utils import _NNCFModuleMixin
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.model_creation import wrap_model
-from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_module_replacement import replace_modules_by_nncf_modules
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.nncf_network import PTInsertionPoint
@@ -54,12 +49,11 @@ from nncf.torch.nncf_network import PTInsertionType
 from nncf.torch.quantization.external_quantizer import EXTERNAL_QUANTIZERS_STORAGE_NAME
 from tests.torch.composite.test_sparsity_quantization import get_basic_sparsity_plus_quantization_config
 from tests.torch.helpers import BasicConvTestModel
-from tests.torch.helpers import HookChecker
 from tests.torch.helpers import TwoConvTestModel
-from tests.torch.helpers import are_commands_equal
 from tests.torch.helpers import check_correct_nncf_modules_replacement
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
+from tests.torch.nncf_network.helpers import SimplestModel
 from tests.torch.test_models.synthetic import ManyNonEvalModules
 
 
@@ -618,17 +612,6 @@ def test_can_work_with_sequential_models():
     _ = model.nncf.get_clean_shallow_copy()
 
 
-class SimplestModel(torch.nn.Module):
-    INPUT_SIZE = [1, 1, 32, 32]
-
-    def __init__(self):
-        super().__init__()
-        self.conv = torch.nn.Conv2d(1, 1, 1)
-
-    def forward(self, x):
-        return self.conv(x)
-
-
 @pytest.fixture(name="simple_net")
 def simple_net_():
     model = NNCFNetwork(SimplestModel(), FillerInputInfo([FillerInputElement(SimplestModel.INPUT_SIZE)]))
@@ -933,179 +916,3 @@ def test_insert_hook_after_parameter():
     assert hook.forward_calls_counter == 1
     assert torch.sum(result.nonzero()) > 0
     assert torch.sum(result_with_hook.nonzero()) == 0
-
-
-@pytest.mark.parametrize(
-    "target_type, target_node_name, input_port_id",
-    [
-        (TargetType.OPERATOR_PRE_HOOK, "/nncf_model_output_0", 0),
-        (TargetType.OPERATOR_POST_HOOK, "/nncf_model_input_0", 0),
-        (TargetType.PRE_LAYER_OPERATION, "SimplestModel/NNCFConv2d[conv]/conv2d_0", 0),
-        (TargetType.POST_LAYER_OPERATION, "SimplestModel/NNCFConv2d[conv]/conv2d_0", 0),
-    ],
-)
-class TestHookHandles:
-    class TestHook(torch.nn.Module):
-        def __init__(self):
-            super().__init__()
-            self._p = torch.nn.Parameter(torch.zeros((1,)))
-
-        def forward(self, x):
-            return x + self._p
-
-    @staticmethod
-    def _prepare_hook_handles_test(
-        target_type: TargetType, target_node_name: str, input_port_id: int
-    ) -> Tuple[NNCFNetwork, PTInsertionPoint, Callable[[List[HookHandle]], None]]:
-        model = SimplestModel()
-        example_input = torch.ones(SimplestModel.INPUT_SIZE)
-        input_info = ExampleInputInfo.from_example_input(example_input)
-        nncf_model = NNCFNetwork(model, input_info)
-
-        node_name_vs_address = nncf_model.nncf.get_node_to_op_address_mapping()
-        ip = PTInsertionPoint(target_type, node_name_vs_address[target_node_name], input_port_id=input_port_id)
-
-        checker = HookChecker(nncf_model, "conv")
-
-        def _check(ref_hooks_):
-            checker.clear()
-            checker.add_ref(ref_hooks_, target_type, target_node_name, input_port_id)
-            checker.check_with_reference()
-
-        return nncf_model, ip, _check
-
-    def test_temporary_insert_at_point_by_hook_group_name(
-        self, target_type: TargetType, target_node_name: str, input_port_id: int
-    ):
-        nncf_model, ip, _check = self._prepare_hook_handles_test(target_type, target_node_name, input_port_id)
-        permanent_hook = self.TestHook()
-        TEMPORARY_HOOK_GROUP_NAME = "tmp"
-        # Make temporary hook a ref to the permanent hook
-        # to check tmp hooks are not removed by their id()
-        temporary_hook = permanent_hook
-        nncf_model.nncf.insert_at_point(ip, permanent_hook)
-        ref_hooks = [permanent_hook]
-        _check(ref_hooks)
-
-        for _ in range(2):
-            temporary_hook = self.TestHook()
-            nncf_model.nncf.insert_at_point(ip, temporary_hook, TEMPORARY_HOOK_GROUP_NAME)
-            ref_hooks.append(temporary_hook)
-            _check(ref_hooks)
-
-            nncf_model.nncf.insert_at_point(ip, permanent_hook)
-            ref_hooks.append(permanent_hook)
-            _check(ref_hooks)
-
-            nncf_model.nncf.remove_hooks_group(TEMPORARY_HOOK_GROUP_NAME)
-            del ref_hooks[-2]
-            _check(ref_hooks)
-            assert not nncf_model.nncf._groups_vs_hooks_handlers[TEMPORARY_HOOK_GROUP_NAME]
-
-    def test_insert_at_point_hook_handles(self, target_type: TargetType, target_node_name: str, input_port_id: int):
-        nncf_model, ip, _check = self._prepare_hook_handles_test(target_type, target_node_name, input_port_id)
-        permanent_hook = self.TestHook()
-        # Make temporary hook a ref to the permanent hook
-        # to check tmp hooks are not removed by their id()
-        temporary_hook = permanent_hook
-        tmp_hh = []
-        nncf_model.nncf.insert_at_point(ip, permanent_hook)
-
-        ref_hooks = [permanent_hook]
-        _check(ref_hooks)
-
-        for _ in range(2):
-            temporary_hook = self.TestHook()
-            tmp_hh.append(nncf_model.nncf.insert_at_point(ip, temporary_hook))
-            ref_hooks.append(temporary_hook)
-            _check(ref_hooks)
-
-            nncf_model.nncf.insert_at_point(ip, permanent_hook)
-            ref_hooks.append(permanent_hook)
-            _check(ref_hooks)
-
-            for hh in tmp_hh:
-                hh.remove()
-
-            del ref_hooks[-2]
-            _check(ref_hooks)
-
-
-@pytest.mark.parametrize("target_type", TwoConvTestModel.AVAILABLE_TARGET_TYPES)
-@pytest.mark.parametrize("command_builder", TwoConvTestModel.get_command_builders())
-def test_get_applied_modification_commands(command_builder, target_type):
-    command = command_builder(target_type, TransformationPriority.DEFAULT_PRIORITY)
-    if isinstance(command, PTSharedFnInsertionCommand) and target_type in [
-        TargetType.PRE_LAYER_OPERATION,
-        TargetType.POST_LAYER_OPERATION,
-    ]:
-        pytest.skip(f"PTSharedFnInsertionCommand is not supporting target type {target_type}")
-
-    model = TwoConvTestModel()
-    nncf_model = NNCFNetwork(deepcopy(model), input_info=FillerInputInfo([FillerInputElement([1, 1, 4, 4])]))
-    model_tranformer = PTModelTransformer(nncf_model)
-
-    layout = PTTransformationLayout()
-    layout.register(command)
-    model_tranformer.transform(layout)
-
-    applied_commands = nncf_model.nncf.get_applied_transformation_layout()
-
-    assert len(applied_commands.transformations) == 1
-    applied_command = applied_commands.transformations[0]
-    are_commands_equal(command, applied_command, check_priority=False, check_hooks_group_name=False)
-
-
-@pytest.mark.parametrize("target_type", TwoConvTestModel.AVAILABLE_TARGET_TYPES)
-@pytest.mark.parametrize(
-    "command_builder,command_type", tuple(zip(TwoConvTestModel.get_command_builders(), TwoConvTestModel.COMMAND_TYPES))
-)
-def test_priority_of_get_applied_modification_commands(command_builder, target_type, command_type):
-    layout = PTTransformationLayout()
-    commands = dict()
-    for priority in (0, 3, 2, 4, 1):
-        if command_type is PTSharedFnInsertionCommand:
-            command = command_builder(target_type, priority, op_unique_name=f"UNIQUE_NAME_{priority}")
-        else:
-            command = command_builder(target_type, priority)
-        layout.register(command)
-        commands[priority] = command
-    else:
-        if isinstance(command, PTSharedFnInsertionCommand) and target_type in [
-            TargetType.PRE_LAYER_OPERATION,
-            TargetType.POST_LAYER_OPERATION,
-        ]:
-            pytest.skip(f"PTSharedFnInsertionCommand is not supporting target type {target_type}")
-
-    model = TwoConvTestModel()
-    nncf_model = NNCFNetwork(deepcopy(model), input_info=FillerInputInfo([FillerInputElement([1, 1, 4, 4])]))
-    model_tranformer = PTModelTransformer(nncf_model)
-
-    model_tranformer.transform(layout)
-
-    applied_commands = nncf_model.nncf.get_applied_transformation_layout()
-    assert len(applied_commands.transformations) == len(commands)
-    for applied_command in applied_commands.transformations:
-        command = commands[applied_command.priority]
-        are_commands_equal(command, applied_command, check_priority=False, check_hooks_group_name=False)
-
-
-def test_all_possible_combinations_of_commands_for_get_applied_commands():
-    dummy_state = "DummyState"
-    commands = TwoConvTestModel.get_all_available_commands(dummy_state, skip_model_transformer_unsupported=True)
-
-    model = TwoConvTestModel()
-    nncf_model = NNCFNetwork(deepcopy(model), input_info=FillerInputInfo([FillerInputElement([1, 1, 4, 4])]))
-    model_tranformer = PTModelTransformer(nncf_model)
-
-    model_tranformer.transform(commands)
-
-    applied_commands = nncf_model.nncf.get_applied_transformation_layout()
-    assert len(applied_commands.transformations) == len(commands.transformations)
-    for command in commands.transformations:
-        eq_commands = (
-            are_commands_equal(command, applied_command, check_priority=False, check_hooks_group_name=False)
-            for applied_command in applied_commands.transformations
-        )
-        if sum(map(int, eq_commands)) != 1:
-            raise RuntimeError(f"Command {command} has no pair in recovered commands")

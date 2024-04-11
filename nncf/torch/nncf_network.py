@@ -794,19 +794,19 @@ class NNCFNetworkInterface(torch.nn.Module):
         :return: Transformation layout with all commands applied to the NNCFNetwork.
         """
 
-        def _create_pt_insert_command(module, target_type, target_node_name, priority, input_port_id):
-            target_point = PTTargetPoint(
-                target_type=target_type, target_node_name=target_node_name, input_port_id=input_port_id
-            )
-            return PTInsertionCommand(point=target_point, fn=module, priority=priority)
-
         def _check_external_call_hook_is_valid(hook: ExternalOpCallHook, info: str):
+            """
+            Check given external op call hook reference is correct.
+
+            :param hook: External op call hook to check correctness.
+            :param info: Info to log in case op call hook references are broken.
+            """
             assert hasattr(
                 self, hook._storage_name
             ), f"Storage name {hook._storage_name} is not registered. Info: {info}"
             assert hook._storage_key in getattr(
                 self, hook._storage_name
-            ), f"Storage key {hook._storage_key} is not registered. Info: {info}"
+            ), f"Key {hook._storage_key} is not registered in {hook._storage_name}. Info: {info}"
 
         context_hooks = defaultdict(lambda: defaultdict(list))
         transformation_layout = PTTransformationLayout()
@@ -828,14 +828,16 @@ class NNCFNetworkInterface(torch.nn.Module):
                         command_target_type = TargetType.OPERATION_WITH_WEIGHTS
                         module = module.op
                     if not isinstance(module, ExternalOpCallHook):
-                        command = _create_pt_insert_command(
+                        command = create_pt_insertion_command(
                             module, command_target_type, nncf_node.node_name, priority, None
                         )
                         transformation_layout.register(command)
                         continue
 
-                    info = f"TargetType: {command_target_type}, nncf node name: {nncf_node.node_name},"
-                    f" priority: {priority}, fn: {module}"
+                    info = (
+                        f"TargetType: {command_target_type}, nncf node name: {nncf_node.node_name},"
+                        f" priority: {priority}, fn: {module}"
+                    )
                     _check_external_call_hook_is_valid(module, info)
 
                     context_hooks[module._storage_name][module._storage_key].append(
@@ -859,7 +861,9 @@ class NNCFNetworkInterface(torch.nn.Module):
                     target_node_name = target_node_names[0]
 
                     if not isinstance(fn, ExternalOpCallHook):
-                        command = _create_pt_insert_command(fn, target_type, target_node_name, priority, input_port_id)
+                        command = create_pt_insertion_command(
+                            fn, target_type, target_node_name, priority, input_port_id
+                        )
                         transformation_layout.register(command)
                         continue
 
@@ -1262,3 +1266,26 @@ def compression_module_type_to_attr_name(compression_module_type: ExtraCompressi
     if compression_module_type == ExtraCompressionModuleType.EXTERNAL_OP:
         return EXTERNAL_OP_STORAGE_NAME
     raise nncf.ValidationError("Unknown extra module type")
+
+
+def create_pt_insertion_command(
+    module: torch.nn.Module,
+    target_type: TargetType,
+    target_node_name: str,
+    priority: int,
+    input_port_id: Optional[int],
+) -> PTInsertionCommand:
+    """
+    Creates a PTInsertionCommand.
+
+    :param module: Torch module to insert.
+    :param target_type: Insertion command target type.
+    :param target_name: Insertion command target name.
+    :param priority: Insertion command priority.
+    :param input_port_id: Insertion command input port id.
+    :return: A PTInsertionCommand
+    """
+    target_point = PTTargetPoint(
+        target_type=target_type, target_node_name=target_node_name, input_port_id=input_port_id
+    )
+    return PTInsertionCommand(point=target_point, fn=module, priority=priority)
