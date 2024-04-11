@@ -15,6 +15,7 @@ import nncf
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.scopes import IgnoredScope
+from nncf.scopes import Subgraph
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
@@ -59,6 +60,10 @@ IGNORED_SCOPES_TEST_DATA = [
         IgnoredScope(["/Conv_1_0", "/Linear_1_0"], [".*Marked.*"], [LINEAR_TYPE]),
         ["/Conv_1_0", "/Linear_1_0", "/Linear_2_0", "/Linear_3_0", "/Marked_Conv_3_0"],
     ),
+    (
+        IgnoredScope(subgraphs=[Subgraph(inputs=["/Linear_1_0"], outputs=["/Linear_3_0"])]),
+        ["/Conv_2_0", "/Linear_1_0", "/Linear_2_0", "/Linear_3_0", "/Marked_Conv_3_0"],
+    ),
 ]
 
 
@@ -73,6 +78,8 @@ WRONG_IGNORED_SCOPES_TEST_DATA = [
     IgnoredScope(["/Conv_0_0", "/Conv_1_0", "/Linear_1_0"]),
     IgnoredScope(patterns=[".*Maarked.*"]),
     IgnoredScope(types=["wrong_type"]),
+    IgnoredScope(subgraphs=[Subgraph(inputs=["/Linear_1_0"], outputs=["/Linear_1_0"])]),
+    IgnoredScope(subgraphs=[Subgraph(inputs=["/Linear_3_0"], outputs=["/Linear_1_0"])]),
 ]
 
 

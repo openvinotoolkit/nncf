@@ -2,7 +2,7 @@
 
 Here we present the results achieved using our sample scripts, example patches to third-party repositories and NNCF configuration files.
 
-The applied quantization compression algorithms are divided into two broad categories: Quantization-Aware Training ([QAT](../README.md#training-time-compression)) and Post-Training Quantization ([PTQ](../README.md#post-training-quantization)). Here we mainly report the QAT results and the PTQ results may be found on an OpenVino Performance Benchmarks [page](https://docs.openvino.ai/latest/openvino_docs_performance_benchmarks.html).
+The applied quantization compression algorithms are divided into two broad categories: Quantization-Aware Training ([QAT](../README.md#training-time-compression)) and Post-Training Quantization ([PTQ](../README.md#post-training-quantization)). Here we mainly report the QAT results and the PTQ results may be found on an OpenVino Performance Benchmarks [page](https://docs.openvino.ai/2024/about-openvino/performance-benchmarks.html).
 
 - [PyTorch](#pytorch)
   - [Classification](#pytorch-classification)
@@ -126,30 +126,6 @@ The applied quantization compression algorithms are divided into two broad categ
       <td>66.98 (0.68)</td>
       <td><a href="../examples/torch/classification/configs/quantization/mobilenet_v3_small_imagenet_int8.json">Config</a></td>
       <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/mobilenet_v3_small_imagenet_int8.pth">Download</a></td>
-    </tr>
-    <tr>
-      <td align="left">ResNet-18</td>
-      <td align="left">-</td>
-      <td>ImageNet</td>
-      <td>69.76</td>
-      <td><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet.json">Config</a></td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td align="left">ResNet-18</td>
-      <td align="left">• Binarization: XNOR (weights), scale/threshold (activations)</td>
-      <td>ImageNet</td>
-      <td>61.67 (8.09)</td>
-      <td><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet_binarization_xnor.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_binarization_xnor.pth">Download</a></td>
-    </tr>
-    <tr>
-      <td align="left">ResNet-18</td>
-      <td align="left">• Binarization: DoReFa (weights), scale/threshold (activations)</td>
-      <td>ImageNet</td>
-      <td>61.63 (8.13)</td>
-      <td><a href="../examples/torch/classification/configs/binarization/resnet18_imagenet_binarization_dorefa.json">Config</a></td>
-      <td><a href="https://storage.openvinotoolkit.org/repositories/nncf/models/develop/torch/resnet18_imagenet_binarization_dorefa.pth">Download</a></td>
     </tr>
     <tr>
       <td align="left">ResNet-18</td>

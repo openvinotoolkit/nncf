@@ -528,7 +528,7 @@ class TemplateTestChannelAlignment:
         tensor_collectors = stat_points[0].algorithm_to_tensor_collectors[algorithm._algorithm_key]
         assert len(tensor_collectors) == 1
         assert tensor_collectors[0] == ref_stat_collector
-        MockBackend.get_statistic_collector.assert_called_once_with((0, 2, 3), 1e-4, ref_subset_size, ref_inplace)
+        MockBackend.get_statistic_collector.assert_called_once_with((2, 3), 1e-4, ref_subset_size, ref_inplace)
 
         target_point = stat_points[0].target_point
         assert target_point.target_node_name == target_node_name
@@ -555,4 +555,4 @@ class TemplateTestChannelAlignment:
             assert isinstance(aggr, MedianAggregator)
             assert aggr.num_samples == num_samples_ref
             assert aggr._keepdims
-            assert aggr._aggregation_axes == (0,)
+            assert aggr._aggregation_axes == (0, 1)

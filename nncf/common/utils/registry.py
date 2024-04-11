@@ -25,7 +25,7 @@ class Registry:
     def values(self):
         return self._registry_dict.values()
 
-    def _register(self, obj, name):
+    def _register(self, obj, name: str):
         if name in self._registry_dict:
             raise KeyError("{} is already registered in {}".format(name, self._name))
         self._registry_dict[name] = obj

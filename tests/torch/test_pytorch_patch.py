@@ -86,7 +86,7 @@ def test_tensor_printing_does_not_inflate_graph():
 def test_jit_if_tracing_script_patching(tmp_path):
     @torch.jit.script_if_tracing
     def test_fn(x: torch.Tensor):
-        return torch.empty(x.shape)
+        return torch.ones(x.shape)
 
     class TestModel(torch.nn.Module):
         def forward(self, x: torch.Tensor):

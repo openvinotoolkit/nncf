@@ -24,7 +24,7 @@ Please run the pre-commit testing scope locally before submitting your PR and en
 New feature pull requests should include all the necessary testing code.
 Testing is done using the `pytest` framework.
 The test files should be located inside the [tests](./tests) directory and start with `test_` so that the `pytest` is able to discover them.
-Any additional data that is required for tests (configuration files, mock datasets, etc.) must be stored within the [tests/data](./tests/data) folder.
+Any additional data that is required for tests (configuration files, mock datasets, etc.) must be stored within the `tests/<framework>/data` folder.
 The test files themselves may be grouped in arbitrary directories according to their testing purpose and common sense.
 
 Any additional tests in the [tests](./tests) directory will be automatically added into the pre-commit CI scope.

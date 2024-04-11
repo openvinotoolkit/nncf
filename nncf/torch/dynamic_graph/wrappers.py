@@ -15,16 +15,14 @@ from typing import Callable, List, Tuple
 import torch
 from torch.nn import DataParallel
 
-import nncf
 from nncf.common.graph.definitions import MODEL_CONST_OP_NAME
 from nncf.common.graph.layer_attributes import BaseLayerAttributes
+from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.logging import nncf_logger
 from nncf.common.utils.debug import is_debug
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.context import get_current_context
-from nncf.torch.dynamic_graph.layer_attributes_handlers import OP_NAMES_REQUIRING_ATTRS_FROM_ARGS_KWARGS
 from nncf.torch.dynamic_graph.layer_attributes_handlers import get_layer_attributes_from_args_and_kwargs
-from nncf.torch.dynamic_graph.layer_attributes_handlers import get_layer_attributes_from_module
 from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.structs import NamespaceTarget
@@ -202,21 +200,22 @@ def _execute_op(
 def _collect_module_attrs_and_ignored_algorithms(
     ctx: TracingContext, op_name: str, args, kwargs
 ) -> Tuple[BaseLayerAttributes, List[str]]:
-    layer_attrs = None
     ignored_algos = []
-    from nncf.torch.graph.operator_metatypes import OP_NAMES_WITH_WEIGHTS
+    layer_attrs = get_layer_attributes_from_args_and_kwargs(op_name, args, kwargs)
 
-    if op_name in OP_NAMES_WITH_WEIGHTS:
-        curr_module = ctx.get_current_module()
-        if curr_module is None:
-            raise nncf.ValidationError(
-                f"Operation {op_name} requires module attributes, but it was executed outside any module"
-            )
-        layer_attrs = get_layer_attributes_from_module(curr_module, op_name)
+    curr_module = ctx.get_current_module()
+    if curr_module is not None:
         if isinstance(curr_module, _NNCFModuleMixin):
             ignored_algos = deepcopy(curr_module.ignored_algorithms)
-    elif op_name in OP_NAMES_REQUIRING_ATTRS_FROM_ARGS_KWARGS:
-        layer_attrs = get_layer_attributes_from_args_and_kwargs(op_name, args, kwargs)
+
+        if (
+            isinstance(layer_attrs, WeightedLayerAttributes)
+            and hasattr(curr_module, "weight_g")
+            and hasattr(curr_module, "weight_v")
+        ):
+            # torch.nn.utils.weight_norm replaces weight with weight_g and weight_v
+            layer_attrs.weight_requires_grad = curr_module.weight_g.requires_grad
+
     return layer_attrs, ignored_algos
 
 

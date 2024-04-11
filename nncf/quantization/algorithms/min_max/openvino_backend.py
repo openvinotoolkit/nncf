@@ -19,16 +19,13 @@ from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfig
-from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.structs import QuantizerConfig
-from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
 from nncf.openvino.graph.model_utils import get_start_nodes_for_activation_path_tracing
-from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.transformations.commands import OVConvertInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
@@ -141,47 +138,28 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return OVMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     @staticmethod
-    def _get_reduction_axes(
-        nncf_graph: NNCFGraph, target_point: OVTargetPoint, collector_params: RangeInitCollectorParams
-    ) -> Tuple[ReductionAxes, bool]:
-        if not collector_params.is_per_channel:
-            return None
+    def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: OVTargetPoint) -> Tuple[int, ...]:
+        if target_point.is_weight_target_point():
+            return node.layer_attributes.constant_attributes[target_point.port_id]["shape"]
+        if target_point.type == TargetType.PRE_LAYER_OPERATION:
+            return nncf_graph.get_input_edges(node)[target_point.port_id].tensor_shape
+        elif target_point.type == TargetType.POST_LAYER_OPERATION:
+            return nncf_graph.get_output_edges(node)[target_point.port_id].tensor_shape
+        raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
 
-        node = nncf_graph.get_node_by_name(target_point.target_node_name)
-        if not target_point.is_weight_target_point():
-            if target_point.type == TargetType.PRE_LAYER_OPERATION:
-                shape = nncf_graph.get_input_edges(node)[target_point.port_id].tensor_shape
-            elif target_point.type == TargetType.POST_LAYER_OPERATION:
-                shape = nncf_graph.get_output_edges(node)[target_point.port_id].tensor_shape
-            else:
-                raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
-
-            # TODO (l-bat): Disable quantizer propagation through layout changing operations
-            channel_axis = 1  # OpenVINO activations have channel first layout: [N, C, Z, Y, X]
-            axes = get_channel_agnostic_reduction_axes([channel_axis], shape)
-            return axes
-
-        assert isinstance(node.layer_attributes, OVLayerAttributes)
-        const_shape = node.layer_attributes.constant_attributes[target_point.port_id]["shape"]
-
-        if collector_params.is_per_channel:
-            channel_axes = get_weight_channel_axes(node)
-            axes = get_channel_agnostic_reduction_axes(channel_axes, const_shape)
-        else:
-            axes = tuple(range(len(const_shape)))
-        return axes
+    @staticmethod
+    def get_weight_quantization_axes(node: NNCFNode, target_point: OVTargetPoint) -> Tuple[int]:
+        return tuple(get_weight_channel_axes(node))
 
     @staticmethod
     def get_statistic_collector(
         range_estimator_params: RangeEstimatorParameters,
-        nncf_graph: NNCFGraph,
-        target_point: OVTargetPoint,
-        collector_params: RangeInitCollectorParams,
+        use_abs_max: bool,
+        reduction_axes: Optional[Tuple[int, ...]],
+        aggregation_axes: Optional[Tuple[int, ...]],
         inplace: bool,
-        num_samples: int = None,
+        num_samples: Optional[int] = None,
     ) -> TensorCollector:
-        reduction_axes = OVMinMaxAlgoBackend._get_reduction_axes(nncf_graph, target_point, collector_params)
-
         collector = TensorCollector(OVMinMaxTensorStatistic)
         for params, container_key in zip(
             [range_estimator_params.min, range_estimator_params.max],
@@ -191,12 +169,10 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 raise nncf.InternalError(
                     f"Statistic type: {params.statistics_type} is not supported for OpenVino PTQ backend yet."
                 )
-
             if params.aggregator_type not in AGGREGATORS_MAP:
                 raise nncf.InternalError(
                     f"Aggregator type: {params.aggregator_type} is not supported for OpenVino PTQ backend yet."
                 )
-
             kwargs = {"reduction_axes": reduction_axes, "inplace": inplace}
             if params.statistics_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
                 if container_key == OVMinMaxTensorStatistic.MIN_STAT:
@@ -206,12 +182,15 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
                 kwargs.update({"quantile": [quantile]})
             # TODO(dlyakhov): merge two quantile aggregators in one
             statistic_type = params.statistics_type
-            if collector_params.use_abs_max and statistic_type == StatisticsType.MAX:
+            if use_abs_max and statistic_type == StatisticsType.MAX:
                 statistic_type = StatisticsType.ABS_MAX
             reducer = OV_REDUCERS_MAP[statistic_type](**kwargs)
 
-            kwargs = {"num_samples": num_samples, "tensor_processor": OVNNCFCollectorTensorProcessor}
-            aggregator = AGGREGATORS_MAP[params.aggregator_type](**kwargs)
+            aggregator = AGGREGATORS_MAP[params.aggregator_type](
+                num_samples=num_samples,
+                aggregation_axes=aggregation_axes,
+                tensor_processor=OVNNCFCollectorTensorProcessor,
+            )
 
             collector.register_statistic_branch(container_key, reducer, aggregator)
         return collector

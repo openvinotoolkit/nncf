@@ -9,12 +9,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple, Union
 
+from nncf.common.graph.utils import get_reduction_axes
 from nncf.common.initialization.dataloader import NNCFDataLoader
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.config.schemata.defaults import NUM_INIT_SAMPLES
+from nncf.experimental.common.tensor_statistics.collectors import AggregationAxes
 
 
 class RangeInitConfig:
@@ -204,3 +207,51 @@ class RangeInitCollectorParams:
     @property
     def use_means_of_maxs(self) -> bool:
         return not self._is_weights and not self._is_per_channel
+
+    def _get_reduction_axes(
+        self,
+        shape_to_reduce: Union[Tuple[int, ...], List[int]],
+        quantization_axes: Union[Tuple[int, ...], List[int]],
+        aggregation_axes: Union[Tuple[int, ...], List[int]],
+    ):
+        """
+        Returns axes for a reducer regarding aggregation axes. As aggregator takes axes counting from stacked tensors,
+        from these axes only tensor related axes should be used for reducer.
+
+        :param shape_to_reduce: Shape of a reduced tensor.
+        :param quantization_axes: Axes of quantization.
+        :param aggregation_axes: Axes of aggregator which is applied onto reduced tensor.
+        :return: Axes for reducer.
+        """
+        axes_to_keep = set(el - 1 for el in aggregation_axes if el != 0)
+        axes_to_keep.update(quantization_axes)
+        return get_reduction_axes(axes_to_keep, shape_to_reduce)
+
+    def _get_aggregation_axes(self, batchwise_statistics: bool) -> Tuple[int, ...]:
+        """
+        Returns axes for aggregator.
+
+        :param batchwise_statistics: Determines whether quantizer statistics should be calculated
+            for each item of the batch or for the entire batch.
+        :return Tuple[int]: Aggregation axes.
+        """
+        return (0, 1) if batchwise_statistics else (0,)
+
+    def get_reduction_aggregation_axes(
+        self,
+        shape_to_reduce: Union[Tuple[int, ...], List[int]],
+        quantization_axes: Union[Tuple[int, ...], List[int]],
+        batchwise_statistics: bool,
+    ) -> Tuple[ReductionAxes, AggregationAxes]:
+        """
+        Calculates the reduction axes, aggregation axes for the tensor.
+
+        :param shape_to_reduce: Shape of the tensor.
+        :param quantization_axes: Quantization axes if per-channel quantization.
+        :param batchwise_statistics: Determines whether quantizer statistics should be calculated
+            for each item of the batch or for the entire batch.
+        :return: Reduction axes and aggregation axes.
+        """
+        aggregation_axes = self._get_aggregation_axes(batchwise_statistics)
+        reduction_axes = self._get_reduction_axes(shape_to_reduce, quantization_axes, aggregation_axes)
+        return reduction_axes, aggregation_axes

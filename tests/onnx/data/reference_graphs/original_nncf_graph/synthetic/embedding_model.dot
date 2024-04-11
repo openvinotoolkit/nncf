@@ -8,6 +8,6 @@ strict digraph  {
 "0 Identity" -> "1 Embedding"  [label="[10, 20]", style=solid];
 "1 Embedding" -> "2 Gather"  [label="[1, 10, 20]", style=solid];
 "2 Gather" -> "3 MatMul"  [label="[10, 20]", style=solid];
-"3 MatMul" -> "5 nncf_model_output_0"  [label="[1, 10]", style=solid];
+"3 MatMul" -> "5 nncf_model_output_0"  [label="[10, 10]", style=solid];
 "4 nncf_model_input_0" -> "1 Embedding"  [label="[1, 10]", style=dashed];
 }
