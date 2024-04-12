@@ -124,6 +124,19 @@ class ModelWithUnifiedScales:
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls=nncf_graph_cls)
 
 
+class DummyMinMaxTensorStatistic(MinMaxTensorStatistic):
+    def tensor_eq(self):
+        return True
+
+
+class DummyMinMaxTensorCollector:
+    def __init__(self, min_val, max_val):
+        self._stat = DummyMinMaxTensorStatistic(min_values=min_val, max_values=max_val)
+
+    def get_statistics(self):
+        return self._stat
+
+
 class TemplateTestPTQParams:
     @abstractmethod
     def get_algo_backend(self):
@@ -353,9 +366,7 @@ class TemplateTestPTQParams:
         )
         stats = StatisticPointsContainer()
         for idx, tp in enumerate(unified_scales_group):
-            tc = TemplateTestPTQParams.DummyMinMaxTensorCollector(
-                self.get_backend_tensor(idx - 1), self.get_backend_tensor(idx + 2)
-            )
+            tc = DummyMinMaxTensorCollector(self.get_backend_tensor(idx - 1), self.get_backend_tensor(idx + 2))
             stats.add_statistic_point(StatisticPoint(tp, tc, algo._algorithm_key))
         algo.apply(model, model.nncf_graph, stats)
         mock_transformer.transform.assert_called_once()
@@ -394,9 +405,7 @@ class TemplateTestPTQParams:
         else:
             dummy_tps = ({}, ((target_point,),))
         stat_points.add_statistic_point(
-            StatisticPoint(
-                target_point, TemplateTestPTQParams.DummyMinMaxTensorCollector(None, None), algo._algorithm_key
-            )
+            StatisticPoint(target_point, DummyMinMaxTensorCollector(None, None), algo._algorithm_key)
         )
         mocker.patch("nncf.common.factory.ModelTransformerFactory.create", return_value=mocker.MagicMock())
         mocker.patch(
@@ -411,14 +420,3 @@ class TemplateTestPTQParams:
             algo.apply(None, None, stat_points)
 
         assert str(exc_info.value) == "Statistics were not collected for the node A"
-
-    class DummyMinMaxTensorStatistic(MinMaxTensorStatistic):
-        def tensor_eq(self):
-            return True
-
-    class DummyMinMaxTensorCollector:
-        def __init__(self, min_val, max_val):
-            self._stat = TemplateTestPTQParams.DummyMinMaxTensorStatistic(min_values=min_val, max_values=max_val)
-
-        def get_statistics(self):
-            return self._stat
