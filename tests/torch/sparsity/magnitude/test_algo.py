@@ -46,8 +46,6 @@ def test_can_create_magnitude_sparse_algo__with_defaults():
 
     _, sparse_model_conv = check_correct_nncf_modules_replacement(model, sparse_model)
 
-    i = 0
-
     nncf_stats = compression_ctrl.statistics()
     for layer_info in nncf_stats.magnitude_sparsity.thresholds:
         assert layer_info.threshold == approx(0.24, 0.1)

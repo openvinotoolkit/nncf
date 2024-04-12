@@ -225,7 +225,7 @@ def train(
             return acc_drop
 
         logger.info(">>>> [Epoch: {0:d}] Training".format(epoch))
-        epoch_loss, (_iou, miou) = train_obj.run_epoch(config.print_step)
+        epoch_loss, (_, miou) = train_obj.run_epoch(config.print_step)
 
         logger.info(">>>> [Epoch: {0:d}] Avg. loss: {1:.4f} | Mean IoU: {2:.4f}".format(epoch, epoch_loss, miou))
 
