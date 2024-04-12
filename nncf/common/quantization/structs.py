@@ -24,7 +24,7 @@ from nncf.parameters import TargetDevice
 
 
 @api()
-class QuantizationScheme:
+class QuantizationScheme(StrEnum):
     """
     Basic enumeration for quantization scheme specification.
 
