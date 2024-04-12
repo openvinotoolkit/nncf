@@ -8,7 +8,7 @@ pytest-dependency>=0.5.1
 virtualenv
 
 # Required for search_building_blocks tests
-transformers[torch]~=4.39.3
+transformers[torch]~=4.38.2
 accelerate==0.24.1
 
 # Required for movement_sparsity tests
