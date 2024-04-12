@@ -154,7 +154,7 @@ class MinMaxAlgoBackend(ABC):
         target_points: List[TargetPoint],
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
-    ) -> TransformationCommand:
+    ) -> List[TransformationCommand]:
         """
         Returns backend-specific unified scales quantizers insertion commands.
 
@@ -162,7 +162,8 @@ class MinMaxAlgoBackend(ABC):
         :param target_points: List of target locations for the quantizers insertion.
         :param quantizer_config: QuantizerConfig instance for the current layer.
         :param parameters: FakeQuantizeParameters to calculate activation quantization parameters.
-        :return: Backend-specific TransformationCommand for the quantizer insertion operation.
+        :return: List of backend-specific TransformationCommands
+            for the quantizers with unified scales insertion operations.
         """
 
     @staticmethod
