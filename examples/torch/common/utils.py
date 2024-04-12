@@ -166,7 +166,9 @@ def is_staged_quantization(config):
     if isinstance(compression_config, list):
         compression_config = compression_config[0]
     algo_type = compression_config.get("algorithm")
-    return bool(algo_type is not None and algo_type == "quantization" and compression_config.get("params", {}))
+    if algo_type is not None and algo_type == "quantization" and compression_config.get("params", {}):
+        return True
+    return False
 
 
 def is_pretrained_model_requested(config: SampleConfig) -> bool:

@@ -15,7 +15,7 @@ from torch import distributed as dist
 def is_dist_avail_and_initialized():
     if not dist.is_available():
         return False
-    return bool(dist.is_initialized())
+    return dist.is_initialized()
 
 
 def get_rank():

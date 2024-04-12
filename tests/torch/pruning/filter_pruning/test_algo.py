@@ -168,32 +168,32 @@ def test_valid_modules_replacement_and_pruning(prune_first, prune_batch_norms):
 BIG_PRUNING_MODEL_TEST_PARAMS = ("all_weights", "prune_by_flops", "pruning_init", "prune_first", "ref_masks")
 BIG_PRUNING_MODEL_TEST_PARAMS_VALUES = \
 [
-    (False, False, 0.5, True, {1: gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)]),
-                         2: gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)]),
-                         3: gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)])}),
-    (True, False, 0.5, True, {1: gen_ref_masks([(2, 14), (2, 30), (29, 35), (87, 41)]),
-                        2: gen_ref_masks([(2, 14), (2, 30), (29, 35), (87, 41)]),
-                        3: gen_ref_masks([(2, 14), (2, 30), (29, 35), (87, 41)])}),
-    (False, False, 0.5, False, {1: gen_ref_masks([(16, 16), (32, 32), (64, 64)]),
-                           2: gen_ref_masks([(16, 16), (32, 32), (64, 64)]),
-                           3: gen_ref_masks([(16, 16), (32, 32), (64, 64)])}),
+    (False, False, 0.5, True, {1 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)]),
+                         2 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)]),
+                         3 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)])}),
+    (True, False, 0.5, True, {1 : gen_ref_masks([(2, 14), (2, 30), (29, 35), (87, 41)]),
+                        2 : gen_ref_masks([(2, 14), (2, 30), (29, 35), (87, 41)]),
+                        3 : gen_ref_masks([(2, 14), (2, 30), (29, 35), (87, 41)])}),
+    (False, False, 0.5, False, { 1 : gen_ref_masks([(16, 16), (32, 32), (64, 64)]),
+                           2 : gen_ref_masks([(16, 16), (32, 32), (64, 64)]),
+                           3 : gen_ref_masks([(16, 16), (32, 32), (64, 64)])}),
 
-    (True, False, 0.5, False, {1: gen_ref_masks([(1, 31), (27, 37), (84, 44)]),
-                          2: gen_ref_masks([(1, 31), (27, 37), (84, 44)]),
+    (True, False, 0.5, False, { 1 : gen_ref_masks([(1, 31), (27, 37), (84, 44)]),
+                          2 : gen_ref_masks([(1, 31), (27, 37), (84, 44)]),
                           3: gen_ref_masks([(1, 31), (27, 37), (84, 44)])}),
     # Flops pruning cases
-    (False, True, 0.7, True, {1: gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)]),
-                         2: gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)]),
-                         3: gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)])}),
-    (False, True, 0.7, False, {1: gen_ref_masks([(16, 16), (32, 32), (64, 64)]),
-                         2: gen_ref_masks([(16, 16), (32, 32), (64, 64)]),
-                         3: gen_ref_masks([(16, 16), (32, 32), (64, 64)])}),
-    (True, True, 0.7, True, {1: gen_ref_masks([(2, 14), (4, 28), (31, 33), (93, 35)]),
+    (False, True, 0.7, True, { 1 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)]),
+                         2 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)]),
+                         3 : gen_ref_masks([(8, 8), (16, 16), (32, 32), (64, 64)])}),
+    (False, True, 0.7, False, {1 : gen_ref_masks([(16, 16), (32, 32), (64, 64)]),
+                         2 : gen_ref_masks([(16, 16), (32, 32), (64, 64)]),
+                         3 : gen_ref_masks([(16, 16), (32, 32), (64, 64)])}),
+    (True, True, 0.7, True, { 1: gen_ref_masks([(2, 14), (4, 28), (31, 33), (93, 35)]),
                         2: gen_ref_masks([(2, 14), (6, 26), (35, 29), (102, 26)]),
                         3: gen_ref_masks([(2, 14), (7, 25), (38, 26), (106, 22)])}),
-    (True, True, 0.7, False, {1: gen_ref_masks([(4, 28), (32, 32), (93, 35)]),
-                         2: gen_ref_masks([(6, 26), (36, 28), (102, 26)]),
-                         3: gen_ref_masks([(7, 25), (38, 26), (106, 22)])}),
+    (True, True, 0.7, False, { 1 : gen_ref_masks([(4, 28), (32, 32), (93, 35)]),
+                         2 : gen_ref_masks([(6, 26), (36, 28), (102, 26)]),
+                         3 : gen_ref_masks([(7, 25), (38, 26), (106, 22)])}),
 ]  # fmt: skip
 
 
@@ -489,7 +489,7 @@ BigPruningTestModelRef = {
             'BigPruningTestModel/NNCFConv2d[conv3]/conv2d_0': 1,
         }
     },
-    1: {
+    1:{
         "next_nodes":
             BigPruningTestModelNextNodesRef,
         "num_of_sparse_by_node": {
@@ -658,7 +658,7 @@ PruningTestModelConcatWithLinearRefs = {
     }
 }
 
-PruningTestBatchedLinearRef = {"next_nodes": {},
+PruningTestBatchedLinearRef = { "next_nodes": {},
     "num_of_sparse_by_node": {},
     "pruned_in_channels": {'PruningTestBatchedLinear/NNCFConv2d[first_conv]/conv2d_0': 1,
                            'PruningTestBatchedLinear/NNCFLinear[linear1]/linear_0': 8,

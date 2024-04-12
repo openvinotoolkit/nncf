@@ -104,7 +104,9 @@ class IdentityMaskForwardPruningOp(BasePruningOp):
 class ConvolutionPruningOp(BasePruningOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode) -> bool:
-        return not (is_grouped_conv(node) and not is_prunable_depthwise_conv(node))
+        if is_grouped_conv(node) and not is_prunable_depthwise_conv(node):
+            return False
+        return True
 
     @classmethod
     def mask_propagation(
@@ -124,7 +126,9 @@ class ConvolutionPruningOp(BasePruningOp):
 class TransposeConvolutionPruningOp(BasePruningOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode) -> bool:
-        return not (is_grouped_conv(node) and not is_prunable_depthwise_conv(node))
+        if is_grouped_conv(node) and not is_prunable_depthwise_conv(node):
+            return False
+        return True
 
     @classmethod
     def mask_propagation(
@@ -274,7 +278,9 @@ class SplitPruningOp(BasePruningOp):
 
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode):
-        return node.layer_attributes is not None
+        if node.layer_attributes is not None:
+            return True
+        return False
 
     @classmethod
     def generate_output_masks(
@@ -329,7 +335,9 @@ class PadPruningOp(IdentityMaskForwardPruningOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode) -> bool:
         mode, value = node.layer_attributes.mode, node.layer_attributes.value
-        return not (mode == "constant" and value != 0)
+        if mode == "constant" and value != 0:
+            return False
+        return True
 
 
 class ElementwisePruningOp(BasePruningOp):
@@ -386,7 +394,9 @@ class ReshapePruningOp(BasePruningOp):
 class FlattenPruningOp(BasePruningOp):
     @classmethod
     def accept_pruned_input(cls, node: NNCFNode) -> bool:
-        return node.layer_attributes is not None
+        if node.layer_attributes is not None:
+            return True
+        return False
 
     @classmethod
     def mask_propagation(cls, node: NNCFNode, graph: NNCFGraph, tensor_processor: Type[NNCFPruningBaseTensorProcessor]):
