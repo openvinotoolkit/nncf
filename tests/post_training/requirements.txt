@@ -2,7 +2,7 @@
 torch==2.2.1
 --extra-index-url https://download.pytorch.org/whl/cpu
 torchvision==0.17.1
-transformers==4.36.0
+transformers==4.38.0
 onnx==1.16.0
 onnxruntime==1.17.1
 pytest==8.0.2
