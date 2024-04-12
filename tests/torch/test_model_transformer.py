@@ -50,6 +50,7 @@ from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
 from nncf.torch.graph.operator_metatypes import PTOutputNoopMetatype
 from nncf.torch.graph.operator_metatypes import PTReshapeMetatype
 from nncf.torch.graph.transformations.command_creation import create_quantizer_insertion_command
+from nncf.torch.graph.transformations.command_creation import create_shared_quantizer_insertion_command
 from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.graph.transformations.commands import PTBiasCorrectionCommand
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
@@ -638,32 +639,26 @@ class Hook(torch.nn.Module):
         self.to_device = device
 
 
-@pytest.mark.parametrize(
-    "target_type, node_name, input_port_id, ref_name, compression_module_registered",
-    (
-        (
-            TargetType.OPERATOR_POST_HOOK,
-            "/nncf_model_input_0",
-            None,
-            "/nncf_model_input_0|OUTPUT",
-            True,
-        ),
-        (
-            TargetType.OPERATOR_PRE_HOOK,
-            "InsertionPointTestModel/linear_0",
-            0,
-            "InsertionPointTestModel/linear_0|INPUT0",
-            True,
-        ),
-        (TargetType.OPERATION_WITH_WEIGHTS, "InsertionPointTestModel/NNCFConv2d[conv1]/conv2d_0", None, None, False),
+SHARED_FN_TARGET_POINTS = (
+    PTTargetPoint(
+        TargetType.OPERATOR_POST_HOOK,
+        "/nncf_model_input_0",
+    ),
+    PTTargetPoint(
+        TargetType.OPERATOR_PRE_HOOK,
+        "InsertionPointTestModel/linear_0",
+        input_port_id=0,
+    ),
+    PTTargetPoint(
+        TargetType.OPERATION_WITH_WEIGHTS,
+        "InsertionPointTestModel/NNCFConv2d[conv1]/conv2d_0",
     ),
 )
-def test_quantizer_insertion_transformations(
-    target_type, node_name, input_port_id, ref_name, compression_module_registered
-):
-    hook = Hook()
 
-    target_point = PTTargetPoint(target_type, node_name, input_port_id=input_port_id)
+
+@pytest.mark.parametrize("target_point", SHARED_FN_TARGET_POINTS)
+def test_create_quantizer_insertion_command(target_point):
+    hook = Hook()
     command = create_quantizer_insertion_command(target_point, hook)
 
     assert command.fn is hook
@@ -679,21 +674,21 @@ def test_quantizer_insertion_transformations(
         assert command.compression_module_type is ExtraCompressionModuleType.EXTERNAL_QUANTIZER
 
 
-SHARED_FN_TARGET_POINTS = [
-    PTTargetPoint(
-        TargetType.OPERATOR_POST_HOOK,
-        "/nncf_model_input_0",
-    ),
-    PTTargetPoint(
-        TargetType.OPERATOR_PRE_HOOK,
-        "InsertionPointTestModel/linear_0",
-        input_port_id=0,
-    ),
-    PTTargetPoint(
-        TargetType.OPERATION_WITH_WEIGHTS,
-        "InsertionPointTestModel/NNCFConv2d[conv1]/conv2d_0",
-    ),
-]
+def test_create_shared_quantizer_insertion_command():
+    ref_storage_key = (
+        "/nncf_model_input_0|OUTPUT;"
+        "InsertionPointTestModel/NNCFConv2d[conv1]/conv2d_0|OUTPUT;"
+        "InsertionPointTestModel/linear_0|INPUT0"
+    )
+    hook = Hook()
+
+    command = create_shared_quantizer_insertion_command(list(SHARED_FN_TARGET_POINTS), hook)
+    assert command.fn is hook
+    assert isinstance(command, PTSharedFnInsertionCommand)
+    assert command.target_points == list(SHARED_FN_TARGET_POINTS)
+    assert command.fn is hook
+    assert command.op_name == ref_storage_key
+    assert command.compression_module_type is ExtraCompressionModuleType.EXTERNAL_QUANTIZER
 
 
 @pytest.mark.parametrize("compression_module_type", ExtraCompressionModuleType)
