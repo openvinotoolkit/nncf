@@ -94,15 +94,13 @@ class ModelToTestOverflowFix:
 
 
 class ModelWithUnifiedScales:
-    #   Input_1 -----------
-    #      |     \         \
-    #   Conv_1   Conv_2  Conv_3
-    #        \         / |
-    #          \      /  |
-    #              \ /   /
-    #              Cat_1
-    #                |
-    #           Output_1
+    #        Input_1
+    #       /   |   \
+    #  Conv_1 Conv_2 Conv_3
+    #       \   |   /
+    #         Cat_1
+    #           |
+    #        Output_1
 
     def __init__(self, metatypes: Dict[TestMetatype, OperatorMetatype], nncf_graph_cls=NNCFGraph):
         nodes = [
