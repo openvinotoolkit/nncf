@@ -177,6 +177,14 @@ class BasicConvTestModel(nn.Module):
 
 class TwoConvTestModel(nn.Module):
     INPUT_SHAPE = [1, 1, 4, 4]
+    NNCF_CONV_NODES_NAMES = [
+        "TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0",
+        "TwoConvTestModel/Sequential[features]/Sequential[1]/NNCFConv2d[0]/conv2d_0",
+    ]
+    CONV_NODES_NAMES = [
+        "TwoConvTestModel/Sequential[features]/Sequential[0]/Conv2d[0]/conv2d_0",
+        "TwoConvTestModel/Sequential[features]/Sequential[1]/Conv2d[0]/conv2d_0",
+    ]
 
     def __init__(self):
         super().__init__()
@@ -203,6 +211,30 @@ class TwoConvTestModel(nn.Module):
     @property
     def nz_bias_num(self):
         return 2
+
+
+class TwoSharedConvTestModel(nn.Module):
+    INPUT_SHAPE = [1, 1, 4, 4]
+    NNCF_CONV_NODES_NAMES = [
+        "TwoSharedConvTestModel/NNCFConv2d[conv1]/conv2d_0",
+        "TwoSharedConvTestModel/NNCFConv2d[conv2]/conv2d_0",
+    ]
+    CONV_NODES_NAMES = [
+        "TwoSharedConvTestModel/Conv2d[conv1]/conv2d_0",
+        "TwoSharedConvTestModel/Conv2d[conv2]/conv2d_0",
+    ]
+
+    def __init__(self):
+        super().__init__()
+        self.features = []
+        self.conv1 = create_conv(1, 1, 1, -1, -2)
+        self.conv2 = create_conv(1, 1, 1, 0, 0)
+
+    def forward(self, x):
+        for _ in range(2):
+            x = self.conv1(x)
+            x = self.conv2(x)
+        return x
 
 
 class LeNet(nn.Module):

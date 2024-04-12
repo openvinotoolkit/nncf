@@ -820,8 +820,11 @@ class NNCFNetworkInterface(torch.nn.Module):
                 (nncf_module.post_ops, TargetType.POST_LAYER_OPERATION),
             ):
                 for priority, module in enumerate(ops.values()):
-                    nodes_in_scope = nncf_graph.get_op_node_in_scope(module_scope)
-                    assert len(nodes_in_scope) == 1
+                    nodes_in_scope = nncf_graph.get_op_nodes_with_scope(module_scope)
+                    # Several NNCFNodes means that current NNCFModule was called
+                    # several times. Only one insertion command is required to
+                    # call hook as much times as the current NNCFModule, therefore
+                    # we use first correspondent NNCFNode.
                     nncf_node = nodes_in_scope[0]
                     command_target_type = target_type
                     if isinstance(module, UpdateWeight):
@@ -857,6 +860,7 @@ class NNCFNetworkInterface(torch.nn.Module):
                     input_port_id = None
                 for priority, fn in enumerate(hooks.values()):
                     target_node_names = nncf_node_names_map[op_address]
+                    # Operation address is unique for each module call
                     assert len(target_node_names) == 1
                     target_node_name = target_node_names[0]
 
