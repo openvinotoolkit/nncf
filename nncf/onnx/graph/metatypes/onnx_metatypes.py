@@ -755,7 +755,7 @@ def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
         return False
     conv_out_channels = weight_tensor_value.shape[0]
     conv_in_channels = weight_tensor_value.shape[1] * conv_group
-    return bool(
+    return (
         conv_out_channels % conv_in_channels == 0
         and conv_out_channels // conv_in_channels > 0
         and conv_group == conv_in_channels
