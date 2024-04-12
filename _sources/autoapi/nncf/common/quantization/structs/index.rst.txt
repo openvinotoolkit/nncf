@@ -17,6 +17,8 @@ Classes
 
 .. py:class:: QuantizationScheme
 
+   Bases: :py:obj:`nncf.parameters.StrEnum`
+
    Basic enumeration for quantization scheme specification.
 
    :param SYMMETRIC:

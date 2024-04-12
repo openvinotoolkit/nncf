@@ -28,7 +28,7 @@ Classes
 
 .. py:class:: FP8Type
 
-   Bases: :py:obj:`enum.Enum`
+   Bases: :py:obj:`nncf.parameters.StrEnum`
 
    Defines FP8 special types (https://arxiv.org/pdf/2209.05433.pdf).
 
