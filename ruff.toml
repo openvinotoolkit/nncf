@@ -5,10 +5,15 @@ exclude = ["nncf/tensorflow/__init__.py"]
 preview = true
 ignore-init-module-imports = true
 ignore = [
+    "E201", # whitespace-after-open-bracket
+    "E203", # whitespace-before-punctuation
+    "E231", # missing-whitespace
+    "E251", # unexpected-spaces-around-keyword-parameter-equals
     "E731",  # lambda-assignment
     "SIM108",  # if-else-block-instead-of-if-exp
     "SIM110",  # reimplemented-builtin
     "SIM117",  # multiple-with-statements
+    "SIM103", # needless-bool
 ]
 select = [
     "E",  # pycodestyle rules
