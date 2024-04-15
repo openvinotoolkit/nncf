@@ -41,7 +41,6 @@ from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
-from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.initialization import PTInitializingDataLoader
 from nncf.torch.initialization import register_default_init_args
 from nncf.torch.layers import NNCF_MODULES_MAP
@@ -287,21 +286,6 @@ class DummyOpWithState(torch.nn.Module):
         return cls(state)
 
 
-def target_points_are_equal(tp_left: PTTargetPoint, tp_right: PTTargetPoint) -> bool:
-    """
-    Returns True if given target points are equal and False elsewhere.
-
-    :param tp_left: The first target point.
-    :param tp_right: The second target point.
-    :return: True if given target points are equal and False elsewhere.
-    """
-    if tp_left != tp_right:
-        return False
-    if tp_left.target_type == TargetType.OPERATOR_PRE_HOOK:
-        return tp_left.input_port_id == tp_right.input_port_id
-    return True
-
-
 def commands_are_equal(
     command_left: Union[PTInsertionCommand, PTSharedFnInsertionCommand],
     command_right: Union[PTInsertionCommand, PTSharedFnInsertionCommand],
@@ -331,12 +315,10 @@ def commands_are_equal(
         return False
 
     if isinstance(command_right, PTInsertionCommand):
-        if not target_points_are_equal(command_left.target_point, command_right.target_point):
+        if command_left.target_point != command_right.target_point:
             return False
     elif isinstance(command_right, PTSharedFnInsertionCommand):
-        if not all(
-            target_points_are_equal(a, b) for a, b in zip(command_left.target_points, command_right.target_points)
-        ):
+        if not all(a == b for a, b in zip(command_left.target_points, command_right.target_points)):
             return False
         if (
             command_right.target_points != command_left.target_points

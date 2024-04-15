@@ -64,6 +64,14 @@ class InsertionCommandBuilder:
 
     TRACE_VS_NODE_NAMES = {True: "CONV_NODES_NAMES", False: "NNCF_CONV_NODES_NAMES"}
 
+    @staticmethod
+    def get_input_port_id(target_type: TargetType, trace_parameters: bool) -> Optional[int]:
+        if target_type is TargetType.OPERATOR_PRE_HOOK:
+            return 0
+        if trace_parameters and target_type in [TargetType.PRE_LAYER_OPERATION, TargetType.OPERATION_WITH_WEIGHTS]:
+            return 1
+        return None
+
     def create_pt_insertion_command(
         self,
         target_type: TargetType,
@@ -75,7 +83,9 @@ class InsertionCommandBuilder:
     ):
         attr_name = self.TRACE_VS_NODE_NAMES[trace_parameters]
         target_point = PTTargetPoint(
-            target_type=target_type, target_node_name=getattr(self.model_cls, attr_name)[0], input_port_id=0
+            target_type=target_type,
+            target_node_name=getattr(self.model_cls, attr_name)[0],
+            input_port_id=self.get_input_port_id(target_type, trace_parameters),
         )
         if fn is None:
             fn = DummyOpWithState("DUMMY_STATE")
@@ -94,7 +104,13 @@ class InsertionCommandBuilder:
         target_points = []
         attr_name = self.TRACE_VS_NODE_NAMES[trace_parameters]
         for node_name in getattr(self.model_cls, attr_name):
-            target_points.append(PTTargetPoint(target_type=target_type, target_node_name=node_name, input_port_id=0))
+            target_points.append(
+                PTTargetPoint(
+                    target_type=target_type,
+                    target_node_name=node_name,
+                    input_port_id=self.get_input_port_id(target_type, trace_parameters),
+                )
+            )
         if fn is None:
             fn = DummyOpWithState("DUMMY_STATE")
         return PTSharedFnInsertionCommand(
