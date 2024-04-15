@@ -72,6 +72,13 @@ class StatsFromOutput:
 
 
 @dataclass
+class NumCompressNodes:
+    num_fq_nodes: Optional[int] = None
+    num_int8: Optional[int] = None
+    num_int4: Optional[int] = None
+
+
+@dataclass
 class PTQTimeStats(StatsFromOutput):
     """
     Contains statistics that are parsed from the stdout of PTQ tests.
@@ -130,12 +137,12 @@ class RunInfo:
     metric_name: Optional[str] = None
     metric_value: Optional[float] = None
     metric_diff: Optional[float] = None
-    num_fq_nodes: Optional[float] = None
     compression_memory_usage: Optional[int] = None
     status: Optional[str] = None
     fps: Optional[float] = None
     time_total: Optional[float] = None
     time_compression: Optional[float] = None
+    num_compress_nodes: Optional[NumCompressNodes] = None
     stats_from_output = StatsFromOutput()
 
     @staticmethod
@@ -157,7 +164,9 @@ class RunInfo:
             "Metric name": self.metric_name,
             "Metric value": self.metric_value,
             "Metric diff": self.metric_diff,
-            "Num FQ": self.num_fq_nodes,
+            "Num FQ": self.num_compress_nodes.num_fq_nodes,
+            "Num int4": self.num_compress_nodes.num_int4,
+            "Num int8": self.num_compress_nodes.num_int8,
             "RAM MiB": self.format_memory_usage(self.compression_memory_usage),
             "Compr. time": self.format_time(self.time_compression),
             **self.stats_from_output.get_stats(),
@@ -210,7 +219,7 @@ class BaseTestPipeline(ABC):
         self.dummy_tensor = None
         self.input_size = None
 
-        self.run_info = RunInfo(model=reported_name, backend=self.backend)
+        self.run_info = RunInfo(model=reported_name, backend=self.backend, num_compress_nodes=NumCompressNodes())
 
     @abstractmethod
     def prepare_preprocessor(self) -> None:
@@ -383,7 +392,7 @@ class PTQTestPipeline(BaseTestPipeline):
             if node_type == "FakeQuantize":
                 num_fq += 1
 
-        self.run_info.num_fq_nodes = num_fq
+        self.run_info.num_compress_nodes.num_fq_nodes = num_fq
 
     def run_bench(self) -> None:
         """

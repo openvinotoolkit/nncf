@@ -161,7 +161,21 @@ class LMWeightCompression(BaseTestPipeline):
         self.model_hf._save_config(self.output_model_dir)
 
     def get_num_compressed(self) -> None:
-        pass
+        """
+        Get number of the i8, u8, i4, u4 ops in the compressed IR.
+        """
+        num_int8 = 0
+        num_int4 = 0
+
+        for node in self.model.get_ops():
+            for i in range(node.get_output_size()):
+                if node.get_output_element_type(i).get_type_name() in ["i8", "u8"]:
+                    num_int8 += 1
+                if node.get_output_element_type(i).get_type_name() in ["i4", "u4"]:
+                    num_int4 += 1
+
+        self.run_info.num_compress_nodes.num_int8 = num_int8
+        self.run_info.num_compress_nodes.num_int4 = num_int4
 
     def run_bench(self) -> None:
         pass
@@ -219,3 +233,19 @@ class LMWeightCompression(BaseTestPipeline):
         similarity = all_metrics["similarity"][0]
         self.run_info.metric_name = "Similarity"
         self.run_info.metric_value = round(similarity, 5)
+
+        num_int4_reference = self.reference_data.get("num_int4")
+        num_int8_reference = self.reference_data.get("num_int8")
+
+        num_int4_value = self.run_info.num_compress_nodes.num_int4
+        num_int8_value = self.run_info.num_compress_nodes.num_int8
+
+        if num_int4_reference != num_int4_value:
+            status_msg = f"Regression: The number of int4 ops is different \
+                than reference {num_int4_reference} != {num_int4_value}"
+            raise ValueError(status_msg)
+
+        if num_int8_reference != num_int8_value:
+            status_msg = f"Regression: The number of int8 ops is different \
+                than reference {num_int8_reference} != {num_int8_value}"
+            raise ValueError(status_msg)
