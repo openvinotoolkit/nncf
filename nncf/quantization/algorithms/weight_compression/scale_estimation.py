@@ -106,9 +106,9 @@ class ScaleEstimation(Algorithm):
     ) -> TModel:
         """
         Estimates better scale for the int4 nodes in the model.
-        Minimazes per group differnece between floating point MatMul and
-        MatMal with compressed weights.
-        Algorith computes weighted scale for the group of weights in MatMul which
+        Minimizes per-group difference between floating point MatMul and
+        MatMul with compressed weights.
+        The algorithm computes weighted scale for the group of weights in MatMul, which
         shared the same scale.
 
         :param model: Model for applying algorithm.
