@@ -22,8 +22,11 @@ from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.graph.transformations.commands import PTTransformationCommand
 from nncf.torch.layer_utils import COMPRESSION_MODULES
 from tests.torch.helpers import DummyOpWithState
+from tests.torch.helpers import TwoConvTestModel
+from tests.torch.helpers import TwoSharedConvTestModel
 
 
 class SimplestModel(torch.nn.Module):
@@ -53,6 +56,8 @@ class InsertionCommandBuilder:
     NNCF_CONV_NODES_NAMES and CONV_NODES_NAMES with names of
     target model convolutions and names of nncf-wrapped target model convolutions
     """
+
+    AVAILABLE_MODELS = (TwoConvTestModel, TwoSharedConvTestModel)
 
     def __init__(self, model_cls: Type[torch.nn.Module]):
         self.model_cls = model_cls
@@ -103,21 +108,28 @@ class InsertionCommandBuilder:
 
     def get_command_builders(self):
         """
-        Get all command builders available in a tuple.
+        Get all command builders available and their types in a tuple of pairs.
         """
         return (
-            self.create_pt_insertion_command,
-            functools.partial(
-                self.create_pt_shared_fn_insertion_command,
-                compression_module_type=ExtraCompressionModuleType.EXTERNAL_OP,
+            (self.create_pt_insertion_command, PTInsertionCommand),
+            (
+                functools.partial(
+                    self.create_pt_shared_fn_insertion_command,
+                    compression_module_type=ExtraCompressionModuleType.EXTERNAL_OP,
+                ),
+                PTSharedFnInsertionCommand,
             ),
-            functools.partial(
-                self.create_pt_shared_fn_insertion_command,
-                compression_module_type=ExtraCompressionModuleType.EXTERNAL_QUANTIZER,
+            (
+                functools.partial(
+                    self.create_pt_shared_fn_insertion_command,
+                    compression_module_type=ExtraCompressionModuleType.EXTERNAL_QUANTIZER,
+                ),
+                PTSharedFnInsertionCommand,
             ),
         )
 
     COMMAND_CLASSES = [PTInsertionCommand, PTSharedFnInsertionCommand, PTSharedFnInsertionCommand]
+    # Check priority as an enum member and as an int
     PRIORITIES = (TransformationPriority.QUANTIZATION_PRIORITY, TransformationPriority.QUANTIZATION_PRIORITY.value + 1)
 
     def get_all_available_commands(
@@ -129,18 +141,10 @@ class InsertionCommandBuilder:
         """
         layout = TransformationLayout()
         for idx, (target_type, (command_builder, command_type), priority) in enumerate(
-            itertools.product(
-                AVAILABLE_TARGET_TYPES, zip(self.get_command_builders(), self.COMMAND_CLASSES), self.PRIORITIES
-            )
+            itertools.product(AVAILABLE_TARGET_TYPES, self.get_command_builders(), self.PRIORITIES)
         ):
-            if (
-                skip_model_transformer_unsupported
-                and command_type is PTSharedFnInsertionCommand
-                and target_type
-                in [
-                    TargetType.PRE_LAYER_OPERATION,
-                    TargetType.POST_LAYER_OPERATION,
-                ]
+            if skip_model_transformer_unsupported and self.is_unsupported_by_transformer_command(
+                command_type, target_type
             ):
                 continue
             command = self._create_command(
@@ -154,6 +158,16 @@ class InsertionCommandBuilder:
 
             layout.register(command)
         return layout
+
+    @staticmethod
+    def is_unsupported_by_transformer_command(command_type: PTTransformationCommand, target_type: TargetType) -> bool:
+        """
+        Returns True if insertion parameters don't supported by the PTModelTransformer otherwise False.
+        """
+        return command_type is PTSharedFnInsertionCommand and target_type in [
+            TargetType.PRE_LAYER_OPERATION,
+            TargetType.POST_LAYER_OPERATION,
+        ]
 
     @staticmethod
     def _create_command(

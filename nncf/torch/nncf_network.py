@@ -788,7 +788,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         """
         Collects all hooks applied to the NNCFNetwork, converts them to insertion commands
         and returns in PTTransformationLayout format. Default hooks group name is used in
-        recovered commands, so hooks group names specified diring the model modification
+        recovered commands, so hooks group names specified during the model modification
         become outdated.
 
         :return: Transformation layout with all commands applied to the NNCFNetwork.
