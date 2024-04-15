@@ -256,7 +256,7 @@ class AdvancedAWQParameters:
 
     subset_size: int = 32
     percent_to_apply: float = 0.002
-    alpha_min: float = 0.01
+    alpha_min: float = 0.0
     alpha_max: float = 1.0
     steps: int = 100
 

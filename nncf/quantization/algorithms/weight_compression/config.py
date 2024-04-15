@@ -51,7 +51,6 @@ class WeightCompressionParameters:
     :param num_weights: Number of elements in the weight array.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics (e.g. min, max).
     :param compression_config: Configuration of weight compression for the weight node.
-    :param precomputed_scale: Precomputed scale for weight compression.
     """
 
     weight_name: str
@@ -60,7 +59,6 @@ class WeightCompressionParameters:
     num_weights: np.uint64
     reduction_axes: Tuple[int, ...]
     compression_config = WeightCompressionConfig()
-    precomputed_scale = None
 
     def __post_init__(self):
         # Explicitly cast num_weights to avoid overflow on finding total number of weights.

@@ -21,6 +21,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.experimental.tensor import Tensor
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.weight_lowering import CompressedWeight
 
 TModel = TypeVar("TModel")
 
@@ -119,6 +120,26 @@ class WeightCompressionAlgoBackend(ABC):
         :param model: Model in which the weights will be compressed according to the weight compression description.
         :param graph: The graph associated with the model.
         :param weight_compression_parameters: List of weight compression parameters.
+        :return: The transformed model.
+        """
+
+    @abstractmethod
+    def transform_node(
+        self,
+        model: TModel,
+        graph: NNCFGraph,
+        wc_params: WeightCompressionParameters,
+        compressed_weight: CompressedWeight = None,
+        original_shape: Tuple[int, ...] = None,
+    ) -> TModel:
+        """
+        Applies weight compression transformations to the node of the model.
+
+        :param model: Model in which the weights will be compressed according to the weight compression description.
+        :param graph: The graph associated with the model.
+        :param wc_params: Weight compression parameters defining node to compress and compression parameters.
+        :param compressed_weight: predefined compressed weight and decompression parameters.
+        :param original_shape: shape of original weight tensor.
         :return: The transformed model.
         """
 
