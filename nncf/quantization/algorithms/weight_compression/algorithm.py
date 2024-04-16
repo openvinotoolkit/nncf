@@ -377,12 +377,12 @@ class WeightCompression(Algorithm):
                 scale_estimation_params.scale_steps,
                 scale_estimation_params.weight_penalty,
             )
-            scale_algo.apply(model, graph)
-
-        # Compress model using weight compression parameters
-        transformed_model = self._backend_entity.transform_model(
-            model, graph, track(all_weight_params, description="Applying Weight Compression")
-        )
+            transformed_model = scale_algo.apply(model, graph)
+        else:
+            # Compress model using weight compression parameters
+            transformed_model = self._backend_entity.transform_model(
+                model, graph, track(all_weight_params, description="Applying Weight Compression")
+            )
 
         self._backend_entity.dump_parameters(
             model,

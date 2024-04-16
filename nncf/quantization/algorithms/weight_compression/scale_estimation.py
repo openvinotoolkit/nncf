@@ -23,6 +23,7 @@ from nncf.experimental.tensor import TensorDataType
 from nncf.experimental.tensor import functions as fns
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.weight_lowering import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
@@ -117,14 +118,17 @@ class ScaleEstimation(Algorithm):
         :param dataset: A representative dataset for the calibration process.
         :return: A resulting model.
         """
-        name_mapping = {wp.node_with_weight.node_name: idx for idx, wp in enumerate(self._all_weight_params)}
 
         compress_decompress_cashe = {}
 
-        for k, stats in track(self._activations.items(), description="Applying Scale Estimation"):
-            if k not in name_mapping:
+        for wp in track(self._all_weight_params, description="Applying Scale Estimation"):
+            k = wp.node_with_weight.node_name
+            config = wp.compression_config
+            if config.num_bits != 4 or k not in self._activations:
+                self._backend_entity.transform_node(None, None, wp)
                 continue
-            wp = self._all_weight_params[name_mapping[k]]
+
+            stats = self._activations[k]
             reduction_axis = wp.reduction_axes[0]
             config = wp.compression_config
             if config.num_bits != 4:
@@ -161,11 +165,13 @@ class ScaleEstimation(Algorithm):
                 reduction_axis = 1
 
             original_weight = fns.zeros_like(weight) + weight
+            original_shape = original_weight.shape
 
-            compressed_weighs, scale, zp = do_integer_quantization(original_weight, reduction_axis, config)
+            compressed_weights, scale, zp = do_integer_quantization(original_weight, reduction_axis, config)
+            zp_type = zp.dtype
             zp = zp.astype(scale.dtype)
 
-            q_weights = do_dequantization(compressed_weighs, scale, zp, reduction_axis)
+            q_weights = do_dequantization(compressed_weights, scale, zp, reduction_axis)
 
             s = fns.unsqueeze(s, 0)
             s, _ = reshape_weight_for_grouped_quantization(s, reduction_axis, config.group_size)
@@ -178,8 +184,8 @@ class ScaleEstimation(Algorithm):
             importance = fns.ones_like(original_weight)
             importance = importance * s
 
-            target = compressed_weighs.astype(dtype=zp.dtype) - zp
-            zero_mask = compressed_weighs == zp
+            target = compressed_weights.astype(dtype=zp.dtype) - zp
+            zero_mask = compressed_weights == zp
 
             importance = fns.where(zero_mask, 0.0, importance)
 
@@ -294,7 +300,14 @@ class ScaleEstimation(Algorithm):
                 else:
                     near_to_ideal_scale = mask * result_scale + (1.0 - mask) * near_to_ideal_scale
                 result_scale = near_to_ideal_scale
-            wp.precomputed_scale = result_scale
+
+            out = compress_model(original_weight.data, result_scale.data, zp.data)
+            compressed_weights = fns.zeros_like(original_weight) + out
+
+            zp = zp.astype(zp_type)
+            self._backend_entity.transform_node(
+                None, None, wp, CompressedWeight(compressed_weights, result_scale, zp), original_shape
+            )
         return model
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
