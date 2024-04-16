@@ -191,12 +191,10 @@ class BootstrapNASScheduler(BaseCompressionScheduler):
         :return: current stage descriptor and its index in the list of all descriptors
         """
         partial_epochs = 0
-        stage_desc_idx = 0
-        for stage_desc in self.list_stage_descriptors:
+        for stage_desc_idx, stage_desc in enumerate(self.list_stage_descriptors):
             partial_epochs += stage_desc.epochs
             if self.current_epoch < partial_epochs:
                 return stage_desc, stage_desc_idx
-            stage_desc_idx += 1
         return None, -1
 
     def get_total_training_epochs(self) -> int:

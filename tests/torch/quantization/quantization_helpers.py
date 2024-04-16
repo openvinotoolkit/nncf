@@ -63,7 +63,7 @@ def get_squeezenet_quantization_config(image_size=32, batch_size=3):
 
 def distributed_init_test_default(gpu, ngpus_per_node, config):
     config.batch_size = 3
-    config.workers = 0  #  workaround for the pytorch multiprocessingdataloader issue/
+    config.workers = 0  # workaround for the pytorch multiprocessingdataloader issue/
     config.gpu = gpu
     config.ngpus_per_node = ngpus_per_node
     config.rank = gpu
