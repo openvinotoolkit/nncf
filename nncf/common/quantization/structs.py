@@ -92,7 +92,9 @@ class QuantizerConfig:
             self.signedness_to_force is None and other.signedness_to_force is not None,
             self.signedness_to_force is True and other.signedness_to_force is False,
         ]
-        return not any(fail_conditions)
+        if any(fail_conditions):
+            return False
+        return True
 
     def compatible_with_a_unified_scale_linked_qconfig(self, linked_qconfig: "QuantizerConfig"):
         """

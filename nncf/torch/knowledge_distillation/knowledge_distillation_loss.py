@@ -141,7 +141,9 @@ class KnowledgeDistillationLoss(PTCompressionLoss):
     def _is_loss(obj):
         if not isinstance(obj, torch.Tensor):
             return False
-        return obj.requires_grad
+        if obj.requires_grad:
+            return True
+        return False
 
     def forward(self) -> torch.Tensor:
         """

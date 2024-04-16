@@ -13,7 +13,9 @@ from nncf import NNCFConfig
 
 
 def is_accuracy_aware_training(nncf_config: NNCFConfig) -> bool:
-    return nncf_config.get("accuracy_aware_training") is not None
+    if nncf_config.get("accuracy_aware_training") is not None:
+        return True
+    return False
 
 
 def is_experimental_quantization(nncf_config: NNCFConfig) -> bool:

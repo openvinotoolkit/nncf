@@ -170,7 +170,9 @@ def get_flat_tensor_contents_string(input_tensor):
 def is_dist_avail_and_initialized():
     if not dist.is_available():
         return False
-    return dist.is_initialized()
+    if not dist.is_initialized():
+        return False
+    return True
 
 
 def get_rank():

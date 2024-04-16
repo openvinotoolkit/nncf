@@ -409,10 +409,12 @@ def check_graph_has_no_act_layer_duplication_after_block_removal(
     if previous_nodes[0].is_dummy:
         previous_nodes = sgraph.get_prev_nodes(previous_nodes[0].node_key)
 
-    return not (
+    if (
         previous_nodes[0].node_type[-1] in PTRELUMetatype.get_all_aliases()
         and next_end_node[0].node_type[0] in PTRELUMetatype.get_all_aliases()
-    )
+    ):
+        return False
+    return True
 
 
 def get_num_ops_in_block(first_skipped_node: SearchGraphNode, end_node: SearchGraphNode) -> int:
