@@ -21,7 +21,7 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.torch import wrap_model
-from nncf.torch.graph.transformations.commands import PTQuantizerInsertionCommand
+from nncf.torch.graph.transformations.command_creation import create_quantizer_insertion_command
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.model_graph_manager import get_const_data
 from nncf.torch.model_graph_manager import get_const_data_on_port
@@ -268,7 +268,7 @@ def test_get_fake_quantizer(target_type, port_id):
     )
 
     fq = SymmetricQuantizer(qspec)
-    command = PTQuantizerInsertionCommand(PTTargetPoint(target_type, node_name, input_port_id=port_id), fq)
+    command = create_quantizer_insertion_command(PTTargetPoint(target_type, node_name, input_port_id=port_id), fq)
     layout = PTTransformationLayout()
     layout.register(command)
     q_model = transformer.transform(layout)
@@ -303,7 +303,9 @@ def test_is_quantized_weights():
     )
 
     fq = SymmetricQuantizer(qspec)
-    command = PTQuantizerInsertionCommand(PTTargetPoint(TargetType.OPERATOR_PRE_HOOK, node_name, input_port_id=1), fq)
+    command = create_quantizer_insertion_command(
+        PTTargetPoint(TargetType.OPERATOR_PRE_HOOK, node_name, input_port_id=1), fq
+    )
     layout = PTTransformationLayout()
     layout.register(command)
     q_model = transformer.transform(layout)

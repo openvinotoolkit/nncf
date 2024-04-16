@@ -22,9 +22,9 @@ import nncf
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.transformations.commands import TargetPoint
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.quantization.initialization.range import RangeInitCollectorParams
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
+from nncf.common.tensor_statistics.aggregator import EMPTY_DATASET_ERROR
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
@@ -32,12 +32,21 @@ from nncf.experimental.common.tensor_statistics.collectors import TensorCollecto
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
+from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from nncf.quantization.range_estimator import StatisticsCollectorParameters
 from nncf.quantization.range_estimator import StatisticsType
+
+
+class MockedDataset:
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        raise StopIteration
 
 
 class BiasCorrectionAlgos(Enum):
@@ -118,6 +127,10 @@ class TemplateTestStatisticsAggregator:
     @pytest.fixture
     def dataset_values(self):
         return [{"max": 1, "min": -10}, {"max": 0.1, "min": -1}, {"max": 128, "min": -128}]
+
+    @staticmethod
+    def get_min_max_algo_cls() -> Type[MinMaxQuantization]:
+        return MinMaxQuantization
 
     @dataclass
     class MinMaxTestParameters:
@@ -382,6 +395,7 @@ class TemplateTestStatisticsAggregator:
         dataset_samples,
         inplace_statistics,
         is_backend_support_custom_estimators,
+        mocker,
     ):
         model = self.get_backend_model(dataset_samples)
         quantizer_config = QuantizerConfig(
@@ -405,6 +419,7 @@ class TemplateTestStatisticsAggregator:
             algorithm_name,
             inplace_statistics,
             test_parameters.range_estimator_params,
+            mocker,
         )
         statistics_points = StatisticPointsContainer()
         statistics_points.add_statistic_point(statistic_point)
@@ -626,24 +641,20 @@ class TemplateTestStatisticsAggregator:
 
     @classmethod
     def create_statistics_point(
-        cls, model, q_config, target_point, subset_size, algorithm_name, inplace_statistics, range_estimator
+        cls, model, q_config, target_point, subset_size, algorithm_name, inplace_statistics, range_estimator, mocker
     ):
-        algo_backend = cls.get_min_max_algo_backend_cls()
+        _ = mocker.patch(
+            "nncf.quantization.algorithms.min_max.algorithm.MinMaxQuantization._get_range_estimator_parameters",
+            return_value=range_estimator,
+        )
+        algo = cls.get_min_max_algo_cls()(
+            subset_size=subset_size,
+            inplace_statistics=inplace_statistics,
+        )
+        algo._set_backend_entity(model)
         nncf_graph = NNCFGraphFactory.create(model)
-
-        collector_params = RangeInitCollectorParams(
-            is_weights=target_point.is_weight_target_point(),
-            scheme=q_config.mode,
-            per_channel=q_config.per_channel,
-        )
-        tensor_collector = algo_backend.get_statistic_collector(
-            range_estimator,
-            nncf_graph=nncf_graph,
-            target_point=target_point,
-            collector_params=collector_params,
-            num_samples=subset_size,
-            inplace=inplace_statistics,
-        )
+        algo._subset_size = subset_size
+        tensor_collector = algo._get_stat_collector(nncf_graph, target_point, q_config, False)
         return StatisticPoint(target_point=target_point, tensor_collector=tensor_collector, algorithm=algorithm_name)
 
     @pytest.mark.parametrize(
@@ -656,7 +667,7 @@ class TemplateTestStatisticsAggregator:
             ),
         ),
     )
-    def test_statistics_merging_simple(self, dataset_samples, inplace_statistics, statistic_point_params):
+    def test_statistics_merging_simple(self, dataset_samples, inplace_statistics, statistic_point_params, mocker):
         model = self.get_backend_model(dataset_samples)
         quantizer_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC, per_channel=False)
         subset_size = len(dataset_samples)
@@ -669,7 +680,14 @@ class TemplateTestStatisticsAggregator:
             ref_val[algorithm_name] = (ref_min_val, ref_max_val)
             target_point = self.get_target_point(target_point_type)
             statistics_point = self.create_statistics_point(
-                model, quantizer_config, target_point, subset_size, algorithm_name, inplace_statistics, range_estimator
+                model,
+                quantizer_config,
+                target_point,
+                subset_size,
+                algorithm_name,
+                inplace_statistics,
+                range_estimator,
+                mocker,
             )
             statistics_points.add_statistic_point(statistics_point)
 
@@ -745,45 +763,33 @@ class TemplateTestStatisticsAggregator:
     }
 
     @pytest.mark.parametrize("key", ["split_concat", "shared_conv"])
-    def test_statistic_merging(self, test_params, key, dataset_samples, inplace_statistics):
+    def test_statistic_merging(self, test_params, key, dataset_samples, inplace_statistics, mocker):
         params = test_params["test_statistic_merging"][key]
         model = params["model"](dataset_samples)
         nncf_graph = NNCFGraphFactory.create(model)
 
         quantizer_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC, per_channel=False)
         statistics_points = StatisticPointsContainer()
-        collectors_and_refs = []
-        algo_backend = self.get_min_max_algo_backend_cls()
         target_point_cls = self.get_target_point_cls()
+        sp_and_refs = []
         for target_point_args, ref in self.MERGED_TARGET_POINT_AND_REFS[key]:
             target_point = target_point_cls(*target_point_args)
-            collector_params = RangeInitCollectorParams(
-                is_weights=target_point.is_weight_target_point(),
-                scheme=quantizer_config.mode,
-                per_channel=quantizer_config.per_channel,
-            )
-            min_max_tensor_collector = algo_backend.get_statistic_collector(
-                RangeEstimatorParametersSet.MINMAX,
-                nncf_graph=nncf_graph,
-                target_point=target_point,
-                collector_params=collector_params,
-                num_samples=len(dataset_samples),
-                inplace=inplace_statistics,
-            )
-            mean_min_max_tensor_collector = algo_backend.get_statistic_collector(
-                RangeEstimatorParametersSet.MEAN_MINMAX,
-                nncf_graph=nncf_graph,
-                target_point=target_point,
-                collector_params=collector_params,
-                num_samples=len(dataset_samples),
-                inplace=inplace_statistics,
-            )
-
-            for tensor_collector in [min_max_tensor_collector, mean_min_max_tensor_collector]:
-                stat_point = StatisticPoint(target_point, tensor_collector, "TEST")
-                statistics_points.add_statistic_point(stat_point)
-            collectors_and_refs.append((min_max_tensor_collector, ref["min_max"]))
-            collectors_and_refs.append((mean_min_max_tensor_collector, ref["mean_min_max"]))
+            for estimator, ref_val in (
+                (RangeEstimatorParametersSet.MINMAX, ref["min_max"]),
+                (RangeEstimatorParametersSet.MEAN_MINMAX, ref["mean_min_max"]),
+            ):
+                s_p = self.create_statistics_point(
+                    model,
+                    quantizer_config,
+                    target_point,
+                    len(dataset_samples),
+                    "TEST",
+                    inplace_statistics,
+                    estimator,
+                    mocker,
+                )
+                statistics_points.add_statistic_point(s_p)
+                sp_and_refs.append((s_p, ref_val))
 
         dataset = self.get_dataset(dataset_samples)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
@@ -798,7 +804,8 @@ class TemplateTestStatisticsAggregator:
         statistics_aggregator.register_statistic_points(statistics_points)
         statistics_aggregator.collect_statistics(model, nncf_graph)
 
-        for collector, ref in collectors_and_refs:
+        for sp, ref in sp_and_refs:
+            collector = sp.algorithm_to_tensor_collectors["TEST"][0]
             stat = collector.get_statistics()
             assert np.allclose(stat.min_values, ref[0])
             assert np.allclose(stat.max_values, ref[1])
@@ -871,7 +878,7 @@ class TemplateTestStatisticsAggregator:
             ),
         ),
     )
-    def test_register_statistics(self, dataset_samples, statistic_point_params):
+    def test_register_statistics(self, dataset_samples, statistic_point_params, mocker):
         model = self.get_backend_model(dataset_samples)
         quantizer_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC, per_channel=False)
         statistics_points = StatisticPointsContainer()
@@ -882,7 +889,7 @@ class TemplateTestStatisticsAggregator:
             ref_val[algorithm_name] = subset_size
             target_point = self.get_target_point(target_point_type)
             statistics_point = self.create_statistics_point(
-                model, quantizer_config, target_point, subset_size, algorithm_name, True, range_estimator
+                model, quantizer_config, target_point, subset_size, algorithm_name, True, range_estimator, mocker
             )
             statistics_points.add_statistic_point(statistics_point)
 
@@ -898,30 +905,22 @@ class TemplateTestStatisticsAggregator:
                 ref_subset_size = subset_size
         assert statistics_aggregator.stat_subset_size == ref_subset_size
 
-    def test_collect_with_empty_dataset(self, dataset_samples):
+    def test_collect_with_empty_dataset_no_len(self, dataset_samples):
+        """
+        Checks a correct raising of an error when dataset has no elements to iterate.
+        """
         model = self.get_backend_model(dataset_samples)
-        dataset_samples = []
-        dataset = self.get_dataset(dataset_samples)
-        graph = NNCFGraphFactory.create(model)
-
-        inplace_statistics = False
-        quantizer_config = QuantizerConfig(mode=QuantizationMode.ASYMMETRIC, per_channel=False)
-        target_point = self.get_target_point(TargetType.POST_LAYER_OPERATION)
-        algorithm_name = "TestAlgo"
-        statistic_point = self.create_statistics_point(
-            model,
-            quantizer_config,
-            target_point,
-            len(dataset_samples),
-            algorithm_name,
-            inplace_statistics,
-            RangeEstimatorParametersSet.MEAN_MINMAX,
+        dummy_statistic_point = StatisticPoint(
+            target_point=self.get_target_point(TargetType.POST_LAYER_OPERATION),
+            tensor_collector=TensorCollector(),
+            algorithm="dummy",
         )
         statistics_points = StatisticPointsContainer()
-        statistics_points.add_statistic_point(statistic_point)
-
+        statistics_points.add_statistic_point(dummy_statistic_point)
+        dataset = nncf.Dataset(MockedDataset())
+        graph = NNCFGraphFactory.create(model)
         statistics_aggregator = self.get_statistics_aggregator(dataset)
         statistics_aggregator.register_statistic_points(statistics_points)
         with pytest.raises(nncf.ValidationError) as e:
             statistics_aggregator.collect_statistics(model, graph)
-            assert "Calibration dataset must not be empty" in e.info
+        assert EMPTY_DATASET_ERROR in str(e)

@@ -70,7 +70,7 @@ class Command:
 
                     self.output = []
                     for line in self.process.stdout:
-                        line = line.decode("utf-8")
+                        line = line.decode("utf-8", errors="ignore")
                         self.output.append(line)
                         if stdout:
                             sys.stdout.write(line)
