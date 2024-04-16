@@ -2,7 +2,7 @@
 torch==2.2.1
 --extra-index-url https://download.pytorch.org/whl/cpu
 torchvision==0.17.1
-transformers==4.36.0
+transformers==4.38.2
 pytest==8.0.2
 timm==0.9.2
 scikit-learn==1.2.2
