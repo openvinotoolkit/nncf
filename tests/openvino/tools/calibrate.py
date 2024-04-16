@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from dataclasses import replace
 from enum import Enum
 from itertools import islice
-from typing import Any, Iterable, List, Optional, TypeVar
+from typing import Any, Dict, Iterable, List, Optional, TypeVar
 
 import numpy as np
 import openvino.runtime as ov
@@ -100,6 +100,8 @@ def parse_args():
     )
 
     parser.add_argument("--impl", help="NNCF OpenVINO backend implementation.", choices=["pot", "native"], default=None)
+
+    parser.add_argument("--batch_size", help="Batch size", type=int, default=1)
 
     return parser.parse_args()
 
@@ -884,6 +886,7 @@ class ACDattasetWrapper:
 
     def __init__(self, model_evaluator):
         self.model_evaluator = model_evaluator
+        self.batch_size = self.model_evaluator.dataset.batch
 
     def __iter__(self):
         for sequence in self.model_evaluator.dataset:
@@ -1032,6 +1035,33 @@ def filter_configuration(config: Config) -> Config:
     return config
 
 
+def update_accuracy_checker_config(accuracy_checker_config: Config, batch_size: int) -> None:
+    """
+    Updates batch section of accuracy checker configuration file by batch_size value.
+
+    :param accuracy_checker_config: Accuracy checker configuration file.
+    :param batch_size: Batch size value.
+    """
+    for model in accuracy_checker_config["models"]:
+        for dataset in model["datasets"]:
+            dataset["batch"] = batch_size
+            print(f"Updated batch size value to {batch_size}")
+
+
+def update_nncf_algorithms_config(nncf_algorithms_config: Dict[str, Dict[str, Any]], batch_size: int) -> None:
+    """
+    Updates subset_size parameter depending on batch_size and subset_size from an algorithm config.
+
+    :param nncf_algorithms_config: Configuration file of an algorithm.
+    :param batch_size: Batch size value.
+    """
+    for nncf_method, config in nncf_algorithms_config.items():
+        subset_size = config.get("subset_size", 300)
+        new_subset_size = subset_size // batch_size
+        config["subset_size"] = new_subset_size
+        print(f"Updated subset_size value for {nncf_method} method to {new_subset_size} ")
+
+
 def main():
     args = parse_args()
     if args.impl is not None:
@@ -1042,6 +1072,10 @@ def main():
     xml_path, bin_path = get_model_paths(config.model)
     accuracy_checker_config = get_accuracy_checker_config(config.engine)
     nncf_algorithms_config = get_nncf_algorithms_config(config.compression, args.output_dir)
+    assert args.batch_size >= 0
+    if args.batch_size > 1:
+        update_accuracy_checker_config(accuracy_checker_config, args.batch_size)
+        update_nncf_algorithms_config(nncf_algorithms_config, args.batch_size)
 
     set_log_file(f"{args.output_dir}/log.txt")
     output_dir = os.path.join(args.output_dir, "optimized")

@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from functools import partial
-from typing import List, Set
+from typing import List, Set, Tuple, Type, Union
 
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -89,7 +89,9 @@ def get_split_axis(input_shapes: List[List[int]], output_shapes: List[List[int]]
 
 
 def get_number_of_quantized_ops(
-    graph: NNCFGraph, quantizer_metatypes: List[OperatorMetatype], quantizable_metatypes: List[OperatorMetatype]
+    graph: NNCFGraph,
+    quantizer_metatypes: List[Type[OperatorMetatype]],
+    quantizable_metatypes: List[Type[OperatorMetatype]],
 ) -> int:
     """
     Returns the number of quantized operations in the graph.
@@ -114,3 +116,19 @@ def get_number_of_quantized_ops(
             else:
                 nodes_to_see.extend(graph.get_next_nodes(node))
     return len(quantized_ops)
+
+
+def get_reduction_axes(
+    channel_axes: Union[List[int], Tuple[int, ...]], shape: Union[List[int], Tuple[int, ...]]
+) -> Tuple[int, ...]:
+    """
+    Returns filtered reduction axes without axes that correspond to channels.
+
+    :param channel_axes: Channel axes.
+    :param shape: Shape that need to be filtered.
+    :return: Reduction axes.
+    """
+    reduction_axes = list(range(len(shape)))
+    for channel_axis in sorted(channel_axes, reverse=True):
+        del reduction_axes[channel_axis]
+    return tuple(reduction_axes)

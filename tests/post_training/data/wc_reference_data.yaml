@@ -1,12 +1,24 @@
 tinyllama_data_free_backend_OV:
   metric_value: 0.72057
+  num_int4: 228
+  num_int8: 84
 tinyllama_data_aware_backend_OV:
   metric_value: 0.83853
+  num_int4: 184
+  num_int8: 128
 tinyllama_data_aware_awq_backend_OV:
   metric_value: 0.84439
+  num_int4: 184
+  num_int8: 128
 tinyllama_data_aware_awq_stateful_backend_OV:
   metric_value: 0.84439
+  num_int4: 184
+  num_int8: 128
 tinyllama_data_aware_awq_scale_estimation_backend_OV:
   metric_value: 0.84431
+  num_int4: 184
+  num_int8: 128
 tinyllama_data_aware_awq_scale_estimation_stateful_backend_OV:
   metric_value: 0.84431
+  num_int4: 184
+  num_int8: 128

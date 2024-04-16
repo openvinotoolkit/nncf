@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import json
+import os
 import sys
 from argparse import ArgumentParser
 from typing import Dict, Tuple
@@ -172,6 +173,8 @@ def llm_tune_params() -> Dict[str, float]:
 def quantization_aware_training_torch_resnet18():
     from examples.quantization_aware_training.torch.resnet18.main import main as resnet18_main
 
+    # Set manual seed and determenistic cuda mode to make the test determenistic
+    set_torch_cuda_seed()
     results = resnet18_main()
 
     return {
@@ -186,6 +189,27 @@ def quantization_aware_training_torch_resnet18():
         "int8_model_size": results[6],
         "model_compression_rate": results[5] / results[6],
     }
+
+
+def set_torch_cuda_seed(seed: int = 42):
+    """
+    Sets torch, cuda and python random module to determenistic mode with
+    given seed.
+    :param seed: Seed to use for determenistic run.
+    """
+    import random
+
+    import numpy as np
+    import torch
+    from torch.backends import cudnn
+
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.manual_seed(seed)
+    cudnn.deterministic = True
+    cudnn.benchmark = False
+    torch.use_deterministic_algorithms(True)
+    os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
 
 def main(argv):
