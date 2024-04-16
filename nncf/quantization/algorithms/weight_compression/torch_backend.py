@@ -27,6 +27,7 @@ from nncf.experimental.tensor.tensor import Tensor
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.weight_lowering import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 from nncf.torch.dynamic_graph.scope import Scope
 from nncf.torch.graph import operator_metatypes as om
@@ -176,65 +177,74 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
     def transform_model(
         self, model: NNCFNetwork, graph: NNCFGraph, weight_compression_parameters: Iterable[WeightCompressionParameters]
     ) -> NNCFNetwork:
-        transformation_layout = TransformationLayout()
-
         for wc_params in weight_compression_parameters:
-            compression_config = wc_params.compression_config
-            if compression_config.mode not in [
-                CompressWeightsMode.INT8_ASYM,
-                CompressWeightsMode.INT8_SYM,
-                CompressWeightsMode.INT8,
-            ]:
-                raise ValueError(f"{compression_config.mode.value} is not supported.")
+            model = self.transform_node(model, graph, wc_params)
 
-            weight_node = get_const_node(wc_params.node_with_weight, wc_params.weight_port_id, graph)
-            weight_name = weight_node.layer_attributes.name
-            module_name, weight_attr_name = split_const_name(weight_name)
-            module = get_module_by_name(module_name, model)
-            weight = getattr(module, weight_attr_name)
-            if weight is None or not isinstance(weight, torch.nn.Parameter):
-                raise nncf.InternalError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
+        return model
 
-            # calculates compressed weights and decompression parameters
+    def transform_node(
+        self,
+        model: NNCFNetwork,
+        graph: NNCFGraph,
+        wc_params: WeightCompressionParameters,
+        compressed_weight: CompressedWeight = None,
+        original_shape: Tuple[int, ...] = None,
+    ) -> NNCFNetwork:
+        transformation_layout = TransformationLayout()
+        compression_config = wc_params.compression_config
+        if compression_config.mode not in [
+            CompressWeightsMode.INT8_ASYM,
+            CompressWeightsMode.INT8_SYM,
+            CompressWeightsMode.INT8,
+        ]:
+            raise ValueError(f"{compression_config.mode.value} is not supported.")
+
+        weight_node = get_const_node(wc_params.node_with_weight, wc_params.weight_port_id, graph)
+        weight_name = weight_node.layer_attributes.name
+        module_name, weight_attr_name = split_const_name(weight_name)
+        module = get_module_by_name(module_name, model)
+        weight = getattr(module, weight_attr_name)
+        if weight is None or not isinstance(weight, torch.nn.Parameter):
+            raise nncf.InternalError(f"Could not find a torch.nn.Parameter in the model by name {weight_name}.")
+
+        # calculates compressed weights and decompression parameters
+        if compressed_weight is None:
             compressed_weight = compress_weight(Tensor(weight), wc_params.reduction_axes, compression_config)
             compressed_weight.scale = compressed_weight.scale.astype(dtype=TensorDataType.float16)
 
-            # pack compressed tensor
-            packed_tensor = compressed_weight.tensor.astype(TensorDataType.uint8)
+        # pack compressed tensor
+        packed_tensor = compressed_weight.tensor.astype(TensorDataType.uint8)
 
-            # sets compressed tensor
-            compressed_parameter = torch.nn.Parameter(packed_tensor.data, requires_grad=False)
-            setattr(module, weight_attr_name, compressed_parameter)
+        # sets compressed tensor
+        compressed_parameter = torch.nn.Parameter(packed_tensor.data, requires_grad=False)
+        setattr(module, weight_attr_name, compressed_parameter)
 
-            consumer_nodes = graph.get_next_nodes(weight_node)
-            if len(consumer_nodes) > 1:
-                for c_node in consumer_nodes:
-                    c_module = model.nncf.get_module_by_scope(Scope.from_str(c_node.layer_name))
-                    for name, param in c_module.named_parameters(recurse=False, remove_duplicate=False):
-                        if id(param) == id(weight):
-                            setattr(c_module, name, compressed_parameter)
+        consumer_nodes = graph.get_next_nodes(weight_node)
+        if len(consumer_nodes) > 1:
+            for c_node in consumer_nodes:
+                c_module = model.nncf.get_module_by_scope(Scope.from_str(c_node.layer_name))
+                for name, param in c_module.named_parameters(recurse=False, remove_duplicate=False):
+                    if id(param) == id(weight):
+                        setattr(c_module, name, compressed_parameter)
 
-            # pack zero point tensor
-            packed_zero_point = compressed_weight.zero_point.astype(TensorDataType.uint8)
+        # pack zero point tensor
+        packed_zero_point = compressed_weight.zero_point.astype(TensorDataType.uint8)
 
-            # creates weight decompressor
-            decompressor = WeightsDecompressor(
-                compressed_weight.scale.data, packed_zero_point.data, result_dtype=weight.dtype
+        # creates weight decompressor
+        decompressor = WeightsDecompressor(
+            compressed_weight.scale.data, packed_zero_point.data, result_dtype=weight.dtype
+        )
+
+        # registry weight decompression module in the model
+        decompressor_name = f"weights_decompressor_{weight_node.node_name.replace('.', '_')}"
+
+        # inserts the weight decompressor into the model as the post hook on the model weight
+        transformation_layout.register(
+            PTSharedFnInsertionCommand(
+                [PTTargetPoint(TargetType.OPERATOR_POST_HOOK, target_node_name=weight_node.node_name)],
+                decompressor,
+                decompressor_name,
             )
+        )
 
-            # registry weight decompression module in the model
-            decompressor_name = f"weights_decompressor_{weight_node.node_name.replace('.', '_')}"
-
-            # inserts the weight decompressor into the model as the post hook on the model weight
-            transformation_layout.register(
-                PTSharedFnInsertionCommand(
-                    [PTTargetPoint(TargetType.OPERATOR_POST_HOOK, target_node_name=weight_node.node_name)],
-                    decompressor,
-                    decompressor_name,
-                )
-            )
-
-        # apply transformations
-        transformed_model = PTModelTransformer(model).transform(transformation_layout)
-
-        return transformed_model
+        return PTModelTransformer(model).transform(transformation_layout)
