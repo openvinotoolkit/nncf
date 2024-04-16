@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union
+from typing import List, Union
 
 from torch import Tensor
 
@@ -57,6 +57,23 @@ def create_quantizer_insertion_command(
     storage_key = str(quantizer_id)
     return PTSharedFnInsertionCommand(
         target_points=[target_point],
+        fn=quantizer,
+        op_unique_name=storage_key,
+        compression_module_type=ExtraCompressionModuleType.EXTERNAL_QUANTIZER,
+        priority=TransformationPriority.QUANTIZATION_PRIORITY,
+    )
+
+
+def create_shared_quantizer_insertion_command(
+    target_points: List[PTTargetPoint], quantizer: BaseQuantizer
+) -> PTSharedFnInsertionCommand:
+    quantizers_ids = []
+    for target_point in target_points:
+        quantizers_ids.append(NonWeightQuantizerId(target_point.target_node_name, target_point.input_port_id))
+
+    storage_key = ";".join(str(quantizer_id) for quantizer_id in sorted(quantizers_ids, key=str))
+    return PTSharedFnInsertionCommand(
+        target_points=target_points,
         fn=quantizer,
         op_unique_name=storage_key,
         compression_module_type=ExtraCompressionModuleType.EXTERNAL_QUANTIZER,

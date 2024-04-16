@@ -37,6 +37,7 @@ from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.transformations.command_creation import create_quantizer_insertion_command
+from nncf.torch.graph.transformations.command_creation import create_shared_quantizer_insertion_command
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.hardware.config import PTHWConfig
@@ -295,6 +296,22 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
             quantizer_config, scale_shape, parameters, target_point.target_type
         )
         return create_quantizer_insertion_command(target_point, quantizer)
+
+    @staticmethod
+    def create_unified_scales_quantizers_insertion_commands(
+        nncf_graph: NNCFGraph,
+        target_points: List[PTTargetPoint],
+        quantizer_config: QuantizerConfig,
+        parameters: FakeQuantizeParameters,
+    ) -> List[PTSharedFnInsertionCommand]:
+        _, scale_shape, _ = PTMinMaxAlgoBackend._get_input_scale_shape(
+            nncf_graph, target_points[0], quantizer_config.per_channel
+        )
+
+        quantizer = PTMinMaxAlgoBackend._create_quantizer(
+            quantizer_config, scale_shape, parameters, target_points[0].target_type
+        )
+        return [create_shared_quantizer_insertion_command(target_points, quantizer)]
 
     @staticmethod
     def get_ignored_metatypes(model_type: ModelType, device: TargetDevice) -> List[OperatorMetatype]:
