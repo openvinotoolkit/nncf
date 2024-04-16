@@ -113,19 +113,10 @@ jobs:
         run: |
             nvcc --version
 
-      - name: cat /proc/driver/nvidia/version
-        continue-on-error: true
-        run: |
-          cat /proc/driver/nvidia/version
-
-
-      - name: lspci sudo
-        continue-on-error: true
-        run: |
-          sudo apt-get update
-          sudo apt-get install --assume-yes pciutils kmod
-          sudo lspci -k | grep -A 2 -i "VGA"
-          sudo modinfo nvidia
+      - name: Install dependencies
+        run : |
+          sudo apt-get install
+          sudo apt-get --assume-yes install gcc
 
       # - name: cuda
       #   continue-on-error: true
@@ -142,3 +133,12 @@ jobs:
           cat /var/log/cuda-installer.log
           nvidia-smi
           nvcc --version
+
+      - uses: actions/setup-python@v3
+        with:
+          python-version: 3.8.10
+      - name: install torch
+        run: |
+          python --version
+          pip install torch
+          python -c "import torch; print(torch.cuda.is_available())"
