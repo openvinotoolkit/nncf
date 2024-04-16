@@ -57,6 +57,7 @@ class PTTargetPoint(TargetPoint):
             isinstance(other, PTTargetPoint)
             and self.target_type == other.target_type
             and self.target_node_name == other.target_node_name
+            and self.input_port_id == other.input_port_id
         )
 
     def __str__(self):

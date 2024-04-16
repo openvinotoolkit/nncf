@@ -59,7 +59,7 @@ class OverflowFix(StrEnum):
 
 
 @api()
-class FP8Type(Enum):
+class FP8Type(StrEnum):
     """
     Defines FP8 special types (https://arxiv.org/pdf/2209.05433.pdf).
 
