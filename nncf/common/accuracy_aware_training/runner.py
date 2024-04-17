@@ -39,7 +39,6 @@ OptimizerType = TypeVar("OptimizerType")
 LRSchedulerType = TypeVar("LRSchedulerType")
 TensorboardWriterType = TypeVar("TensorboardWriterType")
 Checkpoint = TypeVar("Checkpoint")
-#Path = TypeVar("Path", bound=pathlib.Path)
 
 try:
     import matplotlib.pyplot as plt
