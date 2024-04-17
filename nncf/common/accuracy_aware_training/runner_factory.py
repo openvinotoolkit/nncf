@@ -11,7 +11,8 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict, Union
+from typing import Dict
+from typing import Union
 
 import nncf
 from nncf.api.compression import CompressionAlgorithmController
@@ -20,7 +21,6 @@ from nncf.common.accuracy_aware_training.runner import BaseAdaptiveCompressionLe
 from nncf.common.accuracy_aware_training.runner import TrainingRunner
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
-
 
 
 class TrainingRunnerCreator(ABC):
@@ -60,7 +60,7 @@ class EarlyExitTrainingRunnerCreator(TrainingRunnerCreator):
 
         :return: AccuracyAwareTrainingRunner object
         """
-        nncf_backend = get_backend(self.compression_controller.model) #type: ignore
+        nncf_backend = get_backend(self.compression_controller.model)  # type: ignore
         if nncf_backend is BackendType.TORCH:
             from nncf.torch.accuracy_aware_training.runner import PTAccuracyAwareTrainingRunner
 
@@ -115,7 +115,7 @@ class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
 
         :return: AdaptiveCompressionLevelTrainingRunner object
         """
-        nncf_backend = get_backend(self.compression_controller.model) #type: ignore
+        nncf_backend = get_backend(self.compression_controller.model)  # type: ignore
 
         if nncf_backend is BackendType.TORCH:
             from nncf.torch.accuracy_aware_training.runner import PTAdaptiveCompressionLevelTrainingRunner

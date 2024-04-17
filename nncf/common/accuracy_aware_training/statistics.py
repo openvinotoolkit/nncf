@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from nncf.api.statistics import Statistics
 from nncf.common.utils.api_marker import api
 
+
 @api()
 @dataclass
 class TrainingLoopStatistics(Statistics):
