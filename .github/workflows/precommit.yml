@@ -90,46 +90,44 @@ jobs:
   #         name: coverage_openvino
   #         flags: OPENVINO
 
-  pytorch:
+
+  pytorch-cpu:
+    defaults:
+      run:
+        shell: bash
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          lfs: true
+      - uses: actions/setup-python@v3
+        with:
+          python-version: 3.8.10
+      - name: Install NNCF and test requirements
+        run: make install-torch-test
+      - name: Run PyTorch precommit test scope
+        run: make test-torch-cpu
+
+  pytorch-cuda:
     defaults:
       run:
         shell: bash
     runs-on: aks-linux-4-cores-28gb-gpu-testla-t4
-
     steps:
-      - name: uname -a
-        continue-on-error: true
-        run: |
-            uname -a
-            ls -l /usr/local/
-            ls -l /dev/*
-
-      - name: nvidia-smi
-        continue-on-error: true
-        run: |
-            nvidia-smi
-      - name: nvidia-smi
-        continue-on-error: true
-        run: |
-            nvcc --version
-
       - name: Install dependencies
         run : |
           sudo apt-get update
           sudo apt-get --assume-yes install gcc ninja-build libgl1-mesa-dev libglib2.0-0
-
       - name: Install CUDA
         run: |
           wget -q https://developer.download.nvidia.com/compute/cuda/12.1.1/local_installers/cuda_12.1.1_530.30.02_linux.run
           sudo sh cuda_12.1.1_530.30.02_linux.run --toolkit --silent
-
       - name: Runner info
         continue-on-error: true
         run: |
           nvidia-smi
           cat /proc/cpuinfo
           nvcc --version
-
       - uses: actions/checkout@v3
         with:
           lfs: true
@@ -141,5 +139,5 @@ jobs:
       - name: Check CUDA
         run: |
           python -c "import torch; print(torch.cuda.is_available())"
-      - name: Run Pytorch precommit test scope
-        run: pytest tests/torch -m "not weekly and not nightly and not models_hub" -rA
+      - name: Run PyTorch precommit test scope
+        run: make test-torch-cuda

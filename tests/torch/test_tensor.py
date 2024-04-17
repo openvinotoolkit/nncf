@@ -35,6 +35,7 @@ class TestPTNNCFTensorOperators(TemplateTestNNCFTensorOperators):
         return cast_to(x, dtype)
 
 
+@pytest.mark.cuda
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="Skipping for CPU-only setups")
 class TestCudaPTNNCFTensorOperators(TemplateTestNNCFTensorOperators):
     @staticmethod
