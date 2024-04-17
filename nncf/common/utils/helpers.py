@@ -43,7 +43,7 @@ def create_table(
     return tabulate(tabular_data=rows, headers=header, tablefmt=table_fmt, maxcolwidths=max_col_widths, floatfmt=".3f")
 
 
-def configure_accuracy_aware_paths(log_dir: str|pathlib.Path) -> str|pathlib.Path:
+def configure_accuracy_aware_paths(log_dir: Union[str,pathlib.Path]) -> Union[str,pathlib.Path]:
     """
     Create a subdirectory inside of the passed log directory
     to save checkpoints from the accuracy-aware training loop to.
