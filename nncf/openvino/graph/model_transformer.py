@@ -16,7 +16,6 @@ from typing import Callable, Dict, List, Tuple
 import numpy as np
 import openvino.runtime as ov
 from openvino._pyopenvino import DescriptorTensor
-from openvino.preprocess import PrePostProcessor
 from openvino.runtime import opset13 as opset
 
 import nncf
@@ -189,6 +188,7 @@ class OVModelTransformer(ModelTransformer):
         :param outputs: list of tuples with ov.Output & port_id.
         :return: Model with new outputs.
         """
+        outputs_type = ov.Type.f32
         results = model.get_results()
         params = model.get_parameters()
 
@@ -196,10 +196,15 @@ class OVModelTransformer(ModelTransformer):
 
         extra_model_outputs = []
         for output, port_id in outputs:
-            output_name = output.get_node().get_friendly_name()
+            node_output = output
+            output_name = node_output.get_node().get_friendly_name()
             # TODO: (KodiaqQ) check out the models with the Split
             result_name = get_result_node_name(output_name, port_id)
-            result = opset.result(output, name=result_name)
+
+            if node_output.get_element_type() != outputs_type:
+                node_output = opset.convert(output, destination_type=outputs_type)
+
+            result = opset.result(node_output, name=result_name)
             OVModelTransformer._update_tensor_name([result.get_output_tensor(0)], result_name)
             extra_model_outputs.append(result)
 
@@ -207,13 +212,6 @@ class OVModelTransformer(ModelTransformer):
             results=results + extra_model_outputs, sinks=assign_ops, parameters=params, name=model.friendly_name
         )
         copy_rt_info(model, model_with_outputs, path=["nncf"])
-        return model_with_outputs
-
-        pre_post_processor = PrePostProcessor(model_with_outputs)
-        for output_id, _ in enumerate(model_with_outputs.outputs):
-            # We set output precision for statistics as FP32 to prevent overflows
-            pre_post_processor.output(output_id).tensor().set_element_type(ov.Type.f32)
-        model_with_outputs = pre_post_processor.build()
         return model_with_outputs
 
     @staticmethod
