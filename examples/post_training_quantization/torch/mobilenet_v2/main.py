@@ -63,7 +63,7 @@ def validate(model: ov.Model, val_loader: torch.utils.data.DataLoader) -> float:
     return accuracy_score(predictions, references)
 
 
-def run_benchmark(model_path: str, shape: Optional[List[int]] = None, verbose: bool = True) -> float:
+def run_benchmark(model_path: Path, shape: Optional[List[int]] = None, verbose: bool = True) -> float:
     command = f"benchmark_app -m {model_path} -d CPU -api async -t 15"
     if shape is not None:
         command += f' -shape [{",".join(str(x) for x in shape)}]'
@@ -74,7 +74,7 @@ def run_benchmark(model_path: str, shape: Optional[List[int]] = None, verbose: b
     return float(match.group(1))
 
 
-def get_model_size(ir_path: str, m_type: str = "Mb", verbose: bool = True) -> float:
+def get_model_size(ir_path: Path, m_type: str = "Mb", verbose: bool = True) -> float:
     xml_size = os.path.getsize(ir_path)
     bin_size = os.path.getsize(os.path.splitext(ir_path)[0] + ".bin")
     for t in ["bytes", "Kb", "Mb"]:
@@ -97,7 +97,7 @@ dataset_path = download_dataset()
 
 normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 val_dataset = datasets.ImageFolder(
-    root=f"{dataset_path}/val",
+    root=dataset_path / "val",
     transform=transforms.Compose(
         [
             transforms.Resize(256),
@@ -107,7 +107,8 @@ val_dataset = datasets.ImageFolder(
         ]
     ),
 )
-val_data_loader = torch.utils.data.DataLoader(val_dataset)
+batch_size = 128
+val_data_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size)
 
 torch_model = models.mobilenet_v2(num_classes=DATASET_CLASSES)
 torch_model = load_checkpoint(torch_model)
@@ -140,8 +141,10 @@ def transform_fn(data_item: Tuple[torch.Tensor, int], device: torch.device) -> t
 # item and prepare model input data. The quantize method uses a small subset
 # (default: 300 samples) of the calibration dataset.
 
+# Recalculation default subset_size parameter based on batch_size.
+subset_size = 300 // batch_size
 calibration_dataset = nncf.Dataset(val_data_loader, partial(transform_fn, device=device))
-torch_quantized_model = nncf.quantize(torch_model, calibration_dataset)
+torch_quantized_model = nncf.quantize(torch_model, calibration_dataset, subset_size=subset_size)
 
 ###############################################################################
 # Benchmark performance, calculate compression rate and validate accuracy
@@ -150,12 +153,12 @@ dummy_input = torch.randn(1, 3, 224, 224)
 ov_model = ov.convert_model(torch_model.cpu(), example_input=dummy_input)
 ov_quantized_model = ov.convert_model(torch_quantized_model.cpu(), example_input=dummy_input)
 
-fp32_ir_path = f"{ROOT}/mobilenet_v2_fp32.xml"
+fp32_ir_path = ROOT / "mobilenet_v2_fp32.xml"
 ov.save_model(ov_model, fp32_ir_path, compress_to_fp16=False)
 print(f"[1/7] Save FP32 model: {fp32_ir_path}")
 fp32_model_size = get_model_size(fp32_ir_path, verbose=True)
 
-int8_ir_path = f"{ROOT}/mobilenet_v2_int8.xml"
+int8_ir_path = ROOT / "mobilenet_v2_int8.xml"
 ov.save_model(ov_quantized_model, int8_ir_path, compress_to_fp16=False)
 print(f"[2/7] Save INT8 model: {int8_ir_path}")
 int8_model_size = get_model_size(int8_ir_path, verbose=True)

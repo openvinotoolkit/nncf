@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import random
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 from unittest.mock import MagicMock
 
 import networkx as nx
@@ -57,7 +57,9 @@ class NodeWithType:
         self.layer_attributes = layer_attributes
 
 
-def create_mock_graph(nodes: List[NodeWithType], node_edges: List[Tuple[str, str]]) -> nx.DiGraph:
+def create_mock_graph(
+    nodes: List[NodeWithType], node_edges: List[Tuple[str, str]], edges_attrs: Optional[Tuple[Any]] = None
+) -> nx.DiGraph:
     mock_graph = nx.DiGraph()
     for node in nodes:
         mock_node_attrs = get_mock_nncf_node_attrs(
@@ -67,7 +69,11 @@ def create_mock_graph(nodes: List[NodeWithType], node_edges: List[Tuple[str, str
             layer_attributes=node.layer_attributes,
         )
         mock_graph.add_node(node.node_name, **mock_node_attrs)
-    mock_graph.add_edges_from(node_edges)
+    if edges_attrs:
+        for (edge_from, edge_to), attr in zip(node_edges, edges_attrs):
+            mock_graph.add_edge(edge_from, edge_to, **attr)
+    else:
+        mock_graph.add_edges_from(node_edges)
     mark_input_ports_lexicographically_based_on_input_node_key(mock_graph)
     return mock_graph
 
@@ -121,8 +127,9 @@ def get_nncf_graph_from_mock_nx_graph(nx_graph: nx.DiGraph, nncf_graph_cls=NNCFG
             out_idx, creator_id = edge_vs_output_idx_and_creator_id[in_edge]
             edge_data = nx_graph.edges[in_edge]
             dtype = edge_data.get(NNCFGraph.DTYPE_EDGE_ATTR, Dtype.FLOAT)
+            shape = edge_data.get(NNCFGraph.ACTIVATION_SHAPE_EDGE_ATTR, [1, 1, 1, 1])
             mock_graph.add_edge_between_nncf_nodes(
-                creator_id, node_id, [1, 1, 1, 1], input_port_id=pred_idx, output_port_id=out_idx, dtype=dtype
+                creator_id, node_id, shape, input_port_id=pred_idx, output_port_id=out_idx, dtype=dtype
             )
 
         for out_idx, out_edge in enumerate(nx_graph.out_edges(curr_node_key)):

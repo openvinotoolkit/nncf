@@ -45,7 +45,10 @@ from nncf.quantization import quantize_with_accuracy_control as quantize_with_ac
 from nncf.quantization.advanced_parameters import (
     AdvancedAccuracyRestorerParameters as AdvancedAccuracyRestorerParameters,
 )
+from nncf.quantization.advanced_parameters import AdvancedBiasCorrectionParameters as AdvancedBiasCorrectionParameters
 from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters as AdvancedQuantizationParameters
+from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters as AdvancedSmoothQuantParameters
+from nncf.quantization.advanced_parameters import OverflowFix as OverflowFix
 from nncf.scopes import IgnoredScope as IgnoredScope
 from nncf.scopes import Subgraph as Subgraph
 from nncf.version import __version__ as __version__

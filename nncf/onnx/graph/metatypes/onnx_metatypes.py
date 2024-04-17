@@ -71,7 +71,7 @@ class ONNXOpWithWeightsMetatype(ONNXOpMetatype):
     bias_port_id: Optional[int] = None
 
 
-@ONNX_OPERATION_METATYPES.register()
+@ONNX_OPERATION_METATYPES.register(is_subtype=True)
 class ONNXDepthwiseConvolutionMetatype(ONNXOpWithWeightsMetatype):
     name = "DepthwiseConvOp"
     op_names = ["Conv"]
@@ -86,7 +86,7 @@ class ONNXDepthwiseConvolutionMetatype(ONNXOpWithWeightsMetatype):
         return _is_depthwise_conv(model, node)
 
 
-@ONNX_OPERATION_METATYPES.register()
+@ONNX_OPERATION_METATYPES.register(is_subtype=True)
 class ONNXGroupConvolutionMetatype(ONNXOpWithWeightsMetatype):
     name = "GroupConvOp"
     op_names = ["Conv"]
@@ -130,7 +130,7 @@ class ONNXGemmMetatype(ONNXOpWithWeightsMetatype):
     name = "GemmOp"
     op_names = ["Gemm"]
     hw_config_names = [HWConfigOpName.MATMUL]
-    weight_channel_axis = -1
+    weight_channel_axis = -1  # For port_id=1
     weight_port_ids = None
     bias_port_id = 2
     possible_weight_ports = [0, 1]
@@ -142,7 +142,7 @@ class ONNXMatMulMetatype(ONNXOpMetatype):
     name = "MatMulOp"
     op_names = ["MatMul"]
     hw_config_names = [HWConfigOpName.MATMUL]
-    weight_channel_axis = -1
+    weight_channel_axis = -1  # For port_id=1
     weight_port_ids = None
     bias_port_id = 2
     possible_weight_ports = [0, 1]
@@ -420,7 +420,7 @@ class ONNXReciprocalMetatype(ONNXOpMetatype):
     hw_config_names = [HWConfigOpName.POWER]
 
 
-@ONNX_OPERATION_METATYPES.register()
+@ONNX_OPERATION_METATYPES.register(is_subtype=True)
 class ONNXEmbeddingMetatype(ONNXOpMetatype):
     name = "EmbeddingOp"
     hw_config_names = [HWConfigOpName.EMBEDDING]
@@ -463,8 +463,8 @@ class ONNXScatterNDMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
-class ONNXRoiAlignMetatype(ONNXOpMetatype):
-    name = "RoiAlignOp"
+class ONNXROIAlignMetatype(ONNXOpMetatype):
+    name = "ROIAlignOp"
     op_names = ["RoiAlign"]
 
 
@@ -749,7 +749,7 @@ def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
         if attribute.name == "group":
             conv_group = onnx.helper.get_attribute_value(attribute)
     weight_tensor_value = None
-    initializer_name = node.input[1]
+    initializer_name = get_tensor_edge_name(model, node, 1, get_parents_node_mapping(model))
     for init in model.graph.initializer:
         if init.name == initializer_name:
             weight_tensor_value = onnx.numpy_helper.to_array(init)

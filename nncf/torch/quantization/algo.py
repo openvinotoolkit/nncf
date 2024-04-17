@@ -83,6 +83,7 @@ from nncf.torch.graph.operator_metatypes import UNIFICATION_PRODUCING_METATYPES
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
 from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
+from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TransformationPriority
@@ -90,7 +91,6 @@ from nncf.torch.graph.transformations.layout import PTTransformationLayout
 from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.initialization import SimpleDataLoaderRunner
 from nncf.torch.module_operations import UpdatePaddingValue
-from nncf.torch.nncf_network import ExtraCompressionModuleType
 from nncf.torch.nncf_network import LoadStateListener
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.adjust_padding import AdjustPaddingArgs
@@ -534,7 +534,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         return PTRangeInitParams(**range_init_params) if range_init_params is not None else None
 
     def _parse_precision_init_params(self, initializer_config: Dict) -> Tuple[str, BasePrecisionInitParams]:
-        init_precision_config = initializer_config.get("precision", None)
+        init_precision_config = initializer_config.get("precision")
         if not init_precision_config:
             return None, None
         precision_init_type = init_precision_config.get("type", "manual")
@@ -934,7 +934,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
             range_init_minmax_values = None
             if minmax_values_for_range_init:
-                minmax_stat = minmax_values_for_range_init[qp_id] if qp_id in minmax_values_for_range_init else None
+                minmax_stat = minmax_values_for_range_init.get(qp_id)
                 if minmax_stat is not None:
                     range_init_minmax_values = (minmax_stat.min_values, minmax_stat.max_values)
 
@@ -1084,7 +1084,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             min_values = None
             max_values = None
             for qp_id in sorted_qp_ids:
-                minmax_stat = minmax_values_for_range_init[qp_id] if qp_id in minmax_values_for_range_init else None
+                minmax_stat = minmax_values_for_range_init.get(qp_id)
                 if minmax_stat is None:
                     continue
 
@@ -1208,15 +1208,11 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
                     # share the single module and this would be impossible for multiple weight quantizer sharing if
                     # the corresponding UpdateWeights operations contained real modules (these would simply get copied
                     # by PyTorch internals)
-                    callable_obj = ExternalQuantizerCallHook(
-                        target_model.nncf.get_tracing_context(), external_quantizer_storage_key, self._debug_interface
-                    )
+                    callable_obj = ExternalQuantizerCallHook(external_quantizer_storage_key, self._debug_interface)
             else:
                 # Hooks will be identical for each affected op_address in the linked scenario
                 # - will call one and the same quantizer
-                callable_obj = ExternalQuantizerCallHook(
-                    target_model.nncf.get_tracing_context(), external_quantizer_storage_key, self._debug_interface
-                )
+                callable_obj = ExternalQuantizerCallHook(external_quantizer_storage_key, self._debug_interface)
 
             nncf_logger.debug(
                 f"Performing "

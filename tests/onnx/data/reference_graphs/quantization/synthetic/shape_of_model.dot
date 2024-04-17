@@ -32,7 +32,7 @@ strict digraph  {
 "10 Cast1" -> "11 Cast2"  [label="[]", style=dashed];
 "11 Cast2" -> "12 Sqrt"  [label="[]", style=solid];
 "12 Sqrt" -> "13 Reshape"  [label="[]", style=solid];
-"13 Reshape" -> "16 Conv2"  [label="[1]", style=solid];
+"13 Reshape" -> "16 Conv2"  [label="[]", style=solid];
 "14 QuantizeLinear_Conv2_W_1" -> "15 DequantizeLinear_Conv2_W_1"  [label="[10, 32, 1, 1]", style=dashed];
 "15 DequantizeLinear_Conv2_W_1" -> "16 Conv2"  [label="[10, 32, 1, 1]", style=solid];
 "16 Conv2" -> "18 nncf_model_output_0"  [label="[1, 10, 1, 1]", style=solid];

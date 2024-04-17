@@ -60,9 +60,7 @@ class WeightCompressionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_channel_agnostic_reduction_axes(
-        node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph
-    ) -> Optional[Tuple[int]]:
+    def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[Tuple[int]]:
         """
         Returns reduction axes without axes that corresponds to weight channels of the node with weight.
 

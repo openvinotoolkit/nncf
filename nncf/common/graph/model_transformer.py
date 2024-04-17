@@ -29,7 +29,7 @@ class ModelTransformer:
         """
         self._model = model
 
-    def transform(self, transformation_layout: TransformationLayout) -> TModel:
+    def transform(self, transformation_layout: TransformationLayout) -> TModel:  # type:ignore
         """
         Applies transformations to the model.
 

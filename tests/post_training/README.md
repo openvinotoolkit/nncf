@@ -60,6 +60,7 @@ Additional arguments:
 - `--fp32` to run validation of not quantized model
 - `--cuda` to enable CUDA_TORCH backend
 - `--subset-size=N` to force subset_size of calibration dataset
+- `--batch-size=N` to use batch_size for calibration. Some of the models do not support --batch-size > 1. For such models, please, use --batch-size=1.
 - `--benchmark` to collect throughput statistics, add `FPS` column to result.csv
 - `--extra-columns` to add additional columns to reports.csv:
   - `Stat. collection time` - time of statistic collection
@@ -114,4 +115,10 @@ Run test with additional columns:
 
 ```bash
 pytest --data=<path_to_datasets> --extra-columns tests/post_training/test_quantize_conformance.py
+```
+
+Run test with calibration dataset having batch-size=10 for all models:
+
+```bash
+pytest --data=<path_to_datasets> --batch-size 10 tests/post_training/test_quantize_conformance.py
 ```

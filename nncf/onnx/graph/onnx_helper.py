@@ -114,26 +114,6 @@ def get_output_port_id_for_node_before_output(output_name: str, from_node: onnx.
     raise nncf.ValidationError(f"The node {from_node} does not have output edge with the name {output_name}")
 
 
-def get_port_ids_between_nodes(from_node: onnx.NodeProto, to_node: onnx.NodeProto) -> Dict[str, int]:
-    """
-    Returns input_port_id and output_port_id between 'from_node' and 'to_node'.
-
-    :param from_node: Node, whose output is connected to 'to_node' node.
-    :param to_node: Node, whose input is connected to 'from_node' node.
-    :return: Dict{'input_port_id': input port id, 'output_port_id': output port id}
-    """
-    output = {"input_port_id": None, "output_port_id": None}
-    for port_id, port in enumerate(to_node.input):
-        if port in from_node.output:
-            output["input_port_id"] = port_id
-    for port_id, port in enumerate(from_node.output):
-        if port in to_node.input:
-            output["output_port_id"] = port_id
-    if output["output_port_id"] is None or output["input_port_id"] is None:
-        raise nncf.InternalError(f"The nodes {from_node.name} and {to_node.name} do not have edges between.")
-    return output
-
-
 def get_node_index(model: onnx.ModelProto, node_name: str) -> Optional[int]:
     """
     Returns the node index in the model.
