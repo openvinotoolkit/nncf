@@ -307,7 +307,9 @@
                     "compression_description": "INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + filter pruning 40%",
                     "batch_per_gpu": 15,
                     "target_tf": 32.61,
-                    "target_ov": 32.47
+                    "target_ov": 32.47,
+                    "diff_target_tf_min": -0.15,
+                    "diff_target_tf_max": 0.15
                 },
                 "yolo_v4_coco": {
                     "config": "examples/tensorflow/object_detection/configs/yolo_v4_coco.json",
