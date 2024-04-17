@@ -11,13 +11,14 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict
-from typing import Union
+from typing import Dict, Union
 
 import nncf
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.accuracy_aware_training.runner import BaseAccuracyAwareTrainingRunner
-from nncf.common.accuracy_aware_training.runner import BaseAdaptiveCompressionLevelTrainingRunner
+from nncf.common.accuracy_aware_training.runner import (
+    BaseAdaptiveCompressionLevelTrainingRunner,
+)
 from nncf.common.accuracy_aware_training.runner import TrainingRunner
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
@@ -40,7 +41,7 @@ class EarlyExitTrainingRunnerCreator(TrainingRunnerCreator):
 
     def __init__(
         self,
-        accuracy_aware_training_params: Dict[str, Union[float,int]],
+        accuracy_aware_training_params: Dict[str, Union[float, int]],
         compression_controller: CompressionAlgorithmController,
         uncompressed_model_accuracy: float,
         verbose: bool,
@@ -62,7 +63,9 @@ class EarlyExitTrainingRunnerCreator(TrainingRunnerCreator):
         """
         nncf_backend = get_backend(self.compression_controller.model)  # type: ignore
         if nncf_backend is BackendType.TORCH:
-            from nncf.torch.accuracy_aware_training.runner import PTAccuracyAwareTrainingRunner
+            from nncf.torch.accuracy_aware_training.runner import (
+                PTAccuracyAwareTrainingRunner,
+            )
 
             return PTAccuracyAwareTrainingRunner(
                 self.accuracy_aware_training_params,
@@ -72,7 +75,9 @@ class EarlyExitTrainingRunnerCreator(TrainingRunnerCreator):
                 self.lr_updates_needed,
             )
         if nncf_backend == BackendType.TENSORFLOW:
-            from nncf.tensorflow.accuracy_aware_training.runner import TFAccuracyAwareTrainingRunner
+            from nncf.tensorflow.accuracy_aware_training.runner import (
+                TFAccuracyAwareTrainingRunner,
+            )
 
             return TFAccuracyAwareTrainingRunner(
                 self.accuracy_aware_training_params,
@@ -91,7 +96,7 @@ class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
 
     def __init__(
         self,
-        accuracy_aware_training_params: Dict[str, Union[float,int]],
+        accuracy_aware_training_params: Dict[str, Union[float, int]],
         compression_controller: CompressionAlgorithmController,
         uncompressed_model_accuracy: float,
         verbose: bool,
@@ -118,7 +123,9 @@ class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
         nncf_backend = get_backend(self.compression_controller.model)  # type: ignore
 
         if nncf_backend is BackendType.TORCH:
-            from nncf.torch.accuracy_aware_training.runner import PTAdaptiveCompressionLevelTrainingRunner
+            from nncf.torch.accuracy_aware_training.runner import (
+                PTAdaptiveCompressionLevelTrainingRunner,
+            )
 
             return PTAdaptiveCompressionLevelTrainingRunner(
                 self.accuracy_aware_training_params,
@@ -130,7 +137,9 @@ class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
                 self.maximal_compression_rate,
             )
         if nncf_backend == BackendType.TENSORFLOW:
-            from nncf.tensorflow.accuracy_aware_training.runner import TFAdaptiveCompressionLevelTrainingRunner
+            from nncf.tensorflow.accuracy_aware_training.runner import (
+                TFAdaptiveCompressionLevelTrainingRunner,
+            )
 
             return TFAdaptiveCompressionLevelTrainingRunner(
                 self.accuracy_aware_training_params,

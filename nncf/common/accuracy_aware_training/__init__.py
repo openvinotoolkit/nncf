@@ -12,7 +12,9 @@
 Accuracy Aware Training functionality.
 """
 
-from nncf.common.accuracy_aware_training.training_loop import AccuracyAwareTrainingMode as AccuracyAwareTrainingMode
+from nncf.common.accuracy_aware_training.training_loop import (
+    AccuracyAwareTrainingMode as AccuracyAwareTrainingMode,
+)
 from nncf.common.accuracy_aware_training.training_loop import (
     create_accuracy_aware_training_loop as create_accuracy_aware_training_loop,
 )
