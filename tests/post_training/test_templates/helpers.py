@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -30,9 +30,14 @@ class StaticDatasetMock:
     to convert data to backend specific type.
     """
 
-    def __init__(self, input_size: Tuple, fn_to_type: Callable = None):
+    def __init__(
+        self,
+        input_size: Tuple,
+        fn_to_type: Callable = None,
+        length: int = 1,
+    ):
         super().__init__()
-        self._len = 1
+        self._len = length
         self._input_size = input_size
         self._fn_to_type = fn_to_type
 
@@ -47,19 +52,19 @@ class StaticDatasetMock:
         return self._len
 
 
-def get_static_dataset(
-    input_size: Tuple,
-    transform_fn: Callable,
-    fn_to_type: Callable,
-) -> Dataset:
+def get_static_dataset(input_size: Tuple, transform_fn: Callable, fn_to_type: Callable, length: int = 1) -> Dataset:
     """
     Create nncf.Dataset for StaticDatasetMock.
     :param input_size: Size of generated tensors,
     :param transform_fn: Function to transformation dataset.
     :param fn_to_type: Function, defaults to None.
+    :param length: The length of the dataset.
     :return: Instance of nncf.Dataset for StaticDatasetMock.
     """
-    return Dataset(StaticDatasetMock(input_size, fn_to_type), transform_fn)
+    return Dataset(
+        StaticDatasetMock(input_size, fn_to_type, length),
+        transform_fn,
+    )
 
 
 class ConvTestModel(nn.Module):
@@ -90,6 +95,67 @@ class ConvBNTestModel(nn.Module):
         x = self.conv(x)
         x = self.bn(x)
         return x
+
+
+class ConvBiasBNTestModel(torch.nn.Module):
+    INPUT_SIZE = [1, 1, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.conv = create_conv(1, 2, 2)
+        self.conv.bias.data = torch.Tensor([0.3, 1.3])
+        self.conv.weight.data = torch.Tensor([[[[0.1, -2.0], [1.0, 0.1]]], [[[0.1, 2.0], [-1.0, 0.1]]]])
+        self.bn = create_bn(2)
+        self.bn.bias.data = torch.Tensor([0.1, 1.0])
+        self.bn.weight.data = torch.Tensor([0.2, 2.0])
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.bn(x)
+        return x
+
+
+class CustomConv(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.weight = nn.Parameter(torch.Tensor([[[[0.1, -2.0], [1.0, 0.1]]], [[[0.1, 2.0], [-1.0, 0.1]]]]))
+        self.bias = nn.Parameter(torch.Tensor([0.1, 1.0]))
+        self.act = nn.Identity()
+
+    def forward(self, x):
+        return self.act(F.conv2d(x, self.weight, self.bias))
+
+
+class CustomConvTestModel(nn.Module):
+    INPUT_SIZE = [1, 1, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.conv = CustomConv()
+        self.drop = nn.Dropout(0)
+
+    def forward(self, x):
+        return self.drop(self.conv(x))
+
+
+class CustomBN2d(nn.BatchNorm2d):
+    def __init__(self):
+        super().__init__(2)
+        self.bias.data = torch.Tensor([0.1, 1.0])
+        self.weight.data = torch.Tensor([0.2, 2.0])
+        self.act = nn.Identity()
+
+
+class CustomConvBNTestModel(nn.Module):
+    INPUT_SIZE = [1, 1, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        self.conv = CustomConv()
+        self.bn = CustomBN2d()
+
+    def forward(self, x):
+        return self.bn(self.conv(x))
 
 
 class FCTestModel(nn.Module):
@@ -157,6 +223,14 @@ class LinearMultiShapeModel(nn.Module):
             self.matmul_7_data = torch.randn((6, 6), dtype=torch.float32)
             self.matmul_8_data = torch.randn((10, 6), dtype=torch.float32)
 
+            self.linear_3 = nn.Linear(4, 4)
+            self.linear_3.weight.data = torch.randn((4, 4), dtype=torch.float32)
+            self.linear_3.bias.data = torch.randn((1, 4), dtype=torch.float32)
+
+            self.linear_4 = nn.Linear(4, 4)
+            self.linear_4.weight.data = torch.randn((4, 4), dtype=torch.float32)
+            self.linear_4.bias.data = torch.randn((1, 4), dtype=torch.float32)
+
     def forward(self, x):
         x = torch.reshape(x, (1, 3, 2, 4))
 
@@ -164,6 +238,15 @@ class LinearMultiShapeModel(nn.Module):
         x_2 = torch.matmul(x, self.matmul_2_data)
 
         x = torch.add(x_1, x_2)
+
+        x_3 = self.linear_3(x)
+        x_4 = self.linear_4(x)
+
+        x_ = torch.add(x_3, x_4)
+
+        x = torch.add(x, x_)
+        x = torch.sub(x, x_)
+
         x_1 = torch.reshape(x, (1, 3, 8))
 
         x_1_1 = torch.matmul(x_1, self.matmul_3_data)
@@ -189,13 +272,23 @@ class LinearMultiShapeModel(nn.Module):
 class NonZeroLinearModel(nn.Module):
     INPUT_SIZE = [10]
 
+    def __init__(self):
+        super().__init__()
+        self.linear = nn.Linear(1, 5)
+        self.linear.weight.data = torch.ones((5, 1))
+        self.linear.bias.data = torch.zeros((1, 1))
+
+        self.linear1 = nn.Linear(10, 10)
+        self.linear1.weight.data = torch.ones((10, 10))
+        self.linear1.bias.data = torch.zeros((1, 1))
+
     def forward(self, x):
         zeros = (x > torch.inf).float()
         empty = torch.nonzero(zeros).reshape((-1, 1, 1)).float()
-        y = torch.matmul(empty, torch.ones((1, 5)))
+        y = self.linear(empty)
         y += 5
         y = torch.cat((torch.ones((1, 10)), y.reshape(1, -1)), dim=1)
-        y = torch.matmul(y, torch.ones(10, 10))
+        y = self.linear1(y)
         y += 5
         return y
 
@@ -310,4 +403,22 @@ class EmbeddingModel(nn.Module):
         x = x.type(torch.int32)
         x = self.embedding(x)
         x = self.matmul(x)
+        return x
+
+
+class ShareWeghtsConvAndShareLinearModel(nn.Module):
+    INPUT_SIZE = [1, 1, 4, 4]
+
+    def __init__(self):
+        super().__init__()
+        with set_torch_seed():
+            self.conv = create_conv(1, 1, 1)
+            self.linear = nn.Linear(4, 4)
+            self.linear.weight.data = torch.randn((4, 4), dtype=torch.float32)
+            self.linear.bias.data = torch.randn((1, 4), dtype=torch.float32)
+
+    def forward(self, x):
+        for _ in range(2):
+            x = self.conv(x)
+            x = self.linear(x)
         return x

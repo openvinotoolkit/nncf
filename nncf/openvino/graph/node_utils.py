@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,6 +15,7 @@ import numpy as np
 import openvino.runtime as ov
 import openvino.runtime.opset13 as opset
 
+import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
@@ -43,17 +44,23 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
 InplaceInsertionFnType = Callable[[ov.Node, int], ov.Node]
 
 
-def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
+def is_node_with_bias(
+    node: NNCFNode, nncf_graph: NNCFGraph, metatypes_with_bias: Optional[List[OVOpMetatype]] = None
+) -> bool:
     """
     Checks if the node has a bias or not.
 
     :param node: The node to check.
     :param nncf_graph: NNCFGraph instance.
+    :param metatypes_with_bias: List of the metatypes that contains biases.
     :return: Return `True` if `node` corresponds to the operation
         with bias (bias is added to the output tensor of that operation),
         `False` otherwise.
     """
-    if node.metatype not in OPERATIONS_WITH_BIAS:
+    if metatypes_with_bias is None:
+        metatypes_with_bias = OPERATIONS_WITH_BIAS
+
+    if node.metatype not in metatypes_with_bias:
         return False
 
     add_node = nncf_graph.get_next_nodes(node)[0]
@@ -316,7 +323,7 @@ def get_inplace_mean_per_ch(axis: int) -> InplaceInsertionFnType:
 def get_partial_shape_safe(node, port_id) -> Tuple[int, ...]:
     partial_shape = node.get_output_partial_shape(port_id)
     if partial_shape.rank.is_dynamic or not partial_shape.all_non_negative:
-        raise RuntimeError(
+        raise nncf.ValidationError(
             f"Could not collect statistics for the node {node} because its output shape rank is dynamic or negative"
         )
     return partial_shape
@@ -370,20 +377,6 @@ def get_matmul_channel_axes(node: ov.Node) -> List[int]:
     """
     weights_layout = get_linear_weights_layout_from_node(node)
     return [idx for idx, elem in enumerate(weights_layout) if elem in [OVLayoutElem.SPATIAL, OVLayoutElem.C_OUT]]
-
-
-def get_channel_agnostic_reduction_axes(channel_axes: List[int], shape: List[int]) -> Optional[ReductionAxes]:
-    """
-    Returns filtered reduction axes without axes that corresponds channels.
-
-    :param channel_axes: List of the channel axes.
-    :param shape: Shape that need to be filtered.
-    :return: Reduction axes in tuple format.
-    """
-    reduction_axes = list(range(len(shape)))
-    for channel_axis in sorted(channel_axes, reverse=True):
-        del reduction_axes[channel_axis]
-    return tuple(reduction_axes)
 
 
 def create_bias_tensor(node_without_bias: NNCFNode, graph: NNCFGraph, value: Any) -> np.ndarray:

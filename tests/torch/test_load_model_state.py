@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,6 +16,7 @@ from typing import Dict, List, Set
 import pytest
 import torch
 
+import nncf
 from examples.torch.common.model_loader import load_model
 from nncf.common.logging.logger import NNCFDeprecationWarning
 from nncf.torch.checkpoint_loading import OPTIONAL_PARAMETERS_REGISTRY
@@ -243,15 +244,6 @@ MATCH_KEY_DESC_LIST = [
     MatchKeyDesc(num_loaded=2)
         .keys_to_load(['pre_ops.0.op.1', 'pre_ops.1.op.2'])
         .model_keys(['pre_ops.1.op.1', 'pre_ops.0.op.2'])
-        .all_matched(),
-    # binarization of activation and weight may have the identical parameter (e.g. enabled)
-    MatchKeyDesc(num_loaded=2)
-        .keys_to_load(['pre_ops.0.op.1', 'pre_ops.1.op.1'])
-        .model_keys(['pre_ops.0.op.1', 'pre_ops.1.op.1'])
-        .all_matched(),
-    MatchKeyDesc(num_loaded=2)
-        .keys_to_load(['module.pre_ops.1.op.1', 'module.pre_ops.0.op.1'])
-        .model_keys(['module.module.pre_ops.1.op.1', 'module.module.pre_ops.0.op.1'])
         .all_matched(),
     # quantization -> quantization + sparsity: op.1 was first, than
     MatchKeyDesc(num_loaded=2)
@@ -512,7 +504,7 @@ def test_match_key(desc: MatchKeyDesc, mocker, nncf_caplog):
 
     assert key_matcher._processed_keys._keys == desc.processed_keys._keys
     if desc.expects_error:
-        with pytest.raises(RuntimeError):
+        with pytest.raises(nncf.InternalError):
             key_matcher.handle_problematic_keys()
     else:
         with nncf_caplog.at_level(logging.WARNING):

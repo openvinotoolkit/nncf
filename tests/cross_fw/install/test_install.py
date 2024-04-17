@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,6 +17,7 @@ from typing import List
 
 import pytest
 
+import nncf
 from nncf.common.utils.os import is_linux
 from nncf.common.utils.os import is_windows
 from tests.cross_fw.install.conftest import TESTED_BACKENDS
@@ -30,7 +31,7 @@ from tests.shared.paths import TEST_ROOT
 
 def run_install_checks(venv_path: Path, tmp_path: Path, package_type: str, backend: str, install_type: str):
     if install_type.lower() not in ["cpu", "gpu"]:
-        raise RuntimeError("Unknown installation mode - must be either 'cpu' or 'gpu'")
+        raise nncf.ValidationError("Unknown installation mode - must be either 'cpu' or 'gpu'")
 
     python_executable_with_venv = get_python_executable_with_venv(venv_path)
     pip_with_venv = get_pip_executable_with_venv(venv_path)
@@ -48,14 +49,8 @@ def run_install_checks(venv_path: Path, tmp_path: Path, package_type: str, backe
             package_path = find_file_by_extension(PROJECT_ROOT / "dist", ".tar.gz")
         elif package_type == "build_w":
             package_path = find_file_by_extension(PROJECT_ROOT / "dist", ".whl")
-        # Currently CI runs on RTX3090s, which require CUDA 11 to work.
-        # Current torch, however (v1.12), is installed via pip using .whl packages
-        # compiled for CUDA 10.2. Thus need to direct pip installation specifically for
-        # torch, otherwise the NNCF will only work in CPU mode.
-        torch_extra_index = " --extra-index-url https://download.pytorch.org/whl/cu116"
+
         run_cmd_line = f"{pip_with_venv} install {package_path}[{backend}]"
-        if backend == "torch":
-            run_cmd_line += torch_extra_index
         subprocess.run(run_cmd_line, check=True, shell=True)
 
     run_path = tmp_path / "run"

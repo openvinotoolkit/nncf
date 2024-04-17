@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,15 +10,15 @@
 # limitations under the License.
 from typing import Dict, List
 
-import networkx as nx
-import networkx.algorithms.isomorphism as ism
+import networkx as nx  # type:ignore
+import networkx.algorithms.isomorphism as ism  # type:ignore
 
 from nncf.common.graph.patterns import GraphPattern
 
 ATTRS_TO_SKIP = [GraphPattern.LABEL_ATTR, GraphPattern.PATTERN_NODE_TO_EXCLUDE]
 
 
-def _are_nodes_matched(node_1, node_2) -> bool:
+def _are_nodes_matched(node_1, node_2) -> bool:  # type:ignore
     for attr in node_2:
         if attr in ATTRS_TO_SKIP:
             continue

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -24,7 +24,7 @@ def _get_site_packages_path() -> Path:
     return Path(next(x for x in site_packages if "lib" in x and "site-packages" in x))
 
 
-DATASET_DEFINITIONS_PATH = _get_site_packages_path() / "openvino" / "model_zoo" / "data" / "dataset_definitions.yml"
+DATASET_DEFINITIONS_PATH = _get_site_packages_path() / "omz_tools" / "data" / "dataset_definitions.yml"
 
 ROOT_PYTHONPATH_ENV = os.environ.copy().update({"PYTHONPATH": str(PROJECT_ROOT)})
 

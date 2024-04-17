@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,7 +18,7 @@ from tensorflow.python.eager import context as eager_context  # noqa: F401
 
 from nncf.tensorflow import tensorflow_version
 
-if version.parse(tensorflow_version) < version.parse("2.13"):
+if tensorflow_version < version.parse("2.13"):
     from keras import engine as keras_engine  # noqa: F401
     from keras.applications import imagenet_utils as imagenet_utils
     from keras.engine.keras_tensor import KerasTensor as KerasTensor

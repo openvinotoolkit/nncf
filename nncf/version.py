@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,8 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__version__ = "2.7.0"
+__version__ = "2.10.0"
 
-BKC_TORCH_VERSION = "2.1.0"
-BKC_TORCHVISION_VERSION = "0.16.0"
-BKC_TF_VERSION = "2.12.*"
+BKC_TORCH_SPEC = "==2.2.*"
+BKC_TF_SPEC = "==2.12.*"
+STRICT_TF_SPEC = ">=2.8.4,<2.14.0"

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -163,6 +163,21 @@ class ParameterTestMetatype(TestMetatype):
     name = "parameter"
 
 
+@METATYPES_FOR_TEST.register()
+class FakeQuantizeTestMetatype(TestMetatype):
+    name = "fake_quantize"
+
+
+@METATYPES_FOR_TEST.register()
+class QuantizeTestMetatype(TestMetatype):
+    name = "quantize"
+
+
+@METATYPES_FOR_TEST.register()
+class DequantizeTestMetatype(TestMetatype):
+    name = "dequantize"
+
+
 WEIGHT_LAYER_METATYPES = [LinearTestMetatype, Conv2dTestMetatype, MatMulTestMetatype]
 
 
@@ -180,7 +195,9 @@ DEFAULT_TEST_QUANT_TRAIT_MAP = {
 
 
 QUANTIZER_METATYPES = [
-    QuantizerTestMetatype,
+    FakeQuantizeTestMetatype,
+    QuantizeTestMetatype,
+    DequantizeTestMetatype,
 ]
 
 

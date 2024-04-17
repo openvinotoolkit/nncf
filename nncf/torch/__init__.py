@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,25 +17,23 @@ Base subpackage for NNCF PyTorch functionality.
 from nncf import nncf_logger
 from nncf.common.logging.logger import warn_bkc_version_mismatch
 
-from nncf.version import BKC_TORCH_VERSION
+from nncf.version import BKC_TORCH_SPEC
 
 import torch
 from packaging import version
+from packaging.specifiers import SpecifierSet
 
 try:
-    _torch_version = torch.__version__
-    torch_version = version.parse(_torch_version).base_version
+    _torch_version = version.parse(version.parse(torch.__version__).base_version)
 except:  # noqa: E722
     nncf_logger.debug("Could not parse torch version")
-    _torch_version = "0.0.0"
-    torch_version = version.parse(_torch_version).base_version
+    _torch_version = version.parse("0.0.0")
 
-if version.parse(BKC_TORCH_VERSION).base_version != torch_version:
-    warn_bkc_version_mismatch("torch", BKC_TORCH_VERSION, torch.__version__)
+if _torch_version not in SpecifierSet(BKC_TORCH_SPEC):
+    warn_bkc_version_mismatch("torch", BKC_TORCH_SPEC, torch.__version__)
 
 
 # Required for correct COMPRESSION_ALGORITHMS registry functioning
-from nncf.torch.binarization import algo as binarization_algo
 from nncf.torch.quantization import algo as quantization_algo
 from nncf.torch.sparsity.const import algo as const_sparsity_algo
 from nncf.torch.sparsity.magnitude import algo as magnitude_sparsity_algo
@@ -48,6 +46,7 @@ from nncf.torch.knowledge_distillation import algo as knowledge_distillation_alg
 # listed below for importing convenience
 
 from nncf.torch.model_creation import create_compressed_model
+from nncf.torch.model_creation import is_wrapped_model
 from nncf.torch.model_creation import wrap_model
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.initialization import register_default_init_args

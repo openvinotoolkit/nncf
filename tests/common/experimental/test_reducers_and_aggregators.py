@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,6 +18,7 @@ from typing import Any, Iterator, List, Optional, Tuple
 import numpy as np
 import pytest
 
+import nncf
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
@@ -30,7 +31,9 @@ from nncf.experimental.common.tensor_statistics.collectors import MedianAggregat
 from nncf.experimental.common.tensor_statistics.collectors import MedianNoOutliersAggregator
 from nncf.experimental.common.tensor_statistics.collectors import MinAggregator
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
+from nncf.experimental.common.tensor_statistics.collectors import NoopReducer
 from nncf.experimental.common.tensor_statistics.collectors import PercentileAggregator
+from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 
 DEFAULT_3D_MEAN_VALUE = [[2503.125, -2493.75, 5009.375], [-4987.5, 7515.625, -7481.25], [10021.875, -9975.0, 12528.125]]
@@ -170,12 +173,25 @@ class TemplateTestReducersAggreagtors:
     def cast_tensor(self, tensor, dtype: Dtype):
         pass
 
-    def test_noop_reducer(self, reducers):
-        reducer = reducers["noop"]()
-        input_ = np.arange(24).reshape((1, 2, 3, 4))
-        reduced_input = reducer([self.get_nncf_tensor(input_)])
-        assert len(reduced_input) == 1
-        assert self.all_close(reduced_input[0].tensor, input_)
+    @pytest.mark.parametrize("reducer_cls", [NoopReducer, RawReducer])
+    @pytest.mark.parametrize("input_data", [np.arange(24).reshape((1, 2, 3, 4)), np.array([])])
+    def test_other_reducers(self, reducer_cls, input_data):
+        reducer = reducer_cls()
+        tensor_data = self.get_nncf_tensor(input_data)
+        reduced_input = reducer([tensor_data])
+        if reducer_cls == NoopReducer and tensor_data.is_empty():
+            assert reduced_input is None
+        else:
+            assert len(reduced_input) == 1
+            assert self.all_close(reduced_input[0].tensor, input_data)
+
+    @pytest.mark.parametrize("reducer_cls", [NoopReducer, RawReducer])
+    def test_other_reducers_name_hash_equal(self, reducer_cls):
+        reducers_instances = [reducer_cls() for _ in range(2)]
+        assert hash(reducers_instances[0]) == hash(reducers_instances[1])
+        assert reducers_instances[0] == reducers_instances[1]
+        assert reducers_instances[0].name == reducers_instances[1].name
+        assert len(set(reducers_instances)) == 1
 
     @pytest.mark.parametrize(
         "reducer_name,ref",
@@ -498,17 +514,9 @@ class TemplateTestReducersAggreagtors:
 
     @pytest.mark.parametrize(
         "reducer_name",
-        ["noop", "min", "max", "abs_max", "mean", "quantile", "abs_quantile", "batch_mean", "mean_per_ch"],
+        ["min", "max", "abs_max", "mean", "quantile", "abs_quantile", "batch_mean", "mean_per_ch"],
     )
     def test_reducers_name_hash_equal(self, reducer_name, reducers):
-        if reducer_name == "noop":
-            reducers_instances = [reducers[reducer_name]() for _ in range(2)]
-            assert hash(reducers_instances[0]) == hash(reducers_instances[1])
-            assert reducers_instances[0] == reducers_instances[1]
-            assert reducers_instances[0].name == reducers_instances[1].name
-            assert len(set(reducers_instances)) == 1
-            return
-
         params = {}
         if reducer_name in ["min", "max", "abs_max", "mean"]:
             params["reduction_axes"] = [None, (0, 1, 3), (1, 2, 3)]
@@ -522,7 +530,7 @@ class TemplateTestReducersAggreagtors:
             params["inplace"] = [False, True]
             params["channel_axis"] = [1, 2]
         else:
-            raise RuntimeError(
+            raise nncf.ValidationError(
                 "test_min_max_mean_reducer_hash_equal configurated in a wrong way."
                 f" Wrong reducer_name: {reducer_name}"
             )

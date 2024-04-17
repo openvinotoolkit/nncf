@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -22,15 +22,20 @@ from dataclasses import dataclass
 from dataclasses import replace
 from enum import Enum
 from itertools import islice
-from typing import Any, Iterable, List, Optional, TypeVar
+from typing import Any, Dict, Iterable, List, Optional, TypeVar
 
 import numpy as np
 import openvino.runtime as ov
 from config import Config
 from openvino.runtime import Dimension
 from openvino.runtime import PartialShape
-from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator
-from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import create_model_evaluator
+
+try:
+    from accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator
+    from accuracy_checker.evaluators.quantization_model_evaluator import create_model_evaluator
+except ImportError:
+    from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import ModelEvaluator
+    from openvino.tools.accuracy_checker.evaluators.quantization_model_evaluator import create_model_evaluator
 
 import nncf
 from nncf.common.deprecation import warning_deprecated
@@ -95,6 +100,8 @@ def parse_args():
     )
 
     parser.add_argument("--impl", help="NNCF OpenVINO backend implementation.", choices=["pot", "native"], default=None)
+
+    parser.add_argument("--batch_size", help="Batch size", type=int, default=1)
 
     return parser.parse_args()
 
@@ -224,7 +231,7 @@ class ACValidationFunction:
 
     def _output_callback(self, raw_predictions, **kwargs):
         if not ("metrics_result" in kwargs and "dataset_indices" in kwargs):
-            raise RuntimeError(
+            raise nncf.ValidationError(
                 "Expected `metrics_result`, `dataset_indices` be passed to output_callback inside accuracy checker"
             )
 
@@ -533,6 +540,12 @@ def map_smooth_quant_alpha(smooth_quant_alpha):
     return map_smooth_quant_alphas({"matmul": smooth_quant_alpha, "convolution": -1})
 
 
+def map_mode(mode):
+    if not hasattr(QuantizationMode, mode):
+        raise ValueError(f"{mode} mode is not supported")
+    return {"mode": getattr(QuantizationMode, mode)}
+
+
 def map_threshold(threshold):
     ctx = get_algorithm_parameters_context()
     advanced_parameter_name = ctx.param_name_map[ParameterNames.advanced_parameters]
@@ -613,6 +626,7 @@ def get_pot_quantization_parameters_mapping():
         "threshold": map_threshold,
         "smooth_quant_alphas": map_smooth_quant_alphas,
         "smooth_quant_alpha": map_smooth_quant_alpha,
+        "mode": map_mode,
     }
 
     default_parameters = {"use_layerwise_tuning": False}
@@ -768,14 +782,14 @@ def maybe_reshape_model(model, dataset, subset_size, input_to_tensor_name):
         model_inputs_shapes[input_to_tensor_name[input_node.friendly_name]] = tuple(partial_shape)
 
     if len(dataset_inputs_shapes) != len(model_inputs_shapes):
-        raise RuntimeError(
+        raise nncf.InternalError(
             f"Model inputs: {list(model_inputs_shapes.keys())}"
             f" and dataset inputs {list(dataset_inputs_shapes.keys())} are not compatible"
         )
 
     for name in model_inputs_shapes:
         if name not in dataset_inputs_shapes:
-            raise RuntimeError(
+            raise nncf.ValidationError(
                 f"Model input {name} is not present in dataset inputs: {list(dataset_inputs_shapes.keys())}"
             )
 
@@ -784,7 +798,7 @@ def maybe_reshape_model(model, dataset, subset_size, input_to_tensor_name):
     for name, shapes in dataset_inputs_shapes.items():
         shapes = list(shapes)
         if len(set(len(shape) for shape in shapes)) != 1 or len(model_inputs_shapes[name]) != len(shapes[0]):
-            raise RuntimeError("calibrate.py does not support dataset with dynamic ranks")
+            raise nncf.InternalError("calibrate.py does not support dataset with dynamic ranks")
 
         for idx in range(len(shapes[0])):
             if len(shapes) == 1:
@@ -872,6 +886,7 @@ class ACDattasetWrapper:
 
     def __init__(self, model_evaluator):
         self.model_evaluator = model_evaluator
+        self.batch_size = self.model_evaluator.dataset.batch
 
     def __iter__(self):
         for sequence in self.model_evaluator.dataset:
@@ -905,6 +920,8 @@ def quantize_model(xml_path, bin_path, accuracy_checker_config, quantization_par
     model_evaluator.select_dataset("")
 
     advanced_parameters = quantization_parameters.get("advanced_parameters", AdvancedQuantizationParameters())
+    if quantization_parameters.get("mode", None) is not None:
+        advanced_parameters.backend_params = None
     quantization_parameters["advanced_parameters"] = advanced_parameters
 
     transform_fn = get_transform_fn(model_evaluator, ov_model)
@@ -991,7 +1008,7 @@ def quantize_model_with_accuracy_control(
 
 
 def filter_configuration(config: Config) -> Config:
-    fields_to_filter = ["smooth_quant_alphas", "smooth_quant_alpha"]
+    fields_to_filter = ["smooth_quant_alphas", "smooth_quant_alpha", "mode"]
     algorithms_to_update = defaultdict(dict)
 
     # Drop params before configure
@@ -1018,6 +1035,33 @@ def filter_configuration(config: Config) -> Config:
     return config
 
 
+def update_accuracy_checker_config(accuracy_checker_config: Config, batch_size: int) -> None:
+    """
+    Updates batch section of accuracy checker configuration file by batch_size value.
+
+    :param accuracy_checker_config: Accuracy checker configuration file.
+    :param batch_size: Batch size value.
+    """
+    for model in accuracy_checker_config["models"]:
+        for dataset in model["datasets"]:
+            dataset["batch"] = batch_size
+            print(f"Updated batch size value to {batch_size}")
+
+
+def update_nncf_algorithms_config(nncf_algorithms_config: Dict[str, Dict[str, Any]], batch_size: int) -> None:
+    """
+    Updates subset_size parameter depending on batch_size and subset_size from an algorithm config.
+
+    :param nncf_algorithms_config: Configuration file of an algorithm.
+    :param batch_size: Batch size value.
+    """
+    for nncf_method, config in nncf_algorithms_config.items():
+        subset_size = config.get("subset_size", 300)
+        new_subset_size = subset_size // batch_size
+        config["subset_size"] = new_subset_size
+        print(f"Updated subset_size value for {nncf_method} method to {new_subset_size} ")
+
+
 def main():
     args = parse_args()
     if args.impl is not None:
@@ -1028,6 +1072,10 @@ def main():
     xml_path, bin_path = get_model_paths(config.model)
     accuracy_checker_config = get_accuracy_checker_config(config.engine)
     nncf_algorithms_config = get_nncf_algorithms_config(config.compression, args.output_dir)
+    assert args.batch_size >= 0
+    if args.batch_size > 1:
+        update_accuracy_checker_config(accuracy_checker_config, args.batch_size)
+        update_nncf_algorithms_config(nncf_algorithms_config, args.batch_size)
 
     set_log_file(f"{args.output_dir}/log.txt")
     output_dir = os.path.join(args.output_dir, "optimized")
@@ -1038,7 +1086,7 @@ def main():
         "quantize_with_accuracy_control": quantize_model_with_accuracy_control,
     }
     for algo_name, algo_config in nncf_algorithms_config.items():
-        algo_fn = algo_name_to_method_map.get(algo_name, None)
+        algo_fn = algo_name_to_method_map.get(algo_name)
         if algo_fn:
             quantize_model_arguments = {
                 "xml_path": xml_path,
@@ -1053,7 +1101,7 @@ def main():
             keys = ["xml_path", "quantization_parameters"]
             dump_to_json(path, quantize_model_arguments, keys)
         else:
-            raise RuntimeError(f"Support for {algo_name} is not implemented in the optimize tool.")
+            raise nncf.InternalError(f"Support for {algo_name} is not implemented in the optimize tool.")
 
     model_name = config.model.model_name
     output_model_path = os.path.join(output_dir, f"{model_name}.xml")

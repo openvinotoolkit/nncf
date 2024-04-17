@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,6 +11,7 @@
 
 import pytest
 
+import nncf
 from nncf import NNCFConfig
 from nncf.common.logging import nncf_logger
 from nncf.config.structures import QuantizationRangeInitArgs
@@ -68,7 +69,7 @@ class AlgoBuilder:
 class FrozenLayersTestStruct:
     def __init__(self, name="No_name"):
         self.name = name
-        self.config_update = {"target_device": "VPU", "compression": []}
+        self.config_update = {"target_device": "NPU", "compression": []}
         self.raising_error = False
         self.printing_warning = False
         self._freeze_all = False
@@ -224,7 +225,6 @@ TEST_PARAMS = [
     FrozenLayersTestStruct(name="filter_pruning_with_frozen_in_ignored_scope")
     .add_algo(AlgoBuilder().name("filter_pruning"))
     .expects_error(),
-    FrozenLayersTestStruct(name="binarization").add_algo(AlgoBuilder().name("binarization")).expects_error(),
 ]
 
 
@@ -242,7 +242,7 @@ def test_frozen_layers(_nncf_caplog, params):
     register_bn_adaptation_init_args(config)
 
     if params.raising_error:
-        with pytest.raises(RuntimeError):
+        with pytest.raises(nncf.InternalError):
             __, _ = create_compressed_model_and_algo_for_test(model, config)
     else:
         __, _ = create_compressed_model_and_algo_for_test(model, config)

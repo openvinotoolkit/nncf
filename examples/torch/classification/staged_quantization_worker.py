@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -22,6 +22,7 @@ from torch import nn
 from torch.backends import cudnn
 from torchvision.models import InceptionOutputs
 
+import nncf
 from examples.torch.classification.main import AverageMeter
 from examples.torch.classification.main import accuracy
 from examples.torch.classification.main import create_data_loaders
@@ -51,7 +52,6 @@ from nncf.config.schemata.defaults import LR_POLY_DURATION_EPOCHS
 from nncf.config.schemata.defaults import STAGED_QUANTIZATION_BASE_LR
 from nncf.config.schemata.defaults import STAGED_QUANTIZATION_BASE_WD
 from nncf.torch import create_compressed_model
-from nncf.torch.binarization.algo import BinarizationController
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.initialization import default_criterion_fn
 from nncf.torch.initialization import register_default_init_args
@@ -185,9 +185,9 @@ def staged_quantization_main_worker(current_gpu, config):
     if model_state_dict is not None:
         load_state(model, model_state_dict, is_resume=True)
 
-    if not isinstance(compression_ctrl, (BinarizationController, QuantizationController)):
-        raise RuntimeError(
-            "The stage quantization sample worker may only be run with the binarization and quantization algorithms!"
+    if not isinstance(compression_ctrl, QuantizationController):
+        raise nncf.InternalError(
+            "The stage quantization sample worker may only be run with the quantization algorithms!"
         )
 
     model, _ = prepare_model_for_execution(model, config)

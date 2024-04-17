@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -122,20 +122,12 @@ def quantize(model: ov.Model, data_loader: torch.utils.data.DataLoader, validato
         quantization_dataset,
         preset=nncf.QuantizationPreset.MIXED,
         ignored_scope=nncf.IgnoredScope(
-            types=["Multiply", "Subtract", "Sigmoid"],  # ignore operations
-            names=[
-                "/model.22/dfl/conv/Conv",  # in the post-processing subgraph
-                "/model.22/Add",
-                "/model.22/Add_1",
-                "/model.22/Add_2",
-                "/model.22/Add_3",
-                "/model.22/Add_4",
-                "/model.22/Add_5",
-                "/model.22/Add_6",
-                "/model.22/Add_7",
-                "/model.22/Add_8",
-                "/model.22/Add_9",
-                "/model.22/Add_10",
+            types=["Multiply", "Subtract", "Sigmoid"],
+            subgraphs=[
+                nncf.Subgraph(
+                    inputs=["/model.22/Concat", "/model.22/Concat_1", "/model.22/Concat_2"],
+                    outputs=["output0/sink_port_0"],
+                )
             ],
         ),
     )

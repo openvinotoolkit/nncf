@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,7 +13,7 @@
 class Registry:
     REGISTERED_NAME_ATTR = "_registered_name"
 
-    def __init__(self, name, add_name_as_attr=False):
+    def __init__(self, name: str, add_name_as_attr: bool = False):
         self._name = name
         self._registry_dict = {}
         self._add_name_as_attr = add_name_as_attr
@@ -25,12 +25,12 @@ class Registry:
     def values(self):
         return self._registry_dict.values()
 
-    def _register(self, obj, name):
+    def _register(self, obj, name: str):
         if name in self._registry_dict:
             raise KeyError("{} is already registered in {}".format(name, self._name))
         self._registry_dict[name] = obj
 
-    def register(self, name=None):
+    def register(self, name: str = None):
         def wrap(obj):
             cls_name = name
             if cls_name is None:

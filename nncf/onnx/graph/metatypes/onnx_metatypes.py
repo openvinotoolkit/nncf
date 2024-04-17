@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import deque
 from typing import Dict, List, Optional, Type
 
 import onnx
@@ -43,14 +44,15 @@ class ONNXOpMetatype(OperatorMetatype):
     @classmethod
     def determine_subtype(cls, model: onnx.ModelProto, node: onnx.NodeProto) -> Optional[Type[OperatorMetatype]]:
         matches = []
-        for subtype in cls.get_subtypes():
+        subtypes_list = deque(cls.get_subtypes())
+        while subtypes_list:
+            subtype = subtypes_list.popleft()
             if subtype.matches(model, node):
+                subtypes_list.extend(subtype.get_subtypes())
                 matches.append(subtype)
-        if len(matches) > 1:
-            raise RuntimeError("Multiple subtypes match operator call - cannot determine single subtype.")
         if not matches:
             return None
-        return matches[0]
+        return matches[-1]
 
 
 class ONNXOpWithWeightsMetatype(ONNXOpMetatype):
@@ -69,7 +71,7 @@ class ONNXOpWithWeightsMetatype(ONNXOpMetatype):
     bias_port_id: Optional[int] = None
 
 
-@ONNX_OPERATION_METATYPES.register()
+@ONNX_OPERATION_METATYPES.register(is_subtype=True)
 class ONNXDepthwiseConvolutionMetatype(ONNXOpWithWeightsMetatype):
     name = "DepthwiseConvOp"
     op_names = ["Conv"]
@@ -84,6 +86,22 @@ class ONNXDepthwiseConvolutionMetatype(ONNXOpWithWeightsMetatype):
         return _is_depthwise_conv(model, node)
 
 
+@ONNX_OPERATION_METATYPES.register(is_subtype=True)
+class ONNXGroupConvolutionMetatype(ONNXOpWithWeightsMetatype):
+    name = "GroupConvOp"
+    op_names = ["Conv"]
+    hw_config_names = [HWConfigOpName.CONVOLUTION]
+    weight_channel_axis = 0
+    weight_port_ids = [1]
+    bias_port_id = 2
+    output_channel_axis = 1
+    subtypes = [ONNXDepthwiseConvolutionMetatype]
+
+    @classmethod
+    def matches(cls, model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
+        return _is_group_conv(node)
+
+
 @ONNX_OPERATION_METATYPES.register()
 class ONNXConvolutionMetatype(ONNXOpWithWeightsMetatype):
     name = "ConvOp"
@@ -93,7 +111,7 @@ class ONNXConvolutionMetatype(ONNXOpWithWeightsMetatype):
     weight_port_ids = [1]
     bias_port_id = 2
     output_channel_axis = 1
-    subtypes = [ONNXDepthwiseConvolutionMetatype]
+    subtypes = [ONNXGroupConvolutionMetatype]
 
 
 @ONNX_OPERATION_METATYPES.register()
@@ -112,7 +130,7 @@ class ONNXGemmMetatype(ONNXOpWithWeightsMetatype):
     name = "GemmOp"
     op_names = ["Gemm"]
     hw_config_names = [HWConfigOpName.MATMUL]
-    weight_channel_axis = -1
+    weight_channel_axis = -1  # For port_id=1
     weight_port_ids = None
     bias_port_id = 2
     possible_weight_ports = [0, 1]
@@ -124,7 +142,7 @@ class ONNXMatMulMetatype(ONNXOpMetatype):
     name = "MatMulOp"
     op_names = ["MatMul"]
     hw_config_names = [HWConfigOpName.MATMUL]
-    weight_channel_axis = -1
+    weight_channel_axis = -1  # For port_id=1
     weight_port_ids = None
     bias_port_id = 2
     possible_weight_ports = [0, 1]
@@ -402,7 +420,7 @@ class ONNXReciprocalMetatype(ONNXOpMetatype):
     hw_config_names = [HWConfigOpName.POWER]
 
 
-@ONNX_OPERATION_METATYPES.register()
+@ONNX_OPERATION_METATYPES.register(is_subtype=True)
 class ONNXEmbeddingMetatype(ONNXOpMetatype):
     name = "EmbeddingOp"
     hw_config_names = [HWConfigOpName.EMBEDDING]
@@ -445,8 +463,8 @@ class ONNXScatterNDMetatype(ONNXOpMetatype):
 
 
 @ONNX_OPERATION_METATYPES.register()
-class ONNXRoiAlignMetatype(ONNXOpMetatype):
-    name = "RoiAlignOp"
+class ONNXROIAlignMetatype(ONNXOpMetatype):
+    name = "ROIAlignOp"
     op_names = ["RoiAlign"]
 
 
@@ -698,6 +716,23 @@ def get_tensor_edge_name(
     return None
 
 
+def _is_group_conv(node: onnx.NodeProto) -> bool:
+    """
+    Returns True if the convolution is group, False - otherwise.
+    Group convolution is a convolution with the group attribute.
+
+    :param node: Convolution node to check whether it is depthwise.
+    :return: True if the convolution is group, False - otherwise.
+    """
+    conv_group = None
+    for attribute in node.attribute:
+        if attribute.name == "group":
+            conv_group = onnx.helper.get_attribute_value(attribute)
+    if conv_group is None or conv_group == 1:
+        return False
+    return True
+
+
 def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
     """
     Returns True if the convolution is depthwise, False - otherwise.
@@ -710,14 +745,11 @@ def _is_depthwise_conv(model: onnx.ModelProto, node: onnx.NodeProto) -> bool:
     :param node: Convolution node to check whether it is depthwise.
     :return: True if the convolution is depthwise, False - otherwise.
     """
-    conv_group = None
     for attribute in node.attribute:
         if attribute.name == "group":
             conv_group = onnx.helper.get_attribute_value(attribute)
-    if conv_group is None:
-        return False
     weight_tensor_value = None
-    initializer_name = node.input[1]
+    initializer_name = get_tensor_edge_name(model, node, 1, get_parents_node_mapping(model))
     for init in model.graph.initializer:
         if init.name == initializer_name:
             weight_tensor_value = onnx.numpy_helper.to_array(init)

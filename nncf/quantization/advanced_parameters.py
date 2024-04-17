@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -19,15 +19,17 @@ from dataclasses import is_dataclass
 from enum import Enum
 from typing import Any, Dict, Optional, Union
 
+import nncf
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.utils.api_marker import api
+from nncf.parameters import StrEnum
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import StatisticsType
 
 
-@api()
-class OverflowFix(Enum):
+@api(canonical_alias="nncf.OverflowFix")
+class OverflowFix(StrEnum):
     """
     This option controls whether to apply the overflow issue fix for the 8-bit
     quantization.
@@ -57,7 +59,7 @@ class OverflowFix(Enum):
 
 
 @api()
-class FP8Type(Enum):
+class FP8Type(StrEnum):
     """
     Defines FP8 special types (https://arxiv.org/pdf/2209.05433.pdf).
 
@@ -177,7 +179,7 @@ class AdvancedQuantizationParameters:
     Contains advanced parameters for fine-tuning quantization algorithm.
 
     :param overflow_fix: This option controls whether to apply the overflow issue fix
-        for the 8-bit quantization, defaults to OverflowFix.FIRST_LAYER.
+        for the 8-bit quantization.
     :type overflow_fix: nncf.quantization.advanced_parameters.OverflowFix
     :param quantize_outputs: Whether to insert additional quantizers right before each
         of the model outputs.
@@ -189,6 +191,12 @@ class AdvancedQuantizationParameters:
     :type disable_channel_alignment: bool
     :param disable_bias_correction: Whether to disable the bias correction.
     :type disable_bias_correction: bool
+    :param batchwise_statistics: Determines whether quantizer statistics should be calculated
+        for each item of the batch or for the entire batch, default is None.
+        "None" means that if torch.DataLoader or tensorflow.Dataset was passed as a data source for
+        the calibration dataset, then in case batch_size of the data source > 1 batchwise_statistics sets to True,
+        otherwise sets to False.
+    :type batchwise_statistics: Optional[bool]
     :param activations_quantization_params: Quantization parameters for activations.
     :type activations_quantization_params: nncf.quantization.advanced_parameters.QuantizationParameters
     :param weights_quantization_params: Quantization parameters for weights.
@@ -211,11 +219,12 @@ class AdvancedQuantizationParameters:
     """
 
     # General parameters
-    overflow_fix: OverflowFix = OverflowFix.FIRST_LAYER
+    overflow_fix: OverflowFix = None
     quantize_outputs: bool = False
     inplace_statistics: bool = True
     disable_channel_alignment: bool = True
     disable_bias_correction: bool = False
+    batchwise_statistics: Optional[bool] = None
 
     # Advanced Quantization parameters
     activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None
@@ -330,7 +339,7 @@ def convert_quantization_parameters_to_dict(params: QuantizationParameters) -> D
         if params.per_channel is not None:
             result["per_channel"] = params.per_channel
         if params.narrow_range is not None:
-            raise RuntimeError("narrow_range parameter is not supported in the legacy format")
+            raise nncf.ParameterNotSupportedError("narrow_range parameter is not supported in the legacy format")
     return result
 
 
@@ -342,7 +351,7 @@ def convert_range_estimator_parameters_to_dict(params: RangeEstimatorParameters)
     :return: range estimator parameters as dict in the legacy format
     """
     if params.min.clipping_value is not None or params.max.clipping_value is not None:
-        raise RuntimeError("clipping_value parameter is not supported in the legacy format")
+        raise nncf.ParameterNotSupportedError("clipping_value parameter is not supported in the legacy format")
 
     result = {}
     if (
@@ -378,7 +387,9 @@ def convert_range_estimator_parameters_to_dict(params: RangeEstimatorParameters)
     ):
         return {}
     else:
-        raise RuntimeError(f"The following range estimator parameters are not supported: {str(params)}")
+        raise nncf.ParameterNotSupportedError(
+            f"The following range estimator parameters are not supported: {str(params)}"
+        )
 
     return result
 
@@ -393,7 +404,7 @@ def apply_advanced_parameters_to_config(
     :param params: Advanced quantization parameters
     :return: advanced quantization parameters as dict in the legacy format
     """
-    config["overflow_fix"] = params.overflow_fix.value
+    config["overflow_fix"] = params.overflow_fix if params.overflow_fix is None else params.overflow_fix.value
     config["quantize_outputs"] = params.quantize_outputs
 
     if params.disable_bias_correction:
@@ -438,11 +449,13 @@ def apply_advanced_parameters_to_config(
         config["initializer"] = initializer
 
     if params.bias_correction_params.apply_for_all_nodes:
-        raise RuntimeError(
+        raise nncf.ParameterNotSupportedError(
             "apply_for_all_nodes parameter of the BiasCorrection algorithm is not supported in the legacy format"
         )
 
     if params.bias_correction_params.threshold is not None:
-        raise RuntimeError("threshold parameter of the BiasCorrection algorithm is not supported in the legacy format")
+        raise nncf.ParameterNotSupportedError(
+            "threshold parameter of the BiasCorrection algorithm is not supported in the legacy format"
+        )
 
     return config

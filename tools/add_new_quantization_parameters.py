@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -63,9 +63,6 @@ def main(argv):
     files_to_copy = []
     for pair in pth_files:
         src_file, dst_file = pair
-        if "binarization" in src_file:
-            files_to_copy.append(pair)
-            continue
         sd = pth = torch.load(src_file)
         if "state_dict" in pth:
             sd = pth["state_dict"]

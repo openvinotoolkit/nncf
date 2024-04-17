@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -166,9 +166,7 @@ def is_staged_quantization(config):
     if isinstance(compression_config, list):
         compression_config = compression_config[0]
     algo_type = compression_config.get("algorithm")
-    if algo_type is not None and algo_type == "binarization":
-        return True
-    if algo_type == "quantization" and compression_config.get("params", {}):
+    if algo_type is not None and algo_type == "quantization" and compression_config.get("params", {}):
         return True
     return False
 

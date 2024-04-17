@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -94,10 +94,6 @@ class NNCFStatistics(Statistics):
         """
         return self._storage.get("filter_pruning")
 
-    @property
-    def binarization(self) -> None:
-        raise NotImplementedError
-
     def register(self, algorithm_name: str, stats: Statistics):
         """
         Registers statistics for the algorithm.
@@ -108,7 +104,6 @@ class NNCFStatistics(Statistics):
             * const_sparsity
             * quantization
             * filter_pruning
-            * binarization
 
         :param stats: Statistics of the algorithm.
         """
@@ -120,7 +115,6 @@ class NNCFStatistics(Statistics):
             "const_sparsity",
             "quantization",
             "filter_pruning",
-            "binarization",
         ]
         if algorithm_name not in available_algorithms:
             raise ValueError(

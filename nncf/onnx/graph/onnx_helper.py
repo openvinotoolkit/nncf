@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -14,6 +14,8 @@ from typing import Dict, Iterator, List, Optional, Union
 import numpy as np
 import onnx
 from onnx import numpy_helper
+
+import nncf
 
 
 def get_name_to_node_map(model: onnx.ModelProto) -> Dict[str, onnx.NodeProto]:
@@ -95,7 +97,7 @@ def get_input_port_id_for_node_after_input(input_name: str, to_node: onnx.NodePr
     for input_port_id, port in enumerate(to_node.input):
         if port == input_name:
             return input_port_id
-    raise RuntimeError(f"The node {to_node} does not have input edge with the name {input_name}")
+    raise nncf.ValidationError(f"The node {to_node} does not have input edge with the name {input_name}")
 
 
 def get_output_port_id_for_node_before_output(output_name: str, from_node: onnx.NodeProto) -> int:
@@ -109,27 +111,7 @@ def get_output_port_id_for_node_before_output(output_name: str, from_node: onnx.
     for output_port_id, port in enumerate(from_node.output):
         if port == output_name:
             return output_port_id
-    raise RuntimeError(f"The node {from_node} does not have output edge with the name {output_name}")
-
-
-def get_port_ids_between_nodes(from_node: onnx.NodeProto, to_node: onnx.NodeProto) -> Dict[str, int]:
-    """
-    Returns input_port_id and output_port_id between 'from_node' and 'to_node'.
-
-    :param from_node: Node, whose output is connected to 'to_node' node.
-    :param to_node: Node, whose input is connected to 'from_node' node.
-    :return: Dict{'input_port_id': input port id, 'output_port_id': output port id}
-    """
-    output = {"input_port_id": None, "output_port_id": None}
-    for port_id, port in enumerate(to_node.input):
-        if port in from_node.output:
-            output["input_port_id"] = port_id
-    for port_id, port in enumerate(from_node.output):
-        if port in to_node.input:
-            output["output_port_id"] = port_id
-    if output["output_port_id"] is None or output["input_port_id"] is None:
-        raise RuntimeError(f"The nodes {from_node.name} and {to_node.name} do not have edges between.")
-    return output
+    raise nncf.ValidationError(f"The node {from_node} does not have output edge with the name {output_name}")
 
 
 def get_node_index(model: onnx.ModelProto, node_name: str) -> Optional[int]:
@@ -187,7 +169,7 @@ def get_tensor(model: onnx.ModelProto, tensor_name: str) -> onnx.TensorProto:
     for tensor in _get_all_tensors(model):
         if tensor.name == tensor_name:
             return tensor
-    raise RuntimeError("There is no tensor with the name {}".format(tensor_name))
+    raise nncf.ValidationError("There is no tensor with the name {}".format(tensor_name))
 
 
 def get_tensor_value(model: onnx.ModelProto, tensor_name: str) -> np.ndarray:

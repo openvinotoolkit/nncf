@@ -1,12 +1,19 @@
-# Post-training Quantization Conformance Suite
+# Post-training Compression Conformance Suite
 
-This is the test suite that takes PyTorch Timm models and runs post-training quantization on ImageNet dataset for the following three representations:
+This is the test suite that takes PyTorch Timm or HuggingFace models and runs post-training compression on ImageNet or
+some HuggingFace datasets for the following three representations:
 
 - PyTorch
 - ONNX
 - OpenVINO
 
-The outcome of each quantization step is accuracy and performance with OpenVINO. The source representation is converted to OpenVINO IR at this step.
+The outcome of each compression test case is accuracy and performance with OpenVINO.
+The source representation is converted to OpenVINO IR at this step.
+
+Test supports 2 different types of compression:
+
+- Post-training quantization of weights and activations.
+- Weight compression.
 
 ## Installation
 
@@ -30,10 +37,19 @@ n01843383
 
 ## Usage
 
-Once the environment is installed use the following command to run the test:
+Once the environment is installed use the following command to run all tests, including post-training quantization
+and weight compression:
 
 ```bash
 NUM_VAL_THREADS=8 pytest --data=<path_to_datasets> --output=./tmp tests/post_training/test_quantize_conformance.py
+```
+
+It's possible to run a suite of tests for the specific compression algorithm only.
+For that append `::test_weight_compression` or `::test_ptq_quantization` to the `tests/post_training/test_quantize_conformance.py`.
+For instance:
+
+```bash
+NUM_VAL_THREADS=8 pytest --data=<path_to_datasets> --output=./tmp tests/post_training/test_quantize_conformance.py::test_weight_compression
 ```
 
 `NUM_VAL_THREADS` environment variable controls the number of parallel streams when validating the model.
@@ -44,6 +60,7 @@ Additional arguments:
 - `--fp32` to run validation of not quantized model
 - `--cuda` to enable CUDA_TORCH backend
 - `--subset-size=N` to force subset_size of calibration dataset
+- `--batch-size=N` to use batch_size for calibration. Some of the models do not support --batch-size > 1. For such models, please, use --batch-size=1.
 - `--benchmark` to collect throughput statistics, add `FPS` column to result.csv
 - `--extra-columns` to add additional columns to reports.csv:
   - `Stat. collection time` - time of statistic collection
@@ -98,4 +115,10 @@ Run test with additional columns:
 
 ```bash
 pytest --data=<path_to_datasets> --extra-columns tests/post_training/test_quantize_conformance.py
+```
+
+Run test with calibration dataset having batch-size=10 for all models:
+
+```bash
+pytest --data=<path_to_datasets> --batch-size 10 tests/post_training/test_quantize_conformance.py
 ```

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -56,7 +56,6 @@ CONFIGS = {
     "classification": [
         TEST_ROOT / "torch" / "data" / "configs" / "squeezenet1_1_cifar10_rb_sparsity_int8.json",
         TEST_ROOT / "torch" / "data" / "configs" / "inception_v3_mock_dataset.json",
-        TEST_ROOT / "torch" / "data" / "configs" / "resnet18_cifar100_bin_xnor.json",
         TEST_ROOT / "torch" / "data" / "configs" / "resnet18_cifar10_staged_quant.json",
         TEST_ROOT / "torch" / "data" / "configs" / "resnet18_imagenet_pruning_magnitude.json",
         TEST_ROOT / "torch" / "data" / "configs" / "resnet18_imagenet_pruning_learned_ranking.json",

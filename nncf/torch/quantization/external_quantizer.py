@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.external_hook import ExternalOpCallHook
 from nncf.torch.quantization.debug_interface import QuantizationDebugInterface
 
@@ -25,11 +24,10 @@ class ExternalQuantizerCallHook(ExternalOpCallHook):
 
     def __init__(
         self,
-        context: TracingContext,
         quantizer_storage_key: str,
         debug_interface: QuantizationDebugInterface = None,
     ):
-        super().__init__(EXTERNAL_QUANTIZERS_STORAGE_NAME, context, quantizer_storage_key)
+        super().__init__(EXTERNAL_QUANTIZERS_STORAGE_NAME, quantizer_storage_key)
         self.debug_interface = debug_interface
 
     def __call__(self, *args, **kwargs):

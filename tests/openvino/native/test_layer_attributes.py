@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -442,12 +442,14 @@ def test_layer_attributes(test_descriptor: LayerAttributesTestCase):
 @pytest.mark.parametrize("test_descriptor", TEST_CASES_CONV)
 def test_get_conv_weights_layout_from_node(test_descriptor: LayerAttributesTestCase):
     node = _get_node_to_test(test_descriptor)
-    weights_layout = get_conv_weights_layout_from_node(node)
-    assert weights_layout == test_descriptor.ref_weights_layout
+    for _ in range(2):  # To test get_conv_weights_layout_from_node is a clean function
+        weights_layout = get_conv_weights_layout_from_node(node)
+        assert weights_layout == test_descriptor.ref_weights_layout
 
 
 @pytest.mark.parametrize("test_descriptor", TEST_CASES_LINEAR)
 def test_get_linear_weights_layout_from_node(test_descriptor: LayerAttributesTestCase):
     node = _get_node_to_test(test_descriptor)
-    weights_layout = get_linear_weights_layout_from_node(node)
-    assert weights_layout == test_descriptor.ref_weights_layout
+    for _ in range(2):  # To test get_linear_weights_layout_from_node is a clean function
+        weights_layout = get_linear_weights_layout_from_node(node)
+        assert weights_layout == test_descriptor.ref_weights_layout

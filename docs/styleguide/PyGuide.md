@@ -316,10 +316,10 @@ inline comments.
 
 #### 4.2.1 Modules
 
-Every file should contain a license boilerplate.
+Every file should contain a license boilerplate, where [YYYY] should be replaced to current year.
 
 ```python
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) [YYYY] Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -803,7 +803,7 @@ def log_current_time(log_stream: LogStream):
 
 ```python3
 class CheckpointConverter:
-    # ... 
+    # ...
     def convert(self, ckpt: CheckpointType) -> AnotherCheckpointType:
         pass
 ```

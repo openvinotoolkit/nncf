@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,6 +15,7 @@ from copy import deepcopy
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set
 
+import nncf
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import NonWeightQuantizerId
@@ -252,7 +253,7 @@ class QuantizerSetupBase:
         for qp_id in qp_group:
             gid = self.get_unified_scale_group_id(qp_id) is not None
             if gid:
-                raise RuntimeError("QP id {} is already in unified scale group {}".format(qp_id, gid))
+                raise nncf.InternalError("QP id {} is already in unified scale group {}".format(qp_id, gid))
         gid = self._next_unified_scale_gid
         self.unified_scale_groups[self._next_unified_scale_gid] = set(qp_group)
         self._next_unified_scale_gid += 1
@@ -262,7 +263,7 @@ class QuantizerSetupBase:
         for qp_id in qp_group:
             gid = self.get_shared_inputs_group_id(qp_id) is not None
             if gid:
-                raise RuntimeError("QP id {} is already in shared input group {}".format(qp_id, gid))
+                raise nncf.InternalError("QP id {} is already in shared input group {}".format(qp_id, gid))
         gid = self._next_shared_inputs_gid
         self.shared_input_operation_set_groups[self._next_shared_inputs_gid] = set(qp_group)
         self._next_shared_inputs_gid += 1
@@ -308,13 +309,13 @@ class QuantizerSetupBase:
     def register_existing_qp_id_in_unified_scale_group(self, qp_id: QuantizationPointId, unified_scale_gid: int):
         gid = self.get_unified_scale_group_id(qp_id)
         if gid is not None:
-            raise RuntimeError("QP id {} is already in unified scale group {}".format(qp_id, gid))
+            raise nncf.InternalError("QP id {} is already in unified scale group {}".format(qp_id, gid))
         self.unified_scale_groups[unified_scale_gid].add(qp_id)
 
     def register_existing_qp_id_in_shared_input_group(self, qp_id: QuantizationPointId, shared_inputs_gid: int):
         gid = self.get_shared_inputs_group_id(qp_id)
         if gid is not None:
-            raise RuntimeError("QP id {} is already in shared inputs group {}".format(qp_id, gid))
+            raise nncf.InternalError("QP id {} is already in shared inputs group {}".format(qp_id, gid))
         self.shared_input_operation_set_groups[shared_inputs_gid].add(qp_id)
 
     def remove_unified_scale_from_point(self, qp_id: QuantizationPointId):

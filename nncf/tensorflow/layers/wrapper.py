@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,6 +15,7 @@ from typing import Dict
 
 import tensorflow as tf
 
+import nncf
 from nncf.tensorflow.layers.custom_objects import NNCF_CUSTOM_OBJECTS
 from nncf.tensorflow.layers.custom_objects import get_nncf_custom_objects
 from nncf.tensorflow.layers.operation import InputType
@@ -201,7 +202,9 @@ class NNCFWrapper(tf.keras.layers.Wrapper):
             self.weights_attr_ops[weights_attr] = OrderedDict()
 
         if op.name in self.weights_attr_ops[weights_attr]:
-            raise RuntimeError(f"Attempt to apply an operation with the same name {op.name} on layer weight twice")
+            raise nncf.InternalError(
+                f"Attempt to apply an operation with the same name {op.name} on layer weight twice"
+            )
 
         self.weights_attr_ops[weights_attr][op.name] = op
 

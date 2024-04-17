@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -355,16 +355,19 @@ def moveaxis(a: Tensor, source: Union[int, Tuple[int, ...]], destination: Union[
 
 @functools.singledispatch
 @tensor_guard
-def mean(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> Tensor:
+def mean(
+    a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False, dtype: TensorDataType = None
+) -> Tensor:
     """
     Compute the arithmetic mean along the specified axis.
 
     :param a: Array containing numbers whose mean is desired.
     :param axis: Axis or axes along which the means are computed.
     :param keepdims: Destination positions for each of the original axes. These must also be unique.
+    :param dtype: Type to use in computing the mean.
     :return: Array with moved axes.
     """
-    return Tensor(mean(a.data, axis, keepdims))
+    return Tensor(mean(a.data, axis, keepdims, dtype))
 
 
 @functools.singledispatch
@@ -379,6 +382,45 @@ def round(a: Tensor, decimals=0) -> Tensor:
     :return: An array of the same type as a, containing the rounded values.
     """
     return Tensor(round(a.data, decimals))
+
+
+@functools.singledispatch
+@tensor_guard
+def power(a: Tensor, exponent: Union[Tensor, float]) -> Tensor:
+    """
+    Takes the power of each element in input with exponent and returns a tensor with the result.
+    Exponent can be either a single float number or a broadcastable Tensor. In case exponent is
+    a brodcastable tensor, the exponent is being broadcasted and the return tensor contains
+    the power of each element in input with exponent elementwise.
+
+    :param a: Input data.
+    :param exponent: Exponent value.
+    :return: The result of the power of each element in input with given exponent.
+    """
+    return Tensor(power(a.data, unwrap_tensor_data(exponent)))
+
+
+@functools.singledispatch
+@tensor_guard
+def quantile(
+    a: Tensor,
+    q: Union[float, List[float]],
+    axis: Optional[Union[int, Tuple[int]]] = None,
+    keepdims: Optional[bool] = None,
+) -> Tensor:
+    """
+    Compute the quantile(s) of the data along the specified axis.
+
+    :param a: Given tensor.
+    :params q: Quantile or sequence of quantiles to compute, which must be between
+        0 and 1 inclusive.
+    :param axis: Axis or axes along which the quantiles are computed.
+    :param keepdims: If True, the axes which are reduced are left in the result
+        as dimensions with size one.
+    :return: An tensor with quantiles, the first axis of the result corresponds
+        to the quantiles, other axes of the result correspond to the quantiles values.
+    """
+    return Tensor(quantile(a.data, q, axis, keepdims))
 
 
 @functools.singledispatch
@@ -522,3 +564,58 @@ def size(a: Tensor) -> int:
     :return: The size of the input tensor.
     """
     return size(a.data)
+
+
+@functools.singledispatch
+@tensor_guard
+def matmul(x1: Tensor, x2: Union[Tensor, float]) -> Tensor:
+    """
+    Matrix multiplication.
+
+    :param x1: The first input tensor.
+    :param x2: The second input tensor or number.
+    :return: The product of x1 and x2, matmul.
+    """
+    return Tensor(matmul(x1.data, unwrap_tensor_data(x2)))
+
+
+@functools.singledispatch
+@tensor_guard
+def unsqueeze(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> Tensor:
+    """
+    Add axes of length one to a.
+
+    :param a: The input tensor.
+    :param axis: Selects a subset of the entries of length one in the shape.
+    :return: The input array, but with expanded shape with len 1 defined in axis.
+    """
+    return Tensor(unsqueeze(a.data, axis=axis))
+
+
+@functools.singledispatch
+@tensor_guard
+def transpose(a: Tensor, axes: Optional[Tuple[int, ...]] = None) -> Tensor:
+    """
+    Returns an array with axes transposed.
+
+    :param a: The input tensor.
+    :param axes: list of permutations or None.
+    :return: array with permuted axes.
+    """
+    return Tensor(transpose(a.data, axes=axes))
+
+
+@functools.singledispatch
+@tensor_guard
+def argsort(a: Tensor, axis: int = -1, descending: bool = False, stable: bool = False) -> Tensor:
+    """
+    Returns the indices that would sort an array.
+
+    :param a: The input tensor.
+    :param axis: Axis along which to sort. The default is -1 (the last axis). If None, the flattened array is used.
+    :param descending: Controls the sorting order (ascending or descending).
+    :param stable: If True then the sorting routine becomes stable, preserving the order of equivalent elements.
+        If False, the relative order of values which compare equal is not guaranteed. True is slower.
+    :return: Array of indices that sort a along the specified axis.
+    """
+    return Tensor(argsort(a.data, axis=axis))

@@ -39,7 +39,7 @@
             96
         ]
     },
-    "target_device": "VPU",
+    "target_device": "NPU",
     "compression": {
         "algorithm": "quantization",
         "initializer": {

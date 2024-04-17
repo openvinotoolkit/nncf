@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -70,7 +70,7 @@ class Command:
 
                     self.output = []
                     for line in self.process.stdout:
-                        line = line.decode("utf-8")
+                        line = line.decode("utf-8", errors="ignore")
                         self.output.append(line)
                         if stdout:
                             sys.stdout.write(line)

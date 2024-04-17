@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,6 +12,7 @@ from typing import TypeVar
 
 import torch.nn
 
+import nncf
 from nncf import NNCFConfig
 from nncf.common.composite_compression import CompositeCompressionAlgorithmBuilder
 from nncf.common.composite_compression import CompositeCompressionAlgorithmController
@@ -44,7 +45,7 @@ class PTCompositeCompressionAlgorithmBuilder(CompositeCompressionAlgorithmBuilde
 
         algo_names = extract_algorithm_names(config)
         if len(algo_names) < 2:
-            raise RuntimeError(
+            raise nncf.ValidationError(
                 "Composite algorithm builder must be supplied with a config with more than one "
                 "compression algo specified!"
             )

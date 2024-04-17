@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -43,8 +43,6 @@ LR_POLY_DURATION_EPOCHS = 30
 STAGED_QUANTIZATION_BASE_LR = 1e-3
 STAGED_QUANTIZATION_BASE_WD = 1e-5
 
-BINARIZATION_MODE = "xnor"
-
 PRUNING_INIT = 0.0
 PRUNING_SCHEDULE = "exponential"
 PRUNING_TARGET = 0.5
@@ -61,6 +59,10 @@ PRUNING_LEGR_GENERATIONS = 400
 PRUNING_LEGR_TRAIN_STEPS = 200
 PRUNING_LEGR_MAX_PRUNING = 0.8
 PRUNING_LEGR_RANDOM_SEED = 42
+PRUNING_LEGR_POPULATION_SIZE = 64
+PRUNING_LEGR_NUM_SAMPLES = 16
+PRUNING_LEGR_MUTATE_PERCENT = 0.1
+PRUNING_LEGR_SIGMA_SCALE = 1
 
 SPARSITY_INIT = 0.0
 MAGNITUDE_SPARSITY_WEIGHT_IMPORTANCE = "normed_abs"

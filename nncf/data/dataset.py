@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -79,6 +79,17 @@ class Dataset(Generic[DataItem, ModelInput]):
         """
         if hasattr(self._data_source, "__len__"):
             return self._data_source.__len__()
+        return None
+
+    def get_batch_size(self) -> Optional[int]:
+        """
+        Tries to fetch batch size of the underlying dataset.
+        :return: The value of batch_size or _batch_size attributes of the data_source if exist, and None otherwise.
+        """
+        if hasattr(self._data_source, "batch_size"):  # Torch dataloader
+            return self._data_source.batch_size
+        if hasattr(self._data_source, "_batch_size"):  # TF dataloader
+            return self._data_source._batch_size
         return None
 
 

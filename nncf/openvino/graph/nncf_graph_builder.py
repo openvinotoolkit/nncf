@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -35,13 +35,14 @@ class GraphConverter:
     """
 
     @staticmethod
-    def convert_to_nncf_dtype(ov_dtype: str) -> Dtype:
+    def convert_to_nncf_dtype(ov_type: ov.Type) -> Dtype:
         """
         Converts the primitive types from the OpenVINO domain to the NNCF domain.
 
         :param ov_dtype: OpenVINO primitive typename.
         :return: NNCF primitive type.
         """
+        type_name = ov_type.get_type_name()
         conversion_map = {
             "f16": "float",
             "bf16": "float",
@@ -49,18 +50,21 @@ class GraphConverter:
             "f64": "float",
             "i4": "int",
             "i8": "int",
+            "i16": "int",
             "i32": "int",
             "i64": "int",
             "u1": "int",
             "u4": "int",
             "u8": "int",
+            "u16": "int",
             "u32": "int",
             "u64": "int",
             "boolean": "int",
+            "string": "int",
         }
-        if ov_dtype not in conversion_map:
-            raise NotImplementedError(f"NNCF is not yet supported OpenVINO data type: {ov_dtype}.")
-        return Dtype(conversion_map[ov_dtype])
+        if type_name not in conversion_map:
+            raise NotImplementedError(f"NNCF is not yet supported OpenVINO data type: {type_name}.")
+        return Dtype(conversion_map[type_name])
 
     @staticmethod
     def _filter_weight_input_ports(inputs: List[ov.Input], metatype: Type[OperatorMetatype]) -> List[ov.Input]:
@@ -97,8 +101,7 @@ class GraphConverter:
                 for out_node, inputs in node_vs_target_inputs.items():
                     tensor_shape = list(out.partial_shape.get_max_shape())
                     output_node_id = graph.get_node_by_name(out_node.get_friendly_name()).node_id
-                    ov_dtype = out.get_element_type().get_type_name()
-                    nncf_dtype = GraphConverter.convert_to_nncf_dtype(ov_dtype)
+                    nncf_dtype = GraphConverter.convert_to_nncf_dtype(out.get_element_type())
 
                     parallel_inputs = None
                     if len(inputs) > 1:
@@ -110,7 +113,7 @@ class GraphConverter:
                         tensor_shape=tensor_shape,
                         input_port_id=inputs[0].get_index(),
                         output_port_id=output_port_id,
-                        dtype=Dtype(nncf_dtype),
+                        dtype=nncf_dtype,
                         parallel_input_port_ids=parallel_inputs,
                     )
 
@@ -190,8 +193,7 @@ class GraphConverter:
                     if const_node is None:
                         continue
 
-                    ov_dtype = const_node.get_element_type().get_type_name()
-                    if GraphConverter.convert_to_nncf_dtype(ov_dtype) == Dtype.INTEGER:
+                    if GraphConverter.convert_to_nncf_dtype(const_node.get_element_type()) == Dtype.INTEGER:
                         continue
 
                     const_attrs[const_port_id] = {

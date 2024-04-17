@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,20 +12,35 @@ import datetime
 import itertools
 import os
 import os.path as osp
-from typing import Any, Dict, Hashable, List
+from typing import Any, Dict, Hashable, Iterable, List, Optional, Union
 
-from texttable import Texttable
+from tabulate import tabulate
+
+from nncf.common.utils.os import is_windows
 
 
-def create_table(header: List[str], rows: List[List[Any]]) -> str:
+def create_table(
+    header: List[str],
+    rows: List[List[Any]],
+    table_fmt: str = "mixed_grid",
+    max_col_widths: Optional[Union[int, Iterable[int]]] = None,
+) -> str:
     """
     Returns a string which represents a table with a header and rows.
 
     :param header: Table's header.
     :param rows: Table's rows.
+    :param table_fmt: Type of formatting of the table.
+    :param max_col_widths: Max widths of columns.
     :return: A string which represents a table with a header and rows.
     """
-    return Texttable().header(header).add_rows(rows, header=False).draw()
+    if not rows:
+        # For empty rows max_col_widths raises IndexError
+        max_col_widths = None
+    if is_windows():
+        # Not all terminals on Windows supports any format of table
+        table_fmt = "grid"
+    return tabulate(tabular_data=rows, headers=header, tablefmt=table_fmt, maxcolwidths=max_col_widths, floatfmt=".3f")
 
 
 def configure_accuracy_aware_paths(log_dir: str) -> str:

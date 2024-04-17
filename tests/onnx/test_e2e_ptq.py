@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -184,7 +184,7 @@ def is_ov(request):
 def _read_accuracy_checker_result(root_dir: Path, key: str) -> pd.DataFrame:
     dfs = []
     for task in TASKS:
-        csv_fp = str(root_dir / task / f"accuracy_checker-{key}.csv")
+        csv_fp = str(root_dir / task / f"ac_wrapper-{key}.csv")
         dfs += [pd.read_csv(csv_fp)]
     df = pd.concat(dfs, axis=0)
     df = df[["model", "metric_value", "metric_name", "tags"]]
@@ -402,7 +402,7 @@ class TestBenchmark:
             anno_dir,
             output_dir,
             eval_size,
-            program="accuracy_checker.py",
+            program="ac_wrapper.py",
             is_quantized=False,
             is_ov_ep=False,
             is_cpu_ep=True,
@@ -445,7 +445,7 @@ class TestBenchmark:
             anno_dir,
             output_dir,
             eval_size,
-            program="accuracy_checker.py",
+            program="ac_wrapper.py",
             is_quantized=True,
             is_ov_ep=is_ov_ep,
             is_cpu_ep=is_cpu_ep,
@@ -474,7 +474,7 @@ class TestBenchmark:
             anno_dir,
             output_dir,
             eval_size,
-            program="accuracy_checker.py",
+            program="ac_wrapper.py",
             is_quantized=True,
         )
         run_command(command)

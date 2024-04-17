@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,6 +12,7 @@
 import sys
 from typing import Iterable, List, Optional, Tuple, TypeVar
 
+import nncf
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
@@ -49,7 +50,12 @@ def get_algo_backend(backend: BackendType) -> AccuracyControlAlgoBackend:
 
         return OVAccuracyControlAlgoBackend()
 
-    raise RuntimeError(
+    if backend == BackendType.ONNX:
+        from nncf.quantization.algorithms.accuracy_control.onnx_backend import ONNXAccuracyControlAlgoBackend
+
+        return ONNXAccuracyControlAlgoBackend()
+
+    raise nncf.UnsupportedBackendError(
         f"Cannot create the backend for the accuracy control algorithm because {backend} is not supported."
     )
 
@@ -310,6 +316,8 @@ class QuantizationAccuracyRestorer:
                 quantized_model_graph,
                 self.restore_mode,
                 algo_backend.get_op_with_weights_metatypes(),
+                algo_backend.is_node_with_weight,
+                algo_backend.get_weight_tensor_port_ids,
             )
             report.removed_groups.append(current_group)
 

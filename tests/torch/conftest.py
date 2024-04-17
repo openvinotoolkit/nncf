@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -254,19 +254,44 @@ def distributed_mode_sync_port(request: FixtureRequest):
 
 @pytest.fixture
 def _seed():
-    if torch is not None:
-        from torch.backends import cudnn
+    """
+    Fixture to ensure deterministic randomness across tests.
+    """
+    import numpy as np
+    from torch.backends import cudnn
 
-        cudnn.deterministic = True
-        cudnn.benchmark = False
-        torch.manual_seed(0)
-    try:
-        import numpy as np
+    deterministic = cudnn.deterministic
+    benchmark = cudnn.benchmark
+    seed = torch.seed()
 
-        np.random.seed(0)
-    except ImportError:
-        pass
+    cudnn.deterministic = True
+    cudnn.benchmark = False
+    torch.manual_seed(0)
+    np.random.seed(0)
     random.seed(0)
+
+    yield
+
+    cudnn.deterministic = deterministic
+    cudnn.benchmark = benchmark
+    torch.manual_seed(seed)
+
+
+@pytest.fixture
+def _safe_deterministic_state():
+    """
+    This fixture sets both cuDNN and PyTorch deterministic algorithms to their
+    original states after each test to avoid unintended side effects
+    caused by modifying these settings globally.
+    """
+    import torch
+    from torch.backends import cudnn
+
+    cudnn_deterministic = cudnn.deterministic
+    torch_deterministic = torch.are_deterministic_algorithms_enabled()
+    yield
+    cudnn.deterministic = cudnn_deterministic
+    torch.use_deterministic_algorithms(torch_deterministic)
 
 
 # Custom markers specifying tests to be run only if a specific option

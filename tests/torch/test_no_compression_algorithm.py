@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,9 +17,7 @@ from tests.torch.helpers import create_compressed_model_and_algo_for_test
 EPS = 1e-9
 INPUT_SIZE = [1, 4, 4]
 
-NO_COMPRESSION_NNCF_CONFIG = NNCFConfig(
-    {"model": "basic_binarization_config", "input_info": {"sample_size": [1] + INPUT_SIZE}}
-)
+NO_COMPRESSION_NNCF_CONFIG = NNCFConfig({"model": "basic_config", "input_info": {"sample_size": [1] + INPUT_SIZE}})
 
 
 def test_no_compression_algo_not_change_model_params():

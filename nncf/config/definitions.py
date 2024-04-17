@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,7 +16,6 @@ ADAPTIVE_COMPRESSION_LEVEL_TRAINING_MODE_NAME_IN_CONFIG = "adaptive_compression_
 EARLY_EXIT_TRAINING_MODE_NAME_IN_CONFIG = "early_exit"
 EXPERIMENTAL_QUANTIZATION_ALGO_NAME_IN_CONFIG = "experimental_quantization"
 BOOTSTRAP_NAS_ALGO_NAME_IN_CONFIG = "bootstrapNAS"
-BINARIZATION_ALGO_NAME_IN_CONFIG = "binarization"
 CONST_SPARSITY_ALGO_NAME_IN_CONFIG = "const_sparsity"
 FILTER_PRUNING_ALGO_NAME_IN_CONFIG = "filter_pruning"
 KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG = "knowledge_distillation"
@@ -32,5 +31,4 @@ ALGO_NAME_VS_README_URL = {
     RB_SPARSITY_ALGO_NAME_IN_CONFIG: "docs/compression_algorithms/Sparsity.md",
     CONST_SPARSITY_ALGO_NAME_IN_CONFIG: "docs/compression_algorithms/Sparsity.md",
     KNOWLEDGE_DISTILLATION_ALGO_NAME_IN_CONFIG: "docs/compression_algorithms/KnowledgeDistillation.md",
-    BINARIZATION_ALGO_NAME_IN_CONFIG: "docs/compression_algorithms/Binarization.md",
 }

@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -19,6 +19,7 @@ from torch import distributed as dist
 from torch import nn
 from torch.nn import Module
 
+import nncf
 from nncf.common.compression import BaseCompressionAlgorithmController as BaseController
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph import NNCFNodeName
@@ -245,7 +246,7 @@ def load_module_state(base_module: Module, state: _ModuleState, strict=False) ->
             msg = f"Could not find a module to restore state: {name}"
             nncf_logger.debug(msg)
             if strict:
-                raise RuntimeError(msg) from e
+                raise nncf.InternalError(msg) from e
 
     for name, param in base_module.named_parameters():
         param.requires_grad = state.requires_grad_state[name]
@@ -412,6 +413,14 @@ def maybe_convert_legacy_names_in_compress_state(compression_state: Dict[str, An
 
 
 def get_model_device(model: torch.nn.Module) -> torch.device:
+    """
+    Get the device on which the first model parameters reside.
+
+    :param model: The PyTorch model.
+    :return: The device where the first model parameter reside.
+        Default cpu if the model has no parameters.
+    """
+
     try:
         device = next(model.parameters()).device
     except StopIteration:
@@ -426,6 +435,14 @@ def get_all_model_devices_generator(model: torch.nn.Module) -> Generator[torch.d
 
 
 def is_multidevice(model: torch.nn.Module) -> bool:
+    """
+    Checks if the model's parameters are distributed across multiple devices.
+
+    :param model: The PyTorch model.
+    :return: True if the parameters reside on multiple devices, False otherwise.
+        Default False if the models has no parameters
+    """
+
     device_generator = get_all_model_devices_generator(model)
     try:
         curr_device = next(device_generator)
@@ -439,6 +456,14 @@ def is_multidevice(model: torch.nn.Module) -> bool:
 
 
 def get_model_dtype(model: torch.nn.Module) -> torch.dtype:
+    """
+    Get the datatype of the first model parameter.
+
+    :param model: The PyTorch model.
+    :return: The datatype of the first model parameter.
+        Default to torch.float32 if the model has no parameters.
+    """
+
     try:
         dtype = next(model.parameters()).dtype
     except StopIteration:

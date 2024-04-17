@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,9 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import warnings
 from dataclasses import dataclass
 from typing import Tuple
 
+import nncf
 from nncf.common.quantization.quantizers import calculate_asymmetric_level_ranges
 from nncf.common.quantization.quantizers import calculate_symmetric_level_ranges
 from nncf.common.quantization.quantizers import get_num_levels
@@ -121,7 +123,11 @@ def tune_range(
         qval = fns.round(fval)
 
     ra = fns.where(qval < level_high, qval / (qval - level_high) * right_border, left_border)
-    rb = fns.where(qval > 0.0, (qval - level_high) / qval * left_border, right_border)
+    with warnings.catch_warnings():
+        # If `qval` is 0 `rb` will equal `right_border`, and we don't want to show an unnecessary division by 0 warning
+        warnings.simplefilter("ignore")
+        rb_then_result = (qval - level_high) / qval * left_border
+    rb = fns.where(qval > 0.0, rb_then_result, right_border)
 
     range_a = right_border - ra
     range_b = rb - left_border
@@ -183,7 +189,7 @@ def asymmetric_range(
     :param max_values: Collected max values for the quantized insertion.
     :param quantizer_config: Config of the quantization configuration.
     :param unify_zp: Whether to unify the zero point.
-        It is `True` for the per-tensor zero point constrain on KMB (vpu2p0).
+        It is `True` for the per-tensor zero point constrain on KMB.
     :return: A Tuple
         level_low - the low quant number
         level_high - the high quant number
@@ -313,9 +319,9 @@ def _calculate_scaled_parameters(
         levels: Number of quantization levels.
     """
     if quantizer_config.mode == QuantizationMode.ASYMMETRIC:
-        raise RuntimeError("half_range is only applied to symmetric quantization mode.")
+        raise nncf.ValidationError("half_range is only applied to symmetric quantization mode.")
     if quant_group != QuantizerGroup.WEIGHTS:
-        raise RuntimeError("half_range is only applied to weight quantizers.")
+        raise nncf.ValidationError("half_range is only applied to weight quantizers.")
 
     num_bits = quantizer_config.num_bits
     level_low, level_high = calculate_symmetric_level_ranges(num_bits - 1, signed=True, narrow_range=False)

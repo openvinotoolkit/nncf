@@ -89,3 +89,5 @@ for data_item in val_loader:
 
 NNCF provides the examples of Post-Training Quantization where you can find the implementation of data transformation
 function: [PyTorch](../../../examples/post_training_quantization/torch/mobilenet_v2/README.md), [TensorFlow](../../../examples/post_training_quantization/tensorflow/mobilenet_v2/README.md), [ONNX](../../../examples/post_training_quantization/onnx/mobilenet_v2/README.md), and [OpenVINO](../../../examples/post_training_quantization/openvino/mobilenet_v2/README.md)
+
+In case the Post-Training Quantization algorithm could not reach quality requirements you can fine-tune a quantized pytorch model. Example of the Quantization-Aware training pipeline for a pytorch model could be found [here](../../../examples/quantization_aware_training/torch/resnet18/README.md).

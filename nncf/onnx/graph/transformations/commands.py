@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -72,18 +72,18 @@ class ONNXOutputInsertionCommand(ONNXInsertionCommand):
     pass
 
 
-class ONNXBiasCorrectionCommand(TransformationCommand):
+class ONNXInitializerUpdateCommand(TransformationCommand):
     """
-    Corrects bias value in the model based on the input value.
+    Update initializer in the value.
     """
 
-    def __init__(self, target_point: ONNXTargetPoint, bias_value: np.ndarray):
+    def __init__(self, target_point: ONNXTargetPoint, new_value: np.ndarray):
         """
-        :param target_point: The TargetPoint instance for the correction that contains layer's information.
-        :param bias_value: The bias shift value (numpy format) that will be added to the original bias value.
+        :param target_point: Target point.
+        :param new_value: New value for initializer.
         """
         super().__init__(TransformationType.CHANGE, target_point)
-        self.bias_value = bias_value
+        self.new_value = new_value
 
 
 class ONNXModelExtractionCommand(Command):

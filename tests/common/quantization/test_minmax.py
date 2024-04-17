@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,6 +11,7 @@
 
 import pytest
 
+import nncf
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.common.quantization.structs import QuantizerGroup
@@ -20,6 +21,7 @@ from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import FP8QuantizationParameters
 from nncf.quantization.advanced_parameters import FP8Type
 from nncf.quantization.advanced_parameters import OverflowFix
+from nncf.quantization.advanced_parameters import QuantizationParameters
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 
 
@@ -53,24 +55,37 @@ def test_quantization_preset(preset, model_type, activation_mode, weights_mode):
 @pytest.mark.parametrize(
     "algo_params, is_error",
     [
-        ({"mode": QuantizationMode.FP8_E4M3}, True),
+        ({"mode": None}, False),
         (
             {
-                "mode": QuantizationMode.FP8_E4M3,
-                "preset": QuantizationPreset.PERFORMANCE,
-                "target_device": TargetDevice.CPU,
-                "overflow_fix": OverflowFix.DISABLE,
-                "quantize_outputs": False,
-                "backend_params": None,
+                "mode": None,
+                "activations_quantization_params": FP8QuantizationParameters(),
+                "weights_quantization_params": FP8QuantizationParameters(),
             },
-            False,
+            True,
         ),
+        ({"mode": QuantizationMode.FP8_E4M3}, False),
         (
             {
                 "mode": QuantizationMode.FP8_E4M3,
                 "preset": QuantizationPreset.MIXED,
-                "target_device": TargetDevice.GPU,
+            },
+            True,
+        ),
+        (
+            {"mode": QuantizationMode.FP8_E4M3, "target_device": TargetDevice.GPU},
+            True,
+        ),
+        (
+            {
+                "mode": QuantizationMode.FP8_E4M3,
                 "overflow_fix": OverflowFix.FIRST_LAYER,
+            },
+            True,
+        ),
+        (
+            {
+                "mode": QuantizationMode.FP8_E4M3,
                 "quantize_outputs": True,
             },
             True,
@@ -78,20 +93,39 @@ def test_quantization_preset(preset, model_type, activation_mode, weights_mode):
         (
             {
                 "mode": QuantizationMode.FP8_E4M3,
-                "target_device": TargetDevice.CPU_SPR,
-                "overflow_fix": OverflowFix.ENABLE,
+                "activations_quantization_params": QuantizationParameters(),
+                "weights_quantization_params": QuantizationParameters(),
+            },
+            True,
+        ),
+        (
+            {
+                "mode": QuantizationMode.FP8_E4M3,
+                "activations_quantization_params": QuantizationParameters(),
+                "weights_quantization_params": QuantizationParameters(),
             },
             True,
         ),
     ],
 )
 def test_mode_against_default_map(algo_params, is_error):
+    mode_param = algo_params["mode"]
     default_values_to_compare = {
-        "_preset": QuantizationPreset.PERFORMANCE,
-        "_target_device": TargetDevice.CPU,
-        "_overflow_fix": OverflowFix.DISABLE,
-        "_quantize_outputs": False,
-        "_backend_params": None,
+        None: {
+            "_overflow_fix": OverflowFix.FIRST_LAYER,
+            "_activations_quantization_params": QuantizationParameters(),
+            "_weights_quantization_params": QuantizationParameters(),
+        },
+        QuantizationMode.FP8_E4M3: {
+            "_overflow_fix": OverflowFix.DISABLE,
+            "_activations_quantization_params": FP8QuantizationParameters(FP8Type.E4M3),
+            "_weights_quantization_params": FP8QuantizationParameters(FP8Type.E4M3),
+        },
+        QuantizationMode.FP8_E5M2: {
+            "_overflow_fix": OverflowFix.DISABLE,
+            "_activations_quantization_params": FP8QuantizationParameters(FP8Type.E5M2),
+            "_weights_quantization_params": FP8QuantizationParameters(FP8Type.E5M2),
+        },
     }
 
     qconf_attr_vs_constraint_dict_to_compare = {"mode": QuantizationScheme.SYMMETRIC}
@@ -99,10 +133,10 @@ def test_mode_against_default_map(algo_params, is_error):
     if is_error:
         try:
             minmax = MinMaxQuantization(**algo_params)
-        except RuntimeError:
-            pytest.xfail("Caught expected RuntimeError")
+        except nncf.ParameterNotSupportedError:
+            pytest.xfail("Caught expected error")
     minmax = MinMaxQuantization(**algo_params)
-    for ref_parameter_name, ref_parameter_value in default_values_to_compare.items():
+    for ref_parameter_name, ref_parameter_value in default_values_to_compare[mode_param].items():
         parameter_value = getattr(minmax, ref_parameter_name)
         assert parameter_value == ref_parameter_value
 

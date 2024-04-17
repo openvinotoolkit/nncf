@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -23,11 +23,11 @@ class TransformationLayout:
     addresses these issues.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initialize Transformation Layout.
         """
-        self._transformations = []
+        self._transformations: List[TransformationCommand] = []
 
     @property
     def transformations(self) -> List[TransformationCommand]:

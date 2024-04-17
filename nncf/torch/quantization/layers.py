@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -21,6 +21,7 @@ import torch
 from torch import distributed
 from torch import nn
 
+import nncf
 from nncf.common.graph import NNCFNodeName
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.quantizer_setup import QuantizationPointId
@@ -501,7 +502,7 @@ class BaseQuantizer(nn.Module, ABC):
             y_scale, y_zero_point = get_scale_zp_from_input_low_input_high(level_low, level_high, input_low, input_high)
             possible_axes = self._possible_per_channel_dimensions()
             if len(possible_axes) > 1:
-                raise RuntimeError(
+                raise nncf.InternalError(
                     f"Impossible to determine the per-channel axis for a scale shape {self.scale_shape} - "
                     f"more than one dimension is >1"
                 )
@@ -533,7 +534,7 @@ class BaseQuantizer(nn.Module, ABC):
             if self._export_mode == QuantizerExportMode.ONNX_QUANTIZE_DEQUANTIZE_PAIRS:
                 x, y_scale, y_zero_point, axis = self._prepare_qdq_export_quantization(x)
                 return ExportQuantizeToONNXQuantDequant.apply(x, y_scale, y_zero_point, axis)
-        raise RuntimeError("Unknown export mode")
+        raise nncf.InternalError("Unknown export mode")
 
     def extra_repr(self):
         return "bit={}, ch={}".format(self.num_bits, self.per_channel)
@@ -1038,14 +1039,18 @@ class WeightsDecompressor(nn.Module):
     Applies decompression of compressed weights in the forward pass
     """
 
-    def __init__(self, scale: torch.Tensor, zero_point: torch.Tensor):
+    def __init__(self, scale: torch.Tensor, zero_point: torch.Tensor, result_dtype: torch.dtype = None):
         """
         :param scale: A scale in quantization scheme
         :param zero_point: A zero point in quantization scheme
+        :param result_dtype: (Optional) A data type that result should be cast to
         """
         super().__init__()
         self.register_buffer("_scale", scale)
         self.register_buffer("_zero_point", zero_point)
+        self.result_dtype = result_dtype
 
     def forward(self, x):
-        return decompress(x, self._scale, self._zero_point)
+        result = decompress(x, self._scale, self._zero_point)
+        result = result.type(dtype=self.result_dtype) if self.result_dtype is not None else result
+        return result

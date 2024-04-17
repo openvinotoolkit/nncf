@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import json
+import os
 import sys
 from argparse import ArgumentParser
 from typing import Dict, Tuple
@@ -87,28 +88,51 @@ def post_training_quantization_openvino_yolo8_quantize_with_accuracy_control() -
     return format_results(results)
 
 
-def post_training_quantization_openvino_anomaly_stfpm_quantize_with_accuracy_control() -> Dict[str, float]:
-    sys.path.append(
-        str(
-            PROJECT_ROOT
-            / "examples"
-            / "post_training_quantization"
-            / "openvino"
-            / "anomaly_stfpm_quantize_with_accuracy_control"
-        )
+def post_training_quantization_onnx_yolo8_quantize_with_accuracy_control() -> Dict[str, float]:
+    from examples.post_training_quantization.onnx.yolov8_quantize_with_accuracy_control.main import (
+        run_example as yolo8_main,
     )
-    import main as stfpm
+
+    onnx_fp32_box_mAP, onnx_fp32_mask_mAP, onnx_int8_box_mAP, onnx_int8_mask_mAP = yolo8_main()
+
+    import examples.post_training_quantization.onnx.yolov8_quantize_with_accuracy_control.deploy as yolov8_deploy
 
     return {
-        "fp32_top1": float(stfpm.fp32_top1),
-        "int8_top1": float(stfpm.int8_top1),
-        "accuracy_drop": float(stfpm.fp32_top1 - stfpm.int8_top1),
-        "fp32_fps": stfpm.fp32_fps,
-        "int8_fps": stfpm.int8_fps,
-        "performance_speed_up": stfpm.int8_fps / stfpm.fp32_fps,
-        "fp32_model_size": stfpm.fp32_size,
-        "int8_model_size": stfpm.int8_size,
-        "model_compression_rate": stfpm.fp32_size / stfpm.int8_size,
+        "onnx_fp32_box_mAP": onnx_fp32_box_mAP,
+        "onnx_fp32_mask_mAP": onnx_fp32_mask_mAP,
+        "onnx_int8_box_mAP": onnx_int8_box_mAP,
+        "onnx_int8_mask_mAP": onnx_int8_mask_mAP,
+        "onnx_drop_box_mAP": onnx_fp32_box_mAP - onnx_int8_box_mAP,
+        "onnx_drop_mask_mAP": onnx_fp32_mask_mAP - onnx_int8_mask_mAP,
+        "ov_fp32_box_mAP": yolov8_deploy.fp32_stats["metrics/mAP50-95(B)"],
+        "ov_fp32_mask_mAP": yolov8_deploy.fp32_stats["metrics/mAP50-95(M)"],
+        "ov_int8_box_mAP": yolov8_deploy.int8_stats["metrics/mAP50-95(B)"],
+        "ov_int8_mask_mAP": yolov8_deploy.int8_stats["metrics/mAP50-95(M)"],
+        "ov_drop_box_mAP": yolov8_deploy.box_metric_drop,
+        "ov_drop_mask_mAP": yolov8_deploy.mask_metric_drop,
+        "ov_fp32_fps": yolov8_deploy.fp32_fps,
+        "ov_int8_fps": yolov8_deploy.int8_fps,
+        "performance_speed_up": yolov8_deploy.int8_fps / yolov8_deploy.fp32_fps,
+    }
+
+
+def post_training_quantization_openvino_anomaly_stfpm_quantize_with_accuracy_control() -> Dict[str, float]:
+    from examples.post_training_quantization.openvino.anomaly_stfpm_quantize_with_accuracy_control.main import (
+        run_example as anomaly_stfpm_main,
+    )
+
+    fp32_top1, int8_top1, fp32_fps, int8_fps, fp32_size, int8_size = anomaly_stfpm_main()
+
+    return {
+        "fp32_top1": float(fp32_top1),
+        "int8_top1": float(int8_top1),
+        "accuracy_drop": float(fp32_top1 - int8_top1),
+        "fp32_fps": fp32_fps,
+        "int8_fps": int8_fps,
+        "performance_speed_up": int8_fps / fp32_fps,
+        "fp32_model_size": fp32_size,
+        "int8_model_size": int8_size,
+        "model_compression_rate": fp32_size / int8_size,
     }
 
 
@@ -131,11 +155,61 @@ def post_training_quantization_torch_ssd300_vgg16() -> Dict[str, float]:
 
 
 def llm_compression() -> Dict[str, float]:
-    from examples.llm_compression.openvino.main import main as llm_compression_main
+    from examples.llm_compression.openvino.tiny_llama.main import main as llm_compression_main
 
     result = llm_compression_main()
 
     return {"word_count": len(result.split())}
+
+
+def llm_tune_params() -> Dict[str, float]:
+    from examples.llm_compression.openvino.tiny_llama_find_hyperparams.main import main as llm_tune_params_main
+
+    awq, ratio, group_size = llm_tune_params_main()
+
+    return {"awq": bool(awq), "ratio": ratio, "group_size": group_size}
+
+
+def quantization_aware_training_torch_resnet18():
+    from examples.quantization_aware_training.torch.resnet18.main import main as resnet18_main
+
+    # Set manual seed and determenistic cuda mode to make the test determenistic
+    set_torch_cuda_seed()
+    results = resnet18_main()
+
+    return {
+        "fp32_top1": float(results[0]),
+        "int8_init_top1": float(results[1]),
+        "int8_top1": float(results[2]),
+        "accuracy_drop": float(results[0] - results[2]),
+        "fp32_fps": results[3],
+        "int8_fps": results[4],
+        "performance_speed_up": results[4] / results[3],
+        "fp32_model_size": results[5],
+        "int8_model_size": results[6],
+        "model_compression_rate": results[5] / results[6],
+    }
+
+
+def set_torch_cuda_seed(seed: int = 42):
+    """
+    Sets torch, cuda and python random module to determenistic mode with
+    given seed.
+    :param seed: Seed to use for determenistic run.
+    """
+    import random
+
+    import numpy as np
+    import torch
+    from torch.backends import cudnn
+
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.manual_seed(seed)
+    cudnn.deterministic = True
+    cudnn.benchmark = False
+    torch.use_deterministic_algorithms(True)
+    os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
 
 def main(argv):

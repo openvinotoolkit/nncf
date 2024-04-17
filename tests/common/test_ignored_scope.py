@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,9 +11,11 @@
 
 import pytest
 
+import nncf
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
 from nncf.scopes import IgnoredScope
+from nncf.scopes import Subgraph
 from nncf.scopes import get_ignored_node_names_from_ignored_scope
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
@@ -58,6 +60,10 @@ IGNORED_SCOPES_TEST_DATA = [
         IgnoredScope(["/Conv_1_0", "/Linear_1_0"], [".*Marked.*"], [LINEAR_TYPE]),
         ["/Conv_1_0", "/Linear_1_0", "/Linear_2_0", "/Linear_3_0", "/Marked_Conv_3_0"],
     ),
+    (
+        IgnoredScope(subgraphs=[Subgraph(inputs=["/Linear_1_0"], outputs=["/Linear_3_0"])]),
+        ["/Conv_2_0", "/Linear_1_0", "/Linear_2_0", "/Linear_3_0", "/Marked_Conv_3_0"],
+    ),
 ]
 
 
@@ -72,11 +78,13 @@ WRONG_IGNORED_SCOPES_TEST_DATA = [
     IgnoredScope(["/Conv_0_0", "/Conv_1_0", "/Linear_1_0"]),
     IgnoredScope(patterns=[".*Maarked.*"]),
     IgnoredScope(types=["wrong_type"]),
+    IgnoredScope(subgraphs=[Subgraph(inputs=["/Linear_1_0"], outputs=["/Linear_1_0"])]),
+    IgnoredScope(subgraphs=[Subgraph(inputs=["/Linear_3_0"], outputs=["/Linear_1_0"])]),
 ]
 
 
 @pytest.mark.parametrize("ignored_scope", WRONG_IGNORED_SCOPES_TEST_DATA)
 def test_wrong_ignored_scopes(ignored_scope):
     nncf_graph = NNCFGraphToTestIgnoredScope(CONV_TYPE, LINEAR_TYPE).nncf_graph
-    with pytest.raises(RuntimeError):
+    with pytest.raises(nncf.ValidationError):
         get_ignored_node_names_from_ignored_scope(ignored_scope, nncf_graph)

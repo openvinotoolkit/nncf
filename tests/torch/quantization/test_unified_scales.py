@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -19,6 +19,7 @@ import pytest
 import torch
 import torch.nn
 
+import nncf
 from nncf.common.graph import NNCFNodeName
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.hardware.config import HWConfigType
@@ -288,7 +289,7 @@ def test_insertion_point_coalescing(
     ref_coalesced_ip_lists: List[List[PTTargetPoint]],
 ):
     if ref_coalesced_ip_lists is None:
-        with pytest.raises(RuntimeError):
+        with pytest.raises((nncf.InternalError, nncf.ValidationError)):
             _ = QuantizerPropagationSolver.coalesce_insertion_points(input_insertion_points, linked_scopes_groups_list)
     else:
         test_coalesced_ip_lists = QuantizerPropagationSolver.coalesce_insertion_points(
@@ -375,7 +376,7 @@ def test_quantizer_scale_linking(mocker):
         assert non_shared_spy.call_count == 1
 
 
-def test_eltwise_unified_scales_for_vpu():
+def test_eltwise_unified_scales_for_npu():
     nncf_config = get_quantization_config_without_range_init(model_size=1)
     nncf_config["input_info"] = [
         {
@@ -385,7 +386,7 @@ def test_eltwise_unified_scales_for_vpu():
             "sample_size": [1, 1, 1, 1],
         },
     ]
-    nncf_config["target_device"] = "VPU"
+    nncf_config["target_device"] = "NPU"
     register_bn_adaptation_init_args(nncf_config)
 
     _, compression_ctrl = create_compressed_model_and_algo_for_test(EltwiseQuantizerLinkingTestModel(), nncf_config)
@@ -577,7 +578,7 @@ class TestsWithONNXInspection:
                 "sample_size": [1, 1, 1, 2],
             },
         ]
-        nncf_config["target_device"] = "VPU"
+        nncf_config["target_device"] = "NPU"
         register_bn_adaptation_init_args(nncf_config)
 
         compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(
@@ -632,7 +633,7 @@ class TestsWithONNXInspection:
         nncf_config["input_info"] = [
             {"sample_size": [1, 5], "type": "long", "filler": "zeros"},
         ]
-        nncf_config["target_device"] = "VPU"
+        nncf_config["target_device"] = "NPU"
         register_bn_adaptation_init_args(nncf_config)
 
         compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(
@@ -701,7 +702,7 @@ def test_unified_scales_with_shared_nodes():
     nncf_config["input_info"] = [
         {"sample_size": [1, 5], "type": "long", "filler": "zeros"},
     ]
-    nncf_config["target_device"] = "VPU"
+    nncf_config["target_device"] = "NPU"
     register_bn_adaptation_init_args(nncf_config)
 
     _, compression_ctrl = create_compressed_model_and_algo_for_test(

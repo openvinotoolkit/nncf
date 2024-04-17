@@ -1,0 +1,23 @@
+name: mypy
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+jobs:
+  mypy:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v3
+      with:
+        python-version: 3.8.10
+    - name: Install NNCF
+      run: pip install -e .
+    - name: Install mypy
+      run: pip install mypy==1.8.0
+    - name: Run mypy
+      run: mypy --install-types --config-file=.mypy.ini --non-interactive

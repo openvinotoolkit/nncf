@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -11,6 +11,7 @@
 
 from typing import Any, Dict, List, Optional
 
+import nncf
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.initialization.range import PerLayerRangeInitConfig
 from nncf.common.quantization.initialization.range import RangeInitConfig
@@ -52,7 +53,7 @@ def extract_algo_specific_config(config: NNCFConfig, algo_name_to_match: str) ->
 
     if algo_name_to_match == NO_COMPRESSION_ALGORITHM_NAME:
         if len(algo_list) > 0:
-            raise RuntimeError(
+            raise nncf.ValidationError(
                 f"No algorithm configuration should be specified "
                 f"when you try to extract {algo_name_to_match} from the NNCF config!"
             )
@@ -65,12 +66,14 @@ def extract_algo_specific_config(config: NNCFConfig, algo_name_to_match: str) ->
             matches.append(compression_algo_dict)
 
     if len(matches) > 1:
-        raise RuntimeError(
+        raise nncf.ValidationError(
             f"Multiple algorithm configurations specified for the same "
             f"algo {algo_name_to_match} in the NNCF config!"
         )
     if not matches:
-        raise RuntimeError(f"Did not find an algorithm configuration for algo {algo_name_to_match} in the NNCF config!")
+        raise nncf.InternalError(
+            f"Did not find an algorithm configuration for algo {algo_name_to_match} in the NNCF config!"
+        )
     return next(iter(matches))
 
 
@@ -203,13 +206,13 @@ def extract_accuracy_aware_training_params(config: NNCFConfig) -> Dict[str, obje
             if NNCFAlgorithmNames.FILTER_PRUNING in algorithms and any(
                 algo in NNCFAlgorithmNames.SPARSITY for algo in algorithms
             ):
-                raise RuntimeError(
+                raise nncf.ValidationError(
                     "adaptive_compression_level mode supports filter_pruning or sparsity algorithms"
                     "separately. Please, choose only one algorithm with adaptive compression level. "
                     "Take a note that you still can use it combined with quantization."
                 )
             if len(algorithms) == 1 and algorithms[0] == NNCFAlgorithmNames.QUANTIZATION:
-                raise RuntimeError("adaptive_compression_level mode doesn't support quantization")
+                raise nncf.ValidationError("adaptive_compression_level mode doesn't support quantization")
 
     accuracy_aware_training_config = config.get("accuracy_aware_training", None)
 

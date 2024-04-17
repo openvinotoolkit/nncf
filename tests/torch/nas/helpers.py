@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -65,7 +65,7 @@ class DebugGraphContext:
 
     def dump_graph(self, file_name):
         dyn_graph = self._model.nncf.get_dynamic_graph()
-        nncf_graph = GraphConverter.convert(dyn_graph)
+        nncf_graph = GraphConverter.convert(dyn_graph, False)
         nncf_graph.visualize_graph(f"{file_name}.dot")
 
     def __enter__(self):

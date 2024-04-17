@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,6 +18,7 @@ import openvino.runtime as ov
 import pytest
 from openvino.runtime import opset13 as opset
 
+import nncf
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.tensor import Tensor
@@ -310,7 +311,7 @@ def test_inplace_reduce_fn_dynamic_shapes(input_shape, raise_error):
     input_1 = opset.parameter(input_shape, name="Input")
     fn = get_inplace_min_op(reduction_axes=None)
     if raise_error:
-        with pytest.raises(RuntimeError):
+        with pytest.raises(nncf.ValidationError):
             fn(input_1, 0, "test")
         return
     op = fn(input_1, 0, "test")

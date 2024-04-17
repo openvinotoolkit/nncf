@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -19,9 +19,7 @@ from nncf.torch.utils import add_domain
 from nncf.torch.utils import no_jit_trace
 
 
-@register_module(
-    ignored_algorithms=["quantization", "binarization", "const_sparsity", "magnitude_sparsity", "rb_sparsity"]
-)
+@register_module(ignored_algorithms=["quantization", "const_sparsity", "magnitude_sparsity", "rb_sparsity"])
 class L2Norm(nn.Module):
     def __init__(self, n_channels, scale, eps, across_spatial=0, channel_shared=0):
         super().__init__()

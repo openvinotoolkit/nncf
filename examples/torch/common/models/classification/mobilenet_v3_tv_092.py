@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -305,7 +305,7 @@ def _mobilenet_v3_model(
 ):
     model = MobileNetV3(inverted_residual_setting, last_channel, **kwargs)
     if pretrained:
-        if model_urls.get(arch, None) is None:
+        if model_urls.get(arch) is None:
             raise ValueError("No checkpoint is available for model type {}".format(arch))
         state_dict = load_state_dict_from_url(model_urls[arch], progress=progress)
         model.load_state_dict(state_dict)

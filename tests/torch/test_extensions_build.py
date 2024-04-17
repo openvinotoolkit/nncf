@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -87,16 +87,6 @@ def test_force_cuda_build(tmp_path):
     cuda_ext_so = cuda_ext_dir / "quantized_functions_cuda.so"
     assert not cuda_ext_so.exists()
 
-    cpu_ext_dir = torch_ext_dir / "nncf" / "binarized_functions_cpu" / torch_version
-    assert cpu_ext_dir.exists()
-    cpu_ext_so = cpu_ext_dir / "binarized_functions_cpu.so"
-    assert cpu_ext_so.exists()
-
-    cuda_ext_dir = torch_ext_dir / "nncf" / "binarized_functions_cuda" / torch_version
-    assert not cuda_ext_dir.exists()
-    cuda_ext_so = cuda_ext_dir / "nncf" / torch_version / "binarized_functions_cuda.so"
-    assert not cuda_ext_so.exists()
-
     mode = "cuda"
 
     command = Command(
@@ -109,9 +99,4 @@ def test_force_cuda_build(tmp_path):
     cuda_ext_dir = torch_ext_dir / "nncf" / "quantized_functions_cuda" / torch_version
     assert cuda_ext_dir.exists()
     cuda_ext_so = cuda_ext_dir / "quantized_functions_cuda.so"
-    assert cuda_ext_so.exists()
-
-    cuda_ext_dir = torch_ext_dir / "nncf" / "binarized_functions_cuda" / torch_version
-    assert cuda_ext_dir.exists()
-    cuda_ext_so = cuda_ext_dir / "binarized_functions_cuda.so"
     assert cuda_ext_so.exists()

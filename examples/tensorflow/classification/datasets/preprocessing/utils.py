@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -12,6 +12,8 @@
 from typing import Tuple
 
 import tensorflow as tf
+
+import nncf
 
 
 def resize_image(image: tf.Tensor, height: int, width: int) -> tf.Tensor:
@@ -39,10 +41,10 @@ def mean_image_subtraction(
     :return: the centered image.
     """
     if image.get_shape().ndims != 3:
-        raise ValueError("Input must be of size [height, width, C>0]")
+        raise nncf.ValidationError("Input must be of size [height, width, C>0]")
 
     if len(means) != num_channels:
-        raise ValueError("len(means) must match the number of channels")
+        raise nncf.ValidationError("len(means) must match the number of channels")
 
     means = tf.broadcast_to(means, tf.shape(image))
     if dtype is not None:
@@ -64,10 +66,10 @@ def standardize_image(
     :return: the centered image.
     """
     if image.get_shape().ndims != 3:
-        raise ValueError("Input must be of size [height, width, C>0]")
+        raise nncf.ValidationError("Input must be of size [height, width, C>0]")
 
     if len(stddev) != num_channels:
-        raise ValueError("len(stddev) must match the number of channels")
+        raise nncf.ValidationError("len(stddev) must match the number of channels")
 
     stddev = tf.broadcast_to(stddev, tf.shape(image))
     if dtype is not None:

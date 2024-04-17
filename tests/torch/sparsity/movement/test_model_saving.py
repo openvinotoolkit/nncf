@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -20,11 +20,11 @@ import torch
 from addict import Dict
 from datasets import Dataset
 from onnx import numpy_helper
+from openvino._offline_transformations import apply_fused_names_cleanup
+from openvino._offline_transformations import apply_moc_transformations
+from openvino._offline_transformations import apply_pruning_transformation
 from openvino.runtime import Core
 from openvino.runtime import serialize
-from openvino.tools.mo.back.offline_transformations import apply_fused_names_cleanup
-from openvino.tools.mo.back.offline_transformations import apply_moc_transformations
-from openvino.tools.mo.back.offline_transformations import apply_user_transformations
 from packaging import version
 from scipy.special import softmax
 from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
@@ -44,6 +44,11 @@ from tests.torch.sparsity.movement.helpers import Wav2Vec2RunRecipe
 from tests.torch.sparsity.movement.helpers import build_compression_trainer
 from tests.torch.sparsity.movement.helpers import force_update_sparsifier_binary_masks_by_threshold
 from tests.torch.sparsity.movement.helpers import initialize_sparsifier_parameters_by_linspace
+
+
+@pytest.fixture(scope="function", autouse=True)
+def safe_deterministic_state(_safe_deterministic_state):
+    pass
 
 
 class TestONNXExport:
@@ -246,14 +251,14 @@ class TestONNXExport:
         ov_model = core.read_model(onnx_model_path)
 
         # Convert to IR without pruning
-        apply_moc_transformations(ov_model)
+        apply_moc_transformations(ov_model, cf=False)
         apply_fused_names_cleanup(ov_model)
         not_pruned_file = str(tmp_path / "ov_not_pruned.xml")
         serialize(ov_model, not_pruned_file)
 
         # Convert to IR with pruning
-        apply_moc_transformations(ov_model)
-        apply_user_transformations(ov_model, [("Pruning", {})])
+        apply_moc_transformations(ov_model, cf=False)
+        apply_pruning_transformation(ov_model)
         apply_fused_names_cleanup(ov_model)
         pruned_file = str(tmp_path / "ov_pruned.xml")
         serialize(ov_model, pruned_file)

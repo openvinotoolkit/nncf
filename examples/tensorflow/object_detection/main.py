@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,6 +16,7 @@ from pathlib import Path
 import numpy as np
 import tensorflow as tf
 
+import nncf
 from examples.common.paths import configure_paths
 from examples.common.sample_config import create_sample_config
 from examples.tensorflow.common.argparser import get_common_argument_parser
@@ -90,7 +91,7 @@ def load_checkpoint(checkpoint, ckpt_path):
     if not path_to_checkpoint:
         logger.info("No checkpoint detected.")
         if ckpt_path:
-            raise RuntimeError(f"ckpt_path was given, but no checkpoint detected in path: {ckpt_path}")
+            raise nncf.ValidationError(f"ckpt_path was given, but no checkpoint detected in path: {ckpt_path}")
 
     logger.info("Checkpoint file {} found and restoring from checkpoint".format(path_to_checkpoint))
     status = checkpoint.restore(path_to_checkpoint)

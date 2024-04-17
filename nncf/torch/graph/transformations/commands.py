@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,6 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import Enum
 from typing import Any, Callable, Dict, List
 
 import torch
@@ -20,6 +21,8 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.commands import TransformationType
+
+DEFAULT_HOOKS_GROUP_NAME = "default_hooks_group"
 
 
 class PTTargetPointStateNames:
@@ -54,6 +57,7 @@ class PTTargetPoint(TargetPoint):
             isinstance(other, PTTargetPoint)
             and self.target_type == other.target_type
             and self.target_node_name == other.target_node_name
+            and self.input_port_id == other.input_port_id
         )
 
     def __str__(self):
@@ -136,14 +140,21 @@ class PTInsertionCommand(PTTransformationCommand):
         point: PTTargetPoint,
         fn: Callable,
         priority: TransformationPriority = TransformationPriority.DEFAULT_PRIORITY,
+        hooks_group_name: str = DEFAULT_HOOKS_GROUP_NAME,
     ):
         super().__init__(TransformationType.INSERT, point)
         self.fn: Callable = fn
         self.priority: TransformationPriority = priority
+        self.hooks_group_name = hooks_group_name
 
     def requires_graph_rebuild(self):
         # Rebuild graph when adding quantization nodes.
         return self.priority == TransformationPriority.QUANTIZATION_PRIORITY
+
+
+class ExtraCompressionModuleType(Enum):
+    EXTERNAL_QUANTIZER = 0
+    EXTERNAL_OP = 1
 
 
 class PTSharedFnInsertionCommand(PTTransformationCommand):
@@ -152,30 +163,17 @@ class PTSharedFnInsertionCommand(PTTransformationCommand):
         target_points: List[PTTargetPoint],
         fn: Callable,
         op_unique_name: str,
+        compression_module_type: ExtraCompressionModuleType = ExtraCompressionModuleType.EXTERNAL_OP,
         priority: TransformationPriority = TransformationPriority.DEFAULT_PRIORITY,
+        hooks_group_name: str = DEFAULT_HOOKS_GROUP_NAME,
     ):
         super().__init__(TransformationType.INSERT, None)
         self.target_points = target_points
         self.fn = fn
         self.op_name = op_unique_name
+        self.compression_module_type = compression_module_type
         self.priority = priority
-
-    def requires_graph_rebuild(self):
-        return True
-
-
-class PTQuantizerInsertionCommand(PTTransformationCommand):
-    """
-    Insertion quantizer operation to the models.
-    """
-
-    def __init__(
-        self,
-        point: PTTargetPoint,
-        quantizer: "BaseQuantizer",  # noqa: F821
-    ):
-        super().__init__(TransformationType.INSERT, point)
-        self.quantizer = quantizer
+        self.hooks_group_name = hooks_group_name
 
     def requires_graph_rebuild(self):
         return True

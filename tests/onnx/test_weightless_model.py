@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import tempfile
 from pathlib import Path
 
 import onnx
@@ -30,7 +29,6 @@ def test_save_weightless_model(tmp_path, model_to_test, model):
     torch.onnx.export(model, x, onnx_model_path)
     onnx_model = onnx.load_model(onnx_model_path)
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        weightless_model_path = tmpdir / Path("weightless_model.onnx")
-        save_model_without_tensors(onnx_model, weightless_model_path)
-        assert weightless_model_path.stat().st_size < Path(onnx_model_path).stat().st_size
+    weightless_model_path = tmp_path / Path("weightless_model.onnx")
+    save_model_without_tensors(onnx_model, weightless_model_path)
+    assert weightless_model_path.stat().st_size < Path(onnx_model_path).stat().st_size

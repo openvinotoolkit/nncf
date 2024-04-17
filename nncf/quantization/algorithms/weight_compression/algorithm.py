@@ -1,14 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#      http://www.apache.org/licenses/LICENSE-2.0
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -22,6 +12,7 @@
 from collections import defaultdict
 from typing import Dict, List, Optional, OrderedDict, Tuple, TypeVar
 
+import nncf
 from nncf import Dataset
 from nncf.common.factory import StatisticsAggregatorFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -40,6 +31,7 @@ from nncf.experimental.tensor.definitions import TensorDataType
 from nncf.parameters import CompressWeightsMode
 from nncf.parameters import SensitivityMetric
 from nncf.quantization.algorithms.algorithm import Algorithm
+from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.weight_lowering import WeightCompressionConfig
@@ -66,6 +58,8 @@ class WeightCompression(Algorithm):
         ignored_scope: IgnoredScope,
         all_layers: bool,
         sensitivity_metric: SensitivityMetric,
+        awq: bool,
+        subset_size: int,
     ):
         """
         :param mode: Defines a mode for weight compression.
@@ -87,10 +81,13 @@ class WeightCompression(Algorithm):
             that share quantization parameters (scale). The value -1 means no grouping.
         :param ignored_scope: An ignored scope that defined the list of model control
             flow graph nodes to be ignored during quantization.
-        :param all_layers: Indicates whether embeddings and last layers should be compressed to a primary
-            precision. By default, the backup precision is assigned for the embeddings and last layers.
+        :param all_layers: Indicates whether embeddings and last MatMul layers should be compressed to a primary
+            precision. By default, the backup precision is assigned for the embeddings and last MatMul layers.
         :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
             preserve the accuracy of the model, the more sensitive layers receives a higher precision.
+        :param awq: determines whether to use or not modified AWQ algorithm.
+        :param subset_size: Number of data samples to calculate activation statistics used for assigning different
+            quantization precision.
         """
         super().__init__()
         self._mode = mode
@@ -102,6 +99,8 @@ class WeightCompression(Algorithm):
         self._fp_inputs = defaultdict(list)
         self._all_layers = all_layers
         self._sensitivity_metric = sensitivity_metric
+        self._awq = awq
+        self._subset_size = subset_size
 
     @property
     def available_backends(self) -> List[BackendType]:
@@ -123,7 +122,7 @@ class WeightCompression(Algorithm):
 
             self._backend_entity = PTWeightCompressionAlgoBackend()
         else:
-            raise RuntimeError(
+            raise nncf.UnsupportedBackendError(
                 "Cannot return backend-specific entity because {} is not supported!".format(model_backend.value)
             )
 
@@ -134,7 +133,12 @@ class WeightCompression(Algorithm):
         :param nncf_graph: NNCFGraph instance.
         :return: List with the data for each layer.
         """
-        weighted_metatypes = self._backend_entity.matmul_metatypes + self._backend_entity.embedding_metatypes
+        weighted_metatypes = (
+            self._backend_entity.matmul_metatypes
+            + self._backend_entity.embedding_metatypes
+            + self._backend_entity.convolution_metatypes
+        )
+
         ordered_nodes_to_compress = []
         ignored_names = get_ignored_node_names_from_ignored_scope(
             self._ignored_scope, nncf_graph, strict=self._ignored_scope.validate
@@ -158,16 +162,30 @@ class WeightCompression(Algorithm):
             should be quantized or not.
         :return: Information about each weight node that is considered for mixed precision.
         """
-        if self._mode in [CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM] or self._all_layers:
+        if self._mode in [CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM]:
             return all_weight_params
+
+        if self._all_layers:
+            return list(filter(lambda wp: len(wp.reduction_axes) == 1, all_weight_params))
 
         ratio_defining_params = list(
             filter(
-                lambda wp: wp.node_with_weight.metatype not in self._backend_entity.embedding_metatypes,
+                lambda wp: wp.node_with_weight.metatype in self._backend_entity.matmul_metatypes,
                 all_weight_params,
             )
         )
-        if not is_last_layer_shared:
+
+        # Embedding layers are quantized to 4-bits only if all_layers=True.
+        if self._all_layers:
+            embedding_params = list(
+                filter(
+                    lambda wp: wp.node_with_weight.metatype in self._backend_entity.embedding_metatypes,
+                    all_weight_params,
+                )
+            )
+            ratio_defining_params.extend(embedding_params)
+
+        if not self._all_layers and not is_last_layer_shared:
             ratio_defining_params = ratio_defining_params[:-1]
         return ratio_defining_params
 
@@ -265,7 +283,7 @@ class WeightCompression(Algorithm):
 
         activations = {}
         if dataset is not None and self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR:
-            activations = self._get_activations(dataset, nodes_to_compress, graph, model)
+            activations = self._get_activations(dataset, self._subset_size, nodes_to_compress, graph, model)
 
         transformed_model = self.do_compression(model, graph, nodes_to_compress, activations)
         return transformed_model
@@ -292,18 +310,26 @@ class WeightCompression(Algorithm):
                 weight = self._backend_entity.get_weight(node, weight_port_id, model, graph)
                 if weight.dtype not in [TensorDataType.float32, TensorDataType.float16, TensorDataType.float64]:
                     continue
-                reduction_axes = self._backend_entity.get_channel_agnostic_reduction_axes(node, weight_port_id, graph)
-                if isinstance(reduction_axes, tuple) and len(reduction_axes) != 1:
+                reduction_axes = self._backend_entity.get_reduction_axes(node, weight_port_id, graph)
+                if (
+                    self._group_size != -1
+                    and self._all_layers
+                    and node.metatype in self._backend_entity.embedding_metatypes
+                    and isinstance(reduction_axes, tuple)
+                    and len(reduction_axes) != 1
+                ):
+                    # NNCF supports multiple reduction axes only for ops with group_size != -1.
+                    # Convolution ops are always quantized to 8-bits (without groups).
+                    # Embedding layers are quantized to 4-bits only if all_layers=True.
+                    # MatMul ops can't have multiple reduction axes.
                     nncf_logger.warning(
                         f"Weight compression expects a single reduction axis, but {len(reduction_axes)} given. "
                         f"Weight shape: {weight.shape}, reduction axes: {reduction_axes}, "
-                        f"node name: {node.node_name}. The node won't be quantized."
+                        f"node name: {node.node_name}. The node will be asymmetrically quantized to 8 bits."
                     )
-                    continue
-                reduction_axis = reduction_axes[0] if isinstance(reduction_axes, tuple) else reduction_axes
 
                 weight_params = WeightCompressionParameters(
-                    weight_name, node, weight_port_id, weight.size, reduction_axis
+                    weight_name, node, weight_port_id, weight.size, reduction_axes
                 )
                 all_weight_params.append(weight_params)
                 weight_names.add(weight_name)
@@ -311,6 +337,12 @@ class WeightCompression(Algorithm):
         ratio_defining_params = self._get_ratio_defining_params(all_weight_params, is_last_layer_shared)
         self._set_weight_compression_config(ratio_defining_params, model, graph, activations)
         nncf_logger.info(self._get_bitwidth_distribution_str(all_weight_params, ratio_defining_params))
+
+        if self._awq and activations is not None and self._mode != CompressWeightsMode.NF4:
+            awq_algo = AWQ(
+                model, self._backend_entity.name_to_node_mapping, all_weight_params, nodes_to_compress, activations
+            )
+            awq_algo.apply(model, graph)
 
         # Compress model using weight compression parameters
         transformed_model = self._backend_entity.transform_model(
@@ -326,6 +358,7 @@ class WeightCompression(Algorithm):
                 "all_layers": self._all_layers,
                 "ignored_scope": self._ignored_scope,
                 "sensitivity_metric": self._sensitivity_metric.value,
+                "awq": self._awq,
             },
             algo_name="weight_compression",
         )
@@ -382,19 +415,19 @@ class WeightCompression(Algorithm):
         return self._fp_inputs[input_id]
 
     def _get_activations(
-        self, dataset: Dataset, nodes_to_compress: List[NNCFNode], graph: NNCFGraph, model: TModel
+        self, dataset: Dataset, subset_size: int, nodes_to_compress: List[NNCFNode], graph: NNCFGraph, model: TModel
     ) -> Dict[str, List[Tensor]]:
         """
         Collects input activations for the given nodes on the dataset.
 
         :param dataset: Dataset to collect values.
+        :param subset_size: Number of data samples to calculate activation statistics used for assigning different
+            quantization precision.
         :param nodes_to_compress: List of nodes, whose inputs are collected.
         :param model: Model for statistics collection.
         :param graph: Model graph.
         :return: statistics values itself per node name.
         """
-        subset_size = 128
-
         activations = {}
         _collected_stat_inputs_map = {}
         statistic_container = StatisticPointsContainer()

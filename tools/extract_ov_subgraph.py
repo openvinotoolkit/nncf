@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -94,8 +94,8 @@ def get_nodes(xml_dict: Dict, edges: Dict):
         try:
             attributes = node["attributes"]
             data = node["data"]["attributes"] if "data" in node else None
-            inp = node["input"] if "input" in node else None
-            out = node["output"] if "output" in node else None
+            inp = node.get("input", None)
+            out = node.get("output", None)
 
             node_id = int(attributes["id"])
             node_name = attributes["name"]

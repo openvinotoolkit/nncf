@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -25,7 +25,6 @@ from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
-from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
 from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.common import dump_model
@@ -247,7 +246,6 @@ def test_synthetic_models_fc_placement(model_creator_func):
             "preset": QuantizationPreset.PERFORMANCE,
             "inplace_statistics": True,
             "mode": QuantizationMode.FP8_E4M3,
-            "overflow_fix": OverflowFix.DISABLE,
         },
     )
 

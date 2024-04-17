@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,6 +15,7 @@ from collections import defaultdict
 from collections import deque
 from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
+import nncf
 from nncf.common.tensor import TensorType
 from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.tensor_statistics.collectors import NNCFTensor
@@ -86,6 +87,9 @@ class TensorReducerBase(ABC):
         """
 
     def __call__(self, x: List[NNCFTensor]):
+        if any(t.is_empty() for t in x):
+            return None
+
         if self.inplace:
             return x
 
@@ -252,11 +256,11 @@ class TensorCollector:
         :reducer_output_port_id: Reducer target output port id.
         """
         if container_key in self._stat_container_kwargs_map:
-            raise RuntimeError(
+            raise nncf.InternalError(
                 f"Two different statistic branches for one container key {container_key} are encountered"
             )
         if any(aggr is aggregator for aggr in self._aggregators.values()):
-            raise RuntimeError(f"One aggregator instance {aggregator} for different branches is encountered")
+            raise nncf.InternalError(f"One aggregator instance {aggregator} for different branches is encountered")
 
         self._reducers.add(reducer)
         key = (hash(reducer), reducer_output_port_id, hash(aggregator))
@@ -292,9 +296,9 @@ class TensorCollector:
         for reducer in self._reducers:
             reducer_hash = hash(reducer)
             input_ = inputs[reducer_hash]
-            if any(tensor.is_empty() for tensor in input_):
-                continue
-            reduced_inputs[reducer_hash] = reducer(input_)
+            reduced_input = reducer(input_)
+            if reduced_input is not None:
+                reduced_inputs[reducer_hash] = reduced_input
 
         for (
             (reducer_hash, reducer_port_id, _),
@@ -423,7 +427,7 @@ class TensorCollector:
                 for (_, percentile), value in kwargs.items():
                     percentile_vs_values_dict[percentile] = value
             return statistic_container_cls(percentile_vs_values_dict=percentile_vs_values_dict)
-        raise RuntimeError(
+        raise nncf.InternalError(
             f"Statistic collector class {statistic_container_cls} is not supported by the TensorCollector class."
         )
 
@@ -457,7 +461,9 @@ class MergedTensorCollector(TensorCollector):
             self._aggregators[key] = unique_aggregator
 
 
-##################################################Reducers##################################################
+##################################################
+# Reducers
+##################################################
 
 
 class NoopReducer(TensorReducerBase):
@@ -473,6 +479,14 @@ class NoopReducer(TensorReducerBase):
 
     def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
         return x
+
+
+class RawReducer(NoopReducer):
+    def __init__(self):
+        super().__init__()
+
+    def __call__(self, x: List[NNCFTensor]):
+        return self._reduce_out_of_place(x)
 
 
 class MinReducer(TensorReducerBase):
@@ -566,7 +580,9 @@ class MeanPerChReducer(TensorReducerBase):
         return hash((self.__class__.__name__, self.inplace, self._reduction_axes, self._channel_axis))
 
 
-##################################################Aggregators##################################################
+##################################################
+# Aggregators
+##################################################
 
 
 class NoopAggregator(AggregatorBase):

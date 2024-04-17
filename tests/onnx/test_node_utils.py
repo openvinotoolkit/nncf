@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -32,13 +32,11 @@ def test_get_bias_value(model):
 @pytest.mark.parametrize(
     "shape, axis, expected_channel_axis",
     [
-        ((1, 3, 5, 5), -1, 0),
+        ((1, 3, 5, 5), 3, 0),
         ((1, 3, 5, 5), 1, 2),
         ((1, 3, 5, 5), 0, 3),
         ((1, 3, 5, 5), 2, 1),
-        ((1, 3, 5, 5), -2, 1),
-        ((1,), -1, 0),
-        ((1, 1), -1, 0),
+        ((1,), 0, 0),
         ((1, 1), 1, 0),
         ((1, 1), 0, 1),
     ],

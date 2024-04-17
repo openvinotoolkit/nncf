@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,6 +13,7 @@ import pytest
 import torch
 from torch import nn
 
+from nncf.common.hook_handle import HookHandle
 from nncf.torch.layers import NNCFConv2d
 from nncf.torch.layers import NNCFLinear
 from nncf.torch.module_operations import UpdateWeight
@@ -30,11 +31,11 @@ class SingleLayerModel(nn.Module):
         super().__init__()
         self.layer = layer
         sparsifier = BinaryMask(layer.weight.size())
-        self.op_key = self.layer.register_pre_forward_operation(UpdateWeight(sparsifier))
+        self.hook_handle: HookHandle = self.layer.register_pre_forward_operation(UpdateWeight(sparsifier))
 
     @property
     def sparsifier(self):
-        return self.layer.get_pre_op(self.op_key).operand
+        return self.layer.get_pre_op(self.hook_handle.hook_id).operand
 
     def forward(self, x):
         return self.layer(x)

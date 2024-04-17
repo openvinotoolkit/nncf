@@ -1,4 +1,4 @@
-# Copyright (c) 2023 Intel Corporation
+# Copyright (c) 2024 Intel Corporation
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,6 +15,7 @@ from typing import Type
 import numpy as np
 import pytest
 
+import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.common.graph.layer_attributes import LinearLayerAttributes
@@ -475,7 +476,7 @@ class TemplateTestChannelAlignment:
                 _class = weights_update_cls
                 _attr = "weight_value"
             else:
-                raise RuntimeError(f"Wrong type of transformation: {type(transformation)}")
+                raise nncf.ValidationError(f"Wrong type of transformation: {type(transformation)}")
 
             target_names[tp.target_node_name].append(_class)
             assert ref_values[tp.target_node_name][_attr] == getattr(transformation, _attr)
@@ -527,7 +528,7 @@ class TemplateTestChannelAlignment:
         tensor_collectors = stat_points[0].algorithm_to_tensor_collectors[algorithm._algorithm_key]
         assert len(tensor_collectors) == 1
         assert tensor_collectors[0] == ref_stat_collector
-        MockBackend.get_statistic_collector.assert_called_once_with((0, 2, 3), 1e-4, ref_subset_size, ref_inplace)
+        MockBackend.get_statistic_collector.assert_called_once_with((2, 3), 1e-4, ref_subset_size, ref_inplace)
 
         target_point = stat_points[0].target_point
         assert target_point.target_node_name == target_node_name
@@ -554,4 +555,4 @@ class TemplateTestChannelAlignment:
             assert isinstance(aggr, MedianAggregator)
             assert aggr.num_samples == num_samples_ref
             assert aggr._keepdims
-            assert aggr._aggregation_axes == (0,)
+            assert aggr._aggregation_axes == (0, 1)
