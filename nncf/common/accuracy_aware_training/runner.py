@@ -132,8 +132,8 @@ class TrainingRunner(ABC):
         ],
         validate_fn: Callable[[TModel], float],
         configure_optimizers_fn: Optional[Callable[[], Tuple[OptimizerType, LRSchedulerType]]],
-        dump_checkpoint_fn: Optional[Callable[[TModel, CompressionAlgorithmController, "TrainingRunner", Optional[str|pathlib.Path]], None]],
-        load_checkpoint_fn: Optional[Callable[[Checkpoint, str|pathlib.Path], None]]=None,
+        dump_checkpoint_fn: Optional[Callable[[TModel, CompressionAlgorithmController, "TrainingRunner", Optional[Union[str, pathlib.Path]]], None]],
+        load_checkpoint_fn: Optional[Callable[[Checkpoint, Union[str, pathlib.Path]], None]]=None,
         early_stopping_fn: Optional[Callable[[float,], bool]]=None,
         update_learning_rate_fn: Optional[Callable[[],None]]=None
     ) -> None:
@@ -189,7 +189,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
 
     def __init__(
         self,
-        accuracy_aware_training_params: Dict[str, float|int],
+        accuracy_aware_training_params: Dict[str, Union[float,int]],
         uncompressed_model_accuracy: float,
         verbose: bool = True,
         dump_checkpoints: bool = True,
@@ -222,18 +222,18 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.current_loss: float = 0
 
         self._compressed_training_history: List[Tuple[float, float]] = []
-        self._best_checkpoint: tuple[str|pathlib.Path, float]
+        self._best_checkpoint: tuple[Union[str, pathlib.Path], float]
 
         self._train_epoch_fn: Callable[[CompressionAlgorithmController, TModel, Optional[int], Optional[OptimizerType], Optional[LRSchedulerType]], float,]
         self._validate_fn: Callable[[TModel], float]
         self._configure_optimizers_fn: Callable[[], Tuple[OptimizerType, LRSchedulerType]]
-        self._dump_checkpoint_fn: Optional[Callable[[TModel, CompressionAlgorithmController, "TrainingRunner", Optional[str|pathlib.Path]], None]]
-        self._load_checkpoint_fn: Optional[Callable[[Checkpoint, str|pathlib.Path], None]] = None
+        self._dump_checkpoint_fn: Optional[Callable[[TModel, CompressionAlgorithmController, "TrainingRunner", Optional[Union[str, pathlib.Path]]], None]]
+        self._load_checkpoint_fn: Optional[Callable[[Checkpoint, Union[str, pathlib.Path]], None]] = None
         self._early_stopping_fn: Optional[Callable[[float], bool]] = None
         self._update_learning_rate_fn: Optional[Callable[[],None]] = None
 
-        self._log_dir: str|pathlib.Path
-        self._checkpoint_save_dir: str|pathlib.Path
+        self._log_dir: Union[str, pathlib.Path]
+        self._checkpoint_save_dir: Union[str, pathlib.Path]
         self._tensorboard_writer: TensorboardWriterType #type: ignore
 
     def train_epoch(self, model: TModel, compression_controller: CompressionAlgorithmController) -> None:
@@ -302,8 +302,8 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         train_epoch_fn: Callable[[CompressionAlgorithmController, TModel, Optional[int], Optional[OptimizerType], Optional[LRSchedulerType]], float],
         validate_fn: Callable[[TModel], float],
         configure_optimizers_fn: Optional[Callable[[], Tuple[OptimizerType, LRSchedulerType]]],
-        dump_checkpoint_fn: Optional[Callable[[TModel, CompressionAlgorithmController, "TrainingRunner", Optional[str|pathlib.Path]], None]],
-        load_checkpoint_fn: Optional[Callable[[Checkpoint, str|pathlib.Path], None]]=None,
+        dump_checkpoint_fn: Optional[Callable[[TModel, CompressionAlgorithmController, "TrainingRunner", Optional[Union[str, pathlib.Path]]], None]],
+        load_checkpoint_fn: Optional[Callable[[Checkpoint, Union[str, pathlib.Path]], None]]=None,
         early_stopping_fn: Optional[Callable[[float], bool]]=None,
         update_learning_rate_fn: Optional[Callable[[],None]]=None,
     ) -> None:
@@ -315,7 +315,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self._early_stopping_fn = early_stopping_fn
         self._update_learning_rate_fn = update_learning_rate_fn
 
-    def initialize_logging(self, log_dir: Optional[str|pathlib.Path] = None, tensorboard_writer: Optional[TensorboardWriterType] =None) -> None:
+    def initialize_logging(self, log_dir: Optional[Union[str, pathlib.Path]] = None, tensorboard_writer: Optional[TensorboardWriterType] =None) -> None:
         self._log_dir = log_dir if log_dir is not None else osp.join(os.getcwd(), "runs")
         self._log_dir = configure_accuracy_aware_paths(self._log_dir)
         self._checkpoint_save_dir = self._log_dir
@@ -333,7 +333,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         nncf_logger.info(f"Saved the best model to {best_path}")
 
     def load_best_checkpoint(self, model: TModel) -> float:
-        resuming_checkpoint_path: str|pathlib.Path = ''
+        resuming_checkpoint_path: Union[str, pathlib.Path] = ''
         compression_rate: float = 0.0
         resuming_checkpoint_path, compression_rate = self._best_checkpoint
         nncf_logger.info(f"Loading the best checkpoint found during training: {resuming_checkpoint_path}")
@@ -344,7 +344,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         return compression_controller.compression_stage() == CompressionStage.FULLY_COMPRESSED
 
     @abstractmethod
-    def add_tensorboard_scalar(self, key: str, data:int|float, step: int) -> None:
+    def add_tensorboard_scalar(self, key: str, data:Union[int, float], step: int) -> None:
         """
         Add a scalar to tensorboard
 
@@ -365,7 +365,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
 
     @abstractmethod
     def _save_checkpoint(
-        self, model: TModel, compression_controller: CompressionAlgorithmController, checkpoint_path: str|pathlib.Path
+        self, model: TModel, compression_controller: CompressionAlgorithmController, checkpoint_path: Union[str, pathlib.Path]
     ) -> None:
         """
         Save a model to the disk.
@@ -377,7 +377,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         """
 
     @abstractmethod
-    def _load_checkpoint(self, model: TModel, checkpoint_path: str|pathlib.Path) -> None:
+    def _load_checkpoint(self, model: TModel, checkpoint_path: Union[str, pathlib.Path]) -> None:
         """
         Load model from path.
 
@@ -386,7 +386,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         """
 
     @abstractmethod
-    def _make_checkpoint_path(self, is_best: bool, compression_rate: Optional[float] = None) -> str|pathlib.Path:
+    def _make_checkpoint_path(self, is_best: bool, compression_rate: Optional[float] = None) -> Union[str, pathlib.Path]:
         """
         Make a path to save the checkpoint there
 
@@ -403,7 +403,7 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
 
     def __init__(
         self,
-        accuracy_aware_training_params: Dict[str, float|int],
+        accuracy_aware_training_params: Dict[str, Union[float,int]],
         uncompressed_model_accuracy: float,
         verbose: bool = True,
         dump_checkpoints: bool = True,
@@ -433,7 +433,7 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
         self.minimal_compression_rate = minimal_compression_rate
         self.maximal_compression_rate = maximal_compression_rate
 
-        self._best_checkpoints: Dict[float,Tuple[str|pathlib.Path,float]] = {}
+        self._best_checkpoints: Dict[float,Tuple[Union[str, pathlib.Path],float]] = {}
         self._compression_rate_target: Optional[float]
         self.adaptive_controller: CompressionAlgorithmController
         self.was_compression_increased_on_prev_step: Optional[float]
@@ -478,7 +478,7 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
             )
             return self.compression_rate_target
 
-        resuming_checkpoint_path: str|pathlib.Path = self._best_checkpoints[best_checkpoint_compression_rate][0]
+        resuming_checkpoint_path: Union[str, pathlib.Path] = self._best_checkpoints[best_checkpoint_compression_rate][0]
         nncf_logger.info(f"Loading the best checkpoint found during training: {resuming_checkpoint_path}")
         self._load_checkpoint(model, resuming_checkpoint_path)
         return best_checkpoint_compression_rate
