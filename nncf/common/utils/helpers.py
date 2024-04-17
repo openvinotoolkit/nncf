@@ -13,7 +13,7 @@ import itertools
 import os
 import os.path as osp
 from typing import Any, Dict, Hashable, Iterable, List, Optional, Union
-
+import pathlib
 from tabulate import tabulate
 
 from nncf.common.utils.os import is_windows
@@ -43,7 +43,7 @@ def create_table(
     return tabulate(tabular_data=rows, headers=header, tablefmt=table_fmt, maxcolwidths=max_col_widths, floatfmt=".3f")
 
 
-def configure_accuracy_aware_paths(log_dir: str) -> str:
+def configure_accuracy_aware_paths(log_dir: str|pathlib.Path) -> str|pathlib.Path:
     """
     Create a subdirectory inside of the passed log directory
     to save checkpoints from the accuracy-aware training loop to.

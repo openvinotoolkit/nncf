@@ -14,7 +14,6 @@ from dataclasses import dataclass
 from nncf.api.statistics import Statistics
 from nncf.common.utils.api_marker import api
 
-
 @api()
 @dataclass
 class TrainingLoopStatistics(Statistics):
@@ -29,7 +28,7 @@ class TrainingLoopStatistics(Statistics):
     relative_accuracy_degradation: float
     accuracy_budget: float
 
-    def to_str(self):
+    def to_str(self) -> str:
         stats_str = (
             f"Uncompressed model accuracy: {self.uncompressed_accuracy:.4f}\n"
             f"Compressed model accuracy: {self.compressed_accuracy:.4f}\n"
