@@ -92,6 +92,7 @@ jobs:
 
 
   pytorch-cpu:
+    timeout-minutes: 150
     defaults:
       run:
         shell: bash
@@ -109,6 +110,7 @@ jobs:
         run: make test-torch-cpu
 
   pytorch-cuda:
+    timeout-minutes: 150
     defaults:
       run:
         shell: bash
@@ -121,8 +123,6 @@ jobs:
       - name: Download CUDA
         run: |
           wget -q https://developer.download.nvidia.com/compute/cuda/12.1.1/local_installers/cuda_12.1.1_530.30.02_linux.run
-      - name: Install CUDA
-        run: |
           sudo sh cuda_12.1.1_530.30.02_linux.run --toolkit
       - name: Runner info
         continue-on-error: true
