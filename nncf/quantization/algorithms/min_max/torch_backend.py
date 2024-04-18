@@ -33,7 +33,8 @@ from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
-from nncf.quantization.range_estimator import RangeEstimatorParameters, AggregatorType
+from nncf.quantization.range_estimator import AggregatorType
+from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.transformations.command_creation import create_quantizer_insertion_command
@@ -198,7 +199,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
             kwargs = {
                 "num_samples": num_samples,
                 "aggregation_axes": aggregation_axes,
-                "tensor_processor": PTNNCFCollectorTensorProcessor
+                "tensor_processor": PTNNCFCollectorTensorProcessor,
             }
             if params.aggregator_type == AggregatorType.MEAN_NO_OUTLIERS:
                 kwargs.update({"quantile": params.quantile_outlier_prob})

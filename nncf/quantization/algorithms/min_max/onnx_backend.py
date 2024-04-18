@@ -42,7 +42,8 @@ from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
-from nncf.quantization.range_estimator import RangeEstimatorParameters, AggregatorType
+from nncf.quantization.range_estimator import AggregatorType
+from nncf.quantization.range_estimator import RangeEstimatorParameters
 
 
 class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
@@ -214,7 +215,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             kwargs = {
                 "num_samples": num_samples,
                 "aggregation_axes": aggregation_axes,
-                "tensor_processor": ONNXNNCFCollectorTensorProcessor
+                "tensor_processor": ONNXNNCFCollectorTensorProcessor,
             }
             if params.aggregator_type == AggregatorType.MEAN_NO_OUTLIERS:
                 kwargs.update({"quantile": params.quantile_outlier_prob})

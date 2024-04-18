@@ -199,7 +199,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             kwargs = {
                 "num_samples": num_samples,
                 "aggregation_axes": aggregation_axes,
-                "tensor_processor": OVNNCFCollectorTensorProcessor
+                "tensor_processor": OVNNCFCollectorTensorProcessor,
             }
             if params.aggregator_type == AggregatorType.MEAN_NO_OUTLIERS:
                 kwargs.update({"quantile": params.quantile_outlier_prob})
