@@ -95,7 +95,7 @@ class HAWQPrecisionInitParams(BasePrecisionInitParams):
         return cls(
             user_init_args=user_init_args,
             bitwidths=hawq_init_config_dict.get("bits", PRECISION_INIT_BITWIDTHS),
-            traces_per_layer_path=hawq_init_config_dict.get("traces_per_layer_path", None),
+            traces_per_layer_path=hawq_init_config_dict.get("traces_per_layer_path"),
             num_data_points=hawq_init_config_dict.get("num_data_points", HAWQ_NUM_DATA_POINTS),
             iter_number=hawq_init_config_dict.get("iter_number", HAWQ_ITER_NUMBER),
             tolerance=hawq_init_config_dict.get("tolerance", HAWQ_TOLERANCE),

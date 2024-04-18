@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Type
+from typing import Callable, List, Type
 
 import numpy as np
 import pytest
@@ -53,6 +53,9 @@ class PTIdentityConvModel(nn.Module, ToNNCFNetworkInterface):
 
     def get_nncf_network(self):
         return get_nncf_network(self, INPUT_SHAPE)
+
+
+MinMaxTestParameters = TemplateTestStatisticsAggregator.MinMaxTestParameters
 
 
 class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
@@ -131,58 +134,114 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         pass
 
     @pytest.mark.parametrize(
-        "target_point",
+        "test_parameters",
         (
-            PTTargetPoint(TargetType.OPERATOR_PRE_HOOK, IDENTITY_NODE_NAME, input_port_id=0),
-            PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS, CONV_NODE_NAME, input_port_id=1),
-            PTTargetPoint(TargetType.OPERATOR_POST_HOOK, IDENTITY_NODE_NAME, input_port_id=None),
+            MinMaxTestParameters(
+                RangeEstimatorParametersSet.MINMAX,
+                TargetType.OPERATOR_PRE_HOOK,
+                QuantizationMode.SYMMETRIC,
+                False,
+                256,
+                -256,
+            ),
+            MinMaxTestParameters(
+                RangeEstimatorParametersSet.MINMAX,
+                TargetType.OPERATION_WITH_WEIGHTS,
+                QuantizationMode.SYMMETRIC,
+                False,
+                256,
+                -256,
+            ),
+            MinMaxTestParameters(
+                RangeEstimatorParametersSet.MINMAX,
+                TargetType.OPERATOR_POST_HOOK,
+                QuantizationMode.SYMMETRIC,
+                False,
+                256,
+                -256,
+            ),
         ),
     )
     def test_successive_statistics_aggregation(
         self,
-        target_point: PTTargetPoint,
+        test_parameters: MinMaxTestParameters,
         dataset_samples,
         inplace_statistics,
+        is_backend_support_custom_estimators,
         mocker,
     ):
         is_stat_in_shape_of_scale = True
         model = self.get_backend_model(dataset_samples)
-        quantizer_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC, per_channel=False)
+        quantizer_config = QuantizerConfig(
+            mode=test_parameters.quantization_mode, per_channel=test_parameters.per_channel
+        )
 
-        ### Register operations before statistic collection
+        is_standard_estimator = test_parameters.range_estimator_params in [
+            RangeEstimatorParametersSet.MINMAX,
+            RangeEstimatorParametersSet.MEAN_MINMAX,
+        ]
+        if not is_standard_estimator and not is_backend_support_custom_estimators:
+            pytest.skip("Custom estimators are not supported for this backend yet")
+
+        # Register operations before statistic collection
         def fn(x):
             return x * 2
 
-        target_point = self.get_target_point(target_point.target_type)
+        target_point = self.get_target_point(test_parameters.target_type)
         model = self.__add_fn_to_model(model, target_point, fn)
 
-        ### Check hook inserted correctly
+        # Check hook inserted correctly
         self.__check_successive_hooks(model, target_point, fn)
 
-        ### Register and collect statistics after inserted operations
+        # Register and collect statistics after inserted operations
         statistic_points = self.__get_statistic_points(
-            target_point, model, quantizer_config, dataset_samples, inplace_statistics, mocker
+            test_parameters, model, quantizer_config, dataset_samples, inplace_statistics, mocker
         )
         tensor_collector = self.__collect_statistics_get_collector(statistic_points, model, dataset_samples)
-        ### Check values are changed because of the inserted operation
-        self.__check_collector(target_point, tensor_collector, is_stat_in_shape_of_scale, -256, 256)
+        # Check values are changed because of the inserted operation
+        self.__check_collector(
+            test_parameters,
+            tensor_collector,
+            is_stat_in_shape_of_scale,
+        )
 
-        ### Check the inserted operation is inside the model
+        # Check the inserted operation is inside the model
         self.__check_successive_hooks(model, target_point, fn)
 
     @pytest.mark.parametrize(
-        "target_point, nested_target_node_name",
+        "test_parameters, nested_target_node_name",
         (
             (
-                PTTargetPoint(TargetType.OPERATOR_PRE_HOOK, IDENTITY_NODE_NAME, input_port_id=0),
+                MinMaxTestParameters(
+                    RangeEstimatorParametersSet.MINMAX,
+                    TargetType.OPERATOR_PRE_HOOK,
+                    QuantizationMode.SYMMETRIC,
+                    False,
+                    512,
+                    -512,
+                ),
                 "PTIdentityConvModel/fn_0",
             ),
             (
-                PTTargetPoint(TargetType.OPERATION_WITH_WEIGHTS, CONV_NODE_NAME, input_port_id=1),
+                MinMaxTestParameters(
+                    RangeEstimatorParametersSet.MINMAX,
+                    TargetType.OPERATION_WITH_WEIGHTS,
+                    QuantizationMode.SYMMETRIC,
+                    False,
+                    512,
+                    -512,
+                ),
                 "PTIdentityConvModel/Conv2d[conv]/fn_0",
             ),
             (
-                PTTargetPoint(TargetType.OPERATOR_POST_HOOK, IDENTITY_NODE_NAME, input_port_id=None),
+                MinMaxTestParameters(
+                    RangeEstimatorParametersSet.MINMAX,
+                    TargetType.OPERATOR_POST_HOOK,
+                    QuantizationMode.SYMMETRIC,
+                    False,
+                    512,
+                    -512,
+                ),
                 "PTIdentityConvModel/fn_0",
             ),
         ),
@@ -190,38 +249,53 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     @pytest.mark.parametrize("nested_target_type", [TargetType.OPERATOR_PRE_HOOK, TargetType.OPERATOR_POST_HOOK])
     def test_nested_statistics_aggregation(
         self,
-        target_point: PTTargetPoint,
+        test_parameters: MinMaxTestParameters,
         nested_target_type: TargetType,
         nested_target_node_name,
         dataset_samples,
         inplace_statistics,
+        is_backend_support_custom_estimators,
         mocker,
     ):
         is_stat_in_shape_of_scale = True
         model = self.get_backend_model(dataset_samples)
-        quantizer_config = QuantizerConfig(mode=QuantizationMode.SYMMETRIC, per_channel=False)
+        quantizer_config = QuantizerConfig(
+            mode=test_parameters.quantization_mode, per_channel=test_parameters.per_channel
+        )
 
-        ### Register operations before statistic collection
+        is_standard_estimator = test_parameters.range_estimator_params in [
+            RangeEstimatorParametersSet.MINMAX,
+            RangeEstimatorParametersSet.MEAN_MINMAX,
+        ]
+        if not is_standard_estimator and not is_backend_support_custom_estimators:
+            pytest.skip("Custom estimators are not supported for this backend yet")
+
+        # Register operations before statistic collection
         @register_operator()
         def fn(x):
             return x * 2
 
+        target_point = self.get_target_point(test_parameters.target_type)
         model = self.__add_fn_to_model(model, target_point, fn)
         nested_target_point = PTMinMaxAlgoBackend.target_point(nested_target_type, nested_target_node_name, 0)
         model = self.__add_fn_to_model(model, nested_target_point, fn)
 
-        ### Check hook inserted correctly
+        # Check hook inserted correctly
         self.__check_nested_hooks(model, target_point, nested_target_type, nested_target_node_name, fn)
 
-        ### Register and collect statistics after inserted operations
+        # Register and collect statistics after inserted operations
         statistic_points = self.__get_statistic_points(
-            target_point, model, quantizer_config, dataset_samples, inplace_statistics, mocker
+            test_parameters, model, quantizer_config, dataset_samples, inplace_statistics, mocker
         )
         tensor_collector = self.__collect_statistics_get_collector(statistic_points, model, dataset_samples)
-        ### Check values are changed because of the inserted operation
-        self.__check_collector(target_point, tensor_collector, is_stat_in_shape_of_scale, -512, 512)
+        # Check values are changed because of the inserted operation
+        self.__check_collector(
+            test_parameters,
+            tensor_collector,
+            is_stat_in_shape_of_scale,
+        )
 
-        ### Check the inserted operation is inside the model
+        # Check the inserted operation is inside the model
         self.__check_nested_hooks(model, target_point, nested_target_type, nested_target_node_name, fn)
 
     @staticmethod
@@ -236,10 +310,10 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
 
     @classmethod
     def __get_statistic_points(
-        cls, target_point: PTTargetPoint, model, quantizer_config, dataset_samples, inplace_statistics, mocker
+        cls, test_parameters: MinMaxTestParameters, model, quantizer_config, dataset_samples, inplace_statistics, mocker
     ) -> StatisticPointsContainer:
         statistics_points = StatisticPointsContainer()
-        for target_type in [target_point.target_type]:
+        for target_type in [test_parameters.target_type]:
             target_point = cls.get_target_point(target_type)
             statistic_point = cls.create_statistics_point(
                 model,
@@ -248,7 +322,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
                 len(dataset_samples),
                 "TEST_ALGO",
                 inplace_statistics,
-                RangeEstimatorParametersSet.MINMAX,
+                test_parameters.range_estimator_params,
                 mocker,
             )
             statistics_points.add_statistic_point(statistic_point)
@@ -271,16 +345,14 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         return tensor_collectors[0][2]
 
     @staticmethod
-    def __check_collector(
-        target_point: PTTargetPoint, tensor_collector, stat_in_shape_of_scale, ref_min_val, ref_max_val
-    ):
+    def __check_collector(test_parameters, tensor_collector, stat_in_shape_of_scale):
         stat = tensor_collector.get_statistics()
         # Torch and Openvino backends tensor collectors return values in shape of scale
         # in comparison to ONNX backends.
-
+        ref_min_val, ref_max_val = test_parameters.ref_min_val, test_parameters.ref_max_val
         if isinstance(ref_min_val, np.ndarray) and stat_in_shape_of_scale:
             shape = (1, 3, 1, 1)
-            if target_point.target_type == TargetType.OPERATION_WITH_WEIGHTS:
+            if test_parameters.target_type == TargetType.OPERATION_WITH_WEIGHTS:
                 shape = (3, 1, 1, 1)
             ref_min_val, ref_max_val = map(lambda x: np.reshape(x, shape), (ref_min_val, ref_max_val))
 
@@ -295,7 +367,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
             assert stat.max_values.shape == ref_shape
 
     @staticmethod
-    def __check_successive_hooks(model, target_point: PTTargetPoint, fn):
+    def __check_successive_hooks(model: nn.Module, target_point: PTTargetPoint, fn: Callable):
         checker = HookChecker(model, "conv")
         checker.add_ref(
             ref_hooks=[fn],
@@ -309,7 +381,11 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
 
     @staticmethod
     def __check_nested_hooks(
-        model, target_point: PTTargetPoint, nested_target_type: TargetType, nested_target_node_name: str, fn
+        model: nn.Module,
+        target_point: PTTargetPoint,
+        nested_target_type: TargetType,
+        nested_target_node_name: str,
+        fn: Callable,
     ):
         checker = HookChecker(model, "conv")
         checker.add_ref(

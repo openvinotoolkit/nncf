@@ -534,7 +534,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
         return PTRangeInitParams(**range_init_params) if range_init_params is not None else None
 
     def _parse_precision_init_params(self, initializer_config: Dict) -> Tuple[str, BasePrecisionInitParams]:
-        init_precision_config = initializer_config.get("precision", None)
+        init_precision_config = initializer_config.get("precision")
         if not init_precision_config:
             return None, None
         precision_init_type = init_precision_config.get("type", "manual")
@@ -934,7 +934,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
 
             range_init_minmax_values = None
             if minmax_values_for_range_init:
-                minmax_stat = minmax_values_for_range_init[qp_id] if qp_id in minmax_values_for_range_init else None
+                minmax_stat = minmax_values_for_range_init.get(qp_id)
                 if minmax_stat is not None:
                     range_init_minmax_values = (minmax_stat.min_values, minmax_stat.max_values)
 
@@ -1084,7 +1084,7 @@ class QuantizationBuilder(PTCompressionAlgorithmBuilder):
             min_values = None
             max_values = None
             for qp_id in sorted_qp_ids:
-                minmax_stat = minmax_values_for_range_init[qp_id] if qp_id in minmax_values_for_range_init else None
+                minmax_stat = minmax_values_for_range_init.get(qp_id)
                 if minmax_stat is None:
                     continue
 
