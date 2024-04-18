@@ -19,10 +19,10 @@ from typing import Dict, Optional
 import numpy as np
 import openvino as ov
 import torch
-import transformers
 from datasets import load_dataset
 from memory_profiler import memory_usage
 from optimum.intel.openvino import OVModelForCausalLM
+from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 from whowhatbench import Evaluator
 
@@ -145,22 +145,6 @@ class LMWeightCompression(BaseTestPipeline):
     def compress(self) -> None:
         if self.backend == BackendType.FP32:
             return
-        elif self.backend == BackendType.TORCH:
-            start_time = time.perf_counter()
-
-            tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_id)
-            self.model = transformers.AutoModelForCausalLM.from_pretrained(
-                self.model_id, torch_dtype=torch.float16, device_map="cpu"
-            )
-
-            text = "The TinyLlama project aims to pretrain a 1.1B Llama model on 3 trillion tokens."
-            token = tokenizer(text, max_length=500, return_tensors="pt", truncation=True)
-            inputs = {"input_ids": token["input_ids"], "attention_mask": token["attention_mask"]}
-
-            self.run_info.compression_memory_usage = memory_usage(self._compress_torch(inputs), max_usage=True)
-            self.run_info.time_compression = time.perf_counter() - start_time
-
-            return
 
         print("Weight compression...")
         start_time = time.perf_counter()
@@ -191,9 +175,6 @@ class LMWeightCompression(BaseTestPipeline):
         """
         self.model_hf.save_pretrained(self.fp32_model_dir)
         self.model_hf._save_config(self.fp32_model_dir)
-
-    def _compress_torch(self, inputs):
-        self.compressed_model = nncf.compress_weights(self.model, dataset=nncf.Dataset([inputs]))
 
     def _compress(self):
         """
@@ -231,7 +212,11 @@ class LMWeightCompression(BaseTestPipeline):
             )
 
         compressed_model_hf = self.model_hf
-        if self.backend != BackendType.FP32:
+        if self.backend == BackendType.TORCH:
+            compressed_model_hf = AutoModelForCausalLM.from_pretrained(
+                self.output_model_dir, torch_dtype=torch.float16, device_map="cpu"
+            )
+        elif self.backend != BackendType.FP32:
             compressed_model_hf = OVModelForCausalLM.from_pretrained(
                 self.output_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=is_stateful
             )
