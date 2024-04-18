@@ -539,6 +539,7 @@ class OVModelTransformer(ModelTransformer):
         :param transformation: Model extraction transformation.
         :return: Extracted sub-model.
         """
+        outputs_type = ov.Type.f32
         transformation = transformations[-1]
         name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
 
@@ -550,14 +551,21 @@ class OVModelTransformer(ModelTransformer):
                 continue
 
             input_port = input_node.input(input_port_id)
+            input_type = input_port.get_element_type()
             input_node_output = input_port.get_source_output()
             parameter_name = get_parameter_node_name(input_name, input_port_id)
+
             new_param = opset.parameter(
                 shape=input_node_output.partial_shape,
-                dtype=input_node_output.get_element_type(),
+                dtype=outputs_type,
                 name=parameter_name,
             )
-            input_port.replace_source_output(new_param.output(0))
+            new_input = new_param.output(0)
+
+            if input_type != outputs_type:
+                new_input = opset.convert(new_param, destination_type=input_type).output(0)
+
+            input_port.replace_source_output(new_input)
             new_param_tensors = [o.get_tensor() for o in new_param.outputs()]
             OVModelTransformer._update_tensor_name(new_param_tensors, parameter_name)
             params.append(new_param)
@@ -565,9 +573,10 @@ class OVModelTransformer(ModelTransformer):
         for output_name, output_port_id in transformation.output_ids:
             output_node = name_to_node_mapping[output_name]
 
-            output_port = output_node.output(output_port_id)
             result_name = get_result_node_name(output_name, output_port_id)
-            new_result = opset.result(output_port, name=result_name)
+            if output_node.get_element_type() != outputs_type:
+                output_node = opset.convert(output_node, destination_type=outputs_type)
+            new_result = opset.result(output_node, name=result_name)
             OVModelTransformer._update_tensor_name([new_result.get_output_tensor(0)], result_name)
             results.append(new_result)
 
