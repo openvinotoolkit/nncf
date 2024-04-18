@@ -62,6 +62,7 @@ class TestTorchFBCAlgorithm(TemplateTestFBCAlgorithm):
         raise ValueError("Not found node with bias")
 
 
+@pytest.mark.cuda
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="Skipping for CPU-only setups")
 class TestTorchCudaFBCAlgorithm(TestTorchFBCAlgorithm):
     @staticmethod

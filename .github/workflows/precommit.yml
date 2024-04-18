@@ -95,7 +95,7 @@ jobs:
     defaults:
       run:
         shell: bash
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-20.04-4-cores
     steps:
       - uses: actions/checkout@v3
         with:
@@ -125,6 +125,8 @@ jobs:
       - name: Runner info
         continue-on-error: true
         run: |
+          export PATH=/usr/local/cuda-12.1/bin${PATH:+:${PATH}}
+          export LD_LIBRARY_PATH=/usr/local/cuda-12.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
           nvidia-smi
           cat /proc/cpuinfo
           nvcc --version
@@ -140,4 +142,7 @@ jobs:
         run: |
           python -c "import torch; print(torch.cuda.is_available())"
       - name: Run PyTorch precommit test scope
-        run: make test-torch-cuda
+        run: |
+          export PATH=/usr/local/cuda-12.1/bin${PATH:+:${PATH}}
+          export LD_LIBRARY_PATH=/usr/local/cuda-12.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+          make test-torch-cuda

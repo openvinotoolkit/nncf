@@ -835,6 +835,7 @@ class MultideviceModel(torch.nn.Module):
         return res
 
 
+@pytest.mark.cuda
 def test_multidevice_model():
     if not torch.cuda.is_available():
         pytest.skip("GPU required")

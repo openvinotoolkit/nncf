@@ -243,12 +243,11 @@ def test_get_dtype_attribute_of_parameter():
     assert compressed_model.weight.dtype == torch.uint8
 
 
-@pytest.mark.parametrize("device", ("cpu", "cuda"))
 @pytest.mark.parametrize("dtype", ("float16", "float32"))
-def test_model_devices_and_precisions(device, dtype):
-    if device == "cuda" and not torch.cuda.is_available():
+def test_model_devices_and_precisions(use_cuda, dtype):
+    if use_cuda and not torch.cuda.is_available():
         pytest.skip("Skipping for CPU-only setups")
-    device = torch.device(device)
+    device = torch.device("cuda" if use_cuda else "cpu")
     dtype = torch.float16 if dtype == "float16" else torch.float32
 
     model = MatMulModel().to(device)

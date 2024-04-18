@@ -379,6 +379,7 @@ comp_loss_configs = [
 ]
 
 
+@pytest.mark.cuda
 @pytest.mark.parametrize(
     "config",
     comp_loss_configs,
