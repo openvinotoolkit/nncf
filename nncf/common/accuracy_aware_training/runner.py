@@ -248,7 +248,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.current_loss: float = 0
 
         self._compressed_training_history: List[Tuple[float, float]] = []
-        self._best_checkpoint: tuple[Union[str, pathlib.Path], float]
+        self._best_checkpoint: Tuple[Union[str, pathlib.Path], float]
 
         self._train_epoch_fn: Callable[
             [
