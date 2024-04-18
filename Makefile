@@ -146,7 +146,7 @@ test-torch:
 	pytest ${COVERAGE_ARGS} tests/torch -m "not weekly and not nightly and not models_hub" --junitxml ${JUNITXML_PATH} $(DATA_ARG)
 
 test-torch-cpu:
-	pytest ${COVERAGE_ARGS} tests/torch -n2 -rS -m "not cuda and not weekly and not nightly and not models_hub"
+	pytest ${COVERAGE_ARGS} tests/torch -rS -m "not cuda and not weekly and not nightly and not models_hub"
 
 test-torch-cuda:
 	pytest ${COVERAGE_ARGS} tests/torch -rS -m "cuda and not weekly and not nightly and not models_hub"

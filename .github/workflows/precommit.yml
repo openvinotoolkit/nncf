@@ -123,7 +123,7 @@ jobs:
       - name: Download CUDA
         run: |
           wget -q https://developer.download.nvidia.com/compute/cuda/12.1.1/local_installers/cuda_12.1.1_530.30.02_linux.run
-          sudo sh cuda_12.1.1_530.30.02_linux.run --toolkit
+          sudo sh cuda_12.1.1_530.30.02_linux.run --toolkit --silent
       - name: Runner info
         continue-on-error: true
         run: |
