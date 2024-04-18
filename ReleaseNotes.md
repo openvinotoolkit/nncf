@@ -36,7 +36,16 @@ Compression-aware training:
 - Deprecations/Removals:
   - ...
 - Tutorials:
-  - ...
+  - [Post-Training Optimization of PhotoMaker Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/photo-maker/photo-maker.ipynb)
+  - [Post-Training Optimization of Stable Diffusion XL Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/stable-diffusion-xl/stable-diffusion-xl.ipynb)
+  - [Post-Training Optimization of KerasCV Stable Diffusion Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/stable-diffusion-keras-cv/stable-diffusion-keras-cv.ipynb)
+  - [Post-Training Optimization of Paint By Example Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/paint-by-example/paint-by-example.ipynb)
+  - [Post-Training Optimization of aMUSEd Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/amused-lightweight-text-to-image/amused-lightweight-text-to-image.ipynb)
+  - [Post-Training Optimization of InstantID Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/instant-id/instant-id.ipynb)
+  - [Post-Training Optimization of LLaVA Next Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llava-next-multimodal-chatbot/llava-next-multimodal-chatbot.ipynb)
+  - [Post-Training Optimization of AnimateAnyone Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/animate-anyone/animate-anyone.ipynb)
+  - [Post-Training Optimization of YOLOv8-OBB Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/yolov8-optimization/yolov8-obb.ipynb)
+  - [Post-Training Optimization of LLM Agent](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-agent-langchain/llm-agent-langchain.ipynb)
 - Known issues:
   - ...
 
