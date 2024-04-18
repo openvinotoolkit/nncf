@@ -183,29 +183,29 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         if not is_standard_estimator and not is_backend_support_custom_estimators:
             pytest.skip("Custom estimators are not supported for this backend yet")
 
-        ### Register operations before statistic collection
+        # Register operations before statistic collection
         def fn(x):
             return x * 2
 
         target_point = self.get_target_point(test_parameters.target_type)
         model = self.__add_fn_to_model(model, target_point, fn)
 
-        ### Check hook inserted correctly
+        # Check hook inserted correctly
         self.__check_successive_hooks(test_parameters, model, target_point, fn)
 
-        ### Register and collect statistics after inserted operations
+        # Register and collect statistics after inserted operations
         statistic_points = self.__get_statistic_points(
             test_parameters, model, quantizer_config, dataset_samples, inplace_statistics, mocker
         )
         tensor_collector = self.__collect_statistics_get_collector(statistic_points, model, dataset_samples)
-        ### Check values are changed because of the inserted operation
+        # Check values are changed because of the inserted operation
         self.__check_collector(
             test_parameters,
             tensor_collector,
             is_stat_in_shape_of_scale,
         )
 
-        ### Check the inserted operation is inside the model
+        # Check the inserted operation is inside the model
         self.__check_successive_hooks(test_parameters, model, target_point, fn)
 
     @pytest.mark.parametrize(
@@ -270,7 +270,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         if not is_standard_estimator and not is_backend_support_custom_estimators:
             pytest.skip("Custom estimators are not supported for this backend yet")
 
-        ### Register operations before statistic collection
+        # Register operations before statistic collection
         @register_operator()
         def fn(x):
             return x * 2
@@ -280,22 +280,22 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         nested_target_point = PTMinMaxAlgoBackend.target_point(nested_target_type, nested_target_node_name, 0)
         model = self.__add_fn_to_model(model, nested_target_point, fn)
 
-        ### Check hook inserted correctly
+        # Check hook inserted correctly
         self.__check_nested_hooks(test_parameters, model, target_point, nested_target_type, nested_target_node_name, fn)
 
-        ### Register and collect statistics after inserted operations
+        # Register and collect statistics after inserted operations
         statistic_points = self.__get_statistic_points(
             test_parameters, model, quantizer_config, dataset_samples, inplace_statistics, mocker
         )
         tensor_collector = self.__collect_statistics_get_collector(statistic_points, model, dataset_samples)
-        ### Check values are changed because of the inserted operation
+        # Check values are changed because of the inserted operation
         self.__check_collector(
             test_parameters,
             tensor_collector,
             is_stat_in_shape_of_scale,
         )
 
-        ### Check the inserted operation is inside the model
+        # Check the inserted operation is inside the model
         self.__check_nested_hooks(test_parameters, model, target_point, nested_target_type, nested_target_node_name, fn)
 
     @staticmethod

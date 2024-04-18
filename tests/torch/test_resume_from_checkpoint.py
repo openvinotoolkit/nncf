@@ -117,7 +117,7 @@ SAVE_ALGOS = [[algo] for algo in SPARSITY_ALGOS]  # 3S
 SAVE_ALGOS += [[QUANTIZATION]]  # Q
 SAVE_ALGOS += LOAD_ALGOS  # Q , 3S, 3S + Q, Q+3S
 
-ALGOS = list(itertools.product(SAVE_ALGOS, LOAD_ALGOS))
+ALGOS = list(sorted(itertools.product(SAVE_ALGOS, LOAD_ALGOS), key=lambda x: "_".join(x[0]) + "_".join(x[1])))
 
 
 @pytest.fixture(
@@ -153,7 +153,7 @@ def _algos(request):
 
 
 MODEL_WRAPPER = ["CPU", "GPU"]
-WRAPPERS = list(itertools.product(MODEL_WRAPPER, MODEL_WRAPPER))
+WRAPPERS = list(sorted(itertools.product(MODEL_WRAPPER, MODEL_WRAPPER), key=lambda x: "_".join(x)))
 
 
 @pytest.fixture(scope="function", params=WRAPPERS, ids=["_".join(["from:" + w[0], "to:" + w[1]]) for w in WRAPPERS])
@@ -205,7 +205,9 @@ RESUME_ALGOS = list(itertools.product([QUANTIZATION], SPARSITY_ALGOS))  # Q + 3S
 RESUME_ALGOS += [[algo] for algo in SPARSITY_ALGOS]  # 3S
 RESUME_ALGOS += [[QUANTIZATION]]  # Q
 RESUME_ALGOS += [["EMPTY"]]  # No Compression
-RESUME_ALGOS = list(itertools.product(RESUME_ALGOS, RESUME_ALGOS))
+RESUME_ALGOS = list(
+    sorted(itertools.product(RESUME_ALGOS, RESUME_ALGOS), key=lambda x: "_".join(x[0]) + "_".join(x[1]))
+)
 NUM_PARAMS_PER_ALGO = {QUANTIZATION: 8, "magnitude_sparsity": 1, "const_sparsity": 1, "rb_sparsity": 3, "EMPTY": 0}
 
 
@@ -265,8 +267,7 @@ def test_load_state__with_resume_checkpoint(_resume_algos, _model_wrapper, mocke
     assert act_num_loaded == ref_num_loaded
 
 
-LIST_ALGOS = [None, QUANTIZATION]
-LIST_ALGOS += SPARSITY_ALGOS  # 3S
+LIST_ALGOS = sorted(["", QUANTIZATION] + list(SPARSITY_ALGOS))
 
 
 @pytest.mark.parametrize("is_resume", (True, False), ids=["resume", "load_weights"])

@@ -28,7 +28,7 @@ def is_tuple(obj) -> bool:
 
 
 def is_named_tuple(obj) -> bool:
-    return is_tuple(obj) and (obj.__class__ != tuple)
+    return is_tuple(obj) and (obj.__class__ is not tuple)
 
 
 def maybe_get_iterator(obj):
