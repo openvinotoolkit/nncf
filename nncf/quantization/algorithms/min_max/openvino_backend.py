@@ -121,6 +121,15 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         return OVQuantizerInsertionCommand(target_point, parameters)
 
     @staticmethod
+    def create_unified_scales_quantizers_insertion_commands(
+        nncf_graph: NNCFGraph,
+        target_points: List[OVTargetPoint],
+        quantizer_config: QuantizerConfig,
+        parameters: FakeQuantizeParameters,
+    ) -> List[OVQuantizerInsertionCommand]:
+        return [OVQuantizerInsertionCommand(target_point, parameters) for target_point in target_points]
+
+    @staticmethod
     def create_convert_insertion_command(
         target_point: OVTargetPoint,
         parameters: FakeConvertParameters,
