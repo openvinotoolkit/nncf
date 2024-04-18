@@ -39,7 +39,7 @@ TensorboardWriterType = TypeVar("TensorboardWriterType")
 Checkpoint = TypeVar("Checkpoint")
 
 try:
-    import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt  # type: ignore
     import PIL.Image
 
     IMG_PACKAGES_AVAILABLE = True
@@ -248,7 +248,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.current_loss: float = 0
 
         self._compressed_training_history: List[Tuple[float, float]] = []
-        self._best_checkpoint: Tuple[Union[str, pathlib.Path], float]
+        self._best_checkpoint: tuple[Union[str, pathlib.Path], float]
 
         self._train_epoch_fn: Callable[
             [
