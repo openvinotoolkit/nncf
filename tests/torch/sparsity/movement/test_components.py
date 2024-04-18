@@ -384,7 +384,7 @@ class TestImportanceLoss:
             assert output.requires_grad is requires_grad
             assert torch.allclose(output, torch.tensor(desc["ref_output"]))
 
-    @pytest.mark.gpu
+    @pytest.mark.cuda
     def test_importance_loss_adapts_to_device_change(self):
         if not torch.cuda.is_available():
             pytest.skip("requires GPU")

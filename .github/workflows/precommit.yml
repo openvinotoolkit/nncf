@@ -95,7 +95,7 @@ jobs:
     defaults:
       run:
         shell: bash
-    runs-on: ubuntu-20.04-4-cores
+    runs-on: aks-16-cores-32gb
     steps:
       - uses: actions/checkout@v3
         with:
