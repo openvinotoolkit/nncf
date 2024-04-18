@@ -180,8 +180,8 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
         if self._accuracy_criterion_satisfied():
             nncf_logger.info("\nReached the accuracy criteria after the initialization step.\n")
             return model
-
-        for epoch in range(1, self.runner.maximal_total_epochs + 1):
+        maximal_total_epochs = cast(int, self.runner.maximal_total_epochs)
+        for epoch in range(1, maximal_total_epochs + 1):
             self.runner.train_epoch(model, self.compression_controller)
             self.runner.validate(model)
             self._current_compression_rate = self.compression_controller.compression_rate
@@ -615,7 +615,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
             endpoint=True,
         )
         acc_budget_values = acc_budget_vs_comp_rate_curve(rate_interval)
-        target_compression_rate = cast(float, rate_interval[np.argmin(np.abs(acc_budget_values))])
+        target_compression_rate: float = rate_interval[np.argmin(np.abs(acc_budget_values))]
         nncf_logger.info(
             f"Predicted compression rate: {target_compression_rate}, "
             f"current compression rate: {current_compression_rate}"

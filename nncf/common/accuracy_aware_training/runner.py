@@ -15,7 +15,7 @@ import os.path as osp
 import pathlib
 from abc import ABC
 from abc import abstractmethod
-from typing import Callable, Dict, List, Optional, Tuple, TypeVar, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union, cast
 
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.api.compression import CompressionStage
@@ -38,15 +38,20 @@ LRSchedulerType = TypeVar("LRSchedulerType")
 TensorboardWriterType = TypeVar("TensorboardWriterType")
 Checkpoint = TypeVar("Checkpoint")
 
+IMG_PACKAGES_AVAILABLE = False
+
+Image = Any  # Default type for Image.
+
 try:
     import matplotlib.pyplot as plt  # type: ignore
     import PIL.Image
+    from PIL.Image import Image
 
     IMG_PACKAGES_AVAILABLE = True
 except ImportError:
-    IMG_PACKAGES_AVAILABLE = False
+    pass
 
-Image = TypeVar("Image")  # Create a new type for PIL.Image.Image for easier reference
+ImageType = TypeVar("ImageType", bound=Image)
 
 
 class TrainingRunner(ABC):
@@ -217,18 +222,13 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         lr_updates_needed: bool = True,
     ):
         self.uncompressed_model_accuracy = uncompressed_model_accuracy
-        self.maximal_relative_accuracy_drop: float = cast(
-            float,
-            accuracy_aware_training_params.get("maximal_relative_accuracy_degradation", 1.0),
+        self.maximal_relative_accuracy_drop: float = accuracy_aware_training_params.get(
+            "maximal_relative_accuracy_degradation", 1.0
         )
-        self.maximal_absolute_accuracy_drop: float = cast(
-            float,
-            accuracy_aware_training_params.get("maximal_absolute_accuracy_degradation"),
+        self.maximal_absolute_accuracy_drop = accuracy_aware_training_params.get(
+            "maximal_absolute_accuracy_degradation"
         )
-        self.maximal_total_epochs: int = cast(
-            int,
-            accuracy_aware_training_params.get("maximal_total_epochs", AA_MAXIMAL_TOTAL_EPOCHS),
-        )
+        self.maximal_total_epochs = accuracy_aware_training_params.get("maximal_total_epochs", AA_MAXIMAL_TOTAL_EPOCHS)
 
         self.verbose: bool = verbose
         self.dump_checkpoints: bool = dump_checkpoints
@@ -425,7 +425,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         """
 
     @abstractmethod
-    def add_tensorboard_image(self, key: str, data: Image, step: int) -> None:
+    def add_tensorboard_image(self, key: str, data: ImageType, step: int) -> None:
         """
         Add an image to tensorboard
 
@@ -495,32 +495,23 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
             lr_updates_needed,
         )
 
-        self.compression_rate_step: float = cast(
-            float,
-            accuracy_aware_training_params.get("initial_compression_rate_step", AA_INITIAL_COMPRESSION_RATE_STEP),
+        self.compression_rate_step: float = accuracy_aware_training_params.get(
+            "initial_compression_rate_step", AA_INITIAL_COMPRESSION_RATE_STEP
         )
-        self.compression_rate_step_reduction_factor: float = cast(
-            float,
-            accuracy_aware_training_params.get(
-                "compression_rate_step_reduction_factor",
-                AA_COMPRESSION_RATE_STEP_REDUCTION_FACTOR,
-            ),
+        self.compression_rate_step_reduction_factor: float = accuracy_aware_training_params.get(
+            "compression_rate_step_reduction_factor",
+            AA_COMPRESSION_RATE_STEP_REDUCTION_FACTOR,
         )
-        self.lr_reduction_factor: float = cast(
-            float,
-            accuracy_aware_training_params.get("lr_reduction_factor", AA_LR_REDUCTION_FACTOR),
+
+        self.lr_reduction_factor: float = accuracy_aware_training_params.get(
+            "lr_reduction_factor", AA_LR_REDUCTION_FACTOR
         )
-        self.minimal_compression_rate_step: float = cast(
-            float,
-            accuracy_aware_training_params.get("minimal_compression_rate_step", AA_MINIMAL_COMPRESSION_RATE_STEP),
+        self.minimal_compression_rate_step: float = accuracy_aware_training_params.get(
+            "minimal_compression_rate_step", AA_MINIMAL_COMPRESSION_RATE_STEP
         )
-        self.patience_epochs: int = cast(
-            int,
-            accuracy_aware_training_params.get("patience_epochs", AA_PATIENCE_EPOCHS),
-        )
-        self.initial_training_phase_epochs: int = cast(
-            int,
-            accuracy_aware_training_params.get("initial_training_phase_epochs", AA_INITIAL_TRAINING_PHASE_EPOCHS),
+        self.patience_epochs = accuracy_aware_training_params.get("patience_epochs", AA_PATIENCE_EPOCHS)
+        self.initial_training_phase_epochs = accuracy_aware_training_params.get(
+            "initial_training_phase_epochs", AA_INITIAL_TRAINING_PHASE_EPOCHS
         )
 
         self.minimal_compression_rate = minimal_compression_rate
