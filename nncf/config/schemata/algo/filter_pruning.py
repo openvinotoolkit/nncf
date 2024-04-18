@@ -27,7 +27,11 @@ from nncf.config.schemata.defaults import PRUNING_INIT
 from nncf.config.schemata.defaults import PRUNING_INTERLAYER_RANKING_TYPE
 from nncf.config.schemata.defaults import PRUNING_LEGR_GENERATIONS
 from nncf.config.schemata.defaults import PRUNING_LEGR_MAX_PRUNING
+from nncf.config.schemata.defaults import PRUNING_LEGR_MUTATE_PERCENT
+from nncf.config.schemata.defaults import PRUNING_LEGR_NUM_SAMPLES
+from nncf.config.schemata.defaults import PRUNING_LEGR_POPULATION_SIZE
 from nncf.config.schemata.defaults import PRUNING_LEGR_RANDOM_SEED
+from nncf.config.schemata.defaults import PRUNING_LEGR_SIGMA_SCALE
 from nncf.config.schemata.defaults import PRUNING_LEGR_TRAIN_STEPS
 from nncf.config.schemata.defaults import PRUNING_NUM_INIT_STEPS
 from nncf.config.schemata.defaults import PRUNING_SCHEDULE
@@ -161,6 +165,26 @@ FILTER_PRUNING_SCHEMA = {
                             NUMBER,
                             description="Random seed for LeGR coefficients generation.",
                             default=PRUNING_LEGR_RANDOM_SEED,
+                        ),
+                        "population_size": with_attributes(
+                            NUMBER,
+                            description="Size of population for the evolution algorithm.",
+                            default=PRUNING_LEGR_POPULATION_SIZE,
+                        ),
+                        "num_samples": with_attributes(
+                            NUMBER,
+                            description="Number of samples for the evolution algorithm.",
+                            default=PRUNING_LEGR_NUM_SAMPLES,
+                        ),
+                        "mutate_percent": with_attributes(
+                            NUMBER,
+                            description="Percent of mutate for the evolution algorithm.",
+                            default=PRUNING_LEGR_MUTATE_PERCENT,
+                        ),
+                        "scale_sigma": with_attributes(
+                            NUMBER,
+                            description="Scale sigma for the evolution algorithm.",
+                            default=PRUNING_LEGR_SIGMA_SCALE,
                         ),
                     },
                     "additionalProperties": False,

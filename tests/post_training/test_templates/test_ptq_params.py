@@ -16,6 +16,7 @@ from typing import Dict
 import pytest
 
 import nncf
+from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import InputNoopMetatype
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.operator_metatypes import OutputNoopMetatype
@@ -37,6 +38,7 @@ from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.passes import transform_to_inference_graph
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from nncf.scopes import IgnoredScope
+from tests.common.quantization.metatypes import CatTestMetatype
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import IdentityTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
@@ -91,6 +93,50 @@ class ModelToTestOverflowFix:
             self.weight_quantization_target_point_names.append(node.node_name)
 
 
+class ModelWithUnifiedScales:
+    #        Input_1
+    #       /   |   \
+    #  Conv_1 Conv_2 Conv_3
+    #       \   |   /
+    #         Cat_1
+    #           |
+    #        Output_1
+
+    def __init__(self, metatypes: Dict[TestMetatype, OperatorMetatype], nncf_graph_cls=NNCFGraph):
+        nodes = [
+            NodeWithType("Input_1", InputNoopMetatype),
+            NodeWithType("Conv_1", metatypes[Conv2dTestMetatype]),
+            NodeWithType("Conv_2", metatypes[Conv2dTestMetatype]),
+            NodeWithType("Conv_3", metatypes[Conv2dTestMetatype]),
+            NodeWithType("Cat_1", metatypes[CatTestMetatype]),
+            NodeWithType("Output_1", OutputNoopMetatype),
+        ]
+        node_edges = [
+            ("Input_1", "Conv_1"),
+            ("Input_1", "Conv_2"),
+            ("Input_1", "Conv_3"),
+            ("Conv_1", "Cat_1"),
+            ("Conv_2", "Cat_1"),
+            ("Conv_3", "Cat_1"),
+            ("Cat_1", "Output_1"),
+        ]
+        original_mock_graph = create_mock_graph(nodes, node_edges)
+        self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls=nncf_graph_cls)
+
+
+class DummyMinMaxTensorStatistic(MinMaxTensorStatistic):
+    def tensor_eq(self):
+        return True
+
+
+class DummyMinMaxTensorCollector:
+    def __init__(self, min_val, max_val):
+        self._stat = DummyMinMaxTensorStatistic(min_values=min_val, max_values=max_val)
+
+    def get_statistics(self):
+        return self._stat
+
+
 class TemplateTestPTQParams:
     @abstractmethod
     def get_algo_backend(self):
@@ -113,6 +159,13 @@ class TemplateTestPTQParams:
         pass
 
     @abstractmethod
+    def check_unified_scale_layout(self, layout, unified_scales_group):
+        """
+        Checks that given transfromation layout and unified_scales_group target points
+        are correspond to each other and to the test params
+        """
+
+    @abstractmethod
     @pytest.fixture(scope="session")
     def test_params(self):
         pass
@@ -129,6 +182,15 @@ class TemplateTestPTQParams:
     @property
     @abstractmethod
     def metatypes_mapping(self):
+        pass
+
+    @property
+    @abstractmethod
+    def nncf_graph_cls(self):
+        pass
+
+    @abstractmethod
+    def get_backend_tensor(self, value):
         pass
 
     @pytest.mark.parametrize(
@@ -282,6 +344,35 @@ class TemplateTestPTQParams:
         )
         assert Counter([t_p.target_node_name for t_p in target_points_overflow_fix]) == Counter(affected_target_points)
 
+    def test_unified_scales_command_creation(self, mocker):
+        model = ModelWithUnifiedScales(self.metatypes_mapping, self.nncf_graph_cls)
+        algo = MinMaxQuantization()
+        algo._backend_entity = self.get_algo_backend()
+        # Imitating solver quantization setup building
+        q_tp_vs_qcf = {}
+        unified_scales_group = []
+        for i in range(1, 4):
+            tp = self.target_point(TargetType.POST_LAYER_OPERATION, f"/Conv_{i}_0", port_id=0)
+            q_tp_vs_qcf[tp] = QuantizerConfig()
+            unified_scales_group.append(tp)
+
+        algo._quantization_target_points_to_qconfig = q_tp_vs_qcf
+        algo._unified_scale_groups = [unified_scales_group]
+
+        mock_transformer = mocker.MagicMock()
+        mocker.patch(
+            "nncf.quantization.algorithms.min_max.algorithm.ModelTransformerFactory.create",
+            return_value=mock_transformer,
+        )
+        stats = StatisticPointsContainer()
+        for idx, tp in enumerate(unified_scales_group):
+            tc = DummyMinMaxTensorCollector(self.get_backend_tensor(idx - 1), self.get_backend_tensor(idx + 2))
+            stats.add_statistic_point(StatisticPoint(tp, tc, algo._algorithm_key))
+        algo.apply(model, model.nncf_graph, stats)
+        mock_transformer.transform.assert_called_once()
+        layout = mock_transformer.transform.call_args.args[0]
+        self.check_unified_scale_layout(layout, unified_scales_group)
+
     @pytest.mark.parametrize("validate_scopes", (True, False))
     def test_validate_scope(self, test_params, validate_scopes):
         nncf_graph = test_params["test_model_type_pass"]["nncf_graph"]
@@ -308,20 +399,14 @@ class TemplateTestPTQParams:
         target_point = self.target_point(TargetType.PRE_LAYER_OPERATION, "A", 0)
         stat_points = StatisticPointsContainer()
 
-        class DummyMinMaxTensorStatistic(MinMaxTensorStatistic):
-            def tensor_eq(self):
-                return True
-
-        class EmptyTensorCollector:
-            def get_statistics(self):
-                return DummyMinMaxTensorStatistic(None, None)
-
         dummy_tp = {target_point: QuantizerConfig()}
         if mode == "target_point":
             dummy_tps = (dummy_tp, {})
         else:
             dummy_tps = ({}, ((target_point,),))
-        stat_points.add_statistic_point(StatisticPoint(target_point, EmptyTensorCollector(), algo._algorithm_key))
+        stat_points.add_statistic_point(
+            StatisticPoint(target_point, DummyMinMaxTensorCollector(None, None), algo._algorithm_key)
+        )
         mocker.patch("nncf.common.factory.ModelTransformerFactory.create", return_value=mocker.MagicMock())
         mocker.patch(
             "nncf.quantization.algorithms.min_max.algorithm.MinMaxQuantization._get_quantization_target_points",

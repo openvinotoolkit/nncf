@@ -133,7 +133,7 @@ class PolynomialSparsityScheduler(SparsityScheduler):
         self._update_per_optimizer_step = params.get(
             "update_per_optimizer_step", SPARSITY_SCHEDULER_UPDATE_PER_OPTIMIZER_STEP
         )
-        self._steps_per_epoch = params.get("steps_per_epoch", None)
+        self._steps_per_epoch = params.get("steps_per_epoch")
         self._should_skip = False
 
     def step(self, next_step: Optional[int] = None) -> None:

@@ -283,7 +283,7 @@ class Config(Dict):
             ac_conf = ConfigReader.convert_paths(ac_conf)
             ConfigReader._filter_launchers(ac_conf, filtering_params, mode=mode)
         for req_num in ["stat_requests_number", "eval_requests_number"]:
-            ac_conf[req_num] = self.engine[req_num] if req_num in self.engine else None
+            ac_conf[req_num] = self.engine.get(req_num, None)
 
         self["engine"] = ac_conf
 
