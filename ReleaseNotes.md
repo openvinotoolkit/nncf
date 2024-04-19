@@ -10,6 +10,7 @@ Post-training Quantization:
 - Fixes:
   - Fixed issue with the `nncf.OverflowFix` parameter absence in some scenarios.
   - Aligned the list of correctable layers for the FastBiasCorrection algorithm between PyTorch, OpenVINO and ONNX backends.
+  - Fixed issue with the `nncf.QuantizationMode` parameters combination.
   - Fixed Mobilenetv2 ([PyTorch](examples/post_training_quantization/torch/mobilenet_v2), [ONNX](examples/post_training_quantization/onnx/mobilenet_v2), [OpenVINO](examples/post_training_quantization/openvino/mobilenet_v2)) examples for the Windows platform.
   - (OpenVINO) Fixed [an Anomaly Classification](examples/post_training_quantization/openvino/anomaly_stfpm_quantize_with_accuracy_control) for the Windows platform.
   - (PyTorch) Fixed bias shift magnitude calculation for fused layers.
@@ -40,8 +41,11 @@ Compression-aware training:
   - (PyTorch) Introduced extractors for the fused Convolution, Batch-/GroupNorm, and Linear functions.
 - Fixes:
   - (PyTorch) Fixed `apply_args_defaults` function issue.
+  - (PyTorch) Fixed `dtype` handling for the compressed `torch.nn.Parameter`.
+  - (PyTorch) Fixed `is_shared` parameter propagation.
 - Improvements:
   - (PyTorch) Updated command creation behaviour to reduce the number of adapters.
+  - (PyTorch) Added option to insert point for models that wrapped with `replace_modules=False`.
 - Deprecations/Removals:
   - (PyTorch) Removed the `binarization` algorithm.
   - NNCF installation via `pip install nncf[<framework>]` option is now deprecated.
