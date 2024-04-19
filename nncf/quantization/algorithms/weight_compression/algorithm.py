@@ -364,6 +364,7 @@ class WeightCompression(Algorithm):
             )
             awq_algo.apply(model, graph)
 
+        precomputed_scales = None
         if self._scale_estimation and activations is not None and self._mode != CompressWeightsMode.NF4:
             scale_estimation_params = self._advanced_parameters.scale_estimation_params
             scale_algo = ScaleEstimation(
@@ -378,11 +379,11 @@ class WeightCompression(Algorithm):
                 scale_estimation_params.weight_penalty,
             )
             transformed_model = scale_algo.apply(model, graph)
-        else:
-            # Compress model using weight compression parameters
-            transformed_model = self._backend_entity.transform_model(
-                model, graph, track(all_weight_params, description="Applying Weight Compression")
-            )
+
+        # Compress model using weight compression parameters
+        transformed_model = self._backend_entity.transform_model(
+            model, graph, track(all_weight_params, description="Applying Weight Compression")
+        )
 
         self._backend_entity.dump_parameters(
             model,

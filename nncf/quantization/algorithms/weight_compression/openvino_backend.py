@@ -17,11 +17,11 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
-from nncf.common.graph.utils import get_reduction_axes
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.tensor.tensor import Tensor
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.model_transformer import OVModelTransformer
+from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
@@ -31,7 +31,6 @@ from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.awq_patterns import get_awq_patterns
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
-from nncf.quantization.algorithms.weight_compression.weight_lowering import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import compress_weight
 
 
@@ -65,10 +64,12 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return node.layer_attributes and node.layer_attributes.constant_attributes
 
     @staticmethod
-    def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[Tuple[int]]:
+    def get_channel_agnostic_reduction_axes(
+        node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph
+    ) -> Optional[Tuple[int]]:
         channel_axes = get_weight_channel_axes(node_with_weight)
         const_shape = node_with_weight.layer_attributes.constant_attributes[weight_port_id]["shape"]
-        return get_reduction_axes(channel_axes, const_shape)
+        return get_channel_agnostic_reduction_axes(channel_axes, const_shape)
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:
@@ -123,77 +124,76 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         del const_node
 
     def transform_model(
-        self, model: ov.Model, graph: NNCFGraph, weight_compression_parameters: Iterable[WeightCompressionParameters]
+        self, model: ov.Model, graph: NNCFGraph, weight_compression_parameters: Iterable[WeightCompressionParameters],
+        precomputed_scales: Dict[str, Tensor] = None
     ) -> ov.Model:
+        if precomputed_scales is None:
+            precomputed_scales = Dict()
+            for wc_params in weight_compression_parameters:
+                precomputed_scales[wc_params.node_with_weight.node_name] = None
+
         for wc_params in weight_compression_parameters:
-            self.transform_node(model, graph, wc_params)
+            compression_config = wc_params.compression_config
+            if compression_config.mode == CompressWeightsMode.NF4:
+                compression_dtype = ov.Type.nf4
+            elif compression_config.mode in [
+                CompressWeightsMode.INT8_ASYM,
+                CompressWeightsMode.INT8_SYM,
+                CompressWeightsMode.INT8,
+                CompressWeightsMode.INT4_ASYM,
+                CompressWeightsMode.INT4_SYM,
+            ]:
+                if compression_config.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT4_SYM]:
+                    compression_dtype = ov.Type.u4
+                else:
+                    compression_dtype = ov.Type.u8
+            else:
+                raise ValueError(f"{compression_config.mode.value} is not supported.")
+
+            const_attributes = wc_params.node_with_weight.layer_attributes.constant_attributes[wc_params.weight_port_id]
+            const_node_name = const_attributes["name"]
+            const_node = self.name_to_node_mapping[const_node_name]
+            const_dtype = const_node.output(0).get_element_type().to_dtype()
+
+            weight = Tensor(get_const_value(const_node))
+            original_shape = weight.shape
+            compressed_weight = compress_weight(
+                weight, wc_params.reduction_axes, compression_config, precomputed_scales[wc_params.node_with_weight.node_name]
+            )
+
+            compressed_const = opset.constant(
+                compressed_weight.tensor.data, dtype=compression_dtype, name=const_node_name
+            )
+            converted_const = opset.convert(compressed_const, const_dtype)
+            if compressed_weight.zero_point is not None:
+                zero_point_const = opset.constant(
+                    compressed_weight.zero_point.data,
+                    dtype=compression_dtype,
+                    name=f"{const_node_name}/zero_point",
+                )
+                converted_zero_point = opset.convert(zero_point_const, const_dtype)
+                converted_const = opset.subtract(converted_const, converted_zero_point)
+
+            scale_const = opset.constant(compressed_weight.scale.data, dtype="float16", name=f"{const_node_name}/scale")
+            if const_dtype != "float16":
+                scale_const = opset.convert(scale_const, const_dtype, name=f"{const_node_name}/scale_convert")
+            mul = opset.multiply(
+                converted_const,
+                scale_const,
+                name=f"{const_node_name}/fq_weights_{wc_params.weight_port_id}",
+            )
+
+            if compression_config.group_size != -1:
+                mul = opset.reshape(mul, output_shape=original_shape, special_zero=False)
+
+            mul_output = mul.output(0)
+            for target_input in const_node.output(0).get_target_inputs():
+                target_input.replace_source_output(mul_output)
 
         # reset name_to_node_mapping
         self.name_to_node_mapping = None
 
         return model
-
-    def transform_node(
-        self,
-        model: ov.Model,
-        graph: NNCFGraph,
-        wc_params: WeightCompressionParameters,
-        compressed_weight: CompressedWeight = None,
-        original_shape: Tuple[int, ...] = None,
-    ) -> ov.Model:
-        compression_config = wc_params.compression_config
-        if compression_config.mode == CompressWeightsMode.NF4:
-            compression_dtype = ov.Type.nf4
-        elif compression_config.mode in [
-            CompressWeightsMode.INT8_ASYM,
-            CompressWeightsMode.INT8_SYM,
-            CompressWeightsMode.INT8,
-            CompressWeightsMode.INT4_ASYM,
-            CompressWeightsMode.INT4_SYM,
-        ]:
-            if compression_config.mode in [CompressWeightsMode.INT4_ASYM, CompressWeightsMode.INT4_SYM]:
-                compression_dtype = ov.Type.u4
-            else:
-                compression_dtype = ov.Type.u8
-        else:
-            raise ValueError(f"{compression_config.mode.value} is not supported.")
-
-        const_attributes = wc_params.node_with_weight.layer_attributes.constant_attributes[wc_params.weight_port_id]
-        const_node_name = const_attributes["name"]
-        const_node = self.name_to_node_mapping[const_node_name]
-        const_dtype = const_node.output(0).get_element_type().to_dtype()
-
-        if compress_weight is None or original_shape is None:
-            weight = Tensor(get_const_value(const_node))
-            original_shape = weight.shape
-            compressed_weight = compress_weight(weight, wc_params.reduction_axes, compression_config)
-
-        compressed_const = opset.constant(compressed_weight.tensor.data, dtype=compression_dtype, name=const_node_name)
-        converted_const = opset.convert(compressed_const, const_dtype)
-        if compressed_weight.zero_point is not None:
-            zero_point_const = opset.constant(
-                compressed_weight.zero_point.data,
-                dtype=compression_dtype,
-                name=f"{const_node_name}/zero_point",
-            )
-            converted_zero_point = opset.convert(zero_point_const, const_dtype)
-            converted_const = opset.subtract(converted_const, converted_zero_point)
-
-        scale_const = opset.constant(compressed_weight.scale.data, dtype="float16", name=f"{const_node_name}/scale")
-        if const_dtype != "float16":
-            scale_const = opset.convert(scale_const, const_dtype, name=f"{const_node_name}/scale_convert")
-        mul = opset.multiply(
-            converted_const,
-            scale_const,
-            name=f"{const_node_name}/fq_weights_{wc_params.weight_port_id}",
-        )
-
-        if compression_config.group_size != -1:
-            mul = opset.reshape(mul, output_shape=original_shape, special_zero=False)
-
-        mul_output = mul.output(0)
-        for target_input in const_node.output(0).get_target_inputs():
-            target_input.replace_source_output(mul_output)
 
     @staticmethod
     def dump_parameters(

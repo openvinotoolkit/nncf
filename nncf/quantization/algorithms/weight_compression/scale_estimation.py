@@ -33,7 +33,7 @@ TTensor = TypeVar("TTensor")
 TWeightType = TypeVar("TWeightType")
 
 
-class ScaleEstimation(Algorithm):
+class ScaleEstimation():
     """
     Scale estimation algorithm implementation.
     """
@@ -116,17 +116,15 @@ class ScaleEstimation(Algorithm):
         :param graph: Model graph.
         :param statistic_points: Statistic points with collected statistics values.
         :param dataset: A representative dataset for the calibration process.
-        :return: A resulting model.
+        :return: Dict with pairs (node name, estimated scale).
         """
 
         compress_decompress_cashe = {}
+        res = Dict()
 
         for wp in track(self._all_weight_params, description="Applying Scale Estimation"):
             k = wp.node_with_weight.node_name
             config = wp.compression_config
-            if config.num_bits != 4 or k not in self._activations:
-                self._backend_entity.transform_node(None, None, wp)
-                continue
 
             stats = self._activations[k]
             reduction_axis = wp.reduction_axes[0]
@@ -165,10 +163,8 @@ class ScaleEstimation(Algorithm):
                 reduction_axis = 1
 
             original_weight = fns.zeros_like(weight) + weight
-            original_shape = original_weight.shape
 
             compressed_weights, scale, zp = do_integer_quantization(original_weight, reduction_axis, config)
-            zp_type = zp.dtype
             zp = zp.astype(scale.dtype)
 
             q_weights = do_dequantization(compressed_weights, scale, zp, reduction_axis)
@@ -301,21 +297,6 @@ class ScaleEstimation(Algorithm):
                     near_to_ideal_scale = mask * result_scale + (1.0 - mask) * near_to_ideal_scale
                 result_scale = near_to_ideal_scale
 
-            out = compress_model(original_weight.data, result_scale.data, zp.data)
-            compressed_weights = fns.zeros_like(original_weight) + out
+            res[k] = model
 
-            zp = zp.astype(zp_type)
-            self._backend_entity.transform_node(
-                None, None, wp, CompressedWeight(compressed_weights, result_scale, zp), original_shape
-            )
-        return model
-
-    def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:
-        """
-        Returns statistic points, for which StatisticsCollector should collect statistics.
-
-        :param model: Model for statistics collection.
-        :param graph: Model graph.
-        :return: Statistic points, for which StatisticsCollector should collect statistics.
-        """
-        return StatisticPointsContainer()
+        return res

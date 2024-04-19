@@ -21,7 +21,6 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.experimental.tensor import Tensor
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
-from nncf.quantization.algorithms.weight_compression.weight_lowering import CompressedWeight
 
 TModel = TypeVar("TModel")
 
@@ -61,7 +60,9 @@ class WeightCompressionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[Tuple[int]]:
+    def get_channel_agnostic_reduction_axes(
+        node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph
+    ) -> Optional[Tuple[int]]:
         """
         Returns reduction axes without axes that corresponds to weight channels of the node with weight.
 
@@ -110,7 +111,8 @@ class WeightCompressionAlgoBackend(ABC):
 
     @abstractmethod
     def transform_model(
-        self, model: TModel, graph: NNCFGraph, weight_compression_parameters: Iterable[WeightCompressionParameters]
+        self, model: TModel, graph: NNCFGraph, weight_compression_parameters: Iterable[WeightCompressionParameters],
+        precomputed_scales: Dict[str, Tensor] = None
     ) -> TModel:
         """
         Applies weight compression transformations to the model.
@@ -118,26 +120,7 @@ class WeightCompressionAlgoBackend(ABC):
         :param model: Model in which the weights will be compressed according to the weight compression description.
         :param graph: The graph associated with the model.
         :param weight_compression_parameters: List of weight compression parameters.
-        :return: The transformed model.
-        """
-
-    @abstractmethod
-    def transform_node(
-        self,
-        model: TModel,
-        graph: NNCFGraph,
-        wc_params: WeightCompressionParameters,
-        compressed_weight: CompressedWeight = None,
-        original_shape: Tuple[int, ...] = None,
-    ) -> TModel:
-        """
-        Applies weight compression transformations to the node of the model.
-
-        :param model: Model in which the weights will be compressed according to the weight compression description.
-        :param graph: The graph associated with the model.
-        :param wc_params: Weight compression parameters defining node to compress and compression parameters.
-        :param compressed_weight: predefined compressed weight and decompression parameters.
-        :param original_shape: shape of original weight tensor.
+        :param precomputed_scales: Precomputed scales for compressed nodes.
         :return: The transformed model.
         """
 
