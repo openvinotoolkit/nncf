@@ -112,6 +112,7 @@ jobs:
         run: make install-torch-test
       - name: TEST
         run: |
+          ll ~/.cache/torch_extensions/* | echo  1
           python --version
           python -c "from nncf.torch.quantization.extensions import QuantizedFunctionsCPULoader; QuantizedFunctionsCPULoader.load()"
       # - name: Run PyTorch precommit test scope
