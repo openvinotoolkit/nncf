@@ -38,7 +38,6 @@ LRSchedulerType = TypeVar("LRSchedulerType")
 TensorboardWriterType = TypeVar("TensorboardWriterType")
 Checkpoint = TypeVar("Checkpoint")
 
-IMG_PACKAGES_AVAILABLE = False
 
 Image = Any  # Default type for Image.
 
@@ -49,7 +48,7 @@ try:
 
     IMG_PACKAGES_AVAILABLE = True
 except ImportError:
-    pass
+    IMG_PACKAGES_AVAILABLE = False
 
 ImageType = TypeVar("ImageType", bound=Image)
 
@@ -588,8 +587,8 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
             with noninteractive_plotting():
                 fig = plt.figure()
                 plt.plot(
-                    list(self.compressed_training_history.keys()),
-                    list(self.compressed_training_history.values()),
+                    cast(List[float], self.compressed_training_history.keys()),
+                    cast(List[float], self.compressed_training_history.values()),
                 )
                 buf = io.BytesIO()
                 plt.savefig(buf, format="jpeg")
