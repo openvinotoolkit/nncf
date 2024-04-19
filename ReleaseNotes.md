@@ -6,13 +6,13 @@ Post-training Quantization:
 
 - Features:
   - Introduced the subgraph defining functionality for the `nncf.IgnoredScope()` option.
-  - Introduced batch support for the optimization process via `nncf.*` methods. This also includes the new option `batchwise_statistics` for the `nncf.AdvancedQuantizationParameters()`.
+  - Introduced limited support for the batch size of more than 1. MobilenetV2 [PyTorch example](examples/post_training_quantization/torch/mobilenet_v2) was updated with batch support.
 - Fixes:
   - Fixed issue with the `nncf.OverflowFix` parameter absence in some scenarios.
   - Aligned the list of correctable layers for the FastBiasCorrection algorithm between PyTorch, OpenVINO and ONNX backends.
   - Fixed issue with the `nncf.QuantizationMode` parameters combination.
-  - Fixed Mobilenetv2 ([PyTorch](examples/post_training_quantization/torch/mobilenet_v2), [ONNX](examples/post_training_quantization/onnx/mobilenet_v2), [OpenVINO](examples/post_training_quantization/openvino/mobilenet_v2)) examples for the Windows platform.
-  - (OpenVINO) Fixed [an Anomaly Classification](examples/post_training_quantization/openvino/anomaly_stfpm_quantize_with_accuracy_control) for the Windows platform.
+  - Fixed MobilenetV2 ([PyTorch](examples/post_training_quantization/torch/mobilenet_v2), [ONNX](examples/post_training_quantization/onnx/mobilenet_v2), [OpenVINO](examples/post_training_quantization/openvino/mobilenet_v2)) examples for the Windows platform.
+  - (OpenVINO) Fixed [Anomaly Classification example](examples/post_training_quantization/openvino/anomaly_stfpm_quantize_with_accuracy_control) for the Windows platform.
   - (PyTorch) Fixed bias shift magnitude calculation for fused layers.
   - (OpenVINO) Fixed removing the ShapeOf graph which led to an error in the `nncf.quantize_with_accuracy_control()` method.
 - Improvements:
@@ -36,8 +36,7 @@ Post-training Quantization:
 Compression-aware training:
 
 - Features:
-  - (PyTorch) `nncf.quantize` method now may be used as quantization initialization for Quantization-Aware Training.
-  - (PyTorch) Added a [Resnet18-based example](examples/quantization_aware_training/torch/resnet18) with the transition from the Post-Training Quantization to a Quantization-Aware Training algorithm.
+  - (PyTorch) `nncf.quantize` method now may be used as quantization initialization for Quantization-Aware Training. Added a [Resnet18-based example](examples/quantization_aware_training/torch/resnet18) with the transition from the Post-Training Quantization to a Quantization-Aware Training algorithm.
   - (PyTorch) Introduced extractors for the fused Convolution, Batch-/GroupNorm, and Linear functions.
 - Fixes:
   - (PyTorch) Fixed `apply_args_defaults` function issue.
@@ -51,7 +50,7 @@ Compression-aware training:
   - NNCF installation via `pip install nncf[<framework>]` option is now deprecated.
 - Requirements:
   - Updated PyTorch (2.2.1) and CUDA (12.1) versions.
-  - Updated  ONNX version (1.16.0).
+  - Updated ONNX (1.16.0) and ONNXRuntime (1.17.1) versions.
 
 ## New in Release 2.9.0
 
