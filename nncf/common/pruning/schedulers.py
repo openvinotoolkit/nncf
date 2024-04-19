@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Optional, Tuple, cast
+from typing import Any, Dict, Optional, Tuple, cast
 
 import numpy as np
 import scipy.optimize  # type: ignore
@@ -42,7 +42,7 @@ class PruningScheduler(BaseCompressionScheduler):
       section of the NNCF config file .json section (https://openvinotoolkit.github.io/nncf/schema).
     """
 
-    def __init__(self, controller: CompressionAlgorithmController, params: dict[str, Any]):
+    def __init__(self, controller: CompressionAlgorithmController, params: Dict[str, Any]):
         super().__init__()
         self._controller = controller
         self.initial_level = getattr(self._controller, "pruning_init", 0.0)
@@ -110,7 +110,7 @@ class BaselinePruningScheduler(PruningScheduler):
     Then scheduler sets `target_level` and freezes the algorithm.
     """
 
-    def __init__(self, controller: CompressionAlgorithmController, params: dict[str, Any]):
+    def __init__(self, controller: CompressionAlgorithmController, params: Dict[str, Any]):
         super().__init__(controller, params)
         self.freeze_epoch = self.num_warmup_epochs
 
@@ -130,7 +130,7 @@ class ExponentialPruningScheduler(PruningScheduler):
         current_density = 1.0 - current_level
     """
 
-    def __init__(self, controller: CompressionAlgorithmController, params: dict[str, Any]):
+    def __init__(self, controller: CompressionAlgorithmController, params: Dict[str, Any]):
         """
         Initializes a pruning scheduler with an exponential decay schedule.
 
@@ -160,7 +160,7 @@ class ExponentialWithBiasPruningScheduler(PruningScheduler):
     where a, b, k is a params.
     """
 
-    def __init__(self, controller: CompressionAlgorithmController, params: dict[str, Any]):
+    def __init__(self, controller: CompressionAlgorithmController, params: Dict[str, Any]):
         """
         Initializes a pruning scheduler with an exponential (with bias) decay schedule.
 
