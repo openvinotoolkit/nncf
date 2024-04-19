@@ -346,7 +346,9 @@ statistics for activations and weights of the model.</p>
 <li><p><strong>aggregator_type</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#nncf.quantization.range_estimator.AggregatorType" title="nncf.quantization.range_estimator.AggregatorType"><em>nncf.quantization.range_estimator.AggregatorType</em></a><em>]</em>) – The type of aggregator of per sample statistics.</p></li>
 <li><p><strong>clipping_value</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – The value to use for clipping the input tensors before
 collecting statistics.</p></li>
-<li><p><strong>quantile_outlier_prob</strong> (<em>float</em>) – The outlier probability for quantile statistics.</p></li>
+<li><p><strong>quantile_outlier_prob</strong> (<em>float</em>) – The outlier probability for QUANTILE statistic or MEAN_NO_OUTLIERS/MEDIAN_NO_OUTLIERS
+aggregators. When using these together, please be aware that currently the quantile value will be applied to
+both.</p></li>
 </ul>
 </dd>
 </dl>
