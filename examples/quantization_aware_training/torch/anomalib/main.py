@@ -97,7 +97,7 @@ def main():
     datamodule = create_dataset(root=DATASET_PATH)
 
     # Create an engine for the original model
-    engine = Engine(task=TaskType.SEGMENTATION, default_root_dir=FP32_RESULTS_ROOT)
+    engine = Engine(task=TaskType.SEGMENTATION, default_root_dir=FP32_RESULTS_ROOT, devices=1)
     if USE_PRETRAINED:
         # Load the pretrained checkpoint
         CHECKPOINT_PATH.mkdir(parents=True, exist_ok=True)
@@ -131,7 +131,7 @@ def main():
     quantized_model.model = quantized_inference_model
 
     # Create engine for the quantized model
-    engine = Engine(task=TaskType.SEGMENTATION, default_root_dir=INT8_RESULTS_ROOT, max_epochs=1)
+    engine = Engine(task=TaskType.SEGMENTATION, default_root_dir=INT8_RESULTS_ROOT, max_epochs=1, devices=1)
 
     # Validate the quantized model
     print("Test results for INT8 model after PTQ:")
