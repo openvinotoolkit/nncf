@@ -684,7 +684,7 @@ def test_call_max_var_criterion_with_dataset_by_default(mocker, mode):
     scores_spy.assert_called()
 
 
-@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+@pytest.mark.parametrize("mode", INT4_MODES)
 def test_call_max_var_criterion_with_dataset_by_default_awq(mode):
     model = AWQMatmulModel().ov_model
     dataset = Dataset([np.ones([8, 8])])
