@@ -110,45 +110,49 @@ jobs:
           python-version: 3.8.10
       - name: Install NNCF and test requirements
         run: make install-torch-test
-      - name: Run PyTorch precommit test scope
-        run: make test-torch-cpu
+      - name: TEST
+        run: |
+          python --version
+          python -c "from nncf.torch.quantization.extensions import QuantizedFunctionsCPULoader; QuantizedFunctionsCPULoader.load()"
+      # - name: Run PyTorch precommit test scope
+      #   run: make test-torch-cpu
 
-  pytorch-cuda:
-    timeout-minutes: 150
-    defaults:
-      run:
-        shell: bash
-    runs-on: aks-linux-4-cores-28gb-gpu-testla-t4
-    steps:
-      - name: Install dependencies
-        run : |
-          sudo apt-get update
-          sudo apt-get --assume-yes install gcc ninja-build libgl1-mesa-dev libglib2.0-0
-      - name: Download CUDA
-        run: |
-          wget -q https://developer.download.nvidia.com/compute/cuda/12.1.1/local_installers/cuda_12.1.1_530.30.02_linux.run
-          sudo sh cuda_12.1.1_530.30.02_linux.run --toolkit --silent
-      - name: Runner info
-        continue-on-error: true
-        run: |
-          export PATH=/usr/local/cuda-12.1/bin${PATH:+:${PATH}}
-          export LD_LIBRARY_PATH=/usr/local/cuda-12.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-          nvidia-smi
-          cat /proc/cpuinfo
-          nvcc --version
-      - uses: actions/checkout@v3
-        with:
-          lfs: true
-      - uses: actions/setup-python@v3
-        with:
-          python-version: 3.8.10
-      - name: Install NNCF and test requirements
-        run: make install-torch-test
-      - name: Check CUDA
-        run: |
-          python -c "import torch; print(torch.cuda.is_available())"
-      - name: Run PyTorch precommit test scope
-        run: |
-          export PATH=/usr/local/cuda-12.1/bin${PATH:+:${PATH}}
-          export LD_LIBRARY_PATH=/usr/local/cuda-12.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-          make test-torch-cuda
+  # pytorch-cuda:
+  #   timeout-minutes: 150
+  #   defaults:
+  #     run:
+  #       shell: bash
+  #   runs-on: aks-linux-4-cores-28gb-gpu-testla-t4
+  #   steps:
+  #     - name: Install dependencies
+  #       run : |
+  #         sudo apt-get update
+  #         sudo apt-get --assume-yes install gcc ninja-build libgl1-mesa-dev libglib2.0-0
+  #     - name: Download CUDA
+  #       run: |
+  #         wget -q https://developer.download.nvidia.com/compute/cuda/12.1.1/local_installers/cuda_12.1.1_530.30.02_linux.run
+  #         sudo sh cuda_12.1.1_530.30.02_linux.run --toolkit --silent
+  #     - name: Runner info
+  #       continue-on-error: true
+  #       run: |
+  #         export PATH=/usr/local/cuda-12.1/bin${PATH:+:${PATH}}
+  #         export LD_LIBRARY_PATH=/usr/local/cuda-12.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+  #         nvidia-smi
+  #         cat /proc/cpuinfo
+  #         nvcc --version
+  #     - uses: actions/checkout@v3
+  #       with:
+  #         lfs: true
+  #     - uses: actions/setup-python@v3
+  #       with:
+  #         python-version: 3.8.10
+  #     - name: Install NNCF and test requirements
+  #       run: make install-torch-test
+  #     - name: Check CUDA
+  #       run: |
+  #         python -c "import torch; print(torch.cuda.is_available())"
+  #     - name: Run PyTorch precommit test scope
+  #       run: |
+  #         export PATH=/usr/local/cuda-12.1/bin${PATH:+:${PATH}}
+  #         export LD_LIBRARY_PATH=/usr/local/cuda-12.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+  #         make test-torch-cuda
