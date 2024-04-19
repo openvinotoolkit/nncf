@@ -15,7 +15,8 @@ Post-training Quantization:
   - (PyTorch) Fixed bias shift magnitude calculation for fused layers.
   - (OpenVINO) Fixed removing the ShapeOf graph which led to an error in the `nncf.quantize_with_accuracy_control()` method.
 - Improvements:
-  - (OpenVINO, PyTorch) Introduced scale compression to FP16 for weights in `nncf.compress_weights()` method.
+  - `OverflowFix`, `AdvancedSmoothQuantParameters` and `AdvancedBiasCorrectionParameters` were exposed into the `nncf.*` namespace.
+  - (OpenVINO, PyTorch) Introduced scale compression to FP16 for weights in `nncf.compress_weights()` method, regardless of model weights precision.
   - (PyTorch) Modules that NNCF inserted were excluded from parameter tracing.
   - (OpenVINO) Extended the list of correctable layers for the BiasCorrection algorithm.
   - (ONNX) Aligned BiasCorrection algorithm behaviour with OpenVINO in specific cases.
@@ -34,6 +35,7 @@ Post-training Quantization:
 Compression-aware training:
 
 - Features:
+  - (PyTorch) `nncf.quantize` method now may be used as quantization initialization for Quantization-Aware Training.
   - (PyTorch) Added a [Resnet18-based example](examples/quantization_aware_training/torch/resnet18) with the transition from the Post-Training Quantization to a Quantization-Aware Training algorithm.
   - (PyTorch) Introduced extractors for the fused Convolution, Batch-/GroupNorm, and Linear functions. 
 - Fixes:
