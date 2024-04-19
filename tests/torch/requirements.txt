@@ -10,11 +10,11 @@ torch
 virtualenv
 
 # Required for search_building_blocks tests
-accelerate
-transformers
+accelerate==0.28.0
+transformers==4.38.2
 
 # Required for movement_sparsity tests
-datasets
-evaluate
+datasets==2.14.7
+evaluate==0.3.0
 openvino-dev
 timm==0.9.2

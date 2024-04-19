@@ -1,6 +1,5 @@
--c ../../../../constraints.txt
-fastdownload
-openvino-dev
+fastdownload==0.0.7
+openvino-dev==2024.0
 scikit-learn
-torch
-torchvision
+torch==2.2.1
+torchvision==0.17.1

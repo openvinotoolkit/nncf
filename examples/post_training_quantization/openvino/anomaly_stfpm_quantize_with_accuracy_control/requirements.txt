@@ -1,3 +1,2 @@
--c ../../../../constraints.txt
 anomalib==0.6.0
-openvino-dev
+openvino-dev==2024.0

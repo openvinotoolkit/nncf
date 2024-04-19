@@ -18,12 +18,4 @@ pytest==8.0.2
 pytest-cov==4.1.0
 pytest-mock==3.12.0
 pytest-dependency==0.6.0
-
-accelerate==0.28.0
-addict==2.4.0
-datasets==2.14.7
-evaluate==0.3.0
-fastdownload==0.0.7
-scikit-learn==1.2.2
-transformers==4.38.2
-ultralytics==8.0.170
+pytest-ordering==0.6

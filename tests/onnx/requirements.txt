@@ -1,5 +1,4 @@
 -c ../../constraints.txt
-fastdownload
 onnx
 onnxruntime
 openvino-dev
@@ -7,7 +6,9 @@ pytest-cov
 pytest-dependency
 pytest-mock
 pytest-ordering
-scikit-learn
 torch
 torchvision
+
+fastdownload==0.0.7
+scikit-learn==1.2.2
 yattag>=1.14.0
