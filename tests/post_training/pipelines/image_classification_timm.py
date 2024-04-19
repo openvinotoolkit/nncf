@@ -126,13 +126,12 @@ class ImageClassificationTimm(PTQTestPipeline):
 
     def _validate(self):
         val_dataset = datasets.ImageFolder(root=self.data_dir / "imagenet" / "val", transform=self.transform)
-        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, num_workers=2, shuffle=False)
+        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=self.batch_size, num_workers=2, shuffle=False)
 
         dataset_size = len(val_loader)
-
         # Initialize result tensors for async inference support.
-        predictions = np.zeros((dataset_size))
-        references = -1 * np.ones((dataset_size))
+        predictions = [[] for _ in range(dataset_size)]
+        references = [[] for _ in range(dataset_size)]
 
         core = ov.Core()
 
@@ -164,8 +163,12 @@ class ImageClassificationTimm(PTQTestPipeline):
                 references[i] = target
 
             infer_queue.wait_all()
-
-        acc_top1 = accuracy_score(predictions, references)
+        flatten_predictions = []
+        flatten_references = []
+        for i in range(len(predictions)):
+            flatten_predictions.extend(predictions[i])
+            flatten_references.extend(references[i])
+        acc_top1 = accuracy_score(flatten_predictions, flatten_references)
 
         self.run_info.metric_name = "Acc@1"
         self.run_info.metric_value = acc_top1
