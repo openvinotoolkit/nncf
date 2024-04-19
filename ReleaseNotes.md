@@ -7,13 +7,13 @@ Post-training Quantization:
 - Breaking changes:
   - ...
 - General:
-  - ...
+  - For weight compression, align quantization scales to always be saved in FP16 precision nevertheless the input model weights precision.
 - Features:
   - ...
 - Fixes:
   - (Torch) An epsilon value is added to quantization parameters to prevent division by zero.
 - Improvements:
-  - ...
+  - (UX) Expose `OverflowFix`, `AdvancedSmoothQuantParameters` and `AdvancedBiasCorrectionParameters` classes to be available for import as `nncf.OverfloFix`, `nncf.AdvancedSmoothQuantParameters`, `nncf.AdvancedBiasCorrectionParameters`.
 - Deprecations/Removals:
   - ...
 - Tutorials:
@@ -26,7 +26,7 @@ Compression-aware training:
 - Breaking changes:
   - ...
 - General:
-- (Torch) `nncf.quantize` funciton could be used as quantization initialization for Quantization-aware training.
+- (Torch) `nncf.quantize` function could be used as quantization initialization for Quantization-aware training.
 - Features:
   - ...
 - Fixes:
