@@ -11,7 +11,7 @@ Post-training Quantization:
 - Features:
   - ...
 - Fixes:
-  - ...
+  - (Torch) An epsilon value is added to quantization parameters to prevent division by zero.
 - Improvements:
   - ...
 - Deprecations/Removals:
@@ -26,7 +26,7 @@ Compression-aware training:
 - Breaking changes:
   - ...
 - General:
-  - ...
+- (Torch) `nncf.quantize` funciton could be used as quantization initialization for Quantization-aware training.
 - Features:
   - ...
 - Fixes:
@@ -46,6 +46,7 @@ Compression-aware training:
   - [Post-Training Optimization of AnimateAnyone Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/animate-anyone/animate-anyone.ipynb)
   - [Post-Training Optimization of YOLOv8-OBB Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/yolov8-optimization/yolov8-obb.ipynb)
   - [Post-Training Optimization of LLM Agent](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-agent-langchain/llm-agent-langchain.ipynb)
+  - [Quantization-aware training of Resnet18 Model](examples/quantization_aware_training//torch/resnet18/README.md)
 - Known issues:
   - ...
 
