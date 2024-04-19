@@ -784,7 +784,7 @@ class NNCFNetworkInterface(torch.nn.Module):
                 result.append(scope_in_model)
         return result
 
-    def get_applied_transformation_layout(self) -> PTTransformationLayout:
+    def transformation_layout(self) -> PTTransformationLayout:
         """
         Collects all hooks applied to the NNCFNetwork, converts them to insertion commands
         and returns in PTTransformationLayout format. Default hooks group name is used in

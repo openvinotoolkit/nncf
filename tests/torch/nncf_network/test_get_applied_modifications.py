@@ -100,7 +100,7 @@ def test_get_applied_modification_commands(
     layout.register(command)
     model_transformer.transform(layout)
 
-    applied_commands = nncf_model.nncf.get_applied_transformation_layout()
+    applied_commands = nncf_model.nncf.transformation_layout()
 
     assert len(applied_commands.transformations) == 1
     applied_command = applied_commands.transformations[0]
@@ -130,7 +130,7 @@ def test_priority_of_get_applied_modification_commands(
 
     model_transformer.transform(layout)
 
-    applied_commands = nncf_model.nncf.get_applied_transformation_layout()
+    applied_commands = nncf_model.nncf.transformation_layout()
     assert len(applied_commands.transformations) == len(commands)
     for applied_command in applied_commands.transformations:
         command = commands[applied_command.priority]
@@ -153,7 +153,7 @@ def test_all_possible_combinations_of_commands_for_get_applied_commands(
 
     model_transformer.transform(commands)
 
-    applied_commands = nncf_model.nncf.get_applied_transformation_layout()
+    applied_commands = nncf_model.nncf.transformation_layout()
     assert len(applied_commands.transformations) == len(commands.transformations)
     for command in commands.transformations:
         _translate_target_types(trace_parameters, command)
@@ -186,4 +186,4 @@ def test_get_applied_modification_commands_broken_call_hook(
 
     nncf_model.nncf.external_op.clear()
     with pytest.raises(AssertionError):
-        nncf_model.nncf.get_applied_transformation_layout()
+        nncf_model.nncf.transformation_layout()
