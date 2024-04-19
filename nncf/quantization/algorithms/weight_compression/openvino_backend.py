@@ -17,11 +17,11 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.utils import get_reduction_axes
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.tensor.tensor import Tensor
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.model_transformer import OVModelTransformer
-from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
@@ -64,12 +64,10 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return node.layer_attributes and node.layer_attributes.constant_attributes
 
     @staticmethod
-    def get_channel_agnostic_reduction_axes(
-        node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph
-    ) -> Optional[Tuple[int]]:
+    def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[Tuple[int]]:
         channel_axes = get_weight_channel_axes(node_with_weight)
         const_shape = node_with_weight.layer_attributes.constant_attributes[weight_port_id]["shape"]
-        return get_channel_agnostic_reduction_axes(channel_axes, const_shape)
+        return get_reduction_axes(channel_axes, const_shape)
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:
@@ -124,14 +122,12 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         del const_node
 
     def transform_model(
-        self, model: ov.Model, graph: NNCFGraph, weight_compression_parameters: Iterable[WeightCompressionParameters],
-        precomputed_scales: Dict[str, Tensor] = None
+        self,
+        model: ov.Model,
+        graph: NNCFGraph,
+        weight_compression_parameters: Iterable[WeightCompressionParameters],
+        precomputed_scales: Dict[str, Tensor] = None,
     ) -> ov.Model:
-        if precomputed_scales is None:
-            precomputed_scales = Dict()
-            for wc_params in weight_compression_parameters:
-                precomputed_scales[wc_params.node_with_weight.node_name] = None
-
         for wc_params in weight_compression_parameters:
             compression_config = wc_params.compression_config
             if compression_config.mode == CompressWeightsMode.NF4:
@@ -158,7 +154,10 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             weight = Tensor(get_const_value(const_node))
             original_shape = weight.shape
             compressed_weight = compress_weight(
-                weight, wc_params.reduction_axes, compression_config, precomputed_scales[wc_params.node_with_weight.node_name]
+                weight,
+                wc_params.reduction_axes,
+                compression_config,
+                precomputed_scales[wc_params.node_with_weight.node_name],
             )
 
             compressed_const = opset.constant(

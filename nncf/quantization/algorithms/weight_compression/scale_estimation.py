@@ -21,9 +21,7 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.experimental.tensor import TensorDataType
 from nncf.experimental.tensor import functions as fns
-from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
-from nncf.quantization.algorithms.weight_compression.weight_lowering import CompressedWeight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_dequantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_integer_quantization
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
@@ -33,7 +31,7 @@ TTensor = TypeVar("TTensor")
 TWeightType = TypeVar("TWeightType")
 
 
-class ScaleEstimation():
+class ScaleEstimation:
     """
     Scale estimation algorithm implementation.
     """
@@ -120,17 +118,18 @@ class ScaleEstimation():
         """
 
         compress_decompress_cashe = {}
-        res = Dict()
+        res = dict()
 
         for wp in track(self._all_weight_params, description="Applying Scale Estimation"):
             k = wp.node_with_weight.node_name
             config = wp.compression_config
 
+            if config.num_bits != 4 or k not in self._activations:
+                res[k] = None
+                continue
+
             stats = self._activations[k]
             reduction_axis = wp.reduction_axes[0]
-            config = wp.compression_config
-            if config.num_bits != 4:
-                continue
 
             cur_config = deepcopy(config)
             cur_config.group_size = -1
@@ -297,6 +296,6 @@ class ScaleEstimation():
                     near_to_ideal_scale = mask * result_scale + (1.0 - mask) * near_to_ideal_scale
                 result_scale = near_to_ideal_scale
 
-            res[k] = model
+            res[k] = result_scale
 
         return res

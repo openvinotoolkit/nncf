@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Iterable, List, Optional, Tuple, Dict
+from typing import Dict, Iterable, List, Optional, Tuple
 
 import torch
 
@@ -103,9 +103,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         return weight_port_ids
 
     @staticmethod
-    def get_channel_agnostic_reduction_axes(
-        node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph
-    ) -> Optional[Tuple[int]]:
+    def get_reduction_axes(node_with_weight: NNCFNode, weight_port_id: int, graph: NNCFGraph) -> Optional[Tuple[int]]:
         weight_node = get_const_node(node_with_weight, weight_port_id, graph)
 
         ndims = len(weight_node.layer_attributes.shape)
@@ -176,8 +174,11 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         pass
 
     def transform_model(
-        self, model: NNCFNetwork, graph: NNCFGraph, weight_compression_parameters: Iterable[WeightCompressionParameters],
-        precomputed_scales: Dict[str, Tensor] = None
+        self,
+        model: NNCFNetwork,
+        graph: NNCFGraph,
+        weight_compression_parameters: Iterable[WeightCompressionParameters],
+        precomputed_scales: Dict[str, Tensor] = None,
     ) -> NNCFNetwork:
         transformation_layout = TransformationLayout()
 
@@ -200,6 +201,7 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
             # calculates compressed weights and decompression parameters
             compressed_weight = compress_weight(Tensor(weight), wc_params.reduction_axes, compression_config)
+            compressed_weight.scale = compressed_weight.scale.astype(dtype=TensorDataType.float16)
 
             # pack compressed tensor
             packed_tensor = compressed_weight.tensor.astype(TensorDataType.uint8)
@@ -220,7 +222,9 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             packed_zero_point = compressed_weight.zero_point.astype(TensorDataType.uint8)
 
             # creates weight decompressor
-            decompressor = WeightsDecompressor(compressed_weight.scale.data, packed_zero_point.data)
+            decompressor = WeightsDecompressor(
+                compressed_weight.scale.data, packed_zero_point.data, result_dtype=weight.dtype
+            )
 
             # registry weight decompression module in the model
             decompressor_name = f"weights_decompressor_{weight_node.node_name.replace('.', '_')}"
