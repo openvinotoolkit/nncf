@@ -311,6 +311,7 @@ class AdvancedCompressionParameters:
     :param scale_estimation_params: Advanced parameters for scale estimation algorithm.
     :type scale_estimation_params: AdvancedScaleEstimationParameters
     """
+
     # Advanced AWQ algorithm parameters
     awq_params: AdvancedAWQParameters = field(default_factory=AdvancedAWQParameters)
 
