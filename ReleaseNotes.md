@@ -37,7 +37,7 @@ Compression-aware training:
 - Features:
   - (PyTorch) `nncf.quantize` method now may be used as quantization initialization for Quantization-Aware Training.
   - (PyTorch) Added a [Resnet18-based example](examples/quantization_aware_training/torch/resnet18) with the transition from the Post-Training Quantization to a Quantization-Aware Training algorithm.
-  - (PyTorch) Introduced extractors for the fused Convolution, Batch-/GroupNorm, and Linear functions. 
+  - (PyTorch) Introduced extractors for the fused Convolution, Batch-/GroupNorm, and Linear functions.
 - Fixes:
   - (PyTorch) Fixed `apply_args_defaults` function issue.
 - Improvements:
