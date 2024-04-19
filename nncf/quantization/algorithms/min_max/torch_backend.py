@@ -33,6 +33,7 @@ from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph import PTTargetPoint
@@ -195,11 +196,14 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                     statistic_type = StatisticsType.ABS_MAX
                 reducer = PT_REDUCERS_MAP[statistic_type](reduction_axes=reduction_axes)
 
-            aggregator = AGGREGATORS_MAP[params.aggregator_type](
-                aggregation_axes=aggregation_axes,
-                num_samples=num_samples,
-                tensor_processor=PTNNCFCollectorTensorProcessor,
-            )
+            kwargs = {
+                "num_samples": num_samples,
+                "aggregation_axes": aggregation_axes,
+                "tensor_processor": PTNNCFCollectorTensorProcessor,
+            }
+            if params.aggregator_type in [AggregatorType.MEAN_NO_OUTLIERS, AggregatorType.MEDIAN_NO_OUTLIERS]:
+                kwargs.update({"quantile": params.quantile_outlier_prob})
+            aggregator = AGGREGATORS_MAP[params.aggregator_type](**kwargs)
 
             collector.register_statistic_branch(container_key, reducer, aggregator)
         return collector
