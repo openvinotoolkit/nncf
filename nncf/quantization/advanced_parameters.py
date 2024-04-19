@@ -256,10 +256,15 @@ class AdvancedAWQParameters:
     this parameter may be adjusted in the range from 0 to 1 or set -1 to disable SmoothQuant algorithm.
 
     :param subset_size: The number of samples for AWQ.
+    :type subset_size: int
     :param percent_to_apply: The percent of outliers for correction.
+    :type percent_to_apply: float
     :param alpha_min: Minimum value of smoothness parameter for grid search.
+    :type alpha_min: float
     :param alpha_max: Maximal value of smoothness parameter for grid search.
+    :type alpha_max: float
     :param steps: The number of the steps in grid search.
+    :type steps: int
     """
 
     subset_size: int = 32
@@ -279,10 +284,14 @@ class AdvancedScaleEstimationParameters:
     this parameter may be adjusted in the range from 0 to 1 or set -1 to disable SmoothQuant algorithm.
 
     :param subset_size: The number of samples for scale estimation.
+    :type subset_size: int
     :param initial_steps: The number of the steps for absmax scale rectification.
+    :type initial_steps: int
     :param scale_steps: The number of the steps for grid search scale rectification
                         from 1.0 to 1.0 - 0.05 * scale_step.
+    :type scale_steps: int
     :param weight_penalty: coefficient for penalty between fp and compressed weights. If -1 then doesn't apply.
+    :type weight_penalty: float
     """
 
     subset_size: int = 32
@@ -294,6 +303,14 @@ class AdvancedScaleEstimationParameters:
 @api()
 @dataclass
 class AdvancedCompressionParameters:
+    """
+    Contains advanced parameters for compression algorithms.
+
+    :param awq_params: Advanced parameters for AWQ algorithm.
+    :type awq_params: AdvancedAWQParameters
+    :param scale_estimation_params: Advanced parameters for scale estimation algorithm.
+    :type scale_estimation_params: AdvancedScaleEstimationParameters
+    """
     # Advanced AWQ algorithm parameters
     awq_params: AdvancedAWQParameters = field(default_factory=AdvancedAWQParameters)
 
