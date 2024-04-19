@@ -97,7 +97,7 @@ def get_const_value(const_node: ov.Node) -> np.ndarray:
     :param const_node: OpenVINO node.
     :return: The constant value.
     """
-    return const_node.data
+    return const_node.get_data(dtype=np.float32)
 
 
 def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
