@@ -562,6 +562,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
         self,
         runner: BaseAdaptiveCompressionLevelTrainingRunner,
         stepping_mode: str = "uniform_decrease",
+        **kwargs: Union[int, float],
     ) -> float:
         if stepping_mode == "uniform_decrease":
             compression_step_updater = self._uniform_decrease_compression_step_update
@@ -572,7 +573,7 @@ class AdaptiveCompressionTrainingLoop(BaseEarlyExitCompressionTrainingLoop):
             )
         else:
             raise ValueError("Wrong stepping mode to determine compression rate step value provided")
-        return compression_step_updater(runner)
+        return compression_step_updater(runner, **kwargs)
 
     @staticmethod
     def _uniform_decrease_compression_step_update(
