@@ -217,7 +217,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 "aggregation_axes": aggregation_axes,
                 "tensor_processor": ONNXNNCFCollectorTensorProcessor,
             }
-            if params.aggregator_type == AggregatorType.MEAN_NO_OUTLIERS:
+            if params.aggregator_type in [AggregatorType.MEAN_NO_OUTLIERS, AggregatorType.MEDIAN_NO_OUTLIERS]:
                 kwargs.update({"quantile": params.quantile_outlier_prob})
             aggregator = AGGREGATORS_MAP[params.aggregator_type](**kwargs)
 
