@@ -4,37 +4,35 @@
 
 Post-training Quantization:
 
-- Breaking changes:
-  - ...
-- General:
-  - ...
 - Features:
-  - ...
+  - Introduced the subgraph defining functionality for the `nncf.IgnoredScope()` option.
+  - Introduced batch support for the optimization process via `nncf.*` methods. This also includes the new option `batchwise_statistics` for the `nncf.AdvancedQuantizationParameters()`.
 - Fixes:
-  - ...
+  - Fixed issue with the `nncf.OverflowFix` parameter absence in some scenarios.
+  - Aligned the list of correctable layers for the FastBiasCorrection algorithm between PyTorch, OpenVINO and ONNX backends.
+  - Fixed Mobilenetv2 ([PyTorch](examples/post_training_quantization/torch/mobilenet_v2), [ONNX](examples/post_training_quantization/onnx/mobilenet_v2), [OpenVINO](examples/post_training_quantization/openvino/mobilenet_v2)) examples for the Windows platform.
+  - (OpenVINO) Fixed [an Anomaly Classification](examples/post_training_quantization/openvino/anomaly_stfpm_quantize_with_accuracy_control) for the Windows platform.
+  - (PyTorch) Fixed bias shift magnitude calculation for fused layers.
+  - (OpenVINO) Fixed removing the ShapeOf graph which led to an error in the `nncf.quantize_with_accuracy_control()` method.
+
 - Improvements:
-  - ...
-- Deprecations/Removals:
-  - ...
-- Tutorials:
-  - ...
-- Known issues:
-  - ...
+  - (OpenVINO, PyTorch) Introduced scale compression to FP16 for weights in `nncf.compress_weights()` method.
+  - (PyTorch) Modules that NNCF inserted were excluded from parameter tracing.
+  - (OpenVINO) Extended the list of correctable layers for the BiasCorrection algorithm.
+  - (ONNX) Aligned BiasCorrection algorithm behaviour with OpenVINO in specific cases.
 
 Compression-aware training:
 
-- Breaking changes:
-  - ...
-- General:
-  - ...
 - Features:
-  - ...
+  - (PyTorch) Added a [Resnet18-based example](examples/quantization_aware_training/torch/resnet18) with the transition from the Post-Training Quantization to a Quantization-Aware Training algorithm.
+  - (PyTorch) Introduced extractors for the fused Convolution, Batch-/GroupNorm, and Linear functions. 
 - Fixes:
-  - ...
+  - (PyTorch) Fixed `apply_args_defaults` function issue.
 - Improvements:
-  - ...
+  - (PyTorch) Updated command creation behaviour to reduce the number of adapters.
 - Deprecations/Removals:
-  - ...
+  - (PyTorch) Removed the `binarization` algorithm.
+  - NNCF installation via `pip install nncf[<framework>]` option is now deprecated.
 - Tutorials:
   - [Post-Training Optimization of PhotoMaker Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/photo-maker/photo-maker.ipynb)
   - [Post-Training Optimization of Stable Diffusion XL Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/stable-diffusion-xl/stable-diffusion-xl.ipynb)
@@ -46,8 +44,9 @@ Compression-aware training:
   - [Post-Training Optimization of AnimateAnyone Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/animate-anyone/animate-anyone.ipynb)
   - [Post-Training Optimization of YOLOv8-OBB Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/yolov8-optimization/yolov8-obb.ipynb)
   - [Post-Training Optimization of LLM Agent](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-agent-langchain/llm-agent-langchain.ipynb)
-- Known issues:
-  - ...
+- Requirements:
+  - Updated PyTorch (2.2.1) and CUDA (12.1) versions.
+  - Updated  ONNX version (1.16.0).
 
 ## New in Release 2.9.0
 
