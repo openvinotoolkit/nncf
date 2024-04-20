@@ -96,7 +96,7 @@ jobs:
     defaults:
       run:
         shell: bash
-    runs-on: aks-linux-16-cores-32gb
+    runs-on: ubuntu-20.04-8-cores # aks-linux-16-cores-32gb
     steps:
       - name: Install dependencies
         run : |
@@ -108,24 +108,24 @@ jobs:
       - uses: actions/setup-python@v3
         with:
           python-version: 3.8.10
-      # - name: Install NNCF and test requirements
-      #   run: make install-torch-test
-      # - name: Run PyTorch precommit test scope
-      #   run: make test-torch-cpu
-      - name: ext
-        continue-on-error: true
-        run: ls -l  ~/.cache/torch_extensions/*
-      - name: Runner info
-        continue-on-error: true
-        run: |
-          cat /proc/cpuinfo
-          cat /etc/*release
-      - name: TEST
-        run: |
-          pip install -e .
-          pip install torch==2.2.1
-          python --version
-          python -c "from nncf.torch.quantization.extensions import QuantizedFunctionsCPULoader; QuantizedFunctionsCPULoader.load()"
+      - name: Install NNCF and test requirements
+        run: make install-torch-test
+      - name: Run PyTorch precommit test scope
+        run: make test-torch-cpu
+      # - name: ext
+      #   continue-on-error: true
+      #   run: ls -l  ~/.cache/torch_extensions/*
+      # - name: Runner info
+      #   continue-on-error: true
+      #   run: |
+      #     cat /proc/cpuinfo
+      #     cat /etc/*release
+      # - name: TEST
+      #   run: |
+      #     pip install -e .
+      #     pip install torch==2.2.1
+      #     python --version
+      #     python -c "from nncf.torch.quantization.extensions import QuantizedFunctionsCPULoader; QuantizedFunctionsCPULoader.load()"
 
 
   # pytorch-cuda:
