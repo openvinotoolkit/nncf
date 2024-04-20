@@ -92,7 +92,7 @@ jobs:
 
 
   pytorch-cpu:
-    timeout-minutes: 150
+    timeout-minutes: 15
     defaults:
       run:
         shell: bash
@@ -115,6 +115,11 @@ jobs:
       - name: ext
         continue-on-error: true
         run: ls -l  ~/.cache/torch_extensions/*
+      - name: Runner info
+        continue-on-error: true
+        run: |
+          cat /proc/cpuinfo
+          cat /etc/*release
       - name: TEST
         run: |
           pip install -e .
