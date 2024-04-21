@@ -92,7 +92,7 @@ jobs:
 
 
   pytorch-cpu:
-    timeout-minutes: 15
+    timeout-minutes: 150
     defaults:
       run:
         shell: bash
@@ -108,13 +108,16 @@ jobs:
       - uses: actions/setup-python@v3
         with:
           python-version: 3.8.10
+      - name: Runner info
+        continue-on-error: true
+        run: |
+          cat /proc/cpuinfo
+          cat /etc/*release
       - name: Install NNCF and test requirements
         run: make install-torch-test
       - name: Run PyTorch precommit test scope
         run: make test-torch-cpu
-      # - name: ext
-      #   continue-on-error: true
-      #   run: ls -l  ~/.cache/torch_extensions/*
+
       # - name: Runner info
       #   continue-on-error: true
       #   run: |
