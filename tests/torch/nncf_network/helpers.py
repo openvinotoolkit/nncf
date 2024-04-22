@@ -144,7 +144,6 @@ class InsertionCommandBuilder:
             ),
         )
 
-    COMMAND_CLASSES = [PTInsertionCommand, PTSharedFnInsertionCommand, PTSharedFnInsertionCommand]
     # Check priority as an enum member and as an int
     PRIORITIES = (TransformationPriority.QUANTIZATION_PRIORITY, TransformationPriority.QUANTIZATION_PRIORITY.value + 1)
 
