@@ -148,6 +148,9 @@ class AWQ(Algorithm):
 
         for match in matches:
             nncf_node = graph.get_node_by_key(match[-1])
+            if not self._backend_entity.is_node_with_weights(nncf_node, graph):
+                continue
+
             for weight_op_friendly_name, _ in self._backend_entity.get_weight_names_and_port_ids(nncf_node, graph):
                 target_node_names.append(weight_op_friendly_name)
 
@@ -189,9 +192,13 @@ class AWQ(Algorithm):
             top_k = max(int(s.shape[0] * self._percent_to_apply), 1)
             topk_idxs = fns.argsort(-s)[:top_k]
 
+            group_size = config.group_size
+            if group_size == -1:
+                group_size = s.shape[0]
+
             groups_to_correct = set()
             for idx in topk_idxs:
-                groups_to_correct.add(idx.data // config.group_size)
+                groups_to_correct.add(idx.data // group_size)
 
             groups_to_correct = list(groups_to_correct)
 
@@ -212,15 +219,15 @@ class AWQ(Algorithm):
             awq_config.group_size = -1
 
             for gi in groups_to_correct:
-                offset = gi * config.group_size
-                gscale = s[offset : offset + config.group_size]
+                offset = gi * group_size
+                gscale = s[offset : offset + group_size]
 
                 a_min = fns.quantile(gscale, 0.1)
                 a_max = 1e2
                 gscale = fns.clip(gscale, a_min=a_min, a_max=a_max)
 
-                gweight = weight[:, offset : offset + config.group_size]
-                gacts = X[offset : offset + config.group_size, :]
+                gweight = weight[:, offset : offset + group_size]
+                gacts = X[offset : offset + group_size, :]
 
                 fp32_out = fns.matmul(gweight, gacts)
                 min_diff = fns.max(fns.abs(fp32_out))
@@ -244,7 +251,7 @@ class AWQ(Algorithm):
                     alpha += alpha_step
 
                 if best_scale is not None:
-                    scale.data[offset : offset + config.group_size] = best_scale.data
+                    scale.data[offset : offset + group_size] = best_scale.data
 
             a_scale = scale
             w_scale = scale
