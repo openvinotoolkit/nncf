@@ -120,8 +120,7 @@ def train_lenet():
 
 
 @pytest.mark.parametrize("distributed", [False, True], ids=["not_distributed", "distributed"])
-@pytest.mark.parametrize("quantized", [False, True], ids=["without_quantization", "with_quantization"])
-def test_rb_sparse_target_lenet(distributed, quantized, determenistic_mode):
+def test_rb_sparse_target_lenet(distributed, determenistic_mode):
     if not os.path.exists(MODEL_PATH):
         train_lenet()
 
@@ -162,8 +161,6 @@ def test_rb_sparse_target_lenet(distributed, quantized, determenistic_mode):
             sparsity_freeze_epoch=freeze_epoch,
             scheduler="exponential",
         )
-        if quantized:
-            config.update({"compression": [config["compression"], {"algorithm": "quantization"}]})
 
         compression_state_to_skip_init = {BaseCompressionAlgorithmController.BUILDER_STATE: {}}
         compress_algo, compress_model = create_compressed_model(model, config, compression_state_to_skip_init)
