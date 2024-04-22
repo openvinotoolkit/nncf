@@ -170,4 +170,4 @@ jobs:
         run: |
           export PATH=/usr/local/cuda-12.1/bin${PATH:+:${PATH}}
           export LD_LIBRARY_PATH=/usr/local/cuda-12.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-          pytest tests/torch -n2 -rS -m "cuda and not weekly and not nightly and not models_hub"
+          pytest tests/torch -rS -m "cuda and not weekly and not nightly and not models_hub"
