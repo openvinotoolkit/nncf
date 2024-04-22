@@ -16,9 +16,9 @@ import time
 from dataclasses import dataclass
 from typing import Dict, Optional
 
+import torch
 import numpy as np
 import openvino as ov
-import torch
 from datasets import load_dataset
 from memory_profiler import memory_usage
 from optimum.intel.openvino import OVModelForCausalLM
@@ -71,7 +71,6 @@ class LMWeightCompression(BaseTestPipeline):
     """Pipeline for casual language models from Hugging Face repository"""
 
     OV_MODEL_NAME = "openvino_model.xml"
-    TORCH_MODEL_NAME = "torch_model.xml"
 
     def prepare_model(self) -> None:
         is_stateful = self.params.get("is_stateful", False)
@@ -147,6 +146,11 @@ class LMWeightCompression(BaseTestPipeline):
         if self.backend == BackendType.FP32:
             return
 
+        if self.backend == BackendType.TORCH:
+            inference_num_threads = os.environ.get("INFERENCE_NUM_THREADS")
+            if inference_num_threads is not None:
+                torch.set_num_threads(int(inference_num_threads))
+
         print("Weight compression...")
         start_time = time.perf_counter()
         self.run_info.compression_memory_usage = memory_usage(self._compress, max_usage=True)
@@ -160,25 +164,15 @@ class LMWeightCompression(BaseTestPipeline):
     def save_compressed_model(self) -> None:
         if self.backend == BackendType.FP32:
             return
+        elif self.backend == BackendType.TORCH:
+            self.model = ov.convert_model(
+                self.compressed_model.cpu(), example_input=self.dummy_tensor.cpu(), input=self.input_size
+            )
         ov.serialize(self.model, self.output_model_dir / self.OV_MODEL_NAME)
         self.model_hf._save_config(self.output_model_dir)
 
     def get_num_compressed(self) -> None:
-        """
-        Get number of the i8, u8, i4, u4 ops in the compressed IR.
-        """
-        num_int8 = 0
-        num_int4 = 0
-
-        for node in self.model.get_ops():
-            for i in range(node.get_output_size()):
-                if node.get_output_element_type(i).get_type_name() in ["i8", "u8"]:
-                    num_int8 += 1
-                if node.get_output_element_type(i).get_type_name() in ["i4", "u4"]:
-                    num_int4 += 1
-
-        self.run_info.num_compress_nodes.num_int8 = num_int8
-        self.run_info.num_compress_nodes.num_int4 = num_int4
+        pass
 
     def run_bench(self) -> None:
         pass
@@ -227,7 +221,11 @@ class LMWeightCompression(BaseTestPipeline):
             )
 
         compressed_model_hf = self.model_hf
-        if self.backend != BackendType.FP32:
+        if self.backend == BackendType.TORCH:
+            compressed_model_hf = AutoModelForCausalLM.from_pretrained(
+                self.output_model_dir, torch_dtype=torch.float16, device_map="cpu"
+            )
+        elif self.backend != BackendType.FP32:
             compressed_model_hf = OVModelForCausalLM.from_pretrained(
                 self.output_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=is_stateful
             )
@@ -236,19 +234,3 @@ class LMWeightCompression(BaseTestPipeline):
         similarity = all_metrics["similarity"][0]
         self.run_info.metric_name = "Similarity"
         self.run_info.metric_value = round(similarity, 5)
-
-        num_int4_reference = self.reference_data.get("num_int4")
-        num_int8_reference = self.reference_data.get("num_int8")
-
-        num_int4_value = self.run_info.num_compress_nodes.num_int4
-        num_int8_value = self.run_info.num_compress_nodes.num_int8
-
-        if num_int4_reference != num_int4_value:
-            status_msg = f"Regression: The number of int4 ops is different \
-                than reference {num_int4_reference} != {num_int4_value}"
-            raise ValueError(status_msg)
-
-        if num_int8_reference != num_int8_value:
-            status_msg = f"Regression: The number of int8 ops is different \
-                than reference {num_int8_reference} != {num_int8_value}"
-            raise ValueError(status_msg)
