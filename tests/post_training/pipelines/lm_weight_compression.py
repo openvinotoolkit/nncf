@@ -179,6 +179,7 @@ class LMWeightCompression(BaseTestPipeline):
         Actual call of weight compression
         """
         if self.backend == BackendType.TORCH:
+            """If Backend is TORCH (Assuming that it's INT8 compression), don't use a dataset as it's Unsupported"""
             self.compressed_model = nncf.compress_weights(
                 self.model,
                 dataset=None,
