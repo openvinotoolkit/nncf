@@ -92,21 +92,12 @@ function: [PyTorch](../../../examples/post_training_quantization/torch/mobilenet
 
 In case the Post-Training Quantization algorithm could not reach quality requirements you can fine-tune a quantized pytorch model. Example of the Quantization-Aware training pipeline for a pytorch model could be found [here](../../../examples/quantization_aware_training/torch/resnet18/README.md).
 
-## Dataloader Usage
+## Using `pytorch.Dataloader` or `tf.data.Dataset` as data source for calibration dataset
 
 ```batch_size``` is a parameter of a dataloader that refers to the number of samples or data points propagated through the neural network in a single pass.
 
-When utilizing post-training quantization with NNCF, the recommendation is to use a ```batch_size``` of 1 for your dataloader.
-
-However, NNCF supports dataloaders with arbitrary batch sizes, but there are some limitations that need to be taken into consideration. For some architectures, such as transformer-like models, statistics collection for ```batch_size``` greater than 1 could lead to inaccurate results.
-
-If the results after quantization with a batch size greater than 1 are inaccurate, the following recommendations apply:
-
-1) Set the ```batch_size``` to 1 for the dataloader.
-2) In ```AdvancedQuantizationParameters```, set the ```batchwise_statistics``` parameter to ```False```.
-
-Why are the statistics results different? During statistics collection for quantization with ```batch_size``` greater than 1 in NNCF, the assumption of having the batch axis lying on the 0-axis is made. This is not a general case, but for many models, it is applicable. For models where this assumption does not fit, it leads to inaccurate statistics.
-
-[Example](../../../examples/post_training_quantization/torch/mobilenet_v2/README.md) with post-training quantization for PyTorch with a dataloader having a ```batch_size``` of 128.
+NNCF allows for dataloaders with different batch sizes, but there are limitations. For models like transformers or those with unconventional tensor structures, such as the batch axis not being in the expected position, using batch sizes larger than 1 for quantization isn't supported. It happens because certain models' internal data arrangements may not align with the assumptions made during quantization, leading to inaccurate statistics calculation issues with batch sizes larger than 1.
 
 Please keep in mind that you have to recalculate the subset size for quantization according to the batch size using the following formula: ```subset_size = subset_size_for_batch_size_1 // batch_size.```.
+
+[Example](../../../examples/post_training_quantization/torch/mobilenet_v2/README.md) with post-training quantization for PyTorch with a dataloader having a ```batch_size``` of 128.
