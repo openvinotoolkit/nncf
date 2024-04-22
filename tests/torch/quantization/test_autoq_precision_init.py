@@ -183,6 +183,7 @@ def test_autoq_precision_init(_seed, dataset_dir, tmp_path, mocker, params):
     check_bitwidth_graph(algo_ctrl, model, path_to_dot, graph_dir)
 
 
+@pytest.mark.cuda
 def test_can_broadcast_initialized_precisions_in_distributed_mode(tmp_path, runs_subprocess_in_precommit):
     if not torch.cuda.is_available():
         pytest.skip("Skipping CUDA test cases for CPU only setups")

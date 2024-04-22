@@ -80,6 +80,7 @@ def test_bn_training_state_switcher(model: nn.Module):
     compare_saved_model_state_and_current_model_state(model, saved_state)
 
 
+@pytest.mark.cuda
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="Cuda is not available in current environment")
 def test_model_device():
     model = TwoConvTestModel()
