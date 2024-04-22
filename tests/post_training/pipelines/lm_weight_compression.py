@@ -71,6 +71,7 @@ class LMWeightCompression(BaseTestPipeline):
     """Pipeline for casual language models from Hugging Face repository"""
 
     OV_MODEL_NAME = "openvino_model.xml"
+    TORCH_MODEL_NAME = "torch_model.xml"
 
     def prepare_model(self) -> None:
         is_stateful = self.params.get("is_stateful", False)
@@ -226,11 +227,7 @@ class LMWeightCompression(BaseTestPipeline):
             )
 
         compressed_model_hf = self.model_hf
-        if self.backend == BackendType.TORCH:
-            compressed_model_hf = AutoModelForCausalLM.from_pretrained(
-                self.output_model_dir, torch_dtype=torch.float16, device_map="cpu"
-            )
-        elif self.backend != BackendType.FP32:
+        if self.backend != BackendType.FP32:
             compressed_model_hf = OVModelForCausalLM.from_pretrained(
                 self.output_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=is_stateful
             )
