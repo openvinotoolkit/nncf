@@ -332,6 +332,9 @@ WEIGHT_COMPRESSION_MODELS = [
         "pipeline_cls": LMWeightCompression,
         "compression_params": {
             "mode": CompressWeightsMode.INT8_ASYM,
+            "all_layers": None,
+            "awq": None,
+            "sensitivity_metric": None,
         },
         "backends": [BackendType.TORCH],
     },
