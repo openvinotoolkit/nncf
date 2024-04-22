@@ -418,8 +418,10 @@ def compress_weights(
     if backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.quantize_model import compress_weights_impl as ov_compress_weights_impl
 
-        if True in [awq, scale_estimation] and (dataset is None or mode == CompressWeightsMode.NF4):
-            raise AttributeError("Scale estimation or AWQ algorithm defined, but dataset is None or mode is NF4.")
+        if True in [awq, scale_estimation] and (dataset is None or mode == CompressWeightsMode.NF4 or group_size == -1):
+            raise AttributeError(
+                "Scale estimation or AWQ algorithm defined, but dataset is None or mode is NF4 or group_size < 0."
+            )
 
         compression_weights_impl = ov_compress_weights_impl
 
