@@ -36,7 +36,7 @@ Post-training Quantization:
 Compression-aware training:
 
 - Features:
-  - (PyTorch)	Now it is possible to apply fine-tuning on INT8 models after Post-training Quantization to improve model accuracy and make it easier to move from post-training to training-aware quantization. An example demonstrating it [has been added](examples/quantization_aware_training/torch/resnet18).
+  - (PyTorch) Now it is possible to apply fine-tuning on INT8 models after Post-training Quantization to improve model accuracy and make it easier to move from post-training to training-aware quantization. An example demonstrating it [has been added](examples/quantization_aware_training/torch/resnet18).
   - (PyTorch) Introduced extractors for the fused Convolution, Batch-/GroupNorm, and Linear functions.
 - Fixes:
   - (PyTorch) Fixed `apply_args_defaults` function issue.
