@@ -116,7 +116,8 @@ jobs:
       - name: Install NNCF and test requirements
         run: make install-torch-test
       - name: Run PyTorch precommit test scope
-        run: make test-torch-cpu
+        run: |
+          pytest tests/torch -n4 -rS -m "not cuda and not weekly and not nightly and not models_hub"
 
       # - name: Runner info
       #   continue-on-error: true
