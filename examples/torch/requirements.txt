@@ -1,7 +1,7 @@
 -c ../../constraints.txt
 torch
 torchvision
-addict
+addict>=2.4.0
 pillow>=8.0.1
 tensorboard>=2.1
 matplotlib>=3.3.3
