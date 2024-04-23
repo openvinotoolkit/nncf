@@ -942,9 +942,10 @@ def test_can_quantize_user_module_with_addmm():
     create_compressed_model_and_algo_for_test(ModelWithUserModule(), nncf_config)
 
 
+@pytest.mark.nightly
 @pytest.mark.cuda
 def test_works_when_wrapped_with_dataparallel():
-    if not torch.cuda.is_available():
+    if not torch.cuda.is_available() and torch.cuda.device_count() > 1:
         pytest.xfail("The executing host must have > 1 CUDA GPU in order for this test to be relevant.")
 
     model = SharedLayersModel()
