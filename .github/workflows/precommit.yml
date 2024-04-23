@@ -117,7 +117,7 @@ jobs:
         run: make install-torch-test
       - name: Run PyTorch precommit test scope
         run: |
-          pytest tests/torch -n4 -rS -m "not cuda and not weekly and not nightly and not models_hub"
+          pytest tests/torch -n4 -ra -m "not cuda and not weekly and not nightly and not models_hub"
 
       # - name: Runner info
       #   continue-on-error: true
@@ -170,4 +170,4 @@ jobs:
         run: |
           export PATH=/usr/local/cuda-12.1/bin${PATH:+:${PATH}}
           export LD_LIBRARY_PATH=/usr/local/cuda-12.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-          pytest tests/torch -rS -m "cuda and not weekly and not nightly and not models_hub"
+          pytest tests/torch -ra -m "cuda and not weekly and not nightly and not models_hub"
