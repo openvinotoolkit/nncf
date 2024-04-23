@@ -149,7 +149,7 @@ class BaseEarlyExitCompressionTrainingLoop(TrainingLoop, ABC):
         load_checkpoint_fn: Optional[Callable[[Checkpoint, Union[str, pathlib.Path]], None]] = None,
         early_stopping_fn: Optional[Callable[[float], bool]] = None,
         tensorboard_writer: Optional[TensorboardWriterType] = None,
-        log_dir: Union[pathlib.Path, str] = None,
+        log_dir: Optional[Union[pathlib.Path, str]] = None,
         update_learning_rate_fn: Optional[Callable[[], None]] = None,
     ) -> TModel:
         self.runner.initialize_training_loop_fns(

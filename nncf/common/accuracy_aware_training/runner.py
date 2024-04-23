@@ -517,7 +517,7 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
         self.maximal_compression_rate = maximal_compression_rate
 
         self._best_checkpoints: Dict[float, Tuple[Union[str, pathlib.Path], float]] = {}
-        self._compression_rate_target: Optional[float]
+        self._compression_rate_target: Optional[float] = None
         self.adaptive_controller: CompressionAlgorithmController
         self.was_compression_increased_on_prev_step: Optional[float]
 
