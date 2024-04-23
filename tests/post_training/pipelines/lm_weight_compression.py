@@ -20,6 +20,7 @@ import numpy as np
 import openvino as ov
 from datasets import load_dataset
 from memory_profiler import memory_usage
+from nncf.parameters import CompressWeightsMode
 from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoTokenizer
 from whowhatbench import Evaluator
@@ -178,15 +179,9 @@ class LMWeightCompression(BaseTestPipeline):
         """
         Actual call of weight compression
         """
-        if self.backend == BackendType.TORCH:
-            """If Backend is TORCH (Assuming that it's INT8 compression), don't use a dataset as it's Unsupported"""
-            self.compressed_model = nncf.compress_weights(
-                self.model,
-                dataset=None,
-                **self.compression_params,
-            )
-
-            return
+        if self.compression_params["mode"] == CompressWeightsMode.INT8_ASYM:
+            """If compression mode is INT8, don't use a dataset as it's Unsupported"""
+            self.calibration_dataset = None
 
         self.compressed_model = nncf.compress_weights(
             self.model,
