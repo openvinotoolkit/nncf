@@ -11,92 +11,92 @@ on:
       - 'docs/**/*'
 
 jobs:
-  # common:
-  #   runs-on: ubuntu-20.04
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #       with:
-  #         lfs: true
-  #     - uses: actions/setup-python@v3
-  #       with:
-  #         python-version: 3.8.10
-  #     - name: Install NNCF and test requirements
-  #       run: make install-common-test
-  #     - name: Run common precommit test scope
-  #       run: make test-common
-  #       env:
-  #         NNCF_COVERAGE: 1
-  #     - name: Upload coverage report as artifact
-  #       uses: actions/upload-artifact@v3
-  #       with:
-  #         name: coverage_common
-  #         path: ./coverage.xml
-  #     - name: Upload coverage report to codecov
-  #       uses: codecov/codecov-action@v3
-  #       with:
-  #         token: ${{ secrets.CODECOV_TOKEN }}
-  #         name: coverage_common
-  #         flags: COMMON
-  # onnx:
-  #   runs-on: ubuntu-20.04
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #       with:
-  #         lfs: true
-  #     - uses: actions/setup-python@v3
-  #       with:
-  #         python-version: 3.8.10
-  #     - name: Install NNCF and test requirements
-  #       run: make install-onnx-test
-  #     - name: Run ONNX precommit test scope
-  #       run: make test-onnx
-  #       env:
-  #         NNCF_COVERAGE: 1
-  #     - name: Upload coverage report as artifact
-  #       uses: actions/upload-artifact@v3
-  #       with:
-  #         name: coverage_onnx
-  #         path: ./coverage.xml
-  #     - name: Upload coverage report to codecov
-  #       uses: codecov/codecov-action@v3
-  #       with:
-  #         token: ${{ secrets.CODECOV_TOKEN }}
-  #         name: coverage_onnx
-  #         flags: ONNX
-  # openvino:
-  #   runs-on: ubuntu-20.04
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #       with:
-  #         lfs: true
-  #     - uses: actions/setup-python@v3
-  #       with:
-  #         python-version: 3.8.10
-  #     - name: Install NNCF and test requirements
-  #       run: make install-openvino-test
-  #     - name: Run OV precommit test scope
-  #       run: make test-openvino
-  #       env:
-  #         NNCF_COVERAGE: 1
-  #     - name: Upload coverage report as artifact
-  #       uses: actions/upload-artifact@v3
-  #       with:
-  #         name: coverage_openvino
-  #         path: ./coverage.xml
-  #     - name: Upload coverage report to codecov
-  #       uses: codecov/codecov-action@v3
-  #       with:
-  #         token: ${{ secrets.CODECOV_TOKEN }}
-  #         name: coverage_openvino
-  #         flags: OPENVINO
-
-
+  common:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          lfs: true
+      - uses: actions/setup-python@v3
+        with:
+          python-version: 3.8.10
+      - name: Install NNCF and test requirements
+        run: make install-common-test
+      - name: Run common precommit test scope
+        run: make test-common
+        env:
+          NNCF_COVERAGE: 1
+      - name: Upload coverage report as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage_common
+          path: ./coverage.xml
+      - name: Upload coverage report to codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          name: coverage_common
+          flags: COMMON
+  onnx:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          lfs: true
+      - uses: actions/setup-python@v3
+        with:
+          python-version: 3.8.10
+      - name: Install NNCF and test requirements
+        run: make install-onnx-test
+      - name: Run ONNX precommit test scope
+        run: make test-onnx
+        env:
+          NNCF_COVERAGE: 1
+      - name: Upload coverage report as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage_onnx
+          path: ./coverage.xml
+      - name: Upload coverage report to codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          name: coverage_onnx
+          flags: ONNX
+  openvino:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          lfs: true
+      - uses: actions/setup-python@v3
+        with:
+          python-version: 3.8.10
+      - name: Install NNCF and test requirements
+        run: make install-openvino-test
+      - name: Run OV precommit test scope
+        run: make test-openvino
+        env:
+          NNCF_COVERAGE: 1
+      - name: Upload coverage report as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage_openvino
+          path: ./coverage.xml
+      - name: Upload coverage report to codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          name: coverage_openvino
+          flags: OPENVINO
   pytorch-cpu:
     timeout-minutes: 40
     defaults:
       run:
         shell: bash
     runs-on: ubuntu-20.04-8-cores # aks-linux-16-cores-32gb
+    env:
+      DEBIAN_FRONTEND: noninteractive
     steps:
       - name: Install dependencies
         run : |
@@ -117,27 +117,15 @@ jobs:
         run: make install-torch-test
       - name: Run PyTorch precommit test scope
         run: |
-          pytest tests/torch -n4 -ra -m "not cuda and not weekly and not nightly and not models_hub"
-
-      # - name: Runner info
-      #   continue-on-error: true
-      #   run: |
-      #     cat /proc/cpuinfo
-      #     cat /etc/*release
-      # - name: TEST
-      #   run: |
-      #     pip install -e .
-      #     pip install torch==2.2.1
-      #     python --version
-      #     python -c "from nncf.torch.quantization.extensions import QuantizedFunctionsCPULoader; QuantizedFunctionsCPULoader.load()"
-
-
+          make test-torch-cpu
   pytorch-cuda:
     timeout-minutes: 40
     defaults:
       run:
         shell: bash
     runs-on: aks-linux-4-cores-28gb-gpu-testla-t4
+    env:
+      DEBIAN_FRONTEND: noninteractive
     steps:
       - name: Install dependencies
         run : |
@@ -170,4 +158,4 @@ jobs:
         run: |
           export PATH=/usr/local/cuda-12.1/bin${PATH:+:${PATH}}
           export LD_LIBRARY_PATH=/usr/local/cuda-12.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-          pytest tests/torch -ra -m "cuda and not weekly and not nightly and not models_hub"
+          make test-torch-cuda
