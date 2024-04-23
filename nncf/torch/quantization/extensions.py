@@ -55,7 +55,6 @@ class QuantizedFunctionsCPULoader(ExtensionLoader):
     @classmethod
     def load(cls):
         try:
-            print("start load")
             retval = torch.utils.cpp_extension.load(
                 cls.name(),
                 CPU_EXT_SRC_LIST,
@@ -63,7 +62,6 @@ class QuantizedFunctionsCPULoader(ExtensionLoader):
                 build_directory=cls.get_build_dir(),
                 verbose=False,
             )
-            print("finish load")
         except ExtensionLoaderTimeoutException as e:
             raise e
         except Exception as e:
