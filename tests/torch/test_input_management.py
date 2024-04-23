@@ -16,11 +16,13 @@ from typing import Dict, List, Tuple
 import pytest
 import torch
 
+from nncf.torch.dynamic_graph.io_handling import ExampleInputInfo
 from nncf.torch.dynamic_graph.io_handling import FillerInputElement
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.io_handling import InputInfoWrapManager
 from nncf.torch.dynamic_graph.io_handling import ModelInputInfo
 from tests.torch.helpers import MockModel
+from tests.torch.helpers import ModelWithReloadedForward
 from tests.torch.helpers import create_compressed_model_and_algo_for_test
 from tests.torch.helpers import register_bn_adaptation_init_args
 from tests.torch.test_compressed_graph import get_basic_quantization_config
@@ -199,3 +201,58 @@ def test_same_input_tensor_replication(mocker):
     assert clone_spy.call_count == 1
     cat_arg = cat_spy.call_args[0][0]
     assert cat_arg[0] is not cat_arg[1]
+
+
+@pytest.fixture(name="use_kwargs", params=(False, True))
+def use_kwargs_fixture(request):
+    return request.param
+
+
+def test_reloaded_forward_inputs_wrapping(use_kwargs, mocker):
+    """
+    Check for a model which could accept both tensor and not tensor for the same
+    input parameter that a non tensor input after a tensor input does not cause errors.
+    """
+    model = ModelWithReloadedForward()
+    example_input = torch.ones(ModelWithReloadedForward.INPUT_SHAPE)
+    input_info = ExampleInputInfo.from_example_input(example_input)
+    mgr = InputInfoWrapManager(input_info, inspect.signature(model.forward), model)
+    if use_kwargs:
+        model_args = ()
+        model_kwargs = {"x": {"tensor": example_input}}
+    else:
+        model_args = ({"tensor": example_input},)
+        model_kwargs = {}
+
+    ref_model_args = ({"tensor": example_input},)
+    ref_model_kwargs = {}
+
+    mocker.patch("nncf.torch.dynamic_graph.io_handling.nncf_model_input")
+    from nncf.torch.dynamic_graph.io_handling import nncf_model_input
+
+    actual_args, actual_kwargs = mgr.wrap_inputs(model_args, model_kwargs)
+    nncf_model_input.assert_not_called()
+    assert actual_args == ref_model_args
+    assert actual_kwargs == ref_model_kwargs
+
+
+def test_non_tensor_param_becomes_a_tensor_param(use_kwargs):
+    """
+    Check for a model which could accept both tensor and not tensor for the same
+    input parameter that a tensor input after a non tensor input raises runtime error.
+    """
+    model = ModelWithReloadedForward()
+    tensor_input = torch.ones(ModelWithReloadedForward.INPUT_SHAPE)
+    example_input = ({"tensor": tensor_input},)
+    input_info = ExampleInputInfo.from_example_input(example_input)
+    mgr = InputInfoWrapManager(input_info, inspect.signature(model.forward), model)
+    with pytest.raises(RuntimeError) as exc_info:
+        if use_kwargs:
+            mgr.wrap_inputs(model_args=(), model_kwargs={"x": tensor_input})
+        else:
+            mgr.wrap_inputs(model_args=(tensor_input,), model_kwargs={})
+    assert (
+        exc_info.value.args[0] == 'Original model forward parameter "x" expected to not be a tensor,'
+        " but the tensor type recieved."
+        ' Please use a tensor type as an example input for the "x" parameter_name'
+    )
