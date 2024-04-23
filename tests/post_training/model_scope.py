@@ -155,7 +155,7 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {},
         "backends": NNCF_PTQ_BACKENDS,
-        "batch_size": 128,
+        "batch_size": 64,
     },
     {
         "reported_name": "timm/levit_128",
