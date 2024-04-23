@@ -175,13 +175,31 @@ class LMWeightCompression(BaseTestPipeline):
         self.model_hf.save_pretrained(self.fp32_model_dir)
         self.model_hf._save_config(self.fp32_model_dir)
 
+    # def _compress(self):
+    #     """
+    #     Actual call of weight compression
+    #     """
+    #     if self.compression_params["mode"] == CompressWeightsMode.INT8_ASYM:
+    #         """If compression mode is INT8, don't use a dataset as it's Unsupported"""
+    #         self.calibration_dataset = None
+    #
+    #     self.compressed_model = nncf.compress_weights(
+    #         self.model,
+    #         dataset=self.calibration_dataset,
+    #         **self.compression_params,
+    #     )
     def _compress(self):
         """
         Actual call of weight compression
         """
-        if self.compression_params["mode"] == CompressWeightsMode.INT8_ASYM:
-            """If compression mode is INT8, don't use a dataset as it's Unsupported"""
-            self.calibration_dataset = None
+        if self.backend == BackendType.TORCH:
+            from nncf.torch.model_creation import is_wrapped_model
+            from nncf.torch.model_creation import wrap_model
+
+            if not is_wrapped_model(self.model):
+                example_input = next(iter(self.calibration_dataset.get_inference_data()))
+                self.model = wrap_model(self.model, example_input=example_input, trace_parameters=True)
+                self.calibration_dataset = None
 
         self.compressed_model = nncf.compress_weights(
             self.model,
