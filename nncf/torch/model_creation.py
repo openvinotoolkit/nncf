@@ -326,6 +326,10 @@ def wrap_model(
     :param trace_parameters: Whether to trace model parameters. Default is False.
     :return: A model wrapped by NNCFNetwork.
     """
+    if not isinstance(model, torch.nn.Module):
+        raise TypeError(
+            f"The provided model type {type(model)} is incompatible. Only models inheriting from torch.nn.Module are supported."
+        )
 
     input_info = ExampleInputInfo.from_example_input(example_input)
 
