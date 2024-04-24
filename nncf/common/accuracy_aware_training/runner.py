@@ -235,7 +235,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.base_lr_reduction_factor_during_search = 1.0
         self.lr_updates_needed: bool = lr_updates_needed
 
-        self.accuracy_budget: float = None
+        self.accuracy_budget: Optional[float] = None
         self.is_higher_metric_better: bool = True
         self.optimizer: OptimizerType  # type: ignore
         self.lr_scheduler: LRSchedulerType  # type: ignore
@@ -247,7 +247,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.current_loss: float = 0
 
         self._compressed_training_history: List[Tuple[float, float]] = []
-        self._best_checkpoint: Tuple[Union[str, pathlib.Path], float] = None
+        self._best_checkpoint: Optional[Tuple[Union[str, pathlib.Path], float]] = None
 
         self._train_epoch_fn: Callable[
             [
@@ -405,7 +405,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
     def load_best_checkpoint(self, model: TModel) -> float:
         resuming_checkpoint_path: Union[str, pathlib.Path] = ""
         compression_rate: float = 0.0
-        resuming_checkpoint_path, compression_rate = self._best_checkpoint
+        resuming_checkpoint_path, compression_rate = self._best_checkpoint  # type: ignore
         nncf_logger.info(f"Loading the best checkpoint found during training: {resuming_checkpoint_path}")
         self._load_checkpoint(model, resuming_checkpoint_path)
         return compression_rate
