@@ -336,15 +336,7 @@ class InputInfoWrapManager:
                     )
                 continue  # Did not expect a tensor at this parameter during graph building, shouldn't wrap now too
 
-            if potential_tensor is not None:
-                if not isinstance(potential_tensor, torch.Tensor):
-                    nncf_logger.warning(
-                        f'Original model forward parameter "{param_name}" expected to be a tensor,'
-                        f" but {type(potential_tensor)} recieved."
-                    )
-                    continue
-                bound_model_params.arguments[param_name] = nncf_model_input(potential_tensor)
-            else:
+            if potential_tensor is None:
                 # Default was None - cannot wrap as-is. Will wrap a dummy tensor as specified in
                 # input info - will preserve the call order of nncf_model_input nodes,
                 # and the post-hooks for the input node will execute. The result won't go anywhere, though.
@@ -354,6 +346,9 @@ class InputInfoWrapManager:
                     device = get_model_device(self._module_ref_for_device)
                 dummy_input_copy = dummy_input.clone().to(device)
                 _ = nncf_model_input(dummy_input_copy)
+            elif isinstance(potential_tensor, torch.Tensor):
+                # Skip wrapping by nncf_model_input in case potential tensor is not a torch.Tensor.
+                bound_model_params.arguments[param_name] = nncf_model_input(potential_tensor)
 
         return bound_model_params.args, bound_model_params.kwargs
 
