@@ -328,7 +328,8 @@ def wrap_model(
     """
     if not isinstance(model, torch.nn.Module):
         raise TypeError(
-            f"The provided model type {type(model)} is incompatible. Only models inheriting from torch.nn.Module are supported."
+            f"The provided model type {type(model)} is incompatible. "
+            "Only models inheriting from torch.nn.Module are supported."
         )
 
     input_info = ExampleInputInfo.from_example_input(example_input)
