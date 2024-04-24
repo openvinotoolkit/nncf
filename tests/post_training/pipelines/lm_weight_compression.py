@@ -22,7 +22,7 @@ from datasets import load_dataset
 from memory_profiler import memory_usage
 from nncf.parameters import CompressWeightsMode
 from optimum.intel.openvino import OVModelForCausalLM
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, AutoModelForCausalLM
 from whowhatbench import Evaluator
 
 import nncf
@@ -69,21 +69,25 @@ class WCTimeStats(StatsFromOutput):
 class LMWeightCompression(BaseTestPipeline):
     """Pipeline for casual language models from Hugging Face repository"""
 
-    OV_MODEL_NAME = "openvino_model.xml"
+    MODEL_NAME = "openvino_model.xml"
+    MODEL_FUNC = OVModelForCausalLM
 
     def prepare_model(self) -> None:
+        if self.backend == BackendType.TORCH:
+            self.MODEL_NAME = "torch_model.xml"
+            self.MODEL_FUNC = AutoModelForCausalLM
         is_stateful = self.params.get("is_stateful", False)
         if is_stateful:
             self.fp32_model_dir = self.fp32_model_dir.parent / (self.fp32_model_dir.name + "_sf")
-        if not (self.fp32_model_dir / self.OV_MODEL_NAME).exists():
+        if not (self.fp32_model_dir / self.MODEL_NAME).exists():
             # export by model_id
-            self.model_hf = OVModelForCausalLM.from_pretrained(
+            self.model_hf = self.MODEL_FUNC.from_pretrained(
                 self.model_id, export=True, load_in_8bit=False, compile=False, stateful=is_stateful
             )
             self._dump_model_fp32()
         else:
             # no export, load from IR. Applicable for sequential run of test cases in local environment.
-            self.model_hf = OVModelForCausalLM.from_pretrained(
+            self.model_hf = self.MODEL_FUNC.from_pretrained(
                 self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=is_stateful
             )
         self.model = self.model_hf.model
@@ -158,7 +162,7 @@ class LMWeightCompression(BaseTestPipeline):
     def save_compressed_model(self) -> None:
         if self.backend == BackendType.FP32:
             return
-        ov.serialize(self.model, self.output_model_dir / self.OV_MODEL_NAME)
+        ov.serialize(self.model, self.output_model_dir / self.MODEL_NAME)
         self.model_hf._save_config(self.output_model_dir)
 
     def get_num_compressed(self) -> None:
@@ -220,7 +224,7 @@ class LMWeightCompression(BaseTestPipeline):
         gt_data_path.parent.mkdir(parents=True, exist_ok=True)
         if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
             print("Collection ground-truth reference data")
-            model_gold = OVModelForCausalLM.from_pretrained(
+            model_gold = self.MODEL_FUNC.from_pretrained(
                 self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=is_stateful
             )
             evaluator = Evaluator(base_model=model_gold, tokenizer=self.preprocessor, metrics=("similarity",))
@@ -234,7 +238,7 @@ class LMWeightCompression(BaseTestPipeline):
 
         compressed_model_hf = self.model_hf
         if self.backend != BackendType.FP32:
-            compressed_model_hf = OVModelForCausalLM.from_pretrained(
+            compressed_model_hf = self.MODEL_FUNC.from_pretrained(
                 self.output_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=is_stateful
             )
         print("Evaluation of the target model")
