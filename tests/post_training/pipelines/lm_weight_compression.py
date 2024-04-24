@@ -140,6 +140,15 @@ class LMWeightCompression(BaseTestPipeline):
     def prepare_calibration_dataset(self):
         dataset = load_dataset("wikitext", "wikitext-2-v1", split="train", revision="b08601e")
         dataset = dataset.filter(lambda example: len(example["text"]) > 80)
+        if self.backend == BackendType.TORCH:
+            example_text = "The TinyLlama project aims to pretrain a 1.1B Llama model on 3 trillion tokens."
+            token = self.tokenizer(example_text, max_length=500, return_tensors="pt", truncation=True)
+            inputs = {"input_ids": token["input_ids"], "attention_mask": token["attention_mask"]}
+
+            self.calibration_dataset = nncf.Dataset([inputs])
+
+            return
+
         self.calibration_dataset = nncf.Dataset(dataset, self.get_transform_calibration_fn())
 
     def cleanup_cache(self):
