@@ -94,7 +94,7 @@ jobs:
     defaults:
       run:
         shell: bash
-    runs-on: ubuntu-20.04-8-cores # aks-linux-16-cores-32gb
+    runs-on: ubuntu-20.04-8-cores
     env:
       DEBIAN_FRONTEND: noninteractive
     steps:
@@ -123,7 +123,7 @@ jobs:
     defaults:
       run:
         shell: bash
-    runs-on: aks-linux-4-cores-28gb-gpu-testla-t4
+    runs-on: aks-linux-4-cores-28gb-gpu-tesla-t4
     env:
       DEBIAN_FRONTEND: noninteractive
     steps:
