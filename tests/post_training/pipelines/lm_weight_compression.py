@@ -18,11 +18,12 @@ from typing import Dict, Optional
 
 import numpy as np
 import openvino as ov
+import transformers
 from datasets import load_dataset
 from memory_profiler import memory_usage
-from nncf.parameters import CompressWeightsMode
 from optimum.intel.openvino import OVModelForCausalLM
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoModelForCausalLM
+from transformers import AutoTokenizer
 from whowhatbench import Evaluator
 
 import nncf
@@ -78,16 +79,16 @@ class LMWeightCompression(BaseTestPipeline):
             self.MODEL_NAME = "torch_model.xml"
             self.MODEL_FUNC = AutoModelForCausalLM
             MODEL_SPECIFIC_PARAMS = {}
+            self.tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_id)
         else:
             MODEL_SPECIFIC_PARAMS = {"export": True, "compile": False, "stateful": is_stateful}
         if is_stateful:
             self.fp32_model_dir = self.fp32_model_dir.parent / (self.fp32_model_dir.name + "_sf")
         if not (self.fp32_model_dir / self.MODEL_NAME).exists():
             # export by model_id
-            self.model_hf = self.MODEL_FUNC.from_pretrained(
-                self.model_id, load_in_8bit=False, **MODEL_SPECIFIC_PARAMS
-            )
-            self._dump_model_fp32()
+            self.model_hf = self.MODEL_FUNC.from_pretrained(self.model_id, load_in_8bit=False, **MODEL_SPECIFIC_PARAMS)
+            if self.backend != BackendType.TORCH:
+                self._dump_model_fp32()
         else:
             # no export, load from IR. Applicable for sequential run of test cases in local environment.
             self.model_hf = self.MODEL_FUNC.from_pretrained(
@@ -182,19 +183,6 @@ class LMWeightCompression(BaseTestPipeline):
         self.model_hf.save_pretrained(self.fp32_model_dir)
         self.model_hf._save_config(self.fp32_model_dir)
 
-    # def _compress(self):
-    #     """
-    #     Actual call of weight compression
-    #     """
-    #     if self.compression_params["mode"] == CompressWeightsMode.INT8_ASYM:
-    #         """If compression mode is INT8, don't use a dataset as it's Unsupported"""
-    #         self.calibration_dataset = None
-    #
-    #     self.compressed_model = nncf.compress_weights(
-    #         self.model,
-    #         dataset=self.calibration_dataset,
-    #         **self.compression_params,
-    #     )
     def _compress(self):
         """
         Actual call of weight compression
