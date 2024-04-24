@@ -73,22 +73,25 @@ class LMWeightCompression(BaseTestPipeline):
     MODEL_FUNC = OVModelForCausalLM
 
     def prepare_model(self) -> None:
+        is_stateful = self.params.get("is_stateful", False)
         if self.backend == BackendType.TORCH:
             self.MODEL_NAME = "torch_model.xml"
             self.MODEL_FUNC = AutoModelForCausalLM
-        is_stateful = self.params.get("is_stateful", False)
+            MODEL_SPECIFIC_PARAMS = {}
+        else:
+            MODEL_SPECIFIC_PARAMS = {"export": True, "compile": False, "stateful": is_stateful}
         if is_stateful:
             self.fp32_model_dir = self.fp32_model_dir.parent / (self.fp32_model_dir.name + "_sf")
         if not (self.fp32_model_dir / self.MODEL_NAME).exists():
             # export by model_id
             self.model_hf = self.MODEL_FUNC.from_pretrained(
-                self.model_id, export=True, load_in_8bit=False, compile=False, stateful=is_stateful
+                self.model_id, load_in_8bit=False, **MODEL_SPECIFIC_PARAMS
             )
             self._dump_model_fp32()
         else:
             # no export, load from IR. Applicable for sequential run of test cases in local environment.
             self.model_hf = self.MODEL_FUNC.from_pretrained(
-                self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=is_stateful
+                self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, **MODEL_SPECIFIC_PARAMS
             )
         self.model = self.model_hf.model
 
