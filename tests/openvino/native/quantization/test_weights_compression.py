@@ -456,6 +456,21 @@ def test_shared_gather(mode):
             assert op.get_element_type() == weight_name_vs_type[op_name]
 
 
+@pytest.mark.parametrize("all_layers", (True, False))
+def test_shared_gather_all_layers(all_layers):
+    weight_name_vs_type = {
+        "gather_2_data": ov.Type.u4 if all_layers else ov.Type.u8,
+        "shared_data": ov.Type.u4 if all_layers else ov.Type.u8,
+        "matmul_1_data": ov.Type.u4,
+    }
+    model = GatherAndMatmulShareData().ov_model
+    compressed_model = compress_weights(model, CompressWeightsMode.INT4_ASYM, group_size=-1, all_layers=all_layers)
+    for op in compressed_model.get_ordered_ops():
+        op_name = op.get_friendly_name()
+        if op.get_type_name() == "Constant" and op_name in weight_name_vs_type:
+            assert op.get_element_type() == weight_name_vs_type[op_name]
+
+
 @dataclass
 class QuantErrorDesc:
     weight: List[float]

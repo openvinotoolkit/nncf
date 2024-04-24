@@ -175,9 +175,6 @@ class WeightCompression(Algorithm):
         if self._mode in [CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM]:
             return all_weight_params
 
-        if self._all_layers:
-            return list(filter(lambda wp: len(wp.reduction_axes) == 1, all_weight_params))
-
         ratio_defining_params = list(
             filter(
                 lambda wp: wp.node_with_weight.metatype in self._backend_entity.matmul_metatypes,
@@ -185,18 +182,21 @@ class WeightCompression(Algorithm):
             )
         )
 
+        # The last MatMul layer is quantized to 4-bits if all_layers=True or if the layer is shared
+        if not self._all_layers and not is_last_layer_shared:
+            ratio_defining_params = ratio_defining_params[:-1]
+
         # Embedding layers are quantized to 4-bits only if all_layers=True.
         if self._all_layers:
             embedding_params = list(
                 filter(
-                    lambda wp: wp.node_with_weight.metatype in self._backend_entity.embedding_metatypes,
+                    lambda wp: wp.node_with_weight.metatype in self._backend_entity.embedding_metatypes
+                    and len(wp.reduction_axes) == 1,
                     all_weight_params,
                 )
             )
             ratio_defining_params.extend(embedding_params)
 
-        if not self._all_layers and not is_last_layer_shared:
-            ratio_defining_params = ratio_defining_params[:-1]
         return ratio_defining_params
 
     def _set_weight_compression_config(
