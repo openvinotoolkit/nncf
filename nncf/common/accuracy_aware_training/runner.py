@@ -235,7 +235,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.base_lr_reduction_factor_during_search = 1.0
         self.lr_updates_needed: bool = lr_updates_needed
 
-        self.accuracy_budget: float
+        self.accuracy_budget: float = None
         self.is_higher_metric_better: bool = True
         self.optimizer: OptimizerType  # type: ignore
         self.lr_scheduler: LRSchedulerType  # type: ignore
@@ -247,7 +247,7 @@ class BaseAccuracyAwareTrainingRunner(TrainingRunner):
         self.current_loss: float = 0
 
         self._compressed_training_history: List[Tuple[float, float]] = []
-        self._best_checkpoint: Tuple[Union[str, pathlib.Path], float]
+        self._best_checkpoint: Tuple[Union[str, pathlib.Path], float] = None
 
         self._train_epoch_fn: Callable[
             [
@@ -519,7 +519,7 @@ class BaseAdaptiveCompressionLevelTrainingRunner(BaseAccuracyAwareTrainingRunner
         self._best_checkpoints: Dict[float, Tuple[Union[str, pathlib.Path], float]] = {}
         self._compression_rate_target: Optional[float] = None
         self.adaptive_controller: CompressionAlgorithmController
-        self.was_compression_increased_on_prev_step: Optional[float]
+        self.was_compression_increased_on_prev_step: Optional[float] = None
 
     def dump_statistics(self, model: TModel, compression_controller: CompressionAlgorithmController) -> None:
         self.update_training_history(self.compression_rate_target, self.current_val_metric_value)
