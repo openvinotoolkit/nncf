@@ -74,7 +74,9 @@ class StatisticsCollectorParameters:
     :param clipping_value: The value to use for clipping the input tensors before
         collecting statistics.
     :type clipping_value: Optional[float]
-    :param quantile_outlier_prob: The outlier probability for quantile statistics.
+    :param quantile_outlier_prob: The outlier probability for QUANTILE statistic or MEAN_NO_OUTLIERS/MEDIAN_NO_OUTLIERS
+        aggregators. When using these together, please be aware that currently the quantile value will be applied to
+        both.
     :type quantile_outlier_prob: float
     """
 

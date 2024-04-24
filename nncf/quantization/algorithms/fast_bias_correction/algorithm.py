@@ -154,7 +154,10 @@ class FastBiasCorrection(Algorithm):
             input_fp, input_shape = self._get_fp_inputs(statistic_points, in_node_name)
             output_fp = self._get_fp_outputs(statistic_points, out_node_name)
 
-            extracted_model = self._extract_submodel(model_transformer, node_name)
+            extracted_model = self._extract_submodel(model_transformer, in_node_name, out_node_name)
+            if extracted_model is None:
+                nncf_logger.debug(f"Skipping node {node_name} because cant extract submodel")
+                continue
 
             sub_input_name, sub_output_name = self._backend_entity.get_sub_input_output_names(extracted_model)
 
@@ -267,15 +270,18 @@ class FastBiasCorrection(Algorithm):
             output_fp.extend(Tensor(tensor_collector.get_statistics().mean_values))
         return output_fp
 
-    def _extract_submodel(self, model_transformer: ModelTransformer, node_name: str) -> TModel:
+    def _extract_submodel(self, model_transformer: ModelTransformer, in_node_name: str, out_node_name: str) -> TModel:
         """
         Extracts sub-model using backend-specific ModelTransformer.
 
         :param model_transformer: Backend-specific ModelTransformer.
-        :param node_name: Name of the node that should be a center of the sub-model.
+        :param in_node_name: Name of the start node.
+        :param out_node_name: Name of the output node.
         :return: Backend-specific sub-model.
         """
-        model_extraction_command = self._backend_entity.model_extraction_command([(node_name, 0)], [(node_name, 0)])
+        model_extraction_command = self._backend_entity.model_extraction_command(
+            [(in_node_name, 0)], [(out_node_name, 0)]
+        )
         me_transformation_layout = TransformationLayout()
         me_transformation_layout.register(model_extraction_command)
         extracted_model = model_transformer.transform(me_transformation_layout)

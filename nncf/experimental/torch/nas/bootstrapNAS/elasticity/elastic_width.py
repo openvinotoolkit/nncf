@@ -48,9 +48,9 @@ from nncf.experimental.torch.nas.bootstrapNAS.elasticity.base_handler import Sin
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.elasticity_dim import ElasticityDim
 from nncf.experimental.torch.nas.bootstrapNAS.elasticity.filter_reorder import FilterReorderingAlgorithm
 from nncf.torch.graph.graph import PTNNCFGraph
-from nncf.torch.graph.operator_metatypes import PTDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTModuleBatchNormMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
+from nncf.torch.graph.operator_metatypes import PTModuleDepthwiseConv2dSubtype
 from nncf.torch.graph.operator_metatypes import PTModuleLayerNormMetatype
 from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
@@ -1027,7 +1027,7 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
 
         metatype_vs_elastic_op_creator = {
             PTModuleConv2dMetatype: self._create_elastic_conv_width_op,
-            PTDepthwiseConv2dSubtype: self._create_elastic_conv_width_op,
+            PTModuleDepthwiseConv2dSubtype: self._create_elastic_conv_width_op,
             PTModuleLinearMetatype: self._create_elastic_linear_width_op,
         }
 
@@ -1078,7 +1078,7 @@ class ElasticWidthBuilder(SingleElasticityBuilder):
 
         metatype_vs_dynamic_input_op_creator = {
             PTModuleConv2dMetatype: self._create_dynamic_conv_input_op,
-            PTDepthwiseConv2dSubtype: self._create_dynamic_dw_conv_input_op,
+            PTModuleDepthwiseConv2dSubtype: self._create_dynamic_dw_conv_input_op,
             PTModuleBatchNormMetatype: self._create_dynamic_bn_input_op,
             PTModuleLayerNormMetatype: self._create_dynamic_ln_input_op,
             PTModuleLinearMetatype: self._create_dynamic_linear_input_op,

@@ -5,6 +5,7 @@ openvino-dev
 pytest
 pytest-cov
 pytest-mock
+pytest-xdist
 torch
 torchvision
 virtualenv
