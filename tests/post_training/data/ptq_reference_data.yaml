@@ -105,11 +105,11 @@ timm/inception_resnet_v2_backend_CUDA_TORCH:
 timm/inception_resnet_v2_backend_FP32:
   metric_value: 0.80448
 timm/inception_resnet_v2_backend_ONNX:
-  metric_value: 0.80424
+  metric_value: 0.80396
 timm/inception_resnet_v2_backend_OV:
-  metric_value: 0.8038
+  metric_value: 0.80422
 timm/inception_resnet_v2_backend_TORCH:
-  metric_value: 0.80356
+  metric_value: 0.80334
 timm/levit_128_backend_CUDA_TORCH:
   metric_value: 0.7324
 timm/levit_128_backend_FP32:
