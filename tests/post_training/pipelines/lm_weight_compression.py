@@ -18,6 +18,7 @@ from typing import Dict, Optional
 
 import numpy as np
 import openvino as ov
+import torch
 import transformers
 from datasets import load_dataset
 from memory_profiler import memory_usage
@@ -78,7 +79,7 @@ class LMWeightCompression(BaseTestPipeline):
         if self.backend == BackendType.TORCH:
             self.MODEL_NAME = "torch_model.xml"
             self.MODEL_FUNC = AutoModelForCausalLM
-            MODEL_SPECIFIC_PARAMS = {}
+            MODEL_SPECIFIC_PARAMS = {"torch_dtype": torch.float16}
             self.tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_id)
         else:
             MODEL_SPECIFIC_PARAMS = {"export": True, "compile": False, "stateful": is_stateful}
