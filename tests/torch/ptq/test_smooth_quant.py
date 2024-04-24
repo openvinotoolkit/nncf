@@ -19,8 +19,8 @@ import torch
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.quantization.algorithms.smooth_quant.torch_backend import PTSmoothQuantAlgoBackend
 from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
-from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
-from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
+from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
+from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.model_creation import wrap_model
@@ -36,15 +36,15 @@ PT_LINEAR_MODEL_SQ_MAP = {
 }
 
 PT_LINEAR_MODEL_MM_MAP = {
-    "Linear1": "LinearMultiShapeModel/NNCFLinear[linear_2]/linear_0",
-    "Linear2": "LinearMultiShapeModel/NNCFLinear[linear_1]/linear_0",
-    "Linear3": "LinearMultiShapeModel/NNCFLinear[linear_3]/linear_0",
-    "Linear4": "LinearMultiShapeModel/NNCFLinear[linear_4]/linear_0",
+    "Linear1": "LinearMultiShapeModel/Linear[linear_2]/linear_0",
+    "Linear2": "LinearMultiShapeModel/Linear[linear_1]/linear_0",
+    "Linear3": "LinearMultiShapeModel/Linear[linear_3]/linear_0",
+    "Linear4": "LinearMultiShapeModel/Linear[linear_4]/linear_0",
 }
 
 PT_CONV_MODEL_SQ_MAP = {("Conv1",): "/nncf_model_input_0_0_0/nncf_smooth_quant"}
 
-PT_CONV_MODEL_MM_MAP = {"Conv1": "ConvTestModel/NNCFConv2d[conv]/conv2d_0"}
+PT_CONV_MODEL_MM_MAP = {"Conv1": "ConvTestModel/Conv2d[conv]/conv2d_0"}
 
 
 class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
@@ -84,7 +84,7 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
 
     @staticmethod
     def backend_specific_model(model: torch.nn.Module, tmp_dir: str) -> ov.Model:
-        return wrap_model(model.eval(), torch.rand(model.INPUT_SIZE))
+        return wrap_model(model.eval(), torch.rand(model.INPUT_SIZE), trace_parameters=True)
 
     @staticmethod
     def check_scales(model: torch.nn.Module, reference_values: Dict[str, np.ndarray], model_cls) -> None:
@@ -107,8 +107,8 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
     @pytest.mark.parametrize(
         "node_metatype, layer_attributes, port_id, reference_value",
         (
-            (PTModuleLinearMetatype, None, 0, -1),
-            (PTModuleConv2dMetatype, None, 0, 1),
+            (PTLinearMetatype, None, 0, -1),
+            (PTConv2dMetatype, None, 0, 1),
         ),
     )
     def test_get_activation_channel_axis(self, node_metatype, layer_attributes, port_id, reference_value):
@@ -117,8 +117,8 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
     @pytest.mark.parametrize(
         "node_metatype, layer_attributes, reference_value",
         (
-            (PTModuleLinearMetatype, None, 1),
-            (PTModuleConv2dMetatype, None, 1),
+            (PTLinearMetatype, None, 1),
+            (PTConv2dMetatype, None, 1),
         ),
     )
     def test_get_weight_channel_axis(self, node_metatype, layer_attributes, reference_value):
@@ -126,4 +126,4 @@ class TestTorchSQAlgorithm(TemplateTestSQAlgorithm):
 
     @staticmethod
     def get_matmul_metatype():
-        return PTModuleLinearMetatype
+        return PTLinearMetatype
