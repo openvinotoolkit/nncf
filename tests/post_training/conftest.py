@@ -19,7 +19,7 @@ def pytest_addoption(parser):
     parser.addoption("--data", action="store", help="Data directory")
     parser.addoption("--output", action="store", default="./tmp/", help="Directory to store artifacts")
     parser.addoption("--no-eval", action="store_true", help="Skip validation step")
-    parser.addoption("--batch-size", action="store", default=1, type=int, help="Batch size of calibration dataset")
+    parser.addoption("--batch-size", action="store", default=None, type=int, help="Batch size of calibration dataset")
     parser.addoption("--subset-size", type=int, default=None, help="Set subset size")
     parser.addoption("--fp32", action="store_true", help="Test original model")
     parser.addoption("--cuda", action="store_true", help="Enable CUDA_TORCH backend")

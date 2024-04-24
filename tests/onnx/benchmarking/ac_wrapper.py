@@ -35,7 +35,7 @@ class MSCocoSegmentationToVOCConverter(MSCocoSegmentationConverter):
 
     @staticmethod
     def convert_to_voc(image_labels):
-        return [COCO_TO_VOC[label] if label in COCO_TO_VOC else 0 for label in image_labels]
+        return [COCO_TO_VOC.get(label, 0) for label in image_labels]
 
 
 if __name__ == "__main__":

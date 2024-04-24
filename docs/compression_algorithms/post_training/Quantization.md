@@ -91,3 +91,13 @@ NNCF provides the examples of Post-Training Quantization where you can find the 
 function: [PyTorch](../../../examples/post_training_quantization/torch/mobilenet_v2/README.md), [TensorFlow](../../../examples/post_training_quantization/tensorflow/mobilenet_v2/README.md), [ONNX](../../../examples/post_training_quantization/onnx/mobilenet_v2/README.md), and [OpenVINO](../../../examples/post_training_quantization/openvino/mobilenet_v2/README.md)
 
 In case the Post-Training Quantization algorithm could not reach quality requirements you can fine-tune a quantized pytorch model. Example of the Quantization-Aware training pipeline for a pytorch model could be found [here](../../../examples/quantization_aware_training/torch/resnet18/README.md).
+
+## Using `pytorch.Dataloader` or `tf.data.Dataset` as data source for calibration dataset
+
+```batch_size``` is a parameter of a dataloader that refers to the number of samples or data points propagated through the neural network in a single pass.
+
+NNCF allows for dataloaders with different batch sizes, but there are limitations. For models like transformers or those with unconventional tensor structures, such as the batch axis not being in the expected position, using batch sizes larger than 1 for quantization isn't supported. It happens because certain models' internal data arrangements may not align with the assumptions made during quantization, leading to inaccurate statistics calculation issues with batch sizes larger than 1.
+
+Please keep in mind that you have to recalculate the subset size for quantization according to the batch size using the following formula: ```subset_size = subset_size_for_batch_size_1 // batch_size.```.
+
+[Example](../../../examples/post_training_quantization/torch/mobilenet_v2/README.md) with post-training quantization for PyTorch with a dataloader having a ```batch_size``` of 128.
