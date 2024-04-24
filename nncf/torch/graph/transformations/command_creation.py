@@ -9,8 +9,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Union
+from typing import List, Optional, Union
 
+import torch
 from torch import Tensor
 
 from nncf.common.graph.graph import NNCFNode
@@ -82,3 +83,26 @@ def create_shared_quantizer_insertion_command(
         compression_module_type=ExtraCompressionModuleType.EXTERNAL_QUANTIZER,
         priority=TransformationPriority.QUANTIZATION_PRIORITY,
     )
+
+
+def create_pt_insertion_command(
+    module: torch.nn.Module,
+    target_type: TargetType,
+    target_node_name: str,
+    priority: int,
+    input_port_id: Optional[int],
+) -> PTInsertionCommand:
+    """
+    Creates a PTInsertionCommand.
+
+    :param module: Torch module to insert.
+    :param target_type: Insertion command target type.
+    :param target_name: Insertion command target name.
+    :param priority: Insertion command priority.
+    :param input_port_id: Insertion command input port id.
+    :return: A PTInsertionCommand
+    """
+    target_point = PTTargetPoint(
+        target_type=target_type, target_node_name=target_node_name, input_port_id=input_port_id
+    )
+    return PTInsertionCommand(point=target_point, fn=module, priority=priority)

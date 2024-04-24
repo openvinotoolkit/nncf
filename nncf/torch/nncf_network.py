@@ -67,9 +67,9 @@ from nncf.torch.graph.graph_builder import GraphBuilder
 from nncf.torch.graph.graph_builder import GraphConverter
 from nncf.torch.graph.operator_metatypes import OPERATORS_WITH_WEIGHTS_METATYPES
 from nncf.torch.graph.operator_metatypes import PTSplitMetatype
+from nncf.torch.graph.transformations.command_creation import create_pt_insertion_command
 from nncf.torch.graph.transformations.commands import DEFAULT_HOOKS_GROUP_NAME
 from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
-from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.layout import PTTransformationLayout
@@ -1270,26 +1270,3 @@ def compression_module_type_to_attr_name(compression_module_type: ExtraCompressi
     if compression_module_type == ExtraCompressionModuleType.EXTERNAL_OP:
         return EXTERNAL_OP_STORAGE_NAME
     raise nncf.ValidationError("Unknown extra module type")
-
-
-def create_pt_insertion_command(
-    module: torch.nn.Module,
-    target_type: TargetType,
-    target_node_name: str,
-    priority: int,
-    input_port_id: Optional[int],
-) -> PTInsertionCommand:
-    """
-    Creates a PTInsertionCommand.
-
-    :param module: Torch module to insert.
-    :param target_type: Insertion command target type.
-    :param target_name: Insertion command target name.
-    :param priority: Insertion command priority.
-    :param input_port_id: Insertion command input port id.
-    :return: A PTInsertionCommand
-    """
-    target_point = PTTargetPoint(
-        target_type=target_type, target_node_name=target_node_name, input_port_id=input_port_id
-    )
-    return PTInsertionCommand(point=target_point, fn=module, priority=priority)
