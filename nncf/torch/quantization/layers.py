@@ -1078,6 +1078,7 @@ class SymmetricWeightsDecompressor(nn.Module):
         """
         super().__init__()
         self.register_buffer("_scale", scale)
+        self.result_dtype = result_dtype
 
     def forward(self, x):
         zero_point = torch.zeros_like(self._scale)

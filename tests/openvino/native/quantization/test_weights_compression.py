@@ -277,7 +277,7 @@ def test_gather_in_4_bit_if_all_layers_with_data(metric):
         sensitivity_metric=metric,
         dataset=dataset,
     )
-    int4_reference_node_names = ["gather_2_data", "gather_2_data/zero_point"]
+    int4_reference_node_names = ["gather_2_data"]
     nodes_map = {op.get_friendly_name(): op for op in compressed_model.get_ordered_ops()}
     for node_name in int4_reference_node_names:
         node = nodes_map[node_name]
@@ -306,17 +306,13 @@ def test_gather_can_be_8_bit_if_all_layers_without_data():
 def test_conv_in_8_bit_if_mode_8bit(mode):
     model = WeightsModel().ov_model
     compressed_model = compress_weights(model, mode=mode)
-    int8_reference_node_names = [
-        "conv_weights_0",
-        "conv_weights_0/zero_point",
-        "conv_weights_1",
-        "conv_weights_1/zero_point",
-    ]
+    int8_reference_node_names = ["conv_weights_0", "conv_weights_1"]
     nodes_map = {op.get_friendly_name(): op for op in compressed_model.get_ordered_ops()}
+    dtype = ov.Type.u8 if mode == CompressWeightsMode.INT8_ASYM else ov.Type.i8
     for node_name in int8_reference_node_names:
         node = nodes_map[node_name]
         assert node.get_type_name() == "Constant"
-        assert node.get_element_type() == ov.Type.u8
+        assert node.get_element_type() == dtype
 
 
 @pytest.mark.parametrize("all_layers", (True, False))
@@ -339,9 +335,9 @@ def test_conv_in_8_bit_if_mode_4bit(all_layers):
             ]:
                 assert ov.Type.u8 == op.get_element_type()
             elif op.get_friendly_name() in ["weights_1", "weights_1/zero_point"]:
-                assert ov.Type.u4 == op.get_element_type()
+                assert ov.Type.i4 == op.get_element_type()
             elif op.get_friendly_name() in ["weights_0", "weights_0/zero_point"]:
-                dtype = ov.Type.u4 if all_layers else ov.Type.u8
+                dtype = ov.Type.i4 if all_layers else ov.Type.u8
                 assert dtype == op.get_element_type()
 
 
@@ -354,7 +350,7 @@ def test_gather_can_be_4_bit_if_all_layers_without_data():
         group_size=1,
         all_layers=True,
     )
-    int4_reference_node_names = ["gather_2_data", "gather_2_data/zero_point"]
+    int4_reference_node_names = ["gather_2_data"]
     nodes_map = {op.get_friendly_name(): op for op in compressed_model.get_ordered_ops()}
     for node_name in int4_reference_node_names:
         node = nodes_map[node_name]
@@ -380,7 +376,7 @@ def test_gather_in_8_bit_if_not_all_layers(metric):
     for node_name in int8_reference_node_names:
         node = nodes_map[node_name]
         assert node.get_type_name() == "Constant"
-        assert node.get_element_type() == ov.Type.i8
+        assert node.get_element_type() == ov.Type.u8
 
 
 MAX_BASELINE_SCORE = 1 / np.finfo(np.float32).eps
@@ -427,9 +423,10 @@ def test_data_based_criterion(mode, ref_scores, ref_act_scores, mocker):
 def test_quantize_Gather_with_multiple_reduction_axes_in_8bit(mode):
     model = GatherWithTwoReductionAxes().ov_model
     compressed_model = compress_weights(model, mode=mode)
+    dtype = ov.Type.u8 if mode == CompressWeightsMode.INT8_ASYM else ov.Type.i8
     for op in compressed_model.get_ordered_ops():
         if op.get_type_name() == "Constant" and op.get_friendly_name() == "gather_1_data":
-            assert op.get_element_type() == ov.Type.u8
+            assert op.get_element_type() == dtype
 
 
 @pytest.mark.parametrize("mode", (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM))
