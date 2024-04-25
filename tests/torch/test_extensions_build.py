@@ -26,6 +26,7 @@ from tests.shared.paths import TEST_ROOT
 EXTENSIONS_BUILD_FILENAME = "extensions_build_checks.py"
 
 
+@pytest.mark.cuda
 def test_force_cuda_build(tmp_path):
     """
     Check that CUDA Extensions weren't initially built and \

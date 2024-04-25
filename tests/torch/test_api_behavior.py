@@ -122,7 +122,10 @@ class DeviceCheckingModel(torch.nn.Module):
         return self.model.forward(x)
 
 
-@pytest.mark.parametrize("original_device", ["cpu", "cuda", "cuda:0"])
+@pytest.mark.parametrize(
+    "original_device",
+    ["cpu", pytest.param("cuda", marks=pytest.mark.cuda), pytest.param("cuda:0", marks=pytest.mark.cuda)],
+)
 def test_model_is_inited_with_own_device_by_default(nncf_config_with_default_init_args, original_device):
     if not torch.cuda.is_available() and "cuda" in original_device:
         pytest.skip("Skipping for CPU-only setups")

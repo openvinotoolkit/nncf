@@ -199,7 +199,7 @@ class TestInsertionCommands:
             self.to_device = device
 
     @pytest.mark.parametrize("target_point", available_points)
-    @pytest.mark.parametrize("multidevice", (False, True))
+    @pytest.mark.parametrize("multidevice", (False, pytest.param(True, marks=pytest.mark.cuda)))
     @pytest.mark.parametrize("hook", (lambda x: x, BaseOpWithParam(lambda x: x).cpu()))
     def test_pt_insertion_command(self, target_point: PTTargetPoint, multidevice: bool, hook):
         model = wrap_model(InsertionPointTestModel(), torch.ones([1, 1, 10, 10]))
@@ -689,7 +689,7 @@ def test_create_shared_quantizer_insertion_command():
     "priority", [TransformationPriority.FP32_TENSOR_STATISTICS_OBSERVATION, TransformationPriority.DEFAULT_PRIORITY]
 )
 @pytest.mark.parametrize("compression_module_registered", [False, True])
-@pytest.mark.parametrize("multidevice_model", (False, True))
+@pytest.mark.parametrize("multidevice_model", (False, pytest.param(True, marks=pytest.mark.cuda)))
 def test_shared_fn_insertion_point(
     priority, compression_module_registered, compression_module_type, multidevice_model, mocker
 ):
@@ -779,7 +779,7 @@ def test_shared_fn_insertion_point(
     "priority", [TransformationPriority.FP32_TENSOR_STATISTICS_OBSERVATION, TransformationPriority.DEFAULT_PRIORITY]
 )
 @pytest.mark.parametrize("compression_module_registered", [False, True])
-@pytest.mark.parametrize("multidevice_model", (False, True))
+@pytest.mark.parametrize("multidevice_model", (False, pytest.param(True, marks=pytest.mark.cuda)))
 def test_shared_fn_insertion_command_several_module_types(
     priority, compression_module_registered, multidevice_model, mocker
 ):
