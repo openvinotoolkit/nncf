@@ -4,4 +4,4 @@ scikit-learn
 fastdownload
 onnx==1.16.0
 onnxruntime==1.17.1
-openvino-dev==2024.0
+openvino-dev==2024.1

@@ -11,4 +11,4 @@ virtualenv
 # filelock 3.12.3 requires typing-extensions>=4.7.1, but tensorflow 2.12.1 requires typing-extensions<4.6.0,>=3.6.6
 # TODO: remove after upgrade to TF 2.13
 filelock<3.12.3
-openvino-dev==2024.0
+openvino-dev==2024.1
