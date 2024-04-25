@@ -19,7 +19,7 @@ jobs:
           lfs: true
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.8.19
+          python-version: 3.8.18
       - name: Install NNCF and test requirements
         run: make install-common-test
       - name: Run common precommit test scope
@@ -45,7 +45,7 @@ jobs:
           lfs: true
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.8.19
+          python-version: 3.8.18
       - name: Install NNCF and test requirements
         run: make install-onnx-test
       - name: Run ONNX precommit test scope
@@ -71,7 +71,7 @@ jobs:
           lfs: true
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.8.19
+          python-version: 3.8.18
       - name: Install NNCF and test requirements
         run: make install-openvino-test
       - name: Run OV precommit test scope
@@ -107,7 +107,7 @@ jobs:
           lfs: true
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.8.19
+          python-version: 3.8.18
       - name: Runner info
         continue-on-error: true
         run: |
@@ -148,7 +148,7 @@ jobs:
           lfs: true
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.8.19
+          python-version: 3.8.18
       - name: Install NNCF and test requirements
         run: make install-torch-test
       - name: Check CUDA
