@@ -19,8 +19,10 @@ from nncf.common.factory import ModelTransformerFactory
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
 from nncf.torch import wrap_model
-from nncf.torch.graph.transformations.serialization import load_command
-from nncf.torch.graph.transformations.serialization import load_transformations
+from nncf.torch.graph.transformations.commands import PTTransformationCommand
+from nncf.torch.graph.transformations.commands import TransformationType
+from nncf.torch.graph.transformations.serialization import deserialize_command
+from nncf.torch.graph.transformations.serialization import deserialize_transformations
 from nncf.torch.graph.transformations.serialization import serialize_command
 from nncf.torch.graph.transformations.serialization import serialize_transformations
 from nncf.torch.module_operations import UpdateWeight
@@ -37,6 +39,29 @@ from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import commands_are_equal
 from tests.torch.nncf_network.helpers import AVAILABLE_TARGET_TYPES
 from tests.torch.nncf_network.helpers import InsertionCommandBuilder
+
+
+def load_from_config_impl(model: torch.nn.Module, serialized_transformations, example_input, trace_parameters):
+    """
+    Test implementation of nncf.torch.load_from_config(). Should be replaced by the implementation
+    """
+    transformations_layout = deserialize_transformations(serialized_transformations)
+
+    nncf_network = wrap_model(deepcopy(model), example_input=example_input, trace_parameters=trace_parameters)
+    transformed_model = ModelTransformerFactory.create(nncf_network).transform(transformations_layout)
+
+    transformed_model.nncf.disable_dynamic_graph_building()
+    return transformed_model
+
+
+def nncf_get_config_impl(
+    model: NNCFNetwork,
+):
+    """
+    Test implementation of model.nncf.get_config(). Should be replaced by the implementation
+    """
+    layout = model.nncf.transformation_layout()
+    return serialize_transformations(layout)
 
 
 @pytest.mark.parametrize("target_type", AVAILABLE_TARGET_TYPES)
@@ -56,8 +81,23 @@ def test_serialize_load_command(target_type, command_builder, priority):
     j_str = json.dumps(serialized_command)
     serialized_command = json.loads(j_str)
 
-    recovered_command = load_command(serialized_command)
+    recovered_command = deserialize_command(serialized_command)
     _check_commands_after_serialization(command, recovered_command, dummy_op_state)
+
+
+def test_non_supported_command_serialization():
+    class NonSupportedCommand(PTTransformationCommand):
+        def __init__(self):
+            super().__init__(TransformationType.INSERT, None)
+
+    command = NonSupportedCommand()
+
+    with pytest.raises(RuntimeError):
+        serialize_command(command)
+
+    serialized_command = {"type": NonSupportedCommand.__name__}
+    with pytest.raises(RuntimeError):
+        deserialize_command(serialized_command)
 
 
 def test_serialize_transformations():
@@ -73,28 +113,11 @@ def test_serialize_transformations():
     j_str = json.dumps(serialized_transformations)
     serialized_transformations = json.loads(j_str)
 
-    recovered_layout = load_transformations(serialized_transformations)
+    recovered_layout = deserialize_transformations(serialized_transformations)
     assert len(layout.transformations) == len(recovered_layout.transformations)
     # Can zip layouts because the order should not be altered
     for command, recovered_command in zip(layout.transformations, recovered_layout.transformations):
         _check_commands_after_serialization(command, recovered_command, dummy_op_state)
-
-
-def load_from_config_impl(model: torch.nn.Module, serialized_transformations, example_input, trace_parameters):
-    transformations_layout = load_transformations(serialized_transformations)
-
-    nncf_network = wrap_model(deepcopy(model), example_input=example_input, trace_parameters=trace_parameters)
-    transformed_model = ModelTransformerFactory.create(nncf_network).transform(transformations_layout)
-
-    transformed_model.nncf.disable_dynamic_graph_building()
-    return transformed_model
-
-
-def nncf_get_config_impl(
-    model: NNCFNetwork,
-):
-    layout = model.nncf.transformation_layout()
-    return serialize_transformations(layout)
 
 
 @pytest.mark.parametrize("model_cls", InsertionCommandBuilder.AVAILABLE_MODELS)

@@ -22,14 +22,16 @@ from nncf.torch.graph.transformations.commands import PTTransformationCommand
 from nncf.torch.layer_utils import COMPRESSION_MODULES
 
 COMPRESSION_STATE_ATTR = "compression_state"
-
-
-class CompressionKeys(Enum):
-    SHARED_INSERTION_COMMAND = "SHARED_INSERTION_COMMAND"
-    INSERTION_COMMAND = "INSERTION_COMMAND"
+SUPPORTED_COMMANDS = (PTSharedFnInsertionCommand, PTInsertionCommand)
 
 
 def serialize_transformations(transformations_layout: TransformationLayout) -> Dict[str, Any]:
+    """
+    Serializes given transformation layout to a dict.
+
+    :param tranformation_layout: Given transformation layout.
+    :return: Serialized representation of given transformation layout as a dict.
+    """
     transformation_commands = []
     for command in transformations_layout.transformations:
         serialized_command = serialize_command(command)
@@ -39,28 +41,39 @@ def serialize_transformations(transformations_layout: TransformationLayout) -> D
     return {COMPRESSION_STATE_ATTR: transformation_commands}
 
 
-def load_transformations(transformations_state: Dict[str, Any]) -> TransformationLayout:
+def deserialize_transformations(serialized_transformation_layout: Dict[str, Any]) -> TransformationLayout:
+    """
+    Deserializes given serialized transformation layout.
+
+    :param serialized_transformation_layout: Given serialized transformation layout.
+    :return: The deserialized transformation layout.
+    """
     transformation_layout = TransformationLayout()
-    for serialized_command in transformations_state[COMPRESSION_STATE_ATTR]:
-        command = load_command(serialized_command)
+    for serialized_command in serialized_transformation_layout[COMPRESSION_STATE_ATTR]:
+        command = deserialize_command(serialized_command)
         transformation_layout.register(command)
 
     return transformation_layout
 
 
 def serialize_command(command: PTTransformationCommand) -> Dict[str, Any]:
-    if not isinstance(command, (PTSharedFnInsertionCommand, PTInsertionCommand)):
-        return {}
+    """
+    Serializes given command layout to a dict.
+
+    :param command: Given command.
+    :return: Serialized representation of given command as a dict.
+    """
+    if not isinstance(command, SUPPORTED_COMMANDS):
+        raise RuntimeError(f"Command type {command.__class__} is not supported.")
 
     serialized_transformation = dict()
+    serialized_transformation["type"] = command.__class__.__name__
     if isinstance(command, PTSharedFnInsertionCommand):
-        serialized_transformation["type"] = CompressionKeys.SHARED_INSERTION_COMMAND.value
         serialized_transformation["target_points"] = [point.get_state() for point in command.target_points]
         serialized_transformation["op_name"] = command.op_name
         serialized_transformation["compression_module_type"] = command.compression_module_type.value
 
     elif isinstance(command, PTInsertionCommand):
-        serialized_transformation["type"] = CompressionKeys.INSERTION_COMMAND.value
         serialized_transformation["target_point"] = command.target_point.get_state()
 
     # Check compression module is registered
@@ -78,27 +91,34 @@ def serialize_command(command: PTTransformationCommand) -> Dict[str, Any]:
     return serialized_transformation
 
 
-def load_command(serialized_command: Dict[str, Any]) -> Union[PTInsertionCommand, PTSharedFnInsertionCommand]:
+def deserialize_command(serialized_command: Dict[str, Any]) -> Union[PTInsertionCommand, PTSharedFnInsertionCommand]:
+    """
+    Deserializes given serialized command.
+
+    :param serialized_command: Given serialized command.
+    :return: The deserialized command.
+    """
+    if serialized_command["type"] not in (command_cls.__name__ for command_cls in SUPPORTED_COMMANDS):
+        raise RuntimeError(f"Command type {serialized_command['type']} is not supported.")
+
     module_cls = COMPRESSION_MODULES.get(serialized_command["compression_module_name"])
     fn = module_cls.from_state(serialized_command["fn_state"])
     priority = serialized_command["priority"]
     if priority in iter(TransformationPriority):
         priority = TransformationPriority(priority)
 
-    if serialized_command["type"] == CompressionKeys.INSERTION_COMMAND.value:
+    if serialized_command["type"] == PTInsertionCommand.__name__:
         target_point = PTTargetPoint.from_state(serialized_command["target_point"])
         return PTInsertionCommand(
             point=target_point, fn=fn, priority=priority, hooks_group_name=serialized_command["hooks_group_name"]
         )
 
-    if serialized_command["type"] == CompressionKeys.SHARED_INSERTION_COMMAND.value:
-        target_points = [PTTargetPoint.from_state(state) for state in serialized_command["target_points"]]
-        return PTSharedFnInsertionCommand(
-            target_points=target_points,
-            fn=fn,
-            op_unique_name=serialized_command["op_name"],
-            compression_module_type=ExtraCompressionModuleType(serialized_command["compression_module_type"]),
-            priority=priority,
-            hooks_group_name=serialized_command["hooks_group_name"],
-        )
-    raise RuntimeError(f"Command type {serialized_command['type']} is not supported.")
+    target_points = [PTTargetPoint.from_state(state) for state in serialized_command["target_points"]]
+    return PTSharedFnInsertionCommand(
+        target_points=target_points,
+        fn=fn,
+        op_unique_name=serialized_command["op_name"],
+        compression_module_type=ExtraCompressionModuleType(serialized_command["compression_module_type"]),
+        priority=priority,
+        hooks_group_name=serialized_command["hooks_group_name"],
+    )

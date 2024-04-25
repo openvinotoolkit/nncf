@@ -61,7 +61,6 @@ class PTModelTransformer(ModelTransformer):
         ]
 
     def transform(self, transformation_layout: PTTransformationLayout) -> NNCFNetwork:
-        # self._model.nncf.record_commands(transformation_layout.transformations)
         transformations = transformation_layout.transformations
         aggregated_transformations = defaultdict(list)
         requires_graph_rebuild = False
