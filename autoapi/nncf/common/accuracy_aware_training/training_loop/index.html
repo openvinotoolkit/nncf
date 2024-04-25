@@ -321,20 +321,23 @@
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>model</strong> (<em>TModel</em>) – The model instance before fine-tuning</p></li>
-<li><p><strong>train_epoch_fn</strong> (<em>Callable</em>) – a callback to fine-tune the model for a single epoch</p></li>
-<li><p><strong>validate_fn</strong> (<em>Callable</em>) – a callback to evaluate the model on the validation dataset</p></li>
-<li><p><strong>configure_optimizers_fn</strong> (<em>Callable</em>) – a callback to instantiate an optimizer and a learning rate scheduler</p></li>
-<li><p><strong>dump_checkpoint_fn</strong> (<em>Callable</em>) – a callback to dump a checkpoint</p></li>
-<li><p><strong>load_checkpoint_fn</strong> (<em>Callable</em>) – a callback to load a checkpoint</p></li>
-<li><p><strong>early_stopping_fn</strong> (<em>Callable</em>) – a callback to check for an early stopping condition</p></li>
+<li><p><strong>train_epoch_fn</strong> (<em>Callable</em><em>[</em><em>[</em><a class="reference internal" href="../../../api/compression/index.html#nncf.api.compression.CompressionAlgorithmController" title="nncf.api.compression.CompressionAlgorithmController"><em>nncf.api.compression.CompressionAlgorithmController</em></a><em>, </em><em>TModel</em><em>, </em><em>Optional</em><em>[</em><em>int</em><em>]</em><em>, </em><em>Optional</em><em>[</em><em>OptimizerType</em><em>]</em><em>, </em><em>Optional</em><em>[</em><em>LRSchedulerType</em><em>]</em><em>]</em><em>, </em><em>float</em><em>]</em>) – a callback to fine-tune the model for a single epoch</p></li>
+<li><p><strong>validate_fn</strong> (<em>Callable</em><em>[</em><em>[</em><em>TModel</em><em>]</em><em>, </em><em>float</em><em>]</em>) – a callback to evaluate the model on the validation dataset</p></li>
+<li><p><strong>configure_optimizers_fn</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>]</em><em>, </em><em>Tuple</em><em>[</em><em>OptimizerType</em><em>, </em><em>LRSchedulerType</em><em>]</em><em>]</em><em>]</em>) – a callback to instantiate an optimizer and a learning rate scheduler</p></li>
+<li><p><strong>dump_checkpoint_fn</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>TModel</em><em>, </em><a class="reference internal" href="../../../api/compression/index.html#nncf.api.compression.CompressionAlgorithmController" title="nncf.api.compression.CompressionAlgorithmController"><em>nncf.api.compression.CompressionAlgorithmController</em></a><em>, </em><em>nncf.common.accuracy_aware_training.runner.TrainingRunner</em><em>, </em><em>Union</em><em>[</em><em>str</em><em>, </em><em>pathlib.Path</em><em>]</em><em>]</em><em>, </em><em>None</em><em>]</em><em>]</em>) – a callback to dump a checkpoint</p></li>
+<li><p><strong>load_checkpoint_fn</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>Checkpoint</em><em>, </em><em>Union</em><em>[</em><em>str</em><em>, </em><em>pathlib.Path</em><em>]</em><em>]</em><em>, </em><em>None</em><em>]</em><em>]</em>) – a callback to load a checkpoint</p></li>
+<li><p><strong>early_stopping_fn</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>float</em><em>]</em><em>, </em><em>bool</em><em>]</em><em>]</em>) – a callback to check for an early stopping condition</p></li>
 <li><p><strong>tensorboard_writer</strong> (<em>Optional</em><em>[</em><em>TensorboardWriterType</em><em>]</em>) – The tensorboard object to be used for logging.</p></li>
 <li><p><strong>log_dir</strong> (<em>Union</em><em>[</em><em>pathlib.Path</em><em>, </em><em>str</em><em>]</em>) – The path to be used for logging and checkpoint saving.</p></li>
-<li><p><strong>update_learning_rate_fn</strong> (<em>Callable</em>) – The callback to update the learning rate after each epoch
+<li><p><strong>update_learning_rate_fn</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>]</em><em>, </em><em>None</em><em>]</em><em>]</em>) – The callback to update the learning rate after each epoch
 of the training loop.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The fine-tuned model.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>TModel</p>
 </dd>
 </dl>
 </dd></dl>
@@ -371,20 +374,23 @@ of the training loop.</p></li>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>model</strong> (<em>TModel</em>) – The model instance before fine-tuning</p></li>
-<li><p><strong>train_epoch_fn</strong> (<em>Callable</em>) – a callback to fine-tune the model for a single epoch</p></li>
-<li><p><strong>validate_fn</strong> (<em>Callable</em>) – a callback to evaluate the model on the validation dataset</p></li>
-<li><p><strong>configure_optimizers_fn</strong> (<em>Callable</em>) – a callback to instantiate an optimizer and a learning rate scheduler</p></li>
-<li><p><strong>dump_checkpoint_fn</strong> (<em>Callable</em>) – a callback to dump a checkpoint</p></li>
-<li><p><strong>load_checkpoint_fn</strong> (<em>Callable</em>) – a callback to load a checkpoint</p></li>
-<li><p><strong>early_stopping_fn</strong> (<em>Callable</em>) – a callback to check for an early stopping condition</p></li>
+<li><p><strong>train_epoch_fn</strong> (<em>Callable</em><em>[</em><em>[</em><a class="reference internal" href="../../../api/compression/index.html#nncf.api.compression.CompressionAlgorithmController" title="nncf.api.compression.CompressionAlgorithmController"><em>nncf.api.compression.CompressionAlgorithmController</em></a><em>, </em><em>TModel</em><em>, </em><em>Optional</em><em>[</em><em>int</em><em>]</em><em>, </em><em>Optional</em><em>[</em><em>OptimizerType</em><em>]</em><em>, </em><em>Optional</em><em>[</em><em>LRSchedulerType</em><em>]</em><em>]</em><em>, </em><em>float</em><em>]</em>) – a callback to fine-tune the model for a single epoch</p></li>
+<li><p><strong>validate_fn</strong> (<em>Callable</em><em>[</em><em>[</em><em>TModel</em><em>]</em><em>, </em><em>float</em><em>]</em>) – a callback to evaluate the model on the validation dataset</p></li>
+<li><p><strong>configure_optimizers_fn</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>]</em><em>, </em><em>Tuple</em><em>[</em><em>OptimizerType</em><em>, </em><em>LRSchedulerType</em><em>]</em><em>]</em><em>]</em>) – a callback to instantiate an optimizer and a learning rate scheduler</p></li>
+<li><p><strong>dump_checkpoint_fn</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>TModel</em><em>, </em><a class="reference internal" href="../../../api/compression/index.html#nncf.api.compression.CompressionAlgorithmController" title="nncf.api.compression.CompressionAlgorithmController"><em>nncf.api.compression.CompressionAlgorithmController</em></a><em>, </em><em>nncf.common.accuracy_aware_training.runner.TrainingRunner</em><em>, </em><em>Union</em><em>[</em><em>str</em><em>, </em><em>pathlib.Path</em><em>]</em><em>]</em><em>, </em><em>None</em><em>]</em><em>]</em>) – a callback to dump a checkpoint</p></li>
+<li><p><strong>load_checkpoint_fn</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>Checkpoint</em><em>, </em><em>Union</em><em>[</em><em>str</em><em>, </em><em>pathlib.Path</em><em>]</em><em>]</em><em>, </em><em>None</em><em>]</em><em>]</em>) – a callback to load a checkpoint</p></li>
+<li><p><strong>early_stopping_fn</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>float</em><em>]</em><em>, </em><em>bool</em><em>]</em><em>]</em>) – a callback to check for an early stopping condition</p></li>
 <li><p><strong>tensorboard_writer</strong> (<em>Optional</em><em>[</em><em>TensorboardWriterType</em><em>]</em>) – The tensorboard object to be used for logging.</p></li>
-<li><p><strong>log_dir</strong> (<em>Union</em><em>[</em><em>pathlib.Path</em><em>, </em><em>str</em><em>]</em>) – The path to be used for logging and checkpoint saving.</p></li>
-<li><p><strong>update_learning_rate_fn</strong> (<em>Callable</em>) – The callback to update the learning rate after each epoch
+<li><p><strong>log_dir</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><em>pathlib.Path</em><em>, </em><em>str</em><em>]</em><em>]</em>) – The path to be used for logging and checkpoint saving.</p></li>
+<li><p><strong>update_learning_rate_fn</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>]</em><em>, </em><em>None</em><em>]</em><em>]</em>) – The callback to update the learning rate after each epoch
 of the training loop.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The fine-tuned model.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>TModel</p>
 </dd>
 </dl>
 </dd></dl>
@@ -445,20 +451,23 @@ only keep the best checkpoint (accuracy-wise).</p></li>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>model</strong> (<em>TModel</em>) – The model instance before fine-tuning</p></li>
-<li><p><strong>train_epoch_fn</strong> (<em>Callable</em>) – a callback to fine-tune the model for a single epoch</p></li>
-<li><p><strong>validate_fn</strong> (<em>Callable</em>) – a callback to evaluate the model on the validation dataset</p></li>
-<li><p><strong>configure_optimizers_fn</strong> (<em>Callable</em>) – a callback to instantiate an optimizer and a learning rate scheduler</p></li>
-<li><p><strong>dump_checkpoint_fn</strong> (<em>Callable</em>) – a callback to dump a checkpoint</p></li>
-<li><p><strong>load_checkpoint_fn</strong> (<em>Callable</em>) – a callback to load a checkpoint</p></li>
-<li><p><strong>early_stopping_fn</strong> (<em>Callable</em>) – a callback to check for an early stopping condition</p></li>
+<li><p><strong>train_epoch_fn</strong> (<em>Callable</em><em>[</em><em>[</em><a class="reference internal" href="../../../api/compression/index.html#nncf.api.compression.CompressionAlgorithmController" title="nncf.api.compression.CompressionAlgorithmController"><em>nncf.api.compression.CompressionAlgorithmController</em></a><em>, </em><em>TModel</em><em>, </em><em>Optional</em><em>[</em><em>int</em><em>]</em><em>, </em><em>Optional</em><em>[</em><em>OptimizerType</em><em>]</em><em>, </em><em>Optional</em><em>[</em><em>LRSchedulerType</em><em>]</em><em>]</em><em>, </em><em>float</em><em>]</em>) – a callback to fine-tune the model for a single epoch</p></li>
+<li><p><strong>validate_fn</strong> (<em>Callable</em><em>[</em><em>[</em><em>TModel</em><em>]</em><em>, </em><em>float</em><em>]</em>) – a callback to evaluate the model on the validation dataset</p></li>
+<li><p><strong>configure_optimizers_fn</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>]</em><em>, </em><em>Tuple</em><em>[</em><em>OptimizerType</em><em>, </em><em>LRSchedulerType</em><em>]</em><em>]</em><em>]</em>) – a callback to instantiate an optimizer and a learning rate scheduler</p></li>
+<li><p><strong>dump_checkpoint_fn</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>TModel</em><em>, </em><a class="reference internal" href="../../../api/compression/index.html#nncf.api.compression.CompressionAlgorithmController" title="nncf.api.compression.CompressionAlgorithmController"><em>nncf.api.compression.CompressionAlgorithmController</em></a><em>, </em><em>nncf.common.accuracy_aware_training.runner.TrainingRunner</em><em>, </em><em>Union</em><em>[</em><em>str</em><em>, </em><em>pathlib.Path</em><em>]</em><em>]</em><em>, </em><em>None</em><em>]</em><em>]</em>) – a callback to dump a checkpoint</p></li>
+<li><p><strong>load_checkpoint_fn</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>Checkpoint</em><em>, </em><em>Union</em><em>[</em><em>str</em><em>, </em><em>pathlib.Path</em><em>]</em><em>]</em><em>, </em><em>None</em><em>]</em><em>]</em>) – a callback to load a checkpoint</p></li>
+<li><p><strong>early_stopping_fn</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>float</em><em>]</em><em>, </em><em>bool</em><em>]</em><em>]</em>) – a callback to check for an early stopping condition</p></li>
 <li><p><strong>tensorboard_writer</strong> (<em>Optional</em><em>[</em><em>TensorboardWriterType</em><em>]</em>) – The tensorboard object to be used for logging.</p></li>
-<li><p><strong>log_dir</strong> (<em>Union</em><em>[</em><em>pathlib.Path</em><em>, </em><em>str</em><em>]</em>) – The path to be used for logging and checkpoint saving.</p></li>
-<li><p><strong>update_learning_rate_fn</strong> (<em>Callable</em>) – The callback to update the learning rate after each epoch
+<li><p><strong>log_dir</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><em>pathlib.Path</em><em>, </em><em>str</em><em>]</em><em>]</em>) – The path to be used for logging and checkpoint saving.</p></li>
+<li><p><strong>update_learning_rate_fn</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><em>]</em><em>, </em><em>None</em><em>]</em><em>]</em>) – The callback to update the learning rate after each epoch
 of the training loop.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The fine-tuned model.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>TModel</p>
 </dd>
 </dl>
 </dd></dl>
