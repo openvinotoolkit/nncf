@@ -4,6 +4,7 @@ pytest==8.0.2
 pytest-cov
 pytest-mock
 pytest-dependency
+pytext-xdist
 pydot
 tensorflow_hub
 virtualenv

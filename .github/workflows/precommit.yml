@@ -178,6 +178,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: 3.8.18
+          cache: pip
       - name: Install NNCF and test requirements
         run: make install-tensorflow-test
       - name: Run PyTorch precommit test scope
