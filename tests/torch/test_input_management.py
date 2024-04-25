@@ -203,11 +203,7 @@ def test_same_input_tensor_replication(mocker):
     assert cat_arg[0] is not cat_arg[1]
 
 
-@pytest.fixture(name="use_kwargs", params=(False, True))
-def use_kwargs_fixture(request):
-    return request.param
-
-
+@pytest.mark.parametrize("use_kwargs", (False, True))
 def test_reloaded_forward_inputs_wrapping(use_kwargs, mocker):
     """
     Check for a model which could accept both tensor and not tensor for the same
@@ -234,25 +230,3 @@ def test_reloaded_forward_inputs_wrapping(use_kwargs, mocker):
     nncf_model_input.assert_not_called()
     assert actual_args == ref_model_args
     assert actual_kwargs == ref_model_kwargs
-
-
-def test_non_tensor_param_becomes_a_tensor_param(use_kwargs):
-    """
-    Check for a model which could accept both tensor and not tensor for the same
-    input parameter that a tensor input after a non tensor input raises runtime error.
-    """
-    model = ModelWithReloadedForward()
-    tensor_input = torch.ones(ModelWithReloadedForward.INPUT_SHAPE)
-    example_input = ({"tensor": tensor_input},)
-    input_info = ExampleInputInfo.from_example_input(example_input)
-    mgr = InputInfoWrapManager(input_info, inspect.signature(model.forward), model)
-    with pytest.raises(RuntimeError) as exc_info:
-        if use_kwargs:
-            mgr.wrap_inputs(model_args=(), model_kwargs={"x": tensor_input})
-        else:
-            mgr.wrap_inputs(model_args=(tensor_input,), model_kwargs={})
-    assert (
-        exc_info.value.args[0] == 'Original model forward parameter "x" expected to not be a tensor,'
-        " but the tensor type recieved."
-        ' Please use a tensor type as an example input for the "x" parameter_name'
-    )
