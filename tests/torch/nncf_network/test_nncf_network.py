@@ -618,8 +618,10 @@ def simple_net_():
     return model
 
 
+@pytest.mark.nightly
+@pytest.mark.cuda
 def test_works_when_wrapped_with_dataparallel(simple_net):
-    if not torch.cuda.is_available():
+    if not torch.cuda.is_available() and torch.cuda.device_count() > 1:
         pytest.xfail("The executing host must have > 1 CUDA GPU in order for this test to be relevant.")
     simple_net.cuda()
     dp_model = torch.nn.DataParallel(simple_net)
@@ -823,6 +825,7 @@ class MultideviceModel(torch.nn.Module):
         return res
 
 
+@pytest.mark.cuda
 def test_multidevice_model():
     if not torch.cuda.is_available():
         pytest.skip("GPU required")
