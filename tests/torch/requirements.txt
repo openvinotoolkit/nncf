@@ -6,6 +6,7 @@ pytest
 pytest-cov
 pytest-dependency
 pytest-mock
+pytest-xdist
 torch
 virtualenv
 
