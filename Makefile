@@ -102,7 +102,7 @@ install-tensorflow-dev: install-tensorflow-test install-pre-commit
 	pip install -r examples/post_training_quantization/tensorflow/mobilenet_v2/requirements.txt
 
 test-tensorflow:
-	pytest ${COVERAGE_ARGS} tests/tensorflow -m "not nightly"   \
+	pytest ${COVERAGE_ARGS} -n4 tests/tensorflow -m "not nightly"   \
 		--junitxml ${JUNITXML_PATH}         \
 		$(DATA_ARG)
 

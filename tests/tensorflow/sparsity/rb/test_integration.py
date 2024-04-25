@@ -109,7 +109,9 @@ def train_lenet():
     model.save(MODEL_PATH)
 
 
-@pytest.mark.parametrize("distributed", [False, True], ids=["not_distributed", "distributed"])
+@pytest.mark.parametrize(
+    "distributed", [False, pytest.param(True, marks=pytest.mark.nightly)], ids=["not_distributed", "distributed"]
+)
 @pytest.mark.parametrize("quantized", [False, True], ids=["without_quantization", "with_quantization"])
 def test_rb_sparse_target_lenet(distributed, quantized):
     if not os.path.exists(MODEL_PATH):
