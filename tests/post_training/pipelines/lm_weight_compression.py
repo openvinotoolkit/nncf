@@ -19,7 +19,6 @@ from typing import Dict, Optional
 import numpy as np
 import openvino as ov
 import torch
-import transformers
 from datasets import load_dataset
 from memory_profiler import memory_usage
 from optimum.intel.openvino import OVModelForCausalLM
@@ -76,25 +75,31 @@ class LMWeightCompression(BaseTestPipeline):
 
     def prepare_model(self) -> None:
         is_stateful = self.params.get("is_stateful", False)
+
         if self.backend == BackendType.TORCH:
             self.MODEL_NAME = "torch_model.xml"
             self.MODEL_FUNC = AutoModelForCausalLM
-            MODEL_SPECIFIC_PARAMS = {"torch_dtype": torch.float16}
-            self.tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_id)
+            self.MODEL_SPECIFIC_PARAMS = {"torch_dtype": torch.float16}
         else:
-            MODEL_SPECIFIC_PARAMS = {"export": True, "compile": False, "stateful": is_stateful}
+            self.MODEL_SPECIFIC_PARAMS = {"export": True, "compile": False, "stateful": is_stateful}
+
         if is_stateful:
             self.fp32_model_dir = self.fp32_model_dir.parent / (self.fp32_model_dir.name + "_sf")
+
         if not (self.fp32_model_dir / self.MODEL_NAME).exists():
             # export by model_id
-            self.model_hf = self.MODEL_FUNC.from_pretrained(self.model_id, load_in_8bit=False, **MODEL_SPECIFIC_PARAMS)
+            self.model_hf = self.MODEL_FUNC.from_pretrained(
+                self.model_id, load_in_8bit=False, **self.MODEL_SPECIFIC_PARAMS
+            )
+
             if self.backend != BackendType.TORCH:
                 self._dump_model_fp32()
         else:
             # no export, load from IR. Applicable for sequential run of test cases in local environment.
             self.model_hf = self.MODEL_FUNC.from_pretrained(
-                self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, **MODEL_SPECIFIC_PARAMS
+                self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, **self.MODEL_SPECIFIC_PARAMS
             )
+
         self.model = self.model_hf.model
 
     def prepare_preprocessor(self) -> None:
@@ -143,7 +148,7 @@ class LMWeightCompression(BaseTestPipeline):
         dataset = dataset.filter(lambda example: len(example["text"]) > 80)
         if self.backend == BackendType.TORCH:
             example_text = "The TinyLlama project aims to pretrain a 1.1B Llama model on 3 trillion tokens."
-            token = self.tokenizer(example_text, max_length=500, return_tensors="pt", truncation=True)
+            token = self.preprocessor(example_text, max_length=500, return_tensors="pt", truncation=True)
             inputs = {"input_ids": token["input_ids"], "attention_mask": token["attention_mask"]}
 
             self.calibration_dataset = nncf.Dataset([inputs])
@@ -210,6 +215,9 @@ class LMWeightCompression(BaseTestPipeline):
             self.model,
             dataset=self.calibration_dataset,
             **self.compression_params,
+        )
+        self.compressed_model = ov.convert_model(
+            self.compressed_model, example_input=torch.rand(1, 3, 224, 224).to(torch.long)
         )
 
     def _validate(self):
