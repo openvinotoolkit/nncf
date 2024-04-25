@@ -12,6 +12,7 @@ import datetime
 import itertools
 import os
 import os.path as osp
+import pathlib
 from typing import Any, Dict, Hashable, Iterable, List, Optional, Union
 
 from tabulate import tabulate
@@ -43,7 +44,7 @@ def create_table(
     return tabulate(tabular_data=rows, headers=header, tablefmt=table_fmt, maxcolwidths=max_col_widths, floatfmt=".3f")
 
 
-def configure_accuracy_aware_paths(log_dir: str) -> str:
+def configure_accuracy_aware_paths(log_dir: Union[str, pathlib.Path]) -> Union[str, pathlib.Path]:
     """
     Create a subdirectory inside of the passed log directory
     to save checkpoints from the accuracy-aware training loop to.

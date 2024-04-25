@@ -97,8 +97,6 @@ def check_int8_node(op: ov.Node, mode: CompressWeightsMode = CompressWeightsMode
     mul_node = get_next_node(sub_node)
     assert mul_node.get_type_name() == "Multiply"
     scale_node = mul_node.input_value(1).get_node()
-    if scale_node.get_type_name() == "Convert":
-        scale_node = scale_node.input_value(0).get_node()
     scale = get_const_value(scale_node)
 
     return {
@@ -135,12 +133,13 @@ def check_int4_grouped(op: ov.Node, mode: CompressWeightsMode, group_size: int =
     mul_node = get_next_node(sub_node)
     assert mul_node.get_type_name() == "Multiply"
     scale_node = mul_node.input_value(1).get_node()
-    if scale_node.get_type_name() == "Convert":
-        scale_node = scale_node.input_value(0).get_node()
     assert list(scale_node.shape) == reduced_weight_shape
 
     reshape_node = get_next_node(mul_node)
     assert reshape_node.get_type_name() == "Reshape"
+
+    convert_node = get_next_node(reshape_node)
+    assert convert_node.get_type_name() == "Convert"
 
     return {
         "scale": get_const_value(scale_node),
@@ -161,12 +160,13 @@ def check_nf4_grouped(op: ov.Node, group_size: int = 7):
     mul_node = get_next_node(convert_node)
     assert mul_node.get_type_name() == "Multiply"
     scale_node = mul_node.input_value(1).get_node()
-    if scale_node.get_type_name() == "Convert":
-        scale_node = scale_node.input_value(0).get_node()
     assert list(scale_node.shape) == reduced_weight_shape
 
     reshape_node = get_next_node(mul_node)
     assert reshape_node.get_type_name() == "Reshape"
+
+    convert_node = get_next_node(reshape_node)
+    assert convert_node.get_type_name() == "Convert"
 
     return {
         "scale": get_const_value(scale_node),
@@ -698,22 +698,35 @@ def test_data_type_for_num_weights(mocker):
     assert isinstance(params.num_weights, np.uint64)
 
 
-def test_weight_scale_datatype():
-    # When model weight is in fp32, there will be an extra convert node for weight scale f16 > f32
-    model_fp32 = IdentityMatmul(weights_dtype=np.float32).ov_model
-    compressed_model_fp32 = compress_weights(model_fp32)
-    name_to_node_map = {op.get_friendly_name(): op for op in compressed_model_fp32.get_ops()}
-    assert "weights/scale_convert" in name_to_node_map
-    scale_multiply_node = name_to_node_map["weights/fq_weights_1"]
-    assert scale_multiply_node.input_value(1).get_node().get_element_type() == ov.Type.f32
+def test_compression_for_different_dtypes():
+    for activation_dtype in [np.float32, np.float16]:
+        for weight_dtype in [np.float32, np.float16]:
+            if activation_dtype == np.float16 and weight_dtype == np.float32:
+                # Activations can be in f16 only if weights are in f16
+                continue
 
-    # When model weight is in fp16, there will be no extra convert node for weight scale
-    model_fp16 = IdentityMatmul(weights_dtype=np.float16).ov_model
-    compressed_model_fp16 = compress_weights(model_fp16)
-    name_to_node_map = {op.get_friendly_name(): op for op in compressed_model_fp16.get_ops()}
-    assert "weights/scale_convert" not in name_to_node_map
-    scale_multiply_node = name_to_node_map["weights/fq_weights_1"]
-    assert scale_multiply_node.input_value(1).get_node().get_element_type() == ov.Type.f16
+            model = IdentityMatmul(weights_dtype=weight_dtype, activation_dtype=activation_dtype).ov_model
+            compressed_model = compress_weights(
+                model, mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=1, all_layers=True
+            )
+            name_to_node_map = {op.get_friendly_name(): op for op in compressed_model.get_ops()}
+
+            # Weight scale should be in fp16 nevertheless the weight data type
+            scale_multiply_node = name_to_node_map["weights/fq_weights_1"]
+            assert scale_multiply_node.input_value(1).get_node().get_element_type() == ov.Type.f16
+
+            reshape_node = get_next_node(scale_multiply_node)
+            assert reshape_node.get_type_name() == "Reshape"
+
+            next_node = get_next_node(reshape_node)
+            if activation_dtype == np.float16:
+                # There should be no convert node after multiply if both weights and activations are in f16
+                assert next_node.get_type_name() != "Convert"
+            else:
+                assert next_node.get_type_name() == "Convert"
+                # In case weight is in fp32, the convert node is manually inserted
+                if weight_dtype == np.float32:
+                    assert next_node.get_friendly_name() == "weights/fq_weights_1/convert"
 
 
 DATASET_SIZE = 129

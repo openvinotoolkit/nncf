@@ -60,7 +60,7 @@ def quantize_impl(
     copied_model = deepcopy(model)
 
     example_input = next(iter(calibration_dataset.get_inference_data()))
-    nncf_network = wrap_model(copied_model.eval(), example_input)
+    nncf_network = wrap_model(copied_model.eval(), example_input, trace_parameters=True)
 
     quantization_algorithm = PostTrainingQuantization(
         preset=preset,
