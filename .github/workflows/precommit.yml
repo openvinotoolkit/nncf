@@ -14,12 +14,12 @@ jobs:
   common:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           lfs: true
-      - uses: actions/setup-python@v3
+      - uses: actions/setup-python@v5
         with:
-          python-version: 3.8.10
+          python-version: 3.8.18
       - name: Install NNCF and test requirements
         run: make install-common-test
       - name: Run common precommit test scope
@@ -40,12 +40,12 @@ jobs:
   onnx:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           lfs: true
-      - uses: actions/setup-python@v3
+      - uses: actions/setup-python@v5
         with:
-          python-version: 3.8.10
+          python-version: 3.8.18
       - name: Install NNCF and test requirements
         run: make install-onnx-test
       - name: Run ONNX precommit test scope
@@ -66,12 +66,12 @@ jobs:
   openvino:
     runs-on: ubuntu-20.04-8-cores
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           lfs: true
-      - uses: actions/setup-python@v3
+      - uses: actions/setup-python@v5
         with:
-          python-version: 3.8.10
+          python-version: 3.8.18
       - name: Install NNCF and test requirements
         run: make install-openvino-test
       - name: Run OV precommit test scope
@@ -102,12 +102,12 @@ jobs:
         run : |
           sudo apt-get update
           sudo apt-get --assume-yes install gcc g++ build-essential ninja-build libgl1-mesa-dev libglib2.0-0
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           lfs: true
-      - uses: actions/setup-python@v3
+      - uses: actions/setup-python@v5
         with:
-          python-version: 3.8.10
+          python-version: 3.8.18
       - name: Runner info
         continue-on-error: true
         run: |
@@ -143,12 +143,12 @@ jobs:
           nvidia-smi
           cat /proc/cpuinfo
           nvcc --version
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           lfs: true
-      - uses: actions/setup-python@v3
+      - uses: actions/setup-python@v5
         with:
-          python-version: 3.8.10
+          python-version: 3.8.18
       - name: Install NNCF and test requirements
         run: make install-torch-test
       - name: Check CUDA
