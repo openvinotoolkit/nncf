@@ -14,10 +14,10 @@ jobs:
   common:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           lfs: true
-      - uses: actions/setup-python@v3
+      - uses: actions/setup-python@v5
         with:
           python-version: 3.8.10
       - name: Install NNCF and test requirements
@@ -40,10 +40,10 @@ jobs:
   onnx:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           lfs: true
-      - uses: actions/setup-python@v3
+      - uses: actions/setup-python@v5
         with:
           python-version: 3.8.10
       - name: Install NNCF and test requirements
@@ -66,10 +66,10 @@ jobs:
   openvino:
     runs-on: ubuntu-20.04-8-cores
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           lfs: true
-      - uses: actions/setup-python@v3
+      - uses: actions/setup-python@v5
         with:
           python-version: 3.8.10
       - name: Install NNCF and test requirements
@@ -102,10 +102,10 @@ jobs:
         run : |
           sudo apt-get update
           sudo apt-get --assume-yes install gcc g++ build-essential ninja-build libgl1-mesa-dev libglib2.0-0
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           lfs: true
-      - uses: actions/setup-python@v3
+      - uses: actions/setup-python@v5
         with:
           python-version: 3.8.10
       - name: Runner info
@@ -143,10 +143,10 @@ jobs:
           nvidia-smi
           cat /proc/cpuinfo
           nvcc --version
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           lfs: true
-      - uses: actions/setup-python@v3
+      - uses: actions/setup-python@v5
         with:
           python-version: 3.8.10
       - name: Install NNCF and test requirements
