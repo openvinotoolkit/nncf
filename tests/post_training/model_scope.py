@@ -62,6 +62,7 @@ QUANTIZATION_MODELS = [
             "advanced_parameters": AdvancedQuantizationParameters(smooth_quant_alpha=-1.0),
         },
         "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
     },
     {
         "reported_name": "timm/darknet53",
@@ -71,6 +72,7 @@ QUANTIZATION_MODELS = [
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
     },
     {
         "reported_name": "timm/deit3_small_patch16_224",
@@ -84,6 +86,7 @@ QUANTIZATION_MODELS = [
             ),
         },
         "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
     },
     {
         "reported_name": "timm/dla34",
@@ -93,6 +96,7 @@ QUANTIZATION_MODELS = [
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
     },
     {
         "reported_name": "timm/dpn68",
@@ -102,6 +106,7 @@ QUANTIZATION_MODELS = [
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
     },
     {
         "reported_name": "timm/efficientnet_b0",
@@ -111,6 +116,7 @@ QUANTIZATION_MODELS = [
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
     },
     {
         "reported_name": "timm/efficientnet_b0_BC",
@@ -121,6 +127,7 @@ QUANTIZATION_MODELS = [
             "fast_bias_correction": False,
         },
         "backends": [BackendType.ONNX, BackendType.OV],
+        "batch_size": 128,
     },
     {
         "reported_name": "timm/efficientnet_lite0",
@@ -130,6 +137,7 @@ QUANTIZATION_MODELS = [
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
     },
     {
         "reported_name": "timm/hrnet_w18",
@@ -139,6 +147,7 @@ QUANTIZATION_MODELS = [
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
     },
     {
         "reported_name": "timm/inception_resnet_v2",
@@ -146,6 +155,7 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {},
         "backends": NNCF_PTQ_BACKENDS,
+        "batch_size": 64,
     },
     {
         "reported_name": "timm/levit_128",
@@ -168,6 +178,7 @@ QUANTIZATION_MODELS = [
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
     },
     {
         "reported_name": "timm/mobilenetv2_050_BC",
@@ -178,6 +189,7 @@ QUANTIZATION_MODELS = [
             "fast_bias_correction": False,
         },
         "backends": [BackendType.ONNX, BackendType.OV],
+        "batch_size": 128,
     },
     {
         "reported_name": "timm/mobilenetv3_small_050",
@@ -187,6 +199,18 @@ QUANTIZATION_MODELS = [
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
+    },
+    {
+        "reported_name": "timm/mobilenetv3_small_050_BC",
+        "model_id": "mobilenetv3_small_050",
+        "pipeline_cls": ImageClassificationTimm,
+        "compression_params": {
+            "preset": QuantizationPreset.MIXED,
+            "fast_bias_correction": False,
+        },
+        "backends": [BackendType.ONNX, BackendType.OV],
+        "batch_size": 128,
     },
     {
         "reported_name": "timm/regnetx_002",
@@ -196,6 +220,7 @@ QUANTIZATION_MODELS = [
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
     },
     {
         "reported_name": "timm/resnest14d",
@@ -205,6 +230,7 @@ QUANTIZATION_MODELS = [
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
     },
     {
         "reported_name": "timm/resnet18",
@@ -212,6 +238,7 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {},
         "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
     },
     {
         "reported_name": "timm/swin_base_patch4_window7_224",
@@ -222,6 +249,7 @@ QUANTIZATION_MODELS = [
             "model_type": ModelType.TRANSFORMER,
         },
         "backends": [BackendType.OV],
+        "batch_size": 32,
     },
     {
         "reported_name": "timm/swin_base_patch4_window7_224_no_sq",
@@ -235,6 +263,7 @@ QUANTIZATION_MODELS = [
             ),
         },
         "backends": [BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.ONNX],
+        "batch_size": 128,
     },
     {
         "reported_name": "timm/tf_inception_v3",
@@ -244,6 +273,7 @@ QUANTIZATION_MODELS = [
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
     },
     {
         "reported_name": "timm/vgg11",
@@ -251,6 +281,7 @@ QUANTIZATION_MODELS = [
         "pipeline_cls": ImageClassificationTimm,
         "compression_params": {},
         "backends": NNCF_PTQ_BACKENDS,
+        "batch_size": 128,
     },
     {
         "reported_name": "timm/visformer_small",
@@ -261,6 +292,7 @@ QUANTIZATION_MODELS = [
             "model_type": ModelType.TRANSFORMER,
         },
         "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
     },
     {
         "reported_name": "timm/wide_resnet50_2",
@@ -270,6 +302,7 @@ QUANTIZATION_MODELS = [
             "preset": QuantizationPreset.MIXED,
         },
         "backends": ALL_PTQ_BACKENDS,
+        "batch_size": 128,
     },
 ]
 
@@ -322,6 +355,8 @@ def generate_tests_scope(models_list: List[Dict]) -> Dict[str, dict]:
     for test_model_param in models_list:
         for backend in test_model_param["backends"] + [BackendType.FP32]:
             model_param = copy.deepcopy(test_model_param)
+            if "is_batch_size_supported" not in model_param:  # Set default value of is_batch_size_supported.
+                model_param["is_batch_size_supported"] = True
             reported_name = model_param["reported_name"]
             model_id = reported_name_to_model_id_mapping[reported_name]
             if backend == BackendType.FP32:

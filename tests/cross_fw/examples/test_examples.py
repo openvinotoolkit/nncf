@@ -11,6 +11,7 @@
 
 import os
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -33,6 +34,7 @@ PERFORMANCE_RELATIVE_TOLERANCE = 0.05
 MODEL_SIZE_RELATIVE_TOLERANCE = 0.05
 
 ACCURACY_METRICS = "accuracy_metrics"
+ACCURACY_METRICS_AFTER_TRAINING = "accuracy_metrics_after_training"
 MODEL_SIZE_METRICS = "model_size_metrics"
 PERFORMANCE_METRICS = "performance_metrics"
 
@@ -52,6 +54,11 @@ def test_examples(
     is_check_performance: bool,
     ov_version_override: str,
 ):
+    python_version = sys.version_info
+    example_python_version = tuple(example_params.get("python_version", python_version))
+    if python_version < example_python_version:
+        pytest.skip(f"The test is skipped because python >= {example_python_version} is required.")
+
     backend = example_params["backend"]
     skip_if_backend_not_selected(backend, backends_list)
     venv_path = create_venv_with_nncf(tmp_path, "pip_e_local", "venv", set([backend]))
@@ -82,6 +89,12 @@ def test_examples(
         assert measured_metrics[name] == pytest.approx(
             value, abs=example_params.get("accuracy_tolerance", ACCURACY_TOLERANCE)
         )
+
+    if ACCURACY_METRICS_AFTER_TRAINING in example_params:
+        for name, value in example_params[ACCURACY_METRICS_AFTER_TRAINING].items():
+            assert measured_metrics[name] == pytest.approx(
+                value, abs=example_params.get("accuracy_tolerance_after_training", ACCURACY_TOLERANCE)
+            )
 
     if MODEL_SIZE_METRICS in example_params:
         for name, value in example_params[MODEL_SIZE_METRICS].items():

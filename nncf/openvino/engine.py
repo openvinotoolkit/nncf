@@ -14,7 +14,6 @@ from typing import Dict, List, Tuple, Union
 import numpy as np
 import openvino.runtime as ov
 
-import nncf
 from nncf.common.engine import Engine
 from nncf.openvino.graph.model_utils import model_has_state
 from nncf.parameters import TargetDevice
@@ -32,30 +31,6 @@ class OVCompiledModelEngine(Engine):
     def __init__(self, compiled_model: ov.CompiledModel, stateful: bool):
         self.infer_request = compiled_model.create_infer_request()
         self.reset_state = stateful and hasattr(self.infer_request, "reset_state")
-        self.input_tensor_names = set()
-        self.number_of_inputs = len(compiled_model.inputs)
-        for model_input in compiled_model.inputs:
-            self.input_tensor_names.update(model_input.get_names())
-
-    def _check_input_data_format(
-        self, input_data: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray], Dict[str, np.ndarray]]
-    ) -> None:
-        """
-        Checks correspondence of the model input names and the passed data.
-        If there is a mismatch, the method throws a more specific and readable error than
-        original error raised by the compiled model.
-
-        :param input_data: Provided inputs to infer the model.
-        """
-        actual_num_inputs = 1 if isinstance(input_data, np.ndarray) else len(input_data)
-        if actual_num_inputs != self.number_of_inputs:
-            raise nncf.ValidationError(
-                f"Model expects {self.number_of_inputs} inputs, but {actual_num_inputs} are provided."
-            )
-        if isinstance(input_data, dict):
-            for name in input_data:
-                if isinstance(name, str) and name not in self.input_tensor_names:
-                    raise nncf.ValidationError(f"Missing a required input: {name} to run the model.")
 
     def infer(
         self, input_data: Union[np.ndarray, List[np.ndarray], Tuple[np.ndarray], Dict[str, np.ndarray]]
@@ -67,8 +42,6 @@ class OVCompiledModelEngine(Engine):
         :param input_data: Inputs for the model.
         :return output_data: Model's output.
         """
-        self._check_input_data_format(input_data)
-
         if self.reset_state:
             self.infer_request.reset_state()
 

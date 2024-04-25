@@ -183,12 +183,13 @@ OPERATIONS_WITH_CONST_PORT_ID = [
 
 
 # Contains the operation metatypes for which bias can be applied.
-OPERATIONS_WITH_BIAS = [
+# Limited operations scope
+OPERATIONS_WITH_BIAS_REDUCED = [
     ov_metatypes.OVConvolutionMetatype,
-    # TODO: add all metatypes with bias
     ov_metatypes.OVMatMulMetatype,
 ]
 
+OPERATIONS_WITH_BIAS = [*OPERATIONS_WITH_BIAS_REDUCED, ov_metatypes.OVDepthwiseConvolutionMetatype]
 
 CONV_OPERATIONS = [
     ov_metatypes.OVConvolutionMetatype,
@@ -196,4 +197,17 @@ CONV_OPERATIONS = [
     ov_metatypes.OVGroupConvolutionMetatype,
     ov_metatypes.OVConvolutionBackpropDataMetatype,
     ov_metatypes.OVGroupConvolutionBackpropDataMetatype,
+]
+
+# These metatypes mix outputs for different samples into one axis.
+# If reducers and aggregators collect statistics at the output of the following operations,
+# assuming that 0-axis is batch axis, they get only 1 value instead of batch_size values.
+# It could lead to inaccurate/incorrect statistics result.
+OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS = [
+    ov_metatypes.OVSpaceToBatchMetatype,
+    ov_metatypes.OVBatchToSpaceMetatype,
+    ov_metatypes.OVROIPoolingMetatype,
+    ov_metatypes.OVROIAlignMetatype,
+    ov_metatypes.OVEmbeddingMetatype,
+    ov_metatypes.OVIfMetatype,
 ]

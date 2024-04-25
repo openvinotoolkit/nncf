@@ -18,7 +18,6 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.logging.logger import nncf_logger
-from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.metatypes.onnx_metatypes import ONNXDequantizeLinearMetatype
 from nncf.onnx.graph.onnx_helper import get_tensor_value
@@ -128,29 +127,14 @@ def transpose_axis(shape: List[int], axis: int) -> int:
     Returns transpose axis.
 
     :param shape: Tensor shape.
-    :param axis: Axis before transpose.
+    :param axis: Axis before transpose (only positive).
     :return: Axis after transpose.
     """
-    axis %= len(shape)  # Make axis positive
+    assert axis >= 0
     return range(len(shape) - 1, -1, -1)[axis]  # Iterate backward throug axis
 
 
-def get_reduction_shape(shape: List[int], axis: int) -> ReductionAxes:
-    """
-    Returns reduction shape for shape and axis.
-
-    :param shape: Shape.
-    :param axis: Axis.
-    :return: Reduction shape.
-    """
-    reduction_shape = list(range(len(shape)))
-    if len(reduction_shape) == 1:  # If only one channel
-        return tuple(reduction_shape)
-    reduction_shape.pop(axis)
-    return tuple(reduction_shape)
-
-
-def _get_weight_quantization_axis(node: NNCFNode, port_id: int) -> int:
+def get_weight_quantization_axis(node: NNCFNode, port_id: int) -> int:
     """
     Returns weight tensor axis, along which quantizer parameters are calculated.
 
@@ -161,6 +145,9 @@ def _get_weight_quantization_axis(node: NNCFNode, port_id: int) -> int:
     weight_channel_axis = node.metatype.weight_channel_axis
     if node.layer_attributes.has_node_attrs() and node.metatype == om.ONNXGemmMetatype:
         weight_shape = node.layer_attributes.weight_attrs[port_id]["shape"]
+        weight_channel_axis %= len(weight_shape)  # Make axis positive
+        if port_id == 0:
+            weight_channel_axis -= 1
         if (
             port_id == 0
             and node.layer_attributes.node_attrs["transA"] == 1
@@ -171,18 +158,9 @@ def _get_weight_quantization_axis(node: NNCFNode, port_id: int) -> int:
     return weight_channel_axis
 
 
-def _get_activation_quantization_axis() -> int:
-    """
-    Returns activation tensor axis, along which quantizer parameters are calculated.
-
-    :return: Axis, along which quantizer parameters are calculated.
-    """
-    return 1  # Activations have channel first layout: [N, C, Z, Y, X]
-
-
 def _get_activation_tensor_shape(
     nncf_graph: NNCFGraph, node: NNCFNode, target_point: ONNXTargetPoint
-) -> Optional[List[int]]:
+) -> Optional[Tuple[int, ...]]:
     """
     Returns shape of an activation tensor which is correspond to the target point and node.
     ONNX model can not have a shape of a edge, even after shape inference.
@@ -203,12 +181,12 @@ def _get_activation_tensor_shape(
         if target_point.type == TargetType.PRE_LAYER_OPERATION:
             nncf_logger.info(
                 f"The shape of input edge of a node {node.node_name} is unkown. \
-                    Therefore per-tensor quantizaiton is applied."
+                    It could lead to inaccurate statistics collection."
             )
         elif target_point.type == TargetType.POST_LAYER_OPERATION:
             nncf_logger.info(
                 f"The shape of output edge of a node {node.node_name} is unkown. \
-                    Therefore per-tensor quantizaiton is applied."
+                    It could lead to inaccurate statistics collection."
             )
         nncf_logger.info("Please consider to run pre-processing before quantization.")
         # TODO: add preprocessing tool for ONNX model.
@@ -218,7 +196,7 @@ def _get_activation_tensor_shape(
 
 def get_quantized_tensor_shape(
     nncf_graph: NNCFGraph, node: NNCFNode, target_point: ONNXTargetPoint
-) -> Optional[List[int]]:
+) -> Optional[Tuple[int, ...]]:
     """
     Returns quantized tensor shape corresponding to a target point with a node if shape - info is existed.
     If there is no shape info - returns None.
@@ -231,20 +209,3 @@ def get_quantized_tensor_shape(
     if target_point.is_weight_target_point():
         return node.layer_attributes.weight_attrs[target_point.port_id]["shape"]
     return _get_activation_tensor_shape(nncf_graph, node, target_point)
-
-
-def get_quantization_axis(is_per_channel: bool, node: NNCFNode, target_point: ONNXTargetPoint) -> Optional[int]:
-    """
-    Returns axis of quantizer parameters are calculated along.
-    If quantization is per-tensor returns None.
-
-    :param is_per_channel: True if quantizater is per-channel.
-    :param node: NNCFNode.
-    :param target_point: Target point indicates the quantizer place in the model graph.
-    :return: None if per-tensor, otherwise quantizion axis.
-    """
-    if not is_per_channel:
-        return None
-    if target_point.is_weight_target_point():
-        return _get_weight_quantization_axis(node, target_point.port_id)
-    return _get_activation_quantization_axis()

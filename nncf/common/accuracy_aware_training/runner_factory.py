@@ -11,7 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
-from typing import Dict
+from typing import Dict, Union
 
 import nncf
 from nncf.api.compression import CompressionAlgorithmController
@@ -39,7 +39,7 @@ class EarlyExitTrainingRunnerCreator(TrainingRunnerCreator):
 
     def __init__(
         self,
-        accuracy_aware_training_params: Dict[str, object],
+        accuracy_aware_training_params: Dict[str, Union[float, int]],
         compression_controller: CompressionAlgorithmController,
         uncompressed_model_accuracy: float,
         verbose: bool,
@@ -59,7 +59,7 @@ class EarlyExitTrainingRunnerCreator(TrainingRunnerCreator):
 
         :return: AccuracyAwareTrainingRunner object
         """
-        nncf_backend = get_backend(self.compression_controller.model)
+        nncf_backend = get_backend(self.compression_controller.model)  # type: ignore
         if nncf_backend is BackendType.TORCH:
             from nncf.torch.accuracy_aware_training.runner import PTAccuracyAwareTrainingRunner
 
@@ -90,7 +90,7 @@ class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
 
     def __init__(
         self,
-        accuracy_aware_training_params: Dict[str, object],
+        accuracy_aware_training_params: Dict[str, Union[float, int]],
         compression_controller: CompressionAlgorithmController,
         uncompressed_model_accuracy: float,
         verbose: bool,
@@ -114,7 +114,7 @@ class AdaptiveCompressionLevelTrainingRunnerCreator(TrainingRunnerCreator):
 
         :return: AdaptiveCompressionLevelTrainingRunner object
         """
-        nncf_backend = get_backend(self.compression_controller.model)
+        nncf_backend = get_backend(self.compression_controller.model)  # type: ignore
 
         if nncf_backend is BackendType.TORCH:
             from nncf.torch.accuracy_aware_training.runner import PTAdaptiveCompressionLevelTrainingRunner

@@ -289,13 +289,16 @@ def moveaxis(a: Tensor, source: Union[int, Tuple[int, ...]], destination: Union[
 
 
 @tensor_dispatch
-def mean(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> Tensor:
+def mean(
+    a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False, dtype: TensorDataType = None
+) -> Tensor:
     """
     Compute the arithmetic mean along the specified axis.
 
     :param a: Array containing numbers whose mean is desired.
     :param axis: Axis or axes along which the means are computed.
     :param keepdims: Destination positions for each of the original axes. These must also be unique.
+    :param dtype: Type to use in computing the mean.
     :return: Array with moved axes.
     """
 

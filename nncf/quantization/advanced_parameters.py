@@ -22,13 +22,14 @@ from typing import Any, Dict, Optional, Union
 import nncf
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.utils.api_marker import api
+from nncf.parameters import StrEnum
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import StatisticsType
 
 
-@api()
-class OverflowFix(Enum):
+@api(canonical_alias="nncf.OverflowFix")
+class OverflowFix(StrEnum):
     """
     This option controls whether to apply the overflow issue fix for the 8-bit
     quantization.
@@ -58,7 +59,7 @@ class OverflowFix(Enum):
 
 
 @api()
-class FP8Type(Enum):
+class FP8Type(StrEnum):
     """
     Defines FP8 special types (https://arxiv.org/pdf/2209.05433.pdf).
 
@@ -190,6 +191,12 @@ class AdvancedQuantizationParameters:
     :type disable_channel_alignment: bool
     :param disable_bias_correction: Whether to disable the bias correction.
     :type disable_bias_correction: bool
+    :param batchwise_statistics: Determines whether quantizer statistics should be calculated
+        for each item of the batch or for the entire batch, default is None.
+        "None" means that if torch.DataLoader or tensorflow.Dataset was passed as a data source for
+        the calibration dataset, then in case batch_size of the data source > 1 batchwise_statistics sets to True,
+        otherwise sets to False.
+    :type batchwise_statistics: Optional[bool]
     :param activations_quantization_params: Quantization parameters for activations.
     :type activations_quantization_params: nncf.quantization.advanced_parameters.QuantizationParameters
     :param weights_quantization_params: Quantization parameters for weights.
@@ -217,6 +224,7 @@ class AdvancedQuantizationParameters:
     inplace_statistics: bool = True
     disable_channel_alignment: bool = True
     disable_bias_correction: bool = False
+    batchwise_statistics: Optional[bool] = None
 
     # Advanced Quantization parameters
     activations_quantization_params: Union[QuantizationParameters, FP8QuantizationParameters] = None

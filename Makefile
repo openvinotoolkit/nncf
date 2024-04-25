@@ -74,7 +74,7 @@ install-openvino-dev: install-openvino-test install-pre-commit
 	pip install -r examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/requirements.txt
 
 test-openvino:
-	ONEDNN_MAX_CPU_ISA=AVX2 pytest ${COVERAGE_ARGS} tests/openvino $(DATA_ARG) --junitxml ${JUNITXML_PATH}
+	ONEDNN_MAX_CPU_ISA=AVX2 pytest ${COVERAGE_ARGS} -n4 -ra tests/openvino $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
 test-install-openvino:
 	pytest tests/cross_fw/install -s        \
@@ -121,13 +121,13 @@ test-examples-tensorflow:
 # PyTorch backend
 install-torch-test:
 	pip install -U pip
-	pip install -e .[torch] --index-url https://download.pytorch.org/whl/cu118 --extra-index-url=https://pypi.org/simple  # ticket 119128
+	pip install -e .[torch]
 	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=omz-tools&subdirectory=tools/model_tools"
 	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
-	pip install -r tests/torch/requirements.txt --index-url https://download.pytorch.org/whl/cu118 --extra-index-url=https://pypi.org/simple
+	pip install -r tests/torch/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/cross_fw/examples/requirements.txt
-	pip install -r examples/torch/requirements.txt --index-url https://download.pytorch.org/whl/cu118 --extra-index-url=https://pypi.org/simple
+	pip install -r examples/torch/requirements.txt
 
 install-torch-dev: install-torch-test install-pre-commit
 	pip install -r examples/post_training_quantization/torch/mobilenet_v2/requirements.txt
@@ -144,6 +144,12 @@ install-models-hub-torch:
 
 test-torch:
 	pytest ${COVERAGE_ARGS} tests/torch -m "not weekly and not nightly and not models_hub" --junitxml ${JUNITXML_PATH} $(DATA_ARG)
+
+test-torch-cpu:
+	pytest ${COVERAGE_ARGS} tests/torch -n4 -ra -m "not cuda and not weekly and not nightly and not models_hub"
+
+test-torch-cuda:
+	pytest ${COVERAGE_ARGS} tests/torch -ra -m "cuda and not weekly and not nightly and not models_hub"
 
 test-torch-nightly:
 	pytest ${COVERAGE_ARGS} tests/torch -m nightly --junitxml ${JUNITXML_PATH} $(DATA_ARG)

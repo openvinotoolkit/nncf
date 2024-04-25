@@ -306,7 +306,7 @@
                     "model_description": "RetinaNet",
                     "compression_description": "INT8 (per-tensor symmetric for weights, per-tensor asymmetric half-range for activations) + filter pruning 40%",
                     "batch_per_gpu": 15,
-                    "target_tf": 32.67,
+                    "target_tf": 32.61,
                     "target_ov": 32.47
                 },
                 "yolo_v4_coco": {

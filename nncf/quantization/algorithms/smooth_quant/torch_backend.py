@@ -24,13 +24,14 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.experimental.common.tensor_statistics.collectors import MaxAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.tensor import Tensor
-from nncf.openvino.graph.node_utils import get_channel_agnostic_reduction_axes
 from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.quantization.algorithms.smooth_quant.backend import SmoothQuantAlgoBackend
 from nncf.torch.graph.transformations.command_creation import create_command_to_update_weight
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
+from nncf.torch.model_graph_manager import get_const_data
+from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.tensor_statistics.collectors import PTAbsMaxReducer
@@ -53,14 +54,14 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     @property
     def convolution_metatypes(self) -> List[OperatorMetatype]:
         return [
-            om.PTModuleConv1dMetatype,
-            om.PTModuleConv2dMetatype,
-            om.PTModuleConv3dMetatype,
+            om.PTConv1dMetatype,
+            om.PTConv2dMetatype,
+            om.PTConv3dMetatype,
         ]
 
     @property
     def matmul_metatypes(self) -> List[OperatorMetatype]:
-        return [om.PTModuleLinearMetatype]
+        return [om.PTLinearMetatype]
 
     @property
     def quantize_agnostic_metatypes(self) -> List[OperatorMetatype]:
@@ -88,10 +89,6 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
         return 0
 
     @staticmethod
-    def get_channel_agnostic_reduction_axes(channel_axis: int, shape: Tuple[int]) -> Tuple[int]:
-        return get_channel_agnostic_reduction_axes([channel_axis], shape)
-
-    @staticmethod
     def get_abs_max_channel_collector(
         num_samples: int, stats_reduction_axes: Tuple[int], inplace: bool, branch_key: str
     ) -> TensorCollector:
@@ -103,10 +100,13 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def get_weight_value(node_with_weight: NNCFNode, model: NNCFNetwork) -> Tensor:
-        node_module = model.nncf.get_containing_module(node_with_weight.node_name)
-        if node_module.weight is None:
-            raise RuntimeError(f"{node_module} module has no .weight attribute.")
-        return Tensor(node_module.weight.data)
+        weight_node = get_const_node(
+            node_with_weight, node_with_weight.metatype.weight_port_ids[0], model.nncf.get_graph()
+        )
+        if weight_node is None:
+            raise RuntimeError(f"{node_with_weight} node has no weight node.")
+        weight_data = get_const_data(weight_node, model)
+        return Tensor(weight_data)
 
     @staticmethod
     def get_weight_tensor_port_id(node: NNCFNode) -> int:
@@ -136,7 +136,7 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
 
     @staticmethod
     def get_activation_channel_axis(node: NNCFNode, port_id: int) -> int:
-        if node.metatype == om.PTModuleLinearMetatype:
+        if node.metatype == om.PTLinearMetatype:
             return -1
         # TODO: Add activation axis calculation when MatMul will be supported
         return 1

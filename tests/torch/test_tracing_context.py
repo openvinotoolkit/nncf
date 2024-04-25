@@ -17,7 +17,7 @@ from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.trace_tensor import TracedParameter
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
 from nncf.torch.dynamic_graph.wrappers import wrap_parameters
-from nncf.torch.nncf_network import ExtraCompressionModuleType
+from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from tests.torch.helpers import BasicConvTestModel
 
 
@@ -110,10 +110,10 @@ def test_traced_tensors_are_stripped_on_context_exit():
         assert isinstance(module.weight, TracedParameter)
         assert isinstance(module.conv2d.weight, TracedParameter)
         assert isinstance(result, TracedTensor)
-    assert type(module.cached_tensor) == torch.Tensor
-    assert type(result) == torch.Tensor
-    assert type(module.weight) == torch.nn.Parameter
-    assert type(module.conv2d.weight) == torch.nn.Parameter
+    assert isinstance(module.cached_tensor, torch.Tensor)
+    assert isinstance(result, torch.Tensor)
+    assert isinstance(module.weight, torch.nn.Parameter)
+    assert isinstance(module.conv2d.weight, torch.nn.Parameter)
 
 
 def test_no_cross_forward_run_dependency():

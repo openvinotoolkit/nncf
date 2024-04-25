@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import tempfile
 from copy import deepcopy
 from pathlib import Path
 from typing import Union
@@ -49,5 +48,5 @@ def save_model_without_tensors(model: onnx.ModelProto, model_path: Path) -> None
     """
     tensors_location = Path("tensors")
     copy_model = deepcopy(model)
-    with tempfile.TemporaryDirectory() as tmpfile:
-        onnx.save_model(copy_model, model_path, save_as_external_data=True, location=Path(tmpfile) / tensors_location)
+    onnx.save_model(copy_model, model_path, save_as_external_data=True, location=tensors_location)
+    (model_path.parent / tensors_location).unlink()

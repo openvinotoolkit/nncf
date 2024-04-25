@@ -10,20 +10,26 @@
 # limitations under the License.
 
 import pytest
+import torch
 from torch import nn
 
 from nncf.common.graph.patterns import GraphPattern
 from nncf.common.graph.patterns.manager import PatternsManager
 from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationType
 from nncf.common.utils.backend import BackendType
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 from nncf.scopes import IgnoredScope
+from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph import PTTargetPoint
-from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
-from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
+from nncf.torch.graph.operator_metatypes import PTCatMetatype
+from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
+from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from nncf.torch.graph.operator_metatypes import PTSoftmaxMetatype
+from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
+from tests.common.quantization.metatypes import CatTestMetatype
 from tests.common.quantization.metatypes import Conv2dTestMetatype
 from tests.common.quantization.metatypes import LinearTestMetatype
 from tests.common.quantization.metatypes import SoftmaxTestMetatype
@@ -97,16 +103,33 @@ class TestPTQParams(TemplateTestPTQParams):
             assert act_num_q == 1
         assert weight_num_q == 1
 
+    def check_unified_scale_layout(self, layout, unified_scale_group):
+        assert len(layout.transformations) == 1
+        command = layout.transformations[0]
+        assert isinstance(command, PTSharedFnInsertionCommand)
+        assert command.op_name == "/Conv_1_0|INPUT0;/Conv_2_0|INPUT0;/Conv_3_0|INPUT0"
+        assert command.target_points == unified_scale_group
+        assert torch.allclose(command.fn.scale, torch.tensor(4.0))
+        assert command.type == TransformationType.INSERT
+
     def target_point(self, target_type: TargetType, target_node_name: str, port_id: int) -> PTTargetPoint:
         return PTTargetPoint(target_type, target_node_name, input_port_id=port_id)
+
+    def get_backend_tensor(self, value):
+        return torch.tensor(value)
 
     @property
     def metatypes_mapping(self):
         return {
-            Conv2dTestMetatype: PTModuleConv2dMetatype,
-            LinearTestMetatype: PTModuleLinearMetatype,
+            Conv2dTestMetatype: PTConv2dMetatype,
+            LinearTestMetatype: PTLinearMetatype,
             SoftmaxTestMetatype: PTSoftmaxMetatype,
+            CatTestMetatype: PTCatMetatype,
         }
+
+    @property
+    def nncf_graph_cls(self):
+        return PTNNCFGraph
 
     @pytest.fixture(scope="session")
     def test_params(self):
