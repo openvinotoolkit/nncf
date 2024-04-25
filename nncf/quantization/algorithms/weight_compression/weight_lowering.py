@@ -101,68 +101,6 @@ def calculate_normalized_weight_and_nf4_scale(
 
 
 def do_integer_quantization(
-    weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig
-) -> Tuple[Tensor, Tensor, Tensor]:
-    """
-    The method quantizes the given weights to integer data type in accordance with the compression config.
-    The config defines a quantization mode:
-        INT8_SYM mode refers to unsigned int8 symmetric weight compression with a fixed zero point equals to 128 -
-            quantization to [0, 255] range.
-        INT8_ASYM mode refers to unsigned int8 asymmetric weight compression with a typical non-fixed zero-point -
-            quantization to [0, 255] range.
-        INT4_ASYM mode refers to unsigned int4 asymmetric weight compression with a typical non-fixed zero-point -
-            quantization to [0, 15] range.
-        INT4_SYM mode refers to unsigned int4 symmetric weight compression with a fixed zero point equals to 8 -
-            quantization to [0, 15] range.
-        NF4 mode requires a dedicated procedure and it is not supported in this method.
-    One of the parameter of compression config is a group size. Quantization is per-channel, if group size equals to -1,
-    otherwise it's per-group, i.e. group size number of weights in the channel dimension share quantization parameters
-    (scales).
-
-    :param weight: Weight array to compress.
-    :param reduction_axes: Axes, along which to reduce (collect) different statistics (e.g. min, max).
-    :param config: Information on how to compress (quantize) a specific weight.
-    :return: The compressed weights tensor of uint8 type, scale tensor of float32 type and
-        zero point tensor of int32 type that was used for its quantization.
-    """
-    mode = config.mode
-    assert mode != CompressWeightsMode.NF4, "The function supports integer quantization only"
-    group_size = config.group_size
-    num_bits = config.num_bits
-
-    level_low = 0
-    level_high = 2**num_bits - 1
-
-    if weight.dtype != TensorDataType.float32:
-        weight = weight.astype(TensorDataType.float32)
-
-    if group_size != -1:
-        # weights are reshaped from [a1, r, a2] to [a1, r//gs, gs, a2]
-        weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, group_size)
-
-    if mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]:
-        min_values = fns.min(weight, axis=reduction_axes, keepdims=True)  # [a1, r, a2] -> [a1, 1, a2]
-        max_values = fns.max(weight, axis=reduction_axes, keepdims=True)  # [a1, r, a2] -> [a1, 1, a2]
-        scale, zero_point = calculate_scale_zero_point(
-            min_values, max_values, level_low, level_high, narrow_range=False
-        )
-    else:
-        level_low_sym = -(2 ** (num_bits - 1))
-        level_high_sym = 2 ** (num_bits - 1) - 1
-
-        scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)  # [a1, r//gs, 1, a2]
-        scale = scale / level_high_sym
-        zero_point = fns.as_tensor_like(scale, [-level_low_sym]).astype(TensorDataType.int32)
-        eps = fns.finfo(scale).eps
-        # NOTE: adding machine epsilon to avoid division by zero
-        scale = fns.where(fns.abs(scale) < eps, eps, scale)
-
-    compressed_weights = fns.round(weight / scale + zero_point.astype(weight.dtype))
-    compressed_weights = fns.clip(compressed_weights, level_low, level_high).astype(TensorDataType.uint8)
-    return compressed_weights, scale, zero_point
-
-
-def do_integer_quantization_with_fixed_scale(
     weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig, precomputed_scale: Tensor = None
 ) -> Tuple[Tensor, Tensor, Tensor]:
     """
@@ -202,17 +140,26 @@ def do_integer_quantization_with_fixed_scale(
     if group_size != -1:
         # weights are reshaped from [a1, r, a2] to [a1, r//gs, gs, a2]
         weight, reduction_axes = reshape_weight_for_grouped_quantization(weight, reduction_axes, group_size)
-    scale = precomputed_scale
+
     if mode in [CompressWeightsMode.INT8_ASYM, CompressWeightsMode.INT4_ASYM]:
         min_values = fns.min(weight, axis=reduction_axes, keepdims=True)  # [a1, r, a2] -> [a1, 1, a2]
         max_values = fns.max(weight, axis=reduction_axes, keepdims=True)  # [a1, r, a2] -> [a1, 1, a2]
-        _, zero_point = calculate_scale_zero_point(min_values, max_values, level_low, level_high, narrow_range=False)
+        scale, zero_point = calculate_scale_zero_point(
+            min_values, max_values, level_low, level_high, narrow_range=False
+        )
     else:
         level_low_sym = -(2 ** (num_bits - 1))
+        level_high_sym = 2 ** (num_bits - 1) - 1
+
+        scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)  # [a1, r//gs, 1, a2]
+        scale = scale / level_high_sym
         zero_point = fns.as_tensor_like(scale, [-level_low_sym]).astype(TensorDataType.int32)
         eps = fns.finfo(scale).eps
         # NOTE: adding machine epsilon to avoid division by zero
         scale = fns.where(fns.abs(scale) < eps, eps, scale)
+
+    if precomputed_scale is not None:
+        scale = precomputed_scale
 
     compressed_weights = fns.round(weight / scale + zero_point.astype(weight.dtype))
     compressed_weights = fns.clip(compressed_weights, level_low, level_high).astype(TensorDataType.uint8)
@@ -262,12 +209,8 @@ def compress_weight(
     if config.mode == CompressWeightsMode.NF4:
         compressed_weight, scale = calculate_normalized_weight_and_nf4_scale(weight, reduction_axes, config.group_size)
         return CompressedWeight(compressed_weight, scale)
-    if precomputed_scale is not None:
-        compressed_weight, scale, zero_point = do_integer_quantization_with_fixed_scale(
-            weight, reduction_axes, config, precomputed_scale
-        )
-    else:
-        compressed_weight, scale, zero_point = do_integer_quantization(weight, reduction_axes, config)
+    compressed_weight, scale, zero_point = do_integer_quantization(weight, reduction_axes, config, precomputed_scale)
+
     return CompressedWeight(compressed_weight, scale, zero_point)
 
 
