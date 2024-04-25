@@ -19,97 +19,97 @@ timm/crossvit_9_240_backend_CUDA_TORCH:
 timm/crossvit_9_240_backend_FP32:
   metric_value: 0.73982
 timm/crossvit_9_240_backend_ONNX:
-  metric_value: 0.72854
+  metric_value: 0.73484
 timm/crossvit_9_240_backend_OV:
-  metric_value: 0.72812
+  metric_value: 0.72788
 timm/crossvit_9_240_backend_TORCH:
-  metric_value: 0.72816
+  metric_value: 0.72744
 timm/darknet53_backend_CUDA_TORCH:
   metric_value: 0.79176
 timm/darknet53_backend_FP32:
   metric_value: 0.80006
 timm/darknet53_backend_ONNX:
-  metric_value: 0.79336
+  metric_value: 0.79176
 timm/darknet53_backend_OV:
-  metric_value: 0.79222
+  metric_value: 0.79216
 timm/darknet53_backend_TORCH:
-  metric_value: 0.7916
+  metric_value: 0.79094
 timm/deit3_small_patch16_224_backend_CUDA_TORCH:
   metric_value: 0.76816
 timm/deit3_small_patch16_224_backend_FP32:
   metric_value: 0.81358
 timm/deit3_small_patch16_224_backend_ONNX:
-  metric_value: 0.81154
+  metric_value: 0.81116
 timm/deit3_small_patch16_224_backend_OV:
   metric_value: 0.81276
 timm/deit3_small_patch16_224_backend_TORCH:
-  metric_value: 0.81278
+  metric_value: 0.81274
 timm/dla34_backend_CUDA_TORCH:
   metric_value: 0.73978
 timm/dla34_backend_FP32:
   metric_value: 0.74628
 timm/dla34_backend_ONNX:
-  metric_value: 0.7455
+  metric_value: 0.74564
 timm/dla34_backend_OV:
-  metric_value: 0.74556
+  metric_value: 0.74532
 timm/dla34_backend_TORCH:
-  metric_value: 0.74242
+  metric_value: 0.74256
 timm/dpn68_backend_CUDA_TORCH:
   metric_value: 0.75492
 timm/dpn68_backend_FP32:
   metric_value: 0.76342
 timm/dpn68_backend_ONNX:
-  metric_value: 0.7595
+  metric_value: 0.75906
 timm/dpn68_backend_OV:
-  metric_value: 0.75968
+  metric_value: 0.75972
 timm/dpn68_backend_TORCH:
-  metric_value: 0.75826
+  metric_value: 0.75868
 timm/efficientnet_b0_BC_backend_FP32:
   metric_value: 0.77698
 timm/efficientnet_b0_BC_backend_ONNX:
-  metric_value: 0.77212
+  metric_value: 0.77132
 timm/efficientnet_b0_BC_backend_OV:
-  metric_value: 0.77218
+  metric_value: 0.77166
 timm/efficientnet_b0_backend_CUDA_TORCH:
   metric_value: 0.768
 timm/efficientnet_b0_backend_FP32:
   metric_value: 0.77698
 timm/efficientnet_b0_backend_ONNX:
-  metric_value: 0.77208
+  metric_value: 0.7719
 timm/efficientnet_b0_backend_OV:
-  metric_value: 0.77196
+  metric_value: 0.77104
 timm/efficientnet_b0_backend_TORCH:
-  metric_value: 0.77124
+  metric_value: 0.77042
 timm/efficientnet_lite0_backend_CUDA_TORCH:
   metric_value: 0.74686
 timm/efficientnet_lite0_backend_FP32:
   metric_value: 0.75496
 timm/efficientnet_lite0_backend_ONNX:
-  metric_value: 0.75214
+  metric_value: 0.75184
 timm/efficientnet_lite0_backend_OV:
-  metric_value: 0.7515
+  metric_value: 0.75176
 timm/efficientnet_lite0_backend_TORCH:
-  metric_value: 0.75236
+  metric_value: 0.7517
 timm/hrnet_w18_backend_CUDA_TORCH:
   metric_value: 0.76712
 timm/hrnet_w18_backend_FP32:
   metric_value: 0.78124
 timm/hrnet_w18_backend_ONNX:
-  metric_value: 0.7747
+  metric_value: 0.7743
 timm/hrnet_w18_backend_OV:
-  metric_value: 0.77526
+  metric_value: 0.7743
 timm/hrnet_w18_backend_TORCH:
-  metric_value: 0.77316
+  metric_value: 0.7722
 timm/inception_resnet_v2_backend_CUDA_TORCH:
   metric_value: 0.80024
 timm/inception_resnet_v2_backend_FP32:
   metric_value: 0.80448
 timm/inception_resnet_v2_backend_ONNX:
-  metric_value: 0.804
+  metric_value: 0.80396
 timm/inception_resnet_v2_backend_OV:
   metric_value: 0.80422
 timm/inception_resnet_v2_backend_TORCH:
-  metric_value: 0.803
+  metric_value: 0.80334
 timm/levit_128_backend_CUDA_TORCH:
   metric_value: 0.7324
 timm/levit_128_backend_FP32:
@@ -117,120 +117,120 @@ timm/levit_128_backend_FP32:
 timm/levit_128_backend_ONNX:
   metric_value: 0.7762
 timm/levit_128_backend_OV:
-  metric_value: 0.77696
+  metric_value: 0.77644
 timm/levit_128_backend_TORCH:
-  metric_value: 0.77752
+  metric_value: 0.77814
 timm/mobilenetv2_050_BC_backend_FP32:
   metric_value: 0.6594
 timm/mobilenetv2_050_BC_backend_ONNX:
-  metric_value: 0.65466
+  metric_value: 0.65486
 timm/mobilenetv2_050_BC_backend_OV:
-  metric_value: 0.6543
+  metric_value: 0.65332
 timm/mobilenetv2_050_backend_CUDA_TORCH:
   metric_value: 0.64278
 timm/mobilenetv2_050_backend_FP32:
   metric_value: 0.6594
 timm/mobilenetv2_050_backend_ONNX:
-  metric_value: 0.65332
+  metric_value: 0.6537
 timm/mobilenetv2_050_backend_OV:
-  metric_value: 0.65282
+  metric_value: 0.65314
 timm/mobilenetv2_050_backend_TORCH:
-  metric_value: 0.65364
+  metric_value: 0.65334
 timm/mobilenetv3_small_050_backend_CUDA_TORCH:
   metric_value: 0.41888
 timm/mobilenetv3_small_050_backend_FP32:
   metric_value: 0.57906
 timm/mobilenetv3_small_050_backend_ONNX:
-  metric_value: 0.42104
+  metric_value: 0.41828
 timm/mobilenetv3_small_050_backend_OV:
-  metric_value: 0.42184
+  metric_value: 0.41874
 timm/mobilenetv3_small_050_backend_TORCH:
-  metric_value: 0.4291
+  metric_value: 0.4267
 timm/mobilenetv3_small_050_BC_backend_FP32:
   metric_value: 0.57906
 timm/mobilenetv3_small_050_BC_backend_ONNX:
-  metric_value: 0.56496
+  metric_value: 0.56556
 timm/mobilenetv3_small_050_BC_backend_OV:
-  metric_value: 0.56476
+  metric_value: 0.5655
 timm/regnetx_002_backend_CUDA_TORCH:
   metric_value: 0.67452
 timm/regnetx_002_backend_FP32:
   metric_value: 0.68756
 timm/regnetx_002_backend_ONNX:
-  metric_value: 0.68476
+  metric_value: 0.6848
 timm/regnetx_002_backend_OV:
-  metric_value: 0.6853
+  metric_value: 0.6852
 timm/regnetx_002_backend_TORCH:
-  metric_value: 0.68492
+  metric_value: 0.68576
 timm/resnest14d_backend_CUDA_TORCH:
   metric_value: 0.74176
 timm/resnest14d_backend_FP32:
   metric_value: 0.75516
 timm/resnest14d_backend_ONNX:
-  metric_value: 0.74968
+  metric_value: 0.75428
 timm/resnest14d_backend_OV:
-  metric_value: 0.74984
+  metric_value: 0.75
 timm/resnest14d_backend_TORCH:
-  metric_value: 0.74838
+  metric_value: 0.7485
 timm/resnet18_backend_CUDA_TORCH:
   metric_value: 0.69748
 timm/resnet18_backend_FP32:
   metric_value: 0.71502
 timm/resnet18_backend_ONNX:
-  metric_value: 0.71104
+  metric_value: 0.71102
 timm/resnet18_backend_OV:
-  metric_value: 0.71042
+  metric_value: 0.71116
 timm/resnet18_backend_TORCH:
-  metric_value: 0.71024
+  metric_value: 0.70982
 timm/swin_base_patch4_window7_224_backend_FP32:
   metric_value: 0.85274
 timm/swin_base_patch4_window7_224_backend_OV:
-  metric_value: 0.83636
+  metric_value: 0.83566
 timm/swin_base_patch4_window7_224_no_sq_backend_FP32:
   metric_value: 0.85274
 timm/swin_base_patch4_window7_224_no_sq_backend_CUDA_TORCH:
   metric_value: 0.85142
 timm/swin_base_patch4_window7_224_no_sq_backend_ONNX:
-  metric_value: 0.85158
+  metric_value: 0.85212
 timm/swin_base_patch4_window7_224_no_sq_backend_TORCH:
-  metric_value: 0.85142
+  metric_value: 0.85178
 timm/tf_inception_v3_backend_CUDA_TORCH:
   metric_value: 0.77542
 timm/tf_inception_v3_backend_FP32:
   metric_value: 0.7786
 timm/tf_inception_v3_backend_ONNX:
-  metric_value: 0.77766
+  metric_value: 0.77762
 timm/tf_inception_v3_backend_OV:
-  metric_value: 0.77742
+  metric_value: 0.77748
 timm/tf_inception_v3_backend_TORCH:
-  metric_value: 0.77642
+  metric_value: 0.77586
 timm/vgg11_backend_CUDA_TORCH:
   metric_value: 0.6809
 timm/vgg11_backend_FP32:
   metric_value: 0.6904
 timm/vgg11_backend_ONNX:
-  metric_value: 0.68754
+  metric_value: 0.68788
 timm/vgg11_backend_OV:
-  metric_value: 0.68732
+  metric_value: 0.68788
 timm/vgg11_backend_TORCH:
-  metric_value: 0.68754
+  metric_value: 0.6879
 timm/visformer_small_backend_CUDA_TORCH:
   metric_value: 0.77728
 timm/visformer_small_backend_FP32:
   metric_value: 0.82098
 timm/visformer_small_backend_ONNX:
-  metric_value: 0.81604
+  metric_value: 0.81562
 timm/visformer_small_backend_OV:
-  metric_value: 0.81692
+  metric_value: 0.81674
 timm/visformer_small_backend_TORCH:
-  metric_value: 0.81624
+  metric_value: 0.8162
 timm/wide_resnet50_2_backend_CUDA_TORCH:
   metric_value: 0.81186
 timm/wide_resnet50_2_backend_FP32:
   metric_value: 0.81454
 timm/wide_resnet50_2_backend_ONNX:
-  metric_value: 0.81228
+  metric_value: 0.8119
 timm/wide_resnet50_2_backend_OV:
-  metric_value: 0.8125
+  metric_value: 0.81232
 timm/wide_resnet50_2_backend_TORCH:
-  metric_value: 0.81234
+  metric_value: 0.81206

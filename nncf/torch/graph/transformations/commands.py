@@ -10,7 +10,7 @@
 # limitations under the License.
 
 from enum import Enum
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Union
 
 import torch
 
@@ -139,7 +139,7 @@ class PTInsertionCommand(PTTransformationCommand):
         self,
         point: PTTargetPoint,
         fn: Callable,
-        priority: TransformationPriority = TransformationPriority.DEFAULT_PRIORITY,
+        priority: Union[TransformationPriority, int] = TransformationPriority.DEFAULT_PRIORITY,
         hooks_group_name: str = DEFAULT_HOOKS_GROUP_NAME,
     ):
         super().__init__(TransformationType.INSERT, point)
@@ -164,7 +164,7 @@ class PTSharedFnInsertionCommand(PTTransformationCommand):
         fn: Callable,
         op_unique_name: str,
         compression_module_type: ExtraCompressionModuleType = ExtraCompressionModuleType.EXTERNAL_OP,
-        priority: TransformationPriority = TransformationPriority.DEFAULT_PRIORITY,
+        priority: Union[TransformationPriority, int] = TransformationPriority.DEFAULT_PRIORITY,
         hooks_group_name: str = DEFAULT_HOOKS_GROUP_NAME,
     ):
         super().__init__(TransformationType.INSERT, None)
@@ -179,17 +179,18 @@ class PTSharedFnInsertionCommand(PTTransformationCommand):
         return True
 
 
-class PTModelExtractionWithFusedBiasCommand(PTCommand):
+class PTModelExtractionCommand(PTCommand):
     """
-    Extracts sequence by name with node that contain fused bias.
+    Extracts submodel based on the sub-model input and output names
     """
 
-    def __init__(self, node_name: str):
+    def __init__(self, input_node_names: List[str], output_node_names: List[str]):
         """
         :param node_name: Node name that will be extracted.
         """
         super().__init__(TransformationType.EXTRACT)
-        self.node_name = node_name
+        self.input_node_names = input_node_names
+        self.output_node_names = output_node_names
 
 
 class PTBiasCorrectionCommand(PTTransformationCommand):

@@ -137,7 +137,7 @@ def maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_back
         pytest.skip("To run test for not quantized model use --fp32 argument")
     if test_model_param["backend"] == BackendType.CUDA_TORCH and not run_torch_cuda_backend:
         pytest.skip("To run test for CUDA_TORCH backend use --cuda argument")
-    if batch_size > 1 and not test_model_param["is_batch_size_supported"]:
+    if batch_size and batch_size > 1 and test_model_param.get("batch_size", 1) == 1:
         pytest.skip("The model does not support batch_size > 1. Please use --batch-size 1.")
     return test_model_param
 
@@ -203,7 +203,7 @@ def test_ptq_quantization(
     output_dir: Path,
     ptq_result_data: Dict[str, RunInfo],
     no_eval: bool,
-    batch_size: int,
+    batch_size: Optional[int],
     run_fp32_backend: bool,
     run_torch_cuda_backend: bool,
     subset_size: Optional[int],
@@ -222,6 +222,8 @@ def test_ptq_quantization(
         maybe_skip_test_case(test_model_param, run_fp32_backend, run_torch_cuda_backend, batch_size)
         pipeline_cls = test_model_param["pipeline_cls"]
         # Recalculates subset_size when subset_size is None
+        if batch_size is None:
+            batch_size = test_model_param.get("batch_size", 1)
         if batch_size > 1 and subset_size is None:
             subset_size = 300 // batch_size
             print(f"Update subset_size value based on provided batch_size to {subset_size}.")
