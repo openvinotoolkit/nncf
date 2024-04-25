@@ -1,2 +1,2 @@
 anomalib==0.6.0
-openvino-dev==2024.0
+openvino-dev==2024.1
