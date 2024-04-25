@@ -17,7 +17,6 @@ from collections import defaultdict
 from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass
-from enum import Enum
 from enum import IntEnum
 from typing import Callable, Dict, Iterator, List, Optional, Tuple, TypeVar
 
@@ -67,6 +66,7 @@ from nncf.torch.graph.graph_builder import GraphConverter
 from nncf.torch.graph.operator_metatypes import OPERATORS_WITH_WEIGHTS_METATYPES
 from nncf.torch.graph.operator_metatypes import PTSplitMetatype
 from nncf.torch.graph.transformations.commands import DEFAULT_HOOKS_GROUP_NAME
+from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.knowledge_distillation.knowledge_distillation_handler import KnowledgeDistillationLossHandler
 from nncf.torch.layer_utils import _NNCFModuleMixin
@@ -87,28 +87,45 @@ class PTInsertionType(IntEnum):
     OPERATOR_POST_HOOK = 3
 
 
+TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT_FOR_REPLACED_MODULES = {
+    TargetType.PRE_LAYER_OPERATION: PTInsertionType.NNCF_MODULE_PRE_OP,
+    TargetType.POST_LAYER_OPERATION: PTInsertionType.NNCF_MODULE_POST_OP,
+    TargetType.OPERATION_WITH_WEIGHTS: PTInsertionType.NNCF_MODULE_PRE_OP,
+    TargetType.OPERATOR_PRE_HOOK: PTInsertionType.OPERATOR_PRE_HOOK,
+    TargetType.OPERATOR_POST_HOOK: PTInsertionType.OPERATOR_POST_HOOK,
+}
+
+TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT_FOR_NOT_REPLACED_MODULES = {
+    TargetType.PRE_LAYER_OPERATION: PTInsertionType.OPERATOR_PRE_HOOK,
+    TargetType.POST_LAYER_OPERATION: PTInsertionType.OPERATOR_POST_HOOK,
+    TargetType.OPERATION_WITH_WEIGHTS: PTInsertionType.OPERATOR_PRE_HOOK,
+    TargetType.OPERATOR_PRE_HOOK: PTInsertionType.OPERATOR_PRE_HOOK,
+    TargetType.OPERATOR_POST_HOOK: PTInsertionType.OPERATOR_POST_HOOK,
+}
+
+
 class PTInsertionPoint:
-    TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT = {
-        TargetType.PRE_LAYER_OPERATION: PTInsertionType.NNCF_MODULE_PRE_OP,
-        TargetType.POST_LAYER_OPERATION: PTInsertionType.NNCF_MODULE_POST_OP,
-        TargetType.OPERATION_WITH_WEIGHTS: PTInsertionType.NNCF_MODULE_PRE_OP,
-        TargetType.OPERATOR_PRE_HOOK: PTInsertionType.OPERATOR_PRE_HOOK,
-        TargetType.OPERATOR_POST_HOOK: PTInsertionType.OPERATOR_POST_HOOK,
-    }
-
-    def _get_pt_insertion_type(self, target_type: TargetType) -> PTInsertionType:
-        if (
-            not isinstance(target_type, TargetType)
-            or target_type not in PTInsertionPoint.TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT
-        ):
-            raise nncf.InternalError("Unsupported target type for PyTorch: {}".format(target_type))
-        return PTInsertionPoint.TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT[target_type]
-
-    def __init__(self, target_type: TargetType, op_address: OperationAddress, input_port_id: int = None):
-        self.insertion_type = self._get_pt_insertion_type(target_type)
+    def __init__(
+        self,
+        target_type: TargetType,
+        op_address: OperationAddress,
+        input_port_id: int = None,
+        replaced_modules: bool = True,
+    ):
+        self.insertion_type = self._get_pt_insertion_type(target_type, replaced_modules)
         self.op_address = op_address
         self.module_scope = op_address.scope_in_model
         self.input_port_id = input_port_id
+
+    @staticmethod
+    def _get_pt_insertion_type(target_type: TargetType, replaced_modules: bool) -> PTInsertionType:
+        map_target_types = TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT_FOR_NOT_REPLACED_MODULES
+        if replaced_modules:
+            map_target_types = TARGET_TYPE_VS_PT_INSERTION_TYPE_DICT_FOR_REPLACED_MODULES
+
+        if not isinstance(target_type, TargetType) or target_type not in map_target_types:
+            raise nncf.InternalError("Unsupported target type for PyTorch: {}".format(target_type))
+        return map_target_types[target_type]
 
     def __eq__(self, other: "PTInsertionPoint"):
         return (
@@ -123,11 +140,6 @@ class PTInsertionPoint:
 
     def __hash__(self):
         return hash(str(self))
-
-
-class ExtraCompressionModuleType(Enum):
-    EXTERNAL_QUANTIZER = 0
-    EXTERNAL_OP = 1
 
 
 @dataclass
@@ -297,7 +309,7 @@ class NNCFNetworkInterface(torch.nn.Module):
             original_dynamic_graph = GraphTracer(_orig_graph_build_forward_fn).trace_graph(
                 model, _orig_context, as_eval=True, trace_parameters=self.trace_parameters
             )
-            original_graph = GraphConverter.convert(original_dynamic_graph)
+            original_graph = GraphConverter.convert(original_dynamic_graph, trace_parameters)
             self._original_graphs_pair = PTGraphPair(dynamic_graph=original_dynamic_graph, nncf_graph=original_graph)
         self._compressed_graphs_pair: PTGraphPair = None
 
@@ -414,7 +426,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         """
         Inserts given function to the point in the NNCFNetwork, creates hook handle for the inserted function and
         stores created hook handle in a group with the given name. A group name could be used late
-        to remove all hooks from the NNCFNewtork which belongs to the group.
+        to remove all hooks from the NNCFNetwork which belongs to the group.
 
         :param point: Target point to insert function.
         :param fn: Function to insert to the NNCFNetwork.
@@ -543,7 +555,7 @@ class NNCFNetworkInterface(torch.nn.Module):
             compressed_traced_graph = builder.build_dynamic_graph(
                 self._model_ref, self._compressed_context, trace_parameters=self.trace_parameters
             )
-            compressed_graph = GraphConverter.convert(compressed_traced_graph)
+            compressed_graph = GraphConverter.convert(compressed_traced_graph, self.trace_parameters)
             self._compressed_graphs_pair = PTGraphPair(
                 dynamic_graph=compressed_traced_graph, nncf_graph=compressed_graph
             )
@@ -559,7 +571,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         return False
 
     def register_compression_module_type(self, compression_module_type: ExtraCompressionModuleType):
-        attr_name = self._compression_module_type_to_attr_name(compression_module_type)
+        attr_name = compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type in self._extra_module_types:
             raise nncf.ValidationError(f"Module type {compression_module_type} is already registered")
 
@@ -569,7 +581,7 @@ class NNCFNetworkInterface(torch.nn.Module):
     def add_compression_module(
         self, module_key: str, module: nn.Module, compression_module_type: ExtraCompressionModuleType
     ):
-        attr_name = self._compression_module_type_to_attr_name(compression_module_type)
+        attr_name = compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type not in self._extra_module_types:
             raise nncf.InternalError(f"Module type {compression_module_type} was not registered")
         storage = self.__getattr__(attr_name)
@@ -578,7 +590,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         storage[module_key] = module
 
     def get_compression_modules_by_type(self, compression_module_type: ExtraCompressionModuleType) -> nn.ModuleDict:
-        attr_name = self._compression_module_type_to_attr_name(compression_module_type)
+        attr_name = compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type not in self._extra_module_types:
             raise nncf.InternalError(f"Module type {compression_module_type} was not registered")
         return self.__getattr__(attr_name)
@@ -592,20 +604,8 @@ class NNCFNetworkInterface(torch.nn.Module):
         """
         return compression_module_type in self._extra_module_types
 
-    @staticmethod
-    def _compression_module_type_to_attr_name(compression_module_type: ExtraCompressionModuleType):
-        """
-        Required for backward compatibility with checkpoints that store function and activation
-        quantizers directly under corresponding attributes of NNCFNetwork.
-        """
-        if compression_module_type == ExtraCompressionModuleType.EXTERNAL_QUANTIZER:
-            return EXTERNAL_QUANTIZERS_STORAGE_NAME
-        if compression_module_type == ExtraCompressionModuleType.EXTERNAL_OP:
-            return EXTERNAL_OP_STORAGE_NAME
-        raise nncf.ValidationError("Unknown extra module type")
-
     def sort_compression_modules(self, compression_module_type: ExtraCompressionModuleType):
-        attr_name = self._compression_module_type_to_attr_name(compression_module_type)
+        attr_name = compression_module_type_to_attr_name(compression_module_type)
         if compression_module_type not in self._extra_module_types:
             raise nncf.InternalError("Module type {} was not registered".format(compression_module_type))
         module_dict = self.__getattr__(attr_name)
@@ -824,8 +824,7 @@ class NNCFNetworkInterface(torch.nn.Module):
         ret = []
         graph = self._original_graphs_pair.nncf_graph
         for node in graph.get_nodes_by_metatypes(CONST_NOOP_METATYPES):
-            next_nodes = graph.get_next_nodes(node)
-            if len(next_nodes) > 1:
+            if node.is_shared():
                 ret.append(node.layer_attributes.name)
         return ret
 
@@ -1121,3 +1120,15 @@ class LoadStateListener:
 
     def close(self):
         self.hook.remove()
+
+
+def compression_module_type_to_attr_name(compression_module_type: ExtraCompressionModuleType):
+    """
+    Required for backward compatibility with checkpoints that store function and activation
+    quantizers directly under corresponding attributes of NNCFNetwork.
+    """
+    if compression_module_type == ExtraCompressionModuleType.EXTERNAL_QUANTIZER:
+        return EXTERNAL_QUANTIZERS_STORAGE_NAME
+    if compression_module_type == ExtraCompressionModuleType.EXTERNAL_OP:
+        return EXTERNAL_OP_STORAGE_NAME
+    raise nncf.ValidationError("Unknown extra module type")

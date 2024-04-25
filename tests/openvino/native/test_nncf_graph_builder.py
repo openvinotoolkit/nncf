@@ -97,3 +97,45 @@ def test_parallel_edges():
     )
     assert set(nncf_graph.get_input_edges(mm_node)) == ref_input_edges
     assert set(nncf_graph.get_output_edges(input_node)) == ref_output_edges
+
+
+@pytest.mark.parametrize(
+    "ov_type,expected_nncf_dtype",
+    [
+        (ov.Type.f16, Dtype.FLOAT),
+        (ov.Type.f32, Dtype.FLOAT),
+        (ov.Type.f64, Dtype.FLOAT),
+        (ov.Type.i4, Dtype.INTEGER),
+        (ov.Type.i8, Dtype.INTEGER),
+        (ov.Type.i16, Dtype.INTEGER),
+        (ov.Type.i32, Dtype.INTEGER),
+        (ov.Type.i64, Dtype.INTEGER),
+        (ov.Type.u1, Dtype.INTEGER),
+        (ov.Type.u4, Dtype.INTEGER),
+        (ov.Type.u8, Dtype.INTEGER),
+        (ov.Type.u16, Dtype.INTEGER),
+        (ov.Type.u32, Dtype.INTEGER),
+        (ov.Type.u64, Dtype.INTEGER),
+        (ov.Type.boolean, Dtype.INTEGER),
+        (ov.Type.string, Dtype.INTEGER),
+    ],
+)
+def test_convert_to_nncf_dtype_supported_types(ov_type: ov.Type, expected_nncf_dtype: Dtype):
+    actual_nncf_dtype = GraphConverter.convert_to_nncf_dtype(ov_type)
+    assert actual_nncf_dtype == expected_nncf_dtype
+
+
+@pytest.mark.parametrize(
+    "ov_type",
+    [
+        ov.Type.bf16,
+        ov.Type.nf4,
+        ov.Type.undefined,
+        # TODO(andrey-churkin): Add in OV 2024.0
+        # ov.Type.f8e4m3,
+        # ov.Type.f8e5m2,
+    ],
+)
+def test_convert_to_nncf_dtype_unsupported_types(ov_type: ov.Type):
+    with pytest.raises(NotImplementedError):
+        _ = GraphConverter.convert_to_nncf_dtype(ov_type)

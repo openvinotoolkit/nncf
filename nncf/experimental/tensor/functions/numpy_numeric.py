@@ -170,8 +170,14 @@ def _(a: np.ndarray, source: Union[int, Tuple[int, ...]], destination: Union[int
 
 
 @register_numpy_types(numeric.mean)
-def _(a: Union[np.ndarray, np.generic], axis: Union[int, Tuple[int, ...]] = None, keepdims: bool = False) -> np.ndarray:
-    return np.array(np.mean(a, axis=axis, keepdims=keepdims))
+def _(
+    a: Union[np.ndarray, np.generic],
+    axis: Union[int, Tuple[int, ...]] = None,
+    keepdims: bool = False,
+    dtype: Optional[TensorDataType] = None,
+) -> np.ndarray:
+    dtype = DTYPE_MAP[dtype] if dtype else None
+    return np.array(np.mean(a, axis=axis, keepdims=keepdims, dtype=dtype))
 
 
 @register_numpy_types(numeric.round)

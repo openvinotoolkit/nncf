@@ -41,7 +41,7 @@ This diagram is the sparsity level of BERT-base model over the optimization life
 
 ## Inference Acceleration via [OpenVINO](https://docs.openvino.ai/latest/index.html)
 
-Optimized models are compatible with OpenVINO toolchain. Use `compression_controller.export_model("movement_sparsified_model.onnx")` to export model in onnx format. Sparsified parameters in the onnx are in value of zero. Structured sparse structures can be discarded during ONNX translation to OpenVINO IR using [Model Optimizer](https://docs.openvino.ai/latest/openvino_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html) with additional option `--transform=Pruning`. Corresponding IR is compressed and deployable with [OpenVINO Runtime](https://docs.openvino.ai/latest/openvino_docs_OV_UG_OV_Runtime_User_Guide.html). To quantify inference performance improvement, both ONNX and IR can be profiled using [Benchmark Tool](https://docs.openvino.ai/latest/openvino_inference_engine_tools_benchmark_tool_README.html).
+Optimized models are compatible with OpenVINO toolchain. Use `compression_controller.export_model("movement_sparsified_model.onnx")` to export model in onnx format. Sparsified parameters in the onnx are in value of zero. Structured sparse structures can be discarded during ONNX translation to OpenVINO IR using [Model Conversion](https://docs.openvino.ai/2024/openvino-workflow/model-preparation/convert-model-to-ir.html) with utilizing [pruning transformation](https://docs.openvino.ai/2024/documentation/legacy-features/transition-legacy-conversion-api.html#transform). Corresponding IR is compressed and deployable with [OpenVINO Runtime](https://docs.openvino.ai/latest/openvino_docs_OV_UG_OV_Runtime_User_Guide.html). To quantify inference performance improvement, both ONNX and IR can be profiled using [Benchmark Tool](https://docs.openvino.ai/latest/openvino_inference_engine_tools_benchmark_tool_README.html).
 
 ## Getting Started
 
@@ -78,5 +78,5 @@ Following arguments have been defaulted to work well out of the box. However, yo
 
 ## References
 
-1. Victor Sanh, Thomas Wolf, and Alexander M. Rush. 2020. [Movement Pruning: Adaptive Sparsity by Fine-Tuning]((https://arxiv.org/pdf/2005.07683.pdf)). In Advances in Neural Information Processing Systems, 33, pp. 20378-20389.
-2. François Lagunas, Ella Charlaix, Victor Sanh, and Alexander M. Rush. 2021. [Block Pruning For Faster Transformers]((https://arxiv.org/pdf/2109.04838.pdf)). In Proceedings of the 2021 Conference on Empirical Methods in Natural Language Processing, pp. 10619–10629.
+1. Victor Sanh, Thomas Wolf, and Alexander M. Rush. 2020. [Movement Pruning: Adaptive Sparsity by Fine-Tuning](https://arxiv.org/pdf/2005.07683.pdf). In Advances in Neural Information Processing Systems, 33, pp. 20378-20389.
+2. François Lagunas, Ella Charlaix, Victor Sanh, and Alexander M. Rush. 2021. [Block Pruning For Faster Transformers](https://arxiv.org/pdf/2109.04838.pdf). In Proceedings of the 2021 Conference on Empirical Methods in Natural Language Processing, pp. 10619–10629.

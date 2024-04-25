@@ -53,8 +53,8 @@ def get_basic_quantization_config(
 
 
 def get_nx_graph_from_tf_graph(tf_graph: tf.Graph, graph_to_layer_var_names_map: dict):
-    def _get_node_attributes(op: tf.Operation):
-        attr = {"op": op.type}
+    def _get_node_attributes(id: int, op: tf.Operation):
+        attr = {"id": str(id), "op": op.type}
         return attr
 
     def _get_inbound_edges(op: tf.Operation):
@@ -69,10 +69,13 @@ def get_nx_graph_from_tf_graph(tf_graph: tf.Graph, graph_to_layer_var_names_map:
         return inbound_edges
 
     nodes = {}
+    for id, op in enumerate(tf_graph.get_operations()):
+        graph_to_layer_var_names_map[op.name] = f"{id} {graph_to_layer_var_names_map.get(op.name, op.name)}"
+        op_name = graph_to_layer_var_names_map[op.name]
+        nodes[op_name] = _get_node_attributes(id, op)
+
     edges = []
     for op in tf_graph.get_operations():
-        op_name = graph_to_layer_var_names_map.get(op.name, op.name)
-        nodes[op_name] = _get_node_attributes(op)
         edges.extend(_get_inbound_edges(op))
 
     for node_name in list(nodes.keys()):
@@ -179,6 +182,7 @@ class ModelDesc:
         input_sample_sizes,
         rename_resource_nodes=False,
         ignored_scopes: List[str] = None,
+        unstable_node_names: bool = False,
     ):
         self.model_name, _ = os.path.splitext(ref_graph_filename)
         self.model_builder = model_builder
@@ -186,6 +190,7 @@ class ModelDesc:
         self.input_sample_sizes = input_sample_sizes
         self.rename_resource_nodes = rename_resource_nodes
         self.ignored_scopes = ignored_scopes
+        self.unstable_node_names = unstable_node_names
 
 
 SKIP_MAP = {
@@ -194,11 +199,13 @@ SKIP_MAP = {
         "nasnet_mobile": pytest.mark.skip(reason="gitlab issue #18"),
         "mobilenet_v2_slim": pytest.mark.skip(reason="ticket #46349"),
         "xception": pytest.mark.skip(reason="gitlab issue #28"),
+        "mask_rcnn": pytest.mark.nightly(),
     },
     "magnitude_sparsity": {
         "inception_resnet_v2": pytest.mark.skip(reason="gitlab issue #17"),
         "nasnet_mobile": pytest.mark.skip(reason="gitlab issue #18"),
         "xception": pytest.mark.skip(reason="gitlab issue #28"),
+        "mask_rcnn": pytest.mark.nightly(),
     },
     "filter_pruning": {
         "densenet121": pytest.mark.skip(reason="ticket #50604"),
@@ -209,7 +216,7 @@ SKIP_MAP = {
         "resnet50v2": pytest.mark.skip(reason="Several masks on one weight"),
         "mobilenet_v2_slim": pytest.mark.skip(reason="ticket #46349"),
     },
-    "rb_sparsity": {"mobilenet_v2_slim": pytest.mark.skip(reason="ticket #46349")},
+    "rb_sparsity": {"mobilenet_v2_slim": pytest.mark.skip(reason="ticket #46349"), "mask_rcnn": pytest.mark.nightly()},
 }
 
 
@@ -267,7 +274,7 @@ def get_test_models_desc(algorithm):
             marks=SKIP_MAP[algorithm].get("shared_layers_model", ()),
         ),
         pytest.param(
-            ModelDesc("mask_rcnn.dot", test_models.MaskRCNN, [1, 1024, 1024, 3]),
+            ModelDesc("mask_rcnn.dot", test_models.MaskRCNN, [1, 1024, 1024, 3], unstable_node_names=True),
             marks=SKIP_MAP[algorithm].get("mask_rcnn", ()),
         ),
         pytest.param(
@@ -348,14 +355,18 @@ def prepare_and_check_graph_def(
 
 
 def prepare_and_check_nx_graph(
-    tf_graph: tf.Graph, graph_path: str, ref_graph_exist: bool, graph_to_layer_var_names_map: dict
+    tf_graph: tf.Graph,
+    graph_path: str,
+    ref_graph_exist: bool,
+    graph_to_layer_var_names_map: dict,
+    unstable_node_names=False,
 ):
     nx_graph = get_nx_graph_from_tf_graph(tf_graph, graph_to_layer_var_names_map)
 
-    compare_nx_graph_with_reference(nx_graph, graph_path)
+    compare_nx_graph_with_reference(nx_graph, graph_path, unstable_node_names=unstable_node_names)
 
 
-def check_model_graph(compressed_model, ref_graph_filename, ref_graph_dir, rename_resource_nodes):
+def check_model_graph(compressed_model, ref_graph_filename, ref_graph_dir, rename_resource_nodes, unstable_node_names):
     tf_version = version.parse(tf.__version__).base_version
     tf_version_major, tf_version_minor = tuple(map(int, tf_version.split(".")))[:2]
     data_dir = os.path.join(
@@ -381,9 +392,10 @@ def check_model_graph(compressed_model, ref_graph_filename, ref_graph_dir, renam
     ref_graph_ext = os.path.splitext(ref_graph_filename)[1]
     if ref_graph_ext == ".pb":
         prepare_and_check_graph_def(compressed_graph, graph_path, ref_graph_exist, graph_to_layer_var_names_map)
-
     else:
-        prepare_and_check_nx_graph(compressed_graph, graph_path, ref_graph_exist, graph_to_layer_var_names_map)
+        prepare_and_check_nx_graph(
+            compressed_graph, graph_path, ref_graph_exist, graph_to_layer_var_names_map, unstable_node_names
+        )
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -418,7 +430,11 @@ class TestModelsGraph:
         compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
         check_model_graph(
-            compressed_model, desc.ref_graph_filename, _quantization_case_config.graph_dir, desc.rename_resource_nodes
+            compressed_model,
+            desc.ref_graph_filename,
+            _quantization_case_config.graph_dir,
+            desc.rename_resource_nodes,
+            desc.unstable_node_names,
         )
 
     @pytest.mark.parametrize(
@@ -437,6 +453,7 @@ class TestModelsGraph:
             desc.ref_graph_filename,
             _magnitude_sparsity_case_config.graph_dir,
             desc.rename_resource_nodes,
+            desc.unstable_node_names,
         )
 
     @pytest.mark.parametrize(
@@ -451,7 +468,11 @@ class TestModelsGraph:
         compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
         check_model_graph(
-            compressed_model, desc.ref_graph_filename, _rb_sparsity_case_config.graph_dir, desc.rename_resource_nodes
+            compressed_model,
+            desc.ref_graph_filename,
+            _rb_sparsity_case_config.graph_dir,
+            desc.rename_resource_nodes,
+            desc.unstable_node_names,
         )
 
     @pytest.mark.parametrize(
@@ -465,7 +486,11 @@ class TestModelsGraph:
         compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
         check_model_graph(
-            compressed_model, desc.ref_graph_filename, _pruning_case_config.graph_dir, desc.rename_resource_nodes
+            compressed_model,
+            desc.ref_graph_filename,
+            _pruning_case_config.graph_dir,
+            desc.rename_resource_nodes,
+            desc.unstable_node_names,
         )
 
 
@@ -485,7 +510,11 @@ def test_quantize_outputs(desc: ModelDesc, _quantization_case_config):
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
     check_model_graph(
-        compressed_model, desc.ref_graph_filename, _quantization_case_config.graph_dir, desc.rename_resource_nodes
+        compressed_model,
+        desc.ref_graph_filename,
+        _quantization_case_config.graph_dir,
+        desc.rename_resource_nodes,
+        desc.unstable_node_names,
     )
 
 
@@ -519,5 +548,9 @@ def test_compressed_graph_models_hw(desc: ModelDesc, hw_config_type):
     compressed_model, _ = create_compressed_model_and_algo_for_test(model, config, force_no_init=True)
 
     check_model_graph(
-        compressed_model, desc.ref_graph_filename, _quantization_case_config.graph_dir, desc.rename_resource_nodes
+        compressed_model,
+        desc.ref_graph_filename,
+        _quantization_case_config.graph_dir,
+        desc.rename_resource_nodes,
+        desc.unstable_node_names,
     )

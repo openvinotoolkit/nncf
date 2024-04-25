@@ -118,6 +118,11 @@ desc_improper_sparse_structures = {
 }
 
 
+@pytest.fixture(scope="function", autouse=True)
+def safe_deterministic_state(_safe_deterministic_state):
+    pass
+
+
 class TestControllerCreation:
     @pytest.mark.parametrize(
         "sparse_structure_by_scopes", desc_sparse_structures.values(), ids=desc_sparse_structures.keys()

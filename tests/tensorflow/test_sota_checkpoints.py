@@ -250,7 +250,6 @@ def metrics_dump_dir(request: FixtureRequest):
     return dump_path
 
 
-@pytest.mark.nightly
 class TestSotaCheckpoints:
     @pytest.fixture(scope="class")
     def collected_data(self, metrics_dump_dir: Path):

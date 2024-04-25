@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import json
+import os
 import sys
 from argparse import ArgumentParser
 from typing import Dict, Tuple
@@ -116,27 +117,22 @@ def post_training_quantization_onnx_yolo8_quantize_with_accuracy_control() -> Di
 
 
 def post_training_quantization_openvino_anomaly_stfpm_quantize_with_accuracy_control() -> Dict[str, float]:
-    sys.path.append(
-        str(
-            PROJECT_ROOT
-            / "examples"
-            / "post_training_quantization"
-            / "openvino"
-            / "anomaly_stfpm_quantize_with_accuracy_control"
-        )
+    from examples.post_training_quantization.openvino.anomaly_stfpm_quantize_with_accuracy_control.main import (
+        run_example as anomaly_stfpm_main,
     )
-    import main as stfpm
+
+    fp32_top1, int8_top1, fp32_fps, int8_fps, fp32_size, int8_size = anomaly_stfpm_main()
 
     return {
-        "fp32_top1": float(stfpm.fp32_top1),
-        "int8_top1": float(stfpm.int8_top1),
-        "accuracy_drop": float(stfpm.fp32_top1 - stfpm.int8_top1),
-        "fp32_fps": stfpm.fp32_fps,
-        "int8_fps": stfpm.int8_fps,
-        "performance_speed_up": stfpm.int8_fps / stfpm.fp32_fps,
-        "fp32_model_size": stfpm.fp32_size,
-        "int8_model_size": stfpm.int8_size,
-        "model_compression_rate": stfpm.fp32_size / stfpm.int8_size,
+        "fp32_top1": float(fp32_top1),
+        "int8_top1": float(int8_top1),
+        "accuracy_drop": float(fp32_top1 - int8_top1),
+        "fp32_fps": fp32_fps,
+        "int8_fps": int8_fps,
+        "performance_speed_up": int8_fps / fp32_fps,
+        "fp32_model_size": fp32_size,
+        "int8_model_size": int8_size,
+        "model_compression_rate": fp32_size / int8_size,
     }
 
 
@@ -172,6 +168,48 @@ def llm_tune_params() -> Dict[str, float]:
     awq, ratio, group_size = llm_tune_params_main()
 
     return {"awq": bool(awq), "ratio": ratio, "group_size": group_size}
+
+
+def quantization_aware_training_torch_resnet18():
+    from examples.quantization_aware_training.torch.resnet18.main import main as resnet18_main
+
+    # Set manual seed and determenistic cuda mode to make the test determenistic
+    set_torch_cuda_seed()
+    results = resnet18_main()
+
+    return {
+        "fp32_top1": float(results[0]),
+        "int8_init_top1": float(results[1]),
+        "int8_top1": float(results[2]),
+        "accuracy_drop": float(results[0] - results[2]),
+        "fp32_fps": results[3],
+        "int8_fps": results[4],
+        "performance_speed_up": results[4] / results[3],
+        "fp32_model_size": results[5],
+        "int8_model_size": results[6],
+        "model_compression_rate": results[5] / results[6],
+    }
+
+
+def set_torch_cuda_seed(seed: int = 42):
+    """
+    Sets torch, cuda and python random module to determenistic mode with
+    given seed.
+    :param seed: Seed to use for determenistic run.
+    """
+    import random
+
+    import numpy as np
+    import torch
+    from torch.backends import cudnn
+
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.manual_seed(seed)
+    cudnn.deterministic = True
+    cudnn.benchmark = False
+    torch.use_deterministic_algorithms(True)
+    os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
 
 def main(argv):

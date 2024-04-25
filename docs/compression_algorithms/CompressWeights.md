@@ -289,32 +289,63 @@ Here is the perplexity and model size before and after weight compression for di
 
 Here is the word perplexity with data-free and data-aware mixed-precision INT4-INT8 weight compression for different language models on the [wikitext dataset](https://arxiv.org/pdf/1609.07843.pdf).
 `data` suffix refers to the data-aware mixed-precision.
-
+`data_awq` suffix refers to the data-aware mixed-precision with modified [AWQ](https://arxiv.org/abs/2306.00978) algorithm.
+This modification applies only for patterns `MatMul-Multiply-MatMul` (for example MLP block in LLama).
 <table>
-    <tr>
+    <tr bgcolor='#B4B5BB'>
         <td>Model</td>
         <td>Mode</td>
         <td>Word Perplexity (↓)</td>
     </tr>
-    <tr>
+        <tr>
         <td>meta-llama/llama-7b-chat-hf</td>
+        <td>fp16</td>
+        <td>11.57</td>
+    </tr>
+    <tr>
+        <td></td>
         <td>int4_sym_g128_r80_data</td>
         <td>11.87</td>
     </tr>
     <tr>
-        <td>meta-llama/llama-7b-chat-hf</td>
+        <td></td>
         <td>int4_sym_g128_r80</td>
         <td>11.92</td>
     </tr>
     <tr>
+        <td></td>
+        <td>int4_sym_g128_r100_data_awq</td>
+        <td>12.34</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>int4_sym_g128_r100</td>
+        <td>12.35</td>
+    </tr>
+    <tr>
         <td>stabilityai_stablelm-3b-4e1t</td>
+        <td>fp16</td>
+        <td>10.16</td>
+    </tr>
+    <tr>
+        <td></td>
         <td>int4_sym_g64_r80_data</td>
         <td>10.67</td>
     </tr>
     <tr>
-        <td>stabilityai_stablelm-3b-4e1t</td>
+        <td></td>
         <td>int4_sym_g64_r80</td>
         <td>10.83</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>int4_sym_g64_r100_data_awq</td>
+        <td>10.89</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>int4_sym_g64_r100</td>
+        <td>11.07</td>
     </tr>
     <tr>
         <td>stable-zephyr-3b-dpo</td>
@@ -322,22 +353,37 @@ Here is the word perplexity with data-free and data-aware mixed-precision INT4-I
         <td>21.62</td>
     </tr>
     <tr>
-        <td>stable-zephyr-3b-dpo</td>
+        <td></td>
         <td>int4_sym_g64_r80_data</td>
         <td>21.74</td>
     </tr>
     <tr>
-        <td>stable-zephyr-3b-dpo</td>
+        <td></td>
         <td>int4_sym_g64_r80</td>
         <td>23.10</td>
     </tr>
     <tr>
+        <td></td>
+        <td>int4_sym_g64_r100_data_awq</td>
+        <td>21.76</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>int4_sym_g64_r100</td>
+        <td>23.19</td>
+    </tr>
+    <tr>
         <td>HuggingFaceH4/zephyr-7b-beta</td>
+        <td>fp16</td>
+        <td>9.82</td>
+    </tr>
+    <tr>
+        <td></td>
         <td>int4_sym_g128_r80_data</td>
         <td>10.13</td>
     </tr>
     <tr>
-        <td>HuggingFaceH4/zephyr-7b-beta</td>
+        <td></td>
         <td>int4_sym_g128</td>
         <td>10.22</td>
     </tr>
@@ -353,15 +399,16 @@ Here is the word perplexity with data-free and data-aware mixed-precision INT4-I
 
 #### Additional resources
 
-- [LLM Weight Compression](https://docs.openvino.ai/nightly/weight_compression.html)
-- [Optimize and Deploy Generative AI Models using Hugging Face Optimum Intel](https://docs.openvino.ai/nightly/gen_ai_guide.html)
+- [LLM Weight Compression](https://docs.openvino.ai/2024/openvino-workflow/model-optimization-guide/weight-compression.html)
+- [Large Language Model Inference Guide](https://docs.openvino.ai/2024/learn-openvino/llm_inference_guide.html)
+- [Inference with Hugging Face and Optimum Intel](https://docs.openvino.ai/2024/learn-openvino/llm_inference_guide/llm-inference-hf.html)
 - [Optimum Intel documentation](https://huggingface.co/docs/optimum/intel/inference)
 - [Large Language Models Weight Compression Example](https://github.com/openvinotoolkit/nncf/blob/develop/examples/llm_compression/openvino/tiny_llama)
 - [Tuning Ratio and Group Size Example](https://github.com/openvinotoolkit/nncf/blob/develop/examples/llm_compression/openvino/tiny_llama_find_hyperparams)
 
 List of notebooks demonstrating OpenVINO conversion and inference together with NNCF weight compression for models from various domains:
 
-- [LLM Instruction Following](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/275-llm-question-answering)
-- [Dolly 2.0](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/240-dolly-2-instruction-following)
-- [Stable-Zephyr-3b](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/273-stable-zephyr-3b-chatbot)
-- [LLM Chat Bots](https://github.com/openvinotoolkit/openvino_notebooks/tree/main/notebooks/254-llm-chatbot)
+- [LLM Instruction Following](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-question-answering)
+- [Dolly 2.0](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/dolly-2-instruction-following)
+- [Stable-Zephyr-3b](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/stable-zephyr-3b-chatbot)
+- [LLM Chat Bots](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/llm-chatbot)
