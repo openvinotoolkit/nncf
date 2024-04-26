@@ -7,7 +7,7 @@ onnx==1.16.0
 onnxruntime==1.17.1
 pytest==8.0.2
 pytest-cov
-openvino-dev==2024.0.0
+openvino-dev==2024.1
 optimum[onnxruntime,openvino]==1.17.1
 optimum-intel==1.15.2
 whowhatbench @ git+https://github.com/andreyanufr/who_what_benchmark@456d3584ce628f6c8605f37cd9a3ab2db1ebf933
