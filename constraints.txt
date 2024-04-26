@@ -1,6 +1,6 @@
 # Openvino
 openvino==2024.0.0
-openvino-dev==2024.0.0
+openvino-dev==2024.1
 
 # Pytorch
 torch==2.2.1
