@@ -140,6 +140,7 @@ def test_get_apply_serialization_from_a_model(model_cls, trace_parameters):
 
     recovered_model = load_from_config_impl(model, serialized_transformations, example_input, trace_parameters)
 
+    assert modified_model.state_dict().keys() == recovered_model.state_dict().keys()
     if not trace_parameters:
         _check_pre_post_ops(modified_model, recovered_model)
 

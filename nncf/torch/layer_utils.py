@@ -32,7 +32,10 @@ class StatefullTorchModuleInterface(ABC):
     standart (str, list and etc.) should be present in a compression module state.
     The state for attributes with type torch.nn.Parameter
     is recovered from the model `state_dict`, so there is no need to keep them in the module state.
-
+    Modules should avoid implementation of `__call__` method and use `forward` method instead,
+    as torch functions called inside the `__call__` method could not be unambiguously
+    separated from the wrapped parent nncf module functions calls, thus nncf is unable to
+    identify target point for that call during transformations recovery process.
     """
 
     @abstractmethod

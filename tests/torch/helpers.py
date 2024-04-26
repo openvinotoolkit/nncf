@@ -269,13 +269,20 @@ class DummyOpWithState(torch.nn.Module):
     def __init__(self, state: str):
         super().__init__()
         self._state = state
+        # Keep dummy param to check state dict
+        self._dummy_param = torch.nn.Parameter(
+            torch.tensor(
+                0.0,
+            )
+        )
 
-    def __call__(self, *args):
+    def forward(self, *args):
         if len(args) == 1:
-            return args[0]
+            return args[0] + self._dummy_param
         # To work correctly with
         # TargetType.PRE_LAYER_OPERATION
         # TargetType.POST_LAYER_OPERATION
+        args[0].weight + self._dummy_param
         return None
 
     def get_state(self):
