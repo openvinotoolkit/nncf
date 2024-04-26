@@ -15,5 +15,5 @@ accelerate==0.28.0
 datasets~=2.14.0
 evaluate==0.3.0
 timm==0.9.2
-openvino-dev==2024.0
+openvino-dev==2024.1
 pytest-xdist==3.5.0
