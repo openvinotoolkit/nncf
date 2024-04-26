@@ -8,6 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import contextlib
 import numbers
 from abc import ABC
@@ -38,6 +39,8 @@ from nncf.torch.dynamic_graph.context import PreHookId
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
 from nncf.torch.dynamic_graph.scope import Scope
+from nncf.torch.graph.transformations.commands import PTInsertionCommand
+from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.initialization import PTInitializingDataLoader
 from nncf.torch.initialization import register_default_init_args
 from nncf.torch.layers import NNCF_MODULES_MAP
@@ -172,6 +175,16 @@ class BasicConvTestModel(nn.Module):
 
 
 class TwoConvTestModel(nn.Module):
+    INPUT_SHAPE = [1, 1, 4, 4]
+    NNCF_CONV_NODES_NAMES = [
+        "TwoConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0",
+        "TwoConvTestModel/Sequential[features]/Sequential[1]/NNCFConv2d[0]/conv2d_0",
+    ]
+    CONV_NODES_NAMES = [
+        "TwoConvTestModel/Sequential[features]/Sequential[0]/Conv2d[0]/conv2d_0",
+        "TwoConvTestModel/Sequential[features]/Sequential[1]/Conv2d[0]/conv2d_0",
+    ]
+
     def __init__(self):
         super().__init__()
         self.features = []
@@ -197,6 +210,30 @@ class TwoConvTestModel(nn.Module):
     @property
     def nz_bias_num(self):
         return 2
+
+
+class TwoSharedConvTestModel(nn.Module):
+    INPUT_SHAPE = [1, 1, 4, 4]
+    NNCF_CONV_NODES_NAMES = [
+        "TwoSharedConvTestModel/NNCFConv2d[conv1]/conv2d_0",
+        "TwoSharedConvTestModel/NNCFConv2d[conv2]/conv2d_0",
+    ]
+    CONV_NODES_NAMES = [
+        "TwoSharedConvTestModel/Conv2d[conv1]/conv2d_0",
+        "TwoSharedConvTestModel/Conv2d[conv2]/conv2d_0",
+    ]
+
+    def __init__(self):
+        super().__init__()
+        self.features = []
+        self.conv1 = create_conv(1, 1, 1, -1, -2)
+        self.conv2 = create_conv(1, 1, 1, 0, 0)
+
+    def forward(self, x):
+        for _ in range(2):
+            x = self.conv1(x)
+            x = self.conv2(x)
+        return x
 
 
 class LeNet(nn.Module):
@@ -226,6 +263,72 @@ class LeNet(nn.Module):
         for s in size:
             num_features *= s
         return num_features
+
+
+class DummyOpWithState(torch.nn.Module):
+    def __init__(self, state: str):
+        super().__init__()
+        self._state = state
+
+    def __call__(self, *args):
+        if len(args) == 1:
+            return args[0]
+        # To work correctly with
+        # TargetType.PRE_LAYER_OPERATION
+        # TargetType.POST_LAYER_OPERATION
+        return None
+
+    def get_state(self):
+        return self._state
+
+    @classmethod
+    def from_state(cls, state: str):
+        return cls(state)
+
+
+def commands_are_equal(
+    command_left: Union[PTInsertionCommand, PTSharedFnInsertionCommand],
+    command_right: Union[PTInsertionCommand, PTSharedFnInsertionCommand],
+    check_priority: bool = True,
+    check_hooks_group_name: bool = True,
+    check_fn_ref=True,
+) -> bool:
+    """
+    Returns True if given commands are equal and False elsewhere.
+
+    :param command_left: The first command.
+    :param command_right: The second command.
+    :param check_priority: Whether to check insertion priority or not.
+    :param check_hooks_group_name: Whether to check hooks group name or not.
+    :param check_fn_ref: Whether to check fn by reference or not.
+    :returns: True if given commands are equal and False elsewhere.
+    """
+    if type(command_right) is not type(command_left):
+        return False
+
+    # Check reference to functions are equal.
+    if check_fn_ref and command_right.fn is not command_left.fn:
+        return False
+    if check_hooks_group_name and command_right.hooks_group_name != command_left.hooks_group_name:
+        return False
+    if check_priority and command_right.priority != command_left.priority:
+        return False
+
+    if isinstance(command_right, PTInsertionCommand):
+        if command_left.target_point != command_right.target_point:
+            return False
+    elif isinstance(command_right, PTSharedFnInsertionCommand):
+        if not all(a == b for a, b in zip(command_left.target_points, command_right.target_points)):
+            return False
+        if (
+            command_right.target_points != command_left.target_points
+            or command_right.op_name != command_left.op_name
+            or command_right.compression_module_type != command_left.compression_module_type
+        ):
+            return False
+    else:
+        raise RuntimeError()
+    return True
 
 
 class SharedConv(nn.Module):

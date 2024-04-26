@@ -27,7 +27,7 @@ jobs:
         with:
           name: html_doc_artifact
       - name: Checkout latest doc_pages branch tip
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: doc_pages
           path: previous_doc_state

@@ -213,7 +213,7 @@ def is_weights(request: FixtureRequest):
     return request.param
 
 
-@pytest.fixture(params=[True, False], ids=["cuda", "cpu"])
+@pytest.fixture(params=[pytest.param(True, marks=pytest.mark.cuda), False], ids=["cuda", "cpu"])
 def use_cuda(request: FixtureRequest):
     return request.param
 
