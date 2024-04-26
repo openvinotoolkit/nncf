@@ -45,8 +45,7 @@ def tensor_dispatch(func):
         Retrieves the registered function for a given type.
 
         :param cls: The type to retrieve the function for.
-        :return: The registered function for the given type, or a function that raises a NotImplementedError
-            if no function is registered for type.
+        :return: The registered function for the given type.
         """
         try:
             return registry[cls]

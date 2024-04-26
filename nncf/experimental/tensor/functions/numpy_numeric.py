@@ -269,7 +269,5 @@ def _(a: Union[np.ndarray, np.generic], axes: Optional[Tuple[int, ...]] = None) 
 
 
 @numeric.argsort.register
-def _(
-    a: Union[np.ndarray, np.generic], axis: Optional[int] = None, descending=False, stable=False
-) -> Union[np.ndarray, np.generic]:
+def _(a: Union[np.ndarray, np.generic], axis: Optional[int] = -1) -> Union[np.ndarray, np.generic]:
     return np.argsort(a, axis=axis)
