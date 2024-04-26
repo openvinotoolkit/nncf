@@ -12,8 +12,8 @@
 import numpy as np
 import openvino.runtime as ov
 import pytest
-import nncf
 
+import nncf
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.openvino.quantization.quantize_model import quantize_impl
 from nncf.parameters import TargetDevice
@@ -135,7 +135,13 @@ def test_meta_information(model_creator_func, ignored_options):
     [
         (
             IgnoredScope(names=["conv_weights_0", "conv_weights_1"]),
-            {"validate": None, "types": None, "subgraphs": None, "patterns": None, "names": "['conv_weights_0', 'conv_weights_1']"},
+            {
+                "validate": None,
+                "types": None,
+                "subgraphs": None,
+                "patterns": None,
+                "names": "['conv_weights_0', 'conv_weights_1']",
+            },
         ),
         (
             IgnoredScope(
@@ -144,9 +150,7 @@ def test_meta_information(model_creator_func, ignored_options):
                         inputs=[
                             "MatMul_1",
                         ],
-                        outputs=[
-                            "MatMul"
-                        ],
+                        outputs=["MatMul"],
                     )
                 ],
             ),
@@ -156,7 +160,7 @@ def test_meta_information(model_creator_func, ignored_options):
                 "subgraphs": "[{'inputs': ['MatMul_1'], 'outputs': ['MatMul']}]",
                 "patterns": None,
                 "names": None,
-            }
+            },
         ),
         (
             IgnoredScope(names=["MatMul"], types=["Add"]),

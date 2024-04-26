@@ -9,13 +9,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Any
+from dataclasses import asdict
+from typing import Any, Dict, List, Optional
 
 import openvino.runtime as ov
 
 from nncf.common.logging import nncf_logger
 from nncf.scopes import IgnoredScope
-from dataclasses import asdict
 
 
 def exclude_empty_fields(value: Dict[str, Any]) -> Dict[str, Any]:
