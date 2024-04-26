@@ -12,6 +12,7 @@
 import numpy as np
 import openvino.runtime as ov
 import pytest
+import nncf
 
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.openvino.quantization.quantize_model import quantize_impl
@@ -21,7 +22,7 @@ from tests.openvino.native.common import get_dataset_for_test
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import MatMul2DModel
-from tests.openvino.native.models import QuantizedModel
+from tests.openvino.native.models import WeightsModel
 from tests.openvino.native.test_model_transformer import get_nodes_by_type
 
 REF_FQ_NODES = [
@@ -133,17 +134,38 @@ def test_meta_information(model_creator_func, ignored_options):
     "ignored_options, expected_dump",
     [
         (
-            IgnoredScope(names=["Conv_1", "Conv_2"]),
-            {"validate": None, "types": None, "subgraphs": None, "patterns": None, "names": "['Conv_1', 'Conv_2']"},
+            IgnoredScope(names=["conv_weights_0", "conv_weights_1"]),
+            {"validate": None, "types": None, "subgraphs": None, "patterns": None, "names": "['conv_weights_0', 'conv_weights_1']"},
         ),
         (
-            IgnoredScope(names=["Transpose"], types=["Add"]),
+            IgnoredScope(
+                subgraphs=[
+                    nncf.Subgraph(
+                        inputs=[
+                            "MatMul_1",
+                        ],
+                        outputs=[
+                            "MatMul"
+                        ],
+                    )
+                ],
+            ),
+            {
+                "validate": None,
+                "types": None,
+                "subgraphs": "[{'inputs': ['MatMul_1'], 'outputs': ['MatMul']}]",
+                "patterns": None,
+                "names": None,
+            }
+        ),
+        (
+            IgnoredScope(names=["MatMul"], types=["Add"]),
             {
                 "validate": None,
                 "types": "['Add']",
                 "subgraphs": None,
                 "patterns": None,
-                "names": "['Transpose']",
+                "names": "['MatMul']",
             },
         ),
         (IgnoredScope(), {"": "[]"}),
@@ -152,7 +174,7 @@ def test_meta_information(model_creator_func, ignored_options):
 def test_ignored_scope_dump(ignored_options, expected_dump, tmp_path):
     ignored_scope_path = ["nncf", "quantization", "ignored_scope"]
 
-    model = QuantizedModel().ov_model
+    model = WeightsModel().ov_model
     dataset = get_dataset_for_test(model)
     quantize_parameters = {
         "preset": QuantizationPreset.PERFORMANCE,
