@@ -216,9 +216,6 @@ class LMWeightCompression(BaseTestPipeline):
             dataset=self.calibration_dataset,
             **self.compression_params,
         )
-        self.compressed_model = ov.convert_model(
-            self.compressed_model, example_input=torch.rand(1, 3, 224, 224).to(torch.long)
-        )
 
     def _validate(self):
         is_stateful = self.params.get("is_stateful", False)
