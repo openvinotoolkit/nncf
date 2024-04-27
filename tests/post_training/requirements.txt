@@ -1,21 +1,19 @@
---extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.2.1
---extra-index-url https://download.pytorch.org/whl/cpu
-torchvision==0.17.1
-transformers==4.38.2
-onnx==1.16.0
-onnxruntime==1.17.1
-pytest==8.0.2
-pytest-cov
-openvino-dev==2024.0.0
-optimum[onnxruntime,openvino]==1.17.1
-optimum-intel==1.15.2
-whowhatbench @ git+https://github.com/andreyanufr/who_what_benchmark@456d3584ce628f6c8605f37cd9a3ab2db1ebf933
-soundfile==0.12.1
+-c ../../constraints.txt
+torch
+torchvision
+onnx
+onnxruntime
+openvino-dev
+pytest
+
 librosa==0.10.0
 memory-profiler==0.61.0
-pandas==2.0.3
+optimum-intel==1.15.2
+optimum==1.17.1
+scikit-learn==1.2.2
+soundfile==0.12.1
 tensorboard==2.13.0
 tensorflow-io==0.32.0
 timm==0.9.2
-scikit-learn==1.2.2
+transformers==4.38.2
+whowhatbench @ git+https://github.com/andreyanufr/who_what_benchmark@456d3584ce628f6c8605f37cd9a3ab2db1ebf933

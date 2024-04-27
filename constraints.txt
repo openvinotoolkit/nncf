@@ -1,0 +1,22 @@
+# Openvino
+openvino==2024.1.0
+openvino-dev==2024.1.0
+
+# Pytorch
+torch==2.2.1
+torchvision==0.17.1
+
+# ONNX
+onnx==1.16.0
+onnxruntime==1.17.1
+
+# TensorFlow
+tensorflow==2.12.1
+
+# Tests and examples
+pytest==8.0.2
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+pytest-dependency==0.6.0
+pytest-ordering==0.6
+pytest-xdist==3.5.0
