@@ -13,7 +13,7 @@ from inspect import getfullargspec
 from inspect import isclass
 from inspect import isfunction
 from types import MappingProxyType
-from typing import List, _GenericAlias, _UnionGenericAlias, get_type_hints
+from typing import List, get_type_hints
 
 from nncf.experimental.tensor import Tensor
 
@@ -21,11 +21,10 @@ from nncf.experimental.tensor import Tensor
 def _get_target_types(type_alias):
     if isclass(type_alias):
         return [type_alias]
-    if isinstance(type_alias, (_UnionGenericAlias, _GenericAlias)):
-        ret = []
-        for t in type_alias.__args__:
-            ret.extend(_get_target_types(t))
-        return ret
+    ret = []
+    for t in type_alias.__args__:
+        ret.extend(_get_target_types(t))
+    return ret
 
 
 def tensor_dispatch(func):
@@ -130,11 +129,11 @@ def tensor_dispatch(func):
     if first_type_hint is Tensor:
         if return_type_hint is Tensor:
             wrapper = wrapper_tensor_to_tensor
-        elif isinstance(return_type_hint, _GenericAlias) and not isinstance(return_type_hint, _UnionGenericAlias):
+        elif not isclass(return_type_hint) and return_type_hint._name == "List":
             wrapper = wrapper_tensor_to_list
         else:
             wrapper = wrapper_tensor_to_any
-    elif isinstance(first_type_hint, _GenericAlias) and return_type_hint is Tensor:
+    elif not isclass(first_type_hint) and first_type_hint._name == "List" and return_type_hint is Tensor:
         wrapper = wrapper_list_to_tensor
 
     assert wrapper is not None, (
