@@ -77,6 +77,7 @@ def tensor_dispatch(func):
         """
         is_wrapped = any(isinstance(x, Tensor) for x in args)
         args = tuple(x.data if isinstance(x, Tensor) else x for x in args)
+        kw = {k: v.data if isinstance(v, Tensor) else v for k, v in kw.items()}
         ret = dispatch(args[0].__class__)(*args, **kw)
         return Tensor(ret) if is_wrapped else ret
 
@@ -86,6 +87,7 @@ def tensor_dispatch(func):
         This wrapper unwraps Tensor arguments but doesn't specifically wrap the returned value.
         """
         args = tuple(x.data if isinstance(x, Tensor) else x for x in args)
+        kw = {k: v.data if isinstance(v, Tensor) else v for k, v in kw.items()}
         return dispatch(args[0].__class__)(*args, **kw)
 
     def wrapper_tensor_to_list(*args, **kw):
@@ -95,6 +97,7 @@ def tensor_dispatch(func):
         """
         is_wrapped = any(isinstance(x, Tensor) for x in args)
         args = tuple(x.data if isinstance(x, Tensor) else x for x in args)
+        kw = {k: v.data if isinstance(v, Tensor) else v for k, v in kw.items()}
         ret = dispatch(args[0].__class__)(*args, **kw)
         if is_wrapped:
             return [Tensor(x) for x in ret]
@@ -106,6 +109,8 @@ def tensor_dispatch(func):
         This wrapper handles lists containing Tensors appropriately.
         """
         if any(isinstance(x, Tensor) for x in list_of_tensors):
+            args = tuple(x.data if isinstance(x, Tensor) else x for x in args)
+            kw = {k: v.data if isinstance(v, Tensor) else v for k, v in kw.items()}
             list_of_tensors = [x.data if isinstance(x, Tensor) else x for x in list_of_tensors]
             return Tensor(dispatch(list_of_tensors[0].__class__)(list_of_tensors, *args, **kw))
         return dispatch(list_of_tensors[0].__class__)(list_of_tensors, *args, **kw)
