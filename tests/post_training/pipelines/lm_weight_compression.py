@@ -92,8 +92,7 @@ class LMWeightCompression(BaseTestPipeline):
                 self.model_id, load_in_8bit=False, **self.MODEL_SPECIFIC_PARAMS
             )
 
-            if self.backend != BackendType.TORCH:
-                self._dump_model_fp32()
+            self._dump_model_fp32()
         else:
             # no export, load from IR. Applicable for sequential run of test cases in local environment.
             self.model_hf = self.MODEL_FUNC.from_pretrained(
@@ -181,6 +180,11 @@ class LMWeightCompression(BaseTestPipeline):
     def save_compressed_model(self) -> None:
         if self.backend == BackendType.FP32:
             return
+        if self.backend == BackendType.TORCH:
+            self.compressed_model.save_pretrained(self.output_model_dir)
+
+            return
+
         ov.serialize(self.model, self.output_model_dir / self.MODEL_NAME)
         self.model_hf._save_config(self.output_model_dir)
 
@@ -196,7 +200,8 @@ class LMWeightCompression(BaseTestPipeline):
         to the dedicated shared folder.
         """
         self.model_hf.save_pretrained(self.fp32_model_dir)
-        self.model_hf._save_config(self.fp32_model_dir)
+        if not self.backend == BackendType.TORCH:
+            self.model_hf._save_config(self.fp32_model_dir)
 
     def _compress(self):
         """
@@ -231,7 +236,7 @@ class LMWeightCompression(BaseTestPipeline):
         if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
             print("Collection ground-truth reference data")
             model_gold = self.MODEL_FUNC.from_pretrained(
-                self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=is_stateful
+                self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, **self.MODEL_SPECIFIC_PARAMS
             )
             evaluator = Evaluator(base_model=model_gold, tokenizer=self.preprocessor, metrics=("similarity",))
             evaluator.dump_gt(str(gt_data_path))
@@ -245,7 +250,7 @@ class LMWeightCompression(BaseTestPipeline):
         compressed_model_hf = self.model_hf
         if self.backend != BackendType.FP32:
             compressed_model_hf = self.MODEL_FUNC.from_pretrained(
-                self.output_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=is_stateful
+                self.output_model_dir, trust_remote_code=True, load_in_8bit=False, **self.MODEL_SPECIFIC_PARAMS 
             )
         print("Evaluation of the target model")
         _, all_metrics = evaluator.score(compressed_model_hf)
