@@ -11,7 +11,7 @@
 import copy
 from collections import OrderedDict
 from collections import namedtuple
-from typing import Callable, Dict, List, Set, Union
+from typing import Callable, Dict, List, Set, TypeVar, Union
 
 import tensorflow as tf
 
@@ -37,6 +37,7 @@ from nncf.tensorflow.layers.custom_objects import get_nncf_custom_objects
 from nncf.tensorflow.layers.wrapper import NNCFWrapper
 
 WeightOperations = namedtuple("WeightOperations", ("weights_attr_name", "operations"))
+TModel = TypeVar("TModel")
 
 
 class TFModelTransformer(ModelTransformer):
@@ -44,7 +45,7 @@ class TFModelTransformer(ModelTransformer):
     Applies transformations to a Keras model graph.
     """
 
-    def __init__(self, model):
+    def __init__(self, model: TModel) -> None:
         """
         Initializes Model Transformer
 

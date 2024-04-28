@@ -17,7 +17,7 @@ from typing import Callable, Type, TypeVar
 from packaging import version
 
 
-def warning_deprecated(msg):
+def warning_deprecated(msg: str) -> None:
     # Note: must use FutureWarning in order not to get suppressed by default
     warnings.warn(msg, FutureWarning, stacklevel=2)
 
