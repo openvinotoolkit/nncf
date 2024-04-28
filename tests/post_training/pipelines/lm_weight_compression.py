@@ -79,7 +79,7 @@ class LMWeightCompression(BaseTestPipeline):
         if self.backend == BackendType.TORCH:
             self.MODEL_NAME = "torch_model.xml"
             self.MODEL_FUNC = AutoModelForCausalLM
-            self.MODEL_SPECIFIC_PARAMS = {"torch_dtype": torch.float16}
+            self.MODEL_SPECIFIC_PARAMS = {}
         else:
             self.MODEL_SPECIFIC_PARAMS = {"export": True, "compile": False, "stateful": is_stateful}
 
@@ -181,7 +181,7 @@ class LMWeightCompression(BaseTestPipeline):
         if self.backend == BackendType.FP32:
             return
         if self.backend == BackendType.TORCH:
-            self.compressed_model.save_pretrained(self.output_model_dir)
+            self.model_hf.save_pretrained(self.output_model_dir)
 
             return
 
@@ -248,10 +248,12 @@ class LMWeightCompression(BaseTestPipeline):
             )
 
         compressed_model_hf = self.model_hf
-        if self.backend != BackendType.FP32:
+        raise ValueError(f"{type(compressed_model_hf)}")
+        if self.backend != BackendType.FP32 and self.backend != BackendType.TORCH:
             compressed_model_hf = self.MODEL_FUNC.from_pretrained(
                 self.output_model_dir, trust_remote_code=True, load_in_8bit=False, **self.MODEL_SPECIFIC_PARAMS 
             )
+
         print("Evaluation of the target model")
         _, all_metrics = evaluator.score(compressed_model_hf)
         similarity = all_metrics["similarity"][0]
