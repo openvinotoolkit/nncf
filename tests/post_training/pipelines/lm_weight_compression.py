@@ -251,7 +251,7 @@ class LMWeightCompression(BaseTestPipeline):
         raise ValueError(f"{type(compressed_model_hf)}")
         if self.backend != BackendType.FP32 and self.backend != BackendType.TORCH:
             compressed_model_hf = self.MODEL_FUNC.from_pretrained(
-                self.output_model_dir, trust_remote_code=True, load_in_8bit=False, **self.MODEL_SPECIFIC_PARAMS 
+                self.output_model_dir, trust_remote_code=True, load_in_8bit=False, **self.MODEL_SPECIFIC_PARAMS
             )
 
         print("Evaluation of the target model")
