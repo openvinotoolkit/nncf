@@ -15,6 +15,6 @@ tinyllama_data_aware_awq_stateful_backend_OV:
   num_int4: 184
   num_int8: 128
 tinyllama_int8_data_free_backend_TORCH:
-  metric_value: 0.96283
+  metric_value: 0.95944
   num_int4: 228
   num_int8: 84
