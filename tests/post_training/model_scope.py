@@ -249,7 +249,7 @@ QUANTIZATION_MODELS = [
             "model_type": ModelType.TRANSFORMER,
         },
         "backends": [BackendType.OV],
-        "batch_size": 32,
+        "batch_size": 1,
     },
     {
         "reported_name": "timm/swin_base_patch4_window7_224_no_sq",
@@ -263,7 +263,7 @@ QUANTIZATION_MODELS = [
             ),
         },
         "backends": [BackendType.TORCH, BackendType.CUDA_TORCH, BackendType.ONNX],
-        "batch_size": 128,
+        "batch_size": 1,
     },
     {
         "reported_name": "timm/tf_inception_v3",
