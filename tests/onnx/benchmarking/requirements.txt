@@ -1,2 +1,3 @@
+-c ../../../constraints.txt
 pycocotools
-openvino-dev==2024.0
+openvino-dev
