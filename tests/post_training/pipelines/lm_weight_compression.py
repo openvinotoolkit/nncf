@@ -18,7 +18,6 @@ from typing import Dict, Optional
 
 import numpy as np
 import openvino as ov
-import torch
 from datasets import load_dataset
 from memory_profiler import memory_usage
 from optimum.intel.openvino import OVModelForCausalLM
@@ -200,7 +199,7 @@ class LMWeightCompression(BaseTestPipeline):
         to the dedicated shared folder.
         """
         self.model_hf.save_pretrained(self.fp32_model_dir)
-        if not self.backend == BackendType.TORCH:
+        if self.backend != BackendType.TORCH:
             self.model_hf._save_config(self.fp32_model_dir)
 
     def _compress(self):
@@ -223,7 +222,6 @@ class LMWeightCompression(BaseTestPipeline):
         )
 
     def _validate(self):
-        is_stateful = self.params.get("is_stateful", False)
         core = ov.Core()
 
         if os.environ.get("INFERENCE_NUM_THREADS"):
