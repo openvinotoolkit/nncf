@@ -259,3 +259,19 @@ class LMWeightCompression(BaseTestPipeline):
         similarity = all_metrics["similarity"][0]
         self.run_info.metric_name = "Similarity"
         self.run_info.metric_value = round(similarity, 5)
+
+        num_int4_reference = self.reference_data.get("num_int4")
+        num_int8_reference = self.reference_data.get("num_int8")
+
+        num_int4_value = self.run_info.num_compress_nodes.num_int4
+        num_int8_value = self.run_info.num_compress_nodes.num_int8
+
+        if num_int4_reference != num_int4_value:
+            status_msg = f"Regression: The number of int4 ops is different \
+                than reference {num_int4_reference} != {num_int4_value}"
+            raise ValueError(status_msg)
+
+        if num_int8_reference != num_int8_value:
+            status_msg = f"Regression: The number of int8 ops is different \
+                than reference {num_int8_reference} != {num_int8_value}"
+            raise ValueError(status_msg)
