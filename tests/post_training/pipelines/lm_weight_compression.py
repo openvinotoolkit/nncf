@@ -158,7 +158,7 @@ class LMWeightCompression(BaseTestPipeline):
 
             self.calibration_dataset = nncf.Dataset([inputs])
 
-            return        
+            return
         self.calibration_dataset = nncf.Dataset(dataset, self.get_transform_calibration_fn())
 
     def cleanup_cache(self):
