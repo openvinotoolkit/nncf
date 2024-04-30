@@ -62,6 +62,7 @@ ALL_SENSITIVITY_METRICS = DATA_BASED_SENSITIVITY_METRICS + (SensitivityMetric.WE
 
 INT8_MODES = (CompressWeightsMode.INT8, CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM)
 INT4_NF4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM, CompressWeightsMode.NF4)
+INT4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM)
 
 
 def get_next_node(node):
@@ -683,7 +684,7 @@ def test_call_max_var_criterion_with_dataset_by_default(mocker, mode):
     scores_spy.assert_called()
 
 
-@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+@pytest.mark.parametrize("mode", INT4_MODES)
 def test_call_max_var_criterion_with_dataset_by_default_awq(mode):
     model = AWQMatmulModel().ov_model
     dataset = Dataset([np.ones([8, 8])])
@@ -770,3 +771,11 @@ def test_duplicate_names_generation():
         name = op.get_friendly_name()
         assert name not in op_names
         op_names.add(name)
+
+
+@pytest.mark.parametrize("mode", INT4_MODES)
+def test_call_max_var_criterion_with_dataset_by_default_scale_estimation(mode):
+    model = AWQMatmulModel().ov_model
+    dataset = Dataset([np.ones([8, 8])])
+
+    compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, scale_estimation=True)

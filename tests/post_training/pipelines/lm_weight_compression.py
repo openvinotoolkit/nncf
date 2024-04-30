@@ -91,14 +91,21 @@ class LMWeightCompression(BaseTestPipeline):
         self.preprocessor = AutoTokenizer.from_pretrained(self.model_id)
 
     def get_transform_calibration_fn(self):
-        def transform_fn(data):
+        def transform_fn(data, max_tokens=128):
             tokenized_text = self.preprocessor(data["text"], return_tensors="np")
-            input_ids = tokenized_text["input_ids"]
-            attention_mask = tokenized_text["attention_mask"]
+
+            bad_tokens = self.preprocessor("<unk><s>", return_tensors="np")["input_ids"]
+            raw_tokens = tokenized_text["input_ids"][0, :]
+            filtered_tokens = np.array(list(filter(lambda x: x not in bad_tokens, raw_tokens)))
+            tokenized_text["input_ids"] = np.expand_dims(filtered_tokens, 0)
+            tokenized_text["attention_mask"] = tokenized_text["attention_mask"][:, : filtered_tokens.shape[0]]
+
+            input_ids = tokenized_text["input_ids"][:, :max_tokens]
+            attention_mask = tokenized_text["attention_mask"][:, :max_tokens]
 
             inputs = {}
             inputs["input_ids"] = input_ids
-            inputs["attention_mask"] = tokenized_text["attention_mask"]
+            inputs["attention_mask"] = attention_mask
             position_ids = np.cumsum(attention_mask, axis=1) - 1
             position_ids[attention_mask == 0] = 1
 
@@ -130,7 +137,7 @@ class LMWeightCompression(BaseTestPipeline):
 
     def prepare_calibration_dataset(self):
         dataset = load_dataset("wikitext", "wikitext-2-v1", split="train", revision="b08601e")
-        dataset = dataset.filter(lambda example: len(example["text"]) > 80)
+        dataset = dataset.filter(lambda example: len(example["text"]) > 128)
         self.calibration_dataset = nncf.Dataset(dataset, self.get_transform_calibration_fn())
 
     def cleanup_cache(self):

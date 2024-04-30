@@ -35,8 +35,11 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import comp
 
 
 class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
-    def __init__(self, model: ov.Model):
-        self.name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
+    def __init__(self, model: ov.Model, name_to_node_mapping: Dict = None):
+        if name_to_node_mapping is None:
+            self.name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
+        else:
+            self.name_to_node_mapping = name_to_node_mapping
 
     @property
     def matmul_metatypes(self) -> List[OperatorMetatype]:
@@ -119,7 +122,11 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         del const_node
 
     def transform_model(
-        self, model: ov.Model, graph: NNCFGraph, weight_compression_parameters: Iterable[WeightCompressionParameters]
+        self,
+        model: ov.Model,
+        graph: NNCFGraph,
+        weight_compression_parameters: Iterable[WeightCompressionParameters],
+        precomputed_scales: Dict[str, Tensor] = None,
     ) -> ov.Model:
         for wc_params in weight_compression_parameters:
             compression_config = wc_params.compression_config
@@ -146,7 +153,12 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
             weight = Tensor(get_const_value(const_node))
             original_shape = weight.shape
-            compressed_weight = compress_weight(weight, wc_params.reduction_axes, compression_config)
+            compressed_weight = compress_weight(
+                weight,
+                wc_params.reduction_axes,
+                compression_config,
+                precomputed_scales[wc_params.node_with_weight.node_name],
+            )
 
             compressed_const = opset.constant(
                 compressed_weight.tensor.data, dtype=compression_dtype, name=const_node_name
@@ -194,6 +206,53 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         model: ov.Model, parameters: Dict, algo_name: Optional[str] = "quantization", path: Optional[List] = None
     ) -> None:
         dump_parameters(model, parameters, algo_name, path)
+
+    @staticmethod
+    def get_compress_decompress_pipeline(
+        weight_compression_parameter: WeightCompressionParameters, w_shape, s_shape, z_p_shape
+    ):
+        (
+            w,
+            s,
+            zp,
+            clamp,
+        ) = OVWeightCompressionAlgoBackend.get_compress_pipeline(
+            weight_compression_parameter, w_shape, s_shape, z_p_shape, True
+        )
+
+        result = (clamp - zp) * s
+        model = ov.Model([result], [w, s, zp])
+
+        compiled_model = ov.compile_model(model)
+
+        return lambda w, s, zp: compiled_model([w, s, zp])[0]
+
+    @staticmethod
+    def get_compress_pipeline(
+        weight_compression_parameter: WeightCompressionParameters, w_shape, s_shape, z_p_shape, return_nodes=False
+    ):
+        config = weight_compression_parameter.compression_config
+        mode = config.mode
+        assert mode in [CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM]
+        num_bits = config.num_bits
+
+        level_low = 0
+        level_high = 2**num_bits - 1
+
+        w = opset.parameter(w_shape, name="w")
+        s = opset.parameter(s_shape, name="s")
+        zp = opset.parameter(z_p_shape, name="zp")
+
+        result = opset.clamp(opset.round(w / s + zp), level_low, level_high, name="compressed_weights")
+
+        if return_nodes:
+            return w, s, zp, result
+
+        model = ov.Model([result], [w, s, zp])
+
+        compiled_model = ov.compile_model(model)
+
+        return lambda w, s, zp: compiled_model([w, s, zp])[0]
 
 
 class OVAWQAlgoAlgoBackend(OVWeightCompressionAlgoBackend):
