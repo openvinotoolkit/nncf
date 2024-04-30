@@ -299,7 +299,16 @@
 <tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedQuantizationParameters" title="nncf.quantization.advanced_parameters.AdvancedQuantizationParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedQuantizationParameters</span></code></a></p></td>
 <td><p>Contains advanced parameters for fine-tuning quantization algorithm.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters" title="nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedAccuracyRestorerParameters</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedAWQParameters" title="nncf.quantization.advanced_parameters.AdvancedAWQParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedAWQParameters</span></code></a></p></td>
+<td><p>Contains advanced parameters for AWQ algorithm.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedScaleEstimationParameters" title="nncf.quantization.advanced_parameters.AdvancedScaleEstimationParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedScaleEstimationParameters</span></code></a></p></td>
+<td><p>Contains advanced parameters for scale estimation algorithm.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedCompressionParameters" title="nncf.quantization.advanced_parameters.AdvancedCompressionParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedCompressionParameters</span></code></a></p></td>
+<td><p>Contains advanced parameters for compression algorithms.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters" title="nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdvancedAccuracyRestorerParameters</span></code></a></p></td>
 <td><p>Contains advanced parameters for fine-tuning the accuracy restorer algorithm.</p></td>
 </tr>
 </tbody>
@@ -431,6 +440,60 @@ fields may be adjusted in the range from 0 to 1 or set -1 to disable smoothing f
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="nncf.quantization.advanced_parameters.AdvancedAWQParameters">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.quantization.advanced_parameters.</span></span><span class="sig-name descname"><span class="pre">AdvancedAWQParameters</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/quantization/advanced_parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.quantization.advanced_parameters.AdvancedAWQParameters" title="Permalink to this definition">#</a></dt>
+<dd><p>Contains advanced parameters for AWQ algorithm.
+It regulates the calculation of the smooth scale for different node types.
+A negative value switches off the algorithm for current node type. In case of inaccurate results,
+this parameter may be adjusted in the range from 0 to 1 or set -1 to disable SmoothQuant algorithm.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>subset_size</strong> (<em>int</em>) – The number of samples for AWQ.</p></li>
+<li><p><strong>percent_to_apply</strong> (<em>float</em>) – The percent of outliers for correction.</p></li>
+<li><p><strong>alpha_min</strong> (<em>float</em>) – Minimum value of smoothness parameter for grid search.</p></li>
+<li><p><strong>alpha_max</strong> (<em>float</em>) – Maximal value of smoothness parameter for grid search.</p></li>
+<li><p><strong>steps</strong> (<em>int</em>) – The number of the steps in grid search.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="nncf.quantization.advanced_parameters.AdvancedScaleEstimationParameters">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.quantization.advanced_parameters.</span></span><span class="sig-name descname"><span class="pre">AdvancedScaleEstimationParameters</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/quantization/advanced_parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.quantization.advanced_parameters.AdvancedScaleEstimationParameters" title="Permalink to this definition">#</a></dt>
+<dd><p>Contains advanced parameters for scale estimation algorithm.
+It regulates the calculation of the smooth scale for different node types.
+A negative value switches off the algorithm for current node type. In case of inaccurate results,
+this parameter may be adjusted in the range from 0 to 1 or set -1 to disable SmoothQuant algorithm.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>subset_size</strong> (<em>int</em>) – The number of samples for scale estimation.</p></li>
+<li><p><strong>initial_steps</strong> (<em>int</em>) – The number of the steps for absmax scale rectification.</p></li>
+<li><p><strong>scale_steps</strong> (<em>int</em>) – The number of the steps for grid search scale rectification
+from 1.0 to 1.0 - 0.05 * scale_step.</p></li>
+<li><p><strong>weight_penalty</strong> (<em>float</em>) – coefficient for penalty between fp and compressed weights. If -1 then doesn’t apply.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="nncf.quantization.advanced_parameters.AdvancedCompressionParameters">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.quantization.advanced_parameters.</span></span><span class="sig-name descname"><span class="pre">AdvancedCompressionParameters</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/quantization/advanced_parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.quantization.advanced_parameters.AdvancedCompressionParameters" title="Permalink to this definition">#</a></dt>
+<dd><p>Contains advanced parameters for compression algorithms.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>awq_params</strong> (<a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedAWQParameters" title="nncf.quantization.advanced_parameters.AdvancedAWQParameters"><em>AdvancedAWQParameters</em></a>) – Advanced parameters for AWQ algorithm.</p></li>
+<li><p><strong>scale_estimation_params</strong> (<a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedScaleEstimationParameters" title="nncf.quantization.advanced_parameters.AdvancedScaleEstimationParameters"><em>AdvancedScaleEstimationParameters</em></a>) – Advanced parameters for scale estimation algorithm.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">nncf.quantization.advanced_parameters.</span></span><span class="sig-name descname"><span class="pre">AdvancedAccuracyRestorerParameters</span></span><a class="reference external" href="https://github.com/openvinotoolkit/nncf/blob/develop/nncf/quantization/advanced_parameters.py"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters" title="Permalink to this definition">#</a></dt>
 <dd><p>Contains advanced parameters for fine-tuning the accuracy restorer algorithm.</p>
@@ -522,6 +585,9 @@ quantized with initial parameters, should be saved.</p></li>
 <li><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedBiasCorrectionParameters"><code class="docutils literal notranslate"><span class="pre">AdvancedBiasCorrectionParameters</span></code></a></li>
 <li><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedSmoothQuantParameters"><code class="docutils literal notranslate"><span class="pre">AdvancedSmoothQuantParameters</span></code></a></li>
 <li><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedQuantizationParameters"><code class="docutils literal notranslate"><span class="pre">AdvancedQuantizationParameters</span></code></a></li>
+<li><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedAWQParameters"><code class="docutils literal notranslate"><span class="pre">AdvancedAWQParameters</span></code></a></li>
+<li><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedScaleEstimationParameters"><code class="docutils literal notranslate"><span class="pre">AdvancedScaleEstimationParameters</span></code></a></li>
+<li><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedCompressionParameters"><code class="docutils literal notranslate"><span class="pre">AdvancedCompressionParameters</span></code></a></li>
 <li><a class="reference internal" href="#nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters"><code class="docutils literal notranslate"><span class="pre">AdvancedAccuracyRestorerParameters</span></code></a></li>
 </ul>
 </li>
