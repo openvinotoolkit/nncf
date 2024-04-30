@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 
 import torch
 
@@ -174,7 +174,11 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         pass
 
     def transform_model(
-        self, model: NNCFNetwork, graph: NNCFGraph, weight_compression_parameters: Iterable[WeightCompressionParameters]
+        self,
+        model: NNCFNetwork,
+        graph: NNCFGraph,
+        weight_compression_parameters: Iterable[WeightCompressionParameters],
+        precomputed_scales: Dict[str, Tensor] = None,
     ) -> NNCFNetwork:
         transformation_layout = TransformationLayout()
 
