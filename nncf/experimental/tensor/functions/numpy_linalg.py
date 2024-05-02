@@ -30,19 +30,19 @@ def _(
 
 @register_numpy_types(linalg.cholesky)
 def _(a: Union[np.ndarray, np.generic], upper: bool = False) -> np.ndarray:
-    if a.ndim != 2:
-        raise ValueError(f"Input tensor needs to be 2D but received a {a.ndim}d-tensor.")
-    return scipy.linalg.cholesky(a, lower=not upper)
+    l = np.linalg.cholesky(a)
+    if upper:
+        l = np.conjugate(np.swapaxes(l, -2, -1))
+    return l
 
 
 @register_numpy_types(linalg.cholesky_inverse)
 def _(a: Union[np.ndarray, np.generic], upper: bool = False) -> np.ndarray:
-    if a.ndim != 2:
-        raise ValueError(f"Input tensor needs to be 2D but received a {a.ndim}d-tensor.")
     c = np.linalg.inv(a)
+    ct = np.conjugate(np.swapaxes(c, -2, -1))
     if upper:
-        return np.dot(c, c.T)
-    return np.dot(c.T, c)
+        return np.matmul(c, ct)
+    return np.matmul(ct, c)
 
 
 @register_numpy_types(linalg.inv)

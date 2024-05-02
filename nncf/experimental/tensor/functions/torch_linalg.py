@@ -27,15 +27,11 @@ def _(
 
 @linalg.cholesky.register(torch.Tensor)
 def _(a: torch.Tensor, upper: bool = False) -> torch.Tensor:
-    if a.ndim != 2:
-        raise ValueError(f"Input tensor needs to be 2D but received a {a.ndim}d-tensor.")
     return torch.linalg.cholesky(a, upper=upper)
 
 
 @linalg.cholesky_inverse.register(torch.Tensor)
 def _(a: torch.Tensor, upper: bool = False) -> torch.Tensor:
-    if a.ndim != 2:
-        raise ValueError(f"Input tensor needs to be 2D but received a {a.ndim}d-tensor.")
     return torch.cholesky_inverse(a, upper=upper)
 
 
