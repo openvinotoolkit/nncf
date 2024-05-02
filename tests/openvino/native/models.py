@@ -24,6 +24,7 @@ from tests.torch.test_models.mobilenet_v3 import mobilenet_v3_small
 from tests.torch.test_models.resnet import ResNet18
 from tests.torch.test_models.ssd_mobilenet import ssd_mobilenet
 from tests.torch.test_models.ssd_vgg import ssd_vgg300
+from tests.torch.test_models.swin import SwinTransformer
 
 SYNTHETIC_MODELS = Registry("OV_SYNTHETIC_MODELS")
 
@@ -37,6 +38,7 @@ def create_torch_model(model_name):
         "inception-v3": (inception_v3(), (1, 3, 224, 224)),
         "ssd-vgg-300": (ssd_vgg300(), (1, 3, 300, 300)),
         "ssd-mobilenet": (ssd_mobilenet(), (1, 3, 300, 300)),
+        "swin-t": (SwinTransformer(), (1, 3, 224, 224)),
     }[model_name]
 
 
