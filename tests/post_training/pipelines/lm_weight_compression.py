@@ -22,6 +22,7 @@ import torch
 from datasets import load_dataset
 from memory_profiler import memory_usage
 from optimum.intel.openvino import OVModelForCausalLM
+from optimum.exporters.openvino.convert import export_from_model
 from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 from whowhatbench import Evaluator
@@ -186,16 +187,34 @@ class LMWeightCompression(BaseTestPipeline):
     def save_compressed_model(self) -> None:
         if self.backend == BackendType.FP32:
             return
-        if self.backend == BackendType.TORCH:
-            self.model_hf.save_pretrained(self.output_model_dir)
 
-            return
-
-        ov.serialize(self.model, self.output_model_dir / self.MODEL_NAME)
-        self.model_hf._save_config(self.output_model_dir)
+        if self.backend == BackendType.OV:
+	            ov.serialize(self.model, self.output_model_dir / self.OV_MODEL_NAME)
+	            self.model_hf._save_config(self.output_model_dir)
+	        elif self.backend == BackendType.TORCH:
+	            export_from_model(self.model_hf, self.output_model_dir, stateful=False, compression_option="fp32")
 
     def get_num_compressed(self) -> None:
-        pass
+        """
+        Get number of the i8, u8, i4, u4 ops in the compressed IR.
+        """
+        num_int8 = 0
+        num_int4 = 0
+
+        if self.backend == BackendType.TORCH:
+            model = ov.Core().read_model(self.output_model_dir / self.OV_MODEL_NAME)
+        else:
+            model = self.model
+
+        for node in model.get_ops():
+            for i in range(node.get_output_size()):
+                if node.get_output_element_type(i).get_type_name() in ["i8", "u8"]:
+                    num_int8 += 1
+                if node.get_output_element_type(i).get_type_name() in ["i4", "u4"]:
+                    num_int4 += 1
+
+        self.run_info.num_compress_nodes.num_int8 = num_int8
+        self.run_info.num_compress_nodes.num_int4 = num_int4
 
     def run_bench(self) -> None:
         pass
