@@ -21,8 +21,8 @@ import openvino as ov
 import torch
 from datasets import load_dataset
 from memory_profiler import memory_usage
-from optimum.intel.openvino import OVModelForCausalLM
 from optimum.exporters.openvino.convert import export_from_model
+from optimum.intel.openvino import OVModelForCausalLM
 from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 from whowhatbench import Evaluator
@@ -189,10 +189,10 @@ class LMWeightCompression(BaseTestPipeline):
             return
 
         if self.backend == BackendType.OV:
-	            ov.serialize(self.model, self.output_model_dir / self.OV_MODEL_NAME)
-	            self.model_hf._save_config(self.output_model_dir)
-	        elif self.backend == BackendType.TORCH:
-	            export_from_model(self.model_hf, self.output_model_dir, stateful=False, compression_option="fp32")
+            ov.serialize(self.model, self.output_model_dir / self.OV_MODEL_NAME)
+            self.model_hf._save_config(self.output_model_dir)
+        elif self.backend == BackendType.TORCH:
+            export_from_model(self.model_hf, self.output_model_dir, stateful=False, compression_option="fp32")
 
     def get_num_compressed(self) -> None:
         """
@@ -234,15 +234,6 @@ class LMWeightCompression(BaseTestPipeline):
         """
         Actual call of weight compression
         """
-        if self.backend == BackendType.TORCH:
-            from nncf.torch.model_creation import is_wrapped_model
-            from nncf.torch.model_creation import wrap_model
-
-            if not is_wrapped_model(self.model):
-                example_input = next(iter(self.calibration_dataset.get_inference_data()))
-                self.model = wrap_model(self.model, example_input=example_input, trace_parameters=True)
-                self.calibration_dataset = None
-
         self.compressed_model = nncf.compress_weights(
             self.model,
             dataset=self.calibration_dataset,
