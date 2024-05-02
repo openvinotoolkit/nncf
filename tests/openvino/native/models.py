@@ -18,8 +18,11 @@ import torch
 from openvino.runtime import opset13 as opset
 
 from nncf.common.utils.registry import Registry
+from tests.torch.test_models.inceptionv3 import inception_v3
 from tests.torch.test_models.mobilenet import mobilenet_v2
+from tests.torch.test_models.mobilenet_v3 import mobilenet_v3_small
 from tests.torch.test_models.resnet import ResNet18
+from tests.torch.test_models.ssd_mobilenet import ssd_mobilenet
 from tests.torch.test_models.ssd_vgg import ssd_vgg300
 
 SYNTHETIC_MODELS = Registry("OV_SYNTHETIC_MODELS")
@@ -29,8 +32,11 @@ def create_torch_model(model_name):
     torch.manual_seed(0)
     return {
         "mobilenet-v2": (mobilenet_v2(), (1, 3, 224, 224)),
+        "mobilenet-v3-small": (mobilenet_v3_small(), (1, 3, 224, 224)),
         "resnet-18": (ResNet18(), (1, 3, 224, 224)),
+        "inception-v3": (inception_v3(), (1, 3, 224, 224)),
         "ssd-vgg-300": (ssd_vgg300(), (1, 3, 300, 300)),
+        "ssd-mobilenet": (ssd_mobilenet(), (1, 3, 300, 300)),
     }[model_name]
 
 

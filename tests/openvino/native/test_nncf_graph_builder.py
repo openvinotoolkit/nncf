@@ -11,8 +11,9 @@
 
 from pathlib import Path
 
-import openvino.runtime as ov
+import openvino as ov
 import pytest
+import torch
 
 from nncf.common.graph.graph import NNCFGraphEdge
 from nncf.common.graph.layer_attributes import Dtype
@@ -21,8 +22,7 @@ from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.models import SYNTHETIC_MODELS
 from tests.openvino.native.models import ParallelEdgesModel
-from tests.openvino.omz_helpers import convert_model
-from tests.openvino.omz_helpers import download_model
+from tests.openvino.native.models import create_torch_model
 
 REFERENCE_GRAPHS_DIR = Path("reference_graphs") / "original_nncf_graph"
 
@@ -34,22 +34,22 @@ def test_compare_nncf_graph_synthetic_models(model_cls_to_test):
     compare_nncf_graphs(model_to_test.ov_model, path_to_dot)
 
 
-OMZ_MODELS = [
-    "mobilenet-v2-pytorch",
-    "mobilenet-v3-small-1.0-224-tf",
-    "resnet-18-pytorch",
-    "googlenet-v3-pytorch",
-    "ssd_mobilenet_v1_coco",
-    "yolo-v4-tiny-tf",
-]
-
-
-@pytest.mark.parametrize("model_name", OMZ_MODELS)
-def test_compare_nncf_graph_omz_models(tmp_path, omz_cache_dir, model_name):
-    download_model(model_name, tmp_path, omz_cache_dir)
-    convert_model(model_name, tmp_path)
-    model_path = tmp_path / "public" / model_name / "FP32" / f"{model_name}.xml"
-    model = ov.Core().read_model(model_path)
+@pytest.mark.parametrize(
+    "model_name",
+    (
+        "mobilenet-v2",
+        "mobilenet-v3-small",
+        "resnet-18",
+        "inception-v3",
+        "ssd-mobilenet",
+    ),
+)
+def test_compare_nncf_graph_real_models(tmp_path, model_name):
+    torch_model, input_shape = create_torch_model(model_name)
+    model_onnx_path = tmp_path / (model_name + ".onnx")
+    with torch.no_grad():
+        torch.onnx.export(torch_model, torch.rand(input_shape), model_onnx_path)
+    model = ov.convert_model(model_onnx_path)
 
     path_to_dot = get_actual_reference_for_current_openvino(REFERENCE_GRAPHS_DIR / f"{model_name}.dot")
     compare_nncf_graphs(model, path_to_dot)
