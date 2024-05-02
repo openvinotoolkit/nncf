@@ -57,7 +57,7 @@ class RBSparsifyingWeight(BinaryMask, StatefullTorchModuleInterface):
     def loss(self):
         return binary_mask(self._mask)
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_config(self) -> Dict[str, Any]:
         return {
             self.WEIGHTS_SHAPE_KEY: list(self.mask.shape),
             self.FROZEN_KEY: self.frozen,
@@ -66,7 +66,7 @@ class RBSparsifyingWeight(BinaryMask, StatefullTorchModuleInterface):
         }
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "RBSparsifyingWeight":
+    def from_config(cls, state: Dict[str, Any]) -> "RBSparsifyingWeight":
         return RBSparsifyingWeight(
             weight_shape=state[cls.WEIGHTS_SHAPE_KEY],
             frozen=state[cls.FROZEN_KEY],

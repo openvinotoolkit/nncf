@@ -28,10 +28,10 @@ class StatefullTorchModuleInterface(ABC):
     """
     Interface that should be implemented for every registered compression module to make it possible
     to save an compression modules state and create an compression module from the saved state.
-    State of the module should be json serializable, no python objects except
-    standart (str, list and etc.) should be present in a compression module state.
-    The state for attributes with type torch.nn.Parameter
-    is recovered from the model `state_dict`, so there is no need to keep them in the module state.
+    Config of the module should be json serializable, no python objects except
+    standart (str, list and etc.) should be present in a compression module config.
+    Values for attributes with type torch.nn.Parameter
+    is recovered from the model `state_dict`, so there is no need to keep them in the module config.
     Modules should avoid implementation of `__call__` method and use `forward` method instead,
     as torch functions called inside the `__call__` method could not be unambiguously
     separated from the wrapped parent nncf module functions calls, thus nncf is unable to
@@ -39,15 +39,15 @@ class StatefullTorchModuleInterface(ABC):
     """
 
     @abstractmethod
-    def get_state(self) -> Dict[str, Any]:
+    def get_config(self) -> Dict[str, Any]:
         """
-        Returns the compression module state.
+        Returns the compression module config.
         """
 
     @abstractclassmethod
-    def from_state(cls, state: Dict[str, Any]) -> object:
+    def from_config(cls, state: Dict[str, Any]) -> object:
         """
-        Creates a compression module instance from the given state.
+        Creates a compression module instance from the given config.
         """
 
 

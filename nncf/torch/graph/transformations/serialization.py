@@ -34,9 +34,7 @@ def serialize_transformations(transformations_layout: TransformationLayout) -> D
     """
     transformation_commands = []
     for command in transformations_layout.transformations:
-        serialized_command = serialize_command(command)
-        if serialized_command:
-            transformation_commands.append(serialized_command)
+        transformation_commands.append(serialize_command(command))
 
     return {COMPRESSION_STATE_ATTR: transformation_commands}
 
@@ -72,7 +70,6 @@ def serialize_command(command: PTTransformationCommand) -> Dict[str, Any]:
         serialized_transformation["target_points"] = [point.get_state() for point in command.target_points]
         serialized_transformation["op_name"] = command.op_name
         serialized_transformation["compression_module_type"] = command.compression_module_type.value
-
     elif isinstance(command, PTInsertionCommand):
         serialized_transformation["target_point"] = command.target_point.get_state()
 
@@ -84,7 +81,7 @@ def serialize_command(command: PTTransformationCommand) -> Dict[str, Any]:
             " Please register your module in the COMPRESSION_MODULES registry."
         )
     serialized_transformation["compression_module_name"] = compression_module_name
-    serialized_transformation["fn_state"] = command.fn.get_state()
+    serialized_transformation["fn_config"] = command.fn.get_config()
     serialized_transformation["hooks_group_name"] = command.hooks_group_name
     priority = command.priority
     serialized_transformation["priority"] = priority.value if isinstance(priority, Enum) else priority
@@ -102,7 +99,7 @@ def deserialize_command(serialized_command: Dict[str, Any]) -> Union[PTInsertion
         raise RuntimeError(f"Command type {serialized_command['type']} is not supported.")
 
     module_cls = COMPRESSION_MODULES.get(serialized_command["compression_module_name"])
-    fn = module_cls.from_state(serialized_command["fn_state"])
+    fn = module_cls.from_config(serialized_command["fn_config"])
     priority = serialized_command["priority"]
     if priority in iter(TransformationPriority):
         priority = TransformationPriority(priority)

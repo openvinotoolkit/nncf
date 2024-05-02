@@ -183,7 +183,7 @@ def _check_pre_post_ops(modified_model, recovered_model):
 def _check_hook_are_equal(hook, recovered_hook):
     assert type(hook) == type(recovered_hook)
     if isinstance(hook, DummyOpWithState):
-        assert hook.get_state() == recovered_hook.get_state()
+        assert hook.get_config() == recovered_hook.get_config()
         return
     # Hook is external op call hook then
     assert hook._storage_name == recovered_hook._storage_name
@@ -193,9 +193,9 @@ def _check_hook_are_equal(hook, recovered_hook):
 def _check_commands_after_serialization(command, recovered_command, dummy_op_state=None):
     commands_are_equal(recovered_command, command, check_fn_ref=False)
     assert isinstance(command.fn, DummyOpWithState)
-    assert command.fn.get_state() == recovered_command.fn.get_state()
+    assert command.fn.get_config() == recovered_command.fn.get_config()
     if dummy_op_state is not None:
-        assert command.fn.get_state() == dummy_op_state
+        assert command.fn.get_config() == dummy_op_state
 
 
 @pytest.mark.parametrize("size", (4, [3, 4]))
@@ -206,11 +206,11 @@ def test_pruning_mask_serialization(size):
     mask.binary_filter_pruning_mask = torch.fill(torch.empty(size), 5)
     state_dict = mask.state_dict()
 
-    state = mask.get_state()
+    state = mask.get_config()
     json_state = json.dumps(state)
     state = json.loads(json_state)
 
-    recovered_mask = FilterPruningMask.from_state(state)
+    recovered_mask = FilterPruningMask.from_config(state)
     recovered_mask.load_state_dict(state_dict)
 
     ref_size = size if isinstance(size, list) else [size]
@@ -244,11 +244,11 @@ def test_quantizer_serialization(quantizer_class: BaseQuantizer):
 
     state_dict = quantizer.state_dict()
 
-    state = quantizer.get_state()
+    state = quantizer.get_config()
     json_state = json.dumps(state)
     state = json.loads(json_state)
 
-    recovered_quantizer = quantizer_class.from_state(state)
+    recovered_quantizer = quantizer_class.from_config(state)
     recovered_quantizer.load_state_dict(state_dict)
 
     assert recovered_quantizer._qspec == ref_qspec
@@ -271,11 +271,11 @@ def test_sparsity_binary_mask_serialization():
     mask.binary_mask = torch.zeros(ref_shape)
     state_dict = mask.state_dict()
 
-    state = mask.get_state()
+    state = mask.get_config()
     json_state = json.dumps(state)
     state = json.loads(json_state)
 
-    recovered_mask = BinaryMask.from_state(state)
+    recovered_mask = BinaryMask.from_config(state)
     recovered_mask.load_state_dict(state_dict)
 
     assert list(recovered_mask.binary_mask.shape) == ref_shape
@@ -297,11 +297,11 @@ def test_rb_sparsity_mask_serialization():
     mask.mask = torch.fill(torch.empty(ref_weights_shape), 5)
     state_dict = mask.state_dict()
 
-    state = mask.get_state()
+    state = mask.get_config()
     json_state = json.dumps(state)
     state = json.loads(json_state)
 
-    recovered_mask = RBSparsifyingWeight.from_state(state)
+    recovered_mask = RBSparsifyingWeight.from_config(state)
     recovered_mask.load_state_dict(state_dict)
 
     assert list(recovered_mask.mask.shape) == ref_weights_shape
@@ -321,11 +321,11 @@ def test_sq_multiply_serialization():
     sq_multiply.scale = tensor_value
     state_dict = sq_multiply.state_dict()
 
-    state = sq_multiply.get_state()
+    state = sq_multiply.get_config()
     json_state = json.dumps(state)
     state = json.loads(json_state)
 
-    recovered_sq_multiply = SQMultiply.from_state(state)
+    recovered_sq_multiply = SQMultiply.from_config(state)
     recovered_sq_multiply.load_state_dict(state_dict)
 
     assert torch.all(sq_multiply.scale == recovered_sq_multiply.scale)

@@ -64,7 +64,7 @@ class FilterPruningMask(nn.Module, StatefullTorchModuleInterface):
             )
         return new_params
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_config(self) -> Dict[str, Any]:
         return {
             self.MASK_APPLYING_DIM_KEY: self.mask_applying_dim,
             self.NODE_NAME_KEY: self.node_name,
@@ -72,7 +72,7 @@ class FilterPruningMask(nn.Module, StatefullTorchModuleInterface):
         }
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "FilterPruningMask":
+    def from_config(cls, state: Dict[str, Any]) -> "FilterPruningMask":
         return FilterPruningMask(
             size=state[cls.SIZE_KEY], node_name=state[cls.NODE_NAME_KEY], dim=state[cls.MASK_APPLYING_DIM_KEY]
         )

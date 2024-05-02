@@ -43,6 +43,7 @@ from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.initialization import PTInitializingDataLoader
 from nncf.torch.initialization import register_default_init_args
+from nncf.torch.layer_utils import StatefullTorchModuleInterface
 from nncf.torch.layers import NNCF_MODULES_MAP
 from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.module_operations import UpdateWeight
@@ -265,7 +266,7 @@ class LeNet(nn.Module):
         return num_features
 
 
-class DummyOpWithState(torch.nn.Module):
+class DummyOpWithState(torch.nn.Module, StatefullTorchModuleInterface):
     def __init__(self, state: str):
         super().__init__()
         self._state = state
@@ -285,11 +286,11 @@ class DummyOpWithState(torch.nn.Module):
         args[0].weight + self._dummy_param
         return None
 
-    def get_state(self):
+    def get_config(self):
         return self._state
 
     @classmethod
-    def from_state(cls, state: str):
+    def from_config(cls, state: str):
         return cls(state)
 
 

@@ -60,11 +60,11 @@ class SQMultiply(torch.nn.Module, StatefullTorchModuleInterface):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return torch.mul(x, self._scale_value)
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_config(self) -> Dict[str, Any]:
         return {self.SCALE_SHAPE_KEY: list(self._scale_value.shape)}
 
     @classmethod
-    def from_state(cls, state) -> "SQMultiply":
+    def from_config(cls, state) -> "SQMultiply":
         return SQMultiply(state[cls.SCALE_SHAPE_KEY])
 
 

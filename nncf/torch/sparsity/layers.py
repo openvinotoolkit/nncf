@@ -49,9 +49,9 @@ class BinaryMask(nn.Module, StatefullTorchModuleInterface):
     def apply_binary_mask(self, weight):
         return apply_binary_mask_impl(self.binary_mask, weight)
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_config(self) -> Dict[str, Any]:
         return {self.SHAPE_KEY: list(self.binary_mask.shape)}
 
     @classmethod
-    def from_state(cls, state: Dict[str, Any]) -> "BinaryMask":
+    def from_config(cls, state: Dict[str, Any]) -> "BinaryMask":
         return BinaryMask(state[cls.SHAPE_KEY])

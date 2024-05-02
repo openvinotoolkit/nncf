@@ -565,11 +565,11 @@ class BaseQuantizer(nn.Module, StatefullTorchModuleInterface, ABC):
             zero_point - Quantizer zero point.
         """
 
-    def get_state(self):
+    def get_config(self):
         return self._qspec.get_state()
 
     @classmethod
-    def from_state(cls, state) -> "BaseQuantizer":
+    def from_config(cls, state) -> "BaseQuantizer":
         qsetup = PTQuantizerSpec.from_state(state)
         return cls(qsetup)
 
