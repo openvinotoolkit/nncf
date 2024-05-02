@@ -224,9 +224,11 @@ class LMWeightCompression(BaseTestPipeline):
         Dump IRs of fp32 models, to help debugging. The test cases may share the same fp32 model, therefore it is saved
         to the dedicated shared folder.
         """
-        self.model_hf.save_pretrained(self.fp32_model_dir)
-        if self.backend != BackendType.TORCH:
+        if self.backend == BackendType.OV:
+            self.model_hf.save_pretrained(self.fp32_model_dir)
             self.model_hf._save_config(self.fp32_model_dir)
+        elif self.backend == BackendType.TORCH:
+            export_from_model(self.model_hf, self.fp32_model_dir, stateful=False, compression_option="fp32")
 
     def _compress(self):
         """
