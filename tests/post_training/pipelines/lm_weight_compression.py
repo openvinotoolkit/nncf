@@ -241,6 +241,7 @@ class LMWeightCompression(BaseTestPipeline):
         )
 
     def _validate(self):
+        is_stateful = self.params.get("is_stateful", False)
         core = ov.Core()
 
         if os.environ.get("INFERENCE_NUM_THREADS"):
@@ -252,8 +253,8 @@ class LMWeightCompression(BaseTestPipeline):
         gt_data_path.parent.mkdir(parents=True, exist_ok=True)
         if os.getenv("NNCF_TEST_REGEN_DOT") is not None:
             print("Collection ground-truth reference data")
-            model_gold = self.MODEL_FUNC.from_pretrained(
-                self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, **self.MODEL_SPECIFIC_PARAMS
+            model_gold = OVModelForCausalLM.from_pretrained(
+                self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=is_stateful
             )
             evaluator = Evaluator(base_model=model_gold, tokenizer=self.preprocessor, metrics=("similarity",))
             evaluator.dump_gt(str(gt_data_path))
@@ -265,11 +266,10 @@ class LMWeightCompression(BaseTestPipeline):
             )
 
         compressed_model_hf = self.model_hf
-        if self.backend != BackendType.FP32 and self.backend != BackendType.TORCH:
-            compressed_model_hf = self.MODEL_FUNC.from_pretrained(
-                self.output_model_dir, trust_remote_code=True, load_in_8bit=False, **self.MODEL_SPECIFIC_PARAMS
+        if self.backend != BackendType.FP32:
+            compressed_model_hf = OVModelForCausalLM.from_pretrained(
+                self.output_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=is_stateful
             )
-
         print("Evaluation of the target model")
         _, all_metrics = evaluator.score(compressed_model_hf)
         similarity = all_metrics["similarity"][0]
