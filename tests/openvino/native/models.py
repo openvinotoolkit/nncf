@@ -14,11 +14,24 @@ from abc import abstractmethod
 
 import numpy as np
 import openvino.runtime as ov
+import torch
 from openvino.runtime import opset13 as opset
 
 from nncf.common.utils.registry import Registry
+from tests.torch.test_models.mobilenet import mobilenet_v2
+from tests.torch.test_models.resnet import ResNet18
+from tests.torch.test_models.ssd_vgg import ssd_vgg300
 
 SYNTHETIC_MODELS = Registry("OV_SYNTHETIC_MODELS")
+
+
+def create_torch_model(model_name):
+    torch.manual_seed(0)
+    return {
+        "mobilenet-v2": (mobilenet_v2(), (1, 3, 224, 224)),
+        "resnet-18": (ResNet18(), (1, 3, 224, 224)),
+        "ssd-vgg-300": (ssd_vgg300(), (1, 3, 300, 300)),
+    }[model_name]
 
 
 class OVReferenceModel(ABC):

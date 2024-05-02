@@ -12,8 +12,9 @@
 from pathlib import Path
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
 import pytest
+import torch
 
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
@@ -28,8 +29,7 @@ from tests.openvino.native.models import FPModel
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import MatMul2DModel
 from tests.openvino.native.models import WeightsModel
-from tests.openvino.omz_helpers import convert_model
-from tests.openvino.omz_helpers import download_model
+from tests.openvino.native.models import create_torch_model
 from tests.shared.helpers import compare_stats
 from tests.shared.helpers import load_json
 
@@ -115,32 +115,27 @@ def test_overflow_fix_scales(overflow_fix):
     compare_stats(ref_nodes, nodes)
 
 
-OMZ_MODELS = [
-    "mobilenet-v2-pytorch",
-    "resnet-18-pytorch",
-    "yolo-v3-tiny-onnx",
-]
-
-
 @pytest.mark.parametrize(
     "preset",
     [QuantizationPreset.PERFORMANCE, QuantizationPreset.MIXED],
     ids=[QuantizationPreset.PERFORMANCE.value, QuantizationPreset.MIXED.value],
 )
-@pytest.mark.parametrize("model_name", OMZ_MODELS)
-def test_omz_models_fq_scales(model_name, preset, inplace_statistics, tmp_path, omz_cache_dir):
-    download_model(model_name, tmp_path, omz_cache_dir)
-    convert_model(model_name, tmp_path)
-    model_path = tmp_path / "public" / model_name / "FP32" / f"{model_name}.xml"
-    model = ov.Core().read_model(model_path)
+@pytest.mark.parametrize("model_name", ("mobilenet-v2", "resnet-18", "ssd-vgg-300"))
+def test_real_models_fq_scales(model_name, preset, inplace_statistics, tmp_path, omz_cache_dir):
+    torch_model, input_shape = create_torch_model(model_name)
+    model_onnx_path = tmp_path / (model_name + ".onnx")
+    with torch.no_grad():
+        torch.onnx.export(torch_model, torch.rand(input_shape), model_onnx_path)
+    model = ov.convert_model(model_onnx_path)
+
     quantized_model = quantize_model(model, {"preset": preset, "inplace_statistics": inplace_statistics})
     nodes = get_fq_nodes_stats_algo(quantized_model)
-
-    ref_stats_name = str(Path(model_path).name).rsplit(".", maxsplit=1)[0] + f"_{preset.value}.json"
+    ref_stats_name = model_name + f"_{preset.value}.json"
     ref_stats_path = get_actual_reference_for_current_openvino(REFERENCE_SCALES_DIR / ref_stats_name)
 
     # Uncomment lines below to generate reference for new models.
     # from tests.shared.helpers import dump_to_json
+
     # dump_to_json(ref_stats_path, nodes)
 
     ref_nodes = load_json(ref_stats_path)
