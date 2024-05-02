@@ -370,6 +370,15 @@ WEIGHT_COMPRESSION_MODELS = [
         "params": {"is_stateful": True},
         "backends": [BackendType.OV],
     },
+    {
+        "reported_name": "tinyllama_int8_data_free",
+        "model_id": "tinyllama/tinyllama-1.1b-step-50k-105b",
+        "pipeline_cls": LMWeightCompression,
+        "compression_params": {
+            "mode": CompressWeightsMode.INT8_ASYM,
+        },
+        "backends": [BackendType.TORCH],
+    },
 ]
 
 

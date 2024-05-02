@@ -18,9 +18,12 @@ from typing import Dict, Optional
 
 import numpy as np
 import openvino as ov
+import torch
 from datasets import load_dataset
 from memory_profiler import memory_usage
+from optimum.exporters.openvino.convert import export_from_model
 from optimum.intel.openvino import OVModelForCausalLM
+from transformers import AutoModelForCausalLM
 from transformers import AutoTokenizer
 from whowhatbench import Evaluator
 
@@ -72,20 +75,36 @@ class LMWeightCompression(BaseTestPipeline):
 
     def prepare_model(self) -> None:
         is_stateful = self.params.get("is_stateful", False)
-        if is_stateful:
-            self.fp32_model_dir = self.fp32_model_dir.parent / (self.fp32_model_dir.name + "_sf")
-        if not (self.fp32_model_dir / self.OV_MODEL_NAME).exists():
-            # export by model_id
-            self.model_hf = OVModelForCausalLM.from_pretrained(
-                self.model_id, export=True, load_in_8bit=False, compile=False, stateful=is_stateful
+
+        # load model
+        if self.backend == BackendType.TORCH:
+            if is_stateful:
+                raise RuntimeError(f"is_stateful={is_stateful} is not supported for PyTorch backend.")
+
+            self.model_hf = AutoModelForCausalLM.from_pretrained(
+                self.model_id, torch_dtype=torch.float32, device_map="cpu"
             )
-            self._dump_model_fp32()
+            self.model = self.model_hf
+        elif self.backend == BackendType.OV:
+            if is_stateful:
+                self.fp32_model_dir = self.fp32_model_dir.parent / (self.fp32_model_dir.name + "_sf")
+            if not (self.fp32_model_dir / self.OV_MODEL_NAME).exists():
+                # export by model_id
+                self.model_hf = OVModelForCausalLM.from_pretrained(
+                    self.model_id, export=True, load_in_8bit=False, compile=False, stateful=is_stateful
+                )
+            else:
+                # no export, load from IR. Applicable for sequential run of test cases in local environment.
+                self.model_hf = OVModelForCausalLM.from_pretrained(
+                    self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=is_stateful
+                )
+            self.model = self.model_hf.model
         else:
-            # no export, load from IR. Applicable for sequential run of test cases in local environment.
-            self.model_hf = OVModelForCausalLM.from_pretrained(
-                self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=is_stateful
-            )
-        self.model = self.model_hf.model
+            raise RuntimeError(f"backend={self.backend.value} is not supported.")
+
+        # dump FP32 model
+        if not (self.fp32_model_dir / self.OV_MODEL_NAME).exists():
+            self._dump_model_fp32()
 
     def prepare_preprocessor(self) -> None:
         self.preprocessor = AutoTokenizer.from_pretrained(self.model_id)
@@ -108,29 +127,32 @@ class LMWeightCompression(BaseTestPipeline):
             inputs["attention_mask"] = attention_mask
             position_ids = np.cumsum(attention_mask, axis=1) - 1
             position_ids[attention_mask == 0] = 1
-
-            # The magic forms KV cache as model inputs
-            batch_size = input_ids.shape[0]
-            for input_name in self.model_hf.key_value_input_names:
-                model_inputs = self.model.input(input_name)
-                shape = model_inputs.get_partial_shape()
-                shape[0] = batch_size
-                if shape[2].is_dynamic:
-                    shape[2] = 0
-                else:
-                    shape[1] = 0
-                inputs[input_name] = ov.Tensor(model_inputs.get_element_type(), shape.get_shape())
-
             inputs["position_ids"] = position_ids
 
-            # initialize the rest of inputs (e.g. beam_idx for stateful models)
-            for val in self.model.inputs:
-                name = val.any_name
-                if name in inputs:
-                    continue
-                shape = list(val.partial_shape.get_min_shape())
-                shape[0] = batch_size
-                inputs[name] = np.zeros(shape)
+            if self.backend == BackendType.OV:
+                # The magic forms KV cache as model inputs
+                batch_size = input_ids.shape[0]
+                for input_name in self.model_hf.key_value_input_names:
+                    model_inputs = self.model.input(input_name)
+                    shape = model_inputs.get_partial_shape()
+                    shape[0] = batch_size
+                    if shape[2].is_dynamic:
+                        shape[2] = 0
+                    else:
+                        shape[1] = 0
+                    inputs[input_name] = ov.Tensor(model_inputs.get_element_type(), shape.get_shape())
+
+                # initialize the rest of inputs (e.g. beam_idx for stateful models)
+                for val in self.model.inputs:
+                    name = val.any_name
+                    if name in inputs:
+                        continue
+                    shape = list(val.partial_shape.get_min_shape())
+                    shape[0] = batch_size
+                    inputs[name] = np.zeros(shape)
+            if self.backend == BackendType.TORCH:
+                for input_name in inputs:
+                    inputs[input_name] = torch.from_numpy(inputs[input_name])
             return inputs
 
         return transform_fn
@@ -138,6 +160,7 @@ class LMWeightCompression(BaseTestPipeline):
     def prepare_calibration_dataset(self):
         dataset = load_dataset("wikitext", "wikitext-2-v1", split="train", revision="b08601e")
         dataset = dataset.filter(lambda example: len(example["text"]) > 128)
+
         self.calibration_dataset = nncf.Dataset(dataset, self.get_transform_calibration_fn())
 
     def cleanup_cache(self):
@@ -164,8 +187,12 @@ class LMWeightCompression(BaseTestPipeline):
     def save_compressed_model(self) -> None:
         if self.backend == BackendType.FP32:
             return
-        ov.serialize(self.model, self.output_model_dir / self.OV_MODEL_NAME)
-        self.model_hf._save_config(self.output_model_dir)
+
+        if self.backend == BackendType.OV:
+            ov.serialize(self.model, self.output_model_dir / self.OV_MODEL_NAME)
+            self.model_hf._save_config(self.output_model_dir)
+        elif self.backend == BackendType.TORCH:
+            export_from_model(self.model_hf, self.output_model_dir, stateful=False, compression_option="fp32")
 
     def get_num_compressed(self) -> None:
         """
@@ -174,7 +201,12 @@ class LMWeightCompression(BaseTestPipeline):
         num_int8 = 0
         num_int4 = 0
 
-        for node in self.model.get_ops():
+        if self.backend == BackendType.TORCH:
+            model = ov.Core().read_model(self.output_model_dir / self.OV_MODEL_NAME)
+        else:
+            model = self.model
+
+        for node in model.get_ops():
             for i in range(node.get_output_size()):
                 if node.get_output_element_type(i).get_type_name() in ["i8", "u8"]:
                     num_int8 += 1
@@ -192,8 +224,11 @@ class LMWeightCompression(BaseTestPipeline):
         Dump IRs of fp32 models, to help debugging. The test cases may share the same fp32 model, therefore it is saved
         to the dedicated shared folder.
         """
-        self.model_hf.save_pretrained(self.fp32_model_dir)
-        self.model_hf._save_config(self.fp32_model_dir)
+        if self.backend == BackendType.OV:
+            self.model_hf.save_pretrained(self.fp32_model_dir)
+            self.model_hf._save_config(self.fp32_model_dir)
+        elif self.backend == BackendType.TORCH:
+            export_from_model(self.model_hf, self.fp32_model_dir, stateful=False, compression_option="fp32")
 
     def _compress(self):
         """
