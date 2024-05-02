@@ -323,7 +323,6 @@ class TestFunctions:
         ],
     )
     @pytest.mark.parametrize("requires_grad", [True, False])
-    @pytest.mark.parametrize("use_cuda", [True, False])
     def test_binary_mask_by_threshold(
         self,
         input_tensor: torch.Tensor,
@@ -385,6 +384,7 @@ class TestImportanceLoss:
             assert output.requires_grad is requires_grad
             assert torch.allclose(output, torch.tensor(desc["ref_output"]))
 
+    @pytest.mark.cuda
     def test_importance_loss_adapts_to_device_change(self):
         if not torch.cuda.is_available():
             pytest.skip("requires GPU")

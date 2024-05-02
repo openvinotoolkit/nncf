@@ -1,18 +1,21 @@
-yattag>=1.14.0
-prettytable>=2.0.0
-onnx==1.16.0
-onnxruntime==1.17.1
-pytest-mock>=3.3.1
+-c ../../constraints.txt
+-r ../../examples/torch/requirements.txt
+onnx
+onnxruntime
+pytest
 pytest-cov
-pytest-dependency>=0.5.1
+pytest-dependency
+pytest-mock
+pytest-xdist
+torch
 virtualenv
 
 # Required for search_building_blocks tests
-transformers[torch]~=4.38.2
 accelerate==0.28.0
+transformers==4.38.2
 
 # Required for movement_sparsity tests
-datasets~=2.14.0
+datasets==2.14.7
 evaluate==0.3.0
+openvino-dev
 timm==0.9.2
-openvino-dev==2024.0

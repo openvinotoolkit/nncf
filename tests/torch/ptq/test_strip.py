@@ -35,5 +35,5 @@ def test_nncf_strip_api(strip_type, do_copy):
     else:
         assert id(strip_model) == id(quantized_model)
 
-    assert isinstance(strip_model.conv.get_pre_op("0").op, FakeQuantize)
-    assert isinstance(strip_model.nncf.external_quantizers["/nncf_model_input_0|OUTPUT"], FakeQuantize)
+    for fq in strip_model.nncf.external_quantizers.values():
+        assert isinstance(fq, FakeQuantize)

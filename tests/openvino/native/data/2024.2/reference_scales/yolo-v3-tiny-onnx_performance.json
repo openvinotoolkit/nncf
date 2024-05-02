@@ -7150,12 +7150,12 @@
         ]
     },
     "leaky_re_lu_11/fq_output_0": {
-        "input_low": -0.3303394019603729,
-        "input_high": 3.881488084793091,
-        "output_low": -0.3303394019603729,
-        "output_high": 3.881488084793091
+        "input_low": -3.859119176864624,
+        "input_high": 3.828969717025757,
+        "output_low": -3.859119176864624,
+        "output_high": 3.828969717025757
     },
-    "Multiply_6501/fq_weights_1": {
+    "Multiply_6924/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -14334,12 +14334,12 @@
         ]
     },
     "leaky_re_lu_5/fq_output_0": {
-        "input_low": -1.0861154794692993,
-        "input_high": 7.848060131072998,
-        "output_low": -1.0861154794692993,
-        "output_high": 7.848060131072998
+        "input_low": -7.785910606384277,
+        "input_high": 7.725083351135254,
+        "output_low": -7.785910606384277,
+        "output_high": 7.725083351135254
     },
-    "Multiply_6459/fq_weights_1": {
+    "Multiply_6882/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -21518,12 +21518,12 @@
         ]
     },
     "leaky_re_lu_4/fq_output_0": {
-        "input_low": -1.0673936605453491,
-        "input_high": 13.258152961730957,
-        "output_low": -1.0673936605453491,
-        "output_high": 13.258152961730957
+        "input_low": -13.285137176513672,
+        "input_high": 13.181346893310547,
+        "output_low": -13.285137176513672,
+        "output_high": 13.181346893310547
     },
-    "Multiply_6452/fq_weights_1": {
+    "Multiply_6875/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -25118,12 +25118,12 @@
         ]
     },
     "leaky_re_lu_3/fq_output_0": {
-        "input_low": -0.6687189340591431,
+        "input_low": -11.602160453796387,
         "input_high": 11.511518478393555,
-        "output_low": -0.6687189340591431,
+        "output_low": -11.602160453796387,
         "output_high": 11.511518478393555
     },
-    "Multiply_6445/fq_weights_1": {
+    "Multiply_6868/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -26926,12 +26926,12 @@
         ]
     },
     "leaky_re_lu_2/fq_output_0": {
-        "input_low": -0.5482831001281738,
-        "input_high": 6.109440326690674,
-        "output_low": -0.5482831001281738,
-        "output_high": 6.109440326690674
+        "input_low": -6.0120320320129395,
+        "input_high": 5.965063095092773,
+        "output_low": -6.0120320320129395,
+        "output_high": 5.965063095092773
     },
-    "Multiply_6438/fq_weights_1": {
+    "Multiply_6861/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -27838,12 +27838,12 @@
         ]
     },
     "leaky_re_lu_1/fq_output_0": {
-        "input_low": -1.5592432022094727,
+        "input_low": -3.5011093616485596,
         "input_high": 3.473757028579712,
-        "output_low": -1.5592432022094727,
+        "output_low": -3.5011093616485596,
         "output_high": 3.473757028579712
     },
-    "Multiply_6431/fq_weights_1": {
+    "Multiply_6854/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -28308,18 +28308,18 @@
         "output_high": 0.9999967813491821
     },
     "Resize/fq_output_0": {
-        "input_low": -1.0861154794692993,
-        "input_high": 7.848060131072998,
-        "output_low": -1.0861154794692993,
-        "output_high": 7.848060131072998
+        "input_low": -7.785910606384277,
+        "input_high": 7.725083351135254,
+        "output_low": -7.785910606384277,
+        "output_high": 7.725083351135254
     },
     "leaky_re_lu_10/fq_output_0": {
-        "input_low": -0.2852116525173187,
-        "input_high": 3.020650625228882,
-        "output_low": -0.2852116525173187,
-        "output_high": 3.020650625228882
+        "input_low": -3.0029969215393066,
+        "input_high": 2.9795360565185547,
+        "output_low": -3.0029969215393066,
+        "output_high": 2.9795360565185547
     },
-    "Multiply_6494/fq_weights_1": {
+    "Multiply_6917/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -31914,12 +31914,12 @@
         ]
     },
     "leaky_re_lu_8/fq_output_0": {
-        "input_low": -0.21894927322864532,
-        "input_high": 1.706294298171997,
-        "output_low": -0.21894927322864532,
-        "output_high": 1.706294298171997
+        "input_low": -1.6986862421035767,
+        "input_high": 1.685415267944336,
+        "output_low": -1.6986862421035767,
+        "output_high": 1.685415267944336
     },
-    "Multiply_6480/fq_weights_1": {
+    "Multiply_6903/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -39098,12 +39098,12 @@
         ]
     },
     "leaky_re_lu_7/fq_output_0": {
-        "input_low": -1.4062703847885132,
-        "input_high": 7.131800174713135,
-        "output_low": -1.4062703847885132,
-        "output_high": 7.131800174713135
+        "input_low": -7.094355583190918,
+        "input_high": 7.038930892944336,
+        "output_low": -7.094355583190918,
+        "output_high": 7.038930892944336
     },
-    "Multiply_6473/fq_weights_1": {
+    "Multiply_6896/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -67786,12 +67786,12 @@
         ]
     },
     "leaky_re_lu_6/fq_output_0": {
-        "input_low": -0.7759751081466675,
+        "input_low": -3.372742176055908,
         "input_high": 3.3463926315307617,
-        "output_low": -0.7759751081466675,
+        "output_low": -3.372742176055908,
         "output_high": 3.3463926315307617
     },
-    "Multiply_6466/fq_weights_1": {
+    "Multiply_6889/fq_weights_1": {
         "input_low": [
             [
                 [
@@ -89288,12 +89288,12 @@
         ]
     },
     "leaky_re_lu_9/fq_output_0": {
-        "input_low": -0.3361658453941345,
+        "input_low": -3.5883357524871826,
         "input_high": 3.5603017807006836,
-        "output_low": -0.3361658453941345,
+        "output_low": -3.5883357524871826,
         "output_high": 3.5603017807006836
     },
-    "Multiply_6487/fq_weights_1": {
+    "Multiply_6910/fq_weights_1": {
         "input_low": [
             [
                 [

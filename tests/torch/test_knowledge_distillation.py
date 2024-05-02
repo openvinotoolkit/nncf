@@ -62,7 +62,15 @@ def get_sparsity_config_with_sparsity_init(config: NNCFConfig, sparsity_init=0.5
     return config
 
 
-@pytest.mark.parametrize("inference_type", ["cpu", "single_GPU", "DP", "DDP"])
+@pytest.mark.parametrize(
+    "inference_type",
+    [
+        "cpu",
+        pytest.param("single_GPU", marks=pytest.mark.cuda),
+        pytest.param("DP", marks=pytest.mark.cuda),
+        pytest.param("DDP", marks=pytest.mark.cuda),
+    ],
+)
 def test_knowledge_distillation_training_process(inference_type: str):
     if not torch.cuda.is_available() and inference_type != "cpu":
         pytest.skip("Skipping CUDA test cases for CPU only setups")
@@ -311,7 +319,15 @@ def test_kd_sparsity_statistics(algo: str):
 
 
 @pytest.mark.parametrize("device_placing", ["before", "after"])
-@pytest.mark.parametrize("inference_type", ["cpu", "single_GPU", "DP", "DDP"])
+@pytest.mark.parametrize(
+    "inference_type",
+    [
+        "cpu",
+        pytest.param("single_GPU", marks=pytest.mark.cuda),
+        pytest.param("DP", marks=pytest.mark.cuda),
+        pytest.param("DDP", marks=pytest.mark.cuda),
+    ],
+)
 def test_model_device_before_create_compressed_model(device_placing, inference_type):
     if not torch.cuda.is_available() and inference_type != "cpu":
         pytest.skip("Skipping CUDA test cases for CPU only setups")
