@@ -16,6 +16,7 @@ import time
 from dataclasses import dataclass
 from typing import Dict, Optional
 
+import torch
 import numpy as np
 import openvino as ov
 from datasets import load_dataset
@@ -69,36 +70,40 @@ class WCTimeStats(StatsFromOutput):
 class LMWeightCompression(BaseTestPipeline):
     """Pipeline for casual language models from Hugging Face repository"""
 
-    MODEL_NAME = "openvino_model.xml"
-    MODEL_FUNC = OVModelForCausalLM
+    OV_MODEL_NAME = "openvino_model.xml"
 
     def prepare_model(self) -> None:
         is_stateful = self.params.get("is_stateful", False)
 
+        # load model
         if self.backend == BackendType.TORCH:
-            self.MODEL_NAME = "torch_model.xml"
-            self.MODEL_FUNC = AutoModelForCausalLM
-            self.MODEL_SPECIFIC_PARAMS = {}
-        else:
-            self.MODEL_SPECIFIC_PARAMS = {"export": True, "compile": False, "stateful": is_stateful}
+            if is_stateful:
+                raise RuntimeError(f"is_stateful={is_stateful} is not supported for PyTorch backend.")
 
-        if is_stateful:
-            self.fp32_model_dir = self.fp32_model_dir.parent / (self.fp32_model_dir.name + "_sf")
-
-        if not (self.fp32_model_dir / self.MODEL_NAME).exists():
-            # export by model_id
-            self.model_hf = self.MODEL_FUNC.from_pretrained(
-                self.model_id, load_in_8bit=False, **self.MODEL_SPECIFIC_PARAMS
+            self.model_hf = AutoModelForCausalLM.from_pretrained(
+                self.model_id, torch_dtype=torch.float32, device_map="cpu"
             )
+            self.model = self.model_hf
+        elif self.backend == BackendType.OV:
+            if is_stateful:
+                self.fp32_model_dir = self.fp32_model_dir.parent / (self.fp32_model_dir.name + "_sf")
+            if not (self.fp32_model_dir / self.OV_MODEL_NAME).exists():
+                # export by model_id
+                self.model_hf = OVModelForCausalLM.from_pretrained(
+                    self.model_id, export=True, load_in_8bit=False, compile=False, stateful=is_stateful
+                )
+            else:
+                # no export, load from IR. Applicable for sequential run of test cases in local environment.
+                self.model_hf = OVModelForCausalLM.from_pretrained(
+                    self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, compile=False, stateful=is_stateful
+                )
+            self.model = self.model_hf.model
+        else:
+            raise RuntimeError(f"backend={self.backend.value} is not supported.")
 
+        # dump FP32 model
+        if not (self.fp32_model_dir / self.OV_MODEL_NAME).exists():
             self._dump_model_fp32()
-        else:
-            # no export, load from IR. Applicable for sequential run of test cases in local environment.
-            self.model_hf = self.MODEL_FUNC.from_pretrained(
-                self.fp32_model_dir, trust_remote_code=True, load_in_8bit=False, **self.MODEL_SPECIFIC_PARAMS
-            )
-
-        self.model = self.model_hf.model
 
     def prepare_preprocessor(self) -> None:
         self.preprocessor = AutoTokenizer.from_pretrained(self.model_id)
