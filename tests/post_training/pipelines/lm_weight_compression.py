@@ -16,9 +16,9 @@ import time
 from dataclasses import dataclass
 from typing import Dict, Optional
 
-import torch
 import numpy as np
 import openvino as ov
+import torch
 from datasets import load_dataset
 from memory_profiler import memory_usage
 from optimum.intel.openvino import OVModelForCausalLM
@@ -126,29 +126,32 @@ class LMWeightCompression(BaseTestPipeline):
             inputs["attention_mask"] = attention_mask
             position_ids = np.cumsum(attention_mask, axis=1) - 1
             position_ids[attention_mask == 0] = 1
-
-            # The magic forms KV cache as model inputs
-            batch_size = input_ids.shape[0]
-            for input_name in self.model_hf.key_value_input_names:
-                model_inputs = self.model.input(input_name)
-                shape = model_inputs.get_partial_shape()
-                shape[0] = batch_size
-                if shape[2].is_dynamic:
-                    shape[2] = 0
-                else:
-                    shape[1] = 0
-                inputs[input_name] = ov.Tensor(model_inputs.get_element_type(), shape.get_shape())
-
             inputs["position_ids"] = position_ids
 
-            # initialize the rest of inputs (e.g. beam_idx for stateful models)
-            for val in self.model.inputs:
-                name = val.any_name
-                if name in inputs:
-                    continue
-                shape = list(val.partial_shape.get_min_shape())
-                shape[0] = batch_size
-                inputs[name] = np.zeros(shape)
+            if self.backend == BackendType.OV:
+                # The magic forms KV cache as model inputs
+                batch_size = input_ids.shape[0]
+                for input_name in self.model_hf.key_value_input_names:
+                    model_inputs = self.model.input(input_name)
+                    shape = model_inputs.get_partial_shape()
+                    shape[0] = batch_size
+                    if shape[2].is_dynamic:
+                        shape[2] = 0
+                    else:
+                        shape[1] = 0
+                    inputs[input_name] = ov.Tensor(model_inputs.get_element_type(), shape.get_shape())
+
+                # initialize the rest of inputs (e.g. beam_idx for stateful models)
+                for val in self.model.inputs:
+                    name = val.any_name
+                    if name in inputs:
+                        continue
+                    shape = list(val.partial_shape.get_min_shape())
+                    shape[0] = batch_size
+                    inputs[name] = np.zeros(shape)
+            if self.backend == BackendType.TORCH:
+                for input_name in inputs:
+                    inputs[input_name] = torch.from_numpy(inputs[input_name])
             return inputs
 
         return transform_fn
@@ -156,14 +159,7 @@ class LMWeightCompression(BaseTestPipeline):
     def prepare_calibration_dataset(self):
         dataset = load_dataset("wikitext", "wikitext-2-v1", split="train", revision="b08601e")
         dataset = dataset.filter(lambda example: len(example["text"]) > 128)
-        if self.backend == BackendType.TORCH:
-            example_text = "The TinyLlama project aims to pretrain a 1.1B Llama model on 3 trillion tokens."
-            token = self.preprocessor(example_text, max_length=500, return_tensors="pt", truncation=True)
-            inputs = {"input_ids": token["input_ids"], "attention_mask": token["attention_mask"]}
 
-            self.calibration_dataset = nncf.Dataset([inputs])
-
-            return
         self.calibration_dataset = nncf.Dataset(dataset, self.get_transform_calibration_fn())
 
     def cleanup_cache(self):
