@@ -870,10 +870,7 @@ def test_compressed_graph_models_hw(desc, hw_config_type):
     sketch_graph = compressed_model.nncf.get_original_graph()
 
     potential_quantizer_graph = prepare_potential_quantizer_graph(sketch_graph, single_config_quantizer_setup)
-    hw_config_value = hw_config_type.value
-    if hw_config_type == HWConfigType.NPU:
-        hw_config_value = HWConfigType.CPU.value
-    path_to_dot = get_full_path_to_the_graph(desc.dot_filename(), _case_dir(hw_config_value))
+    path_to_dot = get_full_path_to_the_graph(desc.dot_filename(), _case_dir(hw_config_type.value))
     compare_nx_graph_with_reference(potential_quantizer_graph, path_to_dot, sort_dot_graph=False)
 
 
