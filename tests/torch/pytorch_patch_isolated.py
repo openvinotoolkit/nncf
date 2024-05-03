@@ -18,7 +18,6 @@ import pytest
 import torch
 
 from tests.shared.isolation_runner import ISOLATION_RUN_ENV_VAR
-from tests.torch.test_models.lenet import LeNet
 
 
 def clean_source_code(code_source):
@@ -80,7 +79,9 @@ def test_jit_script_exception_preserves_patching_isolated():
     assert "nncf" in torch.nn.Module.__call__.__code__.co_filename
 
 
-def _compile_and_run_lenet() -> torch.Tensor:
+def compile_and_run_lenet() -> torch.Tensor:
+    from tests.torch.test_models.lenet import LeNet
+
     model = LeNet()
 
     torch.manual_seed(0)
@@ -93,9 +94,10 @@ def _compile_and_run_lenet() -> torch.Tensor:
     return compiled_model(torch.ones([1, 3, 32, 32]))
 
 
+@pytest.mark.skipif(ISOLATION_RUN_ENV_VAR not in os.environ, reason="Should be run via isolation proxy")
 def test_compile():
-    before_nncf = _compile_and_run_lenet()
+    before_nncf = compile_and_run_lenet()
     import nncf.torch  # noqa: F401
 
-    after_nncf = _compile_and_run_lenet()
+    after_nncf = compile_and_run_lenet()
     assert torch.allclose(before_nncf, after_nncf)
