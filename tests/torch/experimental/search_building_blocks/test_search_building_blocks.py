@@ -17,7 +17,7 @@ from typing import Callable, List, Optional, Type, Union
 import pytest
 import torch
 
-from examples.torch.common.models import efficient_net
+from examples.torch.common.models.classification.efficientnet import efficient_net
 from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlock
 from nncf.experimental.torch.search_building_blocks.search_blocks import BuildingBlocks
 from nncf.experimental.torch.search_building_blocks.search_blocks import GroupedBlockIDs

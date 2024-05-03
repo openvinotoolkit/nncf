@@ -9,8 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from examples.torch.common.models.classification import MobileNetV2 as MobileNetV2_tv_092
-from examples.torch.common.models.classification import mobilenet_v2_tv_092
+from examples.torch.common.models.classification.mobilenet_v2_tv_092 import MobileNetV2 as MobileNetV2_tv_092
+from examples.torch.common.models.classification.mobilenet_v2_tv_092 import mobilenet_v2_tv_092
 
 mobilenet_v2 = mobilenet_v2_tv_092
 MobileNetV2 = MobileNetV2_tv_092

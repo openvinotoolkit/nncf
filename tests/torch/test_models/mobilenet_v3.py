@@ -9,6 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from examples.torch.common.models.classification import mobilenet_v3_small_tv_092
+from examples.torch.common.models.classification.mobilenet_v3_tv_092 import mobilenet_v3_small_tv_092
 
 mobilenet_v3_small = mobilenet_v3_small_tv_092

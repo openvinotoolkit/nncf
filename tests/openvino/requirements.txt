@@ -10,4 +10,3 @@ torch
 torchvision
 virtualenv
 addict>=2.4.0
-efficientnet_pytorch==0.7.1
