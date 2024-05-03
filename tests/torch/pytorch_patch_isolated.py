@@ -18,6 +18,7 @@ import pytest
 import torch
 
 from tests.shared.isolation_runner import ISOLATION_RUN_ENV_VAR
+from tests.torch.test_models.lenet import LeNet
 
 
 def clean_source_code(code_source):
@@ -77,3 +78,23 @@ def test_jit_script_exception_preserves_patching_isolated():
     # torch.nn.Module.__call__ is one of the fundamental patched functions, if the code object points to NNCF code,
     # then it means patching is still present
     assert "nncf" in torch.nn.Module.__call__.__code__.co_filename
+
+
+def _compile_and_run_lenet() -> torch.Tensor:
+    model = LeNet()
+
+    torch.manual_seed(0)
+    state_dict = {}
+    for k, v in model.state_dict().items():
+        state_dict[k] = torch.rand(v.shape)
+    model.load_state_dict(state_dict)
+
+    compiled_model = torch.compile(model)
+    return compiled_model(torch.ones([1, 3, 32, 32]))
+
+
+def test_compile():
+    before_nncf = _compile_and_run_lenet()
+    import nncf.torch
+    after_nncf = _compile_and_run_lenet()
+    assert torch.allclose(before_nncf, after_nncf)
