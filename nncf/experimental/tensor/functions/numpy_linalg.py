@@ -12,7 +12,6 @@
 from typing import Optional, Tuple, Union
 
 import numpy as np
-import scipy
 
 from nncf.experimental.tensor.functions import linalg
 from nncf.experimental.tensor.functions.dispatcher import register_numpy_types
@@ -30,10 +29,10 @@ def _(
 
 @register_numpy_types(linalg.cholesky)
 def _(a: Union[np.ndarray, np.generic], upper: bool = False) -> np.ndarray:
-    l = np.linalg.cholesky(a)
+    lt = np.linalg.cholesky(a)
     if upper:
-        l = np.conjugate(np.swapaxes(l, -2, -1))
-    return l
+        return np.conjugate(np.swapaxes(lt, -2, -1))
+    return lt
 
 
 @register_numpy_types(linalg.cholesky_inverse)
