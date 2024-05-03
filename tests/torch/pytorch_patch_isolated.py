@@ -95,7 +95,7 @@ def _compile_and_run_lenet() -> torch.Tensor:
 
 def test_compile():
     before_nncf = _compile_and_run_lenet()
-    import nncf.torch
+    import nncf.torch  # noqa: F401
 
     after_nncf = _compile_and_run_lenet()
     assert torch.allclose(before_nncf, after_nncf)
