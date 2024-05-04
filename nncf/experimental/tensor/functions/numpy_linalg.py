@@ -25,3 +25,25 @@ def _(
     keepdims: bool = False,
 ) -> np.ndarray:
     return np.array(np.linalg.norm(a, ord=ord, axis=axis, keepdims=keepdims))
+
+
+@register_numpy_types(linalg.cholesky)
+def _(a: Union[np.ndarray, np.generic], upper: bool = False) -> np.ndarray:
+    lt = np.linalg.cholesky(a)
+    if upper:
+        return np.conjugate(np.swapaxes(lt, -2, -1))
+    return lt
+
+
+@register_numpy_types(linalg.cholesky_inverse)
+def _(a: Union[np.ndarray, np.generic], upper: bool = False) -> np.ndarray:
+    c = np.linalg.inv(a)
+    ct = np.conjugate(np.swapaxes(c, -2, -1))
+    if upper:
+        return np.matmul(c, ct)
+    return np.matmul(ct, c)
+
+
+@register_numpy_types(linalg.inv)
+def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
+    return np.linalg.inv(a)

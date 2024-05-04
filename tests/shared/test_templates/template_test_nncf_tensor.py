@@ -1107,3 +1107,98 @@ class TemplateTestNNCFTensorOperators:
         assert fns.allclose(res.data, ref_tensor)
         assert res.device == tensor.device
         assert res.shape == tuple(ref_tensor.shape)
+
+    @pytest.mark.parametrize(
+        "a, upper, ref",
+        (
+            ([[1.0, 2.0], [2.0, 5.0]], False, [[1.0, 0.0], [2.0, 1.0]]),
+            ([[1.0, 2.0], [2.0, 5.0]], True, [[1.0, 2.0], [0.0, 1.0]]),
+            (
+                [[[1.0, 2.0], [2.0, 5.0]], [[9.0, -3.0], [-3.0, 5.0]]],
+                False,
+                [[[1.0, 0.0], [2.0, 1.0]], [[3.0, 0.0], [-1.0, 2.0]]],
+            ),
+            (
+                [[[1.0, 2.0], [2.0, 5.0]], [[9.0, -3.0], [-3.0, 5.0]]],
+                True,
+                [[[1.0, 2.0], [0.0, 1.0]], [[3.0, -1.0], [0.0, 2.0]]],
+            ),
+        ),
+    )
+    def test_fn_linalg_cholesky(self, a, upper, ref):
+        tensor_a = Tensor(self.to_tensor(a))
+        ref_tensor = self.to_tensor(ref)
+
+        res = fns.linalg.cholesky(tensor_a, upper=upper)
+
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res.data, ref_tensor)
+        assert res.device == tensor_a.device
+
+    @pytest.mark.parametrize(
+        "a, upper, ref",
+        (
+            ([[1.0, 0.0], [2.0, 1.0]], False, [[5.0, -2.0], [-2.0, 1.0]]),
+            ([[1.0, 2.0], [0.0, 1.0]], True, [[5.0, -2.0], [-2.0, 1.0]]),
+            (
+                [[[1.0, 0.0], [2.0, 1.0]], [[3.0, 0.0], [-1.0, 2.0]]],
+                False,
+                [[[5.0, -2.0], [-2.0, 1.0]], [[0.1388888888888889, 0.08333333333333333], [0.08333333333333333, 0.25]]],
+            ),
+            (
+                [[[1.0, 2.0], [0.0, 1.0]], [[3.0, -1.0], [0.0, 2.0]]],
+                True,
+                [[[5.0, -2.0], [-2.0, 1.0]], [[0.1388888888888889, 0.08333333333333333], [0.08333333333333333, 0.25]]],
+            ),
+        ),
+    )
+    def test_fn_linalg_cholesky_inverse(self, a, upper, ref):
+        tensor_a = Tensor(self.to_tensor(a))
+        ref_tensor = self.to_tensor(ref)
+
+        res = fns.linalg.cholesky_inverse(tensor_a, upper=upper)
+
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res.data, ref_tensor)
+        assert res.device == tensor_a.device
+
+    @pytest.mark.parametrize(
+        "a, ref",
+        (
+            ([[1.0, 2.0], [2.0, 5.0]], [[5.0, -2.0], [-2.0, 1.0]]),
+            (
+                [[[0.5, 0.2], [0.5, 0.7]], [[0.2, 0.8], [0.1, 0.8]]],
+                [[[2.8, -0.8], [-2.0, 2.0]], [[10.0, -10.0], [-1.25, 2.5]]],
+            ),
+        ),
+    )
+    def test_fn_linalg_inv(self, a, ref):
+        tensor_a = Tensor(self.to_tensor(a))
+        ref_tensor = self.to_tensor(ref)
+
+        res = fns.linalg.inv(tensor_a)
+
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res.data, ref_tensor)
+        assert res.device == tensor_a.device
+
+    @pytest.mark.parametrize(
+        "a, k, ref",
+        (
+            ([[1.0, 3.0], [2.0, 5.0]], 0, [1.0, 5.0]),
+            ([[1.0, 3.0], [2.0, 5.0]], 1, [3.0]),
+            ([[1.0, 3.0], [2.0, 5.0]], -1, [2.0]),
+            ([1.0, 5.0], 0, [[1.0, 0.0], [0.0, 5.0]]),
+            ([3.0], 1, [[0.0, 3.0], [0.0, 0.0]]),
+            ([2.0], -1, [[0.0, 0.0], [2.0, 0.0]]),
+        ),
+    )
+    def test_fn_diag(self, a, k, ref):
+        tensor_a = Tensor(self.to_tensor(a))
+        ref_tensor = self.to_tensor(ref)
+
+        res = fns.diag(tensor_a, k=k)
+
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res.data, ref_tensor)
+        assert res.device == tensor_a.device
