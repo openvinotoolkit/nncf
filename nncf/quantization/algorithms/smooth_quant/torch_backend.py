@@ -32,7 +32,7 @@ from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.torch.layer_utils import CompressionParameter
-from nncf.torch.layer_utils import StatefullTorchModuleInterface
+from nncf.torch.layer_utils import StatefullModuleInterface
 from nncf.torch.model_graph_manager import get_const_data
 from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.nncf_network import NNCFNetwork
@@ -42,7 +42,7 @@ from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcess
 
 
 @COMPRESSION_MODULES.register()
-class SQMultiply(torch.nn.Module, StatefullTorchModuleInterface):
+class SQMultiply(torch.nn.Module, StatefullModuleInterface):
     SCALE_SHAPE_KEY = "scale_shape"
 
     def __init__(self, scale_shape: Tuple[int, ...]):

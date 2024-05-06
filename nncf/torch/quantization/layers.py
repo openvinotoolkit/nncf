@@ -41,7 +41,7 @@ from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.graph.transformations.commands import TargetType
 from nncf.torch.layer_utils import COMPRESSION_MODULES
 from nncf.torch.layer_utils import CompressionParameter
-from nncf.torch.layer_utils import StatefullTorchModuleInterface
+from nncf.torch.layer_utils import StatefullModuleInterface
 from nncf.torch.quantization.quantize_functions import ExportQuantizeToFakeQuantize
 from nncf.torch.quantization.quantize_functions import ExportQuantizeToONNXQuantDequant
 from nncf.torch.quantization.quantize_functions import TuneRange
@@ -284,7 +284,7 @@ class PTQuantizerSetup(QuantizerSetupBase):
         self.quantization_points[qp_id] = qp
 
 
-class BaseQuantizer(nn.Module, StatefullTorchModuleInterface, ABC):
+class BaseQuantizer(nn.Module, StatefullModuleInterface, ABC):
     def __init__(self, qspec: PTQuantizerSpec):
         super().__init__()
         self._qspec = qspec
