@@ -43,6 +43,7 @@ from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.initialization import PTInitializingDataLoader
 from nncf.torch.initialization import register_default_init_args
+from nncf.torch.layer_utils import StatefullModuleInterface
 from nncf.torch.layers import NNCF_MODULES_MAP
 from nncf.torch.model_creation import create_compressed_model
 from nncf.torch.module_operations import UpdateWeight
@@ -215,24 +216,24 @@ class TwoConvTestModel(nn.Module):
 class TwoSharedConvTestModel(nn.Module):
     INPUT_SHAPE = [1, 1, 4, 4]
     NNCF_CONV_NODES_NAMES = [
-        "TwoSharedConvTestModel/NNCFConv2d[conv1]/conv2d_0",
-        "TwoSharedConvTestModel/NNCFConv2d[conv2]/conv2d_0",
+        "TwoSharedConvTestModel/Sequential[features]/Sequential[0]/NNCFConv2d[0]/conv2d_0",
+        "TwoSharedConvTestModel/Sequential[features]/Sequential[1]/NNCFConv2d[0]/conv2d_0",
     ]
     CONV_NODES_NAMES = [
-        "TwoSharedConvTestModel/Conv2d[conv1]/conv2d_0",
-        "TwoSharedConvTestModel/Conv2d[conv2]/conv2d_0",
+        "TwoSharedConvTestModel/Sequential[features]/Sequential[0]/Conv2d[0]/conv2d_0",
+        "TwoSharedConvTestModel/Sequential[features]/Sequential[1]/Conv2d[0]/conv2d_0",
     ]
 
     def __init__(self):
         super().__init__()
         self.features = []
-        self.conv1 = create_conv(1, 1, 1, -1, -2)
-        self.conv2 = create_conv(1, 1, 1, 0, 0)
+        self.features.append(nn.Sequential(create_conv(1, 1, 1, -1, -2)))
+        self.features.append(nn.Sequential(create_conv(1, 1, 1, 0, 0)))
+        self.features = nn.Sequential(*self.features)
 
     def forward(self, x):
         for _ in range(2):
-            x = self.conv1(x)
-            x = self.conv2(x)
+            x = self.features(x)
         return x
 
 
@@ -265,24 +266,31 @@ class LeNet(nn.Module):
         return num_features
 
 
-class DummyOpWithState(torch.nn.Module):
+class DummyOpWithState(torch.nn.Module, StatefullModuleInterface):
     def __init__(self, state: str):
         super().__init__()
         self._state = state
+        # Keep dummy param to check state dict
+        self._dummy_param = torch.nn.Parameter(
+            torch.tensor(
+                0.0,
+            )
+        )
 
-    def __call__(self, *args):
+    def forward(self, *args):
         if len(args) == 1:
-            return args[0]
+            return args[0] + self._dummy_param
         # To work correctly with
         # TargetType.PRE_LAYER_OPERATION
         # TargetType.POST_LAYER_OPERATION
+        args[0].weight + self._dummy_param
         return None
 
-    def get_state(self):
+    def get_config(self):
         return self._state
 
     @classmethod
-    def from_state(cls, state: str):
+    def from_config(cls, state: str):
         return cls(state)
 
 

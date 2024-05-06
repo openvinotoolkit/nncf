@@ -54,7 +54,9 @@ class InsertionCommandBuilder:
     Contains methods which allows to build all possible commands
     for the given torch.nn.Module. Target module should have
     NNCF_CONV_NODES_NAMES and CONV_NODES_NAMES with names of
-    target model convolutions and names of nncf-wrapped target model convolutions
+    target model convolutions and names of nncf-wrapped target model convolutions.
+    Convolutions should be placed inside nn.sequential in .features attribute
+    for test compatibility.
     """
 
     AVAILABLE_MODELS = (TwoConvTestModel, TwoSharedConvTestModel)
@@ -162,7 +164,7 @@ class InsertionCommandBuilder:
                 command_type, target_type
             ):
                 continue
-            command = self._create_command(
+            command = self.create_one_command(
                 command_builder,
                 target_type,
                 priority,
@@ -185,7 +187,7 @@ class InsertionCommandBuilder:
         ]
 
     @staticmethod
-    def _create_command(
+    def create_one_command(
         command_builder,
         target_type,
         priority,
