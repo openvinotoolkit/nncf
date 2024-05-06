@@ -206,6 +206,7 @@ class MinMaxQuantization(Algorithm):
             else:
                 self._preset = QuantizationPreset.PERFORMANCE
 
+        self._override_device()
         self._set_mode_based_defaults()
         self._review_mode_based_defaults()
 
@@ -227,6 +228,21 @@ class MinMaxQuantization(Algorithm):
 
         self._reset_cache()
         self._algorithm_key = f"MMQ_{hash(self)}"
+
+    def _override_device(self) -> None:
+        """
+        Overrides NPU device to use CPU quantization scheme.
+        """
+        if self._target_device == TargetDevice.NPU:
+            act_bits, weight_bits = 8, 8
+            if self._activations_quantization_params and self._activations_quantization_params.num_bits:
+                act_bits = self._activations_quantization_params.num_bits
+            if self._weights_quantization_params and self._weights_quantization_params.num_bits:
+                weight_bits = self._weights_quantization_params.num_bits
+
+            if act_bits == 8 and weight_bits == 8:
+                self._target_device == TargetDevice.CPU
+                nncf_logger.debug("Target device NPU was changed to CPU!")
 
     def _set_mode_based_defaults(self) -> None:
         """
