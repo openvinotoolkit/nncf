@@ -149,12 +149,7 @@ class CompressionParameter(nn.Parameter):
         """
         super().__init__()
 
-        self._compression_lr_multiplier = compression_lr_multiplier
         if compression_lr_multiplier is not None and self.dtype.is_floating_point:
             self.requires_grad = True
             self.register_hook(lambda grad: compression_lr_multiplier * grad)
             self.requires_grad = requires_grad
-
-    @property
-    def compression_lr_multiplier(self):
-        return self._compression_lr_multiplier

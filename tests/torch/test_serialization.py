@@ -306,7 +306,7 @@ def test_rb_sparsity_mask_serialization():
 
     assert list(recovered_mask.mask.shape) == ref_weights_shape
     assert recovered_mask.frozen == ref_frozen
-    assert recovered_mask.mask.compression_lr_multiplier == ref_compression_lr_multiplier
+    assert recovered_mask._compression_lr_multiplier == ref_compression_lr_multiplier
     assert recovered_mask.eps == ref_eps
 
     assert torch.all(mask.mask == recovered_mask.mask)
