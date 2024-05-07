@@ -39,8 +39,18 @@ from nncf.torch.dynamic_graph.trace_tensor import TracedTensorMixin
 
 class GlobalContext:
     def __init__(self):
-        super().__init__()
-        self.context = None
+        self._context = None
+        self.lock = threading.Lock()
+
+    @property
+    def context(self):
+        with self.lock:
+            return self._context
+
+    @context.setter
+    def context(self, value):
+        with self.lock:
+            self._context = value
 
 
 _CURRENT_CONTEXT = GlobalContext()
