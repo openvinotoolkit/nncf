@@ -125,7 +125,7 @@ def test_overflow_fix_scales(overflow_fix):
 def test_real_models_fq_scales(model_name, preset, inplace_statistics, tmp_path):
     torch.manual_seed(0)  # To use the same initialized model
     model_cls, input_shape = get_torch_model_info(model_name)
-    ov_model = convert_torch_model(model_cls(), model_name, input_shape, tmp_path)
+    ov_model = convert_torch_model(model_cls(), input_shape, tmp_path)
 
     quantized_model = quantize_model(ov_model, {"preset": preset, "inplace_statistics": inplace_statistics})
     nodes = get_fq_nodes_stats_algo(quantized_model)
