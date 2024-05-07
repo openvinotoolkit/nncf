@@ -29,7 +29,7 @@ from tests.openvino.native.models import FPModel
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import MatMul2DModel
 from tests.openvino.native.models import WeightsModel
-from tests.openvino.native.models import create_torch_model
+from tests.openvino.native.models import get_torch_model_info
 from tests.shared.helpers import compare_stats
 from tests.shared.helpers import load_json
 
@@ -122,10 +122,10 @@ def test_overflow_fix_scales(overflow_fix):
 )
 @pytest.mark.parametrize("model_name", ("mobilenet-v2", "resnet-18", "ssd-vgg-300"))
 def test_real_models_fq_scales(model_name, preset, inplace_statistics, tmp_path, omz_cache_dir):
-    torch_model, input_shape = create_torch_model(model_name)
+    model_cls, input_shape = get_torch_model_info(model_name)
     model_onnx_path = tmp_path / (model_name + ".onnx")
     with torch.no_grad():
-        torch.onnx.export(torch_model, torch.rand(input_shape), model_onnx_path)
+        torch.onnx.export(model_cls(), torch.rand(input_shape), model_onnx_path)
     model = ov.convert_model(model_onnx_path)
 
     quantized_model = quantize_model(model, {"preset": preset, "inplace_statistics": inplace_statistics})

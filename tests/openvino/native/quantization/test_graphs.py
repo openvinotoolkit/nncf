@@ -40,7 +40,7 @@ from tests.openvino.native.models import GRUSequenceModel
 from tests.openvino.native.models import IfModel
 from tests.openvino.native.models import MatmulSoftmaxMatmulBlock
 from tests.openvino.native.models import ScaledDotProductAttentionModel
-from tests.openvino.native.models import create_torch_model
+from tests.openvino.native.models import get_torch_model_info
 from tests.openvino.native.quantization.test_fq_params_calculation import quantize_model
 
 QUANTIZED_REF_GRAPHS_DIR = Path("reference_graphs") / "quantized"
@@ -83,10 +83,10 @@ def test_real_models_fq_placement(model_name_params, tmp_path):
     model_name, q_params = model_name_params
     params_str = "_".join([param.value for param in q_params.values()])
 
-    torch_model, input_shape = create_torch_model(model_name)
+    model_cls, input_shape = get_torch_model_info(model_name)
     model_onnx_path = tmp_path / (model_name + ".onnx")
     with torch.no_grad():
-        torch.onnx.export(torch_model, torch.rand(input_shape), model_onnx_path)
+        torch.onnx.export(model_cls(), torch.rand(input_shape), model_onnx_path)
     model = ov.convert_model(model_onnx_path)
 
     quantized_model = quantize_model(model, q_params)
@@ -121,10 +121,10 @@ MODELS_SQ_PARAMS = (("swin-t", {"preset": QuantizationPreset.PERFORMANCE, "model
 def test_real_models_sq_placement(model_name_params, tmp_path):
     model_name, q_params = model_name_params
 
-    torch_model, input_shape = create_torch_model(model_name)
+    model_cls, input_shape = get_torch_model_info(model_name)
     model_onnx_path = tmp_path / (model_name + ".onnx")
     with torch.no_grad():
-        torch.onnx.export(torch_model, torch.rand(input_shape), model_onnx_path)
+        torch.onnx.export(model_cls(), torch.rand(input_shape), model_onnx_path)
     model = ov.convert_model(model_onnx_path)
 
     quantized_model = smooth_quant_model(model, q_params, quantize=False)

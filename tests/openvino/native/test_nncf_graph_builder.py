@@ -22,7 +22,7 @@ from tests.openvino.native.common import compare_nncf_graphs
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.models import SYNTHETIC_MODELS
 from tests.openvino.native.models import ParallelEdgesModel
-from tests.openvino.native.models import create_torch_model
+from tests.openvino.native.models import get_torch_model_info
 
 REFERENCE_GRAPHS_DIR = Path("reference_graphs") / "original_nncf_graph"
 
@@ -45,10 +45,10 @@ def test_compare_nncf_graph_synthetic_models(model_cls_to_test):
     ),
 )
 def test_compare_nncf_graph_real_models(tmp_path, model_name):
-    torch_model, input_shape = create_torch_model(model_name)
+    model_cls, input_shape = get_torch_model_info(model_name)
     model_onnx_path = tmp_path / (model_name + ".onnx")
     with torch.no_grad():
-        torch.onnx.export(torch_model, torch.rand(input_shape), model_onnx_path)
+        torch.onnx.export(model_cls(), torch.rand(input_shape), model_onnx_path)
     model = ov.convert_model(model_onnx_path)
 
     path_to_dot = get_actual_reference_for_current_openvino(REFERENCE_GRAPHS_DIR / f"{model_name}.dot")
