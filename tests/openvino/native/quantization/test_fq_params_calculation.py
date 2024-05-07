@@ -21,6 +21,7 @@ from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.statistics.aggregator import OVStatisticsAggregator
 from nncf.quantization.advanced_parameters import OverflowFix
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
+from tests.openvino.native.common import convert_torch_model
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.common import get_dataset_for_test
 from tests.openvino.native.models import SYNTHETIC_MODELS
@@ -121,14 +122,12 @@ def test_overflow_fix_scales(overflow_fix):
     ids=[QuantizationPreset.PERFORMANCE.value, QuantizationPreset.MIXED.value],
 )
 @pytest.mark.parametrize("model_name", ("mobilenet-v2", "resnet-18", "ssd-vgg-300"))
-def test_real_models_fq_scales(model_name, preset, inplace_statistics, tmp_path, omz_cache_dir):
+def test_real_models_fq_scales(model_name, preset, inplace_statistics, tmp_path):
+    torch.manual_seed(0)  # To use the same initialized model
     model_cls, input_shape = get_torch_model_info(model_name)
-    model_onnx_path = tmp_path / (model_name + ".onnx")
-    with torch.no_grad():
-        torch.onnx.export(model_cls(), torch.rand(input_shape), model_onnx_path)
-    model = ov.convert_model(model_onnx_path)
+    ov_model = convert_torch_model(model_cls(), model_name, input_shape, tmp_path)
 
-    quantized_model = quantize_model(model, {"preset": preset, "inplace_statistics": inplace_statistics})
+    quantized_model = quantize_model(ov_model, {"preset": preset, "inplace_statistics": inplace_statistics})
     nodes = get_fq_nodes_stats_algo(quantized_model)
     ref_stats_name = model_name + f"_{preset.value}.json"
     ref_stats_path = get_actual_reference_for_current_openvino(REFERENCE_SCALES_DIR / ref_stats_name)

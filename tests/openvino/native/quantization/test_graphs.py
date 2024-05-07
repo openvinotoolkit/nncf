@@ -16,7 +16,6 @@ from typing import Dict
 import numpy as np
 import openvino as ov
 import pytest
-import torch
 
 from nncf import Dataset
 from nncf.common.quantization.structs import QuantizationPreset
@@ -28,6 +27,7 @@ from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
 from nncf.quantization.algorithms.smooth_quant.algorithm import SmoothQuant
 from tests.openvino.native.common import compare_nncf_graphs
+from tests.openvino.native.common import convert_torch_model
 from tests.openvino.native.common import dump_model
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.common import get_dataset_for_test
@@ -82,14 +82,10 @@ MODELS_QUANTIZE_PARAMS = (
 def test_real_models_fq_placement(model_name_params, tmp_path):
     model_name, q_params = model_name_params
     params_str = "_".join([param.value for param in q_params.values()])
-
     model_cls, input_shape = get_torch_model_info(model_name)
-    model_onnx_path = tmp_path / (model_name + ".onnx")
-    with torch.no_grad():
-        torch.onnx.export(model_cls(), torch.rand(input_shape), model_onnx_path)
-    model = ov.convert_model(model_onnx_path)
+    ov_model = convert_torch_model(model_cls(), input_shape, tmp_path)
 
-    quantized_model = quantize_model(model, q_params)
+    quantized_model = quantize_model(ov_model, q_params)
 
     result_name = f"{model_name}_{params_str}"
     path_ref_graph = get_actual_reference_for_current_openvino(QUANTIZED_REF_GRAPHS_DIR / f"{result_name}.dot")
@@ -122,12 +118,9 @@ def test_real_models_sq_placement(model_name_params, tmp_path):
     model_name, q_params = model_name_params
 
     model_cls, input_shape = get_torch_model_info(model_name)
-    model_onnx_path = tmp_path / (model_name + ".onnx")
-    with torch.no_grad():
-        torch.onnx.export(model_cls(), torch.rand(input_shape), model_onnx_path)
-    model = ov.convert_model(model_onnx_path)
+    ov_model = convert_torch_model(model_cls(), input_shape, tmp_path)
 
-    quantized_model = smooth_quant_model(model, q_params, quantize=False)
+    quantized_model = smooth_quant_model(ov_model, q_params, quantize=False)
 
     path_ref_graph = get_actual_reference_for_current_openvino(QUANTIZED_REF_GRAPHS_DIR / f"{model_name}_sq.dot")
     xml_path = tmp_path / (model_name + ".xml")

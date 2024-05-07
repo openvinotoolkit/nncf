@@ -13,12 +13,12 @@ from pathlib import Path
 
 import openvino as ov
 import pytest
-import torch
 
 from nncf.common.graph.graph import NNCFGraphEdge
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from tests.openvino.native.common import compare_nncf_graphs
+from tests.openvino.native.common import convert_torch_model
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.models import SYNTHETIC_MODELS
 from tests.openvino.native.models import ParallelEdgesModel
@@ -46,13 +46,9 @@ def test_compare_nncf_graph_synthetic_models(model_cls_to_test):
 )
 def test_compare_nncf_graph_real_models(tmp_path, model_name):
     model_cls, input_shape = get_torch_model_info(model_name)
-    model_onnx_path = tmp_path / (model_name + ".onnx")
-    with torch.no_grad():
-        torch.onnx.export(model_cls(), torch.rand(input_shape), model_onnx_path)
-    model = ov.convert_model(model_onnx_path)
-
+    ov_model = convert_torch_model(model_cls(), input_shape, tmp_path)
     path_to_dot = get_actual_reference_for_current_openvino(REFERENCE_GRAPHS_DIR / f"{model_name}.dot")
-    compare_nncf_graphs(model, path_to_dot)
+    compare_nncf_graphs(ov_model, path_to_dot)
 
 
 def test_parallel_edges():

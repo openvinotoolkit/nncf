@@ -14,7 +14,6 @@ from abc import abstractmethod
 
 import numpy as np
 import openvino.runtime as ov
-import torch
 from openvino.runtime import opset13 as opset
 
 from nncf.common.utils.registry import Registry
@@ -27,7 +26,6 @@ from tests.torch.test_models.ssd_vgg import ssd_vgg300
 from tests.torch.test_models.swin import SwinTransformer
 
 SYNTHETIC_MODELS = Registry("OV_SYNTHETIC_MODELS")
-torch.manual_seed(0)
 
 
 def get_torch_model_info(model_name):
