@@ -13,10 +13,12 @@ import functools
 from collections import deque
 from typing import Any, Callable, List, Optional, Tuple, Union
 
+from nncf.experimental.tensor.definitions import TensorBackend
 from nncf.experimental.tensor.definitions import TensorDataType
 from nncf.experimental.tensor.definitions import TensorDeviceType
 from nncf.experimental.tensor.definitions import TypeInfo
 from nncf.experimental.tensor.functions.dispatcher import dispatch_list
+from nncf.experimental.tensor.functions.dispatcher import get_numeric_backend_fn
 from nncf.experimental.tensor.functions.dispatcher import tensor_guard
 from nncf.experimental.tensor.tensor import Tensor
 from nncf.experimental.tensor.tensor import unwrap_tensor_data
@@ -32,6 +34,18 @@ def device(a: Tensor) -> TensorDeviceType:
     :return: The device of the tensor.
     """
     return device(a.data)
+
+
+@functools.singledispatch
+@tensor_guard
+def backend(a: Tensor) -> TensorBackend:
+    """
+    Return the backend of the tensor.
+
+    :param a: The input tensor.
+    :return: The backend of the tensor.
+    """
+    return backend(a.data)
 
 
 @functools.singledispatch
@@ -732,3 +746,61 @@ def masked_median(x: Tensor, mask: Tensor, axis: Union[int, Tuple[int, ...], Lis
     :return: Reduced Tensor.
     """
     return Tensor(masked_median(x.data, mask.data, axis, keepdims))
+
+
+@functools.singledispatch
+@tensor_guard
+def clone(a: Tensor) -> Tensor:
+    """
+    Return a copy of the tensor.
+
+    :param a: The input tensor.
+    :return: The copied tensor.
+    """
+    return Tensor(clone(a.data))
+
+
+def zeros(
+    shape: Tuple[int, ...],
+    *,
+    backend: TensorBackend,
+    dtype: TensorDataType = TensorDataType.float32,
+    device: TensorDeviceType = TensorDeviceType.CPU,
+) -> Tensor:
+    """
+    Return a new array of given shape and type, filled with zeros.
+
+    :param shape: Shape of the new array
+    :param backend: The backend type for which the zero tensor is required.
+    :param dtype: The data type of the returned tensor, defaults to TensorDataType.float32
+    :return: A tensor filled with zeros of the specified shape and data type.
+    """
+    return Tensor(get_numeric_backend_fn("zeros", backend)(shape, dtype=dtype, device=device))
+
+
+def arange(
+    start: float,
+    end: Optional[float] = None,
+    step: float = 1,
+    *,
+    backend: TensorBackend,
+    dtype: Optional[TensorDataType] = None,
+    device: TensorDeviceType = TensorDeviceType.CPU,
+) -> Tensor:
+    """
+    Returns a tensor with a sequence of numbers in the specified range.
+
+    This function generates a tensor containing a sequence of numbers starting from
+    `start` to `end` with a step size of `step`, using the specified backend.
+
+    :param start: The starting value of the sequence.
+    :param end: The end value of the sequence (exclusive). If None, the sequence will start at 0 and end at `start`.
+    :param step: The step size between each value in the sequence, defaults to 1.
+    :param backend: The backend type for which the tensor is required.
+    :param dtype: The data type of the returned tensor If dtype is not given, infer the data type
+        from the other input arguments.
+    :param device: The device on which the tensor will be allocated, defaults to TensorDeviceType.CPU.
+    :return: A tensor containing the sequence of numbers.
+    """
+    args = (0, start, step) if end is None else (start, end, step)
+    return Tensor(get_numeric_backend_fn("arange", backend)(*args, dtype=dtype, device=device))

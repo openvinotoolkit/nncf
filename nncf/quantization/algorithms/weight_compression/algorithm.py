@@ -34,6 +34,7 @@ from nncf.quantization.advanced_parameters import AdvancedCompressionParameters
 from nncf.quantization.algorithms.algorithm import Algorithm
 from nncf.quantization.algorithms.weight_compression.awq import AWQ
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
+from nncf.quantization.algorithms.weight_compression.gptq import GPTQ
 from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXED_PRECISION_CRITERIA
 from nncf.quantization.algorithms.weight_compression.scale_estimation import ScaleEstimation
 from nncf.quantization.algorithms.weight_compression.weight_lowering import WeightCompressionConfig
@@ -63,6 +64,7 @@ class WeightCompression(Algorithm):
         awq: bool,
         subset_size: int,
         scale_estimation: bool,
+        gptq: bool,
         advanced_parameters: Optional[AdvancedCompressionParameters] = None,
     ):
         """
@@ -93,6 +95,7 @@ class WeightCompression(Algorithm):
         :param subset_size: Number of data samples to calculate activation statistics used for assigning different
             quantization precision.
         :param scale_estimation: determines whether to use or not scale estimation for 4 bit layers.
+        :param gptq: determines whether to use or not GPTQ algorithm.
         :param advanced_parameters: advanced parameters for algorithms in compression pipeline.
         """
         super().__init__()
@@ -108,9 +111,15 @@ class WeightCompression(Algorithm):
         self._awq = awq
         self._subset_size = subset_size
         self._scale_estimation = scale_estimation
+        self._gptq = gptq
         self._advanced_parameters = (
             advanced_parameters if advanced_parameters is not None else AdvancedCompressionParameters()
         )
+
+        if self._gptq:
+            gptq_params = self._advanced_parameters.gptq_params
+            self._gptq_algo = GPTQ(gptq_params.damp_percent, gptq_params.block_size, gptq_params.subset_size)
+            self._gptq_statistics = None
 
     @property
     def available_backends(self) -> List[BackendType]:
@@ -294,17 +303,6 @@ class WeightCompression(Algorithm):
         activations = {}
         if dataset is not None and self._sensitivity_metric != SensitivityMetric.WEIGHT_QUANTIZATION_ERROR:
             activations = self._get_activations(dataset, self._subset_size, nodes_to_compress, graph, model)
-
-        transformed_model = self.do_compression(model, graph, nodes_to_compress, activations)
-        return transformed_model
-
-    def do_compression(
-        self,
-        model: TModel,
-        graph: NNCFGraph,
-        nodes_to_compress: List[NNCFNode],
-        activations: Optional[Dict[str, List[Tensor]]] = None,
-    ) -> TModel:
         all_weight_params: List[WeightCompressionParameters] = []
         weight_names = set()
 
@@ -369,7 +367,8 @@ class WeightCompression(Algorithm):
             )
             awq_algo.apply(model, graph)
 
-        precomputed_scales = {wp.node_with_weight.node_name: None for wp in all_weight_params}
+        scales = {}
+        zero_points = {}
         if self._scale_estimation and activations is not None and self._mode != CompressWeightsMode.NF4:
             scale_estimation_params = self._advanced_parameters.scale_estimation_params
             scale_algo = ScaleEstimation(
@@ -383,11 +382,25 @@ class WeightCompression(Algorithm):
                 scale_estimation_params.scale_steps,
                 scale_estimation_params.weight_penalty,
             )
-            precomputed_scales = scale_algo.apply(model, graph)
+            scales = scale_algo.apply(model, graph)
+
+        if self._gptq:
+            model, scales, zero_points = self._gptq_algo.apply(
+                model=model,
+                graph=graph,
+                dataset=dataset,
+                weight_compression_parameters=all_weight_params,
+                statistics_points=self._gptq_statistics,
+                backend_entity=self._backend_entity,
+            )
 
         # Compress model using weight compression parameters
         transformed_model = self._backend_entity.transform_model(
-            model, graph, track(all_weight_params, description="Applying Weight Compression"), precomputed_scales
+            model,
+            graph,
+            track(all_weight_params, description="Applying Weight Compression"),
+            scales,
+            zero_points,
         )
 
         self._backend_entity.dump_parameters(
@@ -401,6 +414,7 @@ class WeightCompression(Algorithm):
                 "sensitivity_metric": self._sensitivity_metric.value,
                 "awq": self._awq,
                 "scale_estimation": self._scale_estimation,
+                "gptq": self._gptq,
             },
             algo_name="weight_compression",
         )
@@ -499,6 +513,13 @@ class WeightCompression(Algorithm):
 
         statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
         statistics_aggregator.register_statistic_points(statistic_container)
+
+        if self._gptq:
+            self._gptq_statistics = self._gptq_algo.get_statistic_points(
+                model, graph, nodes_to_compress, self._backend_entity
+            )
+            statistics_aggregator.register_statistic_points(self._gptq_statistics)
+
         statistics_aggregator.collect_statistics(model, graph)
 
         for node_name, output_id in _collected_stat_inputs_map.items():

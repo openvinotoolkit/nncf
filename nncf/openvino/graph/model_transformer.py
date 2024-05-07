@@ -33,6 +33,7 @@ from nncf.openvino.graph.transformations.commands import OVExtractIfBodyCommand
 from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
+from nncf.openvino.graph.transformations.commands import OVModelExtractionCommandV2
 from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
@@ -57,6 +58,7 @@ class OVModelTransformer(ModelTransformer):
             (OVBiasCorrectionCommand, self._apply_bias_correction_transformations),
             (OVWeightUpdateCommand, self._apply_weight_update_transformations),
             (OVModelExtractionCommand, self._apply_model_extraction_transformation),
+            (OVModelExtractionCommandV2, self._apply_model_extraction_transformation_v2),
             (OVInplaceFnInsertionCommand, self._apply_insert_operation),
             (OVOutputInsertionCommand, self._apply_output_insertion_transformations),
             (OVBiasInsertionCommand, self._apply_bias_insertion_transformations),
@@ -572,6 +574,57 @@ class OVModelTransformer(ModelTransformer):
                 name=parameter_name,
             )
             input_port.replace_source_output(new_param.output(0))
+            new_param_tensors = [o.get_tensor() for o in new_param.outputs()]
+            OVModelTransformer._update_tensor_name(new_param_tensors, parameter_name)
+            params.append(new_param)
+
+        for output_name, output_port_id in transformation.output_ids:
+            output_node = name_to_node_mapping[output_name]
+
+            output_port = output_node.output(output_port_id)
+            result_name = get_result_node_name(output_name, output_port_id)
+            new_result = opset.result(output_port, name=result_name)
+            OVModelTransformer._update_tensor_name([new_result.get_output_tensor(0)], result_name)
+            results.append(new_result)
+
+        if not results:
+            results = model.get_results()
+
+        extracted_model = ov.Model(results, params)
+        copy_rt_info(model, extracted_model, path=["nncf"])
+        return extracted_model
+
+    @staticmethod
+    def _apply_model_extraction_transformation_v2(
+        model: ov.Model, transformations: List[OVModelExtractionCommandV2]
+    ) -> ov.Model:
+        """
+        Extracts sub-model from the original based on the inputs and outputs names.
+
+        :param model: Model to apply transformations.
+        :param transformation: Model extraction transformation.
+        :return: Extracted sub-model.
+        """
+        transformation = transformations[-1]
+        name_to_node_mapping = OVModelTransformer._get_name_to_node_mapping(model)
+
+        params, results = [], []
+        model_input_names = [tensor.node.get_friendly_name() for tensor in model.inputs]
+        for input_name, output_port_id in transformation.input_ids:
+            input_node = name_to_node_mapping[input_name]
+            if input_name in model_input_names:
+                params.append(input_node)
+                continue
+
+            output_port = input_node.output(output_port_id)
+            parameter_name = get_parameter_node_name(input_name, output_port_id)
+            new_param = opset.parameter(
+                shape=output_port.partial_shape,
+                dtype=output_port.get_element_type(),
+                name=parameter_name,
+            )
+            for input_port in output_port.get_target_inputs():
+                input_port.replace_source_output(new_param.output(0))
             new_param_tensors = [o.get_tensor() for o in new_param.outputs()]
             OVModelTransformer._update_tensor_name(new_param_tensors, parameter_name)
             params.append(new_param)

@@ -14,6 +14,7 @@ from nncf.experimental.tensor.functions.numeric import abs as abs
 from nncf.experimental.tensor.functions.numeric import all as all
 from nncf.experimental.tensor.functions.numeric import allclose as allclose
 from nncf.experimental.tensor.functions.numeric import any as any
+from nncf.experimental.tensor.functions.numeric import arange as arange
 from nncf.experimental.tensor.functions.numeric import argsort as argsort
 from nncf.experimental.tensor.functions.numeric import as_tensor_like as as_tensor_like
 from nncf.experimental.tensor.functions.numeric import astype as astype
@@ -54,6 +55,7 @@ from nncf.experimental.tensor.functions.numeric import unsqueeze as unsqueeze
 from nncf.experimental.tensor.functions.numeric import unstack as unstack
 from nncf.experimental.tensor.functions.numeric import var as var
 from nncf.experimental.tensor.functions.numeric import where as where
+from nncf.experimental.tensor.functions.numeric import zeros as zeros
 from nncf.experimental.tensor.functions.numeric import zeros_like as zeros_like
 
 

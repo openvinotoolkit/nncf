@@ -16,6 +16,7 @@ import torch
 
 from nncf.experimental.tensor import TensorDataType
 from nncf.experimental.tensor import TensorDeviceType
+from nncf.experimental.tensor.definitions import TensorBackend
 from nncf.experimental.tensor.definitions import TypeInfo
 from nncf.experimental.tensor.functions import numeric as numeric
 
@@ -30,16 +31,20 @@ DTYPE_MAP = {
     TensorDataType.uint8: torch.uint8,
 }
 
+DEVICE_MAP = {TensorDeviceType.CPU: "cpu", TensorDeviceType.GPU: "cuda"}
+
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
+DEVICE_MAP_REV = {v: k for k, v in DEVICE_MAP.items()}
 
 
 @numeric.device.register(torch.Tensor)
 def _(a: torch.Tensor) -> TensorDeviceType:
-    DEVICE_MAP = {
-        "cpu": TensorDeviceType.CPU,
-        "cuda": TensorDeviceType.GPU,
-    }
-    return DEVICE_MAP[a.device.type]
+    return DEVICE_MAP_REV[a.device.type]
+
+
+@numeric.backend.register(torch.Tensor)
+def _(a: torch.Tensor) -> TensorBackend:
+    return TensorBackend.torch
 
 
 @numeric.squeeze.register(torch.Tensor)
@@ -365,3 +370,28 @@ def _(
     masked_x = x.masked_fill(mask, torch.nan)
     ret = torch.nanquantile(masked_x, q=0.5, dim=axis, keepdims=keepdims)
     return torch.nan_to_num(ret)
+
+
+@numeric.clone.register(torch.Tensor)
+def _(a: torch.Tensor) -> torch.Tensor:
+    return a.clone()
+
+
+def zeros(
+    shape: Tuple[int, ...],
+    dtype: TensorDataType = TensorDataType.float32,
+    device: TensorDeviceType = TensorDeviceType.CPU,
+) -> torch.Tensor:
+    return torch.zeros(*shape, dtype=DTYPE_MAP[dtype], device=DEVICE_MAP[device])
+
+
+def arange(
+    start: float,
+    end: float,
+    step: float,
+    dtype: Optional[TensorDataType] = None,
+    device: TensorDeviceType = TensorDeviceType.CPU,
+) -> torch.Tensor:
+    if dtype is not None:
+        dtype = DTYPE_MAP[dtype]
+    return np.arange(start, end, step, dtype=dtype, device=DEVICE_MAP[device])

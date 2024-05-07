@@ -13,6 +13,7 @@ from typing import Any, Callable, List, Optional, Tuple, Union
 
 import numpy as np
 
+from nncf.experimental.tensor.definitions import TensorBackend
 from nncf.experimental.tensor.definitions import TensorDataType
 from nncf.experimental.tensor.definitions import TensorDeviceType
 from nncf.experimental.tensor.definitions import TypeInfo
@@ -35,6 +36,11 @@ DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
 @register_numpy_types(numeric.device)
 def _(a: Union[np.ndarray, np.generic]) -> TensorDeviceType:
     return TensorDeviceType.CPU
+
+
+@register_numpy_types(numeric.backend)
+def _(a: Union[np.ndarray, np.generic]) -> TensorBackend:
+    return TensorBackend.numpy
 
 
 @register_numpy_types(numeric.squeeze)
@@ -356,3 +362,32 @@ def _(
     if isinstance(result, np.ma.MaskedArray):
         return result.data
     return result
+
+
+@register_numpy_types(numeric.clone)
+def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
+    return a.copy()
+
+
+def zeros(
+    shape: Tuple[int, ...],
+    dtype: Optional[TensorDataType] = None,
+    device: TensorDeviceType = TensorDeviceType.CPU,
+) -> np.ndarray:
+    if device != TensorDeviceType.CPU:
+        raise ValueError("numpy_numeric.zeros only supports CPU device.")
+    return np.zeros(shape, dtype=DTYPE_MAP[dtype])
+
+
+def arange(
+    start: float,
+    end: float,
+    step: float,
+    dtype: TensorDataType = TensorDataType.float32,
+    device: TensorDeviceType = TensorDeviceType.CPU,
+) -> np.ndarray:
+    if device != TensorDeviceType.CPU:
+        raise ValueError("numpy_numeric.zeros only supports CPU device.")
+    if dtype is not None:
+        dtype = DTYPE_MAP[dtype]
+    return np.arange(start, end, step, dtype=dtype)
