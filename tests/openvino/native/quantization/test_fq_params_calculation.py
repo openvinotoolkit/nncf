@@ -134,7 +134,6 @@ def test_real_models_fq_scales(model_name, preset, inplace_statistics, tmp_path)
 
     # Uncomment lines below to generate reference for new models.
     # from tests.shared.helpers import dump_to_json
-
     # dump_to_json(ref_stats_path, nodes)
 
     ref_nodes = load_json(ref_stats_path)
