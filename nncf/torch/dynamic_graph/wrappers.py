@@ -128,10 +128,21 @@ def wrap_module_call(module_call):
     @functools.wraps(module_call)
     def wrapped(self, *args, **kwargs):
         ctx = get_current_context()
+        # if ctx is not None:
+        #     # import threading
+        #     # from nncf.torch.dynamic_graph.context import _CURRENT_CONTEXT
+        #     print(ctx, type(ctx), ctx is None, ctx is not None)
+        #     # print(threading.get_ident(), ctx, type(ctx), ctx is None, ctx is not None)
+        #     # print(_CURRENT_CONTEXT)
+        if "_torchdynamo_orig_callable" in self.forward.__dict__:
+            from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
+            with disable_patching():
+                return module_call(self, *args, **kwargs)
         if not ctx or self.__class__ in _IGNORED_SCOPES:
             if isinstance(self, DataParallel):
                 _warn_data_parallel()
             return module_call(self, *args, **kwargs)
+        print(self.__class__)
         ctx.push_scope(self)
         is_nncf_layer = isinstance(self, _NNCFModuleMixin)
         if is_nncf_layer:

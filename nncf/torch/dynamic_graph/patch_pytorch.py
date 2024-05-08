@@ -243,6 +243,14 @@ def torch_jit_script_if_tracing(fn):
     return wrapper
 
 
+def get_disable_patching_wrapper(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        with disable_patching():
+            return fn(*args, **kwargs)
+    return wrapper
+
+
 class OriginalOpInfo:
     def __init__(self, name: str, namespace, op):
         self.name = name

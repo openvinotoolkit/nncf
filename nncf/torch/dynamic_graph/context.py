@@ -37,23 +37,32 @@ from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensorMixin
 
 
-class GlobalContext:
+# class GlobalContext:
+#     def __init__(self):
+#         self._context = None
+#         self.lock = threading.Lock()
+#
+#     @property
+#     def context(self):
+#         with self.lock:
+#             return self._context
+#
+#     @context.setter
+#     def context(self, value):
+#         with self.lock:
+#             self._context = value
+#
+#
+# _CURRENT_CONTEXT = GlobalContext()
+
+
+class ThreadLocalGlobalContext(threading.local):
     def __init__(self):
-        self._context = None
-        self.lock = threading.Lock()
-
-    @property
-    def context(self):
-        with self.lock:
-            return self._context
-
-    @context.setter
-    def context(self, value):
-        with self.lock:
-            self._context = value
+        super().__init__()
+        self.context = None
 
 
-_CURRENT_CONTEXT = GlobalContext()
+_CURRENT_CONTEXT = ThreadLocalGlobalContext()
 
 
 class PreHookId:
