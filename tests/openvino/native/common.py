@@ -25,7 +25,7 @@ from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.shared.nx_graph import compare_nx_graph_with_reference
 
 
-def convert_torch_model(model, input_shape, tmp_path):
+def convert_torch_model(model: torch.nn.Module, input_shape: Tuple[int], tmp_path: Path) -> ov.Model:
     model_tmp_path = tmp_path / ("model.onnx")
     with torch.no_grad():
         torch.onnx.export(model, torch.ones(input_shape), model_tmp_path)
