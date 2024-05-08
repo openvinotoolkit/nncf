@@ -11,6 +11,7 @@
 
 from abc import ABC
 from abc import abstractmethod
+from functools import partial
 from typing import Callable, Tuple
 
 import numpy as np
@@ -24,7 +25,7 @@ from tests.torch.test_models.mobilenet_v3 import mobilenet_v3_small
 from tests.torch.test_models.resnet import ResNet18
 from tests.torch.test_models.ssd_mobilenet import ssd_mobilenet
 from tests.torch.test_models.ssd_vgg import ssd_vgg300
-from tests.torch.test_models.swin import SwinTransformer
+from tests.torch.test_models.swin import SwinTransformerBlock
 
 SYNTHETIC_MODELS = Registry("OV_SYNTHETIC_MODELS")
 
@@ -37,7 +38,7 @@ def get_torch_model_info(model_name: str) -> Tuple[Callable, Tuple[int]]:
         "inception-v3": (inception_v3, (1, 3, 224, 224)),
         "ssd-vgg-300": (ssd_vgg300, (1, 3, 300, 300)),
         "ssd-mobilenet": (ssd_mobilenet, (1, 3, 300, 300)),
-        "swin-t": (SwinTransformer, (1, 3, 224, 224)),
+        "swin-block": (partial(SwinTransformerBlock, dim=8, input_resolution=[4, 4], num_heads=2), (1, 16, 8)),
     }
     return models[model_name]
 

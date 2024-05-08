@@ -74,7 +74,7 @@ MODELS_QUANTIZE_PARAMS = (
     ("resnet-18", {"preset": QuantizationPreset.PERFORMANCE}),
     ("resnet-18", {"preset": QuantizationPreset.PERFORMANCE, "target_device": TargetDevice.CPU_SPR}),
     ("ssd-vgg-300", {"preset": QuantizationPreset.PERFORMANCE}),
-    ("swin-t", {"preset": QuantizationPreset.PERFORMANCE, "model_type": ModelType.TRANSFORMER}),
+    ("swin-block", {"preset": QuantizationPreset.PERFORMANCE, "model_type": ModelType.TRANSFORMER}),
 )
 
 
@@ -110,7 +110,7 @@ def test_transformer_models_fq_placement(model_creator_func, tmp_path):
     compare_nncf_graphs(quantized_model, path_ref_graph)
 
 
-MODELS_SQ_PARAMS = (("swin-t", {"preset": QuantizationPreset.PERFORMANCE, "model_type": ModelType.TRANSFORMER}),)
+MODELS_SQ_PARAMS = (("swin-block", {"preset": QuantizationPreset.PERFORMANCE, "model_type": ModelType.TRANSFORMER}),)
 
 
 @pytest.mark.parametrize("model_name_params", MODELS_SQ_PARAMS)
