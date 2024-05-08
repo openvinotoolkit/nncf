@@ -612,13 +612,13 @@ def argsort(a: Tensor, axis: int = -1, descending: bool = False, stable: bool = 
     Returns the indices that would sort an array.
 
     :param a: The input tensor.
-    :param axis: Axis along which to sort. The default is -1 (the last axis). If None, the flattened array is used.
+    :param axis: Axis along which to sort. The default is -1 (the last axis).
     :param descending: Controls the sorting order (ascending or descending).
     :param stable: If True then the sorting routine becomes stable, preserving the order of equivalent elements.
         If False, the relative order of values which compare equal is not guaranteed. True is slower.
     :return: A tensor of indices that sort a along the specified axis.
     """
-    return Tensor(argsort(a.data, axis=axis))
+    return Tensor(argsort(a.data, axis=axis, descending=descending, stable=stable))
 
 
 @functools.singledispatch

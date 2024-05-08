@@ -1024,23 +1024,45 @@ class TemplateTestNNCFTensorOperators:
         assert res.device == tensor.device
 
     @pytest.mark.parametrize(
-        "x, ref",
+        "x, axis, descending, stable, ref",
         (
+            ([1, 2, 2, 3, 3, 3], -1, False, False, [0, 1, 2, 3, 4, 5]),
+            ([6, 5, 4, 3, 2, 1], -1, True, False, [0, 1, 2, 3, 4, 5]),
             (
-                [1, 2, 3, 4, 5, 6],
-                [0, 1, 2, 3, 4, 5],
+                [[1, 2, 2, 3, 3, 3], [4, 5, 6, 6, 5, 5], [1, 2, 2, 3, 3, 3]],
+                -1,
+                False,
+                True,
+                [[0, 1, 2, 3, 4, 5], [0, 1, 4, 5, 2, 3], [0, 1, 2, 3, 4, 5]],
             ),
             (
-                [6, 5, 4, 3, 2, 1],
-                [5, 4, 3, 2, 1, 0],
+                [[1, 2, 2, 3, 3, 3], [4, 5, 6, 6, 5, 5], [1, 2, 2, 3, 3, 3]],
+                -1,
+                True,
+                True,
+                [[3, 4, 5, 1, 2, 0], [2, 3, 1, 4, 5, 0], [3, 4, 5, 1, 2, 0]],
+            ),
+            (
+                [[1, 2, 2, 3, 3, 3], [4, 5, 6, 6, 5, 5], [1, 2, 2, 3, 3, 3]],
+                0,
+                False,
+                True,
+                [[0, 0, 0, 0, 0, 0], [2, 2, 2, 2, 2, 2], [1, 1, 1, 1, 1, 1]],
+            ),
+            (
+                [[1, 2, 2, 3, 3, 3], [4, 5, 6, 6, 5, 5], [1, 2, 2, 3, 3, 3]],
+                0,
+                True,
+                True,
+                [[1, 1, 1, 1, 1, 1], [0, 0, 0, 0, 0, 0], [2, 2, 2, 2, 2, 2]],
             ),
         ),
     )
-    def test_fn_argsort(self, x, ref):
+    def test_fn_argsort(self, x, axis, descending, stable, ref):
         tensor = Tensor(self.to_tensor(x))
         ref_tensor = self.to_tensor(ref)
 
-        res = fns.argsort(tensor)
+        res = fns.argsort(tensor, axis, descending, stable)
 
         assert isinstance(res, Tensor)
         assert fns.allclose(res.data, ref_tensor)
