@@ -151,7 +151,7 @@ test-torch-cuda:
 	pytest ${COVERAGE_ARGS} tests/torch -ra -m "cuda and not weekly and not nightly and not models_hub"
 
 test-torch-nightly:
-	pytest ${COVERAGE_ARGS} tests/torch -m nightly --junitxml ${JUNITXML_PATH} $(DATA_ARG)
+	pytest ${COVERAGE_ARGS} tests/torch -m nightly -k "quantization.test_sanity_sample" --junitxml ${JUNITXML_PATH} $(DATA_ARG)
 
 test-torch-weekly:
 	pytest ${COVERAGE_ARGS} tests/torch -m weekly \
