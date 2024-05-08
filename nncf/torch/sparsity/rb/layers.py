@@ -37,6 +37,7 @@ class RBSparsifyingWeight(BinaryMask, StatefullModuleInterface):
             requires_grad=not self.frozen,
             compression_lr_multiplier=compression_lr_multiplier,
         )
+        self._compression_lr_multiplier = compression_lr_multiplier
         self.binary_mask = binary_mask(self._mask)
         self.register_buffer("uniform", torch.zeros(weight_shape))
         self.mask_calculation_hook = MaskCalculationHook(self)
@@ -61,7 +62,7 @@ class RBSparsifyingWeight(BinaryMask, StatefullModuleInterface):
         return {
             self.WEIGHTS_SHAPE_KEY: list(self.mask.shape),
             self.FROZEN_KEY: self.frozen,
-            self.COMPRESSION_LR_MULTIPLIER_KEY: self.mask.compression_lr_multiplier,
+            self.COMPRESSION_LR_MULTIPLIER_KEY: self._compression_lr_multiplier,
             self.EPS_KEY: self.eps,
         }
 
