@@ -243,12 +243,39 @@ def torch_jit_script_if_tracing(fn):
     return wrapper
 
 
-def get_disable_patching_wrapper(fn):
-    @functools.wraps(fn)
-    def wrapper(*args, **kwargs):
-        with disable_patching():
-            return fn(*args, **kwargs)
-    return wrapper
+# def get_disable_patching_wrapper(fn):
+#     @functools.wraps(fn)
+#     def wrapper(*args, **kwargs):
+#         with disable_patching():
+#             wrapped_call = fn.__dict__["__wrapped__"]
+#             original_call = wrapped_call.__dict__["__wrapped__"]
+#             # fn.__dict__["__wrapped__"] = original_call
+#             result = fn(*args, **kwargs)
+#             fn.__dict__["__wrapped__"] = wrapped_call
+#             return result
+#     return wrapper
+#
+#
+# def get_dynamo_optimize_context_wrapper(fn):
+#     @functools.wraps(fn)
+#     def wrapper(self, target):
+#         result = fn(self, target)
+#         if hasattr(target, "__self__"):
+#             return get_disable_patching_wrapper(result)
+#         return result
+#     return wrapper
+#
+#
+# def get_dynamo_optimized_module_forward_wrapper(fn):
+#     @functools.wraps(fn)
+#     def wrapper(*args, **kwargs):
+#         return fn(*args, **kwargs)
+#     return wrapper
+#
+#
+# def patch_dynamo():
+#     from torch._dynamo.eval_frame import OptimizeContext
+#     OptimizeContext.__call__ = get_dynamo_optimize_context_wrapper(OptimizeContext.__call__)
 
 
 class OriginalOpInfo:
@@ -285,6 +312,8 @@ def patch_torch_jit():
     # Patch torch.jit._script_if_tracing because it references an original
     # unpatched torch.jit.script and the patching above does not affect it
     setattr(torch.jit, "_script_if_tracing", torch_jit_script_if_tracing)
+
+    # patch_dynamo()
 
 
 def patch_namespace_opname(namespace, op_info: PatchedOperatorInfo):
@@ -431,3 +460,7 @@ def disable_patching():
         # Need to restore the previous state of patching in this case before continuing to the exception handling.
         if was_patched:
             patch_torch_operators()
+
+
+def is_patched_by_dynamo(model: torch.nn.Module):
+    return hasattr(model, "forward") and "_torchdynamo_orig_callable" in model.forward.__dict__
