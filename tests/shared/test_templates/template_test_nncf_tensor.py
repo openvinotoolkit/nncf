@@ -1026,7 +1026,7 @@ class TemplateTestNNCFTensorOperators:
     @pytest.mark.parametrize(
         "x, axis, descending, stable, ref",
         (
-            ([1, 2, 2, 3, 3, 3], -1, False, False, [0, 1, 2, 3, 4, 5]),
+            ([1, 2, 3, 4, 5, 6], -1, False, False, [0, 1, 2, 3, 4, 5]),
             ([6, 5, 4, 3, 2, 1], -1, True, False, [0, 1, 2, 3, 4, 5]),
             (
                 [[1, 2, 2, 3, 3, 3], [4, 5, 6, 6, 5, 5], [1, 2, 2, 3, 3, 3]],
