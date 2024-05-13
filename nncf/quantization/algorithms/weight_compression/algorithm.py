@@ -182,7 +182,7 @@ class WeightCompression(Algorithm):
             )
         )
 
-        # The last MatMul layer is quantized to 4-bits if all_layers=True or if the layer is shared
+        # The last MatMul layer is quantized to 4-bits if all_layers=True
         if not self._all_layers and not is_last_layer_shared:
             ratio_defining_params = ratio_defining_params[:-1]
 
