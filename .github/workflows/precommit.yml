@@ -27,6 +27,7 @@ jobs:
         run: make test-common
         env:
           NNCF_COVERAGE: 1
+          NUM_WORKERS: 2
       - name: Upload coverage report as artifact
         uses: actions/upload-artifact@v3
         with:
@@ -80,6 +81,7 @@ jobs:
         run: make test-openvino
         env:
           NNCF_COVERAGE: 1
+          NUM_WORKERS: 6
       - name: Upload coverage report as artifact
         uses: actions/upload-artifact@v3
         with:
@@ -121,6 +123,8 @@ jobs:
       - name: Run PyTorch precommit test scope
         run: |
           make test-torch-cpu
+        env:
+          NUM_WORKERS: 6
   pytorch-cuda:
     timeout-minutes: 40
     defaults:
@@ -184,3 +188,5 @@ jobs:
       - name: Run TensorFlow precommit test scope
         run: |
           make test-tensorflow
+        env:
+          NUM_WORKERS: 6

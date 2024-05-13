@@ -22,6 +22,10 @@ ifdef WEEKLY_MODELS
 	WEEKLY_MODELS_ARG := --weekly-models $(WEEKLY_MODELS)
 endif
 
+ifdef NUM_WORKERS
+	NUM_WORKERS_ARG := -n${NUM_WORKERS}
+endif
+
 install-pre-commit:
 	pip install pre-commit==3.2.2
 
@@ -74,7 +78,7 @@ install-openvino-dev: install-openvino-test install-pre-commit
 	pip install -r examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control/requirements.txt
 
 test-openvino:
-	ONEDNN_MAX_CPU_ISA=AVX2 pytest ${COVERAGE_ARGS} -n4 -ra tests/openvino $(DATA_ARG) --junitxml ${JUNITXML_PATH}
+	ONEDNN_MAX_CPU_ISA=AVX2 pytest ${COVERAGE_ARGS} ${NUM_WORKERS_ARG} -ra tests/openvino $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
 test-install-openvino:
 	pytest tests/cross_fw/install -s        \
@@ -102,7 +106,7 @@ install-tensorflow-dev: install-tensorflow-test install-pre-commit
 	pip install -r examples/post_training_quantization/tensorflow/mobilenet_v2/requirements.txt
 
 test-tensorflow:
-	pytest ${COVERAGE_ARGS} -ra tests/tensorflow -m "not nightly"   \
+	pytest ${COVERAGE_ARGS} ${NUM_WORKERS_ARG} -ra tests/tensorflow -m "not nightly"   \
 		--junitxml ${JUNITXML_PATH}         \
 		$(DATA_ARG)
 
@@ -145,7 +149,7 @@ test-torch:
 	pytest ${COVERAGE_ARGS} tests/torch -m "not weekly and not nightly and not models_hub" --junitxml ${JUNITXML_PATH} $(DATA_ARG)
 
 test-torch-cpu:
-	pytest ${COVERAGE_ARGS} tests/torch -n4 -ra -m "not cuda and not weekly and not nightly and not models_hub"
+	pytest ${COVERAGE_ARGS} ${NUM_WORKERS_ARG} tests/torch -ra -m "not cuda and not weekly and not nightly and not models_hub"
 
 test-torch-cuda:
 	pytest ${COVERAGE_ARGS} tests/torch -ra -m "cuda and not weekly and not nightly and not models_hub"
@@ -186,7 +190,7 @@ install-common-test:
 	pip install -r tests/cross_fw/examples/requirements.txt
 
 test-common:
-	pytest ${COVERAGE_ARGS} tests/common $(DATA_ARG) --junitxml ${JUNITXML_PATH}
+	pytest ${COVERAGE_ARGS} ${NUM_WORKERS_ARG} -ra tests/common $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
 test-examples:
 	pytest tests/cross_fw/examples -s --junitxml ${JUNITXML_PATH}
