@@ -31,7 +31,7 @@ install-pre-commit:
 install-onnx-test:
 	pip install -U pip
 	pip install -e .
-	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
+	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker" # E2E test uses AC for models validation
 	pip install -r tests/onnx/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
 	pip install -r tests/cross_fw/examples/requirements.txt
@@ -88,7 +88,6 @@ test-examples-openvino:
 install-tensorflow-test:
 	pip install -U pip
 	pip install -e .
-	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=omz-tools&subdirectory=tools/model_tools"
 	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
 	pip install -r tests/tensorflow/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt
@@ -119,7 +118,6 @@ test-examples-tensorflow:
 install-torch-test:
 	pip install -U pip
 	pip install -e .
-	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=omz-tools&subdirectory=tools/model_tools"
 	pip install "git+https://github.com/openvinotoolkit/open_model_zoo.git@37f60eb#egg=accuracy_checker&subdirectory=tools/accuracy_checker"
 	pip install -r tests/torch/requirements.txt
 	pip install -r tests/cross_fw/install/requirements.txt

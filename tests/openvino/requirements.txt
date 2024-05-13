@@ -1,7 +1,6 @@
 -c ../../constraints.txt
 fastdownload==0.0.7
 onnx
-openvino-dev
 pytest
 pytest-cov
 pytest-mock
