@@ -81,7 +81,7 @@ jobs:
         run: make test-openvino
         env:
           NNCF_COVERAGE: 1
-          NUM_WORKERS: 6
+          NUM_WORKERS: 4
       - name: Upload coverage report as artifact
         uses: actions/upload-artifact@v3
         with:
