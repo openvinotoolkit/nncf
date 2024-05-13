@@ -62,3 +62,52 @@ def norm(
     :return: Norm of the matrix or vector.
     """
     return Tensor(norm(a.data, ord, axis, keepdims))
+
+
+@functools.singledispatch
+@tensor_guard
+def cholesky(a: Tensor, upper: bool = False) -> Tensor:
+    """
+    Computes the Cholesky decomposition of a complex Hermitian or real symmetric
+    positive-definite matrix `a`.
+
+    If `upper` is False, then the Cholesky decomposition, `L * L.H` of the matrix `a`
+    is returned, where `L` is lower-triangular and .H is the conjugate transpose operator
+    If `upper` is True, then the conjugate transpose tensor of the tensor with upper=False
+    is returned.
+
+    :param a: The input tensor of size (n,n).
+    :param upper: Whether to compute the upper- or lower-triangular Cholesky factorization.
+        Default is lower-triangular.
+    :return: Upper- or lower-triangular Cholesky factor of `a`.
+    """
+    return Tensor(cholesky(a.data, upper))
+
+
+@functools.singledispatch
+@tensor_guard
+def cholesky_inverse(a: Tensor, upper: bool = False) -> Tensor:
+    """
+    Computes the inverse of a complex Hermitian or real symmetric positive-definite matrix given
+    its Cholesky decomposition.
+
+    :param a: The input tensor of size (n,n) consisting of lower or upper triangular Cholesky
+        decompositions of symmetric or Hermitian positive-definite matrices.
+    :param upper: The flag that indicates whether the input tensor is lower triangular or
+        upper triangular. Default: False.
+    :return: The inverse of matrix given its Cholesky decomposition.
+    """
+    return Tensor(cholesky_inverse(a.data, upper))
+
+
+@functools.singledispatch
+@tensor_guard
+def inv(a: Tensor) -> Tensor:
+    """
+    Computes the inverse of a matrix.
+
+    :param a: The input tensor of shape (*, n, n) where * is zero or more batch dimensions
+        consisting of invertible matrices.
+    :return: The inverse of the input tensor.
+    """
+    return Tensor(inv(a.data))

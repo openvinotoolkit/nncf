@@ -101,7 +101,7 @@ def calculate_normalized_weight_and_nf4_scale(
 
 
 def do_integer_quantization(
-    weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig
+    weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig, precomputed_scale: Tensor = None
 ) -> Tuple[Tensor, Tensor, Tensor]:
     """
     The method quantizes the given weights to integer data type in accordance with the compression config.
@@ -122,6 +122,7 @@ def do_integer_quantization(
     :param weight: Weight array to compress.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics (e.g. min, max).
     :param config: Information on how to compress (quantize) a specific weight.
+    :param precomputed_scale: Precomputed scale for better performance.
     :return: The compressed weights tensor of uint8 type, scale tensor of float32 type and
         zero point tensor of int32 type that was used for its quantization.
     """
@@ -147,14 +148,18 @@ def do_integer_quantization(
             min_values, max_values, level_low, level_high, narrow_range=False
         )
     else:
-        scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)  # [a1, r//gs, 1, a2]
         level_low_sym = -(2 ** (num_bits - 1))
         level_high_sym = 2 ** (num_bits - 1) - 1
+
+        scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)  # [a1, r//gs, 1, a2]
         scale = scale / level_high_sym
-        zero_point = fns.as_tensor_like(scale, [-level_low_sym])
+        zero_point = fns.as_tensor_like(scale, [-level_low_sym]).astype(TensorDataType.int32)
         eps = fns.finfo(scale).eps
         # NOTE: adding machine epsilon to avoid division by zero
         scale = fns.where(fns.abs(scale) < eps, eps, scale)
+
+    if precomputed_scale is not None:
+        scale = precomputed_scale
 
     compressed_weights = fns.round(weight / scale + zero_point.astype(weight.dtype))
     compressed_weights = fns.clip(compressed_weights, level_low, level_high).astype(TensorDataType.uint8)
@@ -189,24 +194,29 @@ def get_integer_quantization_error(
     return val.item()
 
 
-def compress_weight(weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig):
+def compress_weight(
+    weight: Tensor, reduction_axes: ReductionAxes, config: WeightCompressionConfig, precomputed_scale: Tensor = None
+):
     """
     Compress weight using compression configuration.
 
     :param weight: The weight to compress.
     :param reduction_axes: Axes, along which to reduce (collect) different statistics (e.g. min, max).
     :param config: Compression configuration.
+    :param precomputed_scale: Precomputed scale for better performance.
     :return: The compressed weight and decompression parameters as instance of CompressedWeight
     """
     if config.mode == CompressWeightsMode.NF4:
         compressed_weight, scale = calculate_normalized_weight_and_nf4_scale(weight, reduction_axes, config.group_size)
         return CompressedWeight(compressed_weight, scale)
+    compressed_weight, scale, zero_point = do_integer_quantization(weight, reduction_axes, config, precomputed_scale)
 
-    compressed_weight, scale, zero_point = do_integer_quantization(weight, reduction_axes, config)
     return CompressedWeight(compressed_weight, scale, zero_point)
 
 
-def do_dequantization(compressed_weights: Tensor, scale: Tensor, zero_point: Tensor) -> Tensor:
+def do_dequantization(
+    compressed_weights: Tensor, scale: Tensor, zero_point: Tensor, reduction_axis: int = -1
+) -> Tensor:
     """
     The method dequantizes the given weights to float point data type in accordance with the scale and
     zero_point data type.
@@ -214,8 +224,18 @@ def do_dequantization(compressed_weights: Tensor, scale: Tensor, zero_point: Ten
     :param compressed_weights: compressed weights.
     :param scale: scale in compression/quantization.
     :param zero_point: zero point in compression/quantization.
+    :param reduction_axis: axis for return back for group compression.
     :return: dequantized/decompressed weights.
     """
     decompressed_weight = compressed_weights.astype(dtype=scale.dtype)
     decompressed_weight = (decompressed_weight - zero_point) * scale
+
+    if reduction_axis > -1:
+        shape = list(decompressed_weight.shape)  # [a1, r, a2] - "r" refers to number of channels along reduction axis
+        shape[reduction_axis] = shape[reduction_axis] * shape[reduction_axis + 1]
+        shape[reduction_axis + 1] = 1
+        reshaped_weight = decompressed_weight.reshape(shape)
+        reshaped_weight = fns.squeeze(reshaped_weight)
+        decompressed_weight = reshaped_weight
+
     return decompressed_weight

@@ -9,6 +9,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from abc import ABC
+from abc import abstractclassmethod
+from abc import abstractmethod
+from typing import Any, Dict
+
 import torch
 from torch import nn
 
@@ -17,6 +22,33 @@ from nncf.common.hook_handle import add_op_to_registry
 from nncf.common.utils.registry import Registry
 
 COMPRESSION_MODULES = Registry("compression modules")
+
+
+class StatefullModuleInterface(ABC):
+    """
+    Interface that should be implemented for every registered compression module to make it possible
+    to save an compression modules state and create an compression module from the saved state.
+    Config of the module should be json serializable, no python objects except
+    standart (str, list and etc.) should be present in a compression module config.
+    Values for attributes with type torch.nn.Parameter
+    is recovered from the model `state_dict`, so there is no need to keep them in the module config.
+    Modules should avoid implementation of `__call__` method and use `forward` method instead,
+    as torch functions called inside the `__call__` method could not be unambiguously
+    separated from the wrapped parent nncf module functions calls, thus nncf is unable to
+    identify target point for that call during transformations recovery process.
+    """
+
+    @abstractmethod
+    def get_config(self) -> Dict[str, Any]:
+        """
+        Returns the compression module config.
+        """
+
+    @abstractclassmethod
+    def from_config(cls, state: Dict[str, Any]) -> object:
+        """
+        Creates a compression module instance from the given config.
+        """
 
 
 class ProxyModule:

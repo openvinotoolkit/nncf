@@ -24,7 +24,6 @@ from nncf.torch.layers import LSTMCellNNCF
 from tests.post_training.test_templates.helpers import EmbeddingModel
 from tests.post_training.test_templates.helpers import get_static_dataset
 from tests.torch import test_models
-from tests.torch.ptq.helpers import mock_collect_statistics
 from tests.torch.quantization.test_algo_quantization import SharedLayersModel
 from tests.torch.test_compressed_graph import ModelDesc
 from tests.torch.test_compressed_graph import check_graph
@@ -95,15 +94,20 @@ TEST_MODELS_DESC = [
     ("desc", "quantization_parameters"), TEST_MODELS_DESC, ids=[get_model_name(m) for m in TEST_MODELS_DESC]
 )
 def test_min_max_classification_quantized_graphs(desc: ModelDesc, quantization_parameters, graph_dir, mocker):
-    mock_collect_statistics(mocker)
     model = desc.model_builder()
 
     nncf_network = wrap_model(model, torch.ones(desc.input_sample_sizes), trace_parameters=True)
     quantization_parameters["advanced_parameters"] = AdvancedQuantizationParameters(disable_bias_correction=True)
+    quantization_parameters["subset_size"] = 1
     quantization_algorithm = PostTrainingQuantization(**quantization_parameters)
 
+    def transform_fn(input_) -> torch.Tensor:
+        return torch.tensor(input_[0])
+
     quantized_model = quantization_algorithm.apply(
-        nncf_network, nncf_network.nncf.get_graph(), dataset=get_static_dataset(desc.input_sample_sizes, None, None)
+        nncf_network,
+        nncf_network.nncf.get_graph(),
+        dataset=get_static_dataset(desc.input_sample_sizes, transform_fn, None),
     )
 
     check_graph(quantized_model.nncf.get_graph(), desc.dot_filename(), graph_dir)

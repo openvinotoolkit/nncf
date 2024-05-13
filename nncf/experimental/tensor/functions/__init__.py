@@ -20,6 +20,7 @@ from nncf.experimental.tensor.functions.numeric import astype as astype
 from nncf.experimental.tensor.functions.numeric import clip as clip
 from nncf.experimental.tensor.functions.numeric import count_nonzero as count_nonzero
 from nncf.experimental.tensor.functions.numeric import device as device
+from nncf.experimental.tensor.functions.numeric import diag as diag
 from nncf.experimental.tensor.functions.numeric import dtype as dtype
 from nncf.experimental.tensor.functions.numeric import finfo as finfo
 from nncf.experimental.tensor.functions.numeric import flatten as flatten
