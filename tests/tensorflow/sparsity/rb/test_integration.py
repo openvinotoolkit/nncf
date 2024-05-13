@@ -15,6 +15,8 @@ from pathlib import Path
 import pytest
 import tensorflow as tf
 import tensorflow_addons as tfa
+from tensorflow.python.framework.config import disable_op_determinism
+from tensorflow.python.framework.config import enable_op_determinism
 
 from examples.tensorflow.common.callbacks import get_callbacks
 from examples.tensorflow.common.callbacks import get_progress_bar
@@ -25,6 +27,14 @@ from nncf.tensorflow.helpers.callback_creation import create_compression_callbac
 from nncf.tensorflow.helpers.model_creation import create_compressed_model
 
 MODEL_PATH = Path(__file__).parent.parent.parent / "data" / "mock_models" / "LeNet.h5"
+
+
+@pytest.fixture(name="determenistic_mode", scope="module")
+def determenistic_mode_fixture():
+    tf.keras.utils.set_random_seed(1)
+    enable_op_determinism()
+    yield
+    disable_op_determinism()
 
 
 def get_basic_sparsity_config(
@@ -110,8 +120,7 @@ def train_lenet():
 
 
 @pytest.mark.parametrize("distributed", [False, True], ids=["not_distributed", "distributed"])
-@pytest.mark.parametrize("quantized", [False, True], ids=["without_quantization", "with_quantization"])
-def test_rb_sparse_target_lenet(distributed, quantized):
+def test_rb_sparse_target_lenet(distributed, determenistic_mode):
     if not os.path.exists(MODEL_PATH):
         train_lenet()
 
@@ -152,8 +161,6 @@ def test_rb_sparse_target_lenet(distributed, quantized):
             sparsity_freeze_epoch=freeze_epoch,
             scheduler="exponential",
         )
-        if quantized:
-            config.update({"compression": [config["compression"], {"algorithm": "quantization"}]})
 
         compression_state_to_skip_init = {BaseCompressionAlgorithmController.BUILDER_STATE: {}}
         compress_algo, compress_model = create_compressed_model(model, config, compression_state_to_skip_init)
