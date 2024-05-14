@@ -38,11 +38,13 @@ def matmul_mul_operation(matmul_metatype, multiply_metatype) -> GraphPattern:
 
     return pattern
 
+
 def matmul_operation(matmul_metatype) -> GraphPattern:
     pattern = GraphPattern()
     pattern.add_node(**{GraphPattern.LABEL_ATTR: "LINEAR", GraphPattern.METATYPE_ATTR: matmul_metatype})
 
     return pattern
+
 
 @AWQ_PATTERNS.register("ACT_Mul_MatMul")
 def create_linear_mul_activations(matmul_metatype, multiply_metatype) -> GraphPattern:
@@ -51,8 +53,9 @@ def create_linear_mul_activations(matmul_metatype, multiply_metatype) -> GraphPa
     activations.join_patterns(linear)
     return activations
 
+
 @AWQ_PATTERNS.register("ACT_MatMul")
-def create_linear_activations(matmul_metatype, multiply_metatype) -> GraphPattern:
+def create_linear_activations(matmul_metatype, _multiply_metatype) -> GraphPattern:
     linear = matmul_operation(matmul_metatype)
     activations = atomic_activations_operations()
     activations.join_patterns(linear)
