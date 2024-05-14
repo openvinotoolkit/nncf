@@ -25,6 +25,7 @@ from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVLoopMetatype
+from nncf.openvino.graph.model_utils import remove_friendly_name_duplicates
 from nncf.openvino.graph.node_utils import get_number_loop_op
 from nncf.openvino.graph.node_utils import get_result_node_name
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
@@ -144,6 +145,7 @@ def apply_algorithm_loop_bodies(
             parent_model, parent_dataset, subset_size, loop_node
         )
         body = get_loop_body(parent_model, loop_node)
+        body = remove_friendly_name_duplicates(body)
         quantized_body, current_model_num = apply_algorithm_loop_bodies(
             algorithm,
             body,
@@ -155,4 +157,4 @@ def apply_algorithm_loop_bodies(
         )
         quantized_model = set_loop_body(quantized_model, loop_node, quantized_body)
 
-    return quantized_model
+    return quantized_model, current_model_num
