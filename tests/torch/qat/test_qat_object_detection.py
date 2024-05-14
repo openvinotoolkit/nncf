@@ -103,9 +103,9 @@ def get_sample_config(quantization_config_path: Path, data_dir: Path, weights_di
     sample_config.execution_mode = get_execution_mode(sample_config)
 
     if sample_config.dataset_dir is not None:
-        sample_config.train_imgs = (
-            sample_config.train_anno
-        ) = sample_config.test_imgs = sample_config.test_anno = sample_config.dataset_dir
+        sample_config.train_imgs = sample_config.train_anno = sample_config.test_imgs = sample_config.test_anno = (
+            sample_config.dataset_dir
+        )
     return sample_config
 
 
