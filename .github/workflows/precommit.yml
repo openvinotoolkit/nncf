@@ -124,7 +124,7 @@ jobs:
         run: |
           make test-torch-cpu
         env:
-          NUM_WORKERS: 6
+          NUM_WORKERS: 4
   pytorch-cuda:
     timeout-minutes: 40
     defaults:
