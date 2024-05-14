@@ -145,6 +145,7 @@ def apply_algorithm_if_bodies(
     """
     Applies an algorithm recursievley to each bodies of If node.
 
+    :param algorithm: Algorithm to apply.
     :param parent_model: Model to apply algorithm.
     :param parent_graph: Graph of a model.
     :param parent_dataset: Dataset for algorithm.
@@ -292,8 +293,8 @@ class OVBackend:
         """
         Returns output insertion commands on If node inputs.
 
-        :param ov.Model model: Model.
-        :param NNCFNode if_node: If node.
+        :param model: Model.
+        :param if_node: If node.
         :return: Transformation commands to insert outputs before If node.
         """
         assert if_node.metatype == OVIfMetatype
