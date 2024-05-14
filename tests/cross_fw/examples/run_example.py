@@ -59,6 +59,35 @@ def post_training_quantization_torch_mobilenet_v2() -> Dict[str, float]:
     return post_training_quantization_mobilenet_v2(example_root)
 
 
+def post_training_quantization_torch_save_load_mobilenet_v2() -> Dict[str, float]:
+    from examples.post_training_quantization.torch.save_load_mobilenet_v2 import quantize  # isort:skip # noqa F401
+    from examples.post_training_quantization.torch.save_load_mobilenet_v2 import export_onnx
+    from examples.post_training_quantization.torch.save_load_mobilenet_v2 import export_openvino
+
+    metrics = {}
+    for backend_name, backend in (("openvino", export_openvino), ("onnx", export_onnx)):
+        metrics.update(
+            {
+                f"{backend_name}_fp32_top1": float(backend.fp32_top1),
+                f"{backend_name}_int8_top1": float(backend.int8_top1),
+                f"{backend_name}_accuracy_drop": float(backend.fp32_top1 - backend.int8_top1),
+                f"{backend_name}_fp32_fps": backend.fp32_fps,
+                f"{backend_name}_int8_fps": backend.int8_fps,
+                f"{backend_name}_performance_speed_up": backend.int8_fps / backend.fp32_fps,
+            }
+        )
+
+        if hasattr(backend, "fp32_model_size") and hasattr(backend, "int8_model_size"):
+            metrics.update(
+                {
+                    f"{backend_name}_fp32_model_size": backend.fp32_model_size,
+                    f"{backend_name}_int8_model_size": backend.int8_model_size,
+                    f"{backend_name}_model_compression_rate": backend.fp32_model_size / backend.int8_model_size,
+                }
+            )
+    return metrics
+
+
 def format_results(results: Tuple[float]) -> Dict[str, float]:
     return {
         "fp32_mAP": results[0],

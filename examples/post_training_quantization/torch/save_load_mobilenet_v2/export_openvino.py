@@ -15,14 +15,14 @@ from pathlib import Path
 
 import openvino as ov
 import torch
-from common import QUANTIZED_CHECKPOINT_FILE_NAME
-from common import ROOT
-from common import get_data_loader
-from common import get_mobilenet_v2
-from common import run_benchmark
-from common import validate
 
 import nncf.torch
+from examples.post_training_quantization.torch.save_load_mobilenet_v2.common import QUANTIZED_CHECKPOINT_FILE_NAME
+from examples.post_training_quantization.torch.save_load_mobilenet_v2.common import ROOT
+from examples.post_training_quantization.torch.save_load_mobilenet_v2.common import get_data_loader
+from examples.post_training_quantization.torch.save_load_mobilenet_v2.common import get_mobilenet_v2
+from examples.post_training_quantization.torch.save_load_mobilenet_v2.common import run_benchmark
+from examples.post_training_quantization.torch.save_load_mobilenet_v2.common import validate
 
 
 def get_model_size(ir_path: Path, m_type: str = "Mb", verbose: bool = True) -> float:

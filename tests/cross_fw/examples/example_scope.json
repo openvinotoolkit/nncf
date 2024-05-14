@@ -235,5 +235,31 @@
             "int8_model_size": 5.677968978881836,
             "model_compression_rate": 3.7654144877995197
         }
+    },
+    "post_training_quantization_torch_save_load_mobilenet_v2": {
+        "backend": "torch",
+        "requirements": "examples/post_training_quantization/torch/save_load_mobilenet_v2/requirements.txt",
+        "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
+        "accuracy_metrics": {
+            "openvino_fp32_top1": 0.9864968152866243,
+            "openvino_int8_top1": 0.9852229299363058,
+            "openvino_accuracy_drop": 0.001273885350318471,
+            "onnx_fp32_top1": 0.9864968152866243,
+            "onnx_int8_top1": 0.9857324840764331,
+            "onnx_accuracy_drop": 0.0007643312101911492
+        },
+        "performance_metrics": {
+            "openvino_fp32_fps": 1714.83,
+            "openvino_int8_fps": 5857.77,
+            "openvino_performance_speed_up": 3.415947936530152,
+            "onnx_fp32_fps": 1684.77,
+            "onnx_int8_fps": 5875.98,
+            "onnx_performance_speed_up": 3.4877045531437525
+        },
+        "model_size_metrics": {
+            "openvino_fp32_model_size": 8.604256629943848,
+            "openvino_int8_model_size": 2.6377429962158203,
+            "openvino_model_compression_rate": 3.2619768651789633
+        }
     }
 }
