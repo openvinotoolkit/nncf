@@ -15,6 +15,7 @@ from copy import deepcopy
 import pytest
 import torch
 
+import nncf
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.quantization.structs import QuantizationScheme
 from nncf.quantization.algorithms.smooth_quant.torch_backend import SQMultiply
@@ -26,7 +27,6 @@ from nncf.torch.graph.transformations.serialization import deserialize_transform
 from nncf.torch.graph.transformations.serialization import serialize_command
 from nncf.torch.graph.transformations.serialization import serialize_transformations
 from nncf.torch.module_operations import UpdateWeight
-from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.pruning.filter_pruning.layers import FilterPruningMask
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
@@ -39,29 +39,6 @@ from tests.torch.helpers import TwoConvTestModel
 from tests.torch.helpers import commands_are_equal
 from tests.torch.nncf_network.helpers import AVAILABLE_TARGET_TYPES
 from tests.torch.nncf_network.helpers import InsertionCommandBuilder
-
-
-def load_from_config_impl(model: torch.nn.Module, serialized_transformations, example_input, trace_parameters):
-    """
-    Test implementation of nncf.torch.load_from_config(). Should be replaced by the implementation
-    """
-    transformations_layout = deserialize_transformations(serialized_transformations)
-
-    nncf_network = wrap_model(deepcopy(model), example_input=example_input, trace_parameters=trace_parameters)
-    transformed_model = ModelTransformerFactory.create(nncf_network).transform(transformations_layout)
-
-    transformed_model.nncf.disable_dynamic_graph_building()
-    return transformed_model
-
-
-def nncf_get_config_impl(
-    model: NNCFNetwork,
-):
-    """
-    Test implementation of model.nncf.get_config(). Should be replaced by the implementation
-    """
-    layout = model.nncf.transformation_layout()
-    return serialize_transformations(layout)
 
 
 @pytest.mark.parametrize("target_type", AVAILABLE_TARGET_TYPES)
@@ -132,13 +109,13 @@ def test_get_apply_serialization_from_a_model(model_cls, trace_parameters):
     nncf_model = wrap_model(deepcopy(model), example_input=example_input, trace_parameters=trace_parameters)
     modified_model = ModelTransformerFactory.create(nncf_model).transform(layout)
 
-    serialized_transformations = nncf_get_config_impl(modified_model)
+    serialized_transformations = modified_model.nncf.get_config()
 
     # Check serialized transformation are json compatible
     j_str = json.dumps(serialized_transformations)
     serialized_transformations = json.loads(j_str)
 
-    recovered_model = load_from_config_impl(model, serialized_transformations, example_input, trace_parameters)
+    recovered_model = nncf.torch.load_from_config(model, serialized_transformations, example_input)
 
     assert modified_model.state_dict().keys() == recovered_model.state_dict().keys()
     if not trace_parameters:
