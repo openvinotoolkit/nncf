@@ -744,8 +744,8 @@ for this type of device.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>model</strong> (<em>nncf.api.compression.TModel</em>) – A model to be compressed.</p></li>
-<li><p><strong>mode</strong> – <p>Defines a mode for weight compression.
+<li><p><strong>model</strong> (<em>TModel</em>) – A model to be compressed.</p></li>
+<li><p><strong>mode</strong> (<a class="reference internal" href="#nncf.CompressWeightsMode" title="nncf.CompressWeightsMode"><em>nncf.CompressWeightsMode</em></a>) – <p>Defines a mode for weight compression.
 INT8_SYM stands for 8-bit integer symmetric quantization of all weights.
 INT8_ASYM is the same as INT8_SYM mode, but weights are quantized to a primary precision asymmetrically</p>
 <blockquote>
@@ -762,22 +762,23 @@ criteria and the given ratio.</p>
 </dl>
 <p>NF4 is the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.</p>
 </p></li>
-<li><p><strong>ratio</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
+<li><p><strong>ratio</strong> (<em>float</em>) – the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
 and the rest to INT8_ASYM).</p></li>
-<li><p><strong>group_size</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
+<li><p><strong>group_size</strong> (<em>int</em>) – number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
 The value -1 means no grouping.</p></li>
-<li><p><strong>ignored_scope</strong> (<em>Optional</em><em>[</em><em>nncf.scopes.IgnoredScope</em><em>]</em>) – An ignored scope that defined the list of model control
+<li><p><strong>ignored_scope</strong> (<a class="reference internal" href="#nncf.IgnoredScope" title="nncf.IgnoredScope"><em>nncf.IgnoredScope</em></a>) – An ignored scope that defined the list of model control
 flow graph nodes to be ignored during quantization.</p></li>
-<li><p><strong>all_layers</strong> (<em>Optional</em><em>[</em><em>bool</em><em>]</em>) – Indicates whether embeddings and last MatMul layers should be compressed to a primary
+<li><p><strong>all_layers</strong> (<em>bool</em>) – Indicates whether embeddings and last MatMul layers should be compressed to a primary
 precision. By default, the backup precision is assigned for the embeddings and last MatMul layers.</p></li>
-<li><p><strong>dataset</strong> (<em>Optional</em><em>[</em><em>nncf.data.Dataset</em><em>]</em>) – Dataset used for assigning different quantization precision by finding outliers in activations.</p></li>
-<li><p><strong>sensitivity_metric</strong> (<em>Optional</em><em>[</em><em>nncf.parameters.SensitivityMetric</em><em>]</em>) – The sensitivity metric for assigning quantization precision to layers. In order to
+<li><p><strong>dataset</strong> (<a class="reference internal" href="#nncf.Dataset" title="nncf.Dataset"><em>nncf.Dataset</em></a>) – Dataset used for assigning different quantization precision by finding outliers in activations.</p></li>
+<li><p><strong>sensitivity_metric</strong> (<a class="reference internal" href="#nncf.SensitivityMetric" title="nncf.SensitivityMetric"><em>nncf.SensitivityMetric</em></a>) – The sensitivity metric for assigning quantization precision to layers. In order to
 preserve the accuracy of the model, the more sensitive layers receives a higher precision.</p></li>
-<li><p><strong>subset_size</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Number of data samples to calculate activation statistics used for assigning different
+<li><p><strong>subset_size</strong> (<em>int</em>) – Number of data samples to calculate activation statistics used for assigning different
 quantization precision. Defaults to 128.</p></li>
-<li><p><strong>awq</strong> (<em>Optional</em><em>[</em><em>bool</em><em>]</em>) – Indicates whether use AWQ weights correction.</p></li>
-<li><p><strong>scale_estimation</strong> (<em>Optional</em><em>[</em><em>bool</em><em>]</em>) – </p></li>
-<li><p><strong>advanced_parameters</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="quantization/advanced_parameters/index.html#nncf.quantization.advanced_parameters.AdvancedCompressionParameters" title="nncf.quantization.advanced_parameters.AdvancedCompressionParameters"><em>nncf.quantization.advanced_parameters.AdvancedCompressionParameters</em></a><em>]</em>) – </p></li>
+<li><p><strong>awq</strong> (<em>bool</em>) – Indicates whether use AWQ weights correction.</p></li>
+<li><p><strong>scale_estimation</strong> (<em>bool</em>) – Indicates whether a scale estimation algorithm is used that minimizes the L2 error
+between the original and compressed layers.</p></li>
+<li><p><strong>advanced_parameters</strong> (<em>nncf.AdvancedCompressionParameters</em>) – Advanced parameters for compression algorithms.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>

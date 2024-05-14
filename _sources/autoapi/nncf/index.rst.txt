@@ -283,6 +283,7 @@ Functions
    Compress model weights.
 
    :param model: A model to be compressed.
+   :type model: TModel
    :param mode: Defines a mode for weight compression.
        INT8_SYM stands for 8-bit integer symmetric quantization of all weights.
        INT8_ASYM is the same as INT8_SYM mode, but weights are quantized to a primary precision asymmetrically
@@ -295,20 +296,34 @@ Functions
        INT4_ASYM is the same as INT4_SYM mode, but weights are quantized to a primary precision asymmetrically
            with a typical non-fixed zero point.
        NF4 is the same as INT4_SYM mode, but primary precision is NF4 data type without zero point.
+   :type mode: nncf.CompressWeightsMode
    :param ratio: the ratio between baseline and backup precisions (e.g. 0.9 means 90% of layers quantized to NF4
        and the rest to INT8_ASYM).
+   :type ratio: float
    :param group_size: number of weights (e.g. 128) in the channel dimension that share quantization parameters (scale).
        The value -1 means no grouping.
+   :type group_size: int
    :param ignored_scope: An ignored scope that defined the list of model control
        flow graph nodes to be ignored during quantization.
+   :type ignored_scope: nncf.IgnoredScope
    :param all_layers: Indicates whether embeddings and last MatMul layers should be compressed to a primary
        precision. By default, the backup precision is assigned for the embeddings and last MatMul layers.
+   :type all_layers: bool
    :param dataset: Dataset used for assigning different quantization precision by finding outliers in activations.
+   :type dataset: nncf.Dataset
    :param sensitivity_metric: The sensitivity metric for assigning quantization precision to layers. In order to
        preserve the accuracy of the model, the more sensitive layers receives a higher precision.
+   :type sensitivity_metric: nncf.SensitivityMetric
    :param subset_size: Number of data samples to calculate activation statistics used for assigning different
        quantization precision. Defaults to 128.
+   :type subset_size: int
    :param awq: Indicates whether use AWQ weights correction.
+   :type awq: bool
+   :param scale_estimation: Indicates whether a scale estimation algorithm is used that minimizes the L2 error
+       between the original and compressed layers.
+   :type scale_estimation: bool
+   :param advanced_parameters: Advanced parameters for compression algorithms.
+   :type advanced_parameters: nncf.AdvancedCompressionParameters
    :return: The non-trainable model with compressed weights.
 
 
