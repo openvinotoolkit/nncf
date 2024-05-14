@@ -46,7 +46,7 @@ install-onnx-dev: install-onnx-test install-pre-commit
 	pip install -r examples/post_training_quantization/onnx/mobilenet_v2/requirements.txt
 
 test-onnx:
-	pytest ${COVERAGE_ARGS} tests/onnx $(DATA_ARG) --junitxml ${JUNITXML_PATH}
+	pytest ${COVERAGE_ARGS} ${NUM_WORKERS_ARG} -ra tests/onnx $(DATA_ARG) --junitxml ${JUNITXML_PATH}
 
 
 test-install-onnx:

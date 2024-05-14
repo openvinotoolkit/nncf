@@ -40,7 +40,7 @@ jobs:
           name: coverage_common
           flags: COMMON
   onnx:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-20.04-8-cores
     steps:
       - uses: actions/checkout@v4
         with:
@@ -54,6 +54,7 @@ jobs:
         run: make test-onnx
         env:
           NNCF_COVERAGE: 1
+          NUM_WORKERS: 4
       - name: Upload coverage report as artifact
         uses: actions/upload-artifact@v3
         with:
