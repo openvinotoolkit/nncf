@@ -21,7 +21,7 @@ GITHUB_REPO_URL = "https://github.com/openvinotoolkit/nncf/"
 
 def _get_site_packages_path() -> Path:
     site_packages = site.getsitepackages()
-    return Path(next(x for x in site_packages if "Lib" in x and "site-packages" in x))
+    return Path(next(x for x in site_packages if "lib" in x and "site-packages" in x))
 
 
 DATASET_DEFINITIONS_PATH = _get_site_packages_path() / "omz_tools" / "data" / "dataset_definitions.yml"
