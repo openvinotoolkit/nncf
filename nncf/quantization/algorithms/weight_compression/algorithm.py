@@ -395,6 +395,7 @@ class WeightCompression(Algorithm):
                 "ignored_scope": self._ignored_scope,
                 "sensitivity_metric": self._sensitivity_metric.value,
                 "awq": self._awq,
+                "scale_estimation": self._scale_estimation,
             },
             algo_name="weight_compression",
         )
