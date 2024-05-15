@@ -21,6 +21,7 @@ from nncf.experimental.tensor.functions import numeric as numeric
 
 DTYPE_MAP = {
     TensorDataType.float16: torch.float16,
+    TensorDataType.bfloat16: torch.bfloat16,
     TensorDataType.float32: torch.float32,
     TensorDataType.float64: torch.float64,
     TensorDataType.int8: torch.int8,
