@@ -1,2 +1,6 @@
+-c ../../../../constraints.txt
 atheris
-torchvision==0.17.1
+pytest
+torch
+torchvision
+openvino

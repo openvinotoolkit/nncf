@@ -11,14 +11,36 @@
 
 from abc import ABC
 from abc import abstractmethod
+from functools import partial
+from typing import Callable, Tuple
 
 import numpy as np
 import openvino.runtime as ov
 from openvino.runtime import opset13 as opset
 
 from nncf.common.utils.registry import Registry
+from tests.torch.test_models.inceptionv3 import inception_v3
+from tests.torch.test_models.mobilenet import mobilenet_v2
+from tests.torch.test_models.mobilenet_v3 import mobilenet_v3_small
+from tests.torch.test_models.resnet import ResNet18
+from tests.torch.test_models.ssd_mobilenet import ssd_mobilenet
+from tests.torch.test_models.ssd_vgg import ssd_vgg300
+from tests.torch.test_models.swin import SwinTransformerBlock
 
 SYNTHETIC_MODELS = Registry("OV_SYNTHETIC_MODELS")
+
+
+def get_torch_model_info(model_name: str) -> Tuple[Callable, Tuple[int]]:
+    models = {
+        "mobilenet-v2": (mobilenet_v2, (1, 3, 224, 224)),
+        "mobilenet-v3-small": (mobilenet_v3_small, (1, 3, 224, 224)),
+        "resnet-18": (ResNet18, (1, 3, 224, 224)),
+        "inception-v3": (inception_v3, (1, 3, 224, 224)),
+        "ssd-vgg-300": (ssd_vgg300, (1, 3, 300, 300)),
+        "ssd-mobilenet": (ssd_mobilenet, (1, 3, 300, 300)),
+        "swin-block": (partial(SwinTransformerBlock, dim=8, input_resolution=[4, 4], num_heads=2), (1, 16, 8)),
+    }
+    return models[model_name]
 
 
 class OVReferenceModel(ABC):
@@ -903,41 +925,56 @@ class AWQMatmulModel(OVReferenceModel):
     Model for testing AWQ algorithm. Contains MatMul->Multiply->MatMul pattern.
     """
 
-    def _create_ov_model(self):
+    def _get_weights(self, weights_data, is_int8, name):
+        if not is_int8:
+            return opset.constant(weights_data, dtype=np.float32, name=name)
+        else:
+            qw = opset.constant(weights_data, dtype=np.uint8, name="qw_" + name)
+            qw = opset.convert(qw, destination_type=np.float32)
+
+            zp = opset.constant(np.array([2**7]), dtype=np.uint8, name="zp_" + name)
+            zp = opset.convert(zp, destination_type=np.float32)
+
+            scale = opset.constant(
+                np.ones((weights_data.shape[0], 1), dtype=np.float32), dtype=np.float32, name="scale_" + name
+            )
+            return (qw - zp) * scale
+
+    def _create_ov_model(self, is_int8=False):
         input_node = opset.parameter([8, 8], name="Input_1")
 
         weights_data1 = np.arange(0, 64).reshape(8, 8)
         weights_data1[:] = 2.0
-        weights1 = opset.constant(weights_data1, dtype=np.float32, name="weights_1")
+        weights1 = self._get_weights(weights_data1, is_int8, name="weights_1")
         node1 = opset.matmul(input_node, weights1, transpose_a=False, transpose_b=True, name="MatMul_1")
 
         weights_data2 = np.arange(0, 64).reshape(8, 8)
         weights_data2[:] = 3.0
-        weights2 = opset.constant(weights_data2, dtype=np.float32, name="weights_2")
+        weights2 = self._get_weights(weights_data2, is_int8, name="weights_2")
         node2 = opset.matmul(input_node, weights2, transpose_a=False, transpose_b=True, name="MatMul_2")
 
         node_multiply = opset.multiply(node1, node2, name="Multiply")
 
         weights_data3 = np.arange(0, 64).reshape(8, 8)
         weights_data3[:] = 4.0
-        weights3 = opset.constant(weights_data3, dtype=np.float32, name="weights_3")
+        weights3 = self._get_weights(weights_data3, is_int8, name="weights_3")
         node3 = opset.matmul(node_multiply, weights3, transpose_a=False, transpose_b=True, name="MatMul_3")
 
         weights_data4 = np.arange(0, 64).reshape(8, 8)
         weights_data4[:] = 2.0
-        weights4 = opset.constant(weights_data4, dtype=np.float32, name="weights_4")
+        weights4 = self._get_weights(weights_data4, is_int8, name="weights_4")
         node4 = opset.matmul(node3, weights4, transpose_a=False, transpose_b=True, name="MatMul_4")
 
         weights_data5 = np.arange(0, 64).reshape(8, 8)
         weights_data5[:] = 3.0
-        weights5 = opset.constant(weights_data5, dtype=np.float32, name="weights_5")
+        weights5 = self._get_weights(weights_data5, is_int8, name="weights_5")
         node5 = opset.matmul(node3, weights5, transpose_a=False, transpose_b=True, name="MatMul_5")
 
         node_multiply_2 = opset.multiply(node4, node5, name="Multiply_2")
 
         weights_data6 = np.arange(0, 64).reshape(8, 8)
         weights_data6[:] = 4.0
-        weights6 = opset.constant(weights_data6, dtype=np.float32, name="weights_6")
+        weights6 = self._get_weights(weights_data6, is_int8, name="weights_6")
         node6 = opset.matmul(node_multiply_2, weights6, transpose_a=False, transpose_b=True, name="MatMul_6")
 
         result = opset.result(node6, name="Result")

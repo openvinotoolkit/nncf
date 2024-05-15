@@ -282,7 +282,10 @@ def _(a: torch.Tensor, axes: Optional[Tuple[int, ...]] = None) -> torch.Tensor:
 
 
 @numeric.argsort.register
-def _(a: torch.Tensor, axis: Optional[int] = -1) -> torch.Tensor:
-    if axis is None:
-        return torch.argsort(a.flatten())
-    return torch.argsort(a, dim=axis)
+def _(a: torch.Tensor, axis: int = -1, descending=False, stable=False) -> torch.Tensor:
+    return torch.argsort(a, dim=axis, descending=descending, stable=stable)
+
+
+@numeric.diag.register
+def _(a: torch.Tensor, k: int = 0) -> torch.Tensor:
+    return torch.diag(a, diagonal=k)

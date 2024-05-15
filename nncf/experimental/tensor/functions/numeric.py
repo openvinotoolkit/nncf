@@ -475,17 +475,32 @@ def transpose(a: Tensor, axes: Optional[Tuple[int, ...]] = None) -> Tensor:
     Returns an array with axes transposed.
 
     :param a: The input tensor.
-    :param axes: list of permutations or None.
-    :return: array with permuted axes.
+    :param axes: List of permutations or None.
+    :return: A tensor with permuted axes.
     """
 
 
 @tensor_dispatch
-def argsort(a: Tensor, axis: Optional[int] = -1) -> Tensor:
+def argsort(a: Tensor, axis: int = -1, descending: bool = False, stable: bool = False) -> Tensor:
     """
     Returns the indices that would sort an array.
 
     :param a: The input tensor.
-    :param axis: Axis along which to sort. The default is -1 (the last axis). If None, the flattened array is used.
-    :return: Array of indices that sort a along the specified axis.
+    :param axis: Axis along which to sort. The default is -1 (the last axis).
+    :param descending: Controls the sorting order (ascending or descending).
+    :param stable: If True then the sorting routine becomes stable, preserving the order of equivalent elements.
+        If False, the relative order of values which compare equal is not guaranteed. True is slower.
+    :return: A tensor of indices that sort a along the specified axis.
+    """
+
+
+@tensor_dispatch
+def diag(a: Tensor, k: int = 0) -> Tensor:
+    """
+    Returns the indices that would sort an array.
+
+    :param a: The input tensor.
+    :param k: Diagonal in question. The default is 0. Use k > 0 for diagonals above the main diagonal, and k < 0
+        for diagonals below the main diagonal.
+    :return: A tensor with the extracted diagonal.
     """
