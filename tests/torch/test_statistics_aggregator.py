@@ -371,9 +371,11 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         checker = HookChecker(model, "conv")
         checker.add_ref(
             ref_hooks=[fn],
-            target_type=TargetType.OPERATOR_PRE_HOOK
-            if target_point.target_type == TargetType.OPERATION_WITH_WEIGHTS
-            else target_point.target_type,
+            target_type=(
+                TargetType.OPERATOR_PRE_HOOK
+                if target_point.target_type == TargetType.OPERATION_WITH_WEIGHTS
+                else target_point.target_type
+            ),
             target_node_name=target_point.target_node_name,
             input_port_id=target_point.input_port_id,
         )
@@ -390,9 +392,11 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         checker = HookChecker(model, "conv")
         checker.add_ref(
             ref_hooks=[fn],
-            target_type=TargetType.OPERATOR_PRE_HOOK
-            if target_point.target_type == TargetType.OPERATION_WITH_WEIGHTS
-            else target_point.target_type,
+            target_type=(
+                TargetType.OPERATOR_PRE_HOOK
+                if target_point.target_type == TargetType.OPERATION_WITH_WEIGHTS
+                else target_point.target_type
+            ),
             target_node_name=target_point.target_node_name,
             input_port_id=target_point.input_port_id,
         )
