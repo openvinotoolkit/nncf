@@ -112,9 +112,11 @@ GLOBAL_BATCH_SIZE = get_global_batch_size()
 
 DATASET_PATHS = {
     "classification": {
-        x: lambda dataset_root, dataset_name=x: os.path.join(dataset_root, dataset_name)
-        if dataset_root
-        else os.path.join(tempfile.gettempdir(), dataset_name)
+        x: lambda dataset_root, dataset_name=x: (
+            os.path.join(dataset_root, dataset_name)
+            if dataset_root
+            else os.path.join(tempfile.gettempdir(), dataset_name)
+        )
         for x, _ in DATASETS["classification"]
     },
     "object_detection": {
