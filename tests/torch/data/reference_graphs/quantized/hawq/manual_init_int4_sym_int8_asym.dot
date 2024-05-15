@@ -1,7 +1,7 @@
 strict digraph  {
 "0 /nncf_model_input_0" [id=0, label="nncf_model_input_#0", style=filled, type=nncf_model_input];
 "1 SymmetricQuantizer/symmetric_quantize_0" [color=red, id=1, label="AFQ_[B:4 M:S SGN:U PC:N]_#1_G0", style=filled, type=symmetric_quantize];
-"2 BasicConvTestModel/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" [color=green, id=2, label="WFQ_[B:8 M:S SGN:U PC:Y]_#2_G0", style=filled, type=symmetric_quantize];
+"2 BasicConvTestModel/NNCFConv2d[conv]/ModuleDict[pre_ops]/UpdateWeight[0]/SymmetricQuantizer[op]/symmetric_quantize_0" [color=green, id=2, label="WFQ_[B:8 M:S SGN:S PC:Y]_#2_G0", style=filled, type=symmetric_quantize];
 "3 BasicConvTestModel/NNCFConv2d[conv]/conv2d_0" [color=lightblue, id=3, label="conv2d_k2x2_#3", style=filled, type=conv2d];
 "4 /nncf_model_output_0" [id=4, label="nncf_model_output_#4", style=filled, type=nncf_model_output];
 "0 /nncf_model_input_0" -> "1 SymmetricQuantizer/symmetric_quantize_0";

@@ -22,13 +22,14 @@ from typing import Any, Dict, Optional, Union
 import nncf
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.utils.api_marker import api
+from nncf.parameters import StrEnum
 from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.quantization.range_estimator import StatisticsType
 
 
-@api()
-class OverflowFix(Enum):
+@api(canonical_alias="nncf.OverflowFix")
+class OverflowFix(StrEnum):
     """
     This option controls whether to apply the overflow issue fix for the 8-bit
     quantization.
@@ -58,7 +59,7 @@ class OverflowFix(Enum):
 
 
 @api()
-class FP8Type(Enum):
+class FP8Type(StrEnum):
     """
     Defines FP8 special types (https://arxiv.org/pdf/2209.05433.pdf).
 
@@ -243,6 +244,75 @@ class AdvancedQuantizationParameters:
 
     # Backend specific parameters
     backend_params: Dict[str, Any] = field(default_factory=dict)
+
+
+@api()
+@dataclass
+class AdvancedAWQParameters:
+    """
+    Contains advanced parameters for AWQ algorithm.
+
+    :param subset_size: The number of samples for AWQ.
+    :type subset_size: int
+    :param percent_to_apply: The percent of outliers for correction.
+    :type percent_to_apply: float
+    :param alpha_min: Minimum value of smoothness parameter for grid search.
+    :type alpha_min: float
+    :param alpha_max: Maximal value of smoothness parameter for grid search.
+    :type alpha_max: float
+    :param steps: The number of the steps in grid search.
+    :type steps: int
+    """
+
+    subset_size: int = 32
+    percent_to_apply: float = 0.002
+    alpha_min: float = 0.0
+    alpha_max: float = 1.0
+    steps: int = 100
+
+
+@api()
+@dataclass
+class AdvancedScaleEstimationParameters:
+    """
+    Contains advanced parameters for scale estimation algorithm.
+
+    :param subset_size: The number of samples for scale estimation.
+    :type subset_size: int
+    :param initial_steps: The number of the steps for absmax scale rectification.
+    :type initial_steps: int
+    :param scale_steps: The number of the steps for grid search scale rectification
+        from 1.0 to 1.0 - 0.05 * scale_step.
+    :type scale_steps: int
+    :param weight_penalty: coefficient for penalty between fp and compressed weights. If -1 then doesn't apply.
+    :type weight_penalty: float
+    """
+
+    subset_size: int = 32
+    initial_steps: int = 5
+    scale_steps: int = 10
+    weight_penalty: float = -1.0
+
+
+@api()
+@dataclass
+class AdvancedCompressionParameters:
+    """
+    Contains advanced parameters for compression algorithms.
+
+    :param awq_params: Advanced parameters for AWQ algorithm.
+    :type awq_params: AdvancedAWQParameters
+    :param scale_estimation_params: Advanced parameters for scale estimation algorithm.
+    :type scale_estimation_params: AdvancedScaleEstimationParameters
+    """
+
+    # Advanced AWQ algorithm parameters
+    awq_params: AdvancedAWQParameters = field(default_factory=AdvancedAWQParameters)
+
+    # Advanced scale estimation algorithm parameters
+    scale_estimation_params: AdvancedScaleEstimationParameters = field(
+        default_factory=AdvancedScaleEstimationParameters
+    )
 
 
 @api()

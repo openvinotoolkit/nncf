@@ -212,7 +212,7 @@ class TestONNXBCAlgorithm(TemplateTestBCAlgorithm):
                 MultipleConvTestModel,
                 {
                     ("/conv_1/Conv", 0): ("nncf_model_input_0", 0),
-                    ("/conv_3/Conv", 0): ("nncf_model_input_0", 1),
+                    ("/conv_3/Conv", 0): ("nncf_model_input_0", 0),
                 },
             ),
             (ConvTestModel, {("/conv/Conv", 0): ("nncf_model_input_0", 0)}),

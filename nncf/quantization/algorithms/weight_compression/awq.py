@@ -58,7 +58,7 @@ class AWQ(Algorithm):
         activations: Optional[Dict[str, TTensor]] = None,
         subset_size: int = 32,
         percent_to_apply=0.002,
-        alpha_min=0.01,
+        alpha_min=0.0,
         alpha_max=1.0,
         steps=100,
     ):
@@ -107,8 +107,7 @@ class AWQ(Algorithm):
         if model_backend == BackendType.OPENVINO:
             from nncf.quantization.algorithms.weight_compression.openvino_backend import OVAWQAlgoAlgoBackend
 
-            self._backend_entity = OVAWQAlgoAlgoBackend(model)
-            self._backend_entity.name_to_node_mapping = self.name_to_node_mapping
+            self._backend_entity = OVAWQAlgoAlgoBackend(model, self.name_to_node_mapping)
             self._patterns = self._backend_entity.get_awq_patterns()
         else:
             raise RuntimeError(
@@ -148,6 +147,9 @@ class AWQ(Algorithm):
 
         for match in matches:
             nncf_node = graph.get_node_by_key(match[-1])
+            if not self._backend_entity.is_node_with_weights(nncf_node, graph):
+                continue
+
             for weight_op_friendly_name, _ in self._backend_entity.get_weight_names_and_port_ids(nncf_node, graph):
                 target_node_names.append(weight_op_friendly_name)
 
@@ -181,17 +183,25 @@ class AWQ(Algorithm):
             stats = self._activations[k]
             X = fns.stack([fns.mean(stat, axis=0) for stat in stats])
             X = fns.transpose(X)
-            if X.shape[1] > self._subset_size:
-                X = X[:, : self._subset_size]
 
             s = fns.max(fns.abs(X), axis=1)
+
+            if X.shape[1] > self._subset_size:
+                lens = [stat.shape[0] for stat in stats]
+                step = X.shape[1] // self._subset_size
+                idxs = [i[0] for i in sorted(enumerate(lens), key=lambda x: -x[1])][::step]
+                X = X[:, idxs]
 
             top_k = max(int(s.shape[0] * self._percent_to_apply), 1)
             topk_idxs = fns.argsort(-s)[:top_k]
 
+            group_size = config.group_size
+            if group_size == -1:
+                group_size = s.shape[0]
+
             groups_to_correct = set()
             for idx in topk_idxs:
-                groups_to_correct.add(idx.data // config.group_size)
+                groups_to_correct.add(idx.data // group_size)
 
             groups_to_correct = list(groups_to_correct)
 
@@ -212,15 +222,15 @@ class AWQ(Algorithm):
             awq_config.group_size = -1
 
             for gi in groups_to_correct:
-                offset = gi * config.group_size
-                gscale = s[offset : offset + config.group_size]
+                offset = gi * group_size
+                gscale = s[offset : offset + group_size]
 
                 a_min = fns.quantile(gscale, 0.1)
                 a_max = 1e2
                 gscale = fns.clip(gscale, a_min=a_min, a_max=a_max)
 
-                gweight = weight[:, offset : offset + config.group_size]
-                gacts = X[offset : offset + config.group_size, :]
+                gweight = weight[:, offset : offset + group_size]
+                gacts = X[offset : offset + group_size, :]
 
                 fp32_out = fns.matmul(gweight, gacts)
                 min_diff = fns.max(fns.abs(fp32_out))
@@ -244,7 +254,7 @@ class AWQ(Algorithm):
                     alpha += alpha_step
 
                 if best_scale is not None:
-                    scale.data[offset : offset + config.group_size] = best_scale.data
+                    scale.data[offset : offset + group_size] = best_scale.data
 
             a_scale = scale
             w_scale = scale
@@ -262,6 +272,12 @@ class AWQ(Algorithm):
                 merge_weight = self._backend_entity.get_weight(merge_node, port_id, model, graph)
                 merge_weight = merge_weight * a_scale
                 self._backend_entity.set_weight(merge_node, port_id, model, graph, merge_weight)
+
+            # update activations for next usage
+            a_scale_t = fns.transpose(a_scale)
+            for i, stat in enumerate(self._activations[k]):
+                stat = stat * a_scale_t
+                self._activations[k][i] = stat
 
         return model
 

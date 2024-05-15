@@ -289,6 +289,15 @@ def _(a: Union[np.ndarray, np.generic], axes: Optional[Tuple[int, ...]] = None) 
 
 @register_numpy_types(numeric.argsort)
 def _(
-    a: Union[np.ndarray, np.generic], axis: Optional[int] = None, descending=False, stable=False
+    a: Union[np.ndarray, np.generic], axis: int = -1, descending=False, stable=False
 ) -> Union[np.ndarray, np.generic]:
-    return np.argsort(a, axis=axis)
+    if descending and stable:
+        return a.shape[axis] - 1 - np.flip(np.argsort(np.flip(a, axis), axis=axis, kind="stable"), axis)
+    if descending and not stable:
+        return np.flip(np.argsort(a, axis=axis), axis)
+    return np.argsort(a, axis=axis, kind="stable" if stable else None)
+
+
+@register_numpy_types(numeric.diag)
+def _(a: Union[np.ndarray, np.generic], k: int = 0) -> np.ndarray:
+    return np.diag(a, k=k)

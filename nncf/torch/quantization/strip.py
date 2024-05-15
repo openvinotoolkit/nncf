@@ -15,7 +15,7 @@ import torch
 from torch.quantization.fake_quantize import FakeQuantize
 
 import nncf
-from nncf.torch.nncf_network import ExtraCompressionModuleType
+from nncf.torch.graph.transformations.commands import ExtraCompressionModuleType
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
@@ -138,6 +138,9 @@ def remove_disabled_quantizers(model: NNCFNetwork) -> NNCFNetwork:
             op = external_quantizers[key]
             if isinstance(op, BaseQuantizer) and not op.is_enabled_quantization():
                 external_quantizers.pop(key)
+
+    if not model.nncf.replace_modules:
+        return model
 
     for node in model.nncf.get_original_graph().get_all_nodes():
         if node.node_type in ["nncf_model_input", "nncf_model_output"]:

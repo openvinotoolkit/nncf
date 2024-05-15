@@ -210,6 +210,7 @@ def test_model_eval(_config, tmp_path):
     main(convert_to_argv(args))
 
 
+@pytest.mark.nightly
 @pytest.mark.dependency(name="tf_test_model_train")
 def test_model_train(_config, tmp_path, _case_common_dirs):
     if _config["sample_type"] == "segmentation":
@@ -235,6 +236,7 @@ def test_model_train(_config, tmp_path, _case_common_dirs):
     assert tf.train.latest_checkpoint(checkpoint_save_dir)
 
 
+@pytest.mark.nightly
 @pytest.mark.dependency(depends=["tf_test_model_train"])
 def test_trained_model_eval(_config, tmp_path, _case_common_dirs):
     config_factory = ConfigFactory(_config["nncf_config"], tmp_path / "config.json")
@@ -252,6 +254,7 @@ def test_trained_model_eval(_config, tmp_path, _case_common_dirs):
     main(convert_to_argv(args))
 
 
+@pytest.mark.nightly
 @pytest.mark.dependency(depends=["tf_test_model_train"])
 def test_resume(_config, tmp_path, _case_common_dirs):
     checkpoint_save_dir = os.path.join(str(tmp_path), "models")
@@ -278,6 +281,7 @@ def test_resume(_config, tmp_path, _case_common_dirs):
     assert tf.train.latest_checkpoint(checkpoint_save_dir)
 
 
+@pytest.mark.nightly
 @pytest.mark.dependency(depends=["tf_test_model_train"])
 def test_trained_model_resume_train_test_export_last_ckpt(_config, tmp_path, _case_common_dirs):
     if _config["sample_type"] == "segmentation":
@@ -320,6 +324,7 @@ def get_export_model_name(export_format):
     return model_name
 
 
+@pytest.mark.nightly
 @pytest.mark.dependency(depends=["tf_test_model_train"])
 @pytest.mark.parametrize("export_format", FORMATS, ids=FORMATS)
 def test_export_with_resume(_config, tmp_path, export_format, _case_common_dirs):
@@ -356,6 +361,7 @@ def test_export_with_resume(_config, tmp_path, export_format, _case_common_dirs)
 PREPARE_CHECKPOINTS_SUPPORTED_SAMPLE_TYPES = ["object_detection", "segmentation"]
 
 
+@pytest.mark.nightly
 @pytest.mark.dependency(name="tf_test_prepare_checkpoint", depends=["tf_test_model_train"])
 def test_prepare_checkpoint(_config, tmp_path, _case_common_dirs):
     if _config["sample_type"] not in PREPARE_CHECKPOINTS_SUPPORTED_SAMPLE_TYPES:
@@ -377,6 +383,7 @@ def test_prepare_checkpoint(_config, tmp_path, _case_common_dirs):
     assert tf.train.latest_checkpoint(checkpoint_save_dir)
 
 
+@pytest.mark.nightly
 @pytest.mark.dependency(depends=["tf_test_prepare_checkpoint"])
 def test_eval_prepared_checkpoint(_config, tmp_path, _case_common_dirs):
     if _config["sample_type"] not in PREPARE_CHECKPOINTS_SUPPORTED_SAMPLE_TYPES:
@@ -426,6 +433,7 @@ def _accuracy_aware_config(request, dataset_dir):
     }
 
 
+@pytest.mark.nightly
 @pytest.mark.dependency(name="tf_test_model_train")
 def test_model_accuracy_aware_train(_accuracy_aware_config, tmp_path):
     checkpoint_save_dir = Path(tmp_path)
@@ -449,6 +457,7 @@ def test_model_accuracy_aware_train(_accuracy_aware_config, tmp_path):
     assert tf.train.latest_checkpoint(str(aa_checkpoint_path))
 
 
+@pytest.mark.nightly
 @pytest.mark.parametrize("sample_type", SAMPLE_TYPES)
 def test_eval_only_config_fails_to_train(tmp_path, sample_type):
     config_factory = ConfigFactory(

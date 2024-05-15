@@ -263,7 +263,7 @@ strict digraph  {
 "261 MobileNetV2/Sequential[features]/ConvBNActivation[18]/NNCFConv2d[0]/conv2d_0" [color=lightblue, id=261, label="conv2d_k1x1_#261", style=filled, type=conv2d];
 "262 MobileNetV2/Sequential[features]/ConvBNActivation[18]/NNCFBatchNorm2d[1]/batch_norm_0" [id=262, label="batch_norm_#262", style=filled, type=batch_norm];
 "263 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/hardtanh_0" [id=263, label="hardtanh_#263", style=filled, type=hardtanh];
-"264 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/SymmetricQuantizer/symmetric_quantize_0" [color=green, id=264, label="AFQ_[B:8 M:S SGN:U PC:Y]_#264_G42", style=filled, type=symmetric_quantize];
+"264 MobileNetV2/Sequential[features]/ConvBNActivation[18]/ReLU6[2]/SymmetricQuantizer/symmetric_quantize_0" [color=green, id=264, label="AFQ_[B:8 M:S SGN:U PC:N]_#264_G42", style=filled, type=symmetric_quantize];
 "265 MobileNetV2/adaptive_avg_pool2d_0" [id=265, label="adaptive_avg_pool2d_#265", style=filled, type=adaptive_avg_pool2d];
 "266 MobileNetV2/NNCFNetworkInterface[_nncf]/ModuleDict[external_quantizers]/SymmetricQuantizer[MobileNetV2/adaptive_avg_pool2d_0|OUTPUT]/symmetric_quantize_0" [color=red, id=266, label="AFQ_[B:4 M:S SGN:U PC:N]_#266_G43", style=filled, type=symmetric_quantize];
 "267 MobileNetV2/reshape_0" [id=267, label="reshape_#267", style=filled, type=reshape];

@@ -11,10 +11,10 @@ jobs:
   pre-commit:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-python@v3
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
       with:
-        python-version: 3.8.10
+        python-version: 3.8.18
     - name: Install pre-commit package
       run: make install-pre-commit
     - name: Run pre-commit linter suite
@@ -23,4 +23,4 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - uses: AlexanderDokuchaev/md-dead-link-check@v0.6
+      - uses: AlexanderDokuchaev/md-dead-link-check@v0.8

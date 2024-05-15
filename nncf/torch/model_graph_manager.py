@@ -18,10 +18,11 @@ from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.operator_metatypes import CONST_NOOP_METATYPES
 from nncf.torch.dynamic_graph.context import PreHookId
+from nncf.torch.external_hook import ExternalOpCallHook
 from nncf.torch.graph import operator_metatypes as om
 from nncf.torch.nncf_network import NNCFNetwork
-from nncf.torch.quantization.external_quantizer import ExternalQuantizerCallHook
 from nncf.torch.quantization.layers import AsymmetricQuantizer
+from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import SymmetricQuantizer
 
 CONV_META_TYPES = [
@@ -195,9 +196,44 @@ def get_fused_bias_value(node: NNCFNode, model: NNCFNetwork) -> Optional[torch.T
     """
     nncf_graph = model.nncf.get_graph()
     fused_node = get_potential_fused_node(node.node_name, nncf_graph)
-    target_node_name = fused_node.node_name if fused_node else node.node_name
+    bias = get_const_data_on_port(node, node.metatype.bias_port_id, model)
+
+    if fused_node is None:
+        return bias
+
+    fused_bias = get_const_data_on_port(fused_node, fused_node.metatype.bias_port_id, model)
+    if bias is None:
+        return fused_bias
+
+    fused_weight = get_const_data_on_port(fused_node, fused_node.metatype.weight_port_ids[0], model)
+    return bias * fused_weight + fused_bias
+
+
+def update_fused_bias(target_node_name: str, new_bias: torch.Tensor, model: NNCFNetwork) -> None:
+    """
+    Update bias for target module or potential fused module.
+
+    :param target_node_name: The target node name.
+    :param new_bias: New bias value.
+    :param model: The model.
+    """
+    nncf_graph = model.nncf.get_graph()
     target_node = nncf_graph.get_node_by_name(target_node_name)
-    return get_const_data_on_port(target_node, target_node.metatype.bias_port_id, model)
+    fused_node = get_potential_fused_node(target_node_name, nncf_graph)
+    if fused_node is None:
+        set_const_data_to_port_id(new_bias, target_node, target_node.metatype.bias_port_id, model)
+        return
+
+    target_bias_node = get_const_node(target_node, target_node.metatype.bias_port_id, nncf_graph)
+    fused_bias_node = get_const_node(fused_node, fused_node.metatype.bias_port_id, nncf_graph)
+    fused_weight_node = get_const_node(fused_node, fused_node.metatype.weight_port_ids[0], nncf_graph)
+
+    if target_bias_node is None:
+        set_const_data(new_bias, fused_bias_node, model)
+        return
+
+    new_bias = new_bias - get_const_data(target_bias_node, model) * get_const_data(fused_weight_node, model)
+    set_const_data(new_bias, fused_bias_node, model)
 
 
 def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[int]:
@@ -295,7 +331,9 @@ def get_fake_quantizer(
         hook_container = model.nncf._compressed_context._post_hooks.get(op_addr, {})
 
     for call_hook in hook_container.values():
-        if isinstance(call_hook, ExternalQuantizerCallHook):
+        if isinstance(call_hook, ExternalOpCallHook):
             storage = getattr(model.nncf, call_hook._storage_name)
-            return storage[call_hook._storage_key]
+            module = storage[call_hook._storage_key]
+            if isinstance(module, BaseQuantizer):
+                return module
     return None

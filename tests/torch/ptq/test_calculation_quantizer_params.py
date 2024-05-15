@@ -19,7 +19,6 @@ import torch
 from torch import nn
 
 from nncf import Dataset
-from nncf import NNCFConfig
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
@@ -32,7 +31,7 @@ from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBacke
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.quantization.fake_quantize import get_quantizer_narrow_range
-from nncf.torch.model_creation import create_nncf_network
+from nncf.torch.model_creation import wrap_model
 from nncf.torch.statistics.aggregator import PTStatisticsAggregator
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 from tests.post_training.test_templates.test_calculate_quantizer_parameters import TemplateTestFQParams
@@ -290,17 +289,17 @@ def calculate_fq_params(model, input_data):
     conv2_w_stats = calculate_statistics(conv2_w, QuantizationMode.SYMMETRIC, QuantizerGroup.WEIGHTS)
     return {
         "//nncf_model_input_0|OUTPUT/FakeQuantize": conv1_stats,
-        "/bn1/LinearTestModel/NNCFBatchNorm2d[bn1]/batch_norm_0|INPUT0/FakeQuantize": bn1_stats,
+        "/bn1/LinearTestModel/BatchNorm2d[bn1]/batch_norm_0|INPUT0/FakeQuantize": bn1_stats,
         "/avg_pool/LinearTestModel/AdaptiveAvgPool2d[avg_pool]/adaptive_avg_pool2d_0|INPUT0/FakeQuantize": (
             avg_pool_stats
         ),
-        "/conv2/LinearTestModel/NNCFConv2d[conv2]/conv2d_0|INPUT0/FakeQuantize": conv2_stats,
-        "/conv1/pre_ops.0/op/FakeQuantize": conv1_w_stats,
-        "/conv2/pre_ops.0/op/FakeQuantize": conv2_w_stats,
+        "/conv2/LinearTestModel/Conv2d[conv2]/conv2d_0|INPUT0/FakeQuantize": conv2_stats,
+        "/conv1/LinearTestModel/Conv2d[conv1]/conv2d_0|INPUT1/FakeQuantize": conv1_w_stats,
+        "/conv2/LinearTestModel/Conv2d[conv2]/conv2d_0|INPUT1/FakeQuantize": conv2_w_stats,
     }
 
 
-def test_quantizer_parameters_export(tmp_path: Path):
+def test_quantizer_parameters_export(tmp_path: Path, _seed):
     model = LinearTestModel()
     model.eval().cpu()
 
@@ -312,8 +311,7 @@ def test_quantizer_parameters_export(tmp_path: Path):
     min_max_algo = MinMaxQuantization(subset_size=1, preset=QuantizationPreset.PERFORMANCE, inplace_statistics=False)
     statistics_aggregator = PTStatisticsAggregator(dataset)
 
-    nncf_config = NNCFConfig({"input_info": {"sample_size": [1, 3, 32, 32]}})
-    nncf_network = create_nncf_network(model, nncf_config)
+    nncf_network = wrap_model(model, torch.ones([1, 3, 32, 32]), True)
     statistic_points = min_max_algo.get_statistic_points(nncf_network, nncf_network.nncf.get_graph())
     statistics_aggregator.register_statistic_points(statistic_points)
     statistics_aggregator.collect_statistics(model, nncf_network.nncf.get_graph())
