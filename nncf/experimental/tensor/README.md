@@ -122,10 +122,10 @@ tensor_a[0:2]  # Tensor(array([[1],[2]]))
     **NOTE** Type of wrapper function selected by type hint of function, supported signatures of functions:
 
     ```python
-        def foo(a: Tensor, *args) -> Tensor:
-        def foo(a: Tensor, *args) -> Any:
-        def foo(a: Tensor, *args) -> List[Tensor]:
-        def foo(a: List[Tensor], *args) -> Tensor:
+        def foo(a: Tensor, ...) -> Tensor:
+        def foo(a: Tensor, ...) -> Any:
+        def foo(a: Tensor, ...) -> List[Tensor]:
+        def foo(a: List[Tensor], ...) -> Tensor:
     ```
 
 3. Add backend specific implementation of method to corresponding module:

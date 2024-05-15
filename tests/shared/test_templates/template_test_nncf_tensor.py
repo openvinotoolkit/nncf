@@ -1063,9 +1063,9 @@ class TemplateTestNNCFTensorOperators:
         ref_tensor = self.to_tensor(ref)
 
         res = fns.argsort(tensor, axis, descending, stable)
-        print(res.data)
+
         assert isinstance(res, Tensor)
-        assert fns.allclose(res.data, ref_tensor), f"{res.data} != {ref_tensor}"
+        assert fns.allclose(res.data, ref_tensor)
         assert res.device == tensor.device
 
     zero_ten_range = [x / 100 for x in range(1001)]
