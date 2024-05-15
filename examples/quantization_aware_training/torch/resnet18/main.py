@@ -279,7 +279,7 @@ def main():
     # Export FP32 model to OpenVINO™ IR
     fp32_ir_path = f"{ROOT}/{BASE_MODEL_NAME}_fp32.xml"
     ov_model = ov.convert_model(model.cpu(), example_input=example_input, input=input_shape)
-    ov.save_model(ov_model, fp32_ir_path, compress_to_fp16=False)
+    ov.save_model(ov_model, fp32_ir_path)
     print(f"Original model path: {fp32_ir_path}")
 
     # Export INT8 model to OpenVINO™ IR
