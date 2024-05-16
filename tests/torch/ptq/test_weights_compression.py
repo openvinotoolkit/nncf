@@ -17,6 +17,7 @@ from nncf import CompressWeightsMode
 from nncf import SensitivityMetric
 from nncf.quantization import compress_weights
 from nncf.torch import wrap_model
+from nncf.torch.quantization.layers import AsymmetricWeightsDecompressor
 from nncf.torch.quantization.layers import SymmetricWeightsDecompressor
 
 DATA_BASED_SENSITIVITY_METRICS = (
@@ -127,16 +128,20 @@ def test_compress_weights(mode):
     assert n_compressed_weights == n_target_modules
 
 
-def test_compress_weights_functional_model():
+@pytest.mark.parametrize("mode", (CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM))
+def test_compress_weights_functional_model(mode):
     model = FunctionalModel()
+    decompressor_type = (
+        SymmetricWeightsDecompressor if mode == CompressWeightsMode.INT8_SYM else AsymmetricWeightsDecompressor
+    )
 
     input_ids = torch.randint(0, 10, [1, 3, 300, 300])
     wrapped_model = wrap_model(model, example_input=input_ids, trace_parameters=True)
-    compressed_model = compress_weights(wrapped_model, mode=CompressWeightsMode.INT8_SYM)
+    compressed_model = compress_weights(wrapped_model, mode=mode)
 
     n_compressed_weights = 0
     for layer in compressed_model.nncf.external_op.values():
-        if isinstance(layer, SymmetricWeightsDecompressor):
+        if isinstance(layer, decompressor_type):
             n_compressed_weights += 1
     assert n_compressed_weights == 4
 
