@@ -60,9 +60,13 @@ def post_training_quantization_torch_mobilenet_v2() -> Dict[str, float]:
 
 
 def post_training_quantization_torch_save_load_mobilenet_v2() -> Dict[str, float]:
-    from examples.post_training_quantization.torch.save_load_mobilenet_v2 import quantize  # isort:skip # noqa F401
-    from examples.post_training_quantization.torch.save_load_mobilenet_v2 import export_onnx
-    from examples.post_training_quantization.torch.save_load_mobilenet_v2 import export_openvino
+    example_root_dir = str(
+        PROJECT_ROOT / "examples" / "post_training_quantization" / "torch" / "save_load_mobilenet_v2"
+    )
+    sys.path.append(example_root_dir)
+    import quantize  # isort:skip # noqa F401
+    import export_onnx
+    import export_openvino
 
     metrics = {}
     for backend_name, backend in (("openvino", export_openvino), ("onnx", export_onnx)):

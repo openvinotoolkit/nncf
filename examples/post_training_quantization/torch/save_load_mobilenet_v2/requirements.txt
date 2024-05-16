@@ -1,6 +1,6 @@
 fastdownload==0.0.7
-openvino-dev==2024.0
-scikit-learn
+openvino==2024.1.0
+scikit-learn==1.2.2
 torch==2.2.1
 torchvision==0.17.1
 onnx==1.16.0

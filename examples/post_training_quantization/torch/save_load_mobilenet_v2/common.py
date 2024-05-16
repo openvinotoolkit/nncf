@@ -96,7 +96,6 @@ def run_benchmark(model_path: Path, shape: Optional[List[int]] = None, verbose: 
     command = f"benchmark_app -m {model_path} -d CPU -api async -t 15"
     if shape is not None:
         command += f' -shape=[{",".join(str(x) for x in shape)}]'
-    print(command)
     cmd_output = subprocess.check_output(command, shell=True)  # nosec
     if verbose:
         print(*str(cmd_output).split("\\n")[-9:-1], sep="\n")

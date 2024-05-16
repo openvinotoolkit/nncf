@@ -13,13 +13,13 @@ from functools import partial
 from typing import Tuple
 
 import torch
+from common import QUANTIZED_CHECKPOINT_FILE_NAME
+from common import ROOT
+from common import get_data_loader
+from common import get_device
+from common import get_mobilenet_v2
 
 import nncf
-from examples.post_training_quantization.torch.save_load_mobilenet_v2.common import QUANTIZED_CHECKPOINT_FILE_NAME
-from examples.post_training_quantization.torch.save_load_mobilenet_v2.common import ROOT
-from examples.post_training_quantization.torch.save_load_mobilenet_v2.common import get_data_loader
-from examples.post_training_quantization.torch.save_load_mobilenet_v2.common import get_device
-from examples.post_training_quantization.torch.save_load_mobilenet_v2.common import get_mobilenet_v2
 
 val_data_loader = get_data_loader()
 batch_size = val_data_loader.batch_size

@@ -10,17 +10,23 @@
 # limitations under the License.
 
 import os
+import warnings
 from copy import deepcopy
 
 import torch
+from common import QUANTIZED_CHECKPOINT_FILE_NAME
+from common import ROOT
+from common import get_data_loader
+from common import get_mobilenet_v2
+from common import run_benchmark
+from common import validate
+from torch.jit import TracerWarning
 
 import nncf.torch
-from examples.post_training_quantization.torch.save_load_mobilenet_v2.common import QUANTIZED_CHECKPOINT_FILE_NAME
-from examples.post_training_quantization.torch.save_load_mobilenet_v2.common import ROOT
-from examples.post_training_quantization.torch.save_load_mobilenet_v2.common import get_data_loader
-from examples.post_training_quantization.torch.save_load_mobilenet_v2.common import get_mobilenet_v2
-from examples.post_training_quantization.torch.save_load_mobilenet_v2.common import run_benchmark
-from examples.post_training_quantization.torch.save_load_mobilenet_v2.common import validate
+from nncf.common.utils.helpers import create_table
+
+warnings.filterwarnings("ignore", category=TracerWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
 
 ###############################################################################
 # Recover the quantized model, benchmark performance, calculate compression rate and validate accuracy
@@ -67,6 +73,13 @@ int8_top1 = validate(int8_model_path, val_loader)
 print(f"Accuracy @ top1: {int8_top1:.3f}")
 
 print("[8/8] Report:")
-print(f"Accuracy drop: {fp32_top1 - int8_top1:.3f}")
-# https://docs.openvino.ai/latest/openvino_docs_optimization_guide_dldt_optimization_guide.html
-print(f"Performance speed up (throughput mode): {int8_fps / fp32_fps:.3f}")
+tabular_data = [
+    [
+        "Accuracy@1",
+        fp32_top1,
+        int8_top1,
+        f"Accuracy drop: {fp32_top1 - int8_top1:.3f}",
+    ],
+    ["Performance, FPS", fp32_fps, int8_fps, f"Speedup x{int8_fps / fp32_fps:.3f}"],
+]
+print(create_table(["", "FP32", "INT8", "Summary"], tabular_data))
