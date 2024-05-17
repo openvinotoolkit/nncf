@@ -244,10 +244,31 @@ def torch_jit_script_if_tracing(fn):
 
 
 def get_disable_patching_wrapper(f):
+    """
+    :param: f: A callable object to be wrapped.
+    :return: A wrapper of a function that unpatches torch operators before the
+             function call and patches them back after the call.
+    """
+
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
         with disable_patching():
             return f(*args, **kwargs)
+
+    return wrapper
+
+
+def module_call_wrapper(module_call):
+    wrapped_module_call = wrap_module_call(module_call)
+    unpatched_module_call = get_disable_patching_wrapper(module_call)
+
+    @functools.wraps(module_call)
+    def wrapper(self, *args, **kwargs):
+        # Check if model was patched by torch dynamo during compilation
+        if "_torchdynamo_orig_callable" in self.forward.__dict__:
+            unpatched_module_call(self, *args, **kwargs)
+        return wrapped_module_call(self, *args, **kwargs)
+
     return wrapper
 
 
@@ -287,8 +308,6 @@ def patch_torch_jit():
     # Patch torch.jit._script_if_tracing because it references an original
     # unpatched torch.jit.script and the patching above does not affect it
     setattr(torch.jit, "_script_if_tracing", torch_jit_script_if_tracing)
-
-    # patch_dynamo()
 
 
 def patch_namespace_opname(namespace, op_info: PatchedOperatorInfo):
@@ -342,6 +361,7 @@ def patch_torch_operators():
         patch_torch_jit()
         _JIT_ALREADY_WRAPPED = True
 
+    # Unpatch torch operators during model compilation.
     global _COMPILE_ALREADY_WRAPPED
     if not _COMPILE_ALREADY_WRAPPED:
         global _ORIG_TORCH_COMPILE
@@ -415,7 +435,7 @@ def patch_torch_operators():
     patch_namespace_opname(TracedTensor, op_info)
 
     ORIGINAL_OPERATORS.append(OriginalOpInfo("__call__", torch.nn.Module, torch.nn.Module.__call__))
-    torch.nn.Module.__call__ = wrap_module_call(torch.nn.Module.__call__)
+    torch.nn.Module.__call__ = module_call_wrapper(torch.nn.Module.__call__)
     ignore_scope(DataParallel)
     ignore_scope(DistributedDataParallel)
 
@@ -442,7 +462,3 @@ def disable_patching():
         # Need to restore the previous state of patching in this case before continuing to the exception handling.
         if was_patched:
             patch_torch_operators()
-
-
-def is_patched_by_dynamo(model: torch.nn.Module):
-    return hasattr(model, "forward") and "_torchdynamo_orig_callable" in model.forward.__dict__

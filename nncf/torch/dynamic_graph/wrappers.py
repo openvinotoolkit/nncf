@@ -127,13 +127,6 @@ def wrap_module_call(module_call):
 
     @functools.wraps(module_call)
     def wrapped(self, *args, **kwargs):
-        from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
-        from nncf.torch.dynamic_graph.patch_pytorch import is_patched_by_dynamo
-
-        if is_patched_by_dynamo(self):
-            with disable_patching():
-                return module_call(self, *args, **kwargs)
-
         ctx = get_current_context()
         if not ctx or self.__class__ in _IGNORED_SCOPES:
             if isinstance(self, DataParallel):
