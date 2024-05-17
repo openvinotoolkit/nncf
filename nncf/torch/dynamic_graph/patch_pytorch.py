@@ -243,39 +243,12 @@ def torch_jit_script_if_tracing(fn):
     return wrapper
 
 
-# def get_disable_patching_wrapper(fn):
-#     @functools.wraps(fn)
-#     def wrapper(*args, **kwargs):
-#         with disable_patching():
-#             wrapped_call = fn.__dict__["__wrapped__"]
-#             original_call = wrapped_call.__dict__["__wrapped__"]
-#             # fn.__dict__["__wrapped__"] = original_call
-#             result = fn(*args, **kwargs)
-#             fn.__dict__["__wrapped__"] = wrapped_call
-#             return result
-#     return wrapper
-#
-#
-# def get_dynamo_optimize_context_wrapper(fn):
-#     @functools.wraps(fn)
-#     def wrapper(self, target):
-#         result = fn(self, target)
-#         if hasattr(target, "__self__"):
-#             return get_disable_patching_wrapper(result)
-#         return result
-#     return wrapper
-#
-#
-# def get_dynamo_optimized_module_forward_wrapper(fn):
-#     @functools.wraps(fn)
-#     def wrapper(*args, **kwargs):
-#         return fn(*args, **kwargs)
-#     return wrapper
-#
-#
-# def patch_dynamo():
-#     from torch._dynamo.eval_frame import OptimizeContext
-#     OptimizeContext.__call__ = get_dynamo_optimize_context_wrapper(OptimizeContext.__call__)
+def get_disable_patching_wrapper(f):
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        with disable_patching():
+            return f(*args, **kwargs)
+    return wrapper
 
 
 class OriginalOpInfo:
@@ -291,6 +264,8 @@ _JIT_ALREADY_WRAPPED = False
 _OPERATORS_ALREADY_WRAPPED = False
 _ORIG_JIT_SCRIPT = None
 _ORIG_JIT_TRACE_MAKE_MODULE = None
+_COMPILE_ALREADY_WRAPPED = False
+_ORIG_TORCH_COMPILE = None
 
 
 def patch_torch_jit():
@@ -366,6 +341,13 @@ def patch_torch_operators():
     if not _JIT_ALREADY_WRAPPED:
         patch_torch_jit()
         _JIT_ALREADY_WRAPPED = True
+
+    global _COMPILE_ALREADY_WRAPPED
+    if not _COMPILE_ALREADY_WRAPPED:
+        global _ORIG_TORCH_COMPILE
+        _ORIG_TORCH_COMPILE = torch.compile
+        setattr(torch, "compile", get_disable_patching_wrapper(_ORIG_TORCH_COMPILE))
+        _COMPILE_ALREADY_WRAPPED = True
 
     # Do not patch operators twice as well
     global _OPERATORS_ALREADY_WRAPPED
