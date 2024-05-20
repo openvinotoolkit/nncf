@@ -214,6 +214,16 @@ def _(
     return np.array(np.quantile(a, q=q, axis=axis, keepdims=keepdims))
 
 
+@register_numpy_types(numeric.percentile)
+def _(
+    tensor: np.ndarray,
+    q: Union[float, List[float]],
+    axis: Union[int, Tuple[int, ...], List[int]],
+    keepdims: bool = False,
+) -> List[Union[np.ndarray, np.generic]]:
+    return np.quantile(tensor, q=np.true_divide(np.array(q), 100), axis=axis, keepdims=keepdims)
+
+
 @register_numpy_types(numeric._binary_op_nowarn)
 def _(
     a: Union[np.ndarray, np.generic], b: Union[np.ndarray, np.generic, float], operator_fn: Callable
@@ -323,18 +333,8 @@ def _(x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
 
 
 @register_numpy_types(numeric.zero_elements)
-def zero_elements(x: np.ndarray) -> np.ndarray:
+def _(x: np.ndarray) -> np.ndarray:
     return np.abs(x) < np.finfo(x.dtype).eps
-
-
-@register_numpy_types(numeric.percentile)
-def _(
-    tensor: np.ndarray,
-    percentile: Union[float, List[float]],
-    axis: Union[int, Tuple[int, ...], List[int]],
-    keepdims: bool = False,
-) -> List[Union[np.ndarray, np.generic]]:
-    return np.quantile(tensor, quantile=np.true_divide(percentile, 100), axis=axis, keepdims=keepdims)
 
 
 @register_numpy_types(numeric.masked_mean)

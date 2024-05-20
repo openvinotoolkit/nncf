@@ -10,6 +10,7 @@
 # limitations under the License.
 
 import functools
+from collections import deque
 from typing import Any, Callable, List, Optional, Tuple, Union
 
 from nncf.experimental.tensor.definitions import TensorDataType
@@ -320,7 +321,7 @@ def stack(x: List[Tensor], axis: int = 0) -> Tensor:
     :param axis: The axis to stack along.
     :return: Stacked Tensor.
     """
-    if isinstance(x, list):
+    if isinstance(x, (list, deque)):
         return Tensor(dispatch_list(stack, x, axis=axis))
     raise NotImplementedError(f"Function `stack` is not implemented for {type(x)}")
 
@@ -334,7 +335,7 @@ def concatenate(x: List[Tensor], axis: int = 0) -> Tensor:
     :param axis: The axis along which the arrays will be joined. Default is 0.
     :return: The concatenated array.
     """
-    if isinstance(x, list):
+    if isinstance(x, (list, deque)):
         return Tensor(dispatch_list(concatenate, x, axis=axis))
     raise NotImplementedError(f"Function `concatenate` is not implemented for {type(x)}")
 
@@ -694,7 +695,7 @@ def zero_elements(x: Tensor) -> Tensor:
 @tensor_guard
 def percentile(
     tensor: Tensor,
-    percentile: Union[float, List[float]],
+    q: Union[float, List[float]],
     axis: Union[int, Tuple[int, ...], List[int]],
     keepdims: bool = False,
 ) -> List[Tensor]:
@@ -702,14 +703,14 @@ def percentile(
     Compute the percentile(s) of the data along the specified axis.
 
     :param tensor: Given NNCFTensor.
-    :params percentile: percentile or sequence of percentiles to compute, which must be between
+    :params q: percentile or sequence of percentiles to compute, which must be between
         0 and 100 inclusive.
     :param axis: Axis or axes along which the percentiles are computed.
     :param keepdims: If True, the axes which are reduced are left in the result
         as dimensions with size one.
     :returns: List of the percentile(s) of the tensor elements.
     """
-    return Tensor(percentile(tensor.data, percentile, axis, keepdims))
+    return Tensor(percentile(tensor.data, q, axis, keepdims))
 
 
 @functools.singledispatch
@@ -737,7 +738,7 @@ def masked_median(x: Tensor, mask: Tensor, axis: Union[int, Tuple[int, ...], Lis
 
     :param x: Tensor to reduce.
     :param axis: The dimensions to reduce.
-    :param maks: Boolean tensor that have the same shape as x. If an element in mask is True -
+    :param mask: Boolean tensor that have the same shape as x. If an element in mask is True -
         it is skipped during the aggregation.
     :param keepdims: If True, the axes which are reduced are left in the result
         as dimensions with size one.

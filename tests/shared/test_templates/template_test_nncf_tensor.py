@@ -1165,6 +1165,29 @@ class TemplateTestNNCFTensorOperators:
         assert res.shape == tuple(ref_tensor.shape)
 
     @pytest.mark.parametrize(
+        "x,q,axis,keepdims,ref",
+        (
+            (1.0, 10, None, True, 1.0),
+            (zero_ten_range, 10, 0, True, [1.0]),
+            (zero_ten_range, 10, 0, False, 1.0),
+            (zero_ten_range, (10, 90), 0, False, [1.0, 9.0]),
+            (zero_ten_range, (10, 90), 0, True, [[1.0], [9.0]]),
+            (zero_ten_range_two_axes, (10, 90), (0, 1), False, [1.0, 9.0]),
+            (zero_ten_range_two_axes, (10, 90), (0, 1), True, [[[1.0]], [[9.0]]]),
+        ),
+    )
+    def test_fn_percentile(self, x, q, axis, keepdims, ref):
+        tensor = self.to_tensor(x)
+        tensor = Tensor(tensor)
+        ref_tensor = self.to_tensor(ref)
+
+        res = fns.percentile(tensor, axis=axis, q=q, keepdims=keepdims)
+        assert isinstance(res, Tensor)
+        assert fns.allclose(res.data, ref_tensor)
+        assert res.device == tensor.device
+        assert res.shape == tuple(ref_tensor.shape)
+
+    @pytest.mark.parametrize(
         "x,power,ref",
         [
             (list(map(float, range(10))), 2.0, [x**2 for x in map(float, range(10))]),

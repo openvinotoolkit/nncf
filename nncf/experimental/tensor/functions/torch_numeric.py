@@ -242,6 +242,16 @@ def _(
     return torch.tensor(np.quantile(a.detach().cpu().numpy(), q=q, axis=axis, keepdims=keepdims)).to(device)
 
 
+@numeric.percentile.register(torch.Tensor)
+def percentile(
+    tensor: torch.Tensor,
+    q: Union[float, List[float]],
+    axis: Union[int, Tuple[int, ...], List[int]],
+    keepdims: bool = False,
+) -> List[Union[torch.Tensor, np.generic]]:
+    return numeric.quantile(tensor, q=torch.true_divide(q, 100), axis=axis, keepdims=keepdims)
+
+
 @numeric._binary_op_nowarn.register(torch.Tensor)
 def _(a: torch.Tensor, b: Union[torch.Tensor, float], operator_fn: Callable) -> torch.Tensor:
     return operator_fn(a, b)
@@ -307,7 +317,9 @@ def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> to
 
 @numeric.transpose.register(torch.Tensor)
 def _(a: torch.Tensor, axes: Optional[Tuple[int, ...]] = None) -> torch.Tensor:
-    return a.t()
+    if axes is None:
+        return torch.transpose(a)
+    return torch.permute(a, axes)
 
 
 @numeric.argsort.register(torch.Tensor)
@@ -321,7 +333,7 @@ def _(a: torch.Tensor, k: int = 0) -> torch.Tensor:
 
 
 @numeric.logical_or.register(torch.Tensor)
-def logical_or(x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
+def _(x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
     return torch.logical_or(x1, x2)
 
 
@@ -330,18 +342,8 @@ def zero_elements(x: torch.Tensor) -> torch.Tensor:
     return torch.abs(x) < torch.finfo(x.dtype).eps
 
 
-@numeric.percentile.register(torch.Tensor)
-def percentile(
-    tensor: torch.Tensor,
-    percentile: Union[float, List[float]],
-    axis: Union[int, Tuple[int, ...], List[int]],
-    keepdims: bool = False,
-) -> List[Union[torch.Tensor, np.generic]]:
-    return torch.quantile(tensor, quantile=torch.true_divide(percentile, 100), axis=axis, keepdims=keepdims)
-
-
 @numeric.masked_mean.register(torch.Tensor)
-def masked_mean(
+def _(
     x: torch.Tensor, mask: Optional[torch.Tensor], axis: Union[int, Tuple[int, ...], List[int]], keepdims=False
 ) -> torch.Tensor:
     if mask is None:
@@ -355,7 +357,7 @@ def masked_mean(
 
 
 @numeric.masked_median.register(torch.Tensor)
-def masked_median(
+def _(
     x: torch.Tensor, mask: Optional[torch.Tensor], axis: Union[int, Tuple[int, ...], List[int]], keepdims=False
 ) -> torch.Tensor:
     if mask is None:
