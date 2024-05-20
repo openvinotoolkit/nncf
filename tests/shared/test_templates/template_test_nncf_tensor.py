@@ -1183,7 +1183,7 @@ class TemplateTestNNCFTensorOperators:
 
         res = fns.percentile(tensor, axis=axis, q=q, keepdims=keepdims)
         assert isinstance(res, Tensor)
-        assert fns.allclose(res.data, ref_tensor)
+        assert fns.allclose(self.cast_to(res.data, TensorDataType.float32), ref_tensor)
         assert res.device == tensor.device
         assert res.shape == tuple(ref_tensor.shape)
 

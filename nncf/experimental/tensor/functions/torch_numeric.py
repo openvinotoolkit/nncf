@@ -249,7 +249,7 @@ def percentile(
     axis: Union[int, Tuple[int, ...], List[int]],
     keepdims: bool = False,
 ) -> List[Union[torch.Tensor, np.generic]]:
-    return numeric.quantile(tensor, q=torch.true_divide(q, 100), axis=axis, keepdims=keepdims)
+    return numeric.quantile(tensor, q=torch.true_divide(torch.tensor(q), 100), axis=axis, keepdims=keepdims)
 
 
 @numeric._binary_op_nowarn.register(torch.Tensor)
@@ -318,7 +318,7 @@ def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> to
 @numeric.transpose.register(torch.Tensor)
 def _(a: torch.Tensor, axes: Optional[Tuple[int, ...]] = None) -> torch.Tensor:
     if axes is None:
-        return torch.transpose(a)
+        return a.t()
     return torch.permute(a, axes)
 
 

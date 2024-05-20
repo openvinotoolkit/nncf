@@ -454,6 +454,28 @@ def quantile(
 
 @functools.singledispatch
 @tensor_guard
+def percentile(
+    tensor: Tensor,
+    q: Union[float, List[float]],
+    axis: Union[int, Tuple[int, ...], List[int]],
+    keepdims: bool = False,
+) -> Tensor:
+    """
+    Compute the percentile(s) of the data along the specified axis.
+
+    :param tensor: Given NNCFTensor.
+    :params q: percentile or sequence of percentiles to compute, which must be between
+        0 and 100 inclusive.
+    :param axis: Axis or axes along which the percentiles are computed.
+    :param keepdims: If True, the axes which are reduced are left in the result
+        as dimensions with size one.
+    :returns: The percentile(s) of the tensor elements.
+    """
+    return Tensor(percentile(tensor.data, q, axis, keepdims))
+
+
+@functools.singledispatch
+@tensor_guard
 def _binary_op_nowarn(a: Tensor, b: Union[Tensor, float], operator_fn: Callable) -> Tensor:
     """
     Applies a binary operation with disable warnings.
@@ -689,28 +711,6 @@ def zero_elements(x: Tensor) -> Tensor:
     :return: Return binary mask where True on position of zero
     """
     return Tensor(zero_elements(x.data))
-
-
-@functools.singledispatch
-@tensor_guard
-def percentile(
-    tensor: Tensor,
-    q: Union[float, List[float]],
-    axis: Union[int, Tuple[int, ...], List[int]],
-    keepdims: bool = False,
-) -> List[Tensor]:
-    """
-    Compute the percentile(s) of the data along the specified axis.
-
-    :param tensor: Given NNCFTensor.
-    :params q: percentile or sequence of percentiles to compute, which must be between
-        0 and 100 inclusive.
-    :param axis: Axis or axes along which the percentiles are computed.
-    :param keepdims: If True, the axes which are reduced are left in the result
-        as dimensions with size one.
-    :returns: List of the percentile(s) of the tensor elements.
-    """
-    return Tensor(percentile(tensor.data, q, axis, keepdims))
 
 
 @functools.singledispatch
