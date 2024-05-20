@@ -37,6 +37,7 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvertMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVGroupConvolutionBackpropDataMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVIfMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVLoopMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVOpMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
@@ -88,6 +89,24 @@ def get_number_if_op(model: ov.Model) -> int:
         return cnt
 
     return cnt_if_op(model, 0)
+
+
+def get_number_loop_op(model: ov.Model) -> int:
+    """
+    Returns number of Loop operation in a model.
+
+    :param model: Model.
+    :return: Number of Loop operation in a model.
+    """
+
+    def cnt_loop_op(model: ov.Model, cnt: int) -> int:
+        for op in model.get_ops():
+            if get_node_metatype(op) == OVLoopMetatype:
+                cnt += 1
+                cnt = cnt_loop_op(op.get_function(), cnt)
+        return cnt
+
+    return cnt_loop_op(model, 0)
 
 
 def get_const_value(const_node: ov.Node) -> np.ndarray:
