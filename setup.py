@@ -122,7 +122,7 @@ INSTALL_REQUIRES = [
 
 
 TF_EXTRAS = [
-    "tensorflow[and-cuda]==2.15.1",
+    "tensorflow==2.15.1",
 ]
 
 TORCH_EXTRAS = [
