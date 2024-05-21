@@ -9,19 +9,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Deque, List, Optional, Tuple, Union
 
 import numpy as np
 import tensorflow as tf
 
-from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor import TensorElementsType
 from nncf.common.tensor_statistics.collectors import MeanMinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MeanPercentileStatisticCollector
 from nncf.common.tensor_statistics.collectors import MedianMADStatisticCollector
 from nncf.common.tensor_statistics.collectors import MinMaxStatisticCollector
 from nncf.common.tensor_statistics.collectors import MixedMinMaxStatisticCollector
-from nncf.common.tensor_statistics.collectors import NNCFCollectorTensorProcessor
 from nncf.common.tensor_statistics.collectors import PercentileStatisticCollector
 from nncf.common.tensor_statistics.reduction import np_percentile_reduce_like
 from nncf.tensorflow.tensor import TFNNCFTensor
@@ -31,128 +27,7 @@ from nncf.tensorflow.tensor_statistics.statistics import TFMinMaxTensorStatistic
 from nncf.tensorflow.tensor_statistics.statistics import TFPercentileTensorStatistic
 
 
-class TFNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
-    """
-    A realization of the processing methods for TFNNCFTensors.
-    """
-
-    @staticmethod
-    def reduce_min(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
-        return TFNNCFTensor(tf.reduce_min(x.tensor, axis=axis, keepdims=keepdims))
-
-    @staticmethod
-    def reduce_max(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims: bool = False) -> NNCFTensor:
-        return TFNNCFTensor(tf.reduce_max(x.tensor, axis=axis, keepdims=keepdims))
-
-    @staticmethod
-    def abs(x: NNCFTensor) -> NNCFTensor:
-        return TFNNCFTensor(tf.math.abs(x.tensor))
-
-    @staticmethod
-    def min(x1: tf.Tensor, x2: tf.Tensor) -> NNCFTensor:
-        return TFNNCFTensor(tf.math.minimum(x1.tensor, x2.tensor))
-
-    @staticmethod
-    def max(x1: tf.Tensor, x2: tf.Tensor) -> NNCFTensor:
-        return TFNNCFTensor(tf.math.maximum(x1.tensor, x2.tensor))
-
-    @staticmethod
-    def mean(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> NNCFTensor:
-        return TFNNCFTensor(tf.math.reduce_mean(x.tensor, axis=axis, keepdims=keepdims))
-
-    @staticmethod
-    def median(x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> NNCFTensor:
-        raise NotImplementedError()
-
-    @classmethod
-    def masked_mean(
-        cls, x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], mask: NNCFTensor, keepdims=False
-    ) -> NNCFTensor:
-        raise NotImplementedError()
-
-    @classmethod
-    def masked_median(
-        cls, x: NNCFTensor, axis: Union[int, Tuple[int, ...], List[int]], mask: NNCFTensor, keepdims=False
-    ) -> NNCFTensor:
-        raise NotImplementedError()
-
-    @staticmethod
-    def logical_or(input_: NNCFTensor, other: NNCFTensor) -> NNCFTensor:
-        raise NotImplementedError()
-
-    @staticmethod
-    def less(input_: NNCFTensor, other: NNCFTensor) -> NNCFTensor:
-        raise NotImplementedError()
-
-    @staticmethod
-    def stack(x: Union[List[tf.Tensor], Deque[tf.Tensor]], axis: int = 0) -> NNCFTensor:
-        x = [t.tensor for t in x]
-        return TFNNCFTensor(tf.stack(x, axis=axis))
-
-    @staticmethod
-    def unstack(x: NNCFTensor, axis: int = 0) -> List[NNCFTensor]:
-        tensor = x.tensor
-        if list(tensor.shape) == []:
-            tensor = tf.expand_dims(tensor, 0)
-        tensor_list = tf.unstack(tensor, axis=axis)
-        return [TFNNCFTensor(t) for t in tensor_list]
-
-    @staticmethod
-    def squeeze(x: NNCFTensor, dim: Optional[Union[int, Tuple[int, ...]]] = None) -> NNCFTensor:
-        raise NotImplementedError()
-
-    @staticmethod
-    def sum(tensor: NNCFTensor) -> TensorElementsType:
-        return tf.reduce_sum(tensor.tensor).numpy()
-
-    @staticmethod
-    def quantile(
-        tensor: NNCFTensor,
-        quantile: Union[float, List[float]],
-        axis: Union[int, Tuple[int, ...], List[int]],
-        keepdims: bool = False,
-    ) -> List[NNCFTensor]:
-        raise NotImplementedError()
-
-    @classmethod
-    def percentile(
-        cls,
-        tensor: NNCFTensor,
-        percentile: Union[float, List[float]],
-        axis: Union[int, Tuple[int, ...], List[int]],
-        keepdims: bool = False,
-    ) -> List[TensorElementsType]:
-        raise NotImplementedError()
-
-    @staticmethod
-    def mean_per_channel(x: NNCFTensor, axis: int) -> NNCFTensor:
-        raise NotImplementedError()
-
-    @staticmethod
-    def transpose(x: NNCFTensor, axes: Tuple[int, ...]) -> NNCFTensor:
-        raise NotImplementedError()
-
-    @staticmethod
-    def reshape(x: NNCFTensor, shape: Tuple[int, ...]) -> NNCFTensor:
-        raise NotImplementedError()
-
-    @staticmethod
-    def cat(x: List[NNCFTensor], axis: int) -> NNCFTensor:
-        raise NotImplementedError()
-
-    @staticmethod
-    def sub(a: NNCFTensor, b: NNCFTensor) -> NNCFTensor:
-        raise NotImplementedError()
-
-    @staticmethod
-    def zero_elements(x: NNCFTensor) -> NNCFTensor:
-        raise NotImplementedError()
-
-
 class TFMinMaxStatisticCollector(MinMaxStatisticCollector):
-    @staticmethod
-    def _get_processor() -> NNCFCollectorTensorProcessor:
-        return TFNNCFCollectorTensorProcessor()
 
     def _register_input(self, x: tf.Tensor):
         self._register_input_common(TFNNCFTensor(x))
@@ -162,9 +37,6 @@ class TFMinMaxStatisticCollector(MinMaxStatisticCollector):
 
 
 class TFMixedMinMaxStatisticCollector(MixedMinMaxStatisticCollector):
-    @staticmethod
-    def _get_processor() -> NNCFCollectorTensorProcessor:
-        return TFNNCFCollectorTensorProcessor()
 
     def _register_input(self, x: tf.Tensor):
         self._register_input_common(TFNNCFTensor(x))
@@ -174,9 +46,6 @@ class TFMixedMinMaxStatisticCollector(MixedMinMaxStatisticCollector):
 
 
 class TFMeanMinMaxStatisticCollector(MeanMinMaxStatisticCollector):
-    @staticmethod
-    def _get_processor() -> NNCFCollectorTensorProcessor:
-        return TFNNCFCollectorTensorProcessor()
 
     def _register_input(self, x: tf.Tensor):
         self._register_input_common(TFNNCFTensor(x))

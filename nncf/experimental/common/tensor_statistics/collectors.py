@@ -68,7 +68,7 @@ class TensorReducerBase(ABC):
     @abstractmethod
     def _reduce_out_of_place(self, x: List[TensorType]) -> List[TensorType]:
         """
-        Specifies the reduction rule in terms of NNCFCollectorTensorProcessor.
+        Specifies the reduction rule.
 
         :param x: Tensor to register.
         """
@@ -108,8 +108,7 @@ class TensorReducerBase(ABC):
 
 class AggregatorBase:
     """
-    Aggregator is designed to receive (register) calculated statistics and
-    aggregate them in terms of NNCFCollectorTensorProcessor operations.
+    Aggregator is designed to receive (register) calculated statistics and aggregate them.
     """
 
     def __init__(
