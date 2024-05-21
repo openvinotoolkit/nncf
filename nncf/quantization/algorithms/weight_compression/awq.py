@@ -165,7 +165,6 @@ class AWQ(Algorithm):
                 merge_node_names = []
                 for weight_op_friendly_name, _ in self._backend_entity.get_weight_names_and_port_ids(nncf_node, graph):
                     merge_node_names.append(weight_op_friendly_name)
-                assert len(target_node_names) == len(merge_node_names)
                 merge_node = self._nodes_to_compress[name_mapping[merge_node_names[-1]]]
             else:  # pattern Act->MatMul or Act->Multiply->MatMul
                 merge_node = nncf_node
@@ -178,7 +177,6 @@ class AWQ(Algorithm):
             wp = awq_data_item.weight_params
             target_node = awq_data_item.target_node
             merge_node = awq_data_item.merge_node
-
             weight_data = self._backend_entity.get_weight_names_and_port_ids(wp.node_with_weight, graph)
             if len(weight_data) != 1:  # not supported by the algorithm
                 continue

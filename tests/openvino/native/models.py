@@ -991,27 +991,36 @@ class AWQActMatmulModel(OVReferenceModel):
 
     def _create_ov_model(self, is_int8=False, with_multiply=False, n_layers=8):
         input_node = opset.parameter([8, 8], name="Input_1")
-        out_node = input_node
+        weights_data = np.arange(0, 64).reshape(8, 8) - 32
+        weights = AWQMatmulModel.get_weights(weights_data, is_int8, name="weights_emb")
+        out_node = opset.matmul(input_node, weights, transpose_a=False, transpose_b=True, name="MatMul_emb")
 
         for i in range(n_layers):
-            node1 = opset.relu(out_node, name=f"ReLU_{i}")
+            weights_data = np.arange(0, 64).reshape(8, 8) - 32
+            weights = AWQMatmulModel.get_weights(weights_data, is_int8, name=f"weights_1_{i}")
+            mm1 = opset.matmul(out_node, weights, transpose_a=False, transpose_b=True, name=f"MatMul_1_{i}")
+            node1 = opset.relu(mm1, name=f"ReLU_{i}")
 
             if with_multiply:
+                weights_data = np.arange(0, 64).reshape(8, 8) - 32
+                weights = AWQMatmulModel.get_weights(weights_data, is_int8, name=f"weights_2_{i}")
+                mm2 = opset.matmul(out_node, weights, transpose_a=False, transpose_b=True, name=f"MatMul_2_{i}")
+
                 alpha = np.array([1.5], dtype=np.float32)
                 alpha = opset.constant(alpha, dtype=np.float32)
                 lambda_value = np.array([1.5], dtype=np.float32)
                 lambda_value = opset.constant(alpha, dtype=np.float32)
-                node2 = opset.selu(out_node, alpha, lambda_value, name=f"SeLU_{i}")
+                node2 = opset.selu(mm2, alpha, lambda_value, name=f"SeLU_{i}")
 
                 node_multiply = opset.multiply(node1, node2, name=f"Multiply_{i}")
             else:
                 node_multiply = node1
 
-            weights_data3 = np.arange(0, 64).reshape(8, 8)
-            weights_data3[:] = 4.0
-            weights3 = AWQMatmulModel.get_weights(weights_data3, is_int8, name=f"weights_3_{i}")
-            node3 = opset.matmul(node_multiply, weights3, transpose_a=False, transpose_b=True, name=f"MatMul_3_{i}")
-            out_node = node3
+            out_node = node_multiply
+
+        weights_data = np.arange(0, 64).reshape(8, 8) - 32
+        weights = AWQMatmulModel.get_weights(weights_data, is_int8, name="weights_lm_head")
+        out_node = opset.matmul(out_node, weights, transpose_a=False, transpose_b=True, name="MatMul_lm_head")
 
         result = opset.result(out_node, name="Result")
         result.get_output_tensor(0).set_names(set(["Result"]))
