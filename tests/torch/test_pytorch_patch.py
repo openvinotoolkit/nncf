@@ -15,6 +15,7 @@ from typing import List
 import pytest
 import torch
 
+import nncf
 from nncf.config import NNCFConfig
 from nncf.torch.dynamic_graph.context import TracingContext
 from nncf.torch.dynamic_graph.patch_pytorch import _ORIG_JIT_SCRIPT
@@ -112,6 +113,31 @@ def test_torch_compile():
     run_pytest_case_function_in_separate_process(test_compile)
 
 
+def test_torch_compile_on_nncf_model():
+    model = BasicConvTestModel()
+    quantized_model = nncf.quantize(model, nncf.Dataset([torch.rand(model.INPUT_SIZE)]))
+    with pytest.raises(ValueError) as e:
+        torch.compile(quantized_model)
+        assert "At the moment torch.compile() is not supported for models optimized by NNCF." in str(e.value)
+
+    model = BasicConvTestModel()
+    config = get_test_quantization_config(model)
+    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    with pytest.raises(ValueError) as e:
+        torch.compile(compressed_model)
+        assert "At the moment torch.compile() is not supported for models optimized by NNCF." in str(e.value)
+
+    stripped_model = compression_ctrl.strip()
+    with pytest.raises(ValueError) as e:
+        torch.compile(stripped_model)
+        assert "At the moment torch.compile() is not supported for models optimized by NNCF." in str(e.value)
+
+    with pytest.raises(ValueError) as e:
+        # Compiling this model would actually work, but inference of the compiled model will fail
+        torch.compile(model)
+        assert "At the moment torch.compile() is not supported for models optimized by NNCF." in str(e.value)
+
+
 def test_jit_script_signature():
     # Check that torch.jit.script has the same signature as the wrapper was designed for
     signature = inspect.signature(_ORIG_JIT_SCRIPT)
@@ -133,6 +159,18 @@ def test_jit_script_class():
 
 def test_jit_trace_model():
     model = BasicConvTestModel()
+    config = get_test_quantization_config(model)
+
+    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
+    torch.jit.trace(compressed_model, example_inputs=torch.rand(model.INPUT_SIZE))
+
+    model = compression_ctrl.strip()
+    torch.jit.trace(model, example_inputs=torch.rand(model.INPUT_SIZE))
+
+
+def get_test_quantization_config(
+    model,
+):
     config = NNCFConfig()
     config.update(
         {
@@ -142,9 +180,4 @@ def test_jit_trace_model():
         }
     )
     register_bn_adaptation_init_args(config)
-
-    compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    torch.jit.trace(compressed_model, example_inputs=torch.rand(model.INPUT_SIZE))
-
-    model = compression_ctrl.strip()
-    torch.jit.trace(model, example_inputs=torch.rand(model.INPUT_SIZE))
+    return config

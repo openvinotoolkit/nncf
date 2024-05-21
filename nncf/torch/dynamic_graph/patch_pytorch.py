@@ -12,7 +12,7 @@
 import functools
 import inspect
 from contextlib import contextmanager
-from typing import List
+from typing import Callable, List, Union
 
 import torch
 import torch.utils.cpp_extension
@@ -259,6 +259,22 @@ def get_disable_patching_wrapper(f):
     return wrapper
 
 
+def get_torch_compile_wrapper():
+    """
+    Wrapper for torch.compile() that disables NNCF patching when called for vanilla PyTorch model and
+    raises an exception when called for an NNCF-optimized model.
+    """
+
+    @functools.wraps(_ORIG_TORCH_COMPILE)
+    def wrapper(model, *args, **kwargs):
+        if hasattr(model, "nncf"):
+            raise ValueError("At the moment torch.compile() is not supported for models optimized by NNCF.")
+        with disable_patching():
+            return _ORIG_TORCH_COMPILE(model, *args, **kwargs)
+
+    return wrapper
+
+
 def get_module_call_wrapper():
     """
     An additional wrapper over wrap_module_call() that disables torch patching if
@@ -292,7 +308,7 @@ _OPERATORS_ALREADY_WRAPPED = False
 _ORIG_JIT_SCRIPT = None
 _ORIG_JIT_TRACE_MAKE_MODULE = None
 _COMPILE_ALREADY_WRAPPED = False
-_ORIG_TORCH_COMPILE = None
+_ORIG_TORCH_COMPILE: Union[Callable, None] = None
 
 
 def patch_torch_jit():
@@ -372,7 +388,7 @@ def patch_torch_operators():
     if not _COMPILE_ALREADY_WRAPPED:
         global _ORIG_TORCH_COMPILE
         _ORIG_TORCH_COMPILE = torch.compile
-        setattr(torch, "compile", get_disable_patching_wrapper(_ORIG_TORCH_COMPILE))
+        setattr(torch, "compile", get_torch_compile_wrapper())
         _COMPILE_ALREADY_WRAPPED = True
 
     # Do not patch operators twice as well
