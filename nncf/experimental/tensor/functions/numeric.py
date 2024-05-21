@@ -389,7 +389,7 @@ def mean(
 @tensor_guard
 def median(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> Tensor:
     """
-    Compute the arithmetic media along the specified axis.
+    Compute the arithmetic median along the specified axis.
 
     :param a: Array containing numbers whose median is desired.
     :param axis: Axis or axes along which the medians are computed.
