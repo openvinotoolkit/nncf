@@ -258,7 +258,12 @@ def get_disable_patching_wrapper(f):
     return wrapper
 
 
-def module_call_wrapper(module_call):
+def module_call_wrapper():
+    """
+    An additional wrapper over wrap_module_call() that disables torch patching if
+    model is compiled by torch dynamo.
+    """
+    module_call = torch.nn.Module.__call__
     wrapped_module_call = wrap_module_call(module_call)
     unpatched_module_call = get_disable_patching_wrapper(module_call)
 
@@ -435,7 +440,7 @@ def patch_torch_operators():
     patch_namespace_opname(TracedTensor, op_info)
 
     ORIGINAL_OPERATORS.append(OriginalOpInfo("__call__", torch.nn.Module, torch.nn.Module.__call__))
-    torch.nn.Module.__call__ = module_call_wrapper(torch.nn.Module.__call__)
+    torch.nn.Module.__call__ = module_call_wrapper()
     ignore_scope(DataParallel)
     ignore_scope(DistributedDataParallel)
 
