@@ -14,10 +14,9 @@ from typing import Optional, Tuple, Union
 import numpy as np
 
 from nncf.experimental.tensor.functions import linalg
-from nncf.experimental.tensor.functions.dispatcher import register_numpy_types
 
 
-@register_numpy_types(linalg.norm)
+@linalg.norm.register
 def _(
     a: Union[np.ndarray, np.generic],
     ord: Optional[Union[str, float, int]] = None,
@@ -27,7 +26,7 @@ def _(
     return np.array(np.linalg.norm(a, ord=ord, axis=axis, keepdims=keepdims))
 
 
-@register_numpy_types(linalg.cholesky)
+@linalg.cholesky.register
 def _(a: Union[np.ndarray, np.generic], upper: bool = False) -> np.ndarray:
     lt = np.linalg.cholesky(a)
     if upper:
@@ -35,7 +34,7 @@ def _(a: Union[np.ndarray, np.generic], upper: bool = False) -> np.ndarray:
     return lt
 
 
-@register_numpy_types(linalg.cholesky_inverse)
+@linalg.cholesky_inverse.register
 def _(a: Union[np.ndarray, np.generic], upper: bool = False) -> np.ndarray:
     c = np.linalg.inv(a)
     ct = np.conjugate(np.swapaxes(c, -2, -1))
@@ -44,6 +43,6 @@ def _(a: Union[np.ndarray, np.generic], upper: bool = False) -> np.ndarray:
     return np.matmul(ct, c)
 
 
-@register_numpy_types(linalg.inv)
+@linalg.inv.register
 def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
     return np.linalg.inv(a)

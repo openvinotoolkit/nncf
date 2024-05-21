@@ -15,7 +15,7 @@ import torch
 from nncf.experimental.tensor.functions import linalg
 
 
-@linalg.norm.register(torch.Tensor)
+@linalg.norm.register
 def _(
     a: torch.Tensor,
     ord: Optional[Union[str, float, int]] = None,
@@ -25,16 +25,16 @@ def _(
     return torch.linalg.norm(a, ord=ord, dim=axis, keepdims=keepdims)
 
 
-@linalg.cholesky.register(torch.Tensor)
+@linalg.cholesky.register
 def _(a: torch.Tensor, upper: bool = False) -> torch.Tensor:
     return torch.linalg.cholesky(a, upper=upper)
 
 
-@linalg.cholesky_inverse.register(torch.Tensor)
+@linalg.cholesky_inverse.register
 def _(a: torch.Tensor, upper: bool = False) -> torch.Tensor:
     return torch.cholesky_inverse(a, upper=upper)
 
 
-@linalg.inv.register(torch.Tensor)
+@linalg.inv.register
 def _(a: torch.Tensor) -> torch.Tensor:
     return torch.linalg.inv(a)
