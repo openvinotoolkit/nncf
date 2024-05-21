@@ -91,10 +91,6 @@ def compile_and_run_lenet() -> torch.Tensor:
     model.load_state_dict(state_dict)
 
     compiled_model = torch.compile(model)
-
-    # This key is used to check if model is compiled at patch_pytorch.py
-    assert "_torchdynamo_orig_callable" in compiled_model.forward.__dict__
-    
     return compiled_model(torch.ones([1, 3, 32, 32]))
 
 

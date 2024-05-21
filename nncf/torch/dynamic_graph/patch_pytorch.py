@@ -16,6 +16,7 @@ from typing import List
 
 import torch
 import torch.utils.cpp_extension
+from torch._dynamo import OptimizedModule
 from torch._jit_internal import createResolutionCallbackFromFrame
 from torch.jit import is_tracing
 from torch.nn import DataParallel
@@ -269,8 +270,8 @@ def module_call_wrapper():
 
     @functools.wraps(module_call)
     def wrapper(self, *args, **kwargs):
-        # Check if model was patched by torch dynamo during compilation
-        if "_torchdynamo_orig_callable" in self.forward.__dict__:
+        # Check if model was compiled by torch dynamo
+        if isinstance(self, OptimizedModule):
             unpatched_module_call(self, *args, **kwargs)
         return wrapped_module_call(self, *args, **kwargs)
 
