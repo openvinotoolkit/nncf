@@ -56,6 +56,7 @@ class PTOperatorMetatype(OperatorMetatype):
         NamespaceTarget.TORCH_NN_FUNCTIONAL: [],
         NamespaceTarget.TORCH_TENSOR: [],
         NamespaceTarget.TORCH: [],
+        NamespaceTarget.ATEN: [],
     }
 
     subtypes: List[Type["PTOperatorMetatype"]] = []
@@ -528,7 +529,7 @@ class PTGELUMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register()
 class PTSILUMetatype(PTOperatorMetatype):
     name = "SiluOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["silu"]}
+    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["silu"], NamespaceTarget.ATEN: ["silu_"]}
 
 
 @PT_OPERATOR_METATYPES.register()
@@ -553,6 +554,7 @@ class PTAddMetatype(PTOperatorMetatype):
             "__radd__",
         ],
         NamespaceTarget.TORCH: ["add"],
+        NamespaceTarget.ATEN: ["add_"],
     }
     hw_config_names = [HWConfigOpName.ADD]
     num_expected_input_edges = 2
@@ -570,6 +572,7 @@ class PTSubMetatype(PTOperatorMetatype):
             "__rsub__",
         ],
         NamespaceTarget.TORCH: ["sub"],
+        NamespaceTarget.ATEN: ["sub_"],
     }
     hw_config_names = [HWConfigOpName.SUBTRACT]
     num_expected_input_edges = 2
@@ -706,6 +709,7 @@ class PTModuleBatchNormMetatype(PTModuleOperatorSubtype):
     name = "BatchNormOp"
     module_to_function_names = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["batch_norm"],
+        NamespaceTarget.ATEN: ["_native_batch_norm_legit_no_training"],
     }
 
 
@@ -714,6 +718,7 @@ class PTBatchNormMetatype(PTOperatorMetatype):
     name = "BatchNormOp"
     module_to_function_names = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["batch_norm"],
+        NamespaceTarget.ATEN: ["_native_batch_norm_legit_no_training"],
     }
     subtypes = [PTModuleBatchNormMetatype]
     weight_port_ids = [3]
@@ -844,6 +849,7 @@ class PTGatherMetatype(PTOperatorMetatype):
     module_to_function_names = {
         NamespaceTarget.TORCH_TENSOR: ["index_select", "__getitem__"],
         NamespaceTarget.TORCH: ["gather", "index_select", "select", "where"],
+        NamespaceTarget.ATEN: ["slice"],
     }
 
 
@@ -880,6 +886,7 @@ class PTSplitMetatype(PTOperatorMetatype):
         NamespaceTarget.TORCH_NN_FUNCTIONAL: [],
         NamespaceTarget.TORCH_TENSOR: ["split", "chunk", "unbind"],
         NamespaceTarget.TORCH: ["split", "chunk", "unbind"],
+        NamespaceTarget.ATEN: ["split_with_sizes"],
     }
     hw_config_names = [HWConfigOpName.SPLIT, HWConfigOpName.CHUNK]
 
@@ -1047,6 +1054,7 @@ class PTInterpolateMetatype(PTOperatorMetatype):
     name = "InterpolateOp"
     module_to_function_names = {
         NamespaceTarget.TORCH_NN_FUNCTIONAL: ["interpolate"],
+        NamespaceTarget.ATEN: ["upsample_nearest2d", "upsample_nearest_exact2d"],
     }
     hw_config_names = [HWConfigOpName.INTERPOLATE]
     num_expected_input_edges = 1

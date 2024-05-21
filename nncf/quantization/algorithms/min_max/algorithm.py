@@ -328,7 +328,7 @@ class MinMaxQuantization(Algorithm):
 
     @property
     def available_backends(self) -> List[BackendType]:
-        return [BackendType.ONNX, BackendType.OPENVINO, BackendType.TORCH]
+        return [BackendType.ONNX, BackendType.OPENVINO, BackendType.TORCH, BackendType.TORCH_FX]
 
     def _get_quantizer_constraints(
         self,
@@ -381,6 +381,10 @@ class MinMaxQuantization(Algorithm):
             from nncf.quantization.algorithms.min_max.openvino_backend import OVMinMaxAlgoBackend
 
             self._backend_entity = OVMinMaxAlgoBackend()
+        elif model_backend == BackendType.TORCH_FX:
+            from nncf.quantization.algorithms.min_max.torch_fx_backend import FXMinMaxAlgoBackend
+
+            self._backend_entity = FXMinMaxAlgoBackend()
         elif model_backend == BackendType.TORCH:
             from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
 

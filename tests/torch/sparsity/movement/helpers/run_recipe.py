@@ -20,7 +20,6 @@ import torch
 import torch.nn
 import torch.nn.functional as F
 import torch.utils.data
-from datasets import Dataset
 from transformers import AutoModelForAudioClassification
 from transformers import AutoModelForImageClassification
 from transformers import AutoModelForSequenceClassification
@@ -34,6 +33,7 @@ from transformers import PreTrainedModel
 from transformers import SwinConfig
 from transformers import Wav2Vec2Config
 
+from datasets import Dataset
 from nncf import NNCFConfig
 from nncf.experimental.torch.sparsity.movement.scheduler import MovementSchedulerParams
 from nncf.torch.dynamic_graph.io_handling import FillerInputElement

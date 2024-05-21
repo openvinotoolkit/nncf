@@ -19,7 +19,6 @@ from typing import Dict, Optional
 import numpy as np
 import openvino as ov
 import torch
-from datasets import load_dataset
 from memory_profiler import memory_usage
 from optimum.exporters.openvino.convert import export_from_model
 from optimum.intel.openvino import OVModelForCausalLM
@@ -28,6 +27,7 @@ from transformers import AutoTokenizer
 from whowhatbench import Evaluator
 
 import nncf
+from datasets import load_dataset
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.base import BaseTestPipeline
 from tests.post_training.pipelines.base import StatsFromOutput
