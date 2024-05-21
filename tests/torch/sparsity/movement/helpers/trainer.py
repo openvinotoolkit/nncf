@@ -14,7 +14,6 @@ from typing import List, Optional
 
 import numpy as np
 import torch
-from datasets import Dataset  # pylint: disable=no-name-in-module
 from transformers import TrainingArguments
 from transformers.trainer import Trainer
 from transformers.trainer_callback import TrainerCallback
@@ -22,6 +21,7 @@ from transformers.trainer_callback import TrainerControl
 from transformers.trainer_callback import TrainerState
 from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
 
+from datasets import Dataset  # pylint: disable=no-name-in-module
 from nncf.api.compression import CompressionAlgorithmController
 from nncf.common.compression import BaseCompressionAlgorithmController
 from nncf.common.utils.tensorboard import prepare_for_tensorboard

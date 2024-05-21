@@ -42,6 +42,10 @@ class NNCFGraphFactory:
             from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 
             return GraphConverter.create_nncf_graph(model)
+        if model_backend == BackendType.TORCH_FX:
+            from nncf.experimental.torch_fx.nncf_graph_builder import GraphConverter
+
+            return GraphConverter.create_nncf_graph(model)
         if model_backend == BackendType.TORCH:
             return model.nncf.get_graph()
         raise nncf.UnsupportedBackendError(
@@ -72,6 +76,10 @@ class ModelTransformerFactory:
             from nncf.torch.model_transformer import PTModelTransformer
 
             return PTModelTransformer(model)
+        if model_backend == BackendType.TORCH_FX:
+            from nncf.experimental.torch_fx.model_transformer import FXModelTransformer
+
+            return FXModelTransformer(model)
         raise nncf.UnsupportedBackendError(
             "Cannot create backend-specific model transformer because {} is not supported!".format(model_backend.value)
         )
@@ -99,6 +107,10 @@ class EngineFactory:
             from nncf.torch.engine import PTEngine
 
             return PTEngine(model)
+        if model_backend == BackendType.TORCH_FX:
+            from nncf.experimental.torch_fx.engine import FXEngine
+
+            return FXEngine(model)
         raise nncf.UnsupportedBackendError(
             "Cannot create backend-specific engine because {} is not supported!".format(model_backend.value)
         )
@@ -151,6 +163,10 @@ class StatisticsAggregatorFactory:
             from nncf.torch.statistics.aggregator import PTStatisticsAggregator
 
             return PTStatisticsAggregator(dataset)
+        if model_backend == BackendType.TORCH_FX:
+            from nncf.experimental.torch_fx.statistics.aggregator import FXStatisticsAggregator
+
+            return FXStatisticsAggregator(dataset)
         raise nncf.UnsupportedBackendError(
             "Cannot create backend-specific statistics aggregator because {} is not supported!".format(
                 model_backend.value
