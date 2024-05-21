@@ -16,7 +16,6 @@ import torch
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.tensor_statistics.collectors import PT_REDUCERS_MAP
-from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 from tests.common.experimental.test_tensor_collector_batch_size import TemplateTestTensorCollectorBatchSize
 
@@ -25,10 +24,6 @@ class TestTensorCollectorBatchSize(TemplateTestTensorCollectorBatchSize):
     @staticmethod
     def get_tensor_statistics_class():
         return PTMinMaxTensorStatistic
-
-    @staticmethod
-    def get_tensor_processor():
-        return PTNNCFCollectorTensorProcessor()
 
     @staticmethod
     def get_nncf_tensor_class():

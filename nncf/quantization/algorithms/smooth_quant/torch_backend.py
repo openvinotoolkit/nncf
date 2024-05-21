@@ -38,7 +38,6 @@ from nncf.torch.model_graph_manager import get_const_node
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.tensor_statistics.collectors import PTAbsMaxReducer
-from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
 
 
 @COMPRESSION_MODULES.register()
@@ -115,7 +114,7 @@ class PTSmoothQuantAlgoBackend(SmoothQuantAlgoBackend):
     ) -> TensorCollector:
         collector = TensorCollector()
         reducer = PTAbsMaxReducer(reduction_axes=stats_reduction_axes)
-        aggregator = MaxAggregator(tensor_processor=PTNNCFCollectorTensorProcessor, num_samples=num_samples)
+        aggregator = MaxAggregator(num_samples=num_samples)
         collector.register_statistic_branch(branch_key, reducer, aggregator)
         return collector
 

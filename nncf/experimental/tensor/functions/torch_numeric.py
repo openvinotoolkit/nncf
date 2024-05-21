@@ -105,7 +105,7 @@ def _(
 ) -> bool:
     if not isinstance(b, torch.Tensor):
         b = torch.tensor(b, device=a.device)
-    return torch.allclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
+    return torch.allclose(a, b.to(dtype=a.dtype), rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 
 @numeric.any.register(torch.Tensor)
@@ -130,8 +130,8 @@ def _(
     a: torch.Tensor, b: Union[torch.Tensor, float], rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False
 ) -> torch.Tensor:
     if not isinstance(b, torch.Tensor):
-        b = torch.tensor(b, device=a.device)
-    return torch.isclose(a, b, atol=atol, rtol=rtol, equal_nan=equal_nan)
+        b = torch.tensor(b, device=a.device, dtype=a.dtype)
+    return torch.isclose(a, b.to(dtype=a.dtype), atol=atol, rtol=rtol, equal_nan=equal_nan)
 
 
 @numeric.maximum.register(torch.Tensor)
@@ -209,7 +209,7 @@ def _(
         device = a.device
         result = torch.tensor(np.median(a.detach().cpu().numpy(), axis=axis, keepdims=keepdims))
         return result.type(a.dtype).to(device)
-    return torch.quantile(a, q=0.5, dim=axis, keepdims=keepdims)
+    return numeric.quantile(a, q=0.5, axis=axis, keepdims=keepdims)
 
 
 @numeric.round.register(torch.Tensor)
@@ -227,29 +227,30 @@ def _(
     a: torch.Tensor,
     q: Union[float, List[float]],
     axis: Optional[Union[int, Tuple[int]]] = None,
-    keepdims: Optional[bool] = None,
+    keepdims: Optional[bool] = False,
 ) -> torch.Tensor:
     device = a.device
     # See https://github.com/pytorch/pytorch/issues/61582
     # https://github.com/pytorch/pytorch/issues/64947
     if a.numel() <= 16_000_000 and isinstance(axis, int) and a.dtype in [torch.float32, torch.float64]:
         return torch.quantile(
-            a,
-            torch.tensor(q, dtype=a.dtype, device=a.device),
+            a.to(dtype=torch.float64),
+            torch.tensor(q, dtype=torch.float64, device=a.device),
             axis,
             keepdims,
-        ).type(torch.float64)
+        )
     return torch.tensor(np.quantile(a.detach().cpu().numpy(), q=q, axis=axis, keepdims=keepdims)).to(device)
 
 
 @numeric.percentile.register(torch.Tensor)
 def percentile(
-    tensor: torch.Tensor,
+    a: torch.Tensor,
     q: Union[float, List[float]],
     axis: Union[int, Tuple[int, ...], List[int]],
     keepdims: bool = False,
 ) -> List[Union[torch.Tensor, np.generic]]:
-    return numeric.quantile(tensor, q=torch.true_divide(torch.tensor(q), 100), axis=axis, keepdims=keepdims)
+    q = torch.tensor(q, dtype=torch.float64) / 100
+    return numeric.quantile(a, q=q, axis=axis, keepdims=keepdims)
 
 
 @numeric._binary_op_nowarn.register(torch.Tensor)

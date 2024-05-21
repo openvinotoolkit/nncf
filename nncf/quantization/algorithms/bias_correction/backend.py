@@ -28,13 +28,6 @@ OutputType = TypeVar("OutputType")
 
 
 class BiasCorrectionAlgoBackend(ABC):
-    @property
-    @abstractmethod
-    def tensor_processor(self):
-        """
-        Returns backend-specific instance of the NNCFCollectorTensorProcessor.
-        """
-
     @staticmethod
     @abstractmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> TargetPoint:
@@ -43,7 +36,7 @@ class BiasCorrectionAlgoBackend(ABC):
 
         :param target_type: Type of the location that should be modified.
         :param target_node_name: Name of the located node.
-        :param port_id: id of the port for the statistics disctribution.
+        :param port_id: id of the port for the statistics distribution.
         :return: Backend-specific TargetPoint.
         """
 

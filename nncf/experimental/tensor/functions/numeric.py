@@ -435,7 +435,7 @@ def quantile(
     a: Tensor,
     q: Union[float, List[float]],
     axis: Optional[Union[int, Tuple[int]]] = None,
-    keepdims: Optional[bool] = None,
+    keepdims: bool = False,
 ) -> Tensor:
     """
     Compute the quantile(s) of the data along the specified axis.
@@ -455,7 +455,7 @@ def quantile(
 @functools.singledispatch
 @tensor_guard
 def percentile(
-    tensor: Tensor,
+    a: Tensor,
     q: Union[float, List[float]],
     axis: Union[int, Tuple[int, ...], List[int]],
     keepdims: bool = False,
@@ -463,7 +463,7 @@ def percentile(
     """
     Compute the percentile(s) of the data along the specified axis.
 
-    :param tensor: Given NNCFTensor.
+    :param a: Given tensor.
     :params q: percentile or sequence of percentiles to compute, which must be between
         0 and 100 inclusive.
     :param axis: Axis or axes along which the percentiles are computed.
@@ -471,7 +471,7 @@ def percentile(
         as dimensions with size one.
     :returns: The percentile(s) of the tensor elements.
     """
-    return Tensor(percentile(tensor.data, q, axis, keepdims))
+    return Tensor(percentile(a.data, q, axis, keepdims))
 
 
 @functools.singledispatch

@@ -34,7 +34,6 @@ from nncf.onnx.hardware.config import ONNXHWConfig
 from nncf.onnx.quantization.default_quantization import DEFAULT_ONNX_QUANT_TRAIT_TO_OP_DICT
 from nncf.onnx.quantization.quantizer_parameters import convert_fq_params_to_onnx_params
 from nncf.onnx.statistics.collectors import ONNX_REDUCERS_MAP
-from nncf.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
 from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -154,13 +153,11 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         raise nncf.InternalError("FakeConvert insertion not implemented in ONNX backend!")
 
     @staticmethod
-    def unify_statistics(
-        statistics: List[ONNXMinMaxTensorStatistic],
-    ) -> ONNXMinMaxTensorStatistic:
+    def unify_statistics(statistics: List[ONNXMinMaxTensorStatistic]) -> ONNXMinMaxTensorStatistic:
         max_values, min_values = [], []
         for statistic in statistics:
-            max_values.append(np.array(statistic.max_values).flatten())
-            min_values.append(np.array(statistic.min_values).flatten())
+            max_values.append(np.array(statistic.max_values.data).flatten())
+            min_values.append(np.array(statistic.min_values.data).flatten())
         max_values = np.max(max_values, axis=0)
         min_values = np.min(min_values, axis=0)
         return ONNXMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
@@ -215,7 +212,6 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
             kwargs = {
                 "num_samples": num_samples,
                 "aggregation_axes": aggregation_axes,
-                "tensor_processor": ONNXNNCFCollectorTensorProcessor,
             }
             if params.aggregator_type in [AggregatorType.MEAN_NO_OUTLIERS, AggregatorType.MEDIAN_NO_OUTLIERS]:
                 kwargs.update({"quantile": params.quantile_outlier_prob})

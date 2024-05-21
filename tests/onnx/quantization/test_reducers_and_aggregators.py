@@ -15,6 +15,7 @@ import numpy as np
 import pytest
 
 from nncf.common.graph.layer_attributes import Dtype
+from nncf.experimental.tensor import Tensor
 from nncf.onnx.statistics.collectors import ONNXAbsMaxReducer
 from nncf.onnx.statistics.collectors import ONNXAbsQuantileReducer
 from nncf.onnx.statistics.collectors import ONNXBatchMeanReducer
@@ -22,23 +23,18 @@ from nncf.onnx.statistics.collectors import ONNXMaxReducer
 from nncf.onnx.statistics.collectors import ONNXMeanPerChanelReducer
 from nncf.onnx.statistics.collectors import ONNXMeanReducer
 from nncf.onnx.statistics.collectors import ONNXMinReducer
-from nncf.onnx.statistics.collectors import ONNXNNCFCollectorTensorProcessor
 from nncf.onnx.statistics.collectors import ONNXQuantileReducer
-from nncf.onnx.tensor import ONNXNNCFTensor
-from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggreagtors
+from tests.common.experimental.test_reducers_and_aggregators import TemplateTestReducersAggregators
 
 
-class TestReducersAggregators(TemplateTestReducersAggreagtors):
-    @pytest.fixture
-    def tensor_processor(self):
-        return ONNXNNCFCollectorTensorProcessor
+class TestReducersAggregators(TemplateTestReducersAggregators):
 
     def get_nncf_tensor(self, x: np.array, dtype: Optional[Dtype] = None):
         if dtype is Dtype.INTEGER:
             x = x.astype(np.int64)
         if dtype is Dtype.FLOAT:
             x = x.astype(np.float32)
-        return ONNXNNCFTensor(x)
+        return Tensor(x)
 
     @pytest.fixture(scope="module")
     def reducers(self):

@@ -33,7 +33,6 @@ from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.hardware.config import OVHWConfig
 from nncf.openvino.quantization.default_quantization import DEFAULT_OV_QUANT_TRAIT_TO_OP_DICT
 from nncf.openvino.statistics.collectors import OV_REDUCERS_MAP
-from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
@@ -141,8 +140,8 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
     def unify_statistics(statistics: List[OVMinMaxTensorStatistic]) -> OVMinMaxTensorStatistic:
         max_values, min_values = [], []
         for statistic in statistics:
-            max_values.append(np.array(statistic.max_values).flatten())
-            min_values.append(np.array(statistic.min_values).flatten())
+            max_values.append(np.array(statistic.max_values.data).flatten())
+            min_values.append(np.array(statistic.min_values.data).flatten())
         max_values = np.max(max_values, axis=0)
         min_values = np.min(min_values, axis=0)
         return OVMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
@@ -199,7 +198,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
             kwargs = {
                 "num_samples": num_samples,
                 "aggregation_axes": aggregation_axes,
-                "tensor_processor": OVNNCFCollectorTensorProcessor,
             }
             if params.aggregator_type in [AggregatorType.MEAN_NO_OUTLIERS, AggregatorType.MEDIAN_NO_OUTLIERS]:
                 kwargs.update({"quantile": params.quantile_outlier_prob})

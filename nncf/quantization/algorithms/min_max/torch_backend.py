@@ -50,7 +50,6 @@ from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import get_scale_shape
 from nncf.torch.tensor_statistics.collectors import PT_REDUCERS_MAP
-from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 
 
@@ -143,8 +142,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     def unify_statistics(statistics: List[PTMinMaxTensorStatistic]) -> PTMinMaxTensorStatistic:
         max_values, min_values = [], []
         for statistic in statistics:
-            max_values.append(statistic.max_values.flatten())
-            min_values.append(statistic.min_values.flatten())
+            max_values.append(statistic.max_values.data.flatten())
+            min_values.append(statistic.min_values.data.flatten())
         max_values = torch.amax(torch.stack(max_values), dim=0)
         min_values = torch.amin(torch.stack(min_values), dim=0)
         return PTMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
@@ -199,7 +198,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
             kwargs = {
                 "num_samples": num_samples,
                 "aggregation_axes": aggregation_axes,
-                "tensor_processor": PTNNCFCollectorTensorProcessor,
             }
             if params.aggregator_type in [AggregatorType.MEAN_NO_OUTLIERS, AggregatorType.MEDIAN_NO_OUTLIERS]:
                 kwargs.update({"quantile": params.quantile_outlier_prob})

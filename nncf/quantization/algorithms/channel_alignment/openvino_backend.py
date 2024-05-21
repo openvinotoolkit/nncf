@@ -37,7 +37,6 @@ from nncf.openvino.graph.node_utils import get_bias_value
 from nncf.openvino.graph.node_utils import get_node_with_bias_value
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
-from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.openvino.statistics.collectors import OVQuantileReducer
 from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
 from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend
@@ -85,9 +84,7 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
         quantile_reducer = OVQuantileReducer(reduction_axes, (q, 1 - q), inplace)
 
         for port_id, container_key in enumerate([OVMinMaxTensorStatistic.MIN_STAT, OVMinMaxTensorStatistic.MAX_STAT]):
-            aggregator = MedianAggregator(
-                OVNNCFCollectorTensorProcessor, num_samples=num_samples, aggregation_axes=(0, 1)
-            )
+            aggregator = MedianAggregator(num_samples=num_samples, aggregation_axes=(0, 1))
             tensor_collector.register_statistic_branch(container_key, quantile_reducer, aggregator, port_id)
         return tensor_collector
 

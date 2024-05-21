@@ -20,16 +20,16 @@ from nncf.common.tensor_statistics.statistics import MedianMADTensorStatistic
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.tensor_statistics.statistics import PercentileTensorStatistic
 from nncf.common.tensor_statistics.statistics import RawTensorStatistic
+from nncf.experimental.tensor import Tensor
 from nncf.openvino.statistics.statistics import OVMeanTensorStatistic
 from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
 from nncf.openvino.statistics.statistics import OVRawTensorStatistic
-from nncf.openvino.tensor import OVNNCFTensor
 from tests.common.experimental.test_statistic_collector import TemplateTestStatisticCollector
 
 
 class TestOVStatisticCollector(TemplateTestStatisticCollector):
     def get_nncf_tensor(self, value: np.ndarray) -> NNCFTensor:
-        return OVNNCFTensor(value)
+        return Tensor(value)
 
     @pytest.fixture
     def min_max_statistic_cls(self) -> Type[MinMaxTensorStatistic]:

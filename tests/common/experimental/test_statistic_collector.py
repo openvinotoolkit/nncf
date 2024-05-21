@@ -27,24 +27,7 @@ from nncf.experimental.common.tensor_statistics.collectors import MergedTensorCo
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.experimental.common.tensor_statistics.collectors import TensorType
-
-
-class NumpyNNCFTensor(NNCFTensor):
-    def __init__(self, tensor: np.array, dummy_device: Optional[str] = None):
-        # In case somebody attempts to wrap
-        # tensor twice
-        if isinstance(tensor, self.__class__):
-            tensor = tensor.tensor
-
-        super().__init__(tensor)
-        self.dummy_device = dummy_device
-
-    @property
-    def device(self) -> Optional[str]:
-        return self.dummy_device
-
-    def is_empty(self) -> bool:
-        return self.tensor.size == 0
+from nncf.experimental.tensor import Tensor
 
 
 class DummyTensorReducer(TensorReducerBase):
@@ -92,7 +75,7 @@ def test_aggregator_enabled_and_reset():
     collector.register_statistic_branch("A", reducer, aggregator)
     input_name = "input_name"
     inputs = TensorCollector.get_tensor_collector_inputs(
-        {input_name: NumpyNNCFTensor(np.array(100))}, [(hash(reducer), [input_name])]
+        {input_name: Tensor(np.array(100))}, [(hash(reducer), [input_name])]
     )
 
     for _ in range(3):
@@ -149,9 +132,9 @@ def test_duplicated_statistics_are_merged():
     )
 
     outputs = {
-        "Dummy": NumpyNNCFTensor(np.array(5)),
-        "A": NumpyNNCFTensor(np.array(0)),
-        "Dummy_inplace": NumpyNNCFTensor(np.array(6)),
+        "Dummy": Tensor(np.array(5)),
+        "A": Tensor(np.array(0)),
+        "Dummy_inplace": Tensor(np.array(6)),
     }
     target_inputs = TensorCollector.get_tensor_collector_inputs(outputs, output_info)
     collector.register_inputs(target_inputs)
@@ -169,10 +152,10 @@ def test_duplicated_statistics_are_merged():
     # Check aggregators recieved correct inputs
     assert len(statistics) == 6
     for k in "ABC":
-        assert statistics[k] == NumpyNNCFTensor(np.array(5))
-    assert statistics["D"] == NumpyNNCFTensor(np.array(5))
-    assert statistics["E"] == NumpyNNCFTensor(np.array(0))
-    assert statistics["F"] == NumpyNNCFTensor(np.array(6))
+        assert statistics[k] == Tensor(np.array(5))
+    assert statistics["D"] == Tensor(np.array(5))
+    assert statistics["E"] == Tensor(np.array(0))
+    assert statistics["F"] == Tensor(np.array(6))
 
 
 def test_inplace_param():
@@ -219,8 +202,8 @@ def test_merged_tensor_collector():
         assert collector.aggregators[common_branch_key] is common_aggregator
 
     output_info = merged_collector.get_output_info(None, None)
-    outputs = {"common_input": NumpyNNCFTensor(np.array(0))}
-    outputs.update({f"input_{idx + 1}": NumpyNNCFTensor(np.array(idx + 1)) for idx, _ in enumerate(collectors[:-1])})
+    outputs = {"common_input": Tensor(np.array(0))}
+    outputs.update({f"input_{idx + 1}": Tensor(np.array(idx + 1)) for idx, _ in enumerate(collectors[:-1])})
     target_inputs = TensorCollector.get_tensor_collector_inputs(outputs, output_info)
     merged_collector.register_inputs(target_inputs)
 
@@ -231,8 +214,8 @@ def test_merged_tensor_collector():
 
         statistic = collector.get_statistics()
         assert len(statistic) == 2
-        assert statistic["common"] == NumpyNNCFTensor(np.array(0))
-        assert statistic["unique"] == NumpyNNCFTensor(np.array(idx + 1))
+        assert statistic["common"] == Tensor(np.array(0))
+        assert statistic["unique"] == Tensor(np.array(idx + 1))
 
 
 def test_ambigous_container_key():
@@ -284,7 +267,7 @@ def test_multiple_branch_reducer():
             ],
         )
     ]
-    inputs = {name: NumpyNNCFTensor(np.array(i)) for i, name in enumerate(ref_output_info[0][1])}
+    inputs = {name: Tensor(np.array(i)) for i, name in enumerate(ref_output_info[0][1])}
 
     output_info = collector.get_output_info(target_node_name, 0)
     assert output_info == ref_output_info
@@ -292,7 +275,7 @@ def test_multiple_branch_reducer():
     target_inputs = collector.get_tensor_collector_inputs(inputs, output_info)
     collector.register_inputs(target_inputs)
 
-    ref_stats = {"0": NumpyNNCFTensor(np.array(0)), "1": NumpyNNCFTensor(np.array(1))}
+    ref_stats = {"0": Tensor(np.array(0)), "1": Tensor(np.array(1))}
     stats = collector.get_statistics()
     assert len(ref_stats) == len(stats)
     for key, value in ref_stats.items():
@@ -308,7 +291,7 @@ def test_register_unnamed_statistics(mocker):
         reducer_hashes.append(hash(reducer))
 
     tensor_collector.register_inputs = mocker.MagicMock()
-    inputs_ = NumpyNNCFTensor(np.ones(5))
+    inputs_ = Tensor(np.ones(5))
     tensor_collector.register_input_for_all_reducers(inputs_)
 
     tensor_collector.register_inputs.assert_called_once()
@@ -326,7 +309,7 @@ def test_wrong_statistic_container_class():
 
     tensor_collector = TensorCollector(BadStatContainer)
     tensor_collector.register_statistic_branch("A", DummyTensorReducer("A"), DummyTensorAggregator())
-    tensor_collector.register_input_for_all_reducers(NumpyNNCFTensor(np.array(1)))
+    tensor_collector.register_input_for_all_reducers(Tensor(np.array(1)))
     with pytest.raises(nncf.InternalError):
         tensor_collector.get_statistics()
 
@@ -406,10 +389,10 @@ class TemplateTestStatisticCollector:
         tensor_collector.register_statistic_branch(
             min_max_statistic_cls.MAX_STAT, DummyTensorReducer("B"), DummyTensorAggregator()
         )
-        tensor_collector.register_input_for_all_reducers(NumpyNNCFTensor(np.array(1)))
+        tensor_collector.register_input_for_all_reducers(Tensor(np.array(1)))
         statistic = tensor_collector.get_statistics()
         assert isinstance(statistic, MinMaxTensorStatistic)
-        assert statistic.min_values == statistic.max_values == NumpyNNCFTensor(np.array(1))
+        assert statistic.min_values == statistic.max_values == Tensor(np.array(1))
 
     def test_mean_max_stat_building(self, mean_statistic_cls: MeanTensorStatistic):
         tensor_collector = TensorCollector(mean_statistic_cls)
@@ -419,10 +402,10 @@ class TemplateTestStatisticCollector:
         tensor_collector.register_statistic_branch(
             mean_statistic_cls.SHAPE_STAT, DummyTensorReducer("B"), DummyTensorAggregator()
         )
-        tensor_collector.register_input_for_all_reducers(NumpyNNCFTensor(np.array(1)))
+        tensor_collector.register_input_for_all_reducers(Tensor(np.array(1)))
         statistic = tensor_collector.get_statistics()
         assert isinstance(statistic, MeanTensorStatistic)
-        assert statistic.mean_values == statistic.shape == NumpyNNCFTensor(np.array(1))
+        assert statistic.mean_values == statistic.shape == Tensor(np.array(1))
 
     def test_median_mad_stat_building(self, median_mad_statistic_cls: MedianMADTensorStatistic):
         class DummyMADPercentileAggregator(DummyTensorAggregator):
@@ -438,10 +421,10 @@ class TemplateTestStatisticCollector:
             DummyTensorReducer("A"),
             DummyMADPercentileAggregator(),
         )
-        tensor_collector.register_input_for_all_reducers(NumpyNNCFTensor(np.array(1)))
+        tensor_collector.register_input_for_all_reducers(Tensor(np.array(1)))
         statistic = tensor_collector.get_statistics()
         assert isinstance(statistic, MedianMADTensorStatistic)
-        assert statistic.median_values == statistic.mad_values == NumpyNNCFTensor(np.array(1))
+        assert statistic.median_values == statistic.mad_values == Tensor(np.array(1))
 
     def test_percentile_max_stat_building(self, percentile_statistic_cls: PercentileTensorStatistic):
         class DummyPercentileTensorAggregator(DummyTensorAggregator):
@@ -454,10 +437,10 @@ class TemplateTestStatisticCollector:
             DummyTensorReducer("A"),
             DummyPercentileTensorAggregator(),
         )
-        tensor_collector.register_input_for_all_reducers(NumpyNNCFTensor(np.array(1)))
+        tensor_collector.register_input_for_all_reducers(Tensor(np.array(1)))
         statistic = tensor_collector.get_statistics()
         assert isinstance(statistic, PercentileTensorStatistic)
-        assert statistic.percentile_vs_values_dict[0.5] == NumpyNNCFTensor(np.array(1))
+        assert statistic.percentile_vs_values_dict[0.5] == Tensor(np.array(1))
 
         tensor_collector = TensorCollector(percentile_statistic_cls)
         qs = [0.3, 0.5, 0.7]
@@ -467,19 +450,19 @@ class TemplateTestStatisticCollector:
                 DummyTensorReducer(f"A{q}"),
                 DummyTensorAggregator(),
             )
-        tensor_collector.register_input_for_all_reducers(NumpyNNCFTensor(np.array(1)))
+        tensor_collector.register_input_for_all_reducers(Tensor(np.array(1)))
         statistic = tensor_collector.get_statistics()
         assert isinstance(statistic, PercentileTensorStatistic)
         assert len(statistic.percentile_vs_values_dict) == len(qs)
         for q in qs:
-            assert statistic.percentile_vs_values_dict[q] == NumpyNNCFTensor(np.array(1))
+            assert statistic.percentile_vs_values_dict[q] == Tensor(np.array(1))
 
     def test_raw_max_stat_building(self, raw_statistic_cls: RawTensorStatistic):
         tensor_collector = TensorCollector(raw_statistic_cls)
         tensor_collector.register_statistic_branch(
             raw_statistic_cls.VALUES_STATS, DummyTensorReducer("A"), DummyTensorAggregator()
         )
-        tensor_collector.register_input_for_all_reducers(NumpyNNCFTensor(np.array(1)))
+        tensor_collector.register_input_for_all_reducers(Tensor(np.array(1)))
         statistic = tensor_collector.get_statistics()
         assert isinstance(statistic, RawTensorStatistic)
-        assert statistic.values == NNCFTensor(1)
+        assert statistic.values == 1

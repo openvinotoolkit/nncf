@@ -37,6 +37,7 @@ from nncf.experimental.common.tensor_statistics.collectors import QuantileReduce
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.tensor import Tensor
 from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.torch.tensor import PTNNCFTensor
 from nncf.torch.tensor_statistics.statistics import PTMeanTensorStatistic
@@ -214,8 +215,6 @@ class PTNNCFCollectorTensorProcessor(NNCFCollectorTensorProcessor):
 
 
 class PTReducerMixIn:
-    def _get_processor(self):
-        return PTNNCFCollectorTensorProcessor
 
     def get_inplace_fn(self):
         return None
@@ -256,8 +255,8 @@ class PTMeanPerChanelReducer(PTReducerMixIn, MeanPerChReducer):
     pass
 
 
-def _reshape_all(targets: Tuple[torch.Tensor, ...], target_shape: Tuple[int, ...]):
-    return map(lambda stat: torch.reshape(stat, target_shape), targets)
+def _reshape_all(targets: Tuple[Tensor, ...], target_shape: Tuple[int, ...]):
+    return map(lambda stat: stat.reshape(target_shape), targets)
 
 
 def _get_wrapped_min_max_tensor_statistic(target_shape: Tuple[int, ...]) -> Type[PTMinMaxTensorStatistic]:
@@ -288,7 +287,7 @@ def _get_wrapped_percentile_tensor_statistic(target_shape: Tuple[int, ...]) -> T
         def __init__(self, percentile_vs_values_dict):
             reshaped_percentiles = {}
             for k, v in percentile_vs_values_dict.items():
-                reshaped_percentiles[k] = torch.reshape(v, target_shape)
+                reshaped_percentiles[k] = v.reshape(target_shape)
             super().__init__(reshaped_percentiles)
 
     return WrappedPTPercentileTensorStatistic
@@ -315,7 +314,6 @@ def get_min_max_statistic_collector(
     tensor_collector = TensorCollector(_get_wrapped_min_max_tensor_statistic(target_shape=scale_shape))
 
     aggregator_kwargs = {
-        "tensor_processor": PTNNCFCollectorTensorProcessor,
         "num_samples": num_samples,
         "aggregation_axes": aggregation_axes,
     }
@@ -358,7 +356,6 @@ def get_mixed_min_max_statistic_collector(
     min_reducer = PTMinReducer(reduction_axes)
 
     kwargs = {
-        "tensor_processor": PTNNCFCollectorTensorProcessor,
         "num_samples": num_samples,
         "aggregation_axes": aggregation_axes,
         "window_size": window_size,
@@ -422,7 +419,7 @@ def get_percentile_tensor_collector(
     """
     Percentile statistic collector builder.
 
-    :param percentiles_to_collect: Percetiles to use on aggregation phase.
+    :param percentiles_to_collect: Percentiles to use on aggregation phase.
     :param reduction_axes: Axes to use in reduction functions.
     :param aggregation_axes: Axes to use in aggregation functions.
     :param scale_shape: Target shape for collected statistics.
@@ -465,7 +462,6 @@ def _get_collection_without_reduction(
     reducer = NoopReducer()
     aggregation_axes = list(set(list(aggregation_axes) + [dim + 1 for dim in reduction_axes]))
     aggregator = aggregator_cls(
-        PTNNCFCollectorTensorProcessor,
         aggregation_axes=aggregation_axes,
         window_size=window_size,
         num_samples=num_samples,
@@ -488,7 +484,7 @@ def get_mean_percentile_statistic_collector(
     """
     Mean percentile statistic collector builder.
 
-    :param percentiles_to_collect: Percetiles to use on reduction phase.
+    :param percentiles_to_collect: Percentiles to use on reduction phase.
     :param reduction_axes: Axes to use in reduction functions.
     :param aggregation_axes: Axes to use in aggregation functions.
     :param scale_shape: Target shape for collected statistics.
@@ -502,7 +498,6 @@ def get_mean_percentile_statistic_collector(
     reducer = PTQuantileReducer(reduction_axes=reduction_axes, quantile=quantiles_to_collect)
     for output_port_id, p in enumerate(percentiles_to_collect):
         aggregator = MeanAggregator(
-            PTNNCFCollectorTensorProcessor,
             aggregation_axes=aggregation_axes,
             num_samples=num_samples,
             window_size=window_size,
@@ -532,7 +527,6 @@ def get_mean_statistic_collector(
     noop_reducer = NoopReducer()
 
     kwargs = {
-        "tensor_processor": PTNNCFCollectorTensorProcessor,
         "num_samples": num_samples,
         "window_size": window_size,
     }

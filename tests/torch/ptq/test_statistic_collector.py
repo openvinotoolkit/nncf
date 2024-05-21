@@ -15,13 +15,12 @@ import numpy as np
 import pytest
 import torch
 
-from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
 from nncf.common.tensor_statistics.statistics import MedianMADTensorStatistic
 from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.common.tensor_statistics.statistics import PercentileTensorStatistic
 from nncf.common.tensor_statistics.statistics import RawTensorStatistic
-from nncf.torch.tensor import PTNNCFTensor
+from nncf.experimental.tensor import Tensor
 from nncf.torch.tensor_statistics.statistics import PTMeanTensorStatistic
 from nncf.torch.tensor_statistics.statistics import PTMedianMADTensorStatistic
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
@@ -30,8 +29,8 @@ from tests.common.experimental.test_statistic_collector import TemplateTestStati
 
 
 class TestPTStatisticCollector(TemplateTestStatisticCollector):
-    def get_nncf_tensor(self, value: np.ndarray) -> NNCFTensor:
-        return PTNNCFTensor(torch.tensor(value))
+    def get_nncf_tensor(self, value: np.ndarray) -> Tensor:
+        return Tensor(torch.tensor(value))
 
     @pytest.fixture
     def min_max_statistic_cls(self) -> Type[MinMaxTensorStatistic]:

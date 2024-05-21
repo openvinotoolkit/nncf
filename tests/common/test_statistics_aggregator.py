@@ -30,6 +30,7 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPointsContain
 from nncf.experimental.common.tensor_statistics.collectors import NoopAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
+from nncf.experimental.tensor import functions as fns
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.fast_bias_correction.backend import FastBiasCorrectionAlgoBackend
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
@@ -451,8 +452,8 @@ class TemplateTestStatisticsAggregator:
                     shape = (3, 1, 1, 1)
                 ref_min_val, ref_max_val = map(lambda x: np.reshape(x, shape), (ref_min_val, ref_max_val))
 
-            assert np.allclose(stat.min_values, ref_min_val)
-            assert np.allclose(stat.max_values, ref_max_val)
+            assert np.allclose(stat.min_values.data, ref_min_val)
+            assert np.allclose(stat.max_values.data, ref_max_val)
             if isinstance(ref_min_val, np.ndarray):
                 assert stat.min_values.shape == ref_min_val.shape
                 assert stat.max_values.shape == ref_max_val.shape
@@ -637,7 +638,11 @@ class TemplateTestStatisticsAggregator:
             for val, ref in zip(ret_val, test_params.ref_values):
                 if isinstance(ref, np.ndarray):
                     assert ref.shape == val.shape
-                assert np.allclose(val, ref)
+
+                if isinstance(val, tuple):
+                    assert val == ref
+                else:
+                    assert np.allclose(val.data, ref)
 
     @classmethod
     def create_statistics_point(
@@ -702,8 +707,8 @@ class TemplateTestStatisticsAggregator:
         for algorithm, _, tensor_collector in tensor_collectors:
             stat = tensor_collector.get_statistics()
             ref_min_val, ref_max_val = ref_val[algorithm]
-            assert np.allclose(stat.min_values, ref_min_val)
-            assert np.allclose(stat.max_values, ref_max_val)
+            assert fns.allclose(stat.min_values, ref_min_val)
+            assert fns.allclose(stat.max_values, ref_max_val)
 
     @classmethod
     def _check_static_point_common(cls, stat_point, ref_type=TargetType.POST_LAYER_OPERATION):
@@ -807,8 +812,8 @@ class TemplateTestStatisticsAggregator:
         for sp, ref in sp_and_refs:
             collector = sp.algorithm_to_tensor_collectors["TEST"][0]
             stat = collector.get_statistics()
-            assert np.allclose(stat.min_values, ref[0])
-            assert np.allclose(stat.max_values, ref[1])
+            assert fns.allclose(stat.min_values, ref[0])
+            assert fns.allclose(stat.max_values, ref[1])
 
             if isinstance(ref[0], np.ndarray):
                 assert stat.min_values.shape == ref[0].shape

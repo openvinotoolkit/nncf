@@ -18,6 +18,7 @@ from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.tensor import Tensor
 from nncf.openvino.graph.metatypes.groups import FAKE_QUANTIZE_OPERATIONS
 from nncf.openvino.graph.model_utils import remove_fq_from_inputs
 from nncf.openvino.graph.node_utils import get_bias_value
@@ -29,17 +30,12 @@ from nncf.openvino.graph.transformations.commands import OVBiasCorrectionCommand
 from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
-from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.openvino.statistics.collectors import get_mean_statistic_collector
 from nncf.openvino.statistics.collectors import get_raw_stat_collector
-from nncf.openvino.tensor import OVNNCFTensor
 from nncf.quantization.algorithms.bias_correction.backend import BiasCorrectionAlgoBackend
 
 
 class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
-    @property
-    def tensor_processor(self) -> OVNNCFCollectorTensorProcessor:
-        return OVNNCFCollectorTensorProcessor
 
     @staticmethod
     def target_point(target_type: TargetType, target_node_name: str, port_id: int) -> OVTargetPoint:
@@ -75,8 +71,8 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return get_raw_stat_collector(num_samples)
 
     @staticmethod
-    def process_model_output(raw_data: Dict, output_name: str) -> OVNNCFTensor:
-        return OVNNCFTensor(raw_data[output_name])
+    def process_model_output(raw_data: Dict, output_name: str) -> Tensor:
+        return Tensor(raw_data[output_name])
 
     @staticmethod
     def get_activation_port_id(node: NNCFNode, nncf_graph: NNCFGraph) -> int:
@@ -88,8 +84,8 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
         return activation_ports[0]
 
     @staticmethod
-    def get_bias_value(node: NNCFNode, model: ov.Model, nncf_graph: NNCFGraph) -> np.ndarray:
-        return get_bias_value(node, nncf_graph, model)
+    def get_bias_value(node: NNCFNode, model: ov.Model, nncf_graph: NNCFGraph) -> Tensor:
+        return Tensor(get_bias_value(node, nncf_graph, model))
 
     @staticmethod
     def get_input_name(model: ov.Model, node_name: str, input_port_id: int) -> str:

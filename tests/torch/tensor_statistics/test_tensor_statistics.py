@@ -18,8 +18,8 @@ import torch
 from nncf.common.tensor_statistics.collectors import ReductionAxes
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.common.tensor_statistics.statistics import TensorStatistic
-from nncf.torch.tensor import PTNNCFTensor
-from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
+from nncf.experimental.tensor import Tensor
+from nncf.experimental.tensor import functions as fns
 from nncf.torch.tensor_statistics.collectors import get_mean_percentile_statistic_collector
 from nncf.torch.tensor_statistics.collectors import get_median_mad_statistic_collector
 from nncf.torch.tensor_statistics.collectors import get_min_max_statistic_collector
@@ -125,7 +125,7 @@ class TestCollectedStatistics:
                 num_samples=None,
             )
             for input_ in TestCollectedStatistics.REF_INPUTS:
-                collector_obj.register_input_for_all_reducers(PTNNCFTensor(input_))
+                collector_obj.register_input_for_all_reducers(Tensor(input_))
             test_stats = collector_obj.get_statistics()
             assert reduction_axes_vs_ref_statistic[shapes] == test_stats
 
@@ -219,21 +219,20 @@ class TestCollectedStatistics:
                 num_samples=None,
             )
             for input_ in TestCollectedStatistics.REF_INPUTS:
-                collector_obj.register_input_for_all_reducers(PTNNCFTensor(input_))
+                collector_obj.register_input_for_all_reducers(Tensor(input_))
             test_stats = collector_obj.get_statistics()
             assert reduction_axes_vs_ref_statistic[reduction_axes] == test_stats
 
 
 class TestCollectorTensorProcessor:
-    tensor_processor = PTNNCFCollectorTensorProcessor()
 
     def test_unstack(self):
         # Unstack tensor with dimensions
         tensor1 = torch.tensor([1.0])
-        tensor_unstacked1 = TestCollectorTensorProcessor.tensor_processor.unstack(PTNNCFTensor(tensor1))
+        tensor_unstacked1 = fns.unstack(Tensor(tensor1))
 
         # Unstack dimensionless tensor
         tensor2 = torch.tensor(1.0)
-        tensor_unstacked2 = TestCollectorTensorProcessor.tensor_processor.unstack(PTNNCFTensor(tensor2))
+        tensor_unstacked2 = fns.unstack(Tensor(tensor2))
 
-        assert tensor_unstacked1 == tensor_unstacked2 == [PTNNCFTensor(torch.tensor(1.0))]
+        assert tensor_unstacked1 == tensor_unstacked2 == [Tensor(torch.tensor(1.0))]
