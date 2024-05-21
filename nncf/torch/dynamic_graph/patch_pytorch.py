@@ -246,7 +246,7 @@ def torch_jit_script_if_tracing(fn):
 
 def get_disable_patching_wrapper(f):
     """
-    :param: f: A callable object to be wrapped.
+    :param f: A callable object to be wrapped.
     :return: A wrapper of a function that unpatches torch operators before the
              function call and patches them back after the call.
     """
@@ -272,7 +272,7 @@ def get_module_call_wrapper():
     def wrapper(self, *args, **kwargs):
         # Check if model was compiled by torch dynamo
         if isinstance(self, OptimizedModule):
-            unpatched_module_call(self, *args, **kwargs)
+            return unpatched_module_call(self, *args, **kwargs)
         return wrapped_module_call(self, *args, **kwargs)
 
     return wrapper
