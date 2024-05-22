@@ -1333,6 +1333,20 @@ class TemplateTestNNCFTensorOperators:
             ([[0.0, 2.0], [2.0, 0.0]], [[False, False], [False, True]], 0, False, [1.0, 2.0]),
             ([[0.0, 2.0], [2.0, 0.0]], [[False, False], [False, True]], 0, True, [[1.0, 2.0]]),
             ([[0.0, 2.0], [2.0, 0.0]], [[True, True], [True, True]], 0, True, [[0.0, 0.0]]),
+            (
+                [[[0.5, 0.2], [0.5, 0.7]], [[0.2, 0.8], [0.1, 0.8]]],
+                [[[False, False], [False, False]], [[False, True], [False, False]]],
+                (0, 2),
+                False,
+                [0.3, 0.525],
+            ),
+            (
+                [[[0.5, 0.2], [0.5, 0.7]], [[0.2, 0.8], [0.1, 0.8]]],
+                [[[False, False], [False, False]], [[False, True], [False, False]]],
+                (1, 2),
+                True,
+                [[[0.475]], [[0.36666667]]],
+            ),
         ),
     )
     def test_fn_masked_mean(self, x, mask, axis, keepdims, ref):
@@ -1353,6 +1367,20 @@ class TemplateTestNNCFTensorOperators:
             ([[0.0, 2.0], [2.0, 0.0]], [[False, False], [False, True]], 0, False, [1.0, 2.0]),
             ([[0.0, 2.0], [2.0, 0.0]], [[False, False], [False, True]], 0, True, [[1.0, 2.0]]),
             ([[0.0, 2.0], [2.0, 0.0]], [[True, True], [True, True]], 0, True, [[0.0, 0.0]]),
+            (
+                [[[0.5, 0.2], [0.5, 0.7]], [[0.2, 0.8], [0.1, 0.8]]],
+                [[[False, False], [False, False]], [[False, True], [False, False]]],
+                (0, 2),
+                False,
+                [0.2, 0.6],
+            ),
+            (
+                [[[0.5, 0.2], [0.5, 0.7]], [[0.2, 0.8], [0.1, 0.8]]],
+                [[[False, False], [False, False]], [[False, True], [False, False]]],
+                (1, 2),
+                True,
+                [[[0.5]], [[0.2]]],
+            ),
         ),
     )
     def test_fn_masked_median(self, x, mask, axis, keepdims, ref):
@@ -1361,5 +1389,6 @@ class TemplateTestNNCFTensorOperators:
         ref_tensor = self.to_tensor(ref)
         res = fns.masked_median(x, mask, axis, keepdims)
         assert isinstance(res, Tensor)
+        assert res.shape == ref_tensor.shape
         assert fns.allclose(res.data, ref_tensor)
         assert res.device == x.device
