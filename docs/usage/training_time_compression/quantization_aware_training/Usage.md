@@ -1,4 +1,4 @@
-# Use Neural Network Compression Framework (NNCF) as Standalone for Quantization Aware Training
+# Use Neural Network Compression Framework (NNCF) for Quantization Aware Training
 
 This is a step-by-step tutorial on how to integrate the NNCF package into the existing project.
 The use case implies that the user already has a training pipeline that reproduces training of the model in the floating  point precision and pretrained model.
