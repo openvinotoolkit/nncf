@@ -93,7 +93,7 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
 
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        is_node_with_bias(node, nncf_graph)
+        return is_node_with_bias(node, nncf_graph)
 
     @staticmethod
     def get_dims_descriptor(node: NNCFNode) -> LayoutDescriptor:
