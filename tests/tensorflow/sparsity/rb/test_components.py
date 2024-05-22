@@ -75,6 +75,9 @@ def calc_rb_mask_decorator(fn):
 
 @pytest.fixture(scope="module")
 def mirrored_strategy():
+    gpus = tf.config.list_physical_devices("GPU")
+    if len(gpus) == 0:
+        return tf.distribute.get_strategy()
     num_of_replicas = 3
     strategy = tf.distribute.MirroredStrategy([f"GPU:{i}" for i in range(num_of_replicas)])
     return strategy
