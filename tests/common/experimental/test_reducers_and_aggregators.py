@@ -181,7 +181,7 @@ class TemplateTestReducersAggregators:
             assert reduced_input is None
         else:
             assert len(reduced_input) == 1
-            assert fns.allclose(reduced_input[0], input_data)
+            assert fns.allclose(reduced_input[0], tensor_data)
 
     @pytest.mark.parametrize("reducer_cls", [NoopReducer, RawReducer])
     def test_other_reducers_name_hash_equal(self, reducer_cls):
@@ -207,7 +207,7 @@ class TemplateTestReducersAggregators:
             reducer = reducers[reducer_name](reduction_axes=reduction_axes_, inplace=False)
             val = reducer([self.get_nncf_tensor(input_, Dtype.FLOAT)])
             assert len(val) == 1
-            assert fns.allclose(val[0], self.cast_tensor(ref[i], Dtype.FLOAT))
+            assert fns.allclose(val[0], self.get_nncf_tensor(ref[i]))
 
     @pytest.mark.parametrize(
         "reducer_name,ref", [("quantile", ([[[[-20000]]]], [[[[10000]]]])), ("abs_quantile", ([[[[20000]]]],))]
@@ -221,7 +221,7 @@ class TemplateTestReducersAggregators:
         val = reducer([self.get_nncf_tensor(input_, dtype=Dtype.FLOAT)])
         assert val.shape[0] == len(ref)
         for i, ref_ in enumerate(ref):
-            assert fns.allclose(val[i], self.cast_tensor(ref_, Dtype.FLOAT))
+            assert fns.allclose(val[i], self.get_nncf_tensor(ref_))
 
     @pytest.mark.parametrize(
         "reducer_name,ref,kwargs",
@@ -235,7 +235,7 @@ class TemplateTestReducersAggregators:
         reducer = reducers[reducer_name](inplace=False, **kwargs)
         val = reducer([self.get_nncf_tensor(input_, Dtype.FLOAT)])
         assert len(val) == 1
-        assert fns.allclose(val[0], self.cast_tensor(ref, Dtype.FLOAT))
+        assert fns.allclose(val[0], self.get_nncf_tensor(ref))
 
     def test_noop_aggregator(self):
         aggregator = NoopAggregator(None)
@@ -249,7 +249,7 @@ class TemplateTestReducersAggregators:
         aggregated = aggregator.aggregate()
         assert len(aggregated) == 3
         for val in aggregated:
-            assert fns.allclose(val, input_)
+            assert fns.allclose(val, self.get_nncf_tensor(input_))
 
     def test_shape_aggregator(self):
         aggregator = ShapeAggregator()
@@ -284,8 +284,8 @@ class TemplateTestReducersAggregators:
         min_ref = offline_aggregators_test_desc.min_ref
         max_ref = offline_aggregators_test_desc.max_ref
 
-        assert fns.allclose(min_aggregator.aggregate(), min_ref)
-        assert fns.allclose(max_aggregator.aggregate(), max_ref)
+        assert fns.allclose(min_aggregator.aggregate(), self.get_nncf_tensor(min_ref))
+        assert fns.allclose(max_aggregator.aggregate(), self.get_nncf_tensor(max_ref))
 
     NO_OUTLIERS_TEST_PARAMS = [
         (MeanAggregator, (0, 1), 1, [1404.5138888888905]),
@@ -375,7 +375,7 @@ class TemplateTestReducersAggregators:
             aggregator.register_reduced_input(input_)
 
         ret_val = aggregator.aggregate()
-        assert fns.allclose(ret_val, self.cast_tensor(refs, Dtype.FLOAT))
+        assert fns.allclose(ret_val, self.get_nncf_tensor(refs))
 
     NO_OUTLIERS_DIFFERENT_SIZES_TEST_PARAMS = [
         (MeanAggregator, (1,), 1, [[5.0], [10.0], [15.0], [20.0], [25.0], [50.0], [-55556.0], [66667.0], [5.0]]),
@@ -408,7 +408,7 @@ class TemplateTestReducersAggregators:
             aggregator.register_reduced_input(input_)
 
         ret_val = aggregator.aggregate()
-        assert fns.allclose(ret_val, self.cast_tensor(refs, Dtype.FLOAT))
+        assert fns.allclose(ret_val, self.get_nncf_tensor(refs))
 
     @pytest.fixture(
         name="MAD_percentile_aggregator_cls",
@@ -471,7 +471,7 @@ class TemplateTestReducersAggregators:
         ref_values = self.REF_MAD_PERCENTILE_REF_VALUES[aggregator.__class__][aggregation_axes]
         assert len(ret_val) == len(ref_values)
         for k, v in ref_values.items():
-            assert fns.allclose(ret_val[k], self.cast_tensor(v, Dtype.FLOAT))
+            assert fns.allclose(ret_val[k], self.get_nncf_tensor(v)), f"{k}"
 
     REF_MAD_PERCENTILE_REF_VALUES_DYNAMIC_TENSORS = {
         MedianAbsoluteDeviationAggregator: {
@@ -497,7 +497,7 @@ class TemplateTestReducersAggregators:
         ref_values = self.REF_MAD_PERCENTILE_REF_VALUES_DYNAMIC_TENSORS[aggregator.__class__]
         assert len(ret_val) == len(ref_values)
         for k, v in ref_values.items():
-            assert fns.allclose(ret_val[k], self.cast_tensor(v, Dtype.FLOAT))
+            assert fns.allclose(ret_val[k], self.get_nncf_tensor(v))
 
     def test_mad_percentile_aggregators_not_implemented_aggregation_axes(self, MAD_percentile_aggregator_cls):
         with pytest.raises(NotImplementedError):

@@ -763,7 +763,7 @@ class MedianAbsoluteDeviationAggregator(AggregatorBase):
             self._container, [x - 1 for x in self._aggregation_axes if x > 0]
         )
 
-        mask = fns.zero_elements(stacked_val)
+        mask = fns.abs(stacked_val) < fns.finfo(stacked_val).eps
         median_per_ch = fns.masked_median(stacked_val, mask=mask, axis=0, keepdims=True)
 
         mad_values = fns.median(

@@ -249,7 +249,8 @@ def percentile(
     axis: Union[int, Tuple[int, ...], List[int]],
     keepdims: bool = False,
 ) -> List[Union[torch.Tensor, np.generic]]:
-    return numeric.quantile(a, q=torch.true_divide(torch.tensor(q), 100), axis=axis, keepdims=keepdims)
+    q = [x / 100 for x in q] if isinstance(q, (list, tuple)) else q / 100
+    return numeric.quantile(a, q=q, axis=axis, keepdims=keepdims)
 
 
 @numeric._binary_op_nowarn.register(torch.Tensor)
