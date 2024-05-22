@@ -3,8 +3,8 @@ addict
 absl-py==1.0.0
 tensorflow
 tensorflow_datasets==4.2.0
-tensorflow_hub==0.15.0
+tensorflow_hub
 tensorflow-metadata==1.13.0
-tensorflow_addons~=0.23.0
+tensorflow_addons==0.20.0
 opencv-python
 pycocotools==2.0.6
