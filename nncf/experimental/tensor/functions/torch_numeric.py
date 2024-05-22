@@ -344,7 +344,8 @@ def _(
     if mask is None:
         return torch.mean(x, axis=axis, keepdims=keepdims)
     masked_x = x.masked_fill(mask, torch.nan)
-    return torch.nanmean(masked_x, dim=axis, keepdim=keepdims)
+    ret = torch.nanmean(masked_x, dim=axis, keepdim=keepdims)
+    return torch.nan_to_num(ret)
 
 
 @numeric.masked_median.register(torch.Tensor)
@@ -361,4 +362,5 @@ def _(
         result = torch.tensor(np.ma.median(masked_x, axis=axis, keepdims=keepdims))
         return result.type(x.dtype).to(device)
     masked_x = x.masked_fill(mask, torch.nan)
-    return torch.nanquantile(masked_x, q=0.5, dim=axis, keepdims=keepdims)
+    ret = torch.nanquantile(masked_x, q=0.5, dim=axis, keepdims=keepdims)
+    return torch.nan_to_num(ret)

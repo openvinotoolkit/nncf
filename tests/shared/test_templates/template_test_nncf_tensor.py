@@ -1326,33 +1326,40 @@ class TemplateTestNNCFTensorOperators:
         assert res.device == x1.device
 
     @pytest.mark.parametrize(
-        "x, mask, axis, ref",
+        "x, mask, axis, keepdims, ref",
         (
-            ([0.0, 1.0, 0.0], [True, False, True], None, 1.0),
-            ([[0.0, 2.0], [2.0, 0.0]], [[False, False], [False, True]], 0, [1.0, 2.0]),
+            ([0.0, 1.0, 0.0], [True, False, True], None, False, 1.0),
+            ([0.0, 1.0, 0.0], [True, False, True], None, True, [1.0]),
+            ([[0.0, 2.0], [2.0, 0.0]], [[False, False], [False, True]], 0, False, [1.0, 2.0]),
+            ([[0.0, 2.0], [2.0, 0.0]], [[False, False], [False, True]], 0, True, [[1.0, 2.0]]),
+            ([[0.0, 2.0], [2.0, 0.0]], [[True, True], [True, True]], 0, True, [[0.0, 0.0]]),
         ),
     )
-    def test_fn_masked_mean(self, x, mask, axis, ref):
+    def test_fn_masked_mean(self, x, mask, axis, keepdims, ref):
         x = Tensor(self.to_tensor(x))
         mask = Tensor(self.to_tensor(mask))
         ref_tensor = self.to_tensor(ref)
-        res = fns.masked_mean(x, mask, axis)
+        res = fns.masked_mean(x, mask, axis, keepdims)
         assert isinstance(res, Tensor)
-        assert fns.allclose(res.data, ref_tensor), f"{res}"
+        assert res.shape == ref_tensor.shape
+        assert fns.allclose(res.data, ref_tensor)
         assert res.device == x.device
 
     @pytest.mark.parametrize(
-        "x, mask, axis, ref",
+        "x, mask, axis, keepdims, ref",
         (
-            ([0.0, 1.0, 0.0], [True, False, True], None, 1.0),
-            ([[0.0, 2.0], [2.0, 0.0]], [[False, False], [False, True]], 0, [1.0, 2.0]),
+            ([0.0, 1.0, 0.0], [True, False, True], None, False, 1.0),
+            ([0.0, 1.0, 0.0], [True, False, True], None, True, [1.0]),
+            ([[0.0, 2.0], [2.0, 0.0]], [[False, False], [False, True]], 0, False, [1.0, 2.0]),
+            ([[0.0, 2.0], [2.0, 0.0]], [[False, False], [False, True]], 0, True, [[1.0, 2.0]]),
+            ([[0.0, 2.0], [2.0, 0.0]], [[True, True], [True, True]], 0, True, [[0.0, 0.0]]),
         ),
     )
-    def test_fn_masked_median(self, x, mask, axis, ref):
+    def test_fn_masked_median(self, x, mask, axis, keepdims, ref):
         x = Tensor(self.to_tensor(x))
         mask = Tensor(self.to_tensor(mask))
         ref_tensor = self.to_tensor(ref)
-        res = fns.masked_median(x, mask, axis)
+        res = fns.masked_median(x, mask, axis, keepdims)
         assert isinstance(res, Tensor)
         assert fns.allclose(res.data, ref_tensor)
         assert res.device == x.device
