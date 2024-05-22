@@ -343,12 +343,8 @@ def _(
 ) -> torch.Tensor:
     if mask is None:
         return torch.mean(x, axis=axis, keepdims=keepdims)
-    device = x.device
-    masked_x = np.ma.array(x.detach().cpu().numpy(), mask=mask.detach().cpu().numpy())
-    result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims).astype(masked_x.dtype)
-    if isinstance(result, np.ma.MaskedArray):
-        result = result.data
-    return torch.tensor(result).to(device=device)
+    masked_x = x.masked_fill(mask, torch.nan)
+    return torch.nanmean(masked_x, dim=axis, keepdim=keepdims)
 
 
 @numeric.masked_median.register(torch.Tensor)
@@ -356,10 +352,13 @@ def _(
     x: torch.Tensor, mask: Optional[torch.Tensor], axis: Union[int, Tuple[int, ...], List[int]], keepdims=False
 ) -> torch.Tensor:
     if mask is None:
-        return torch.median(x, axis=axis, keepdims=keepdims)
-    device = x.device
-    masked_x = np.ma.array(x.detach().cpu().numpy(), mask=mask.detach().cpu().numpy())
-    result = np.ma.median(masked_x, axis=axis, keepdims=keepdims).astype(masked_x.dtype)
-    if isinstance(result, np.ma.MaskedArray):
-        result = result.data
-    return torch.tensor(result).to(device=device)
+        return numeric.median(x, axis=axis, keepdims=keepdims)
+
+    # See https://github.com/pytorch/pytorch/issues/61582
+    if not isinstance(axis, int):
+        device = x.device
+        masked_x = np.ma.array(x.detach().cpu().numpy(), mask=mask.detach().cpu().numpy())
+        result = torch.tensor(np.ma.median(masked_x, axis=axis, keepdims=keepdims))
+        return result.type(x.dtype).to(device)
+    masked_x = x.masked_fill(mask, torch.nan)
+    return torch.nanquantile(masked_x, q=0.5, dim=axis, keepdims=keepdims)
