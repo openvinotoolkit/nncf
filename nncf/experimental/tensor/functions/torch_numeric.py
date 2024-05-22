@@ -249,8 +249,7 @@ def percentile(
     axis: Union[int, Tuple[int, ...], List[int]],
     keepdims: bool = False,
 ) -> List[Union[torch.Tensor, np.generic]]:
-    q = torch.tensor(q, dtype=torch.float64) / 100
-    return numeric.quantile(a, q=q, axis=axis, keepdims=keepdims)
+    return numeric.quantile(a, q=torch.true_divide(torch.tensor(q), 100), axis=axis, keepdims=keepdims)
 
 
 @numeric._binary_op_nowarn.register(torch.Tensor)
@@ -338,23 +337,15 @@ def _(x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
     return torch.logical_or(x1, x2)
 
 
-@numeric.zero_elements.register(torch.Tensor)
-def zero_elements(x: torch.Tensor) -> torch.Tensor:
-    return torch.abs(x) < torch.finfo(x.dtype).eps
-
-
 @numeric.masked_mean.register(torch.Tensor)
 def _(
     x: torch.Tensor, mask: Optional[torch.Tensor], axis: Union[int, Tuple[int, ...], List[int]], keepdims=False
 ) -> torch.Tensor:
     if mask is None:
         return torch.mean(x, axis=axis, keepdims=keepdims)
-    device = x.device
-    masked_x = np.ma.array(x.detach().cpu().numpy(), mask=mask.detach().cpu().numpy())
-    result = np.ma.mean(masked_x, axis=axis, keepdims=keepdims).astype(masked_x.dtype)
-    if isinstance(result, np.ma.MaskedArray):
-        result = result.data
-    return torch.tensor(result).to(device=device)
+    masked_x = x.masked_fill(mask, torch.nan)
+    ret = torch.nanmean(masked_x, dim=axis, keepdim=keepdims)
+    return torch.nan_to_num(ret)
 
 
 @numeric.masked_median.register(torch.Tensor)
@@ -362,10 +353,14 @@ def _(
     x: torch.Tensor, mask: Optional[torch.Tensor], axis: Union[int, Tuple[int, ...], List[int]], keepdims=False
 ) -> torch.Tensor:
     if mask is None:
-        return torch.median(x, axis=axis, keepdims=keepdims)
-    device = x.device
-    masked_x = np.ma.array(x.detach().cpu().numpy(), mask=mask.detach().cpu().numpy())
-    result = np.ma.median(masked_x, axis=axis, keepdims=keepdims).astype(masked_x.dtype)
-    if isinstance(result, np.ma.MaskedArray):
-        result = result.data
-    return torch.tensor(result).to(device=device)
+        return numeric.median(x, axis=axis, keepdims=keepdims)
+
+    # See https://github.com/pytorch/pytorch/issues/61582
+    if not isinstance(axis, int):
+        device = x.device
+        masked_x = np.ma.array(x.detach().cpu().numpy(), mask=mask.detach().cpu().numpy())
+        result = torch.tensor(np.ma.median(masked_x, axis=axis, keepdims=keepdims))
+        return result.type(x.dtype).to(device)
+    masked_x = x.masked_fill(mask, torch.nan)
+    ret = torch.nanquantile(masked_x, q=0.5, dim=axis, keepdims=keepdims)
+    return torch.nan_to_num(ret)

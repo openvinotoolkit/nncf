@@ -1326,45 +1326,69 @@ class TemplateTestNNCFTensorOperators:
         assert res.device == x1.device
 
     @pytest.mark.parametrize(
-        "x, ref",
-        (([0.0, 1.0, 0.0], [True, False, True]),),
-    )
-    def test_fn_zero_elements(self, x, ref):
-        x = Tensor(self.to_tensor(x))
-        ref_tensor = self.to_tensor(ref)
-        res = fns.zero_elements(x)
-        assert isinstance(res, Tensor)
-        assert fns.all(res.data == ref_tensor)
-        assert res.device == x.device
-
-    @pytest.mark.parametrize(
-        "x, mask, axis, ref",
+        "x, mask, axis, keepdims, ref",
         (
-            ([0.0, 1.0, 0.0], [True, False, True], None, 1.0),
-            ([[0.0, 2.0], [2.0, 0.0]], [[False, False], [False, True]], 0, [1.0, 2.0]),
+            ([0.0, 1.0, 0.0], [True, False, True], None, False, 1.0),
+            ([0.0, 1.0, 0.0], [True, False, True], None, True, [1.0]),
+            ([[0.0, 2.0], [2.0, 0.0]], [[False, False], [False, True]], 0, False, [1.0, 2.0]),
+            ([[0.0, 2.0], [2.0, 0.0]], [[False, False], [False, True]], 0, True, [[1.0, 2.0]]),
+            ([[0.0, 2.0], [2.0, 0.0]], [[True, True], [True, True]], 0, True, [[0.0, 0.0]]),
+            (
+                [[[0.5, 0.2], [0.5, 0.7]], [[0.2, 0.8], [0.1, 0.8]]],
+                [[[False, False], [False, False]], [[False, True], [False, False]]],
+                (0, 2),
+                False,
+                [0.3, 0.525],
+            ),
+            (
+                [[[0.5, 0.2], [0.5, 0.7]], [[0.2, 0.8], [0.1, 0.8]]],
+                [[[False, False], [False, False]], [[False, True], [False, False]]],
+                (1, 2),
+                True,
+                [[[0.475]], [[0.36666667]]],
+            ),
         ),
     )
-    def test_fn_masked_mean(self, x, mask, axis, ref):
+    def test_fn_masked_mean(self, x, mask, axis, keepdims, ref):
         x = Tensor(self.to_tensor(x))
         mask = Tensor(self.to_tensor(mask))
         ref_tensor = self.to_tensor(ref)
-        res = fns.masked_mean(x, mask, axis)
+        res = fns.masked_mean(x, mask, axis, keepdims)
         assert isinstance(res, Tensor)
-        assert fns.allclose(res.data, ref_tensor), f"{res}"
+        assert res.shape == ref_tensor.shape
+        assert fns.allclose(res.data, ref_tensor)
         assert res.device == x.device
 
     @pytest.mark.parametrize(
-        "x, mask, axis, ref",
+        "x, mask, axis, keepdims, ref",
         (
-            ([0.0, 1.0, 0.0], [True, False, True], None, 1.0),
-            ([[0.0, 2.0], [2.0, 0.0]], [[False, False], [False, True]], 0, [1.0, 2.0]),
+            ([0.0, 1.0, 0.0], [True, False, True], None, False, 1.0),
+            ([0.0, 1.0, 0.0], [True, False, True], None, True, [1.0]),
+            ([[0.0, 2.0], [2.0, 0.0]], [[False, False], [False, True]], 0, False, [1.0, 2.0]),
+            ([[0.0, 2.0], [2.0, 0.0]], [[False, False], [False, True]], 0, True, [[1.0, 2.0]]),
+            ([[0.0, 2.0], [2.0, 0.0]], [[True, True], [True, True]], 0, True, [[0.0, 0.0]]),
+            (
+                [[[0.5, 0.2], [0.5, 0.7]], [[0.2, 0.8], [0.1, 0.8]]],
+                [[[False, False], [False, False]], [[False, True], [False, False]]],
+                (0, 2),
+                False,
+                [0.2, 0.6],
+            ),
+            (
+                [[[0.5, 0.2], [0.5, 0.7]], [[0.2, 0.8], [0.1, 0.8]]],
+                [[[False, False], [False, False]], [[False, True], [False, False]]],
+                (1, 2),
+                True,
+                [[[0.5]], [[0.2]]],
+            ),
         ),
     )
-    def test_fn_masked_median(self, x, mask, axis, ref):
+    def test_fn_masked_median(self, x, mask, axis, keepdims, ref):
         x = Tensor(self.to_tensor(x))
         mask = Tensor(self.to_tensor(mask))
         ref_tensor = self.to_tensor(ref)
-        res = fns.masked_median(x, mask, axis)
+        res = fns.masked_median(x, mask, axis, keepdims)
         assert isinstance(res, Tensor)
+        assert res.shape == ref_tensor.shape
         assert fns.allclose(res.data, ref_tensor)
         assert res.device == x.device

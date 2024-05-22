@@ -389,12 +389,16 @@ def mean(
 @tensor_guard
 def median(a: Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None, keepdims: bool = False) -> Tensor:
     """
-    Compute the arithmetic media along the specified axis.
+    <<<<<<< HEAD
+        Compute the arithmetic media along the specified axis.
+    =======
+        Compute the arithmetic median along the specified axis.
+    >>>>>>> develop
 
-    :param a: Array containing numbers whose median is desired.
-    :param axis: Axis or axes along which the medians are computed.
-    :param keepdims: Destination positions for each of the original axes. These must also be unique.
-    :return: Array with moved axes.
+        :param a: Array containing numbers whose median is desired.
+        :param axis: Axis or axes along which the medians are computed.
+        :param keepdims: Destination positions for each of the original axes. These must also be unique.
+        :return: Array with moved axes.
     """
     return Tensor(median(a.data, axis, keepdims))
 
@@ -698,19 +702,6 @@ def logical_or(x1: Tensor, x2: Tensor) -> Tensor:
     :return: Result of elementwise or operation between input_ and other tensor.
     """
     return Tensor(logical_or(x1.data, unwrap_tensor_data(x2)))
-
-
-@functools.singledispatch
-@tensor_guard
-def zero_elements(x: Tensor) -> Tensor:
-    """
-    Returns binary mask from the input x which equal true for all elements that are smaller than
-    corresponding machine epsilon.
-
-    :param x: The input tensor.
-    :return: Return binary mask where True on position of zero
-    """
-    return Tensor(zero_elements(x.data))
 
 
 @functools.singledispatch
