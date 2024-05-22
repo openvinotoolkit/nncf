@@ -34,8 +34,8 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVSubtractMetatype
 from nncf.openvino.graph.node_utils import create_bias_tensor
 from nncf.openvino.graph.node_utils import get_bias_value
-from nncf.openvino.graph.node_utils import get_node_with_bias_value
 from nncf.openvino.graph.node_utils import get_weight_value
+from nncf.openvino.graph.node_utils import is_node_with_bias
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.statistics.collectors import OVNNCFCollectorTensorProcessor
 from nncf.openvino.statistics.collectors import OVQuantileReducer
@@ -93,16 +93,7 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
 
     @staticmethod
     def is_node_with_bias(node: NNCFNode, nncf_graph: NNCFGraph) -> bool:
-        next_nodes = nncf_graph.get_next_nodes(node)
-        if not next_nodes:
-            return False
-
-        add_node = next_nodes[0]
-        if add_node.metatype != OVAddMetatype:
-            return False
-
-        bias_constant = get_node_with_bias_value(add_node, nncf_graph)
-        return bias_constant is not None
+        is_node_with_bias(node, nncf_graph)
 
     @staticmethod
     def get_dims_descriptor(node: NNCFNode) -> LayoutDescriptor:
