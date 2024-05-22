@@ -73,16 +73,16 @@ def quantize(model, example_inputs):
         prepared_model = prepare_pt2e(exported_model, quantizer)
         prepared_model(*example_inputs)
         converted_model = convert_pt2e(prepared_model)
-        # g = FxGraphDrawer(converted_model, "resnet18_int8")
-        # g.get_dot_graph().write_svg("resnet18_int8_compiled.svg")
+        g = FxGraphDrawer(converted_model, "resnet18_int8")
+        g.get_dot_graph().write_svg("resnet18_int8_compiled.svg")
         qsetup = defaultdict(lambda: dict())
 
         for node in converted_model.graph.nodes:
             if "dequantize" in node.name:
                 quantize = node.all_input_nodes[0]
-                place = "activations"
-                if len(quantize.all_input_nodes) > 1:
-                    place = "weights"
+                # place = "activations"
+                # if len(quantize.all_input_nodes) > 1:
+                #    place = "weights"
                 if "per_tensor" in node.name:
                     params = QPARAMSPerTensor(*node.args[1:])
                 else:
@@ -92,13 +92,12 @@ def quantize(model, example_inputs):
                         params.append(getattr(converted_model, name))
                     params = QPARAMPerChannel(*(params + list(node.args[3:])))
 
-                target_node_name = list(node.users.keys())[0].name
-                assert place not in qsetup[target_node_name]
-                qsetup[target_node_name][place] = params
+                target_node_name = quantize.all_input_nodes[0].name
+                qsetup[target_node_name] = params
 
         # MOCK NNCF QUANTIZATION
         exported_model = get_exported_model_from_nn_module(model, example_inputs)
-        insert_qdq_to_model(exported_model, qsetup)
+        exported_model = insert_qdq_to_model(exported_model, qsetup)
         return exported_model
 
     return converted_model
