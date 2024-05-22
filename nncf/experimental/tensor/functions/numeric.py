@@ -702,19 +702,6 @@ def logical_or(x1: Tensor, x2: Tensor) -> Tensor:
 
 @functools.singledispatch
 @tensor_guard
-def zero_elements(x: Tensor) -> Tensor:
-    """
-    Returns binary mask from the input x which equal true for all elements that are smaller than
-    corresponding machine epsilon.
-
-    :param x: The input tensor.
-    :return: Return binary mask where True on position of zero
-    """
-    return Tensor(zero_elements(x.data))
-
-
-@functools.singledispatch
-@tensor_guard
 def masked_mean(x: Tensor, mask: Tensor, axis: Union[int, Tuple[int, ...], List[int]], keepdims=False) -> Tensor:
     """
     Computes the masked mean of elements across given dimensions of Tensor.

@@ -1326,18 +1326,6 @@ class TemplateTestNNCFTensorOperators:
         assert res.device == x1.device
 
     @pytest.mark.parametrize(
-        "x, ref",
-        (([0.0, 1.0, 0.0], [True, False, True]),),
-    )
-    def test_fn_zero_elements(self, x, ref):
-        x = Tensor(self.to_tensor(x))
-        ref_tensor = self.to_tensor(ref)
-        res = fns.zero_elements(x)
-        assert isinstance(res, Tensor)
-        assert fns.all(res.data == ref_tensor)
-        assert res.device == x.device
-
-    @pytest.mark.parametrize(
         "x, mask, axis, ref",
         (
             ([0.0, 1.0, 0.0], [True, False, True], None, 1.0),

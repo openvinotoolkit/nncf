@@ -54,7 +54,6 @@ from nncf.experimental.tensor.functions.numeric import unsqueeze as unsqueeze
 from nncf.experimental.tensor.functions.numeric import unstack as unstack
 from nncf.experimental.tensor.functions.numeric import var as var
 from nncf.experimental.tensor.functions.numeric import where as where
-from nncf.experimental.tensor.functions.numeric import zero_elements as zero_elements
 from nncf.experimental.tensor.functions.numeric import zeros_like as zeros_like
 
 

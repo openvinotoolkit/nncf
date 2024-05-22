@@ -332,11 +332,6 @@ def _(x1: np.ndarray, x2: np.ndarray) -> np.ndarray:
     return np.logical_or(x1, x2)
 
 
-@register_numpy_types(numeric.zero_elements)
-def _(x: np.ndarray) -> np.ndarray:
-    return np.abs(x) < np.finfo(x.dtype).eps
-
-
 @register_numpy_types(numeric.masked_mean)
 def _(
     x: np.ndarray, mask: Optional[np.ndarray], axis: Union[int, Tuple[int, ...], List[int]], keepdims=False

@@ -337,11 +337,6 @@ def _(x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
     return torch.logical_or(x1, x2)
 
 
-@numeric.zero_elements.register(torch.Tensor)
-def zero_elements(x: torch.Tensor) -> torch.Tensor:
-    return torch.abs(x) < torch.finfo(x.dtype).eps
-
-
 @numeric.masked_mean.register(torch.Tensor)
 def _(
     x: torch.Tensor, mask: Optional[torch.Tensor], axis: Union[int, Tuple[int, ...], List[int]], keepdims=False
