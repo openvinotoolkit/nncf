@@ -1,7 +1,7 @@
 -c ../../constraints.txt
 PyYAML
 tensorflow_addons==0.20.0
-tensorflow-metadata==1.15.0
+tensorflow-metadata==1.13.0
 pytest
 pytest-cov
 pytest-mock
