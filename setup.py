@@ -122,7 +122,8 @@ INSTALL_REQUIRES = [
 
 
 TF_EXTRAS = [
-    "tensorflow~=2.15.1",
+    "tensorflow~=2.12.0;python_version < '3.9'"
+    "tensorflow~=2.15.1;python_version >= '3.9'",
 ]
 
 TORCH_EXTRAS = [
