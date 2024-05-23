@@ -20,6 +20,7 @@ from torch.ao.quantization.pt2e.port_metadata_pass import PortNodeMetaForQDQ
 from torch.ao.quantization.pt2e.qat_utils import _fold_conv_bn_qat
 from torch.ao.quantization.pt2e.utils import _disallow_eval_train
 from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
+from torch.fx import GraphModule
 from torch.fx.passes.infra.pass_manager import PassManager
 
 
@@ -45,9 +46,15 @@ class QPARAMPerChannel:
 def insert_qdq_to_model(model: torch.fx.GraphModule, qsetup) -> torch.fx.GraphModule:
     # from prepare
     _fuse_conv_bn_(model)
+
     # from convert
     original_graph_meta = model.meta
     _insert_qdq_to_model(model, qsetup)
+
+    # Magic. Without this call compiled model
+    # is not preformant
+    model = GraphModule(model, model.graph)
+
     model = _fold_conv_bn_qat(model)
     pm = PassManager([DuplicateDQPass()])
 

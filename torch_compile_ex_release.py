@@ -12,10 +12,8 @@
 # Enable torch inductor freezing feature first
 import os
 
-# Optional: using the C++ wrapper instead of default Python wrapper
-import torch._inductor.config as config
-
 os.environ["TORCHINDUCTOR_FREEZING"] = "1"
+
 
 import argparse
 import copy
@@ -24,6 +22,9 @@ from collections import defaultdict
 
 import openvino.torch  # noqa
 import torch
+
+# Optional: using the C++ wrapper instead of default Python wrapper
+import torch._inductor.config as config
 import torch.ao.quantization.quantizer.x86_inductor_quantizer as xiq
 import torchvision.models as models
 from torch._export import capture_pre_autograd_graph
@@ -98,9 +99,12 @@ def quantize(model, example_inputs):
         # MOCK NNCF QUANTIZATION
         exported_model = get_exported_model_from_nn_module(model, example_inputs)
         exported_model = insert_qdq_to_model(exported_model, qsetup)
+        g = FxGraphDrawer(converted_model, "resnet18_int8")
+        g.get_dot_graph().write_svg("resnet18_int8_compiled_manually.svg")
+        exported_model.meta = converted_model.meta
         return exported_model
 
-    return converted_model
+    return None  # converted_model
 
 
 config.cpp_wrapper = True
