@@ -14,7 +14,7 @@
 # to install Python packages and causes particular problems with namespace
 # packages such as `protobuf`.
 # Refer to the table below for well-known and supported alternatives with
-# the same behaviour:
+# the same behavior:
 # +-------------------------------------+---------------------------------------------+
 # |           Old command               |                New command                  |
 # +-------------------------------------+---------------------------------------------+
@@ -121,48 +121,6 @@ INSTALL_REQUIRES = [
 ]
 
 
-TF_EXTRAS = [
-    "tensorflow~=2.12.0",
-    # This is required for support of TF 2.8.4 which needs protobuf<=3.19.6
-    "tensorflow-metadata<=1.13.0",
-]
-
-TORCH_EXTRAS = [
-    "torch==2.3.0;python_version < '3.11'",
-]
-
-ONNX_EXTRAS = ["onnx==1.16.0", "onnxruntime==1.17.1;python_version < '3.11'"]
-
-OPENVINO_EXTRAS = ["openvino==2024.1"]
-
-
-EXTRAS_REQUIRE = {
-    "dev": [
-        "black==23.3.0",
-        "isort==5.12.0",
-        "kaleido>=0.2.1",
-        "matplotlib>=3.3.4, <3.6",
-        "pillow>=9.0.0",
-        "plotly-express>=0.4.1",
-        "pre-commit==3.2.2",
-    ],
-    "tests": ["pytest"],
-    "docs": [],
-    "tf": TF_EXTRAS,
-    "tensorflow": TF_EXTRAS,
-    "tensorflow2": TF_EXTRAS,
-    "torch": TORCH_EXTRAS,
-    "pytorch": TORCH_EXTRAS,
-    "onnx": ONNX_EXTRAS,
-    "openvino": OPENVINO_EXTRAS,
-    "all": [
-        TF_EXTRAS,
-        TORCH_EXTRAS,
-        ONNX_EXTRAS,
-        OPENVINO_EXTRAS,
-    ],
-}
-
 with open("{}/README.md".format(here), "r", encoding="utf8") as fh:
     long_description = fh.read()
 
@@ -183,7 +141,6 @@ setup(
         "Operating System :: OS Independent",
     ],
     install_requires=INSTALL_REQUIRES,
-    extras_require=EXTRAS_REQUIRE,
     keywords=[
         "compression",
         "quantization",
