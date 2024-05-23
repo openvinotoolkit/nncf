@@ -783,8 +783,8 @@ def test_compression_for_different_dtypes(activation_dtype, weight_dtype):
         assert next_node.get_type_name() != "Convert"
     else:
         assert next_node.get_type_name() == "Convert"
-        # In case weight is in fp32, the convert node is manually inserted
-        if weight_dtype == np.float32:
+        # In case precision of weight and activation were equal, but not f16, the convert node is manually inserted
+        if activation_dtype == weight_dtype and weight_dtype != ov.Type.f16:
             assert next_node.get_friendly_name() == "weights/fq_weights_1/convert"
 
 
