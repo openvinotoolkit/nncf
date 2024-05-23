@@ -126,7 +126,7 @@ class TestInstall:
         skip_if_backend_not_selected(backend, backend_clopt)
         if "pypi" in package_type:
             pytest.xfail("Disabled until NNCF is exposed in a release")
-        venv_path = create_venv_with_nncf(tmp_path, package_type, venv_type, extra_reqs={backend})
+        venv_path = create_venv_with_nncf(tmp_path, package_type, venv_type, backends={backend})
 
         if is_linux():
             pip_with_venv = f". {venv_path}/bin/activate && {venv_path}/bin/pip"
