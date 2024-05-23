@@ -33,17 +33,17 @@ learning frameworks.
 
 | Compression algorithm                                                       |OpenVINO|PyTorch|   TensorFlow   |     ONNX       |
 |:----------------------------------------------------------------------------| :---: | :---: |:--------:|:------------------:|
-| [Post-Training Quantization](./docs/compression_algorithms/post_training/Quantization.md) | Supported | Supported |Supported| Supported |
-| [Weights Compression](./docs/compression_algorithms/CompressWeights.md) | Supported | Supported |Not supported| Not supported |
+| [Post-Training Quantization](./docs/usage/post_training_compression/post_training_quantization/Usage.md) | Supported | Supported |Supported| Supported |
+| [Weights Compression](./docs/usage/post_training_compression/weights_compression/Usage.md) | Supported | Supported |Not supported| Not supported |
 
 ### Training-Time Compression Algorithms
 
 |Compression algorithm|PyTorch|TensorFlow|
 | :--- | :---: | :---: |
-|[Quantization Aware Training](./docs/compression_algorithms/Quantization.md) | Supported | Supported |
-|[Mixed-Precision Quantization](./docs/compression_algorithms/Quantization.md#mixed-precision-quantization) | Supported | Not supported |
-|[Sparsity](./docs/compression_algorithms/Sparsity.md) | Supported | Supported |
-|[Filter pruning](./docs/compression_algorithms/Pruning.md) | Supported | Supported |
+|Quantization Aware Training | [Supported](./docs/usage/training_time_compression/quantization_aware_training/Usage.md) | [Supported](./docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md) |
+|[Mixed-Precision Quantization](./docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#mixed-precision-quantization) | Supported | Not supported |
+|[Sparsity](./docs/usage/training_time_compression/other_algorithms/Sparsity.md) | Supported | Supported |
+|[Filter pruning](./docs/usage/training_time_compression/other_algorithms/Pruning.md) | Supported | Supported |
 |[Movement pruning](./nncf/experimental/torch/sparsity/movement/MovementSparsity.md) | Experimental | Not supported |
 
 - Automatic, configurable model graph transformation to obtain the compressed model.
@@ -55,7 +55,7 @@ learning frameworks.
 - Seamless combination of pruning, sparsity and quantization algorithms. Please refer to [optimum-intel](https://github.com/huggingface/optimum-intel/tree/main/examples/openvino) for examples of
 joint (movement) pruning, quantization and distillation (JPQD), end-to-end from NNCF optimization to compressed OpenVINO IR.
 - Exporting PyTorch compressed models to ONNX\* checkpoints and TensorFlow compressed models to SavedModel or Frozen Graph format, ready to use with [OpenVINO&trade; toolkit](https://docs.openvino.ai).
-- Support for [Accuracy-Aware model training](./docs/Usage.md#accuracy-aware-model-training) pipelines via the [Adaptive Compression Level Training](./docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md) and [Early Exit Training](./docs/accuracy_aware_model_training/EarlyExitTraining.md).
+- Support for [Accuracy-Aware model training](./docs/usage/training_time_compression/other_algorithms/Usage.md#accuracy-aware-model-training) pipelines via the [Adaptive Compression Level Training](./docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md) and [Early Exit Training](./docs/accuracy_aware_model_training/EarlyExitTraining.md).
 
 ## Documentation
 
@@ -265,7 +265,7 @@ compression_ctrl.export_model("compressed_model.pb", save_format="frozen_graph")
 
 </details>
 
-For a more detailed description of NNCF usage in your training code, see [this tutorial](docs/Usage.md).
+For a more detailed description of NNCF usage in your training code, see [this tutorial](docs/usage/training_time_compression/other_algorithms/Usage.md).
 
 ## Demos, Tutorials and Samples
 
