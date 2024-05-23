@@ -118,6 +118,7 @@ INSTALL_REQUIRES = [
     "scipy>=1.3.2",
     "tabulate>=0.9.0",
     "tqdm>=4.54.1",
+    "typing_extensions>=4.1.1",
 ]
 
 
