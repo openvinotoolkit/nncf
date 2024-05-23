@@ -55,6 +55,7 @@ class PTOperatorMetatype(OperatorMetatype):
         NamespaceTarget.TORCH_NN_FUNCTIONAL: [],
         NamespaceTarget.TORCH_TENSOR: [],
         NamespaceTarget.TORCH: [],
+        NamespaceTarget.ATEN: [],
     }
 
     subtypes: List[Type["PTOperatorMetatype"]] = []
@@ -546,6 +547,7 @@ class PTAddMetatype(PTOperatorMetatype):
     module_to_function_names = {
         NamespaceTarget.TORCH_TENSOR: ["add", "__add__", "__iadd__", "__radd__"],
         NamespaceTarget.TORCH: ["add"],
+        NamespaceTarget.ATEN: ["add_"],
     }
     hw_config_names = [HWConfigOpName.ADD]
     num_expected_input_edges = 2
@@ -557,6 +559,7 @@ class PTSubMetatype(PTOperatorMetatype):
     module_to_function_names = {
         NamespaceTarget.TORCH_TENSOR: ["sub", "__sub__", "__isub__", "__rsub__"],
         NamespaceTarget.TORCH: ["sub"],
+        NamespaceTarget.ATEN: ["sub_"],
     }
     hw_config_names = [HWConfigOpName.SUBTRACT]
     num_expected_input_edges = 2

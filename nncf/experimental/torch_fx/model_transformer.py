@@ -68,20 +68,6 @@ def insert_qdq_to_model(model: torch.fx.GraphModule, qsetup) -> torch.fx.GraphMo
 
 
 def _insert_qdq_to_model(model: torch.fx.GraphModule, qsetup) -> torch.fx.GraphModule:
-    # qsetup_after_node = dict()
-    # for node in list(model.graph.nodes):
-    #    for node_name, setup in qsetup.items():
-    #        if node.name != node_name:
-    #            continue
-    #        qsetup_after_node[node.all_input_nodes[0].name] = setup["activations"]
-    #        if "weights" in setup:
-    #            qsetup_after_node[node.all_input_nodes[1].name] = setup["weights"]
-    #        # Case for nodes with two activations
-    #        #if len(node.all_input_nodes) > 1 and node.all_input_nodes[1].op not in ["placeholder", "get_attr"]:
-    #        #    qsetup_after_node[node.all_input_nodes[1].name] = setup["activations"]
-    #        break
-    # qsetup = qsetup_after_node
-
     for idx, node in enumerate(list(model.graph.nodes)):
         if node.name not in qsetup:
             continue

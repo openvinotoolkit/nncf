@@ -10,6 +10,7 @@
 # limitations under the License.
 
 
+'''
 from typing import Dict, List, Optional, Type, TypeVar
 
 from nncf.common.graph.definitions import NNCFGraphNodeType
@@ -29,7 +30,6 @@ ModuleAttributes = TypeVar("ModuleAttributes", bound=BaseLayerAttributes)
 
 FX_OPERATOR_METATYPES = OperatorMetatypeRegistry("operator_metatypes")
 
-
 class FXOperatorMetatype(OperatorMetatype):
     """
     Base class for grouping PyTorch operators based on their semantic meaning.
@@ -48,35 +48,13 @@ class FXOperatorMetatype(OperatorMetatype):
     :param subtypes: List of subtypes of PyTorch operator.
     """
 
-    external_op_names: List[str] = []
-    num_expected_input_edges: Optional[int] = None
-
-    module_to_function_names: Dict[NamespaceTarget, List[str]] = {
-        NamespaceTarget.TORCH_NN_FUNCTIONAL: [],
-        NamespaceTarget.TORCH_TENSOR: [],
-        NamespaceTarget.TORCH: [],
-    }
+    classes: List[Type] = []
 
     subtypes: List[Type["FXOperatorMetatype"]] = []
 
     @classmethod
     def get_subtypes(cls) -> List[Type["FXOperatorMetatype"]]:
         return cls.subtypes.copy()
-
-    @classmethod
-    def get_all_namespace_to_function_names(cls) -> Dict[NamespaceTarget, List[str]]:
-        output = dict(cls.module_to_function_names)
-        output[NamespaceTarget.EXTERNAL] = cls.external_op_names
-        return output
-
-    @classmethod
-    def get_all_aliases(cls) -> List[str]:
-        output = set()
-        for _, function_names in cls.module_to_function_names.items():
-            output = output.union(function_names)
-        if cls.external_op_names is not None:
-            output = output.union(cls.external_op_names)
-        return list(output)
 
     @classmethod
     def determine_subtype(
@@ -97,47 +75,8 @@ class FXOperatorMetatype(OperatorMetatype):
         return subtype
 
 
-class FXOperatorSubtype(FXOperatorMetatype):
-    """
-    Exact specialization of FXOperatorMetatype that can only be determined via operator argument
-    inspection or owning module attribute inspection, and that may have specialized compression method
-    configuration other than the one used for general operations having the type of FXOperatorMetatype.
-    """
-
-    @classmethod
-    def matches(
-        cls, layer_attributes: Optional[BaseLayerAttributes] = None, function_args=None, functions_kwargs=None
-    ) -> bool:
-        raise NotImplementedError
-
-
-def _is_called_inside_nncf_module(functions_kwargs):
-    key = DynamicGraph.IS_CALLED_INSIDE_NNCF_MODULE
-    if functions_kwargs is None or key not in functions_kwargs:
-        return False
-    return functions_kwargs[key]
-
-
-class FXModuleOperatorSubtype(FXOperatorSubtype):
-    @classmethod
-    def matches(
-        cls, layer_attributes: Optional[BaseLayerAttributes] = None, function_args=None, functions_kwargs=None
-    ) -> bool:
-        return _is_called_inside_nncf_module(functions_kwargs)
-
-
-class FXModuleDepthwiseConvOperatorSubtype(FXOperatorSubtype):
-    @classmethod
-    def matches(
-        cls, layer_attributes: Optional[BaseLayerAttributes] = None, function_args=None, functions_kwargs=None
-    ) -> bool:
-        if not _is_called_inside_nncf_module(functions_kwargs):
-            return False
-        if not isinstance(layer_attributes, ConvolutionLayerAttributes):
-            return False
-        if layer_attributes.groups == layer_attributes.in_channels and layer_attributes.in_channels > 1:
-            return True
-        return False
+class FXOperatorSubtype:
+    pass
 
 
 class FXDepthwiseConvOperatorSubtype(FXOperatorSubtype):
@@ -145,8 +84,6 @@ class FXDepthwiseConvOperatorSubtype(FXOperatorSubtype):
     def matches(
         cls, layer_attributes: Optional[BaseLayerAttributes] = None, function_args=None, functions_kwargs=None
     ) -> bool:
-        if _is_called_inside_nncf_module(functions_kwargs):
-            return False
         if not isinstance(layer_attributes, ConvolutionLayerAttributes):
             return False
         if layer_attributes.groups == layer_attributes.in_channels and layer_attributes.in_channels > 1:
@@ -188,29 +125,6 @@ class FXNoopMetatype(FXOperatorMetatype):
 
 
 @FX_OPERATOR_METATYPES.register(is_subtype=True)
-class FXModuleDepthwiseConv1dSubtype(FXModuleDepthwiseConvOperatorSubtype):
-    name = "Conv1DOp"
-    hw_config_name = [HWConfigOpName.DEPTHWISECONVOLUTION]
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv1d"]}
-    output_channel_axis = 1
-    num_expected_input_edges = 2
-    weight_port_ids = [1]
-    bias_port_id = 2
-
-
-@FX_OPERATOR_METATYPES.register(is_subtype=True)
-class FXModuleConv1dMetatype(FXModuleOperatorSubtype):
-    name = "Conv1DOp"
-    hw_config_names = [HWConfigOpName.CONVOLUTION]
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv1d"]}
-    subtypes = [FXModuleDepthwiseConv1dSubtype]
-    output_channel_axis = 1
-    num_expected_input_edges = 2
-    weight_port_ids = [1]
-    bias_port_id = 2
-
-
-@FX_OPERATOR_METATYPES.register(is_subtype=True)
 class FXDepthwiseConv1dSubtype(FXDepthwiseConvOperatorSubtype):
     name = "Conv1DOp"
     hw_config_name = [HWConfigOpName.DEPTHWISECONVOLUTION]
@@ -226,7 +140,7 @@ class FXConv1dMetatype(FXOperatorMetatype):
     name = "Conv1DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv1d"]}
-    subtypes = [FXModuleConv1dMetatype, FXDepthwiseConv1dSubtype]
+    subtypes = [FXDepthwiseConv1dSubtype]
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
@@ -234,22 +148,10 @@ class FXConv1dMetatype(FXOperatorMetatype):
 
 
 @FX_OPERATOR_METATYPES.register(is_subtype=True)
-class FXModuleDepthwiseConv2dSubtype(FXModuleDepthwiseConvOperatorSubtype):
+class FXModuleDepthwiseConv2dSubtype(FXOperatorSubtype):
     name = "Conv2DOp"
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv2d"]}
-    output_channel_axis = 1
-    num_expected_input_edges = 2
-    weight_port_ids = [1]
-    bias_port_id = 2
-
-
-@FX_OPERATOR_METATYPES.register(is_subtype=True)
-class FXModuleConv2dMetatype(FXModuleOperatorSubtype):
-    name = "Conv2DOp"
-    hw_config_names = [HWConfigOpName.CONVOLUTION]
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv2d"]}
-    subtypes = [FXModuleDepthwiseConv2dSubtype]
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
@@ -272,7 +174,7 @@ class FXConv2dMetatype(FXOperatorMetatype):
     name = "Conv2DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv2d"]}
-    subtypes = [FXModuleConv2dMetatype, FXDepthwiseConv2dSubtype]
+    subtypes = [FXDepthwiseConv2dSubtype]
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
@@ -284,18 +186,6 @@ class FXModuleDepthwiseConv3dSubtype(FXModuleDepthwiseConvOperatorSubtype):
     name = "Conv3DOp"
     hw_config_names = [HWConfigOpName.DEPTHWISECONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv3d"]}
-    output_channel_axis = 1
-    num_expected_input_edges = 2
-    weight_port_ids = [1]
-    bias_port_id = 2
-
-
-@FX_OPERATOR_METATYPES.register(is_subtype=True)
-class FXModuleConv3dMetatype(FXModuleOperatorSubtype):
-    name = "Conv3DOp"
-    hw_config_names = [HWConfigOpName.CONVOLUTION]
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv3d"]}
-    subtypes = [FXModuleDepthwiseConv3dSubtype]
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
@@ -318,18 +208,7 @@ class FXConv3dMetatype(FXOperatorMetatype):
     name = "Conv3DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv3d"]}
-    subtypes = [FXModuleConv3dMetatype, FXDepthwiseConv3dSubtype]
-    output_channel_axis = 1
-    num_expected_input_edges = 2
-    weight_port_ids = [1]
-    bias_port_id = 2
-
-
-@FX_OPERATOR_METATYPES.register(is_subtype=True)
-class FXModuleConvTranspose1dMetatype(FXModuleOperatorSubtype):
-    name = "ConvTranspose1DOp"
-    hw_config_names = [HWConfigOpName.CONVOLUTION]
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose1d"]}
+    subtypes = [FXDepthwiseConv3dSubtype]
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
@@ -341,18 +220,7 @@ class FXConvTranspose1dMetatype(FXOperatorMetatype):
     name = "ConvTranspose1DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose1d"]}
-    subtypes = [FXModuleConvTranspose1dMetatype]
-    output_channel_axis = 1
-    num_expected_input_edges = 2
-    weight_port_ids = [1]
-    bias_port_id = 2
-
-
-@FX_OPERATOR_METATYPES.register(is_subtype=True)
-class FXModuleConvTranspose2dMetatype(FXModuleOperatorSubtype):
-    name = "ConvTranspose2DOp"
-    hw_config_names = [HWConfigOpName.CONVOLUTION]
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose2d"]}
+    subtypes = []
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
@@ -364,18 +232,7 @@ class FXConvTranspose2dMetatype(FXOperatorMetatype):
     name = "ConvTranspose2DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose2d"]}
-    subtypes = [FXModuleConvTranspose2dMetatype]
-    output_channel_axis = 1
-    num_expected_input_edges = 2
-    weight_port_ids = [1]
-    bias_port_id = 2
-
-
-@FX_OPERATOR_METATYPES.register(is_subtype=True)
-class FXModuleConvTranspose3dMetatype(FXModuleOperatorSubtype):
-    name = "ConvTranspose3DOp"
-    hw_config_names = [HWConfigOpName.CONVOLUTION]
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose3d"]}
+    subtypes = []
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
@@ -387,38 +244,20 @@ class FXConvTranspose3dMetatype(FXOperatorMetatype):
     name = "ConvTranspose3DOp"
     hw_config_names = [HWConfigOpName.CONVOLUTION]
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["conv_transpose3d"]}
-    subtypes = [FXModuleConvTranspose3dMetatype]
+    subtypes = []
     output_channel_axis = 1
     num_expected_input_edges = 2
     weight_port_ids = [1]
     bias_port_id = 2
 
 
-@FX_OPERATOR_METATYPES.register(is_subtype=True)
-class FXModuleDeformConv2dMetatype(FXModuleOperatorSubtype):
-    name = "DeformConv2dOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["deform_conv2d"]}
-    num_expected_input_edges = 2
-    weight_port_ids = [2]
-
-
 @FX_OPERATOR_METATYPES.register()
 class FXDeformConv2dMetatype(FXOperatorMetatype):
     name = "DeformConv2dOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["deform_conv2d"]}
-    subtypes = [FXModuleDeformConv2dMetatype]
+    subtypes = []
     num_expected_input_edges = 4
     weight_port_ids = [2]
-
-
-@FX_OPERATOR_METATYPES.register(is_subtype=True)
-class FXModuleLinearMetatype(FXModuleOperatorSubtype):
-    name = "LinearOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["linear"]}
-    hw_config_names = [HWConfigOpName.MATMUL]
-    output_channel_axis = -1
-    num_expected_input_edges = 2
-    weight_port_ids = [1]
 
 
 @FX_OPERATOR_METATYPES.register()
@@ -426,7 +265,7 @@ class FXLinearMetatype(FXOperatorMetatype):
     name = "LinearOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["linear"]}
     hw_config_names = [HWConfigOpName.MATMUL]
-    subtypes = [FXModuleLinearMetatype]
+    subtypes = []
     output_channel_axis = -1
     num_expected_input_edges = 2
     weight_port_ids = [1]
@@ -482,38 +321,22 @@ class FXLeakyRELUMetatype(FXOperatorMetatype):
 
 
 @FX_OPERATOR_METATYPES.register(is_subtype=True)
-class FXModuleLayerNormMetatype(FXModuleOperatorSubtype):
-    name = "LayerNormOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["layer_norm"]}
-    hw_config_names = [HWConfigOpName.MVN]
-    num_expected_input_edges = 1
-    weight_port_ids = [2]
-
-
 @FX_OPERATOR_METATYPES.register()
 class FXLayerNormMetatype(FXOperatorMetatype):
     name = "LayerNormOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["layer_norm"]}
     hw_config_names = [HWConfigOpName.MVN]
-    subtypes = [FXModuleLayerNormMetatype]
+    subtypes = []
     num_expected_input_edges = 1
-    weight_port_ids = [2]
-
-
-@FX_OPERATOR_METATYPES.register(is_subtype=True)
-class FXModuleGroupNormMetatype(FXModuleOperatorSubtype):
-    name = "GroupNormOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["group_norm"]}
-    hw_config_names = [HWConfigOpName.MVN]
     weight_port_ids = [2]
 
 
 @FX_OPERATOR_METATYPES.register()
 class FXGroupNormMetatype(FXOperatorMetatype):
     name = "GroupNormOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["group_norm"]}
+    module_to_function_names = {}
     hw_config_names = [HWConfigOpName.MVN]
-    subtypes = [FXModuleGroupNormMetatype]
+    subtypes = []
     weight_port_ids = [2]
 
 
@@ -687,17 +510,11 @@ class FXThresholdMetatype(FXOperatorMetatype):
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["threshold"]}
 
 
-@FX_OPERATOR_METATYPES.register(is_subtype=True)
-class FXModuleBatchNormMetatype(FXModuleOperatorSubtype):
-    name = "BatchNormOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["batch_norm"]}
-
-
 @FX_OPERATOR_METATYPES.register()
 class FXBatchNormMetatype(FXOperatorMetatype):
     name = "BatchNormOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["batch_norm"]}
-    subtypes = [FXModuleBatchNormMetatype]
+    subtypes = []
     weight_port_ids = [3]
     bias_port_id = 4
 
@@ -878,28 +695,12 @@ class FXExpandAsMetatype(FXOperatorMetatype):
     module_to_function_names = {NamespaceTarget.TORCH_TENSOR: ["expand_as"]}
 
 
-@FX_OPERATOR_METATYPES.register(is_subtype=True)
-class FXModuleEmbeddingMetatype(FXModuleOperatorSubtype):
-    name = "EmbeddingOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["embedding"]}
-    hw_config_names = [HWConfigOpName.EMBEDDING]
-    weight_port_ids = [1]
-
-
 @FX_OPERATOR_METATYPES.register()
 class FXEmbeddingMetatype(FXOperatorMetatype):
     name = "EmbeddingOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["embedding"]}
     hw_config_names = [HWConfigOpName.EMBEDDING]
-    subtypes = [FXModuleEmbeddingMetatype]
-    weight_port_ids = [1]
-
-
-@FX_OPERATOR_METATYPES.register(is_subtype=True)
-class FXModuleEmbeddingBagMetatype(FXModuleOperatorSubtype):
-    name = "EmbeddingBagOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["embedding_bag"]}
-    hw_config_names = [HWConfigOpName.EMBEDDINGBAG]
+    subtypes = []
     weight_port_ids = [1]
 
 
@@ -908,7 +709,7 @@ class FXEmbeddingBagMetatype(FXOperatorMetatype):
     name = "EmbeddingBagOp"
     module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["embedding_bag"]}
     hw_config_names = [HWConfigOpName.EMBEDDINGBAG]
-    subtypes = [FXModuleEmbeddingBagMetatype]
+    subtypes = []
     weight_port_ids = [1]
 
 
@@ -1119,3 +920,5 @@ OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS = [
     FXModuleEmbeddingBagMetatype,
     FXModuleEmbeddingMetatype,
 ]
+
+'''

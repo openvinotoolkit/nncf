@@ -31,6 +31,7 @@ from torch._export import capture_pre_autograd_graph
 from torch.ao.quantization.quantize_pt2e import convert_pt2e
 from torch.ao.quantization.quantize_pt2e import prepare_pt2e
 from torch.ao.quantization.quantizer.x86_inductor_quantizer import X86InductorQuantizer
+from torch.fx.passes.graph_drawer import FxGraphDrawer
 
 from nncf.experimental.torch_fx.model_transformer import QPARAMPerChannel
 from nncf.experimental.torch_fx.model_transformer import QPARAMSPerTensor
@@ -44,6 +45,37 @@ def get_exported_model_from_nn_module(module, example_inputs):
 
 
 NNCF_IMPL = False
+
+
+def get_qsetup(exported_model, example_inputs):
+    quantizer = X86InductorQuantizer()
+    quantizer.set_global(xiq.get_default_x86_inductor_quantization_config())
+
+    prepared_model = prepare_pt2e(exported_model, quantizer)
+    prepared_model(*example_inputs)
+    converted_model = convert_pt2e(prepared_model)
+    g = FxGraphDrawer(converted_model, "resnet18_int8")
+    g.get_dot_graph().write_svg("resnet18_int8_compiled.svg")
+    qsetup = defaultdict(lambda: dict())
+
+    for node in converted_model.graph.nodes:
+        if "dequantize" in node.name:
+            quantize = node.all_input_nodes[0]
+            # place = "activations"
+            # if len(quantize.all_input_nodes) > 1:
+            #    place = "weights"
+            if "per_tensor" in node.name:
+                params = QPARAMSPerTensor(*node.args[1:])
+            else:
+                params = []
+                for i in range(1, 3):
+                    name = node.args[i].target
+                    params.append(getattr(converted_model, name))
+                params = QPARAMPerChannel(*(params + list(node.args[3:])))
+
+            target_node_name = quantize.all_input_nodes[0].name
+            qsetup[target_node_name] = params
+    return qsetup
 
 
 def quantize(model, example_inputs):
@@ -63,45 +95,18 @@ def quantize(model, example_inputs):
         # 7. prepared_model(*example_inputs)
         # 8. convert_pt2e(prepared_model)
     else:
-        from torch.fx.passes.graph_drawer import FxGraphDrawer
 
         g = FxGraphDrawer(exported_model, "resnet18")
         g.get_dot_graph().write_svg("resnet18_compiled.svg")
-        # nncf_graph = GraphConverter.create_nncf_graph(exported_model)
-        quantizer = X86InductorQuantizer()
-        quantizer.set_global(xiq.get_default_x86_inductor_quantization_config())
-
-        prepared_model = prepare_pt2e(exported_model, quantizer)
-        prepared_model(*example_inputs)
-        converted_model = convert_pt2e(prepared_model)
-        g = FxGraphDrawer(converted_model, "resnet18_int8")
-        g.get_dot_graph().write_svg("resnet18_int8_compiled.svg")
-        qsetup = defaultdict(lambda: dict())
-
-        for node in converted_model.graph.nodes:
-            if "dequantize" in node.name:
-                quantize = node.all_input_nodes[0]
-                # place = "activations"
-                # if len(quantize.all_input_nodes) > 1:
-                #    place = "weights"
-                if "per_tensor" in node.name:
-                    params = QPARAMSPerTensor(*node.args[1:])
-                else:
-                    params = []
-                    for i in range(1, 3):
-                        name = node.args[i].target
-                        params.append(getattr(converted_model, name))
-                    params = QPARAMPerChannel(*(params + list(node.args[3:])))
-
-                target_node_name = quantize.all_input_nodes[0].name
-                qsetup[target_node_name] = params
+        nncf_graph = GraphConverter.create_nncf_graph(exported_model)
+        del nncf_graph
 
         # MOCK NNCF QUANTIZATION
+        qsetup = get_qsetup(exported_model, example_inputs)
         exported_model = get_exported_model_from_nn_module(model, example_inputs)
         exported_model = insert_qdq_to_model(exported_model, qsetup)
-        g = FxGraphDrawer(converted_model, "resnet18_int8")
+        g = FxGraphDrawer(exported_model, "resnet18_int8")
         g.get_dot_graph().write_svg("resnet18_int8_compiled_manually.svg")
-        exported_model.meta = converted_model.meta
         return exported_model
 
     return None  # converted_model
