@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import defaultdict
+from collections import OrderedDict
 from typing import List, Type
 
 import openvino.runtime as ov
@@ -93,9 +93,9 @@ class GraphConverter:
         for op in model.get_ops():
             in_node_id = graph.get_node_by_name(op.get_friendly_name()).node_id
             for output_port_id, out in enumerate(op.outputs()):
-                node_vs_target_inputs = defaultdict(list)
-                for inp in out.get_target_inputs():
-                    node_vs_target_inputs[inp.get_node()].append(inp)
+                node_vs_target_inputs = OrderedDict()
+                for inp in sorted(out.get_target_inputs(), key=lambda x: x.get_node().get_friendly_name()):
+                    node_vs_target_inputs[inp.get_node()] = node_vs_target_inputs.get(inp.get_node(), [inp])
 
                 for out_node, inputs in node_vs_target_inputs.items():
                     tensor_shape = list(out.partial_shape.get_max_shape())
