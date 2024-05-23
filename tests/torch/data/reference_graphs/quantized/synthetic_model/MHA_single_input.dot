@@ -17,7 +17,7 @@ strict digraph  {
 "15 MHA_single_input/MultiheadAttention[mha]/transpose_2" [id=15, type=transpose];
 "16 MHA_single_input/MultiheadAttention[mha]/view_2" [id=16, type=view];
 "17 MHA_single_input/MultiheadAttention[mha]/transpose_3" [id=17, type=transpose];
-"18 MHA_single_input/MultiheadAttention[mha]/__truediv___0" [id=18, type=__truediv__];
+"18 MHA_single_input/MultiheadAttention[mha]/__mul___0" [id=18, type=__mul__];
 "19 MHA_single_input/MultiheadAttention[mha]/SymmetricQuantizer/symmetric_quantize_1" [id=19, type=symmetric_quantize];
 "20 MHA_single_input/MultiheadAttention[mha]/transpose_4" [id=20, type=transpose];
 "21 MHA_single_input/MultiheadAttention[mha]/bmm_0" [id=21, type=bmm];
@@ -49,12 +49,12 @@ strict digraph  {
 "10 MHA_single_input/MultiheadAttention[mha]/__getitem___1" -> "14 MHA_single_input/MultiheadAttention[mha]/view_1";
 "11 MHA_single_input/MultiheadAttention[mha]/__getitem___2" -> "16 MHA_single_input/MultiheadAttention[mha]/view_2";
 "12 MHA_single_input/MultiheadAttention[mha]/view_0" -> "13 MHA_single_input/MultiheadAttention[mha]/transpose_1";
-"13 MHA_single_input/MultiheadAttention[mha]/transpose_1" -> "18 MHA_single_input/MultiheadAttention[mha]/__truediv___0";
+"13 MHA_single_input/MultiheadAttention[mha]/transpose_1" -> "18 MHA_single_input/MultiheadAttention[mha]/__mul___0";
 "14 MHA_single_input/MultiheadAttention[mha]/view_1" -> "15 MHA_single_input/MultiheadAttention[mha]/transpose_2";
 "15 MHA_single_input/MultiheadAttention[mha]/transpose_2" -> "20 MHA_single_input/MultiheadAttention[mha]/transpose_4";
 "16 MHA_single_input/MultiheadAttention[mha]/view_2" -> "17 MHA_single_input/MultiheadAttention[mha]/transpose_3";
 "17 MHA_single_input/MultiheadAttention[mha]/transpose_3" -> "24 MHA_single_input/MultiheadAttention[mha]/bmm_1";
-"18 MHA_single_input/MultiheadAttention[mha]/__truediv___0" -> "19 MHA_single_input/MultiheadAttention[mha]/SymmetricQuantizer/symmetric_quantize_1";
+"18 MHA_single_input/MultiheadAttention[mha]/__mul___0" -> "19 MHA_single_input/MultiheadAttention[mha]/SymmetricQuantizer/symmetric_quantize_1";
 "19 MHA_single_input/MultiheadAttention[mha]/SymmetricQuantizer/symmetric_quantize_1" -> "21 MHA_single_input/MultiheadAttention[mha]/bmm_0";
 "20 MHA_single_input/MultiheadAttention[mha]/transpose_4" -> "21 MHA_single_input/MultiheadAttention[mha]/bmm_0";
 "21 MHA_single_input/MultiheadAttention[mha]/bmm_0" -> "22 MHA_single_input/MultiheadAttention[mha]/softmax_0";

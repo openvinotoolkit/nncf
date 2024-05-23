@@ -13,6 +13,7 @@ import os
 import re
 import subprocess
 import warnings
+from copy import deepcopy
 from pathlib import Path
 from typing import List, Tuple
 
@@ -30,6 +31,7 @@ from fastdownload import FastDownload
 from torch.jit import TracerWarning
 
 import nncf
+import nncf.torch
 from nncf.common.logging.track_progress import track
 from nncf.common.utils.helpers import create_table
 
@@ -40,9 +42,11 @@ warnings.filterwarnings("ignore", category=UserWarning)
 BASE_MODEL_NAME = "resnet18"
 IMAGE_SIZE = 64
 BATCH_SIZE = 128
+TRAINING_EPOCHS = 2
 
 
 ROOT = Path(__file__).parent.resolve()
+BEST_CKPT_NAME = "resnet18_int8_best.pt"
 CHECKPOINT_URL = (
     "https://storage.openvinotoolkit.org/repositories/nncf/openvino_notebook_ckpts/302_resnet18_fp32_v1.pth"
 )
@@ -70,7 +74,7 @@ def get_resnet18_model(device: torch.device) -> torch.nn.Module:
     return model
 
 
-def train(
+def train_epoch(
     train_loader: torch.utils.data.DataLoader,
     model: torch.nn.Module,
     criterion: torch.nn.Module,
@@ -262,8 +266,32 @@ def main():
     criterion = nn.CrossEntropyLoss().to(device)
     compression_lr = 1e-5
     optimizer = torch.optim.Adam(quantized_model.parameters(), lr=compression_lr)
+    acc1_int8_best = 0.0
 
-    train(train_loader, quantized_model, criterion, optimizer, device=device)
+    for epoch in range(TRAINING_EPOCHS):
+        print(f"Train epoch: {epoch}")
+        train_epoch(train_loader, quantized_model, criterion, optimizer, device=device)
+        acc1_int8 = validate(val_loader, quantized_model, device)
+        print(f"Accyracy@1 of INT8 model after {epoch} epoch finetuning: {acc1_int8:.3f}")
+        # Save the compression checkpoint for model with the best accuracy metric.
+        if acc1_int8 > acc1_int8_best:
+            state_dict = quantized_model.state_dict()
+            compression_config = quantized_model.nncf.get_config()
+            torch.save(
+                {
+                    "model_state_dict": state_dict,
+                    "compression_config": compression_config,
+                },
+                ROOT / BEST_CKPT_NAME,
+            )
+            acc1_int8_best = acc1_int8
+
+    # Load quantization modules and parameters from best checkpoint to the source model.
+    ckpt = torch.load(ROOT / BEST_CKPT_NAME)
+    quantized_model = nncf.torch.load_from_config(
+        deepcopy(model), ckpt["compression_config"], torch.ones((1, 3, IMAGE_SIZE, IMAGE_SIZE)).to(device)
+    )
+    quantized_model.load_state_dict(ckpt["model_state_dict"])
 
     # Evaluate on validation set after Quantization-Aware Training (QAT case).
     acc1_int8 = validate(val_loader, quantized_model, device)

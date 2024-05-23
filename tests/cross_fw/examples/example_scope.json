@@ -179,8 +179,8 @@
             "int8_init_top1": 55.279998779296875
         },
         "accuracy_metrics_after_training":{
-            "int8_top1": 56.74446202531646,
-            "accuracy_drop": -1.2244606018066406
+            "int8_top1": 57.08069620253165,
+            "accuracy_drop": -1.5606957447679761
         },
         "performance_metrics": {
             "fp32_fps": 3646.13,

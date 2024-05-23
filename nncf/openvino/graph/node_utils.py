@@ -429,9 +429,11 @@ def get_weighted_layer_attributes(
                 "kernel_size": tuple(
                     dim for dim, elem in zip(weights_shape, weights_layout) if elem == OVLayoutElem.SPATIAL
                 ),
-                "groups": weights_shape[weights_layout.index(OVLayoutElem.GROUPS)]
-                if OVLayoutElem.GROUPS in weights_layout
-                else 1,
+                "groups": (
+                    weights_shape[weights_layout.index(OVLayoutElem.GROUPS)]
+                    if OVLayoutElem.GROUPS in weights_layout
+                    else 1
+                ),
             }
         )
 
@@ -445,9 +447,11 @@ def get_weighted_layer_attributes(
         kwargs = {
             "weight_requires_grad": False,
             "in_features": weights_shape[weights_layout.index(OVLayoutElem.C_IN)],
-            "out_features": weights_shape[weights_layout.index(OVLayoutElem.C_OUT)]
-            if OVLayoutElem.C_OUT in weights_layout
-            else None,
+            "out_features": (
+                weights_shape[weights_layout.index(OVLayoutElem.C_OUT)]
+                if OVLayoutElem.C_OUT in weights_layout
+                else None
+            ),
             "with_bias": False,
         }
         return LinearLayerAttributes(**kwargs)

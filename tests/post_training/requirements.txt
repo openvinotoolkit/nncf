@@ -3,7 +3,7 @@ torch
 torchvision
 onnx
 onnxruntime
-openvino-dev
+openvino
 pytest
 
 librosa==0.10.0

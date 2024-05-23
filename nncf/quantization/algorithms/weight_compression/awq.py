@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, TypeVar
 
 from nncf import Dataset
+from nncf import nncf_logger
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.graph_matching import find_subgraphs_matching_pattern
@@ -136,6 +137,10 @@ class AWQ(Algorithm):
         nx_graph = inference_nncf_graph.get_nx_graph_copy()
         for _, pattern_graph in self._patterns.items():
             matches.extend(find_subgraphs_matching_pattern(nx_graph, pattern_graph(), strict=False))
+
+        if len(matches) == 0:
+            nncf_logger.info("No matching patterns were found for applying AWQ algorithm, it will be skipped.")
+            return model
 
         awq_data = {}
         name_mapping = {wp.weight_name: idx for idx, wp in enumerate(self._all_weight_params)}

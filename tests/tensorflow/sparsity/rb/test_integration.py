@@ -29,8 +29,8 @@ from nncf.tensorflow.helpers.model_creation import create_compressed_model
 MODEL_PATH = Path(__file__).parent.parent.parent / "data" / "mock_models" / "LeNet.h5"
 
 
-@pytest.fixture(name="determenistic_mode", scope="module")
-def determenistic_mode_fixture():
+@pytest.fixture(name="deterministic_mode", scope="module")
+def deterministic_mode_fixture():
     tf.keras.utils.set_random_seed(1)
     enable_op_determinism()
     yield
@@ -119,8 +119,10 @@ def train_lenet():
     model.save(MODEL_PATH)
 
 
-@pytest.mark.parametrize("distributed", [False, True], ids=["not_distributed", "distributed"])
-def test_rb_sparse_target_lenet(distributed, determenistic_mode):
+@pytest.mark.parametrize(
+    "distributed", [False, pytest.param(True, marks=pytest.mark.nightly)], ids=["not_distributed", "distributed"]
+)
+def test_rb_sparse_target_lenet(distributed, deterministic_mode):
     if not os.path.exists(MODEL_PATH):
         train_lenet()
 
