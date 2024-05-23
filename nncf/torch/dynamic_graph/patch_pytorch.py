@@ -16,7 +16,6 @@ from typing import Callable, List, Union
 
 import torch
 import torch.utils.cpp_extension
-from torch._dynamo import OptimizedModule
 from torch._jit_internal import createResolutionCallbackFromFrame
 from torch.jit import is_tracing
 from torch.nn import DataParallel
@@ -244,21 +243,6 @@ def torch_jit_script_if_tracing(fn):
     return wrapper
 
 
-def get_disable_patching_wrapper(f):
-    """
-    :param f: A callable object to be wrapped.
-    :return: A wrapper of a function that unpatches torch operators before the
-             function call and patches them back after the call.
-    """
-
-    @functools.wraps(f)
-    def wrapper(*args, **kwargs):
-        with disable_patching():
-            return f(*args, **kwargs)
-
-    return wrapper
-
-
 def get_torch_compile_wrapper():
     """
     Wrapper for torch.compile() that disables NNCF patching when called for vanilla PyTorch model and
@@ -267,29 +251,12 @@ def get_torch_compile_wrapper():
 
     @functools.wraps(_ORIG_TORCH_COMPILE)
     def wrapper(model, *args, **kwargs):
-        if hasattr(model, "nncf"):
-            raise ValueError("At the moment torch.compile() is not supported for models optimized by NNCF.")
+        from nncf.torch.nncf_network import NNCFNetwork
+
+        if isinstance(model, NNCFNetwork):
+            raise TypeError("At the moment torch.compile() is not supported for models optimized by NNCF.")
         with disable_patching():
             return _ORIG_TORCH_COMPILE(model, *args, **kwargs)
-
-    return wrapper
-
-
-def get_module_call_wrapper():
-    """
-    An additional wrapper over wrap_module_call() that disables torch patching if
-    model is compiled by torch dynamo.
-    """
-    module_call = torch.nn.Module.__call__
-    wrapped_module_call = wrap_module_call(module_call)
-    unpatched_module_call = get_disable_patching_wrapper(module_call)
-
-    @functools.wraps(module_call)
-    def wrapper(self, *args, **kwargs):
-        # Check if model was compiled by torch dynamo
-        if isinstance(self, OptimizedModule):
-            return unpatched_module_call(self, *args, **kwargs)
-        return wrapped_module_call(self, *args, **kwargs)
 
     return wrapper
 
@@ -309,6 +276,13 @@ _ORIG_JIT_SCRIPT = None
 _ORIG_JIT_TRACE_MAKE_MODULE = None
 _COMPILE_ALREADY_WRAPPED = False
 _ORIG_TORCH_COMPILE: Union[Callable, None] = None
+
+
+@functools.wraps(ORIGINAL_CALL)
+def unpatching_module_call(*args, **kwargs):
+    # Wrapper for module.__call__ that unpatches torch operators during model forward
+    with disable_patching():
+        return ORIGINAL_CALL(*args, **kwargs)
 
 
 def patch_torch_jit():
@@ -457,7 +431,7 @@ def patch_torch_operators():
     patch_namespace_opname(TracedTensor, op_info)
 
     ORIGINAL_OPERATORS.append(OriginalOpInfo("__call__", torch.nn.Module, torch.nn.Module.__call__))
-    torch.nn.Module.__call__ = get_module_call_wrapper()
+    torch.nn.Module.__call__ = wrap_module_call(torch.nn.Module.__call__)
     ignore_scope(DataParallel)
     ignore_scope(DistributedDataParallel)
 

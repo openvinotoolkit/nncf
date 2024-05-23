@@ -13,6 +13,7 @@ from copy import deepcopy
 from typing import Callable, List, Tuple
 
 import torch
+from torch._dynamo import OptimizedModule
 from torch.nn import DataParallel
 
 from nncf.common.graph.definitions import MODEL_CONST_OP_NAME
@@ -127,6 +128,12 @@ def wrap_module_call(module_call):
 
     @functools.wraps(module_call)
     def wrapped(self, *args, **kwargs):
+        from nncf.torch.dynamic_graph.patch_pytorch import unpatching_module_call
+
+        # If called on a model compiled by torch dynamo, we unpatch torch operators and invoke original module call
+        if isinstance(self, OptimizedModule):
+            return unpatching_module_call(self, *args, **kwargs)
+
         ctx = get_current_context()
         if not ctx or self.__class__ in _IGNORED_SCOPES:
             if isinstance(self, DataParallel):

@@ -114,28 +114,37 @@ def test_torch_compile():
 
 
 def test_torch_compile_on_nncf_model():
+    # Calling torch.compile on a regular torch model should work fine
+    model = BasicConvTestModel()
+    compiled_model = torch.compile(model)
+    compiled_model(torch.ones(model.INPUT_SIZE))
+
     model = BasicConvTestModel()
     quantized_model = nncf.quantize(model, nncf.Dataset([torch.rand(model.INPUT_SIZE)]))
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(
+        TypeError, match="At the moment torch\\.compile\\(\\) is not supported for models optimized by NNCF\\."
+    ):
         torch.compile(quantized_model)
-        assert "At the moment torch.compile() is not supported for models optimized by NNCF." in str(e.value)
 
     model = BasicConvTestModel()
     config = get_test_quantization_config(model)
     compressed_model, compression_ctrl = create_compressed_model_and_algo_for_test(model, config)
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(
+        TypeError, match="At the moment torch\\.compile\\(\\) is not supported for models optimized by NNCF\\."
+    ):
         torch.compile(compressed_model)
-        assert "At the moment torch.compile() is not supported for models optimized by NNCF." in str(e.value)
 
     stripped_model = compression_ctrl.strip()
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(
+        TypeError, match="At the moment torch\\.compile\\(\\) is not supported for models optimized by NNCF\\."
+    ):
         torch.compile(stripped_model)
-        assert "At the moment torch.compile() is not supported for models optimized by NNCF." in str(e.value)
 
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(
+        TypeError, match="At the moment torch\\.compile\\(\\) is not supported for models optimized by NNCF\\."
+    ):
         # Compiling this model would actually work, but inference of the compiled model will fail
         torch.compile(model)
-        assert "At the moment torch.compile() is not supported for models optimized by NNCF." in str(e.value)
 
 
 def test_jit_script_signature():
@@ -168,9 +177,7 @@ def test_jit_trace_model():
     torch.jit.trace(model, example_inputs=torch.rand(model.INPUT_SIZE))
 
 
-def get_test_quantization_config(
-    model,
-):
+def get_test_quantization_config(model):
     config = NNCFConfig()
     config.update(
         {
