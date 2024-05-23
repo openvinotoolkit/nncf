@@ -154,7 +154,7 @@ ov_model = ov.convert_model(torch_model.cpu(), example_input=dummy_input)
 ov_quantized_model = ov.convert_model(torch_quantized_model.cpu(), example_input=dummy_input)
 
 fp32_ir_path = ROOT / "mobilenet_v2_fp32.xml"
-ov.save_model(ov_model, fp32_ir_path)
+ov.save_model(ov_model, fp32_ir_path, compress_to_fp16=False)
 print(f"[1/7] Save FP32 model: {fp32_ir_path}")
 fp32_model_size = get_model_size(fp32_ir_path, verbose=True)
 

@@ -137,7 +137,7 @@ ov_quantized_model = nncf.quantize(ov_model, calibration_dataset)
 # Benchmark performance, calculate compression rate and validate accuracy
 
 fp32_ir_path = ROOT / "mobilenet_v2_fp32.xml"
-ov.save_model(ov_model, fp32_ir_path)
+ov.save_model(ov_model, fp32_ir_path, compress_to_fp16=False)
 print(f"[1/7] Save FP32 model: {fp32_ir_path}")
 fp32_model_size = get_model_size(fp32_ir_path, verbose=True)
 
