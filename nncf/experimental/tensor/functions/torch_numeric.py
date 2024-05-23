@@ -170,6 +170,11 @@ def _(x: List[torch.Tensor], axis: int = 0) -> List[torch.Tensor]:
     return torch.stack(x, dim=axis)
 
 
+@numeric.concatenate.register(torch.Tensor)
+def _(x: List[torch.Tensor], axis: int = 0) -> List[torch.Tensor]:
+    return torch.concatenate(x, dim=axis)
+
+
 @numeric.unstack.register(torch.Tensor)
 def _(x: torch.Tensor, axis: int = 0) -> List[torch.Tensor]:
     if not list(x.shape):
@@ -191,6 +196,20 @@ def _(
 ) -> torch.Tensor:
     dtype = DTYPE_MAP[dtype] if dtype else None
     return torch.mean(a, dim=axis, keepdim=keepdims, dtype=dtype)
+
+
+@numeric.median.register(torch.Tensor)
+def _(
+    a: torch.Tensor,
+    axis: Union[int, Tuple[int, ...]] = None,
+    keepdims: bool = False,
+) -> torch.Tensor:
+    # See https://github.com/pytorch/pytorch/issues/61582
+    if not isinstance(axis, int):
+        device = a.device
+        result = torch.tensor(np.median(a.detach().cpu().numpy(), axis=axis, keepdims=keepdims))
+        return result.type(a.dtype).to(device)
+    return torch.quantile(a, q=0.5, dim=axis, keepdims=keepdims)
 
 
 @numeric.round.register(torch.Tensor)
@@ -221,6 +240,16 @@ def _(
             keepdims,
         ).type(torch.float64)
     return torch.tensor(np.quantile(a.detach().cpu().numpy(), q=q, axis=axis, keepdims=keepdims)).to(device)
+
+
+@numeric.percentile.register(torch.Tensor)
+def percentile(
+    tensor: torch.Tensor,
+    q: Union[float, List[float]],
+    axis: Union[int, Tuple[int, ...], List[int]],
+    keepdims: bool = False,
+) -> List[Union[torch.Tensor, np.generic]]:
+    return numeric.quantile(tensor, q=torch.true_divide(torch.tensor(q), 100), axis=axis, keepdims=keepdims)
 
 
 @numeric._binary_op_nowarn.register(torch.Tensor)
@@ -288,7 +317,9 @@ def _(a: torch.Tensor, axis: Optional[Union[int, Tuple[int, ...]]] = None) -> to
 
 @numeric.transpose.register(torch.Tensor)
 def _(a: torch.Tensor, axes: Optional[Tuple[int, ...]] = None) -> torch.Tensor:
-    return a.t()
+    if axes is None:
+        return a.t()
+    return torch.permute(a, axes)
 
 
 @numeric.argsort.register(torch.Tensor)
@@ -299,3 +330,37 @@ def _(a: torch.Tensor, axis: int = -1, descending=False, stable=False) -> torch.
 @numeric.diag.register(torch.Tensor)
 def _(a: torch.Tensor, k: int = 0) -> torch.Tensor:
     return torch.diag(a, diagonal=k)
+
+
+@numeric.logical_or.register(torch.Tensor)
+def _(x1: torch.Tensor, x2: torch.Tensor) -> torch.Tensor:
+    return torch.logical_or(x1, x2)
+
+
+@numeric.masked_mean.register(torch.Tensor)
+def _(
+    x: torch.Tensor, mask: Optional[torch.Tensor], axis: Union[int, Tuple[int, ...], List[int]], keepdims=False
+) -> torch.Tensor:
+    if mask is None:
+        return torch.mean(x, axis=axis, keepdims=keepdims)
+    masked_x = x.masked_fill(mask, torch.nan)
+    ret = torch.nanmean(masked_x, dim=axis, keepdim=keepdims)
+    return torch.nan_to_num(ret)
+
+
+@numeric.masked_median.register(torch.Tensor)
+def _(
+    x: torch.Tensor, mask: Optional[torch.Tensor], axis: Union[int, Tuple[int, ...], List[int]], keepdims=False
+) -> torch.Tensor:
+    if mask is None:
+        return numeric.median(x, axis=axis, keepdims=keepdims)
+
+    # See https://github.com/pytorch/pytorch/issues/61582
+    if not isinstance(axis, int):
+        device = x.device
+        masked_x = np.ma.array(x.detach().cpu().numpy(), mask=mask.detach().cpu().numpy())
+        result = torch.tensor(np.ma.median(masked_x, axis=axis, keepdims=keepdims))
+        return result.type(x.dtype).to(device)
+    masked_x = x.masked_fill(mask, torch.nan)
+    ret = torch.nanquantile(masked_x, q=0.5, dim=axis, keepdims=keepdims)
+    return torch.nan_to_num(ret)
