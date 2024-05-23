@@ -185,6 +185,9 @@ class AWQ(Algorithm):
             weight_data = self._backend_entity.get_weight_names_and_port_ids(wp.node_with_weight, graph)
             if len(weight_data) != 1:  # not supported by the algorithm
                 continue
+
+            nncf_logger.debug(f"Apply AWQ for: {wp.node_with_weight.node_name}")
+
             _, weight_port_id = weight_data[0]
 
             config = wp.compression_config
