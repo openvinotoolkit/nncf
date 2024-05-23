@@ -17,16 +17,12 @@ import pytest
 
 from nncf.common.graph.utils import get_reduction_axes
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor import functions as fns
 
 
 class TemplateTestTensorCollectorBatchSize(ABC):
-    @staticmethod
-    @abstractmethod
-    def get_tensor_statistics_class():
-        pass
-
     @pytest.fixture
     @abstractmethod
     def reducers(self):
@@ -75,7 +71,7 @@ class TemplateTestTensorCollectorBatchSize(ABC):
     def _create_tensor_collector(self, shape, inplace, reducer, aggregator) -> TensorCollector:
         batch_axis = 0
         statistic_branch_random_name = "1"
-        collector = TensorCollector(self.get_tensor_statistics_class())
+        collector = TensorCollector(MinMaxTensorStatistic)
         reduction_axes = get_reduction_axes([batch_axis], shape)
         aggregation_axes = (0, 1)
         kwargs = {"reduction_axes": reduction_axes, "inplace": inplace}

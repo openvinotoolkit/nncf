@@ -33,13 +33,13 @@ from nncf.experimental.common.tensor_statistics.collectors import QuantileReduce
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.statistics import MeanTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import MedianMADTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import PercentileTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.experimental.tensor import Tensor
 from nncf.quantization.advanced_parameters import StatisticsType
-from nncf.torch.tensor_statistics.statistics import PTMeanTensorStatistic
-from nncf.torch.tensor_statistics.statistics import PTMedianMADTensorStatistic
-from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
-from nncf.torch.tensor_statistics.statistics import PTPercentileTensorStatistic
-from nncf.torch.tensor_statistics.statistics import PTRawTensorStatistic
 
 
 class PTReducerMixIn:
@@ -87,15 +87,15 @@ def _reshape_all(targets: Tuple[Tensor, ...], target_shape: Tuple[int, ...]):
     return map(lambda stat: stat.reshape(target_shape), targets)
 
 
-def _get_wrapped_min_max_tensor_statistic(target_shape: Tuple[int, ...]) -> Type[PTMinMaxTensorStatistic]:
+def _get_wrapped_min_max_tensor_statistic(target_shape: Tuple[int, ...]) -> Type[MinMaxTensorStatistic]:
     """
-    Returns PTMinMaxTensorStatistic type but all statistics are reshaped to target_shape.
+    Returns MinMaxTensorStatistic type but all statistics are reshaped to target_shape.
 
     :param target_shape: Target shape of the tensor statistic
-    :return: PTMinMaxTensorStatistic type but all statistics are reshaped to target_shape.
+    :return: MinMaxTensorStatistic type but all statistics are reshaped to target_shape.
     """
 
-    class WrappedPTMinMaxTensorStatistic(PTMinMaxTensorStatistic):
+    class WrappedPTMinMaxTensorStatistic(MinMaxTensorStatistic):
         def __init__(self, min_values, max_values):
             min_values, max_values = _reshape_all((min_values, max_values), target_shape)
             super().__init__(min_values, max_values)
@@ -103,15 +103,15 @@ def _get_wrapped_min_max_tensor_statistic(target_shape: Tuple[int, ...]) -> Type
     return WrappedPTMinMaxTensorStatistic
 
 
-def _get_wrapped_percentile_tensor_statistic(target_shape: Tuple[int, ...]) -> Type[PTPercentileTensorStatistic]:
+def _get_wrapped_percentile_tensor_statistic(target_shape: Tuple[int, ...]) -> Type[PercentileTensorStatistic]:
     """
-    Returns PTPercentileTensorStatistic type but all statistics are reshaped to target_shape.
+    Returns PercentileTensorStatistic type but all statistics are reshaped to target_shape.
 
     :param target_shape: Target shape of the tensor statistic
-    :return: PTPercentileTensorStatistic type but all statistics are reshaped to target_shape.
+    :return: PercentileTensorStatistic type but all statistics are reshaped to target_shape.
     """
 
-    class WrappedPTPercentileTensorStatistic(PTPercentileTensorStatistic):
+    class WrappedPTPercentileTensorStatistic(PercentileTensorStatistic):
         def __init__(self, percentile_vs_values_dict):
             reshaped_percentiles = {}
             for k, v in percentile_vs_values_dict.items():
@@ -147,12 +147,12 @@ def get_min_max_statistic_collector(
     }
     min_reducer = PTMinReducer(reduction_axes)
     min_aggregator = MinAggregator(**aggregator_kwargs)
-    tensor_collector.register_statistic_branch(PTMinMaxTensorStatistic.MIN_STAT, min_reducer, min_aggregator)
+    tensor_collector.register_statistic_branch(MinMaxTensorStatistic.MIN_STAT, min_reducer, min_aggregator)
 
     max_reducer_cls = PTAbsMaxReducer if use_abs_max else PTMaxReducer
     max_reducer = max_reducer_cls(reduction_axes)
     max_aggregator = MaxAggregator(**aggregator_kwargs)
-    tensor_collector.register_statistic_branch(PTMinMaxTensorStatistic.MAX_STAT, max_reducer, max_aggregator)
+    tensor_collector.register_statistic_branch(MinMaxTensorStatistic.MAX_STAT, max_reducer, max_aggregator)
     return tensor_collector
 
 
@@ -190,13 +190,13 @@ def get_mixed_min_max_statistic_collector(
     }
     min_aggregator_cls = MeanAggregator if use_means_of_mins else MinAggregator
     min_aggregator = min_aggregator_cls(**kwargs)
-    tensor_collector.register_statistic_branch(PTMinMaxTensorStatistic.MIN_STAT, min_reducer, min_aggregator)
+    tensor_collector.register_statistic_branch(MinMaxTensorStatistic.MIN_STAT, min_reducer, min_aggregator)
 
     max_reducer_cls = PTAbsMaxReducer if use_abs_max else PTMaxReducer
     max_reducer = max_reducer_cls(reduction_axes)
     max_aggregator_cls = MeanAggregator if use_means_of_maxs else MaxAggregator
     max_aggregator = max_aggregator_cls(**kwargs)
-    tensor_collector.register_statistic_branch(PTMinMaxTensorStatistic.MAX_STAT, max_reducer, max_aggregator)
+    tensor_collector.register_statistic_branch(MinMaxTensorStatistic.MAX_STAT, max_reducer, max_aggregator)
 
     return tensor_collector
 
@@ -221,7 +221,7 @@ def get_median_mad_statistic_collector(
 
     """
 
-    class WrappedPTMedianMADTensorStatistic(PTMedianMADTensorStatistic):
+    class WrappedPTMedianMADTensorStatistic(MedianMADTensorStatistic):
         def __init__(self, median_values, mad_values):
             median_values, mad_values = _reshape_all((median_values, mad_values), scale_shape)
             super().__init__(median_values, mad_values)
@@ -296,7 +296,7 @@ def _get_collection_without_reduction(
     )
 
     tensor_collector.register_statistic_branch(
-        PTMedianMADTensorStatistic.TENSOR_STATISTIC_OUTPUT_KEY, reducer, aggregator
+        MedianMADTensorStatistic.TENSOR_STATISTIC_OUTPUT_KEY, reducer, aggregator
     )
     return tensor_collector
 
@@ -331,7 +331,7 @@ def get_mean_percentile_statistic_collector(
             window_size=window_size,
         )
         tensor_collector.register_statistic_branch(
-            (PTPercentileTensorStatistic.PERCENTILE_VS_VALUE_DICT, p), reducer, aggregator, output_port_id
+            (PercentileTensorStatistic.PERCENTILE_VS_VALUE_DICT, p), reducer, aggregator, output_port_id
         )
     return tensor_collector
 
@@ -361,9 +361,9 @@ def get_mean_statistic_collector(
     aggregate_mean = MeanAggregator(**kwargs)
     aggregate_shape = ShapeAggregator()
 
-    collector = TensorCollector(PTMeanTensorStatistic)
-    collector.register_statistic_branch(PTMeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
-    collector.register_statistic_branch(PTMeanTensorStatistic.SHAPE_STAT, noop_reducer, aggregate_shape)
+    collector = TensorCollector(MeanTensorStatistic)
+    collector.register_statistic_branch(MeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
+    collector.register_statistic_branch(MeanTensorStatistic.SHAPE_STAT, noop_reducer, aggregate_shape)
     return collector
 
 
@@ -377,8 +377,8 @@ def get_raw_stat_collector(num_samples: Optional[int] = None) -> TensorCollector
     reducer = RawReducer()
     aggregator = NoopAggregator(num_samples)
 
-    collector = TensorCollector(PTRawTensorStatistic)
-    collector.register_statistic_branch(PTRawTensorStatistic.VALUES_STATS, reducer, aggregator)
+    collector = TensorCollector(RawTensorStatistic)
+    collector.register_statistic_branch(RawTensorStatistic.VALUES_STATS, reducer, aggregator)
     return collector
 
 

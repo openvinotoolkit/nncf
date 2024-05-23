@@ -26,13 +26,13 @@ from nncf.experimental.common.tensor_statistics.collectors import QuantileReduce
 from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.statistics import MeanTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.openvino.graph.node_utils import get_inplace_batch_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_max_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_op
 from nncf.openvino.graph.node_utils import get_inplace_mean_per_ch
 from nncf.openvino.graph.node_utils import get_inplace_min_op
-from nncf.openvino.statistics.statistics import OVMeanTensorStatistic
-from nncf.openvino.statistics.statistics import OVRawTensorStatistic
 from nncf.quantization.advanced_parameters import StatisticsType
 
 
@@ -109,9 +109,9 @@ def get_mean_statistic_collector(
     aggregate_mean = MeanAggregator(**kwargs)
     aggregate_shape = ShapeAggregator()
 
-    collector = TensorCollector(OVMeanTensorStatistic)
-    collector.register_statistic_branch(OVMeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
-    collector.register_statistic_branch(OVMeanTensorStatistic.SHAPE_STAT, noop_reducer, aggregate_shape)
+    collector = TensorCollector(MeanTensorStatistic)
+    collector.register_statistic_branch(MeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
+    collector.register_statistic_branch(MeanTensorStatistic.SHAPE_STAT, noop_reducer, aggregate_shape)
     return collector
 
 
@@ -119,8 +119,8 @@ def get_raw_stat_collector(num_samples: Optional[int] = None) -> TensorCollector
     reducer = RawReducer()
     aggregator = NoopAggregator(num_samples)
 
-    collector = TensorCollector(OVRawTensorStatistic)
-    collector.register_statistic_branch(OVRawTensorStatistic.VALUES_STATS, reducer, aggregator)
+    collector = TensorCollector(RawTensorStatistic)
+    collector.register_statistic_branch(RawTensorStatistic.VALUES_STATS, reducer, aggregator)
     return collector
 
 

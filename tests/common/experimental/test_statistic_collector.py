@@ -10,23 +10,23 @@
 # limitations under the License.
 
 from abc import abstractmethod
-from typing import List, Optional, Type
+from typing import List, Optional
 
 import numpy as np
 import pytest
 
 import nncf
 from nncf.common.tensor import NNCFTensor
-from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
-from nncf.common.tensor_statistics.statistics import MedianMADTensorStatistic
-from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.common.tensor_statistics.statistics import PercentileTensorStatistic
-from nncf.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
 from nncf.experimental.common.tensor_statistics.collectors import MergedTensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.experimental.common.tensor_statistics.collectors import TensorType
+from nncf.experimental.common.tensor_statistics.statistics import MeanTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import MedianMADTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import PercentileTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.experimental.tensor import Tensor
 
 
@@ -319,31 +319,6 @@ class TemplateTestStatisticCollector:
     def get_nncf_tensor(self, value: np.ndarray) -> NNCFTensor:
         pass
 
-    @abstractmethod
-    @pytest.fixture
-    def min_max_statistic_cls(self) -> Type[MinMaxTensorStatistic]:
-        pass
-
-    @abstractmethod
-    @pytest.fixture
-    def mean_statistic_cls(self) -> Type[MeanTensorStatistic]:
-        pass
-
-    @abstractmethod
-    @pytest.fixture
-    def median_mad_statistic_cls(self) -> Type[MedianMADTensorStatistic]:
-        pass
-
-    @abstractmethod
-    @pytest.fixture
-    def percentile_statistic_cls(self) -> Type[PercentileTensorStatistic]:
-        pass
-
-    @abstractmethod
-    @pytest.fixture
-    def raw_statistic_cls(self) -> Type[RawTensorStatistic]:
-        pass
-
     @pytest.mark.parametrize("inplace", [False, True])
     @pytest.mark.parametrize("any_not_empty", [False, True])
     def test_empty_tensors_register(self, inplace, any_not_empty):
@@ -381,33 +356,33 @@ class TemplateTestStatisticCollector:
         assert len(stats) == 1
         assert stats["A"] is None
 
-    def test_min_max_stat_building(self, min_max_statistic_cls: MinMaxTensorStatistic):
-        tensor_collector = TensorCollector(min_max_statistic_cls)
+    def test_min_max_stat_building(self):
+        tensor_collector = TensorCollector(MinMaxTensorStatistic)
         tensor_collector.register_statistic_branch(
-            min_max_statistic_cls.MIN_STAT, DummyTensorReducer("A"), DummyTensorAggregator()
+            MinMaxTensorStatistic.MIN_STAT, DummyTensorReducer("A"), DummyTensorAggregator()
         )
         tensor_collector.register_statistic_branch(
-            min_max_statistic_cls.MAX_STAT, DummyTensorReducer("B"), DummyTensorAggregator()
+            MinMaxTensorStatistic.MAX_STAT, DummyTensorReducer("B"), DummyTensorAggregator()
         )
         tensor_collector.register_input_for_all_reducers(Tensor(np.array(1)))
         statistic = tensor_collector.get_statistics()
         assert isinstance(statistic, MinMaxTensorStatistic)
         assert statistic.min_values == statistic.max_values == Tensor(np.array(1))
 
-    def test_mean_max_stat_building(self, mean_statistic_cls: MeanTensorStatistic):
-        tensor_collector = TensorCollector(mean_statistic_cls)
+    def test_mean_max_stat_building(self):
+        tensor_collector = TensorCollector(MeanTensorStatistic)
         tensor_collector.register_statistic_branch(
-            mean_statistic_cls.MEAN_STAT, DummyTensorReducer("A"), DummyTensorAggregator()
+            MeanTensorStatistic.MEAN_STAT, DummyTensorReducer("A"), DummyTensorAggregator()
         )
         tensor_collector.register_statistic_branch(
-            mean_statistic_cls.SHAPE_STAT, DummyTensorReducer("B"), DummyTensorAggregator()
+            MeanTensorStatistic.SHAPE_STAT, DummyTensorReducer("B"), DummyTensorAggregator()
         )
         tensor_collector.register_input_for_all_reducers(Tensor(np.array(1)))
         statistic = tensor_collector.get_statistics()
         assert isinstance(statistic, MeanTensorStatistic)
         assert statistic.mean_values == statistic.shape == Tensor(np.array(1))
 
-    def test_median_mad_stat_building(self, median_mad_statistic_cls: MedianMADTensorStatistic):
+    def test_median_mad_stat_building(self):
         class DummyMADPercentileAggregator(DummyTensorAggregator):
             def _aggregate_impl(self):
                 return {
@@ -415,9 +390,9 @@ class TemplateTestStatisticCollector:
                     MedianMADTensorStatistic.MAD_VALUES_STAT: self._container[0],
                 }
 
-        tensor_collector = TensorCollector(median_mad_statistic_cls)
+        tensor_collector = TensorCollector(MedianMADTensorStatistic)
         tensor_collector.register_statistic_branch(
-            median_mad_statistic_cls.TENSOR_STATISTIC_OUTPUT_KEY,
+            MedianMADTensorStatistic.TENSOR_STATISTIC_OUTPUT_KEY,
             DummyTensorReducer("A"),
             DummyMADPercentileAggregator(),
         )
@@ -426,14 +401,14 @@ class TemplateTestStatisticCollector:
         assert isinstance(statistic, MedianMADTensorStatistic)
         assert statistic.median_values == statistic.mad_values == Tensor(np.array(1))
 
-    def test_percentile_max_stat_building(self, percentile_statistic_cls: PercentileTensorStatistic):
+    def test_percentile_max_stat_building(self):
         class DummyPercentileTensorAggregator(DummyTensorAggregator):
             def _aggregate_impl(self):
                 return {0.5: self._container[0]}
 
-        tensor_collector = TensorCollector(percentile_statistic_cls)
+        tensor_collector = TensorCollector(PercentileTensorStatistic)
         tensor_collector.register_statistic_branch(
-            percentile_statistic_cls.TENSOR_STATISTIC_OUTPUT_KEY,
+            PercentileTensorStatistic.TENSOR_STATISTIC_OUTPUT_KEY,
             DummyTensorReducer("A"),
             DummyPercentileTensorAggregator(),
         )
@@ -442,7 +417,7 @@ class TemplateTestStatisticCollector:
         assert isinstance(statistic, PercentileTensorStatistic)
         assert statistic.percentile_vs_values_dict[0.5] == Tensor(np.array(1))
 
-        tensor_collector = TensorCollector(percentile_statistic_cls)
+        tensor_collector = TensorCollector(PercentileTensorStatistic)
         qs = [0.3, 0.5, 0.7]
         for q in qs:
             tensor_collector.register_statistic_branch(
@@ -457,10 +432,10 @@ class TemplateTestStatisticCollector:
         for q in qs:
             assert statistic.percentile_vs_values_dict[q] == Tensor(np.array(1))
 
-    def test_raw_max_stat_building(self, raw_statistic_cls: RawTensorStatistic):
-        tensor_collector = TensorCollector(raw_statistic_cls)
+    def test_raw_max_stat_building(self):
+        tensor_collector = TensorCollector(RawTensorStatistic)
         tensor_collector.register_statistic_branch(
-            raw_statistic_cls.VALUES_STATS, DummyTensorReducer("A"), DummyTensorAggregator()
+            RawTensorStatistic.VALUES_STATS, DummyTensorReducer("A"), DummyTensorAggregator()
         )
         tensor_collector.register_input_for_all_reducers(Tensor(np.array(1)))
         statistic = tensor_collector.get_statistics()

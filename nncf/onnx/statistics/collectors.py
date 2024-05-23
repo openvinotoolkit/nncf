@@ -26,8 +26,8 @@ from nncf.experimental.common.tensor_statistics.collectors import RawReducer
 from nncf.experimental.common.tensor_statistics.collectors import ShapeAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
-from nncf.onnx.statistics.statistics import ONNXMeanTensorStatistic
-from nncf.onnx.statistics.statistics import ONNXRawTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import MeanTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import RawTensorStatistic
 from nncf.quantization.advanced_parameters import StatisticsType
 
 
@@ -96,9 +96,9 @@ def get_mean_statistic_collector(
     aggregate_mean = MeanAggregator(**kwargs)
     aggregate_shape = ShapeAggregator()
 
-    collector = TensorCollector(ONNXMeanTensorStatistic)
-    collector.register_statistic_branch(ONNXMeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
-    collector.register_statistic_branch(ONNXMeanTensorStatistic.SHAPE_STAT, noop_reducer, aggregate_shape)
+    collector = TensorCollector(MeanTensorStatistic)
+    collector.register_statistic_branch(MeanTensorStatistic.MEAN_STAT, reducer, aggregate_mean)
+    collector.register_statistic_branch(MeanTensorStatistic.SHAPE_STAT, noop_reducer, aggregate_shape)
     return collector
 
 
@@ -112,8 +112,8 @@ def get_raw_stat_collector(num_samples: int) -> TensorCollector:
     reducer = RawReducer()
     aggregator = NoopAggregator(num_samples)
 
-    collector = TensorCollector(ONNXRawTensorStatistic)
-    collector.register_statistic_branch(ONNXRawTensorStatistic.VALUES_STATS, reducer, aggregator)
+    collector = TensorCollector(RawTensorStatistic)
+    collector.register_statistic_branch(RawTensorStatistic.VALUES_STATS, reducer, aggregator)
     return collector
 
 

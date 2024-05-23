@@ -14,14 +14,10 @@ import pytest
 
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.openvino.statistics.collectors import OV_REDUCERS_MAP
-from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
 from tests.common.experimental.test_tensor_collector_batch_size import TemplateTestTensorCollectorBatchSize
 
 
 class TestTensorCollectorBatchSize(TemplateTestTensorCollectorBatchSize):
-    @staticmethod
-    def get_tensor_statistics_class():
-        return OVMinMaxTensorStatistic
 
     @pytest.fixture(params=OV_REDUCERS_MAP.values())
     def reducers(self, request) -> bool:

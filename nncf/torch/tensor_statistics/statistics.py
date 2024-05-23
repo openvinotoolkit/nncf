@@ -10,50 +10,28 @@
 # limitations under the License.
 
 
-from nncf.common.tensor_statistics.statistics import MeanTensorStatistic
-from nncf.common.tensor_statistics.statistics import MedianMADTensorStatistic
-from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.common.tensor_statistics.statistics import PercentileTensorStatistic
-from nncf.common.tensor_statistics.statistics import RawTensorStatistic
-from nncf.common.tensor_statistics.statistics import TensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import MedianMADTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import PercentileTensorStatistic
+from nncf.experimental.common.tensor_statistics.statistics import TensorStatistic
 
 
-class PTMinMaxTensorStatistic(MinMaxTensorStatistic):
-    pass
-
-
-class PTMedianMADTensorStatistic(MedianMADTensorStatistic):
-    pass
-
-
-class PTPercentileTensorStatistic(PercentileTensorStatistic):
-    pass
-
-
-class PTMeanTensorStatistic(MeanTensorStatistic):
-    pass
-
-
-class PTRawTensorStatistic(RawTensorStatistic):
-    pass
-
-
-def pt_convert_stat_to_min_max_tensor_stat(statistic: TensorStatistic) -> PTMinMaxTensorStatistic:
-    if isinstance(statistic, PTMinMaxTensorStatistic):
+def pt_convert_stat_to_min_max_tensor_stat(statistic: TensorStatistic) -> MinMaxTensorStatistic:
+    if isinstance(statistic, MinMaxTensorStatistic):
         return statistic
-    if isinstance(statistic, PTMedianMADTensorStatistic):
+    if isinstance(statistic, MedianMADTensorStatistic):
         # Using three-sigma approach to estimate min and max
         # Constant factor depends on the distribution form - assuming normal and the factor is 1.4826
-        return PTMinMaxTensorStatistic(
+        return MinMaxTensorStatistic(
             min_values=statistic.median_values - 3 * 1.4826230 * statistic.mad_values,
             max_values=statistic.median_values + 3 * 1.4826230 * statistic.mad_values,
         )
-    if isinstance(statistic, PTPercentileTensorStatistic):
+    if isinstance(statistic, PercentileTensorStatistic):
         if len(statistic.percentile_vs_values_dict.keys()) < 2:
             raise ValueError("Cannot create a min-max statistic for less than 2 percentile values")
         min_pct = min(statistic.percentile_vs_values_dict.keys())
         max_pct = max(statistic.percentile_vs_values_dict.keys())
-        return PTMinMaxTensorStatistic(
+        return MinMaxTensorStatistic(
             min_values=statistic.percentile_vs_values_dict[min_pct],
             max_values=statistic.percentile_vs_values_dict[max_pct],
         )

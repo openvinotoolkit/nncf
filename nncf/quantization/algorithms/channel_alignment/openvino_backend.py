@@ -22,6 +22,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
 from nncf.experimental.common.tensor_statistics.collectors import MedianAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.openvino.graph.layout import OVLayoutElem
 from nncf.openvino.graph.layout import get_conv_weights_layout_from_node
 from nncf.openvino.graph.layout import get_linear_weights_layout_from_node
@@ -38,7 +39,6 @@ from nncf.openvino.graph.node_utils import get_node_with_bias_value
 from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.statistics.collectors import OVQuantileReducer
-from nncf.openvino.statistics.statistics import OVMinMaxTensorStatistic
 from nncf.quantization.algorithms.channel_alignment.backend import ChannelAlignmentAlgoBackend
 from nncf.quantization.algorithms.channel_alignment.backend import LayoutDescriptor
 
@@ -80,10 +80,10 @@ class OVChannelAlignmentAlgoBackend(ChannelAlignmentAlgoBackend):
     def get_statistic_collector(
         reduction_axes, q: float, num_samples: int, inplace: bool
     ) -> TensorStatisticCollectorBase:
-        tensor_collector = TensorCollector(OVMinMaxTensorStatistic)
+        tensor_collector = TensorCollector(MinMaxTensorStatistic)
         quantile_reducer = OVQuantileReducer(reduction_axes, (q, 1 - q), inplace)
 
-        for port_id, container_key in enumerate([OVMinMaxTensorStatistic.MIN_STAT, OVMinMaxTensorStatistic.MAX_STAT]):
+        for port_id, container_key in enumerate([MinMaxTensorStatistic.MIN_STAT, MinMaxTensorStatistic.MAX_STAT]):
             aggregator = MedianAggregator(num_samples=num_samples, aggregation_axes=(0, 1))
             tensor_collector.register_statistic_branch(container_key, quantile_reducer, aggregator, port_id)
         return tensor_collector

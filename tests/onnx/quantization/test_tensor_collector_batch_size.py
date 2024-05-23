@@ -14,14 +14,10 @@ import pytest
 
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.onnx.statistics.collectors import ONNX_REDUCERS_MAP
-from nncf.onnx.statistics.statistics import ONNXMinMaxTensorStatistic
 from tests.common.experimental.test_tensor_collector_batch_size import TemplateTestTensorCollectorBatchSize
 
 
 class TestTensorCollectorBatchSize(TemplateTestTensorCollectorBatchSize):
-    @staticmethod
-    def get_tensor_statistics_class():
-        return ONNXMinMaxTensorStatistic
 
     @pytest.fixture(params=ONNX_REDUCERS_MAP.values())
     def reducers(self, request) -> bool:
