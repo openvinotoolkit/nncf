@@ -160,7 +160,10 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                         should_add_convert_node = True
                         break
 
-            weight = Tensor(get_const_value(const_node, np.float32))
+            dtype = None
+            if const_dtype == ov.Type.bf16:
+                dtype = np.float32
+            weight = Tensor(get_const_value(const_node, dtype))
             original_shape = weight.shape
             compressed_weight = compress_weight(
                 weight,
