@@ -44,6 +44,22 @@ from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
 InplaceInsertionFnType = Callable[[ov.Node, int], ov.Node]
 
 
+def get_add_bias_node(node: NNCFNode, nncf_graph: NNCFGraph) -> Optional[NNCFNode]:
+    """
+    Returns Add node which stores bias for node.
+
+    :param node: NNCFGraph node.
+    :param nncf_graph: NNCFGraph.
+    :return: Add node if exists.
+    """
+    for child in nncf_graph.get_next_nodes(node):
+        if child.metatype == OVAddMetatype:
+            bias_constant = get_node_with_bias_value(child, nncf_graph)
+            if bias_constant is not None:
+                return child
+    return None
+
+
 def is_node_with_bias(
     node: NNCFNode, nncf_graph: NNCFGraph, metatypes_with_bias: Optional[List[OVOpMetatype]] = None
 ) -> bool:
@@ -63,12 +79,7 @@ def is_node_with_bias(
     if node.metatype not in metatypes_with_bias:
         return False
 
-    add_node = nncf_graph.get_next_nodes(node)[0]
-    if add_node.metatype != OVAddMetatype:
-        return False
-
-    bias_constant = get_node_with_bias_value(add_node, nncf_graph)
-    return bias_constant is not None
+    return get_add_bias_node(node, nncf_graph) is not None
 
 
 def get_number_if_op(model: ov.Model) -> int:
@@ -110,9 +121,7 @@ def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Mo
     :return: The bias value that is applied to the output tensor of the node's operation.
     """
     ops_dict = {op.get_friendly_name(): op for op in model.get_ops()}
-
-    add_node = nncf_graph.get_next_nodes(node_with_bias)[0]
-    bias_constant = get_node_with_bias_value(add_node, nncf_graph)
+    bias_constant = get_node_with_bias_value(get_add_bias_node(node_with_bias, nncf_graph), nncf_graph)
     ov_bias_constant = ops_dict[bias_constant.node_name]
     return get_const_value(ov_bias_constant)
 
