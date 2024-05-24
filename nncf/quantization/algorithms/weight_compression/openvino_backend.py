@@ -268,20 +268,3 @@ class OVAWQAlgoAlgoBackend(OVWeightCompressionAlgoBackend):
     @staticmethod
     def get_awq_patterns():
         return get_awq_patterns(om.OVMatMulMetatype, om.OVMultiplyMetatype)
-
-    @staticmethod
-    def insert_scale_after_node(node, scale, node_name):
-        node_output_port = node.output(0)
-        node_dtype = node_output_port.get_element_type()
-        node_output_source_ports = node_output_port.get_target_inputs()
-
-        scale_const = opset.constant(scale, dtype=node_dtype, name=f"{node_name}/awq_scale")
-        mul = opset.multiply(
-            node,
-            scale_const,
-            name=f"{node_name}/awq_mul",
-        )
-
-        mul_output = mul.output(0)
-        for target_input in node_output_source_ports:
-            target_input.replace_source_output(mul_output)
