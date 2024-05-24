@@ -12,7 +12,7 @@
 import functools
 import inspect
 from contextlib import contextmanager
-from typing import List
+from typing import Callable, List, Union
 
 import torch
 import torch.utils.cpp_extension
@@ -243,6 +243,24 @@ def torch_jit_script_if_tracing(fn):
     return wrapper
 
 
+def get_torch_compile_wrapper():
+    """
+    Wrapper for torch.compile() that disables NNCF patching when called for vanilla PyTorch model and
+    raises an exception when called for an NNCF-optimized model.
+    """
+
+    @functools.wraps(_ORIG_TORCH_COMPILE)
+    def wrapper(model, *args, **kwargs):
+        from nncf.torch.nncf_network import NNCFNetwork
+
+        if isinstance(model, NNCFNetwork):
+            raise TypeError("At the moment torch.compile() is not supported for models optimized by NNCF.")
+        with disable_patching():
+            return _ORIG_TORCH_COMPILE(model, *args, **kwargs)
+
+    return wrapper
+
+
 class OriginalOpInfo:
     def __init__(self, name: str, namespace, op):
         self.name = name
@@ -256,6 +274,15 @@ _JIT_ALREADY_WRAPPED = False
 _OPERATORS_ALREADY_WRAPPED = False
 _ORIG_JIT_SCRIPT = None
 _ORIG_JIT_TRACE_MAKE_MODULE = None
+_COMPILE_ALREADY_WRAPPED = False
+_ORIG_TORCH_COMPILE: Union[Callable, None] = None
+
+
+@functools.wraps(ORIGINAL_CALL)
+def unpatching_module_call(*args, **kwargs):
+    # Wrapper for module.__call__ that unpatches torch operators during model forward
+    with disable_patching():
+        return ORIGINAL_CALL(*args, **kwargs)
 
 
 def patch_torch_jit():
@@ -329,6 +356,14 @@ def patch_torch_operators():
     if not _JIT_ALREADY_WRAPPED:
         patch_torch_jit()
         _JIT_ALREADY_WRAPPED = True
+
+    # Unpatch torch operators during model compilation.
+    global _COMPILE_ALREADY_WRAPPED
+    if not _COMPILE_ALREADY_WRAPPED:
+        global _ORIG_TORCH_COMPILE
+        _ORIG_TORCH_COMPILE = torch.compile
+        setattr(torch, "compile", get_torch_compile_wrapper())
+        _COMPILE_ALREADY_WRAPPED = True
 
     # Do not patch operators twice as well
     global _OPERATORS_ALREADY_WRAPPED
