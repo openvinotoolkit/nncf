@@ -1,0 +1,29 @@
+strict digraph  {
+"0 Input_1" [id=0, type=Parameter];
+"1 Conv" [id=1, type=Convolution];
+"2 Conv_Add" [id=2, type=Add];
+"3 GroupNormalization_169" [id=3, type=GroupNormalization];
+"4 Relu" [id=4, type=Relu];
+"5 Mul" [id=5, type=Multiply];
+"6 Add" [id=6, type=Add];
+"7 Result" [id=7, type=Result];
+"8 Constant_173" [id=8, type=Constant];
+"9 Constant_171" [id=9, type=Constant];
+"10 Constant_168" [id=10, type=Constant];
+"11 Constant_167" [id=11, type=Constant];
+"12 Bias" [id=12, type=Constant];
+"13 Constant_163" [id=13, type=Constant];
+"0 Input_1" -> "1 Conv"  [label="[1, 2, 3, 4, 4]", style=solid];
+"1 Conv" -> "2 Conv_Add"  [label="[1, 4, 1, 2, 2]", style=solid];
+"2 Conv_Add" -> "3 GroupNormalization_169"  [label="[1, 4, 3, 2, 2]", style=solid];
+"3 GroupNormalization_169" -> "4 Relu"  [label="[1, 4, 3, 2, 2]", style=solid];
+"4 Relu" -> "5 Mul"  [label="[1, 4, 3, 2, 2]", style=solid];
+"5 Mul" -> "6 Add"  [label="[1, 4, 3, 2, 2]", style=solid];
+"6 Add" -> "7 Result"  [label="[1, 4, 3, 2, 2]", style=solid];
+"8 Constant_173" -> "6 Add"  [label="[1, 4, 1, 1, 1]", style=solid];
+"9 Constant_171" -> "5 Mul"  [label="[1, 4, 1, 1, 1]", style=solid];
+"10 Constant_168" -> "3 GroupNormalization_169"  [label="[4]", style=solid];
+"11 Constant_167" -> "3 GroupNormalization_169"  [label="[4]", style=solid];
+"12 Bias" -> "2 Conv_Add"  [label="[1, 1, 3, 1, 1]", style=solid];
+"13 Constant_163" -> "1 Conv"  [label="[4, 2, 3, 3, 3]", style=solid];
+}

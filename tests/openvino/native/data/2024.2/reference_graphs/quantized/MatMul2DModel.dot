@@ -1,0 +1,33 @@
+strict digraph  {
+"0 Input" [id=0, type=Parameter];
+"1 Input/fq_output_0" [id=1, type=FakeQuantize];
+"2 MatMul" [id=2, type=MatMul];
+"3 Add" [id=3, type=Add];
+"4 Result" [id=4, type=Result];
+"5 Constant_4429" [id=5, type=Constant];
+"6 MatMul/fq_weights_1" [id=6, type=FakeQuantize];
+"7 Constant_6480" [id=7, type=Constant];
+"8 Constant_6479" [id=8, type=Constant];
+"9 Constant_6478" [id=9, type=Constant];
+"10 Constant_6477" [id=10, type=Constant];
+"11 Constant_4427" [id=11, type=Constant];
+"12 Constant_6475" [id=12, type=Constant];
+"13 Constant_6474" [id=13, type=Constant];
+"14 Constant_6473" [id=14, type=Constant];
+"15 Constant_6472" [id=15, type=Constant];
+"0 Input" -> "1 Input/fq_output_0"  [label="[3, 5]", style=solid];
+"1 Input/fq_output_0" -> "2 MatMul"  [label="[3, 5]", style=solid];
+"2 MatMul" -> "3 Add"  [label="[3, 2]", style=solid];
+"3 Add" -> "4 Result"  [label="[3, 2]", style=solid];
+"5 Constant_4429" -> "3 Add"  [label="[1, 2]", style=solid];
+"6 MatMul/fq_weights_1" -> "2 MatMul"  [label="[5, 2]", style=solid];
+"7 Constant_6480" -> "6 MatMul/fq_weights_1"  [label="[5, 1]", style=solid];
+"8 Constant_6479" -> "6 MatMul/fq_weights_1"  [label="[5, 1]", style=solid];
+"9 Constant_6478" -> "6 MatMul/fq_weights_1"  [label="[5, 1]", style=solid];
+"10 Constant_6477" -> "6 MatMul/fq_weights_1"  [label="[5, 1]", style=solid];
+"11 Constant_4427" -> "6 MatMul/fq_weights_1"  [label="[5, 2]", style=solid];
+"12 Constant_6475" -> "1 Input/fq_output_0"  [label="[]", style=solid];
+"13 Constant_6474" -> "1 Input/fq_output_0"  [label="[]", style=solid];
+"14 Constant_6473" -> "1 Input/fq_output_0"  [label="[]", style=solid];
+"15 Constant_6472" -> "1 Input/fq_output_0"  [label="[]", style=solid];
+}
