@@ -209,7 +209,21 @@ def quantize(
             ignored_scope=ignored_scope,
             advanced_parameters=advanced_parameters,
         )
+    if backend == BackendType.TORCH_FX:
+        from nncf.experimental.torch_fx.quantization.quantize_model import quantize_impl
 
+        return quantize_impl(
+            model=model,
+            calibration_dataset=calibration_dataset,
+            mode=mode,
+            preset=preset,
+            target_device=target_device,
+            subset_size=subset_size,
+            fast_bias_correction=fast_bias_correction,
+            model_type=model_type,
+            ignored_scope=ignored_scope,
+            advanced_parameters=advanced_parameters,
+        )
     raise nncf.UnsupportedBackendError(f"Unsupported type of backend: {backend}")
 
 

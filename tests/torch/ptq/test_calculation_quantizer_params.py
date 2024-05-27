@@ -27,7 +27,7 @@ from nncf.common.quantization.structs import QuantizerGroup
 from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor import functions as fn
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
-from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
+from nncf.quantization.algorithms.min_max.torch_backend import FXMinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.quantization.fake_quantize import get_quantizer_narrow_range
@@ -118,7 +118,7 @@ def test_quantizer_params_sym(case_to_test: CaseSymParams):
     target_type = (
         TargetType.OPERATION_WITH_WEIGHTS if quant_group == QuantizerGroup.WEIGHTS else TargetType.PRE_LAYER_OPERATION
     )
-    quantizer = PTMinMaxAlgoBackend._create_quantizer(qconfig, scale_shape, fq_params, target_type)
+    quantizer = FXMinMaxAlgoBackend._create_quantizer(qconfig, scale_shape, fq_params, target_type)
 
     assert quantizer.levels == fq_params.levels
     scale = quantizer.scale.detach().numpy()
@@ -208,7 +208,7 @@ def test_quantizer_params_asym(case_to_test: CaseSymParams):
     target_type = (
         TargetType.OPERATION_WITH_WEIGHTS if quant_group == QuantizerGroup.WEIGHTS else TargetType.PRE_LAYER_OPERATION
     )
-    quantizer = PTMinMaxAlgoBackend._create_quantizer(qconfig, scale_shape, fq_params, target_type)
+    quantizer = FXMinMaxAlgoBackend._create_quantizer(qconfig, scale_shape, fq_params, target_type)
     assert quantizer.levels == fq_params.levels
     assert fn.allclose(quantizer.input_low.data, case_to_test.ref_inp_low)
     assert fn.allclose(quantizer.input_range.data, case_to_test.ref_inp_range)

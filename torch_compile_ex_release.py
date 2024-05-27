@@ -44,7 +44,7 @@ def get_exported_model_from_nn_module(module, example_inputs):
         return capture_pre_autograd_graph(module, example_inputs)
 
 
-NNCF_IMPL = False
+NNCF_IMPL = True
 
 
 def get_qsetup(exported_model, example_inputs):
@@ -94,6 +94,12 @@ def quantize(model, example_inputs):
         # 6. Insert observers
         # 7. prepared_model(*example_inputs)
         # 8. convert_pt2e(prepared_model)
+        import nncf
+
+        calibration_dataset = nncf.Dataset(example_inputs)
+        quantized_model = nncf.quantize(exported_model, calibration_dataset)
+        return quantized_model
+
     else:
 
         g = FxGraphDrawer(exported_model, "resnet18")
@@ -208,5 +214,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     model_name = args.model
     num_iters = args.num_iters
-    main(model_name, num_iters)
-    # main_nncf(model_name, num_iters)
+    #main(model_name, num_iters)
+    main_nncf(model_name, num_iters)

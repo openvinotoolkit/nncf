@@ -26,7 +26,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.experimental.common.tensor_statistics.collectors import TensorReducerBase
 from nncf.quantization.algorithms.fast_bias_correction.torch_backend import PTFastBiasCorrectionAlgoBackend
-from nncf.quantization.algorithms.min_max.torch_backend import PTMinMaxAlgoBackend
+from nncf.quantization.algorithms.min_max.torch_backend import FXMinMaxAlgoBackend
 from nncf.quantization.range_estimator import RangeEstimatorParametersSet
 from nncf.torch.dynamic_graph.patch_pytorch import register_operator
 from nncf.torch.graph.graph import PTTargetPoint
@@ -60,8 +60,8 @@ MinMaxTestParameters = TemplateTestStatisticsAggregator.MinMaxTestParameters
 
 class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     @staticmethod
-    def get_min_max_algo_backend_cls() -> Type[PTMinMaxAlgoBackend]:
-        return PTMinMaxAlgoBackend
+    def get_min_max_algo_backend_cls() -> Type[FXMinMaxAlgoBackend]:
+        return FXMinMaxAlgoBackend
 
     def get_bias_correction_algo_backend_cls(self) -> None:
         pytest.skip("PTBiasCorrectionAlgoBackend is not implemented")
@@ -98,7 +98,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
         if target_type == TargetType.OPERATION_WITH_WEIGHTS:
             target_node_name = CONV_NODE_NAME
             port_id = 1
-        return PTMinMaxAlgoBackend.target_point(target_type, target_node_name, port_id)
+        return FXMinMaxAlgoBackend.target_point(target_type, target_node_name, port_id)
 
     def get_target_point_cls(self):
         return PTTargetPoint
@@ -277,7 +277,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
 
         target_point = self.get_target_point(test_parameters.target_type)
         model = self.__add_fn_to_model(model, target_point, fn)
-        nested_target_point = PTMinMaxAlgoBackend.target_point(nested_target_type, nested_target_node_name, 0)
+        nested_target_point = FXMinMaxAlgoBackend.target_point(nested_target_type, nested_target_node_name, 0)
         model = self.__add_fn_to_model(model, nested_target_point, fn)
 
         # Check hook inserted correctly

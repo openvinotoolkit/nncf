@@ -9,11 +9,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import defaultdict
 from dataclasses import dataclass
-from typing import Callable, Optional
+
+# from functools import partial
+# from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, List, Optional
 
 import torch
 import torch.fx
+
+# from torch import Tensor
+# from torch import nn
 from torch.ao.quantization.fx.utils import create_getattr_from_value
 from torch.ao.quantization.pt2e.duplicate_dq_pass import DuplicateDQPass
 from torch.ao.quantization.pt2e.port_metadata_pass import PortNodeMetaForQDQ
@@ -22,6 +29,118 @@ from torch.ao.quantization.pt2e.utils import _disallow_eval_train
 from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
 from torch.fx import GraphModule
 from torch.fx.passes.infra.pass_manager import PassManager
+
+from nncf.common.graph.model_transformer import ModelTransformer
+from nncf.common.graph.transformations.commands import TargetType
+
+# from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
+# from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.torch.graph.transformations.commands import PTInsertionCommand
+from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
+
+# from nncf.torch.graph.transformations.commands import PTTargetPoint
+# from nncf.torch.graph.transformations.commands import PTWeightUpdateCommand
+from nncf.torch.graph.transformations.layout import PTTransformationLayout
+
+# from torch.nn.parameter import Parameter
+# from nncf.torch.model_graph_manager import update_fused_bias
+# from nncf.torch.nncf_network import PTInsertionPoint
+# from nncf.torch.nncf_network import compression_module_type_to_attr_name
+# from nncf.torch.utils import get_model_device
+# from nncf.torch.utils import is_multidevice
+
+
+class FXModelTransformer(ModelTransformer):
+    """
+    Applies transformations upon Torch FX model.
+    """
+
+    def __init__(self, model: torch.fx.GraphModule):
+        super().__init__(model)
+
+        self._command_transformation_ordered_pairs = [
+            (PTInsertionCommand, self._apply_insertion_transformations),
+            (PTSharedFnInsertionCommand, self._apply_shared_nodes_insertion),
+        ]
+
+    def transform(self, transformation_layout: PTTransformationLayout) -> torch.fx.GraphModule:
+        transformations = transformation_layout.transformations
+        aggregated_transformations = defaultdict(list)
+        for transformation in transformations:
+            aggregated_transformations[transformation.__class__].append(transformation)
+
+        model = self._model
+        for transformation_cls, transformation_fn in self._command_transformation_ordered_pairs:
+            transformations = aggregated_transformations[transformation_cls]
+            if transformations:
+                model = transformation_fn(model, transformations)
+
+        return model
+
+    @staticmethod
+    def _apply_insertion_transformations(
+        model: torch.fx.GraphModule, transformations: List[PTInsertionCommand]
+    ) -> torch.fx.GraphModule:
+        """
+        Applies insertion transformations to the model.
+
+        :param model: Model to apply transformations.
+        :param transformations: List of the bias correction transformations.
+        :param device: Target device for the insertion functions. Applies only to
+            functions which are subclassed from torch.nn.Module. Do nothing in case device is None.
+        :return: A modified torch.fx.GraphModule.
+        """
+        node_type = "output"
+        graph = model.graph
+        outputs = []
+        for transformation in transformations:
+            for node in graph.nodes:
+                if node.name == transformation.target_point.target_node_name:
+                    target_node = node
+                    break
+            target_type = transformation.target_point.target_type
+            if target_type == TargetType.OPERATOR_PRE_HOOK:
+                ctx = graph.inserting_before(target_node)
+                target_nodes = [target_node]
+            elif target_type == TargetType.OPERATOR_POST_HOOK:
+                ctx = graph.inserting_after(target_node)
+                target_nodes = [target_node]
+            elif target_type == TargetType.OPERATION_WITH_WEIGHTS:
+                # TODO: make it common
+                ctx = graph.inserting_after(target_node)
+                target_nodes = []
+                for input in target_node.all_input_nodes:
+                    if input.op == "get_attr":
+                        target_nodes.append(input)
+            else:
+                raise RuntimeError(f"Unsupported target type: {target_type} for transformation: {transformation}")
+
+            with ctx:
+                for target_node in target_nodes:
+                    outputs.append(
+                        graph.create_node(node_type, "", (target_node,), {}, name=target_node.name + "_nncf_output")
+                    )
+        return model
+
+    @staticmethod
+    def _apply_shared_nodes_insertion(
+        model: torch.fx.GraphModule,
+        transformations: List[PTSharedFnInsertionCommand],
+    ) -> torch.fx.GraphModule:
+        """
+        Applies insertion of PTSharedFnInsertionCommand commands. For each command method inserts
+        a torch module to the torch.fx.GraphModule and inserts call hooks for each command target points.
+
+        :param model: Model to apply transformations.
+        :param transformations: List of the bias correction transformations.
+        :param device: Target device for the insertion functions. Applies only to
+            functions which are subclassed from torch.nn.Module. Do nothing in case device is None.
+        :return: A modified torch.fx.GraphModule.
+        """
+        for transformation in transformations:
+            a = 6
+            del a
+            pass
 
 
 @dataclass
