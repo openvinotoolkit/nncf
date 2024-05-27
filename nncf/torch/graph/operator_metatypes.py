@@ -693,13 +693,19 @@ class PTThresholdMetatype(PTOperatorMetatype):
 @PT_OPERATOR_METATYPES.register(is_subtype=True)
 class PTModuleBatchNormMetatype(PTModuleOperatorSubtype):
     name = "BatchNormOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["batch_norm"]}
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["batch_norm"],
+        NamespaceTarget.ATEN: ["_native_batch_norm_legit_no_training"],
+    }
 
 
 @PT_OPERATOR_METATYPES.register()
 class PTBatchNormMetatype(PTOperatorMetatype):
     name = "BatchNormOp"
-    module_to_function_names = {NamespaceTarget.TORCH_NN_FUNCTIONAL: ["batch_norm"]}
+    module_to_function_names = {
+        NamespaceTarget.TORCH_NN_FUNCTIONAL: ["batch_norm"],
+        NamespaceTarget.ATEN: ["_native_batch_norm_legit_no_training"],
+    }
     subtypes = [PTModuleBatchNormMetatype]
     weight_port_ids = [3]
     bias_port_id = 4

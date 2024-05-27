@@ -214,5 +214,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     model_name = args.model
     num_iters = args.num_iters
-    #main(model_name, num_iters)
-    main_nncf(model_name, num_iters)
+    main(model_name, num_iters)
+    # main_nncf(model_name, num_iters)

@@ -13,8 +13,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 
 # from functools import partial
-# from typing import Callable, Dict, List, Optional, Tuple
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Union
 
 import torch
 import torch.fx
@@ -31,12 +30,16 @@ from torch.fx import GraphModule
 from torch.fx.passes.infra.pass_manager import PassManager
 
 from nncf.common.graph.model_transformer import ModelTransformer
-from nncf.common.graph.transformations.commands import TargetType
 
 # from nncf.torch.graph.transformations.commands import PTModelExtractionCommand
 # from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.graph.transformations.commands import Command
+from nncf.common.graph.transformations.commands import TargetType
+from nncf.common.graph.transformations.commands import TransformationPriority
+from nncf.common.graph.transformations.commands import TransformationType
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
+from nncf.torch.graph.transformations.commands import PTTargetPoint
 
 # from nncf.torch.graph.transformations.commands import PTTargetPoint
 # from nncf.torch.graph.transformations.commands import PTWeightUpdateCommand
@@ -50,6 +53,19 @@ from nncf.torch.graph.transformations.layout import PTTransformationLayout
 # from nncf.torch.utils import is_multidevice
 
 
+class FXInsertionCommand(Command):
+    def __init__(
+        self,
+        target_points: List[PTTargetPoint],
+        fn: Callable,
+        priority: Union[TransformationPriority, int] = TransformationPriority.DEFAULT_PRIORITY,
+    ):
+        super().__init__(TransformationType.INSERT)
+        self.target_points = target_points
+        self.fn = fn
+        self.priority = priority
+
+
 class FXModelTransformer(ModelTransformer):
     """
     Applies transformations upon Torch FX model.
@@ -61,6 +77,7 @@ class FXModelTransformer(ModelTransformer):
         self._command_transformation_ordered_pairs = [
             (PTInsertionCommand, self._apply_insertion_transformations),
             (PTSharedFnInsertionCommand, self._apply_shared_nodes_insertion),
+            (FXInsertionCommand, self._apply_insertion_transformations),
         ]
 
     def transform(self, transformation_layout: PTTransformationLayout) -> torch.fx.GraphModule:
@@ -75,6 +92,10 @@ class FXModelTransformer(ModelTransformer):
             if transformations:
                 model = transformation_fn(model, transformations)
 
+        # Do not eliminate dead code as
+        # the dead code is coputing statistics :)
+        # model.graph.eliminate_dead_code()
+        model.recompile()
         return model
 
     @staticmethod
@@ -90,9 +111,8 @@ class FXModelTransformer(ModelTransformer):
             functions which are subclassed from torch.nn.Module. Do nothing in case device is None.
         :return: A modified torch.fx.GraphModule.
         """
-        node_type = "output"
+        node_type = "call_module"
         graph = model.graph
-        outputs = []
         for transformation in transformations:
             for node in graph.nodes:
                 if node.name == transformation.target_point.target_node_name:
@@ -101,25 +121,22 @@ class FXModelTransformer(ModelTransformer):
             target_type = transformation.target_point.target_type
             if target_type == TargetType.OPERATOR_PRE_HOOK:
                 ctx = graph.inserting_before(target_node)
-                target_nodes = [target_node]
             elif target_type == TargetType.OPERATOR_POST_HOOK:
                 ctx = graph.inserting_after(target_node)
-                target_nodes = [target_node]
             elif target_type == TargetType.OPERATION_WITH_WEIGHTS:
-                # TODO: make it common
+                target_node = target_node.all_input_nodes[transformation.target_point.input_port_id]
                 ctx = graph.inserting_after(target_node)
-                target_nodes = []
-                for input in target_node.all_input_nodes:
-                    if input.op == "get_attr":
-                        target_nodes.append(input)
             else:
                 raise RuntimeError(f"Unsupported target type: {target_type} for transformation: {transformation}")
 
+            fn = transformation.fn
+            obs_name_in_model = target_node.name + str(id(fn))
+            assert not hasattr(model, obs_name_in_model)
+            setattr(model, obs_name_in_model, fn)
             with ctx:
-                for target_node in target_nodes:
-                    outputs.append(
-                        graph.create_node(node_type, "", (target_node,), {}, name=target_node.name + "_nncf_output")
-                    )
+                graph.create_node(
+                    node_type, obs_name_in_model, (target_node,), {}, name=obs_name_in_model + "_graph_node"
+                )
         return model
 
     @staticmethod
@@ -137,10 +154,33 @@ class FXModelTransformer(ModelTransformer):
             functions which are subclassed from torch.nn.Module. Do nothing in case device is None.
         :return: A modified torch.fx.GraphModule.
         """
+        node_type = "call_module"
+        graph = model.graph
         for transformation in transformations:
-            a = 6
-            del a
-            pass
+            for node in graph.nodes:
+                if node.name == transformation.target_point.target_node_name:
+                    target_node = node
+                    break
+            target_type = transformation.target_point.target_type
+            if target_type == TargetType.OPERATOR_PRE_HOOK:
+                ctx = graph.inserting_before(target_node)
+            elif target_type == TargetType.OPERATOR_POST_HOOK:
+                ctx = graph.inserting_after(target_node)
+            elif target_type == TargetType.OPERATION_WITH_WEIGHTS:
+                target_node = target_node.all_input_nodes[transformation.target_point.input_port_id]
+                ctx = graph.inserting_after(target_node)
+            else:
+                raise RuntimeError(f"Unsupported target type: {target_type} for transformation: {transformation}")
+
+            fn = transformation.fn
+            obs_name_in_model = target_node.name + str(id(fn))
+            assert not hasattr(model, obs_name_in_model)
+            setattr(model, obs_name_in_model, fn)
+            with ctx:
+                graph.create_node(
+                    node_type, obs_name_in_model, (target_node,), {}, name=obs_name_in_model + "_graph_node"
+                )
+        return model
 
 
 @dataclass

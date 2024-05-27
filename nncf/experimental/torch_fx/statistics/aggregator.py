@@ -20,10 +20,32 @@ from nncf.common.graph.transformations.commands import TransformationPriority
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticPointsContainer
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
-from nncf.torch.graph.transformations.commands import PTInsertionCommand
+from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.torch_fx.model_transformer import PTInsertionCommand
 from nncf.torch.nncf_network import NNCFNetwork
+from nncf.torch.return_types import maybe_get_values_from_torch_return_type
 from nncf.torch.tensor import PTNNCFTensor
-from nncf.torch.tensor_statistics.algo import create_register_input_hook
+
+
+class TensorCollectorModule(torch.nn.Module):
+    """
+    torch.nn.Module which calls given collector in forward
+    """
+
+    def __init__(self, collector: TensorCollector):
+        super().__init__()
+        self._collector = collector
+
+    def forward(self, x: torch.Tensor):
+        """
+        Register inputs hook function.
+
+        :parameter x: tensor to register in hook.
+        :return: tensor to register in hook.
+        """
+        x_unwrapped = maybe_get_values_from_torch_return_type(x)
+        self._collector.register_input_for_all_reducers(PTNNCFTensor(x_unwrapped))
+        return x
 
 
 class FXStatisticsAggregator(StatisticsAggregator):
@@ -32,7 +54,12 @@ class FXStatisticsAggregator(StatisticsAggregator):
     def collect_statistics(self, model: NNCFNetwork, graph: NNCFGraph) -> None:
         with torch.no_grad():
             super().collect_statistics(model, graph)
-        model.nncf.remove_hooks_group(self.HOOKS_GROUP_NAME)
+        # All statistics are collected as a dead code,
+        # so eliminate dead core removed statistcs collector
+        # from the target model. No additional code required
+        # for that, horay!
+        model.graph.eliminate_dead_code()
+        model.recompile()
 
     def _register_statistics(
         self, outputs: Dict[str, PTNNCFTensor], statistic_points: StatisticPointsContainer
@@ -50,11 +77,11 @@ class FXStatisticsAggregator(StatisticsAggregator):
                 for collectors in _statistic_point.algorithm_to_tensor_collectors.values():
                     for collector in collectors:
                         transformation_commands.append(
+                            # FXInsertionCommand(
                             PTInsertionCommand(
                                 _statistic_point.target_point,
-                                create_register_input_hook(collector=collector),
+                                TensorCollectorModule(collector),
                                 TransformationPriority.FP32_TENSOR_STATISTICS_OBSERVATION,
-                                hooks_group_name=self.HOOKS_GROUP_NAME,
                             )
                         )
 

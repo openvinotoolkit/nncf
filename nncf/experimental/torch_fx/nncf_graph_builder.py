@@ -13,12 +13,14 @@ from itertools import chain
 from typing import Tuple
 
 import torch.fx
-from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_
+from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_  # noqa
 
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph import NNCFGraph
+from nncf.common.graph import NNCFNode
 from nncf.common.graph.layer_attributes import Dtype
 from nncf.common.graph.operator_metatypes import UnknownMetatype
+from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.operator_metatypes import PT_OPERATOR_METATYPES
 
 # from nncf.experimental.torch_fx.operator_metatypes import FX_OPERATOR_METATYPES
@@ -52,7 +54,12 @@ class GraphConverter:
             node_type = "get_attr"
             node_metatype = om.PTConstNoopMetatype
         elif node.op in ("call_function",):
-            node_type = str(node.target.overloadpacket).split(".")[1]
+            if hasattr(node.target, "overloadpacket"):
+                torch.nn.BatchNorm2d
+                node_type = str(node.target.overloadpacket).split(".")[1]
+            else:
+                # TODO: get correct nodes types from this nodes as well
+                node_type = str(node.target)
             node_metatype = PT_OPERATOR_METATYPES.get_operator_metatype_by_op_name(node_type)
             # TODO: add layer attrs and support subtypes
             # if node_metatype.get_subtypes():
@@ -75,9 +82,12 @@ class GraphConverter:
         :return: NNCFGraph.
         """
 
-        _fuse_conv_bn_(model)
+        # _fuse_conv_bn_(model)
 
-        nncf_graph = NNCFGraph()
+        # model.graph.eliminate_dead_code()
+        # model.recompile()
+
+        nncf_graph = PTNNCFGraph()
 
         for source_node in model.graph.nodes:
 
@@ -112,15 +122,15 @@ class GraphConverter:
 
         for source_node in model.graph.nodes:
 
-            source_node_id = nncf_graph.get_node_by_name(source_node.name).node_id
+            source_nncf_node = nncf_graph.get_node_by_name(source_node.name)
             for dist_node in source_node.users:
                 dist_node_id = nncf_graph.get_node_by_name(dist_node.name).node_id
                 input_port_id, output_port_id, tensor_shape = GraphConverter.get_edge_params(
-                    model, source_node, dist_node
+                    model, source_node, source_nncf_node, dist_node
                 )
 
                 nncf_graph.add_edge_between_nncf_nodes(
-                    source_node_id,
+                    source_nncf_node.node_id,
                     dist_node_id,
                     tensor_shape=tensor_shape,
                     input_port_id=input_port_id,
@@ -131,13 +141,17 @@ class GraphConverter:
         return nncf_graph
 
     @staticmethod
-    def get_edge_params(model, source_node: torch.fx.Node, dist_node: torch.fx.Node):
+    def get_edge_params(model, source_node: torch.fx.Node, source_nncf_node: NNCFNode, dist_node: torch.fx.Node):
         # TODO: support cat
         output_port_id = 0
         if source_node.op in ("get_attr",):
             tensor_shape = tuple(getattr(model, source_node.target).shape)
         elif "val" in source_node.meta:
-            tensor_shape = tuple(source_node.meta["val"].shape)
+            if source_nncf_node.metatype is om.PTBatchNormMetatype:
+                tensor = source_node.meta["val"][0]
+            else:
+                tensor = source_node.meta["val"]
+            tensor_shape = tuple(tensor.shape)
         else:
             print(f"Edge shape between {source_node.name} and {dist_node.name} is unknown. Using [1,1,1,1] instead.")
             tensor_shape = [1, 1, 1, 1]

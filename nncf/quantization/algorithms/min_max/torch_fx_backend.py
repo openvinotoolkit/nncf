@@ -18,7 +18,6 @@ import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
@@ -51,7 +50,7 @@ from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import get_scale_shape
 from nncf.torch.tensor_statistics.collectors import PT_REDUCERS_MAP
 from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
-from nncf.torch.tensor_statistics.statistics import FXMinMaxTensorStatistic
+from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 
 
 class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
@@ -140,14 +139,14 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         raise nncf.InternalError("FakeConvert insertion not implemented in PyTorch backend!")
 
     @staticmethod
-    def unify_statistics(statistics: List[FXMinMaxTensorStatistic]) -> FXMinMaxTensorStatistic:
+    def unify_statistics(statistics: List[PTMinMaxTensorStatistic]) -> PTMinMaxTensorStatistic:
         max_values, min_values = [], []
         for statistic in statistics:
             max_values.append(statistic.max_values.flatten())
             min_values.append(statistic.min_values.flatten())
         max_values = torch.amax(torch.stack(max_values), dim=0)
         min_values = torch.amin(torch.stack(min_values), dim=0)
-        return FXMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
+        return PTMinMaxTensorStatistic(min_values=min_values, max_values=max_values)
 
     @staticmethod
     def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: PTTargetPoint) -> Tuple[int, ...]:
@@ -168,10 +167,10 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         inplace: bool,
         num_samples: Optional[int] = None,
     ) -> TensorCollector:
-        collector = TensorCollector(FXMinMaxTensorStatistic)
+        collector = TensorCollector(PTMinMaxTensorStatistic)
         for params, container_key in zip(
             [range_estimator_params.min, range_estimator_params.max],
-            [FXMinMaxTensorStatistic.MIN_STAT, FXMinMaxTensorStatistic.MAX_STAT],
+            [PTMinMaxTensorStatistic.MIN_STAT, PTMinMaxTensorStatistic.MAX_STAT],
         ):
             if params.statistics_type not in PT_REDUCERS_MAP:
                 raise nncf.InternalError(
@@ -186,7 +185,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
             statistic_type = params.statistics_type
             if statistic_type in [StatisticsType.QUANTILE, StatisticsType.ABS_QUANTILE]:
                 # TODO(dlyakhov): merge two quantile aggregators in one
-                if container_key == FXMinMaxTensorStatistic.MIN_STAT:
+                if container_key == PTMinMaxTensorStatistic.MIN_STAT:
                     quantile = params.quantile_outlier_prob
                 else:
                     quantile = 1 - params.quantile_outlier_prob
@@ -231,15 +230,12 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
     ) -> Tuple[Tuple[int, ...], Tuple[int, ...], int]:
         is_weights = target_point.is_weight_target_point()
         if is_weights:
-            module_node = nncf_graph.get_node_by_name(target_point.target_node_name)
-            layer_attributes = module_node.layer_attributes
-            assert isinstance(layer_attributes, WeightedLayerAttributes)
-            input_shape = layer_attributes.get_weight_shape()
-            channel_idx = layer_attributes.get_target_dim_for_compression()
+            # TODO: support transpose conv/ make channel_idx common
+            channel_idx = 0
         else:
-            input_shape = nncf_graph.get_input_shape_for_insertion_point(target_point)
             channel_idx = 1  # channel dim for activations
 
+        input_shape = nncf_graph.get_input_shape_for_insertion_point(target_point)
         scale_shape = tuple(
             get_scale_shape(input_shape, is_weights=is_weights, per_channel=per_channel, channel_idx=channel_idx)
         )
