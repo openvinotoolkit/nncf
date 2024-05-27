@@ -21,7 +21,7 @@ from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.common.tensor_statistics.aggregator import StatisticPointsContainer
 from nncf.common.tensor_statistics.aggregator import StatisticsAggregator
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.torch_fx.model_transformer import PTInsertionCommand
+from nncf.experimental.torch_fx.model_transformer import FXModuleInsertionCommand
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.return_types import maybe_get_values_from_torch_return_type
 from nncf.torch.tensor import PTNNCFTensor
@@ -46,6 +46,13 @@ class TensorCollectorModule(torch.nn.Module):
         x_unwrapped = maybe_get_values_from_torch_return_type(x)
         self._collector.register_input_for_all_reducers(PTNNCFTensor(x_unwrapped))
         return x
+
+
+def get_statistic_fn_builder(collector: TensorCollector):
+    def fn(*args, **kwargs):
+        return TensorCollectorModule(collector)
+
+    return fn
 
 
 class FXStatisticsAggregator(StatisticsAggregator):
@@ -77,9 +84,8 @@ class FXStatisticsAggregator(StatisticsAggregator):
                 for collectors in _statistic_point.algorithm_to_tensor_collectors.values():
                     for collector in collectors:
                         transformation_commands.append(
-                            # FXInsertionCommand(
-                            PTInsertionCommand(
-                                _statistic_point.target_point,
+                            FXModuleInsertionCommand(
+                                [_statistic_point.target_point],
                                 TensorCollectorModule(collector),
                                 TransformationPriority.FP32_TENSOR_STATISTICS_OBSERVATION,
                             )

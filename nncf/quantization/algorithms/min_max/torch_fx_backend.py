@@ -9,7 +9,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Dict, List, Optional, Set, Tuple
 
 import torch
 
@@ -26,6 +26,7 @@ from nncf.common.quantization.structs import QuantizationScheme as QuantizationM
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
+from nncf.experimental.torch_fx.model_transformer import FXApplyTransformationCommand
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import StatisticsType
@@ -36,9 +37,6 @@ from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph import PTTargetPoint
-from nncf.torch.graph.transformations.command_creation import create_quantizer_insertion_command
-from nncf.torch.graph.transformations.command_creation import create_shared_quantizer_insertion_command
-from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.hardware.config import PTHWConfig
 from nncf.torch.nncf_network import NNCFNetwork
@@ -287,7 +285,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         target_point: PTTargetPoint,
         quantizer_config: QuantizerConfig,
         parameters: FakeQuantizeParameters,
-    ) -> Union[PTInsertionCommand, PTSharedFnInsertionCommand]:
+    ) -> FXApplyTransformationCommand:
         _, scale_shape, _ = FXMinMaxAlgoBackend._get_input_scale_shape(
             nncf_graph, target_point, quantizer_config.per_channel
         )
@@ -295,7 +293,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer = FXMinMaxAlgoBackend._create_quantizer(
             quantizer_config, scale_shape, parameters, target_point.target_type
         )
-        return create_quantizer_insertion_command(target_point, quantizer)
+        return FXApplyTransformationCommand([target_point], quantizer)
 
     @staticmethod
     def create_unified_scales_quantizers_insertion_commands(
@@ -311,7 +309,7 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer = FXMinMaxAlgoBackend._create_quantizer(
             quantizer_config, scale_shape, parameters, target_points[0].target_type
         )
-        return [create_shared_quantizer_insertion_command(target_points, quantizer)]
+        return [FXApplyTransformationCommand(tp, quantizer) for tp in target_points]
 
     @staticmethod
     def get_ignored_metatypes(model_type: ModelType, device: TargetDevice) -> List[OperatorMetatype]:
