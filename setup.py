@@ -121,14 +121,11 @@ INSTALL_REQUIRES = [
 ]
 
 EXTRAS_REQUIRE = {
-    "dev": [
-        "black==23.3.0",
-        "isort==5.12.0",
+    "plots": [
         "kaleido>=0.2.1",
         "matplotlib>=3.3.4, <3.6",
         "pillow>=9.0.0",
         "plotly-express>=0.4.1",
-        "pre-commit==3.2.2",
     ],
 }
 
