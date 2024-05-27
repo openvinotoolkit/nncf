@@ -120,6 +120,17 @@ INSTALL_REQUIRES = [
     "tqdm>=4.54.1",
 ]
 
+EXTRAS_REQUIRE = {
+    "dev": [
+        "black==23.3.0",
+        "isort==5.12.0",
+        "kaleido>=0.2.1",
+        "matplotlib>=3.3.4, <3.6",
+        "pillow>=9.0.0",
+        "plotly-express>=0.4.1",
+        "pre-commit==3.2.2",
+    ],
+}
 
 with open("{}/README.md".format(here), "r", encoding="utf8") as fh:
     long_description = fh.read()
@@ -141,6 +152,7 @@ setup(
         "Operating System :: OS Independent",
     ],
     install_requires=INSTALL_REQUIRES,
+    extras_require=EXTRAS_REQUIRE,
     keywords=[
         "compression",
         "quantization",
