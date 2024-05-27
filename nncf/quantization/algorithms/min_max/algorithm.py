@@ -12,7 +12,7 @@
 import collections
 import dataclasses
 from copy import deepcopy
-from typing import Any, Dict, List, Optional, OrderedDict, Set, TypeVar, Union
+from typing import Any, Dict, List, Optional, OrderedDict, Set, Tuple, TypeVar, Union
 
 import numpy as np
 
@@ -206,6 +206,7 @@ class MinMaxQuantization(Algorithm):
             else:
                 self._preset = QuantizationPreset.PERFORMANCE
 
+        self._override_device()
         self._set_mode_based_defaults()
         self._review_mode_based_defaults()
 
@@ -227,6 +228,21 @@ class MinMaxQuantization(Algorithm):
 
         self._reset_cache()
         self._algorithm_key = f"MMQ_{hash(self)}"
+
+    def _override_device(self) -> None:
+        """
+        Overrides NPU device to use CPU quantization scheme.
+        """
+        if self._target_device == TargetDevice.NPU:
+            act_bits, weight_bits = 8, 8
+            if self._activations_quantization_params and self._activations_quantization_params.num_bits:
+                act_bits = self._activations_quantization_params.num_bits
+            if self._weights_quantization_params and self._weights_quantization_params.num_bits:
+                weight_bits = self._weights_quantization_params.num_bits
+
+            if act_bits == 8 and weight_bits == 8:
+                self._target_device == TargetDevice.CPU
+                nncf_logger.debug("Target device NPU was changed to CPU!")
 
     def _set_mode_based_defaults(self) -> None:
         """
@@ -295,9 +311,9 @@ class MinMaxQuantization(Algorithm):
     def _reset_cache(self):
         # It prevents the duplicate weight quantizers from being added.
         # It can happen when you have layers that share the identical weight tensor.
-        self._quantization_target_points_to_qconfig: OrderedDict[
-            TargetPoint, QuantizerConfig
-        ] = collections.OrderedDict()
+        self._quantization_target_points_to_qconfig: OrderedDict[TargetPoint, QuantizerConfig] = (
+            collections.OrderedDict()
+        )
         self._unified_scale_groups = []
 
     @property
@@ -681,7 +697,7 @@ class MinMaxQuantization(Algorithm):
 
     def _get_quantization_target_points(
         self, model: TModel, nncf_graph: NNCFGraph
-    ) -> OrderedDict[TargetPoint, QuantizerConfig]:
+    ) -> Tuple[OrderedDict[TargetPoint, QuantizerConfig], List[List[TargetPoint]]]:
         """
         Returns Quantization Target Points.
         In the Compression Pipeline logic NNCF assumes that the compression pipeline works only on the single model.
@@ -1053,7 +1069,7 @@ class MinMaxQuantization(Algorithm):
                     quantizer_setup.discard(fq_2_q_key, True)
                     continue
 
-                # In the case of the two quantizers without the brancking after them,
+                # In the case of the two quantizers without the branching after them,
                 # it needs to check that all quantizers follows after producer nodes.
                 if _is_node_after_producers(fq_1_producer) and _is_node_after_producers(fq_2_producer):
                     fq_1_prod_shape = np.prod(nncf_graph.get_output_edges(fq_1_producer)[0].tensor_shape)

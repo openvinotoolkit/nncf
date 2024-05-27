@@ -33,6 +33,7 @@ from nncf.quantization.advanced_parameters import StatisticsType
 from nncf.quantization.algorithms.min_max.backend import MinMaxAlgoBackend
 from nncf.quantization.fake_quantize import FakeConvertParameters
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.quantization.range_estimator import AggregatorType
 from nncf.quantization.range_estimator import RangeEstimatorParameters
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph import PTTargetPoint
@@ -61,7 +62,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:
-        return [om.PTModuleLinearMetatype, om.PTLinearMetatype, om.PTMatMulMetatype]
+        return [om.PTLinearMetatype, om.PTMatMulMetatype]
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
@@ -81,18 +82,18 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def conv_metatypes(self) -> List[OperatorMetatype]:
-        return [om.PTModuleConv1dMetatype, om.PTModuleConv2dMetatype, om.PTModuleConv3dMetatype]
+        return [om.PTConv1dMetatype, om.PTConv2dMetatype, om.PTConv3dMetatype]
 
     @property
     def overflow_fix_metatypes(self) -> List[OperatorMetatype]:
         return [
-            om.PTModuleConv1dMetatype,
-            om.PTModuleConv2dMetatype,
-            om.PTModuleConv3dMetatype,
-            om.PTModuleLinearMetatype,
-            om.PTModuleConvTranspose1dMetatype,
-            om.PTModuleConvTranspose2dMetatype,
-            om.PTModuleConvTranspose3dMetatype,
+            om.PTConv1dMetatype,
+            om.PTConv2dMetatype,
+            om.PTConv3dMetatype,
+            om.PTLinearMetatype,
+            om.PTConvTranspose1dMetatype,
+            om.PTConvTranspose2dMetatype,
+            om.PTConvTranspose3dMetatype,
         ]
 
     @property
@@ -195,18 +196,21 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                     statistic_type = StatisticsType.ABS_MAX
                 reducer = PT_REDUCERS_MAP[statistic_type](reduction_axes=reduction_axes)
 
-            aggregator = AGGREGATORS_MAP[params.aggregator_type](
-                aggregation_axes=aggregation_axes,
-                num_samples=num_samples,
-                tensor_processor=PTNNCFCollectorTensorProcessor,
-            )
+            kwargs = {
+                "num_samples": num_samples,
+                "aggregation_axes": aggregation_axes,
+                "tensor_processor": PTNNCFCollectorTensorProcessor,
+            }
+            if params.aggregator_type in [AggregatorType.MEAN_NO_OUTLIERS, AggregatorType.MEDIAN_NO_OUTLIERS]:
+                kwargs.update({"quantile": params.quantile_outlier_prob})
+            aggregator = AGGREGATORS_MAP[params.aggregator_type](**kwargs)
 
             collector.register_statistic_branch(container_key, reducer, aggregator)
         return collector
 
     @staticmethod
     def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
-        return [None]
+        return node.metatype.weight_port_ids
 
     @staticmethod
     def get_weight_name(nncf_graph: NNCFGraph, target_point: PTTargetPoint) -> str:
@@ -264,22 +268,22 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer = quantizer_cls(quantizer_spec)
 
         # Fill it with minmax
-        PTMinMaxAlgoBackend._fill_quantizer_parameters(quantizer, parameters)
+        PTMinMaxAlgoBackend._fill_quantizer_parameters(quantizer, parameters, quantizer_spec.scale_shape)
         return quantizer
 
     @staticmethod
-    def _fill_quantizer_parameters(quantizer: BaseQuantizer, parameters: FakeQuantizeParameters) -> None:
+    def _fill_quantizer_parameters(quantizer: BaseQuantizer, parameters: FakeQuantizeParameters, scale_shape) -> None:
         if isinstance(quantizer, AsymmetricQuantizer):
-            quantizer.input_low = torch.nn.Parameter(parameters.input_low.data)
+            quantizer.input_low = torch.nn.Parameter(parameters.input_low.data.reshape(scale_shape))
             input_range = parameters.input_high - parameters.input_low
             # Subtract eps from the input_range to make quantizer parameters equal to
             # original parameters on the forward call.
-            quantizer.input_range = torch.nn.Parameter(input_range.data - quantizer.eps)
+            quantizer.input_range = torch.nn.Parameter((input_range.data - quantizer.eps).reshape(scale_shape))
         else:
             quantizer.signed = bool(torch.any(parameters.input_low.data < 0))
             # Subtract eps from the scale to make quantizer parameters equal to
             # original parameters on the forward call.
-            quantizer.scale = torch.nn.Parameter(parameters.input_high.data - quantizer.eps)
+            quantizer.scale = torch.nn.Parameter((parameters.input_high.data - quantizer.eps).reshape(scale_shape))
 
     @staticmethod
     def create_quantizer_insertion_command(

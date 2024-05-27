@@ -77,3 +77,23 @@ def test_jit_script_exception_preserves_patching_isolated():
     # torch.nn.Module.__call__ is one of the fundamental patched functions, if the code object points to NNCF code,
     # then it means patching is still present
     assert "nncf" in torch.nn.Module.__call__.__code__.co_filename
+
+
+def compile_and_run_test_model() -> torch.Tensor:
+    from tests.torch.helpers import BasicConvTestModel
+
+    model = BasicConvTestModel()
+    state_dict = {"conv.weight": model.default_weight(), "conv.bias": model.default_bias()}
+    model.load_state_dict(state_dict)
+
+    compiled_model = torch.compile(model)
+    return compiled_model(torch.ones(model.INPUT_SIZE))
+
+
+@pytest.mark.skipif(ISOLATION_RUN_ENV_VAR not in os.environ, reason="Should be run via isolation proxy")
+def test_compile():
+    before_nncf = compile_and_run_test_model()
+    import nncf.torch  # noqa: F401
+
+    after_nncf = compile_and_run_test_model()
+    assert torch.allclose(before_nncf, after_nncf)

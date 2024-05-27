@@ -232,6 +232,7 @@ def activation_quantizers_dumping_worker(current_gpu, config, tmp_path):
             f.writelines("%s\n" % str(aq_id))
 
 
+@pytest.mark.cuda
 def test_activation_quantizers_order_is_the_same__for_resnet50(tmp_path, runs_subprocess_in_precommit):
     if not torch.cuda.is_available():
         pytest.skip("Skipping CUDA test cases for CPU only setups")
@@ -803,7 +804,8 @@ class TestHalfPrecisionModels:
         compressed_model(inputs)
 
     @pytest.mark.parametrize(
-        "device", [pytest.param("cuda"), pytest.param("cpu", marks=pytest.mark.skip(reason="CVS-86697"))]
+        "device",
+        [pytest.param("cuda", marks=pytest.mark.cuda), pytest.param("cpu", marks=pytest.mark.skip(reason="CVS-86697"))],
     )
     def test_manual_partial_half_precision_model(self, initializing_config: NNCFConfig, device: str):
         model = TestHalfPrecisionModels.ModelWithManualPartialHalfPrecision()
@@ -821,11 +823,10 @@ class TestHalfPrecisionModels:
         # Should complete successfully, including init.
         compressed_model(inputs)
 
-    @pytest.mark.parametrize("device", ["cpu", "cuda"])
-    def test_external_autocast(self, initializing_config: NNCFConfig, device: str):
+    def test_external_autocast(self, initializing_config: NNCFConfig, use_cuda):
         model = TestHalfPrecisionModels.RegularModel()
         inputs = torch.ones([1, 1, 1, 1])
-        if device == "cuda":
+        if use_cuda:
             if not torch.cuda.is_available():
                 pytest.skip("CUDA not available")
             inputs = inputs.cuda()
@@ -941,13 +942,15 @@ def test_can_quantize_user_module_with_addmm():
     create_compressed_model_and_algo_for_test(ModelWithUserModule(), nncf_config)
 
 
+@pytest.mark.nightly
+@pytest.mark.cuda
 def test_works_when_wrapped_with_dataparallel():
-    if not torch.cuda.is_available():
+    if not torch.cuda.is_available() and torch.cuda.device_count() > 1:
         pytest.xfail("The executing host must have > 1 CUDA GPU in order for this test to be relevant.")
 
-    model = SharedLayersModel()
+    model = SharedLayersModel().cuda()
     config = get_quantization_config_without_range_init(model_size=1)
     register_bn_adaptation_init_args(config)
     model, _ = create_compressed_model_and_algo_for_test(model, config)
-    model = torch.nn.DataParallel(model.cuda())
+    model = torch.nn.DataParallel(model)
     model(torch.ones([10, 1, 1, 1], device="cuda"))

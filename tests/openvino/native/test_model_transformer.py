@@ -122,7 +122,8 @@ class InplaceOpTestCase:
     dims: str = "DEFAULT"
 
     def __str__(self) -> str:
-        return str(self.__dict__.values())
+        s = f"{self.name}-{self.reduce_shape}-{self.op_builder.__name__}-{self.ref_types}-{self.ref_values}-{self.dims}"
+        return s.replace(" ", "")
 
 
 LINEAR_MODEL_SHAPES = {

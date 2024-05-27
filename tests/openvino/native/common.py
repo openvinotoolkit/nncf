@@ -14,7 +14,8 @@ from pathlib import Path
 from typing import Tuple
 
 import numpy as np
-import openvino.runtime as ov
+import openvino as ov
+import torch
 from packaging import version
 
 import nncf
@@ -22,6 +23,13 @@ from nncf import Dataset
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from tests.openvino.conftest import OPENVINO_NATIVE_TEST_ROOT
 from tests.shared.nx_graph import compare_nx_graph_with_reference
+
+
+def convert_torch_model(model: torch.nn.Module, input_shape: Tuple[int], tmp_path: Path) -> ov.Model:
+    model_tmp_path = tmp_path / ("model.onnx")
+    with torch.no_grad():
+        torch.onnx.export(model, torch.ones(input_shape), model_tmp_path)
+    return ov.convert_model(model_tmp_path)
 
 
 def compare_nncf_graphs(model: ov.Model, path_ref_graph: str) -> None:

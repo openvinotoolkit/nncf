@@ -39,6 +39,8 @@ from nncf.torch.dynamic_graph.io_handling import ExampleInputInfo
 from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.io_handling import LoaderInputInfo
 from nncf.torch.dynamic_graph.io_handling import ModelInputInfo
+from nncf.torch.graph.transformations.serialization import deserialize_transformations
+from nncf.torch.model_transformer import PTModelTransformer
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.utils import is_dist_avail_and_initialized
 from nncf.torch.utils import is_main_process
@@ -326,6 +328,11 @@ def wrap_model(
     :param trace_parameters: Whether to trace model parameters. Default is False.
     :return: A model wrapped by NNCFNetwork.
     """
+    if not isinstance(model, torch.nn.Module):
+        raise TypeError(
+            f"The provided model type {type(model)} is incompatible. "
+            "Only models inheriting from torch.nn.Module are supported."
+        )
 
     input_info = ExampleInputInfo.from_example_input(example_input)
 
@@ -346,3 +353,20 @@ def is_wrapped_model(model: torch.nn.Module) -> bool:
     :return: True if the model is wrapped, False otherwise.
     """
     return isinstance(model, NNCFNetwork)
+
+
+def load_from_config(model: torch.nn.Module, config: Dict[str, Any], example_input: Any) -> NNCFNetwork:
+    """
+    Wraps given model to a NNCFNetwork and recovers additional modules from given NNCFNetwork config.
+    Does not recover additional modules weights as they are located in a corresponded state_dict.
+
+    :param model: PyTorch model.
+    :param config: NNCNetwork config.
+    :param example_input: An example input that will be used for model tracing. A tuple is interpreted
+        as an example input of a set of non keyword arguments, and a dict as an example input of a set
+        of keywords arguments.
+    :return: NNCFNetwork builded from given model with additional modules recovered from given NNCFNetwork config.
+    """
+    nncf_network = wrap_model(model, example_input, trace_parameters=config.pop(NNCFNetwork.TRACE_PARAMETERS_KEY))
+    transformation_layout = deserialize_transformations(config)
+    return PTModelTransformer(nncf_network).transform(transformation_layout)

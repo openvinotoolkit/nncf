@@ -25,8 +25,8 @@ from nncf.scopes import IgnoredScope
 from nncf.torch.graph.graph import PTNNCFGraph
 from nncf.torch.graph.graph import PTTargetPoint
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
-from nncf.torch.graph.operator_metatypes import PTModuleConv2dMetatype
-from nncf.torch.graph.operator_metatypes import PTModuleLinearMetatype
+from nncf.torch.graph.operator_metatypes import PTConv2dMetatype
+from nncf.torch.graph.operator_metatypes import PTLinearMetatype
 from nncf.torch.graph.operator_metatypes import PTSoftmaxMetatype
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from tests.common.quantization.metatypes import CatTestMetatype
@@ -121,8 +121,8 @@ class TestPTQParams(TemplateTestPTQParams):
     @property
     def metatypes_mapping(self):
         return {
-            Conv2dTestMetatype: PTModuleConv2dMetatype,
-            LinearTestMetatype: PTModuleLinearMetatype,
+            Conv2dTestMetatype: PTConv2dMetatype,
+            LinearTestMetatype: PTLinearMetatype,
             SoftmaxTestMetatype: PTSoftmaxMetatype,
             CatTestMetatype: PTCatMetatype,
         }
