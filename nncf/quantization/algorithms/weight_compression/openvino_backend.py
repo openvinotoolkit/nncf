@@ -10,7 +10,6 @@
 # limitations under the License.
 from typing import Dict, Iterable, List, Optional, Tuple
 
-import numpy as np
 import openvino as ov
 from openvino.runtime import opset13 as opset
 
@@ -160,7 +159,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                         should_add_convert_node = True
                         break
 
-            weight = Tensor(get_const_value(const_node, np.float32 if const_dtype == ov.Type.bf16 else None))
+            weight = Tensor(get_const_value(const_node, const_dtype))
             original_shape = weight.shape
             compressed_weight = compress_weight(
                 weight,

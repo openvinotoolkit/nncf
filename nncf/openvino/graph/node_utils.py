@@ -101,7 +101,7 @@ def get_number_if_op(model: ov.Model) -> int:
     return cnt_if_op(model, 0)
 
 
-def get_const_value(const_node: ov.Node, dtype: Optional[np.dtype] = None) -> np.ndarray:
+def get_const_value(const_node: ov.Node, dtype: ov.Type = ov.Type.f32) -> np.ndarray:
     """
     Returns the constant tensor for the node.
 
@@ -109,9 +109,7 @@ def get_const_value(const_node: ov.Node, dtype: Optional[np.dtype] = None) -> np
     :param dtype: Destination type.
     :return: The constant value.
     """
-    if dtype is None:
-        return const_node.data
-    return const_node.get_data(dtype=dtype)
+    return const_node.get_data(dtype=dtype.to_dtype())
 
 
 def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:
@@ -126,7 +124,7 @@ def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Mo
     ops_dict = {op.get_friendly_name(): op for op in model.get_ops()}
     bias_constant = get_node_with_bias_value(get_add_bias_node(node_with_bias, nncf_graph), nncf_graph)
     ov_bias_constant = ops_dict[bias_constant.node_name]
-    return get_const_value(ov_bias_constant, dtype=np.float32)
+    return get_const_value(ov_bias_constant)
 
 
 def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) -> np.ndarray:
@@ -142,7 +140,7 @@ def get_weight_value(node_with_weight: NNCFNode, model: ov.Model, port_id: int) 
     const_op_friendly_name = node_with_weight.layer_attributes.constant_attributes[port_id]["name"]
     friendly_name_to_op_map = {op.get_friendly_name(): op for op in model.get_ops()}
     const_op = friendly_name_to_op_map[const_op_friendly_name]
-    weight_tensor = get_const_value(const_op, dtype=np.float32)
+    weight_tensor = get_const_value(const_op)
     return weight_tensor
 
 
