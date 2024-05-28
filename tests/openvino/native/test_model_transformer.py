@@ -35,6 +35,7 @@ from nncf.openvino.graph.transformations.commands import OVConvertInsertionComma
 from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
+from nncf.openvino.graph.transformations.commands import OVModelExtractionCommandV2
 from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
@@ -685,6 +686,33 @@ def test_model_extraction(model_with_data):
     model = model_to_test.ov_model
     transformation_layout = TransformationLayout()
     command = OVModelExtractionCommand(model_with_data["input_ids"], model_with_data["output_ids"])
+    transformation_layout.register(command)
+
+    model_transformer = OVModelTransformer(model)
+    transformed_model = model_transformer.transform(transformation_layout)
+
+    path_to_dot = get_actual_reference_for_current_openvino(
+        REFERENCE_GRAPHS_DIR / f"exctracted_{model_to_test.ref_graph_name}"
+    )
+    compare_nncf_graphs(transformed_model, path_to_dot)
+
+
+MODELS_WITH_DATA_V2 = [
+    {"model": ConvModel(), "input_ids": [("Sub", 0)], "output_ids": [("Conv", 0)]},
+    {
+        "model": QuantizedModel(),
+        "input_ids": [("Conv_1", 0), ("Transpose/fq_input_0", 0)],
+        "output_ids": [("Conv_3", 0), ("Add_2", 0)],
+    },
+]
+
+
+@pytest.mark.parametrize("model_with_data", MODELS_WITH_DATA_V2)
+def test_model_extraction_v2(model_with_data):
+    model_to_test = model_with_data["model"]
+    model = model_to_test.ov_model
+    transformation_layout = TransformationLayout()
+    command = OVModelExtractionCommandV2(model_with_data["input_ids"], model_with_data["output_ids"])
     transformation_layout.register(command)
 
     model_transformer = OVModelTransformer(model)

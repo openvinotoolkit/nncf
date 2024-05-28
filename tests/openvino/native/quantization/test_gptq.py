@@ -10,14 +10,13 @@
 # limitations under the License.
 
 import math
-import pickle
 
 import numpy as np
 import openvino as ov
 import torch
-import transformers
 
 from nncf.common.factory import NNCFGraphFactory
+from nncf.experimental.tensor.tensor import Tensor
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
@@ -31,9 +30,9 @@ def quantize(x, scale, zero, maxq):
     return scale * (q - zero)
 
 
-class Quantizer(torch.nn.Module):
+class GPTQQuantizer(torch.nn.Module):
     def __init__(self, shape=1):
-        super(Quantizer, self).__init__()
+        super(GPTQQuantizer, self).__init__()
         self.register_buffer("maxq", torch.tensor(0))
         self.register_buffer("scale", torch.zeros(shape))
         self.register_buffer("zero", torch.zeros(shape))
@@ -162,20 +161,21 @@ class GPTQReference:
         W = layer.weight.data.clone()
         if isinstance(self.layer, torch.nn.Conv2d):
             W = W.flatten(1)
-        if isinstance(self.layer, transformers.pytorch_utils.Conv1D):
-            W = W.t()
+        # if isinstance(self.layer, transformers.pytorch_utils.Conv1D):
+        #     W = W.t()
         self.rows = W.shape[0]
         self.columns = W.shape[1]
         self.H = torch.zeros((self.columns, self.columns), device=self.dev)
         self.nsamples = 0
-        self.quantizer = Quantizer()
+        self.quantizer = GPTQQuantizer()
         self.quantizer.configure(4, perchannel=True, sym=True)
 
     def add_batch(self, inp):
         if len(inp.shape) == 2:
             inp = inp.unsqueeze(0)
         tmp = inp.shape[0]
-        if isinstance(self.layer, (torch.nn.Linear, transformers.Conv1D)):
+        # if isinstance(self.layer, (torch.nn.Linear, transformers.Conv1D)):
+        if isinstance(self.layer, (torch.nn.Linear)):
             if len(inp.shape) == 3:
                 inp = inp.reshape((-1, inp.shape[-1]))
             inp = inp.t()
@@ -191,9 +191,7 @@ class GPTQReference:
             inp = inp.flatten(1)
         self.H *= self.nsamples / (self.nsamples + tmp)
         self.nsamples += tmp
-        # inp = inp.float()
         inp = math.sqrt(2 / self.nsamples) * inp.float()
-        # self.H += 2 / self.nsamples * inp.matmul(inp.t())
         self.H += inp.matmul(inp.t())
 
     def fasterquant(
@@ -207,8 +205,8 @@ class GPTQReference:
         W = self.layer.weight.data.clone()
         if isinstance(self.layer, torch.nn.Conv2d):
             W = W.flatten(1)
-        if isinstance(self.layer, transformers.Conv1D):
-            W = W.t()
+        # if isinstance(self.layer, transformers.Conv1D):
+        #     W = W.t()
         W = W.float()
 
         if not self.quantizer.ready():
@@ -294,8 +292,6 @@ class GPTQReference:
 
             W[:, i2:] -= Err1.matmul(Hinv[i1:i2, i2:])
 
-        # torch.cuda.synchronize()
-
         group_size = group_size if group_size != -1 else self.columns
         if static_groups and actorder:
             g_idx = [perm[i] // group_size for i in range(self.columns)]
@@ -306,8 +302,8 @@ class GPTQReference:
             Q = Q[:, invperm]
             g_idx = g_idx[invperm]
 
-        if isinstance(self.layer, transformers.Conv1D):
-            Q = Q.t()
+        # if isinstance(self.layer, transformers.Conv1D):
+        #     Q = Q.t()
         self.layer.weight.data = Q.reshape(self.layer.weight.shape).type_as(self.layer.weight.data)
 
         if scale == []:
@@ -318,34 +314,33 @@ class GPTQReference:
         return scale, zero, g_idx
 
 
-def test_calculate_hessian_linear():
-    layer = torch.nn.Linear(32, 20)
-    layer.load_state_dict(torch.load("weight.pt"))
-    # inputs = [torch.randn(128, 32) for i in range(10)]
-    with open("inputs_pickle", "rb") as f:
-        inputs = pickle.load(f)
-    ref_gptq = GPTQReference(layer)
-    for inp in inputs:
-        ref_gptq.add_batch(inp)
+def test_calculate_scale_linear():
+    # generate inputs
+    np.random.seed(0)
+    inputs = [np.random.rand(128, 32).astype(np.float32) for _ in range(10)]
+    weights = np.random.rand(20, 32).astype(np.float32)
 
-    ref_scale, _, _ = ref_gptq.fasterquant(percdamp=0.1, group_size=16)
+    # calculate reference
+    with torch.no_grad():
+        layer = torch.nn.Linear(32, 20)
+        layer.weight.copy_(torch.from_numpy(weights))
 
+        ref_gptq = GPTQReference(layer)
+        for inp in inputs:
+            ref_gptq.add_batch(torch.from_numpy(inp))
+
+        ref_scale, _, _ = ref_gptq.fasterquant(percdamp=0.1, group_size=16)
+
+    # convert PyTorch model to OpenVINO
     ov_model = ov.convert_model(layer, example_input=inputs[0])
     graph = NNCFGraphFactory.create(ov_model)
 
-    # compressed_model = compress_weights(
-    #     ov_model, mode=CompressWeightsMode.INT4_SYM, dataset=Dataset(inputs),
-    #     gptq=True, all_layers=True, group_size=16
-    # )
-
-    graph = NNCFGraphFactory.create(ov_model)
-
+    # GPTQ
     gptq = GPTQ()
     gptq._set_backend_entity(ov_model)
 
     nodes = graph.get_all_nodes()
-    numpy_inputs = [inp.numpy() for inp in inputs]
-    H = gptq._calculate_hessian(nodes[1], numpy_inputs)
+    H = gptq._calculate_hessian(nodes[1], [Tensor(inp) for inp in inputs])
 
     ref_H = ref_gptq.H.numpy()
     assert np.all(np.isclose(ref_H, H.data))

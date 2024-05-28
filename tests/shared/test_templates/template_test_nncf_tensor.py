@@ -21,6 +21,7 @@ from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor import TensorDataType
 from nncf.experimental.tensor import TensorDeviceType
 from nncf.experimental.tensor import functions as fns
+from nncf.experimental.tensor.definitions import TensorBackend
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -56,6 +57,30 @@ class TemplateTestNNCFTensorOperators:
     @abstractmethod
     def cast_to(x: TTensor, dtype: TensorDataType) -> TTensor:
         pass
+
+    @staticmethod
+    @abstractmethod
+    def backend() -> TensorBackend:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def device() -> TensorDeviceType:
+        pass
+
+    def test_property_backend(self):
+        tensor_a = Tensor(self.to_tensor([1, 2]))
+        assert tensor_a.backend == self.backend()
+
+    def test_operator_clone(self):
+        tensor_a = Tensor(self.to_tensor([1, 2]))
+        tensor_b = tensor_a.clone()
+        assert isinstance(tensor_b, Tensor)
+        assert tensor_a.device == tensor_b.device
+        assert tensor_a.backend == tensor_b.backend
+        assert tensor_a.dtype == tensor_b.dtype
+        assert id(tensor_a.data) is not id(tensor_b.data)
+        assert all(tensor_a == tensor_b)
 
     @pytest.mark.parametrize("op_name", OPERATOR_MAP.keys())
     def test_operators_tensor(self, op_name):
@@ -343,11 +368,23 @@ class TemplateTestNNCFTensorOperators:
         assert fns.allclose(res, nncf_ref_tensor)
         assert res.device == nncf_tensor.device
 
-    def test_getitem(self):
+    def test_getitem_for_index(self):
         arr = [0, 1, 2]
         nncf_tensor = Tensor(self.to_tensor(arr))
         res = nncf_tensor[1]
         assert res == 1
+        assert isinstance(res, Tensor)
+        assert res.device == nncf_tensor.device
+
+    @pytest.mark.parametrize("is_tensor_indecies", (False, True))
+    def test_getitem_for_indecies(self, is_tensor_indecies):
+        nncf_tensor = Tensor(self.to_tensor([0, 1, 2]))
+        ref = Tensor(self.to_tensor([0, 1]))
+        indecies = [0, 1]
+        if is_tensor_indecies:
+            indecies = Tensor(self.to_tensor(indecies))
+        res = nncf_tensor[indecies]
+        assert all(res == ref)
         assert isinstance(res, Tensor)
         assert res.device == nncf_tensor.device
 
@@ -1392,3 +1429,35 @@ class TemplateTestNNCFTensorOperators:
         assert res.shape == ref_tensor.shape
         assert fns.allclose(res.data, ref_tensor)
         assert res.device == x.device
+
+    def test_fn_zeros(self):
+        shape = (2, 2)
+        for dtype in TensorDataType:
+            if dtype == TensorDataType.bfloat16 and self.backend() == TensorBackend.numpy:
+                continue
+            tensor_a = fns.zeros(shape, backend=self.backend(), dtype=dtype, device=self.device())
+            assert isinstance(tensor_a, Tensor)
+            assert tensor_a.device == self.device()
+            assert tensor_a.backend == self.backend()
+            assert tensor_a.dtype == dtype
+            assert tensor_a.shape == shape
+            assert fns.all(tensor_a == 0)
+
+    @pytest.mark.parametrize(
+        "start, end, stop, ref",
+        ((3, None, None, [0, 1, 2]), (0, 3, None, [0, 1, 2]), (0, 3, 1, [0, 1, 2]), (2, -1, -1, [2, 1, 0])),
+    )
+    def test_fn_arange(self, start, end, stop, ref):
+        args = [start]
+        if end is not None:
+            args.append(end)
+        if stop is not None:
+            args.append(stop)
+        ref = Tensor(self.to_tensor(ref))
+        for dtype in [TensorDataType.int32, TensorDataType.float32]:
+            tensor_a = fns.arange(*tuple(args), backend=self.backend(), dtype=dtype, device=self.device())
+            assert isinstance(tensor_a, Tensor)
+            assert tensor_a.device == self.device()
+            assert tensor_a.backend == self.backend()
+            assert tensor_a.dtype == dtype
+            assert fns.all(tensor_a == ref)

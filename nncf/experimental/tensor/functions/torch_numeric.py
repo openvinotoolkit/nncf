@@ -379,19 +379,27 @@ def _(a: torch.Tensor) -> torch.Tensor:
 
 def zeros(
     shape: Tuple[int, ...],
-    dtype: TensorDataType = TensorDataType.float32,
-    device: TensorDeviceType = TensorDeviceType.CPU,
+    *,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
 ) -> torch.Tensor:
-    return torch.zeros(*shape, dtype=DTYPE_MAP[dtype], device=DEVICE_MAP[device])
+    if dtype is not None:
+        dtype = DTYPE_MAP[dtype]
+    if device is not None:
+        device = DEVICE_MAP[device]
+    return torch.zeros(*shape, dtype=dtype, device=device)
 
 
 def arange(
     start: float,
     end: float,
     step: float,
+    *,
     dtype: Optional[TensorDataType] = None,
-    device: TensorDeviceType = TensorDeviceType.CPU,
+    device: Optional[TensorDeviceType] = None,
 ) -> torch.Tensor:
     if dtype is not None:
         dtype = DTYPE_MAP[dtype]
-    return np.arange(start, end, step, dtype=dtype, device=DEVICE_MAP[device])
+    if device is not None:
+        device = DEVICE_MAP[device]
+    return torch.arange(start, end, step, dtype=dtype, device=device)

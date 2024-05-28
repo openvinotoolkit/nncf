@@ -371,23 +371,27 @@ def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
 
 def zeros(
     shape: Tuple[int, ...],
+    *,
     dtype: Optional[TensorDataType] = None,
-    device: TensorDeviceType = TensorDeviceType.CPU,
+    device: Optional[TensorDeviceType] = None,
 ) -> np.ndarray:
-    if device != TensorDeviceType.CPU:
+    if device is not None and device != TensorDeviceType.CPU:
         raise ValueError("numpy_numeric.zeros only supports CPU device.")
-    return np.zeros(shape, dtype=DTYPE_MAP[dtype])
+    if dtype is not None:
+        dtype = DTYPE_MAP[dtype]
+    return np.zeros(shape, dtype=dtype)
 
 
 def arange(
     start: float,
     end: float,
     step: float,
-    dtype: TensorDataType = TensorDataType.float32,
-    device: TensorDeviceType = TensorDeviceType.CPU,
+    *,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
 ) -> np.ndarray:
-    if device != TensorDeviceType.CPU:
-        raise ValueError("numpy_numeric.zeros only supports CPU device.")
+    if device is not None and device != TensorDeviceType.CPU:
+        raise ValueError("numpy_numeric.arange only supports CPU device.")
     if dtype is not None:
         dtype = DTYPE_MAP[dtype]
     return np.arange(start, end, step, dtype=dtype)

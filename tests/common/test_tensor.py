@@ -12,6 +12,8 @@
 import numpy as np
 
 from nncf.experimental.tensor import TensorDataType
+from nncf.experimental.tensor.definitions import TensorBackend
+from nncf.experimental.tensor.definitions import TensorDeviceType
 from tests.shared.test_templates.template_test_nncf_tensor import TemplateTestNNCFTensorOperators
 
 
@@ -27,3 +29,11 @@ class TestNPNNCFTensorOperators(TemplateTestNNCFTensorOperators):
         if dtype is TensorDataType.float16:
             return x.astype(np.float16)
         raise NotImplementedError
+
+    @staticmethod
+    def backend() -> TensorBackend:
+        return TensorBackend.numpy
+
+    @staticmethod
+    def device() -> TensorDeviceType:
+        return TensorDeviceType.CPU

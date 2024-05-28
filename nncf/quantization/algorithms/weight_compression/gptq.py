@@ -93,6 +93,7 @@ class GPTQ:
         :param dataset: The dataset to use for quantization.
         :param weight_compression_parameters: Parameters for weight compression.
         :param statistics_points: Optional container for statistic points.
+        :param backend_entity: Weight compression algorithm backend.
         :return: The quantized model and its scales and zero points.
         """
         self._backend_entity = backend_entity
@@ -138,6 +139,7 @@ class GPTQ:
 
         :param model: The model for statistics collection.
         :param graph: The model graph.
+        :param backend_entity: Weight compression algorithm backend.
         :return: Statistic points, for which StatisticsCollector should collect statistics.
         """
         self._backend_entity = backend_entity
@@ -164,39 +166,20 @@ class GPTQ:
 
         if node.metatype in self._backend_entity.convolution_metatypes:
             raise RuntimeError("Convolution metatypes are not supported")
-        # TODO: backend specific code
         if node.layer_attributes.input_attributes["transpose"]:
             raise RuntimeError("Transpose is not supported")
 
-        # TODO: workaround create zeros tensor
-        # check weight transpose
         H = fns.zeros((inputs[0].shape[-1], inputs[0].shape[-1]), backend=inputs[0].backend)
 
         for inp in inputs:
             batch_size = 1 if len(inp.shape) == 2 else inp.shape[0]
-
             if node.metatype in self._backend_entity.matmul_metatypes:
-                # check transpose
                 if len(inp.shape) == 3:
                     inp = inp.reshape((-1, inp.shape[-1]))
                 inp = fns.transpose(inp)
-            if node.metatype in self._backend_entity.convolution_metatypes:
-                pass
-                # TODO: Require implementaiton on numpy
-                # unfold = nn.Unfold(
-                #     self.layer.kernel_size,
-                #     dilation=self.layer.dilation,
-                #     padding=self.layer.padding,
-                #     stride=self.layer.stride,
-                # )
-                # inp = unfold(inp)
-                # inp = inp.permute([1, 0, 2])
-                # inp = inp.flatten(1)
             H *= nsamples / (nsamples + batch_size)
             nsamples += batch_size
-            # inp = inp.float()
             inp = fns.astype(inp, TensorDataType.float32) * math.sqrt(2 / nsamples)
-            # self.H += 2 / self.nsamples * inp.matmul(inp.t())
             H += fns.matmul(inp, fns.transpose(inp))
 
         return H
@@ -213,22 +196,11 @@ class GPTQ:
         """
         if wc_params.node_with_weight.metatype in self._backend_entity.convolution_metatypes:
             raise RuntimeError("Convolution metatypes are not supported")
-        # TODO: backend specific code
         if not wc_params.node_with_weight.layer_attributes.constant_attributes[wc_params.weight_port_id]["transpose"]:
             raise RuntimeError("Transpose is not supported")
 
         W = self._backend_entity.get_weight(wc_params.node_with_weight, wc_params.weight_port_id, model, graph)
-
-        # if isinstance(self.layer, nn.Conv2d):
-        #    W = W.flatten(1)
-        # if isinstance(self.layer, transformers.Conv1D):
-        #    W = W.t()
-        # W = W.float()
         W = fns.astype(W, TensorDataType.float32)
-
-        # TODO: handle it if group size is not used.
-        # if not self.quantizer.ready():
-        #     self.quantizer.find_params(W, weight=True)
 
         dead = fns.diag(H) == 0
         H[dead, dead] = 1
@@ -246,7 +218,6 @@ class GPTQ:
         block_compression_config = WeightCompressionConfig(mode=wc_params.compression_config.mode)
 
         damp = self._damp_percent * fns.mean(fns.diag(H))
-        # TODO: workaround to create arange tensor
         diag = fns.arange(columns, backend=H.backend, device=H.device)
         H[diag, diag] += damp
         H = fns.linalg.cholesky(H)
@@ -292,17 +263,8 @@ class GPTQ:
 
             W[:, i2:] -= fns.matmul(Err1, Hinv[i1:i2, i2:])
 
-        # TODO support Conv1D
-        # if isinstance(self.layer, transformers.Conv1D):
-        #     Q = Q.t()
-
         Q = Q.reshape(W.shape).astype(W.dtype)
         self._backend_entity.set_weight(wc_params.node_with_weight, wc_params.weight_port_id, model, graph, Q)
-
-        # TODO: support group_size = -1
-        # if scale == []:
-        #     scale.append(self.quantizer.scale)
-        #     zero.append(self.quantizer.zero)
 
         scales = fns.stack(scales, axis=1)
         if wc_params.compression_config.mode in [

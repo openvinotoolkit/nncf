@@ -764,15 +764,18 @@ def zeros(
     shape: Tuple[int, ...],
     *,
     backend: TensorBackend,
-    dtype: TensorDataType = TensorDataType.float32,
-    device: TensorDeviceType = TensorDeviceType.CPU,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
 ) -> Tensor:
     """
     Return a new array of given shape and type, filled with zeros.
 
     :param shape: Shape of the new array
     :param backend: The backend type for which the zero tensor is required.
-    :param dtype: The data type of the returned tensor, defaults to TensorDataType.float32
+    :param dtype: The data type of the returned tensor, If dtype is not given,
+        then the default data type is determined by backend.
+    :param device: The device on which the tensor will be allocated, If device is not given,
+        then the default device is determined by backend.
     :return: A tensor filled with zeros of the specified shape and data type.
     """
     return Tensor(get_numeric_backend_fn("zeros", backend)(shape, dtype=dtype, device=device))
@@ -785,7 +788,7 @@ def arange(
     *,
     backend: TensorBackend,
     dtype: Optional[TensorDataType] = None,
-    device: TensorDeviceType = TensorDeviceType.CPU,
+    device: Optional[TensorDeviceType] = None,
 ) -> Tensor:
     """
     Returns a tensor with a sequence of numbers in the specified range.
@@ -799,7 +802,8 @@ def arange(
     :param backend: The backend type for which the tensor is required.
     :param dtype: The data type of the returned tensor If dtype is not given, infer the data type
         from the other input arguments.
-    :param device: The device on which the tensor will be allocated, defaults to TensorDeviceType.CPU.
+    :param device: The device on which the tensor will be allocated, If device is not given,
+        then the default device is determined by backend.
     :return: A tensor containing the sequence of numbers.
     """
     args = (0, start, step) if end is None else (start, end, step)

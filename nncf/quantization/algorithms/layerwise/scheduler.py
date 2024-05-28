@@ -104,9 +104,6 @@ class LayerwiseScheduler:
             while zero_indegree:
                 this_generation = zero_indegree
                 zero_indegree = []
-                # print("==================step==================")
-                # for node in this_generation:
-                #     print(node)
                 for node in this_generation:
                     for next in inference_graph.get_next_nodes(node):
                         if next in input_nodes:
@@ -139,11 +136,11 @@ class LayerwiseScheduler:
             reuse_input_nodes = set()
             if self.add_additional_outputs:
                 for node in indegree_map:
-                    if visited_map[node] == False:
+                    if not visited_map[node]:
                         paths.append(SimplePath(input_nodes_map[node], innode_map[node]))
             else:
                 for node in indegree_map:
-                    if visited_map[node] == False:
+                    if not visited_map[node]:
                         reuse_input_nodes |= input_nodes_map[node]
 
             # fill input ports
@@ -167,7 +164,6 @@ class LayerwiseScheduler:
             # create layerwise step by paths
             old_input_nodes = set()
             new_input_nodes = set()
-            # print(f"==================paths==================")
             for p in paths:
                 target_output_nodes = set()
                 additional_output_nodes = set()
@@ -184,8 +180,6 @@ class LayerwiseScheduler:
                                 break
                 if not target_output_nodes:
                     continue
-
-                # print(SimplePath(input_nodes=p.input_nodes, output_nodes=target_output_nodes | additional_output_nodes))
 
                 old_input_nodes |= p.input_nodes
                 new_input_nodes |= target_output_nodes | additional_output_nodes
