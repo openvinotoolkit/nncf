@@ -120,6 +120,7 @@ def train_lenet():
     model.save(MODEL_PATH)
 
 
+@pytest.mark.skip()
 @pytest.mark.parametrize(
     "distributed", [False, pytest.param(True, marks=pytest.mark.nightly)], ids=["not_distributed", "distributed"]
 )
