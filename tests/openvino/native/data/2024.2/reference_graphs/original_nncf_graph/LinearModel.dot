@@ -1,0 +1,19 @@
+strict digraph  {
+"0 Input" [id=0, type=Parameter];
+"1 Reshape" [id=1, type=Reshape];
+"2 Add" [id=2, type=Add];
+"3 MatMul" [id=3, type=MatMul];
+"4 Result_Add" [id=4, type=Result];
+"5 Result_MatMul" [id=5, type=Result];
+"6 Constant_10" [id=6, type=Constant];
+"7 Constant_1" [id=7, type=Constant];
+"8 Constant_8" [id=8, type=Constant];
+"0 Input" -> "1 Reshape"  [label="[1, 3, 4, 2]", style=solid];
+"1 Reshape" -> "2 Add"  [label="[1, 3, 2, 4]", style=solid];
+"1 Reshape" -> "3 MatMul"  [label="[1, 3, 2, 4]", style=solid];
+"2 Add" -> "4 Result_Add"  [label="[1, 3, 2, 4]", style=solid];
+"3 MatMul" -> "5 Result_MatMul"  [label="[1, 3, 2, 5]", style=solid];
+"6 Constant_10" -> "2 Add"  [label="[1, 3, 2, 4]", style=solid];
+"7 Constant_1" -> "1 Reshape"  [label="[4]", style=dashed];
+"8 Constant_8" -> "3 MatMul"  [label="[1, 3, 4, 5]", style=solid];
+}

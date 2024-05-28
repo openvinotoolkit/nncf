@@ -33,6 +33,7 @@ from nncf.quantization.algorithms.weight_compression.weight_lowering import get_
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.scopes import IgnoredScope
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
+from tests.openvino.native.common import get_openvino_major_minor_version
 from tests.openvino.native.models import AWQMatmulModel
 from tests.openvino.native.models import GatherAndMatmulShareData
 from tests.openvino.native.models import GatherWithTwoReductionAxes
@@ -729,35 +730,44 @@ def test_data_type_for_num_weights(mocker):
     assert isinstance(params.num_weights, np.uint64)
 
 
-def test_compression_for_different_dtypes():
-    for activation_dtype in [np.float32, np.float16]:
-        for weight_dtype in [np.float32, np.float16]:
-            if activation_dtype == np.float16 and weight_dtype == np.float32:
-                # Activations can be in f16 only if weights are in f16
-                continue
+@pytest.mark.parametrize(
+    "activation_dtype, weight_dtype",
+    [
+        (ov.Type.f32, ov.Type.f32),
+        (ov.Type.f32, ov.Type.f16),
+        (ov.Type.f32, ov.Type.bf16),
+        (ov.Type.f16, ov.Type.f16),
+        (ov.Type.bf16, ov.Type.bf16),
+    ],
+)
+def test_compression_for_different_dtypes(activation_dtype, weight_dtype):
+    if weight_dtype == ov.Type.bf16:
+        ov_major_version, ov_minor_version = get_openvino_major_minor_version()
+        if ov_major_version < 2024 or (ov_major_version == 2024 and ov_minor_version < 2):
+            pytest.xfail("const_node.get_data() is not supported until 2024.2")
 
-            model = IdentityMatmul(weights_dtype=weight_dtype, activation_dtype=activation_dtype).ov_model
-            compressed_model = compress_weights(
-                model, mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=1, all_layers=True
-            )
-            name_to_node_map = {op.get_friendly_name(): op for op in compressed_model.get_ops()}
+    model = IdentityMatmul(weights_dtype=weight_dtype, activation_dtype=activation_dtype).ov_model
+    compressed_model = compress_weights(
+        model, mode=CompressWeightsMode.INT4_SYM, ratio=1, group_size=1, all_layers=True
+    )
+    name_to_node_map = {op.get_friendly_name(): op for op in compressed_model.get_ops()}
 
-            # Weight scale should be in fp16 nevertheless the weight data type
-            scale_multiply_node = name_to_node_map["weights/fq_weights_1"]
-            assert scale_multiply_node.input_value(1).get_node().get_element_type() == ov.Type.f16
+    # Weight scale should be in fp16 nevertheless the weight data type
+    scale_multiply_node = name_to_node_map["weights/fq_weights_1"]
+    assert scale_multiply_node.input_value(1).get_node().get_element_type() == ov.Type.f16
 
-            reshape_node = get_next_node(scale_multiply_node)
-            assert reshape_node.get_type_name() == "Reshape"
+    reshape_node = get_next_node(scale_multiply_node)
+    assert reshape_node.get_type_name() == "Reshape"
 
-            next_node = get_next_node(reshape_node)
-            if activation_dtype == np.float16:
-                # There should be no convert node after multiply if both weights and activations are in f16
-                assert next_node.get_type_name() != "Convert"
-            else:
-                assert next_node.get_type_name() == "Convert"
-                # In case weight is in fp32, the convert node is manually inserted
-                if weight_dtype == np.float32:
-                    assert next_node.get_friendly_name() == "weights/fq_weights_1/convert"
+    next_node = get_next_node(reshape_node)
+    if activation_dtype == ov.Type.f16:
+        # There should be no convert node after multiply if both weights and activations are in f16
+        assert next_node.get_type_name() != "Convert"
+    else:
+        assert next_node.get_type_name() == "Convert"
+        # In case precision of weight and activation were equal, but not f16, the convert node is manually inserted
+        if activation_dtype == weight_dtype and weight_dtype != ov.Type.f16:
+            assert next_node.get_friendly_name() == "weights/fq_weights_1/convert"
 
 
 DATASET_SIZE = 129

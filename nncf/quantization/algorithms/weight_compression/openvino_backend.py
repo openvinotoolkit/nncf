@@ -10,6 +10,7 @@
 # limitations under the License.
 from typing import Dict, Iterable, List, Optional, Tuple
 
+import numpy as np
 import openvino as ov
 from openvino.runtime import opset13 as opset
 
@@ -149,9 +150,17 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             const_attributes = wc_params.node_with_weight.layer_attributes.constant_attributes[wc_params.weight_port_id]
             const_node_name = const_attributes["name"]
             const_node = self.name_to_node_mapping[const_node_name]
-            const_dtype = const_node.output(0).get_element_type()
+            const_node_output = const_node.output(0)
+            const_dtype = const_node_output.get_element_type()
 
-            weight = Tensor(get_const_value(const_node))
+            should_add_convert_node = False
+            if const_dtype != ov.Type.f16:
+                for inp in const_node_output.get_target_inputs():
+                    if inp.get_node().get_type_name() != "Convert":
+                        should_add_convert_node = True
+                        break
+
+            weight = Tensor(get_const_value(const_node, np.float32 if const_dtype == ov.Type.bf16 else None))
             original_shape = weight.shape
             compressed_weight = compress_weight(
                 weight,
@@ -187,7 +196,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
             if compression_config.group_size != -1:
                 mul = opset.reshape(mul, output_shape=original_shape, special_zero=False)
 
-            if const_dtype != ov.Type.f16:
+            if should_add_convert_node:
                 mul = opset.convert(
                     mul, const_dtype, name=f"{const_node_name}/fq_weights_{wc_params.weight_port_id}/convert"
                 )

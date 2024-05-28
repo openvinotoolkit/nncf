@@ -12,7 +12,7 @@
 from abc import ABC
 from abc import abstractmethod
 from functools import partial
-from typing import Callable, Tuple
+from typing import Callable, Optional, Tuple
 
 import numpy as np
 import openvino.runtime as ov
@@ -812,13 +812,13 @@ class SequentialMatmulModel(OVReferenceModel):
 
 
 class IdentityMatmul(OVReferenceModel):
-    def _create_ov_model(self, weights_dtype=None, activation_dtype=None):
+    def _create_ov_model(self, weights_dtype: Optional[ov.Type] = None, activation_dtype: Optional[ov.Type] = None):
         """
-        :param: weights_dtype: precision of weights, should be either np.float32 or np.float16
-        :param: activation_dtype: precision of activations, should be either np.float32 or np.float16
+        :param: weights_dtype: precision of weights
+        :param: activation_dtype: precision of activations
         """
-        weights_dtype = np.float32 if weights_dtype is None else weights_dtype
-        activation_dtype = np.float32 if activation_dtype is None else activation_dtype
+        weights_dtype = ov.Type.f32 if weights_dtype is None else weights_dtype
+        activation_dtype = ov.Type.f32 if activation_dtype is None else activation_dtype
 
         input_node = opset.parameter([3, 3], dtype=activation_dtype, name="Input_1")
         weights_data = np.eye(3) * 255
