@@ -15,6 +15,7 @@ from pathlib import Path
 import pytest
 import tensorflow as tf
 import tensorflow_addons as tfa
+from tensorflow.python.eager import context
 from tensorflow.python.framework.config import disable_op_determinism
 from tensorflow.python.framework.config import enable_op_determinism
 
@@ -123,6 +124,7 @@ def train_lenet():
     "distributed", [False, pytest.param(True, marks=pytest.mark.nightly)], ids=["not_distributed", "distributed"]
 )
 def test_rb_sparse_target_lenet(distributed, deterministic_mode):
+    context._reset_context()
     if not os.path.exists(MODEL_PATH):
         train_lenet()
 
