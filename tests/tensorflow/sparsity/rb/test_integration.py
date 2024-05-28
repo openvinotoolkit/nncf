@@ -120,9 +120,10 @@ def train_lenet():
     model.save(MODEL_PATH)
 
 
-@pytest.mark.skip()
 @pytest.mark.parametrize(
-    "distributed", [False, pytest.param(True, marks=pytest.mark.nightly)], ids=["not_distributed", "distributed"]
+    "distributed",
+    [pytest.param(False, marks=pytest.mark.skip(reason="")), pytest.param(True, marks=pytest.mark.nightly)],
+    ids=["not_distributed", "distributed"],
 )
 def test_rb_sparse_target_lenet(distributed, deterministic_mode):
     context._reset_context()
