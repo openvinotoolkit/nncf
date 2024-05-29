@@ -310,6 +310,7 @@ class InputInfoWrapManager:
         for param_name, dummy_input in self._fwd_param_names_to_dummy_inputs_odict.items():
             if not isinstance(dummy_input, torch.Tensor):
                 continue  # Did not expect a tensor at this parameter during graph building, shouldn't wrap now too
+
             param_kind = self._fwd_signature.parameters[param_name].kind
             if param_kind is Parameter.VAR_POSITIONAL or param_kind is Parameter.VAR_KEYWORD:
                 nncf_logger.warning(
@@ -329,9 +330,8 @@ class InputInfoWrapManager:
                 bound_model_params.apply_defaults()
 
             potential_tensor = bound_model_params.arguments[param_name]
-            if potential_tensor is not None:
-                bound_model_params.arguments[param_name] = nncf_model_input(potential_tensor)
-            else:
+
+            if potential_tensor is None:
                 # Default was None - cannot wrap as-is. Will wrap a dummy tensor as specified in
                 # input info - will preserve the call order of nncf_model_input nodes,
                 # and the post-hooks for the input node will execute. The result won't go anywhere, though.
@@ -341,6 +341,9 @@ class InputInfoWrapManager:
                     device = get_model_device(self._module_ref_for_device)
                 dummy_input_copy = dummy_input.clone().to(device)
                 _ = nncf_model_input(dummy_input_copy)
+            elif isinstance(potential_tensor, torch.Tensor):
+                # Skip wrapping by nncf_model_input in case potential tensor is not a torch.Tensor.
+                bound_model_params.arguments[param_name] = nncf_model_input(potential_tensor)
 
         return bound_model_params.args, bound_model_params.kwargs
 

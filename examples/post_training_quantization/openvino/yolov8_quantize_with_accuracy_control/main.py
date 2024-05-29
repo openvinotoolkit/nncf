@@ -193,7 +193,6 @@ def quantize_ac(model: ov.Model, data_loader: torch.utils.data.DataLoader, valid
                     inputs=[
                         "/model.22/Concat_3",
                         "/model.22/Concat_6",
-                        "/model.22/Concat_24",
                         "/model.22/Concat_5",
                         "/model.22/Concat_4",
                     ],
@@ -222,7 +221,7 @@ def main():
     quantized_model = quantize_ac(ov_model, data_loader, validator)
 
     quantized_model_path = Path(f"{ROOT}/{MODEL_NAME}_openvino_model/{MODEL_NAME}_quantized.xml")
-    ov.save_model(quantized_model, str(quantized_model_path), compress_to_fp16=False)
+    ov.save_model(quantized_model, str(quantized_model_path))
 
     # Validate FP32 model
     fp_stats, total_images, total_objects = validate(ov_model, tqdm(data_loader), validator)
