@@ -67,12 +67,10 @@ class FXModuleInsertionCommand(Command):
 class FXApplyTransformationCommand(Command):
     def __init__(
         self,
-        target_point: PTTargetPoint,
-        transformation_fn: Callable[[torch.fx.Graph, torch.fx.Node], None],
+        transformation_fn: Callable[[torch.fx.GraphModule], None],
         priority: Union[TransformationPriority, int] = TransformationPriority.DEFAULT_PRIORITY,
     ):
         super().__init__(TransformationType.INSERT)
-        self.target_point = target_point
         self.tranformation_fn = transformation_fn
         self.priority = priority
 
@@ -86,7 +84,7 @@ class FXModelTransformer(ModelTransformer):
         super().__init__(model)
 
         self._command_transformation_ordered_pairs = [
-            (FXApplyTransformationCommand, self._apply_fn_insertion),
+            (FXApplyTransformationCommand, self._apply_transformation),
             (FXModuleInsertionCommand, self._apply_module_insertion),
         ]
 
@@ -169,14 +167,12 @@ class FXModelTransformer(ModelTransformer):
             graph.create_node("call_module", module_name, (target_node,), {}, name=module_name + "_graph_node")
 
     @staticmethod
-    def _apply_fn_insertion(
+    def _apply_transformation(
         model: torch.fx.GraphModule,
         transformations: List[FXApplyTransformationCommand],
     ) -> torch.fx.GraphModule:
-        graph = model.graph
         for transformation in transformations:
-            target_node, _ = FXModelTransformer._get_target_node_and_ctx(graph, transformation.target_point)
-            transformation.tranformation_fn(graph, target_node)
+            transformation.tranformation_fn(model)
         return model
 
 

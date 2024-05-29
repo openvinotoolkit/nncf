@@ -35,6 +35,11 @@ BATCH_NORMALIZATION_OPERATIONS = {
     GraphPattern.LABEL_ATTR: "BATCH_NORMALIZATION",
 }
 
+GETITEM_OPERATIONS = {
+    GraphPattern.METATYPE_ATTR: ["index_select", "__getitem__", "gather", "index_select", "where"],
+    GraphPattern.LABEL_ATTR: "GETITEM",
+}
+
 GROUP_NORMALIZATION_OPERATIONS = {
     GraphPattern.METATYPE_ATTR: ["group_norm"],
     GraphPattern.LABEL_ATTR: "GROUP_NORMALIZATION",

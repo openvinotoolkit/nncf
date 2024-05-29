@@ -13,7 +13,10 @@ from itertools import chain
 from typing import Tuple
 
 import torch.fx
+from torch.ao.quantization.fx.utils import create_getattr_from_value
 from torch.ao.quantization.pt2e.utils import _fuse_conv_bn_  # noqa
+from torch.ao.quantization.pt2e.utils import _get_tensor_constant_from_node
+from torch.ao.quantization.pt2e.utils import _is_conv  # noqa
 
 import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph import NNCFGraph
@@ -57,6 +60,8 @@ class GraphConverter:
             if hasattr(node.target, "overloadpacket"):
                 torch.nn.BatchNorm2d
                 node_type = str(node.target.overloadpacket).split(".")[1]
+            elif node.target.__name__ == "getitem":
+                node_type = "__getitem__"
             else:
                 # TODO: get correct nodes types from this nodes as well
                 node_type = str(node.target)
@@ -72,6 +77,52 @@ class GraphConverter:
         return node_type, node_metatype
 
     @staticmethod
+    def _separate_conv_and_bias(model: torch.fx.GraphModule):
+        """
+        Separates one joined conv+bias node to two nodes: conv and bias.
+        Needed as nncf does not expect joined conv
+        """
+        add_node_target = torch.ops.aten.add_.Tensor
+        for n in model.graph.nodes:
+            if not _is_conv(n):
+                continue
+            if len(n.args) < 3 or n.args[2] is None:
+                continue
+            conv_node = n
+            dims = len(_get_tensor_constant_from_node(conv_node.args[1], model).shape)
+            conv_bias_node = conv_node.args[2]
+            conv_bias_value = _get_tensor_constant_from_node(conv_bias_node, model)
+            args = list(n.args)
+            args[2] = None
+            conv_node.args = tuple(args)
+            with model.graph.inserting_after(conv_node):
+                new_conv_bias_node = create_getattr_from_value(
+                    model,
+                    model.graph,
+                    conv_bias_node.name + "_",
+                    conv_bias_value.reshape(
+                        (
+                            1,
+                            -1,
+                        )
+                        + (1,) * (dims - 2)
+                    ),
+                )
+            with model.graph.inserting_after(new_conv_bias_node):
+                add_node = model.graph.create_node(
+                    "call_function", add_node_target, (conv_node, new_conv_bias_node), {}
+                )
+            for user in list(conv_node.users):
+                if user is add_node:
+                    continue
+                user.replace_input_with(conv_node, add_node)
+
+            if "val" in conv_node.meta:
+                add_node.meta["val"] = conv_node.meta["val"]
+        model.graph.eliminate_dead_code()
+        model.recompile()
+
+    @staticmethod
     def create_nncf_graph(model: torch.fx.GraphModule) -> NNCFGraph:
         """
         Creates NNCFGraph from GraphModule.
@@ -82,10 +133,10 @@ class GraphConverter:
         :return: NNCFGraph.
         """
 
-        # _fuse_conv_bn_(model)
-
-        # model.graph.eliminate_dead_code()
-        # model.recompile()
+        _fuse_conv_bn_(model)
+        # BN fuses to conv bias, conv+bias joined op
+        # needs to be splited for nncf
+        GraphConverter._separate_conv_and_bias(model)
 
         nncf_graph = PTNNCFGraph()
 

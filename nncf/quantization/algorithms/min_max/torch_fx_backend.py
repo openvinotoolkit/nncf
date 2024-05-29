@@ -27,6 +27,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.torch_fx.model_transformer import FXApplyTransformationCommand
+from nncf.experimental.torch_fx.transformations import fake_quantize_insertion_tranformation_builder
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import StatisticsType
@@ -46,6 +47,7 @@ from nncf.torch.quantization.layers import AsymmetricQuantizer
 from nncf.torch.quantization.layers import BaseQuantizer
 from nncf.torch.quantization.layers import PTQuantizerSpec
 from nncf.torch.quantization.layers import get_scale_shape
+from nncf.torch.quantization.strip import convert_to_torch_fakequantizer
 from nncf.torch.tensor_statistics.collectors import PT_REDUCERS_MAP
 from nncf.torch.tensor_statistics.collectors import PTNNCFCollectorTensorProcessor
 from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
@@ -263,7 +265,9 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
 
         # Fill it with minmax
         FXMinMaxAlgoBackend._fill_quantizer_parameters(quantizer, parameters, quantizer_spec.scale_shape)
-        return quantizer
+        # Convert to the torch fake quantizer
+        torch_fq = convert_to_torch_fakequantizer(quantizer)
+        return torch_fq
 
     @staticmethod
     def _fill_quantizer_parameters(quantizer: BaseQuantizer, parameters: FakeQuantizeParameters, scale_shape) -> None:
@@ -293,7 +297,8 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer = FXMinMaxAlgoBackend._create_quantizer(
             quantizer_config, scale_shape, parameters, target_point.target_type
         )
-        return FXApplyTransformationCommand([target_point], quantizer)
+        transformation = fake_quantize_insertion_tranformation_builder(quantizer, [target_point])
+        return FXApplyTransformationCommand(transformation)
 
     @staticmethod
     def create_unified_scales_quantizers_insertion_commands(
@@ -309,7 +314,9 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
         quantizer = FXMinMaxAlgoBackend._create_quantizer(
             quantizer_config, scale_shape, parameters, target_points[0].target_type
         )
-        return [FXApplyTransformationCommand(tp, quantizer) for tp in target_points]
+
+        transformation = fake_quantize_insertion_tranformation_builder(quantizer, target_points)
+        return [FXApplyTransformationCommand(transformation)]
 
     @staticmethod
     def get_ignored_metatypes(model_type: ModelType, device: TargetDevice) -> List[OperatorMetatype]:
@@ -347,7 +354,9 @@ class FXMinMaxAlgoBackend(MinMaxAlgoBackend):
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
         retval = set()
         for node in nncf_graph.get_all_nodes():
-            if node.metatype is om.PTConstNoopMetatype:
-                for node in nncf_graph.get_next_nodes(node):
-                    retval.add(node)
+            if node.metatype in [om.PTConv1dMetatype, om.PTConv2dMetatype, om.PTConv3dMetatype, om.PTLinearMetatype]:
+                retval.add(node)
+            # if node.metatype is om.PTConstNoopMetatype:
+            #    for node in nncf_graph.get_next_nodes(node):
+            #        retval.add(node)
         return list(retval)

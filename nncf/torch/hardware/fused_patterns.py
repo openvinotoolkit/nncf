@@ -16,6 +16,7 @@ from nncf.torch.graph.operator_metatypes import PTInputNoopMetatype
 from nncf.torch.graph.pattern_operations import ARITHMETIC_OPERATIONS
 from nncf.torch.graph.pattern_operations import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.torch.graph.pattern_operations import BATCH_NORMALIZATION_OPERATIONS
+from nncf.torch.graph.pattern_operations import GETITEM_OPERATIONS
 from nncf.torch.graph.pattern_operations import GROUP_NORMALIZATION_OPERATIONS
 from nncf.torch.graph.pattern_operations import LINEAR_OPERATIONS
 from nncf.torch.graph.pattern_operations import RELU_OPERATIONS
@@ -199,7 +200,12 @@ def arithmetic_operations() -> GraphPattern:
 def batch_norm_operations() -> GraphPattern:
     pattern = GraphPattern()
     pattern.add_node(**BATCH_NORMALIZATION_OPERATIONS)
-    return pattern
+    pattern_alt = GraphPattern()
+    bn = pattern_alt.add_node(**BATCH_NORMALIZATION_OPERATIONS)
+    get_item = pattern_alt.add_node(**GETITEM_OPERATIONS)
+    pattern_alt.add_edge(bn, get_item)
+    pattern.add_pattern_alternative(pattern_alt)
+    return pattern_alt
 
 
 def activation_operations() -> GraphPattern:

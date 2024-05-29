@@ -98,6 +98,8 @@ def quantize(model, example_inputs):
 
         calibration_dataset = nncf.Dataset(example_inputs)
         quantized_model = nncf.quantize(exported_model, calibration_dataset)
+        g = FxGraphDrawer(quantized_model, "resnet18_quantized_native_nncf")
+        g.get_dot_graph().write_svg("resnet18_quantized_native_nncf.svg")
         return quantized_model
 
     else:

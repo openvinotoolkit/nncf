@@ -9,25 +9,70 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 
 import torch
 import torch.fx
 from torch.ao.quantization.fx.utils import create_getattr_from_value
+from torch.quantization.fake_quantize import FakeQuantize
 
+from nncf.experimental.torch_fx.model_transformer import FXModelTransformer
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.torch.graph.transformations.commands import PTTargetPoint
 from nncf.torch.quantization.layers import PTQuantizerSpec
 
 
-def quantizer_insertion_tranformation_builder(
-    qspec: PTQuantizerSpec, fq_params: FakeQuantizeParameters, axis: int, eps=1e-5
-):
+def stat_collectorts_insertion_tranformation_builder():
+    def stat_collectorts_insertion_tranformation(model: torch.fx.GraphModule, node: torch.fx.Node):
+        pass
+
+    return stat_collectorts_insertion_tranformation
+
+
+def fake_quantize_insertion_tranformation_builder(quantizer: FakeQuantize, target_points: List[PTTargetPoint]):
+    def fake_quantize_insertion_transformation(model: torch.fx.GraphModule):
+        module_attr_name = _set_module_to_the_graph_module(model, quantizer, target_points)
+        graph = model.graph
+        for target_point in target_points:
+            target_node, ctx = FXModelTransformer._get_target_node_and_ctx(model.graph, target_point)
+            with ctx:
+                fq_node = graph.create_node(
+                    "call_module", module_attr_name, (target_node,), {}, name=module_attr_name + "_quantizer"
+                )
+            for user in list(target_node.users):
+                if user is fq_node:
+                    continue
+                user.replace_input_with(target_node, fq_node)
+
+    return fake_quantize_insertion_transformation
+
+
+def _set_module_to_the_graph_module(
+    model: torch.fx.GraphModule, module_to_insert: torch.nn.Module, target_points: List[PTTargetPoint]
+) -> str:
+    """
+    Sets given module to the given torch.fx.GraphModule with unique name.
+    """
+    module_to_insert = module_to_insert
+    module_name_in_model = (
+        ";".join(
+            "_".join((tp.target_node_name, str(tp.input_port_id), str(tp.target_type.value))) for tp in target_points
+        )
+        + "_"
+        + str(id(module_to_insert))
+    )
+    assert not hasattr(model, module_name_in_model)
+    setattr(model, module_name_in_model, module_to_insert)
+    return module_name_in_model
+
+
+def qdq_insertion_tranformation_builder(qspec: PTQuantizerSpec, fq_params: FakeQuantizeParameters, axis: int, eps=1e-5):
     # signed = bool(torch.any(fq_params.input_low.data < 0))
     # Subtract eps from the scale to make quantizer parameters equal to
     # original parameters on the forward call.
     scale = (fq_params.input_high.data - eps).reshape(qspec.scale_shape)
 
-    def quantizer_insertion_tranformation(model: torch.fx.GraphModule, node: torch.fx.Node):
+    def qdq_insertion_tranformation(model: torch.fx.GraphModule, node: torch.fx.Node):
         # 1. extract information for inserting q/dq node from activation_post_process
         node_type = "call_function"
         quantize_op: Optional[Callable] = None
@@ -87,4 +132,4 @@ def quantizer_insertion_tranformation_builder(
         for user, dq_node in user_dq_nodes:
             user.replace_input_with(node, dq_node)
 
-    return quantizer_insertion_tranformation
+    return qdq_insertion_tranformation
