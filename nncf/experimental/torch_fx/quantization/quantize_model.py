@@ -55,6 +55,7 @@ def quantize_impl(
         raise ValueError(f"mode={mode} is not supported")
 
     copied_model = deepcopy(model)
+    # copied_model = model
 
     quantization_algorithm = PostTrainingQuantization(
         preset=preset,

@@ -84,6 +84,7 @@ class FXModelTransformer(ModelTransformer):
         super().__init__(model)
 
         self._command_transformation_ordered_pairs = [
+            # TODO: Move the module insertion command to a transformation
             (FXApplyTransformationCommand, self._apply_transformation),
             (FXModuleInsertionCommand, self._apply_module_insertion),
         ]
