@@ -169,7 +169,9 @@ class GPTQ:
         if node.layer_attributes.input_attributes["transpose"]:
             raise RuntimeError("Transpose is not supported")
 
-        H = fns.zeros((inputs[0].shape[-1], inputs[0].shape[-1]), backend=inputs[0].backend)
+        H = fns.zeros(
+            (inputs[0].shape[-1], inputs[0].shape[-1]), backend=inputs[0].backend, dtype=TensorDataType.float32
+        )
 
         for inp in inputs:
             batch_size = 1 if len(inp.shape) == 2 else inp.shape[0]
