@@ -56,6 +56,21 @@ datasets:
         type: accuracy
         top_k: 5
 
+  - name: imagenet_1001_classes
+    annotation_conversion:
+      converter: imagenet
+      annotation_file: val.txt
+      has_background: True
+    annotation: imagenet1001.pickle
+    data_source: ILSVRC2012_img_val
+    metrics:
+      - name: accuracy@top1
+        type: accuracy
+        top_k: 1
+      - name: accuracy@top5
+        type: accuracy
+        top_k: 5
+
   - name: VOC2012_without_background
     annotation_conversion:
       converter: voc_detection
