@@ -21,6 +21,7 @@ from nncf.common.graph.utils import get_reduction_axes
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.tensor.tensor import Tensor
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
+from nncf.openvino.graph.metatypes.groups import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
@@ -258,7 +259,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 class OVAWQAlgoAlgoBackend(OVWeightCompressionAlgoBackend):
     @staticmethod
     def get_awq_patterns():
-        return get_awq_patterns(om.OVMatMulMetatype, om.OVMultiplyMetatype)
+        return get_awq_patterns(om.OVMatMulMetatype, om.OVMultiplyMetatype, ATOMIC_ACTIVATIONS_OPERATIONS)
 
     @staticmethod
     def insert_scale_after_node(node, scale, node_name):
