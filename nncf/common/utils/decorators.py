@@ -37,10 +37,10 @@ def skip_if_dependency_unavailable(dependencies: List[str]) -> Callable:
                     IMPORTED_DEPENDENCIES[libname] = True
                 except ImportError as ex:
                     nncf_logger.warning(
-                        f"{ex.msg} Please install NNCF package with dev "
+                        f"{ex.msg} Please install NNCF package with plots "
                         "extra. Use one of the following commands "
-                        '"pip install .[dev]" running from the repository '
-                        'root directory or "pip install nncf[dev]"'
+                        '"pip install .[plots]" running from the repository '
+                        'root directory or "pip install nncf[plots]"'
                     )
                     IMPORTED_DEPENDENCIES[libname] = False
                     break

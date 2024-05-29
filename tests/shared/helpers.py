@@ -38,7 +38,15 @@ def get_cli_dict_args(args):
     return cli_args
 
 
-def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, extra_reqs: Set[str] = None):
+MAP_BACKEND_PACKAGES = {
+    "torch": ["torch"],
+    "openvino": ["openvino"],
+    "onnx": ["onnx", "onnxruntime"],
+    "tf": ["tensorflow"],
+}
+
+
+def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, backends: Set[str] = None):
     venv_path = tmp_path / "venv"
     venv_path.mkdir()
 
@@ -61,19 +69,15 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
 
     run_path = tmp_path / "run"
     run_path.mkdir()
-    extra_reqs_str = ""
-    if extra_reqs is not None and extra_reqs:
-        extra_reqs_str = ",".join(extra_reqs)
-        extra_reqs_str = f"[{extra_reqs_str}]"
 
     if package_type == "pip_pypi":
-        run_cmd_line = f"{pip_with_venv} install nncf{extra_reqs_str}"
+        run_cmd_line = f"{pip_with_venv} install nncf"
     elif package_type == "pip_local":
-        run_cmd_line = f"{pip_with_venv} install {PROJECT_ROOT}{extra_reqs_str}"
+        run_cmd_line = f"{pip_with_venv} install {PROJECT_ROOT}"
     elif package_type == "pip_e_local":
-        run_cmd_line = f"{pip_with_venv} install -e {PROJECT_ROOT}{extra_reqs_str}"
+        run_cmd_line = f"{pip_with_venv} install -e {PROJECT_ROOT}"
     elif package_type == "pip_git_develop":
-        run_cmd_line = f"{pip_with_venv} install git+{GITHUB_REPO_URL}@develop#egg=nncf{extra_reqs_str}"
+        run_cmd_line = f"{pip_with_venv} install git+{GITHUB_REPO_URL}@develop#egg=nncf"
     elif package_type == "build_s":
         run_cmd_line = f"{python_executable_with_venv} -m build -n -s"
     elif package_type == "build_w":
@@ -81,15 +85,18 @@ def create_venv_with_nncf(tmp_path: Path, package_type: str, venv_type: str, ext
     else:
         raise nncf.ValidationError(f"Invalid package type: {package_type}")
 
-    # Currently CI runs on RTX3090s, which require CUDA 11 to work.
-    # Current torch, however (v1.12), is installed via pip using .whl packages
-    # compiled for CUDA 10.2. Thus need to direct pip installation specifically for
-    # torch, otherwise the NNCF will only work in CPU mode.
-    torch_extra_index = " --extra-index-url https://download.pytorch.org/whl/cu116"
-    if extra_reqs is not None and "torch" in extra_reqs and "build" not in package_type:
-        run_cmd_line += torch_extra_index
-
     subprocess.run(run_cmd_line, check=True, shell=True, cwd=PROJECT_ROOT)
+    if backends:
+        # Install backend specific packages with according version from constraints.txt
+        packages = [item for b in backends for item in MAP_BACKEND_PACKAGES[b]]
+        extra_reqs = " ".join(packages)
+        subprocess.run(
+            f"{pip_with_venv} install {extra_reqs} -c {PROJECT_ROOT}/constraints.txt",
+            check=True,
+            shell=True,
+            cwd=PROJECT_ROOT,
+        )
+
     return venv_path
 
 
