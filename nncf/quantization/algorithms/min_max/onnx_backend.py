@@ -225,7 +225,7 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         return collector
 
     @staticmethod
-    def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
+    def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Optional[int]]:
         return list(node.layer_attributes.weight_attrs.keys())
 
     @staticmethod

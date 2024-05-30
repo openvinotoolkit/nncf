@@ -337,3 +337,21 @@ def get_fake_quantizer(
             if isinstance(module, BaseQuantizer):
                 return module
     return None
+
+
+def get_target_dim_for_weight_compression(metatype: om.PTOperatorMetatype, input_port_id: int) -> int:
+    """
+    Determines the target dimension for weight compression.
+
+    :param metatype: The node metatype for which the target dimension is being determined.
+    :param input_port_id: The input port id.
+    :return: The target dimension for weight compression.
+    """
+    if metatype == om.PTAddmmMetatype:
+        if input_port_id == 1:
+            return -1
+        if input_port_id == 2:
+            return -2
+    if metatype in [om.PTConvTranspose1dMetatype, om.PTConvTranspose2dMetatype, om.PTConvTranspose3dMetatype]:
+        return 1
+    return 0

@@ -25,6 +25,7 @@ from tests.post_training.pipelines.base import ALL_PTQ_BACKENDS
 from tests.post_training.pipelines.base import NNCF_PTQ_BACKENDS
 from tests.post_training.pipelines.base import BackendType
 from tests.post_training.pipelines.causal_language_model import CausalLMHF
+from tests.post_training.pipelines.gpt import GPT
 from tests.post_training.pipelines.image_classification_timm import ImageClassificationTimm
 from tests.post_training.pipelines.lm_weight_compression import LMWeightCompression
 from tests.post_training.pipelines.masked_language_modeling import MaskedLanguageModelingHF
@@ -52,6 +53,17 @@ QUANTIZATION_MODELS = [
             "subset_size": 2,
         },
         "backends": [BackendType.OPTIMUM],
+    },
+    {
+        "reported_name": "hf/hf-internal-testing/tiny-random-gpt2",
+        "model_id": "hf-internal-testing/tiny-random-gpt2",
+        "pipeline_cls": GPT,
+        "compression_params": {
+            "preset": QuantizationPreset.MIXED,
+            "model_type": ModelType.TRANSFORMER,
+            "subset_size": 2,
+        },
+        "backends": [BackendType.TORCH, BackendType.OV, BackendType.OPTIMUM],
     },
     # Timm models
     {

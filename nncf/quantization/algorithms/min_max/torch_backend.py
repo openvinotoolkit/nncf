@@ -42,6 +42,9 @@ from nncf.torch.graph.transformations.command_creation import create_shared_quan
 from nncf.torch.graph.transformations.commands import PTInsertionCommand
 from nncf.torch.graph.transformations.commands import PTSharedFnInsertionCommand
 from nncf.torch.hardware.config import PTHWConfig
+from nncf.torch.model_graph_manager import get_const_node
+from nncf.torch.model_graph_manager import get_target_dim_for_weight_compression
+from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
 from nncf.torch.nncf_network import NNCFNetwork
 from nncf.torch.quantization.default_quantization import DEFAULT_PT_QUANT_TRAIT_TO_OP_DICT
 from nncf.torch.quantization.layers import QUANTIZATION_MODULES
@@ -62,7 +65,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @property
     def mat_mul_metatypes(self) -> List[OperatorMetatype]:
-        return [om.PTLinearMetatype, om.PTMatMulMetatype]
+        return [om.PTLinearMetatype, om.PTMatMulMetatype, om.PTAddmmMetatype]
 
     @property
     def post_processing_metatypes(self) -> List[OperatorMetatype]:
@@ -157,7 +160,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
 
     @staticmethod
     def get_weight_quantization_axes(node: NNCFNode, target_point: PTTargetPoint) -> Tuple[int]:
-        return (node.layer_attributes.get_target_dim_for_compression(),)
+        return (get_target_dim_for_weight_compression(node.metatype, target_point.input_port_id),)
 
     @staticmethod
     def get_statistic_collector(
@@ -209,8 +212,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return collector
 
     @staticmethod
-    def get_weight_tensor_port_ids(node: NNCFNode) -> List[Optional[int]]:
-        return node.metatype.weight_port_ids
+    def get_weight_tensor_port_ids(node: NNCFNode, graph: NNCFGraph) -> List[Optional[int]]:
+        return get_weight_tensor_port_ids(node, graph)
 
     @staticmethod
     def get_weight_name(nncf_graph: NNCFGraph, target_point: PTTargetPoint) -> str:
@@ -231,11 +234,10 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     ) -> Tuple[Tuple[int, ...], Tuple[int, ...], int]:
         is_weights = target_point.is_weight_target_point()
         if is_weights:
-            module_node = nncf_graph.get_node_by_name(target_point.target_node_name)
-            layer_attributes = module_node.layer_attributes
-            assert isinstance(layer_attributes, WeightedLayerAttributes)
-            input_shape = layer_attributes.get_weight_shape()
-            channel_idx = layer_attributes.get_target_dim_for_compression()
+            node_with_weight = nncf_graph.get_node_by_name(target_point.target_node_name)
+            weight_node = get_const_node(node_with_weight, target_point.input_port_id, nncf_graph)
+            input_shape = weight_node.layer_attributes.shape
+            channel_idx = get_target_dim_for_weight_compression(node_with_weight.metatype, target_point.input_port_id)
         else:
             input_shape = nncf_graph.get_input_shape_for_insertion_point(target_point)
             channel_idx = 1  # channel dim for activations

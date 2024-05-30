@@ -11,6 +11,7 @@
 from typing import Callable, Optional, Type
 
 import pytest
+import torch
 from torch import Size
 from torch import nn
 
@@ -34,6 +35,7 @@ from nncf.torch.dynamic_graph.io_handling import FillerInputInfo
 from nncf.torch.dynamic_graph.io_handling import ModelInputInfo
 from nncf.torch.dynamic_graph.layer_attributes_handlers import apply_args_defaults
 from nncf.torch.graph.graph_builder import GraphBuilder
+from nncf.torch.graph.operator_metatypes import PTAddmmMetatype
 from nncf.torch.graph.operator_metatypes import PTBatchNormMetatype
 from nncf.torch.graph.operator_metatypes import PTCatMetatype
 from nncf.torch.graph.operator_metatypes import PTConv1dMetatype
@@ -122,6 +124,16 @@ class LayerAttributesTestDesc:
 
     def __str__(self):
         return str(self.metatype_cls.__name__)
+
+
+class AddmmModel(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.weight = torch.nn.Parameter(torch.ones((3, 3)))
+        self.bias = torch.nn.Parameter(torch.ones(3))
+
+    def forward(self, x):
+        return torch.addmm(self.bias, x, self.weight)
 
 
 BATCH_NORM_REF_ATTR = GenericWeightedLayerAttributes(
@@ -329,6 +341,14 @@ LIST_TEST_DESCS = [
             weight_requires_grad=True, weight_shape=Size([1]), filter_dimension_idx=0, with_bias=True
         ),
         metatype_cls=PTLayerNormMetatype,
+    ),
+    LayerAttributesTestDesc(
+        module_fn=AddmmModel,
+        model_input_info=FillerInputInfo([FillerInputElement([1, 3])]),
+        layer_attributes=GenericWeightedLayerAttributes(
+            weight_requires_grad=True, weight_shape=Size([3, 3]), filter_dimension_idx=0, with_bias=True
+        ),
+        metatype_cls=PTAddmmMetatype,
     ),
 ]
 

@@ -30,11 +30,6 @@ from nncf.common.graph.operator_metatypes import ConstNoopMetatype
 from nncf.common.graph.operator_metatypes import get_all_aliases
 from nncf.common.graph.utils import get_split_axis
 from nncf.torch.dynamic_graph.trace_tensor import TracedParameter
-from nncf.torch.layers import NNCF_MODULES_DICT
-
-OP_NAMES_REQUIRING_MODULE_ATTRS = [v.op_func_name for v in NNCF_MODULES_DICT] + list(
-    om.PTGroupNormMetatype.get_all_aliases()
-)
 
 TRANSPOSE_OP_NAMES = ["transpose", "transpose_"]
 PERMUTE_OP_NAMES = ["permute"]
@@ -51,9 +46,7 @@ LAYER_NORM_OP_NAMES = get_all_aliases(om.PTLayerNormMetatype)
 PAD_OP_NAMES = om.PTPadMetatype.get_all_aliases()
 CONCAT_OP_NAMES = om.PTCatMetatype.get_all_aliases()
 CONST_OP_NAMES = ConstNoopMetatype.get_all_aliases()
-OP_NAMES_REQUIRING_ATTRS_FROM_ARGS_KWARGS = list(
-    TRANSPOSE_OP_NAMES + PERMUTE_OP_NAMES + GETITEM_OP_NAMES + PAD_OP_NAMES + CONCAT_OP_NAMES + CONST_OP_NAMES
-)
+ADDMM_OP_NAMES = get_all_aliases(om.PTAddmmMetatype)
 
 
 def get_layer_attributes_from_args_and_kwargs(op_name: str, args, kwargs) -> BaseLayerAttributes:
@@ -84,6 +77,8 @@ def get_layer_attributes_from_args_and_kwargs(op_name: str, args, kwargs) -> Bas
         layer_attrs = _get_concat_attrs_from_args_kwargs(args, kwargs)
     elif op_name in CONST_OP_NAMES:
         layer_attrs = _get_const_attrs_from_args_kwargs(args, kwargs)
+    elif op_name in ADDMM_OP_NAMES:
+        layer_attrs = _get_addmm_attrs_from_args_kwargs(args, kwargs)
     return layer_attrs
 
 
@@ -233,6 +228,14 @@ LAYER_NORM_FUNC_SIGNATURE = [
     ("eps", 1e-05),
     ("cudnn_enable", True),
 ]
+ADDMM_FUNC_SIGNATURE = [
+    "input",
+    "mat1",
+    "mat2",
+    ("beta", 1),
+    ("alpha", 1),
+    ("out", None),
+]
 
 
 def _get_conv_attrs_from_args_kwargs(args: List[Any], kwargs: Dict[str, Any]) -> ConvolutionLayerAttributes:
@@ -324,4 +327,13 @@ def _get_layer_norm_attrs_from_args_kwargs(args, kwargs):
         weight_shape=args_dict["weight"].shape,
         filter_dimension_idx=0,
         with_bias=args_dict["bias"] is not None,
+    )
+
+
+def _get_addmm_attrs_from_args_kwargs(args, kwargs):
+    args_dict = apply_args_defaults(args, kwargs, ADDMM_FUNC_SIGNATURE)
+    return GenericWeightedLayerAttributes(
+        weight_requires_grad=args_dict["mat2"].requires_grad,
+        weight_shape=args_dict["mat2"].shape,
+        with_bias=args_dict["input"] is not None,
     )
