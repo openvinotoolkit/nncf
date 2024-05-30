@@ -17,7 +17,11 @@ Post-training Quantization:
 - Deprecations/Removals:
   - ...
 - Tutorials:
-  - ...
+  - [Post-Training Optimization of Stable Video Diffusion Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/stable-video-diffusion/stable-video-diffusion.ipynb)
+  - [Post-Training Optimization of YOLOv10 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/yolov10-optimization/yolov10-optimization.ipynb)
+  - [Post-Training Optimization of LLaVA Next Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/nano-llava-multimodal-chatbot/nano-llava-multimodal-chatbot.ipynb)
+  - [Post-Training Optimization of S3D MIL-NCE Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/s3d-mil-nce-text-to-video-retrieval/s3d-mil-nce-text-to-video-retrieval.ipynb)
+  - [Post-Training Optimization of Stable Cascade Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/stable-cascade-image-generation/stable-cascade-image-generation.ipynb)
 - Known issues:
   - ...
 
@@ -36,7 +40,7 @@ Compression-aware training:
 - Deprecations/Removals:
   - ...
 - Tutorials:
-  - ...
+  - [Quantization-Sparsity Aware Training of PyTorch ResNet-50 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/pytorch-quantization-sparsity-aware-training/pytorch-quantization-sparsity-aware-training.ipynb)
 - Known issues:
   - ...
 
