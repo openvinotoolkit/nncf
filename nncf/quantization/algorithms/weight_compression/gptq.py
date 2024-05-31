@@ -10,7 +10,7 @@
 # limitations under the License.
 
 import math
-from typing import List, Optional, TypeVar
+from typing import Dict, List, Optional, Tuple, TypeVar
 
 import nncf
 from nncf import Dataset
@@ -62,7 +62,7 @@ class GPTQ:
 
     def _set_backend_entity(self, model: TModel) -> None:
         """
-        Creates a helper class with a backed-specific logic of the algorithm.
+        Creates a helper class with a backend-specific logic of the algorithm.
 
         :param model: Backend-specific input model.
         """
@@ -73,7 +73,7 @@ class GPTQ:
             self._backend_entity = OVWeightCompressionAlgoBackend(model)
         else:
             raise nncf.UnsupportedBackendError(
-                "Cannot return backend-specific entity because {} is not supported!".format(self._backend.value)
+                f"Cannot return backend-specific entity because {self._backend.value} is not supported!"
             )
 
     def apply(
@@ -82,9 +82,9 @@ class GPTQ:
         graph: NNCFGraph,
         dataset: Dataset,
         weight_compression_parameters: List[WeightCompressionParameters],
-        statistics_points: Optional[StatisticPointsContainer] = None,
+        statistic_points: Optional[StatisticPointsContainer] = None,
         backend_entity: Optional[WeightCompressionAlgoBackend] = None,
-    ) -> None:
+    ) -> Tuple[TModel, Dict[str, Tensor], Dict[str, Tensor]]:
         """
         Applies the GPTQ algorithm to quantize the weights of the given model.
 
@@ -92,7 +92,7 @@ class GPTQ:
         :param graph: The model graph.
         :param dataset: The dataset to use for quantization.
         :param weight_compression_parameters: Parameters for weight compression.
-        :param statistics_points: Optional container for statistic points.
+        :param statistic_points: Optional container for statistic points.
         :param backend_entity: Weight compression algorithm backend.
         :return: The quantized model and its scales and zero points.
         """
@@ -112,7 +112,7 @@ class GPTQ:
                 target_nodes_wc_params_map[wc_params.node_with_weight] = wc_params
 
         target_node_iterator = self._layerwise_engine.create_iterator_through_target_nodes(
-            model, graph, target_nodes, dataset, statistics_points
+            model, graph, target_nodes, dataset, statistic_points
         )
         for node, inputs in track(target_node_iterator, total=len(target_nodes), description="Applying GPTQ"):
             wc_params = target_nodes_wc_params_map[node]
@@ -120,8 +120,8 @@ class GPTQ:
                 continue
             assert len(inputs) == 1
             _, input_tensors = next(iter(inputs.items()))
-            H = self._calculate_hessian(node, input_tensors)
-            scale, zero_point = self._quantize_weights(model, graph, wc_params, H)
+            hessian = self._calculate_hessian(node, input_tensors)
+            scale, zero_point = self._quantize_weights(model, graph, wc_params, hessian)
             scales[wc_params.weight_name] = scale
             zero_points[wc_params.weight_name] = zero_point
 
@@ -169,7 +169,7 @@ class GPTQ:
         if node.layer_attributes.input_attributes["transpose"]:
             raise RuntimeError("Transpose is not supported")
 
-        H = fns.zeros(
+        hessian = fns.zeros(
             (inputs[0].shape[-1], inputs[0].shape[-1]), backend=inputs[0].backend, dtype=TensorDataType.float32
         )
 
@@ -179,21 +179,23 @@ class GPTQ:
                 if len(inp.shape) == 3:
                     inp = inp.reshape((-1, inp.shape[-1]))
                 inp = fns.transpose(inp)
-            H *= nsamples / (nsamples + batch_size)
+            hessian *= nsamples / (nsamples + batch_size)
             nsamples += batch_size
             inp = fns.astype(inp, TensorDataType.float32) * math.sqrt(2 / nsamples)
-            H += fns.matmul(inp, fns.transpose(inp))
+            hessian += fns.matmul(inp, fns.transpose(inp))
 
-        return H
+        return hessian
 
-    def _quantize_weights(self, model: TModel, graph: NNCFGraph, wc_params: WeightCompressionParameters, H: Tensor):
+    def _quantize_weights(
+        self, model: TModel, graph: NNCFGraph, wc_params: WeightCompressionParameters, hessian: Tensor
+    ):
         """
         Quantizes the weights of the model based on the calculated Hessian matrix.
 
         :param model: The model to quantize.
         :param graph: The model graph.
         :param wc_params: Parameters for weight compression.
-        :param H: The Hessian matrix.
+        :param hessian: The Hessian matrix.
         :return: Scales and zero points used for quantization.
         """
         if wc_params.node_with_weight.metatype in self._backend_entity.convolution_metatypes:
@@ -201,72 +203,78 @@ class GPTQ:
         if not wc_params.node_with_weight.layer_attributes.constant_attributes[wc_params.weight_port_id]["transpose"]:
             raise RuntimeError("Transpose is not supported")
 
-        W = self._backend_entity.get_weight(wc_params.node_with_weight, wc_params.weight_port_id, model, graph)
-        W = fns.astype(W, TensorDataType.float32)
+        weight_tensor = self._backend_entity.get_weight(
+            wc_params.node_with_weight, wc_params.weight_port_id, model, graph
+        )
+        weight_tensor = fns.astype(weight_tensor, TensorDataType.float32)
 
-        dead = fns.diag(H) == 0
-        H[dead, dead] = 1
-        W[:, dead] = 0
+        dead_indices = fns.diag(hessian) == 0
+        hessian[dead_indices, dead_indices] = 1
+        weight_tensor[:, dead_indices] = 0
 
         scales = []
         zero_points = []
 
-        Losses = fns.zeros_like(W)
-        Q = fns.zeros_like(W)
+        losses = fns.zeros_like(weight_tensor)
+        quantized_tensor = fns.zeros_like(weight_tensor)
 
-        columns = H.shape[0]
+        columns = hessian.shape[0]
         group_size = wc_params.compression_config.group_size
         reduction_axes = wc_params.reduction_axes
         block_compression_config = WeightCompressionConfig(mode=wc_params.compression_config.mode)
 
-        damp = self._damp_percent * fns.mean(fns.diag(H))
-        diag = fns.arange(columns, backend=H.backend, device=H.device)
-        H[diag, diag] += damp
-        H = fns.linalg.cholesky(H)
-        H = fns.linalg.cholesky_inverse(H)
-        H = fns.linalg.cholesky(H, upper=True)
-        Hinv = H
+        damp = self._damp_percent * fns.mean(fns.diag(hessian))
+        diag_indices = fns.arange(columns, backend=hessian.backend, device=hessian.device)
+        hessian[diag_indices, diag_indices] += damp
+        hessian = fns.linalg.cholesky(hessian)
+        hessian = fns.linalg.cholesky_inverse(hessian)
+        hessian = fns.linalg.cholesky(hessian, upper=True)
+        hessian_inv = hessian
 
         for i1 in range(0, columns, self._block_size):
             i2 = min(i1 + self._block_size, columns)
             count = i2 - i1
 
-            W1 = W[:, i1:i2].clone()
-            Q1 = fns.zeros_like(W1)
-            Err1 = fns.zeros_like(W1)
-            Losses1 = fns.zeros_like(W1)
-            Hinv1 = Hinv[i1:i2, i1:i2]
+            weight_block = weight_tensor[:, i1:i2].clone()
+            quantized_block = fns.zeros_like(weight_block)
+            error_block = fns.zeros_like(weight_block)
+            loss_block = fns.zeros_like(weight_block)
+            hessian_inv_block = hessian_inv[i1:i2, i1:i2]
 
             for i in range(count):
-                w = W1[:, i]
-                d = Hinv1[i, i]
+                weight_col = weight_block[:, i]
+                hessian_diag_val = hessian_inv_block[i, i]
 
                 if group_size != -1 and (i1 + i) % group_size == 0:
                     scale, zero_point = calculate_integer_quantization_params(
-                        W[:, (i1 + i) : (i1 + i + group_size)], reduction_axes, block_compression_config
+                        weight_tensor[:, (i1 + i) : (i1 + i + group_size)], reduction_axes, block_compression_config
                     )
                     scales.append(scale)
                     zero_points.append(zero_point)
 
                 compressed_weights = calculate_quantized_weight(
-                    fns.unsqueeze(w, 1), scales[-1], zero_points[-1], block_compression_config
+                    fns.unsqueeze(weight_col, 1), scales[-1], zero_points[-1], block_compression_config
                 )
-                q = do_dequantization(compressed_weights, scales[-1], zero_points[-1])
-                q = fns.flatten(q)
-                Q1[:, i] = q
-                Losses1[:, i] = (w - q) ** 2 / d**2
+                quantized_col = do_dequantization(compressed_weights, scales[-1], zero_points[-1])
+                quantized_col = fns.flatten(quantized_col)
+                quantized_block[:, i] = quantized_col
+                loss_block[:, i] = (weight_col - quantized_col) ** 2 / hessian_diag_val**2
 
-                err1 = (w - q) / d
-                W1[:, i:] -= fns.matmul(fns.unsqueeze(err1, 1), fns.unsqueeze(Hinv1[i, i:], 0))
-                Err1[:, i] = err1
+                error_col = (weight_col - quantized_col) / hessian_diag_val
+                weight_block[:, i:] -= fns.matmul(
+                    fns.unsqueeze(error_col, 1), fns.unsqueeze(hessian_inv_block[i, i:], 0)
+                )
+                error_block[:, i] = error_col
 
-            Q[:, i1:i2] = Q1
-            Losses[:, i1:i2] = Losses1 / 2
+            quantized_tensor[:, i1:i2] = quantized_block
+            losses[:, i1:i2] = loss_block / 2
 
-            W[:, i2:] -= fns.matmul(Err1, Hinv[i1:i2, i2:])
+            weight_tensor[:, i2:] -= fns.matmul(error_block, hessian_inv[i1:i2, i2:])
 
-        Q = Q.reshape(W.shape).astype(W.dtype)
-        self._backend_entity.set_weight(wc_params.node_with_weight, wc_params.weight_port_id, model, graph, Q)
+        quantized_tensor = quantized_tensor.reshape(weight_tensor.shape).astype(weight_tensor.dtype)
+        self._backend_entity.set_weight(
+            wc_params.node_with_weight, wc_params.weight_port_id, model, graph, quantized_tensor
+        )
 
         scales = fns.stack(scales, axis=1)
         if wc_params.compression_config.mode in [

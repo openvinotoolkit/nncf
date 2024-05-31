@@ -122,8 +122,8 @@ class WeightCompressionAlgoBackend(ABC):
         :param model: Model in which the weights will be compressed according to the weight compression description.
         :param graph: The graph associated with the model.
         :param weight_compression_parameters: List of weight compression parameters.
-        :param precomputed_scales: Precomputed scales for weigths compression.
-        :param precomputed_zero_points: Precomputed zero points for weigths compression.
+        :param precomputed_scales: Precomputed scales for weights compression.
+        :param precomputed_zero_points: Precomputed zero points for weights compression.
         :return: The transformed model.
         """
 

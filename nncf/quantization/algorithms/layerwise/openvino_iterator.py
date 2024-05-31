@@ -56,11 +56,11 @@ class OVLayerwiseIterator(LayerwiseIterator):
         self._schedule = schedule
         self._dataset = dataset
         self._subset_size = subset_size
-        self._cache = {}
-        self._cache_lifetime = {}
+        self._cache = {}  # type: Dict[NodeOutputPort, List[Tensor]]
+        self._cache_lifetime = {}  # type: Dict[NodeOutputPort, int]
 
         self._step_index = 0
-        self._queue = []
+        self._queue = []  # type: Tuple[NNCFNode, Dict[int, List[Tensor]]]
 
         if cache is not None:
             self.update_cache(cache)

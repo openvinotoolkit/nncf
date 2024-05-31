@@ -67,6 +67,15 @@ class SimplePath:
 class LayerwiseScheduler:
     """
     Scheduler that determines the order of layer-wise steps for processing a graph based on a given strategy.
+
+    The scheduling algorithm works as follows:
+    1. Initialize input nodes and create a copy of the graph for inference.
+    2. Perform a topological traversal of the graph starting from the input nodes.
+    3. For each node, if it is a target node and has not been processed, add the path from inputs to this node to the paths list.
+    4. If `add_additional_outputs` is True, add all output nodes which was partial visited to remove inputs to target nodes.
+    5. Merge paths that have overlapping input sets into single paths to minimize model extraction time.
+    6. Create layer-wise steps by mapping target nodes to their input/output ports and corresponding output ports in the subgraph.
+    7. Repeat the process until all target nodes have been processed.
     """
 
     def __init__(self, add_additional_outputs: bool = False):
