@@ -1,97 +1,94 @@
-# Use NNCF for Quantization Aware Training in PyTorch
+# Use NNCF for Quantization Aware Training
 
-This is a step-by-step tutorial on how to integrate the NNCF package into the existing PyTorch project.
-The use case implies that the user already has a training pipeline that reproduces training of the model in the floating  point precision and pretrained model.
-The task is to prepare this model for accelerated inference by simulating the compression at train time.
-Please refer to this [document](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md) for details of the implementation.
+A uniform "fake" quantization method supports an arbitrary number of bits (>=2) which is used to represent weights and activations.
+The method performs differentiable sampling of the continuous signal (for example, activations or weights) during forward pass, simulating inference with integer arithmetic.
 
-## Basic usage
+## Common Quantization Formula
 
-### Step 1: Apply Post Training Quantization to the Model
+Quantization is parametrized by clamping range and number of quantization levels. The sampling formula is the following:
 
-Quantize the model using the [Post Training Quantization](../../post_training_compression/post_training_quantization/Usage.md) method.
+$ZP = \lfloor - input\\_low * s \rceil$
 
-```python
-model = TorchModel() # instance of torch.nn.Module
-quantized_model = nncf.quantize(model, ...)
-```
+$output = \frac{\left\lfloor (clamp(input; input\\_low, input\\_high)-input\\_low) * s- ZP \right\rceil} {s}$
 
-### Step 2: Run the training pipeline
+$clamp(input; input\\_low, input\\_high)$
 
-At this point, the NNCF is fully integrated into your training pipeline.
-You can run it as usual and monitor your original model's metrics and/or compression algorithm metrics and balance model metrics quality vs. level of compression.
+$s = \frac{levels - 1}{input\\_high - input\\_low}$
 
-Important points you should consider when training your networks with compression algorithms:
+$input\\_low$ and $input\\_high$ represent the quantization range and $\left\lfloor \cdot \right\rceil$ denotes rounding to the nearest integer.
 
-- Turn off the `Dropout` layers (and similar ones like `DropConnect`) when training a network with quantization
+## Symmetric Quantization
 
-### Step 3: Export the compressed model
+During the training, we optimize the **scale** parameter that represents the range `[input_low, input_range]` of the original signal using gradient descent:
 
-After the compressed model has been fine-tuned to acceptable accuracy and compression stages, you can export it. There are two ways to export a model:
+$input\\_low=scale*\frac{level\\_low}{level\\_high}$
 
-1. Trace the model via inference in framework operations.
+$input\\_high=scale$
 
-    ```python
-    # To ONNX format
-    import torch
-    torch.onnx.export(quantized_model, dummy_input, './compressed_model.onnx')
-    # To OpenVINO format
-    import openvino as ov
-    ov_quantized_model = ov.convert_model(quantized_model.cpu(), example_input=dummy_input)
-    ```
+In the formula above, $level\\_low$ and $level\\_high$ represent the range of the discrete signal.
 
-## Saving and loading compressed models
+- For weights:
 
-The complete information about compression is defined by a compressed model and a NNCF config.
-The model characterizes the weights and topology of the network. The NNCF config - how to restore additional modules intoduced by NNCF.
-The NNCF config can be obtained by `quantized_model.nncf.get_config()` on saving and passed to the
-`nncf.torch.load_from_config` helper function to load additional modules from the given NNCF config.
-The quantized model saving allows to load quantized modules to the target model in a new python process and
-requires only example input for the target module, correspondent NNCF config and a quantized model state dict.
+    $level\\_low=-2^{bits-1}+1$
 
-### Saving and loading compressed models in PyTorch
+    $level\\_high=2^{bits-1}-1$
 
-```python
-# save part
-quantized_model = nncf.quantize(model, calibration_dataset)
-checkpoint = {
-    'state_dict':quantized_model.state_dict(),
-    'nncf_config': quantized_model.nncf.get_config(),
-    ...
-}
-torch.save(checkpoint, path)
+    $levels=255$
 
-# load part
-resuming_checkpoint = torch.load(path)
+- For unsigned activations:
 
-nncf_config = resuming_checkpoint['nncf_config']
-state_dict = resuming_checkpoint['state_dict']
+    $level\\_low=0$
 
-quantized_model = nncf.torch.load_from_config(model, nncf_config, dummy_input)
-quantized_model.load_state_dict(state_dict)
-```
+    $level\\_high=2^{bits}-1$
 
-You can save the `compressed_model` object `torch.save` as usual: via `state_dict` and `load_state_dict` methods.
+    $levels=256$
 
-## Advanced usage
+- For signed activations:
 
-### Compression of custom modules
+    $level\\_low=-2^{bits-1}$
 
-With no target model code modifications, NNCF only supports native PyTorch modules with respect to trainable parameter (weight) compressed, such as `torch.nn.Conv2d`.
-If your model contains a custom, non-PyTorch standard module with trainable weights that should be compressed, you can register it using the `@nncf.register_module` decorator:
+    $level\\_high=2^{bits-1}-1$
 
-```python
-import nncf
+    $levels=256$
 
-@nncf.register_module(ignored_algorithms=[...])
-class MyModule(torch.nn.Module):
-    def __init__(self, ...):
-        self.weight = torch.nn.Parameter(...)
-    # ...
-```
+For all the cases listed above, the common quantization formula is simplified after substitution of $input\\_low$, $input\\_high$ and $levels$:
 
-If registered module should be ignored by specific algorithms use `ignored_algorithms` parameter of decorator.
+$output = \left\lfloor clamp(input * \frac{level\\_high}{scale}, level\\_low, level\\_high)\right \rceil * \frac{scale}{level\\_high}$
 
-In the example above, the NNCF-compressed models that contain instances of `MyModule` will have the corresponding modules extended with functionality that will allow NNCF to quantize the `weight` parameter of `MyModule` before it takes part in `MyModule`'s `forward` calculation.
+## Asymmetric Quantization
 
-See a PyTorch [example](/examples/quantization_aware_training/torch/resnet18/README.md) for **Quantization** Compression scenario on Tiny ImageNet-200 dataset.
+During the training we optimize the `input_low` and `input_range` parameters using gradient descent:
+
+$input\\_high=input\\_low + input\\_range$
+
+$levels=256$
+
+$level\\_low=0$
+
+$level\\_high=2^{bits}-1$
+
+For better accuracy, floating-point zero should be within quantization range and strictly mapped into quant (without rounding). Therefore, the following scheme is applied to ranges of weight and activation quantizers before applying actual quantization:
+
+${input\\_low}' = min(input\\_low, 0)$
+
+${input\\_high}' = max(input\\_high, 0)$
+
+$ZP= \left\lfloor \frac{-{input\\_low}'*(levels-1)}{{input\\_high}'-{input\\_low}'} \right \rceil$
+
+${input\\_high}''=\frac{ZP-levels+1}{ZP}*{input\\_low}'$
+
+${input\\_low}''=\frac{ZP}{ZP-levels+1}*{input\\_high}'$
+
+$$
+\begin{flalign} &
+{input\\_low,input\\_high} = \begin{cases} {input\\_low}',{input\\_high}', \& ZP \in {0,levels-1} \\
+{input\\_low}',{input\\_high}'', \& {input\\_high}'' - {input\\_low}' > {input\\_high}' - {input\\_low}'' \\
+{input\\_low}'',{input\\_high}', \& {input\\_high}'' - {input\\_low}' <= {input\\_high}' - {input\\_low}''
+\end{cases}
+&\end{flalign}
+$$
+
+## Quantization-aware Training Implementation
+
+- In [PyTorch](Quantization.md)
+- In [TensorFlow](../other_algorithms/LegacyQuantization.md)

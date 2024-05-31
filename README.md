@@ -40,7 +40,7 @@ learning frameworks.
 
 |Compression algorithm|PyTorch|TensorFlow|
 | :--- | :---: | :---: |
-|Quantization Aware Training | [Supported](./docs/usage/training_time_compression/quantization_aware_training/Usage.md) | [Supported](./docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md) |
+|[Quantization Aware Training](./docs/usage/training_time_compression/quantization_aware_training/Usage.md) | Supported | Supported |
 |[Mixed-Precision Quantization](./docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#mixed-precision-quantization) | Supported | Not supported |
 |[Sparsity](./docs/usage/training_time_compression/other_algorithms/Sparsity.md) | Supported | Supported |
 |[Filter pruning](./docs/usage/training_time_compression/other_algorithms/Pruning.md) | Supported | Supported |
@@ -189,9 +189,45 @@ quantized_model = nncf.quantize(onnx_model, calibration_dataset)
 
 [//]: # (NNCF provides full  [samples]&#40;#post-training-quantization-samples&#41;, which demonstrate Post-Training Quantization usage for PyTorch, TensorFlow, ONNX, OpenVINO.)
 
-### Training-Time Compression
+### Training-Time Quantization
 
 Below is an example of Accuracy Aware Quantization pipeline where model weights and compression parameters may be fine-tuned to achieve a higher accuracy.
+
+<details open><summary><b>PyTorch</b></summary>
+
+```python
+import nncf
+import torch
+from torchvision import datasets, models
+
+# Instantiate your uncompressed model
+model = models.mobilenet_v2()
+
+# Provide validation part of the dataset to collect statistics needed for the compression algorithm
+val_dataset = datasets.ImageFolder("/path", transform=transforms.Compose([transforms.ToTensor()]))
+dataset_loader = torch.utils.data.DataLoader(val_dataset)
+
+# Step 1: Initialize the transformation function
+def transform_fn(data_item):
+    images, _ = data_item
+    return images
+
+# Step 2: Initialize NNCF Dataset
+calibration_dataset = nncf.Dataset(dataset_loader, transform_fn)
+# Step 3: Run the quantization pipeline
+quantized_model = nncf.quantize(model, calibration_dataset)
+
+# Now use compressed_model as a usual torch.nn.Module
+# to fine-tune compression parameters along with the model weights
+
+# ... the rest of the usual PyTorch-powered training pipeline
+```
+
+</details>
+
+### Training-Time Compression
+
+Below is an example of Accuracy Aware RB Sparsification pipeline where model weights and compression parameters may be fine-tuned to achieve a higher accuracy.
 
 <details><summary><b>PyTorch</b></summary>
 
@@ -207,7 +243,7 @@ from torchvision.models.resnet import resnet50
 model = resnet50()
 
 # Load a configuration file to specify compression
-nncf_config = NNCFConfig.from_json("resnet50_int8.json")
+nncf_config = NNCFConfig.from_json("resnet50_imagenet_rb_sparsity.json")
 
 # Provide data loaders for compression algorithm initialization, if necessary
 import torchvision.datasets as datasets
@@ -245,7 +281,7 @@ from tensorflow.keras.applications import ResNet50
 model = ResNet50()
 
 # Load a configuration file to specify compression
-nncf_config = NNCFConfig.from_json("resnet50_int8.json")
+nncf_config = NNCFConfig.from_json("resnet50_imagenet_rb_sparsity.json")
 
 # Provide dataset for compression algorithm initialization
 representative_dataset = tf.data.Dataset.list_files("/path/*.jpeg")
