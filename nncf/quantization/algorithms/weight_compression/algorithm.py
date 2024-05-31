@@ -390,7 +390,7 @@ class WeightCompression(Algorithm):
                 graph=graph,
                 dataset=dataset,
                 weight_compression_parameters=all_weight_params,
-                statistics_points=self._gptq_statistics,
+                statistic_points=self._gptq_statistics,
                 backend_entity=self._backend_entity,
             )
 
