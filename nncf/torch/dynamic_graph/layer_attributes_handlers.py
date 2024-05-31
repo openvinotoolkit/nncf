@@ -46,7 +46,6 @@ LAYER_NORM_OP_NAMES = get_all_aliases(om.PTLayerNormMetatype)
 PAD_OP_NAMES = om.PTPadMetatype.get_all_aliases()
 CONCAT_OP_NAMES = om.PTCatMetatype.get_all_aliases()
 CONST_OP_NAMES = ConstNoopMetatype.get_all_aliases()
-ADDMM_OP_NAMES = get_all_aliases(om.PTAddmmMetatype)
 
 
 def get_layer_attributes_from_args_and_kwargs(op_name: str, args, kwargs) -> BaseLayerAttributes:
@@ -77,8 +76,6 @@ def get_layer_attributes_from_args_and_kwargs(op_name: str, args, kwargs) -> Bas
         layer_attrs = _get_concat_attrs_from_args_kwargs(args, kwargs)
     elif op_name in CONST_OP_NAMES:
         layer_attrs = _get_const_attrs_from_args_kwargs(args, kwargs)
-    elif op_name in ADDMM_OP_NAMES:
-        layer_attrs = _get_addmm_attrs_from_args_kwargs(args, kwargs)
     return layer_attrs
 
 
@@ -228,14 +225,6 @@ LAYER_NORM_FUNC_SIGNATURE = [
     ("eps", 1e-05),
     ("cudnn_enable", True),
 ]
-ADDMM_FUNC_SIGNATURE = [
-    "input",
-    "mat1",
-    "mat2",
-    ("beta", 1),
-    ("alpha", 1),
-    ("out", None),
-]
 
 
 def _get_conv_attrs_from_args_kwargs(args: List[Any], kwargs: Dict[str, Any]) -> ConvolutionLayerAttributes:
@@ -327,13 +316,4 @@ def _get_layer_norm_attrs_from_args_kwargs(args, kwargs):
         weight_shape=args_dict["weight"].shape,
         filter_dimension_idx=0,
         with_bias=args_dict["bias"] is not None,
-    )
-
-
-def _get_addmm_attrs_from_args_kwargs(args, kwargs):
-    args_dict = apply_args_defaults(args, kwargs, ADDMM_FUNC_SIGNATURE)
-    return GenericWeightedLayerAttributes(
-        weight_requires_grad=args_dict["mat2"].requires_grad,
-        weight_shape=args_dict["mat2"].shape,
-        with_bias=args_dict["input"] is not None,
     )

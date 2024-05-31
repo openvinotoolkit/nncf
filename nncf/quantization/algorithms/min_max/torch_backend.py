@@ -18,7 +18,6 @@ import nncf.torch.graph.operator_metatypes as om
 from nncf.common.graph.definitions import NNCFGraphNodeType
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
-from nncf.common.graph.layer_attributes import WeightedLayerAttributes
 from nncf.common.graph.operator_metatypes import OperatorMetatype
 from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
@@ -155,7 +154,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: PTTargetPoint) -> Tuple[int, ...]:
         if target_point.is_weight_target_point():
-            return tuple(node.layer_attributes.get_weight_shape())
+            weight_node = get_const_node(node, target_point.input_port_id, nncf_graph)
+            return tuple(weight_node.layer_attributes.shape)
         return nncf_graph.get_input_shape_for_insertion_point(target_point)
 
     @staticmethod
@@ -354,5 +354,7 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
     @staticmethod
     def get_weight_nodes(nncf_graph: NNCFGraph) -> List[NNCFNode]:
         return [
-            node for node in nncf_graph.get_all_nodes() if isinstance(node.layer_attributes, WeightedLayerAttributes)
+            node
+            for node in nncf_graph.get_all_nodes()
+            if issubclass(node.metatype, om.PTOperatorMetatype) and node.metatype.weight_port_ids
         ]

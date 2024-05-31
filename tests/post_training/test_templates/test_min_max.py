@@ -165,4 +165,8 @@ class TemplateTestGetChannelAxes(TemplateTestMinMaxAlgorithm):
         """
         matmul_node = NNCFNode({"metatype": self.matmul_metatype})
         matmul_node.layer_attributes = self.get_matmul_node_attrs(None, None, weight_shape)
-        assert self.backend().get_weight_quantization_axes(matmul_node, "dummy") == ref_axes
+
+        class DummyTargetPoint:
+            input_port_id = 0
+
+        assert self.backend().get_weight_quantization_axes(matmul_node, DummyTargetPoint()) == ref_axes
