@@ -23,7 +23,7 @@ from nncf.openvino.engine import OVNativeEngine
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_parameter_node_name
 from nncf.openvino.graph.node_utils import get_result_node_name
-from nncf.openvino.graph.transformations.commands import OVModelExtractionCommandV2
+from nncf.openvino.graph.transformations.commands import OVStateLessModelExtractionCommand
 from nncf.quantization.algorithms.layerwise.iterator import LayerwiseIterator
 from nncf.quantization.algorithms.layerwise.scheduler import LayerwiseStep
 from nncf.quantization.algorithms.layerwise.scheduler import NodeOutputPort
@@ -80,7 +80,7 @@ class OVLayerwiseIterator(LayerwiseIterator):
         :return: Extracted OpenVINO model.
         """
         transformation_layout = TransformationLayout()
-        model_extraction_command = OVModelExtractionCommandV2(input_ids, output_ids)
+        model_extraction_command = OVStateLessModelExtractionCommand(input_ids, output_ids)
         transformation_layout.register(model_extraction_command)
         extracted_model = self._model_transformer.transform(transformation_layout)
         return extracted_model

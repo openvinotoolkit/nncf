@@ -140,9 +140,9 @@ class OVModelExtractionCommand(Command):
         self.output_ids = output_ids
 
 
-class OVModelExtractionCommandV2(Command):
+class OVStateLessModelExtractionCommand(Command):
     """
-    Extracts sub-graph based on the sub-model input and output names.
+    Extracts stateless sub-graph based on the sub-model input and output names.
     """
 
     def __init__(self, input_ids: List[Tuple[str, int]], output_ids: List[Tuple[str, int]]):

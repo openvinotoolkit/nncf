@@ -33,10 +33,10 @@ from nncf.openvino.graph.transformations.commands import OVExtractIfBodyCommand
 from nncf.openvino.graph.transformations.commands import OVFQNodeRemovingCommand
 from nncf.openvino.graph.transformations.commands import OVInplaceFnInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVModelExtractionCommand
-from nncf.openvino.graph.transformations.commands import OVModelExtractionCommandV2
 from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVStateLessModelExtractionCommand
 from nncf.openvino.graph.transformations.commands import OVUpdateIfBodyCommand
 from nncf.openvino.graph.transformations.commands import OVWeightUpdateCommand
 from nncf.quantization.fake_quantize import FakeConvertParameters
@@ -58,7 +58,7 @@ class OVModelTransformer(ModelTransformer):
             (OVBiasCorrectionCommand, self._apply_bias_correction_transformations),
             (OVWeightUpdateCommand, self._apply_weight_update_transformations),
             (OVModelExtractionCommand, self._apply_model_extraction_transformation),
-            (OVModelExtractionCommandV2, self._apply_model_extraction_transformation_v2),
+            (OVStateLessModelExtractionCommand, self._apply_stateless_model_extraction_transformation),
             (OVInplaceFnInsertionCommand, self._apply_insert_operation),
             (OVOutputInsertionCommand, self._apply_output_insertion_transformations),
             (OVBiasInsertionCommand, self._apply_bias_insertion_transformations),
@@ -198,8 +198,6 @@ class OVModelTransformer(ModelTransformer):
         results = model.get_results()
         params = model.get_parameters()
 
-        assign_ops = [op for op in model.get_ops() if op.get_type_name() == "Assign"]
-
         extra_model_outputs = []
         for output, port_id in outputs:
             output_name = output.get_node().get_friendly_name()
@@ -210,7 +208,7 @@ class OVModelTransformer(ModelTransformer):
             extra_model_outputs.append(result)
 
         model_with_outputs = ov.Model(
-            results=results + extra_model_outputs, sinks=assign_ops, parameters=params, name=model.friendly_name
+            results=results + extra_model_outputs, sinks=model.get_sinks(), parameters=params, name=model.friendly_name
         )
         copy_rt_info(model, model_with_outputs, path=["nncf"])
         return model_with_outputs
@@ -595,11 +593,11 @@ class OVModelTransformer(ModelTransformer):
         return extracted_model
 
     @staticmethod
-    def _apply_model_extraction_transformation_v2(
-        model: ov.Model, transformations: List[OVModelExtractionCommandV2]
+    def _apply_stateless_model_extraction_transformation(
+        model: ov.Model, transformations: List[OVStateLessModelExtractionCommand]
     ) -> ov.Model:
         """
-        Extracts sub-model from the original based on the inputs and outputs names.
+        Extracts stateless sub-model from the original based on the inputs and outputs names.
 
         :param model: Model to apply transformations.
         :param transformation: Model extraction transformation.
@@ -641,8 +639,22 @@ class OVModelTransformer(ModelTransformer):
         if not results:
             results = model.get_results()
 
-        extracted_model = ov.Model(results, params)
+        extracted_model = ov.Model(results=results, parameters=params)
         copy_rt_info(model, extracted_model, path=["nncf"])
+
+        for op in extracted_model.get_ops():
+            if op.get_type_name() != "ReadValue":
+                continue
+
+            op_input_values = op.input_values()
+            op_outputs = op.outputs()
+            if op_input_values:
+                for op_output in op_outputs:
+                    for target_in in op_output.get_target_inputs():
+                        target_in.replace_source_output(op_input_values[0])
+            else:
+                raise RuntimeError("ReadValue has no initial value.")
+
         return extracted_model
 
     @staticmethod
