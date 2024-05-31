@@ -1,9 +1,9 @@
-# Use Neural Network Compression Framework (NNCF) for Quantization Aware Training in PyTorch
+# Use NNCF for Quantization Aware Training in PyTorch
 
 This is a step-by-step tutorial on how to integrate the NNCF package into the existing PyTorch project.
 The use case implies that the user already has a training pipeline that reproduces training of the model in the floating  point precision and pretrained model.
 The task is to prepare this model for accelerated inference by simulating the compression at train time.
-Please refer to this [document](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md) for quantization implementation details.
+Please refer to this [document](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md) for details of the implementation.
 
 ## Basic usage
 
@@ -23,8 +23,7 @@ You can run it as usual and monitor your original model's metrics and/or compres
 
 Important points you should consider when training your networks with compression algorithms:
 
-- Turn off the `Dropout` layers (and similar ones like `DropConnect`) when training a network with quantization or sparsity
-- It is better to turn off additional regularization in the loss function (for example, L2 regularization via `weight_decay`) when training the network with RB sparsity, since it already imposes an L0 regularization term.
+- Turn off the `Dropout` layers (and similar ones like `DropConnect`) when training a network with quantization
 
 ### Step 3: Export the compressed model
 
@@ -47,6 +46,8 @@ The complete information about compression is defined by a compressed model and 
 The model characterizes the weights and topology of the network. The NNCF config - how to restore additional modules intoduced by NNCF.
 The NNCF config can be obtained by `quantized_model.nncf.get_config()` on saving and passed to the
 `nncf.torch.load_from_config` helper function to load additional modules from the given NNCF config.
+The quantized model saving allows to load quantized modules to the target model in a new python process and
+requires only example input for the target module, correspondent NNCF config and a quantized model state dict.
 
 ### Saving and loading compressed models in PyTorch
 
@@ -76,7 +77,7 @@ You can save the `compressed_model` object `torch.save` as usual: via `state_dic
 
 ### Compression of custom modules
 
-With no target model code modifications, NNCF only supports native PyTorch modules with respect to trainable parameter (weight) compressed, such as `torch.nn.Conv2d`
+With no target model code modifications, NNCF only supports native PyTorch modules with respect to trainable parameter (weight) compressed, such as `torch.nn.Conv2d`.
 If your model contains a custom, non-PyTorch standard module with trainable weights that should be compressed, you can register it using the `@nncf.register_module` decorator:
 
 ```python
@@ -91,6 +92,6 @@ class MyModule(torch.nn.Module):
 
 If registered module should be ignored by specific algorithms use `ignored_algorithms` parameter of decorator.
 
-In the example above, the NNCF-compressed models that contain instances of `MyModule` will have the corresponding modules extended with functionality that will allow NNCF to quantize, sparsify or prune the `weight` parameter of `MyModule` before it takes part in `MyModule`'s `forward` calculation.
+In the example above, the NNCF-compressed models that contain instances of `MyModule` will have the corresponding modules extended with functionality that will allow NNCF to quantize the `weight` parameter of `MyModule` before it takes part in `MyModule`'s `forward` calculation.
 
 See a PyTorch [example](/examples/quantization_aware_training/torch/resnet18/README.md) for **Quantization** Compression scenario on Tiny ImageNet-200 dataset.

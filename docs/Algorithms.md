@@ -39,7 +39,7 @@ Each compression method in this section receives its own hyperparameters that ar
   - Automatic bitwidth assignment based on HAWQ
   - Automatic quantization parameter selection and activation quantizer setup based on HW config preset
   - Automatic bitwidth assignment mode AutoQ, based on HAQ, a Deep Reinforcement Learning algorithm to select best mixed precision given quality metric and HW type.
-- [Sparsity](./usage/training_time_compression/other_algorithms/Sparsity.md) (PyTorch,TensorFlow)
+- [Unstructured sparsity](./usage/training_time_compression/other_algorithms/Sparsity.md) (PyTorch,TensorFlow)
   - Magnitude sparsity
   - Regularization-based (RB) sparsity
-- [Filter pruning](./usage/training_time_compression/other_algorithms/Pruning.md) (PyTorch,TensorFlow)
+- [Filter pruning (Structured sparsity)](./usage/training_time_compression/other_algorithms/Pruning.md) (PyTorch,TensorFlow)
