@@ -65,7 +65,7 @@ compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_SYM, ra
 original precision and 4-bit.
 Below is the example how to compress 80% of layers to 4-bit integer with a default data-based mixed precision algorithm and AWQ with Scale Estimation.
 It requires to set `awq` to `True` and `scale_estimation` to `True` additionally to data-based mixed-precision algorithm.
-Both algorithms, AWQ and Scale Estimation, can be enabled together or separately..
+Both algorithms, AWQ and Scale Estimation, can be enabled together or separately.
 
 ```python
 from datasets import load_dataset
