@@ -56,6 +56,11 @@ class TemplateTestNNCFTensorOperators:
 
     @staticmethod
     @abstractmethod
+    def to_cpu(x: TTensor) -> TTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
     def cast_to(x: TTensor, dtype: TensorDataType) -> TTensor:
         pass
 
@@ -1465,7 +1470,7 @@ class TemplateTestNNCFTensorOperators:
 
     def test_fn_from_numpy(self):
         ndarray = np.array([1, 2])
-        ref = Tensor(self.to_tensor(ndarray))
+        ref = Tensor(self.to_cpu(self.to_tensor(ndarray)))
         tensor = fns.from_numpy(ndarray, backend=ref.backend)
         assert isinstance(tensor, Tensor)
         assert tensor.device == ref.device

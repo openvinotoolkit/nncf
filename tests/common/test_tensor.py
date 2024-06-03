@@ -23,6 +23,10 @@ class TestNPNNCFTensorOperators(TemplateTestNNCFTensorOperators):
         return np.array(x)
 
     @staticmethod
+    def to_cpu(x):
+        return x
+
+    @staticmethod
     def cast_to(x: np.ndarray, dtype: TensorDataType) -> np.ndarray:
         if dtype is TensorDataType.float32:
             return x.astype(np.float32)

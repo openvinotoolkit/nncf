@@ -32,6 +32,10 @@ class TestPTNNCFTensorOperators(TemplateTestNNCFTensorOperators):
         return torch.tensor(x)
 
     @staticmethod
+    def to_cpu(x):
+        return x
+
+    @staticmethod
     def cast_to(x: torch.Tensor, dtype: TensorDataType) -> torch.Tensor:
         return cast_to(x, dtype)
 
@@ -50,6 +54,10 @@ class TestCudaPTNNCFTensorOperators(TemplateTestNNCFTensorOperators):
     @staticmethod
     def to_tensor(x):
         return torch.tensor(x).cuda()
+
+    @staticmethod
+    def to_cpu(x):
+        return x.cpu()
 
     @staticmethod
     def cast_to(x: torch.Tensor, dtype: TensorDataType) -> torch.Tensor:
