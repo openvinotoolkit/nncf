@@ -1,5 +1,8 @@
 # Use NNCF for Quantization Aware Training
 
+- In [PyTorch](Quantization.md)
+- In [TensorFlow](../other_algorithms/LegacyQuantization.md)
+
 A uniform "fake" quantization method supports an arbitrary number of bits (>=2) which is used to represent weights and activations.
 The method performs differentiable sampling of the continuous signal (for example, activations or weights) during forward pass, simulating inference with integer arithmetic.
 
@@ -87,8 +90,3 @@ $$
 \end{cases}
 &\end{flalign}
 $$
-
-## Quantization-aware Training Implementation
-
-- In [PyTorch](Quantization.md)
-- In [TensorFlow](../other_algorithms/LegacyQuantization.md)
