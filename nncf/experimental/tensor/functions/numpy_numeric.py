@@ -369,6 +369,11 @@ def _(a: Union[np.ndarray, np.generic]) -> np.ndarray:
     return a.copy()
 
 
+@register_numpy_types(numeric.searchsorted)
+def _(a: np.ndarray, v: np.ndarray, side: str = "left", sorter: Optional[np.ndarray] = None) -> np.ndarray:
+    return np.searchsorted(a, v, side, sorter)
+
+
 def zeros(
     shape: Tuple[int, ...],
     *,

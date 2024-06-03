@@ -29,7 +29,10 @@ from nncf.quantization.algorithms.weight_compression.backend import WeightCompre
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionParameters
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_integer_quantization_params
+from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_nf4_scale
+from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_nf4_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import calculate_quantized_weight
+from nncf.quantization.algorithms.weight_compression.weight_lowering import decompress_nf4_weight
 from nncf.quantization.algorithms.weight_compression.weight_lowering import do_dequantization
 
 TModel = TypeVar("TModel")
@@ -246,16 +249,23 @@ class GPTQ:
                 hessian_diag_val = hessian_inv_block[i, i]
 
                 if group_size != -1 and (i1 + i) % group_size == 0:
-                    scale, zero_point = calculate_integer_quantization_params(
-                        weight_tensor[:, (i1 + i) : (i1 + i + group_size)], reduction_axes, block_compression_config
+                    if block_compression_config.mode == CompressWeightsMode.NF4:
+                        scale = calculate_nf4_scale(weight_tensor[:, (i1 + i) : (i1 + i + group_size)], reduction_axes)
+                        scales.append(scale)
+                    else:
+                        scale, zero_point = calculate_integer_quantization_params(
+                            weight_tensor[:, (i1 + i) : (i1 + i + group_size)], reduction_axes, block_compression_config
+                        )
+                        scales.append(scale)
+                        zero_points.append(zero_point)
+                if block_compression_config.mode == CompressWeightsMode.NF4:
+                    compressed_weights = calculate_nf4_weight(fns.unsqueeze(weight_col, 1), scales[-1])
+                    quantized_col = decompress_nf4_weight(compressed_weights, scales[-1])
+                else:
+                    compressed_weights = calculate_quantized_weight(
+                        fns.unsqueeze(weight_col, 1), scales[-1], zero_points[-1], block_compression_config
                     )
-                    scales.append(scale)
-                    zero_points.append(zero_point)
-
-                compressed_weights = calculate_quantized_weight(
-                    fns.unsqueeze(weight_col, 1), scales[-1], zero_points[-1], block_compression_config
-                )
-                quantized_col = do_dequantization(compressed_weights, scales[-1], zero_points[-1])
+                    quantized_col = do_dequantization(compressed_weights, scales[-1], zero_points[-1])
                 quantized_col = fns.flatten(quantized_col)
                 quantized_block[:, i] = quantized_col
                 loss_block[:, i] = (weight_col - quantized_col) ** 2 / hessian_diag_val**2
@@ -277,7 +287,9 @@ class GPTQ:
         )
 
         scales = fns.stack(scales, axis=1)
-        if wc_params.compression_config.mode in [
+        if wc_params.compression_config.mode == CompressWeightsMode.NF4:
+            zero_points = None
+        elif wc_params.compression_config.mode in [
             CompressWeightsMode.INT8_SYM,
             CompressWeightsMode.INT4_SYM,
         ]:

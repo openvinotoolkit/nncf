@@ -12,6 +12,8 @@
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
+import numpy as np
+
 import nncf
 from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor.definitions import TensorDataType
@@ -21,6 +23,48 @@ from nncf.quantization.algorithms.weight_compression.config import WeightCompres
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
 
 ReductionAxes = Tuple[int, ...]
+
+NF4_QUANTILES = np.array(
+    [
+        -1.0,
+        -0.6961928009986877,
+        -0.5250730514526367,
+        -0.39491748809814453,
+        -0.28444138169288635,
+        -0.18477343022823334,
+        -0.09105003625154495,
+        0.0,
+        0.07958029955625534,
+        0.16093020141124725,
+        0.24611230194568634,
+        0.33791524171829224,
+        0.44070982933044434,
+        0.5626170039176941,
+        0.7229568362236023,
+        1.0,
+    ],
+    dtype=np.float32,
+)
+CENTER_OF_NF4_QUANTILES = np.array(
+    [
+        -0.8480964004993439,
+        -0.6106329262256622,
+        -0.4599952697753906,
+        -0.33967943489551544,
+        -0.23460740596055984,
+        -0.13791173323988914,
+        -0.045525018125772476,
+        0.03979014977812767,
+        0.1202552504837513,
+        0.2035212516784668,
+        0.2920137718319893,
+        0.3893125355243683,
+        0.5016634166240692,
+        0.6427869200706482,
+        0.8614784181118011,
+    ],
+    dtype=np.float32,
+)
 
 
 @dataclass
@@ -105,6 +149,36 @@ def calculate_normalized_weight(weight: Tensor, scale: Tensor) -> Tensor:
         scale = scale.astype(TensorDataType.float32)
 
     return weight / scale
+
+
+def calculate_nf4_weight(weight: Tensor, scale: Tensor) -> Tensor:
+    """
+    Quantizes the weight tensor to NF4 format.
+
+    :param weight: Weight tensor to quantize.
+    :param scale: Scale tensor used for normalization.
+    :return: Quantized weight tensor in NF4 format.
+    """
+    norm_weight = calculate_normalized_weight(weight, scale)
+
+    center_nf4_quantiles = fns.from_numpy(CENTER_OF_NF4_QUANTILES, backend=norm_weight.backend)
+    nf4_quantiles = fns.from_numpy(NF4_QUANTILES, backend=norm_weight.backend)
+
+    index_of_quantile = fns.searchsorted(center_nf4_quantiles, norm_weight)
+    nf4_weight = nf4_quantiles[index_of_quantile]
+
+    return nf4_weight
+
+
+def decompress_nf4_weight(weight: Tensor, scale: Tensor) -> Tensor:
+    """
+    Decompresses the NF4 quantized weight tensor.
+
+    :param weight: Quantized weight tensor in NF4 format.
+    :param scale: Scale tensor used for decompression.
+    :return: Decompressed weight tensor.
+    """
+    return weight * scale
 
 
 def calculate_normalized_weight_and_nf4_scale(

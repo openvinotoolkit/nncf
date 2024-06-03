@@ -849,14 +849,9 @@ def test_call_max_var_criterion_with_dataset_scale_estimation_neg_group_size(mod
         compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, scale_estimation=True)
 
 
-@pytest.mark.parametrize("mode", INT4_MODES)
+@pytest.mark.parametrize("mode", INT4_NF4_MODES)
 def test_call_gptq(mode):
     model = AWQMatmulModel().ov_model
     dataset = Dataset([np.ones([8, 8])])
 
     compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, gptq=True)
-
-
-def test_raise_error_with_gptq_for_nf4():
-    with pytest.raises(AttributeError):
-        compress_weights(ov.Model([], []), mode=CompressWeightsMode.NF4, dataset="anything", gptq=True)

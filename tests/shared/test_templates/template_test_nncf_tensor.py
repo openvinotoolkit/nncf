@@ -14,6 +14,7 @@ import operator
 from abc import abstractmethod
 from typing import TypeVar
 
+import numpy as np
 import pytest
 
 from nncf.experimental.common.tensor_statistics import statistical_functions as s_fns
@@ -1461,3 +1462,44 @@ class TemplateTestNNCFTensorOperators:
             assert tensor_a.backend == self.backend()
             assert tensor_a.dtype == dtype
             assert fns.all(tensor_a == ref)
+
+    def test_fn_from_numpy(self):
+        ndarray = np.array([1, 2])
+        ref = Tensor(self.to_tensor(ndarray))
+        tensor = fns.from_numpy(ndarray, backend=ref.backend)
+        assert isinstance(tensor, Tensor)
+        assert tensor.device == ref.device
+        assert tensor.backend == ref.backend
+        assert tensor.dtype == ref.dtype
+        assert fns.all(tensor == ref)
+
+    @pytest.mark.parametrize(
+        "a, v, side, sorter, ref",
+        (
+            ([-1.0, 0.0, 0.0, 1.0], [-2.0, -0.6, 0.0, 0.3, 1.5], "left", None, [0, 1, 1, 3, 4]),
+            ([-1.0, 0.0, 0.0, 1.0], [-2.0, -0.6, 0.0, 0.3, 1.5], "right", None, [0, 1, 3, 3, 4]),
+            ([0.0, -1.0, 0.0, 1.0], [-2.0, -0.6, 0.0, 0.3, 1.5], "left", [1, 0, 2, 3], [0, 1, 1, 3, 4]),
+            ([0.0, -1.0, 0.0, 1.0], [-2.0, -0.6, 0.0, 0.3, 1.5], "right", [1, 0, 2, 3], [0, 1, 3, 3, 4]),
+        ),
+    )
+    def test_fn_searchsorted(self, a, v, side, sorter, ref):
+        tensor_a = Tensor(self.to_tensor(a))
+        tensor_v = Tensor(self.to_tensor(v))
+        tensor_sorter = sorter
+        if sorter is not None:
+            tensor_sorter = Tensor(self.to_tensor(sorter))
+        ref = Tensor(self.to_tensor(ref))
+        res = fns.searchsorted(tensor_a, tensor_v, side, tensor_sorter)
+        assert fns.allclose(res, ref)
+
+    def test_searchsorted_side_error(self):
+        tensor_a = Tensor(self.to_tensor([-1.0, 0.0, 0.0, 1.0]))
+        tensor_v = Tensor(self.to_tensor([-2.0, -0.6, 0.0, 0.3, 1.5]))
+        with pytest.raises(ValueError):
+            fns.searchsorted(tensor_a, tensor_v, "error")
+
+    def test_searchsorted_2d_error(self):
+        tensor_a = Tensor(self.to_tensor([[-1.0, 0.0, 0.0, 1.0], [-1.0, 0.0, 0.0, 1.0]]))
+        tensor_v = Tensor(self.to_tensor([-2.0, -0.6, 0.0, 0.3, 1.5]))
+        with pytest.raises(ValueError):
+            fns.searchsorted(tensor_a, tensor_v)

@@ -377,6 +377,15 @@ def _(a: torch.Tensor) -> torch.Tensor:
     return a.clone()
 
 
+@numeric.searchsorted.register(torch.Tensor)
+def _(a: torch.Tensor, v: torch.Tensor, side: str = "left", sorter: Optional[torch.Tensor] = None) -> torch.Tensor:
+    if side not in ["right", "left"]:
+        raise ValueError(f"Invalid value for 'side': {side}. Expected 'right' or 'left'.")
+    if a.dim() != 1:
+        raise ValueError(f"Input tensor 'a' must be 1-D. Received {a.dim()}-D tensor.")
+    return torch.searchsorted(sorted_sequence=a, input=v, right=(side == "right"), sorter=sorter)
+
+
 def zeros(
     shape: Tuple[int, ...],
     *,
@@ -403,3 +412,7 @@ def arange(
     if device is not None:
         device = DEVICE_MAP[device]
     return torch.arange(start, end, step, dtype=dtype, device=device)
+
+
+def from_numpy(ndarray: np.ndarray) -> torch.Tensor:
+    return torch.from_numpy(ndarray)

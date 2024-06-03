@@ -436,12 +436,13 @@ def compress_weights(
     if backend == BackendType.OPENVINO:
         from nncf.openvino.quantization.quantize_model import compress_weights_impl as ov_compress_weights_impl
 
-        if any((gptq, awq, scale_estimation)) and (
-            dataset is None or mode == CompressWeightsMode.NF4 or group_size == -1
-        ):
+        if any((awq, scale_estimation)) and (dataset is None or mode == CompressWeightsMode.NF4 or group_size == -1):
             raise AttributeError(
-                "Scale estimation, AWQ or GPTQ algorithm defined, but dataset is None or mode is NF4 or group_size < 0."
+                "Scale estimation or AWQ algorithm defined, but dataset is None or mode is NF4 or group_size < 0."
             )
+        if gptq and (dataset is None or group_size == -1):
+            raise AttributeError("GPTQ algorithm defined, but dataset is None or group_size < 0.")
+
         if gptq and scale_estimation:
             raise AttributeError(
                 "Simultaneous use of Scale estimation and GPTQ algorithms is not supported. Select one of them."
