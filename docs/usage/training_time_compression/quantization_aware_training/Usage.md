@@ -44,7 +44,7 @@ The model characterizes the weights and topology of the network. The NNCF config
 The NNCF config can be obtained by `quantized_model.nncf.get_config()` on saving and passed to the
 `nncf.torch.load_from_config` helper function to load additional modules from the given NNCF config.
 The quantized model saving allows to load quantized modules to the target model in a new python process and
-requires only example input for the target module, correspondent NNCF config and a quantized model state dict.
+requires only example input for the target module, corresponding NNCF config and the quantized model state dict.
 
 ### Saving and loading compressed models in PyTorch
 
