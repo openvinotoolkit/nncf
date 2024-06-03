@@ -193,7 +193,7 @@ quantized_model = nncf.quantize(onnx_model, calibration_dataset)
 
 Below is an example of Accuracy Aware Quantization pipeline where model weights and compression parameters may be fine-tuned to achieve a higher accuracy.
 
-<details open><summary><b>PyTorch</b></summary>
+<details><summary><b>PyTorch</b></summary>
 
 ```python
 import nncf
