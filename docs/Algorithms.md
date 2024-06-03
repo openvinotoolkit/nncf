@@ -16,8 +16,6 @@
 
 ## Training Time Compression
 
-### Quantization
-
 - [Quantization Aware Training (QAT)](./usage/training_time_compression/quantization_aware_training/Usage.md) (PyTorch)
   - Training of a quantized model after the Post Training Quantization
   - Symmetric and asymmetric quantization modes
