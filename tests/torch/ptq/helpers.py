@@ -13,6 +13,7 @@ from typing import List, Optional
 
 import torch
 
+from nncf.common.graph.layer_attributes import ConstantLayerAttributes
 from nncf.common.graph.layer_attributes import ConvolutionLayerAttributes
 from nncf.torch import wrap_model
 from nncf.torch.graph.graph import PTNNCFGraph
@@ -38,7 +39,13 @@ def get_single_conv_nncf_graph() -> NNCFGraphToTest:
         transpose=False,
         padding_values=[],
     )
-    return NNCFGraphToTest(PTModuleConv2dMetatype, conv_layer_attrs, PTNNCFGraph, const_metatype=PTConstNoopMetatype)
+    return NNCFGraphToTest(
+        PTModuleConv2dMetatype,
+        conv_layer_attrs,
+        PTNNCFGraph,
+        const_metatype=PTConstNoopMetatype,
+        const_layer_attrs=ConstantLayerAttributes("w", shape=[4, 4, 4, 4]),
+    )
 
 
 def get_depthwise_conv_nncf_graph() -> NNCFGraphToTestDepthwiseConv:
@@ -54,7 +61,11 @@ def get_depthwise_conv_nncf_graph() -> NNCFGraphToTestDepthwiseConv:
         padding_values=(1, 1),
     )
     return NNCFGraphToTestDepthwiseConv(
-        PTModuleDepthwiseConv2dSubtype, conv_layer_attrs, nncf_graph_cls=PTNNCFGraph, const_metatype=PTConstNoopMetatype
+        PTModuleDepthwiseConv2dSubtype,
+        conv_layer_attrs,
+        nncf_graph_cls=PTNNCFGraph,
+        const_metatype=PTConstNoopMetatype,
+        const_layer_attrs=ConstantLayerAttributes("w", shape=[4, 4, 4, 4]),
     )
 
 
@@ -75,7 +86,12 @@ def get_sum_aggregation_nncf_graph() -> NNCFGraphToTestSumAggregation:
         padding_values=[],
     )
     return NNCFGraphToTestSumAggregation(
-        PTModuleConv2dMetatype, PTSumMetatype, conv_layer_attrs, PTNNCFGraph, const_metatype=PTConstNoopMetatype
+        PTModuleConv2dMetatype,
+        PTSumMetatype,
+        conv_layer_attrs,
+        PTNNCFGraph,
+        const_metatype=PTConstNoopMetatype,
+        const_layer_attrs=ConstantLayerAttributes("w", shape=[4, 4, 4, 4]),
     )
 
 

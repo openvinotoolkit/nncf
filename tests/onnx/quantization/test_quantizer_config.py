@@ -34,6 +34,7 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
             conv_layer_attrs,
             input_layer_attrs=ONNXLayerAttributes(),
             output_layer_attrs=ONNXLayerAttributes(),
+            const_layer_attrs=ONNXLayerAttributes(),
         )
 
     @pytest.fixture
@@ -43,6 +44,7 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
             ONNXLayerAttributes(weight_attrs={1: {"shape": [4, 4, 4, 4]}}, bias_attrs={}),
             input_layer_attrs=ONNXLayerAttributes(),
             output_layer_attrs=ONNXLayerAttributes(),
+            const_layer_attrs=ONNXLayerAttributes(),
         )
 
     @pytest.fixture
@@ -55,4 +57,5 @@ class TestQuantizerConfig(TemplateTestQuantizerConfig):
             sum_layer_attrs=ONNXLayerAttributes(),
             input_layer_attrs=ONNXLayerAttributes(),
             output_layer_attrs=ONNXLayerAttributes(),
+            const_layer_attrs=ONNXLayerAttributes(),
         )
