@@ -139,10 +139,6 @@ class NNCFGraphToTestSumAggregation:
             ),
         )
         self.nncf_graph = get_nncf_graph_from_mock_nx_graph(original_mock_graph, nncf_graph_cls)
-        # # Hack output size of the Sum_1 operation
-        # self.nncf_graph._nx_graph.out_edges[("4 /Sum_1_0", "5 /Output_1_0")][
-        #     self.nncf_graph.ACTIVATION_SHAPE_EDGE_ATTR
-        # ] = [1, 1, 1]
 
 
 class NNCFGraphToTestMatMul:

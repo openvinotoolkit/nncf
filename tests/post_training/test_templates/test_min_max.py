@@ -49,7 +49,7 @@ class TemplateTestMinMaxAlgorithm:
 class TemplateTestGetTargetPointShape(TemplateTestMinMaxAlgorithm):
     @abstractmethod
     def get_nncf_graph(self, weight_port_id: int, weight_shape: Tuple[int]) -> NNCFGraph:
-        "Returns backend specific NNCFGraph having a single Convloution."
+        "Returns backend specific NNCFGraph having a single Convolution."
 
     @pytest.mark.parametrize(
         "target_point_type, input_port_id, reference_shape",
