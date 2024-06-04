@@ -2,6 +2,7 @@
 
 Post-Training Quantization is a quantization algorithm that doesn't demand retraining of a quantized model.
 It utilizes a small subset of the initial dataset to calibrate quantization constants.
+Please refer to this [document](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md) for details of the implementation.
 
 NNCF provides an advanced Post-Training Quantization algorithm, which consists of the following techniques:
 
@@ -88,9 +89,9 @@ for data_item in val_loader:
 </details>
 
 NNCF provides the examples of Post-Training Quantization where you can find the implementation of data transformation
-function: [PyTorch](../../../examples/post_training_quantization/torch/mobilenet_v2/README.md), [TensorFlow](../../../examples/post_training_quantization/tensorflow/mobilenet_v2/README.md), [ONNX](../../../examples/post_training_quantization/onnx/mobilenet_v2/README.md), and [OpenVINO](../../../examples/post_training_quantization/openvino/mobilenet_v2/README.md)
+function: [PyTorch](/examples/post_training_quantization/torch/mobilenet_v2/README.md), [TensorFlow](/examples/post_training_quantization/tensorflow/mobilenet_v2/README.md), [ONNX](/examples/post_training_quantization/onnx/mobilenet_v2/README.md), and [OpenVINO](/examples/post_training_quantization/openvino/mobilenet_v2/README.md)
 
-In case the Post-Training Quantization algorithm could not reach quality requirements you can fine-tune a quantized pytorch model. Example of the Quantization-Aware training pipeline for a pytorch model could be found [here](../../../examples/quantization_aware_training/torch/resnet18/README.md).
+In case the Post-Training Quantization algorithm could not reach quality requirements you can fine-tune a quantized pytorch model. Example of the Quantization-Aware training pipeline for a pytorch model could be found [here](/examples/quantization_aware_training/torch/resnet18/README.md).
 
 ## Using `pytorch.Dataloader` or `tf.data.Dataset` as data source for calibration dataset
 
@@ -100,4 +101,4 @@ NNCF allows for dataloaders with different batch sizes, but there are limitation
 
 Please keep in mind that you have to recalculate the subset size for quantization according to the batch size using the following formula: ```subset_size = subset_size_for_batch_size_1 // batch_size.```.
 
-[Example](../../../examples/post_training_quantization/torch/mobilenet_v2/README.md) with post-training quantization for PyTorch with a dataloader having a ```batch_size``` of 128.
+[Example](/examples/post_training_quantization/torch/mobilenet_v2/README.md) with post-training quantization for PyTorch with a dataloader having a ```batch_size``` of 128.

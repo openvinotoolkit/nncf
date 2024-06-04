@@ -4,14 +4,14 @@ This is a step-by-step tutorial on how to integrate the NNCF package into the ex
 The use case implies that the user already has a training pipeline that reproduces training of the model in the floating  point precision and pretrained model.
 The task is to prepare this model for accelerated inference by simulating the compression at train time.
 The instructions below use certain "helper" functions of the NNCF which abstract away most of the framework specifics and make the integration easier in most cases.
-As an alternative, you can always use the NNCF internal objects and methods as described in the [architectural overview](./NNCFArchitecture.md).
+As an alternative, you can always use the NNCF internal objects and methods as described in the [architectural overview](/docs/NNCFArchitecture.md).
 
 ## Basic usage
 
 ### Step 1: Create an NNCF configuration file
 
 A JSON configuration file is used for easier setup of the parameters of compression to be applied to your model.
-See [configuration file description](./ConfigFile.md) or the sample configuration files packaged with the [example scripts](../examples) for reference.
+See [configuration file description](/docs/ConfigFile.md) or the sample configuration files packaged with the [example scripts](/examples/) for reference.
 
 ### Step 2: Modify the training pipeline
 
@@ -88,7 +88,7 @@ If you use `DistributedDataParallel`, add the following call afterwards:
         compression_ctrl.scheduler.epoch_step()
         ```
 
-> **NOTE**: For a real-world example of how these changes should be introduced, take a look at the [examples](../examples) published in the NNCF repository.
+> **NOTE**: For a real-world example of how these changes should be introduced, take a look at the [examples](/examples/) published in the NNCF repository.
 
 ### Step 3: Run the training pipeline
 
@@ -112,7 +112,7 @@ After the compressed model has been fine-tuned to acceptable accuracy and compre
 
     The exported ONNX file may contain special, non-ONNX-standard operations and layers to leverage full compressed/low-precision potential of the OpenVINO toolkit.
     In some cases it is possible to export a compressed model with ONNX standard operations only (so that it can be run using `onnxruntime`, for example) - this is the case for the 8-bit symmetric quantization and sparsity/filter pruning algorithms.
-    Refer to [compression algorithm documentation](./compression_algorithms) for details.
+    Refer to [compression algorithm documentation](.) for details.
     Also, this method is limited to the supported formats for export.
 
 2. Call the compression controller's `strip` method, to properly get the model without NNCF specific
@@ -264,19 +264,19 @@ After a `create_compressed_model` call, the NNCF log directory will contain visu
 These graphs form the basis for NNCF analyses of your model.
 Below is the example of a LeNet network's `original_graph.dot` visualization:
 
-![alt text](pics/lenet_original_graph.png)
+![alt text](/docs/pics/lenet_original_graph.png)
 
 Same model's `compressed_graph.dot` visualization for symmetric INT8 quantization:
 
-![alt text](pics/lenet_compressed_graph.png)
+![alt text](/docs/pics/lenet_compressed_graph.png)
 
 Visualize these .dot files using Graphviz and browse through the visualization to validate that this representation correctly reflects your model structure.
-Each node represents a single PyTorch function call - see [NNCFArchitecture.md](./NNCFArchitecture.md) section on graph tracing for details.
-In case you need to exclude some parts of the model from being considered in one algorithm or another, you can use the labels of the `compressed_graph.dot` nodes (excluding the numerical ID in the beginning) and specify these (globally or per-algorithm) within the corresponding specific sections in [configuration file](./ConfigFile.md)
+Each node represents a single PyTorch function call - see [NNCFArchitecture.md](/docs/NNCFArchitecture.md) section on graph tracing for details.
+In case you need to exclude some parts of the model from being considered in one algorithm or another, you can use the labels of the `compressed_graph.dot` nodes (excluding the numerical ID in the beginning) and specify these (globally or per-algorithm) within the corresponding specific sections in [configuration file](/docs/ConfigFile.md)
 Regular expression matching is also possible for easier exclusion of certain node groups.
 For instance, below is the same LeNet INT8 model as above, but with `"ignored_scopes": ["{re}.*RELU.*", "LeNet/NNCFConv2d[conv2]"]`:
 
-![alt text](pics/lenet_compressed_graph_ignored.png)
+![alt text](/docs/pics/lenet_compressed_graph_ignored.png)
 
 Notice that all RELU operation outputs and the second convolution's weights are no longer quantized.
 
@@ -303,7 +303,7 @@ In the example above, the NNCF-compressed models that contain instances of `MyMo
 
 ### Accuracy-Aware model training
 
-NNCF has the capability to apply the model compression algorithms while satisfying the user-defined accuracy constraints. This is done by executing an internal custom accuracy-aware training loop, which also helps to automate away some of the manual hyperparameter search related to model training such as setting the total number of epochs, the target compression rate for the model, etc. There are two supported training loops. The first one is called [Early Exit Training](./accuracy_aware_model_training/EarlyExitTraining.md), which aims to finish fine-tuning when the accuracy drop criterion is reached. The second one is more sophisticated. It is targeted for the automated discovery of the compression rate for the model given that it satisfies the user-specified maximal tolerable accuracy drop due to compression. Its name is [Adaptive Compression Level Training](./accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md). Both training loops could be run with either PyTorch or TensorFlow backend with the same user interface(except for the TF case where the Keras API is used for training).
+NNCF has the capability to apply the model compression algorithms while satisfying the user-defined accuracy constraints. This is done by executing an internal custom accuracy-aware training loop, which also helps to automate away some of the manual hyperparameter search related to model training such as setting the total number of epochs, the target compression rate for the model, etc. There are two supported training loops. The first one is called [Early Exit Training](/docs/accuracy_aware_model_training/EarlyExitTraining.md), which aims to finish fine-tuning when the accuracy drop criterion is reached. The second one is more sophisticated. It is targeted for the automated discovery of the compression rate for the model given that it satisfies the user-specified maximal tolerable accuracy drop due to compression. Its name is [Adaptive Compression Level Training](/docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md). Both training loops could be run with either PyTorch or TensorFlow backend with the same user interface(except for the TF case where the Keras API is used for training).
 
 The following function is required to create the accuracy-aware training loop. One has to pass the `NNCFConfig` object and the compression controller (that is returned upon compressed model creation, see above).
 
@@ -314,7 +314,7 @@ training_loop = create_accuracy_aware_training_loop(nncf_config, compression_ctr
 
 In order to properly instantiate the accuracy-aware training loop, the user has to specify the 'accuracy_aware_training' section.
 This section fully depends on what Accuracy-Aware Training loop is being used.
-For more details about config of Adaptive Compression Level Training refer to [Adaptive Compression Level Training documentation](./accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md) and Early Exit Training refer to [Early Exit Training documentation](./accuracy_aware_model_training/EarlyExitTraining.md).
+For more details about config of Adaptive Compression Level Training refer to [Adaptive Compression Level Training documentation](/docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md) and Early Exit Training refer to [Early Exit Training documentation](/docs/accuracy_aware_model_training/EarlyExitTraining.md).
 
 The training loop is launched by calling its `run` method. Before the start of the training loop, the user is expected to define several functions related to the training of the model and pass them as arguments to the `run` method of the training loop instance:
 
@@ -378,6 +378,6 @@ model = training_loop.run(
     dump_checkpoint_fn=dump_checkpoint_fn)
 ```
 
-The above call executes the accuracy-aware training loop and return the compressed model. For more details on how to use the accuracy-aware training loop functionality of NNCF, please refer to its [documentation](./accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md).
+The above call executes the accuracy-aware training loop and return the compressed model. For more details on how to use the accuracy-aware training loop functionality of NNCF, please refer to its [documentation](/docs/accuracy_aware_model_training/AdaptiveCompressionLevelTraining.md).
 
 See a PyTorch [example](/examples/torch/classification/main.py) for **Quantization** + **Filter Pruning** Adaptive Compression scenario on CIFAR10 and ResNet18 [config](/examples/torch/classification/configs/pruning/resnet18_cifar10_accuracy_aware.json).

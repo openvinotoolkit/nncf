@@ -13,6 +13,7 @@ from __future__ import annotations
 import operator
 from typing import Any, Optional, Tuple, TypeVar, Union
 
+from nncf.experimental.tensor.definitions import TensorBackend
 from nncf.experimental.tensor.definitions import TensorDataType
 from nncf.experimental.tensor.definitions import TensorDeviceType
 
@@ -48,6 +49,10 @@ class Tensor:
         return _call_function("dtype", self)
 
     @property
+    def backend(self) -> TensorBackend:
+        return _call_function("backend", self)
+
+    @property
     def size(self) -> int:
         return _call_function("size", self)
 
@@ -57,8 +62,11 @@ class Tensor:
     def __iter__(self):
         return TensorIterator(self.data)
 
-    def __getitem__(self, index: int) -> Tensor:
-        return Tensor(self.data[index])
+    def __getitem__(self, index: Union[Tensor, int, Tuple[Union[Tensor, int], ...]]) -> Tensor:
+        return Tensor(self.data[unwrap_index(index)])
+
+    def __setitem__(self, index: Union[Tensor, int, Tuple[Union[Tensor, int], ...]], value: Any) -> None:
+        self.data[unwrap_index(index)] = unwrap_tensor_data(value)
 
     def __str__(self) -> str:
         return f"nncf.Tensor({str(self.data)})"
@@ -153,6 +161,9 @@ class Tensor:
     def item(self) -> float:
         return _call_function("item", self)
 
+    def clone(self) -> float:
+        return _call_function("clone", self)
+
 
 def _call_function(func_name: str, *args):
     """
@@ -181,6 +192,18 @@ class TensorIterator:
             return Tensor(result)
 
         raise StopIteration
+
+
+def unwrap_index(obj: Union[Any, Tuple[Any, ...]]) -> Union[TTensor, Tuple[TTensor, ...]]:
+    """
+    Unwraps the tensor data from the input object or tuple of objects.
+
+    :param obj: The object to unwrap.
+    :return: The unwrapped tensor data or tuple of unwrapped tensor data.
+    """
+    if isinstance(obj, tuple):
+        return tuple(unwrap_tensor_data(o) for o in obj)
+    return unwrap_tensor_data(obj)
 
 
 def unwrap_tensor_data(obj: Any) -> TTensor:

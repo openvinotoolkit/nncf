@@ -114,21 +114,22 @@ class ScaleEstimation:
         :param graph: Model graph.
         :param statistic_points: Statistic points with collected statistics values.
         :param dataset: A representative dataset for the calibration process.
-        :return: Dict with pairs (node name, estimated scale).
+        :return: Dict with pairs (weight name, estimated scale).
         """
 
         compress_decompress_cashe = {}
         res = dict()
 
         for wp in track(self._all_weight_params, description="Applying Scale Estimation"):
-            k = wp.node_with_weight.node_name
+            weight_name = wp.weight_name
+            node_name = wp.node_with_weight.node_name
             config = wp.compression_config
 
-            if config.num_bits != 4 or k not in self._activations:
-                res[k] = None
+            if config.num_bits != 4 or node_name not in self._activations:
+                res[weight_name] = None
                 continue
 
-            stats = self._activations[k]
+            stats = self._activations[node_name]
             reduction_axis = wp.reduction_axes[0]
 
             cur_config = deepcopy(config)
@@ -296,6 +297,6 @@ class ScaleEstimation:
                     near_to_ideal_scale = mask * result_scale + (1.0 - mask) * near_to_ideal_scale
                 result_scale = near_to_ideal_scale
 
-            res[k] = result_scale
+            res[weight_name] = result_scale
 
         return res

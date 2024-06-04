@@ -22,6 +22,21 @@ torch_tensor = np.array([1,2])
 nncf_tensor = Tensor(torch_tensor)
 ```
 
+### Create Tensor
+
+The function for creating a tensor requires a backend argument to specify the type of data to be created. It supports both numpy array and torch tensor.
+
+```python
+from nncf.experimental.tensor import functions as fns
+from nncf.experimental.tensor.definitions import TensorBackend
+
+# create zeros tensor where data is numpy array
+nncf_tensor = fns.zeros((2,2), backend=TensorBackend.numpy)
+
+# create zeros tensor where data is troch tensor
+nncf_tensor = fns.zeros((2,2), backend=TensorBackend.torch)
+```
+
 ### Math operations
 
 All math operations are overrided to operated with wrapped object and return `Tensor`

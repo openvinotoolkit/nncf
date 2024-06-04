@@ -38,6 +38,7 @@ from nncf.openvino.graph.transformations.commands import OVModelExtractionComman
 from nncf.openvino.graph.transformations.commands import OVMultiplyInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVOutputInsertionCommand
 from nncf.openvino.graph.transformations.commands import OVQuantizerInsertionCommand
+from nncf.openvino.graph.transformations.commands import OVStateLessModelExtractionCommand
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.quantization.advanced_parameters import FP8Type
 from nncf.quantization.fake_quantize import FakeConvertParameters
@@ -51,6 +52,7 @@ from tests.openvino.native.models import FPModel
 from tests.openvino.native.models import LinearModel
 from tests.openvino.native.models import QuantizedModel
 from tests.openvino.native.models import SimpleSplitModel
+from tests.openvino.native.models import StatefulModel
 from tests.openvino.native.models import WeightsModel
 from tests.openvino.native.models import ZeroRankEltwiseModel
 
@@ -685,6 +687,34 @@ def test_model_extraction(model_with_data):
     model = model_to_test.ov_model
     transformation_layout = TransformationLayout()
     command = OVModelExtractionCommand(model_with_data["input_ids"], model_with_data["output_ids"])
+    transformation_layout.register(command)
+
+    model_transformer = OVModelTransformer(model)
+    transformed_model = model_transformer.transform(transformation_layout)
+
+    path_to_dot = get_actual_reference_for_current_openvino(
+        REFERENCE_GRAPHS_DIR / f"exctracted_{model_to_test.ref_graph_name}"
+    )
+    compare_nncf_graphs(transformed_model, path_to_dot)
+
+
+MODELS_WITH_DATA_V2 = [
+    {"model": ConvModel(), "input_ids": [("Sub", 0)], "output_ids": [("Conv", 0)]},
+    {
+        "model": QuantizedModel(),
+        "input_ids": [("Conv_1", 0), ("Transpose/fq_input_0", 0)],
+        "output_ids": [("Conv_3", 0), ("Add_2", 0)],
+    },
+    {"model": StatefulModel(stateful=True), "input_ids": [("input_data", 0)], "output_ids": [("MemoryAdd", 0)]},
+]
+
+
+@pytest.mark.parametrize("model_with_data", MODELS_WITH_DATA_V2)
+def test_stateless_model_extraction(model_with_data):
+    model_to_test = model_with_data["model"]
+    model = model_to_test.ov_model
+    transformation_layout = TransformationLayout()
+    command = OVStateLessModelExtractionCommand(model_with_data["input_ids"], model_with_data["output_ids"])
     transformation_layout.register(command)
 
     model_transformer = OVModelTransformer(model)

@@ -128,6 +128,7 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
         graph: NNCFGraph,
         weight_compression_parameters: Iterable[WeightCompressionParameters],
         precomputed_scales: Dict[str, Tensor] = None,
+        precomputed_zero_points: Dict[str, Tensor] = None,
     ) -> ov.Model:
         for wc_params in weight_compression_parameters:
             compression_config = wc_params.compression_config
@@ -166,7 +167,8 @@ class OVWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
                 weight,
                 wc_params.reduction_axes,
                 compression_config,
-                precomputed_scales[wc_params.node_with_weight.node_name],
+                None if precomputed_scales is None else precomputed_scales.get(wc_params.weight_name),
+                None if precomputed_zero_points is None else precomputed_zero_points.get(wc_params.weight_name),
             )
 
             compressed_const = opset.constant(
