@@ -11,7 +11,7 @@ Post-training Quantization:
 - Features:
   - (OpenVINO) Added Scale Estimation algorithm for 4-bit data-aware weights compression. This algorithm estimates more optimal scale in compression scheme based on difference between matrix multiplication in original precision and compressed one. For that `scale_estimation` optional parameter has been added to `nncf.compress_weights()` and can be used to minimize accuracy degradation of compressed models (note that this option increases the compression time).
 - Fixes:
-  - ...
+  - (OpenVINO) Fix an incorrect Add node determination in FastBiasCorrection, BiasCorrection, and ChannelAlighnment algorithms.
 - Improvements:
   - ...
 - Deprecations/Removals:
