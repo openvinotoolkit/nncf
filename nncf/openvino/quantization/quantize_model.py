@@ -409,6 +409,7 @@ def compress_weights_impl(
     awq: bool,
     subset_size: int,
     scale_estimation: bool,
+    gptq: bool,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> ov.Model:
     """
@@ -426,6 +427,7 @@ def compress_weights_impl(
         awq,
         subset_size,
         scale_estimation,
+        gptq,
         advanced_parameters,
     )
     graph = NNCFGraphFactory.create(model)
