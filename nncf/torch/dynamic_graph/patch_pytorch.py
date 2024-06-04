@@ -458,3 +458,7 @@ def disable_patching():
         # Need to restore the previous state of patching in this case before continuing to the exception handling.
         if was_patched:
             patch_torch_operators()
+
+
+def operators_are_wrapped() -> bool:
+    return _OPERATORS_ALREADY_WRAPPED

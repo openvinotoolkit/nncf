@@ -76,6 +76,12 @@ def wrap_operator(operator, operator_info: PatchedOperatorInfo):
 
     @functools.wraps(operator)
     def wrapped(*args, **kwargs):
+        from nncf.torch.dynamic_graph.patch_pytorch import operators_are_wrapped
+
+        if not operators_are_wrapped():
+            # If operators are not supposed to be wrapped, skip the wrapper logic
+            return operator(*args, **kwargs)
+
         ctx = get_current_context()
         if not ctx or getattr(ctx, "in_operator", False) or not ctx.is_tracing:
             op1 = operator(*args, **kwargs)
