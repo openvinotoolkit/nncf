@@ -23,6 +23,7 @@ Classes
    nncf.quantization.advanced_parameters.AdvancedQuantizationParameters
    nncf.quantization.advanced_parameters.AdvancedAWQParameters
    nncf.quantization.advanced_parameters.AdvancedScaleEstimationParameters
+   nncf.quantization.advanced_parameters.AdvancedGPTQParameters
    nncf.quantization.advanced_parameters.AdvancedCompressionParameters
    nncf.quantization.advanced_parameters.AdvancedAccuracyRestorerParameters
 
@@ -174,6 +175,19 @@ Classes
    :type scale_steps: int
    :param weight_penalty: coefficient for penalty between fp and compressed weights. If -1 then doesn't apply.
    :type weight_penalty: float
+
+
+.. py:class:: AdvancedGPTQParameters
+
+   Contains advanced parameters for GPTQ algorithm.
+
+   :param damp_percent: The percent of the average Hessian diagonal to use for dampening,
+       recommended value is 0.1.
+   :type damp_percent: float
+   :param block_size: The size of the blocks used during quantization. Defaults to 128.
+   :type block_size: int
+   :param subset_size: Number of data samples to calculate Hessian. Defaults to 128.
+   :type subset_size: int
 
 
 .. py:class:: AdvancedCompressionParameters

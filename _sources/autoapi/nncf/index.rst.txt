@@ -278,7 +278,7 @@ Functions
    An enum with values corresponding to the available quantization presets.
 
 
-.. py:function:: compress_weights(model, mode=CompressWeightsMode.INT8_ASYM, ratio = None, group_size = None, ignored_scope = None, all_layers = None, dataset = None, sensitivity_metric = None, *, subset_size = 128, awq = None, scale_estimation = None, advanced_parameters = None)
+.. py:function:: compress_weights(model, mode=CompressWeightsMode.INT8_ASYM, ratio = None, group_size = None, ignored_scope = None, all_layers = None, dataset = None, sensitivity_metric = None, *, subset_size = 128, awq = None, scale_estimation = None, gptq = None, advanced_parameters = None)
 
    Compress model weights.
 
@@ -322,6 +322,8 @@ Functions
    :param scale_estimation: Indicates whether a scale estimation algorithm is used that minimizes the L2 error
        between the original and compressed layers.
    :type scale_estimation: bool
+   :param gptq: Indicates whether use GPTQ algorithm.
+   :type gptq: bool
    :param advanced_parameters: Advanced parameters for compression algorithms.
    :type advanced_parameters: nncf.AdvancedCompressionParameters
    :return: The non-trainable model with compressed weights.

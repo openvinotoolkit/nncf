@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.quantization.algorithms.layerwise.iterator`
+=========================================================
+
+.. py:module:: nncf.quantization.algorithms.layerwise.iterator
+
+

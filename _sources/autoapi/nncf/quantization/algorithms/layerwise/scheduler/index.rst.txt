@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.quantization.algorithms.layerwise.scheduler`
+==========================================================
+
+.. py:module:: nncf.quantization.algorithms.layerwise.scheduler
+
+

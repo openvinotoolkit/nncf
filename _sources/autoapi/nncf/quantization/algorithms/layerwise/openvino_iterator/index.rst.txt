@@ -1,0 +1,8 @@
+:orphan:
+
+:py:mod:`nncf.quantization.algorithms.layerwise.openvino_iterator`
+==================================================================
+
+.. py:module:: nncf.quantization.algorithms.layerwise.openvino_iterator
+
+
