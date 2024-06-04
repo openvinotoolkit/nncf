@@ -33,7 +33,7 @@ Compression-aware training:
   - ...
 - Features:
   - (PyTorch) `nncf.quantize` method now is the recommended path for the quantization initialization for Quantization-Aware Training.
-  - (PyTorch) Compression modules placement in the model now can be serialized and restored with new API functions: `compressed_model.nncf.get_config()` and `nncf.torch.load_from_config`. The [documentation](#TODO) and Resnet18 [example](examples/quantization_aware_training/torch/resnet18) was updated to use the new API.
+  - (PyTorch) Compression modules placement in the model now can be serialized and restored with new API functions: `compressed_model.nncf.get_config()` and `nncf.torch.load_from_config`. The [documentation](/docs/usage/training_time_compression/quantization_aware_training/Usage.md#saving-and-loading-compressed-models) and Resnet18 [example](examples/quantization_aware_training/torch/resnet18) was updated to use the new API.
 - Fixes:
   - ...
 - Improvements:
