@@ -17,6 +17,8 @@ Post-training Quantization:
 - Deprecations/Removals:
   - Remove extra dependencies to install backends from setup.py (like `[torch]` are `[tf]`, `[onnx]` and `[openvino]`).
   - Remove `openvino-dev` dependency.
+- Examples:
+  - Update ignored scope for YOLOv8 examples utilizing a subgraphs approach for OpenVINO and ONNX.
 - Tutorials:
   - [Post-Training Optimization of Stable Video Diffusion Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/stable-video-diffusion/stable-video-diffusion.ipynb)
   - [Post-Training Optimization of YOLOv10 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/yolov10-optimization/yolov10-optimization.ipynb)
