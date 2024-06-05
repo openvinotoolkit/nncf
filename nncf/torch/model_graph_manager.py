@@ -349,9 +349,16 @@ def get_target_dim_for_weight_compression(metatype: om.PTOperatorMetatype, input
     """
     if metatype == om.PTAddmmMetatype:
         if input_port_id == 1:
-            return -1
-        if input_port_id == 2:
             return -2
+        if input_port_id == 2:
+            return -1
+        raise ValueError(f"Unexpected {input_port_id=} for {metatype=}")
+    if metatype == om.PTMatMulMetatype:
+        if input_port_id == 0:
+            return -2
+        if input_port_id == 1:
+            return -1
+        raise ValueError(f"Unexpected {input_port_id=} for {metatype=}")
     if metatype in [om.PTConvTranspose1dMetatype, om.PTConvTranspose2dMetatype, om.PTConvTranspose3dMetatype]:
         return 1
     return 0
