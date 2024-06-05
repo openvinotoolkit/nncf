@@ -209,7 +209,7 @@ def _(
     a: Union[np.ndarray, np.generic],
     q: Union[float, List[float]],
     axis: Optional[Union[int, Tuple[int]]] = None,
-    keepdims: Optional[bool] = False,
+    keepdims: bool = False,
 ) -> Union[np.ndarray, np.generic]:
     return np.array(np.quantile(a, q=q, axis=axis, keepdims=keepdims))
 
