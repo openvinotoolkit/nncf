@@ -1,4 +1,6 @@
 name: "Pull Request Labeler"
+permissions: read-all
+
 on: [pull_request_target]
 
 jobs:
@@ -8,7 +10,7 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/labeler@v4
+      - uses: actions/labeler@ac9175f8a1f3625fd0d4fb234536d26811351594 # v4.3.0
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
           configuration-path: '.github/action_configs/labeler.yml'

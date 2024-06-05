@@ -8,6 +8,7 @@
 # PR commit is generated.
 
 name: Post-PR merge actions
+permissions: read-all
 
 on:
   pull_request_target:
@@ -18,6 +19,8 @@ on:
 
 jobs:
   upload-coverage-common:
+    permissions:
+      attestations: write
     if: github.event.pull_request.merged == true
     uses: ./.github/workflows/upload_coverage_for_develop.yml
     with:
@@ -28,6 +31,8 @@ jobs:
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
   upload-coverage-onnx:
+    permissions:
+      attestations: write
     if: github.event.pull_request.merged == true
     uses: ./.github/workflows/upload_coverage_for_develop.yml
     with:
@@ -38,6 +43,8 @@ jobs:
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
   upload-coverage-openvino:
+    permissions:
+      attestations: write
     if: github.event.pull_request.merged == true
     uses: ./.github/workflows/upload_coverage_for_develop.yml
     with:
