@@ -237,7 +237,7 @@ def calculate_integer_quantization_params(
         level_high = 2 ** (num_bits - 1) - 1
         scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)  # [a1, r//gs, 1, a2]
         scale = scale / level_high
-        zero_point = fns.zeros_like(scale).astype(TensorDataType.int32)
+        zero_point = fns.as_tensor_like(scale, [0]).astype(TensorDataType.int32)
         eps = fns.finfo(scale).eps
         # NOTE: adding machine epsilon to avoid division by zero
         scale = fns.where(fns.abs(scale) < eps, eps, scale)
