@@ -10,14 +10,13 @@
 # limitations under the License.
 
 from itertools import islice
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import openvino.runtime as ov
 
 from nncf import Dataset
 from nncf.common import factory
 from nncf.common.engine import Engine
-from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
 from nncf.common.graph.model_transformer import ModelTransformer
@@ -132,10 +131,11 @@ def _add_outputs_before_if_node(model_transformer: ModelTransformer, model: ov.M
     return model_transformer.transform(transformation_layout)
 
 
+# MAYBE IMPLEMENT THROUH TREE STRICTUE?
 def apply_algorithm_if_bodies(
     algorithm: Algorithm,
     parent_model: ov.Model,
-    parent_graph: NNCFGraph,
+    graphs: Dict[int, NNCFGraph],
     parent_dataset: Dataset,
     subset_size: int,
     current_model_num: int,
@@ -146,7 +146,7 @@ def apply_algorithm_if_bodies(
     Applies an algorithm recursievley to each bodies of If node.
 
     :param parent_model: Model to apply algorithm.
-    :param parent_graph: Graph of a model.
+    :param parent_graph: Graph of a model. TODO:fix
     :param parent_dataset: Dataset for algorithm.
     :param subset_size: Size of a dataset to use for calibration.
     :param current_model_num: Current model number.
@@ -155,6 +155,7 @@ def apply_algorithm_if_bodies(
     :return: A model for every bodies of If nodes the algorithm was applied and the latest model number.
     """
     nncf_logger.info(f"Iteration [{current_model_num}/{all_models_num}] ...")
+    parent_graph = graphs[current_model_num]
     quantized_model = algorithm.apply(parent_model, parent_graph, parent_statistic_points, parent_dataset)
     if get_number_if_op(parent_model) == 0:
         return quantized_model, current_model_num
@@ -183,7 +184,7 @@ def apply_algorithm_if_bodies(
         then_quantized_model, current_model_num = apply_algorithm_if_bodies(
             algorithm,
             then_model,
-            NNCFGraphFactory.create(then_model),
+            graphs,
             then_dataset,
             subset_size,
             current_model_num + 1,
@@ -192,7 +193,7 @@ def apply_algorithm_if_bodies(
         else_quantized_model, current_model_num = apply_algorithm_if_bodies(
             algorithm,
             else_model,
-            NNCFGraphFactory.create(else_model),
+            graphs,
             else_dataset,
             subset_size,
             current_model_num + 1,

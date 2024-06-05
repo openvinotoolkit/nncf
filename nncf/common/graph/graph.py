@@ -238,7 +238,7 @@ class NNCFGraph:
         :return: List of nodes with provided types.
         """
         all_nodes_of_type = []
-        for nncf_node in self.get_all_nodes():
+        for nncf_node in self.nodes.values():
             if nncf_node.node_type in type_list:
                 all_nodes_of_type.append(nncf_node)
         return all_nodes_of_type

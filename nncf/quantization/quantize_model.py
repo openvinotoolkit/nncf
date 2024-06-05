@@ -16,7 +16,6 @@ from nncf.api.compression import TModel
 from nncf.common.deprecation import warning_deprecated
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph.operator_metatypes import OperatorMetatype
-from nncf.common.logging.logger import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.utils.api_marker import api
 from nncf.common.utils.backend import BackendType
@@ -47,7 +46,7 @@ BATCHWISE_STATISTICS_WARNING = (
 )
 
 
-def warning_model_no_batchwise_support(
+def is_model_no_batchwise_support(
     graph: NNCFGraph,
     advanced_quantization_parameters: Optional[AdvancedQuantizationParameters],
     model_type: ModelType,
@@ -66,7 +65,8 @@ def warning_model_no_batchwise_support(
         and advanced_quantization_parameters.batchwise_statistics
         and (graph.get_nodes_by_metatypes(no_batchwise_support_metatypes) or model_type == ModelType.TRANSFORMER)
     ):
-        nncf_logger.warning(BATCHWISE_STATISTICS_WARNING)
+        return True
+    return False
 
 
 def _update_advanced_quantization_parameters(

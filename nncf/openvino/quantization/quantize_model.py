@@ -15,11 +15,14 @@ from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Unio
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
 
+import nncf
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
 from nncf.data import Dataset
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS
+from nncf.openvino.graph.metatypes.openvino_metatypes import OVIfMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
 from nncf.openvino.graph.model_utils import remove_friendly_name_duplicates
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
 from nncf.openvino.graph.node_utils import get_number_if_op
@@ -42,14 +45,28 @@ from nncf.quantization.algorithms.accuracy_control.algorithm import calculate_ac
 from nncf.quantization.algorithms.accuracy_control.evaluator import Evaluator
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.algorithms.weight_compression.algorithm import WeightCompression
+from nncf.quantization.quantize_model import BATCHWISE_STATISTICS_WARNING
+from nncf.quantization.quantize_model import is_model_no_batchwise_support
 from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
-from nncf.quantization.quantize_model import warning_model_no_batchwise_support
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
+from nncf.scopes import error_unmatched_ignored_scope
+from nncf.scopes import get_matches_from_ignored_scope
+from nncf.scopes import get_unmatched_ignored_scope
 from nncf.telemetry.decorator import tracked_function
 from nncf.telemetry.events import NNCF_OV_CATEGORY
 
 TTensor = TypeVar("TTensor")
+
+
+# DFS traversal number rule.
+def get_all_graphs(model, graphs, current_cnt):
+    graphs[current_cnt] = NNCFGraphFactory.create(model)
+    for op in model.get_ops():
+        if get_node_metatype(op) == OVIfMetatype:
+            current_cnt = get_all_graphs(op.get_function(0), graphs, current_cnt + 1)
+            current_cnt = get_all_graphs(op.get_function(1), graphs, current_cnt + 1)
+    return current_cnt
 
 
 @tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
@@ -72,6 +89,18 @@ def native_quantize_if_op_impl(
         raise NotImplementedError(
             "The BiasCorrection algorithm is not supported for OpenVINO models with If operation."
         )
+    graphs = {}
+    get_all_graphs(model, graphs, 1)
+    if ignored_scope and ignored_scope.validate:
+        matches = {}
+        for graph in graphs.values():
+            matches.update(get_matches_from_ignored_scope(ignored_scope, graph))
+        unmatched = get_unmatched_ignored_scope(ignored_scope, matches)
+        if any(unmatched.values()):
+            raise nncf.ValidationError(error_unmatched_ignored_scope(unmatched, ignored_scope))
+        ignored_scope = IgnoredScope(
+            ignored_scope.names, ignored_scope.patterns, ignored_scope.types, ignored_scope.subgraphs, validate=False
+        )
     quantization_algorithm = PostTrainingQuantization(
         mode=mode,
         preset=preset,
@@ -82,9 +111,10 @@ def native_quantize_if_op_impl(
         ignored_scope=ignored_scope,
         advanced_parameters=advanced_parameters,
     )
-
-    graph = GraphConverter.create_nncf_graph(model)
-    warning_model_no_batchwise_support(graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS)
+    for graph in graphs.values():
+        if is_model_no_batchwise_support(graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS):
+            nncf_logger.warning(BATCHWISE_STATISTICS_WARNING)
+            break
     if_ops_number = get_number_if_op(model)
     all_models_number = if_ops_number * 2 + 1
     nncf_logger.info(
@@ -92,7 +122,7 @@ def native_quantize_if_op_impl(
             Main model and all If bodies will be quantized recursively."
     )
     quantized_model, _ = apply_algorithm_if_bodies(
-        quantization_algorithm, model, graph, calibration_dataset, subset_size, 1, all_models_number
+        quantization_algorithm, model, graphs, calibration_dataset, subset_size, 1, all_models_number
     )
 
     if is_weight_compression_needed(advanced_parameters):
@@ -140,7 +170,8 @@ def native_quantize_impl(
         advanced_parameters=advanced_parameters,
     )
     graph = GraphConverter.create_nncf_graph(model)
-    warning_model_no_batchwise_support(graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS)
+    if is_model_no_batchwise_support(graph, advanced_parameters, model_type, OPERATIONS_OUTPUT_HAS_NO_BATCH_AXIS):
+        nncf_logger.warning(BATCHWISE_STATISTICS_WARNING)
     quantized_model = quantization_algorithm.apply(model, graph, dataset=calibration_dataset)
 
     if is_weight_compression_needed(advanced_parameters):
