@@ -37,7 +37,7 @@ REFERENCE_GRAPHS_TEST_ROOT = "data/reference_graphs/quantization"
 
 def mock_collect_statistics(mocker):
     get_statistics_value = MinMaxTensorStatistic(
-        min_values=np.array(-1, dtype=np.float32), max_values=np.array(1, dtype=np.float32)
+        min_values=Tensor(np.array(-1, dtype=np.float32)), max_values=Tensor(np.array(1, dtype=np.float32))
     )
     _ = mocker.patch(
         "nncf.quantization.fake_quantize.calculate_quantizer_parameters",

@@ -355,14 +355,7 @@ class BiasCorrection(Algorithm):
                 # Since we do not use as inputs the layers from which the statistics are gathered,
                 # but those that follow them, we need to take this into account when creating feed dicts.
                 activation_name, _ = self._collected_stat_inputs_map[(input_node_name, input_port_id)]
-
-                val = statistics_per_input[input_tensor_name][stat_id]
-                if isinstance(val, Tensor):
-                    # TODO: !!!!!
-                    val = val.data
-                else:
-                    print("WHY???")
-                feed_dict[input_tensor_name] = val
+                feed_dict[input_tensor_name] = statistics_per_input[input_tensor_name][stat_id].data
             feed_dicts.append(feed_dict)
         return feed_dicts
 
@@ -435,7 +428,7 @@ class BiasCorrection(Algorithm):
             new_q_output = engine.infer(feed_dict)
             for output_node_name, output_id in subgraph_data["subgraph_output_ids"]:
                 output_tensor_name = self._backend_entity.get_output_name(model, output_node_name, output_id)
-                self._fp_inputs[(output_node_name, output_id)].append(new_q_output[output_tensor_name])
+                self._fp_inputs[(output_node_name, output_id)].append(Tensor(new_q_output[output_tensor_name]))
 
     def _remove_unnecessary_stats(self, position: int, subgraphs_data: Dict[str, Dict]) -> None:
         """

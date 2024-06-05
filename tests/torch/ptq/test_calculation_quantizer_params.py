@@ -268,7 +268,9 @@ def calculate_statistics(data, mode, qgroup, half_range=False):
     else:
         max_values = np.amax(data, axes)
 
-    statistics = MinMaxTensorStatistic(min_values=torch.tensor(min_values), max_values=torch.tensor(max_values))
+    statistics = MinMaxTensorStatistic(
+        min_values=Tensor(torch.tensor(min_values)), max_values=Tensor(torch.tensor(max_values))
+    )
     signedness_to_force = True if qgroup == QuantizerGroup.WEIGHTS else None
     qconfig = QuantizerConfig(num_bits=8, mode=mode, per_channel=per_ch, signedness_to_force=signedness_to_force)
     narrow_range = get_quantizer_narrow_range(qconfig, qgroup)
