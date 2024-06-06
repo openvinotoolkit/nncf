@@ -8,7 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Any
+from typing import Any, Optional
 
 import torch
 
@@ -249,7 +249,7 @@ class TuneRange(torch.autograd.Function):
 
 
 @register_operator()
-def decompress(input: torch.Tensor, scale: torch.Tensor, zero_point: torch.Tensor) -> torch.Tensor:
+def decompress(input: torch.Tensor, scale: torch.Tensor, zero_point: Optional[torch.Tensor] = None) -> torch.Tensor:
     """
     Decompress the input tensor.
 
@@ -259,5 +259,7 @@ def decompress(input: torch.Tensor, scale: torch.Tensor, zero_point: torch.Tenso
     :return: The decompressed tensor
     """
     input = input.type(dtype=scale.dtype)
-    decompressed_input = (input - zero_point) * scale
+    if zero_point is not None:
+        input -= zero_point
+    decompressed_input = input * scale
     return decompressed_input

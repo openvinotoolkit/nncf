@@ -1081,7 +1081,6 @@ class SymmetricWeightsDecompressor(nn.Module):
         self.result_dtype = result_dtype
 
     def forward(self, x):
-        zero_point = torch.zeros_like(self._scale)
-        result = decompress(x, self._scale, zero_point)
+        result = decompress(x, self._scale)
         result = result.type(dtype=self.result_dtype) if self.result_dtype is not None else result
         return result

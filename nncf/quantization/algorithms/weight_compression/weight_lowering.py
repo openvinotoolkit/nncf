@@ -233,28 +233,27 @@ def calculate_integer_quantization_params(
         scale, zero_point = calculate_scale_zero_point(
             min_values, max_values, level_low, level_high, narrow_range=False
         )
-    else:
-        level_high = 2 ** (num_bits - 1) - 1
-        scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)  # [a1, r//gs, 1, a2]
-        scale = scale / level_high
-        zero_point = fns.as_tensor_like(scale, [0]).astype(TensorDataType.int32)
-        eps = fns.finfo(scale).eps
-        # NOTE: adding machine epsilon to avoid division by zero
-        scale = fns.where(fns.abs(scale) < eps, eps, scale)
+        return scale, zero_point
 
-    return scale, zero_point
+    level_high = 2 ** (num_bits - 1) - 1
+    scale = fns.max(fns.abs(weight), axis=reduction_axes, keepdims=True)  # [a1, r//gs, 1, a2]
+    scale /= level_high
+    eps = fns.finfo(scale).eps
+    # NOTE: adding machine epsilon to avoid division by zero
+    scale = fns.where(fns.abs(scale) < eps, eps, scale)
+    return scale, None
 
 
 def calculate_quantized_weight(
-    weight: Tensor, scale: Tensor, zero_point: Tensor, config: WeightCompressionConfig
+    weight: Tensor, config: WeightCompressionConfig, scale: Tensor, zero_point: Optional[Tensor] = None
 ) -> Tensor:
     """
     Quantizes the weight tensor using the provided scale and zero point.
 
     :param weight: Weight tensor to quantize.
+    :param config: Weight compression configuration.
     :param scale: Scale tensor used for quantization.
     :param zero_point: Zero point tensor used for quantization.
-    :param config: Weight compression configuration.
     :return: Quantized weight tensor of uint8 or int8 type.
     """
     if weight.dtype != TensorDataType.float32:
@@ -268,7 +267,10 @@ def calculate_quantized_weight(
     level_low = 0 if asym_quant else -(2 ** (num_bits - 1))
     level_high = 2**num_bits - 1 if asym_quant else 2 ** (num_bits - 1) - 1
 
-    compressed_weights = fns.round(weight / scale + zero_point.astype(weight.dtype))
+    compressed_weights = weight / scale
+    if zero_point is not None:
+        compressed_weights += zero_point.astype(weight.dtype)
+    compressed_weights = fns.round(compressed_weights)
     compressed_weights = fns.clip(compressed_weights, level_low, level_high).astype(dtype)
     return compressed_weights
 
@@ -322,7 +324,7 @@ def do_integer_quantization(
     if precomputed_zero_point is not None:
         zero_point = precomputed_zero_point
 
-    compressed_weights = calculate_quantized_weight(weight, scale, zero_point, config)
+    compressed_weights = calculate_quantized_weight(weight, config, scale, zero_point)
     return compressed_weights, scale, zero_point
 
 
@@ -344,8 +346,7 @@ def get_integer_quantization_error(
         weight = weight.astype(TensorDataType.float32)
 
     compressed_weights, scale, zero_point = do_integer_quantization(weight, reduction_axes, config)
-
-    decompressed_weight = (compressed_weights - zero_point).astype(weight.dtype) * scale
+    decompressed_weight = do_dequantization(compressed_weights, scale, zero_point)
 
     decompressed_weight = decompressed_weight.reshape(orig_shape)
     diff = (decompressed_weight - weight) ** 2
@@ -384,7 +385,7 @@ def compress_weight(
 
 
 def do_dequantization(
-    compressed_weights: Tensor, scale: Tensor, zero_point: Tensor, reduction_axis: int = -1
+    compressed_weights: Tensor, scale: Tensor, zero_point: Optional[Tensor] = None, reduction_axis: int = -1
 ) -> Tensor:
     """
     The method dequantizes the given weights to float point data type in accordance with the scale and
@@ -397,7 +398,9 @@ def do_dequantization(
     :return: dequantized/decompressed weights.
     """
     decompressed_weight = compressed_weights.astype(dtype=scale.dtype)
-    decompressed_weight = (decompressed_weight - zero_point) * scale
+    if zero_point is not None:
+        decompressed_weight -= zero_point
+    decompressed_weight *= scale
 
     if reduction_axis > -1:
         shape = list(decompressed_weight.shape)  # [a1, r, a2] - "r" refers to number of channels along reduction axis

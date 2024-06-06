@@ -23,7 +23,6 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.layout import TransformationLayout
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.tensor.definitions import TensorDataType
-from nncf.experimental.tensor.functions import count_nonzero
 from nncf.experimental.tensor.tensor import Tensor
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.backend import WeightCompressionAlgoBackend
@@ -233,7 +232,6 @@ class PTWeightCompressionAlgoBackend(WeightCompressionAlgoBackend):
 
             # creates weight decompressor
             if compression_config.mode == CompressWeightsMode.INT8_SYM:
-                assert count_nonzero(compressed_weight.zero_point) == 0
                 decompressor = SymmetricWeightsDecompressor(compressed_weight.scale.data, result_dtype=weight.dtype)
             else:
                 packed_zero_point = compressed_weight.zero_point.astype(dtype)
