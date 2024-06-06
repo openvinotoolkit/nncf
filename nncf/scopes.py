@@ -152,8 +152,10 @@ def get_ignored_scope_match(
 
         for str_pattern in ignored_scope.patterns:
             pattern = re.compile(str_pattern)
-            matches["patterns"].update(filter(pattern.match, node_names))
-            patterns.add(str_pattern)
+            pattern_matched_names = set(filter(pattern.match, node_names))
+            if pattern_matched_names:
+                matches["patterns"].update(pattern_matched_names)
+                patterns.add(str_pattern)
 
         for node in graph.get_nodes_by_types(set(ignored_scope.types)):
             matches["types"].add(node.node_name)
@@ -161,8 +163,10 @@ def get_ignored_scope_match(
 
         for i, subgraph in enumerate(ignored_scope.subgraphs):
             names_from_subgraph = get_ignored_node_names_from_subgraph(graph, subgraph)
-            matches["subgraphs"].update(names_from_subgraph)
-            subgraphs_numbers.add(i)
+            if names_from_subgraph:
+                matches["subgraphs"].update(names_from_subgraph)
+                subgraphs_numbers.add(i)
+
     matched_ignored_scope = IgnoredScope(
         names=list(names),
         patterns=list(patterns),
