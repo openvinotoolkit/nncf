@@ -23,7 +23,7 @@ from nncf.torch.dynamic_graph.context import get_current_context
 from nncf.torch.dynamic_graph.patch_pytorch import _ORIG_JIT_SCRIPT
 from nncf.torch.dynamic_graph.patch_pytorch import MagicFunctionsToPatch
 from nncf.torch.dynamic_graph.patch_pytorch import disable_patching
-from nncf.torch.dynamic_graph.patch_pytorch import operators_are_wrapped
+from nncf.torch.dynamic_graph.patch_pytorch_state import PATCHING_STATE
 from nncf.torch.dynamic_graph.structs import NamespaceTarget
 from nncf.torch.dynamic_graph.trace_tensor import TensorMeta
 from nncf.torch.dynamic_graph.trace_tensor import TracedTensor
@@ -216,7 +216,7 @@ def test_operator_unpatching():
     example_input = torch.ones((1,))
     wrapped_operator = wrap_model(test_model, example_input)
     with disable_patching():
-        assert not operators_are_wrapped()
+        assert not PATCHING_STATE.operators_are_wrapped
         # Despite patching is disabled, test_model holds a reference to a patched operator
         assert "_original_op" in test_model.op.__dict__
         unwrapped_operator_expected = True
