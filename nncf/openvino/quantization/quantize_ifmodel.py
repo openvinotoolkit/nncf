@@ -131,7 +131,6 @@ def _add_outputs_before_if_node(model_transformer: ModelTransformer, model: ov.M
     return model_transformer.transform(transformation_layout)
 
 
-# MAYBE IMPLEMENT THROUH TREE STRICTUE?
 def apply_algorithm_if_bodies(
     algorithm: Algorithm,
     parent_model: ov.Model,
@@ -145,11 +144,10 @@ def apply_algorithm_if_bodies(
     Applies an algorithm recursievley to each bodies of If node.
 
     :param parent_model: Model to apply algorithm.
-    :param parent_graph: Graph of a model. TODO:fix
+    :param graphs: Mapping from model_number and its graph.
     :param parent_dataset: Dataset for algorithm.
     :param subset_size: Size of a dataset to use for calibration.
     :param current_model_num: Current model number.
-    :param all_models_num: All model numbers.
     :param parent_statistic_points: Statistics points for algorithm.
     :return: A model for every bodies of If nodes the algorithm was applied and the latest model number.
     """
