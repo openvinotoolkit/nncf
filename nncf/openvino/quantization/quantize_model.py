@@ -79,7 +79,7 @@ def native_quantize_if_op_impl(
         )
     graphs = {}
 
-    def _get_all_graphs(model, current_cnt):
+    def _get_all_graphs(model: ov.Model, current_cnt: int):
         graphs[current_cnt] = NNCFGraphFactory.create(model)
         for op in model.get_ops():
             if get_node_metatype(op) == OVIfMetatype:

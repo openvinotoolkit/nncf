@@ -134,15 +134,17 @@ def get_ignored_scope_match(
     ignored_scope: IgnoredScope, nncf_graphs: List[NNCFGraph]
 ) -> Tuple[IgnoredScope, Dict[str, Set[str]]]:
     """
-    Returns matched ignored scope for provided NNCFGraphs along with all matches.
-    The resulted match is a union of all matches across all graphs.
+    Returns matched ignored scope for provided graphs along with all found matches.
+    The resulted ignored scope consist of all matched rules.
+    The found matches consist of a ditionary with a rule name as a key and matched node names as a value.
 
     :param ignored_scope: Ignored scope instance.
-    :param nncf_graphs: NNCFGraphs.
-    :returns: united mathced ingnored scope along with united matches.
+    :param nncf_graphs: Graphs.
+    :returns: Mathced ignored scope along with all matches.
     """
     names, patterns, types, subgraphs_numbers = set(), set(), set(), set()
     matches = {"names": set(), "patterns": set(), "types": set(), "subgraphs": set()}
+
     for graph in nncf_graphs:
         node_names = set(node.node_name for node in graph.nodes.values())
 
@@ -195,7 +197,7 @@ def get_unmatched_ignored_scope(matched_ignored_scope: IgnoredScope, ignored_sco
     )
 
 
-def info_matched_ignored_scope(matches) -> None:
+def info_matched_ignored_scope(matches: Dict[str, Set[str]]) -> None:
     """
     Log matches.
 
@@ -237,7 +239,7 @@ def get_ignored_node_names_from_ignored_scope(
 ) -> Set[str]:
     """
     Returns ignored names according to ignored scope and NNCFGraph.
-    If strict is True, raises RuntimeError if any ignored rule was not matched.
+    If strict is True, raises nncf.ValidationError if any ignored rule was not matched.
     If strict is False, returns all possible matches.
 
     :param ignored_scope: Ignored scope.
