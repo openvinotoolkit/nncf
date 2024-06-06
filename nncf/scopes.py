@@ -147,8 +147,8 @@ def get_ignored_scope_match(ignored_scope: IgnoredScope, nncf_graphs: List[NNCFG
     :returns: ignored scope match united all mathces across graphs
     """
     names, patterns, types, subgraphs_numbers = set(), set(), set(), set()
+    matches = collections.OrderedDict({"name": set(), "patterns": set(), "types": set(), "subgraphs": set()})
     for graph in nncf_graphs:
-        matches = collections.OrderedDict({"name": set(), "patterns": set(), "types": set(), "subgraphs": set()})
         node_names = set(node.node_name for node in graph.nodes.values())
 
         for ignored_node_name in filter(lambda name: name in node_names, ignored_scope.names):
@@ -161,8 +161,7 @@ def get_ignored_scope_match(ignored_scope: IgnoredScope, nncf_graphs: List[NNCFG
             matches["patterns"].add(matches)
             patterns.add(str_pattern)
 
-        ignored_scope_types = set(ignored_scope.types)
-        for node in graph.get_nodes_by_types(ignored_scope_types):
+        for node in graph.get_nodes_by_types(set(ignored_scope.types)):
             matches["types"].add(node.node_name)
             types.add(node.node_type)
 
