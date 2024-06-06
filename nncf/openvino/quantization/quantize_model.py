@@ -15,7 +15,6 @@ from typing import Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Unio
 import openvino.runtime as ov
 from openvino._offline_transformations import compress_quantize_weights_transformation
 
-import nncf
 from nncf.common.factory import NNCFGraphFactory
 from nncf.common.logging import nncf_logger
 from nncf.common.quantization.structs import QuantizationPreset
@@ -50,24 +49,11 @@ from nncf.quantization.quantize_model import is_model_no_batchwise_support
 from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
-from nncf.scopes import error_unmatched_ignored_scope
-from nncf.scopes import get_matched_ignored_scope
-from nncf.scopes import get_unmatched_ignored_scope
-from nncf.scopes import merge_ignored_scopes
+from nncf.scopes import validate_ignored_scope
 from nncf.telemetry.decorator import tracked_function
 from nncf.telemetry.events import NNCF_OV_CATEGORY
 
 TTensor = TypeVar("TTensor")
-
-
-# DFS traversal number rule.
-def get_all_graphs(model, graphs, current_cnt):
-    graphs[current_cnt] = NNCFGraphFactory.create(model)
-    for op in model.get_ops():
-        if get_node_metatype(op) == OVIfMetatype:
-            current_cnt = get_all_graphs(op.get_function(0), graphs, current_cnt + 1)
-            current_cnt = get_all_graphs(op.get_function(1), graphs, current_cnt + 1)
-    return current_cnt
 
 
 @tracked_function(NNCF_OV_CATEGORY, [CompressionStartedWithQuantizeApi(), "target_device", "preset"])
@@ -91,20 +77,18 @@ def native_quantize_if_op_impl(
             "The BiasCorrection algorithm is not supported for OpenVINO models with If operation."
         )
     graphs = {}
-    get_all_graphs(model, graphs, 1)
+
+    def _get_all_graphs(model, current_cnt):
+        for op in model.get_ops():
+            if get_node_metatype(op) == OVIfMetatype:
+                _get_all_graphs(op.get_function(0), current_cnt + 1)
+                _get_all_graphs(op.get_function(1), current_cnt + 2)
+        graphs[current_cnt] = NNCFGraphFactory.create(model)
+        return graphs
+
+    _get_all_graphs(model, 1)
     if ignored_scope and ignored_scope.validate:
-        matched_ignored_scope = IgnoredScope()
-        for graph in graphs.values():
-            match = get_matched_ignored_scope(ignored_scope, graph)
-            matched_ignored_scope = merge_ignored_scopes(matched_ignored_scope, match.matched_ignored_scope)
-        unmatched_ignored_scope = get_unmatched_ignored_scope(ignored_scope, matched_ignored_scope)
-        if (
-            any(unmatched_ignored_scope.names)
-            or any(unmatched_ignored_scope.types)
-            or any(unmatched_ignored_scope.patterns)
-            or any(unmatched_ignored_scope.subgraphs)
-        ):
-            raise nncf.ValidationError(error_unmatched_ignored_scope(unmatched_ignored_scope))
+        validate_ignored_scope(ignored_scope, graphs)
         ignored_scope = IgnoredScope(
             ignored_scope.names, ignored_scope.patterns, ignored_scope.types, ignored_scope.subgraphs, validate=False
         )
