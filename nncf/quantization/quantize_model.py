@@ -53,7 +53,7 @@ def is_model_no_batchwise_support(
     no_batchwise_support_metatypes: List[OperatorMetatype],
 ) -> None:
     """
-    Prints the warning message if batchwise statistics could lead to a significant accuracy drop.
+    Returns True if batchwise statistics could lead to a significant accuracy drop.
 
     :param graph: Model's NNCFGraph.
     :param advanced_quantization_parameters: AdvancedQuantizationParameters.
