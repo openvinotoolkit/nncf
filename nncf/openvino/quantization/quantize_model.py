@@ -80,18 +80,16 @@ def native_quantize_if_op_impl(
     graphs = {}
 
     def _get_all_graphs(model, current_cnt):
+        graphs[current_cnt] = NNCFGraphFactory.create(model)
         for op in model.get_ops():
             if get_node_metatype(op) == OVIfMetatype:
-                _get_all_graphs(op.get_function(0), current_cnt + 1)
-                _get_all_graphs(op.get_function(1), current_cnt + 2)
-        graphs[current_cnt] = NNCFGraphFactory.create(model)
-        return graphs
+                current_cnt = _get_all_graphs(op.get_function(0), current_cnt + 1)
+                current_cnt = _get_all_graphs(op.get_function(1), current_cnt + 1)
+        return current_cnt
 
     _get_all_graphs(model, 1)
     if ignored_scope and ignored_scope.validate:
-        validate_ignored_scope(
-            ignored_scope, get_ignored_scope_match(ignored_scope, graphs.values()).matched_ignored_scope
-        )
+        validate_ignored_scope(ignored_scope, get_ignored_scope_match(ignored_scope, graphs.values())[0])
         ignored_scope = IgnoredScope(
             ignored_scope.names, ignored_scope.patterns, ignored_scope.types, ignored_scope.subgraphs, validate=False
         )

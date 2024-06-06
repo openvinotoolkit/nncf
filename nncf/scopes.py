@@ -9,11 +9,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import collections
 import re
 from dataclasses import dataclass
 from dataclasses import field
-from typing import List, Optional, OrderedDict, Set
+from typing import Dict, List, Optional, Set, Tuple
 
 import nncf
 from nncf.common.graph.graph import NNCFGraph
@@ -131,34 +130,29 @@ def convert_ignored_scope_to_list(ignored_scope: Optional[IgnoredScope]) -> List
     return results
 
 
-@dataclass
-class IgnoredScopeMatch:
-    matched_ignored_scope: IgnoredScope = IgnoredScope()
-    matches: OrderedDict[str, Set[str]] = field(default_factory=lambda: OrderedDict(dict))
-
-
-def get_ignored_scope_match(ignored_scope: IgnoredScope, nncf_graphs: List[NNCFGraph]) -> IgnoredScopeMatch:
+def get_ignored_scope_match(
+    ignored_scope: IgnoredScope, nncf_graphs: List[NNCFGraph]
+) -> Tuple[IgnoredScope, Dict[str, Set[str]]]:
     """
-    Returns ignored scope match for provided NNCFGraphs.
-    The resulted match is a union of all matches across graphs.
+    Returns matched ignored scope for provided NNCFGraphs along with all matches.
+    The resulted match is a union of all matches across all graphs.
 
     :param ignored_scope: Ignored scope instance.
     :param nncf_graphs: NNCFGraphs.
-    :returns: ignored scope match united all mathces across graphs
+    :returns: united mathced ingnored scope along with united matches.
     """
     names, patterns, types, subgraphs_numbers = set(), set(), set(), set()
-    matches = collections.OrderedDict({"name": set(), "patterns": set(), "types": set(), "subgraphs": set()})
+    matches = {"names": set(), "patterns": set(), "types": set(), "subgraphs": set()}
     for graph in nncf_graphs:
         node_names = set(node.node_name for node in graph.nodes.values())
 
         for ignored_node_name in filter(lambda name: name in node_names, ignored_scope.names):
-            matches["name"].add(ignored_node_name)
+            matches["names"].add(ignored_node_name)
             names.add(ignored_node_name)
 
         for str_pattern in ignored_scope.patterns:
             pattern = re.compile(str_pattern)
-            matches = list(filter(pattern.match, node_names))
-            matches["patterns"].add(matches)
+            matches["patterns"].update(filter(pattern.match, node_names))
             patterns.add(str_pattern)
 
         for node in graph.get_nodes_by_types(set(ignored_scope.types)):
@@ -176,7 +170,7 @@ def get_ignored_scope_match(ignored_scope: IgnoredScope, nncf_graphs: List[NNCFG
         subgraphs=[subgraph for i, subgraph in enumerate(ignored_scope.subgraphs) if i in subgraphs_numbers],
         validate=ignored_scope.validate,
     )
-    return IgnoredScopeMatch(matched_ignored_scope, matches)
+    return matched_ignored_scope, matches
 
 
 def get_unmatched_ignored_scope(matched_ignored_scope: IgnoredScope, ignored_scope: IgnoredScope) -> IgnoredScope:
@@ -247,11 +241,11 @@ def get_ignored_node_names_from_ignored_scope(
     :param strict: Whether all ignored_scopes must match at least one node or not.
     :return: NNCF node names from given NNCFGraph specified in given ignored scope.
     """
-    match = get_ignored_scope_match(ignored_scope, [nncf_graph])
+    matched_ignored_scope, matches = get_ignored_scope_match(ignored_scope, [nncf_graph])
     if strict:
-        validate_ignored_scope(ignored_scope, match.matched_ignored_scope)
-    info_matched_ignored_scope(match.matches)
-    return {name for match in match.matches.values() for name in match}
+        validate_ignored_scope(ignored_scope, matched_ignored_scope)
+    info_matched_ignored_scope(matches)
+    return {name for match in matches.values() for name in match}
 
 
 def validate_ignored_scope(ignored_scope: IgnoredScope, matched_ignored_scope: IgnoredScope):
