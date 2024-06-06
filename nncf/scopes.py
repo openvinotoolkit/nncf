@@ -262,7 +262,7 @@ def validate_ignored_scope(ignored_scope: IgnoredScope, matched_ignored_scope: I
     :param ignored_scope: Ignored scope.
     :param matched_ignored_scope: Matched Ignored scope.
     """
-    unmatched_ignored_scope = get_unmatched_ignored_scope(ignored_scope, matched_ignored_scope)
+    unmatched_ignored_scope = get_unmatched_ignored_scope(matched_ignored_scope, ignored_scope)
     if (
         any(unmatched_ignored_scope.names)
         or any(unmatched_ignored_scope.types)
