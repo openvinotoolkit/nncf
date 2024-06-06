@@ -9,13 +9,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import collections
+import itertools
 import re
-import typing
-from collections import OrderedDict
-from collections import defaultdict
+from dataclasses import asdict
 from dataclasses import dataclass
 from dataclasses import field
-from typing import Any, Dict, List, Optional, Set
+from typing import List, Optional, OrderedDict, Set
 
 import nncf
 from nncf.common.graph.graph import NNCFGraph
@@ -133,7 +133,23 @@ def convert_ignored_scope_to_list(ignored_scope: Optional[IgnoredScope]) -> List
     return results
 
 
-def get_matches_from_ignored_scope(ignored_scope: IgnoredScope, nncf_graph: NNCFGraph) -> typing.OrderedDict[str, Dict]:
+def merge_ignored_scopes(ignored_scope_1: IgnoredScope, ignored_scope_2: IgnoredScope):
+    assert ignored_scope_1.validate == ignored_scope_2.validate
+    d1 = asdict(ignored_scope_1)
+    for attr, val in asdict(ignored_scope_2).items():
+        if attr == "validate":
+            continue
+        d1[attr] = list(set(itertools.chain(d1[attr], val)))
+    return IgnoredScope(**d1, validate=ignored_scope_1.validate)
+
+
+@dataclass
+class IgnoredScopeMatch:
+    matched_ignored_scope: IgnoredScope = IgnoredScope()
+    matches: OrderedDict[str, Set[str]] = field(default_factory=lambda: OrderedDict(dict))
+
+
+def get_matched_ignored_scope(ignored_scope: IgnoredScope, nncf_graph: NNCFGraph) -> IgnoredScopeMatch:
     """
     Returns ignored names according to ignored scope and NNCFGraph.
     If strict is True, raises RuntimeError if any ignored name is not found in the NNCFGraph or
@@ -145,79 +161,64 @@ def get_matches_from_ignored_scope(ignored_scope: IgnoredScope, nncf_graph: NNCF
     :param strict: Whether all ignored_scopes must match at least one node or not.
     :returns: NNCF node names from given NNCFGraph specified in given ignored scope.
     """
-    matches = OrderedDict()
+
+    matched_ignored_scope = IgnoredScope()
+    matches = collections.OrderedDict({"name": set(), "patterns": set(), "types": set(), "subgraphs": set()})
     node_names = set(node.node_name for node in nncf_graph.nodes.values())
 
-    matched_by_names = {}
     for ignored_node_name in ignored_scope.names:
         if ignored_node_name in node_names:
-            matched_by_names[ignored_node_name] = ignored_node_name
-    matches["name"] = matched_by_names
+            matches["name"].add(ignored_node_name)
+            matched_ignored_scope.names.append(ignored_node_name)
 
-    matched_by_patterns = defaultdict(set)
     for str_pattern in ignored_scope.patterns:
         pattern = re.compile(str_pattern)
         matches = list(filter(pattern.match, node_names))
-        matched_by_patterns[str_pattern].update(matches)
-    matches["patterns"] = matched_by_patterns
+        matches["patterns"].add(matches)
+        matched_ignored_scope.patterns.append(str_pattern)
 
-    matched_by_types = defaultdict(set)
     ignored_scope_types = set(ignored_scope.types)
     for node in nncf_graph.get_nodes_by_types(ignored_scope_types):
-        matched_by_types[node.node_type].add(node.node_name)
-    matches["types"] = matched_by_types
+        matches["types"].add(node.node_name)
+        matched_ignored_scope.types.append(node.node_type)
 
-    matched_by_subgraphs = defaultdict(set)
-    for i, subgraph in enumerate(ignored_scope.subgraphs):
+    for subgraph in ignored_scope.subgraphs:
         names_from_subgraph = get_ignored_node_names_from_subgraph(nncf_graph, subgraph)
-        matched_by_subgraphs[i].update(names_from_subgraph)
-    matches["subgraphs"] = matched_by_subgraphs
-    return matches
+        matches["subgraphs"].update(names_from_subgraph)
+        matched_ignored_scope.subgraphs.append(subgraph)
+    return IgnoredScopeMatch(matched_ignored_scope, matches)
 
 
-def get_unmatched_ignored_scope(
-    ignored_scope: IgnoredScope, matches: Dict[str, Dict[Any, Set[str]]]
-) -> typing.OrderedDict[str, Dict]:
-    return OrderedDict(
-        {
-            "names": [name for name in ignored_scope.names if name not in matches["names"]],
-            "patterns": [pattern for pattern in ignored_scope.patterns if pattern not in matches["patterns"]],
-            "types": [type for type in ignored_scope.types if type not in matches["types"]],
-            "subgraphs": [
-                subgraph_i
-                for subgraph_i in range(len(ignored_scope.subgraphs))
-                if subgraph_i not in matches["subgraphs"]
-            ],
-        }
+def get_unmatched_ignored_scope(matched_ignored_scope: IgnoredScope, ignored_scope: IgnoredScope) -> IgnoredScope:
+    return IgnoredScope(
+        names=[name for name in ignored_scope.names if name not in matched_ignored_scope.names],
+        patterns=[pattern for pattern in ignored_scope.patterns if pattern not in matched_ignored_scope.patterns],
+        types=[type for type in ignored_scope.types if type not in matched_ignored_scope.types],
+        subgraphs=[subgraph for subgraph in ignored_scope.subgraphs if subgraph not in matched_ignored_scope.subgraphs],
     )
 
 
-def info_matched_ignored_scope(matches):
+def _info_matched_ignored_scope(matches):
+    info_msg = ""
     for rule_type, rules in matches.items():
-        total = 0
-        for matched_nodes in rules.values():
-            total += len(matched_nodes)
-        if total:
-            nncf_logger.info(f"{total} ignored nodes were found by {rule_type} in the NNCFGraph")
+        if rules:
+            info_msg += f"{len(rules)} ignored nodes were found by {rule_type} in the NNCFGraph"
+    return info_msg
 
 
-def error_unmatched_ignored_scope(unmatched, ignored_scope: IgnoredScope):
+def _error_unmatched_ignored_scope(unmatched_ignored_scope: IgnoredScope):
     err_msg = ""
-    for rule_type, unmatched_rule in unmatched.items():
-        if unmatched_rule:
-            if rule_type == "names":
-                err_msg += f"Ignored nodes with name {list(unmatched_rule)} were not found in the NNCFGraph. "
-            if rule_type == "patterns":
-                err_msg += f"No matches for ignored patterns {list(unmatched_rule)} in the NNCFGraph. "
-            if rule_type == "patterns":
-                err_msg += f"Nodes with ignored types {list(unmatched_rule)} were not found in the NNCFGraph. "
-            if rule_type == "subgraphs":
-                for subgraph in unmatched_rule:
-                    inps, outs = ignored_scope.subgraphs[subgraph].inputs, ignored_scope.subgraphs[subgraph].outputs
-                    err_msg += (
-                        f"Ignored subgraph with input names {inps} and output names {outs} "
-                        "was not found in the NNCFGraph. "
-                    )
+    if unmatched_ignored_scope.names:
+        err_msg += f"Ignored nodes with name {unmatched_ignored_scope.names} were not found in the NNCFGraph. "
+    if unmatched_ignored_scope.patterns:
+        err_msg += f"No matches for ignored patterns {unmatched_ignored_scope.patterns} in the NNCFGraph. "
+    if unmatched_ignored_scope.types:
+        err_msg += f"Nodes with ignored types {unmatched_ignored_scope.types} were not found in the NNCFGraph. "
+    for subgraph in unmatched_ignored_scope.subgraphs:
+        err_msg += (
+            f"Ignored subgraph with input names {subgraph.inputs} and output names {subgraph.outputs} "
+            "was not found in the NNCFGraph. "
+        )
     return err_msg + (
         "Refer to the original_graph.dot to discover the operations"
         "in the model currently visible to NNCF and specify the ignored/target"
@@ -225,18 +226,15 @@ def error_unmatched_ignored_scope(unmatched, ignored_scope: IgnoredScope):
     )
 
 
-def get_ignored_node_names(matches: Dict[str, Dict[Any, Set[str]]]):
-    output = set()
-    for rules in matches.values():
-        for matched_nodes in rules.values():
-            output.update(matched_nodes)
-    return output
-
-
-def get_ignored_node_names_from_ignored_scope(ignored_scope: IgnoredScope, nncf_graph: NNCFGraph, strict):
-    matches = get_matches_from_ignored_scope(ignored_scope, nncf_graph)
-    unmatched = get_unmatched_ignored_scope(ignored_scope, matches)
-    if strict and any(unmatched.values()):
-        raise nncf.ValidationError(error_unmatched_ignored_scope(unmatched, ignored_scope))
-    info_matched_ignored_scope(matches)
-    return get_ignored_node_names(matches)
+def get_ignored_node_names_from_ignored_scope(ignored_scope: IgnoredScope, nncf_graph: NNCFGraph, strict: bool = True):
+    match = get_matched_ignored_scope(ignored_scope, nncf_graph)
+    unmatched_ignored_scope = get_unmatched_ignored_scope(match.matched_ignored_scope, ignored_scope)
+    if strict and (
+        any(unmatched_ignored_scope.names)
+        or any(unmatched_ignored_scope.types)
+        or any(unmatched_ignored_scope.patterns)
+        or any(unmatched_ignored_scope.subgraphs)
+    ):
+        raise nncf.ValidationError(_error_unmatched_ignored_scope(unmatched_ignored_scope, ignored_scope))
+    nncf_logger.info(_info_matched_ignored_scope(match.matches))
+    return {name for match in match.matches.values() for name in match}

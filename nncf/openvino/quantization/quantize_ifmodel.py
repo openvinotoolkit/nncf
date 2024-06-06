@@ -139,7 +139,6 @@ def apply_algorithm_if_bodies(
     parent_dataset: Dataset,
     subset_size: int,
     current_model_num: int,
-    all_models_num: int,
     parent_statistic_points: Optional[StatisticPointsContainer] = None,
 ) -> Tuple[ov.Model, int]:
     """
@@ -154,7 +153,7 @@ def apply_algorithm_if_bodies(
     :param parent_statistic_points: Statistics points for algorithm.
     :return: A model for every bodies of If nodes the algorithm was applied and the latest model number.
     """
-    nncf_logger.info(f"Iteration [{current_model_num}/{all_models_num}] ...")
+    nncf_logger.info(f"Iteration [{current_model_num}/{len(graphs)}] ...")
     parent_graph = graphs[current_model_num]
     quantized_model = algorithm.apply(parent_model, parent_graph, parent_statistic_points, parent_dataset)
     if get_number_if_op(parent_model) == 0:
@@ -188,7 +187,6 @@ def apply_algorithm_if_bodies(
             then_dataset,
             subset_size,
             current_model_num + 1,
-            all_models_num,
         )
         else_quantized_model, current_model_num = apply_algorithm_if_bodies(
             algorithm,
@@ -197,7 +195,6 @@ def apply_algorithm_if_bodies(
             else_dataset,
             subset_size,
             current_model_num + 1,
-            all_models_num,
         )
         model_transformer_int8 = factory.ModelTransformerFactory.create(quantized_model)
         quantized_model = _update_if_body(model_transformer_int8, if_node, True, then_quantized_model)

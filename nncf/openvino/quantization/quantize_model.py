@@ -51,8 +51,9 @@ from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
 from nncf.scopes import error_unmatched_ignored_scope
-from nncf.scopes import get_matches_from_ignored_scope
+from nncf.scopes import get_matched_ignored_scope
 from nncf.scopes import get_unmatched_ignored_scope
+from nncf.scopes import merge_ignored_scopes
 from nncf.telemetry.decorator import tracked_function
 from nncf.telemetry.events import NNCF_OV_CATEGORY
 
@@ -92,12 +93,18 @@ def native_quantize_if_op_impl(
     graphs = {}
     get_all_graphs(model, graphs, 1)
     if ignored_scope and ignored_scope.validate:
-        matches = {}
+        matched_ignored_scope = IgnoredScope()
         for graph in graphs.values():
-            matches.update(get_matches_from_ignored_scope(ignored_scope, graph))
-        unmatched = get_unmatched_ignored_scope(ignored_scope, matches)
-        if any(unmatched.values()):
-            raise nncf.ValidationError(error_unmatched_ignored_scope(unmatched, ignored_scope))
+            match = get_matched_ignored_scope(ignored_scope, graph)
+            matched_ignored_scope = merge_ignored_scopes(matched_ignored_scope, match.matched_ignored_scope)
+        unmatched_ignored_scope = get_unmatched_ignored_scope(ignored_scope, matched_ignored_scope)
+        if (
+            any(unmatched_ignored_scope.names)
+            or any(unmatched_ignored_scope.types)
+            or any(unmatched_ignored_scope.patterns)
+            or any(unmatched_ignored_scope.subgraphs)
+        ):
+            raise nncf.ValidationError(error_unmatched_ignored_scope(unmatched_ignored_scope))
         ignored_scope = IgnoredScope(
             ignored_scope.names, ignored_scope.patterns, ignored_scope.types, ignored_scope.subgraphs, validate=False
         )
@@ -116,13 +123,12 @@ def native_quantize_if_op_impl(
             nncf_logger.warning(BATCHWISE_STATISTICS_WARNING)
             break
     if_ops_number = get_number_if_op(model)
-    all_models_number = if_ops_number * 2 + 1
     nncf_logger.info(
         f"The model consists of {if_ops_number} If node(-s) with then and else bodies. \
             Main model and all If bodies will be quantized recursively."
     )
     quantized_model, _ = apply_algorithm_if_bodies(
-        quantization_algorithm, model, graphs, calibration_dataset, subset_size, 1, all_models_number
+        quantization_algorithm, model, graphs, calibration_dataset, subset_size, 1
     )
 
     if is_weight_compression_needed(advanced_parameters):
