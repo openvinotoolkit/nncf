@@ -215,12 +215,13 @@ class MinMaxAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def get_weight_quantization_axes(node: NNCFNode, target_point: TargetPoint) -> Tuple[int, ...]:
+    def get_weight_quantization_axes(node: NNCFNode, target_point: TargetPoint, ndims: int) -> Tuple[int, ...]:
         """
         Returns axes for per-channel quantization of weights of the node placed on a input port_id.
 
         :param node: Quantized node with the weight.
         :param target_point: Corresponding target point.
+        :param ndims: Number of dimensions of weight.
         :return: Axes for per-channel quantization of weights.
         """
 

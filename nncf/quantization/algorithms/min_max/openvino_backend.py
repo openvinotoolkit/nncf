@@ -158,7 +158,7 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         raise NotImplementedError(f"Unsupported target point type {target_point.type}.")
 
     @staticmethod
-    def get_weight_quantization_axes(node: NNCFNode, target_point: OVTargetPoint) -> Tuple[int]:
+    def get_weight_quantization_axes(node: NNCFNode, target_point: OVTargetPoint, ndims: int) -> Tuple[int]:
         return tuple(get_weight_channel_axes(node))
 
     @staticmethod

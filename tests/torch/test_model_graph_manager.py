@@ -16,6 +16,7 @@ import pytest
 import torch
 from torch import nn
 
+import nncf.torch.graph.operator_metatypes as om
 import tests.post_training.test_templates.helpers as helpers
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -30,6 +31,7 @@ from nncf.torch.model_graph_manager import get_fake_quantizer
 from nncf.torch.model_graph_manager import get_fused_bias_value
 from nncf.torch.model_graph_manager import get_module_by_name
 from nncf.torch.model_graph_manager import get_potential_fused_node
+from nncf.torch.model_graph_manager import get_target_dim_for_weight_compression
 from nncf.torch.model_graph_manager import get_weight_tensor_port_ids
 from nncf.torch.model_graph_manager import is_node_with_fused_bias
 from nncf.torch.model_graph_manager import is_quantized_weights
@@ -362,3 +364,39 @@ def test_update_fused_bias(model_cls):
         assert torch.all(torch.isclose(model.conv.bias, torch.tensor([0.3000, 1.3000])))
         assert torch.all(torch.isclose(model.bn.bias, torch.tensor([-1.0600, -3.6000])))
         assert torch.all(torch.isclose(model.conv.bias * model.bn.weight + model.bn.bias, ref_new_bias))
+
+
+class TestTargetDimForWeightCompression:
+
+    MM_SHAPES = (
+        (1, 1, 0, 0),  # [3] x [3]
+        (2, 1, 0, 0),  # [3, 4] x [4]
+        (3, 1, 1, 0),  # [10, 3, 4] x [4]
+        (3, 3, 1, 2),  # [10, 3, 4] x [10, 4, 5]
+        (3, 2, 1, 1),  # [10, 3, 4] x [4, 5]
+    )
+
+    @pytest.mark.parametrize("ndim1, ndim2, ref_dim1, ref_dim2", MM_SHAPES)
+    def test_matmul(self, ndim1, ndim2, ref_dim1, ref_dim2):
+        assert get_target_dim_for_weight_compression(om.PTMatMulMetatype, ndim1, 0) == ref_dim1
+        assert get_target_dim_for_weight_compression(om.PTMatMulMetatype, ndim2, 1) == ref_dim2
+
+    @pytest.mark.parametrize("ndim1, ndim2, ref_dim1, ref_dim2", MM_SHAPES)
+    def test_addmm(self, ndim1, ndim2, ref_dim1, ref_dim2):
+        assert get_target_dim_for_weight_compression(om.PTAddmmMetatype, ndim1, 1) == ref_dim1
+        assert get_target_dim_for_weight_compression(om.PTAddmmMetatype, ndim2, 2) == ref_dim2
+
+    @pytest.mark.parametrize("ndims", (3, 4, 5))
+    @pytest.mark.parametrize("metatype", (om.PTConv1dMetatype, om.PTConv2dMetatype, om.PTConv3dMetatype))
+    def test_conv(self, ndims, metatype):
+        assert get_target_dim_for_weight_compression(metatype, ndims, 1) == 0
+
+    @pytest.mark.parametrize("ndims", (3, 4, 5))
+    @pytest.mark.parametrize(
+        "metatype", (om.PTConvTranspose1dMetatype, om.PTConvTranspose2dMetatype, om.PTConvTranspose3dMetatype)
+    )
+    def test_transpose_conv(self, ndims, metatype):
+        assert get_target_dim_for_weight_compression(metatype, ndims, 1) == 1
+
+    def test_exception(self):
+        assert get_target_dim_for_weight_compression(om.PTAbsMetatype, 0, 1) == 1

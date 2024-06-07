@@ -159,8 +159,8 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         return nncf_graph.get_input_shape_for_insertion_point(target_point)
 
     @staticmethod
-    def get_weight_quantization_axes(node: NNCFNode, target_point: PTTargetPoint) -> Tuple[int]:
-        return (get_target_dim_for_weight_compression(node.metatype, target_point.input_port_id),)
+    def get_weight_quantization_axes(node: NNCFNode, target_point: PTTargetPoint, ndims: int) -> Tuple[int]:
+        return (get_target_dim_for_weight_compression(node.metatype, target_point.input_port_id, ndims),)
 
     @staticmethod
     def get_statistic_collector(
@@ -237,7 +237,9 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
             node_with_weight = nncf_graph.get_node_by_name(target_point.target_node_name)
             weight_node = get_const_node(node_with_weight, target_point.input_port_id, nncf_graph)
             input_shape = weight_node.layer_attributes.shape
-            channel_idx = get_target_dim_for_weight_compression(node_with_weight.metatype, target_point.input_port_id)
+            channel_idx = get_target_dim_for_weight_compression(
+                node_with_weight.metatype, input_shape, target_point.input_port_id
+            )
         else:
             input_shape = nncf_graph.get_input_shape_for_insertion_point(target_point)
             channel_idx = 1  # channel dim for activations

@@ -339,7 +339,7 @@ def get_fake_quantizer(
     return None
 
 
-def get_target_dim_for_weight_compression(metatype: om.PTOperatorMetatype, input_port_id: int) -> int:
+def get_target_dim_for_weight_compression(metatype: om.PTOperatorMetatype, ndims: int, input_port_id: int) -> int:
     """
     Determines the target dimension for weight compression.
 
@@ -349,15 +349,15 @@ def get_target_dim_for_weight_compression(metatype: om.PTOperatorMetatype, input
     """
     if metatype == om.PTAddmmMetatype:
         if input_port_id == 1:
-            return -2
+            return 0 if ndims == 1 else ndims - 2
         if input_port_id == 2:
-            return -1
+            return ndims - 1
         raise ValueError(f"Unexpected {input_port_id=} for {metatype=}")
     if metatype == om.PTMatMulMetatype:
         if input_port_id == 0:
-            return -2
+            return 0 if ndims == 1 else ndims - 2
         if input_port_id == 1:
-            return -1
+            return ndims - 1
         raise ValueError(f"Unexpected {input_port_id=} for {metatype=}")
     if metatype in [om.PTConvTranspose1dMetatype, om.PTConvTranspose2dMetatype, om.PTConvTranspose3dMetatype]:
         return 1
