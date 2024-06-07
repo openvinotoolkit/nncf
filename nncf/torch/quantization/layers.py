@@ -46,7 +46,8 @@ from nncf.torch.quantization.quantize_functions import ExportQuantizeToFakeQuant
 from nncf.torch.quantization.quantize_functions import ExportQuantizeToONNXQuantDequant
 from nncf.torch.quantization.quantize_functions import TuneRange
 from nncf.torch.quantization.quantize_functions import asymmetric_quantize
-from nncf.torch.quantization.quantize_functions import decompress
+from nncf.torch.quantization.quantize_functions import decompress_asymmetric
+from nncf.torch.quantization.quantize_functions import decompress_symmetric
 from nncf.torch.quantization.quantize_functions import get_scale_zp_from_input_low_input_high
 from nncf.torch.quantization.quantize_functions import symmetric_quantize
 from nncf.torch.return_types import maybe_get_values_from_torch_return_type
@@ -1061,7 +1062,7 @@ class AsymmetricWeightsDecompressor(nn.Module):
         self.result_dtype = result_dtype
 
     def forward(self, x):
-        result = decompress(x, self._scale, self._zero_point)
+        result = decompress_asymmetric(x, self._scale, self._zero_point)
         result = result.type(dtype=self.result_dtype) if self.result_dtype is not None else result
         return result
 
@@ -1081,6 +1082,6 @@ class SymmetricWeightsDecompressor(nn.Module):
         self.result_dtype = result_dtype
 
     def forward(self, x):
-        result = decompress(x, self._scale)
+        result = decompress_symmetric(x, self._scale)
         result = result.type(dtype=self.result_dtype) if self.result_dtype is not None else result
         return result

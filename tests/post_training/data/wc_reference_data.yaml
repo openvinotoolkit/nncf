@@ -24,5 +24,5 @@ tinyllama_int8_data_free_backend_TORCH:
   num_int8: 312
 tinyllama_data_aware_gptq_backend_OV:
   metric_value: 0.83387
-  num_int4: 188
+  num_int4: 94
   num_int8: 124
