@@ -9,7 +9,7 @@ Post-training Quantization:
 - General:
   - ...
 - Features:
-  - (OpenVINO) Added Scale Estimation algorithm for 4-bit data-aware weights compression. This algorithm estimates more optimal scale in compression scheme based on difference between matrix multiplication in original precision and compressed one. For that `scale_estimation` optional parameter has been added to `nncf.compress_weights()` and can be used to minimize accuracy degradation of compressed models (note that this option increases the compression time).
+  - (OpenVINO) Added Scale Estimation algorithm for 4-bit data-aware weights compression. This algorithm estimates a more optimal scale in compression scheme based on difference between output of matrix multiplication in the original precision and the compressed one. For that, the optional `scale_estimation` parameter has been added to `nncf.compress_weights()` and can be used to minimize accuracy degradation of compressed models (note that this option increases the compression time).
   - (OpenVINO) Added GPTQ algorithm for 8/4-bit data-aware weights compression, supporting INT8, INT4, and NF4 data types. Introduced the optional `gptq` parameter to `nncf.compress_weights()` to enable the GPTQ algorithm.
   - (OpenVINO) Added support for bf16 weights compression in `nncf.compress_weights()`
 - Fixes:
