@@ -60,13 +60,11 @@ def is_model_no_batchwise_support(
     :param model_type: Model type algorithm option.
     :param no_batchwise_support_metatypes: Meatypes having no batchwise statistics support.
     """
-    if (
+    return (
         advanced_quantization_parameters
         and advanced_quantization_parameters.batchwise_statistics
         and (graph.get_nodes_by_metatypes(no_batchwise_support_metatypes) or model_type == ModelType.TRANSFORMER)
-    ):
-        return True
-    return False
+    )
 
 
 def _update_advanced_quantization_parameters(
