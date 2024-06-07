@@ -12,8 +12,6 @@
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple, TypeVar
 
-import numpy as np
-
 import nncf
 from nncf import Dataset
 from nncf import nncf_logger
@@ -361,7 +359,7 @@ class BiasCorrection(Algorithm):
 
     def _compute_bias_shift(
         self, node: NNCFNode, model: TModel, feed_dicts: List, statistic_points: StatisticPointsContainer
-    ) -> np.ndarray:
+    ) -> Tensor:
         """
         Computes bias shift that will be used for the further bias correction.
 
@@ -393,7 +391,6 @@ class BiasCorrection(Algorithm):
         :param updated_bias_value: Updated bias value.
         :return: Magnitude between original and updated bias values.
         """
-        bias_shift_magnitude = fns.finfo(current_bias_value).max
         bias_shift_magnitude = fns.max(
             fns.abs(
                 (updated_bias_value - current_bias_value) / (current_bias_value + fns.finfo(current_bias_value).min)
@@ -452,7 +449,7 @@ class BiasCorrection(Algorithm):
                 nncf_logger.debug(f"Dropped {activation_name} output statistics.")
                 self._fp_inputs[input_id] = []
 
-    def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str, port_id: int) -> np.ndarray:
+    def _get_fp_inputs(self, statistic_points: StatisticPointsContainer, node_name: str, port_id: int) -> Tensor:
         """
         # TODO: paraphrase
         Makes out pre-layer needed data from the floating-point collected statistics.
@@ -485,7 +482,7 @@ class BiasCorrection(Algorithm):
         self._fp_inputs[input_id] = input_fp
         return self._fp_inputs[input_id]
 
-    def _get_fp_outputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> np.ndarray:
+    def _get_fp_outputs(self, statistic_points: StatisticPointsContainer, node_name: str) -> Tensor:
         """
         Makes out post-layer needed data from the floating-point collected statistics.
 

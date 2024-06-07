@@ -9,7 +9,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from math import inf
 from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
 
 import nncf
@@ -201,9 +200,11 @@ class FastBiasCorrection(Algorithm):
         :param updated_bias_value: The updated bias value.
         :return: Magnitude between original and updated bias values.
         """
-        bias_shift_magnitude = inf
-        if fns.count_nonzero(current_bias_value == 0) == 0:
-            bias_shift_magnitude = fns.max(fns.abs((updated_bias_value - current_bias_value) / current_bias_value))
+        bias_shift_magnitude = fns.max(
+            fns.abs(
+                (updated_bias_value - current_bias_value) / (current_bias_value + fns.finfo(current_bias_value).min)
+            )
+        )
         return bias_shift_magnitude
 
     @staticmethod
