@@ -23,17 +23,15 @@ jobs:
   publish:
     needs: [call-build-html-doc, call-build-schema-page]
     runs-on: ubuntu-20.04
-    permissions:
-      attestations: write
     steps:
       - name: Checkout main repo  # the github-pages-deploy-action seems to require this step
         uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
       - name: Download HTML doc build artifact
-        uses: alehechka/download-tartifact@a055d3a102b9ed9cfff1263bc713295047d0197e # v2
+        uses: alehechka/download-tartifact@1195216b256562056097b175df17b167557f8681 # v2
         with:
           name: html_doc_artifact
       - name: Download schema doc build artifact
-        uses: alehechka/download-tartifact@a055d3a102b9ed9cfff1263bc713295047d0197e # v2
+        uses: alehechka/download-tartifact@1195216b256562056097b175df17b167557f8681 # v2
         with:
           name: schema_doc_artifact
           path: html_build/html

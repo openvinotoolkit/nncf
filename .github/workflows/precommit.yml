@@ -14,8 +14,6 @@ on:
 jobs:
   common:
     runs-on: ubuntu-20.04
-    permissions:
-      attestations: write
     steps:
       - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
         with:
@@ -44,8 +42,6 @@ jobs:
           flags: COMMON
   onnx:
     runs-on: ubuntu-20.04-8-cores
-    permissions:
-      attestations: write
     steps:
       - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
         with:
@@ -73,8 +69,6 @@ jobs:
           flags: ONNX
   openvino:
     runs-on: ubuntu-20.04-8-cores
-    permissions:
-      attestations: write
     steps:
       - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
         with:
