@@ -143,13 +143,12 @@ def get_matched_ignored_scope_info(
     :returns: Matched ignored scope along with all matches.
     """
     names, patterns, types, subgraphs_numbers = set(), set(), set(), set()
-    matches = {"names": set(), "patterns": set(), "types": set(), "subgraphs": set()}
+    matches = {"names": names, "patterns": set(), "types": set(), "subgraphs": set()}
 
     for graph in nncf_graphs:
         node_names = set(node.node_name for node in graph.nodes.values())
 
         for ignored_node_name in filter(lambda name: name in node_names, ignored_scope.names):
-            matches["names"].add(ignored_node_name)
             names.add(ignored_node_name)
 
         for str_pattern in ignored_scope.patterns:
