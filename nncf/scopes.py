@@ -130,17 +130,17 @@ def convert_ignored_scope_to_list(ignored_scope: Optional[IgnoredScope]) -> List
     return results
 
 
-def get_ignored_scope_match(
+def get_matched_ignored_scope_info(
     ignored_scope: IgnoredScope, nncf_graphs: List[NNCFGraph]
 ) -> Tuple[IgnoredScope, Dict[str, Set[str]]]:
     """
     Returns matched ignored scope for provided graphs along with all found matches.
     The resulted ignored scope consist of all matched rules.
-    The found matches consist of a ditionary with a rule name as a key and matched node names as a value.
+    The found matches consist of a dictionary with a rule name as a key and matched node names as a value.
 
     :param ignored_scope: Ignored scope instance.
     :param nncf_graphs: Graphs.
-    :returns: Mathced ignored scope along with all matches.
+    :returns: Matched ignored scope along with all matches.
     """
     names, patterns, types, subgraphs_numbers = set(), set(), set(), set()
     matches = {"names": set(), "patterns": set(), "types": set(), "subgraphs": set()}
@@ -183,7 +183,7 @@ def get_unmatched_ignored_scope(matched_ignored_scope: IgnoredScope, ignored_sco
     """
     Returns unmatched ignored scope rules from full ignored scope and matched ignored scope.
 
-    :param matched_ignored_scope: Matched ingored scope.
+    :param matched_ignored_scope: Matched ignored scope.
     :param ignored_scope: Full ignored scope.
     :return: Unmatched ignored scope.
     """
@@ -217,15 +217,15 @@ def error_unmatched_ignored_scope(unmatched_ignored_scope: IgnoredScope) -> str:
     """
     err_msg = ""
     if unmatched_ignored_scope.names:
-        err_msg += f"Ignored nodes with name {unmatched_ignored_scope.names} were not found in the NNCFGraph. "
+        err_msg += f"Ignored nodes with name {unmatched_ignored_scope.names} were not found in the NNCFGraph.\n"
     if unmatched_ignored_scope.patterns:
-        err_msg += f"No matches for ignored patterns {unmatched_ignored_scope.patterns} in the NNCFGraph. "
+        err_msg += f"No matches for ignored patterns {unmatched_ignored_scope.patterns} in the NNCFGraph.\n"
     if unmatched_ignored_scope.types:
-        err_msg += f"Nodes with ignored types {unmatched_ignored_scope.types} were not found in the NNCFGraph. "
+        err_msg += f"Nodes with ignored types {unmatched_ignored_scope.types} were not found in the NNCFGraph.\n"
     for subgraph in unmatched_ignored_scope.subgraphs:
         err_msg += (
             f"Ignored subgraph with input names {subgraph.inputs} and output names {subgraph.outputs} "
-            "was not found in the NNCFGraph. "
+            "was not found in the NNCFGraph.\n"
         )
     return err_msg + (
         "Refer to the original_graph.dot to discover the operations"
@@ -247,14 +247,14 @@ def get_ignored_node_names_from_ignored_scope(
     :param strict: Whether all ignored_scopes must match at least one node or not.
     :return: NNCF node names from given NNCFGraph specified in given ignored scope.
     """
-    matched_ignored_scope, matches = get_ignored_scope_match(ignored_scope, [nncf_graph])
+    matched_ignored_scope, matches = get_matched_ignored_scope_info(ignored_scope, [nncf_graph])
     if strict:
         validate_ignored_scope(ignored_scope, matched_ignored_scope)
     info_matched_ignored_scope(matches)
     return {name for match in matches.values() for name in match}
 
 
-def validate_ignored_scope(ignored_scope: IgnoredScope, matched_ignored_scope: IgnoredScope):
+def validate_ignored_scope(ignored_scope: IgnoredScope, matched_ignored_scope: IgnoredScope) -> None:
     """
     Checks whether the every rule in ignored scope has a match.
 
