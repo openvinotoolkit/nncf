@@ -25,7 +25,7 @@ jobs:
       issues: write
     steps:
       - name: Download built HTML doc as artifact from previous step
-        uses: alehechka/download-tartifact@a055d3a102b9ed9cfff1263bc713295047d0197e # v2
+        uses: alehechka/download-tartifact@1195216b256562056097b175df17b167557f8681 # v2
         with:
           name: html_doc_artifact
       - name: Checkout latest doc_pages branch tip
