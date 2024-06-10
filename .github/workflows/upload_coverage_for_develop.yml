@@ -1,4 +1,5 @@
 name: Upload coverage from an artifact of a merged PR
+permissions: read-all
 
 on:
   workflow_call:
@@ -24,10 +25,10 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v4  # codecov uploader demands that the scanned files be present when uploading
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6  # codecov uploader demands that the scanned files be present when uploading
         with:
           ref: ${{ inputs.merge_commit_sha }}
-      - uses: dawidd6/action-download-artifact@v2
+      - uses: dawidd6/action-download-artifact@268677152d06ba59fcec7a7f0b5d961b6ccd7e1e # v2.28.0
         with:
           workflow: precommit.yml
           check_artifacts: true

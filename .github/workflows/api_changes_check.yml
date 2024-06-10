@@ -1,4 +1,6 @@
 name: API changes check
+permissions: read-all
+
 on:
   pull_request_target:
     branches:
@@ -23,11 +25,11 @@ jobs:
       issues: write
     steps:
       - name: Download built HTML doc as artifact from previous step
-        uses: alehechka/download-tartifact@v2
+        uses: alehechka/download-tartifact@1195216b256562056097b175df17b167557f8681 # v2
         with:
           name: html_doc_artifact
       - name: Checkout latest doc_pages branch tip
-        uses: actions/checkout@v4
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
         with:
           ref: doc_pages
           path: previous_doc_state
@@ -39,7 +41,7 @@ jobs:
           echo ${CHANGED_FILES}
           CHANGED_FILES=$(echo $CHANGED_FILES | tr '\n' ' ')
           echo "changed_files=${CHANGED_FILES}" >> $GITHUB_OUTPUT
-      - uses: actions/github-script@v6
+      - uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         if: ${{ !(contains(steps.diff.outputs.changed_files, 'differ'))  && contains(github.event.pull_request.labels.*.name, 'API') }}
         with:
           github-token: ${{ secrets.ADD_LABELS_WITH_REST_API }}
@@ -50,7 +52,7 @@ jobs:
               repo: context.repo.repo,
               name: "API"
             })
-      - uses: actions/github-script@v6
+      - uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         if: ${{ contains(steps.diff.outputs.changed_files, 'differ') }}
         with:
           github-token: ${{ secrets.ADD_LABELS_WITH_REST_API }}
@@ -62,7 +64,7 @@ jobs:
               labels: ["API"]
             })
       - name: Add release label
-        uses: actions/github-script@v6
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         if: ${{ contains(github.event.pull_request.base.ref, 'release_v') }}
         with:
           github-token: ${{ secrets.ADD_LABELS_WITH_REST_API }}

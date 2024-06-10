@@ -50,7 +50,7 @@ def run_install_checks(venv_path: Path, tmp_path: Path, package_type: str, backe
         elif package_type == "build_w":
             package_path = find_file_by_extension(PROJECT_ROOT / "dist", ".whl")
 
-        run_cmd_line = f"{pip_with_venv} install {package_path}[{backend}]"
+        run_cmd_line = f"{pip_with_venv} install {package_path}"
         subprocess.run(run_cmd_line, check=True, shell=True)
 
     run_path = tmp_path / "run"

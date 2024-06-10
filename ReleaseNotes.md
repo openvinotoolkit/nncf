@@ -198,7 +198,7 @@ Post-training Quantization:
   - (OpenVINO) Added HyperparameterTuner algorithm.
   - (PyTorch) Added FastBiasCorrection algorithm support.
   - (OpenVINO, ONNX) Added embedding weights quantization.
-  - (OpenVINO, PyTorch) Added new `compress_weights` method that provides data-free [INT8 weights compression](docs/compression_algorithms/CompressWeights.md).
+  - (OpenVINO, PyTorch) Added new `compress_weights` method that provides data-free [INT8 weights compression](docs/usage/post_training_compression/weights_compression/Usage.md).
 - Fixes:
   - Fixed detection of decomposed post-processing in models.
   - Multiple fixes (new patterns, bugfixes, etc.) to solve [#1936](https://github.com/openvinotoolkit/nncf/issues/1936) issue.
@@ -256,7 +256,7 @@ Post-training Quantization:
     - Added quantizer scales unification.
     - Added support for models with 3D and 5D Depthwise convolution.
     - Added FP16 OpenVINO models support.
-  - Added `"overflow_fix"` parameter (for `quantize(...)` & `quantize_with_accuracy_control(...)` methods) support & functionality. It improves accuracy for optimized model for affected devices. More details in [Quantization section](docs/compression_algorithms/Quantization.md).
+  - Added `"overflow_fix"` parameter (for `quantize(...)` & `quantize_with_accuracy_control(...)` methods) support & functionality. It improves accuracy for optimized model for affected devices. More details in [Quantization section](docs/usage/post_training_compression/post_training_quantization/Usage.md).
   - (OpenVINO) Added support for in-place statistics collection (reduce memory footprint during optimization).
   - (OpenVINO) Added Quantization with accuracy control algorithm.
   - (OpenVINO) Added YOLOv8 examples for [`quantize(...)`](examples/post_training_quantization/openvino/yolov8) & [`quantize_with_accuracy_control(...)`](examples/post_training_quantization/openvino/yolov8_quantize_with_accuracy_control) methods.
@@ -552,7 +552,7 @@ Removed features:
 
 ## New in Release 1.5
 
-- Switched to using the propagation-based mode for quantizer setup by default. Compared to the previous default, pattern-based mode, the propagation-based mode better ensures that all the inputs to operations that can be quantized on a given type of hardware are quantized in accordance with what this hardware allows. Default target hardware is CPU - adjustable via `"target_device"` option in the NNCF config. More details can be found in [Quantization.md](./docs/compression_algorithms/Quantization.md#quantizer-setup-and-hardware-config-files).
+- Switched to using the propagation-based mode for quantizer setup by default. Compared to the previous default, pattern-based mode, the propagation-based mode better ensures that all the inputs to operations that can be quantized on a given type of hardware are quantized in accordance with what this hardware allows. Default target hardware is CPU - adjustable via `"target_device"` option in the NNCF config. More details can be found in [Quantization.md](./docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#quantizer-setup-and-hardware-config-files).
 - HAWQ mixed-precision initialization now supports a compression ratio parameter setting - set to 1 for a fully INT8 model, > 1 to increasingly allow lower bitwidth. The level of compression for each layer is defined by a product of the layer FLOPS and the quantization bitwidth.
 - HAWQ mixed-precision initialization allows specifying a more generic `criterion_fn` callable to calculate the related loss in case of complex output's post-processing or multiple losses.
 - Improved algorithm of assigning bitwidth for activation quantizers in HAWQ mixed-precision initialization. If after taking into account the corresponding rules of hardware config there're
@@ -572,7 +572,7 @@ Removed features:
 ## New in Release 1.4
 
 - Models with filter pruning applied are now exportable to ONNX
-- BatchNorm adaptation now available as a common compression algorithm initialization step - currently disabled by default, see `"batchnorm_adaptation"` config parameters in compression algorithm documentation (e.g. [Quantizer.md](docs/compression_algorithms/Quantization.md)) for instructions on how to enable it in NNCF config
+- BatchNorm adaptation now available as a common compression algorithm initialization step - currently disabled by default, see `"batchnorm_adaptation"` config parameters in compression algorithm documentation (e.g. [Quantizer.md](docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md)) for instructions on how to enable it in NNCF config
 - Major performance improvements for per-channel quantization training - now performs almost as fast as the per-tensor quantization training
 - nn.Embedding and nn.Conv1d weights are now quantized by default
 - Compression level querying is now available to determine current compression level (for purposes of choosing a correct "best" checkpoint during training)
