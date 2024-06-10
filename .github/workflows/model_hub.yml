@@ -1,4 +1,5 @@
 name: Model Hub
+permissions: read-all
 
 on:
   workflow_dispatch:
@@ -10,8 +11,8 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c # v5.0.0
         with:
           python-version: 3.8.18
       - name: Install NNCF and test requirements
