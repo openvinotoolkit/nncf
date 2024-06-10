@@ -10,7 +10,6 @@
 # limitations under the License.
 
 import re
-from dataclasses import asdict
 from dataclasses import dataclass
 from dataclasses import field
 from typing import Dict, List, Optional, Set, Tuple
@@ -217,9 +216,8 @@ def error_unmatched_ignored_scope(unmatched_ignored_scope: IgnoredScope) -> str:
     :return str: Error message.
     """
     err_msg = ""
-    unmatched_dict = asdict(unmatched_ignored_scope)
     for ingored_type in ("names", "types", "patterns"):
-        unmatched_rules = unmatched_dict.get(ingored_type)
+        unmatched_rules = getattr(unmatched_ignored_scope, ingored_type)
         if unmatched_rules:
             err_msg += f"Ignored nodes that matches {ingored_type} {unmatched_rules} were not found in the NNCFGraph.\n"
     for subgraph in unmatched_ignored_scope.subgraphs:
