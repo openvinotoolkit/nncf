@@ -209,7 +209,7 @@ def _(
         device = a.device
         result = torch.tensor(np.median(a.detach().cpu().numpy(), axis=axis, keepdims=keepdims))
         return result.type(a.dtype).to(device)
-    return numeric.quantile(a, q=0.5, axis=axis, keepdims=keepdims)
+    return quantile(a, q=0.5, axis=axis, keepdims=keepdims)
 
 
 @numeric.round.register(torch.Tensor)
@@ -223,7 +223,7 @@ def _(a: torch.Tensor, exponent: Union[torch.Tensor, float]) -> torch.Tensor:
 
 
 @numeric.quantile.register(torch.Tensor)
-def _(
+def quantile(
     a: torch.Tensor,
     q: Union[float, List[float]],
     axis: Optional[Union[int, Tuple[int]]] = None,
@@ -243,7 +243,7 @@ def _(
 
 
 @numeric.percentile.register(torch.Tensor)
-def percentile(
+def _(
     a: torch.Tensor,
     q: Union[float, List[float]],
     axis: Union[int, Tuple[int, ...], List[int]],
