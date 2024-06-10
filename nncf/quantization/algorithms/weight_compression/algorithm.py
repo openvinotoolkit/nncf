@@ -124,7 +124,12 @@ class WeightCompression(Algorithm):
 
         if self._gptq:
             gptq_params = self._advanced_parameters.gptq_params
-            self._gptq_algo = GPTQ(gptq_params.damp_percent, gptq_params.block_size, gptq_params.subset_size)
+            self._gptq_algo = GPTQ(
+                damp_percent=gptq_params.damp_percent,
+                block_size=gptq_params.block_size,
+                subset_size=gptq_params.subset_size,
+                scale_estimation=self._scale_estimation,
+            )
             self._gptq_statistics = None
 
     @property
@@ -379,25 +384,8 @@ class WeightCompression(Algorithm):
 
         scales = {}
         zero_points = {}
-        if (
-            self._scale_estimation
-            and activations is not None
-            and self._mode not in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]
-        ):
-            scale_estimation_params = self._advanced_parameters.scale_estimation_params
-            scale_algo = ScaleEstimation(
-                model,
-                self._backend_entity.name_to_node_mapping,
-                all_weight_params,
-                nodes_to_compress,
-                activations,
-                scale_estimation_params.subset_size,
-                scale_estimation_params.initial_steps,
-                scale_estimation_params.scale_steps,
-                scale_estimation_params.weight_penalty,
-            )
-            scales = scale_algo.apply(model, graph)
-
+        lora_correction_algo = None
+        description = "Applying Weight Compression"
         if self._gptq:
             model, scales, zero_points = self._gptq_algo.apply(
                 model=model,
@@ -407,13 +395,30 @@ class WeightCompression(Algorithm):
                 statistic_points=self._gptq_statistics,
                 backend_entity=self._backend_entity,
             )
+        else:
+            if (
+                self._scale_estimation
+                and activations is not None
+                and self._mode not in [CompressWeightsMode.NF4, CompressWeightsMode.E2M1]
+            ):
+                scale_estimation_params = self._advanced_parameters.scale_estimation_params
+                scale_algo = ScaleEstimation(
+                    model,
+                    self._backend_entity.name_to_node_mapping,
+                    all_weight_params,
+                    nodes_to_compress,
+                    activations,
+                    scale_estimation_params.subset_size,
+                    scale_estimation_params.initial_steps,
+                    scale_estimation_params.scale_steps,
+                    scale_estimation_params.weight_penalty,
+                )
+                scales = scale_algo.apply(model, graph)
 
-        lora_correction_algo = None
-        description = "Applying Weight Compression"
-        if self._lora_correction:
-            lora_correction_params = self._advanced_parameters.lora_correction_params
-            lora_correction_algo = LoraCorrectionAlgorithm(activations, lora_correction_params)
-            description += " with correction of low-rank adapters"
+            if self._lora_correction:
+                lora_correction_params = self._advanced_parameters.lora_correction_params
+                lora_correction_algo = LoraCorrectionAlgorithm(activations, lora_correction_params)
+                description += " with correction of low-rank adapters"
 
         # Sort weight params to start compression with the bigger constants. This lowers peak memory footprint.
         all_weight_params = sorted(all_weight_params, key=lambda wp: wp.num_weights, reverse=True)
@@ -542,7 +547,7 @@ class WeightCompression(Algorithm):
         statistics_aggregator = StatisticsAggregatorFactory.create(model, dataset)
         statistics_aggregator.register_statistic_points(statistic_container)
 
-        if self._gptq:
+        if self._gptq and not self._awq:
             self._gptq_statistics = self._gptq_algo.get_statistic_points(
                 model, graph, nodes_to_compress, self._backend_entity
             )
