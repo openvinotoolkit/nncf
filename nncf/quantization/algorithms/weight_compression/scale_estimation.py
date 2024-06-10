@@ -225,7 +225,7 @@ class ScaleEstimation:
                 input_tensors.append(zp.data)
             # iterative rectification of initial scale
             for i in range(self._initial_steps):
-                near_to_ideal_scale = get_near_to_ideal_scale(original_weight, target, zero_mask, importance)
+                near_to_ideal_scale = estimate_scales(original_weight, target, zero_mask, importance)
                 input_tensors[1] = near_to_ideal_scale.data
 
                 out = compress_decompress_model(input_tensors)
@@ -270,7 +270,7 @@ class ScaleEstimation:
 
                 target, zero_mask = get_target_zero_mask(compressed_weights, zp)
                 zero_mask = zero_scale * zero_mask.astype(original_weight.dtype)
-                near_to_ideal_scale = get_near_to_ideal_scale(original_weight, target, zero_mask, importance)
+                near_to_ideal_scale = estimate_scales(original_weight, target, zero_mask, importance)
 
                 input_tensors[1] = near_to_ideal_scale.data
                 out = compress_decompress_model(input_tensors)
@@ -307,7 +307,7 @@ def get_target_zero_mask(compressed_weights, zp=None):
     return target, zero_mask
 
 
-def get_near_to_ideal_scale(weight, target, zero_mask, importance):
+def estimate_scales(weight, target, zero_mask, importance):
     ideal_scale = fns.abs(weight) / (fns.abs(target) + zero_mask)
     weighted_scale = ideal_scale * importance
     near_to_ideal_scale = fns.sum(weighted_scale, axis=2, keepdims=True)
