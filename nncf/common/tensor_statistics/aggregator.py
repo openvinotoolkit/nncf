@@ -11,7 +11,7 @@
 from abc import ABC
 from abc import abstractmethod
 from itertools import islice
-from typing import Any, Dict, Optional, TypeVar, Union
+from typing import Any, Dict, Optional, TypeVar
 
 import nncf
 from nncf.common import factory
@@ -141,10 +141,10 @@ class StatisticsAggregator(ABC):
 
     @staticmethod
     @abstractmethod
-    def _process_outputs(outputs: Any) -> Union[Dict[str, Tensor], Tensor]:
+    def _process_outputs(outputs: Any) -> Dict[str, Tensor]:
         """
         Post-process model outputs for the further statistics collection.
 
         :param outputs: raw model outputs
-        :return: processed model outputs in Dict[str, Tensor] or Tensor format
+        :return: processed model outputs in Dict[str, Tensor] format
         """

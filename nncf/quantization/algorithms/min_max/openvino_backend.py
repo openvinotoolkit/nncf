@@ -11,8 +11,6 @@
 
 from typing import Dict, List, Optional, Set, Tuple
 
-import numpy as np
-
 import nncf
 from nncf.common.graph.graph import NNCFGraph
 from nncf.common.graph.graph import NNCFNode
@@ -23,7 +21,6 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.experimental.tensor.tensor import Tensor
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes import openvino_metatypes as om
 from nncf.openvino.graph.metatypes.groups import OPERATIONS_WITH_WEIGHTS
@@ -136,16 +133,6 @@ class OVMinMaxAlgoBackend(MinMaxAlgoBackend):
         parameters: FakeConvertParameters,
     ) -> OVQuantizerInsertionCommand:
         return OVConvertInsertionCommand(target_point, parameters)
-
-    @staticmethod
-    def unify_statistics(statistics: List[MinMaxTensorStatistic]) -> MinMaxTensorStatistic:
-        max_values, min_values = [], []
-        for statistic in statistics:
-            max_values.append(np.array(statistic.max_values.data).flatten())
-            min_values.append(np.array(statistic.min_values.data).flatten())
-        max_values = np.max(max_values, axis=0)
-        min_values = np.min(min_values, axis=0)
-        return MinMaxTensorStatistic(min_values=Tensor(min_values), max_values=Tensor(max_values))
 
     @staticmethod
     def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: OVTargetPoint) -> Tuple[int, ...]:

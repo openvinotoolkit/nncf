@@ -34,6 +34,7 @@ class PTStatisticsAggregator(StatisticsAggregator):
         model.nncf.remove_hooks_group(self.HOOKS_GROUP_NAME)
 
     def _register_statistics(self, outputs: Dict[str, Tensor], statistic_points: StatisticPointsContainer) -> None:
+        # PyTorch backend doesn't use outputs to register statistics
         return
 
     def _get_transformation_layout_extra_outputs(
@@ -68,5 +69,6 @@ class PTStatisticsAggregator(StatisticsAggregator):
         return statistic_points
 
     @staticmethod
-    def _process_outputs(outputs: torch.Tensor) -> Tensor:
-        return Tensor(outputs)
+    def _process_outputs(outputs: torch.Tensor) -> Dict[str, Tensor]:
+        # PyTorch backend doesn't use outputs to register statistics
+        return {}

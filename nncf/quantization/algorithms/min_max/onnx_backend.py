@@ -24,7 +24,6 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.experimental.tensor.tensor import Tensor
 from nncf.onnx.graph.metatypes import onnx_metatypes as om
 from nncf.onnx.graph.metatypes.groups import MATMUL_METATYPES
 from nncf.onnx.graph.node_utils import get_input_edges_mapping
@@ -152,16 +151,6 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
         parameters: FakeConvertParameters,
     ) -> TransformationCommand:
         raise nncf.InternalError("FakeConvert insertion not implemented in ONNX backend!")
-
-    @staticmethod
-    def unify_statistics(statistics: List[MinMaxTensorStatistic]) -> MinMaxTensorStatistic:
-        max_values, min_values = [], []
-        for statistic in statistics:
-            max_values.append(np.array(statistic.max_values.data).flatten())
-            min_values.append(np.array(statistic.min_values.data).flatten())
-        max_values = np.max(max_values, axis=0)
-        min_values = np.min(min_values, axis=0)
-        return MinMaxTensorStatistic(min_values=Tensor(min_values), max_values=Tensor(max_values))
 
     @staticmethod
     def _get_input_edges_mapping(nncf_graph: NNCFGraph):
