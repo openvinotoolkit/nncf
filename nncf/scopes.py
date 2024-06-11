@@ -260,9 +260,9 @@ def validate_ignored_scope(ignored_scope: IgnoredScope, matched_ignored_scope: I
     """
     unmatched_ignored_scope = get_unmatched_ignored_scope(matched_ignored_scope, ignored_scope)
     if (
-        any(unmatched_ignored_scope.names)
-        or any(unmatched_ignored_scope.types)
-        or any(unmatched_ignored_scope.patterns)
-        or any(unmatched_ignored_scope.subgraphs)
+        unmatched_ignored_scope.names
+        or unmatched_ignored_scope.types
+        or unmatched_ignored_scope.patterns
+        or unmatched_ignored_scope.subgraphs
     ):
         raise nncf.ValidationError(error_unmatched_ignored_scope(unmatched_ignored_scope))
