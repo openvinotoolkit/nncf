@@ -383,7 +383,7 @@ class BiasCorrection(Algorithm):
         return fns.stack(output_fp) - q_output
 
     @staticmethod
-    def _get_bias_shift_magnitude(current_bias_value: Tensor, updated_bias_value: Tensor) -> float:
+    def _get_bias_shift_magnitude(current_bias_value: Tensor, updated_bias_value: Tensor) -> Tensor:
         """
         Calculates bias shift magnitude based on the current and updated values.
 

@@ -28,7 +28,6 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.experimental.common.tensor_statistics.collectors import AGGREGATORS_MAP
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.experimental.tensor.tensor import Tensor
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.advanced_parameters import StatisticsType
@@ -138,16 +137,6 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
         parameters: FakeConvertParameters,
     ) -> TransformationCommand:
         raise nncf.InternalError("FakeConvert insertion not implemented in PyTorch backend!")
-
-    @staticmethod
-    def unify_statistics(statistics: List[MinMaxTensorStatistic]) -> MinMaxTensorStatistic:
-        max_values, min_values = [], []
-        for statistic in statistics:
-            max_values.append(statistic.max_values.data.flatten())
-            min_values.append(statistic.min_values.data.flatten())
-        max_values = torch.amax(torch.stack(max_values), dim=0)
-        min_values = torch.amin(torch.stack(min_values), dim=0)
-        return MinMaxTensorStatistic(min_values=Tensor(min_values), max_values=Tensor(max_values))
 
     @staticmethod
     def get_target_point_shape(nncf_graph: NNCFGraph, node: NNCFNode, target_point: PTTargetPoint) -> Tuple[int, ...]:

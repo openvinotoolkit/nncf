@@ -549,7 +549,6 @@ class BatchMeanReducer(TensorReducerBase):
         super().__init__(None, inplace)
 
     def _reduce_out_of_place(self, x: List[Tensor]) -> List[Tensor]:
-        # x[0] ???
         return [fns.mean(x[0], axis=0, keepdims=True)]
 
 
