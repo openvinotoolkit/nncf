@@ -158,7 +158,7 @@ def get_matched_ignored_scope_info(
                 matches["patterns"].update(pattern_matched_names)
                 patterns.add(str_pattern)
 
-        for node in graph.get_nodes_by_types(set(ignored_scope.types)):
+        for node in graph.get_nodes_by_types(ignored_scope.types):
             matches["types"].add(node.node_name)
             types.add(node.node_type)
 
