@@ -11,7 +11,6 @@
 
 from typing import Dict, List, Optional, Tuple
 
-import numpy as np
 import onnx
 
 from nncf.common.graph import NNCFGraph
@@ -42,9 +41,9 @@ class ONNXBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @staticmethod
     def create_bias_correction_command(
-        node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph
+        node: NNCFNode, bias_value: Tensor, nncf_graph: NNCFGraph
     ) -> ONNXInitializerUpdateCommand:
-        return create_bias_correction_command(node, bias_value)
+        return create_bias_correction_command(node, bias_value.data)
 
     @staticmethod
     def model_extraction_command(

@@ -22,6 +22,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
+from nncf.experimental.tensor.tensor import Tensor
 
 TModel = TypeVar("TModel")
 OutputType = TypeVar("OutputType")
@@ -42,7 +43,7 @@ class BiasCorrectionAlgoBackend(ABC):
 
     @staticmethod
     @abstractmethod
-    def create_bias_correction_command(node: NNCFNode, bias_value: np.ndarray) -> TransformationCommand:
+    def create_bias_correction_command(node: NNCFNode, bias_value: Tensor) -> TransformationCommand:
         """
         Creates backend-specific command to update bias value.
 

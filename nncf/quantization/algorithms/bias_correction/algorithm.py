@@ -186,7 +186,7 @@ class BiasCorrection(Algorithm):
             if magnitude < self.threshold:
                 nncf_logger.debug(f"{node_name} bias would be changed. Magnitude: {magnitude}")
                 bias_correction_command = self._backend_entity.create_bias_correction_command(
-                    node, updated_bias.data, nncf_graph
+                    node, updated_bias, nncf_graph
                 )
                 model_copy_subgraph = self._correct_bias(model_copy_subgraph, bias_correction_command)
                 model_copy = self._correct_bias(model_copy, bias_correction_command)

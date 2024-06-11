@@ -11,7 +11,6 @@
 
 from typing import Dict, List, Optional, Tuple
 
-import numpy as np
 import openvino.runtime as ov
 
 from nncf.common.graph import NNCFGraph
@@ -43,9 +42,9 @@ class OVBiasCorrectionAlgoBackend(BiasCorrectionAlgoBackend):
 
     @staticmethod
     def create_bias_correction_command(
-        node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph
+        node: NNCFNode, bias_value: Tensor, nncf_graph: NNCFGraph
     ) -> OVBiasCorrectionCommand:
-        return OVCommandCreator.create_command_to_update_bias(node, bias_value, nncf_graph)
+        return OVCommandCreator.create_command_to_update_bias(node, bias_value.data, nncf_graph)
 
     @staticmethod
     def model_extraction_command(
