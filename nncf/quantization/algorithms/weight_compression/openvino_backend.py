@@ -26,6 +26,7 @@ from nncf.openvino.graph.metatypes.groups import ATOMIC_ACTIVATIONS_OPERATIONS
 from nncf.openvino.graph.model_transformer import OVModelTransformer
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
+from nncf.openvino.graph.transformations.command_creation import OVCommandCreator
 from nncf.openvino.graph.transformations.commands import OVTargetPoint
 from nncf.openvino.rt_info import dump_parameters
 from nncf.openvino.statistics.collectors import get_raw_stat_collector
@@ -271,18 +272,7 @@ class OVAWQAlgoAlgoBackend(OVWeightCompressionAlgoBackend):
         return get_awq_patterns(om.OVMatMulMetatype, om.OVMultiplyMetatype, ATOMIC_ACTIVATIONS_OPERATIONS)
 
     @staticmethod
-    def insert_scale_after_node(node, scale, node_name):
-        node_output_port = node.output(0)
-        node_dtype = node_output_port.get_element_type()
-        node_output_source_ports = node_output_port.get_target_inputs()
-
-        scale_const = opset.constant(scale, dtype=node_dtype, name=f"{node_name}/awq_scale")
-        mul = opset.multiply(
-            node,
-            scale_const,
-            name=f"{node_name}/awq_mul",
+    def scale_insertion_command(source_node, next_nodes, source_node_output_port, scale):
+        return OVCommandCreator.multiply_insertion_command(
+            source_node, next_nodes, source_node_output_port, scale, f"{source_node.node_name}/awq_mul"
         )
-
-        mul_output = mul.output(0)
-        for target_input in node_output_source_ports:
-            target_input.replace_source_output(mul_output)
