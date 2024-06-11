@@ -24,6 +24,7 @@ from torch.nn.parallel import DistributedDataParallel
 import nncf
 from nncf import nncf_logger
 from nncf.common.utils.api_marker import api
+from nncf.torch.dynamic_graph.patch_pytorch_state import PATCHING_STATE
 from nncf.torch.dynamic_graph.structs import NamespaceTarget
 from nncf.torch.dynamic_graph.structs import PatchedOperatorInfo
 from nncf.torch.dynamic_graph.trace_tensor import TracedParameter
@@ -270,11 +271,8 @@ class OriginalOpInfo:
 
 ORIGINAL_OPERATORS: List[OriginalOpInfo] = []
 ORIGINAL_CALL = torch.nn.Module.__call__
-_JIT_ALREADY_WRAPPED = False
-_OPERATORS_ALREADY_WRAPPED = False
 _ORIG_JIT_SCRIPT = None
 _ORIG_JIT_TRACE_MAKE_MODULE = None
-_COMPILE_ALREADY_WRAPPED = False
 _ORIG_TORCH_COMPILE: Union[Callable, None] = None
 
 
@@ -352,24 +350,21 @@ def get_all_functions_from_namespace(namespace: NamespaceTarget, do_filter: bool
 
 def patch_torch_operators():
     # Only patch torch.jit.script during first patch_torch_operators call
-    global _JIT_ALREADY_WRAPPED
-    if not _JIT_ALREADY_WRAPPED:
+    if not PATCHING_STATE.jit_is_wrapped:
         patch_torch_jit()
-        _JIT_ALREADY_WRAPPED = True
+        PATCHING_STATE.jit_is_wrapped = True
 
     # Unpatch torch operators during model compilation.
-    global _COMPILE_ALREADY_WRAPPED
-    if not _COMPILE_ALREADY_WRAPPED:
+    if not PATCHING_STATE.compile_is_wrapped:
         global _ORIG_TORCH_COMPILE
         _ORIG_TORCH_COMPILE = torch.compile
         setattr(torch, "compile", get_torch_compile_wrapper())
-        _COMPILE_ALREADY_WRAPPED = True
+        PATCHING_STATE.compile_is_wrapped = True
 
     # Do not patch operators twice as well
-    global _OPERATORS_ALREADY_WRAPPED
-    if _OPERATORS_ALREADY_WRAPPED:
+    if PATCHING_STATE.operators_are_wrapped:
         return
-    _OPERATORS_ALREADY_WRAPPED = True
+    PATCHING_STATE.operators_are_wrapped = True
 
     global ORIGINAL_OPERATORS
     ORIGINAL_OPERATORS = []
@@ -437,10 +432,9 @@ def patch_torch_operators():
 
 
 def unpatch_torch_operators():
-    global _OPERATORS_ALREADY_WRAPPED
-    if not _OPERATORS_ALREADY_WRAPPED:
+    if not PATCHING_STATE.operators_are_wrapped:
         return
-    _OPERATORS_ALREADY_WRAPPED = False
+    PATCHING_STATE.operators_are_wrapped = False
 
     for orig_op_info in ORIGINAL_OPERATORS:
         setattr(orig_op_info.namespace, orig_op_info.name, orig_op_info.op)
@@ -448,7 +442,7 @@ def unpatch_torch_operators():
 
 @contextmanager
 def disable_patching():
-    was_patched = _OPERATORS_ALREADY_WRAPPED
+    was_patched = PATCHING_STATE.operators_are_wrapped
     if was_patched:
         unpatch_torch_operators()
     try:

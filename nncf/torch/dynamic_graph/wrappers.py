@@ -26,6 +26,7 @@ from nncf.torch.dynamic_graph.context import get_current_context
 from nncf.torch.dynamic_graph.layer_attributes_handlers import get_layer_attributes_from_args_and_kwargs
 from nncf.torch.dynamic_graph.op_input_processing import OperatorInput
 from nncf.torch.dynamic_graph.operation_address import OperationAddress
+from nncf.torch.dynamic_graph.patch_pytorch_state import PATCHING_STATE
 from nncf.torch.dynamic_graph.structs import NamespaceTarget
 from nncf.torch.dynamic_graph.structs import PatchedOperatorInfo
 from nncf.torch.dynamic_graph.trace_functions import forward_trace_only
@@ -76,6 +77,10 @@ def wrap_operator(operator, operator_info: PatchedOperatorInfo):
 
     @functools.wraps(operator)
     def wrapped(*args, **kwargs):
+        if not PATCHING_STATE.operators_are_wrapped:
+            # If operators are not supposed to be wrapped, skip the wrapper logic
+            return operator(*args, **kwargs)
+
         ctx = get_current_context()
         if not ctx or getattr(ctx, "in_operator", False) or not ctx.is_tracing:
             op1 = operator(*args, **kwargs)

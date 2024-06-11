@@ -80,14 +80,24 @@ def test_jit_script_exception_preserves_patching_isolated():
 
 
 def compile_and_run_test_model() -> torch.Tensor:
-    from tests.torch.helpers import BasicConvTestModel
+    class TestModel(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.conv = torch.nn.Conv2d(3, 3, 3)
 
-    model = BasicConvTestModel()
-    state_dict = {"conv.weight": model.default_weight(), "conv.bias": model.default_bias()}
+        def forward(self, x):
+            return self.conv(x)
+
+    model = TestModel()
+
+    torch.manual_seed(0)
+    state_dict = {}
+    for k, v in model.state_dict().items():
+        state_dict[k] = torch.rand(v.shape)
     model.load_state_dict(state_dict)
 
     compiled_model = torch.compile(model)
-    return compiled_model(torch.ones(model.INPUT_SIZE))
+    return compiled_model(torch.rand([1, 3, 5, 5]))
 
 
 @pytest.mark.skipif(ISOLATION_RUN_ENV_VAR not in os.environ, reason="Should be run via isolation proxy")
