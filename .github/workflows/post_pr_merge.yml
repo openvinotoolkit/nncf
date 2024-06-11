@@ -8,6 +8,7 @@
 # PR commit is generated.
 
 name: Post-PR merge actions
+permissions: read-all
 
 on:
   pull_request_target:

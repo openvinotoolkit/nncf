@@ -29,6 +29,7 @@ class TensorDataType(Enum):
     """
 
     float16 = auto()
+    bfloat16 = auto()
     float32 = auto()
     float64 = auto()
     int8 = auto()
@@ -44,6 +45,15 @@ class TensorDeviceType(Enum):
 
     CPU = auto()
     GPU = auto()
+
+
+class TensorBackend(Enum):
+    """
+    Enum representing the different tensor backends.
+    """
+
+    numpy = auto()
+    torch = auto()
 
 
 @dataclass

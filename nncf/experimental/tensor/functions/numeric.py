@@ -13,10 +13,14 @@ import functools
 from collections import deque
 from typing import Any, Callable, List, Optional, Tuple, Union
 
+import numpy as np
+
+from nncf.experimental.tensor.definitions import TensorBackend
 from nncf.experimental.tensor.definitions import TensorDataType
 from nncf.experimental.tensor.definitions import TensorDeviceType
 from nncf.experimental.tensor.definitions import TypeInfo
 from nncf.experimental.tensor.functions.dispatcher import dispatch_list
+from nncf.experimental.tensor.functions.dispatcher import get_numeric_backend_fn
 from nncf.experimental.tensor.functions.dispatcher import tensor_guard
 from nncf.experimental.tensor.tensor import Tensor
 from nncf.experimental.tensor.tensor import unwrap_tensor_data
@@ -32,6 +36,18 @@ def device(a: Tensor) -> TensorDeviceType:
     :return: The device of the tensor.
     """
     return device(a.data)
+
+
+@functools.singledispatch
+@tensor_guard
+def backend(a: Tensor) -> TensorBackend:
+    """
+    Return the backend of the tensor.
+
+    :param a: The input tensor.
+    :return: The backend of the tensor.
+    """
+    return backend(a.data)
 
 
 @functools.singledispatch
@@ -747,3 +763,96 @@ def expand_dims(a: Tensor, axis: Union[int, Tuple[int, ...], List[int]]) -> Tens
     :return: View of a with the number of dimensions increased.
     """
     return Tensor(expand_dims(a.data, axis))
+
+
+def clone(a: Tensor) -> Tensor:
+    """
+    Return a copy of the tensor.
+
+    :param a: The input tensor.
+    :return: The copied tensor.
+    """
+    return Tensor(clone(a.data))
+
+
+@functools.singledispatch
+@tensor_guard
+def searchsorted(a: Tensor, v: Tensor, side: str = "left", sorter: Optional[Tensor] = None) -> Tensor:
+    """
+    Find indices where elements should be inserted to maintain order.
+
+    Find the indices into a sorted tensor a such that, if the corresponding elements in v were inserted
+    before the indices, the order of a would be preserved.
+
+    :param a: 1-D tensor. If sorter is None, then it must be sorted in ascending order,
+        otherwise sorter must be an array of indices that sort it.
+    :param v: Values to insert into a.
+    :param side: If 'left', the index of the first suitable location found is given.
+        If 'right', return the last such index. Defaults to 'left'.
+    :param sorter: Optional array of integer indices that sort array a into ascending order, defaults to None.
+    :return: Tensor of insertion points with the same shape as v.
+    """
+    return Tensor(searchsorted(a.data, v.data, side, unwrap_tensor_data(sorter)))
+
+
+def zeros(
+    shape: Tuple[int, ...],
+    *,
+    backend: TensorBackend,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> Tensor:
+    """
+    Return a new array of given shape and type, filled with zeros.
+
+    :param shape: Shape of the new array
+    :param backend: The backend type for which the zero tensor is required.
+    :param dtype: The data type of the returned tensor, If dtype is not given,
+        then the default data type is determined by backend.
+    :param device: The device on which the tensor will be allocated, If device is not given,
+        then the default device is determined by backend.
+    :return: A tensor filled with zeros of the specified shape and data type.
+    """
+    return Tensor(get_numeric_backend_fn("zeros", backend)(shape, dtype=dtype, device=device))
+
+
+def arange(
+    start: float,
+    end: Optional[float] = None,
+    step: float = 1,
+    *,
+    backend: TensorBackend,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> Tensor:
+    """
+    Returns a tensor with a sequence of numbers in the specified range.
+
+    This function generates a tensor containing a sequence of numbers starting from
+    `start` to `end` with a step size of `step`, using the specified backend.
+
+    :param start: The starting value of the sequence.
+    :param end: The end value of the sequence (exclusive). If None, the sequence will start at 0 and end at `start`.
+    :param step: The step size between each value in the sequence, defaults to 1.
+    :param backend: The backend type for which the tensor is required.
+    :param dtype: The data type of the returned tensor If dtype is not given, infer the data type
+        from the other input arguments.
+    :param device: The device on which the tensor will be allocated, If device is not given,
+        then the default device is determined by backend.
+    :return: A tensor containing the sequence of numbers.
+    """
+    args = (0, start, step) if end is None else (start, end, step)
+    return Tensor(get_numeric_backend_fn("arange", backend)(*args, dtype=dtype, device=device))
+
+
+def from_numpy(ndarray: np.ndarray, *, backend: TensorBackend) -> Tensor:
+    """
+    Creates a Tensor from a numpy.ndarray, sharing the memory with the given NumPy array.
+
+    :param ndarray: The numpy.ndarray to share memory with.
+    :param backend: The backend type for which the tensor is required.
+    :return: A Tensor object that shares memory with the NumPy array.
+    """
+    if backend == TensorBackend.numpy:
+        return Tensor(ndarray)
+    return Tensor(get_numeric_backend_fn("from_numpy", backend)(ndarray))

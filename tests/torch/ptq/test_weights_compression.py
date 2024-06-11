@@ -201,8 +201,9 @@ class EmptyModel(torch.nn.Module):
         {"all_layers": True},
         {"all_layers": False},
         *({"sensitivity_metric": metric} for metric in ALL_SENSITIVITY_METRICS),
-        {"dataset": "anything"},
-        {"ignored_scope": "anything"},
+        {"gptq": True},
+        {"awq": True},
+        {"scale_estimation": True},
     ),
 )
 def test_raise_error_with_unsupported_params_for_int8(mode, params):

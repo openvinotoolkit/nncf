@@ -101,14 +101,17 @@ def get_number_if_op(model: ov.Model) -> int:
     return cnt_if_op(model, 0)
 
 
-def get_const_value(const_node: ov.Node) -> np.ndarray:
+def get_const_value(const_node: ov.Node, dtype: Optional[np.dtype] = None) -> np.ndarray:
     """
     Returns the constant tensor for the node.
 
     :param const_node: OpenVINO node.
+    :param dtype: Destination type.
     :return: The constant value.
     """
-    return const_node.data
+    if dtype is None:
+        return const_node.data
+    return const_node.get_data(dtype=dtype)
 
 
 def get_bias_value(node_with_bias: NNCFNode, nncf_graph: NNCFGraph, model: ov.Model) -> np.ndarray:

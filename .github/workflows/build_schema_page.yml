@@ -1,12 +1,15 @@
 name: Config schema HTML build
+permissions: read-all
+
 on:
   workflow_call:
+
 jobs:
   build-config-schema-html:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
 
       - name: Install and Build
         run: |
@@ -20,7 +23,7 @@ jobs:
           generate-schema-doc --deprecated-from-description schema.json schema/index.html
 
       - name: Upload result as artifact
-        uses: alehechka/upload-tartifact@v2
+        uses: alehechka/upload-tartifact@a055d3a102b9ed9cfff1263bc713295047d0197e # v2
         with:
           name: schema_doc_artifact
           path: schema

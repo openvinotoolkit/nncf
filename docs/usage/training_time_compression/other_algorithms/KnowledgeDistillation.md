@@ -29,7 +29,7 @@ computed as:
 
  $L = {L}\_{reg}({z}^{s}, y) + {L}\_{distill}({z}^{s}, {z}^{t})$
 
- ![kd_pic](../pics/knowledge_distillation.png)
+ ![kd_pic](/docs/pics/knowledge_distillation.png)
 
   Note: the Cross-Entropy distillation loss was proposed in [Hinton et al., 2015](https://arxiv.org/pdf/1503.02531.pdf)
   with temperature parameter, but we don't use it or assume that T=1.
@@ -55,7 +55,7 @@ specify `knowledge_distillation` algorithm and its type in the config:
 }
 ```
 
-See this [config file](../../examples/torch/classification/configs/pruning/resnet34_imagenet_pruning_geometric_median_kd.json) for an example, and [NNCF config schema](https://openvinotoolkit.github.io/nncf/) for reference to the available configuration parameters for the algorithm.
+See this [config file](/examples/torch/classification/configs/pruning/resnet34_imagenet_pruning_geometric_median_kd.json) for an example, and [NNCF config schema](https://openvinotoolkit.github.io/nncf/) for reference to the available configuration parameters for the algorithm.
 
 ## Limitations
 
