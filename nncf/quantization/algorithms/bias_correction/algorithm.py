@@ -176,9 +176,9 @@ class BiasCorrection(Algorithm):
 
             channel_axis = node.metatype.output_channel_axis
             if current_bias.ndim > 1:
-                new_shape = [1] * current_bias.ndim
-                new_shape[channel_axis] = bias_shift.shape[0]
-                bias_shift = bias_shift.reshape(new_shape)
+                channel_axis = range(current_bias.ndim)[channel_axis]
+                axes = [i for i in range(current_bias.ndim) if i != channel_axis]
+                bias_shift = fns.expand_dims(bias_shift, axes)
 
             updated_bias = current_bias + bias_shift
             magnitude = self._get_bias_shift_magnitude(current_bias, updated_bias)
