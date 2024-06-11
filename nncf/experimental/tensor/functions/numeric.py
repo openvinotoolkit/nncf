@@ -732,3 +732,18 @@ def masked_median(x: Tensor, mask: Tensor, axis: Union[int, Tuple[int, ...], Lis
     :return: Reduced Tensor.
     """
     return Tensor(masked_median(x.data, mask.data, axis, keepdims))
+
+
+@functools.singledispatch
+@tensor_guard
+def expand_dims(a: Tensor, axis: Union[int, Tuple[int, ...], List[int]]) -> Tensor:
+    """
+    Expand the shape of an array.
+    Insert a new axis that will appear at the axis position in the expanded array shape.
+
+    :param a: Input array.
+    :param axis: Position in the expanded axes where the new axis (or axes) is placed.
+
+    :return: View of a with the number of dimensions increased.
+    """
+    return Tensor(expand_dims(a.data, axis))

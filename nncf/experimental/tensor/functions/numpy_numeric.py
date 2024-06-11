@@ -356,3 +356,8 @@ def _(
     if isinstance(result, np.ma.MaskedArray):
         return result.data
     return result
+
+
+@register_numpy_types(numeric.expand_dims)
+def _(a: np.ndarray, axis: Union[int, Tuple[int, ...], List[int]]) -> np.ndarray:
+    return np.expand_dims(a, axis=axis)

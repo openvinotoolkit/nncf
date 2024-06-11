@@ -365,3 +365,24 @@ def _(
     masked_x = x.masked_fill(mask, torch.nan)
     ret = torch.nanquantile(masked_x, q=0.5, dim=axis, keepdims=keepdims)
     return torch.nan_to_num(ret)
+
+
+@numeric.expand_dims.register(torch.Tensor)
+def _(a: torch.Tensor, axis: Union[int, Tuple[int, ...], List[int]]) -> np.ndarray:
+    if type(axis) not in (tuple, list):
+        axis = (axis,)
+
+    if len(set(axis)) != len(axis):
+        raise ValueError("repeated axis")
+
+    out_ndim = len(axis) + a.dim()
+
+    norm_axis = []
+    for ax in axis:
+        if ax < -out_ndim or ax >= out_ndim:
+            raise ValueError(f"axis {ax} is out of bounds for array of dimension {out_ndim}")
+        norm_axis.append(ax + out_ndim if ax < 0 else ax)
+
+    shape_it = iter(a.shape)
+    shape = [1 if ax in norm_axis else next(shape_it) for ax in range(out_ndim)]
+    return a.reshape(shape)
