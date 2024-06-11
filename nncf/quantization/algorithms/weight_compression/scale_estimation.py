@@ -165,6 +165,8 @@ class ScaleEstimation:
             original_weight = fns.zeros_like(weight) + weight
 
             compressed_weights, scale, zp = do_integer_quantization(original_weight, reduction_axis, config)
+            if zp is not None:
+                zp = zp.astype(scale.dtype)
             q_weights = do_dequantization(compressed_weights, scale, zp, reduction_axis)
 
             s = fns.unsqueeze(s, 0)
