@@ -186,13 +186,12 @@ def get_unmatched_ignored_scope(matched_ignored_scope: IgnoredScope, ignored_sco
     :param ignored_scope: Full ignored scope.
     :return: Unmatched ignored scope.
     """
-    assert matched_ignored_scope.validate == ignored_scope.validate
     return IgnoredScope(
         names=[name for name in ignored_scope.names if name not in matched_ignored_scope.names],
         patterns=[pattern for pattern in ignored_scope.patterns if pattern not in matched_ignored_scope.patterns],
         types=[type for type in ignored_scope.types if type not in matched_ignored_scope.types],
         subgraphs=[subgraph for subgraph in ignored_scope.subgraphs if subgraph not in matched_ignored_scope.subgraphs],
-        validate=matched_ignored_scope.validate,
+        validate=ignored_scope.validate,
     )
 
 
