@@ -1096,8 +1096,8 @@ class MinMaxQuantization(Algorithm):
 
         max_values, min_values = [], []
         for statistic in statistics:
-            max_values.append(statistic.max_values.data.flatten())
-            min_values.append(statistic.min_values.data.flatten())
-        max_values = fns.amax(fns.stack(max_values), dim=0)
-        min_values = fns.amin(fns.stack(min_values), dim=0)
+            max_values.append(statistic.max_values.flatten())
+            min_values.append(statistic.min_values.flatten())
+        max_values = fns.max(fns.stack(max_values), axis=0)
+        min_values = fns.min(fns.stack(min_values), axis=0)
         return MinMaxTensorStatistic(min_values=min_values, max_values=max_values)
