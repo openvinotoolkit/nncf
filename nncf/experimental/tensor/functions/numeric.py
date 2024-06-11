@@ -765,6 +765,8 @@ def expand_dims(a: Tensor, axis: Union[int, Tuple[int, ...], List[int]]) -> Tens
     return Tensor(expand_dims(a.data, axis))
 
 
+@functools.singledispatch
+@tensor_guard
 def clone(a: Tensor) -> Tensor:
     """
     Return a copy of the tensor.
