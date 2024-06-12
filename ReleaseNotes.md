@@ -4,53 +4,49 @@
 
 Post-training Quantization:
 
-- Breaking changes:
-  - ...
-- General:
-  - ...
 - Features:
-  - (OpenVINO) Added Scale Estimation algorithm for 4-bit data-aware weights compression. This algorithm estimates a more optimal scale in compression scheme based on difference between output of matrix multiplication in the original precision and the compressed one. For that, the optional `scale_estimation` parameter has been added to `nncf.compress_weights()` and can be used to minimize accuracy degradation of compressed models (note that this option increases the compression time).
-  - (OpenVINO) Added GPTQ algorithm for 8/4-bit data-aware weights compression, supporting INT8, INT4, and NF4 data types. Introduced the optional `gptq` parameter to `nncf.compress_weights()` to enable the GPTQ algorithm.
-  - (OpenVINO) Added support for bf16 weights compression in `nncf.compress_weights()`
+  - (OpenVINO) Added Scale Estimation algorithm for 4-bit data-aware weights compression. The optional `scale_estimation` parameter was introduced to `nncf.compress_weights()` and can be used to minimize accuracy degradation of compressed models (note that this algorithm increases the compression time).
+  - (OpenVINO) Added GPTQ algorithm for 8/4-bit data-aware weights compression, supporting INT8, INT4, and NF4 data types. The optional `gptq` parameter was introduced to `nncf.compress_weights()` to enable the GPTQ algorithm.
+  - (OpenVINO) Added support for BF16 weights compression in `nncf.compress_weights()`.
+  - (PyTorch) Added support of the custom modules with traced parameters.
 - Fixes:
-  - (OpenVINO) Fix an incorrect Add node determination in FastBiasCorrection, BiasCorrection, and ChannelAlighnment algorithms.
+  - (OpenVINO) Fixed incorrect node with bias determination in Fast-/BiasCorrection and ChannelAlighnment algorithms.
+  - (OpenVINO, PyTorch) Fixed incorrect behaviour of `nncf.compress_weights()` in case of compressed model as input.
+  - (OpenVINO, PyTorch) Fixed SmoothQuant algorithm to work with Split ports correctly.
 - Improvements:
-  - ...
-- Deprecations/Removals:
-  - Remove extra dependencies to install backends from setup.py (like `[torch]` are `[tf]`, `[onnx]` and `[openvino]`).
-  - Remove `openvino-dev` dependency.
+  - (OpenVINO) Aligned resulting compression subgraphs for the `nncf.compress_weights()` in different FP precisions.
+  - Aligned 8-bit scheme for NPU target device with the CPU.
 - Examples:
-  - Update ignored scope for YOLOv8 examples utilizing a subgraphs approach for OpenVINO and ONNX.
+  - (OpenVINO, ONNX) Updated ignored scope for YOLOv8 examples utilizing a subgraphs approach.
 - Tutorials:
   - [Post-Training Optimization of Stable Video Diffusion Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/stable-video-diffusion/stable-video-diffusion.ipynb)
   - [Post-Training Optimization of YOLOv10 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/yolov10-optimization/yolov10-optimization.ipynb)
   - [Post-Training Optimization of LLaVA Next Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/nano-llava-multimodal-chatbot/nano-llava-multimodal-chatbot.ipynb)
   - [Post-Training Optimization of S3D MIL-NCE Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/s3d-mil-nce-text-to-video-retrieval/s3d-mil-nce-text-to-video-retrieval.ipynb)
   - [Post-Training Optimization of Stable Cascade Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/stable-cascade-image-generation/stable-cascade-image-generation.ipynb)
-- Known issues:
-  - ...
 
 Compression-aware training:
 
-- Breaking changes:
-  - ...
-- General:
-  - ...
 - Features:
-  - (PyTorch) `nncf.quantize` method now is the recommended path for the quantization initialization for Quantization-Aware Training.
+  - (PyTorch) `nncf.quantize` method is now the recommended path for the quantization initialization for Quantization-Aware Training.
   - (PyTorch) Compression modules placement in the model now can be serialized and restored with new API functions: `compressed_model.nncf.get_config()` and `nncf.torch.load_from_config`. The [documentation](/docs/usage/training_time_compression/quantization_aware_training/Usage.md#saving-and-loading-compressed-models) for the saving/loading of a quantized model is available, and Resnet18 [example](examples/quantization_aware_training/torch/resnet18) was updated to use the new API.
 - Fixes:
-  - ...
+  - (PyTorch) Fixed compatibility with `torch.compile`.
 - Improvements:
-  - ...
-- Deprecations/Removals:
-  - ...
+  - (PyTorch) Base parameters were extended for the EvolutionOptimizer (LeGR algorithm part).
+  - (PyTorch) Improved wrapping for parameters which are not tensors.
 - Examples:
-  - [Quantization-Aware Training of STFPM PyTorch model from Anomalib](examples/quantization_aware_training/torch/anomalib)
+  - (PyTorch) Added [an example](examples/quantization_aware_training/torch/anomalib) for STFPM model from Anomalib.
 - Tutorials:
   - [Quantization-Sparsity Aware Training of PyTorch ResNet-50 Model](https://github.com/openvinotoolkit/openvino_notebooks/tree/latest/notebooks/pytorch-quantization-sparsity-aware-training/pytorch-quantization-sparsity-aware-training.ipynb)
-- Known issues:
-  - ...
+
+Deprecations/Removals:
+
+- Removed extra dependencies to install backends from setup.py (like `[torch]` are `[tf]`, `[onnx]` and `[openvino]`).
+- Removed `openvino-dev` dependency.
+
+Requirements:
+- Updated PyTorch (2.2.1) and Torchvision (0.18.0) versions.
 
 ## New in Release 2.10.0
 
