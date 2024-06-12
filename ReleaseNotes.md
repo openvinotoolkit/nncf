@@ -46,6 +46,7 @@ Deprecations/Removals:
 - Removed `openvino-dev` dependency.
 
 Requirements:
+
 - Updated PyTorch (2.2.1) and Torchvision (0.18.0) versions.
 
 ## New in Release 2.10.0
