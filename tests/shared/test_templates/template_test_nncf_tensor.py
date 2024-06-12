@@ -37,7 +37,7 @@ OPERATOR_MAP = {
     "floordiv": operator.floordiv,
     "neg": lambda a, _: -a,
 }
-BINARY_OPERATORS = ["add", "sub", "pow", "truediv", "floordiv"]
+BINARY_OPERATORS = ["add", "sub", "pow", "mul", "truediv", "floordiv"]
 
 COMPARISON_OPERATOR_MAP = {
     "lt": operator.lt,
