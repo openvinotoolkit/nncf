@@ -1,8 +1,0 @@
-:orphan:
-
-:py:mod:`nncf.experimental.torch.replace_custom_modules`
-========================================================
-
-.. py:module:: nncf.experimental.torch.replace_custom_modules
-
-
