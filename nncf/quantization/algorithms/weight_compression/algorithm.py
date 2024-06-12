@@ -466,7 +466,7 @@ class WeightCompression(Algorithm):
             node_name, input_filter_func, self._algorithm_key
         ):
             for value in tensor_collector.get_statistics().values:
-                input_fp.append(Tensor(value))
+                input_fp.append(value)
         self._fp_inputs[input_id] = input_fp
         return self._fp_inputs[input_id]
 

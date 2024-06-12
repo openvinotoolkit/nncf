@@ -193,7 +193,7 @@ class FastBiasCorrection(Algorithm):
         return transformed_model
 
     @staticmethod
-    def _get_bias_shift_magnitude(current_bias_value: Tensor, updated_bias_value: Tensor) -> float:
+    def _get_bias_shift_magnitude(current_bias_value: Tensor, updated_bias_value: Tensor) -> Tensor:
         """
         Calculates bias shift magnitude based on the current and updated values.
 
@@ -244,7 +244,7 @@ class FastBiasCorrection(Algorithm):
             node_name, input_filter_func, self._algorithm_key
         ):
             statistics = tensor_collector.get_statistics()
-            input_fp.extend(Tensor(statistics.mean_values))
+            input_fp.extend(statistics.mean_values)
             input_shape.extend(statistics.shape)
         return input_fp, input_shape
 
@@ -267,7 +267,7 @@ class FastBiasCorrection(Algorithm):
         for tensor_collector in statistic_points.get_algo_statistics_for_node(
             node_name, output_filter_func, self._algorithm_key
         ):
-            output_fp.extend(Tensor(tensor_collector.get_statistics().mean_values))
+            output_fp.extend(tensor_collector.get_statistics().mean_values)
         return output_fp
 
     def _extract_submodel(self, model_transformer: ModelTransformer, in_node_name: str, out_node_name: str) -> TModel:

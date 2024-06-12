@@ -1436,6 +1436,47 @@ class TemplateTestNNCFTensorOperators:
         assert fns.allclose(res.data, ref_tensor)
         assert res.device == x.device
 
+    @pytest.mark.parametrize(
+        "x, axis, ref",
+        (
+            (2, 0, [2]),
+            (2, -1, [2]),
+            (2, (0, 1), [[2]]),
+            ([2, 2], 0, [[2, 2]]),
+            ([2, 2], 1, [[2], [2]]),
+            ([2, 2], -1, [[2], [2]]),
+            ([2, 2], -2, [[2, 2]]),
+            ([2, 2], (0, 1), [[[2, 2]]]),
+            ([2, 2], (0, 1, 2), [[[[2, 2]]]]),
+            ([2, 2], (0, 1, 3), [[[[2], [2]]]]),
+            ([[[[2], [2]]]], 0, [[[[[2], [2]]]]]),
+            ([[[[2], [2]]]], 2, [[[[[2], [2]]]]]),
+            ([[[[2], [2]]]], -4, [[[[[2], [2]]]]]),
+            ([[[[2], [2]]]], (0, 3, -5), [[[[[[[2], [2]]]]]]]),
+        ),
+    )
+    def test_expand_dims(self, x, axis, ref):
+        x = Tensor(self.to_tensor(x))
+        ref_tensor = self.to_tensor(ref)
+        res = fns.expand_dims(x, axis)
+        assert isinstance(res, Tensor)
+        assert res.shape == ref_tensor.shape, f"{res.data}".replace("\n", "")
+        assert fns.allclose(res.data, ref_tensor), f"{res.data}".replace("\n", "")
+
+    @pytest.mark.parametrize(
+        "x, axis, match",
+        (
+            ([2], 2, "is out of bounds for array"),
+            ([2], -3, "is out of bounds for array"),
+            ([2], (0, 10), "is out of bounds for array"),
+            ([2], (0, 0), "repeated axis"),
+        ),
+    )
+    def test_expand_dims_error(self, x, axis, match):
+        x = Tensor(self.to_tensor(x))
+        with pytest.raises(Exception, match=match):
+            fns.expand_dims(x, axis)
+
     def test_fn_zeros(self):
         shape = (2, 2)
         for dtype in TensorDataType:

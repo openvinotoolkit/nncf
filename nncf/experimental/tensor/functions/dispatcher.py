@@ -53,6 +53,7 @@ def register_numpy_types(singledispatch_fn):
     def inner(func):
         singledispatch_fn.register(np.ndarray)(func)
         singledispatch_fn.register(np.generic)(func)
+        singledispatch_fn.register(float)(func)
         return func
 
     return inner

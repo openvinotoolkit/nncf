@@ -451,7 +451,7 @@ def quantile(
     a: Tensor,
     q: Union[float, List[float]],
     axis: Optional[Union[int, Tuple[int]]] = None,
-    keepdims: Optional[bool] = None,
+    keepdims: bool = False,
 ) -> Tensor:
     """
     Compute the quantile(s) of the data along the specified axis.
@@ -471,7 +471,7 @@ def quantile(
 @functools.singledispatch
 @tensor_guard
 def percentile(
-    tensor: Tensor,
+    a: Tensor,
     q: Union[float, List[float]],
     axis: Union[int, Tuple[int, ...], List[int]],
     keepdims: bool = False,
@@ -479,7 +479,7 @@ def percentile(
     """
     Compute the percentile(s) of the data along the specified axis.
 
-    :param tensor: Given NNCFTensor.
+    :param a: Given tensor.
     :params q: percentile or sequence of percentiles to compute, which must be between
         0 and 100 inclusive.
     :param axis: Axis or axes along which the percentiles are computed.
@@ -487,7 +487,7 @@ def percentile(
         as dimensions with size one.
     :returns: The percentile(s) of the tensor elements.
     """
-    return Tensor(percentile(tensor.data, q, axis, keepdims))
+    return Tensor(percentile(a.data, q, axis, keepdims))
 
 
 @functools.singledispatch
@@ -748,6 +748,21 @@ def masked_median(x: Tensor, mask: Tensor, axis: Union[int, Tuple[int, ...], Lis
     :return: Reduced Tensor.
     """
     return Tensor(masked_median(x.data, mask.data, axis, keepdims))
+
+
+@functools.singledispatch
+@tensor_guard
+def expand_dims(a: Tensor, axis: Union[int, Tuple[int, ...], List[int]]) -> Tensor:
+    """
+    Expand the shape of an array.
+    Insert a new axis that will appear at the axis position in the expanded array shape.
+
+    :param a: Input array.
+    :param axis: Position in the expanded axes where the new axis (or axes) is placed.
+
+    :return: View of a with the number of dimensions increased.
+    """
+    return Tensor(expand_dims(a.data, axis))
 
 
 @functools.singledispatch

@@ -37,7 +37,7 @@ CONV_NODE_NAME = "Conv1"
 INPUT_SHAPE = [1, 3, 3, 3]
 
 
-def get_StatisticAgregatorTestModel(input_shape, kernel):
+def get_StatisticAggregatorTestModel(input_shape, kernel):
     input_1 = opset.parameter(input_shape, name=INPUT_NAME)
     strides = [1, 1]
     pads = [0, 0]
@@ -63,7 +63,7 @@ class TestStatisticsAggregator(TemplateTestStatisticsAggregator):
     def get_backend_model(self, dataset_samples):
         sample = dataset_samples[0].reshape(INPUT_SHAPE[1:])
         conv_w = self.dataset_samples_to_conv_w(sample)
-        return get_StatisticAgregatorTestModel(INPUT_SHAPE, conv_w)
+        return get_StatisticAggregatorTestModel(INPUT_SHAPE, conv_w)
 
     @pytest.fixture(scope="session")
     def test_params(self):

@@ -13,8 +13,6 @@ from abc import ABC
 from abc import abstractmethod
 from typing import Dict, List, Optional, Tuple, TypeVar, Union
 
-import numpy as np
-
 from nncf.common.graph import NNCFGraph
 from nncf.common.graph import NNCFNode
 from nncf.common.graph.transformations.commands import TargetPoint
@@ -44,7 +42,7 @@ class FastBiasCorrectionAlgoBackend(ABC):
     @staticmethod
     @abstractmethod
     def create_bias_correction_command(
-        node: NNCFNode, bias_value: np.ndarray, nncf_graph: NNCFGraph
+        node: NNCFNode, bias_value: Tensor, nncf_graph: NNCFGraph
     ) -> TransformationCommand:
         """
         Creates backend-specific command to update bias value.
