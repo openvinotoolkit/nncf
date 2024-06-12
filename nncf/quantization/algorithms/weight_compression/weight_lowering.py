@@ -135,7 +135,7 @@ def calculate_nf4_scale(weight: Tensor, reduction_axes: ReductionAxes) -> Tensor
     return scale
 
 
-def calculate_e2m1_scale(weight: Tensor, reduction_axes: ReductionAxes, max_val=6.0, to_e8m0=False) -> Tensor:
+def calculate_e2m1_scale(weight: Tensor, reduction_axes: ReductionAxes, max_val=6.0, to_e8m0=True) -> Tensor:
     """
     Calculates the scale for e2m1 quantization.
 
@@ -151,7 +151,7 @@ def calculate_e2m1_scale(weight: Tensor, reduction_axes: ReductionAxes, max_val=
         scale = fns.log2(scale)
         scale = fns.ceil(scale)
         scale = fns.clip(scale, -127, 127)
-        scale = 2**scale
+        scale = fns.zeros_like(scale) + 2**scale.data
 
     return scale
 

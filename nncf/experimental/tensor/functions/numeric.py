@@ -859,11 +859,11 @@ def log2(a: Tensor) -> Tensor:
 
 @functools.singledispatch
 @tensor_guard
-def ceil(a: Tensor, decimals=0) -> Tensor:
+def ceil(a: Tensor) -> Tensor:
     """
     Return the ceiling of the input, element-wise.
 
     :param a: Input data.
     :return: An array of the same type as a, containing the ceiling values.
     """
-    return Tensor(ceil(a.data, decimals))
+    return Tensor(ceil(a.data))
