@@ -121,7 +121,7 @@ class TemplateTestNNCFTensorOperators:
         assert isinstance(res_nncf, Tensor)
         assert res_nncf.device == nncf_tensor_a.device
 
-    @pytest.mark.parametrize("op_name", ("add", "sub", "mul", "truediv", "floordiv"))
+    @pytest.mark.parametrize("op_name", OPERATOR_MAP.keys() - ["neg"])
     def test_operators_int_rev(self, op_name):
         tensor_a = self.to_tensor([1, 2])
         value = 2
