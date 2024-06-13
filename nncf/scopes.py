@@ -214,7 +214,7 @@ def _error_unmatched_ignored_scope(unmatched_ignored_scope: IgnoredScope) -> str
     :param unmatched_ignored_scope: Unmatched ignored scope.
     :return str: Error message.
     """
-    err_msg = ""
+    err_msg = "\n"
     for ignored_type in ("names", "types", "patterns"):
         unmatched_rules = getattr(unmatched_ignored_scope, ignored_type)
         if unmatched_rules:
@@ -224,11 +224,7 @@ def _error_unmatched_ignored_scope(unmatched_ignored_scope: IgnoredScope) -> str
             f"Ignored nodes that matches subgraph with input names {subgraph.inputs} "
             f"and output names {subgraph.outputs} were not found in the NNCFGraph.\n"
         )
-    return err_msg + (
-        "Refer to the original_graph.dot to discover the operations"
-        "in the model currently visible to NNCF and specify the ignored/target"
-        " scopes in terms of the names there."
-    )
+    return err_msg
 
 
 def _check_ignored_scope_strictly_matched(ignored_scope: IgnoredScope, matched_ignored_scope: IgnoredScope) -> None:
