@@ -8,3 +8,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from dataclasses import dataclass
+
+
+@dataclass
+class PatchingState:
+    """
+    A class to track which pytorch components were patched by NNCF.
+    """
+
+    jit_is_wrapped: bool = False
+    operators_are_wrapped: bool = False
+    compile_is_wrapped: bool = False
+
+
+PATCHING_STATE = PatchingState()

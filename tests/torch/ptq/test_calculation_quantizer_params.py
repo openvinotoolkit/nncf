@@ -24,6 +24,7 @@ from nncf.common.quantization.structs import QuantizationPreset
 from nncf.common.quantization.structs import QuantizationScheme as QuantizationMode
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
+from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor import functions as fn
 from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
@@ -33,7 +34,6 @@ from nncf.quantization.fake_quantize import calculate_quantizer_parameters
 from nncf.quantization.fake_quantize import get_quantizer_narrow_range
 from nncf.torch.model_creation import wrap_model
 from nncf.torch.statistics.aggregator import PTStatisticsAggregator
-from nncf.torch.tensor_statistics.statistics import PTMinMaxTensorStatistic
 from tests.post_training.test_templates.test_calculate_quantizer_parameters import TemplateTestFQParams
 from tests.torch.helpers import get_all_inputs_for_graph_node
 from tests.torch.helpers import get_nodes_by_type
@@ -268,7 +268,9 @@ def calculate_statistics(data, mode, qgroup, half_range=False):
     else:
         max_values = np.amax(data, axes)
 
-    statistics = PTMinMaxTensorStatistic(min_values=torch.tensor(min_values), max_values=torch.tensor(max_values))
+    statistics = MinMaxTensorStatistic(
+        min_values=Tensor(torch.tensor(min_values)), max_values=Tensor(torch.tensor(max_values))
+    )
     signedness_to_force = True if qgroup == QuantizerGroup.WEIGHTS else None
     qconfig = QuantizerConfig(num_bits=8, mode=mode, per_channel=per_ch, signedness_to_force=signedness_to_force)
     narrow_range = get_quantizer_narrow_range(qconfig, qgroup)
@@ -345,6 +347,5 @@ def test_quantizer_parameters_export(tmp_path: Path, _seed):
 
 
 class TestFQParams(TemplateTestFQParams):
-    @property
-    def tensor_statistic(self):
-        return PTMinMaxTensorStatistic
+    def to_nncf_tensor(self, t):
+        return Tensor(torch.tensor(t))

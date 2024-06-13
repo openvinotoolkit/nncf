@@ -215,19 +215,19 @@ def _(
     a: Union[np.ndarray, np.generic],
     q: Union[float, List[float]],
     axis: Optional[Union[int, Tuple[int]]] = None,
-    keepdims: Optional[bool] = None,
+    keepdims: bool = False,
 ) -> Union[np.ndarray, np.generic]:
     return np.array(np.quantile(a, q=q, axis=axis, keepdims=keepdims))
 
 
 @register_numpy_types(numeric.percentile)
 def _(
-    tensor: np.ndarray,
+    a: np.ndarray,
     q: Union[float, List[float]],
     axis: Union[int, Tuple[int, ...], List[int]],
     keepdims: bool = False,
 ) -> List[Union[np.ndarray, np.generic]]:
-    return np.quantile(tensor, q=np.true_divide(np.array(q), 100), axis=axis, keepdims=keepdims)
+    return np.quantile(a, q=np.true_divide(np.array(q), 100), axis=axis, keepdims=keepdims)
 
 
 @register_numpy_types(numeric._binary_op_nowarn)
@@ -362,6 +362,11 @@ def _(
     if isinstance(result, np.ma.MaskedArray):
         return result.data
     return result
+
+
+@register_numpy_types(numeric.expand_dims)
+def _(a: np.ndarray, axis: Union[int, Tuple[int, ...], List[int]]) -> np.ndarray:
+    return np.expand_dims(a, axis=axis)
 
 
 @register_numpy_types(numeric.clone)
