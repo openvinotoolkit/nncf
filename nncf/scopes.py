@@ -156,15 +156,15 @@ def get_matched_ignored_scope_info(
     The found matches consist of a dictionary with a rule name as a key and matched node names as a value.
 
     :param ignored_scope: Ignored scope instance.
-    :param nncf_graph: Graph.
+    :param nncf_graphs: Graphs.
     :returns: Matched ignored scope along with all matches.
     """
     names, patterns, types, subgraphs_numbers = set(), set(), set(), set()
     matches = {"names": names, "patterns": set(), "types": set(), "subgraphs": set()}
 
-    for nncf_graph in nncf_graphs:
+    for graph in nncf_graphs:
         if ignored_scope.names or ignored_scope.patterns:
-            node_names = set(node.node_name for node in nncf_graph.nodes.values())
+            node_names = set(node.node_name for node in graph.nodes.values())
 
             for ignored_node_name in filter(lambda name: name in node_names, ignored_scope.names):
                 names.add(ignored_node_name)
@@ -176,12 +176,12 @@ def get_matched_ignored_scope_info(
                     matches["patterns"].update(pattern_matched_names)
                     patterns.add(str_pattern)
 
-        for node in nncf_graph.get_nodes_by_types(ignored_scope.types):
+        for node in graph.get_nodes_by_types(ignored_scope.types):
             matches["types"].add(node.node_name)
             types.add(node.node_type)
 
         for i, subgraph in enumerate(ignored_scope.subgraphs):
-            names_from_subgraph = get_ignored_node_names_from_subgraph(nncf_graph, subgraph)
+            names_from_subgraph = get_ignored_node_names_from_subgraph(graph, subgraph)
             if names_from_subgraph:
                 matches["subgraphs"].update(names_from_subgraph)
                 subgraphs_numbers.add(i)
