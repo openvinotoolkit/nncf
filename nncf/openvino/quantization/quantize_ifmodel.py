@@ -27,6 +27,7 @@ from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVIfMetatype
+from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
 from nncf.openvino.graph.model_utils import remove_friendly_name_duplicates
 from nncf.openvino.graph.node_utils import get_number_if_op
 from nncf.openvino.graph.transformations.commands import OVExtractIfBodyCommand
@@ -157,7 +158,10 @@ def apply_algorithm_if_bodies(
     if get_number_if_op(parent_model) == 0:
         return quantized_model, current_model_num
     model_transformer_fp32 = factory.ModelTransformerFactory.create(parent_model)
-    for if_node in parent_graph.get_nodes_by_metatypes(OVBackend.if_node_metatypes()):
+    for op in parent_model.get_ops():
+        if get_node_metatype(op) != OVIfMetatype:
+            continue
+        if_node = parent_graph.get_node_by_name(op.get_friendly_name())
         parent_model_with_additional_outputs = _add_outputs_before_if_node(
             model_transformer_fp32, parent_model, if_node
         )
