@@ -46,7 +46,8 @@ from nncf.torch.quantization.quantize_functions import ExportQuantizeToFakeQuant
 from nncf.torch.quantization.quantize_functions import ExportQuantizeToONNXQuantDequant
 from nncf.torch.quantization.quantize_functions import TuneRange
 from nncf.torch.quantization.quantize_functions import asymmetric_quantize
-from nncf.torch.quantization.quantize_functions import decompress
+from nncf.torch.quantization.quantize_functions import decompress_asymmetric
+from nncf.torch.quantization.quantize_functions import decompress_symmetric
 from nncf.torch.quantization.quantize_functions import get_scale_zp_from_input_low_input_high
 from nncf.torch.quantization.quantize_functions import symmetric_quantize
 from nncf.torch.return_types import maybe_get_values_from_torch_return_type
@@ -1044,9 +1045,9 @@ def get_scale_shape(input_shape: List[int], is_weights: bool, per_channel: bool,
     return get_per_channel_scale_shape(input_shape, is_weights, channel_idx)
 
 
-class WeightsDecompressor(nn.Module):
+class AsymmetricWeightsDecompressor(nn.Module):
     """
-    Applies decompression of compressed weights in the forward pass
+    Applies asymmetric decompression of compressed weights in the forward pass
     """
 
     def __init__(self, scale: torch.Tensor, zero_point: torch.Tensor, result_dtype: torch.dtype = None):
@@ -1061,6 +1062,26 @@ class WeightsDecompressor(nn.Module):
         self.result_dtype = result_dtype
 
     def forward(self, x):
-        result = decompress(x, self._scale, self._zero_point)
+        result = decompress_asymmetric(x, self._scale, self._zero_point)
+        result = result.type(dtype=self.result_dtype) if self.result_dtype is not None else result
+        return result
+
+
+class SymmetricWeightsDecompressor(nn.Module):
+    """
+    Applies symmetric decompression of compressed weights in the forward pass
+    """
+
+    def __init__(self, scale: torch.Tensor, result_dtype: torch.dtype = None):
+        """
+        :param scale: A scale in quantization scheme
+        :param result_dtype: (Optional) A data type that result should be cast to
+        """
+        super().__init__()
+        self.register_buffer("_scale", scale)
+        self.result_dtype = result_dtype
+
+    def forward(self, x):
+        result = decompress_symmetric(x, self._scale)
         result = result.type(dtype=self.result_dtype) if self.result_dtype is not None else result
         return result

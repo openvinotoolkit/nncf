@@ -249,9 +249,9 @@ class TuneRange(torch.autograd.Function):
 
 
 @register_operator()
-def decompress(input: torch.Tensor, scale: torch.Tensor, zero_point: torch.Tensor) -> torch.Tensor:
+def decompress_asymmetric(input: torch.Tensor, scale: torch.Tensor, zero_point: torch.Tensor) -> torch.Tensor:
     """
-    Decompress the input tensor.
+    Decompress the asymmetrically quantized input tensor.
 
     :param input: An input tensor
     :param scale: A scale tensor
@@ -260,4 +260,18 @@ def decompress(input: torch.Tensor, scale: torch.Tensor, zero_point: torch.Tenso
     """
     input = input.type(dtype=scale.dtype)
     decompressed_input = (input - zero_point) * scale
+    return decompressed_input
+
+
+@register_operator()
+def decompress_symmetric(input: torch.Tensor, scale: torch.Tensor) -> torch.Tensor:
+    """
+    Decompress the symmetrically quantized input tensor.
+
+    :param input: An input tensor
+    :param scale: A scale tensor
+    :return: The decompressed tensor
+    """
+    input = input.type(dtype=scale.dtype)
+    decompressed_input = input * scale
     return decompressed_input
