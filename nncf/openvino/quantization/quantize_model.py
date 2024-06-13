@@ -79,13 +79,12 @@ def native_quantize_if_op_impl(
         )
     graphs = {}
 
-    def _extract_all_subgraphs(model: ov.Model, current_id: str) -> int:
+    def _extract_all_subgraphs(model: ov.Model, current_id: str) -> None:
         """
         Creates all inner subgraphs from If nodes and adds them to 'graphs'.
 
         :param model: Model.
         :param current_id: Current graph id.
-        :return: The next graph id.
         """
         graphs[current_id] = NNCFGraphFactory.create(model)
         for op in model.get_ops():
