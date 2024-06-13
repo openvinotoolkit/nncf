@@ -237,7 +237,7 @@ class NNCFGraph:
         :param type_list: List of types to look for.
         :return: List of nodes with provided types.
         """
-        all_nodes_of_type = []
+        all_nodes_of_type: List[NNCFNode] = []
         if not type_list:
             return all_nodes_of_type
         for nncf_node in self.nodes.values():
