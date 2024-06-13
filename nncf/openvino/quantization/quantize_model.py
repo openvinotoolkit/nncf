@@ -79,22 +79,22 @@ def native_quantize_if_op_impl(
         )
     graphs = {}
 
-    def _extract_all_subgraphs(model: ov.Model, current_cnt: int) -> int:
+    def _extract_all_subgraphs(model: ov.Model, current_id: str) -> int:
         """
         Creates all inner subgraphs from If nodes and adds them to 'graphs'.
 
         :param model: Model.
-        :param current_cnt: Current graph number.
-        :return: The next graph number.
+        :param current_id: Current graph id.
+        :return: The next graph id.
         """
-        graphs[current_cnt] = NNCFGraphFactory.create(model)
+        graphs[current_id] = NNCFGraphFactory.create(model)
         for op in model.get_ops():
             if get_node_metatype(op) == OVIfMetatype:
-                current_cnt = _extract_all_subgraphs(op.get_function(0), current_cnt + 1)
-                current_cnt = _extract_all_subgraphs(op.get_function(1), current_cnt + 1)
-        return current_cnt
+                _extract_all_subgraphs(op.get_function(0), op.get_friendly_name() + "_then")
+                _extract_all_subgraphs(op.get_function(1), op.get_friendly_name() + "_else")
 
-    _extract_all_subgraphs(model, 1)
+    main_model_graph_id = "main_model_graph"
+    _extract_all_subgraphs(model, main_model_graph_id)
     if ignored_scope and ignored_scope.validate:
         validate_ignored_scope(ignored_scope, graphs.values())
         ignored_scope = IgnoredScope(
@@ -120,7 +120,7 @@ def native_quantize_if_op_impl(
             Main model and all If bodies will be quantized recursively."
     )
     quantized_model, _ = apply_algorithm_if_bodies(
-        quantization_algorithm, model, graphs, calibration_dataset, subset_size, 1
+        quantization_algorithm, model, graphs, main_model_graph_id, calibration_dataset, subset_size, 1
     )
 
     if is_weight_compression_needed(advanced_parameters):

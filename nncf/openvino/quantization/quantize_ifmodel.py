@@ -27,7 +27,6 @@ from nncf.common.logging import nncf_logger
 from nncf.common.logging.track_progress import track
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVIfMetatype
-from nncf.openvino.graph.metatypes.openvino_metatypes import get_node_metatype
 from nncf.openvino.graph.model_utils import remove_friendly_name_duplicates
 from nncf.openvino.graph.node_utils import get_number_if_op
 from nncf.openvino.graph.transformations.commands import OVExtractIfBodyCommand
@@ -135,17 +134,19 @@ def _add_outputs_before_if_node(model_transformer: ModelTransformer, model: ov.M
 def apply_algorithm_if_bodies(
     algorithm: Algorithm,
     parent_model: ov.Model,
-    graphs: Dict[int, NNCFGraph],
+    graphs: Dict[str, NNCFGraph],
+    graph_id: str,
     parent_dataset: Dataset,
     subset_size: int,
     current_model_num: int,
     parent_statistic_points: Optional[StatisticPointsContainer] = None,
 ) -> Tuple[ov.Model, int]:
     """
-    Applies an algorithm recursievley to each bodies of If node.
+    Applies an algorithm recursively to each bodies of If node.
 
     :param parent_model: Model to apply algorithm.
-    :param graphs: Mapping from model_number and its graph.
+    :param graphs: All model graphs.
+    :param graph_id: Current graph id in the graphs.
     :param parent_dataset: Dataset for algorithm.
     :param subset_size: Size of a dataset to use for calibration.
     :param current_model_num: Current model number.
@@ -153,15 +154,12 @@ def apply_algorithm_if_bodies(
     :return: A model for every bodies of If nodes the algorithm was applied and the latest model number.
     """
     nncf_logger.info(f"Iteration [{current_model_num}/{len(graphs)}] ...")
-    parent_graph = graphs[current_model_num]
+    parent_graph = graphs[graph_id]
     quantized_model = algorithm.apply(parent_model, parent_graph, parent_statistic_points, parent_dataset)
     if get_number_if_op(parent_model) == 0:
         return quantized_model, current_model_num
     model_transformer_fp32 = factory.ModelTransformerFactory.create(parent_model)
-    for op in parent_model.get_ops():
-        if get_node_metatype(op) != OVIfMetatype:
-            continue
-        if_node = parent_graph.get_node_by_name(op.get_friendly_name())
+    for if_node in parent_graph.get_nodes_by_metatypes(OVBackend.if_node_metatypes()):
         parent_model_with_additional_outputs = _add_outputs_before_if_node(
             model_transformer_fp32, parent_model, if_node
         )
@@ -186,6 +184,7 @@ def apply_algorithm_if_bodies(
             algorithm,
             then_model,
             graphs,
+            if_node.node_name + "_then",
             then_dataset,
             subset_size,
             current_model_num + 1,
@@ -194,6 +193,7 @@ def apply_algorithm_if_bodies(
             algorithm,
             else_model,
             graphs,
+            if_node.node_name + "_else",
             else_dataset,
             subset_size,
             current_model_num + 1,
