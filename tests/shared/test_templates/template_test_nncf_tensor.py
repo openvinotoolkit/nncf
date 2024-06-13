@@ -37,6 +37,7 @@ OPERATOR_MAP = {
     "floordiv": operator.floordiv,
     "neg": lambda a, _: -a,
 }
+BINARY_OPERATORS = ["add", "sub", "pow", "mul", "truediv", "floordiv"]
 
 COMPARISON_OPERATOR_MAP = {
     "lt": operator.lt,
@@ -121,7 +122,7 @@ class TemplateTestNNCFTensorOperators:
         assert isinstance(res_nncf, Tensor)
         assert res_nncf.device == nncf_tensor_a.device
 
-    @pytest.mark.parametrize("op_name", ("add", "sub", "mul", "truediv", "floordiv"))
+    @pytest.mark.parametrize("op_name", BINARY_OPERATORS)
     def test_operators_int_rev(self, op_name):
         tensor_a = self.to_tensor([1, 2])
         value = 2

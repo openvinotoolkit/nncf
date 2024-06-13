@@ -97,6 +97,9 @@ class Tensor:
     def __pow__(self, other: Union[Tensor, float]) -> Tensor:
         return Tensor(self.data ** unwrap_tensor_data(other))
 
+    def __rpow__(self, other: Union[Tensor, float]) -> Tensor:
+        return Tensor(unwrap_tensor_data(other) ** self.data)
+
     def __truediv__(self, other: Union[Tensor, float]) -> Tensor:
         return _call_function("_binary_op_nowarn", self, other, operator.truediv)
 
