@@ -50,7 +50,6 @@ from nncf.quantization.quantize_model import quantize_with_tune_hyperparams
 from nncf.quantization.quantize_model import warning_model_no_batchwise_support
 from nncf.quantization.telemetry_extractors import CompressionStartedWithQuantizeApi
 from nncf.scopes import IgnoredScope
-from nncf.scopes import get_matched_ignored_scope_info
 from nncf.scopes import validate_ignored_scope
 from nncf.telemetry.decorator import tracked_function
 from nncf.telemetry.events import NNCF_OV_CATEGORY
@@ -97,7 +96,7 @@ def native_quantize_if_op_impl(
 
     _extract_all_subgraphs(model, 1)
     if ignored_scope and ignored_scope.validate:
-        validate_ignored_scope(ignored_scope, get_matched_ignored_scope_info(ignored_scope, graphs.values())[0])
+        validate_ignored_scope(ignored_scope, graphs.values())
         ignored_scope = IgnoredScope(
             ignored_scope.names, ignored_scope.patterns, ignored_scope.types, ignored_scope.subgraphs, validate=False
         )
