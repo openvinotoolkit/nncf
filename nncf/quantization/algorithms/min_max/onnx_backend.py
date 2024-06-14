@@ -233,6 +233,10 @@ class ONNXMinMaxAlgoBackend(MinMaxAlgoBackend):
                 om.ONNXSqrtMetatype,
                 om.ONNXReciprocalMetatype,
                 om.ONNXBatchNormMetatype,
+                # Сomparison operations
+                om.ONNXGreaterMetatype,
+                om.ONNXLessMetatype,
+                om.ONNXEqualMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
                 types.append(om.ONNXMulLayerMetatype)

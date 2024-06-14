@@ -328,6 +328,13 @@ class PTMinMaxAlgoBackend(MinMaxAlgoBackend):
                 # Batchnorm
                 om.PTBatchNormMetatype,
                 om.PTModuleBatchNormMetatype,
+                # Сomparison operations
+                om.PTGreaterEqualMetatype,
+                om.PTGreaterMetatype,
+                om.PTLessEqualMetatype,
+                om.PTLessMetatype,
+                om.PTNotEqualMetatype,
+                om.PTEqualsMetatype,
             ]
             if device != TargetDevice.CPU_SPR:
                 types.append(om.PTMulMetatype)
