@@ -21,10 +21,10 @@ from nncf.common.quantization.structs import QuantizationScheme as QuantizationM
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor import TensorDataType
-from nncf.experimental.tensor import functions as fns
 from nncf.quantization.advanced_parameters import FP8Type
+from nncf.tensor import Tensor
+from nncf.tensor import TensorDataType
+from nncf.tensor import functions as fns
 
 
 @dataclass

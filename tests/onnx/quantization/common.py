@@ -17,7 +17,6 @@ import onnx
 
 from nncf import Dataset
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.experimental.tensor import Tensor
 from nncf.onnx.graph.nncf_graph_builder import GraphConverter
 from nncf.onnx.graph.onnx_helper import get_edge_dtype
 from nncf.onnx.graph.onnx_helper import get_edge_info_mapping
@@ -26,6 +25,7 @@ from nncf.quantization.advanced_parameters import AdvancedQuantizationParameters
 from nncf.quantization.advanced_parameters import AdvancedSmoothQuantParameters
 from nncf.quantization.algorithms.post_training.algorithm import PostTrainingQuantization
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
+from nncf.tensor import Tensor
 from tests.onnx.common import get_random_generator
 from tests.onnx.opset_converter import convert_opset_version
 from tests.shared.nx_graph import check_nx_graph

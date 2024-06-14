@@ -15,12 +15,12 @@ from typing import Optional, Tuple
 import numpy as np
 
 import nncf
-from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor.definitions import TensorDataType
-from nncf.experimental.tensor.functions import numeric as fns
 from nncf.parameters import CompressWeightsMode
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
 from nncf.quantization.fake_quantize import calculate_scale_zero_point
+from nncf.tensor import Tensor
+from nncf.tensor import functions as fns
+from nncf.tensor.definitions import TensorDataType
 
 ReductionAxes = Tuple[int, ...]
 

@@ -21,8 +21,8 @@ from nncf.common.tensor_statistics.statistics import TensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import MedianMADTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.experimental.common.tensor_statistics.statistics import PercentileTensorStatistic
-from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor import functions as fns
+from nncf.tensor import Tensor
+from nncf.tensor import functions as fns
 from nncf.torch.tensor_statistics.collectors import get_mean_percentile_statistic_collector
 from nncf.torch.tensor_statistics.collectors import get_median_mad_statistic_collector
 from nncf.torch.tensor_statistics.collectors import get_min_max_statistic_collector

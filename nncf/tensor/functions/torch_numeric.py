@@ -14,11 +14,11 @@ from typing import Any, Callable, List, Optional, Tuple, Union
 import numpy as np
 import torch
 
-from nncf.experimental.tensor import TensorDataType
-from nncf.experimental.tensor import TensorDeviceType
-from nncf.experimental.tensor.definitions import TensorBackend
-from nncf.experimental.tensor.definitions import TypeInfo
-from nncf.experimental.tensor.functions import numeric as numeric
+from nncf.tensor import TensorDataType
+from nncf.tensor import TensorDeviceType
+from nncf.tensor.definitions import TensorBackend
+from nncf.tensor.definitions import TypeInfo
+from nncf.tensor.functions import numeric as numeric
 
 DTYPE_MAP = {
     TensorDataType.float16: torch.float16,

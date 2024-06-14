@@ -22,7 +22,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.tensor import NNCFTensor
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
-from nncf.experimental.tensor.tensor import Tensor
+from nncf.tensor import Tensor
 
 TModel = TypeVar("TModel")
 OutputType = TypeVar("OutputType")

@@ -13,9 +13,9 @@ from __future__ import annotations
 import operator
 from typing import Any, Optional, Tuple, TypeVar, Union
 
-from nncf.experimental.tensor.definitions import TensorBackend
-from nncf.experimental.tensor.definitions import TensorDataType
-from nncf.experimental.tensor.definitions import TensorDeviceType
+from nncf.tensor.definitions import TensorBackend
+from nncf.tensor.definitions import TensorDataType
+from nncf.tensor.definitions import TensorDeviceType
 
 TTensor = TypeVar("TTensor")
 
@@ -175,7 +175,7 @@ def _call_function(func_name: str, *args):
     :param func_name: Name of function.
     :return: Result of function call.
     """
-    from nncf.experimental.tensor.functions import numeric
+    from nncf.tensor.functions import numeric
 
     fn = getattr(numeric, func_name)
     return fn(*args)

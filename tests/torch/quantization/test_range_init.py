@@ -36,7 +36,7 @@ from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.config import NNCFConfig
 from nncf.config.structures import QuantizationRangeInitArgs
-from nncf.experimental.tensor import Tensor
+from nncf.tensor import Tensor
 from nncf.torch import utils
 from nncf.torch.checkpoint_loading import load_state
 from nncf.torch.initialization import DefaultInitializingDataLoader

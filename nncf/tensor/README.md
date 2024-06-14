@@ -11,7 +11,7 @@ Common algorithms should use wrapped tensors and provide the unwrapped tensor to
 ### Initialization Tensor
 
 ```python
-from nncf.experimental.tensor import Tensor
+from nncf.tensor import Tensor
 
 import numpy as np
 numpy_array = np.array([1,2])
@@ -27,8 +27,8 @@ nncf_tensor = Tensor(torch_tensor)
 The function for creating a tensor requires a backend argument to specify the type of data to be created. It supports both numpy array and torch tensor.
 
 ```python
-from nncf.experimental.tensor import functions as fns
-from nncf.experimental.tensor.definitions import TensorBackend
+from nncf.tensor import functions as fns
+from nncf.tensor.definitions import TensorBackend
 
 # create zeros tensor where data is numpy array
 nncf_tensor = fns.zeros((2,2), backend=TensorBackend.numpy)
@@ -72,7 +72,7 @@ nncf_tensor.max()  # Tensor(2)
 All available functions you can found in the functions module.
 
 ```python
-from nncf.experimental.tensor import functions as fns
+from nncf.tensor import functions as fns
 fns.max(nncf_tensor)  # Tensor(2)
 ```
 

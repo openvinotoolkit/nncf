@@ -12,8 +12,8 @@
 import functools
 from typing import Optional, Tuple, Union
 
-from nncf.experimental.tensor import Tensor
-from nncf.experimental.tensor.functions.dispatcher import tensor_guard
+from nncf.tensor import Tensor
+from nncf.tensor.functions.dispatcher import tensor_guard
 
 
 @functools.singledispatch

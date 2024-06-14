@@ -15,15 +15,15 @@ from typing import Any, Callable, List, Optional, Tuple, Union
 
 import numpy as np
 
-from nncf.experimental.tensor.definitions import TensorBackend
-from nncf.experimental.tensor.definitions import TensorDataType
-from nncf.experimental.tensor.definitions import TensorDeviceType
-from nncf.experimental.tensor.definitions import TypeInfo
-from nncf.experimental.tensor.functions.dispatcher import dispatch_list
-from nncf.experimental.tensor.functions.dispatcher import get_numeric_backend_fn
-from nncf.experimental.tensor.functions.dispatcher import tensor_guard
-from nncf.experimental.tensor.tensor import Tensor
-from nncf.experimental.tensor.tensor import unwrap_tensor_data
+from nncf.tensor import Tensor
+from nncf.tensor import unwrap_tensor_data
+from nncf.tensor.definitions import TensorBackend
+from nncf.tensor.definitions import TensorDataType
+from nncf.tensor.definitions import TensorDeviceType
+from nncf.tensor.definitions import TypeInfo
+from nncf.tensor.functions.dispatcher import dispatch_list
+from nncf.tensor.functions.dispatcher import get_numeric_backend_fn
+from nncf.tensor.functions.dispatcher import tensor_guard
 
 
 @functools.singledispatch

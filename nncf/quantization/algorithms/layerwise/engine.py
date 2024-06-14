@@ -20,11 +20,11 @@ from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
 from nncf.data.dataset import Dataset
 from nncf.errors import UnsupportedBackendError
-from nncf.experimental.tensor.tensor import Tensor
 from nncf.quantization.algorithms.layerwise.iterator import LayerwiseIterator
 from nncf.quantization.algorithms.layerwise.scheduler import LayerwiseScheduler
 from nncf.quantization.algorithms.layerwise.scheduler import LayerwiseStep
 from nncf.quantization.algorithms.layerwise.scheduler import NodeOutputPort
+from nncf.tensor import Tensor
 
 TModel = TypeVar("TModel")
 

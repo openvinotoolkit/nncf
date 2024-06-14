@@ -9,8 +9,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nncf.experimental.tensor.definitions import TensorBackendType as TensorBackendType
-from nncf.experimental.tensor.definitions import TensorDataType as TensorDataType
-from nncf.experimental.tensor.definitions import TensorDeviceType as TensorDeviceType
-from nncf.experimental.tensor.tensor import Tensor as Tensor
-from nncf.experimental.tensor.tensor import unwrap_tensor_data as unwrap_tensor_data
+from nncf.tensor.definitions import TensorBackendType as TensorBackendType
+from nncf.tensor.definitions import TensorDataType as TensorDataType
+from nncf.tensor.definitions import TensorDeviceType as TensorDeviceType
+from nncf.tensor.tensor import Tensor as Tensor
+from nncf.tensor.tensor import unwrap_tensor_data as unwrap_tensor_data

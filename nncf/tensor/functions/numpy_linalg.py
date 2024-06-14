@@ -13,8 +13,8 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 
-from nncf.experimental.tensor.functions import linalg
-from nncf.experimental.tensor.functions.dispatcher import register_numpy_types
+from nncf.tensor.functions import linalg
+from nncf.tensor.functions.dispatcher import register_numpy_types
 
 
 @register_numpy_types(linalg.norm)

@@ -21,7 +21,7 @@ from nncf.common.graph.transformations.commands import TargetType
 from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.experimental.common.tensor_statistics.collectors import TensorCollector
-from nncf.experimental.tensor import Tensor
+from nncf.tensor import Tensor
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")

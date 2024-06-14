@@ -23,7 +23,6 @@ from nncf import SensitivityMetric
 from nncf.data.dataset import Dataset
 from nncf.errors import ValidationError
 from nncf.experimental.common.tensor_statistics.collectors import AggregatorBase
-from nncf.experimental.tensor import Tensor
 from nncf.openvino.graph.node_utils import get_const_value
 from nncf.quantization import compress_weights
 from nncf.quantization.algorithms.weight_compression.config import WeightCompressionConfig
@@ -32,6 +31,7 @@ from nncf.quantization.algorithms.weight_compression.mixed_precision import MIXE
 from nncf.quantization.algorithms.weight_compression.weight_lowering import get_integer_quantization_error
 from nncf.quantization.algorithms.weight_compression.weight_lowering import reshape_weight_for_grouped_quantization
 from nncf.scopes import IgnoredScope
+from nncf.tensor import Tensor
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.common import get_openvino_major_minor_version
 from tests.openvino.native.models import AWQMatmulModel

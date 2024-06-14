@@ -21,9 +21,9 @@ from nncf.common.quantization.structs import QuantizationScheme as QuantizationM
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.quantization.structs import QuantizerGroup
 from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
-from nncf.experimental.tensor import functions as fns
 from nncf.quantization.fake_quantize import FakeQuantizeParameters
 from nncf.quantization.fake_quantize import calculate_quantizer_parameters
+from nncf.tensor import functions as fns
 from tests.post_training.conftest import FQ_CALCULATED_PARAMETERS_PATH
 from tests.shared.helpers import dump_to_json
 from tests.shared.helpers import load_json
