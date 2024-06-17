@@ -63,7 +63,12 @@ DATA_BASED_SENSITIVITY_METRICS = (
 ALL_SENSITIVITY_METRICS = DATA_BASED_SENSITIVITY_METRICS + (SensitivityMetric.WEIGHT_QUANTIZATION_ERROR,)
 
 INT8_MODES = (CompressWeightsMode.INT8, CompressWeightsMode.INT8_SYM, CompressWeightsMode.INT8_ASYM)
-INT4_NF4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM, CompressWeightsMode.NF4)
+INT4_FP4_MODES = (
+    CompressWeightsMode.INT4_SYM,
+    CompressWeightsMode.INT4_ASYM,
+    CompressWeightsMode.NF4,
+    CompressWeightsMode.E2M1,
+)
 INT4_MODES = (CompressWeightsMode.INT4_SYM, CompressWeightsMode.INT4_ASYM)
 
 
@@ -175,6 +180,33 @@ def check_nf4_grouped(op: ov.Node, group_size: int = 7):
     }
 
 
+def check_e2m1_grouped(op: ov.Node, group_size: int = 7):
+    assert op.get_element_type() == ov.Type.f4e2m1
+    weight_shape = op.shape
+    # NOTE: get_const_value doesn't work for 4-bit types
+    assert list(weight_shape)[-1] == group_size
+    reduced_weight_shape = list(weight_shape)
+    reduced_weight_shape[-1] = 1
+
+    convert_node = get_next_node(op)
+    assert convert_node.get_type_name() == "Convert"
+
+    mul_node = get_next_node(convert_node)
+    assert mul_node.get_type_name() == "Multiply"
+    scale_node = mul_node.input_value(1).get_node()
+    assert list(scale_node.shape) == reduced_weight_shape
+
+    reshape_node = get_next_node(mul_node)
+    assert reshape_node.get_type_name() == "Reshape"
+
+    convert_node = get_next_node(reshape_node)
+    assert convert_node.get_type_name() == "Convert"
+
+    return {
+        "scale": get_const_value(scale_node),
+    }
+
+
 def check_int4_sym_grouped(op: ov.Node):
     return check_int4_grouped(op, mode=CompressWeightsMode.INT4_SYM)
 
@@ -202,6 +234,7 @@ def get_mixed_mapping(primary_fn: Callable, list_layers: List[str]):
         (CompressWeightsMode.INT4_SYM, 7, get_mixed_mapping(check_int4_sym_grouped, TEST_MODELS[IntegerModel])),
         (CompressWeightsMode.INT4_ASYM, 7, get_mixed_mapping(check_int4_asym_grouped, TEST_MODELS[IntegerModel])),
         (CompressWeightsMode.NF4, 7, get_mixed_mapping(check_nf4_grouped, TEST_MODELS[IntegerModel])),
+        (CompressWeightsMode.E2M1, 7, get_mixed_mapping(check_e2m1_grouped, TEST_MODELS[IntegerModel])),
     ),
 )
 def test_compare_compressed_weights(mode, group_size, check_fn_per_node_map):
@@ -688,7 +721,7 @@ def test_raise_error_with_unsupported_params_for_int4(mode, params):
         compress_weights(ov.Model([], []), mode=mode, **params)
 
 
-@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+@pytest.mark.parametrize("mode", INT4_FP4_MODES)
 @pytest.mark.parametrize("metric", DATA_BASED_SENSITIVITY_METRICS)
 def test_raise_error_with_data_metric_and_without_dataset(mode, metric):
     model = IntegerModel().ov_model
@@ -696,7 +729,7 @@ def test_raise_error_with_data_metric_and_without_dataset(mode, metric):
         compress_weights(model, mode=mode, sensitivity_metric=metric, group_size=-1, ratio=0.8)
 
 
-@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+@pytest.mark.parametrize("mode", INT4_FP4_MODES)
 def test_call_max_var_criterion_with_dataset_by_default(mocker, mode):
     model = IntegerModel().ov_model
     dataset = Dataset([np.ones([1, 7, 1])])
@@ -864,9 +897,13 @@ def test_call_max_var_criterion_with_dataset_scale_estimation_neg_group_size(mod
         compress_weights(model, mode=mode, ratio=1.0, group_size=-1, dataset=dataset, scale_estimation=True)
 
 
-@pytest.mark.parametrize("mode", INT4_NF4_MODES)
+@pytest.mark.parametrize("mode", INT4_FP4_MODES)
 def test_call_gptq(mode):
     model = AWQMatmulModel().ov_model
     dataset = Dataset([np.ones([8, 8])])
 
-    compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, gptq=True)
+    if mode == CompressWeightsMode.E2M1:
+        with pytest.raises(AttributeError):
+            compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, gptq=True)
+    else:
+        compress_weights(model, mode=mode, ratio=1.0, group_size=2, dataset=dataset, gptq=True)

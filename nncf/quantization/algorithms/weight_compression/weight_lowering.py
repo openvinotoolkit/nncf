@@ -151,7 +151,7 @@ def calculate_e2m1_scale(weight: Tensor, reduction_axes: ReductionAxes, max_val=
         scale = fns.log2(scale)
         scale = fns.ceil(scale)
         scale = fns.clip(scale, -127, 127)
-        scale = fns.zeros_like(scale) + 2**scale.data
+        scale = 2**scale
 
     return scale
 
@@ -336,7 +336,10 @@ def do_integer_quantization(
         scale tensor of float32 type and zero point tensor of int32 type that was used for its quantization.
     """
     mode = config.mode
-    assert mode != CompressWeightsMode.NF4, "The function supports integer quantization only"
+    assert mode not in [
+        CompressWeightsMode.NF4,
+        CompressWeightsMode.E2M1,
+    ], "The function supports integer quantization only"
     group_size = config.group_size
 
     if weight.dtype != TensorDataType.float32:
