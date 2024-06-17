@@ -23,7 +23,6 @@ from nncf.quantization.algorithms.min_max.algorithm import MinMaxQuantization
 from tests.openvino.native.common import convert_torch_model
 from tests.openvino.native.common import get_actual_reference_for_current_openvino
 from tests.openvino.native.common import get_dataset_for_test
-from tests.openvino.native.common import get_openvino_major_minor_version
 from tests.openvino.native.models import SYNTHETIC_MODELS
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import FPModel
@@ -166,11 +165,6 @@ def test_synthetic_models_fq_shapes(model_creator_func, ref_shapes, inplace_stat
 @pytest.mark.parametrize("const_dtype", [ov.Type.f16, ov.Type.f32, ov.Type.bf16])
 @pytest.mark.parametrize("input_dtype", [ov.Type.f16, ov.Type.f32, ov.Type.bf16])
 def test_fq_precision_orig_fp32model(const_dtype, input_dtype, inplace_statistics):
-    ov_major_version, ov_minor_version = get_openvino_major_minor_version()
-    if (const_dtype == ov.Type.bf16 or input_dtype == ov.Type.bf16) and (
-        ov_major_version < 2023 or (ov_major_version == 2023 and ov_minor_version < 3)
-    ):
-        pytest.xfail("BF16 is not supported until 2023.3")
     model = FPModel(const_dtype, input_dtype)
     quantized_model = quantize_model(
         model.ov_model, {"preset": QuantizationPreset.PERFORMANCE, "inplace_statistics": inplace_statistics}

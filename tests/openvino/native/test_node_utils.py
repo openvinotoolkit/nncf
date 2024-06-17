@@ -14,34 +14,56 @@ import openvino.runtime as ov
 import pytest
 from openvino.runtime import opset13 as opset
 
-from nncf.common.factory import NNCFGraphFactory
 from nncf.common.graph.graph import NNCFNode
 from nncf.openvino.graph.layer_attributes import OVLayerAttributes
 from nncf.openvino.graph.metatypes.openvino_metatypes import OVMatMulMetatype
 from nncf.openvino.graph.nncf_graph_builder import GraphConverter
+from nncf.openvino.graph.node_utils import get_const_value
 from nncf.openvino.graph.node_utils import get_weight_channel_axes
-from nncf.openvino.graph.node_utils import get_weight_value
 from nncf.openvino.graph.node_utils import get_weighted_layer_attributes
 from nncf.openvino.graph.node_utils import is_node_with_bias
-from tests.openvino.native.common import get_openvino_major_minor_version
 from tests.openvino.native.models import ConvModel
 from tests.openvino.native.models import ConvNotBiasModel
-from tests.openvino.native.models import FPModel
 from tests.openvino.native.models import MatMul2DModel
 from tests.openvino.native.models import MatMul2DNotBiasModel
 
 
-@pytest.mark.parametrize("precision", [ov.Type.f16, ov.Type.bf16])
-def test_get_weight_value_const_with_convert(precision):
-    ov_major_version, ov_minor_version = get_openvino_major_minor_version()
-    if precision == ov.Type.bf16 and (ov_major_version < 2023 or (ov_major_version == 2023 and ov_minor_version < 3)):
-        pytest.xfail("BF16 is not supported until 2023.3")
-    model = FPModel(const_dtype=precision).ov_model
-    nncf_graph = NNCFGraphFactory.create(model)
-    node_with_weight = nncf_graph.get_node_by_name("MatMul")
+@pytest.mark.parametrize(
+    "precisions",
+    [
+        # base FP32 precision
+        {
+            "type_for_const": ov.Type.f32,
+            "type_to_get": ov.Type.f32,
+        },
+        # from base FP16 precision to FP32
+        {
+            "type_for_const": ov.Type.f16,
+            "type_to_get": ov.Type.f16,
+        },
+        {
+            "type_for_const": ov.Type.f16,
+            "type_to_get": ov.Type.f32,
+        },
+        # from base BF16 precision to FP32
+        {
+            "type_for_const": ov.Type.bf16,
+            "type_to_get": ov.Type.bf16,
+        },
+        {
+            "type_for_const": ov.Type.bf16,
+            "type_to_get": ov.Type.f32,
+        },
+    ],
+)
+def test_get_const_value(precisions):
+    type_to_get = precisions["type_to_get"]
 
-    actual_value = get_weight_value(node_with_weight, model, port_id=1)
-    assert actual_value.dtype == precision.to_dtype()
+    const_data = np.ones((1, 2, 3), dtype=np.float32)
+    weight_const = opset.constant(const_data, dtype=precisions["type_for_const"])
+
+    const_value = get_const_value(weight_const, dtype=type_to_get)
+    assert const_value.dtype == type_to_get.to_dtype()
 
 
 @pytest.mark.parametrize(

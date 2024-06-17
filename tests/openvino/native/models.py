@@ -290,11 +290,11 @@ class FPModel(OVReferenceModel):
     def _create_ov_model(self):
         input_shape = [1, 3, 4, 2]
         input_1 = opset.parameter(input_shape, name="Input", dtype=self.input_dtype)
-        data = opset.constant(value=self._rng.random((1, 3, 4, 5)), dtype=self.const_dtype)
+        data = opset.constant(value=self._rng.random((1, 3, 4, 5)), dtype=self.const_dtype, name="MatMul_const")
         if self.const_dtype != self.input_dtype:
             data = opset.convert(data, self.input_dtype.to_string())
         matmul = opset.matmul(input_1, data, transpose_a=True, transpose_b=False, name="MatMul")
-        bias = opset.constant(value=self._rng.random((1, 3, 1, 1)), dtype=self.const_dtype)
+        bias = opset.constant(value=self._rng.random((1, 3, 1, 1)), dtype=self.const_dtype, name="MatMul_bias")
         if self.const_dtype != self.input_dtype:
             bias = opset.convert(bias, self.input_dtype.to_string())
         add = opset.add(matmul, bias, name="Add")

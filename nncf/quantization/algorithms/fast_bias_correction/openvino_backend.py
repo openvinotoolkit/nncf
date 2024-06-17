@@ -65,14 +65,11 @@ class OVFastBiasCorrectionAlgoBackend(FastBiasCorrectionAlgoBackend):
     def create_input_data(
         shape: Tuple[int], data: List[Tensor], input_name: str, channel_axis: int
     ) -> Dict[str, np.ndarray]:
-        blob_dtype = data[0].data.dtype
-        blob = np.zeros(shape, dtype=blob_dtype)
+        blob = np.zeros(shape, dtype=data[0].data.dtype)
         for j, idx in enumerate(np.ndindex(blob.shape[channel_axis])):
             index = tuple(slice(None) if i != channel_axis else idx for i in range(blob.ndim))
             blob[index] = data[j].data
-        input_tensor = ov.Tensor(ov.Type(blob_dtype), blob.shape)
-        input_tensor.data[:] = blob
-        input_data = {input_name: input_tensor}
+        input_data = {input_name: blob}
         return input_data
 
     @staticmethod

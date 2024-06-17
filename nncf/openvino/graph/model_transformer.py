@@ -198,7 +198,6 @@ class OVModelTransformer(ModelTransformer):
         for output, port_id in outputs:
             node_output = output
             output_name = node_output.get_node().get_friendly_name()
-            # TODO: (KodiaqQ) check out the models with the Split
             result_name = get_result_node_name(output_name, port_id)
 
             if node_output.get_element_type() != outputs_type:
@@ -278,8 +277,7 @@ class OVModelTransformer(ModelTransformer):
         :param name: Name for the constant.
         :return: ov.Node instance.
         """
-        data = np.clip(value, np.finfo(dtype.to_dtype()).min, np.finfo(dtype.to_dtype()).max)
-        return opset.constant(data, dtype=dtype, name=name)
+        return opset.constant(value, dtype=dtype, name=name)
 
     @staticmethod
     def _create_fake_quantize(
