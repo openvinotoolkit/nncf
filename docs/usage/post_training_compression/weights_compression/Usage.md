@@ -9,7 +9,7 @@ The Weights Compression algorithm is aimed at compressing the weights of the mod
 #### Supported modes
 
 By default, weights are compressed asymmetrically to 8-bit integer data type - "INT8_ASYM" mode.
-OpenVINO backend also supports 3 modes of mixed precision weight quantization with a 4-bit data type as a primary precision - INT4_SYM, INT4_ASYM and NF4. The primary precision in case of INT4_SYM mode is unsigned 4-bit integer and weights are quantized to it [symmetrically](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#symmetric-quantization) with a fixed zero point equals to 8. In case of INT4_ASYM mode - also unsigned 4-bit integer, but weight are quantized to it [asymmetrically](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization) with a typical non-fixed zero point. In case of NF4 mode - [nf4](https://arxiv.org/pdf/2305.14314v1.pdf) data type without zero point.
+OpenVINO backend also supports 3 modes of mixed precision weight quantization with a 4-bit data type as a primary precision - INT4_SYM, INT4_ASYM and NF4. The primary precision in case of INT4_SYM mode is signed 4-bit integer and weights are quantized to it [symmetrically](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#symmetric-quantization) without zero point. In case of INT4_ASYM mode - unsigned 4-bit integer and weight are quantized to it [asymmetrically](/docs/usage/training_time_compression/other_algorithms/LegacyQuantization.md#asymmetric-quantization) with a typical non-fixed zero point. In case of NF4 mode - [nf4](https://arxiv.org/pdf/2305.14314v1.pdf) data type without zero point.
 All 4-bit modes have a grouped quantization support, when small group of weights (e.g. 128) in the channel dimension share quantization parameters (scale).
 All embeddings, convolutions and last linear layers are always compressed to 8-bit integer data type. To quantize embeddings and last linear layers to 4-bit, use `all_layers=True`.
 Percent of the rest layers compressed to 4-bit can be configured by "ratio" parameter. E.g. ratio=0.9 means 90% of layers compressed to the corresponding 4-bit data type and the rest to 8-bit asymmetric integer data type.
@@ -61,11 +61,9 @@ nncf_dataset = nncf.Dataset(data_source, transform_fn)
 compressed_model = compress_weights(model, mode=CompressWeightsMode.INT4_SYM, ratio=0.8, dataset=nncf_dataset) # model is openvino.Model object
 ```
 
-- Accuracy of the 4-bit compressed models also can be improved by using AWQ algorithm or Scale Estimation algorithm over data-based mixed-precision algorithm. It is capable to equalize some subset of weights to minimize difference between
-original precision and 4-bit.
-Below is the example how to compress 80% of layers to 4-bit integer with a default data-based mixed precision algorithm and AWQ with Scale Estimation.
-It requires to set `awq` to `True` and `scale_estimation` to `True` additionally to data-based mixed-precision algorithm.
-Both algorithms, AWQ and Scale Estimation, can be enabled together or separately.
+- Accuracy of the 4-bit compressed models also can be improved by using AWQ, Scale Estimation or GPTQ algorithms over data-based mixed-precision algorithm. These algorithms work by equalizing a subset of weights to minimize the difference between the original precision and the 4-bit precision. The AWQ algorithm can be used in conjunction with either the Scale Estimation or GPTQ algorithm. However, Scale Estimation and GPTQ algorithms are mutually exclusive and cannot be used together. Below are examples demonstrating how to enable the AWQ, Scale Estimation or GPTQ algorithms:
+
+  Prepare the calibration dataset for data-based algorithms:
 
 ```python
 from datasets import load_dataset
@@ -114,15 +112,27 @@ dataset = dataset.filter(lambda example: len(example["text"]) > 80)
 input_shapes = get_input_shapes(model)
 nncf_dataset = Dataset(dataset, partial(transform_func, tokenizer=tokenizer,
                                                         input_shapes=input_shapes))
+```
 
+- How to compress 80% of layers to 4-bit integer with a default data-based mixed precision algorithm and AWQ with Scale Estimation. It requires to set `awq` to `True` and `scale_estimation` to `True` additionally to data-based mixed-precision algorithm.
+
+```python
 model.model = compress_weights(model.model,
                                mode=CompressWeightsMode.INT4_SYM,
                                ratio=0.8,
                                dataset=nncf_dataset,
                                awq=True,
                                scale_estimation=True)
+```
 
-model.save_pretrained(...)
+- How to compress 80% of layers to 4-bit integer with a default data-based mixed precision algorithm and GPTQ. It requires to set `gptq` to `True` additionally to data-based mixed-precision algorithm.
+
+```python
+model.model = compress_weights(model.model,
+                               mode=CompressWeightsMode.INT4_SYM,
+                               ratio=0.8,
+                               dataset=nncf_dataset,
+                               gptq=True)
 ```
 
 - `NF4` mode can be considered for improving accuracy, but currently models quantized to nf4 should not be faster models
@@ -396,7 +406,7 @@ This modification applies only for patterns `MatMul-Multiply-MatMul` (for exampl
 </table>
 
 Here is the perplexity and accuracy with data-free and data-aware mixed-precision INT4-INT8 weight compression for different language models on the [lambada openai dataset](https://huggingface.co/datasets/EleutherAI/lambada_openai).
-`_scale` suffix refers to the data-aware mixed-precision with Scale Estimation algorithm.
+`_scale` suffix refers to the data-aware mixed-precision with Scale Estimation algorithm. `_gptq` suffix refers to the data-aware mixed-precision with GPTQ algorithm.
 `r100` means that embeddings and lm_head have INT8 precision and all other linear layers have INT4 precision.
 <table>
     <tr bgcolor='#B4B5BB'>
@@ -410,6 +420,12 @@ Here is the perplexity and accuracy with data-free and data-aware mixed-precisio
         <td>fp32</td>
         <td>0.5925</td>
         <td>6.3024</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>int4_sym_r100_gs64_gptq</td>
+        <td>0.5676</td>
+        <td>7.2391</td>
     </tr>
     <tr>
         <td></td>
@@ -435,6 +451,12 @@ Here is the perplexity and accuracy with data-free and data-aware mixed-precisio
         <td>0.595</td>
         <td>7.037</td>
     </tr>
+        <tr>
+        <td></td>
+        <td>int4_sym_r100_gs64_gptq</td>
+        <td>0.567</td>
+        <td>8.6787</td>
+    </tr>
     <tr>
         <td></td>
         <td>int4_sym_r100_gs64</td>
@@ -452,6 +474,12 @@ Here is the perplexity and accuracy with data-free and data-aware mixed-precisio
         <td>int4_sym_r100_gs128_scale</td>
         <td>0.6736</td>
         <td>4.4711</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>int4_sym_r100_gs128_gptq</td>
+        <td>0.6513</td>
+        <td>4.8365</td>
     </tr>
     <tr>
         <td></td>
@@ -484,7 +512,7 @@ Here is the perplexity and accuracy with data-free and data-aware mixed-precisio
 - The algorithm is supported for OpenVINO and PyTorch models.
 - The compression applies in-place.
 - The compressed model is not trainable.
-- INT8_SYM, INT4_SYM, INT4_ASYM and NF4 modes, grouped quantization and mixed precision selection is available for OpenVINO backend only.
+- INT4_SYM, INT4_ASYM and NF4 modes, grouped quantization and mixed precision selection is available for OpenVINO backend only.
 - NF4 support is experimental - models quantized to nf4 should not be faster models quantized to 8-bit integer.
 
 #### Additional resources

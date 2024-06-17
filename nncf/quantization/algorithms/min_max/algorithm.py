@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional, OrderedDict, Set, Tuple, TypeVar, 
 import numpy as np
 
 import nncf
+import nncf.experimental.tensor.functions as fns
 from nncf import Dataset
 from nncf.common.factory import ModelTransformerFactory
 from nncf.common.graph.graph import NNCFGraph
@@ -47,6 +48,7 @@ from nncf.common.tensor_statistics.statistic_point import StatisticPoint
 from nncf.common.tensor_statistics.statistic_point import StatisticPointsContainer
 from nncf.common.utils.backend import BackendType
 from nncf.common.utils.backend import get_backend
+from nncf.experimental.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.parameters import ModelType
 from nncf.parameters import QuantizationMode
 from nncf.parameters import TargetDevice
@@ -878,7 +880,7 @@ class MinMaxQuantization(Algorithm):
                         raise nncf.InternalError(f"Statistics were not collected for the node {target_node_name}")
                     group_statistics.append(statistics)
 
-            unified_values = self._backend_entity.unify_statistics(group_statistics)
+            unified_values = self._unify_statistics(group_statistics)
             qconfigs = [quantization_target_points[qtp] for qtp in unified_scale_group]
             if any(qconfigs[0] != qconfig for qconfig in qconfigs[1:]):
                 raise nncf.InternalError(f"QConfigs for unified scale group {unified_scale_group} are not equal")
@@ -1082,3 +1084,20 @@ class MinMaxQuantization(Algorithm):
                         quantizer_setup.discard(fq_2_q_key, True)
 
         return quantizer_setup
+
+    @staticmethod
+    def _unify_statistics(statistics: List[MinMaxTensorStatistic]) -> MinMaxTensorStatistic:
+        """
+        Returns backend-specific unified statistics.
+
+        :param statistics: List of MinMaxTensorStatistic instances.
+        :return: Unified MinMaxTensorStatistic value.
+        """
+
+        max_values, min_values = [], []
+        for statistic in statistics:
+            max_values.append(statistic.max_values.flatten())
+            min_values.append(statistic.min_values.flatten())
+        max_values = fns.max(fns.stack(max_values), axis=0)
+        min_values = fns.min(fns.stack(min_values), axis=0)
+        return MinMaxTensorStatistic(min_values=min_values, max_values=max_values)

@@ -348,11 +348,11 @@ def compress_weights(
     :param model: A model to be compressed.
     :type model: TModel
     :param mode: Defines a mode for weight compression.
-        INT8_SYM stands for 8-bit integer symmetric quantization of all weights.
+        INT8_SYM stands for 8-bit integer symmetric quantization of all weights without zero point.
         INT8_ASYM is the same as INT8_SYM mode, but weights are quantized to a primary precision asymmetrically
             with a typical non-fixed zero point.
         INT4_SYM stands for a mixed-precision weights quantization with 4-bit integer as a primary precision.
-            Weights are quantized to a primary precision symmetrically with a fixed zero point equals to 8.
+            Weights are quantized to a primary precision symmetrically without zero point.
             All embeddings and the last layer are always compressed to a backup precision, which is INT8_ASYM,
             by default. All others are quantized whether to 4-bit integer or to a backup precision depending on
             criteria and the given ratio.
@@ -393,7 +393,7 @@ def compress_weights(
     """
     if mode == CompressWeightsMode.INT8:
         warning_deprecated(
-            "`CompressWeightsMode.INT8` is deprecated." "Please, use `CompressWeightsMode.INT8_ASYM` as value instead."
+            "`CompressWeightsMode.INT8` is deprecated. Please, use `CompressWeightsMode.INT8_ASYM` as value instead."
         )
         mode = CompressWeightsMode.INT8_ASYM
 

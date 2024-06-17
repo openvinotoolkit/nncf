@@ -117,7 +117,7 @@ class SmoothQuant(Algorithm):
                 activations_value = self._get_statistics_for_node(
                     statistic_points, node_to_smooth.node_name, input_port_id
                 )
-                if any(val.data is None for val in activations_value):
+                if any(val is None for val in activations_value):
                     empty_statistic = True
                     break
                 if len(activations_value) != 1:
@@ -239,7 +239,7 @@ class SmoothQuant(Algorithm):
             self._algorithm_key,
         ):
             statistic = tensor_collector.get_statistics()[STATISTIC_BRANCH_KEY]
-            statistics_for_node.append(Tensor(statistic))
+            statistics_for_node.append(statistic)
         return statistics_for_node
 
     def get_statistic_points(self, model: TModel, graph: NNCFGraph) -> StatisticPointsContainer:

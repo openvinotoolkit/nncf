@@ -25,6 +25,7 @@ from nncf.experimental.tensor.functions.numeric import count_nonzero as count_no
 from nncf.experimental.tensor.functions.numeric import device as device
 from nncf.experimental.tensor.functions.numeric import diag as diag
 from nncf.experimental.tensor.functions.numeric import dtype as dtype
+from nncf.experimental.tensor.functions.numeric import expand_dims as expand_dims
 from nncf.experimental.tensor.functions.numeric import finfo as finfo
 from nncf.experimental.tensor.functions.numeric import flatten as flatten
 from nncf.experimental.tensor.functions.numeric import from_numpy as from_numpy

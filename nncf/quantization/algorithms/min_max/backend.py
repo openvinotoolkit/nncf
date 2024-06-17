@@ -22,7 +22,6 @@ from nncf.common.graph.transformations.commands import TransformationCommand
 from nncf.common.hardware.config import HWConfig
 from nncf.common.quantization.structs import QuantizerConfig
 from nncf.common.tensor_statistics.collectors import TensorStatisticCollectorBase
-from nncf.common.tensor_statistics.statistics import MinMaxTensorStatistic
 from nncf.parameters import ModelType
 from nncf.parameters import TargetDevice
 from nncf.quantization.fake_quantize import FakeConvertParameters
@@ -189,16 +188,6 @@ class MinMaxAlgoBackend(ABC):
         :param nncf_graph: NNCFGraph to get the start nodes.
         :return: List of NNCFNodes to use as start nodes for activation path tracing.
 
-        """
-
-    @staticmethod
-    @abstractmethod
-    def unify_statistics(statistics: List[MinMaxTensorStatistic]) -> MinMaxTensorStatistic:
-        """
-        Returns backend-specific unified statistics.
-
-        :param statistics: List of MinMaxTensorStatistic instances.
-        :return: Unified MinMaxTensorStatistic value.
         """
 
     @staticmethod
