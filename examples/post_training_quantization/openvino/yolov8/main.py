@@ -73,8 +73,6 @@ def prepare_validation(model: YOLO, args: Any) -> Tuple[Validator, torch.utils.d
 
     data_loader = validator.get_dataloader(f"{DATASETS_DIR}/coco128", 1)
 
-    validator = model.smart_load("validator")(args)
-
     validator.is_coco = True
     validator.class_map = coco80_to_coco91_class()
     validator.names = model.model.names
