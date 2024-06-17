@@ -285,7 +285,9 @@ class AWQ(Algorithm):
             scaled_weight = weight * w_scale
             self._backend_entity.set_weight(wp.node_with_weight, weight_port_id, model, graph, scaled_weight)
 
-            if merge_node.node_type == "MatMul":  # for MatMul->Multiply->MatMul pattern scale merged to first MatMul
+            if self._backend_entity.is_node_with_weights(
+                merge_node, graph
+            ):  # for MatMul->Multiply->MatMul pattern scale merged to first MatMul
                 for _, port_id in self._backend_entity.get_weight_names_and_port_ids(merge_node, graph):
                     merge_weight = self._backend_entity.get_weight(merge_node, port_id, model, graph)
                     merge_weight = merge_weight * a_scale

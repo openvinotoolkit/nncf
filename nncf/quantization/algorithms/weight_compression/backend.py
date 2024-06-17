@@ -180,3 +180,9 @@ class AWQAlgoBackend(WeightCompressionAlgoBackend):
         """
         Returns patterns of nodes in network graph for applying AWQ algorithm.
         """
+
+    @staticmethod
+    def scale_insertion_command(source_node, next_nodes, source_node_output_port, scale):
+        """
+        Returns scale insertion command/transformation for applying AWQ algorithm.
+        """
