@@ -109,7 +109,7 @@
         }
     },
     "post_training_quantization_tensorflow_mobilenet_v2": {
-        "backend": "tensorflow",
+        "backend": "tf",
         "requirements": "examples/post_training_quantization/tensorflow/mobilenet_v2/requirements.txt",
         "cpu": "Intel(R) Core(TM) i9-10980XE CPU @ 3.00GHz",
         "accuracy_metrics": {

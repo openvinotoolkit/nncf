@@ -47,6 +47,15 @@ class TensorDeviceType(Enum):
     GPU = auto()
 
 
+class TensorBackend(Enum):
+    """
+    Enum representing the different tensor backends.
+    """
+
+    numpy = auto()
+    torch = auto()
+
+
 @dataclass
 class TypeInfo:
     """

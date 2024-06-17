@@ -16,6 +16,7 @@ import torch
 
 from nncf.experimental.tensor import TensorDataType
 from nncf.experimental.tensor import TensorDeviceType
+from nncf.experimental.tensor.definitions import TensorBackend
 from nncf.experimental.tensor.definitions import TypeInfo
 from nncf.experimental.tensor.functions import numeric as numeric
 
@@ -30,16 +31,20 @@ DTYPE_MAP = {
     TensorDataType.uint8: torch.uint8,
 }
 
+DEVICE_MAP = {TensorDeviceType.CPU: "cpu", TensorDeviceType.GPU: "cuda"}
+
 DTYPE_MAP_REV = {v: k for k, v in DTYPE_MAP.items()}
+DEVICE_MAP_REV = {v: k for k, v in DEVICE_MAP.items()}
 
 
 @numeric.device.register(torch.Tensor)
 def _(a: torch.Tensor) -> TensorDeviceType:
-    DEVICE_MAP = {
-        "cpu": TensorDeviceType.CPU,
-        "cuda": TensorDeviceType.GPU,
-    }
-    return DEVICE_MAP[a.device.type]
+    return DEVICE_MAP_REV[a.device.type]
+
+
+@numeric.backend.register(torch.Tensor)
+def _(a: torch.Tensor) -> TensorBackend:
+    return TensorBackend.torch
 
 
 @numeric.squeeze.register(torch.Tensor)
@@ -106,7 +111,7 @@ def _(
 ) -> bool:
     if not isinstance(b, torch.Tensor):
         b = torch.tensor(b, device=a.device)
-    return torch.allclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
+    return torch.allclose(a, b.to(dtype=a.dtype), rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 
 @numeric.any.register(torch.Tensor)
@@ -131,8 +136,8 @@ def _(
     a: torch.Tensor, b: Union[torch.Tensor, float], rtol: float = 1e-05, atol: float = 1e-08, equal_nan: bool = False
 ) -> torch.Tensor:
     if not isinstance(b, torch.Tensor):
-        b = torch.tensor(b, device=a.device)
-    return torch.isclose(a, b, atol=atol, rtol=rtol, equal_nan=equal_nan)
+        b = torch.tensor(b, device=a.device, dtype=a.dtype)
+    return torch.isclose(a, b.to(dtype=a.dtype), atol=atol, rtol=rtol, equal_nan=equal_nan)
 
 
 @numeric.maximum.register(torch.Tensor)
@@ -210,7 +215,7 @@ def _(
         device = a.device
         result = torch.tensor(np.median(a.detach().cpu().numpy(), axis=axis, keepdims=keepdims))
         return result.type(a.dtype).to(device)
-    return torch.quantile(a, q=0.5, dim=axis, keepdims=keepdims)
+    return quantile(a, q=0.5, axis=axis, keepdims=keepdims)
 
 
 @numeric.round.register(torch.Tensor)
@@ -224,33 +229,34 @@ def _(a: torch.Tensor, exponent: Union[torch.Tensor, float]) -> torch.Tensor:
 
 
 @numeric.quantile.register(torch.Tensor)
-def _(
+def quantile(
     a: torch.Tensor,
     q: Union[float, List[float]],
     axis: Optional[Union[int, Tuple[int]]] = None,
-    keepdims: Optional[bool] = None,
+    keepdims: bool = False,
 ) -> torch.Tensor:
     device = a.device
     # See https://github.com/pytorch/pytorch/issues/61582
     # https://github.com/pytorch/pytorch/issues/64947
     if a.numel() <= 16_000_000 and isinstance(axis, int) and a.dtype in [torch.float32, torch.float64]:
         return torch.quantile(
-            a,
-            torch.tensor(q, dtype=a.dtype, device=a.device),
+            a.to(dtype=torch.float64),
+            torch.tensor(q, dtype=torch.float64, device=a.device),
             axis,
             keepdims,
-        ).type(torch.float64)
+        )
     return torch.tensor(np.quantile(a.detach().cpu().numpy(), q=q, axis=axis, keepdims=keepdims)).to(device)
 
 
 @numeric.percentile.register(torch.Tensor)
-def percentile(
-    tensor: torch.Tensor,
+def _(
+    a: torch.Tensor,
     q: Union[float, List[float]],
     axis: Union[int, Tuple[int, ...], List[int]],
     keepdims: bool = False,
 ) -> List[Union[torch.Tensor, np.generic]]:
-    return numeric.quantile(tensor, q=torch.true_divide(torch.tensor(q), 100), axis=axis, keepdims=keepdims)
+    q = [x / 100 for x in q] if isinstance(q, (list, tuple)) else q / 100
+    return numeric.quantile(a, q=q, axis=axis, keepdims=keepdims)
 
 
 @numeric._binary_op_nowarn.register(torch.Tensor)
@@ -365,3 +371,70 @@ def _(
     masked_x = x.masked_fill(mask, torch.nan)
     ret = torch.nanquantile(masked_x, q=0.5, dim=axis, keepdims=keepdims)
     return torch.nan_to_num(ret)
+
+
+@numeric.expand_dims.register(torch.Tensor)
+def _(a: torch.Tensor, axis: Union[int, Tuple[int, ...], List[int]]) -> np.ndarray:
+    if type(axis) not in (tuple, list):
+        axis = (axis,)
+
+    if len(set(axis)) != len(axis):
+        raise ValueError("repeated axis")
+
+    out_ndim = len(axis) + a.dim()
+
+    norm_axis = []
+    for ax in axis:
+        if ax < -out_ndim or ax >= out_ndim:
+            raise ValueError(f"axis {ax} is out of bounds for array of dimension {out_ndim}")
+        norm_axis.append(ax + out_ndim if ax < 0 else ax)
+
+    shape_it = iter(a.shape)
+    shape = [1 if ax in norm_axis else next(shape_it) for ax in range(out_ndim)]
+    return a.reshape(shape)
+
+
+@numeric.clone.register(torch.Tensor)
+def _(a: torch.Tensor) -> torch.Tensor:
+    return a.clone()
+
+
+@numeric.searchsorted.register(torch.Tensor)
+def _(a: torch.Tensor, v: torch.Tensor, side: str = "left", sorter: Optional[torch.Tensor] = None) -> torch.Tensor:
+    if side not in ["right", "left"]:
+        raise ValueError(f"Invalid value for 'side': {side}. Expected 'right' or 'left'.")
+    if a.dim() != 1:
+        raise ValueError(f"Input tensor 'a' must be 1-D. Received {a.dim()}-D tensor.")
+    return torch.searchsorted(sorted_sequence=a, input=v, right=(side == "right"), sorter=sorter)
+
+
+def zeros(
+    shape: Tuple[int, ...],
+    *,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> torch.Tensor:
+    if dtype is not None:
+        dtype = DTYPE_MAP[dtype]
+    if device is not None:
+        device = DEVICE_MAP[device]
+    return torch.zeros(*shape, dtype=dtype, device=device)
+
+
+def arange(
+    start: float,
+    end: float,
+    step: float,
+    *,
+    dtype: Optional[TensorDataType] = None,
+    device: Optional[TensorDeviceType] = None,
+) -> torch.Tensor:
+    if dtype is not None:
+        dtype = DTYPE_MAP[dtype]
+    if device is not None:
+        device = DEVICE_MAP[device]
+    return torch.arange(start, end, step, dtype=dtype, device=device)
+
+
+def from_numpy(ndarray: np.ndarray) -> torch.Tensor:
+    return torch.from_numpy(ndarray)

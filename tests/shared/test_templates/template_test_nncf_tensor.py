@@ -14,6 +14,7 @@ import operator
 from abc import abstractmethod
 from typing import TypeVar
 
+import numpy as np
 import pytest
 
 from nncf.experimental.common.tensor_statistics import statistical_functions as s_fns
@@ -21,6 +22,7 @@ from nncf.experimental.tensor import Tensor
 from nncf.experimental.tensor import TensorDataType
 from nncf.experimental.tensor import TensorDeviceType
 from nncf.experimental.tensor import functions as fns
+from nncf.experimental.tensor.definitions import TensorBackend
 
 TModel = TypeVar("TModel")
 TTensor = TypeVar("TTensor")
@@ -35,6 +37,7 @@ OPERATOR_MAP = {
     "floordiv": operator.floordiv,
     "neg": lambda a, _: -a,
 }
+BINARY_OPERATORS = ["add", "sub", "pow", "mul", "truediv", "floordiv"]
 
 COMPARISON_OPERATOR_MAP = {
     "lt": operator.lt,
@@ -54,8 +57,37 @@ class TemplateTestNNCFTensorOperators:
 
     @staticmethod
     @abstractmethod
+    def to_cpu(x: TTensor) -> TTensor:
+        pass
+
+    @staticmethod
+    @abstractmethod
     def cast_to(x: TTensor, dtype: TensorDataType) -> TTensor:
         pass
+
+    @staticmethod
+    @abstractmethod
+    def backend() -> TensorBackend:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def device() -> TensorDeviceType:
+        pass
+
+    def test_property_backend(self):
+        tensor_a = Tensor(self.to_tensor([1, 2]))
+        assert tensor_a.backend == self.backend()
+
+    def test_operator_clone(self):
+        tensor_a = Tensor(self.to_tensor([1, 2]))
+        tensor_b = tensor_a.clone()
+        assert isinstance(tensor_b, Tensor)
+        assert tensor_a.device == tensor_b.device
+        assert tensor_a.backend == tensor_b.backend
+        assert tensor_a.dtype == tensor_b.dtype
+        assert id(tensor_a.data) is not id(tensor_b.data)
+        assert all(tensor_a == tensor_b)
 
     @pytest.mark.parametrize("op_name", OPERATOR_MAP.keys())
     def test_operators_tensor(self, op_name):
@@ -90,7 +122,7 @@ class TemplateTestNNCFTensorOperators:
         assert isinstance(res_nncf, Tensor)
         assert res_nncf.device == nncf_tensor_a.device
 
-    @pytest.mark.parametrize("op_name", ("add", "sub", "mul", "truediv", "floordiv"))
+    @pytest.mark.parametrize("op_name", BINARY_OPERATORS)
     def test_operators_int_rev(self, op_name):
         tensor_a = self.to_tensor([1, 2])
         value = 2
@@ -343,11 +375,23 @@ class TemplateTestNNCFTensorOperators:
         assert fns.allclose(res, nncf_ref_tensor)
         assert res.device == nncf_tensor.device
 
-    def test_getitem(self):
+    def test_getitem_for_index(self):
         arr = [0, 1, 2]
         nncf_tensor = Tensor(self.to_tensor(arr))
         res = nncf_tensor[1]
         assert res == 1
+        assert isinstance(res, Tensor)
+        assert res.device == nncf_tensor.device
+
+    @pytest.mark.parametrize("is_tensor_indecies", (False, True))
+    def test_getitem_for_indecies(self, is_tensor_indecies):
+        nncf_tensor = Tensor(self.to_tensor([0, 1, 2]))
+        ref = Tensor(self.to_tensor([0, 1]))
+        indecies = [0, 1]
+        if is_tensor_indecies:
+            indecies = Tensor(self.to_tensor(indecies))
+        res = nncf_tensor[indecies]
+        assert all(res == ref)
         assert isinstance(res, Tensor)
         assert res.device == nncf_tensor.device
 
@@ -1392,3 +1436,117 @@ class TemplateTestNNCFTensorOperators:
         assert res.shape == ref_tensor.shape
         assert fns.allclose(res.data, ref_tensor)
         assert res.device == x.device
+
+    @pytest.mark.parametrize(
+        "x, axis, ref",
+        (
+            (2, 0, [2]),
+            (2, -1, [2]),
+            (2, (0, 1), [[2]]),
+            ([2, 2], 0, [[2, 2]]),
+            ([2, 2], 1, [[2], [2]]),
+            ([2, 2], -1, [[2], [2]]),
+            ([2, 2], -2, [[2, 2]]),
+            ([2, 2], (0, 1), [[[2, 2]]]),
+            ([2, 2], (0, 1, 2), [[[[2, 2]]]]),
+            ([2, 2], (0, 1, 3), [[[[2], [2]]]]),
+            ([[[[2], [2]]]], 0, [[[[[2], [2]]]]]),
+            ([[[[2], [2]]]], 2, [[[[[2], [2]]]]]),
+            ([[[[2], [2]]]], -4, [[[[[2], [2]]]]]),
+            ([[[[2], [2]]]], (0, 3, -5), [[[[[[[2], [2]]]]]]]),
+        ),
+    )
+    def test_expand_dims(self, x, axis, ref):
+        x = Tensor(self.to_tensor(x))
+        ref_tensor = self.to_tensor(ref)
+        res = fns.expand_dims(x, axis)
+        assert isinstance(res, Tensor)
+        assert res.shape == ref_tensor.shape, f"{res.data}".replace("\n", "")
+        assert fns.allclose(res.data, ref_tensor), f"{res.data}".replace("\n", "")
+
+    @pytest.mark.parametrize(
+        "x, axis, match",
+        (
+            ([2], 2, "is out of bounds for array"),
+            ([2], -3, "is out of bounds for array"),
+            ([2], (0, 10), "is out of bounds for array"),
+            ([2], (0, 0), "repeated axis"),
+        ),
+    )
+    def test_expand_dims_error(self, x, axis, match):
+        x = Tensor(self.to_tensor(x))
+        with pytest.raises(Exception, match=match):
+            fns.expand_dims(x, axis)
+
+    def test_fn_zeros(self):
+        shape = (2, 2)
+        for dtype in TensorDataType:
+            if dtype == TensorDataType.bfloat16 and self.backend() == TensorBackend.numpy:
+                continue
+            tensor_a = fns.zeros(shape, backend=self.backend(), dtype=dtype, device=self.device())
+            assert isinstance(tensor_a, Tensor)
+            assert tensor_a.device == self.device()
+            assert tensor_a.backend == self.backend()
+            assert tensor_a.dtype == dtype
+            assert tensor_a.shape == shape
+            assert fns.all(tensor_a == 0)
+
+    @pytest.mark.parametrize(
+        "start, end, stop, ref",
+        ((3, None, None, [0, 1, 2]), (0, 3, None, [0, 1, 2]), (0, 3, 1, [0, 1, 2]), (2, -1, -1, [2, 1, 0])),
+    )
+    def test_fn_arange(self, start, end, stop, ref):
+        args = [start]
+        if end is not None:
+            args.append(end)
+        if stop is not None:
+            args.append(stop)
+        ref = Tensor(self.to_tensor(ref))
+        for dtype in [TensorDataType.int32, TensorDataType.float32]:
+            tensor_a = fns.arange(*tuple(args), backend=self.backend(), dtype=dtype, device=self.device())
+            assert isinstance(tensor_a, Tensor)
+            assert tensor_a.device == self.device()
+            assert tensor_a.backend == self.backend()
+            assert tensor_a.dtype == dtype
+            assert fns.all(tensor_a == ref)
+
+    def test_fn_from_numpy(self):
+        ndarray = np.array([1, 2])
+        ref = Tensor(self.to_cpu(self.to_tensor(ndarray)))
+        tensor = fns.from_numpy(ndarray, backend=ref.backend)
+        assert isinstance(tensor, Tensor)
+        assert tensor.device == ref.device
+        assert tensor.backend == ref.backend
+        assert tensor.dtype == ref.dtype
+        assert fns.all(tensor == ref)
+
+    @pytest.mark.parametrize(
+        "a, v, side, sorter, ref",
+        (
+            ([-1.0, 0.0, 0.0, 1.0], [-2.0, -0.6, 0.0, 0.3, 1.5], "left", None, [0, 1, 1, 3, 4]),
+            ([-1.0, 0.0, 0.0, 1.0], [-2.0, -0.6, 0.0, 0.3, 1.5], "right", None, [0, 1, 3, 3, 4]),
+            ([0.0, -1.0, 0.0, 1.0], [-2.0, -0.6, 0.0, 0.3, 1.5], "left", [1, 0, 2, 3], [0, 1, 1, 3, 4]),
+            ([0.0, -1.0, 0.0, 1.0], [-2.0, -0.6, 0.0, 0.3, 1.5], "right", [1, 0, 2, 3], [0, 1, 3, 3, 4]),
+        ),
+    )
+    def test_fn_searchsorted(self, a, v, side, sorter, ref):
+        tensor_a = Tensor(self.to_tensor(a))
+        tensor_v = Tensor(self.to_tensor(v))
+        tensor_sorter = sorter
+        if sorter is not None:
+            tensor_sorter = Tensor(self.to_tensor(sorter))
+        ref = Tensor(self.to_tensor(ref))
+        res = fns.searchsorted(tensor_a, tensor_v, side, tensor_sorter)
+        assert fns.allclose(res, ref)
+
+    def test_searchsorted_side_error(self):
+        tensor_a = Tensor(self.to_tensor([-1.0, 0.0, 0.0, 1.0]))
+        tensor_v = Tensor(self.to_tensor([-2.0, -0.6, 0.0, 0.3, 1.5]))
+        with pytest.raises(ValueError):
+            fns.searchsorted(tensor_a, tensor_v, "error")
+
+    def test_searchsorted_2d_error(self):
+        tensor_a = Tensor(self.to_tensor([[-1.0, 0.0, 0.0, 1.0], [-1.0, 0.0, 0.0, 1.0]]))
+        tensor_v = Tensor(self.to_tensor([-2.0, -0.6, 0.0, 0.3, 1.5]))
+        with pytest.raises(ValueError):
+            fns.searchsorted(tensor_a, tensor_v)

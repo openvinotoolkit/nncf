@@ -339,6 +339,7 @@ def compress_weights(
     subset_size: Optional[int] = 128,
     awq: Optional[bool] = None,
     scale_estimation: Optional[bool] = None,
+    gptq: Optional[bool] = None,
     advanced_parameters: Optional[AdvancedCompressionParameters] = None,
 ) -> TModel:
     """
@@ -347,11 +348,11 @@ def compress_weights(
     :param model: A model to be compressed.
     :type model: TModel
     :param mode: Defines a mode for weight compression.
-        INT8_SYM stands for 8-bit integer symmetric quantization of all weights.
+        INT8_SYM stands for 8-bit integer symmetric quantization of all weights without zero point.
         INT8_ASYM is the same as INT8_SYM mode, but weights are quantized to a primary precision asymmetrically
             with a typical non-fixed zero point.
         INT4_SYM stands for a mixed-precision weights quantization with 4-bit integer as a primary precision.
-            Weights are quantized to a primary precision symmetrically with a fixed zero point equals to 8.
+            Weights are quantized to a primary precision symmetrically without zero point.
             All embeddings and the last layer are always compressed to a backup precision, which is INT8_ASYM,
             by default. All others are quantized whether to 4-bit integer or to a backup precision depending on
             criteria and the given ratio.
@@ -384,13 +385,15 @@ def compress_weights(
     :param scale_estimation: Indicates whether a scale estimation algorithm is used that minimizes the L2 error
         between the original and compressed layers.
     :type scale_estimation: bool
+    :param gptq: Indicates whether use GPTQ algorithm.
+    :type gptq: bool
     :param advanced_parameters: Advanced parameters for compression algorithms.
     :type advanced_parameters: nncf.AdvancedCompressionParameters
     :return: The non-trainable model with compressed weights.
     """
     if mode == CompressWeightsMode.INT8:
         warning_deprecated(
-            "`CompressWeightsMode.INT8` is deprecated." "Please, use `CompressWeightsMode.INT8_ASYM` as value instead."
+            "`CompressWeightsMode.INT8` is deprecated. Please, use `CompressWeightsMode.INT8_ASYM` as value instead."
         )
         mode = CompressWeightsMode.INT8_ASYM
 
@@ -408,10 +411,10 @@ def compress_weights(
                 f"but given {mode.value} mode."
             )
 
-        if True in [awq, scale_estimation]:
+        if True in [awq, scale_estimation, gptq]:
             raise AttributeError(
                 "Torch backend doesn`t supports scale estimation and AWQ algorithm, "
-                "but awq=True or scale_estimation=True is specified."
+                "but awq=True or scale_estimation=True or gptq=True is specified."
             )
 
         if is_wrapped_model(model):
@@ -427,7 +430,7 @@ def compress_weights(
         else:
             example_input = next(iter(dataset.get_inference_data()))
             model = wrap_model(model, example_input=example_input, trace_parameters=True)
-            dataset = None
+        dataset = None
         compression_weights_impl = pt_compression_weights_impl
 
     if backend == BackendType.OPENVINO:
@@ -436,6 +439,13 @@ def compress_weights(
         if any((awq, scale_estimation)) and (dataset is None or mode == CompressWeightsMode.NF4 or group_size == -1):
             raise AttributeError(
                 "Scale estimation or AWQ algorithm defined, but dataset is None or mode is NF4 or group_size < 0."
+            )
+        if gptq and (dataset is None or group_size == -1):
+            raise AttributeError("GPTQ algorithm defined, but dataset is None or group_size < 0.")
+
+        if gptq and scale_estimation:
+            raise AttributeError(
+                "Simultaneous use of Scale estimation and GPTQ algorithms is not supported. Select one of them."
             )
 
         compression_weights_impl = ov_compress_weights_impl
@@ -450,11 +460,11 @@ def compress_weights(
                 "INT8 mode assumes per-channel quantization of all layers in 8 bit. "
                 "Default values of `ratio` (1) and `group_size` (-1) parameters can not be overridden"
             )
-        options = [all_layers, sensitivity_metric, dataset, awq, scale_estimation]
+        options = [all_layers, sensitivity_metric, dataset, awq, scale_estimation, gptq]
         if any(option is not None for option in options):
             raise AttributeError(
-                "INT8 modes do not support `all_layers`, `sensitivity_metric`, `awq` and `dataset` options. "
-                "Set them to None."
+                "INT8 modes do not support `all_layers`, `sensitivity_metric`, `awq`, `scale_estimation`, `gptq` "
+                "and `dataset` options. Set them to None."
             )
 
     if ratio is None:
@@ -467,6 +477,8 @@ def compress_weights(
         awq = False
     if scale_estimation is None:
         scale_estimation = False
+    if gptq is None:
+        gptq = False
     if ignored_scope is None:
         ignored_scope = IgnoredScope()
     if sensitivity_metric is None:
@@ -500,6 +512,7 @@ def compress_weights(
         awq,
         subset_size,
         scale_estimation,
+        gptq,
         advanced_parameters,
     )
 

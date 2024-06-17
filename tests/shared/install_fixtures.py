@@ -17,5 +17,5 @@ from tests.shared.helpers import create_venv_with_nncf
 
 @pytest.fixture(scope="function")
 def tmp_venv_with_nncf(tmp_path, package_type: str, venv_type: str, extras: Set[str]):
-    venv_path = create_venv_with_nncf(tmp_path, package_type, venv_type, extra_reqs=extras)
+    venv_path = create_venv_with_nncf(tmp_path, package_type, venv_type, backends=extras)
     return venv_path

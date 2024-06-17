@@ -193,7 +193,6 @@ def quantize_ac(model: ov.Model, data_loader: torch.utils.data.DataLoader, valid
                     inputs=[
                         "/model.22/Concat_3",
                         "/model.22/Concat_6",
-                        "/model.22/Concat_24",
                         "/model.22/Concat_5",
                         "/model.22/Concat_4",
                     ],
